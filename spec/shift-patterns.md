@@ -71,7 +71,7 @@ An order with 祝日は休みにする on puts its `holidayShift` on the nationa
 
 ## Changing jobs
 
-The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are tiles as its editor draws them, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will.
+The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are tiles as its editor draws them, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will. In 新しい仕事にする the answers are rows of one list, as the settings pages around them are; はじめの設定, with no list around it, shows them as large cards.
 
 The new job's patterns replace the list, and its repeating order starts on the day of the switch. An old pattern still on a day before the switch, of its own or from an earlier order, stays in the list, so those days keep their marks.
 
