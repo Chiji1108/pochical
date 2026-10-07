@@ -12,15 +12,16 @@ import {
 } from "../lib/design-patterns";
 import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
-import { BackButton, PageHeader } from "./design-header";
+import { BackButton, HeaderAction, PageHeader } from "./design-header";
 import { List, ListRow, listRow } from "./design-list";
 import {
   OrderTitle,
   RepeatCalendar,
   SequenceTiles,
 } from "./design-repeat-editor";
+import { ConfirmDialog } from "./design-sheet";
 import { KeysPreview } from "./design-shift-input";
-import { Button, OptionCard, optionList } from "./design-ui";
+import { OptionCard, optionList } from "./design-ui";
 
 type Template = JobTemplate;
 
@@ -29,6 +30,9 @@ export type Step =
   | { name: "roster" }
   | { name: "rotation" }
   | { name: "order"; template: Template };
+
+// What a page's 完了 asks before days already there change.
+type Confirm = { title: string; message: string; action: string };
 
 // What the setup questions end with: the patterns to use, and for work
 // that repeats, the order and a day that falls on its first shift.
@@ -174,7 +178,7 @@ export const onboarding = {
 export function WorkSetupSteps({
   month = designMonth,
   from = null,
-  finishLabel,
+  confirm,
   onExit,
   onBack,
   onFinish,
@@ -185,7 +189,9 @@ export function WorkSetupSteps({
   // The day the order starts on, as a new job's first day; a first run's
   // covers every day.
   from?: Date | null;
-  finishLabel: string;
+  // What 完了 asks before the order takes over, when days already there
+  // will change; a first run has none.
+  confirm?: Confirm;
   onExit?: () => void;
   // Back from the first question on the first run, to the welcome.
   onBack?: () => void;
@@ -256,7 +262,7 @@ export function WorkSetupSteps({
       )}
       {step.name === "order" && (
         <OrderStep
-          finishLabel={finishLabel}
+          confirm={confirm}
           from={from}
           month={month}
           onBack={() => {
@@ -466,20 +472,21 @@ function OrderStep({
   template,
   month,
   from,
-  finishLabel,
+  confirm,
   onBack,
   onStart,
 }: {
   template: Template;
   month: Date;
   from: Date | null;
-  finishLabel: string;
+  confirm?: Confirm;
   onBack: () => void;
   onStart: (order: { sequence: Shift[]; anchor: Date }) => void;
 }) {
   const [order, setOrder] = useState<{ anchor: Date; sequence: Shift[] }>(
     () => ({ anchor: from ?? month, sequence: template.sequence ?? [] })
   );
+  const [confirming, setConfirming] = useState(false);
   const first = usePatterns()[template.sequence?.[0] ?? ""]?.name;
   return (
     <>
@@ -498,25 +505,41 @@ function OrderStep({
           />
         }
         onBack={onBack}
+        trailing={
+          <HeaderAction
+            disabled={order.sequence.length === 0}
+            onClick={() => {
+              if (confirm) {
+                setConfirming(true);
+              } else {
+                onStart(order);
+              }
+            }}
+          >
+            完了
+          </HeaderAction>
+        }
       />
       <RepeatCalendar
         anchor={order.anchor}
-        footer={
-          <Button
-            variant="primary"
-            disabled={order.sequence.length === 0}
-            onClick={() => {
-              onStart(order);
-            }}
-          >
-            {finishLabel}
-          </Button>
-        }
         from={from}
         onChange={setOrder}
         patternKeys={template.patternKeys}
         sequence={order.sequence}
       />
+      {confirming && confirm && (
+        <ConfirmDialog
+          action={confirm.action}
+          message={confirm.message}
+          onCancel={() => {
+            setConfirming(false);
+          }}
+          onConfirm={() => {
+            onStart(order);
+          }}
+          title={confirm.title}
+        />
+      )}
     </>
   );
 }

@@ -144,7 +144,6 @@ export function DesignOnboarding({
         )}
         {stage === "setup" && (
           <WorkSetupSteps
-            finishLabel="はじめる"
             initialStep={stepOf(initialScreen)}
             onBack={() => {
               setStage("welcome");

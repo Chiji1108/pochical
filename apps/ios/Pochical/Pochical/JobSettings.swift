@@ -30,6 +30,7 @@ struct JobChangePage: View {
   @State private var steps: [JobStep] = [.day]
   @State private var sequence: [PatternID] = []
   @State private var anchor = Day.today
+  @State private var confirming = false
 
   var body: some View {
     let step = steps.last ?? .day
@@ -140,11 +141,6 @@ struct JobChangePage: View {
       patterns: template.patternIDs.compactMap { readyByID[$0] }, holidayCountry: country
     ) {
       EmptyView()
-    } footer: {
-      next("\(start.month)/\(start.day)から切り替える") {
-        finish(template, sequence: sequence, anchor: anchor)
-      }
-      .disabled(sequence.isEmpty)
     }
     .background(colors.backgroundBase)
     .navigationTitle(template.custom || first == nil ? "並びを入れる" : "「\(first ?? "")」の日を押す")
@@ -156,8 +152,19 @@ struct JobChangePage: View {
           withAnimation { _ = steps.popLast() }
         }
       }
+      ToolbarItem(placement: .confirmationAction) {
+        Button("完了", role: .confirm) { confirming = true }
+          .disabled(sequence.isEmpty)
+      }
     }
     .toolbarVisibility(.hidden, for: .tabBar)
+    // The days from the new job's first change, so 完了 asks first.
+    .alert("\(start.month)/\(start.day)から新しい仕事にしますか？", isPresented: $confirming) {
+      Button("キャンセル", role: .cancel) {}
+      Button("切り替える") { finish(template, sequence: sequence, anchor: anchor) }
+    } message: {
+      Text("前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。")
+    }
   }
 
   // MARK: Pieces

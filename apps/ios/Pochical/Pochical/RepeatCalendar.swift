@@ -26,8 +26,8 @@ enum OrderCover: Hashable {
 /// the month that matters is the order's, which typing keeps in sight, and
 /// the month's name picks any other. Its first
 /// day and length go under the page's title, `accessory` at the end of the
-/// month's row, and `footer` under the keys.
-struct RepeatCalendar<Accessory: View, Footer: View>: View {
+/// month's row; what saves it is the page's 完了.
+struct RepeatCalendar<Accessory: View>: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   @Binding var sequence: [PatternID]
@@ -41,7 +41,6 @@ struct RepeatCalendar<Accessory: View, Footer: View>: View {
   var holidayShift: PatternID?
   var holidayCountry = "JP"
   @ViewBuilder let accessory: () -> Accessory
-  @ViewBuilder let footer: () -> Footer
   /// The month shown, from the swiped pages; until then the 1st day's.
   @State private var month: Day?
   /// Where the pages are as a finger moves them, for the month's name.
@@ -94,7 +93,6 @@ struct RepeatCalendar<Accessory: View, Footer: View>: View {
           .font(.subheadline)
           .disabled(sequence.isEmpty)
         }
-        footer()
       }
     }
     .padding(.horizontal, 16)

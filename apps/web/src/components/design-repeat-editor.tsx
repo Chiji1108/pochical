@@ -224,7 +224,7 @@ function OrderMonth({
 // calendar will show it. A day typed, pressed, is chosen: a key then
 // takes its place and ⌫ takes it out. Any other day pressed moves the
 // order to start there, keeping what was typed. `accessory` goes at the
-// end of the month's row, `footer` under the keys.
+// end of the month's row; what saves it is the page's 完了.
 export function RepeatCalendar({
   sequence,
   anchor,
@@ -234,7 +234,6 @@ export function RepeatCalendar({
   patternKeys,
   onChange,
   accessory,
-  footer,
 }: {
   sequence: Shift[];
   // The order's 1st day.
@@ -250,7 +249,6 @@ export function RepeatCalendar({
   patternKeys: Shift[];
   onChange: (order: { sequence: Shift[]; anchor: Date }) => void;
   accessory?: ReactNode;
-  footer: ReactNode;
 }) {
   const weekTools = useWeek();
   const [month, setMonth] = useState(() => monthOf(anchor));
@@ -376,7 +374,6 @@ export function RepeatCalendar({
             {chosen === undefined ? "1つ消す" : "選んだ日を消す"}
           </button>
         </div>
-        {footer}
       </div>
     </div>
   );

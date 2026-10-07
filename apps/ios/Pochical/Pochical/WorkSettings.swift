@@ -258,11 +258,28 @@ enum RepeatMode {
     }
   }
 
+  /// What 完了 asks to do, and asks it as.
   var action: String {
     switch self {
-    case .first: "から繰り返す"
-    case .switch: "から切り替える"
-    case .fix: "から入れ直す"
+    case .first: "繰り返す"
+    case .switch: "切り替える"
+    case .fix: "入れ直す"
+    }
+  }
+
+  var question: String {
+    switch self {
+    case .first: "から繰り返しますか？"
+    case .switch: "から切り替えますか？"
+    case .fix: "から入れ直しますか？"
+    }
+  }
+
+  var message: String {
+    switch self {
+    case .first: "この日から、並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。"
+    case .switch: "この日から、新しい並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。"
+    case .fix: "並びのとおりにシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。"
     }
   }
 }
@@ -285,6 +302,7 @@ private struct RepeatEditor: View {
   @State private var day: Day?
   /// Set by hand; until then it follows holidaysOffByDefault.
   @State private var holidaysOff: Bool?
+  @State private var confirming = false
 
   var body: some View {
     let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -310,27 +328,26 @@ private struct RepeatEditor: View {
       }
       .fixedSize()
       .disabled(offShift == nil)
-    } footer: {
-      if mode == .fix {
-        Text("\(dayName(start))からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。")
-          .font(.caption)
-          .foregroundStyle(colors.textTertiary)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      }
-      Button {
-        save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
-      } label: {
-        Label("\(shortDay(start))\(mode.action)", systemImage: "arrow.right")
-          .frame(maxWidth: .infinity)
-      }
-      .buttonStyle(.borderedProminent)
-      .controlSize(.large)
-      .disabled(steps.isEmpty)
     }
     .background(colors.backgroundBase)
     .navigationTitle(mode.title)
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.hidden, for: .tabBar)
+    .toolbar {
+      ToolbarItem(placement: .confirmationAction) {
+        Button("完了", role: .confirm) { confirming = true }
+          .disabled(steps.isEmpty)
+      }
+    }
+    // The days from its start change, so 完了 asks first.
+    .alert("\(shortDay(start))\(mode.question)", isPresented: $confirming) {
+      Button("キャンセル", role: .cancel) {}
+      Button(mode.action) {
+        save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
+      }
+    } message: {
+      Text(mode.message)
+    }
   }
 
   /// The sequence it starts from: the order in use's when correcting it,

@@ -14,7 +14,7 @@ import { presetList, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import { InputDatePicker } from "./design-date-picker";
-import { PageHeader } from "./design-header";
+import { HeaderAction, PageHeader } from "./design-header";
 import { List, ListRow, SwitchRow, Toggle } from "./design-list";
 import {
   OrderTitle,
@@ -28,6 +28,7 @@ import {
   settingsParts,
   shortDay,
 } from "./design-settings-parts";
+import { ConfirmDialog } from "./design-sheet";
 import { Button, fieldLabel, Note } from "./design-ui";
 import { WorkSetupSteps } from "./design-work-setup";
 
@@ -111,10 +112,32 @@ function RuleHistory({ rules }: { rules: RepeatRule[] }) {
 
 type RepeatMode = "first" | "switch" | "fix";
 
-const repeatModes: Record<RepeatMode, { title: string; action: string }> = {
-  first: { action: "から繰り返す", title: "繰り返しを設定" },
-  fix: { action: "から入れ直す", title: "今の繰り返しを直す" },
-  switch: { action: "から切り替える", title: "新しい繰り返し" },
+// Each way's page, and what its 完了 asks before the days change.
+const repeatModes: Record<
+  RepeatMode,
+  { title: string; action: string; question: string; message: string }
+> = {
+  first: {
+    action: "繰り返す",
+    message:
+      "この日から、並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。",
+    question: "から繰り返しますか？",
+    title: "繰り返しを設定",
+  },
+  fix: {
+    action: "入れ直す",
+    message:
+      "並びのとおりにシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。",
+    question: "から入れ直しますか？",
+    title: "今の繰り返しを直す",
+  },
+  switch: {
+    action: "切り替える",
+    message:
+      "この日から、新しい並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。",
+    question: "から切り替えますか？",
+    title: "新しい繰り返し",
+  },
 };
 
 // Sets an order on the calendar, filling the screen as ポチポチ入力 does.
@@ -156,6 +179,7 @@ export function RepeatEditorPage({
   const holidaysOff =
     holidaysChoice ?? defaultHolidaysOff(sequence, anchor, book);
   const rule: RepeatRule = { anchor, holidaysOff, sequence, start };
+  const [confirming, setConfirming] = useState(false);
   return (
     <div className={settingsParts.fullPage}>
       <PageHeader
@@ -164,6 +188,16 @@ export function RepeatEditorPage({
           <OrderTitle anchor={anchor} sequence={sequence} title={text.title} />
         }
         onBack={onBack}
+        trailing={
+          <HeaderAction
+            disabled={sequence.length === 0}
+            onClick={() => {
+              setConfirming(true);
+            }}
+          >
+            完了
+          </HeaderAction>
+        }
       />
       <RepeatCalendar
         accessory={
@@ -178,33 +212,25 @@ export function RepeatEditorPage({
         }
         anchor={anchor}
         before={shown}
-        footer={
-          <>
-            {fixing && (
-              <Note>
-                {formatDay(start)}
-                からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。
-              </Note>
-            )}
-            <Button
-              variant="primary"
-              disabled={sequence.length === 0}
-              onClick={() => {
-                onApply(rule);
-              }}
-            >
-              <ArrowRight aria-hidden="true" size={16} />
-              {shortDay(start)}
-              {text.action}
-            </Button>
-          </>
-        }
         from={fixing ? current.start : undefined}
         holidayShift={holidaysOff ? holidayShiftOf(patterns) : undefined}
         onChange={setOrder}
         patternKeys={patternKeys}
         sequence={sequence}
       />
+      {confirming && (
+        <ConfirmDialog
+          action={text.action}
+          message={text.message}
+          onCancel={() => {
+            setConfirming(false);
+          }}
+          onConfirm={() => {
+            onApply(rule);
+          }}
+          title={`${shortDay(start)}${text.question}`}
+        />
+      )}
     </div>
   );
 }
@@ -228,7 +254,12 @@ export function JobChangePage({
     return (
       <div className={settingsParts.job}>
         <WorkSetupSteps
-          finishLabel={`${shortDay(start)}から切り替える`}
+          confirm={{
+            action: "切り替える",
+            message:
+              "前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。",
+            title: `${shortDay(start)}から新しい仕事にしますか？`,
+          }}
           from={start}
           month={start}
           onOrdering={onOrdering}
