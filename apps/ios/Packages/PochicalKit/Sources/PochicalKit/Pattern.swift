@@ -6,7 +6,7 @@ public typealias PatternID = String
 /// A shift pattern, as the person made it (spec/shift-patterns.md, A
 /// pattern): its name, its mark in each look, its standard time, and what
 /// it means for the days it is on.
-public struct Pattern: Hashable, Sendable {
+public struct Pattern: Hashable, Sendable, Identifiable {
   public var id: PatternID
   public var name: String
   public var emoji: String

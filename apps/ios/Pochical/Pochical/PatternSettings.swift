@@ -44,26 +44,16 @@ struct PatternsPage: View {
     let sorting = editMode.isEditing
     List {
       ForEach(Array(patterns.enumerated()), id: \.element.id) { index, pattern in
-        Group {
-          if sorting {
-            row(pattern)
-          } else {
-            NavigationLink {
-              PatternEditor(pattern: pattern, isNew: false)
-            } label: {
-              row(pattern)
-            }
-          }
-        }
-        // ポチポチ入力 shows them a page at a time: where each page starts.
-        .listRowSeparator(index % patternsPerPage == 0 && index > 0 ? .hidden : .automatic)
-        .overlay(alignment: .top) {
-          if index % patternsPerPage == 0, index > 0 {
-            Text("ポチポチ入力の\(index / patternsPerPage + 1)ページ目")
-              .font(.caption)
-              .foregroundStyle(colors.textTertiary)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .offset(y: -22)
+        // ポチポチ入力 shows them a page at a time: where each page starts,
+        // over its first pattern.
+        let page = index > 0 && index % patternsPerPage == 0 ? index / patternsPerPage + 1 : nil
+        if sorting {
+          row(pattern, page: page)
+        } else {
+          NavigationLink {
+            PatternEditor(pattern: pattern, isNew: false)
+          } label: {
+            row(pattern, page: page)
           }
         }
       }
@@ -103,14 +93,21 @@ struct PatternsPage: View {
     }
   }
 
-  private func row(_ pattern: Pattern) -> some View {
-    LabeledContent {
-      Text(patternTimeText(pattern.time))
-    } label: {
-      Label {
-        Text(pattern.name).lineLimit(1)
-      } icon: {
-        ShiftMark(pattern: pattern, size: 22)
+  private func row(_ pattern: Pattern, page: Int?) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      if let page {
+        Text("ポチポチ入力の\(page)ページ目")
+          .font(.caption)
+          .foregroundStyle(colors.textTertiary)
+      }
+      LabeledContent {
+        Text(patternTimeText(pattern.time))
+      } label: {
+        Label {
+          Text(pattern.name).lineLimit(1)
+        } icon: {
+          ShiftMark(pattern: pattern, size: 22)
+        }
       }
     }
   }
@@ -469,8 +466,6 @@ private struct NextDayPicker: View {
     .accessibilityAddTraits(nextDay == id ? .isSelected : [])
   }
 }
-
-extension Pattern: @retroactive Identifiable {}
 
 /// 印と色: the mark in each look, so what people on other styles see is
 /// never left out, and its color.
