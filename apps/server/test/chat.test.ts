@@ -214,7 +214,7 @@ describe("a group's chat", () => {
     ]);
   });
 
-  it("takes a reply to a line of the chat, and drops it as the reply is taken back", async () => {
+  it("keeps a reply's line when it is one of the chat's, and drops it as the reply is taken back", async () => {
     const { groupId, guest, maker } = await pair();
     const mine = await groupSocket(groupId, maker);
     const theirs = await groupSocket(groupId, guest);
@@ -224,18 +224,20 @@ describe("a group's chat", () => {
     await mine.frames.next();
     await theirs.frames.next();
 
-    // A line that is not there cannot be answered: nothing is taken.
+    // A line that is not there cannot be answered: the line goes without
+    // its quote.
     chat(theirs.socket, [
       { kind: { reply: [9, "どれ？"] }, opId: "b" },
       { kind: { reply: [1, "なに？"] }, opId: "c" },
     ]);
     expect(changesIn(await mine.frames.next())).toMatchObject([
-      { kind: { value: { replyTo: 1n, seq: 2n, text: "なに？" } } },
+      { kind: { value: { replyTo: 0n, seq: 2n, text: "どれ？" } } },
+      { kind: { value: { replyTo: 1n, seq: 3n, text: "なに？" } } },
     ]);
 
-    chat(theirs.socket, [{ kind: { unsend: 2 }, opId: "d" }]);
+    chat(theirs.socket, [{ kind: { unsend: 3 }, opId: "d" }]);
     expect(changesIn(await mine.frames.next())).toMatchObject([
-      { kind: { value: { replyTo: 0n, seq: 2n, unsent: true } } },
+      { kind: { value: { replyTo: 0n, seq: 3n, unsent: true } } },
     ]);
   });
 

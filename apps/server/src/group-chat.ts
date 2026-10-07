@@ -400,8 +400,8 @@ const lineAt = (
     .get();
 
 /**
- * Whether a new line may answer `replyTo` (返信): none, or a line of the
- * same chat the writer can see, not taken back.
+ * Whether a new line may answer `replyTo` (返信): a line of the same chat
+ * the writer can see, not taken back.
  */
 const answers = (
   db: DrizzleSqliteDODatabase,
@@ -410,7 +410,7 @@ const answers = (
   replyTo: bigint
 ): boolean => {
   if (replyTo === 0n) {
-    return true;
+    return false;
   }
   const line = lineAt(db, threadId, replyTo);
   return line !== undefined && !line.unsent && line.hiddenFrom !== userId;
@@ -795,8 +795,7 @@ const takeSend = (
     .get();
   const { photo, replyTo } = send;
   const fits =
-    (photo === undefined ? fitsSend(send) : fitsPhoto(db, userId, send)) &&
-    answers(db, userId, send.threadId, replyTo);
+    photo === undefined ? fitsSend(send) : fitsPhoto(db, userId, send);
   if (taken !== undefined || !fits) {
     return {};
   }
@@ -824,7 +823,11 @@ const takeSend = (
       poll: send.poll,
       // A page goes with words alone.
       preview: send.text === "" ? null : keptPreview(send.preview),
-      replyTo: replyTo === 0n ? null : Number(replyTo),
+      // A line it cannot answer, as one taken back meanwhile, goes without
+      // its quote rather than not at all.
+      replyTo: answers(db, userId, send.threadId, replyTo)
+        ? Number(replyTo)
+        : null,
       sentAt: new Date(),
       seq: chatHead(db, send.threadId) + 1,
       text: send.text,
