@@ -210,8 +210,8 @@ struct ChatScreen: View {
         ForEach(items(state)) { item in
           row(item, names: names)
         }
-        // Who is writing now, under the latest line.
-        ForEach(typers.keys.sorted(), id: \.self) { userID in
+        // Who is writing now, under the latest line; not someone blocked.
+        ForEach(typers.keys.filter { !blocked.contains($0) }.sorted(), id: \.self) { userID in
           TypingLine(name: names[userID] ?? "メンバー")
             .id("typing-\(userID)")
             .transition(.opacity)

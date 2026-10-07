@@ -46,9 +46,7 @@ export const registerChatService = (router: ConnectRouter): void => {
       if (why === undefined || target.case === undefined) {
         throw new ConnectError("Say why and what", Code.InvalidArgument);
       }
-      if (!(await env.USERS.getByName(user.id).isMember(groupId))) {
-        throw new ConnectError("Not a member of this group", Code.NotFound);
-      }
+      // Null as well for someone not in the group.
       const reported = await env.GROUPS.getByName(groupId).reportContext(
         user.id,
         target.case === "line"

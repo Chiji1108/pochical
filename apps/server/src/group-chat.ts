@@ -261,26 +261,19 @@ const blockedBy = (
   return other !== undefined && hasBlocked(db, other, userId) ? other : null;
 };
 
-/** A member's blocks as their User DO says them: blocked, or not. */
-export const setMemberBlock = (
+/**
+ * A member's blocks as their User DO says them, all of them, so a group
+ * that missed one is put right by the next.
+ */
+export const setMemberBlocks = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  blockedId: string,
-  on: boolean
+  blockedIds: string[]
 ): void => {
-  if (on) {
+  db.delete(memberBlocks).where(eq(memberBlocks.userId, userId)).run();
+  if (blockedIds.length > 0) {
     db.insert(memberBlocks)
-      .values({ blockedId, userId })
-      .onConflictDoNothing()
-      .run();
-  } else {
-    db.delete(memberBlocks)
-      .where(
-        and(
-          eq(memberBlocks.userId, userId),
-          eq(memberBlocks.blockedId, blockedId)
-        )
-      )
+      .values(blockedIds.map((blockedId) => ({ blockedId, userId })))
       .run();
   }
 };

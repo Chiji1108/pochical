@@ -725,8 +725,11 @@ extension Chats {
       default: break
       }
     }
-    let last = try ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
-      .order { $0.seq.desc() }.fetchOne(db)
+    // Lines never delivered to the reader are not theirs to see.
+    let last = try ChatLineRow.where {
+      $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && !$0.hidden
+    }
+    .order { $0.seq.desc() }.fetchOne(db)
     // Shown as the group's line once it has come.
     if let sent = waiting,
       try ChatLineRow.where({ $0.groupID.eq(groupID) && $0.opID.eq(sent.opID) }).fetchCount(db)
@@ -770,7 +773,7 @@ extension Chats {
     let read = max(mark, ownRead)
     return try ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq > read
-        && $0.authorID.neq(me)
+        && $0.authorID.neq(me) && !$0.hidden
     }
     .select(\.text).fetchAll(db)
   }

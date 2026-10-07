@@ -205,7 +205,7 @@ export class UserDO extends DurableObject<Env> {
     if (added !== undefined) {
       broadcastChanges(this.ctx, [membershipChange(added)]);
       // The group learns whom the user has blocked, as the others did.
-      this.ctx.waitUntil(this.tellGroup(groupId, this.blockedIds()));
+      this.ctx.waitUntil(this.tellGroup(groupId));
     }
     this.schedulePush();
   }
@@ -246,7 +246,7 @@ export class UserDO extends DurableObject<Env> {
     // Told before answering, so the block holds once the call returns.
     await Promise.allSettled(
       groups.map(async ({ groupId }) => {
-        await this.tellGroup(groupId, [blockedId], on);
+        await this.tellGroup(groupId);
       })
     );
   }
@@ -262,23 +262,17 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Tells a group of the user's blocks; one that fails is told again with
-   * the next block, or when the user joins again.
+   * Tells a group whom the user has blocked, all of them, so one that
+   * fails is put right with the next block, or when the user joins again.
    */
-  private async tellGroup(
-    groupId: string,
-    blockedIds: string[],
-    on = true
-  ): Promise<void> {
+  private async tellGroup(groupId: string): Promise<void> {
     const userId = this.ctx.id.name;
-    if (userId === undefined || blockedIds.length === 0) {
+    if (userId === undefined) {
       return;
     }
-    const group = this.env.GROUPS.getByName(groupId);
-    await Promise.allSettled(
-      blockedIds.map(async (blockedId) => {
-        await group.setBlock(userId, blockedId, on);
-      })
+    await this.env.GROUPS.getByName(groupId).setBlocks(
+      userId,
+      this.blockedIds()
     );
   }
 
