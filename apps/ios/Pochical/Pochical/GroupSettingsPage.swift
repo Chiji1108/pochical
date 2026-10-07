@@ -4,12 +4,13 @@ import SQLiteData
 import SwiftUI
 
 /// グループの設定 (/design's GroupSettingsPage): the group's name and mark,
-/// how the person appears in it, who is in it with a way to invite more,
-/// and leaving. The chats' 通知 comes with the chats.
+/// how the person appears in it, its chat's 通知, who is in it with a way
+/// to invite more, and leaving.
 struct GroupSettingsPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
   @Fetch private var members: [GroupMember] = []
+  @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   let group: GroupRow
   let onInvite: () -> Void
   /// Called once the person has left the group.
@@ -53,6 +54,23 @@ struct GroupSettingsPage: View {
           LabeledContent("名前", value: me?.name ?? "")
         }
         .disabled(me == nil)
+      }
+      .settingsRows()
+
+      // The same switch as this group's on 設定 › 通知 › チャット.
+      Section {
+        ChatNotificationToggle(
+          groupID: group.id, threadID: groupThread,
+          muted: notifications.isMuted(groupThread, in: group.id)
+        ) {
+          Text("全体チャットの通知")
+        }
+      } header: {
+        Text("通知")
+      } footer: {
+        if notifications.mentionsWhenMuted {
+          Text("オフにしても、自分へのメンションは通知されます。")
+        }
       }
       .settingsRows()
 

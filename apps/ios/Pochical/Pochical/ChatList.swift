@@ -129,6 +129,8 @@ struct ChatList: View {
 private struct ChatRow<Icon: View>: View {
   @Environment(\.themeColors) private var colors
   @Fetch private var chat = ChatSummaryRequest.Value()
+  /// Whether the chat's notifications are off, marked after its name.
+  @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   let group: GroupRow
   let threadID: String
   let me: String
@@ -145,10 +147,18 @@ private struct ChatRow<Icon: View>: View {
       HStack(spacing: 12) {
         icon().accessibilityHidden(true)
         VStack(alignment: .leading, spacing: 2) {
-          Text(label)
-            .font(.body)
-            .foregroundStyle(colors.textPrimary)
-            .lineLimit(1)
+          HStack(spacing: 4) {
+            Text(label)
+              .font(.body)
+              .foregroundStyle(colors.textPrimary)
+              .lineLimit(1)
+            if notifications.isMuted(threadID, in: group.id) {
+              Image(systemName: "bell.slash")
+                .font(.system(size: 12))
+                .foregroundStyle(colors.textTertiary)
+                .accessibilityLabel("通知オフ")
+            }
+          }
           Text(preview)
             .font(.caption)
             .foregroundStyle(colors.textQuaternary)

@@ -69,4 +69,39 @@ public class UserServiceClient(
     ),
   )
 
+
+  /**
+   *  Turns a chat's notifications off or on again (spec/chat.md,
+   *  Notifications); the user's devices hear of it as a ChatMute change.
+   *  NOT_FOUND for a group the user is not in or a chat not theirs.
+   */
+  override suspend fun setChatMuted(request: SetChatMutedRequest, headers: Headers): ResponseMessage<SetChatMutedResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.UserService/SetChatMuted",
+      app.pochical.v1.SetChatMutedRequest::class,
+      app.pochical.v1.SetChatMutedResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
+
+  /**
+   *  Sets メンションはいつも通知 for the account; the devices hear of it as a
+   *  ChatNotifications change.
+   */
+  override suspend fun setChatNotifications(request: SetChatNotificationsRequest, headers: Headers): ResponseMessage<SetChatNotificationsResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.UserService/SetChatNotifications",
+      app.pochical.v1.SetChatNotificationsRequest::class,
+      app.pochical.v1.SetChatNotificationsResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
 }

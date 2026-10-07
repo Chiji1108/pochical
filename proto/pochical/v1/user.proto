@@ -23,7 +23,35 @@ service UserService {
   rpc RegisterPushToken(RegisterPushTokenRequest) returns (RegisterPushTokenResponse) {
     option idempotency_level = IDEMPOTENT;
   }
+
+  // Turns a chat's notifications off or on again (spec/chat.md,
+  // Notifications); the user's devices hear of it as a ChatMute change.
+  // NOT_FOUND for a group the user is not in or a chat not theirs.
+  rpc SetChatMuted(SetChatMutedRequest) returns (SetChatMutedResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
+  // Sets メンションはいつも通知 for the account; the devices hear of it as a
+  // ChatNotifications change.
+  rpc SetChatNotifications(SetChatNotificationsRequest) returns (SetChatNotificationsResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
 }
+
+message SetChatMutedRequest {
+  string group_id = 1;
+  // "group" for the group's chat, or a one-to-one chat the user is in.
+  string thread_id = 2;
+  bool muted = 3;
+}
+
+message SetChatMutedResponse {}
+
+message SetChatNotificationsRequest {
+  bool mentions_when_muted = 1;
+}
+
+message SetChatNotificationsResponse {}
 
 message RegisterPushTokenRequest {
   // The device's APNs token, as hex.

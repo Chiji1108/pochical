@@ -10,6 +10,8 @@ struct SettingsScreen: View {
   @Environment(Settings.self) private var settings
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
+  @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
+  @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   /// The icon in use, read again as the page comes back from changing it.
   @State private var appIcon = AppIconChoice.current
 
@@ -52,6 +54,19 @@ struct SettingsScreen: View {
           } label: {
             LabeledContent(
               "カレンダー", value: "\(WeekdayRow.names[settings.device.week.start])曜はじまり")
+          }
+        }
+        .settingsRows()
+
+        Section("通知") {
+          NavigationLink {
+            ChatNotificationsPage()
+          } label: {
+            LabeledContent(
+              "チャット",
+              value: chatNotificationsSummary(
+                groups: groups, notifications: notifications,
+                allowed: Notifications.shared.permission == .allowed))
           }
         }
         .settingsRows()

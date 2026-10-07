@@ -209,6 +209,8 @@ struct UnreadCountRow: Hashable, Sendable {
   var groupID: String
   var threadID: String
   var count: Int
+  /// How many of them mention the user.
+  var mentions = 0
 }
 
 extension DatabaseMigrator {
@@ -422,7 +424,8 @@ public enum Chats {
   /// A chat's unread count from the user's socket.
   static func take(_ unread: Pochical_V1_UnreadCount, in db: Database) throws {
     let row = UnreadCountRow(
-      groupID: unread.groupID, threadID: unread.threadID, count: Int(unread.count))
+      groupID: unread.groupID, threadID: unread.threadID, count: Int(unread.count),
+      mentions: Int(unread.mentions))
     try UnreadCountRow.where { $0.groupID.eq(row.groupID) && $0.threadID.eq(row.threadID) }
       .delete().execute(db)
     try UnreadCountRow.insert { row }.execute(db)
@@ -756,17 +759,26 @@ extension Chats {
 
   /// The chat's unread lines that count: the group's count, which reaches
   /// every group without a socket to each, but, while the member's own
-  /// read waits, the device's own, so reading clears it at once.
+  /// read waits, the device's own, so reading clears it at once. With the
+  /// user's notifications, as what notifies; without, all of them, as a
+  /// chat's own row shows.
   private static func unread(
-    of threadID: String, in groupID: String, me: String, ownRead: Int64, db: Database
+    of threadID: String, in groupID: String, me: String, ownRead: Int64,
+    notifications: ChatNotificationState = ChatNotificationState(), db: Database
   ) throws -> Int {
+    let muted = notifications.isMuted(threadID, in: groupID)
     guard ownRead > 0 else {
-      // No chat can be turned off yet, so every unread line counts.
-      return try UnreadCountRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
-        .fetchOne(db)?.count ?? 0
+      let row = try UnreadCountRow.where {
+        $0.groupID.eq(groupID) && $0.threadID.eq(threadID)
+      }
+      .fetchOne(db)
+      return notifyingCount(
+        count: row?.count ?? 0, mentions: row?.mentions ?? 0, muted: muted,
+        mentionsWhenMuted: notifications.mentionsWhenMuted)
     }
     let lines = try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
-    return notifyingUnread(lines, muted: false, mentionsWhenMuted: true, me: me)
+    return notifyingUnread(
+      lines, muted: muted, mentionsWhenMuted: notifications.mentionsWhenMuted, me: me)
   }
 
   /// The words of others' lines the device holds past the reader's read.
@@ -803,13 +815,14 @@ extension Chats {
   public static func unreadByGroup(me: String, db: Database) throws -> [String: Int] {
     var counts: [String: Int] = [:]
     var reads: [String: [String: Int64]] = [:]
+    let notifications = try ChatNotifications.state(in: db)
     for row in try UnreadCountRow.where({ $0.count > 0 }).fetchAll(db) {
       if reads[row.groupID] == nil {
         reads[row.groupID] = try waitingReads(of: row.groupID, in: db)
       }
       let unread = try unread(
         of: row.threadID, in: row.groupID, me: me,
-        ownRead: reads[row.groupID]?[row.threadID] ?? 0, db: db)
+        ownRead: reads[row.groupID]?[row.threadID] ?? 0, notifications: notifications, db: db)
       if unread > 0 {
         counts[row.groupID, default: 0] += unread
       }

@@ -21,6 +21,8 @@ import { compareClocks } from "./hlc";
 import type { Clock } from "./hlc";
 import type {
   blocks,
+  chatMutes,
+  chatSettings,
   coworkerOrder,
   coworkers,
   dayFields,
@@ -201,7 +203,12 @@ export const unreadCountChange = (row: UnreadCountRow): Change =>
     cursor: BigInt(row.cursor),
     kind: {
       case: "unreadCount",
-      value: { count: row.count, groupId: row.groupId, threadId: row.threadId },
+      value: {
+        count: row.count,
+        groupId: row.groupId,
+        mentions: row.mentions,
+        threadId: row.threadId,
+      },
     },
   });
 
@@ -212,3 +219,41 @@ export const blockChange = (row: BlockRow): Change =>
     cursor: BigInt(row.cursor),
     kind: { case: "block", value: { on: row.blocked, userId: row.userId } },
   });
+
+type ChatMuteRow = typeof chatMutes.$inferSelect;
+
+export const chatMuteChange = (row: ChatMuteRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: {
+      case: "chatMute",
+      value: { groupId: row.groupId, muted: row.muted, threadId: row.threadId },
+    },
+  });
+
+type ChatSettingsRow = typeof chatSettings.$inferSelect;
+
+export const chatSettingsChange = (row: ChatSettingsRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: {
+      case: "chatNotifications",
+      value: { mentionsWhenMuted: row.mentionsWhenMuted },
+    },
+  });
+
+/**
+ * How many of a chat's unread lines count, as what notifies (spec/chat.md,
+ * Unread lines; spec/vectors/unread.json): all of them in a chat that is
+ * on; in one turned off its mentions of the user, while mentions notify.
+ */
+export const notifyingCount = (
+  unread: { count: number; mentions: number },
+  muted: boolean,
+  mentionsWhenMuted: boolean
+): number => {
+  if (!muted) {
+    return unread.count;
+  }
+  return mentionsWhenMuted ? unread.mentions : 0;
+};

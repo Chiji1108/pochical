@@ -28,6 +28,17 @@ public protocol Pochical_V1_UserServiceClientInterface: Sendable {
     /// Notifications); sent each launch, as iOS may change it.
     @available(iOS 13, *)
     func `registerPushToken`(request: Pochical_V1_RegisterPushTokenRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_RegisterPushTokenResponse>
+
+    /// Turns a chat's notifications off or on again (spec/chat.md,
+    /// Notifications); the user's devices hear of it as a ChatMute change.
+    /// NOT_FOUND for a group the user is not in or a chat not theirs.
+    @available(iOS 13, *)
+    func `setChatMuted`(request: Pochical_V1_SetChatMutedRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetChatMutedResponse>
+
+    /// Sets メンションはいつも通知 for the account; the devices hear of it as a
+    /// ChatNotifications change.
+    @available(iOS 13, *)
+    func `setChatNotifications`(request: Pochical_V1_SetChatNotificationsRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetChatNotificationsResponse>
 }
 
 /// Concrete implementation of `Pochical_V1_UserServiceClientInterface`.
@@ -53,11 +64,23 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
         return await self.client.unary(path: "/pochical.v1.UserService/RegisterPushToken", idempotencyLevel: .idempotent, request: request, headers: headers)
     }
 
+    @available(iOS 13, *)
+    public func `setChatMuted`(request: Pochical_V1_SetChatMutedRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_SetChatMutedResponse> {
+        return await self.client.unary(path: "/pochical.v1.UserService/SetChatMuted", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
+    public func `setChatNotifications`(request: Pochical_V1_SetChatNotificationsRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_SetChatNotificationsResponse> {
+        return await self.client.unary(path: "/pochical.v1.UserService/SetChatNotifications", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
     public enum Metadata {
         public enum Methods {
             public static let getMe = Connect.MethodSpec(name: "GetMe", service: "pochical.v1.UserService", type: .unary)
             public static let setBlocked = Connect.MethodSpec(name: "SetBlocked", service: "pochical.v1.UserService", type: .unary)
             public static let registerPushToken = Connect.MethodSpec(name: "RegisterPushToken", service: "pochical.v1.UserService", type: .unary)
+            public static let setChatMuted = Connect.MethodSpec(name: "SetChatMuted", service: "pochical.v1.UserService", type: .unary)
+            public static let setChatNotifications = Connect.MethodSpec(name: "SetChatNotifications", service: "pochical.v1.UserService", type: .unary)
         }
     }
 }

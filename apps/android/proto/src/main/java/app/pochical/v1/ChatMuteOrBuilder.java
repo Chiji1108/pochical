@@ -6,8 +6,8 @@
 package app.pochical.v1;
 
 @com.google.protobuf.Generated
-public interface UnreadCountOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:pochical.v1.UnreadCount)
+public interface ChatMuteOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:pochical.v1.ChatMute)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
@@ -35,19 +35,12 @@ public interface UnreadCountOrBuilder extends
       getThreadIdBytes();
 
   /**
-   * <code>uint32 count = 3 [json_name = "count"];</code>
-   * @return The count.
-   */
-  int getCount();
-
-  /**
    * <pre>
-   * How many of them mention the user: what counts, and notifies, in a
-   * chat turned off (spec/chat.md, Unread lines).
+   * Off, or on again since.
    * </pre>
    *
-   * <code>uint32 mentions = 4 [json_name = "mentions"];</code>
-   * @return The mentions.
+   * <code>bool muted = 3 [json_name = "muted"];</code>
+   * @return The muted.
    */
-  int getMentions();
+  boolean getMuted();
 }

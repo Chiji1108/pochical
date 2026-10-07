@@ -262,5 +262,39 @@ public interface ChangeOrBuilder extends
    */
   app.pochical.v1.Block getBlock();
 
+  /**
+   * <pre>
+   * A chat whose notifications the user turned off, or on again, and
+   * whether mentions notify in one turned off (spec/chat.md,
+   * Notifications); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+   * @return Whether the chatMute field is set.
+   */
+  boolean hasChatMute();
+  /**
+   * <pre>
+   * A chat whose notifications the user turned off, or on again, and
+   * whether mentions notify in one turned off (spec/chat.md,
+   * Notifications); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatMute chat_mute = 18 [json_name = "chatMute"];</code>
+   * @return The chatMute.
+   */
+  app.pochical.v1.ChatMute getChatMute();
+
+  /**
+   * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+   * @return Whether the chatNotifications field is set.
+   */
+  boolean hasChatNotifications();
+  /**
+   * <code>.pochical.v1.ChatNotifications chat_notifications = 19 [json_name = "chatNotifications"];</code>
+   * @return The chatNotifications.
+   */
+  app.pochical.v1.ChatNotifications getChatNotifications();
+
   public app.pochical.v1.Change.KindCase getKindCase();
 }

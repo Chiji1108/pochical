@@ -227,21 +227,27 @@ Clients advance the watermark to the newest message shown on screen, batching up
 
 ### Unread summary
 
-Tab and app icon badges need unread counts across every group, without a socket to each Group DO. When a line is sent, the Group DO counts each other member's unread lines in that thread and gives the count to their User DO (`setUnread`), with the group's cursor it was counted at; a read does the same for the reader. The same call is where push notifications will start.
+Tab and app icon badges need unread counts across every group, without a socket to each Group DO. When a line is sent, the Group DO counts each other member's unread lines in that thread, and how many of them mention that member, and gives both to their User DO (`setUnread`), with the group's cursor they were counted at; a read does the same for the reader. The same call carries the line's notification (Push).
 
 - The User DO keeps one `unread_counts` row per group and thread, in its own log like the memberships, and sends each change to the user's devices on their socket as an `UnreadCount`. Counts can arrive out of order, so one counted at an older group cursor than the row's changes nothing. A failed call is put right by the member's next count.
 - Leaving a group deletes its rows, in the transaction that marks the membership left at a newer cursor, so the head never goes back; devices drop a group's counts as they hear of the leaving, and joining again starts at the chats' end.
-- A device shows the group's count, except in a chat where a read of its own still waits to be sent: there it counts the lines it holds past that read, so reading clears the badge at once. A group's icon adds up its chats', the グループ tab all groups' (spec/chat.md, Unread lines).
+- A device shows the group's count, except in a chat where a read of its own still waits to be sent: there it counts the lines it holds past that read, so reading clears the badge at once. A group's icon adds up its chats' counts as what notifies, from the count and the mentions as the chat is on or off (Chat notifications), the グループ tab all groups' (spec/chat.md, Unread lines).
 - Reading on one device clears the badge on the user's other devices through the User DO.
-- The APNs `badge` is the User DO's total of these counts, sent with each notification (Push); the app also sets it from its own counts as lines are read.
+- The APNs `badge` is the User DO's total of these counts as what notifies, sent with each notification (Push); the app also sets it from its own counts as lines are read.
 
 ## Push
 
 - Each launch, a device with notifications allowed sends its APNs token (`UserService.RegisterPushToken`, `sandbox` from a development build); the User DO keeps it (`push_tokens`) and drops one APNs says is gone (410, or 400 BadDeviceToken).
-- When a line is sent, the Group DO words a notification for each other member who may read the chat and has not blocked the writer, and gives it to their User DO with their new unread count (`setUnread`). The User DO sends it to each of their devices, its badge the user's total of unread lines.
+- When a line is sent, the Group DO words a notification for each other member who may read the chat and has not blocked the writer, and gives it to their User DO with their new unread count and whether the line mentions them (`setUnread`). The User DO sends it to each of their devices when it notifies (Chat notifications), its badge the user's total of unread lines as what notifies.
 - The server sends a localization key and its arguments (APNs `title-loc-key`/`loc-key` with their args), never words it has put together, so the app words them from its own strings: the title is the group's name (`CHAT_TITLE`), or the writer's in a one-to-one chat; the body is `CHAT_GROUP_{TEXT,PHOTO,DAYS,POLL}` with the writer's name first, or `CHAT_{…}` in a one-to-one chat. Words are sent with mentions as @name, cut at 200 characters. The payload carries `groupId` and `threadId`, which a tap opens, and `thread-id` stacks a chat's notifications together.
 - Sent from the Worker straight to APNs over HTTP/2 with a token key (`APNS_KEY_ID`, `APNS_TEAM_ID`, the `.p8` as the `APNS_KEY` secret), its JWT reused for 50 minutes. A local `wrangler dev` cannot reach APNs, so it sends nothing.
-- A notification is not shown while its chat is open on the device. Turning a chat's notifications off is not built yet; until then every chat notifies.
+- A notification is not shown while its chat is open on the device.
+
+## Chat notifications
+
+- `UserService.SetChatMuted` turns a chat's notifications off or on again, for the group's chat or a one-to-one chat of the user's (NOT_FOUND otherwise). The User DO keeps it (`chat_mutes`, one row a chat, kept when turned on again so devices catching up hear of it) and sends it to their devices as a `ChatMute` change.
+- `UserService.SetChatNotifications` sets メンションはいつも通知 for the account (`chat_settings`), sent as a `ChatNotifications` change; before the user sets it none is sent, and it is on.
+- The groups never hear of either: the User DO decides with them. A new line notifies in a chat that is on, or in one turned off when it mentions the user while メンションはいつも通知 is on; the counts follow the same rule (spec/chat.md, Notifications; spec/vectors/unread.json).
 
 ## Reports and blocks
 

@@ -7,8 +7,11 @@ import {
   GetMeResponseSchema,
   RegisterPushTokenResponseSchema,
   SetBlockedResponseSchema,
+  SetChatMutedResponseSchema,
+  SetChatNotificationsResponseSchema,
   UserService,
 } from "./gen/pochical/v1/user_pb";
+import { GROUP_THREAD, otherIn } from "./group-chat";
 import { isId } from "./ids";
 import { requireUser } from "./session";
 
@@ -36,6 +39,29 @@ export const registerUserService = (router: ConnectRouter): void => {
       }
       await env.USERS.getByName(user.id).setBlocked(userId, blocked);
       return create(SetBlockedResponseSchema, {});
+    },
+    setChatMuted: async ({ groupId, threadId, muted }, context) => {
+      const user = await requireUser(context);
+      const theirs =
+        threadId === GROUP_THREAD || otherIn(threadId, user.id) !== undefined;
+      const kept =
+        theirs &&
+        (await env.USERS.getByName(user.id).setChatMuted(
+          groupId,
+          threadId,
+          muted
+        ));
+      if (!kept) {
+        throw new ConnectError("No such chat of yours", Code.NotFound);
+      }
+      return create(SetChatMutedResponseSchema, {});
+    },
+    setChatNotifications: async ({ mentionsWhenMuted }, context) => {
+      const user = await requireUser(context);
+      await env.USERS.getByName(user.id).setChatNotifications(
+        mentionsWhenMuted
+      );
+      return create(SetChatNotificationsResponseSchema, {});
     },
   });
 };

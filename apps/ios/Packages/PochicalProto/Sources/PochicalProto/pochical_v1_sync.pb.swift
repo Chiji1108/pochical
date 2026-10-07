@@ -727,6 +727,25 @@ public nonisolated struct Pochical_V1_Change: Sendable {
     set {kind = .block(newValue)}
   }
 
+  /// A chat whose notifications the user turned off, or on again, and
+  /// whether mentions notify in one turned off (spec/chat.md,
+  /// Notifications); User DO only.
+  public var chatMute: Pochical_V1_ChatMute {
+    get {
+      if case .chatMute(let v)? = kind {return v}
+      return Pochical_V1_ChatMute()
+    }
+    set {kind = .chatMute(newValue)}
+  }
+
+  public var chatNotifications: Pochical_V1_ChatNotifications {
+    get {
+      if case .chatNotifications(let v)? = kind {return v}
+      return Pochical_V1_ChatNotifications()
+    }
+    set {kind = .chatNotifications(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -760,8 +779,48 @@ public nonisolated struct Pochical_V1_Change: Sendable {
     /// Someone the user has blocked, or no longer (spec/chat.md, Reporting
     /// and blocking); User DO only.
     case block(Pochical_V1_Block)
+    /// A chat whose notifications the user turned off, or on again, and
+    /// whether mentions notify in one turned off (spec/chat.md,
+    /// Notifications); User DO only.
+    case chatMute(Pochical_V1_ChatMute)
+    case chatNotifications(Pochical_V1_ChatNotifications)
 
   }
+
+  public init() {}
+}
+
+/// A chat whose notifications the user turned off, or back on: one value
+/// per chat, the latest.
+public nonisolated struct Pochical_V1_ChatMute: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var groupID: String = String()
+
+  public var threadID: String = String()
+
+  /// Off, or on again since.
+  public var muted: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// The user's chat notification settings for the whole account. Before
+/// the user sets them, none is sent, and mentions notify.
+public nonisolated struct Pochical_V1_ChatNotifications: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// メンションはいつも通知: a line mentioning the user notifies, and
+  /// counts, in a chat turned off.
+  public var mentionsWhenMuted: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
@@ -795,6 +854,10 @@ public nonisolated struct Pochical_V1_UnreadCount: Sendable {
   public var threadID: String = String()
 
   public var count: UInt32 = 0
+
+  /// How many of them mention the user: what counts, and notifies, in a
+  /// chat turned off (spec/chat.md, Unread lines).
+  public var mentions: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2685,7 +2748,7 @@ nonisolated extension Pochical_V1_Changes: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Change"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0\u{1}pattern\0\u{3}pattern_order\0\u{3}member_day\0\u{3}member_pattern\0\u{3}repeat_orders\0\u{1}coworker\0\u{3}coworker_order\0\u{3}member_repeat_orders\0\u{1}membership\0\u{3}group_profile\0\u{1}member\0\u{3}chat_line\0\u{3}read_mark\0\u{3}unread_count\0\u{1}block\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0\u{1}pattern\0\u{3}pattern_order\0\u{3}member_day\0\u{3}member_pattern\0\u{3}repeat_orders\0\u{1}coworker\0\u{3}coworker_order\0\u{3}member_repeat_orders\0\u{1}membership\0\u{3}group_profile\0\u{1}member\0\u{3}chat_line\0\u{3}read_mark\0\u{3}unread_count\0\u{1}block\0\u{3}chat_mute\0\u{3}chat_notifications\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2902,6 +2965,32 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
           self.kind = .block(v)
         }
       }()
+      case 18: try {
+        var v: Pochical_V1_ChatMute?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .chatMute(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .chatMute(v)
+        }
+      }()
+      case 19: try {
+        var v: Pochical_V1_ChatNotifications?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .chatNotifications(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .chatNotifications(v)
+        }
+      }()
       default: break
       }
     }
@@ -2980,6 +3069,14 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
       guard case .block(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
     }()
+    case .chatMute?: try {
+      guard case .chatMute(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+    }()
+    case .chatNotifications?: try {
+      guard case .chatNotifications(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -2988,6 +3085,76 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
   public static func ==(lhs: Pochical_V1_Change, rhs: Pochical_V1_Change) -> Bool {
     if lhs.cursor != rhs.cursor {return false}
     if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ChatMute: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ChatMute"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_id\0\u{3}thread_id\0\u{1}muted\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.groupID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.muted) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.groupID.isEmpty {
+      try visitor.visitSingularStringField(value: self.groupID, fieldNumber: 1)
+    }
+    if !self.threadID.isEmpty {
+      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 2)
+    }
+    if self.muted != false {
+      try visitor.visitSingularBoolField(value: self.muted, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ChatMute, rhs: Pochical_V1_ChatMute) -> Bool {
+    if lhs.groupID != rhs.groupID {return false}
+    if lhs.threadID != rhs.threadID {return false}
+    if lhs.muted != rhs.muted {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ChatNotifications: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ChatNotifications"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}mentions_when_muted\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.mentionsWhenMuted) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.mentionsWhenMuted != false {
+      try visitor.visitSingularBoolField(value: self.mentionsWhenMuted, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ChatNotifications, rhs: Pochical_V1_ChatNotifications) -> Bool {
+    if lhs.mentionsWhenMuted != rhs.mentionsWhenMuted {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -3030,7 +3197,7 @@ nonisolated extension Pochical_V1_Block: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pochical_V1_UnreadCount: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UnreadCount"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_id\0\u{3}thread_id\0\u{1}count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_id\0\u{3}thread_id\0\u{1}count\0\u{1}mentions\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3041,6 +3208,7 @@ nonisolated extension Pochical_V1_UnreadCount: SwiftProtobuf.Message, SwiftProto
       case 1: try { try decoder.decodeSingularStringField(value: &self.groupID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.count) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.mentions) }()
       default: break
       }
     }
@@ -3056,6 +3224,9 @@ nonisolated extension Pochical_V1_UnreadCount: SwiftProtobuf.Message, SwiftProto
     if self.count != 0 {
       try visitor.visitSingularUInt32Field(value: self.count, fieldNumber: 3)
     }
+    if self.mentions != 0 {
+      try visitor.visitSingularUInt32Field(value: self.mentions, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3063,6 +3234,7 @@ nonisolated extension Pochical_V1_UnreadCount: SwiftProtobuf.Message, SwiftProto
     if lhs.groupID != rhs.groupID {return false}
     if lhs.threadID != rhs.threadID {return false}
     if lhs.count != rhs.count {return false}
+    if lhs.mentions != rhs.mentions {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

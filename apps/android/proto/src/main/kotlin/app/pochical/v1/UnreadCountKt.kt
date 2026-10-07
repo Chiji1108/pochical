@@ -84,6 +84,33 @@ public object UnreadCountKt {
     public fun clearCount() {
       _builder.clearCount()
     }
+
+    /**
+     * ```
+     * How many of them mention the user: what counts, and notifies, in a
+     * chat turned off (spec/chat.md, Unread lines).
+     * ```
+     *
+     * `uint32 mentions = 4 [json_name = "mentions"];`
+     */
+    public var mentions: kotlin.Int
+      @kotlin.jvm.JvmName("getMentions")
+        get() = _builder.mentions
+      @kotlin.jvm.JvmName("setMentions")
+        set(value) {
+        _builder.mentions = value
+      }
+    /**
+     * ```
+     * How many of them mention the user: what counts, and notifies, in a
+     * chat turned off (spec/chat.md, Unread lines).
+     * ```
+     *
+     * `uint32 mentions = 4 [json_name = "mentions"];`
+     */
+    public fun clearMentions() {
+      _builder.clearMentions()
+    }
   }
 }
 public inline fun app.pochical.v1.UnreadCount.copy(block: `app.pochical.v1`.UnreadCountKt.Dsl.() -> kotlin.Unit): app.pochical.v1.UnreadCount =

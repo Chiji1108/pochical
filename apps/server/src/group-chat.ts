@@ -16,6 +16,7 @@ import {
   max,
   ne,
   or,
+  sql,
 } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
@@ -428,15 +429,20 @@ export const moveReadMark = (
   return readMarkChange(row);
 };
 
+/** How a message's words keep a mention of `userId`. */
+export const mentionOf = (userId: string): string => `<@${userId}>`;
+
 /**
- * How many of the chat's lines the member has not read: others' lines
- * past their mark (spec/sync-protocol.md, Read states).
+ * A chat's lines `userId` has not read, others' past their read mark, and
+ * how many of them mention them (spec/chat.md, Unread lines): what the
+ * user's badges count, all of them in a chat that is on, the mentions in
+ * one turned off.
  */
 export const unreadCount = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   threadId: string
-): number => {
+): { count: number; mentions: number } => {
   const read =
     db
       .select({ lastReadSeq: readMarks.lastReadSeq })
@@ -445,21 +451,23 @@ export const unreadCount = (
         and(eq(readMarks.userId, userId), eq(readMarks.threadId, threadId))
       )
       .get()?.lastReadSeq ?? 0;
-  return (
-    db
-      .select({ n: count() })
-      .from(chatLines)
-      .where(
-        and(
-          eq(chatLines.threadId, threadId),
-          gt(chatLines.seq, read),
-          ne(chatLines.authorId, userId),
-          // Lines kept from them, from someone they blocked, never count.
-          or(isNull(chatLines.hiddenFrom), ne(chatLines.hiddenFrom, userId))
-        )
+  const counted = db
+    .select({
+      mentions: sql<number>`coalesce(sum(instr(${chatLines.text}, ${mentionOf(userId)}) > 0), 0)`,
+      n: count(),
+    })
+    .from(chatLines)
+    .where(
+      and(
+        eq(chatLines.threadId, threadId),
+        gt(chatLines.seq, read),
+        ne(chatLines.authorId, userId),
+        // Lines kept from them, from someone they blocked, never count.
+        or(isNull(chatLines.hiddenFrom), ne(chatLines.hiddenFrom, userId))
       )
-      .get()?.n ?? 0
-  );
+    )
+    .get();
+  return { count: counted?.n ?? 0, mentions: counted?.mentions ?? 0 };
 };
 
 /**

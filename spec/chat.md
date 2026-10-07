@@ -68,7 +68,8 @@ A mention names one member of the group in a group chat (全体チャット). On
 ### Notifications
 
 - A group chat turned off sends no notifications, except for a line that mentions the reader, which notifies as if the chat were on. The chat notification settings say so under the group chats' switches, and so does a group's own 通知.
-- メンションはいつも通知 (設定 › チャット › メンション, on by default) turns that exception off: off, a chat turned off sends nothing, mentions included, and the notes are not shown. It is one switch for the account, kept by the User DO, not one per group.
+- Each chat's notifications turn off and on in its menu (通知をオフにする, 通知をオンにする, saying so as it changes); a group's chat also on 設定 › 通知 › チャット and in the group's own 通知. That page lists the one-to-one chats turned off as it opens, to turn back on, and those turned on again stay until it is left. A chat turned off shows a crossed-out bell after its name in the chat list and its title. Turning a chat on asks for the system's permission first, if not yet asked, and the page shows a card while notifications are not allowed: to ask, or once refused, to open the system's settings.
+- メンションはいつも通知 (設定 › 通知 › チャット › メンション, on by default) turns that exception off: off, a chat turned off sends nothing, mentions included, and the notes are not shown. It is one switch for the account, kept by the User DO, not one per group.
 - In the chat list, a chat whose unread lines mention the reader shows @ in the accent color before the unread count.
 
 ## Editing and unsending
