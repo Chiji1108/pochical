@@ -17,7 +17,12 @@ import type { Shift } from "../lib/design-patterns";
 import { PageDots } from "./design-choices";
 import { monthGrid } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
-import { dayGrid, WeekdayRow } from "./design-day-grid";
+import {
+  dayGrid,
+  dayGridHeight,
+  MONTH_WEEKS,
+  WeekdayRow,
+} from "./design-day-grid";
 import { monthWithYearOf } from "./design-month-name";
 import { PatternKeys, patternPagesOf, shiftInput } from "./design-shift-input";
 import { fieldHint, fieldLabel, srOnly } from "./design-ui";
@@ -210,7 +215,13 @@ export function RepeatCalendar({
         </button>
       </div>
       <WeekdayRow compact />
-      <section aria-label="繰り返しの並び" className={dayGrid}>
+      {/* Room for six weeks, as the calendar keeps, so the keys under it
+      stay put as the months turn, typing included. */}
+      <section
+        aria-label="繰り返しの並び"
+        className={dayGrid}
+        style={{ alignContent: "start", minHeight: dayGridHeight(MONTH_WEEKS) }}
+      >
         {dates.map((date) => {
           const key = dateKey(date);
           const index = daysFrom(anchor, date);

@@ -84,6 +84,9 @@ struct RepeatCalendar: View {
           }
         }
       }
+      // Room for six weeks, as the calendar keeps, so the keys under it
+      // stay put as the months turn, typing included.
+      .frame(height: MonthPage.height, alignment: .top)
     }
     .padding(.vertical, 4)
     PatternKeys(patterns: patterns, page: $keyPage, onPick: pick)
