@@ -53,20 +53,22 @@ struct RepeatCalendar<Accessory: View>: View {
   @State private var keys = 0
 
   private static var span: Int { 24 }
-  /// The month the pages count from: this one.
-  private var thisMonth: Day { Day.today.firstOfMonth }
+  /// The month the pages count from: the order's as it opened, so an
+  /// order of years ago is among them.
+  @State private var origin: Day?
+  private var base: Day { origin ?? anchor.firstOfMonth }
 
   var body: some View {
     let shown = month ?? anchor.firstOfMonth
     VStack(spacing: 12) {
       HStack {
         MonthTitleButton(
-          month: shown, first: thisMonth.addingMonths(-Self.span),
-          last: thisMonth.addingMonths(Self.span)
+          month: shown, first: base.addingMonths(-Self.span),
+          last: base.addingMonths(Self.span)
         ) { picked in
           month = picked
         } label: {
-          RollingMonthTitle(position: position) { thisMonth.addingMonths($0 - Self.span) }
+          RollingMonthTitle(position: position) { base.addingMonths($0 - Self.span) }
             .foregroundStyle(colors.textPrimary)
         }
         Spacer(minLength: 8)
@@ -112,12 +114,15 @@ struct RepeatCalendar<Accessory: View>: View {
     // Its first day and length under the page's title.
     .navigationSubtitle(
       dayName(anchor) + "から" + (sequence.isEmpty ? "" : "・\(sequence.count)日ごとに繰り返し"))
-    .onAppear { month = month ?? anchor.firstOfMonth }
+    .onAppear {
+      origin = origin ?? anchor.firstOfMonth
+      month = month ?? anchor.firstOfMonth
+    }
   }
 
   /// The months side by side, a swipe turning one.
   private var pager: some View {
-    let months = (-Self.span...Self.span).map { thisMonth.addingMonths($0) }
+    let months = (-Self.span...Self.span).map { base.addingMonths($0) }
     return ScrollView(.horizontal) {
       LazyHStack(spacing: 0) {
         ForEach(months, id: \.self) { month in
