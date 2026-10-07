@@ -59,6 +59,8 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   /// Sent in a one-to-one chat by someone the reader had blocked: never
   /// delivered, and shown as nothing.
   public var hidden = false
+  /// The line it answers (返信), by its seq in the same chat.
+  public var replyTo: Int64?
   public var id: Int64 { seq }
 
   /// Its first link's page, under its words.
@@ -340,6 +342,17 @@ extension DatabaseMigrator {
       .execute(db)
     }
   }
+
+  mutating func registerChatReplies() {
+    registerMigration("Keep the line each answers") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "replyTo" INTEGER
+        """
+      )
+      .execute(db)
+    }
+  }
 }
 
 /// What the group's socket brings of its chats, and the member's edits.
@@ -388,6 +401,7 @@ public enum Chats {
     row.photo = line.hasPhoto ? linePhoto(line.photo) : nil
     row.preview = line.hasPreview ? LinePreview(line.preview) : nil
     row.hidden = line.hidden
+    row.replyTo = line.replyTo == 0 ? nil : Int64(line.replyTo)
     try ChatLineRow.insert { row }.execute(db)
   }
 
@@ -543,6 +557,8 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public var photo: LinePhoto?
   /// Its first link's page.
   public var preview: LinePreview?
+  /// The line it answers (返信), by its seq.
+  public var replyTo: Int64?
   public var id: String { opID }
 }
 
@@ -583,7 +599,8 @@ extension Chats {
             opID: edit.opID, text: send.text, madeAtMs: row.madeAtMs,
             days: send.days.compactMap(Day.init), poll: send.poll,
             photo: send.hasPhoto ? linePhoto(send.photo) : nil,
-            preview: send.hasPreview ? LinePreview(send.preview) : nil))
+            preview: send.hasPreview ? LinePreview(send.preview) : nil,
+            replyTo: send.replyTo == 0 ? nil : Int64(send.replyTo)))
       case .change(let change) where change.threadID == threadID:
         if let at = lines.firstIndex(where: { $0.seq == Int64(change.seq) }) {
           lines[at].text = change.text
@@ -732,7 +749,8 @@ extension Chats {
         waiting = WaitingLine(
           opID: edit.opID, text: send.text, madeAtMs: madeAtMs, days: send.days.compactMap(Day.init),
           poll: send.poll, photo: send.hasPhoto ? linePhoto(send.photo) : nil,
-          preview: send.hasPreview ? LinePreview(send.preview) : nil)
+          preview: send.hasPreview ? LinePreview(send.preview) : nil,
+          replyTo: send.replyTo == 0 ? nil : Int64(send.replyTo))
       default: break
       }
     }

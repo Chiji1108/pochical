@@ -1,0 +1,1 @@
+ALTER TABLE `chat_lines` ADD `reply_to` integer;

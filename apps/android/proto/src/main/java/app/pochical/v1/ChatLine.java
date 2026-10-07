@@ -1197,6 +1197,47 @@ public  final class ChatLine extends
     hidden_ = false;
   }
 
+  public static final int REPLY_TO_FIELD_NUMBER = 18;
+  private long replyTo_;
+  /**
+   * <pre>
+   * The line it answers (返信), by its seq in the same chat; 0 for none,
+   * and none once unsent.
+   * </pre>
+   *
+   * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
+   * @return The replyTo.
+   */
+  @java.lang.Override
+  public long getReplyTo() {
+    return replyTo_;
+  }
+  /**
+   * <pre>
+   * The line it answers (返信), by its seq in the same chat; 0 for none,
+   * and none once unsent.
+   * </pre>
+   *
+   * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
+   * @param value The replyTo to set.
+   */
+  private void setReplyTo(long value) {
+    
+    replyTo_ = value;
+  }
+  /**
+   * <pre>
+   * The line it answers (返信), by its seq in the same chat; 0 for none,
+   * and none once unsent.
+   * </pre>
+   *
+   * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
+   */
+  private void clearReplyTo() {
+
+    replyTo_ = 0L;
+  }
+
   public static app.pochical.v1.ChatLine parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2523,6 +2564,49 @@ public  final class ChatLine extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The line it answers (返信), by its seq in the same chat; 0 for none,
+     * and none once unsent.
+     * </pre>
+     *
+     * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
+     * @return The replyTo.
+     */
+    @java.lang.Override
+    public long getReplyTo() {
+      return instance.getReplyTo();
+    }
+    /**
+     * <pre>
+     * The line it answers (返信), by its seq in the same chat; 0 for none,
+     * and none once unsent.
+     * </pre>
+     *
+     * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
+     * @param value The replyTo to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReplyTo(long value) {
+      copyOnWrite();
+      instance.setReplyTo(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The line it answers (返信), by its seq in the same chat; 0 for none,
+     * and none once unsent.
+     * </pre>
+     *
+     * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReplyTo() {
+      copyOnWrite();
+      instance.clearReplyTo();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatLine)
   }
   @java.lang.Override
@@ -2559,12 +2643,13 @@ public  final class ChatLine extends
             "photo_",
             "preview_",
             "hidden_",
+            "replyTo_",
           };
           java.lang.String info =
-              "\u0000\u0011\u0000\u0001\u0001\u0011\u0011\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
+              "\u0000\u0012\u0000\u0001\u0001\u0012\u0012\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
               "\u0003\u0208\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003" +
               "\u000b\u021a\f\u0007\r\u001b\u000e\u0208\u000f\u1009\u0000\u0010\u1009\u0001\u0011" +
-              "\u0007";
+              "\u0007\u0012\u0003";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

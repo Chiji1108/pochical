@@ -318,4 +318,15 @@ public interface ChatLineOrBuilder extends
    * @return The hidden.
    */
   boolean getHidden();
+
+  /**
+   * <pre>
+   * The line it answers (返信), by its seq in the same chat; 0 for none,
+   * and none once unsent.
+   * </pre>
+   *
+   * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
+   * @return The replyTo.
+   */
+  long getReplyTo();
 }

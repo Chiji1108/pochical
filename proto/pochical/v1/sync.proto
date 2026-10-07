@@ -466,6 +466,9 @@ message ChatLine {
   // Sent in a one-to-one chat by someone the reader had blocked: never
   // delivered to them, so it comes without its content and shows nothing.
   bool hidden = 17;
+  // The line it answers (返信), by its seq in the same chat; 0 for none,
+  // and none once unsent.
+  uint64 reply_to = 18;
 }
 
 // A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
@@ -574,6 +577,8 @@ message ChatSend {
   // The page of the words' first link, as GetLinkPreview gave it; none
   // when the sender took it off (×) or it had not come.
   LinkPreview preview = 6;
+  // The line it answers (返信), an earlier one of the same chat; 0 for none.
+  uint64 reply_to = 7;
 }
 
 // New words for one of the member's own lines of words (編集).

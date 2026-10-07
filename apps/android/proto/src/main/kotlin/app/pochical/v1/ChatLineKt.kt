@@ -728,6 +728,33 @@ public object ChatLineKt {
     public fun clearHidden() {
       _builder.clearHidden()
     }
+
+    /**
+     * ```
+     * The line it answers (返信), by its seq in the same chat; 0 for none,
+     * and none once unsent.
+     * ```
+     *
+     * `uint64 reply_to = 18 [json_name = "replyTo"];`
+     */
+    public var replyTo: kotlin.Long
+      @kotlin.jvm.JvmName("getReplyTo")
+        get() = _builder.replyTo
+      @kotlin.jvm.JvmName("setReplyTo")
+        set(value) {
+        _builder.replyTo = value
+      }
+    /**
+     * ```
+     * The line it answers (返信), by its seq in the same chat; 0 for none,
+     * and none once unsent.
+     * ```
+     *
+     * `uint64 reply_to = 18 [json_name = "replyTo"];`
+     */
+    public fun clearReplyTo() {
+      _builder.clearReplyTo()
+    }
   }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =

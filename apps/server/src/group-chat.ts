@@ -176,6 +176,7 @@ const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
     poll: row.poll,
     preview: row.preview ?? undefined,
     reactions: reactionsOf(db, row),
+    replyTo: BigInt(row.replyTo ?? 0),
     sentAtMs: BigInt(row.sentAt.getTime()),
     seq: BigInt(row.seq),
     text: row.text,
@@ -399,6 +400,23 @@ const lineAt = (
     .get();
 
 /**
+ * Whether a new line may answer `replyTo` (返信): a line of the same chat
+ * the writer can see, not taken back.
+ */
+const answers = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  threadId: string,
+  replyTo: bigint
+): boolean => {
+  if (replyTo === 0n) {
+    return false;
+  }
+  const line = lineAt(db, threadId, replyTo);
+  return line !== undefined && !line.unsent && line.hiddenFrom !== userId;
+};
+
+/**
  * Moves the member's mark in the chat forward to `seq` at `cursor`; none
  * when it is there already.
  */
@@ -579,6 +597,7 @@ const takeWords = (
             photo: null,
             pinnedAt: null,
             preview: null,
+            replyTo: null,
             text,
             unsent: true,
           }
@@ -761,6 +780,64 @@ type Taken = {
   refused?: Change;
 };
 
+/** A new line at the chat's end, when it fits and was not taken before. */
+const takeSend = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  opId: string,
+  send: ChatSend,
+  cursor: number
+): Taken => {
+  const taken = db
+    .select({ opId: chatLines.opId })
+    .from(chatLines)
+    .where(eq(chatLines.opId, opId))
+    .get();
+  const { photo, replyTo } = send;
+  const fits =
+    photo === undefined ? fitsSend(send) : fitsPhoto(db, userId, send);
+  if (taken !== undefined || !fits) {
+    return {};
+  }
+  if (photo !== undefined) {
+    db.update(chatPhotos)
+      .set({ sent: true })
+      .where(eq(chatPhotos.id, photo.id))
+      .run();
+  }
+  const row = db
+    .insert(chatLines)
+    .values({
+      authorId: userId,
+      createdCursor: cursor,
+      cursor,
+      days: send.days.length === 0 ? null : send.days,
+      // Not delivered to the other of a one-to-one chat who blocked
+      // its writer.
+      hiddenFrom: blockedBy(db, send.threadId, userId),
+      opId,
+      photo:
+        photo === undefined
+          ? null
+          : { height: photo.height, id: photo.id, width: photo.width },
+      poll: send.poll,
+      // A page goes with words alone.
+      preview: send.text === "" ? null : keptPreview(send.preview),
+      // A line it cannot answer, as one taken back meanwhile, goes without
+      // its quote rather than not at all.
+      replyTo: answers(db, userId, send.threadId, replyTo)
+        ? Number(replyTo)
+        : null,
+      sentAt: new Date(),
+      seq: chatHead(db, send.threadId) + 1,
+      text: send.text,
+      threadId: send.threadId,
+    })
+    .returning()
+    .get();
+  return { change: chatLineChange(db, row) };
+};
+
 /**
  * A member's edit of a chat, taken at `cursor` when it is theirs to make:
  * a new line at the chat's end, new words or a taking back of one of
@@ -784,52 +861,7 @@ export const takeChatEdit = (
   }
   switch (kind.case) {
     case "send": {
-      const taken = db
-        .select({ opId: chatLines.opId })
-        .from(chatLines)
-        .where(eq(chatLines.opId, opId))
-        .get();
-      const { photo } = kind.value;
-      const fits =
-        photo === undefined
-          ? fitsSend(kind.value)
-          : fitsPhoto(db, userId, kind.value);
-      if (taken !== undefined || !fits) {
-        return {};
-      }
-      if (photo !== undefined) {
-        db.update(chatPhotos)
-          .set({ sent: true })
-          .where(eq(chatPhotos.id, photo.id))
-          .run();
-      }
-      const row = db
-        .insert(chatLines)
-        .values({
-          authorId: userId,
-          createdCursor: cursor,
-          cursor,
-          days: kind.value.days.length === 0 ? null : kind.value.days,
-          // Not delivered to the other of a one-to-one chat who blocked
-          // its writer.
-          hiddenFrom: blockedBy(db, kind.value.threadId, userId),
-          opId,
-          photo:
-            photo === undefined
-              ? null
-              : { height: photo.height, id: photo.id, width: photo.width },
-          poll: kind.value.poll,
-          // A page goes with words alone.
-          preview:
-            kind.value.text === "" ? null : keptPreview(kind.value.preview),
-          sentAt: new Date(),
-          seq: chatHead(db, kind.value.threadId) + 1,
-          text: kind.value.text,
-          threadId: kind.value.threadId,
-        })
-        .returning()
-        .get();
-      return { change: chatLineChange(db, row) };
+      return takeSend(db, userId, opId, kind.value, cursor);
     }
     case "change":
     case "unsend": {
