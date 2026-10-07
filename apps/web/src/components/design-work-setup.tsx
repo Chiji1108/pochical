@@ -195,9 +195,9 @@ export function WorkSetupSteps({
   // takes the screen from the tab bar.
   onOrdering?: (ordering: boolean) => void;
 }) {
-  const [step, setStepState] = useState<Step>(initialStep ?? { name: "kind" });
-  const setStep = (next: Step) => {
-    setStepState(next);
+  const [step, setStep] = useState<Step>(initialStep ?? { name: "kind" });
+  const goTo = (next: Step) => {
+    setStep(next);
     onOrdering?.(next.name === "order");
   };
 
@@ -212,7 +212,7 @@ export function WorkSetupSteps({
         sequence: template.sequence,
       });
     } else {
-      setStep({ name: "order", template });
+      goTo({ name: "order", template });
     }
   }
 
@@ -223,17 +223,17 @@ export function WorkSetupSteps({
           first={!onExit}
           onBack={onExit ?? onBack}
           onRoster={() => {
-            setStep({ name: "roster" });
+            goTo({ name: "roster" });
           }}
           onRotation={() => {
-            setStep({ name: "rotation" });
+            goTo({ name: "rotation" });
           }}
         />
       )}
       {step.name === "roster" && (
         <TemplateStep
           onBack={() => {
-            setStep({ name: "kind" });
+            goTo({ name: "kind" });
           }}
           onChoose={(template) => {
             onFinish({ patternKeys: template.patternKeys });
@@ -246,7 +246,7 @@ export function WorkSetupSteps({
       {step.name === "rotation" && (
         <TemplateStep
           onBack={() => {
-            setStep({ name: "kind" });
+            goTo({ name: "kind" });
           }}
           onChoose={chooseRotation}
           rows={Boolean(onExit)}
@@ -260,7 +260,7 @@ export function WorkSetupSteps({
           from={from}
           month={month}
           onBack={() => {
-            setStep({ name: "rotation" });
+            goTo({ name: "rotation" });
           }}
           onStart={(order) => {
             onFinish({ ...order, patternKeys: step.template.patternKeys });
