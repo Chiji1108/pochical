@@ -1316,6 +1316,12 @@ struct MessageBubble: View {
   /// Its first link's page, under its words.
   var preview: LinePreview?
 
+  /// The invitation code of its first link, when that is one of
+  /// Pochical's invitations.
+  private var invitation: String? {
+    firstLink(text).flatMap { URL(string: $0) }.flatMap(inviteCode(of:))
+  }
+
   /// How wide a bubble with a page is, as /design's linked bubble.
   private static var linkedWidth: CGFloat { 240 }
 
@@ -1326,11 +1332,15 @@ struct MessageBubble: View {
         .lineSpacing(3)
         .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
         .tint(mine ? colors.accentOnFill : colors.accentDefault)
-      if let preview {
+      // An invitation's card takes the place of the one page.
+      if let invitation {
+        InviteCard(code: invitation, mine: mine)
+      } else if let preview {
         LinkPreviewCard(preview: preview, mine: mine)
       }
     }
-    .frame(width: preview == nil ? nil : Self.linkedWidth, alignment: .leading)
+    .frame(
+      width: preview == nil && invitation == nil ? nil : Self.linkedWidth, alignment: .leading)
     .padding(.horizontal, 12)
     .padding(.vertical, 8)
       .background(
