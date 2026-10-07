@@ -241,5 +241,26 @@ public interface ChangeOrBuilder extends
    */
   app.pochical.v1.UnreadCount getUnreadCount();
 
+  /**
+   * <pre>
+   * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+   * and blocking); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+   * @return Whether the block field is set.
+   */
+  boolean hasBlock();
+  /**
+   * <pre>
+   * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+   * and blocking); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+   * @return The block.
+   */
+  app.pochical.v1.Block getBlock();
+
   public app.pochical.v1.Change.KindCase getKindCase();
 }

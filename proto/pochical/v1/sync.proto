@@ -197,7 +197,18 @@ message Change {
     // read, from the group, for badges without a socket to each group
     // (spec/sync-protocol.md, Unread summary).
     UnreadCount unread_count = 16;
+    // Someone the user has blocked, or no longer (spec/chat.md, Reporting
+    // and blocking); User DO only.
+    Block block = 17;
   }
+}
+
+// Someone the user has blocked, in every group they share: one value per
+// person, the latest.
+message Block {
+  string user_id = 1;
+  // Blocked, or unblocked since.
+  bool on = 2;
 }
 
 // How many lines of a group's chat the user has not read: others' lines
@@ -427,6 +438,9 @@ message ChatLine {
   ChatPhoto photo = 15;
   // Its first link's page, under its words; none once unsent.
   LinkPreview preview = 16;
+  // Sent in a one-to-one chat by someone the reader had blocked: never
+  // delivered to them, so it comes without its content and shows nothing.
+  bool hidden = 17;
 }
 
 // A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the

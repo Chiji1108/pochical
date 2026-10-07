@@ -18,6 +18,13 @@ public protocol Pochical_V1_ChatServiceClientInterface: Sendable {
     /// found; INVALID_ARGUMENT for a URL that is not http(s) on 80 or 443.
     @available(iOS 13, *)
     func `getLinkPreview`(request: Pochical_V1_GetLinkPreviewRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_GetLinkPreviewResponse>
+
+    /// Tells Pochical about another member's line or about the member
+    /// (spec/chat.md, Reporting and blocking): kept with what was reported,
+    /// and nobody in the group is told. Members of the group only, about
+    /// someone else; NOT_FOUND for a line the reporter cannot read.
+    @available(iOS 13, *)
+    func `report`(request: Pochical_V1_ReportRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_ReportResponse>
 }
 
 /// Concrete implementation of `Pochical_V1_ChatServiceClientInterface`.
@@ -33,9 +40,15 @@ public final class Pochical_V1_ChatServiceClient: Pochical_V1_ChatServiceClientI
         return await self.client.unary(path: "/pochical.v1.ChatService/GetLinkPreview", idempotencyLevel: .noSideEffects, request: request, headers: headers)
     }
 
+    @available(iOS 13, *)
+    public func `report`(request: Pochical_V1_ReportRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_ReportResponse> {
+        return await self.client.unary(path: "/pochical.v1.ChatService/Report", idempotencyLevel: .unknown, request: request, headers: headers)
+    }
+
     public enum Metadata {
         public enum Methods {
             public static let getLinkPreview = Connect.MethodSpec(name: "GetLinkPreview", service: "pochical.v1.ChatService", type: .unary)
+            public static let report = Connect.MethodSpec(name: "Report", service: "pochical.v1.ChatService", type: .unary)
         }
     }
 }

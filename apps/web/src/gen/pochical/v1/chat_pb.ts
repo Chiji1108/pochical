@@ -2,15 +2,93 @@
 // @generated from file pochical/v1/chat.proto (package pochical.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file pochical/v1/chat.proto.
  */
 export const file_pochical_v1_chat: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS9jaGF0LnByb3RvEgtwb2NoaWNhbC52MSIkChVHZXRMaW5rUHJldmlld1JlcXVlc3QSCwoDdXJsGAEgASgJIkMKFkdldExpbmtQcmV2aWV3UmVzcG9uc2USKQoHcHJldmlldxgBIAEoCzIYLnBvY2hpY2FsLnYxLkxpbmtQcmV2aWV3InQKC0xpbmtQcmV2aWV3EgsKA3VybBgBIAEoCRINCgV0aXRsZRgCIAEoCRIMCgRzaXRlGAMgASgJEhAKCGltYWdlX2lkGAQgASgJEhMKC2ltYWdlX3dpZHRoGAUgASgNEhQKDGltYWdlX2hlaWdodBgGIAEoDTJtCgtDaGF0U2VydmljZRJeCg5HZXRMaW5rUHJldmlldxIiLnBvY2hpY2FsLnYxLkdldExpbmtQcmV2aWV3UmVxdWVzdBojLnBvY2hpY2FsLnYxLkdldExpbmtQcmV2aWV3UmVzcG9uc2UiA5ACAUJpCg9hcHAucG9jaGljYWwudjFCCUNoYXRQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
+  fileDesc("ChZwb2NoaWNhbC92MS9jaGF0LnByb3RvEgtwb2NoaWNhbC52MSKUAQoNUmVwb3J0UmVxdWVzdBIQCghncm91cF9pZBgBIAEoCRIpCgZyZWFzb24YAiABKA4yGS5wb2NoaWNhbC52MS5SZXBvcnRSZWFzb24SKQoEbGluZRgDIAEoCzIZLnBvY2hpY2FsLnYxLlJlcG9ydGVkTGluZUgAEhEKB3VzZXJfaWQYBCABKAlIAEIICgZ0YXJnZXQiLgoMUmVwb3J0ZWRMaW5lEhEKCXRocmVhZF9pZBgBIAEoCRILCgNzZXEYAiABKAQiEAoOUmVwb3J0UmVzcG9uc2UiJAoVR2V0TGlua1ByZXZpZXdSZXF1ZXN0EgsKA3VybBgBIAEoCSJDChZHZXRMaW5rUHJldmlld1Jlc3BvbnNlEikKB3ByZXZpZXcYASABKAsyGC5wb2NoaWNhbC52MS5MaW5rUHJldmlldyJ0CgtMaW5rUHJldmlldxILCgN1cmwYASABKAkSDQoFdGl0bGUYAiABKAkSDAoEc2l0ZRgDIAEoCRIQCghpbWFnZV9pZBgEIAEoCRITCgtpbWFnZV93aWR0aBgFIAEoDRIUCgxpbWFnZV9oZWlnaHQYBiABKA0quQEKDFJlcG9ydFJlYXNvbhIdChlSRVBPUlRfUkVBU09OX1VOU1BFQ0lGSUVEEAASFgoSUkVQT1JUX1JFQVNPTl9TUEFNEAESHAoYUkVQT1JUX1JFQVNPTl9IQVJBU1NNRU5UEAISGgoWUkVQT1JUX1JFQVNPTl9FWFBMSUNJVBADEh8KG1JFUE9SVF9SRUFTT05fSU1QRVJTT05BVElPThAEEhcKE1JFUE9SVF9SRUFTT05fT1RIRVIQBTKwAQoLQ2hhdFNlcnZpY2USXgoOR2V0TGlua1ByZXZpZXcSIi5wb2NoaWNhbC52MS5HZXRMaW5rUHJldmlld1JlcXVlc3QaIy5wb2NoaWNhbC52MS5HZXRMaW5rUHJldmlld1Jlc3BvbnNlIgOQAgESQQoGUmVwb3J0EhoucG9jaGljYWwudjEuUmVwb3J0UmVxdWVzdBobLnBvY2hpY2FsLnYxLlJlcG9ydFJlc3BvbnNlQmkKD2FwcC5wb2NoaWNhbC52MUIJQ2hhdFByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
+
+/**
+ * @generated from message pochical.v1.ReportRequest
+ */
+export type ReportRequest = Message<"pochical.v1.ReportRequest"> & {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId: string;
+
+  /**
+   * @generated from field: pochical.v1.ReportReason reason = 2;
+   */
+  reason: ReportReason;
+
+  /**
+   * @generated from oneof pochical.v1.ReportRequest.target
+   */
+  target: {
+    /**
+     * Someone else's line, sent with the few around it.
+     *
+     * @generated from field: pochical.v1.ReportedLine line = 3;
+     */
+    value: ReportedLine;
+    case: "line";
+  } | {
+    /**
+     * A member, sent with their name in the group.
+     *
+     * @generated from field: string user_id = 4;
+     */
+    value: string;
+    case: "userId";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * Describes the message pochical.v1.ReportRequest.
+ * Use `create(ReportRequestSchema)` to create a new message.
+ */
+export const ReportRequestSchema: GenMessage<ReportRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_chat, 0);
+
+/**
+ * @generated from message pochical.v1.ReportedLine
+ */
+export type ReportedLine = Message<"pochical.v1.ReportedLine"> & {
+  /**
+   * @generated from field: string thread_id = 1;
+   */
+  threadId: string;
+
+  /**
+   * @generated from field: uint64 seq = 2;
+   */
+  seq: bigint;
+};
+
+/**
+ * Describes the message pochical.v1.ReportedLine.
+ * Use `create(ReportedLineSchema)` to create a new message.
+ */
+export const ReportedLineSchema: GenMessage<ReportedLine> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_chat, 1);
+
+/**
+ * @generated from message pochical.v1.ReportResponse
+ */
+export type ReportResponse = Message<"pochical.v1.ReportResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.ReportResponse.
+ * Use `create(ReportResponseSchema)` to create a new message.
+ */
+export const ReportResponseSchema: GenMessage<ReportResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_chat, 2);
 
 /**
  * @generated from message pochical.v1.GetLinkPreviewRequest
@@ -27,7 +105,7 @@ export type GetLinkPreviewRequest = Message<"pochical.v1.GetLinkPreviewRequest">
  * Use `create(GetLinkPreviewRequestSchema)` to create a new message.
  */
 export const GetLinkPreviewRequestSchema: GenMessage<GetLinkPreviewRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_chat, 0);
+  messageDesc(file_pochical_v1_chat, 3);
 
 /**
  * @generated from message pochical.v1.GetLinkPreviewResponse
@@ -44,7 +122,7 @@ export type GetLinkPreviewResponse = Message<"pochical.v1.GetLinkPreviewResponse
  * Use `create(GetLinkPreviewResponseSchema)` to create a new message.
  */
 export const GetLinkPreviewResponseSchema: GenMessage<GetLinkPreviewResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_chat, 1);
+  messageDesc(file_pochical_v1_chat, 4);
 
 /**
  * A link's page as a message carries it, sent with the message so every
@@ -98,7 +176,60 @@ export type LinkPreview = Message<"pochical.v1.LinkPreview"> & {
  * Use `create(LinkPreviewSchema)` to create a new message.
  */
 export const LinkPreviewSchema: GenMessage<LinkPreview> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_chat, 2);
+  messageDesc(file_pochical_v1_chat, 5);
+
+/**
+ * Why something is reported (spec/chat.md, Reporting and blocking).
+ *
+ * @generated from enum pochical.v1.ReportReason
+ */
+export enum ReportReason {
+  /**
+   * @generated from enum value: REPORT_REASON_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * 迷惑・スパム
+   *
+   * @generated from enum value: REPORT_REASON_SPAM = 1;
+   */
+  SPAM = 1,
+
+  /**
+   * 嫌がらせ・いじめ
+   *
+   * @generated from enum value: REPORT_REASON_HARASSMENT = 2;
+   */
+  HARASSMENT = 2,
+
+  /**
+   * 性的・暴力的な内容
+   *
+   * @generated from enum value: REPORT_REASON_EXPLICIT = 3;
+   */
+  EXPLICIT = 3,
+
+  /**
+   * なりすまし
+   *
+   * @generated from enum value: REPORT_REASON_IMPERSONATION = 4;
+   */
+  IMPERSONATION = 4,
+
+  /**
+   * その他
+   *
+   * @generated from enum value: REPORT_REASON_OTHER = 5;
+   */
+  OTHER = 5,
+}
+
+/**
+ * Describes the enum pochical.v1.ReportReason.
+ */
+export const ReportReasonSchema: GenEnum<ReportReason> = /*@__PURE__*/
+  enumDesc(file_pochical_v1_chat, 0);
 
 /**
  * What a chat asks the server beyond its socket (spec/chat.md).
@@ -118,6 +249,19 @@ export const ChatService: GenService<{
     methodKind: "unary";
     input: typeof GetLinkPreviewRequestSchema;
     output: typeof GetLinkPreviewResponseSchema;
+  },
+  /**
+   * Tells Pochical about another member's line or about the member
+   * (spec/chat.md, Reporting and blocking): kept with what was reported,
+   * and nobody in the group is told. Members of the group only, about
+   * someone else; NOT_FOUND for a line the reporter cannot read.
+   *
+   * @generated from rpc pochical.v1.ChatService.Report
+   */
+  report: {
+    methodKind: "unary";
+    input: typeof ReportRequestSchema;
+    output: typeof ReportResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_pochical_v1_chat, 0);

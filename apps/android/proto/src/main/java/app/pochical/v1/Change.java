@@ -40,6 +40,7 @@ public  final class Change extends
     CHAT_LINE(14),
     READ_MARK(15),
     UNREAD_COUNT(16),
+    BLOCK(17),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -70,6 +71,7 @@ public  final class Change extends
         case 14: return CHAT_LINE;
         case 15: return READ_MARK;
         case 16: return UNREAD_COUNT;
+        case 17: return BLOCK;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -1012,6 +1014,81 @@ public  final class Change extends
    */
   private void clearUnreadCount() {
     if (kindCase_ == 16) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int BLOCK_FIELD_NUMBER = 17;
+  /**
+   * <pre>
+   * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+   * and blocking); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+   */
+  @java.lang.Override
+  public boolean hasBlock() {
+    return kindCase_ == 17;
+  }
+  /**
+   * <pre>
+   * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+   * and blocking); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.Block getBlock() {
+    if (kindCase_ == 17) {
+       return (app.pochical.v1.Block) kind_;
+    }
+    return app.pochical.v1.Block.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+   * and blocking); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+   */
+  private void setBlock(app.pochical.v1.Block value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 17;
+  }
+  /**
+   * <pre>
+   * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+   * and blocking); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+   */
+  private void mergeBlock(app.pochical.v1.Block value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 17 &&
+        kind_ != app.pochical.v1.Block.getDefaultInstance()) {
+      kind_ = app.pochical.v1.Block.newBuilder((app.pochical.v1.Block) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 17;
+  }
+  /**
+   * <pre>
+   * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+   * and blocking); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+   */
+  private void clearBlock() {
+    if (kindCase_ == 17) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -2059,6 +2136,84 @@ public  final class Change extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+     * and blocking); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+     */
+    @java.lang.Override
+    public boolean hasBlock() {
+      return instance.hasBlock();
+    }
+    /**
+     * <pre>
+     * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+     * and blocking); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.Block getBlock() {
+      return instance.getBlock();
+    }
+    /**
+     * <pre>
+     * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+     * and blocking); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+     */
+    public Builder setBlock(app.pochical.v1.Block value) {
+      copyOnWrite();
+      instance.setBlock(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+     * and blocking); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+     */
+    public Builder setBlock(
+        app.pochical.v1.Block.Builder builderForValue) {
+      copyOnWrite();
+      instance.setBlock(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+     * and blocking); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+     */
+    public Builder mergeBlock(app.pochical.v1.Block value) {
+      copyOnWrite();
+      instance.mergeBlock(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+     * and blocking); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Block block = 17 [json_name = "block"];</code>
+     */
+    public Builder clearBlock() {
+      copyOnWrite();
+      instance.clearBlock();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
   }
   @java.lang.Override
@@ -2093,11 +2248,13 @@ public  final class Change extends
             app.pochical.v1.ChatLine.class,
             app.pochical.v1.ReadMark.class,
             app.pochical.v1.UnreadCount.class,
+            app.pochical.v1.Block.class,
           };
           java.lang.String info =
-              "\u0000\u0010\u0001\u0000\u0001\u0010\u0010\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
+              "\u0000\u0011\u0001\u0000\u0001\u0011\u0011\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
               "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000" +
-              "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000";
+              "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
+              "<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

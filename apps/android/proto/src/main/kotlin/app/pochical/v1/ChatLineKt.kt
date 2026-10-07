@@ -701,6 +701,33 @@ public object ChatLineKt {
 
     public val ChatLineKt.Dsl.previewOrNull: app.pochical.v1.LinkPreview?
       get() = _builder.previewOrNull
+
+    /**
+     * ```
+     * Sent in a one-to-one chat by someone the reader had blocked: never
+     * delivered to them, so it comes without its content and shows nothing.
+     * ```
+     *
+     * `bool hidden = 17 [json_name = "hidden"];`
+     */
+    public var hidden: kotlin.Boolean
+      @kotlin.jvm.JvmName("getHidden")
+        get() = _builder.hidden
+      @kotlin.jvm.JvmName("setHidden")
+        set(value) {
+        _builder.hidden = value
+      }
+    /**
+     * ```
+     * Sent in a one-to-one chat by someone the reader had blocked: never
+     * delivered to them, so it comes without its content and shows nothing.
+     * ```
+     *
+     * `bool hidden = 17 [json_name = "hidden"];`
+     */
+    public fun clearHidden() {
+      _builder.clearHidden()
+    }
   }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =

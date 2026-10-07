@@ -30,6 +30,9 @@ struct ChatList: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
   @Fetch private var chats = ChatThreadsRequest.Value()
+  /// Whom the user has blocked: their one-to-one chats are hidden and none
+  /// can be started.
+  @Fetch(BlocksRequest()) private var blocked: Set<String> = []
   let group: GroupRow
   /// Everyone in the group now.
   let members: [GroupMember]
@@ -43,14 +46,18 @@ struct ChatList: View {
       meID.map { me in
         chats.writers.filter {
           $0.userID != me && chats.threads.contains(directThread(me, $0.userID))
+            && !blocked.contains($0.userID)
         }
       } ?? []
     let untouched = members.filter { member in
       member.userID != meID && !talking.contains { $0.userID == member.userID }
+        && !blocked.contains(member.userID)
     }
     VStack(spacing: 0) {
       if let meID {
-        ChatRow(group: group, threadID: groupThread, me: meID, label: "全体チャット") {
+        ChatRow(
+          group: group, threadID: groupThread, me: meID, label: "全体チャット", blocked: blocked
+        ) {
           Image(systemName: "bubble.left.and.bubble.right")
             .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(colors.accentDefault)
@@ -126,6 +133,8 @@ private struct ChatRow<Icon: View>: View {
   let threadID: String
   let me: String
   let label: String
+  /// Whom the user has blocked: their latest line is folded.
+  var blocked: Set<String> = []
   @ViewBuilder let icon: () -> Icon
   let onOpen: () -> Void
 
@@ -195,6 +204,9 @@ private struct ChatRow<Icon: View>: View {
     guard let last = summary.last else { return "まだメッセージはありません" }
     if last.unsent {
       return unsentLine(chat.names[last.authorID], mine: last.authorID == me)
+    }
+    if blocked.contains(last.authorID) {
+      return "ブロック中のメンバーのメッセージ"
     }
     if last.photo != nil {
       return last.authorID == me ? "自分：写真を送りました" : "写真を送りました"

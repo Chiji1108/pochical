@@ -35,4 +35,22 @@ public class ChatServiceClient(
     ),
   )
 
+
+  /**
+   *  Tells Pochical about another member's line or about the member
+   *  (spec/chat.md, Reporting and blocking): kept with what was reported,
+   *  and nobody in the group is told. Members of the group only, about
+   *  someone else; NOT_FOUND for a line the reporter cannot read.
+   */
+  override suspend fun report(request: ReportRequest, headers: Headers): ResponseMessage<ReportResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.ChatService/Report",
+      app.pochical.v1.ReportRequest::class,
+      app.pochical.v1.ReportResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
 }

@@ -717,6 +717,16 @@ public nonisolated struct Pochical_V1_Change: Sendable {
     set {kind = .unreadCount(newValue)}
   }
 
+  /// Someone the user has blocked, or no longer (spec/chat.md, Reporting
+  /// and blocking); User DO only.
+  public var block: Pochical_V1_Block {
+    get {
+      if case .block(let v)? = kind {return v}
+      return Pochical_V1_Block()
+    }
+    set {kind = .block(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -747,8 +757,28 @@ public nonisolated struct Pochical_V1_Change: Sendable {
     /// read, from the group, for badges without a socket to each group
     /// (spec/sync-protocol.md, Unread summary).
     case unreadCount(Pochical_V1_UnreadCount)
+    /// Someone the user has blocked, or no longer (spec/chat.md, Reporting
+    /// and blocking); User DO only.
+    case block(Pochical_V1_Block)
 
   }
+
+  public init() {}
+}
+
+/// Someone the user has blocked, in every group they share: one value per
+/// person, the latest.
+public nonisolated struct Pochical_V1_Block: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var userID: String = String()
+
+  /// Blocked, or unblocked since.
+  public var on: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
@@ -1445,6 +1475,13 @@ public nonisolated struct Pochical_V1_ChatLine: @unchecked Sendable {
   public var hasPreview: Bool {_storage._preview != nil}
   /// Clears the value of `preview`. Subsequent reads from it will return its default value.
   public mutating func clearPreview() {_uniqueStorage()._preview = nil}
+
+  /// Sent in a one-to-one chat by someone the reader had blocked: never
+  /// delivered to them, so it comes without its content and shows nothing.
+  public var hidden: Bool {
+    get {_storage._hidden}
+    set {_uniqueStorage()._hidden = newValue}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2648,7 +2685,7 @@ nonisolated extension Pochical_V1_Changes: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Change"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0\u{1}pattern\0\u{3}pattern_order\0\u{3}member_day\0\u{3}member_pattern\0\u{3}repeat_orders\0\u{1}coworker\0\u{3}coworker_order\0\u{3}member_repeat_orders\0\u{1}membership\0\u{3}group_profile\0\u{1}member\0\u{3}chat_line\0\u{3}read_mark\0\u{3}unread_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cursor\0\u{1}day\0\u{1}pattern\0\u{3}pattern_order\0\u{3}member_day\0\u{3}member_pattern\0\u{3}repeat_orders\0\u{1}coworker\0\u{3}coworker_order\0\u{3}member_repeat_orders\0\u{1}membership\0\u{3}group_profile\0\u{1}member\0\u{3}chat_line\0\u{3}read_mark\0\u{3}unread_count\0\u{1}block\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2852,6 +2889,19 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
           self.kind = .unreadCount(v)
         }
       }()
+      case 17: try {
+        var v: Pochical_V1_Block?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .block(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .block(v)
+        }
+      }()
       default: break
       }
     }
@@ -2926,6 +2976,10 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
       guard case .unreadCount(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
+    case .block?: try {
+      guard case .block(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -2934,6 +2988,41 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
   public static func ==(lhs: Pochical_V1_Change, rhs: Pochical_V1_Change) -> Bool {
     if lhs.cursor != rhs.cursor {return false}
     if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_Block: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".Block"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}on\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.userID) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.on) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.userID.isEmpty {
+      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 1)
+    }
+    if self.on != false {
+      try visitor.visitSingularBoolField(value: self.on, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_Block, rhs: Pochical_V1_Block) -> Bool {
+    if lhs.userID != rhs.userID {return false}
+    if lhs.on != rhs.on {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -3863,7 +3952,7 @@ nonisolated extension Pochical_V1_Reset: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatLine"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{1}photo\0\u{1}preview\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{1}photo\0\u{1}preview\0\u{1}hidden\0")
 
   fileprivate class _StorageClass {
     var _threadID: String = String()
@@ -3882,6 +3971,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     var _decided: String = String()
     var _photo: Pochical_V1_ChatPhoto? = nil
     var _preview: Pochical_V1_LinkPreview? = nil
+    var _hidden: Bool = false
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -3908,6 +3998,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       _decided = source._decided
       _photo = source._photo
       _preview = source._preview
+      _hidden = source._hidden
     }
   }
 
@@ -3942,6 +4033,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         case 14: try { try decoder.decodeSingularStringField(value: &_storage._decided) }()
         case 15: try { try decoder.decodeSingularMessageField(value: &_storage._photo) }()
         case 16: try { try decoder.decodeSingularMessageField(value: &_storage._preview) }()
+        case 17: try { try decoder.decodeSingularBoolField(value: &_storage._hidden) }()
         default: break
         }
       }
@@ -4002,6 +4094,9 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       try { if let v = _storage._preview {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
       } }()
+      if _storage._hidden != false {
+        try visitor.visitSingularBoolField(value: _storage._hidden, fieldNumber: 17)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -4027,6 +4122,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._decided != rhs_storage._decided {return false}
         if _storage._photo != rhs_storage._photo {return false}
         if _storage._preview != rhs_storage._preview {return false}
+        if _storage._hidden != rhs_storage._hidden {return false}
         return true
       }
       if !storagesAreEqual {return false}

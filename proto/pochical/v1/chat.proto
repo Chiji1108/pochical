@@ -11,7 +11,46 @@ service ChatService {
   rpc GetLinkPreview(GetLinkPreviewRequest) returns (GetLinkPreviewResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+
+  // Tells Pochical about another member's line or about the member
+  // (spec/chat.md, Reporting and blocking): kept with what was reported,
+  // and nobody in the group is told. Members of the group only, about
+  // someone else; NOT_FOUND for a line the reporter cannot read.
+  rpc Report(ReportRequest) returns (ReportResponse);
 }
+
+// Why something is reported (spec/chat.md, Reporting and blocking).
+enum ReportReason {
+  REPORT_REASON_UNSPECIFIED = 0;
+  // 迷惑・スパム
+  REPORT_REASON_SPAM = 1;
+  // 嫌がらせ・いじめ
+  REPORT_REASON_HARASSMENT = 2;
+  // 性的・暴力的な内容
+  REPORT_REASON_EXPLICIT = 3;
+  // なりすまし
+  REPORT_REASON_IMPERSONATION = 4;
+  // その他
+  REPORT_REASON_OTHER = 5;
+}
+
+message ReportRequest {
+  string group_id = 1;
+  ReportReason reason = 2;
+  oneof target {
+    // Someone else's line, sent with the few around it.
+    ReportedLine line = 3;
+    // A member, sent with their name in the group.
+    string user_id = 4;
+  }
+}
+
+message ReportedLine {
+  string thread_id = 1;
+  uint64 seq = 2;
+}
+
+message ReportResponse {}
 
 message GetLinkPreviewRequest {
   string url = 1;

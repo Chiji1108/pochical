@@ -227,17 +227,23 @@ export const relayTyping = (
 export const broadcastChanges = (
   ctx: DurableObjectState,
   changes: Change[],
-  seenBy?: (change: Change, userId: string) => boolean
+  seenBy?: (change: Change, userId: string) => boolean,
+  // The change as this reader gets it, when it differs by reader.
+  forReader?: (change: Change, userId: string) => Change
 ): void => {
   for (const socket of ctx.getWebSockets()) {
     const attachment = attachmentOf(socket);
     if (attachment?.protocolVersion === undefined) {
       continue;
     }
-    const seen =
+    const visible =
       seenBy === undefined
         ? changes
         : changes.filter((change) => seenBy(change, attachment.userId));
+    const seen =
+      forReader === undefined
+        ? visible
+        : visible.map((change) => forReader(change, attachment.userId));
     if (seen.length > 0) {
       sendChanges(socket, seen);
     }

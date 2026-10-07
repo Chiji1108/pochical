@@ -10,7 +10,21 @@ service UserService {
   rpc GetMe(GetMeRequest) returns (GetMeResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
+
+  // Blocks someone in every group the two share, or unblocks them
+  // (spec/chat.md, Reporting and blocking); their devices hear of it as a
+  // Block change. Blocking oneself is INVALID_ARGUMENT.
+  rpc SetBlocked(SetBlockedRequest) returns (SetBlockedResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
 }
+
+message SetBlockedRequest {
+  string user_id = 1;
+  bool blocked = 2;
+}
+
+message SetBlockedResponse {}
 
 message GetMeRequest {}
 

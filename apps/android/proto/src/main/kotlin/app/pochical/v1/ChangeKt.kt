@@ -500,6 +500,45 @@ public object ChangeKt {
     public fun hasUnreadCount(): kotlin.Boolean {
       return _builder.hasUnreadCount()
     }
+
+    /**
+     * ```
+     * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+     * and blocking); User DO only.
+     * ```
+     *
+     * `.pochical.v1.Block block = 17 [json_name = "block"];`
+     */
+    public var block: app.pochical.v1.Block
+      @kotlin.jvm.JvmName("getBlock")
+        get() = _builder.block
+      @kotlin.jvm.JvmName("setBlock")
+        set(value) {
+        _builder.block = value
+      }
+    /**
+     * ```
+     * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+     * and blocking); User DO only.
+     * ```
+     *
+     * `.pochical.v1.Block block = 17 [json_name = "block"];`
+     */
+    public fun clearBlock() {
+      _builder.clearBlock()
+    }
+    /**
+     * ```
+     * Someone the user has blocked, or no longer (spec/chat.md, Reporting
+     * and blocking); User DO only.
+     * ```
+     *
+     * `.pochical.v1.Block block = 17 [json_name = "block"];`
+     * @return Whether the block field is set.
+     */
+    public fun hasBlock(): kotlin.Boolean {
+      return _builder.hasBlock()
+    }
     public val kindCase: app.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -556,4 +595,7 @@ public val app.pochical.v1.ChangeOrBuilder.readMarkOrNull: app.pochical.v1.ReadM
 
 public val app.pochical.v1.ChangeOrBuilder.unreadCountOrNull: app.pochical.v1.UnreadCount?
   get() = if (hasUnreadCount()) getUnreadCount() else null
+
+public val app.pochical.v1.ChangeOrBuilder.blockOrNull: app.pochical.v1.Block?
+  get() = if (hasBlock()) getBlock() else null
 

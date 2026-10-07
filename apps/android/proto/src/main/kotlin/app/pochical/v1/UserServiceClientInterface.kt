@@ -17,4 +17,11 @@ public interface UserServiceClientInterface {
    *  Who the token belongs to, for the apps to check a stored session.
    */
   public suspend fun getMe(request: GetMeRequest, headers: Headers = emptyMap()): ResponseMessage<GetMeResponse>
+
+  /**
+   *  Blocks someone in every group the two share, or unblocks them
+   *  (spec/chat.md, Reporting and blocking); their devices hear of it as a
+   *  Block change. Blocking oneself is INVALID_ARGUMENT.
+   */
+  public suspend fun setBlocked(request: SetBlockedRequest, headers: Headers = emptyMap()): ResponseMessage<SetBlockedResponse>
 }

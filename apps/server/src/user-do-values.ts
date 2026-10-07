@@ -20,6 +20,7 @@ import type {
 import { compareClocks } from "./hlc";
 import type { Clock } from "./hlc";
 import type {
+  blocks,
   coworkerOrder,
   coworkers,
   dayFields,
@@ -202,4 +203,12 @@ export const unreadCountChange = (row: UnreadCountRow): Change =>
       case: "unreadCount",
       value: { count: row.count, groupId: row.groupId, threadId: row.threadId },
     },
+  });
+
+type BlockRow = typeof blocks.$inferSelect;
+
+export const blockChange = (row: BlockRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: { case: "block", value: { on: row.blocked, userId: row.userId } },
   });

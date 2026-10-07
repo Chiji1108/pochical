@@ -307,4 +307,15 @@ public interface ChatLineOrBuilder extends
    * @return The preview.
    */
   app.pochical.v1.LinkPreview getPreview();
+
+  /**
+   * <pre>
+   * Sent in a one-to-one chat by someone the reader had blocked: never
+   * delivered to them, so it comes without its content and shows nothing.
+   * </pre>
+   *
+   * <code>bool hidden = 17 [json_name = "hidden"];</code>
+   * @return The hidden.
+   */
+  boolean getHidden();
 }

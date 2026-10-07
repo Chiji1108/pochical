@@ -123,6 +123,9 @@ export const chatLines = sqliteTable(
     // The day a poll was settled on, while settled.
     decided: text(),
     edited: integer({ mode: "boolean" }).notNull().default(false),
+    // In a one-to-one chat, the member who had blocked its writer when it
+    // was sent: never delivered to them.
+    hiddenFrom: text("hidden_from"),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),
     // The photo sent as the line, as pochical.v1.ChatPhoto's fields;
@@ -221,3 +224,14 @@ export const chatPhotos = sqliteTable("chat_photos", {
   sent: integer({ mode: "boolean" }).notNull().default(false),
   userId: text("user_id").notNull(),
 });
+
+// Who each member has blocked, as their User DO tells the group, so a
+// one-to-one chat's line from someone blocked is not delivered.
+export const memberBlocks = sqliteTable(
+  "member_blocks",
+  {
+    blockedId: text("blocked_id").notNull(),
+    userId: text("user_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.blockedId] })]
+);

@@ -8,7 +8,9 @@ import {
   desc,
   eq,
   gt,
+  gte,
   isNotNull,
+  isNull,
   lt,
   lte,
   max,
@@ -34,6 +36,7 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import {
   chatLines,
+  memberBlocks,
   chatPhotos,
   chatReactions,
   chatVotes,
@@ -187,6 +190,93 @@ export const chatLineChange = (
     cursor: BigInt(row.cursor),
     kind: { case: "chatLine", value: lineOf(db, row) },
   });
+
+/**
+ * A line's change as `userId` gets it: a one-to-one chat's line from
+ * someone they had blocked when it was sent comes without its content,
+ * marked hidden, so their device keeps its place and shows nothing.
+ */
+export const forReader = (
+  db: DrizzleSqliteDODatabase,
+  change: Change,
+  userId: string
+): Change => {
+  if (change.kind.case !== "chatLine") {
+    return change;
+  }
+  const line = change.kind.value;
+  const hidden = db
+    .select({ hiddenFrom: chatLines.hiddenFrom })
+    .from(chatLines)
+    .where(
+      and(
+        eq(chatLines.threadId, line.threadId),
+        eq(chatLines.seq, Number(line.seq))
+      )
+    )
+    .get()?.hiddenFrom;
+  if (hidden !== userId) {
+    return change;
+  }
+  return create(ChangeSchema, {
+    cursor: change.cursor,
+    kind: {
+      case: "chatLine",
+      value: create(ChatLineSchema, {
+        authorId: line.authorId,
+        hidden: true,
+        opId: line.opId,
+        sentAtMs: line.sentAtMs,
+        seq: line.seq,
+        threadId: line.threadId,
+      }),
+    },
+  });
+};
+
+/** Whether `userId` has blocked `blockedId`, as their User DO told the group. */
+const hasBlocked = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  blockedId: string
+): boolean =>
+  db
+    .select()
+    .from(memberBlocks)
+    .where(
+      and(
+        eq(memberBlocks.userId, userId),
+        eq(memberBlocks.blockedId, blockedId)
+      )
+    )
+    .get() !== undefined;
+
+/** The other of a one-to-one chat, when they have blocked `userId`. */
+const blockedBy = (
+  db: DrizzleSqliteDODatabase,
+  threadId: string,
+  userId: string
+): string | null => {
+  const other = otherIn(threadId, userId);
+  return other !== undefined && hasBlocked(db, other, userId) ? other : null;
+};
+
+/**
+ * A member's blocks as their User DO says them, all of them, so a group
+ * that missed one is put right by the next.
+ */
+export const setMemberBlocks = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  blockedIds: string[]
+): void => {
+  db.delete(memberBlocks).where(eq(memberBlocks.userId, userId)).run();
+  if (blockedIds.length > 0) {
+    db.insert(memberBlocks)
+      .values(blockedIds.map((blockedId) => ({ blockedId, userId })))
+      .run();
+  }
+};
 
 export const readMarkChange = (row: MarkRow): Change =>
   create(ChangeSchema, {
@@ -362,7 +452,9 @@ export const unreadCount = (
         and(
           eq(chatLines.threadId, threadId),
           gt(chatLines.seq, read),
-          ne(chatLines.authorId, userId)
+          ne(chatLines.authorId, userId),
+          // Lines kept from them, from someone they blocked, never count.
+          or(isNull(chatLines.hiddenFrom), ne(chatLines.hiddenFrom, userId))
         )
       )
       .get()?.n ?? 0
@@ -709,6 +801,9 @@ export const takeChatEdit = (
           createdCursor: cursor,
           cursor,
           days: kind.value.days.length === 0 ? null : kind.value.days,
+          // Not delivered to the other of a one-to-one chat who blocked
+          // its writer.
+          hiddenFrom: blockedBy(db, kind.value.threadId, userId),
           opId,
           photo:
             photo === undefined
@@ -787,7 +882,10 @@ export const chatPage = (
     .toReversed();
   return {
     atStart: (rows[0]?.seq ?? 1) <= 1,
-    lines: rows.map((row) => lineOf(db, row)),
+    lines: rows.flatMap((row) => {
+      const change = forReader(db, chatLineChange(db, row), userId);
+      return change.kind.case === "chatLine" ? [change.kind.value] : [];
+    }),
   };
 };
 
@@ -826,7 +924,7 @@ export const chatChangesAfter = (
       )
       .orderBy(asc(chatLines.cursor))
       .all()
-      .map((row) => chatLineChange(db, row))
+      .map((row) => forReader(db, chatLineChange(db, row), userId))
   );
   const marks = db
     .select()
@@ -857,4 +955,61 @@ export const notePhoto = (
   }
   db.insert(chatPhotos).values({ id: photoId, userId }).run();
   return true;
+};
+
+/** How many lines either side of a reported line go with the report. */
+const REPORT_AROUND = 3;
+
+/**
+ * What a report is kept with (spec/chat.md, Reporting and blocking): a
+ * line's writer and the line with the few around it, as JSON, or a
+ * member's name. Null when the reporter cannot read the line or reports
+ * themselves.
+ */
+export const reportContext = (
+  db: DrizzleSqliteDODatabase,
+  reporterId: string,
+  target: { threadId: string; seq: number } | { userId: string },
+  memberOf: (userId: string) => { displayName: string } | undefined
+): { targetId: string; context: string } | null => {
+  if ("userId" in target) {
+    const member = memberOf(target.userId);
+    return member === undefined || target.userId === reporterId
+      ? null
+      : {
+          context: JSON.stringify({ name: member.displayName }),
+          targetId: target.userId,
+        };
+  }
+  const line = lineAt(db, target.threadId, BigInt(target.seq));
+  if (
+    line === undefined ||
+    !mayRead(target.threadId, reporterId) ||
+    line.authorId === reporterId ||
+    line.hiddenFrom === reporterId
+  ) {
+    return null;
+  }
+  const around = db
+    .select()
+    .from(chatLines)
+    .where(
+      and(
+        eq(chatLines.threadId, target.threadId),
+        gte(chatLines.seq, target.seq - REPORT_AROUND),
+        lte(chatLines.seq, target.seq + REPORT_AROUND)
+      )
+    )
+    .orderBy(asc(chatLines.seq))
+    .all()
+    .filter((row) => row.hiddenFrom !== reporterId)
+    .map((row) => ({
+      authorId: row.authorId,
+      days: row.days,
+      photo: row.photo?.id,
+      seq: row.seq,
+      text: row.text,
+      unsent: row.unsent,
+    }));
+  return { context: JSON.stringify(around), targetId: line.authorId };
 };
