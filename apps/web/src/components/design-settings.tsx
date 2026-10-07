@@ -98,6 +98,9 @@ export function DesignSettings({
 }) {
   const coworkers = useCoworkerList();
   const [page, setPage] = useState<Page>(initialPage);
+  // A new job's order on the calendar takes the screen, its keys where
+  // the tab bar was, as typing an order does.
+  const [jobOrdering, setJobOrdering] = useState(false);
   const weekTools = useWeek();
   const patternKeys = patterns.map((pattern) => pattern.id);
   const preview = stylePreviewOf(patterns, weekTools.weekDates);
@@ -116,6 +119,44 @@ export function DesignSettings({
     [];
   // A chat fills the screen, its composer where the tab bar was, as the
   // group chats do.
+  // Typing an order fills the screen, its keys at the foot, as ポチポチ入力.
+  if (page === "repeat-new" || page === "repeat-fix") {
+    return (
+      <Screen>
+        {page === "repeat-new" && (
+          <RepeatEditorPage
+            initialSequence={lastSequence}
+            mode={current ? "switch" : "first"}
+            onApply={(rule) => {
+              onApplyRule(rule);
+              setPage(current ? "work" : "top");
+            }}
+            onBack={() => {
+              setPage("work");
+            }}
+            patternKeys={patternKeys}
+            shown={schedule}
+          />
+        )}
+        {page === "repeat-fix" && current && (
+          <RepeatEditorPage
+            current={current}
+            initialSequence={current.sequence}
+            mode="fix"
+            onApply={(rule) => {
+              onFixRule(rule);
+              setPage("work");
+            }}
+            onBack={() => {
+              setPage("work");
+            }}
+            patternKeys={patternKeys}
+            shown={schedule}
+          />
+        )}
+      </Screen>
+    );
+  }
   if (page === "support") {
     return (
       <SupportChatPage
@@ -127,7 +168,7 @@ export function DesignSettings({
   }
   return (
     <Screen>
-      <ScreenScroll>
+      <ScreenScroll fill={page === "job" && jobOrdering}>
         {page === "top" && (
           <SettingsTop
             coworkerCount={coworkers.list.length}
@@ -146,35 +187,6 @@ export function DesignSettings({
             profile={profile}
           />
         )}
-        {page === "repeat-new" && (
-          <RepeatEditorPage
-            initialSequence={lastSequence}
-            mode={current ? "switch" : "first"}
-            onApply={(rule) => {
-              onApplyRule(rule);
-              setPage(current ? "work" : "top");
-            }}
-            onBack={() => {
-              setPage("work");
-            }}
-            patternKeys={patternKeys}
-          />
-        )}
-        {page === "repeat-fix" && current && (
-          <RepeatEditorPage
-            current={current}
-            initialSequence={current.sequence}
-            mode="fix"
-            onApply={(rule) => {
-              onFixRule(rule);
-              setPage("work");
-            }}
-            onBack={() => {
-              setPage("work");
-            }}
-            patternKeys={patternKeys}
-          />
-        )}
         {page === "job" && (
           <JobChangePage
             onApply={(job) => {
@@ -184,6 +196,7 @@ export function DesignSettings({
             onBack={() => {
               setPage("work");
             }}
+            onOrdering={setJobOrdering}
           />
         )}
         {page === "work" && (
@@ -290,7 +303,9 @@ export function DesignSettings({
           />
         )}
       </ScreenScroll>
-      <TabBar active="settings" onSelect={onTab} />
+      {!(page === "job" && jobOrdering) && (
+        <TabBar active="settings" onSelect={onTab} />
+      )}
     </Screen>
   );
 }

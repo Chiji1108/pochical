@@ -497,7 +497,7 @@ function Buttons() {
           name="DoneButton"
           ios="ToolbarItem(placement: .confirmationAction)"
           android="TopAppBar の actions の Button"
-          where="カレンダーの入力中・週表示の完了だけ"
+          where="カレンダーの入力中・週表示・繰り返しの並びの完了だけ"
         >
           <DoneButton />
         </Item>

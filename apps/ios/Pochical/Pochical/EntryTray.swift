@@ -22,19 +22,19 @@ struct EntryTray: View {
 
   var body: some View {
     VStack(spacing: 8) {
-      dateLabel
+      TrayDateLabel(day: day, week: week)
       PatternKeys(patterns: patterns, page: $page) { pattern in
         keys += 1
         onEnter(pattern.id)
       }
-      // Together in the middle, as /design has them, the pages' dots
-      // between them so the pages take no more height.
-      HStack(spacing: 8) {
-        trayAction("消す", systemImage: "trash", enabled: canClear) { onEnter(nil) }
-        if pageCount > 1 {
-          PageDots(count: pageCount, current: $page, label: "シフトのページ")
+      TrayActionsRow(pages: pageCount, page: $page) {
+        TrayAction(title: "消す", systemImage: "trash", enabled: canClear) {
+          keys += 1
+          onEnter(nil)
         }
-        trayAction("翌日へ", systemImage: "arrow.right", enabled: canSkip, trailingIcon: true) {
+      } trailing: {
+        TrayAction(title: "翌日へ", systemImage: "arrow.right", enabled: canSkip, trailingIcon: true) {
+          keys += 1
           onSkip()
         }
       }
@@ -42,7 +42,19 @@ struct EntryTray: View {
     .sensoryFeedback(.selection, trigger: keys)
   }
 
-  private var dateLabel: some View {
+  private var pageCount: Int {
+    (patterns.count + patternsPerPage - 1) / patternsPerPage
+  }
+}
+
+/// The day ポチポチ入力 enters next, over its keys.
+struct TrayDateLabel: View {
+  @Environment(\.themeColors) private var colors
+  let day: Day
+  /// Which days take their colors (the person's カレンダー settings).
+  let week: DeviceSettings.Week
+
+  var body: some View {
     HStack(spacing: 2) {
       Text("\(day.month)月\(day.day)日")
         .font(.system(size: 17, weight: .semibold))
@@ -63,23 +75,48 @@ struct EntryTray: View {
     return day.weekday == 6 && week.saturday ? colors.calendarSaturday : colors.textTertiary
   }
 
-  private var pageCount: Int {
-    (patterns.count + patternsPerPage - 1) / patternsPerPage
-  }
+}
 
-  private func trayAction(
-    _ title: String, systemImage: String, enabled: Bool, trailingIcon: Bool = false,
-    action: @escaping () -> Void
-  ) -> some View {
-    Button {
-      keys += 1
-      action()
-    } label: {
+/// A tray's words under its keys with the pages' dots between them, the
+/// dots in the middle of the tray whatever the words, so they sit in one
+/// place in every tray.
+struct TrayActionsRow<Leading: View, Trailing: View>: View {
+  let pages: Int
+  @Binding var page: Int
+  @ViewBuilder let leading: () -> Leading
+  @ViewBuilder let trailing: () -> Trailing
+
+  var body: some View {
+    HStack(spacing: 8) {
+      leading().frame(maxWidth: .infinity, alignment: .trailing)
+      if pages > 1 {
+        PageDots(count: pages, current: $page, label: "シフトのページ")
+      }
+      trailing().frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+}
+
+/// One of a tray's words beside its dots, small and quiet: 消す and 翌日へ,
+/// and ⌫ for an order being typed.
+struct TrayAction: View {
+  @Environment(\.themeColors) private var colors
+  let title: String
+  let systemImage: String
+  let enabled: Bool
+  var trailingIcon = false
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
       HStack(spacing: 4) {
         if !trailingIcon {
           Image(systemName: systemImage).imageScale(.small)
         }
         Text(title)
+          // One line, whatever room the dots leave.
+          .lineLimit(1)
+          .fixedSize()
         if trailingIcon {
           Image(systemName: systemImage).imageScale(.small)
         }

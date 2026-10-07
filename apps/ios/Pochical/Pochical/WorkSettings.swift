@@ -258,40 +258,51 @@ enum RepeatMode {
     }
   }
 
-  var dayLabel: String {
+  /// What 完了 asks to do, and asks it as.
+  var action: String {
     switch self {
-    case .first: "始める日"
-    case .switch: "切り替える日"
-    case .fix: "並びの1日目"
+    case .first: "繰り返す"
+    case .switch: "切り替える"
+    case .fix: "入れ直す"
     }
   }
 
-  var action: String {
+  var question: String {
     switch self {
-    case .first: "から繰り返す"
-    case .switch: "から切り替える"
-    case .fix: "から入れ直す"
+    case .first: "から繰り返しますか？"
+    case .switch: "から切り替えますか？"
+    case .fix: "から入れ直しますか？"
+    }
+  }
+
+  var message: String {
+    switch self {
+    case .first: "この日から、並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。"
+    case .switch: "この日から、新しい並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。"
+    case .fix: "並びのとおりにシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。"
     }
   }
 }
 
-/// A sequence built from the person's patterns, the day it starts on,
-/// 祝日は休みにする and the first two weeks; saved as a new order, or as the
-/// one in use corrected, which keeps its start and moves only the day its
-/// first shift falls on.
+/// An order typed on the calendar, from the day pressed, with
+/// 祝日は休みにする; saved as a new order, or as the one in use corrected,
+/// which keeps its start and moves only the day its first shift falls on.
 private struct RepeatEditor: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Dependency(\.defaultDatabase) private var database
   @Fetch(WorkValues()) private var values = WorkValues.Value()
+  /// The days as they show now, for those the order leaves.
+  @FetchAll private var days: [DayRow]
+  @FetchAll private var patternRows: [PatternRow]
+  @FetchAll private var patternOrder: [PatternOrderRow]
+  @FetchAll private var orderRows: [RepeatOrderRow]
   let mode: RepeatMode
   @State private var sequence: [PatternID]?
   @State private var day: Day?
   /// Set by hand; until then it follows holidaysOffByDefault.
   @State private var holidaysOff: Bool?
-  /// A day of the sequence chosen, to put another pattern in its place or
-  /// take it out; with none, keys add to the end.
-  @State private var selected: Int?
+  @State private var confirming = false
 
   var body: some View {
     let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -304,70 +315,39 @@ private struct RepeatEditor: View {
       offShift != nil
       && (holidaysOff ?? (mode == .fix ? current?.holidaysOff : nil)
         ?? holidaysOffByDefault(steps, start: picked, patterns: byID))
-    Form {
-      Section {
-        DatePicker(
-          mode.dayLabel,
-          selection: Binding { date(of: picked) } set: { day = Day($0, in: .current) },
-          displayedComponents: .date)
+    let shown = OwnCalendar(
+      days: days, patterns: patternRows, patternOrder: patternOrder, orders: orderRows)
+    RepeatCalendar(
+      sequence: Binding(get: { steps }, set: { sequence = $0 }),
+      anchor: Binding(get: { picked }, set: { day = $0 }),
+      cover: mode == .fix ? .from(start) : .anchor, patterns: values.patterns,
+      before: shown, holidayShift: holidays ? offShift : nil, holidayCountry: country
+    ) {
+      Toggle(isOn: Binding(get: { holidays }, set: { holidaysOff = $0 })) {
+        Text("祝日は休み").font(.footnote).foregroundStyle(colors.textSecondary)
       }
-      .settingsRows()
-
-      Section {
-        SequenceBuilder(
-          steps: Binding(get: { steps }, set: { sequence = $0 }), patterns: values.patterns,
-          first: picked, selected: $selected)
-      } header: {
-        HStack {
-          Text("並び")
-          Spacer()
-          Text(steps.isEmpty ? "下から順番に追加してください" : "\(steps.count)日ごとに繰り返し")
-        }
-      } footer: {
-        if selected != nil {
-          Text("下のパターンを押すと、選んだ日と置き換わります。")
-        } else {
-          Text(mode == .fix ? "並びの1つ目のシフトが入る日を選びます。" : "\(mode.dayLabel)が、並びの1日目になります。")
-        }
-      }
-      .settingsRows()
-
-      Section {
-        Toggle("祝日は休みにする", isOn: Binding(get: { holidays }, set: { holidaysOff = $0 }))
-          .disabled(offShift == nil)
-      }
-      .settingsRows()
-
-      if !steps.isEmpty {
-        Section {
-          Preview(
-            schedule: repeatSchedule(
-              steps, anchor: picked, from: start, through: start.adding(days: 13),
-              holidayShift: holidays ? offShift : nil, holidayCountry: country),
-            start: start, patterns: byID)
-        } footer: {
-          if mode == .fix {
-            Text("\(dayName(start))からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。")
-          }
-        }
-        .settingsRows()
-      }
-
-      Section {
-        Button {
-          save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
-        } label: {
-          Label("\(shortDay(start))\(mode.action)", systemImage: "arrow.right")
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .disabled(steps.isEmpty)
-        .settingsOnPage()
-      }
+      .fixedSize()
+      .disabled(offShift == nil)
     }
-    .settingsList()
+    .background(colors.backgroundBase)
     .navigationTitle(mode.title)
     .navigationBarTitleDisplayMode(.inline)
+    .toolbarVisibility(.hidden, for: .tabBar)
+    .toolbar {
+      ToolbarItem(placement: .confirmationAction) {
+        Button("完了", systemImage: "checkmark", role: .confirm) { confirming = true }
+          .disabled(steps.isEmpty)
+      }
+    }
+    // The days from its start change, so 完了 asks first.
+    .alert("\(shortDay(start))\(mode.question)", isPresented: $confirming) {
+      Button("キャンセル", role: .cancel) {}
+      Button(mode.action) {
+        save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
+      }
+    } message: {
+      Text(mode.message)
+    }
   }
 
   /// The sequence it starts from: the order in use's when correcting it,
@@ -380,11 +360,6 @@ private struct RepeatEditor: View {
   /// The device's region, whose holidays a new order takes.
   private var country: String {
     Locale.current.region?.identifier ?? "JP"
-  }
-
-  private func date(of day: Day) -> Date {
-    Calendar.current.date(from: DateComponents(year: day.year, month: day.month, day: day.day))
-      ?? .now
   }
 
   private func save(
@@ -402,42 +377,6 @@ private struct RepeatEditor: View {
       }
     }
     dismiss()
-  }
-}
-
-/// The first two weeks of an order, a row of seven days with each mark.
-private struct Preview: View {
-  @Environment(\.themeColors) private var colors
-  let schedule: [Day: PatternID]
-  let start: Day
-  let patterns: [PatternID: Pattern]
-
-  var body: some View {
-    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-      ForEach(0..<14, id: \.self) { offset in
-        let day = start.adding(days: offset)
-        VStack(spacing: 2) {
-          Text("\(day.day)")
-            .font(.caption2)
-            .foregroundStyle(tone(day))
-          if let pattern = schedule[day].flatMap({ patterns[$0] }) {
-            ShiftMark(pattern: pattern, size: 16)
-          } else {
-            Color.clear.frame(width: 16, height: 16)
-          }
-        }
-      }
-    }
-    .padding(.vertical, 4)
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel("はじめの2週間")
-  }
-
-  private func tone(_ day: Day) -> Color {
-    if day.weekday == 0 || Holidays.name(on: day.key, in: "JP") != nil {
-      return colors.calendarHoliday
-    }
-    return day.weekday == 6 ? colors.calendarSaturday : colors.textSecondary
   }
 }
 
@@ -480,96 +419,5 @@ private struct RosterSwitchPage: View {
     .settingsList()
     .navigationTitle("順番をやめる")
     .navigationBarTitleDisplayMode(.inline)
-  }
-}
-
-/// An order's sequence typed as ポチポチ入力 enters days: the patterns'
-/// keys add to its end and ⌫ takes the last day back; a day pressed is
-/// chosen, a key then takes its place and ⌫ takes it out. With the day it
-/// starts on, each day says its date and weekday.
-struct SequenceBuilder: View {
-  @Environment(\.themeColors) private var colors
-  @Binding var steps: [PatternID]
-  let patterns: [Pattern]
-  /// The first day's date, when it is known.
-  let first: Day?
-  @Binding var selected: Int?
-  @State private var keyPage = 0
-
-  var body: some View {
-    let byID = Dictionary(patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 6) {
-      ForEach(Array(steps.enumerated()), id: \.offset) { index, id in
-        let date = first?.adding(days: index)
-        let isSelected = selected == index
-        Button {
-          selected = isSelected ? nil : index
-        } label: {
-          VStack(spacing: 2) {
-            if let date {
-              Text("\(date.month)/\(date.day)\(WeekdayRow.names[date.weekday])")
-                .font(.system(size: 9))
-                .foregroundStyle(weekdayTone(date))
-            } else {
-              Text("\(index + 1)").font(.system(size: 9)).foregroundStyle(colors.textTertiary)
-            }
-            if let pattern = byID[id] {
-              ShiftMark(pattern: pattern, size: 18)
-            }
-            Text(byID[id]?.name ?? "削除").font(.caption2).lineLimit(1)
-          }
-          .frame(maxWidth: .infinity, minHeight: 58)
-          .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
-          .overlay {
-            RoundedRectangle(cornerRadius: Radius.sm)
-              .strokeBorder(isSelected ? colors.accentDefault : colors.borderDefault, lineWidth: isSelected ? 2 : 1)
-          }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(index + 1)日目、\(date.map(dayName) ?? "")、\(byID[id]?.name ?? "削除したパターン")")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityHint(isSelected ? "" : "選ぶと、置き換えたり消したりできます")
-      }
-    }
-    .padding(.vertical, 4)
-    PatternKeys(patterns: patterns, page: $keyPage) { pattern in
-      var next = steps
-      if let selected, selected < next.count {
-        next[selected] = pattern.id
-        self.selected = nil
-      } else {
-        next.append(pattern.id)
-      }
-      steps = next
-    }
-    .padding(.vertical, 4)
-    HStack {
-      let pages = (patterns.count + patternsPerPage - 1) / patternsPerPage
-      if pages > 1 {
-        PageDots(count: pages, current: $keyPage, label: "シフトのページ")
-      }
-      Spacer()
-      Button(selected == nil ? "1つ消す" : "選んだ日を消す", systemImage: "delete.left") {
-        var next = steps
-        if let selected, selected < next.count {
-          next.remove(at: selected)
-        } else if !next.isEmpty {
-          next.removeLast()
-        }
-        selected = nil
-        steps = next
-      }
-      .font(.subheadline)
-      .disabled(steps.isEmpty)
-    }
-  }
-
-  /// A date's color by its weekday: Sundays and holidays red, Saturdays
-  /// blue.
-  private func weekdayTone(_ day: Day) -> Color {
-    if day.weekday == 0 || Holidays.name(on: day.key, in: "JP") != nil {
-      return colors.calendarHoliday
-    }
-    return day.weekday == 6 ? colors.calendarSaturday : colors.textTertiary
   }
 }

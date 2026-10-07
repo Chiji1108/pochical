@@ -60,6 +60,15 @@ A person may follow a repeating order: a sequence of their patterns laid over th
 - Starting a new order, or correcting the one in use, clears the days' own pattern and times from its start, so the new order shows there; memos and people stay (`spec/vectors/own-days.json`, givenToOrder).
 - Everything that reads days reads them this way, the day's own value, else its order's: the month, counting days off, 次の休み, widgets, reminders and a group's tables.
 
+### Typing an order
+
+An order is typed on a month, as ポチポチ入力 enters days (settings' 新しい繰り返し and 今の繰り返しを直す, and the order of はじめの設定 and 新しい仕事にする alike). The month fills the screen as 1人ずつ's does, swiped a month at a time with room for six weeks, so the tray at its foot stays put. The tray is ポチポチ入力's, its 消す and 翌日へ too, the pages' dots in the middle of both, with no date over the keys: the framed day shows where typing goes, and the room is the month's; the order's first day and length go under the page's title, and 祝日は休みにする beside the month's name. There is no 今月: the month that matters is the order's, which typing keeps in sight. The page's 完了 saves it, asking first where days already there change (settings and 新しい仕事にする, not a first run).
+
+- The day pressed is the order's 1st day, its `anchor`. It is typed as ポチポチ入力 enters days: a key fills the framed day and the frame moves on, at most to the day after those typed, turning to that day's month when it is not in sight; 翌日へ moves the frame without typing; 消す takes the framed day out, those after it closing up, as an order has no blank days. On the day after those typed, there is nothing to take out or move past.
+- The days typed show solid. After them, and before them back to the order's `start`, the order comes round with its marks faint, as the calendar will show it, 祝日は休みにする included. Days before the `start` show what they hold now, faded, as they stay.
+- A day typed, pressed, takes the frame, as the day after them does. Any other day pressed moves the order to start there, what was typed kept; for a new order that day is also its `start`.
+- A kind of work with an order of its own opens with it typed from the first day it could start, asking for a day of its first shift; pressing that day moves the order there.
+
 ## Holidays
 
 An order with 祝日は休みにする on puts its `holidayShift` on the national holidays of its `holidayCountry` (`design/scripts/holidays.ts`) in place of the sequence's shift.
@@ -71,7 +80,7 @@ An order with 祝日は休みにする on puts its `holidayShift` on the nationa
 
 ## Changing jobs
 
-The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are tiles as its editor draws them, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will. In 新しい仕事にする the answers are rows of one list, as the settings pages around them are; はじめの設定, with no list around it, shows them as large cards.
+The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are small tiles, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will. In 新しい仕事にする the answers are rows of one list, as the settings pages around them are; はじめの設定, with no list around it, shows them as large cards.
 
 The new job's patterns replace the list, and its repeating order starts on the day of the switch. An old pattern still on a day before the switch, of its own or from an earlier order, stays in the list, so those days keep their marks.
 

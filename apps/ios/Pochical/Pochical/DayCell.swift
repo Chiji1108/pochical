@@ -25,6 +25,8 @@ struct DayCell: View {
   var isSelected = false
   /// While entering, today's frame gives way to the day being entered.
   var isEntering = false
+  /// A shift still to come of an order being typed: its mark faint.
+  var faint = false
   /// Picks the day: to enter while entering, else to open.
   var onSelect: ((Day) -> Void)?
 
@@ -52,7 +54,7 @@ struct DayCell: View {
           pattern: pattern, size: markSize,
           change: timeChange(start: entry?.start, end: entry?.end, standard: pattern.time)
         )
-        .opacity(pattern.countsAsOff && offShown == .faint ? 0.35 : 1)
+        .opacity(faint || (pattern.countsAsOff && offShown == .faint) ? 0.35 : 1)
         .frame(maxHeight: look.options.names ? nil : .infinity)
         if look.options.names {
           Text(dayName(pattern.name))
@@ -69,7 +71,7 @@ struct DayCell: View {
     .frame(maxWidth: .infinity)
     .frame(height: Self.height)
     .background {
-      if look.options.highlight, offShown == .shown, let pattern, pattern.countsAsOff {
+      if look.options.highlight, offShown == .shown, !faint, let pattern, pattern.countsAsOff {
         RoundedRectangle(cornerRadius: Radius.md).fill(colors.mark(look.colored ? pattern.color : 0).tint)
       }
     }

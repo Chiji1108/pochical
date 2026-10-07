@@ -270,19 +270,24 @@ const screenScrollStyle = cva({
     // Beside a rail on its left, like the group hub's list of groups: it
     // takes the rest of the width and runs to the right edge.
     beside: { true: { marginLeft: 0, minWidth: 0, paddingLeft: 0 } },
+    // Holding a page that fills the screen and keeps its foot at the
+    // bottom, like typing an order: nothing after its parts.
+    fill: { true: { "&::after": { display: "none" }, paddingTop: 0 } },
   },
 });
 
 // Marked, so a control inside can scroll it back to the top.
 export function ScreenScroll({
   beside = false,
+  fill = false,
   children,
 }: {
   beside?: boolean;
+  fill?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className={screenScrollStyle({ beside })} data-screen-scroll="">
+    <div className={screenScrollStyle({ beside, fill })} data-screen-scroll="">
       {children}
     </div>
   );

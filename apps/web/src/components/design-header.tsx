@@ -7,8 +7,14 @@ import type { ButtonProps } from "./design-ui";
 // A screen's top: the way back, its actions, 完了 and 今月.
 
 // 完了 at a screen's top right, for the mode that has to be left on
-// purpose: entering shifts, a day opened in the week.
+// purpose: entering shifts, a day opened in the week, an order typed on
+// the calendar.
 const doneButtonStyle = css({
+  _disabled: {
+    bg: "fill.quaternary",
+    color: "text.disabled",
+    cursor: "default",
+  },
   alignItems: "center",
   bg: "accent.fill",
   border: 0,

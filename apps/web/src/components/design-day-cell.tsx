@@ -217,6 +217,7 @@ export function DayCell({
   onPress,
   plain = false,
   dimmed = false,
+  faint = false,
   className,
 }: {
   date: Date;
@@ -233,6 +234,8 @@ export function DayCell({
   dimmed?: boolean;
   // Only the shift, for the saved image: no today frame, no note stroke.
   plain?: boolean;
+  // A shift still to come of an order being typed: its mark faint.
+  faint?: boolean;
   className?: string;
 }) {
   const markStyle = useContext(ShiftMarkStyleContext);
@@ -250,7 +253,9 @@ export function DayCell({
   const faintOff =
     dayOff && (offDisplay === "faint" || (offDisplay === "blank" && editing));
   const offStyle =
-    hideOff || faintOff ? undefined : dayOffStyle(dayOff, highlight, tint);
+    hideOff || faintOff || faint
+      ? undefined
+      : dayOffStyle(dayOff, highlight, tint);
   const today = dateKey(date) === dateKey(designToday);
   const holiday = useWeek().isColoredHoliday(date);
   const change = blank ? undefined : timeChangeOf(entry, pattern);
@@ -288,7 +293,7 @@ export function DayCell({
       {shift && !hideOff && (
         <CellShift
           early={change?.early}
-          faint={faintOff}
+          faint={faint || faintOff}
           late={change?.late}
           shift={shift}
         />

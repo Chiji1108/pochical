@@ -8,28 +8,27 @@ import {
   formatDay,
   holidayShiftOf,
   isRepeating,
-  repeatSchedule,
 } from "../lib/design-days";
-import type { RepeatRule } from "../lib/design-days";
+import type { RepeatRule, Schedule } from "../lib/design-days";
 import { presetList, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import { InputDatePicker } from "./design-date-picker";
-import { PageHeader } from "./design-header";
-import { List, ListRow, SwitchRow } from "./design-list";
+import { DoneButton, PageHeader } from "./design-header";
+import { List, ListRow, SwitchRow, Toggle } from "./design-list";
 import {
-  RepeatSequenceEditor,
+  OrderTitle,
+  RepeatCalendar,
   SequenceTiles,
-  ShiftPreview,
 } from "./design-repeat-editor";
 import {
   ListSection,
   nextMonthStart,
-  previewDays,
   sequenceLabel,
   settingsParts,
   shortDay,
 } from "./design-settings-parts";
+import { ConfirmDialog } from "./design-sheet";
 import { Button, fieldLabel, Note } from "./design-ui";
 import { WorkSetupSteps } from "./design-work-setup";
 
@@ -113,37 +112,44 @@ function RuleHistory({ rules }: { rules: RepeatRule[] }) {
 
 type RepeatMode = "first" | "switch" | "fix";
 
+// Each way's page, and what its 完了 asks before the days change.
 const repeatModes: Record<
   RepeatMode,
-  { title: string; back: string; dayLabel: string; action: string }
+  { title: string; action: string; question: string; message: string }
 > = {
   first: {
-    action: "から繰り返す",
-    back: "働き方",
-    dayLabel: "始める日",
+    action: "繰り返す",
+    message:
+      "この日から、並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。",
+    question: "から繰り返しますか？",
     title: "繰り返しを設定",
   },
   fix: {
-    action: "から入れ直す",
-    back: "働き方",
-    dayLabel: "並びの1日目",
+    action: "入れ直す",
+    message:
+      "並びのとおりにシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。",
+    question: "から入れ直しますか？",
     title: "今の繰り返しを直す",
   },
   switch: {
-    action: "から切り替える",
-    back: "働き方",
-    dayLabel: "切り替える日",
+    action: "切り替える",
+    message:
+      "この日から、新しい並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。",
+    question: "から切り替えますか？",
     title: "新しい繰り返し",
   },
 };
 
-// Sets an order from a day. Fixing keeps the rule's start and moves only
-// the day the order begins on, so no gap opens before it.
+// Sets an order on the calendar, filling the screen as ポチポチ入力 does.
+// A new one starts on its 1st day, the days before it staying; fixing
+// keeps the rule's start and moves only the day the order counts from, so
+// no gap opens before it.
 export function RepeatEditorPage({
   mode,
   current,
   initialSequence,
   patternKeys,
+  shown,
   onBack,
   onApply,
 }: {
@@ -151,97 +157,79 @@ export function RepeatEditorPage({
   current?: RepeatRule;
   initialSequence: Shift[];
   patternKeys: Shift[];
+  // The days as they show now, for those the order leaves.
+  shown: Schedule;
   onBack: () => void;
   onApply: (rule: RepeatRule) => void;
 }) {
   const book = usePatterns();
+  const patterns = useUser((state) => state.patterns);
   const fixing = mode === "fix" && current !== undefined;
   const text = repeatModes[mode];
-  const [sequence, setSequence] = useState(initialSequence);
-  const [day, setDay] = useState(() =>
-    fixing ? (current.anchor ?? current.start) : nextMonthStart()
-  );
-  const start = fixing ? current.start : day;
+  const [order, setOrder] = useState(() => ({
+    anchor: fixing ? (current.anchor ?? current.start) : nextMonthStart(),
+    sequence: initialSequence,
+  }));
+  const { anchor, sequence } = order;
+  const start = fixing ? current.start : anchor;
   // Follows the order until the person sets it.
   const [holidaysChoice, setHolidaysChoice] = useState(
     fixing ? current.holidaysOff : undefined
   );
-  const holidaysOff = holidaysChoice ?? defaultHolidaysOff(sequence, day, book);
-  const rule: RepeatRule = { anchor: day, holidaysOff, sequence, start };
+  const holidaysOff =
+    holidaysChoice ?? defaultHolidaysOff(sequence, anchor, book);
+  const rule: RepeatRule = { anchor, holidaysOff, sequence, start };
+  const [confirming, setConfirming] = useState(false);
   return (
-    <>
-      <PageHeader back={text.back} onBack={onBack} title={text.title} />
-      <div className={settingsParts.field}>
-        <span className={fieldLabel({ place: "row" })}>{text.dayLabel}</span>
-        <InputDatePicker
-          ariaLabel={`${text.dayLabel}：${formatDay(day)}。タップで変更`}
-          look="field"
-          date={day}
-          onSelect={setDay}
-          title={text.dayLabel}
-        >
-          <span>{formatDay(day)}</span>
-        </InputDatePicker>
-      </div>
-      <RepeatSequenceEditor
-        onChange={setSequence}
+    <div className={settingsParts.fullPage}>
+      <PageHeader
+        back="働き方"
+        inlineTitle={
+          <OrderTitle anchor={anchor} sequence={sequence} title={text.title} />
+        }
+        onBack={onBack}
+        trailing={
+          <DoneButton
+            disabled={sequence.length === 0}
+            onClick={() => {
+              setConfirming(true);
+            }}
+          />
+        }
+      />
+      <RepeatCalendar
+        accessory={
+          <span className={settingsParts.holidays}>
+            <span aria-hidden="true">祝日は休み</span>
+            <Toggle
+              checked={holidaysOff}
+              label="祝日は休みにする"
+              onChange={setHolidaysChoice}
+            />
+          </span>
+        }
+        anchor={anchor}
+        before={shown}
+        from={fixing ? current.start : undefined}
+        holidayShift={holidaysOff ? holidayShiftOf(patterns) : undefined}
+        onChange={setOrder}
         patternKeys={patternKeys}
         sequence={sequence}
-        start={day}
       />
-      <Note>
-        {fixing
-          ? "並びの1つ目のシフトが入る日を選びます。"
-          : `${text.dayLabel}が、並びの1日目になります。`}
-      </Note>
-      <List>
-        <SwitchRow
-          checked={holidaysOff}
-          label="祝日は休みにする"
-          onChange={setHolidaysChoice}
+      {confirming && (
+        <ConfirmDialog
+          action={text.action}
+          message={text.message}
+          onCancel={() => {
+            setConfirming(false);
+          }}
+          onConfirm={() => {
+            onApply(rule);
+          }}
+          title={`${shortDay(start)}${text.question}`}
         />
-      </List>
-      {sequence.length > 0 && <RepeatPreview rule={rule} />}
-      {fixing && (
-        <Note>
-          {formatDay(start)}
-          からのシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。
-        </Note>
       )}
-      <Button
-        variant="primary"
-        disabled={sequence.length === 0}
-        onClick={() => {
-          onApply(rule);
-        }}
-      >
-        {shortDay(start)}
-        {text.action}
-        <ArrowRight aria-hidden="true" size={16} />
-      </Button>
-    </>
-  );
-}
-
-// The first two weeks of a rule, from its start.
-function RepeatPreview({ rule }: { rule: RepeatRule }) {
-  const { sequence, start, holidaysOff } = rule;
-  const patterns = useUser((state) => state.patterns);
-  const planned = repeatSchedule(
-    sequence,
-    rule.anchor ?? start,
-    start,
-    addDays(start, previewDays - 1),
-    holidaysOff ? holidayShiftOf(patterns) : undefined
-  );
-  return (
-    <ShiftPreview
-      days={Array.from({ length: previewDays }, (_, index) => {
-        const date = addDays(start, index);
-        return { date, shift: planned[dateKey(date)]?.shift };
-      })}
-      label="はじめの2週間"
-    />
+    </div>
   );
 }
 
@@ -250,9 +238,13 @@ function RepeatPreview({ rule }: { rule: RepeatRule }) {
 export function JobChangePage({
   onBack,
   onApply,
+  onOrdering,
 }: {
   onBack: () => void;
   onApply: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
+  // Told when the order's calendar comes and goes, as it takes the
+  // screen from the tab bar.
+  onOrdering: (ordering: boolean) => void;
 }) {
   const [start, setStart] = useState(nextMonthStart);
   const [asking, setAsking] = useState(false);
@@ -260,12 +252,20 @@ export function JobChangePage({
     return (
       <div className={settingsParts.job}>
         <WorkSetupSteps
-          finishLabel={`${shortDay(start)}から切り替える`}
+          confirm={{
+            action: "切り替える",
+            message:
+              "前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。",
+            title: `${shortDay(start)}から新しい仕事にしますか？`,
+          }}
+          from={start}
           month={start}
+          onOrdering={onOrdering}
           onExit={() => {
             setAsking(false);
           }}
           onFinish={({ patternKeys, sequence, anchor }) => {
+            onOrdering(false);
             onApply({
               patterns: presetList(patternKeys),
               rule: {
