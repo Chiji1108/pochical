@@ -596,3 +596,11 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).last == nil)
   }
 }
+
+@Test func theOtherOfAOneToOneChat() {
+  let thread = directThread("b", "a")
+  #expect(otherIn(thread, me: "a") == "b")
+  #expect(otherIn(thread, me: "b") == "a")
+  #expect(otherIn(thread, me: "c") == nil)
+  #expect(otherIn(groupThread, me: "a") == nil)
+}

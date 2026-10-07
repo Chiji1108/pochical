@@ -6,19 +6,22 @@ import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
+import type { Alert } from "./apns";
 import {
   ChangeSchema,
   ChangesSchema,
   ServerError_Code,
   TypingSchema,
 } from "./gen/pochical/v1/sync_pb";
-import type { Change, ChatEdits } from "./gen/pochical/v1/sync_pb";
+import type { Change, ChatEdits, ChatLine } from "./gen/pochical/v1/sync_pb";
 import {
   chatChangesAfter,
   chatHead,
   chatPage,
+  alertOf,
   forReader,
   GROUP_THREAD,
+  hearsFrom,
   mayRead,
   moveReadMark,
   otherIn,
@@ -313,6 +316,23 @@ export class GroupDO extends DurableObject<Env> {
     return cursor;
   }
 
+  /** A new line as its readers' notifications word it. */
+  private alertOf(line: ChatLine): Alert {
+    // Everyone who was ever in it, for a name in the words.
+    const names = new Map(
+      this.db
+        .select({ displayName: members.displayName, userId: members.userId })
+        .from(members)
+        .all()
+        .map((member) => [member.userId, member.displayName])
+    );
+    return alertOf(
+      line,
+      { id: this.ctx.id.name ?? "", name: this.getProfile()?.name ?? "" },
+      (id) => names.get(id) ?? "メンバー"
+    );
+  }
+
   /**
    * Whom a member has blocked, all of them, as their User DO says it
    * (spec/chat.md, Reporting and blocking): kept so a one-to-one chat's
@@ -461,6 +481,8 @@ export class GroupDO extends DurableObject<Env> {
     // Whose unread lines changed, by chat: everyone else's with a new
     // line, the reader's with a read.
     const counted = new Map<string, Set<string>>();
+    // Each reader's notification of a new line, the latest of a chat's.
+    const alerts = new Map<string, Alert>();
     const recount = (threadId: string, userIds: string[]): void => {
       const users = counted.get(threadId) ?? new Set<string>();
       for (const id of userIds) {
@@ -493,7 +515,16 @@ export class GroupDO extends DurableObject<Env> {
             others ??= this.memberList()
               .map((member) => member.userId)
               .filter((id) => id !== userId);
-            recount(threadId, other === undefined ? others : [other]);
+            const readers = other === undefined ? others : [other];
+            recount(threadId, readers);
+            if (taken.change.kind.case === "chatLine") {
+              const alert = this.alertOf(taken.change.kind.value);
+              for (const reader of readers) {
+                if (hearsFrom(this.db, reader, userId)) {
+                  alerts.set(`${threadId}\n${reader}`, alert);
+                }
+              }
+            }
           } else if (edit.kind.case === "read") {
             recount(edit.kind.value.threadId, [userId]);
           }
@@ -517,7 +548,7 @@ export class GroupDO extends DurableObject<Env> {
     broadcastChanges(this.ctx, changed, seenBy, (change, reader) =>
       forReader(this.db, change, reader)
     );
-    this.tellUnread(counted);
+    this.tellUnread(counted, alerts);
     if (refused.length > 0) {
       send(ws, { case: "changes", value: { changes: refused } });
     }
@@ -533,7 +564,10 @@ export class GroupDO extends DurableObject<Env> {
    * (spec/sync-protocol.md, Unread summary). One that fails is put right
    * by the member's next count.
    */
-  private tellUnread(counted: Map<string, Set<string>>): void {
+  private tellUnread(
+    counted: Map<string, Set<string>>,
+    alerts = new Map<string, Alert>()
+  ): void {
     const groupId = this.ctx.id.name;
     if (groupId === undefined || counted.size === 0) {
       return;
@@ -545,7 +579,8 @@ export class GroupDO extends DurableObject<Env> {
           groupId,
           threadId,
           unreadCount(this.db, userId, threadId),
-          cursor
+          cursor,
+          alerts.get(`${threadId}\n${userId}`)
         );
       })
     );

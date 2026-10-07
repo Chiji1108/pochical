@@ -43,8 +43,15 @@
   // Never change it: the apps' session tokens are signed with it, so a new
   // one signs every user out, and anonymous users cannot sign back in
   // (spec/sync-protocol.md, Reconnecting).
-  "vars": { "BETTER_AUTH_URL": "https://api.pochical.app" },
-  "secrets": { "required": ["BETTER_AUTH_SECRET"] },
+  // APNs' token key (Apple Developer › Keys): its id and the team's are
+  // not secret; the .p8 key itself is APNS_KEY (`wrangler secret put`).
+  // Without it, nothing is sent.
+  "vars": {
+    "APNS_KEY_ID": "MWQ4J6A7F8",
+    "APNS_TEAM_ID": "6KC44WPYLJ",
+    "BETTER_AUTH_URL": "https://api.pochical.app",
+  },
+  "secrets": { "required": ["APNS_KEY", "BETTER_AUTH_SECRET"] },
   // Cloudflare's rate limiting, counted per location and kept by nobody:
   // anonymous sign-ins by the client's address, groups made and link
   // previews asked for by the user.

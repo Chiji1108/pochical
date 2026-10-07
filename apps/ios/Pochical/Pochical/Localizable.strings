@@ -1,0 +1,17 @@
+/* Chat notifications, worded here from the keys and arguments the server
+   sends (spec/sync-protocol.md, Push). */
+
+/* Title: the group's name, or the writer's in a one-to-one chat. */
+"CHAT_TITLE" = "%@";
+
+/* A group chat's line: who wrote it, then what. */
+"CHAT_GROUP_TEXT" = "%1$@: %2$@";
+"CHAT_GROUP_PHOTO" = "%@が写真を送りました";
+"CHAT_GROUP_DAYS" = "%@が日にちを共有しました";
+"CHAT_GROUP_POLL" = "%@が日にちの投票を始めました";
+
+/* A one-to-one chat's line. */
+"CHAT_TEXT" = "%@";
+"CHAT_PHOTO" = "写真を送りました";
+"CHAT_DAYS" = "日にちを共有しました";
+"CHAT_POLL" = "日にちの投票を始めました";

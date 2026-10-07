@@ -17,6 +17,14 @@ public func directThread(_ a: String, _ b: String) -> String {
   return "direct:\(first):\(second)"
 }
 
+/// The other member of a one-to-one chat `me` is in; nil for the group
+/// chat or a chat that is not theirs.
+public func otherIn(_ threadID: String, me: String) -> String? {
+  let parts = threadID.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
+  guard parts.count == 3, parts[0] == "direct", parts.contains(me) else { return nil }
+  return parts[1] == me ? parts[2] : parts[1]
+}
+
 /// A line of a chat as the group holds it.
 @Table("chatLines")
 public struct ChatLineRow: Hashable, Sendable, Identifiable {

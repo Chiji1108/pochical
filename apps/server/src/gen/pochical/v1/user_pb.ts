@@ -10,7 +10,46 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/user.proto.
  */
 export const file_pochical_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSI1ChFTZXRCbG9ja2VkUmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJEg8KB2Jsb2NrZWQYAiABKAgiFAoSU2V0QmxvY2tlZFJlc3BvbnNlIg4KDEdldE1lUmVxdWVzdCIzCg1HZXRNZVJlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSEQoJYW5vbnltb3VzGAIgASgIMqYBCgtVc2VyU2VydmljZRJDCgVHZXRNZRIZLnBvY2hpY2FsLnYxLkdldE1lUmVxdWVzdBoaLnBvY2hpY2FsLnYxLkdldE1lUmVzcG9uc2UiA5ACARJSCgpTZXRCbG9ja2VkEh4ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVzcG9uc2UiA5ACAkJpCg9hcHAucG9jaGljYWwudjFCCVVzZXJQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
+  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSI6ChhSZWdpc3RlclB1c2hUb2tlblJlcXVlc3QSDQoFdG9rZW4YASABKAkSDwoHc2FuZGJveBgCIAEoCCIbChlSZWdpc3RlclB1c2hUb2tlblJlc3BvbnNlIjUKEVNldEJsb2NrZWRSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSDwoHYmxvY2tlZBgCIAEoCCIUChJTZXRCbG9ja2VkUmVzcG9uc2UiDgoMR2V0TWVSZXF1ZXN0IjMKDUdldE1lUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIRCglhbm9ueW1vdXMYAiABKAgyjwIKC1VzZXJTZXJ2aWNlEkMKBUdldE1lEhkucG9jaGljYWwudjEuR2V0TWVSZXF1ZXN0GhoucG9jaGljYWwudjEuR2V0TWVSZXNwb25zZSIDkAIBElIKClNldEJsb2NrZWQSHi5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVxdWVzdBofLnBvY2hpY2FsLnYxLlNldEJsb2NrZWRSZXNwb25zZSIDkAICEmcKEVJlZ2lzdGVyUHVzaFRva2VuEiUucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXF1ZXN0GiYucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXNwb25zZSIDkAICQmkKD2FwcC5wb2NoaWNhbC52MUIJVXNlclByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
+
+/**
+ * @generated from message pochical.v1.RegisterPushTokenRequest
+ */
+export type RegisterPushTokenRequest = Message<"pochical.v1.RegisterPushTokenRequest"> & {
+  /**
+   * The device's APNs token, as hex.
+   *
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * From a development build: sent through APNs' sandbox.
+   *
+   * @generated from field: bool sandbox = 2;
+   */
+  sandbox: boolean;
+};
+
+/**
+ * Describes the message pochical.v1.RegisterPushTokenRequest.
+ * Use `create(RegisterPushTokenRequestSchema)` to create a new message.
+ */
+export const RegisterPushTokenRequestSchema: GenMessage<RegisterPushTokenRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 0);
+
+/**
+ * @generated from message pochical.v1.RegisterPushTokenResponse
+ */
+export type RegisterPushTokenResponse = Message<"pochical.v1.RegisterPushTokenResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.RegisterPushTokenResponse.
+ * Use `create(RegisterPushTokenResponseSchema)` to create a new message.
+ */
+export const RegisterPushTokenResponseSchema: GenMessage<RegisterPushTokenResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 1);
 
 /**
  * @generated from message pochical.v1.SetBlockedRequest
@@ -32,7 +71,7 @@ export type SetBlockedRequest = Message<"pochical.v1.SetBlockedRequest"> & {
  * Use `create(SetBlockedRequestSchema)` to create a new message.
  */
 export const SetBlockedRequestSchema: GenMessage<SetBlockedRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 0);
+  messageDesc(file_pochical_v1_user, 2);
 
 /**
  * @generated from message pochical.v1.SetBlockedResponse
@@ -45,7 +84,7 @@ export type SetBlockedResponse = Message<"pochical.v1.SetBlockedResponse"> & {
  * Use `create(SetBlockedResponseSchema)` to create a new message.
  */
 export const SetBlockedResponseSchema: GenMessage<SetBlockedResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 1);
+  messageDesc(file_pochical_v1_user, 3);
 
 /**
  * @generated from message pochical.v1.GetMeRequest
@@ -58,7 +97,7 @@ export type GetMeRequest = Message<"pochical.v1.GetMeRequest"> & {
  * Use `create(GetMeRequestSchema)` to create a new message.
  */
 export const GetMeRequestSchema: GenMessage<GetMeRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 2);
+  messageDesc(file_pochical_v1_user, 4);
 
 /**
  * @generated from message pochical.v1.GetMeResponse
@@ -82,7 +121,7 @@ export type GetMeResponse = Message<"pochical.v1.GetMeResponse"> & {
  * Use `create(GetMeResponseSchema)` to create a new message.
  */
 export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 3);
+  messageDesc(file_pochical_v1_user, 5);
 
 /**
  * The signed-in user. Every call here needs the session token from
@@ -113,6 +152,17 @@ export const UserService: GenService<{
     methodKind: "unary";
     input: typeof SetBlockedRequestSchema;
     output: typeof SetBlockedResponseSchema;
+  },
+  /**
+   * Keeps a device's push token for the user's notifications (spec/chat.md,
+   * Notifications); sent each launch, as iOS may change it.
+   *
+   * @generated from rpc pochical.v1.UserService.RegisterPushToken
+   */
+  registerPushToken: {
+    methodKind: "unary";
+    input: typeof RegisterPushTokenRequestSchema;
+    output: typeof RegisterPushTokenResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_pochical_v1_user, 0);

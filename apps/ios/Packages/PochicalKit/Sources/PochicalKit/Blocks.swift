@@ -105,3 +105,17 @@ extension GroupCalls {
     _ = try await chats.report(request: request, headers: account.headers()).result.get()
   }
 }
+
+extension GroupCalls {
+  /// Keeps this device's push token for the user's notifications, sent
+  /// each launch as iOS may change it.
+  public func registerPushToken(_ token: Data) async throws {
+    var request = Pochical_V1_RegisterPushTokenRequest()
+    request.token = token.map { String(format: "%02x", $0) }.joined()
+    #if DEBUG
+      request.sandbox = true
+    #endif
+    _ = try await users.registerPushToken(request: request, headers: account.headers()).result
+      .get()
+  }
+}

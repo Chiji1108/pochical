@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from "node:crypto";
 import path from "node:path";
 
 import {
@@ -12,6 +13,10 @@ export default defineConfig({
       // test/setup.ts applies these to the test database.
       miniflare: {
         bindings: {
+          // A key of the kind Apple gives, for signing what tests send.
+          APNS_KEY: generateKeyPairSync("ec", {
+            namedCurve: "P-256",
+          }).privateKey.export({ format: "pem", type: "pkcs8" }),
           BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
           BETTER_AUTH_URL: "https://server.test",
           TEST_MIGRATIONS: await readD1Migrations(

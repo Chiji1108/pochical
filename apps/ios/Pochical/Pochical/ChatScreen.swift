@@ -356,9 +356,15 @@ struct ChatScreen: View {
     }
     .environment(\.openURL, OpenURLAction { open($0) })
     // Leaving the chat takes its open menu with it.
+    .onAppear {
+      Notifications.shared.openChat = OpenedChat(groupID: group.id, threadID: threadID)
+    }
     .onDisappear {
       closeActions()
       stopTyping()
+      if Notifications.shared.openChat?.threadID == threadID {
+        Notifications.shared.openChat = nil
+      }
     }
     .task(id: sharedSpan) {
       guard let span = sharedSpan else { return }
@@ -832,6 +838,7 @@ struct ChatScreen: View {
   }
 
   private func send(_ text: String) {
+    Notifications.shared.askOnce()
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
     send.text = withMentions(text, picked: picked)

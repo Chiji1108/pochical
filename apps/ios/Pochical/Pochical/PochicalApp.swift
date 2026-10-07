@@ -6,6 +6,7 @@ import UIKit
 
 @main
 struct PochicalApp: App {
+  @UIApplicationDelegateAdaptor private var delegate: AppDelegate
   @Environment(\.scenePhase) private var scenePhase
   /// The user's socket, open while the app is in the foreground. It signs
   /// in on its first try, anonymously at first (spec/sync-protocol.md,
@@ -29,6 +30,7 @@ struct PochicalApp: App {
     account = Account()
     sync = SyncClient(account: account, database: database)
     groupCalls = GroupCalls(account: account)
+    Notifications.shared.groupCalls = groupCalls
   }
 
   var body: some Scene {
