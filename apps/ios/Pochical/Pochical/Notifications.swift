@@ -4,7 +4,7 @@ import UIKit
 import UserNotifications
 
 /// A chat a notification opens.
-nonisolated struct OpenedChat: Equatable, Sendable {
+nonisolated struct OpenedChat: Hashable, Sendable {
   let groupID: String
   let threadID: String
 }

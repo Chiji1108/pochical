@@ -52,8 +52,9 @@ struct RootView: View {
     .onChange(of: unread.values.reduce(0, +), initial: true) { _, total in
       UNUserNotificationCenter.current().setBadgeCount(total)
     }
-    // A tapped notification opens its chat.
-    .onChange(of: Notifications.shared.opening) { _, chat in
+    // A tapped notification opens its chat, the one that launched the
+    // app too.
+    .onChange(of: Notifications.shared.opening, initial: true) { _, chat in
       guard let chat else { return }
       tab = .groups
       openGroupID = chat.groupID

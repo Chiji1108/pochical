@@ -518,10 +518,10 @@ export class GroupDO extends DurableObject<Env> {
             const readers = other === undefined ? others : [other];
             recount(threadId, readers);
             if (taken.change.kind.case === "chatLine") {
-              const line = taken.change.kind.value;
+              const alert = this.alertOf(taken.change.kind.value);
               for (const reader of readers) {
                 if (hearsFrom(this.db, reader, userId)) {
-                  alerts.set(`${threadId}\n${reader}`, this.alertOf(line));
+                  alerts.set(`${threadId}\n${reader}`, alert);
                 }
               }
             }

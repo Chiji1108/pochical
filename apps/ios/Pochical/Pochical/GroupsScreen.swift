@@ -88,7 +88,10 @@ struct GroupsScreen: View {
       }
     }
     .environment(\.groupSocket, socket)
-    .task(id: openingChat?.threadID) { await showOpeningChat() }
+    // Once its group has come, at launch.
+    .task(id: OpeningKey(chat: openingChat, groupIDs: groups.map(\.id))) {
+      await showOpeningChat()
+    }
     .task(id: SocketKey(groupID: openGroupID ?? "", active: scenePhase == .active)) {
       guard scenePhase == .active, let groupID = openGroupID else { return }
       let client = SyncClient(account: account, database: database, peer: .group(groupID))
@@ -99,6 +102,12 @@ struct GroupsScreen: View {
       }
       await client.stop()
     }
+  }
+
+  /// A chat a notification opened, and the groups there are to show it in.
+  private struct OpeningKey: Hashable {
+    let chat: OpenedChat?
+    let groupIDs: [String]
   }
 
   /// Shows the chat a notification opened, over its group.
