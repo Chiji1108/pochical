@@ -187,6 +187,13 @@ private struct GroupRail: View {
   let onOpen: (String) -> Void
   let onNew: () -> Void
   let onScan: () -> Void
+  /// How far over the screen's foot the tab bar's top is: the rail fades
+  /// out above it.
+  @State private var barTop: CGFloat = 0
+
+  /// The height the rail fades out over, gone at the tab bar's top, as
+  /// /design's rail does over its 56 points' tab bar 20 over the foot.
+  private static var fade: CGFloat { 72 }
 
   var body: some View {
     ScrollView {
@@ -244,11 +251,27 @@ private struct GroupRail: View {
       .animation(.easeOut(duration: 0.15), value: openID)
     }
     .scrollIndicators(.hidden)
+    // The last of many groups can rise clear of the fade.
+    .contentMargins(.bottom, barTop + Self.fade, for: .scrollContent)
     .frame(width: 58)
     .background(
       colors.fillQuaternary,
       in: UnevenRoundedRectangle(topTrailingRadius: Radius.xl)
     )
+    // Runs on to the screen's foot like the page beside it, fading out
+    // just over the tab bar with what scrolls in it, as Discord's rail
+    // does over its own panel.
+    .mask {
+      GeometryReader { proxy in
+        let height = max(proxy.size.height, 1)
+        LinearGradient(
+          stops: [
+            .init(color: .black, location: max(0, (height - barTop - Self.fade) / height)),
+            .init(color: .clear, location: max(0, (height - barTop) / height)),
+          ], startPoint: .top, endPoint: .bottom)
+      }
+    }
+    .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { barTop = $0 }
     .ignoresSafeArea(edges: .bottom)
   }
 }
