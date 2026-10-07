@@ -775,9 +775,9 @@ function Chips() {
     >
       <Item
         name="ChipGroup + Chip(いくつでも)+ Chip variant=add"
-        ios="独自の Toggle スタイル（標準のチップはない）"
+        ios="使わない：一緒に働く人は、名前を並べた行から ✓ の一覧（List ＋ checkmark、時計の繰り返しと同じ）を開いて選び、一番下に「人を追加…」"
         android="FilterChip、追加は AssistChip"
-        where="日の詳しい表示の一緒に働く人"
+        where="日の詳しい表示の一緒に働く人（Android と Web）"
       >
         <ChipGroup>
           {["田中", "鈴木"].map((name) => (

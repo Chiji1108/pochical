@@ -21,8 +21,6 @@ struct CalendarScreen: View {
   @State private var gaps: [Day] = []
   /// The day opened from the month, its week alone left above its detail.
   @State private var opened: Day?
-  /// Whether a day's 一緒に働く人 is unfolded, kept from day to day.
-  @State private var peopleOpen = false
   /// The week swiped to beside an opened one, until the swipe settles and
   /// opens the same weekday there.
   @State private var swipedWeek: Day?
@@ -112,7 +110,6 @@ struct CalendarScreen: View {
           DayDetail(
             day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
             coworkers: ordered(coworkerRows, by: coworkerOrder),
-            peopleOpen: $peopleOpen,
             onChange: { entry in
               write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
             },
