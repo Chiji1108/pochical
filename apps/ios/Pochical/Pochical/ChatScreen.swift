@@ -309,6 +309,9 @@ struct ChatScreen: View {
       try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID))
       meID = await groupCalls.userID()
       try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: meID))
+      // Opened from a notification as the app starts, its new lines are
+      // still coming: where it opens waits for them, a little.
+      await socket?.catchUp(within: .seconds(2))
       await open()
     }
     .task(
@@ -347,6 +350,13 @@ struct ChatScreen: View {
       if now.timeIntervalSince(typingSentAt) * 1000 >= Double(Chat.typingSendMs) {
         typingSentAt = now
         Task { await socket?.sendTyping(in: threadID, on: true) }
+      }
+    }
+    // Others' lines as they come keep the chat at its foot when it was
+    // there, as the bottom anchor alone stops short of them.
+    .onChange(of: state.lines.last?.seq) {
+      if opened, place.atLatest {
+        withAnimation { toLatest() }
       }
     }
     .onChange(of: state.waiting.last?.opID) { _, sent in
@@ -810,10 +820,16 @@ struct ChatScreen: View {
       let writers = lines.map { $0.authorID == me ? LineWriter.me : .others }
       if let index = firstUnread(writers, unread: chat.state.unread(by: me)) {
         unreadFrom = lines[index].seq
-        // Once the line is laid out.
-        try? await Task.sleep(for: .milliseconds(50))
-        position.scrollTo(id: ChatItem.unread.id, anchor: .top)
       }
+    }
+    // Once the lines are laid out, to the foot by the latest line's id:
+    // the bottom anchor alone stops short of it once the rows have been
+    // measured, and ここから新着 near the foot can then go only so far.
+    try? await Task.sleep(for: .milliseconds(50))
+    toLatest()
+    if unreadFrom != nil {
+      try? await Task.sleep(for: .milliseconds(50))
+      position.scrollTo(id: ChatItem.unread.id, anchor: .top)
     }
     try? await Task.sleep(for: .milliseconds(300))
     opened = true
