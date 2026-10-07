@@ -1,4 +1,5 @@
 import Foundation
+import PochicalDesign
 
 // A chat message's words as spec/chat.md has them: its links, and the
 // members it mentions (spec/vectors/chat-text.json). Ids and the
@@ -162,4 +163,15 @@ public func isEmoji(_ text: String) -> Bool {
   // Extended_Pictographic, and the Emoji property covers the same first
   // characters once the keycaps' bases are set apart.
   return first.properties.isEmoji
+}
+
+/// How many emoji a message of nothing but 1 to `Chat.largeEmojiMax`
+/// emoji has, each one as `isEmoji` has it, shown large without a bubble;
+/// 0 for any other message (spec/chat.md, Large emoji;
+/// spec/vectors/chat-text.json, largeEmoji).
+public func largeEmoji(_ text: String) -> Int {
+  let characters = text.map(String.init)
+  guard (1...Chat.largeEmojiMax).contains(characters.count), characters.allSatisfy(isEmoji)
+  else { return 0 }
+  return characters.count
 }

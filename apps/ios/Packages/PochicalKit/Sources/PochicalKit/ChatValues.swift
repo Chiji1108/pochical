@@ -201,6 +201,9 @@ struct ChatOutboxRow: Hashable, Sendable {
   /// The edit as a `pochical.v1.ChatEdit`.
   var edit: Data
   var madeAtMs: Int64
+  /// A photo's line whose photo could not be uploaded: it waits, unsent,
+  /// for the member to send it again or delete it.
+  var failed = false
 }
 
 /// How many lines of a chat the user has not read, as the group counted
@@ -352,6 +355,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the photos that could not be sent") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatOutbox" ADD COLUMN "failed" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -470,10 +481,27 @@ public enum Chats {
     try ChatOutboxRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
   }
 
-  /// An edit that can never go, as a photo no longer on the device, stops
-  /// waiting.
-  static func drop(_ opID: String, in db: Database) throws {
+  /// An edit that will not go: a photo's line deleted after it could not
+  /// be sent.
+  public static func drop(_ opID: String, in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.eq(opID) }.delete().execute(db)
+  }
+
+  /// A photo's line whose photo could not be uploaded: it stays, marked,
+  /// and the edits after it go on.
+  static func fail(_ opID: String, in db: Database) throws {
+    try ChatOutboxRow.where { $0.opID.eq(opID) }.update { $0.failed = true }.execute(db)
+  }
+
+  /// Sends a line that could not be sent again, as the newest waiting
+  /// edit, so the outbox takes it up after what it has sent.
+  public static func sendAgain(_ opID: String, now: Int64, in db: Database) throws {
+    guard let row = try ChatOutboxRow.where({ $0.opID.eq(opID) }).fetchOne(db) else { return }
+    try ChatOutboxRow.where { $0.opID.eq(opID) }.delete().execute(db)
+    try ChatOutboxRow.insert {
+      ChatOutboxRow.Draft(groupID: row.groupID, opID: row.opID, edit: row.edit, madeAtMs: now)
+    }
+    .execute(db)
   }
 
   /// The edits an Acked names stop waiting.
@@ -491,7 +519,7 @@ public enum Chats {
   static func frames(of groupID: String, after id: Int, in db: Database) throws -> (
     frames: [Pochical_V1_ClientFrame], last: Int
   ) {
-    let rows = try ChatOutboxRow.where { $0.groupID.eq(groupID) && $0.id > id }
+    let rows = try ChatOutboxRow.where { $0.groupID.eq(groupID) && $0.id > id && !$0.failed }
       .order(by: \.id).fetchAll(db)
     var frames: [Pochical_V1_ClientFrame] = []
     for chunk in stride(from: 0, to: rows.count, by: SyncLimits.editsPerFrame) {
@@ -559,6 +587,8 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public var preview: LinePreview?
   /// The line it answers (返信), by its seq.
   public var replyTo: Int64?
+  /// Its photo could not be uploaded: to send again or delete.
+  public var failed = false
   public var id: String { opID }
 }
 
@@ -600,7 +630,7 @@ extension Chats {
             days: send.days.compactMap(Day.init), poll: send.poll,
             photo: send.hasPhoto ? linePhoto(send.photo) : nil,
             preview: send.hasPreview ? LinePreview(send.preview) : nil,
-            replyTo: send.replyTo == 0 ? nil : Int64(send.replyTo)))
+            replyTo: send.replyTo == 0 ? nil : Int64(send.replyTo), failed: row.failed))
       case .change(let change) where change.threadID == threadID:
         if let at = lines.firstIndex(where: { $0.seq == Int64(change.seq) }) {
           lines[at].text = change.text

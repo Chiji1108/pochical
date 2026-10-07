@@ -34,6 +34,10 @@ public actor SyncClient {
     case protocolTooOld
   }
 
+  /// How many times a photo is tried before its line is marked unsent:
+  /// waits of 1, 2, 4 and 8 seconds between.
+  static let photoTries = 5
+
   /// The socket protocol this build speaks (apps/server/src/protocol.ts).
   static let protocolVersion: UInt32 = 1
 
@@ -435,9 +439,10 @@ public actor SyncClient {
   }
 
   /// The edits once their photos are uploaded, trying again after a wait
-  /// that doubles while the server cannot be reached; a photo that can
-  /// never go (gone from the device, or refused) takes its line out of
-  /// the outbox.
+  /// that doubles, `photoTries` times in all; a photo that cannot go
+  /// (gone from the device, refused, or failing every try) leaves its line
+  /// waiting, marked, for the member to send again or delete, and the
+  /// edits after it go on.
   private func uploadingPhotos(of edits: [Pochical_V1_ChatEdit], in groupID: String)
     async throws -> [Pochical_V1_ChatEdit]
   {
@@ -448,7 +453,7 @@ public actor SyncClient {
         continue
       }
       var waitMs = 1000
-      while true {
+      for tried in 1...Self.photoTries {
         try Task.checkCancellation()
         do {
           try await ChatPhotos.upload(
@@ -456,15 +461,19 @@ public actor SyncClient {
           kept.append(edit)
           break
         } catch ChatPhotos.UploadError.gone {
-          try await database.write { try Chats.drop(edit.opID, in: $0) }
+          try await database.write { try Chats.fail(edit.opID, in: $0) }
           break
         } catch ChatPhotos.UploadError.refused(let status) where (400..<500).contains(status) {
           Logger.sync.error("A photo was refused: \(status)")
-          try await database.write { try Chats.drop(edit.opID, in: $0) }
+          try await database.write { try Chats.fail(edit.opID, in: $0) }
           break
         } catch {
+          guard tried < Self.photoTries else {
+            try await database.write { try Chats.fail(edit.opID, in: $0) }
+            break
+          }
           try await Task.sleep(for: .milliseconds(waitMs))
-          waitMs = min(waitMs * 2, 60_000)
+          waitMs *= 2
         }
       }
     }

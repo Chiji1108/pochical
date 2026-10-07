@@ -649,3 +649,45 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.replyTo) == [nil, 1])
   }
 }
+
+struct LargeEmojiVectors: Decodable, Sendable {
+  struct Case: VectorCase {
+    let name: String
+    let text: String
+    let expected: Int
+  }
+
+  let largeEmoji: [Case]
+}
+
+@Test(arguments: try vectors("chat-text", as: LargeEmojiVectors.self).largeEmoji)
+func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
+  #expect(largeEmoji(vector.text) == vector.expected)
+}
+
+@Test func aPhotoThatCouldNotBeSentWaitsAsideUntilSentAgain() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var photo = Pochical_V1_ChatSend()
+    photo.threadID = groupThread
+    photo.photo.id = "p1"
+    try Chats.edit(.send(photo), in: "g", now: 1, db: db)
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "見て"
+    try Chats.edit(.send(words), in: "g", now: 2, db: db)
+    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+
+    try Chats.fail(opID, in: db)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true, false])
+    // The words go on without it.
+    let (frames, sent) = try Chats.frames(of: "g", after: 0, in: db)
+    #expect(frames.flatMap(\.chatEdits.edits).map(\.send.text) == ["見て"])
+
+    // Sent again, it comes after what was sent, as itself.
+    try Chats.sendAgain(opID, now: 3, in: db)
+    let again = try Chats.frames(of: "g", after: sent, in: db).frames.flatMap(\.chatEdits.edits)
+    #expect(again.map(\.opID) == [opID])
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [false, false])
+  }
+}

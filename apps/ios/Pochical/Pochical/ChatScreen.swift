@@ -183,6 +183,10 @@ struct ChatScreen: View {
   @State private var readingPhotos = false
   /// A photo opened large.
   @State private var viewing: LinePhoto?
+  /// Long lines opened at 続きを読む, which stay open while the chat is.
+  @State private var unfolded: Set<String> = []
+  /// A photo's line that could not be sent, its choices open.
+  @State private var unsentPhoto: WaitingLine?
   /// Others writing now, each until their typing lapses.
   @State private var typers: [String: Date] = [:]
   /// When the member's own typing was last sent.
@@ -431,6 +435,15 @@ struct ChatScreen: View {
         groupID: group.id, people: otherID.map { Set([$0, meID ?? ""]) }, pollable: otherID == nil,
         onSend: shareDays)
     }
+    .confirmationDialog(
+      "送れなかった写真",
+      isPresented: Binding(get: { unsentPhoto != nil }, set: { if !$0 { unsentPhoto = nil } }),
+      titleVisibility: .visible, presenting: unsentPhoto
+    ) { line in
+      Button("もう一度送る") { sendAgain(line) }
+      Button("削除", role: .destructive) { deleteUnsent(line) }
+      Button("キャンセル", role: .cancel) {}
+    }
     .fullScreenCover(item: $viewing) { photo in
       PhotoViewer(photo: photo, groupID: group.id) { save(photo) }
     }
@@ -563,6 +576,8 @@ struct ChatScreen: View {
         LineView(
           text: line.text, preview: line.preview, days: line.days, members: cardMembers,
           poll: poll, photo: line.photo, quote: line.replyTo.map(quote(of:)),
+          unfolded: unfolded.contains(line.opID),
+          onUnfold: { withAnimation { _ = unfolded.insert(line.opID) } },
           groupID: group.id, onOpenPhoto: { viewing = line.photo },
           onOpenQuote: { line.replyTo.map(jump(to:)) },
           onOpenProfile: {
@@ -597,6 +612,7 @@ struct ChatScreen: View {
         photo: line.photo, quote: line.replyTo.map(quote(of:)), groupID: group.id,
         time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
+        failed: line.failed, onFailed: { unsentPhoto = line },
         nameOf: nameOf, lifted: acting?.lineID == line.opID
       ) { frame, finger in
         // Still on its way: nothing but コピー yet, and days have nothing
@@ -687,6 +703,21 @@ struct ChatScreen: View {
       write(.send(send))
     }
     withAnimation { pickedPhotos = [] }
+  }
+
+  /// Sends a photo that could not be sent once more, after the rest.
+  private func sendAgain(_ line: WaitingLine) {
+    let now = Int64(Date.now.timeIntervalSince1970 * 1000)
+    try? database.write { try Chats.sendAgain(line.opID, now: now, in: $0) }
+  }
+
+  /// Deletes a photo's line that could not be sent, and the photo kept
+  /// on the device for it.
+  private func deleteUnsent(_ line: WaitingLine) {
+    try? database.write { try Chats.drop(line.opID, in: $0) }
+    if let photo = line.photo {
+      ChatPhotos.forget(photo.id, in: group.id)
+    }
   }
 
   private var composer: some View {
@@ -1372,6 +1403,9 @@ private struct LineView: View {
   var photo: LinePhoto?
   /// The line it answers, inside its bubble.
   var quote: LineQuote?
+  /// Its words opened past chatRules.foldLines lines.
+  var unfolded = false
+  var onUnfold: () -> Void = {}
   var groupID = ""
   var onOpenPhoto: () -> Void = {}
   /// Goes to the line it answers.
@@ -1393,6 +1427,9 @@ private struct LineView: View {
   /// It starts a run of one writer's lines, its bubble's corner drawn in.
   let first: Bool
   let waiting: Bool
+  /// Its photo could not be sent: marked, its choices a tap away.
+  var failed = false
+  var onFailed: () -> Void = {}
   /// A member's name, for the line's mentions.
   let nameOf: (String) -> String
   var reactions: [LineReaction] = []
@@ -1443,8 +1480,9 @@ private struct LineView: View {
           if mine { meta }
           LineContent(
             text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
-            quote: quote, groupID: groupID, mine: mine, first: first, waiting: waiting,
-            nameOf: nameOf, onOpenQuote: onOpenQuote
+            quote: quote, groupID: groupID, mine: mine, first: first,
+            waiting: waiting && !failed, nameOf: nameOf, onOpenQuote: onOpenQuote,
+            unfolded: unfolded, onUnfold: onUnfold
           )
           // A photo opens large at a tap; its menu is the long press's.
           .onTapGesture { if photo != nil, !waiting { onOpenPhoto() } }
@@ -1502,6 +1540,12 @@ private struct LineView: View {
           }
           .buttonStyle(.plain)
         }
+        if failed {
+          Text("送れませんでした")
+            .font(.caption)
+            .foregroundStyle(colors.dangerDefault)
+            .accessibilityHidden(true)
+        }
         if !reactions.isEmpty {
           ReactionRow(reactions: reactions, meID: meID, nameOf: nameOf, onReact: onReact)
         }
@@ -1517,7 +1561,7 @@ private struct LineView: View {
 
   /// The ring's shape: the bubble's, or the card's.
   private var ringShape: AnyShape {
-    days.isEmpty && photo == nil
+    days.isEmpty && photo == nil && !(quote == nil && preview == nil && largeEmoji(text) > 0)
       ? AnyShape(BubbleShape(mine: mine, first: first))
       : AnyShape(RoundedRectangle(cornerRadius: Radius.lg))
   }
@@ -1537,7 +1581,16 @@ private struct LineView: View {
           }
         }
       }
-      if waiting {
+      if failed {
+        Button(action: onFailed) {
+          Image(systemName: "exclamationmark.circle.fill")
+            .font(.title3)
+            .foregroundStyle(colors.dangerDefault)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("送れませんでした")
+        .accessibilityHint("押すと再送か削除")
+      } else if waiting {
         Image(systemName: "clock")
           .accessibilityLabel("送信中")
       } else if showsTime {
@@ -1580,6 +1633,9 @@ struct LineContent: View {
   let waiting: Bool
   let nameOf: (String) -> String
   var onOpenQuote: () -> Void = {}
+  /// Its words opened past chatRules.foldLines lines.
+  var unfolded = false
+  var onUnfold: () -> Void = {}
   @Environment(\.themeColors) private var colors
 
   var body: some View {
@@ -1606,7 +1662,8 @@ struct LineContent: View {
     } else if days.isEmpty {
       MessageBubble(
         text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf, preview: preview,
-        quote: quote, groupID: groupID, onOpenQuote: onOpenQuote)
+        quote: quote, groupID: groupID, onOpenQuote: onOpenQuote, unfolded: unfolded,
+        onUnfold: onUnfold)
     } else {
       DayCard(days: days, members: members)
         .opacity(waiting ? 0.6 : 1)
@@ -1628,6 +1685,14 @@ struct MessageBubble: View {
   var quote: LineQuote?
   var groupID = ""
   var onOpenQuote: () -> Void = {}
+  /// Its words opened past chatRules.foldLines lines.
+  var unfolded = false
+  var onUnfold: () -> Void = {}
+  /// Its words' height whole, and as shown: taller whole, they are cut.
+  @State private var wholeHeight: CGFloat = 0
+  @State private var shownHeight: CGFloat = 0
+  /// Emoji drawn large grow with the reader's text size, as body does.
+  @ScaledMetric(relativeTo: .body) private var emojiSize = CGFloat(Chat.largeEmojiSize)
 
   /// The invitation code of its first link, when that is one of
   /// Pochical's invitations.
@@ -1639,16 +1704,50 @@ struct MessageBubble: View {
   private static var linkedWidth: CGFloat { 240 }
 
   var body: some View {
+    // Nothing but a few emoji: large, without a bubble (spec/chat.md,
+    // Large emoji); a reply keeps its bubble, its quote inside it.
+    if quote == nil, preview == nil, invitation == nil, largeEmoji(text) > 0 {
+      Text(text)
+        .font(.system(size: emojiSize))
+        .opacity(waiting ? 0.6 : 1)
+    } else {
+      bubble
+    }
+  }
+
+  private var bubble: some View {
     VStack(alignment: .leading, spacing: 8) {
       if let quote {
         BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpenQuote)
           .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
       }
-      Text(words)
-        .font(.body)
-        .lineSpacing(3)
-        .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-        .tint(mine ? colors.accentOnFill : colors.accentDefault)
+      VStack(alignment: .leading, spacing: 4) {
+        Text(words)
+          .font(.body)
+          .lineSpacing(3)
+          .lineLimit(unfolded ? nil : Chat.foldLines)
+          .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
+          .tint(mine ? colors.accentOnFill : colors.accentDefault)
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { shownHeight = $0 }
+          // The words whole at the same width, measured, not guessed from
+          // their length (spec/chat.md, Long messages).
+          .background(alignment: .top) {
+            Text(words)
+              .font(.body)
+              .lineSpacing(3)
+              .fixedSize(horizontal: false, vertical: true)
+              .hidden()
+              .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                wholeHeight = $0
+              }
+          }
+        if !unfolded, wholeHeight > shownHeight + 1 {
+          Button("続きを読む", action: onUnfold)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(mine ? colors.accentOnFill : colors.accentDefault)
+            .buttonStyle(.plain)
+        }
+      }
       // An invitation's card takes the place of the one page.
       if let invitation {
         InviteCard(code: invitation, mine: mine)
