@@ -1,7 +1,8 @@
 import { rosterTemplates, rotationTemplates } from "@pochical/design/patterns";
 import type { JobTemplate } from "@pochical/design/patterns";
+import { ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { css, cva } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import { addDays, formatDay } from "../lib/design-days";
 import {
@@ -13,6 +14,7 @@ import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
 import { MonthPicker } from "./design-date-picker";
 import { BackButton } from "./design-header";
+import { List, ListRow, listRow } from "./design-list";
 import {
   RepeatSequenceEditor,
   SequenceTiles,
@@ -38,9 +40,25 @@ export type WorkSetup = {
   anchor?: Date;
 };
 
-// The template's shifts under its title, inside the option's button.
 // A template's order or keys, under its note.
 const templateChips = css({ marginTop: "8px" });
+
+// In settings the answers are a list's rows, as the pages around them
+// are; the first run, with no list around it, keeps big cards.
+const answerRow = {
+  emoji: css({ fontFamily: "emoji", fontSize: "20px", lineHeight: 1 }),
+  note: css({ color: "text.tertiary", textStyle: "caption" }),
+  // A template's row grows to its order or keys, padded like a two-line
+  // row.
+  template: css({ paddingBlock: "12px" }),
+  text: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "2px",
+    minWidth: 0,
+  }),
+};
 
 // The first run, in the phone: a welcome with the app's poodle, then a
 // step at a time, each a heading with what it asks, its answers, and its
@@ -212,6 +230,7 @@ export function WorkSetupSteps({
           onChoose={(template) => {
             onFinish({ patternKeys: template.patternKeys });
           }}
+          rows={Boolean(onExit)}
           templates={rosterTemplates}
           title="近い働き方を選んでください"
         />
@@ -222,6 +241,7 @@ export function WorkSetupSteps({
             setStep({ name: "kind" });
           }}
           onChoose={chooseRotation}
+          rows={Boolean(onExit)}
           templates={rotationTemplates}
           title="どんな順番で回りますか？"
         />
@@ -291,6 +311,21 @@ export function StepHeader({
   );
 }
 
+const kinds = [
+  {
+    icon: "📋",
+    id: "roster",
+    note: "勤務表・シフト表・店長からの連絡など",
+    title: "シフトがその都度決まる",
+  },
+  {
+    icon: "🔁",
+    id: "rotation",
+    note: "消防・工場の交代勤務・曜日で固定など",
+    title: "決まった順番で回っている",
+  },
+] as const;
+
 function KindStep({
   first,
   onBack,
@@ -317,20 +352,35 @@ function KindStep({
             : "新しい仕事のシフトはどう決まりますか？"
         }
       />
-      <div className={optionList}>
-        <OptionCard
-          icon="📋"
-          note="勤務表・シフト表・店長からの連絡など"
-          onClick={onRoster}
-          title="シフトがその都度決まる"
-        />
-        <OptionCard
-          icon="🔁"
-          note="消防・工場の交代勤務・曜日で固定など"
-          onClick={onRotation}
-          title="決まった順番で回っている"
-        />
-      </div>
+      {first ? (
+        <div className={optionList}>
+          {kinds.map((kind) => (
+            <OptionCard
+              icon={kind.icon}
+              key={kind.id}
+              note={kind.note}
+              onClick={kind.id === "roster" ? onRoster : onRotation}
+              title={kind.title}
+            />
+          ))}
+        </div>
+      ) : (
+        <List>
+          {kinds.map((kind) => (
+            <ListRow
+              detail={kind.note}
+              key={kind.id}
+              label={kind.title}
+              leading={
+                <span aria-hidden="true" className={answerRow.emoji}>
+                  {kind.icon}
+                </span>
+              }
+              onClick={kind.id === "roster" ? onRoster : onRotation}
+            />
+          ))}
+        </List>
+      )}
       {first && (
         <p className={onboarding.footnote}>あとから設定で変えられます</p>
       )}
@@ -338,14 +388,32 @@ function KindStep({
   );
 }
 
+// A template's order's days, or the keys a roster's work gives.
+function TemplatePreview({ template }: { template: Template }) {
+  if (template.custom) {
+    return null;
+  }
+  return (
+    <div className={templateChips}>
+      {template.sequence ? (
+        <SequenceTiles sequence={template.sequence} weekly={template.weekly} />
+      ) : (
+        <KeysPreview patternKeys={template.patternKeys} />
+      )}
+    </div>
+  );
+}
+
 function TemplateStep({
   title,
   templates,
+  rows,
   onBack,
   onChoose,
 }: {
   title: string;
   templates: readonly Template[];
+  rows: boolean;
   onBack: () => void;
   onChoose: (template: Template) => void;
 }) {
@@ -356,32 +424,52 @@ function TemplateStep({
         onBack={onBack}
         title={title}
       />
-      <div className={optionList}>
-        {templates.map((template) => (
-          <OptionCard
-            key={template.id}
-            note={template.note}
-            onClick={() => {
-              onChoose(template);
-            }}
-            title={template.title}
-          >
-            {!template.custom && (
-              // An order's days, or the keys a roster's work gives.
-              <div className={templateChips}>
-                {template.sequence ? (
-                  <SequenceTiles
-                    sequence={template.sequence}
-                    weekly={template.weekly}
-                  />
-                ) : (
-                  <KeysPreview patternKeys={template.patternKeys} />
-                )}
-              </div>
-            )}
-          </OptionCard>
-        ))}
-      </div>
+      {rows ? (
+        <List>
+          {templates.map((template) => (
+            // Drawn by hand: the order or keys go under the note.
+            <button
+              className={cx(
+                listRow.root,
+                listRow.pressable,
+                answerRow.template
+              )}
+              data-list-row=""
+              key={template.id}
+              onClick={() => {
+                onChoose(template);
+              }}
+              type="button"
+            >
+              <span className={answerRow.text}>
+                {template.title}
+                <small className={answerRow.note}>{template.note}</small>
+                <TemplatePreview template={template} />
+              </span>
+              <ChevronRight
+                aria-hidden="true"
+                className={listRow.arrow}
+                size={17}
+              />
+            </button>
+          ))}
+        </List>
+      ) : (
+        <div className={optionList}>
+          {templates.map((template) => (
+            <OptionCard
+              key={template.id}
+              note={template.note}
+              onClick={() => {
+                onChoose(template);
+              }}
+              title={template.title}
+            >
+              <TemplatePreview template={template} />
+            </OptionCard>
+          ))}
+        </div>
+      )}
     </>
   );
 }
