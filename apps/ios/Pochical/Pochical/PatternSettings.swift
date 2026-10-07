@@ -8,17 +8,9 @@ import SwiftUI
 // patterns in ポチポチ入力's order, adding one ready-made or their own,
 // changing each, and deleting one no order in use repeats.
 
-/// A pattern's standard time in a line: 9:00 – 18:00, 16:30 – 翌9:30, or
-/// 時間なし.
+/// A pattern's standard time in a line, as a day writes hours, or 時間なし.
 func patternTimeText(_ time: ShiftTime?) -> String {
-  guard let time else { return "時間なし" }
-  let overnight = time.end <= time.start
-  return "\(clockText(time.start)) – \(overnight ? "翌" : "")\(clockText(time.end))"
-}
-
-/// "09:00" as 9:00.
-private func clockText(_ hhmm: String) -> String {
-  hhmm.hasPrefix("0") ? String(hhmm.dropFirst()) : hhmm
+  time.map { hoursText($0.start, $0.end) } ?? "時間なし"
 }
 
 /// The milliseconds now, for an edit's clock.

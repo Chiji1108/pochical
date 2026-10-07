@@ -13,8 +13,6 @@ struct DayDetail: View {
   let note: String?
   let patterns: [Pattern]
   let coworkers: [Coworker]
-  /// Whether 一緒に働く人 is unfolded: kept as another day is opened.
-  @Binding var peopleOpen: Bool
   let onChange: (DayEntry?) -> Void
   /// "" clears the memo.
   let onNoteChange: (String) -> Void
@@ -29,6 +27,10 @@ struct DayDetail: View {
   @State private var clearing = false
   @State private var addingCoworker = false
   @State private var newCoworker = ""
+  /// 一緒に働く人's list, a check by each one on the day.
+  @State private var choosingPeople = false
+  /// 人を追加 past coworkersMax.
+  @State private var coworkersAreFull = false
 
   var body: some View {
     Form {
@@ -105,18 +107,6 @@ struct DayDetail: View {
         keepNote()
       }
     }
-    .alert("一緒に働く人を追加", isPresented: $addingCoworker) {
-      TextField("名前", text: $newCoworker)
-      Button("追加") {
-        let name = String(newCoworker.trimmingCharacters(in: .whitespacesAndNewlines)
-          .prefix(TextLimits.personName))
-        if !name.isEmpty {
-          onAddCoworker(name)
-        }
-        newCoworker = ""
-      }
-      Button("キャンセル", role: .cancel) { newCoworker = "" }
-    }
   }
 
   private var pattern: Pattern? {
@@ -192,45 +182,68 @@ struct DayDetail: View {
     onChange(changed)
   }
 
-  @ViewBuilder private func peopleRows(_ entry: DayEntry) -> some View {
-    let picked = entry.people ?? []
-    DisclosureGroup(isExpanded: $peopleOpen) {
-      FlowLayout(spacing: 8) {
-        ForEach(coworkers) { coworker in
-          let isPicked = picked.contains(coworker.id)
-          Button {
-            // Someone deleted from 一緒に働く人 goes as the day's people
-            // are written (spec/sync-protocol.md, Coworkers).
-            var people = picked.filter { id in coworkers.contains { $0.id == id } }
-            if isPicked {
-              people.removeAll { $0 == coworker.id }
-            } else {
-              people.append(coworker.id)
-            }
-            var changed = entry
-            changed.people = people
-            onChange(changed)
-          } label: {
-            Label(coworker.name, systemImage: "checkmark")
-              .labelStyle(ChipLabel(showsIcon: isPicked))
-          }
-          .buttonStyle(.bordered)
-          .buttonBorderShape(.capsule)
-          .tint(isPicked ? colors.accentDefault : colors.textSecondary)
-          .accessibilityAddTraits(isPicked ? .isSelected : [])
-        }
-        Button("追加", systemImage: "plus") { addingCoworker = true }
-          .labelStyle(.titleAndIcon)
-          .buttonStyle(.bordered)
-          .buttonBorderShape(.capsule)
-          .tint(colors.textSecondary)
-      }
-      .padding(.vertical, 4)
+  /// 一緒に働く人 in a row, those on the day by name; a tap opens the list
+  /// to check them in, as the Clock app's 繰り返し picks days (Android
+  /// keeps /design's filter chips; spec/calendar.md, A day's detail).
+  private func peopleRows(_ entry: DayEntry) -> some View {
+    Button {
+      choosingPeople = true
     } label: {
-      LabeledContent("一緒に働く人") {
-        Text(names(picked))
+      HStack(spacing: 8) {
+        LabeledContent("一緒に働く人") {
+          Text(names(entry.people ?? []))
+            .lineLimit(1)
+        }
+        Image(systemName: "chevron.right")
+          .font(.footnote.weight(.semibold))
+          .foregroundStyle(colors.textQuaternary)
+      }
+      .contentShape(.rect)
+    }
+    .buttonStyle(.plain)
+    .sheet(isPresented: $choosingPeople) {
+      PeopleChecklist(
+        coworkers: coworkers, picked: entry.people ?? [],
+        onToggle: { coworker in toggle(coworker, in: entry) },
+        onAdd: {
+          if coworkers.count >= coworkersMax {
+            coworkersAreFull = true
+          } else {
+            addingCoworker = true
+          }
+        })
+      .presentationDetents([.medium, .large])
+      .alert("一緒に働く人を追加", isPresented: $addingCoworker) {
+        TextField("名前", text: $newCoworker)
+        Button("追加") {
+          let name = String(newCoworker.trimmingCharacters(in: .whitespacesAndNewlines)
+            .prefix(TextLimits.personName))
+          if !name.isEmpty {
+            onAddCoworker(name)
+          }
+          newCoworker = ""
+        }
+        Button("キャンセル", role: .cancel) { newCoworker = "" }
+      }
+      .alert(coworkersFull, isPresented: $coworkersAreFull) {
+        Button("OK", role: .cancel) {}
       }
     }
+  }
+
+  /// Puts someone on the day, or takes them off it.
+  private func toggle(_ coworker: Coworker, in entry: DayEntry) {
+    // Someone deleted from 一緒に働く人 goes as the day's people are
+    // written (spec/sync-protocol.md, Coworkers).
+    var people = (entry.people ?? []).filter { id in coworkers.contains { $0.id == id } }
+    if people.contains(coworker.id) {
+      people.removeAll { $0 == coworker.id }
+    } else {
+      people.append(coworker.id)
+    }
+    var changed = entry
+    changed.people = people
+    onChange(changed)
   }
 
   private func names(_ ids: [String]) -> String {
@@ -303,63 +316,60 @@ struct DayDetail: View {
   }
 }
 
-/// A chip's label: its words, with a check when picked.
-private struct ChipLabel: LabelStyle {
-  let showsIcon: Bool
+/// 一緒に働く人 to check in on a day: a check by each one on it, 人を追加
+/// at the foot, and 完了.
+private struct PeopleChecklist: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.dismiss) private var dismiss
+  let coworkers: [Coworker]
+  let picked: [String]
+  let onToggle: (Coworker) -> Void
+  let onAdd: () -> Void
 
-  func makeBody(configuration: Configuration) -> some View {
-    HStack(spacing: 4) {
-      if showsIcon {
-        configuration.icon.imageScale(.small)
+  var body: some View {
+    NavigationStack {
+      List {
+        if !coworkers.isEmpty {
+          Section {
+            ForEach(coworkers) { coworker in
+              let isPicked = picked.contains(coworker.id)
+              Button {
+                onToggle(coworker)
+              } label: {
+                HStack {
+                  Text(coworker.name).foregroundStyle(colors.textPrimary)
+                  Spacer()
+                  Image(systemName: "checkmark")
+                    .foregroundStyle(colors.accentDefault)
+                    .opacity(isPicked ? 1 : 0)
+                }
+                .contentShape(.rect)
+              }
+              .buttonStyle(.plain)
+              .accessibilityAddTraits(isPicked ? .isSelected : [])
+            }
+          }
+          .settingsRows()
+        }
+        Section {
+          Button(action: onAdd) {
+            Label("人を追加…", systemImage: "plus")
+              .foregroundStyle(colors.accentDefault)
+          }
+        } footer: {
+          Text("同じシフトに入る人などを、この日にメモできます。名前や並び順は、設定の「一緒に働く人」で直せます。")
+        }
+        .settingsRows()
       }
-      configuration.title
-    }
-  }
-}
-
-/// Lays its pieces out in rows, starting a new row when one is full.
-struct FlowLayout: Layout {
-  var spacing: CGFloat = 8
-
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-    let rows = rows(in: proposal.width ?? .infinity, subviews)
-    let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
-    return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: height)
-  }
-
-  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-    var y = bounds.minY
-    for row in rows(in: bounds.width, subviews) {
-      var x = bounds.minX
-      for index in row.indices {
-        let size = subviews[index].sizeThatFits(.unspecified)
-        subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-        x += size.width + spacing
+      .settingsList()
+      .navigationTitle("一緒に働く人")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          Button("完了", systemImage: "checkmark", role: .confirm) { dismiss() }
+        }
       }
-      y += row.height + spacing
     }
-  }
-
-  private struct Row {
-    var indices: [Int] = []
-    var width: CGFloat = 0
-    var height: CGFloat = 0
-  }
-
-  private func rows(in width: CGFloat, _ subviews: Subviews) -> [Row] {
-    var rows: [Row] = [Row()]
-    for index in subviews.indices {
-      let size = subviews[index].sizeThatFits(.unspecified)
-      if !rows[rows.count - 1].indices.isEmpty, rows[rows.count - 1].width + spacing + size.width > width {
-        rows.append(Row())
-      }
-      var row = rows[rows.count - 1]
-      row.width += (row.indices.isEmpty ? 0 : spacing) + size.width
-      row.height = max(row.height, size.height)
-      row.indices.append(index)
-      rows[rows.count - 1] = row
-    }
-    return rows
   }
 }
 
