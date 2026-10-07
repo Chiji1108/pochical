@@ -140,7 +140,7 @@ struct JobChangePage: View {
     }
     .settingsRows()
     Section {
-      next("次へ") { go(.anchor(template, sequence)) }
+      next("次へ") { askAnchor(template, sequence) }
         .disabled(sequence.isEmpty)
     }
   }
@@ -229,17 +229,26 @@ struct JobChangePage: View {
   private func choose(_ template: JobTemplate) {
     if template.custom {
       sequence = []
+      chosen = nil
       go(.custom(template))
     } else if let order = template.sequence {
       if template.weekly {
         // A week starts on Sunday: its order lines up with the weekdays.
         finish(template, sequence: order, anchor: start.adding(days: -start.weekday))
       } else {
-        go(.anchor(template, order))
+        askAnchor(template, order)
       }
     } else {
       finish(template, sequence: [], anchor: start)
     }
+  }
+
+  /// Asks for a day on the order's first shift, starting from the new
+  /// job's first day: a date picker always has one chosen, so it counts
+  /// until another is picked.
+  private func askAnchor(_ template: JobTemplate, _ order: [PatternID]) {
+    anchor = start
+    go(.anchor(template, order))
   }
 
   private func finish(_ template: JobTemplate, sequence: [PatternID], anchor: Day) {
