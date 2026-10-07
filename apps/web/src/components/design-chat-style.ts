@@ -398,7 +398,8 @@ export const chatStyle = {
     color: "accent.default",
     display: "flex",
     gap: "12px",
-    margin: "4px 0",
+    // A run's room either side, as the line after it starts one.
+    margin: "calc(var(--run-gap) - var(--line-gap)) 0",
     textStyle: "caption",
   }),
   // Three dots in a bubble of the others' kind, rising in turn.

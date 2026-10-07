@@ -212,9 +212,11 @@ struct ChatScreen: View {
         let listed = items(state)
         let timeless = linesWithoutTime(listed)
         ForEach(listed) { item in
-          // Lines close within a run, parted where the writer changes.
+          // Lines close within a run, parted where the writer changes; the
+          // first has the list's own margin over it.
+          let parted = item.startsRun && item.id != listed.first?.id
           row(item, names: names, showsTime: !timeless.contains(item.id))
-            .padding(.top, item.startsRun ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
+            .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
         }
         // Who is writing now, under the latest line; not someone blocked.
         ForEach(typers.keys.filter { !blocked.contains($0) }.sorted(), id: \.self) { userID in
