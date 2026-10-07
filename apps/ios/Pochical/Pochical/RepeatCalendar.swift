@@ -77,10 +77,9 @@ struct RepeatCalendar<Accessory: View>: View {
         pager
       }
       Spacer(minLength: 0)
-      // ポチポチ入力's tray as it is, ⌫ in 消す's place: the day typed
-      // next, or the one chosen, over the keys.
+      // ポチポチ入力's tray, ⌫ in 消す's place. No date over the keys: the
+      // framed day shows where typing goes, and the room is the month's.
       VStack(spacing: 8) {
-        TrayDateLabel(day: anchor.adding(days: chosen ?? sequence.count), week: settings.device.week)
         PatternKeys(patterns: patterns, page: $keyPage) { pattern in
           keys += 1
           pick(pattern)

@@ -47,8 +47,7 @@ struct EntryTray: View {
   }
 }
 
-/// The day a tray enters next, over its keys: ポチポチ入力's, and an
-/// order's being typed.
+/// The day ポチポチ入力 enters next, over its keys.
 struct TrayDateLabel: View {
   @Environment(\.themeColors) private var colors
   let day: Day

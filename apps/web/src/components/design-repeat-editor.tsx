@@ -9,7 +9,6 @@ import {
   dateKey,
   dayMilliseconds,
   formatDay,
-  formatMonthDay,
   monthAfter,
   repeatSchedule,
 } from "../lib/design-days";
@@ -250,7 +249,6 @@ export function RepeatCalendar({
   const pages = patternPagesOf(patternKeys).length;
   const orderStart = from === undefined ? anchor : from;
   const cursor = chosen ?? sequence.length;
-  const cursorDate = addDays(anchor, cursor);
   const goTo = (target: Date) => {
     setSwipedTo(undefined);
     setMonth(monthOf(target));
@@ -324,19 +322,9 @@ export function RepeatCalendar({
           )}
         />
       </div>
-      {/* ポチポチ入力's tray as it is, ⌫ in 消す's place: the day typed
-      next, or the one chosen, over the keys. */}
+      {/* ポチポチ入力's tray, ⌫ in 消す's place. No date over the keys: the
+      framed day shows where typing goes, and the room is the month's. */}
       <div className={repeatCalendar.foot}>
-        <p className={shiftInput.dateLabel}>
-          {formatMonthDay(cursorDate)}
-          <span
-            className={shiftInput.weekday({
-              tone: weekTools.dateTone(cursorDate),
-            })}
-          >
-            ({weekdayNameOf(cursorDate.getDay())})
-          </span>
-        </p>
         <PatternKeys
           onPage={setPage}
           onPick={pick}
