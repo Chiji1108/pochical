@@ -604,10 +604,8 @@ private struct LookEditor: View {
     .padding(.vertical, 4)
   }
 
-  /// The emoji offered, the one picked from the keyboard first when it is
-  /// not among them.
-  /// The offered ones, the one picked from all of them first when it is
-  /// not among them.
+  /// The icons or emoji offered, the one picked from all of them (the
+  /// icon sheet, the emoji keyboard) first when it is not among them.
   private func withPicked(_ offered: [String], _ chosen: String) -> [String] {
     offered.contains(chosen) || chosen.isEmpty ? offered : [chosen] + offered
   }
