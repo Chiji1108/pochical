@@ -87,6 +87,10 @@ extension Account {
   public func linkApple(idToken: String, nonce: String) async throws -> LinkResult {
     var request = URLRequest(url: server.appending(path: "api/auth/link-social"))
     request.httpMethod = "POST"
+    // The token says who calls, not better-auth's cookie, which URLSession
+    // would keep and send: with a cookie and no Origin, better-auth takes
+    // the call for a browser's from another site and refuses it (403).
+    request.httpShouldHandleCookies = false
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.setValue("Bearer \(try await token())", forHTTPHeaderField: "Authorization")
     request.httpBody = try JSONSerialization.data(withJSONObject: [
