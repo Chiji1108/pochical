@@ -141,8 +141,11 @@ struct DeviceCalendarSheet: View {
         case .granted:
           if let done {
             Section {
-              Label(done, systemImage: "checkmark.circle.fill")
-                .foregroundStyle(colors.textPrimary)
+              Label {
+                Text(done).foregroundStyle(colors.textPrimary)
+              } icon: {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(colors.accentDefault)
+              }
             }
             .settingsRows()
             Section {
@@ -204,6 +207,9 @@ struct DeviceCalendarSheet: View {
         }
       }
       .pickerStyle(.navigationLink)
+      // The line under it from the row's edge, as under the switch, not
+      // from where the picked calendar's dot puts its words.
+      .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
       Toggle("休みの日も入れる", isOn: $includeOff)
     } header: {
       Text("\(month.monthText)のシフトを、1日ずつ予定として入れます。")
