@@ -63,4 +63,26 @@ public interface SendSupportMessageRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDeviceBytes();
+
+  /**
+   * <pre>
+   * The line it is a reply to, by id, when it is one; one not in the chat
+   * is left out.
+   * </pre>
+   *
+   * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+   * @return The replyTo.
+   */
+  java.lang.String getReplyTo();
+  /**
+   * <pre>
+   * The line it is a reply to, by id, when it is one; one not in the chat
+   * is left out.
+   * </pre>
+   *
+   * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+   * @return The bytes for replyTo.
+   */
+  com.google.protobuf.ByteString
+      getReplyToBytes();
 }

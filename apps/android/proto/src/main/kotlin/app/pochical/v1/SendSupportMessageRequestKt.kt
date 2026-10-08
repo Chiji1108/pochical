@@ -97,6 +97,33 @@ public object SendSupportMessageRequestKt {
     public fun clearDevice() {
       _builder.clearDevice()
     }
+
+    /**
+     * ```
+     * The line it is a reply to, by id, when it is one; one not in the chat
+     * is left out.
+     * ```
+     *
+     * `string reply_to = 4 [json_name = "replyTo"];`
+     */
+    public var replyTo: kotlin.String
+      @kotlin.jvm.JvmName("getReplyTo")
+        get() = _builder.replyTo
+      @kotlin.jvm.JvmName("setReplyTo")
+        set(value) {
+        _builder.replyTo = value
+      }
+    /**
+     * ```
+     * The line it is a reply to, by id, when it is one; one not in the chat
+     * is left out.
+     * ```
+     *
+     * `string reply_to = 4 [json_name = "replyTo"];`
+     */
+    public fun clearReplyTo() {
+      _builder.clearReplyTo()
+    }
   }
 }
 public inline fun app.pochical.v1.SendSupportMessageRequest.copy(block: `app.pochical.v1`.SendSupportMessageRequestKt.Dsl.() -> kotlin.Unit): app.pochical.v1.SendSupportMessageRequest =

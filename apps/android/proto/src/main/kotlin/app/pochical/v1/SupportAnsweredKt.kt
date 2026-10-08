@@ -12,8 +12,8 @@ public inline fun supportAnswered(block: app.pochical.v1.SupportAnsweredKt.Dsl.(
   app.pochical.v1.SupportAnsweredKt.Dsl._create(app.pochical.v1.SupportAnswered.newBuilder()).apply { block() }._build()
 /**
  * ```
- * An answer in the chat with Pochical's people (proto/pochical/v1/support.proto),
- * told to the user's devices as it is written.
+ * A change by Pochical's people in the chat with them
+ * (proto/pochical/v1/support.proto), told to the user's devices as made.
  * ```
  *
  * Protobuf type `pochical.v1.SupportAnswered`

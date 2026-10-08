@@ -31,9 +31,37 @@ public nonisolated struct Pochical_V1_SupportMessage: Sendable {
   /// Written by Pochical's people, not the user.
   public var fromSupport: Bool = false
 
+  /// Empty once taken back.
   public var text: String = String()
 
   public var sentAtMs: Int64 = 0
+
+  /// The line it is a reply to, by id; empty when none, or taken back.
+  public var replyTo: String = String()
+
+  /// Taken back by its writer.
+  public var unsent: Bool = false
+
+  /// Each emoji on it, and who put it there; none once taken back.
+  public var reactions: [Pochical_V1_SupportReaction] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// An emoji on a line, put there by the user, by Pochical's people, or by
+/// both.
+public nonisolated struct Pochical_V1_SupportReaction: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var emoji: String = String()
+
+  public var mine: Bool = false
+
+  public var support: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -78,6 +106,10 @@ public nonisolated struct Pochical_V1_SendSupportMessageRequest: Sendable {
   /// The app's version and the device, as the chat's head says reach
   /// Pochical's people with what is written: ポチカル 1.0・iPhone (iOS 26.0).
   public var device: String = String()
+
+  /// The line it is a reply to, by id, when it is one; one not in the chat
+  /// is left out.
+  public var replyTo: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -125,13 +157,85 @@ public nonisolated struct Pochical_V1_MarkSupportReadResponse: Sendable {
   public init() {}
 }
 
+public nonisolated struct Pochical_V1_ReactSupportRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The line, by id.
+  public var id: String = String()
+
+  public var emoji: String = String()
+
+  /// Put on, or taken off.
+  public var on: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pochical_V1_ReactSupportResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var message: Pochical_V1_SupportMessage {
+    get {_message ?? Pochical_V1_SupportMessage()}
+    set {_message = newValue}
+  }
+  /// Returns true if `message` has been explicitly set.
+  public var hasMessage: Bool {self._message != nil}
+  /// Clears the value of `message`. Subsequent reads from it will return its default value.
+  public mutating func clearMessage() {self._message = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _message: Pochical_V1_SupportMessage? = nil
+}
+
+public nonisolated struct Pochical_V1_UnsendSupportMessageRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pochical_V1_UnsendSupportMessageResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var message: Pochical_V1_SupportMessage {
+    get {_message ?? Pochical_V1_SupportMessage()}
+    set {_message = newValue}
+  }
+  /// Returns true if `message` has been explicitly set.
+  public var hasMessage: Bool {self._message != nil}
+  /// Clears the value of `message`. Subsequent reads from it will return its default value.
+  public mutating func clearMessage() {self._message = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _message: Pochical_V1_SupportMessage? = nil
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "pochical.v1"
 
 nonisolated extension Pochical_V1_SupportMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SupportMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}from_support\0\u{1}text\0\u{3}sent_at_ms\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}from_support\0\u{1}text\0\u{3}sent_at_ms\0\u{3}reply_to\0\u{1}unsent\0\u{1}reactions\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -143,6 +247,9 @@ nonisolated extension Pochical_V1_SupportMessage: SwiftProtobuf.Message, SwiftPr
       case 2: try { try decoder.decodeSingularBoolField(value: &self.fromSupport) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.text) }()
       case 4: try { try decoder.decodeSingularInt64Field(value: &self.sentAtMs) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.replyTo) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.unsent) }()
+      case 7: try { try decoder.decodeRepeatedMessageField(value: &self.reactions) }()
       default: break
       }
     }
@@ -161,6 +268,15 @@ nonisolated extension Pochical_V1_SupportMessage: SwiftProtobuf.Message, SwiftPr
     if self.sentAtMs != 0 {
       try visitor.visitSingularInt64Field(value: self.sentAtMs, fieldNumber: 4)
     }
+    if !self.replyTo.isEmpty {
+      try visitor.visitSingularStringField(value: self.replyTo, fieldNumber: 5)
+    }
+    if self.unsent != false {
+      try visitor.visitSingularBoolField(value: self.unsent, fieldNumber: 6)
+    }
+    if !self.reactions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.reactions, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -169,6 +285,49 @@ nonisolated extension Pochical_V1_SupportMessage: SwiftProtobuf.Message, SwiftPr
     if lhs.fromSupport != rhs.fromSupport {return false}
     if lhs.text != rhs.text {return false}
     if lhs.sentAtMs != rhs.sentAtMs {return false}
+    if lhs.replyTo != rhs.replyTo {return false}
+    if lhs.unsent != rhs.unsent {return false}
+    if lhs.reactions != rhs.reactions {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_SupportReaction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SupportReaction"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}emoji\0\u{1}mine\0\u{1}support\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.emoji) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.mine) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.support) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.emoji.isEmpty {
+      try visitor.visitSingularStringField(value: self.emoji, fieldNumber: 1)
+    }
+    if self.mine != false {
+      try visitor.visitSingularBoolField(value: self.mine, fieldNumber: 2)
+    }
+    if self.support != false {
+      try visitor.visitSingularBoolField(value: self.support, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_SupportReaction, rhs: Pochical_V1_SupportReaction) -> Bool {
+    if lhs.emoji != rhs.emoji {return false}
+    if lhs.mine != rhs.mine {return false}
+    if lhs.support != rhs.support {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -230,7 +389,7 @@ nonisolated extension Pochical_V1_GetSupportChatResponse: SwiftProtobuf.Message,
 
 nonisolated extension Pochical_V1_SendSupportMessageRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SendSupportMessageRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}text\0\u{1}device\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}text\0\u{1}device\0\u{3}reply_to\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -241,6 +400,7 @@ nonisolated extension Pochical_V1_SendSupportMessageRequest: SwiftProtobuf.Messa
       case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.device) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.replyTo) }()
       default: break
       }
     }
@@ -256,6 +416,9 @@ nonisolated extension Pochical_V1_SendSupportMessageRequest: SwiftProtobuf.Messa
     if !self.device.isEmpty {
       try visitor.visitSingularStringField(value: self.device, fieldNumber: 3)
     }
+    if !self.replyTo.isEmpty {
+      try visitor.visitSingularStringField(value: self.replyTo, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -263,6 +426,7 @@ nonisolated extension Pochical_V1_SendSupportMessageRequest: SwiftProtobuf.Messa
     if lhs.id != rhs.id {return false}
     if lhs.text != rhs.text {return false}
     if lhs.device != rhs.device {return false}
+    if lhs.replyTo != rhs.replyTo {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -335,6 +499,144 @@ nonisolated extension Pochical_V1_MarkSupportReadResponse: SwiftProtobuf.Message
   }
 
   public static func ==(lhs: Pochical_V1_MarkSupportReadResponse, rhs: Pochical_V1_MarkSupportReadResponse) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ReactSupportRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ReactSupportRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}emoji\0\u{1}on\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.emoji) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.on) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.emoji.isEmpty {
+      try visitor.visitSingularStringField(value: self.emoji, fieldNumber: 2)
+    }
+    if self.on != false {
+      try visitor.visitSingularBoolField(value: self.on, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ReactSupportRequest, rhs: Pochical_V1_ReactSupportRequest) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.emoji != rhs.emoji {return false}
+    if lhs.on != rhs.on {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ReactSupportResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ReactSupportResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}message\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._message) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._message {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ReactSupportResponse, rhs: Pochical_V1_ReactSupportResponse) -> Bool {
+    if lhs._message != rhs._message {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_UnsendSupportMessageRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UnsendSupportMessageRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_UnsendSupportMessageRequest, rhs: Pochical_V1_UnsendSupportMessageRequest) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_UnsendSupportMessageResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UnsendSupportMessageResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}message\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._message) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._message {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_UnsendSupportMessageResponse, rhs: Pochical_V1_UnsendSupportMessageResponse) -> Bool {
+    if lhs._message != rhs._message {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

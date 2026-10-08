@@ -28,6 +28,17 @@ public protocol Pochical_V1_SupportServiceClientInterface: Sendable {
     /// The answers so far are read, as the chat is open.
     @available(iOS 13, *)
     func `markSupportRead`(request: Pochical_V1_MarkSupportReadRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_MarkSupportReadResponse>
+
+    /// The user's reaction on a line, put on or taken off. NOT_FOUND for a
+    /// line not in their chat or taken back; INVALID_ARGUMENT for anything
+    /// but one emoji.
+    @available(iOS 13, *)
+    func `reactSupport`(request: Pochical_V1_ReactSupportRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_ReactSupportResponse>
+
+    /// One of the user's own lines taken back: its words, reactions and reply
+    /// go, from Pochical's people's chat too. NOT_FOUND for a line not theirs.
+    @available(iOS 13, *)
+    func `unsendSupportMessage`(request: Pochical_V1_UnsendSupportMessageRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_UnsendSupportMessageResponse>
 }
 
 /// Concrete implementation of `Pochical_V1_SupportServiceClientInterface`.
@@ -53,11 +64,23 @@ public final class Pochical_V1_SupportServiceClient: Pochical_V1_SupportServiceC
         return await self.client.unary(path: "/pochical.v1.SupportService/MarkSupportRead", idempotencyLevel: .idempotent, request: request, headers: headers)
     }
 
+    @available(iOS 13, *)
+    public func `reactSupport`(request: Pochical_V1_ReactSupportRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_ReactSupportResponse> {
+        return await self.client.unary(path: "/pochical.v1.SupportService/ReactSupport", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
+    public func `unsendSupportMessage`(request: Pochical_V1_UnsendSupportMessageRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_UnsendSupportMessageResponse> {
+        return await self.client.unary(path: "/pochical.v1.SupportService/UnsendSupportMessage", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
     public enum Metadata {
         public enum Methods {
             public static let getSupportChat = Connect.MethodSpec(name: "GetSupportChat", service: "pochical.v1.SupportService", type: .unary)
             public static let sendSupportMessage = Connect.MethodSpec(name: "SendSupportMessage", service: "pochical.v1.SupportService", type: .unary)
             public static let markSupportRead = Connect.MethodSpec(name: "MarkSupportRead", service: "pochical.v1.SupportService", type: .unary)
+            public static let reactSupport = Connect.MethodSpec(name: "ReactSupport", service: "pochical.v1.SupportService", type: .unary)
+            public static let unsendSupportMessage = Connect.MethodSpec(name: "UnsendSupportMessage", service: "pochical.v1.SupportService", type: .unary)
         }
     }
 }

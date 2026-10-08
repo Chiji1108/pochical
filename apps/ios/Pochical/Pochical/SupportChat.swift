@@ -20,7 +20,7 @@ struct SupportRow: View {
         AppIconChoice.current.image(size: 28)
         VStack(alignment: .leading, spacing: 2) {
           Text("作っている人とチャット").foregroundStyle(colors.textPrimary)
-          Text(latest?.text ?? "ほしい機能や不具合のこと、気軽にどうぞ")
+          Text(latest.map(SupportChatScreen.summary) ?? "ほしい機能や不具合のこと、気軽にどうぞ")
             .font(.footnote)
             .foregroundStyle(colors.textTertiary)
             .lineLimit(1)
@@ -54,25 +54,45 @@ struct SupportRow: View {
 
 /// The chat with the people who make Pochical (/design's SupportChatPage):
 /// a small wish or trouble is easier written in a chat than a mail, and
-/// the answer comes back in the same place. Drawn as the group chats are;
-/// for now in words only. Its head says plainly who reads it and what
+/// the answer comes back in the same place. Drawn and held as the group
+/// chats are: reactions, 返信, コピー and, on one's own lines, 送信取消; not
+/// what only a group needs, and no 編集, as an answer may already be
+/// written to the words. Its head says plainly who reads it and what
 /// reaches them.
 struct SupportChatScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(Settings.self) private var settings
+  @Environment(\.look) private var look
   @State private var lines: [SupportLine] = []
   /// Lines being sent, shown faint until the server keeps them; one that
   /// could not go waits to be tried again.
   @State private var waiting: [Waiting] = []
   @State private var draft = ""
   @State private var composing = false
+  /// The line being answered (返信), quoted over the composer.
+  @State private var replying: SupportLine?
+  /// The line whose 送信取消 waits to be confirmed.
+  @State private var unsending: SupportLine?
+  /// The line given an emoji from the keyboard (+).
+  @State private var reactingTo: SupportLine?
+  /// The line whose reactions and menu are open, its bubble lifted.
+  @State private var acting: String?
+  /// Lines whose long words are opened.
+  @State private var unfolded: Set<String> = []
+  /// The line a tapped quote goes to.
+  @State private var going: String?
   private let field = ComposerBox()
 
   struct Waiting: Identifiable, Hashable {
     let id: String
     let text: String
+    var replyTo: String?
     var failed = false
   }
+
+  /// Who answers here: Pochical's people, under the app's name.
+  private static let supportName = "ポチカル"
 
   var body: some View {
     ScrollViewReader { reader in
@@ -80,11 +100,23 @@ struct SupportChatScreen: View {
         LazyVStack(spacing: 4) {
           intro
           ForEach(Array(lines.enumerated()), id: \.element.id) { index, line in
-            let first = index == 0 || lines[index - 1].fromSupport != line.fromSupport
-            let last = index == lines.count - 1 || lines[index + 1].fromSupport != line.fromSupport
-            row(text: line.text, mine: !line.fromSupport, first: first, waiting: false)
-              .padding(.top, first && index > 0 ? 8 : 0)
-            if last {
+            let runs = { (other: SupportLine) in other.fromSupport == line.fromSupport && !other.unsent }
+            let first = index == 0 || !runs(lines[index - 1]) || line.unsent
+            let last = index == lines.count - 1 || !runs(lines[index + 1]) || line.unsent
+            Group {
+              if line.unsent {
+                Text(unsentLine(Self.supportName, mine: !line.fromSupport))
+                  .font(.caption)
+                  .foregroundStyle(colors.textTertiary)
+                  .frame(maxWidth: .infinity)
+                  .padding(.vertical, 4)
+              } else {
+                row(line, first: first)
+              }
+            }
+            .id(line.id)
+            .padding(.top, first && index > 0 ? 8 : 0)
+            if last && !line.unsent {
               Text(Self.timeText(line.sentAt))
                 .font(.caption2)
                 .foregroundStyle(colors.textTertiary)
@@ -93,7 +125,7 @@ struct SupportChatScreen: View {
             }
           }
           ForEach(waiting) { line in
-            row(text: line.text, mine: true, first: false, waiting: !line.failed)
+            waitingRow(line)
             if line.failed {
               Button("送れませんでした。もう一度送る") { send(line) }
                 .font(.caption)
@@ -110,20 +142,41 @@ struct SupportChatScreen: View {
       .onChange(of: lines.count + waiting.count) { _, _ in
         withAnimation { reader.scrollTo("end", anchor: .bottom) }
       }
+      // A quote tapped goes to the line it is of.
+      .onChange(of: going) { _, id in
+        guard let id else { return }
+        withAnimation { reader.scrollTo(id, anchor: .center) }
+        going = nil
+      }
     }
     .background(colors.backgroundBase)
     .safeAreaInset(edge: .bottom, spacing: 0) { composer }
-    .navigationTitle("ポチカル")
+    .navigationTitle(Self.supportName)
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.hidden, for: .tabBar)
     .task { await load() }
     .refreshable { await load() }
-    // An answer shows as it is written, as a group chat's line does.
+    // An answer, a reaction or a line taken back by Pochical's people
+    // shows as made, as a group chat's do.
     .onReceive(NotificationCenter.default.publisher(for: SupportLine.answered)) { _ in
       Task { await load() }
     }
     .onAppear { Notifications.shared.supportOpen = true }
     .onDisappear { Notifications.shared.supportOpen = false }
+    .sheet(item: $reactingTo) { line in
+      EmojiKeyboardSheet { react($0, on: line) }
+    }
+    .alert(
+      "送信を取り消しますか？",
+      isPresented: Binding { unsending != nil } set: { if !$0 { unsending = nil } }
+    ) {
+      Button("キャンセル", role: .cancel) {}
+      Button("取り消す", role: .destructive) {
+        if let line = unsending { unsend(line) }
+      }
+    } message: {
+      Text("\(Self.supportName)を作っている人のチャットからも消えます。")
+    }
   }
 
   /// Who this reaches, and everything that does.
@@ -145,10 +198,12 @@ struct SupportChatScreen: View {
     .padding(.vertical, 16)
   }
 
-  /// A line, Pochical's people's under the app's icon at the start of a
-  /// run, as a member's face starts theirs.
-  private func row(text: String, mine: Bool, first: Bool, waiting: Bool) -> some View {
-    HStack(alignment: .top, spacing: 8) {
+  /// A line kept, Pochical's people's under the app's icon at the start of
+  /// a run, as a member's face starts theirs; held, its reactions and
+  /// menu; its emoji under it.
+  private func row(_ line: SupportLine, first: Bool) -> some View {
+    let mine = !line.fromSupport
+    return HStack(alignment: .top, spacing: 8) {
       if mine {
         Spacer(minLength: 48)
       } else if first {
@@ -156,7 +211,23 @@ struct SupportChatScreen: View {
       } else {
         Color.clear.frame(width: 28, height: 1)
       }
-      MessageBubble(text: text, mine: mine, first: first, waiting: waiting, nameOf: { _ in "" })
+      VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
+        bubble(line, first: first)
+          .heldForActions(lifted: acting == line.id) { frame, finger in
+            openActions(
+              MessageActionsRequest(
+                lineID: line.id, frame: frame, mine: mine,
+                bubble: AnyView(bubble(line, first: first)), finger: finger,
+                reactions: line.reactions, meID: SupportLine.me,
+                onReact: { react($0, on: line) }, onMoreReactions: { reactingTo = line },
+                actions: actions(for: line)))
+          }
+        if !line.reactions.isEmpty {
+          ReactionRow(
+            reactions: line.reactions, meID: SupportLine.me, nameOf: Self.nameOf, counted: true,
+            onReact: { react($0, on: line) })
+        }
+      }
       if !mine {
         Spacer(minLength: 48)
       }
@@ -164,44 +235,167 @@ struct SupportChatScreen: View {
     .padding(.horizontal, 16)
   }
 
+  private func bubble(_ line: SupportLine, first: Bool) -> some View {
+    MessageBubble(
+      text: line.text, mine: !line.fromSupport, first: first, waiting: false,
+      nameOf: { _ in "" }, quote: line.replyTo.map(quote(of:)),
+      onOpenQuote: { going = line.replyTo },
+      unfolded: unfolded.contains(line.id),
+      onUnfold: { withAnimation { _ = unfolded.insert(line.id) } })
+  }
+
+  /// A line on its way, faint; held, only コピー yet.
+  private func waitingRow(_ line: Waiting) -> some View {
+    let bubble = MessageBubble(
+      text: line.text, mine: true, first: false, waiting: !line.failed, nameOf: { _ in "" },
+      quote: line.replyTo.map(quote(of:)))
+    return HStack(alignment: .top, spacing: 8) {
+      Spacer(minLength: 48)
+      bubble.heldForActions(lifted: acting == line.id) { frame, finger in
+        openActions(
+          MessageActionsRequest(
+            lineID: line.id, frame: frame, mine: true, bubble: AnyView(bubble), finger: finger,
+            actions: [copy(line.text)]))
+      }
+    }
+    .padding(.horizontal, 16)
+  }
+
+  /// A line's menu (/design's): 返信 and コピー, and for one's own,
+  /// 送信取消 apart in the danger color.
+  private func actions(for line: SupportLine) -> [MessageAction] {
+    var actions = [
+      MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") {
+        withAnimation { replying = line }
+        field.focus()
+      },
+      copy(line.text),
+    ]
+    if !line.fromSupport {
+      actions.append(
+        MessageAction(
+          title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
+          startsGroup: true
+        ) { unsending = line })
+    }
+    return actions
+  }
+
+  private func copy(_ text: String) -> MessageAction {
+    MessageAction(title: "コピー", systemImage: "doc.on.doc") {
+      UIPasteboard.general.string = text
+    }
+  }
+
+  /// Who put an emoji on, as its pill names them.
+  private static func nameOf(_ id: String) -> String {
+    id == SupportLine.support ? supportName : "自分"
+  }
+
+  /// The line a reply answers, as its quote shows it: as the chat holds
+  /// it, else said to be earlier.
+  private func quote(of id: String) -> LineQuote {
+    guard let line = lines.first(where: { $0.id == id }) else {
+      return LineQuote(seq: 0, words: "以前のメッセージ")
+    }
+    let writer = line.fromSupport ? Self.supportName : "自分"
+    if line.unsent {
+      return LineQuote(seq: 0, writer: writer, words: "取り消されたメッセージ")
+    }
+    return LineQuote(seq: 0, writer: writer, words: lineWords(line.text, days: [], nameOf: { _ in "" }))
+  }
+
+  /// The last line, as 設定's row shows it.
+  static func summary(_ line: SupportLine) -> String {
+    line.unsent ? unsentLine(supportName, mine: !line.fromSupport) : line.text
+  }
+
+  /// Opens a line's reactions and menu over everything (ChatScreen's).
+  private func openActions(_ request: MessageActionsRequest) {
+    acting = request.lineID
+    OverlayWindow.shared.show(
+      MessageActionsOverlay(request: request) { action in
+        acting = nil
+        OverlayWindow.shared.hide(after: .milliseconds(50))
+        action?()
+      }
+      .environment(\.themeColors, colors)
+      .environment(settings)
+      .environment(\.look, look))
+  }
+
+  /// Puts the user's `emoji` on the line, or takes it back if it was
+  /// theirs already, shown as the server keeps it.
+  private func react(_ emoji: String, on line: SupportLine) {
+    let current = lines.first { $0.id == line.id } ?? line
+    let on = !current.reactions.contains { $0.emoji == emoji && $0.userIDs.contains(SupportLine.me) }
+    Task {
+      guard let kept = try? await groupCalls.reactSupport(emoji, on: on, line: line.id) else { return }
+      replace(kept)
+    }
+  }
+
+  private func unsend(_ line: SupportLine) {
+    if replying?.id == line.id { replying = nil }
+    Task {
+      guard let kept = try? await groupCalls.unsendSupport(line.id) else { return }
+      replace(kept)
+    }
+  }
+
+  private func replace(_ line: SupportLine) {
+    if let index = lines.firstIndex(where: { $0.id == line.id }) {
+      lines[index] = line
+    }
+  }
+
   private var composer: some View {
     let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-    return HStack(alignment: .bottom, spacing: 8) {
-      ComposerField(
-        placeholder: "メッセージ", text: $draft, limit: TextLimits.chatMessage,
-        composing: $composing, box: field
-      )
-      .overlay(alignment: .leading) {
-        if draft.isEmpty {
-          Text("メッセージ")
-            .foregroundStyle(colors.textQuaternary)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+    return VStack(spacing: 0) {
+      if let replying {
+        ReplyBar(quote: quote(of: replying.id), groupID: "") {
+          withAnimation { self.replying = nil }
         }
+      }
+      HStack(alignment: .bottom, spacing: 8) {
+        ComposerField(
+          placeholder: "メッセージ", text: $draft, limit: TextLimits.chatMessage,
+          composing: $composing, box: field
+        )
+        .overlay(alignment: .leading) {
+          if draft.isEmpty {
+            Text("メッセージ")
+              .foregroundStyle(colors.textQuaternary)
+              .allowsHitTesting(false)
+              .accessibilityHidden(true)
+          }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(minHeight: 38)
+        .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
+        Button {
+          let text = String(field.commit().prefix(TextLimits.chatMessage))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+          guard !text.isEmpty else { return }
+          draft = ""
+          let replyTo = replying?.id
+          replying = nil
+          send(Waiting(id: UUID().uuidString.lowercased(), text: text, replyTo: replyTo))
+        } label: {
+          Image(systemName: "arrow.up")
+            .font(.system(size: 16, weight: .bold))
+            .foregroundStyle(colors.accentOnFill)
+            .frame(width: 38, height: 38)
+            .background(colors.accentFill, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("送る")
+        .opacity(trimmed.isEmpty && !composing ? 0.5 : 1)
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
-      .frame(minHeight: 38)
-      .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
-      Button {
-        let text = String(field.commit().prefix(TextLimits.chatMessage))
-          .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        draft = ""
-        send(Waiting(id: UUID().uuidString.lowercased(), text: text))
-      } label: {
-        Image(systemName: "arrow.up")
-          .font(.system(size: 16, weight: .bold))
-          .foregroundStyle(colors.accentOnFill)
-          .frame(width: 38, height: 38)
-          .background(colors.accentFill, in: Circle())
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel("送る")
-      .opacity(trimmed.isEmpty && !composing ? 0.5 : 1)
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 8)
     .background(colors.backgroundBase)
   }
 
@@ -223,7 +417,8 @@ struct SupportChatScreen: View {
     }
     Task {
       do {
-        let kept = try await groupCalls.sendSupport(line.text, id: line.id, device: Self.device)
+        let kept = try await groupCalls.sendSupport(
+          line.text, id: line.id, device: Self.device, replyTo: line.replyTo)
         waiting.removeAll { $0.id == line.id }
         lines.append(kept)
       } catch {

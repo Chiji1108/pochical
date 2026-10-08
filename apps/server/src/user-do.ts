@@ -491,14 +491,22 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Pochical's people answered in the user's chat with them: an open chat
-   * reads itself again, and each device is told, as a chat's line is.
+   * Pochical's people changed the user's chat with them, by answering,
+   * reacting or taking a line back: an open chat reads itself again.
    */
-  async supportAnswered(text: string): Promise<void> {
+  supportChanged(): void {
     tellSockets(this.ctx, {
       case: "supportAnswered",
       value: create(SupportAnsweredSchema, {}),
     });
+  }
+
+  /**
+   * Pochical's people answered in the user's chat with them: an open chat
+   * reads itself again, and each device is told, as a chat's line is.
+   */
+  async supportAnswered(text: string): Promise<void> {
+    this.supportChanged();
     await this.notify({
       body: { args: [text.slice(0, SUPPORT_PREVIEW)], key: "SUPPORT_BODY" },
       groupId: "",

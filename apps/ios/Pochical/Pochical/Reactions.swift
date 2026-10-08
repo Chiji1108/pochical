@@ -11,13 +11,17 @@ struct ReactionRow: View {
   let reactions: [LineReaction]
   let meID: String?
   let nameOf: (String) -> String
+  /// In a chat of two, who chose it needs no face: the emoji alone, and
+  /// how many once both did.
+  var counted = false
   let onReact: (String) -> Void
 
   var body: some View {
     WrappingRow(spacing: 4) {
       ForEach(reactions, id: \.emoji) { reaction in
         ReactionPill(
-          reaction: reaction, mine: reaction.userIDs.contains(meID ?? ""), nameOf: nameOf
+          reaction: reaction, mine: reaction.userIDs.contains(meID ?? ""), nameOf: nameOf,
+          counted: counted
         ) {
           onReact(reaction.emoji)
         }
@@ -34,6 +38,7 @@ private struct ReactionPill: View {
   let reaction: LineReaction
   let mine: Bool
   let nameOf: (String) -> String
+  var counted = false
   let onToggle: () -> Void
 
   private static var mostFaces: Int { 3 }
@@ -45,13 +50,22 @@ private struct ReactionPill: View {
     Button(action: onToggle) {
       HStack(spacing: 4) {
         Text(reaction.emoji).font(.subheadline)
-        HStack(spacing: -2) {
-          ForEach(faces, id: \.self) { id in
-            LetterAvatar(name: nameOf(id), size: 18)
-              .overlay(Circle().strokeBorder(mine ? colors.accentContainer : colors.backgroundCard))
+        if counted {
+          if reaction.userIDs.count > 1 {
+            Text("\(reaction.userIDs.count)")
+              .font(.caption)
+              .foregroundStyle(colors.textSecondary)
+          }
+        } else {
+          HStack(spacing: -2) {
+            ForEach(faces, id: \.self) { id in
+              LetterAvatar(name: nameOf(id), size: 18)
+                .overlay(
+                  Circle().strokeBorder(mine ? colors.accentContainer : colors.backgroundCard))
+            }
           }
         }
-        if crowded {
+        if crowded && !counted {
           Text("+\(reaction.userIDs.count - faces.count)")
             .font(.caption)
             .foregroundStyle(colors.textTertiary)
@@ -59,7 +73,7 @@ private struct ReactionPill: View {
         }
       }
       .padding(.leading, 8)
-      .padding(.trailing, 3)
+      .padding(.trailing, counted ? 8 : 3)
       .frame(height: 24)
       .background(mine ? colors.accentContainer : colors.backgroundCard, in: Capsule())
       .overlay(Capsule().strokeBorder(mine ? colors.accentDefault : colors.borderDefault))

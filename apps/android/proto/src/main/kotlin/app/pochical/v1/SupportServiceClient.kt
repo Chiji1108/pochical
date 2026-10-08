@@ -69,4 +69,39 @@ public class SupportServiceClient(
     ),
   )
 
+
+  /**
+   *  The user's reaction on a line, put on or taken off. NOT_FOUND for a
+   *  line not in their chat or taken back; INVALID_ARGUMENT for anything
+   *  but one emoji.
+   */
+  override suspend fun reactSupport(request: ReactSupportRequest, headers: Headers): ResponseMessage<ReactSupportResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.SupportService/ReactSupport",
+      app.pochical.v1.ReactSupportRequest::class,
+      app.pochical.v1.ReactSupportResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
+
+  /**
+   *  One of the user's own lines taken back: its words, reactions and reply
+   *  go, from Pochical's people's chat too. NOT_FOUND for a line not theirs.
+   */
+  override suspend fun unsendSupportMessage(request: UnsendSupportMessageRequest, headers: Headers): ResponseMessage<UnsendSupportMessageResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.SupportService/UnsendSupportMessage",
+      app.pochical.v1.UnsendSupportMessageRequest::class,
+      app.pochical.v1.UnsendSupportMessageResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
 }

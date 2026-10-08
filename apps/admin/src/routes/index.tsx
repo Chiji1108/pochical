@@ -31,7 +31,7 @@ function SupportChats() {
                   {chat.userId.slice(0, 8)}
                 </Link>
               </td>
-              <td>{chat.text.slice(0, 80)}</td>
+              <td>{chat.unsent ? "（送信取消）" : chat.text.slice(0, 80)}</td>
               <td>
                 {chat.fromSupport ? (
                   "返信済み"

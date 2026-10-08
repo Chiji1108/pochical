@@ -449,6 +449,7 @@ export function MessageLine({
         <span className={chatStyle.reactions({ mine })}>
           {message.reactions.map((reaction) => (
             <ReactionPill
+              counted={!isGroup}
               key={reaction.emoji}
               onToggle={() => {
                 actions.onReact(reaction.emoji);

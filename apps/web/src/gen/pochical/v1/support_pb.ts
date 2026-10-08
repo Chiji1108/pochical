@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/support.proto.
  */
 export const file_pochical_v1_support: GenFile = /*@__PURE__*/
-  fileDesc("Chlwb2NoaWNhbC92MS9zdXBwb3J0LnByb3RvEgtwb2NoaWNhbC52MSJUCg5TdXBwb3J0TWVzc2FnZRIKCgJpZBgBIAEoCRIUCgxmcm9tX3N1cHBvcnQYAiABKAgSDAoEdGV4dBgDIAEoCRISCgpzZW50X2F0X21zGAQgASgDIhcKFUdldFN1cHBvcnRDaGF0UmVxdWVzdCJXChZHZXRTdXBwb3J0Q2hhdFJlc3BvbnNlEi0KCG1lc3NhZ2VzGAEgAygLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2USDgoGdW5yZWFkGAIgASgFIkUKGVNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QSCgoCaWQYASABKAkSDAoEdGV4dBgCIAEoCRIOCgZkZXZpY2UYAyABKAkiSgoaU2VuZFN1cHBvcnRNZXNzYWdlUmVzcG9uc2USLAoHbWVzc2FnZRgBIAEoCzIbLnBvY2hpY2FsLnYxLlN1cHBvcnRNZXNzYWdlIhgKFk1hcmtTdXBwb3J0UmVhZFJlcXVlc3QiGQoXTWFya1N1cHBvcnRSZWFkUmVzcG9uc2UyvwIKDlN1cHBvcnRTZXJ2aWNlEl4KDkdldFN1cHBvcnRDaGF0EiIucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXF1ZXN0GiMucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXNwb25zZSIDkAIBEmoKElNlbmRTdXBwb3J0TWVzc2FnZRImLnBvY2hpY2FsLnYxLlNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QaJy5wb2NoaWNhbC52MS5TZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZSIDkAICEmEKD01hcmtTdXBwb3J0UmVhZBIjLnBvY2hpY2FsLnYxLk1hcmtTdXBwb3J0UmVhZFJlcXVlc3QaJC5wb2NoaWNhbC52MS5NYXJrU3VwcG9ydFJlYWRSZXNwb25zZSIDkAICQmwKD2FwcC5wb2NoaWNhbC52MUIMU3VwcG9ydFByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
+  fileDesc("Chlwb2NoaWNhbC92MS9zdXBwb3J0LnByb3RvEgtwb2NoaWNhbC52MSKnAQoOU3VwcG9ydE1lc3NhZ2USCgoCaWQYASABKAkSFAoMZnJvbV9zdXBwb3J0GAIgASgIEgwKBHRleHQYAyABKAkSEgoKc2VudF9hdF9tcxgEIAEoAxIQCghyZXBseV90bxgFIAEoCRIOCgZ1bnNlbnQYBiABKAgSLwoJcmVhY3Rpb25zGAcgAygLMhwucG9jaGljYWwudjEuU3VwcG9ydFJlYWN0aW9uIj8KD1N1cHBvcnRSZWFjdGlvbhINCgVlbW9qaRgBIAEoCRIMCgRtaW5lGAIgASgIEg8KB3N1cHBvcnQYAyABKAgiFwoVR2V0U3VwcG9ydENoYXRSZXF1ZXN0IlcKFkdldFN1cHBvcnRDaGF0UmVzcG9uc2USLQoIbWVzc2FnZXMYASADKAsyGy5wb2NoaWNhbC52MS5TdXBwb3J0TWVzc2FnZRIOCgZ1bnJlYWQYAiABKAUiVwoZU2VuZFN1cHBvcnRNZXNzYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEg4KBmRldmljZRgDIAEoCRIQCghyZXBseV90bxgEIAEoCSJKChpTZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZRIsCgdtZXNzYWdlGAEgASgLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2UiGAoWTWFya1N1cHBvcnRSZWFkUmVxdWVzdCIZChdNYXJrU3VwcG9ydFJlYWRSZXNwb25zZSI8ChNSZWFjdFN1cHBvcnRSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWVtb2ppGAIgASgJEgoKAm9uGAMgASgIIkQKFFJlYWN0U3VwcG9ydFJlc3BvbnNlEiwKB21lc3NhZ2UYASABKAsyGy5wb2NoaWNhbC52MS5TdXBwb3J0TWVzc2FnZSIpChtVbnNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QSCgoCaWQYASABKAkiTAocVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZRIsCgdtZXNzYWdlGAEgASgLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2UyiwQKDlN1cHBvcnRTZXJ2aWNlEl4KDkdldFN1cHBvcnRDaGF0EiIucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXF1ZXN0GiMucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXNwb25zZSIDkAIBEmoKElNlbmRTdXBwb3J0TWVzc2FnZRImLnBvY2hpY2FsLnYxLlNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QaJy5wb2NoaWNhbC52MS5TZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZSIDkAICEmEKD01hcmtTdXBwb3J0UmVhZBIjLnBvY2hpY2FsLnYxLk1hcmtTdXBwb3J0UmVhZFJlcXVlc3QaJC5wb2NoaWNhbC52MS5NYXJrU3VwcG9ydFJlYWRSZXNwb25zZSIDkAICElgKDFJlYWN0U3VwcG9ydBIgLnBvY2hpY2FsLnYxLlJlYWN0U3VwcG9ydFJlcXVlc3QaIS5wb2NoaWNhbC52MS5SZWFjdFN1cHBvcnRSZXNwb25zZSIDkAICEnAKFFVuc2VuZFN1cHBvcnRNZXNzYWdlEigucG9jaGljYWwudjEuVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXF1ZXN0GikucG9jaGljYWwudjEuVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZSIDkAICQmwKD2FwcC5wb2NoaWNhbC52MUIMU3VwcG9ydFByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
 
 /**
  * A line of the chat.
@@ -31,6 +31,8 @@ export type SupportMessage = Message<"pochical.v1.SupportMessage"> & {
   fromSupport: boolean;
 
   /**
+   * Empty once taken back.
+   *
    * @generated from field: string text = 3;
    */
   text: string;
@@ -39,6 +41,27 @@ export type SupportMessage = Message<"pochical.v1.SupportMessage"> & {
    * @generated from field: int64 sent_at_ms = 4;
    */
   sentAtMs: bigint;
+
+  /**
+   * The line it is a reply to, by id; empty when none, or taken back.
+   *
+   * @generated from field: string reply_to = 5;
+   */
+  replyTo: string;
+
+  /**
+   * Taken back by its writer.
+   *
+   * @generated from field: bool unsent = 6;
+   */
+  unsent: boolean;
+
+  /**
+   * Each emoji on it, and who put it there; none once taken back.
+   *
+   * @generated from field: repeated pochical.v1.SupportReaction reactions = 7;
+   */
+  reactions: SupportReaction[];
 };
 
 /**
@@ -47,6 +70,36 @@ export type SupportMessage = Message<"pochical.v1.SupportMessage"> & {
  */
 export const SupportMessageSchema: GenMessage<SupportMessage> = /*@__PURE__*/
   messageDesc(file_pochical_v1_support, 0);
+
+/**
+ * An emoji on a line, put there by the user, by Pochical's people, or by
+ * both.
+ *
+ * @generated from message pochical.v1.SupportReaction
+ */
+export type SupportReaction = Message<"pochical.v1.SupportReaction"> & {
+  /**
+   * @generated from field: string emoji = 1;
+   */
+  emoji: string;
+
+  /**
+   * @generated from field: bool mine = 2;
+   */
+  mine: boolean;
+
+  /**
+   * @generated from field: bool support = 3;
+   */
+  support: boolean;
+};
+
+/**
+ * Describes the message pochical.v1.SupportReaction.
+ * Use `create(SupportReactionSchema)` to create a new message.
+ */
+export const SupportReactionSchema: GenMessage<SupportReaction> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_support, 1);
 
 /**
  * @generated from message pochical.v1.GetSupportChatRequest
@@ -59,7 +112,7 @@ export type GetSupportChatRequest = Message<"pochical.v1.GetSupportChatRequest">
  * Use `create(GetSupportChatRequestSchema)` to create a new message.
  */
 export const GetSupportChatRequestSchema: GenMessage<GetSupportChatRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_support, 1);
+  messageDesc(file_pochical_v1_support, 2);
 
 /**
  * @generated from message pochical.v1.GetSupportChatResponse
@@ -83,7 +136,7 @@ export type GetSupportChatResponse = Message<"pochical.v1.GetSupportChatResponse
  * Use `create(GetSupportChatResponseSchema)` to create a new message.
  */
 export const GetSupportChatResponseSchema: GenMessage<GetSupportChatResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_support, 2);
+  messageDesc(file_pochical_v1_support, 3);
 
 /**
  * @generated from message pochical.v1.SendSupportMessageRequest
@@ -108,6 +161,14 @@ export type SendSupportMessageRequest = Message<"pochical.v1.SendSupportMessageR
    * @generated from field: string device = 3;
    */
   device: string;
+
+  /**
+   * The line it is a reply to, by id, when it is one; one not in the chat
+   * is left out.
+   *
+   * @generated from field: string reply_to = 4;
+   */
+  replyTo: string;
 };
 
 /**
@@ -115,7 +176,7 @@ export type SendSupportMessageRequest = Message<"pochical.v1.SendSupportMessageR
  * Use `create(SendSupportMessageRequestSchema)` to create a new message.
  */
 export const SendSupportMessageRequestSchema: GenMessage<SendSupportMessageRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_support, 3);
+  messageDesc(file_pochical_v1_support, 4);
 
 /**
  * @generated from message pochical.v1.SendSupportMessageResponse
@@ -132,7 +193,7 @@ export type SendSupportMessageResponse = Message<"pochical.v1.SendSupportMessage
  * Use `create(SendSupportMessageResponseSchema)` to create a new message.
  */
 export const SendSupportMessageResponseSchema: GenMessage<SendSupportMessageResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_support, 4);
+  messageDesc(file_pochical_v1_support, 5);
 
 /**
  * @generated from message pochical.v1.MarkSupportReadRequest
@@ -145,7 +206,7 @@ export type MarkSupportReadRequest = Message<"pochical.v1.MarkSupportReadRequest
  * Use `create(MarkSupportReadRequestSchema)` to create a new message.
  */
 export const MarkSupportReadRequestSchema: GenMessage<MarkSupportReadRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_support, 5);
+  messageDesc(file_pochical_v1_support, 6);
 
 /**
  * @generated from message pochical.v1.MarkSupportReadResponse
@@ -158,7 +219,89 @@ export type MarkSupportReadResponse = Message<"pochical.v1.MarkSupportReadRespon
  * Use `create(MarkSupportReadResponseSchema)` to create a new message.
  */
 export const MarkSupportReadResponseSchema: GenMessage<MarkSupportReadResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_support, 6);
+  messageDesc(file_pochical_v1_support, 7);
+
+/**
+ * @generated from message pochical.v1.ReactSupportRequest
+ */
+export type ReactSupportRequest = Message<"pochical.v1.ReactSupportRequest"> & {
+  /**
+   * The line, by id.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string emoji = 2;
+   */
+  emoji: string;
+
+  /**
+   * Put on, or taken off.
+   *
+   * @generated from field: bool on = 3;
+   */
+  on: boolean;
+};
+
+/**
+ * Describes the message pochical.v1.ReactSupportRequest.
+ * Use `create(ReactSupportRequestSchema)` to create a new message.
+ */
+export const ReactSupportRequestSchema: GenMessage<ReactSupportRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_support, 8);
+
+/**
+ * @generated from message pochical.v1.ReactSupportResponse
+ */
+export type ReactSupportResponse = Message<"pochical.v1.ReactSupportResponse"> & {
+  /**
+   * @generated from field: pochical.v1.SupportMessage message = 1;
+   */
+  message?: SupportMessage | undefined;
+};
+
+/**
+ * Describes the message pochical.v1.ReactSupportResponse.
+ * Use `create(ReactSupportResponseSchema)` to create a new message.
+ */
+export const ReactSupportResponseSchema: GenMessage<ReactSupportResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_support, 9);
+
+/**
+ * @generated from message pochical.v1.UnsendSupportMessageRequest
+ */
+export type UnsendSupportMessageRequest = Message<"pochical.v1.UnsendSupportMessageRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message pochical.v1.UnsendSupportMessageRequest.
+ * Use `create(UnsendSupportMessageRequestSchema)` to create a new message.
+ */
+export const UnsendSupportMessageRequestSchema: GenMessage<UnsendSupportMessageRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_support, 10);
+
+/**
+ * @generated from message pochical.v1.UnsendSupportMessageResponse
+ */
+export type UnsendSupportMessageResponse = Message<"pochical.v1.UnsendSupportMessageResponse"> & {
+  /**
+   * @generated from field: pochical.v1.SupportMessage message = 1;
+   */
+  message?: SupportMessage | undefined;
+};
+
+/**
+ * Describes the message pochical.v1.UnsendSupportMessageResponse.
+ * Use `create(UnsendSupportMessageResponseSchema)` to create a new message.
+ */
+export const UnsendSupportMessageResponseSchema: GenMessage<UnsendSupportMessageResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_support, 11);
 
 /**
  * The chat with the people who make Pochical (/design's SupportChatPage):
@@ -200,6 +343,29 @@ export const SupportService: GenService<{
     methodKind: "unary";
     input: typeof MarkSupportReadRequestSchema;
     output: typeof MarkSupportReadResponseSchema;
+  },
+  /**
+   * The user's reaction on a line, put on or taken off. NOT_FOUND for a
+   * line not in their chat or taken back; INVALID_ARGUMENT for anything
+   * but one emoji.
+   *
+   * @generated from rpc pochical.v1.SupportService.ReactSupport
+   */
+  reactSupport: {
+    methodKind: "unary";
+    input: typeof ReactSupportRequestSchema;
+    output: typeof ReactSupportResponseSchema;
+  },
+  /**
+   * One of the user's own lines taken back: its words, reactions and reply
+   * go, from Pochical's people's chat too. NOT_FOUND for a line not theirs.
+   *
+   * @generated from rpc pochical.v1.SupportService.UnsendSupportMessage
+   */
+  unsendSupportMessage: {
+    methodKind: "unary";
+    input: typeof UnsendSupportMessageRequestSchema;
+    output: typeof UnsendSupportMessageResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_pochical_v1_support, 0);

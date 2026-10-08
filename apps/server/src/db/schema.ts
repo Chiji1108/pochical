@@ -1,6 +1,12 @@
 // The D1 database's tables. Change them here and run `mise run db:generate`
 // for the migration; never edit the files in migrations/ by hand.
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+} from "drizzle-orm/sqlite-core";
 
 // Which group each live invite code opens. The Group DO owns the group
 // itself; this index exists because a link carries only the code. A group
@@ -46,10 +52,34 @@ export const supportMessages = sqliteTable(
     // The app's own id for a user's line, so a send tried again is kept
     // once.
     id: text().primaryKey(),
+    // The line it is a reply to, by id.
+    replyTo: text("reply_to"),
+    // Its message in the chat's Slack thread.
+    slackTs: text("slack_ts"),
+    // Empty once taken back.
     text: text().notNull(),
+    // Taken back by its writer.
+    unsent: integer({ mode: "boolean" }).notNull().default(false),
     userId: text("user_id").notNull(),
   },
-  (table) => [index("support_messages_user").on(table.userId, table.createdAt)]
+  (table) => [
+    index("support_messages_user").on(table.userId, table.createdAt),
+    index("support_messages_slack").on(table.slackTs),
+  ]
+);
+
+// The emoji on a support chat's lines, each put there by the user or by
+// Pochical's people.
+export const supportReactions = sqliteTable(
+  "support_reactions",
+  {
+    emoji: text().notNull(),
+    fromSupport: integer("from_support", { mode: "boolean" }).notNull(),
+    messageId: text("message_id").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.messageId, table.fromSupport, table.emoji] }),
+  ]
 );
 
 // Where each user's chat stands: its latest line, and when the user last

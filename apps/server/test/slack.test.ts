@@ -176,7 +176,7 @@ const startedChat = async () => {
   await vi.waitFor(async () => {
     await expect(threadOf(userId)).resolves.not.toBeNull();
   });
-  return { thread: await threadOf(userId), userId };
+  return { thread: await threadOf(userId), token, userId };
 };
 
 const replyIn = (thread: string | null, more: Record<string, unknown>) => ({
@@ -309,5 +309,114 @@ describe("a support chat in Slack", () => {
     });
     expect(String(calls.at(-1)?.args.text)).toContain("写真やファイル");
     await expect(answersTo(userId)).resolves.toStrictEqual(["チャンネルにも"]);
+  });
+});
+
+/** A user's line in the chat, by its text. */
+const lineOf = async (userId: string, text: string) =>
+  await env.DB.prepare(
+    "select id, slack_ts, unsent from support_messages where user_id = ? and text = ?"
+  )
+    .bind(userId, text)
+    .first<{ id: string; slack_ts: string | null; unsent: number }>();
+
+const supportReactions = async (id: string): Promise<string[]> => {
+  const { results } = await env.DB.prepare(
+    "select emoji from support_reactions where message_id = ? and from_support = 1"
+  )
+    .bind(id)
+    .all<{ emoji: string }>();
+  return results.map((row) => row.emoji);
+};
+
+describe("reactions and lines taken back, in Slack", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("show the user's on their lines' messages", async () => {
+    const calls = slackCalls();
+    const { thread, token, userId } = await startedChat();
+    const line = await lineOf(userId, "質問です");
+    expect(line?.slack_ts).toBe(thread);
+    const id = line?.id ?? "";
+    await call(
+      "SupportService/ReactSupport",
+      { emoji: "👍", id, on: true },
+      token
+    );
+    await call(
+      "SupportService/ReactSupport",
+      { emoji: "🦄", id, on: true },
+      token
+    );
+    await call("SupportService/UnsendSupportMessage", { id }, token);
+    await vi.waitFor(() => {
+      expect(calls.map(({ method }) => method)).toStrictEqual([
+        "chat.postMessage",
+        "reactions.add",
+        "chat.postMessage",
+        "chat.update",
+      ]);
+    });
+    expect([
+      calls[1]?.args.name,
+      calls[1]?.args.timestamp,
+      calls[3]?.args.ts,
+      String(calls[3]?.args.text).includes("管理サイトで開く"),
+    ]).toStrictEqual(["+1", thread, thread, true]);
+  });
+
+  it("take Pochical's people's emoji on a user's line, not the app's own", async () => {
+    slackCalls();
+    const { thread, userId } = await startedChat();
+    const line = await lineOf(userId, "質問です");
+    const id = line?.id ?? "";
+    const reactionEvent = (type: string, user: string, name: string) => ({
+      authorizations: [{ is_bot: true, user_id: "U-BOT" }],
+      event: {
+        item: { channel: "C-SUPPORT", ts: thread, type: "message" },
+        reaction: name,
+        type,
+        user,
+      },
+      type: "event_callback",
+    });
+    await postEvent(reactionEvent("reaction_added", "U-BOT", "+1"));
+    await postEvent(reactionEvent("reaction_added", "U-STAFF", "eyes"));
+    await postEvent(
+      reactionEvent("reaction_added", "U-STAFF", "+1::skin-tone-3")
+    );
+    await vi.waitFor(async () => {
+      await expect(supportReactions(id)).resolves.toStrictEqual(["👀", "👍🏼"]);
+    });
+    await postEvent(reactionEvent("reaction_removed", "U-STAFF", "eyes"));
+    await vi.waitFor(async () => {
+      await expect(supportReactions(id)).resolves.toStrictEqual(["👍🏼"]);
+    });
+  });
+
+  it("take back an answer deleted there", async () => {
+    slackCalls();
+    const { thread, userId } = await startedChat();
+    await postEvent(
+      replyIn(thread, { text: "消す答え", ts: "1700000200.000001" })
+    );
+    await vi.waitFor(async () => {
+      await expect(answersTo(userId)).resolves.toStrictEqual(["消す答え"]);
+    });
+    const answer = await lineOf(userId, "消す答え");
+    await postEvent({
+      event: {
+        channel: "C-SUPPORT",
+        deleted_ts: answer?.slack_ts,
+        subtype: "message_deleted",
+        type: "message",
+      },
+      type: "event_callback",
+    });
+    await vi.waitFor(async () => {
+      await expect(answersTo(userId)).resolves.toStrictEqual([""]);
+    });
   });
 });

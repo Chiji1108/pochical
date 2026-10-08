@@ -92,7 +92,7 @@ A member can change or take back their own messages, at any time. Others' messag
 ## Reactions
 
 - Any member reacts to any line (not one taken back) with an emoji, from the bar over it on a long press: 👍 ❤️ 😂 👀 🙏 🎉, the reader's own on the accent's container, then + for any other, from the system's emoji keyboard (Opening a message's menu). Several emoji may be on a line, and one member may choose several.
-- Under the line, each emoji sits with the faces of who chose it, in the order they did, past three two faces and +N, in a pill on the card's ground; the reader's own on the accent's container, edged in the accent. A tap puts yours on or takes it back; a long press lists everyone who chose it by name.
+- Under the line, each emoji sits with the faces of who chose it, in the order they did, past three two faces and +N, in a pill on the card's ground; the reader's own on the accent's container, edged in the accent. In a chat of two (a 1対1 chat, the chat with Pochical's people) who chose it needs no face: the emoji alone, and 2 beside it once both did. A tap puts yours on or takes it back; a long press lists everyone who chose it by name.
 - Emoji keep the order they were first chosen in, and one nobody holds any more goes. Taking a line back (送信取消) takes its reactions off. A reaction sends no notification and changes no unread count.
 - A reaction is the member's edit of the line (`ChatReact`, on or off), which the group takes only for one emoji (spec/text-limits.md, isEmoji). The line comes again with every reaction on it, so a device simply shows the latest.
 
@@ -158,4 +158,9 @@ A message may be as long as `textLimits.chatMessage` and share up to `SHARED_DAY
 - A line is the user's words, up to `textLimits.chatMessage`, sent with an id of the app's so a send tried again is kept once; past `SUPPORT_LIMIT` (wrangler.jsonc) it waits. A line not sent stays faint, with a way to send it again.
 - Opening the chat reads its answers; until then they are counted on its row.
 - Pochical's people answer from the admin pages (spec/admin.md). An answer shows at once in the open chat and on 設定's row, and comes as a notification that opens the chat.
-- For now in words only. Photos, reactions, 返信 and 送信取消, as /design has them, come next.
+- A line is held as a group chat's is (/design's SupportChatPage), for what fits a chat of two: reactions, 返信 and コピー, and on one's own lines 送信取消; not days, polls, mentions, pins or reports, and no 編集, as an answer may already be written to the words.
+  - A reaction is one emoji, the user's or Pochical's people's, on any line not taken back (`ReactSupport`).
+  - A reply quotes the line it is to (`reply_to`), gone to at a tap; one to a line not in the chat is sent as a plain line.
+  - 送信取消 asks first, says that it leaves Pochical's people's chat too, and leaves 「メッセージの送信を取り消しました」 in the line's place (`UnsendSupportMessage`): its words, reply and reactions go from the server. An answer Pochical's people take back reads 「ポチカルがメッセージの送信を取り消しました」.
+  - A reaction or a line taken back by Pochical's people shows at once in the open chat, with no notification.
+- Photos, as /design has them, come next.

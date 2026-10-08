@@ -280,8 +280,9 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     set {kind = .typing(newValue)}
   }
 
-  /// Pochical's people answered in the user's chat with them, on the
-  /// user's own socket: the chat, if open, reads itself again.
+  /// Pochical's people answered in the user's chat with them, or reacted
+  /// or took a line back, on the user's own socket: the chat, if open,
+  /// reads itself again.
   public var supportAnswered: Pochical_V1_SupportAnswered {
     get {
       if case .supportAnswered(let v)? = kind {return v}
@@ -310,8 +311,9 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     case chatPage(Pochical_V1_ChatPage)
     /// Someone else is writing in a chat the device may read, or stopped.
     case typing(Pochical_V1_Typing)
-    /// Pochical's people answered in the user's chat with them, on the
-    /// user's own socket: the chat, if open, reads itself again.
+    /// Pochical's people answered in the user's chat with them, or reacted
+    /// or took a line back, on the user's own socket: the chat, if open,
+    /// reads itself again.
     case supportAnswered(Pochical_V1_SupportAnswered)
 
   }
@@ -319,8 +321,8 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
   public init() {}
 }
 
-/// An answer in the chat with Pochical's people (proto/pochical/v1/support.proto),
-/// told to the user's devices as it is written.
+/// A change by Pochical's people in the chat with them
+/// (proto/pochical/v1/support.proto), told to the user's devices as made.
 public nonisolated struct Pochical_V1_SupportAnswered: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

@@ -299,8 +299,9 @@ public object ServerFrameKt {
 
     /**
      * ```
-     * Pochical's people answered in the user's chat with them, on the
-     * user's own socket: the chat, if open, reads itself again.
+     * Pochical's people answered in the user's chat with them, or reacted
+     * or took a line back, on the user's own socket: the chat, if open,
+     * reads itself again.
      * ```
      *
      * `.pochical.v1.SupportAnswered support_answered = 9 [json_name = "supportAnswered"];`
@@ -314,8 +315,9 @@ public object ServerFrameKt {
       }
     /**
      * ```
-     * Pochical's people answered in the user's chat with them, on the
-     * user's own socket: the chat, if open, reads itself again.
+     * Pochical's people answered in the user's chat with them, or reacted
+     * or took a line back, on the user's own socket: the chat, if open,
+     * reads itself again.
      * ```
      *
      * `.pochical.v1.SupportAnswered support_answered = 9 [json_name = "supportAnswered"];`
@@ -325,8 +327,9 @@ public object ServerFrameKt {
     }
     /**
      * ```
-     * Pochical's people answered in the user's chat with them, on the
-     * user's own socket: the chat, if open, reads itself again.
+     * Pochical's people answered in the user's chat with them, or reacted
+     * or took a line back, on the user's own socket: the chat, if open,
+     * reads itself again.
      * ```
      *
      * `.pochical.v1.SupportAnswered support_answered = 9 [json_name = "supportAnswered"];`

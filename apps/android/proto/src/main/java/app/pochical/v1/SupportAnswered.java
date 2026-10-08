@@ -7,8 +7,8 @@ package app.pochical.v1;
 
 /**
  * <pre>
- * An answer in the chat with Pochical's people (proto/pochical/v1/support.proto),
- * told to the user's devices as it is written.
+ * A change by Pochical's people in the chat with them
+ * (proto/pochical/v1/support.proto), told to the user's devices as made.
  * </pre>
  *
  * Protobuf type {@code pochical.v1.SupportAnswered}
@@ -106,8 +106,8 @@ public  final class SupportAnswered extends
 
   /**
    * <pre>
-   * An answer in the chat with Pochical's people (proto/pochical/v1/support.proto),
-   * told to the user's devices as it is written.
+   * A change by Pochical's people in the chat with them
+   * (proto/pochical/v1/support.proto), told to the user's devices as made.
    * </pre>
    *
    * Protobuf type {@code pochical.v1.SupportAnswered}
