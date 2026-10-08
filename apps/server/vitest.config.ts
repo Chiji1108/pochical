@@ -19,6 +19,10 @@ export default defineConfig({
           }).privateKey.export({ format: "pem", type: "pkcs8" }),
           BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
           BETTER_AUTH_URL: "https://server.test",
+          // Pochical's people's Slack, as tests answer for it.
+          SLACK_BOT_TOKEN: "xoxb-test",
+          SLACK_CHANNEL_ID: "C-SUPPORT",
+          SLACK_SIGNING_SECRET: "slack-signing-secret",
           TEST_MIGRATIONS: await readD1Migrations(
             path.join(import.meta.dirname, "migrations")
           ),

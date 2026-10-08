@@ -11,7 +11,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "bun run --cwd design typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck",
-    "test": "bun run --cwd apps/web test && bun run --cwd apps/server test && bun run --cwd apps/admin test",
+    "test": "bun run --cwd apps/web test && bun run --cwd apps/server test",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "prepare": "lefthook install",

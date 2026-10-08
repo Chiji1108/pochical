@@ -54,8 +54,14 @@ export const supportMessages = sqliteTable(
 
 // Where each user's chat stands: its latest line, and when the user last
 // read Pochical's people's answers.
-export const supportChats = sqliteTable("support_chats", {
-  lastAt: integer("last_at", { mode: "timestamp_ms" }).notNull(),
-  userId: text("user_id").primaryKey(),
-  userReadAt: integer("user_read_at", { mode: "timestamp_ms" }),
-});
+export const supportChats = sqliteTable(
+  "support_chats",
+  {
+    lastAt: integer("last_at", { mode: "timestamp_ms" }).notNull(),
+    // The Slack thread Pochical's people read and answer the chat in.
+    slackThreadTs: text("slack_thread_ts"),
+    userId: text("user_id").primaryKey(),
+    userReadAt: integer("user_read_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [index("support_chats_slack_thread").on(table.slackThreadTs)]
+);

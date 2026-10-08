@@ -1,9 +1,9 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  // Pochical's people's admin site (spec/admin.md), behind Cloudflare
-  // Access at admin.pochical.app.
+  // Pochical's people's admin site (spec/admin.md) at admin.pochical.app,
+  // the whole Worker behind Cloudflare Access (its Access tab).
   "name": "pochical-admin",
-  "main": "src/server.ts",
+  "main": "@tanstack/react-start/server-entry",
   "compatibility_date": "2026-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
@@ -16,12 +16,8 @@
       "entrypoint": "AdminEntrypoint",
     },
   ],
-  // Cloudflare Access's team domain and this application's audience tag,
-  // which the site checks every request's token against. Until they are
-  // set, nobody gets in but a local dev server.
-  "vars": { "ACCESS_TEAM_DOMAIN": "", "ACCESS_AUD": "" },
   "routes": [{ "pattern": "admin.pochical.app", "custom_domain": true }],
-  // The site is reached only at its own name, through Access.
+  // Reached only at its own name.
   "workers_dev": false,
   "preview_urls": false,
 }

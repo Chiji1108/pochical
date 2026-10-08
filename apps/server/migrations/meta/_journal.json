@@ -36,6 +36,13 @@
       "when": 1791430378762,
       "tag": "0004_support_device",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791457285957,
+      "tag": "0005_support_slack_thread",
+      "breakpoints": true
     }
   ]
 }

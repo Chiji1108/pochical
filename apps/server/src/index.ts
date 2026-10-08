@@ -14,6 +14,7 @@ import {
 import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
 import type { SessionUser } from "./session";
+import { slackEvents } from "./slack";
 import { registerSupportService } from "./support-service";
 import { SESSION_HEADER, USER_HEADER } from "./sync-socket";
 import { registerSystemService } from "./system-service";
@@ -43,6 +44,7 @@ const rpcHandlers = new Map(
 const AUTH_PATH = "/api/auth/";
 const ANONYMOUS_SIGN_IN = "/api/auth/sign-in/anonymous";
 const USER_SOCKET_PATH = "/v1/me/socket";
+const SLACK_EVENTS_PATH = "/slack/events";
 const GROUP_SOCKET_PATH = /^\/v1\/groups\/(?<groupId>[^/]+)\/socket$/u;
 
 // The socket request as a Durable Object receives it: naming the user the
@@ -109,6 +111,11 @@ export default {
 
     if (pathname.startsWith(AUTH_PATH)) {
       return await authRequest(request, env, pathname);
+    }
+
+    // Replies from Pochical's people's Slack, signed by Slack.
+    if (pathname === SLACK_EVENTS_PATH && request.method === "POST") {
+      return await slackEvents(request, env);
     }
 
     const rpc = rpcHandlers.get(pathname);
