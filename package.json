@@ -2,6 +2,7 @@
   "name": "pochical",
   "private": true,
   "workspaces": [
+    "apps/admin",
     "apps/mobile-legacy",
     "apps/server",
     "apps/web",
@@ -9,15 +10,16 @@
   ],
   "type": "module",
   "scripts": {
-    "typecheck": "bun run --cwd design typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck",
-    "test": "bun run --cwd apps/web test && bun run --cwd apps/server test",
+    "typecheck": "bun run --cwd design typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck",
+    "test": "bun run --cwd apps/web test && bun run --cwd apps/server test && bun run --cwd apps/admin test",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "prepare": "lefthook install",
     "web": "bun run --cwd apps/web dev",
     "build:web": "bun run --cwd apps/web build",
     "preview:web": "bun run --cwd apps/web preview",
-    "server": "bun run --cwd apps/server dev"
+    "server": "bun run --cwd apps/server dev",
+    "admin": "bun run --cwd apps/admin dev"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

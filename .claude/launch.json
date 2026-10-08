@@ -19,6 +19,15 @@
         "cd apps/server && exec bun x wrangler dev --port 8787"
       ],
       "port": 8787
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd apps/admin && exec bun x vite dev --port 3100 --strictPort"
+      ],
+      "port": 3100
     }
   ]
 }

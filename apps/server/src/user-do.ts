@@ -9,7 +9,11 @@ import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import { sendAlert } from "./apns";
 import type { Alert, Sent } from "./apns";
 import { hasKey, SHARED_DAY_FIELDS } from "./day-values";
-import { ChangesSchema, ServerError_Code } from "./gen/pochical/v1/sync_pb";
+import {
+  ChangesSchema,
+  ServerError_Code,
+  SupportAnsweredSchema,
+} from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
   CoworkerEdits,
@@ -29,6 +33,7 @@ import {
   handleSyncMessage,
   rejectAndClose,
   send,
+  tellSockets,
   welcome,
 } from "./sync-socket";
 import {
@@ -71,6 +76,9 @@ import {
   notifyingCount,
   unreadCountChange,
 } from "./user-do-values";
+
+/** How much of an answer from Pochical's people its notification shows. */
+const SUPPORT_PREVIEW = 200;
 
 // Values in one push to a group.
 const VALUES_PER_PUSH = 500;
@@ -480,6 +488,23 @@ export class UserDO extends DurableObject<Env> {
       .values(row)
       .onConflictDoUpdate({ set: row, target: pushTokens.token })
       .run();
+  }
+
+  /**
+   * Pochical's people answered in the user's chat with them: an open chat
+   * reads itself again, and each device is told, as a chat's line is.
+   */
+  async supportAnswered(text: string): Promise<void> {
+    tellSockets(this.ctx, {
+      case: "supportAnswered",
+      value: create(SupportAnsweredSchema, {}),
+    });
+    await this.notify({
+      body: { args: [text.slice(0, SUPPORT_PREVIEW)], key: "SUPPORT_BODY" },
+      groupId: "",
+      threadId: "support",
+      title: { args: [], key: "SUPPORT_TITLE" },
+    });
   }
 
   /**

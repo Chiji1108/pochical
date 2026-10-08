@@ -1,0 +1,27 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  // Pochical's people's admin site (spec/admin.md), behind Cloudflare
+  // Access at admin.pochical.app.
+  "name": "pochical-admin",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // apps/server's AdminEntrypoint, called as Workers RPC: it has no public
+  // address. Locally, run `mise run server` beside the admin site.
+  "services": [
+    {
+      "binding": "SERVER",
+      "service": "pochical-server",
+      "entrypoint": "AdminEntrypoint",
+    },
+  ],
+  // Cloudflare Access's team domain and this application's audience tag,
+  // which the site checks every request's token against. Until they are
+  // set, nobody gets in but a local dev server.
+  "vars": { "ACCESS_TEAM_DOMAIN": "", "ACCESS_AUD": "" },
+  "routes": [{ "pattern": "admin.pochical.app", "custom_domain": true }],
+  // The site is reached only at its own name, through Access.
+  "workers_dev": false,
+  "preview_urls": false,
+}

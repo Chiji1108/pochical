@@ -79,7 +79,7 @@ const fetchChecked = async (
 const readUpTo = async (
   response: Response,
   limit: number
-): Promise<Uint8Array | null> => {
+): Promise<Uint8Array<ArrayBuffer> | null> => {
   const reader = response.body?.getReader();
   if (reader === undefined) {
     return null;
@@ -123,7 +123,9 @@ const clean = (text: string | undefined): string | undefined => {
 };
 
 /** A page's og:title, <title>, og:site_name and og:image, from its HTML. */
-export const pageTags = async (html: Uint8Array): Promise<PageTags> => {
+export const pageTags = async (
+  html: Uint8Array<ArrayBuffer>
+): Promise<PageTags> => {
   const tags: PageTags = {};
   let title = "";
   const meta = (property: string, content: string | null): void => {

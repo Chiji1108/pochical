@@ -1,7 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
 
 import { reports } from "./db/schema";
@@ -14,6 +14,7 @@ import {
 import { linkPreview, mayRead } from "./link-preview";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
+import { ADMIN_SITE, tellStaff } from "./staff";
 
 /** Each reason as a report keeps it. */
 const REASONS: Partial<Record<ReportReason, string>> = {
@@ -70,6 +71,7 @@ export const registerChatService = (router: ConnectRouter): void => {
           threadId: target.case === "line" ? target.value.threadId : null,
         })
         .run();
+      waitUntil(tellStaff(env, `新しい通報（${why}）\n${ADMIN_SITE}/reports`));
       return create(ReportResponseSchema, {});
     },
   });

@@ -224,6 +224,18 @@ export const relayTyping = (
   }
 };
 
+/** A frame to every socket that has said hello. */
+export const tellSockets = (
+  ctx: DurableObjectState,
+  kind: ServerFrameKind
+): void => {
+  for (const socket of ctx.getWebSockets()) {
+    if (attachmentOf(socket)?.protocolVersion !== undefined) {
+      send(socket, kind);
+    }
+  }
+};
+
 export const broadcastChanges = (
   ctx: DurableObjectState,
   changes: Change[],

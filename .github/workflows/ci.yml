@@ -33,6 +33,7 @@ jobs:
             typescript:
               - "apps/web/**"
               - "apps/server/**"
+              - "apps/admin/**"
               - "design/**"
               - "spec/design-tokens.json"
               - "spec/vectors/**"
@@ -55,7 +56,7 @@ jobs:
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
-  # apps/web and apps/server: lint and format, types, tests.
+  # apps/web, apps/server and apps/admin: lint and format, types, tests.
   typescript:
     needs: changes
     if: needs.changes.outputs.typescript == 'true'

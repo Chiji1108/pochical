@@ -280,6 +280,16 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     set {kind = .typing(newValue)}
   }
 
+  /// Pochical's people answered in the user's chat with them, on the
+  /// user's own socket: the chat, if open, reads itself again.
+  public var supportAnswered: Pochical_V1_SupportAnswered {
+    get {
+      if case .supportAnswered(let v)? = kind {return v}
+      return Pochical_V1_SupportAnswered()
+    }
+    set {kind = .supportAnswered(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -300,8 +310,23 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     case chatPage(Pochical_V1_ChatPage)
     /// Someone else is writing in a chat the device may read, or stopped.
     case typing(Pochical_V1_Typing)
+    /// Pochical's people answered in the user's chat with them, on the
+    /// user's own socket: the chat, if open, reads itself again.
+    case supportAnswered(Pochical_V1_SupportAnswered)
 
   }
+
+  public init() {}
+}
+
+/// An answer in the chat with Pochical's people (proto/pochical/v1/support.proto),
+/// told to the user's devices as it is written.
+public nonisolated struct Pochical_V1_SupportAnswered: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
@@ -2162,7 +2187,7 @@ nonisolated extension Pochical_V1_ClientFrame: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Pochical_V1_ServerFrame: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ServerFrame"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}welcome\0\u{1}pong\0\u{1}error\0\u{1}changes\0\u{1}acked\0\u{1}reset\0\u{3}chat_page\0\u{1}typing\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}welcome\0\u{1}pong\0\u{1}error\0\u{1}changes\0\u{1}acked\0\u{1}reset\0\u{3}chat_page\0\u{1}typing\0\u{3}support_answered\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2274,6 +2299,19 @@ nonisolated extension Pochical_V1_ServerFrame: SwiftProtobuf.Message, SwiftProto
           self.kind = .typing(v)
         }
       }()
+      case 9: try {
+        var v: Pochical_V1_SupportAnswered?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .supportAnswered(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .supportAnswered(v)
+        }
+      }()
       default: break
       }
     }
@@ -2317,6 +2355,10 @@ nonisolated extension Pochical_V1_ServerFrame: SwiftProtobuf.Message, SwiftProto
       guard case .typing(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
     }()
+    case .supportAnswered?: try {
+      guard case .supportAnswered(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -2324,6 +2366,25 @@ nonisolated extension Pochical_V1_ServerFrame: SwiftProtobuf.Message, SwiftProto
 
   public static func ==(lhs: Pochical_V1_ServerFrame, rhs: Pochical_V1_ServerFrame) -> Bool {
     if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_SupportAnswered: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SupportAnswered"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_SupportAnswered, rhs: Pochical_V1_SupportAnswered) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

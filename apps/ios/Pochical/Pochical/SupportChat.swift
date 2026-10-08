@@ -38,14 +38,17 @@ struct SupportRow: View {
       }
     }
     // Read again each time the settings show it, as coming back from the
-    // chat has read its answers.
-    .onAppear {
-      Task {
-        guard let chat = try? await groupCalls.supportChat() else { return }
-        latest = chat.lines.last
-        unread = chat.unread
-      }
+    // chat has read its answers, and as an answer comes.
+    .onAppear { Task { await refresh() } }
+    .onReceive(NotificationCenter.default.publisher(for: SupportLine.answered)) { _ in
+      Task { await refresh() }
     }
+  }
+
+  private func refresh() async {
+    guard let chat = try? await groupCalls.supportChat() else { return }
+    latest = chat.lines.last
+    unread = chat.unread
   }
 }
 
@@ -115,6 +118,12 @@ struct SupportChatScreen: View {
     .toolbarVisibility(.hidden, for: .tabBar)
     .task { await load() }
     .refreshable { await load() }
+    // An answer shows as it is written, as a group chat's line does.
+    .onReceive(NotificationCenter.default.publisher(for: SupportLine.answered)) { _ in
+      Task { await load() }
+    }
+    .onAppear { Notifications.shared.supportOpen = true }
+    .onDisappear { Notifications.shared.supportOpen = false }
   }
 
   /// Who this reaches, and everything that does.

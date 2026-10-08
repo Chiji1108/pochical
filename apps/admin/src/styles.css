@@ -1,0 +1,110 @@
+/* The admin site's few styles: plain and quiet, Pochical's own colors. */
+:root {
+  color-scheme: light;
+  --text: #2a2f2a;
+  --quiet: #6b716b;
+  --line: #e2e5e0;
+  --accent: #4a6648;
+  --user: #eef3ec;
+  --staff: #f3f4f1;
+  --open: #b0564f;
+}
+
+body {
+  color: var(--text);
+  font:
+    15px/1.6 system-ui,
+    -apple-system,
+    "Hiragino Sans",
+    sans-serif;
+  margin: 0 auto;
+  max-width: 880px;
+  padding: 16px;
+}
+
+nav {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+nav a {
+  color: var(--accent);
+}
+
+nav a[data-status="active"] {
+  font-weight: 600;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--quiet);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.open {
+  color: var(--open);
+  font-weight: 600;
+}
+
+.line {
+  border-radius: 12px;
+  margin: 8px 0;
+  padding: 8px 12px;
+  white-space: pre-wrap;
+}
+
+.line[data-from="user"] {
+  background: var(--user);
+}
+
+.line[data-from="staff"] {
+  background: var(--staff);
+}
+
+.meta {
+  color: var(--quiet);
+  font-size: 12px;
+}
+
+textarea {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 8px;
+  width: 100%;
+}
+
+button {
+  background: var(--accent);
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font: inherit;
+  margin-top: 8px;
+  padding: 8px 16px;
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+pre {
+  font: inherit;
+  margin: 0;
+  white-space: pre-wrap;
+}

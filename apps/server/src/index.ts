@@ -19,7 +19,9 @@ import { SESSION_HEADER, USER_HEADER } from "./sync-socket";
 import { registerSystemService } from "./system-service";
 import { registerUserService } from "./user-service";
 
-// Workers only binds Durable Object classes exported from the entry module.
+// Workers only binds Durable Object classes and named entrypoints exported
+// from the entry module.
+export { AdminEntrypoint } from "./admin-entrypoint";
 export { GroupDO } from "./group-do";
 export { UserDO } from "./user-do";
 
@@ -83,21 +85,30 @@ const photoRequest = async (
   }
 };
 
+/** better-auth's own paths, anonymous sign-ins held back by address. */
+const authRequest = async (
+  request: Request,
+  env: Env,
+  pathname: string
+): Promise<Response> => {
+  if (
+    pathname === ANONYMOUS_SIGN_IN &&
+    (await tooManySignIns(env.SIGN_IN_LIMIT, request))
+  ) {
+    return Response.json(
+      { code: "TOO_MANY_REQUESTS", message: "Try again in a minute" },
+      { status: 429 }
+    );
+  }
+  return await getAuth().handler(request);
+};
+
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
 
     if (pathname.startsWith(AUTH_PATH)) {
-      if (
-        pathname === ANONYMOUS_SIGN_IN &&
-        (await tooManySignIns(env.SIGN_IN_LIMIT, request))
-      ) {
-        return Response.json(
-          { code: "TOO_MANY_REQUESTS", message: "Try again in a minute" },
-          { status: 429 }
-        );
-      }
-      return await getAuth().handler(request);
+      return await authRequest(request, env, pathname);
     }
 
     const rpc = rpcHandlers.get(pathname);

@@ -146,5 +146,26 @@ public interface ServerFrameOrBuilder extends
    */
   app.pochical.v1.Typing getTyping();
 
+  /**
+   * <pre>
+   * Pochical's people answered in the user's chat with them, on the
+   * user's own socket: the chat, if open, reads itself again.
+   * </pre>
+   *
+   * <code>.pochical.v1.SupportAnswered support_answered = 9 [json_name = "supportAnswered"];</code>
+   * @return Whether the supportAnswered field is set.
+   */
+  boolean hasSupportAnswered();
+  /**
+   * <pre>
+   * Pochical's people answered in the user's chat with them, on the
+   * user's own socket: the chat, if open, reads itself again.
+   * </pre>
+   *
+   * <code>.pochical.v1.SupportAnswered support_answered = 9 [json_name = "supportAnswered"];</code>
+   * @return The supportAnswered.
+   */
+  app.pochical.v1.SupportAnswered getSupportAnswered();
+
   public app.pochical.v1.ServerFrame.KindCase getKindCase();
 }

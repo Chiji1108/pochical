@@ -15,3 +15,8 @@
 "CHAT_PHOTO" = "写真を送りました";
 "CHAT_DAYS" = "日にちを共有しました";
 "CHAT_POLL" = "日にちの投票を始めました";
+
+/* An answer in the chat with Pochical's people: who answers, and the
+   answer's words. */
+"SUPPORT_TITLE" = "ポチカル";
+"SUPPORT_BODY" = "%@";
