@@ -16,7 +16,7 @@ import {
 } from "./gen/pochical/v1/support_pb";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
-import { ADMIN_SITE, tellStaff } from "./staff";
+import { tellStaffOfLine } from "./slack";
 import { requireText } from "./text-limits";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
@@ -132,12 +132,7 @@ export const registerSupportService = (router: ConnectRouter): void => {
       if (kept?.userId !== user.id) {
         throw new ConnectError("id is taken", Code.AlreadyExists);
       }
-      waitUntil(
-        tellStaff(
-          env,
-          `サポートに新しいメッセージ：${words.slice(0, 200)}\n${ADMIN_SITE}/support/${encodeURIComponent(user.id)}`
-        )
-      );
+      waitUntil(tellStaffOfLine(env, user.id, words, row.device));
       return create(SendSupportMessageResponseSchema, {
         message: messageOf(kept),
       });

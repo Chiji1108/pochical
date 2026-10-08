@@ -9,14 +9,22 @@ Pochical's people read and answer users' chats with them, and look at what membe
 
 ## Who gets in
 
-- Cloudflare Access stands in front of the whole of `admin.pochical.app` and lets in only Pochical's people, by their email. The site also checks Access's token on every request (`Cf-Access-Jwt-Assertion`, RS256, signed by the team's certs, for the application's audience, from the team, not expired), so a request that went around Access is refused. Its `workers.dev` and preview addresses are off.
-- The team domain and the audience tag are the site's vars `ACCESS_TEAM_DOMAIN` (like `pochical.cloudflareaccess.com`) and `ACCESS_AUD`. Without them nobody gets in but the dev server on this computer (`mise run admin`).
+- Cloudflare Access stands in front of the whole Worker (its Access tab: Protect this Worker behind Access), so every way to it, `admin.pochical.app` and any other, asks Pochical's people to sign in first, by their email. Its `workers.dev` and preview addresses are off besides.
+- The site checks nothing more itself: Access's `ctx.access` does not reach a Worker served behind its static assets, as TanStack Start's is.
+- Its server functions answer only its own pages (TanStack Start's CSRF middleware), so a page elsewhere cannot send an answer through someone signed in.
 
 ## What it holds
 
 - **サポート**: every user's chat, the latest first, saying which wait for an answer (未返信) and the latest line. A chat shows its lines oldest first, each user's with the app version and device it came from, and a form to answer as ポチカル. An answer is kept (`support_messages`, from Pochical's people) and told to the user at once: their open chat and 設定's row read it again over their socket (`SupportAnswered`, spec/sync-protocol.md), and their devices get a notification, which opens the chat.
 - **通報**: what members reported, the latest first: when, why, the group, who reported, who was reported, and what they saw.
 
-## Telling Pochical's people
+## Slack
 
-A new line in a support chat and a new report are told on Pochical's people's Discord channel, through its webhook (the server's secret `DISCORD_WEBHOOK_URL`), with the way to the page on the admin site. Without the secret nothing is told; a webhook that fails never fails what the user did.
+Pochical's people also read and answer the chats in their Slack channel (`apps/server/src/slack.ts`), through a Slack app of their own.
+
+- Each user's chat is a thread. Their first line starts it, with the app and device and the way to the chat on the admin site; each line after it goes in the thread and shows in the channel too. The thread is kept with the chat (`support_chats.slack_thread_ts`).
+- A reply in the thread by one of Pochical's people is an answer, as one from the admin site is: kept, told to the user at once, and marked ✅ in Slack; one that cannot be sent (empty, too long, or with a photo or file, which the chat does not take yet) is answered in the thread with why. One also sent to the channel is an answer all the same. Slack's links, mentions and escapes become plain words first. Slack sends an event again when unsure it arrived: the message's own id keeps it once. Replies by bots, edits, and lines outside a thread or the channel are not answers.
+- An answer from the admin site is put in the thread too, so it holds the whole chat. A user's words go to Slack as written, never as a mention or a link.
+- A new report is posted in the channel, with the way to the reports on the admin site.
+- Slack reaches the server at `api.pochical.app/slack/events` (the Events API, `message.channels` or `message.groups`), each request signed with the app's signing secret and refused otherwise. The app posts with its bot token (`chat:write`, `reactions:write`, and the history scope its event needs).
+- The server's secrets `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET` and `SLACK_CHANNEL_ID` name them. Without them nothing is posted and no reply is taken; Slack failing never fails what the user did, which is answered first.

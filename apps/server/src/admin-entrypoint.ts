@@ -2,10 +2,10 @@
 // asks of the server, as Workers RPC through its service binding to this
 // named entrypoint (spec/admin.md). Nothing here has a public address: the
 // apps and the internet reach only the default entrypoint's fetch.
-import { textLimits } from "@pochical/design/limits";
 import { WorkerEntrypoint } from "cloudflare:workers";
 
-import { characterCount } from "./text-limits";
+import { tellStaffOfAnswer } from "./slack";
+import { answerSupport } from "./support-answers";
 
 /** A user's chat as the list shows it: its latest line, and whose. */
 export type SupportChatSummary = {
@@ -85,33 +85,16 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   }
 
   /**
-   * An answer from Pochical's people, kept and told to the user at once:
-   * their open chat over their socket, their devices by notification.
-   * False, keeping nothing, for no words or more than
-   * textLimits.chatMessage.
+   * An answer from Pochical's people, kept and told to the user at once,
+   * and put in the chat's Slack thread. False, keeping nothing, for no
+   * words or more than textLimits.chatMessage.
    */
   async answerSupport(userId: string, text: string): Promise<boolean> {
-    const words = text.trim();
-    if (words === "" || characterCount(words) > textLimits.chatMessage) {
-      return false;
+    const kept = await answerSupport(this.env, userId, text);
+    if (kept) {
+      this.ctx.waitUntil(tellStaffOfAnswer(this.env, userId, text.trim()));
     }
-    const now = Date.now();
-    await this.env.DB.batch([
-      this.env.DB.prepare(
-        "insert into support_messages (id, user_id, from_support, text, created_at) values (?, ?, 1, ?, ?)"
-      ).bind(crypto.randomUUID(), userId, words, now),
-      this.env.DB.prepare(
-        "insert into support_chats (user_id, last_at) values (?, ?) on conflict (user_id) do update set last_at = excluded.last_at"
-      ).bind(userId, now),
-    ]);
-    // The answer is kept: the user reads it as their chat next opens, even
-    // when telling them now fails.
-    try {
-      await this.env.USERS.getByName(userId).supportAnswered(words);
-    } catch {
-      // Nothing more to do: saying it was not kept would only send it twice.
-    }
-    return true;
+    return kept;
   }
 
   /** What members reported, the latest first. */
