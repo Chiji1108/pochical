@@ -364,8 +364,9 @@ export class GroupDO extends DurableObject<Env> {
     if (!this.isMember(reporterId)) {
       return null;
     }
+    const everyone = this.memberList();
     const memberOf = (id: string) =>
-      this.memberList().find((member) => member.userId === id);
+      everyone.find((member) => member.userId === id);
     const found = reportContext(this.db, reporterId, target, memberOf);
     return found === null
       ? null
