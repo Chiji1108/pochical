@@ -1,6 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
+import { chatRules } from "@pochical/design/chat";
 import { textLimits } from "@pochical/design/limits";
 import { env, waitUntil } from "cloudflare:workers";
 import { and, count, eq, gt } from "drizzle-orm";
@@ -16,6 +17,8 @@ import {
   SupportService,
   UnsendSupportMessageResponseSchema,
 } from "./gen/pochical/v1/support_pb";
+import type { ChatPhoto } from "./gen/pochical/v1/sync_pb";
+import { supportPhotoKey } from "./photos";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
 import {
@@ -36,6 +39,14 @@ const messageOf = (line: SupportLineOf) =>
   create(SupportMessageSchema, {
     fromSupport: line.fromSupport,
     id: line.id,
+    photo:
+      line.photoId === null
+        ? undefined
+        : {
+            height: line.photoHeight ?? 0,
+            id: line.photoId,
+            width: line.photoWidth ?? 0,
+          },
     reactions: line.reactions,
     replyTo: line.replyTo ?? "",
     sentAtMs: BigInt(line.createdAt.getTime()),
@@ -59,6 +70,46 @@ const holdBack = async (userId: string): Promise<void> => {
   if (await overLimit(env.SUPPORT_LIMIT, userId)) {
     throw new ConnectError("Try again in a minute", Code.ResourceExhausted);
   }
+};
+
+/** A photo's side as the app sends it: within chatRules.photoMaxEdge. */
+const isPhotoSide = (side: number): boolean =>
+  side > 0 && side <= chatRules.photoMaxEdge;
+
+/**
+ * What a new line holds: its words, or a photo the user has uploaded and
+ * no words.
+ */
+const contentOf = async (
+  userId: string,
+  text: string,
+  photo: ChatPhoto | undefined
+): Promise<
+  Pick<SupportRow, "photoHeight" | "photoId" | "photoWidth" | "text">
+> => {
+  if (photo === undefined) {
+    return {
+      photoHeight: null,
+      photoId: null,
+      photoWidth: null,
+      text: requireText(text, textLimits.chatMessage, "text"),
+    };
+  }
+  if (text !== "" || !isPhotoSide(photo.width) || !isPhotoSide(photo.height)) {
+    throw new ConnectError(
+      "A photo goes alone, at its size",
+      Code.InvalidArgument
+    );
+  }
+  if ((await env.PHOTOS.head(supportPhotoKey(userId, photo.id))) === null) {
+    throw new ConnectError("Upload the photo first", Code.FailedPrecondition);
+  }
+  return {
+    photoHeight: photo.height,
+    photoId: photo.id,
+    photoWidth: photo.width,
+    text: "",
+  };
 };
 
 /** The line a reply is to, when it is one still in the user's chat. */
@@ -140,12 +191,15 @@ export const registerSupportService = (router: ConnectRouter): void => {
         message: messageOf(await lineInChat(user.id, id)),
       });
     },
-    sendSupportMessage: async ({ device, id, replyTo, text }, context) => {
+    sendSupportMessage: async (
+      { device, id, photo, replyTo, text },
+      context
+    ) => {
       const user = await requireUser(context);
       if (!UUID.test(id)) {
         throw new ConnectError("id is not a UUID", Code.InvalidArgument);
       }
-      const words = requireText(text, textLimits.chatMessage, "text");
+      const content = await contentOf(user.id, text, photo);
       const db = drizzle(env.DB);
       // A send tried again finds its line kept, and is not counted again.
       const [before] = await db
@@ -163,6 +217,7 @@ export const registerSupportService = (router: ConnectRouter): void => {
       await holdBack(user.id);
       const repliedTo = await replyToIn(user.id, replyTo);
       const row: SupportRow = {
+        ...content,
         createdAt: new Date(),
         // Only what an app says of itself, kept short.
         device: device === "" ? null : device.slice(0, DEVICE_MAX),
@@ -170,7 +225,6 @@ export const registerSupportService = (router: ConnectRouter): void => {
         id,
         replyTo: repliedTo?.id ?? null,
         slackTs: null,
-        text: words,
         unsent: false,
         userId: user.id,
       };
@@ -202,7 +256,7 @@ export const registerSupportService = (router: ConnectRouter): void => {
         throw new ConnectError("Not the user's line", Code.NotFound);
       }
       if (!line.unsent) {
-        await unsendLine(env, id);
+        await unsendLine(env, line);
         waitUntil(tellStaffOfUnsend(env, line));
       }
       return create(UnsendSupportMessageResponseSchema, {

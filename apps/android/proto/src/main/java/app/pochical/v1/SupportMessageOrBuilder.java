@@ -113,4 +113,27 @@ public interface SupportMessageOrBuilder extends
    * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
    */
   int getReactionsCount();
+
+  /**
+   * <pre>
+   * A photo, as the line instead of words; uploaded to the user's support
+   * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+   * from there (GET). None once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+   * @return Whether the photo field is set.
+   */
+  boolean hasPhoto();
+  /**
+   * <pre>
+   * A photo, as the line instead of words; uploaded to the user's support
+   * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+   * from there (GET). None once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+   * @return The photo.
+   */
+  app.pochical.v1.ChatPhoto getPhoto();
 }

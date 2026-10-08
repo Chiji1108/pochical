@@ -7,6 +7,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
+import { supportPhotoKey } from "./photos";
 import { keepSlackTs } from "./support-chat";
 import type { SupportLineOf } from "./support-chat";
 
@@ -249,6 +250,10 @@ export const emojiOfSlackName = (name: string): string | undefined => {
 const slackNameOf = (emoji: string): string | undefined =>
   Object.entries(SLACK_EMOJI).find(([, each]) => each === emoji)?.[0];
 
+/** A line's words, or what a photo is called. */
+const wordsOf = (line: SupportLineOf): string =>
+  line.photoId === null ? line.text : "📷 写真";
+
 /** The first words of a line, as a reply to it shows them. */
 const QUOTE_LENGTH = 80;
 
@@ -263,6 +268,136 @@ const threadHead = (line: SupportLineOf, words: string): string => {
 };
 
 /**
+ * A chat's thread, started by the user's first line; null when Slack did
+ * not take it.
+ */
+const startThread = async (
+  env: SlackEnv,
+  line: SupportLineOf,
+  words: string
+): Promise<string | null> => {
+  const posted = await slackCall(env, "chat.postMessage", {
+    text: threadHead(line, words),
+  });
+  const ts = stringOf(posted?.ts);
+  if (ts === undefined) {
+    return null;
+  }
+  // Two first lines at once keep the thread the first kept.
+  await drizzle(env.DB)
+    .update(supportChats)
+    .set({ slackThreadTs: ts })
+    .where(
+      and(
+        eq(supportChats.userId, line.userId),
+        isNull(supportChats.slackThreadTs)
+      )
+    );
+  return ts;
+};
+
+/** How often, and how far apart, a shared file's message is looked for. */
+const SHARE_TRIES = 3;
+const SHARE_WAIT_MS = 1000;
+
+/** The message a file was shared in, in the channel, once Slack says. */
+const sharedTs = (file: unknown, channel: string): string | undefined => {
+  const shares = isRecord(file) && isRecord(file.shares) ? file.shares : {};
+  for (const kind of [shares.private, shares.public]) {
+    const inChannel = isRecord(kind) ? kind[channel] : undefined;
+    const first: unknown = Array.isArray(inChannel)
+      ? inChannel.at(0)
+      : undefined;
+    const ts = isRecord(first) ? stringOf(first.ts) : undefined;
+    if (ts !== undefined) {
+      return ts;
+    }
+  }
+  return undefined;
+};
+
+/**
+ * A user's photo, uploaded into their chat's thread (files:write), a
+ * reply's quote over it; the message it was shared in (files:read), for
+ * its reactions and its taking back.
+ */
+const postPhoto = async (
+  env: SlackEnv,
+  line: SupportLineOf,
+  thread: string,
+  quote: string
+): Promise<string | undefined> => {
+  const photo = await env.PHOTOS.get(
+    supportPhotoKey(line.userId, line.photoId ?? "")
+  );
+  if (photo === null) {
+    return undefined;
+  }
+  const bytes = await photo.arrayBuffer();
+  const slot = await slackCall(env, "files.getUploadURLExternal", {
+    alt_txt: "写真",
+    filename: "photo.jpg",
+    length: bytes.byteLength,
+  });
+  const url = stringOf(slot?.upload_url);
+  const fileId = stringOf(slot?.file_id);
+  if (url === undefined || fileId === undefined) {
+    return undefined;
+  }
+  const uploaded = await fetch(url, { body: bytes, method: "POST" });
+  const shared =
+    uploaded.ok &&
+    (await slackCall(env, "files.completeUploadExternal", {
+      channel_id: env.SLACK_CHANNEL_ID,
+      files: [{ id: fileId, title: "写真" }],
+      thread_ts: thread,
+      ...(quote === "" ? {} : { initial_comment: quote.trim() }),
+    })) !== null;
+  if (!shared) {
+    return undefined;
+  }
+  for (let tries = 0; tries < SHARE_TRIES; tries += 1) {
+    // oxlint-disable-next-line no-await-in-loop -- Slack shares it in a moment
+    const info = await slackCall(env, "files.info", { file: fileId });
+    const ts = sharedTs(info?.file, env.SLACK_CHANNEL_ID ?? "");
+    if (ts !== undefined) {
+      return ts;
+    }
+    // oxlint-disable-next-line no-await-in-loop -- waiting is the point
+    await scheduler.wait(SHARE_WAIT_MS);
+  }
+  return undefined;
+};
+
+/**
+ * A file Pochical's people shared in Slack, read with the app's token
+ * (files:read); null past `most` bytes or when Slack does not give it.
+ */
+export const slackFile = async (
+  env: SlackEnv,
+  url: string,
+  most: number
+): Promise<{ bytes: ArrayBuffer; type: string } | null> => {
+  const token = env.SLACK_BOT_TOKEN ?? "";
+  if (token === "" || !url.startsWith("https://files.slack.com/")) {
+    return null;
+  }
+  try {
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const type = response.headers.get("Content-Type") ?? "";
+    if (!response.ok || !type.startsWith("image/")) {
+      return null;
+    }
+    const bytes = await response.arrayBuffer();
+    return bytes.byteLength > most ? null : { bytes, type };
+  } catch {
+    return null;
+  }
+};
+
+/**
  * A user's new line, in their chat's thread, shown in the channel too;
  * their first starts the thread, with the way to the admin site. A reply
  * quotes what it is to. Its message is kept with the line, for its
@@ -273,12 +408,22 @@ export const tellStaffOfLine = async (
   line: SupportLineOf,
   repliedTo: SupportLineOf | null
 ): Promise<void> => {
-  const thread = await threadOf(env, line.userId);
   const quote =
     repliedTo === null
       ? ""
-      : `> ${toSlackText(repliedTo.text.replaceAll("\n", " ").slice(0, QUOTE_LENGTH))}\n`;
-  const words = `${quote}${toSlackText(line.text)}`;
+      : `> ${toSlackText(wordsOf(repliedTo).replaceAll("\n", " ").slice(0, QUOTE_LENGTH))}\n`;
+  const words = `${quote}${toSlackText(wordsOf(line))}`;
+  const thread = await threadOf(env, line.userId);
+  if (line.photoId !== null) {
+    // A photo is shared in the thread, which a first line starts.
+    const into = thread ?? (await startThread(env, line, words));
+    const ts =
+      into === null ? undefined : await postPhoto(env, line, into, quote);
+    if (ts !== undefined) {
+      await keepSlackTs(env, line.id, ts);
+    }
+    return;
+  }
   if (thread !== null) {
     const posted = await slackCall(env, "chat.postMessage", {
       reply_broadcast: true,
@@ -291,24 +436,10 @@ export const tellStaffOfLine = async (
     }
     return;
   }
-  const posted = await slackCall(env, "chat.postMessage", {
-    text: threadHead(line, words),
-  });
-  const ts = stringOf(posted?.ts);
-  if (ts === undefined) {
-    return;
+  const ts = await startThread(env, line, words);
+  if (ts !== null) {
+    await keepSlackTs(env, line.id, ts);
   }
-  await keepSlackTs(env, line.id, ts);
-  // Two first lines at once keep the thread the first kept.
-  await drizzle(env.DB)
-    .update(supportChats)
-    .set({ slackThreadTs: ts })
-    .where(
-      and(
-        eq(supportChats.userId, line.userId),
-        isNull(supportChats.slackThreadTs)
-      )
-    );
 };
 
 /** An answer written on the admin site, in the chat's thread. */
@@ -356,7 +487,7 @@ export const tellStaffOfReaction = async (
   const thread = await threadOf(env, line.userId);
   if (on && thread !== null) {
     await slackCall(env, "chat.postMessage", {
-      text: `ユーザーが ${emoji} を付けました：「${toSlackText(line.text.slice(0, QUOTE_LENGTH))}」`,
+      text: `ユーザーが ${emoji} を付けました：「${toSlackText(wordsOf(line).slice(0, QUOTE_LENGTH))}」`,
       thread_ts: thread,
     });
   }

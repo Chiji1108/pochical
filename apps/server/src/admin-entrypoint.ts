@@ -4,8 +4,10 @@
 // apps and the internet reach only the default entrypoint's fetch.
 import { WorkerEntrypoint } from "cloudflare:workers";
 
+import { supportPhotoKey } from "./photos";
 import { tellStaffOfAnswer } from "./slack";
 import { answerSupport } from "./support-answers";
+import type { SupportPhotoOf } from "./support-answers";
 import { linesOf } from "./support-chat";
 import type { SupportReactionOf } from "./support-chat";
 
@@ -29,6 +31,8 @@ export type SupportChatLine = {
   replyTo: string | null;
   unsent: boolean;
   reactions: SupportReactionOf[];
+  /** Its photo, read through supportPhoto. */
+  photo: SupportPhotoOf | null;
 };
 
 /** What a member reported, with what they saw. */
@@ -79,6 +83,14 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       device: line.device,
       fromSupport: line.fromSupport,
       id: line.id,
+      photo:
+        line.photoId === null
+          ? null
+          : {
+              height: line.photoHeight ?? 0,
+              id: line.photoId,
+              width: line.photoWidth ?? 0,
+            },
       reactions: line.reactions,
       replyTo: line.replyTo,
       text: line.text,
@@ -98,6 +110,21 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     }
     this.ctx.waitUntil(tellStaffOfAnswer(this.env, userId, kept, text.trim()));
     return true;
+  }
+
+  /** A photo in a user's chat, its bytes and their type; null when gone. */
+  async supportPhoto(
+    userId: string,
+    photoId: string
+  ): Promise<{ bytes: ArrayBuffer; type: string } | null> {
+    const photo = await this.env.PHOTOS.get(supportPhotoKey(userId, photoId));
+    if (photo === null) {
+      return null;
+    }
+    return {
+      bytes: await photo.arrayBuffer(),
+      type: photo.httpMetadata?.contentType ?? "image/jpeg",
+    };
   }
 
   /** What members reported, the latest first. */

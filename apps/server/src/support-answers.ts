@@ -4,10 +4,17 @@ import { textLimits } from "@pochical/design/limits";
 
 import { characterCount } from "./text-limits";
 
+/** A photo in the chat: its id under the user's support photos, and size. */
+export type SupportPhotoOf = { id: string; width: number; height: number };
+
+/** How an answer that is a photo reads in its notification. */
+const PHOTO_WORDS = "📷 写真";
+
 /**
  * Keeps the answer and tells the user at once: their open chat over
  * their socket, their devices by notification. Null, keeping nothing,
  * for no words or more than textLimits.chatMessage; else the answer's id.
+ * An answer may be a photo already in the bucket instead, with no words.
  * An answer already kept under `id` is kept once and told once. One
  * written in Slack keeps its message there (`slackTs`).
  */
@@ -17,18 +24,35 @@ export const answerSupport = async (
   text: string,
   {
     id = crypto.randomUUID(),
+    photo = null,
     slackTs = null,
-  }: { id?: string; slackTs?: string | null } = {}
+  }: {
+    id?: string;
+    photo?: SupportPhotoOf | null;
+    slackTs?: string | null;
+  } = {}
 ): Promise<string | null> => {
-  const words = text.trim();
-  if (words === "" || characterCount(words) > textLimits.chatMessage) {
+  const words = photo === null ? text.trim() : "";
+  if (
+    photo === null &&
+    (words === "" || characterCount(words) > textLimits.chatMessage)
+  ) {
     return null;
   }
   const now = Date.now();
   const [inserted] = await env.DB.batch([
     env.DB.prepare(
-      "insert into support_messages (id, user_id, from_support, text, created_at, slack_ts) values (?, ?, 1, ?, ?, ?) on conflict (id) do nothing"
-    ).bind(id, userId, words, now, slackTs),
+      "insert into support_messages (id, user_id, from_support, text, created_at, slack_ts, photo_id, photo_width, photo_height) values (?, ?, 1, ?, ?, ?, ?, ?, ?) on conflict (id) do nothing"
+    ).bind(
+      id,
+      userId,
+      words,
+      now,
+      slackTs,
+      photo?.id ?? null,
+      photo?.width ?? null,
+      photo?.height ?? null
+    ),
     env.DB.prepare(
       "insert into support_chats (user_id, last_at) values (?, ?) on conflict (user_id) do update set last_at = excluded.last_at"
     ).bind(userId, now),
@@ -39,7 +63,9 @@ export const answerSupport = async (
   // The answer is kept: the user reads it as their chat next opens, even
   // when telling them now fails.
   try {
-    await env.USERS.getByName(userId).supportAnswered(words);
+    await env.USERS.getByName(userId).supportAnswered(
+      photo === null ? words : PHOTO_WORDS
+    );
   } catch {
     // Nothing more to do: saying it was not kept would only send it twice.
   }

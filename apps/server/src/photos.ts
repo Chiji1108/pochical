@@ -22,17 +22,14 @@ const isJpeg = (bytes: Uint8Array): boolean =>
   JPEG_START.every((byte, at) => bytes[at] === byte);
 
 /**
- * A member's photo stored, once the group has noted it as theirs: a JPEG
- * the app shrank to send, at most chatRules.photoMaxBytes. Sending it again
- * (a retry after a lost answer) stores it again.
+ * An upload's bytes when they are a photo the app shrank to send: a JPEG
+ * of at most chatRules.photoMaxBytes under an id of the app's; else the
+ * answer refusing it.
  */
-export const putPhoto = async (
+const jpegOf = async (
   request: Request,
-  env: Env,
-  groupId: string,
-  photoId: string,
-  userId: string
-): Promise<Response> => {
+  photoId: string
+): Promise<Uint8Array | Response> => {
   if (!isId(photoId)) {
     return new Response("Not a photo id", { status: 400 });
   }
@@ -47,6 +44,24 @@ export const putPhoto = async (
   if (!isJpeg(bytes)) {
     return new Response("Not a JPEG", { status: 415 });
   }
+  return bytes;
+};
+
+/**
+ * A member's photo stored, once the group has noted it as theirs. Sending
+ * it again (a retry after a lost answer) stores it again.
+ */
+export const putPhoto = async (
+  request: Request,
+  env: Env,
+  groupId: string,
+  photoId: string,
+  userId: string
+): Promise<Response> => {
+  const bytes = await jpegOf(request, photoId);
+  if (bytes instanceof Response) {
+    return bytes;
+  }
   if (!(await env.GROUPS.getByName(groupId).notePhoto(photoId, userId))) {
     return new Response("Not your photo", { status: 409 });
   }
@@ -58,25 +73,66 @@ export const putPhoto = async (
 };
 
 /**
- * A group's photo for one of its members, kept by the device: a photo
- * never changes, only goes when its line is taken back.
+ * A photo kept by the device: a photo never changes, only goes when its
+ * line is taken back.
  */
-export const getPhoto = async (
-  env: Env,
-  groupId: string,
-  photoId: string
-): Promise<Response> => {
-  const photo = await env.PHOTOS.get(photoKey(groupId, photoId));
+const servePhoto = async (env: Env, key: string): Promise<Response> => {
+  const photo = await env.PHOTOS.get(key);
   if (photo === null) {
     return new Response("No such photo", { status: 404 });
   }
   return new Response(photo.body, {
     headers: {
       "Cache-Control": "private, max-age=31536000, immutable",
-      "Content-Type": "image/jpeg",
+      "Content-Type": photo.httpMetadata?.contentType ?? "image/jpeg",
       ETag: photo.httpEtag,
     },
   });
+};
+
+/** A group's photo for one of its members. */
+export const getPhoto = async (
+  env: Env,
+  groupId: string,
+  photoId: string
+): Promise<Response> => await servePhoto(env, photoKey(groupId, photoId));
+
+/**
+ * Where a photo in a user's chat with Pochical's people is kept: under the
+ * user, theirs and Pochical's people's alike, so the user reads only
+ * their own.
+ */
+export const supportPhotoKey = (userId: string, photoId: string): string =>
+  `support/${userId}/photos/${photoId}`;
+
+/** A photo in the user's support chat: /v1/support/photos/{photoId}. */
+export const SUPPORT_PHOTO_PATH = /^\/v1\/support\/photos\/(?<photoId>[^/]+)$/u;
+
+/** The user's photo to send to Pochical's people, or one in their chat. */
+export const supportPhoto = async (
+  request: Request,
+  env: Env,
+  photoId: string,
+  userId: string
+): Promise<Response> => {
+  switch (request.method) {
+    case "PUT": {
+      const bytes = await jpegOf(request, photoId);
+      if (bytes instanceof Response) {
+        return bytes;
+      }
+      await env.PHOTOS.put(supportPhotoKey(userId, photoId), bytes, {
+        httpMetadata: { contentType: "image/jpeg" },
+      });
+      return new Response(null, { status: 204 });
+    }
+    case "GET": {
+      return await servePhoto(env, supportPhotoKey(userId, photoId));
+    }
+    default: {
+      return new Response("Method not allowed", { status: 405 });
+    }
+  }
 };
 
 /** A link preview's picture by its path: /v1/previews/{imageId}. */

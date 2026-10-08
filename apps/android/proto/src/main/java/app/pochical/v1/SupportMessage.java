@@ -24,6 +24,7 @@ public  final class SupportMessage extends
     replyTo_ = "";
     reactions_ = emptyProtobufList();
   }
+  private int bitField0_;
   public static final int ID_FIELD_NUMBER = 1;
   private java.lang.String id_;
   /**
@@ -443,6 +444,83 @@ public  final class SupportMessage extends
   private void removeReactions(int index) {
     ensureReactionsIsMutable();
     reactions_.remove(index);
+  }
+
+  public static final int PHOTO_FIELD_NUMBER = 8;
+  private app.pochical.v1.ChatPhoto photo_;
+  /**
+   * <pre>
+   * A photo, as the line instead of words; uploaded to the user's support
+   * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+   * from there (GET). None once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPhoto() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * A photo, as the line instead of words; uploaded to the user's support
+   * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+   * from there (GET). None once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatPhoto getPhoto() {
+    return photo_ == null ? app.pochical.v1.ChatPhoto.getDefaultInstance() : photo_;
+  }
+  /**
+   * <pre>
+   * A photo, as the line instead of words; uploaded to the user's support
+   * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+   * from there (GET). None once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+   */
+  private void setPhoto(app.pochical.v1.ChatPhoto value) {
+    java.util.Objects.requireNonNull(value);
+    photo_ = value;
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * A photo, as the line instead of words; uploaded to the user's support
+   * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+   * from there (GET). None once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergePhoto(app.pochical.v1.ChatPhoto value) {
+    java.util.Objects.requireNonNull(value);
+    if (photo_ != null &&
+        photo_ != app.pochical.v1.ChatPhoto.getDefaultInstance()) {
+      photo_ =
+        app.pochical.v1.ChatPhoto.newBuilder(photo_).mergeFrom(value).buildPartial();
+    } else {
+      photo_ = value;
+    }
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * A photo, as the line instead of words; uploaded to the user's support
+   * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+   * from there (GET). None once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+   */
+  private void clearPhoto() {
+    photo_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static app.pochical.v1.SupportMessage parseFrom(
@@ -991,6 +1069,89 @@ public  final class SupportMessage extends
       return this;
     }
 
+    /**
+     * <pre>
+     * A photo, as the line instead of words; uploaded to the user's support
+     * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+     * from there (GET). None once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPhoto() {
+      return instance.hasPhoto();
+    }
+    /**
+     * <pre>
+     * A photo, as the line instead of words; uploaded to the user's support
+     * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+     * from there (GET). None once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatPhoto getPhoto() {
+      return instance.getPhoto();
+    }
+    /**
+     * <pre>
+     * A photo, as the line instead of words; uploaded to the user's support
+     * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+     * from there (GET). None once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+     */
+    public Builder setPhoto(app.pochical.v1.ChatPhoto value) {
+      copyOnWrite();
+      instance.setPhoto(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * A photo, as the line instead of words; uploaded to the user's support
+     * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+     * from there (GET). None once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+     */
+    public Builder setPhoto(
+        app.pochical.v1.ChatPhoto.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPhoto(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A photo, as the line instead of words; uploaded to the user's support
+     * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+     * from there (GET). None once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+     */
+    public Builder mergePhoto(app.pochical.v1.ChatPhoto value) {
+      copyOnWrite();
+      instance.mergePhoto(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A photo, as the line instead of words; uploaded to the user's support
+     * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+     * from there (GET). None once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];</code>
+     */
+    public Builder clearPhoto() {  copyOnWrite();
+      instance.clearPhoto();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.SupportMessage)
   }
   @java.lang.Override
@@ -1007,6 +1168,7 @@ public  final class SupportMessage extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "id_",
             "fromSupport_",
             "text_",
@@ -1015,10 +1177,11 @@ public  final class SupportMessage extends
             "unsent_",
             "reactions_",
             app.pochical.v1.SupportReaction.class,
+            "photo_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0001\u0000\u0001\u0208\u0002\u0007" +
-              "\u0003\u0208\u0004\u0002\u0005\u0208\u0006\u0007\u0007\u001b";
+              "\u0000\b\u0000\u0001\u0001\b\b\u0000\u0001\u0000\u0001\u0208\u0002\u0007\u0003\u0208" +
+              "\u0004\u0002\u0005\u0208\u0006\u0007\u0007\u001b\b\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

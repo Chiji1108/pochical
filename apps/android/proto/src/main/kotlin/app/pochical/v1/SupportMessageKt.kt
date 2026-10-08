@@ -265,8 +265,56 @@ public object SupportMessageKt {
     public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.SupportReaction, ReactionsProxy>.clear() {
       _builder.clearReactions()
     }
+
+    /**
+     * ```
+     * A photo, as the line instead of words; uploaded to the user's support
+     * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+     * from there (GET). None once taken back.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];`
+     */
+    public var photo: app.pochical.v1.ChatPhoto
+      @kotlin.jvm.JvmName("getPhoto")
+        get() = _builder.photo
+      @kotlin.jvm.JvmName("setPhoto")
+        set(value) {
+        _builder.photo = value
+      }
+    /**
+     * ```
+     * A photo, as the line instead of words; uploaded to the user's support
+     * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+     * from there (GET). None once taken back.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];`
+     */
+    public fun clearPhoto() {
+      _builder.clearPhoto()
+    }
+    /**
+     * ```
+     * A photo, as the line instead of words; uploaded to the user's support
+     * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+     * from there (GET). None once taken back.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 8 [json_name = "photo"];`
+     * @return Whether the photo field is set.
+     */
+    public fun hasPhoto(): kotlin.Boolean {
+      return _builder.hasPhoto()
+    }
+
+    public val SupportMessageKt.Dsl.photoOrNull: app.pochical.v1.ChatPhoto?
+      get() = _builder.photoOrNull
   }
 }
 public inline fun app.pochical.v1.SupportMessage.copy(block: `app.pochical.v1`.SupportMessageKt.Dsl.() -> kotlin.Unit): app.pochical.v1.SupportMessage =
   `app.pochical.v1`.SupportMessageKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.SupportMessageOrBuilder.photoOrNull: app.pochical.v1.ChatPhoto?
+  get() = if (hasPhoto()) getPhoto() else null
 

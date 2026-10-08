@@ -12,6 +12,19 @@ export const Route = createFileRoute("/support/$userId")({
   loader: async ({ params }) => await getSupportChat({ data: params.userId }),
 });
 
+/** The line a reply is to, as its quote shows it. */
+function quoteOf(
+  line: { text: string; photo: unknown; unsent: boolean } | undefined
+): string {
+  if (line === undefined) {
+    return "以前のメッセージ";
+  }
+  if (line.unsent) {
+    return "取り消されたメッセージ";
+  }
+  return line.photo === null ? line.text.slice(0, 80) : "📷 写真";
+}
+
 function SupportChat() {
   const lines = Route.useLoaderData();
   const byId = new Map(lines.map((line) => [line.id, line]));
@@ -46,15 +59,25 @@ function SupportChat() {
             {line.device === null ? "" : `・${line.device}`}
           </div>
           {line.replyTo !== null && (
-            <div className="quote">
-              {byId.get(line.replyTo)?.text.slice(0, 80) ?? "以前のメッセージ"}
-            </div>
+            <div className="quote">{quoteOf(byId.get(line.replyTo))}</div>
           )}
-          {line.unsent ? (
-            <span className="meta">送信が取り消されました</span>
-          ) : (
-            line.text
+          {line.unsent && <span className="meta">送信が取り消されました</span>}
+          {line.photo !== null && (
+            <a
+              href={`/photos/${userId}/${line.photo.id}`}
+              rel="noopener"
+              target="_blank"
+            >
+              <img
+                alt="写真"
+                className="photo"
+                height={line.photo.height}
+                src={`/photos/${userId}/${line.photo.id}`}
+                width={line.photo.width}
+              />
+            </a>
           )}
+          {line.text}
           {line.reactions.length > 0 && (
             <div className="meta">
               {line.reactions

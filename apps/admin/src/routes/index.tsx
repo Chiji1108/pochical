@@ -8,6 +8,14 @@ export const Route = createFileRoute("/")({
   loader: async () => await getSupportChats(),
 });
 
+/** A chat's latest line, as its row shows it. */
+function summaryOf(chat: { text: string; unsent: boolean }): string {
+  if (chat.unsent) {
+    return "（送信取消）";
+  }
+  return chat.text === "" ? "📷 写真" : chat.text.slice(0, 80);
+}
+
 function SupportChats() {
   const chats = Route.useLoaderData();
   return (
@@ -31,7 +39,7 @@ function SupportChats() {
                   {chat.userId.slice(0, 8)}
                 </Link>
               </td>
-              <td>{chat.unsent ? "（送信取消）" : chat.text.slice(0, 80)}</td>
+              <td>{summaryOf(chat)}</td>
               <td>
                 {chat.fromSupport ? (
                   "返信済み"

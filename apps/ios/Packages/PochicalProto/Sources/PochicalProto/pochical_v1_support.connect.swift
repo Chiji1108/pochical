@@ -19,9 +19,10 @@ public protocol Pochical_V1_SupportServiceClientInterface: Sendable {
     @available(iOS 13, *)
     func `getSupportChat`(request: Pochical_V1_GetSupportChatRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_GetSupportChatResponse>
 
-    /// A line to Pochical's people. The id is the app's, so a send tried
-    /// again is kept once. INVALID_ARGUMENT for no words or more than
-    /// textLimits.chatMessage; RESOURCE_EXHAUSTED past the limiter.
+    /// A line to Pochical's people: words, or a photo. The id is the app's,
+    /// so a send tried again is kept once. INVALID_ARGUMENT for no words or
+    /// more than textLimits.chatMessage, or words with a photo;
+    /// RESOURCE_EXHAUSTED past the limiter.
     @available(iOS 13, *)
     func `sendSupportMessage`(request: Pochical_V1_SendSupportMessageRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SendSupportMessageResponse>
 

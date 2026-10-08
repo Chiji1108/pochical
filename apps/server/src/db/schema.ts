@@ -52,6 +52,11 @@ export const supportMessages = sqliteTable(
     // The app's own id for a user's line, so a send tried again is kept
     // once.
     id: text().primaryKey(),
+    // Its photo, in the photos bucket under the user's support photos,
+    // and its size; none for words.
+    photoHeight: integer("photo_height"),
+    photoId: text("photo_id"),
+    photoWidth: integer("photo_width"),
     // The line it is a reply to, by id.
     replyTo: text("reply_to"),
     // Its message in the chat's Slack thread.
