@@ -124,9 +124,19 @@ struct AccountPage: View {
   }
 
   /// Links Apple's account to this user, keeping everything the device
-  /// holds; one the person cancelled says nothing.
+  /// holds; one the person cancelled says nothing, any other failure says
+  /// it could not.
   private func signedIn(_ result: Result<ASAuthorization, Error>) async {
-    guard case .success(let authorization) = result else { return }
+    let authorization: ASAuthorization
+    switch result {
+    case .success(let signed):
+      authorization = signed
+    case .failure(let error):
+      if (error as? ASAuthorizationError)?.code != .canceled {
+        problem = .failed
+      }
+      return
+    }
     guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
       let data = credential.identityToken, let idToken = String(data: data, encoding: .utf8)
     else {
