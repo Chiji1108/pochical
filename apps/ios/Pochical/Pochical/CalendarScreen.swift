@@ -410,6 +410,8 @@ struct CalendarScreen: View {
     do {
       try database.write { db in try edit(db, now) }
       changed = true
+      // A memo kept as its day closes comes after the day has gone.
+      askForReviewIfDue()
     } catch {
       // Not expected: the edit is the device's own, and its tables are.
       ReviewPrompt.troubled = true
