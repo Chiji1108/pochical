@@ -34,9 +34,61 @@ export const toSlackText = (text: string): string =>
 
 const SLACK_LINK = /<(?<target>[^<>|]*)(?:\|(?<label>[^<>]*))?>/gu;
 
-/** A Slack message's words as the user reads them in the app. */
-export const fromSlackText = (text: string): string =>
-  text
+/**
+ * Each emoji in a message's rich text blocks, as its text writes it
+ * (`:+1::skin-tone-2:`) and as the character it stands for. A workspace's
+ * own emoji have no character, and stay as written.
+ */
+const emojiIn = (blocks: unknown, found = new Map<string, string>()) => {
+  if (Array.isArray(blocks)) {
+    for (const block of blocks) {
+      emojiIn(block, found);
+    }
+  } else if (isRecord(blocks)) {
+    const { name, skin_tone: tone, type, unicode } = blocks;
+    if (
+      type === "emoji" &&
+      typeof name === "string" &&
+      typeof unicode === "string"
+    ) {
+      const skin = typeof tone === "number" ? `:skin-tone-${tone}:` : "";
+      const points = unicode
+        .split("-")
+        .map((point) => Number.parseInt(point, 16));
+      if (
+        points.every(
+          (point) =>
+            Number.isInteger(point) && point >= 0 && point <= 0x10_ff_ff
+        )
+      ) {
+        found.set(`:${name}:${skin}`, String.fromCodePoint(...points));
+      }
+    }
+    emojiIn(blocks.elements, found);
+  }
+  return found;
+};
+
+/** `text` with each emoji's name as its character. */
+const withEmoji = (text: string, blocks: unknown): string => {
+  let words = text;
+  // The names with a skin tone first, as each starts with the name alone.
+  const names = [...emojiIn(blocks)].toSorted(
+    ([a], [b]) => b.length - a.length
+  );
+  for (const [name, emoji] of names) {
+    words = words.replaceAll(name, emoji);
+  }
+  return words;
+};
+
+/**
+ * A Slack message's words as the user reads them in the app: its links,
+ * mentions and escapes as plain words, and its emoji, which Slack's text
+ * writes by name, as the characters its blocks give.
+ */
+export const fromSlackText = (text: string, blocks?: unknown): string =>
+  withEmoji(text, blocks)
     .replaceAll(SLACK_LINK, (_, target: string, label?: string) => {
       if (target.startsWith("@") || target.startsWith("!")) {
         return label === undefined ? "" : `@${label}`;
@@ -245,7 +297,7 @@ const answerFromSlack = async (
   const kept = await answerSupport(
     env,
     chat.userId,
-    fromSlackText(stringOf(event.text) ?? ""),
+    fromSlackText(stringOf(event.text) ?? "", event.blocks),
     stringOf(event.client_msg_id) ?? `slack-${ts}`
   );
   await (kept

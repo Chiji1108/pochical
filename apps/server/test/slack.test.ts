@@ -98,6 +98,39 @@ describe("Slack's words", () => {
   });
 });
 
+describe("a Slack message's emoji", () => {
+  it("come to the user as characters, a workspace's own as written", () => {
+    const blocks = [
+      {
+        elements: [
+          {
+            elements: [
+              { text: "ありがとう ", type: "text" },
+              { name: "pray", type: "emoji", unicode: "1f64f" },
+              {
+                name: "+1",
+                skin_tone: 2,
+                type: "emoji",
+                unicode: "1f44d-1f3fb",
+              },
+              { name: "+1", type: "emoji", unicode: "1f44d" },
+              { name: "party_parrot", type: "emoji" },
+            ],
+            type: "rich_text_section",
+          },
+        ],
+        type: "rich_text",
+      },
+    ];
+    expect(
+      fromSlackText(
+        "ありがとう :pray::+1::skin-tone-2::+1::party_parrot:",
+        blocks
+      )
+    ).toBe("ありがとう 🙏👍🏻👍:party_parrot:");
+  });
+});
+
 describe("a request from Slack", () => {
   it("is taken when signed with the secret, lately", async () => {
     const body = '{"type":"event_callback"}';
