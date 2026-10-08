@@ -10,6 +10,9 @@ import Testing
   #expect(settings.week.start == 1)
   #expect(settings.week.saturday)
   #expect(settings.week.holiday)
+  // A picture names its shifts and tints days off until set otherwise.
+  #expect(settings.picture.options == MarkOptions(names: true, highlight: true))
+  #expect(settings.picture.dark == nil)
 }
 
 @MainActor @Test func settingsAreKeptAsTheyChange() throws {
