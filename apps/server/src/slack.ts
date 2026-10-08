@@ -510,12 +510,76 @@ export const tellStaffOfUnsend = async (
   });
 };
 
-/** A member's report, with the way to the admin site. */
+/** Each reason as the app's report sheet words it. */
+const REASON_WORDS: Record<string, string> = {
+  explicit: "性的・暴力的な内容",
+  harassment: "嫌がらせ・いじめ",
+  impersonation: "なりすまし",
+  other: "その他",
+  spam: "迷惑・スパム",
+};
+
+/** The most of each reported line's words a report shows. */
+const REPORT_LINE_LENGTH = 200;
+
+/** A line around a reported one, as a report's context keeps it. */
+const reportLineOf = (row: unknown): string | undefined => {
+  if (!isRecord(row)) {
+    return undefined;
+  }
+  let words = toSlackText(
+    (stringOf(row.text) ?? "")
+      .replaceAll("\n", " ")
+      .slice(0, REPORT_LINE_LENGTH)
+  );
+  if (row.unsent === true) {
+    words = "（取り消されたメッセージ）";
+  } else if (stringOf(row.photo) !== undefined) {
+    words = "📷 写真";
+  } else if (Array.isArray(row.days) && row.days.length > 0 && words === "") {
+    words = "📅 日にち";
+  }
+  const mark = row.reported === true ? "▶" : "・";
+  return `${mark} ${toSlackText(stringOf(row.name) ?? "メンバー")}：${words}`;
+};
+
+/** What a report's context says: the lines around the reported one. */
+const reportLinesOf = (context: string): string[] => {
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(context);
+  } catch {
+    return [];
+  }
+  return Array.isArray(parsed)
+    ? parsed.flatMap((row) => reportLineOf(row) ?? [])
+    : [];
+};
+
+/**
+ * A member's report, as the admin site keeps it: why, the group, who
+ * reported whom, and for a line, it and the few around it, the reported
+ * one marked; with the way to the admin site.
+ */
 export const tellStaffOfReport = async (
   env: SlackEnv,
-  why: string
+  report: {
+    why: string;
+    groupName: string;
+    reporterName: string;
+    targetName: string;
+    context: string;
+  }
 ): Promise<void> => {
+  const lines = reportLinesOf(report.context);
+  const what = lines.length === 0 ? "メンバーを通報" : "メッセージを通報";
   await slackCall(env, "chat.postMessage", {
-    text: `新しい通報（${why}）\n<${ADMIN_SITE}/reports|管理サイトで開く>`,
+    text: [
+      `新しい通報：${REASON_WORDS[report.why] ?? report.why}（${what}）`,
+      `グループ：${toSlackText(report.groupName)}`,
+      `通報した人：${toSlackText(report.reporterName)}　通報された人：${toSlackText(report.targetName)}`,
+      ...lines,
+      `<${ADMIN_SITE}/reports|管理サイトで開く>`,
+    ].join("\n"),
   });
 };

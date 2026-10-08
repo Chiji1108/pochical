@@ -1,6 +1,6 @@
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ChatEditSchema } from "../src/gen/pochical/v1/sync_pb";
 import {
@@ -731,9 +731,31 @@ describe("a group's chat", () => {
       );
       return answer.status;
     };
+    // What reaches Pochical's people's Slack.
+    const posted: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const body: unknown = await new Request(input, init).json();
+      posted.push(
+        typeof body === "object" && body !== null && "text" in body
+          ? String(body.text)
+          : ""
+      );
+      return Response.json({ ok: true, ts: "1.1" });
+    });
     // The writer cannot report their own line.
     expect([await report(maker), await report(guest)]).toStrictEqual([
       404, 200,
+    ]);
+    await vi.waitFor(() => {
+      expect(posted).toHaveLength(1);
+    });
+    vi.restoreAllMocks();
+    expect(posted[0]?.split("\n")).toStrictEqual([
+      "新しい通報：嫌がらせ・いじめ（メッセージを通報）",
+      "グループ：いとこ会",
+      "通報した人：ゆうき　通報された人：さくら",
+      "▶ さくら：ひどい",
+      "<https://admin.pochical.app/reports|管理サイトで開く>",
     ]);
     const kept = await env.DB.prepare(
       "select reason, context from reports where group_id = ?"

@@ -998,12 +998,21 @@ export const notePhoto = (
   return true;
 };
 
+const MENTION = /<@(?<id>[\w-]+)>/gu;
+
+/** A message's words with each mention as @ and the name (spec/vectors/chat-text.json, plainText). */
+export const plainText = (
+  text: string,
+  nameOf: (id: string) => string
+): string => text.replace(MENTION, (_, id: string) => `@${nameOf(id)}`);
+
 /** How many lines either side of a reported line go with the report. */
 const REPORT_AROUND = 3;
 
 /**
- * What a report is kept with (spec/chat.md, Reporting and blocking): a
- * line's writer and the line with the few around it, as JSON, or a
+ * What a report is kept with (spec/chat.md, Reporting and blocking): the
+ * line with the few around it, as JSON, each with its writer's name, its
+ * words with mentions as names, and the reported one marked; or a
  * member's name. Null when the reporter cannot read the line or reports
  * themselves.
  */
@@ -1012,7 +1021,8 @@ export const reportContext = (
   reporterId: string,
   target: { threadId: string; seq: number } | { userId: string },
   memberOf: (userId: string) => { displayName: string } | undefined
-): { targetId: string; context: string } | null => {
+): { targetId: string; targetName: string; context: string } | null => {
+  const nameOf = (id: string) => memberOf(id)?.displayName ?? "メンバー";
   if ("userId" in target) {
     const member = memberOf(target.userId);
     return member === undefined || target.userId === reporterId
@@ -1020,6 +1030,7 @@ export const reportContext = (
       : {
           context: JSON.stringify({ name: member.displayName }),
           targetId: target.userId,
+          targetName: member.displayName,
         };
   }
   const line = lineAt(db, target.threadId, BigInt(target.seq));
@@ -1047,21 +1058,19 @@ export const reportContext = (
     .map((row) => ({
       authorId: row.authorId,
       days: row.days,
+      name: nameOf(row.authorId),
       photo: row.photo?.id,
+      reported: row.seq === target.seq,
       seq: row.seq,
-      text: row.text,
+      text: plainText(row.text, nameOf),
       unsent: row.unsent,
     }));
-  return { context: JSON.stringify(around), targetId: line.authorId };
+  return {
+    context: JSON.stringify(around),
+    targetId: line.authorId,
+    targetName: nameOf(line.authorId),
+  };
 };
-
-const MENTION = /<@(?<id>[\w-]+)>/gu;
-
-/** A message's words with each mention as @ and the name (spec/vectors/chat-text.json, plainText). */
-export const plainText = (
-  text: string,
-  nameOf: (id: string) => string
-): string => text.replace(MENTION, (_, id: string) => `@${nameOf(id)}`);
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
