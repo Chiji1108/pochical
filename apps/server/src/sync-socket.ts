@@ -116,7 +116,13 @@ const decodeClientFrame = (
   }
 };
 
+// A socket closed meanwhile, by its device or here (as its user leaves a
+// group), is still listed until the runtime lets it go; it hears nothing
+// more, and sending to it would throw.
 export const send = (ws: WebSocket, kind: ServerFrameKind): void => {
+  if (ws.readyState !== WebSocket.OPEN) {
+    return;
+  }
   ws.send(toBinary(ServerFrameSchema, create(ServerFrameSchema, { kind })));
 };
 
