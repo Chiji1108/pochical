@@ -77,9 +77,9 @@ public struct KeychainError: Error {
 public actor Account {
   public typealias Send = @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
-  private let server: URL
+  let server: URL
   private let store: TokenStore
-  private let send: Send
+  let send: Send
   /// A sign-in under way, which callers at the same time wait on rather
   /// than each making a user.
   private var signingIn: Task<String, Error>?

@@ -5,6 +5,7 @@ import { createAuth } from "./src/auth";
 
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the CLI reads the options and never queries
 export const auth = createAuth({} as D1Database, {
+  appleAppId: "app.pochical",
   baseURL: "https://api.pochical.app",
   secret: "cli-only",
 });

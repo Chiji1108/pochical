@@ -50,6 +50,8 @@
     "APNS_KEY_ID": "MWQ4J6A7F8",
     "APNS_TEAM_ID": "6KC44WPYLJ",
     "BETTER_AUTH_URL": "https://api.pochical.app",
+    // The iOS app's bundle id: Sign in with Apple's ID tokens are for it.
+    "APPLE_APP_ID": "app.pochical",
   },
   "secrets": {
     "required": [
