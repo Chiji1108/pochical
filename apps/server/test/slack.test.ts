@@ -6,17 +6,22 @@ import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 
 const SECRET = "slack-signing-secret";
 
+// Each message Slack posts gets its own time, across the tests too.
+let posts = 0;
+
 /** What reached Slack's Web API, as each method and its arguments. */
 const slackCalls = () => {
   const calls: { method: string; args: Record<string, unknown> }[] = [];
-  let posts = 0;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const request = new Request(input, init);
     const args: Record<string, unknown> = await request.json();
     const method = new URL(request.url).pathname.replace("/api/", "");
     calls.push({ args, method });
     posts += method === "chat.postMessage" ? 1 : 0;
-    return Response.json({ ok: true, ts: `1700000000.00000${posts}` });
+    return Response.json({
+      ok: true,
+      ts: `1700000000.${String(posts).padStart(6, "0")}`,
+    });
   });
   return calls;
 };
@@ -126,6 +131,34 @@ describe("a request from Slack", () => {
   });
 });
 
+/** A user who wrote once, and their chat's thread in Slack. */
+const startedChat = async () => {
+  const token = await signInAnonymously();
+  const userId = await userIdOf(token);
+  await call(
+    "SupportService/SendSupportMessage",
+    { id: crypto.randomUUID(), text: "質問です" },
+    token
+  );
+  await vi.waitFor(async () => {
+    await expect(threadOf(userId)).resolves.not.toBeNull();
+  });
+  return { thread: await threadOf(userId), userId };
+};
+
+const replyIn = (thread: string | null, more: Record<string, unknown>) => ({
+  event: {
+    channel: "C-SUPPORT",
+    client_msg_id: crypto.randomUUID(),
+    thread_ts: thread,
+    ts: "1700000100.000002",
+    type: "message",
+    user: "U-STAFF",
+    ...more,
+  },
+  type: "event_callback",
+});
+
 describe("a support chat in Slack", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -143,8 +176,9 @@ describe("a support chat in Slack", () => {
       );
     await send("色を変えたい");
     await vi.waitFor(async () => {
-      await expect(threadOf(userId)).resolves.toBe("1700000000.000001");
+      await expect(threadOf(userId)).resolves.not.toBeNull();
     });
+    const thread = await threadOf(userId);
     await send("あと<!channel>");
     await vi.waitFor(() => {
       expect(calls).toHaveLength(2);
@@ -153,7 +187,7 @@ describe("a support chat in Slack", () => {
       calls.map(({ args }) => [args.channel, args.thread_ts])
     ).toStrictEqual([
       ["C-SUPPORT", undefined],
-      ["C-SUPPORT", "1700000000.000001"],
+      ["C-SUPPORT", thread],
     ]);
     expect(calls[1]?.args.text).toBe("あと&lt;!channel&gt;");
 
@@ -162,7 +196,7 @@ describe("a support chat in Slack", () => {
         channel: "C-SUPPORT",
         client_msg_id: crypto.randomUUID(),
         text: "設定から変えられます &amp; 試してね",
-        thread_ts: "1700000000.000001",
+        thread_ts: thread,
         ts: "1700000100.000001",
         type: "message",
         user: "U-STAFF",
@@ -216,5 +250,31 @@ describe("a support chat in Slack", () => {
     );
     await expect(answersTo(userId)).resolves.toStrictEqual([]);
     expect(calls).toHaveLength(1);
+  });
+
+  it("answers a reply also sent to the channel, and says why not to one with a file", async () => {
+    const calls = slackCalls();
+    const { thread, userId } = await startedChat();
+    await postEvent(
+      replyIn(thread, { subtype: "thread_broadcast", text: "チャンネルにも" })
+    );
+    await vi.waitFor(async () => {
+      await expect(answersTo(userId)).resolves.toStrictEqual([
+        "チャンネルにも",
+      ]);
+    });
+    const before = calls.length;
+    await postEvent(
+      replyIn(thread, {
+        files: [{ id: "F1" }],
+        subtype: "file_share",
+        text: "スクショです",
+      })
+    );
+    await vi.waitFor(() => {
+      expect(calls).toHaveLength(before + 1);
+    });
+    expect(String(calls.at(-1)?.args.text)).toContain("写真やファイル");
+    await expect(answersTo(userId)).resolves.toStrictEqual(["チャンネルにも"]);
   });
 });

@@ -160,8 +160,9 @@ export const tellStaffOfLine = async (
     return;
   }
   const page = `${ADMIN_SITE}/support/${encodeURIComponent(userId)}`;
+  const from = device === null ? "" : `（${toSlackText(device)}）`;
   const posted = await slackCall(env, "chat.postMessage", {
-    text: `サポートに新しいメッセージ（${toSlackText(device ?? "")}）\n${quoted}\n<${page}|管理サイトで開く>・このスレッドに書くと、ポチカルとして返信します`,
+    text: `サポートに新しいメッセージ${from}\n${quoted}\n<${page}|管理サイトで開く>・このスレッドに書くと、ポチカルとして返信します`,
   });
   const ts = stringOf(posted?.ts);
   if (ts === undefined) {
@@ -223,6 +224,14 @@ const answerFromSlack = async (
   if (chat === undefined) {
     return;
   }
+  // Only words reach the user: a reply with a file is not half sent.
+  if (Array.isArray(event.files) && event.files.length > 0) {
+    await slackCall(env, "chat.postMessage", {
+      text: "届けられませんでした：写真やファイルはまだ届けられません。文だけで返信してください。",
+      thread_ts: thread,
+    });
+    return;
+  }
   const kept = await answerSupport(
     env,
     chat.userId,
@@ -240,10 +249,16 @@ const answerFromSlack = async (
       }));
 };
 
+/**
+ * The kinds of message a person's reply comes as: plain, also sent to the
+ * channel, or with a file.
+ */
+const REPLY_SUBTYPES = new Set([undefined, "thread_broadcast", "file_share"]);
+
 /** Whether an event is a person's new reply in a thread of the channel. */
 const isStaffReply = (env: SlackEnv, event: Record<string, unknown>): boolean =>
   event.type === "message" &&
-  event.subtype === undefined &&
+  REPLY_SUBTYPES.has(stringOf(event.subtype)) &&
   event.bot_id === undefined &&
   event.channel === env.SLACK_CHANNEL_ID &&
   typeof event.thread_ts === "string" &&
