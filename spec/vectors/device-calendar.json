@@ -1,0 +1,84 @@
+{
+  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name, its time (none is all day) and whether it counts as off. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day, or null for all day. Days off are left out unless `includeOff`.",
+  "events": [
+    {
+      "name": "work at its pattern's time, days off left out",
+      "month": "2026-11-01",
+      "patterns": {
+        "day": { "name": "日勤", "time": ["08:30", "17:30"], "off": false },
+        "off": { "name": "休み", "off": true }
+      },
+      "days": {
+        "2026-11-02": { "shift": "day" },
+        "2026-11-03": { "shift": "off" }
+      },
+      "includeOff": false,
+      "expected": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 }
+      ]
+    },
+    {
+      "name": "days off all day when asked for",
+      "month": "2026-11-01",
+      "patterns": {
+        "day": { "name": "日勤", "time": ["08:30", "17:30"], "off": false },
+        "off": { "name": "休み", "off": true }
+      },
+      "days": {
+        "2026-11-02": { "shift": "day" },
+        "2026-11-03": { "shift": "off" }
+      },
+      "includeOff": true,
+      "expected": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 },
+        { "day": "2026-11-03", "title": "休み", "start": null, "end": null }
+      ]
+    },
+    {
+      "name": "a night shift ends the next day",
+      "month": "2026-11-01",
+      "patterns": {
+        "night": { "name": "夜勤", "time": ["16:30", "09:00"], "off": false }
+      },
+      "days": {
+        "2026-11-05": { "shift": "night" }
+      },
+      "includeOff": false,
+      "expected": [
+        { "day": "2026-11-05", "title": "夜勤", "start": 990, "end": 1980 }
+      ]
+    },
+    {
+      "name": "a day's own hours win over its pattern's",
+      "month": "2026-11-01",
+      "patterns": {
+        "day": { "name": "日勤", "time": ["08:30", "17:30"], "off": false }
+      },
+      "days": {
+        "2026-11-09": { "shift": "day", "start": "07:00", "end": "20:00" },
+        "2026-11-10": { "shift": "day", "end": "19:00" }
+      },
+      "includeOff": false,
+      "expected": [
+        { "day": "2026-11-09", "title": "日勤", "start": 420, "end": 1200 },
+        { "day": "2026-11-10", "title": "日勤", "start": 510, "end": 1140 }
+      ]
+    },
+    {
+      "name": "work without a time is all day, other months left out",
+      "month": "2026-11-01",
+      "patterns": {
+        "duty": { "name": "当番", "off": false }
+      },
+      "days": {
+        "2026-10-31": { "shift": "duty" },
+        "2026-11-01": { "shift": "duty" },
+        "2026-12-01": { "shift": "duty" }
+      },
+      "includeOff": false,
+      "expected": [
+        { "day": "2026-11-01", "title": "当番", "start": null, "end": null }
+      ]
+    }
+  ]
+}

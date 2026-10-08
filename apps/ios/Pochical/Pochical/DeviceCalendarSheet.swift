@@ -1,0 +1,230 @@
+import EventKit
+import PochicalDesign
+import PochicalKit
+import SwiftUI
+import UIKit
+
+/// The device's calendars, through EventKit: asked for once, then listed
+/// for 追加先 and written to (spec/calendar.md, Adding a month to the
+/// device calendar).
+@MainActor @Observable final class DeviceCalendars {
+  enum Access { case notAsked, granted, denied }
+
+  private let store = EKEventStore()
+  private(set) var access: Access
+
+  /// The events this device put in, by day, so adding a month again puts
+  /// them in anew rather than twice.
+  private static let addedKey = "deviceCalendar.added"
+  /// The calendar added to last, picked first next time.
+  private static let lastKey = "deviceCalendar.last"
+
+  init() {
+    access =
+      switch EKEventStore.authorizationStatus(for: .event) {
+      case .fullAccess: .granted
+      case .notDetermined: .notAsked
+      default: .denied
+      }
+  }
+
+  func ask() async {
+    let granted = (try? await store.requestFullAccessToEvents()) ?? false
+    access = granted ? .granted : .denied
+  }
+
+  /// The calendars that take new events, by account in the system's
+  /// order: read-only ones like holidays and birthdays are left out.
+  var sources: [(title: String, calendars: [EKCalendar])] {
+    let calendars = store.calendars(for: .event).filter(\.allowsContentModifications)
+    let grouped = Dictionary(grouping: calendars, by: \.source.sourceIdentifier)
+    return store.sources.compactMap { source in
+      grouped[source.sourceIdentifier].map {
+        (source.title, $0.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending })
+      }
+    }
+  }
+
+  /// The last one added to, else the system's for new events.
+  var pickedFirst: String? {
+    let last = UserDefaults.standard.string(forKey: Self.lastKey)
+    if let last, store.calendar(withIdentifier: last)?.allowsContentModifications == true {
+      return last
+    }
+    return store.defaultCalendarForNewEvents?.calendarIdentifier
+  }
+
+  func calendar(_ id: String) -> EKCalendar? {
+    store.calendar(withIdentifier: id)
+  }
+
+  /// Puts the month's events in the calendar: those this device put in
+  /// for its days before go first, so a month added again is put in anew.
+  func add(_ events: [ShiftEvent], of month: Day, to calendarID: String) throws {
+    guard let target = store.calendar(withIdentifier: calendarID) else { return }
+    var added = UserDefaults.standard.dictionary(forKey: Self.addedKey) as? [String: String] ?? [:]
+    for day in month.daysOfMonth {
+      if let id = added.removeValue(forKey: day.key), let old = store.event(withIdentifier: id) {
+        try store.remove(old, span: .thisEvent, commit: false)
+      }
+    }
+    var made: [(Day, EKEvent)] = []
+    for shift in events {
+      let event = EKEvent(eventStore: store)
+      event.calendar = target
+      event.title = shift.title
+      let midnight = date(of: shift.day)
+      if let start = shift.start, let end = shift.end {
+        event.startDate = midnight.addingTimeInterval(TimeInterval(start * 60))
+        event.endDate = midnight.addingTimeInterval(TimeInterval(end * 60))
+      } else {
+        event.isAllDay = true
+        event.startDate = midnight
+        event.endDate = midnight
+      }
+      try store.save(event, span: .thisEvent, commit: false)
+      made.append((shift.day, event))
+    }
+    try store.commit()
+    for (day, event) in made {
+      if let id = event.eventIdentifier {
+        added[day.key] = id
+      }
+    }
+    UserDefaults.standard.set(added, forKey: Self.addedKey)
+    UserDefaults.standard.set(calendarID, forKey: Self.lastKey)
+  }
+
+  private func date(of day: Day) -> Date {
+    Calendar.current.date(from: DateComponents(year: day.year, month: day.month, day: day.day))
+      ?? .now
+  }
+}
+
+/// 端末カレンダーに追加 (/design's SaveSheet, its calendar step): the
+/// month's shifts put in the device's calendar a day each, into the one
+/// picked, days off only when asked for.
+struct DeviceCalendarSheet: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.dismiss) private var dismiss
+  @Environment(\.openURL) private var openURL
+  let month: Day
+  let calendar: OwnCalendar
+  @State private var calendars = DeviceCalendars()
+  @State private var calendarID: String?
+  @State private var includeOff = false
+  /// What was done, once added.
+  @State private var done: String?
+  @State private var failed = false
+
+  var body: some View {
+    let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
+    let events = ShiftEvents.month(
+      month, days: shown, patterns: calendar.patternsByID, includeOff: includeOff)
+    NavigationStack {
+      Form {
+        switch calendars.access {
+        case .notAsked:
+          Section {
+            ProgressView().frame(maxWidth: .infinity)
+          }
+        case .denied:
+          Section {
+            Text("カレンダーへのアクセスが許可されていません。設定アプリで、ポチカルにカレンダーへのフルアクセスを許可してください。")
+            Button("設定を開く") {
+              if let url = URL(string: UIApplication.openSettingsURLString) {
+                openURL(url)
+              }
+            }
+          }
+          .settingsRows()
+        case .granted:
+          if let done {
+            Section {
+              Label(done, systemImage: "checkmark.circle.fill")
+                .foregroundStyle(colors.textPrimary)
+            }
+            .settingsRows()
+            Section {
+              wide("閉じる") { dismiss() }
+            }
+          } else {
+            form
+            Section {
+              wide("\(events.count)件を追加") { add(events) }
+                .disabled(events.isEmpty || calendarID == nil)
+            }
+          }
+        }
+      }
+      .settingsList()
+      .navigationTitle("端末カレンダーに追加")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+        }
+      }
+      .alert("追加できませんでした", isPresented: $failed) {
+        Button("OK", role: .cancel) {}
+      }
+    }
+    .task {
+      if calendars.access == .notAsked {
+        await calendars.ask()
+      }
+      calendarID = calendarID ?? calendars.pickedFirst
+    }
+  }
+
+  /// The page's main button, as /design's at the foot of the sheet.
+  private func wide(_ title: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Text(title).frame(maxWidth: .infinity, minHeight: Metrics.control)
+    }
+    .buttonStyle(.borderedProminent)
+    .buttonBorderShape(.capsule)
+    .settingsOnPage()
+  }
+
+  @ViewBuilder private var form: some View {
+    Section {
+      Picker("追加先", selection: $calendarID) {
+        ForEach(calendars.sources, id: \.title) { source in
+          Section(source.title) {
+            ForEach(source.calendars, id: \.calendarIdentifier) { item in
+              Label {
+                Text(item.title)
+              } icon: {
+                Image(systemName: "circle.fill").foregroundStyle(Color(cgColor: item.cgColor))
+              }
+              .tag(Optional(item.calendarIdentifier))
+            }
+          }
+        }
+      }
+      .pickerStyle(.navigationLink)
+      Toggle("休みの日も入れる", isOn: $includeOff)
+    } header: {
+      Text("\(month.monthText)のシフトを、1日ずつ予定として入れます。")
+        .textCase(nil)
+    } footer: {
+      Text("この端末で前に入れた\(month.monthText)の予定は、入れ直します。メモと一緒に働く人は入れません。")
+    }
+    .settingsRows()
+  }
+
+  private func add(_ events: [ShiftEvent]) {
+    guard let calendarID else { return }
+    do {
+      try calendars.add(events, of: month, to: calendarID)
+      let name = calendars.calendar(calendarID)?.title ?? ""
+      withAnimation {
+        done = "「\(name)」に\(month.monthText)のシフトを\(events.count)件追加しました。"
+      }
+    } catch {
+      ReviewPrompt.troubled = true
+      failed = true
+    }
+  }
+}
