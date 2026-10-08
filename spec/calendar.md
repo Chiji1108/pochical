@@ -35,6 +35,10 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 - The memo can be written on any day, shift or not, up to `textLimits.dayNote`, and is kept as text fields are (below). While it holds words, a clear button in the field empties it at once and keeps that, as a one-line field's does: the memo alone goes, the shift stays.
 - この日のシフトを消す, with a shift, clears it with its own hours and people; the memo stays. When a time change or people would go with it, it asks first and names them: 「一緒に働く人も消えます。」.
 
+## Saving a month as a picture
+
+The month's heading has a way to save it (/design's save menu). 画像で保存 shows the month as it will go out: its name, the weekdays and its days drawn as the calendar draws them on the calendar's own ground, without today's frame, memo strokes or the days of the months around it, and ポチカル with the store's icon at its foot, so whoever gets it can find the app by the same dog. Its look is its own, kept on the device apart from the person's スタイル: light or dark (the screen's until picked; an always-dark テーマ stays dark), 休みの見せ方, and シフト名, the last two on by default as it goes to people who do not know the marks, and days off shown, as they could not tell an empty day from one not entered. 共有 opens the system's share sheet, 保存 puts it in Photos. 端末カレンダーに追加, the menu's other way, is to come on the native apps.
+
 ## How days are written
 
 Each platform writes a day, its weekday and its month through one set of helpers, so another language changes them in one place: Swift's `DayText.swift` in PochicalKit, and on the web `design-days.ts` (`formatDay` and its kin) with `design-week.tsx`'s weekday names. In Japanese they are 11月1日(日) in full, 11月1日, 1日(日) where the month goes without saying, 11/1 where room is short, a year before them (2026年…, 2026/…) for a day of another year, and 2026年11月 or 11月 for a month. Screens never put a day's numbers together themselves.

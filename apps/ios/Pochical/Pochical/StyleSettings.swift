@@ -157,7 +157,7 @@ private enum Shape: CaseIterable, Hashable {
 /// How days off show: on a tint of their color (強調), as a mark alone
 /// (印だけ), or left blank (空白), faint again while entering and in a day's
 /// week.
-private enum OffLook: CaseIterable, Hashable {
+enum OffLook: CaseIterable, Hashable {
   case highlight, mark, blank
 
   init(_ options: MarkOptions) {
@@ -186,7 +186,7 @@ private enum OffLook: CaseIterable, Hashable {
 /// name, as /design's tall segments and iOS's segmented control: the
 /// picked one raised on the card's ground, which slides to the next as it
 /// is picked; track and raised ground both round-ended, as iOS 26's.
-private struct Choices<Option: Hashable, Sample: View>: View {
+struct Choices<Option: Hashable, Sample: View>: View {
   @Environment(\.themeColors) private var colors
   @Namespace private var raised
   let options: [Option]

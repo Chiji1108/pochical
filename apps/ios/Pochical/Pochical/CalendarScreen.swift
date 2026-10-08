@@ -20,6 +20,8 @@ struct CalendarScreen: View {
   /// The day ポチポチ入力 enters next, while entering.
   @State private var entering: Day?
   @State private var gaps: [Day] = []
+  /// The month being saved as a picture.
+  @State private var picturing: Day?
   /// Something was put on the days since entering or a day was opened,
   /// so closing them is a moment to ask for a review (spec/review.md).
   @State private var changed = false
@@ -185,6 +187,11 @@ struct CalendarScreen: View {
         withAnimation(Springs.standard) {
           shownMonth = day.firstOfMonth
         }
+      }
+    }
+    .sheet(isPresented: Binding { picturing != nil } set: { if !$0 { picturing = nil } }) {
+      if let month = picturing {
+        MonthPicturePage(month: month, calendar: currentCalendar)
       }
     }
     .onChange(of: gaps) { _, gaps in
@@ -447,10 +454,19 @@ struct CalendarScreen: View {
       .buttonStyle(BarButton(tint: colors.accentFill))
       .foregroundStyle(colors.accentOnFill)
     } else {
-      TodayFade(position: position, todayPage: todayPage) {
-        Button("今月") {
-          withAnimation(Springs.standard) { shownMonth = thisMonth }
+      HStack(spacing: 12) {
+        TodayFade(position: position, todayPage: todayPage) {
+          Button("今月") {
+            withAnimation(Springs.standard) { shownMonth = thisMonth }
+          }
+          .buttonStyle(BarButton())
         }
+        // The month kept as a picture (/design's save menu, whose 端末
+        // カレンダーに追加 comes once it is built).
+        Button("この月のシフトを保存", systemImage: "square.and.arrow.down") {
+          picturing = shownMonth ?? thisMonth
+        }
+        .labelStyle(.iconOnly)
         .buttonStyle(BarButton())
       }
     }

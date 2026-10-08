@@ -37,6 +37,8 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   public var themeID = Theme.pochical.rawValue
   /// 外観: light or dark as the phone is, or one of them always.
   public var appearance = Appearance.system
+  /// How a month saved as a picture looks, apart from the app's own look.
+  public var picture = PictureLook()
 
   public var theme: Theme {
     get { Theme(rawValue: themeID) ?? .pochical }
@@ -51,6 +53,25 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     look = try container.decodeIfPresent(Look.self, forKey: .look) ?? Look()
     themeID = try container.decodeIfPresent(String.self, forKey: .themeID) ?? Theme.pochical.rawValue
     appearance = try container.decodeIfPresent(Appearance.self, forKey: .appearance) ?? .system
+    picture = try container.decodeIfPresent(PictureLook.self, forKey: .picture) ?? PictureLook()
+  }
+}
+
+/// How a month saved as a picture looks (/design's ImageOptions): it goes
+/// to people who do not know the marks, so names and the days off's tint
+/// start on, and days off are shown, since they could not tell an empty day
+/// from one not entered. Light or dark is the screen's until picked.
+public struct PictureLook: Codable, Equatable, Sendable {
+  public var options = MarkOptions(names: true, highlight: true)
+  /// Dark, light, or none to follow the screen.
+  public var dark: Bool?
+
+  public init() {}
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    options = try container.decodeIfPresent(MarkOptions.self, forKey: .options) ?? PictureLook().options
+    dark = try container.decodeIfPresent(Bool.self, forKey: .dark)
   }
 }
 
