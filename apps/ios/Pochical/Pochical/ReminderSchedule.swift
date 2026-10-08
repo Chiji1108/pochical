@@ -19,6 +19,9 @@ enum ReminderSchedule {
     let center = UNUserNotificationCenter.current()
     let waiting = await center.pendingNotificationRequests().map(\.identifier)
       .filter { $0.hasPrefix(prefix) }
+    // An update put aside by a newer one adds nothing after it: what it
+    // would add may be what the newer one just took out.
+    guard !Task.isCancelled else { return }
     center.removePendingNotificationRequests(withIdentifiers: waiting)
     guard allowed else { return }
     let today = Day.today
@@ -34,6 +37,7 @@ enum ReminderSchedule {
       .sorted { $0.1 < $1.1 }
       .prefix(most)
     for (firing, _) in firings {
+      guard !Task.isCancelled else { return }
       let content = UNMutableNotificationContent()
       content.title = firing.title
       if let body = firing.body {
