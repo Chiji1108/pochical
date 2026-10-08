@@ -51,7 +51,15 @@
     "APNS_TEAM_ID": "6KC44WPYLJ",
     "BETTER_AUTH_URL": "https://api.pochical.app",
   },
-  "secrets": { "required": ["APNS_KEY", "BETTER_AUTH_SECRET"] },
+  "secrets": {
+    "required": [
+      "APNS_KEY",
+      "BETTER_AUTH_SECRET",
+      "SLACK_BOT_TOKEN",
+      "SLACK_CHANNEL_ID",
+      "SLACK_SIGNING_SECRET",
+    ],
+  },
   // Cloudflare's rate limiting, counted per location and kept by nobody:
   // anonymous sign-ins by the client's address, groups made, link
   // previews asked for and lines to Pochical's people by the user.

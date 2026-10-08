@@ -16,9 +16,9 @@ import {
   signedBySlack,
   slackCall,
   slackFile,
+  slackSecret,
   stringOf,
 } from "./slack";
-import type { SlackEnv } from "./slack";
 import { answerSupport, tellSupportChanged } from "./support-answers";
 import type { SupportPhotoOf } from "./support-answers";
 import {
@@ -34,7 +34,7 @@ import {
  * image itself when it has none and fits chatRules.photoMaxBytes.
  */
 const keepSlackPhoto = async (
-  env: SlackEnv,
+  env: Env,
   userId: string,
   file: Record<string, unknown>
 ): Promise<SupportPhotoOf | null> => {
@@ -69,7 +69,7 @@ const keepSlackPhoto = async (
  * arrived; its message and files' ids keep each once.
  */
 const answerFromSlack = async (
-  env: SlackEnv,
+  env: Env,
   event: Record<string, unknown>
 ): Promise<void> => {
   const thread = stringOf(event.thread_ts);
@@ -133,7 +133,7 @@ const answerFromSlack = async (
  * An answer deleted in Slack, taken back from the user's chat too: each
  * line it was, its photos and its words.
  */
-const unsendFromSlack = async (env: SlackEnv, ts: string): Promise<void> => {
+const unsendFromSlack = async (env: Env, ts: string): Promise<void> => {
   const withTs = await linesWithSlackTs(env, ts);
   const lines = withTs.filter((line) => line.fromSupport && !line.unsent);
   for (const line of lines) {
@@ -152,7 +152,7 @@ const unsendFromSlack = async (env: SlackEnv, ts: string): Promise<void> => {
  * left in Slack alone.
  */
 const reactFromSlack = async (
-  env: SlackEnv,
+  env: Env,
   event: Record<string, unknown>,
   on: boolean
 ): Promise<void> => {
@@ -194,12 +194,12 @@ const botOf = (payload: Record<string, unknown>): string | undefined => {
 
 /** The work an event in the channel asks for, if any. */
 const workOf = (
-  env: SlackEnv,
+  env: Env,
   payload: Record<string, unknown>,
   event: Record<string, unknown>
 ): Promise<void> | undefined => {
   const channel = isRecord(event.item) ? event.item.channel : event.channel;
-  if (channel !== env.SLACK_CHANNEL_ID) {
+  if (channel !== slackSecret(env.SLACK_CHANNEL_ID)) {
     return undefined;
   }
   if (event.type === "reaction_added" || event.type === "reaction_removed") {
@@ -221,11 +221,11 @@ const workOf = (
  */
 export const slackEvents = async (
   request: Request,
-  env: SlackEnv
+  env: Env
 ): Promise<Response> => {
   const body = await request.text();
   const signed = await signedBySlack(
-    env.SLACK_SIGNING_SECRET ?? "",
+    slackSecret(env.SLACK_SIGNING_SECRET),
     request.headers,
     body,
     Date.now()

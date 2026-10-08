@@ -11,11 +11,11 @@ import { supportPhotoKey } from "./photos";
 import { keepSlackTs } from "./support-chat";
 import type { SupportLineOf } from "./support-chat";
 
-export type SlackEnv = Env & {
-  SLACK_BOT_TOKEN?: string;
-  SLACK_CHANNEL_ID?: string;
-  SLACK_SIGNING_SECRET?: string;
-};
+/**
+ * A Slack secret, or "" where this server has none: Env says they are
+ * there, as production has them, but a local server may not.
+ */
+export const slackSecret = (value: string | undefined): string => value ?? "";
 
 /** Pochical's people's admin site (apps/admin). */
 export const ADMIN_SITE = "https://admin.pochical.app";
@@ -156,12 +156,12 @@ export const signedBySlack = async (
 
 /** One of Slack's Web API methods as the app; null when it did not take. */
 export const slackCall = async (
-  env: SlackEnv,
+  env: Env,
   method: string,
   args: Record<string, unknown>
 ): Promise<Record<string, unknown> | null> => {
-  const token = env.SLACK_BOT_TOKEN ?? "";
-  const channel = env.SLACK_CHANNEL_ID ?? "";
+  const token = slackSecret(env.SLACK_BOT_TOKEN);
+  const channel = slackSecret(env.SLACK_CHANNEL_ID);
   if (token === "" || channel === "") {
     return null;
   }
@@ -192,7 +192,7 @@ export const slackCall = async (
 };
 
 export const threadOf = async (
-  env: SlackEnv,
+  env: Env,
   userId: string
 ): Promise<string | null> => {
   const [chat] = await drizzle(env.DB)
@@ -272,7 +272,7 @@ const threadHead = (line: SupportLineOf, words: string): string => {
  * not take it.
  */
 const startThread = async (
-  env: SlackEnv,
+  env: Env,
   line: SupportLineOf,
   words: string
 ): Promise<string | null> => {
@@ -322,7 +322,7 @@ const sharedTs = (file: unknown, channel: string): string | undefined => {
  * its reactions and its taking back.
  */
 const postPhoto = async (
-  env: SlackEnv,
+  env: Env,
   line: SupportLineOf,
   thread: string,
   quote: string
@@ -359,7 +359,7 @@ const postPhoto = async (
   for (let tries = 0; tries < SHARE_TRIES; tries += 1) {
     // oxlint-disable-next-line no-await-in-loop -- Slack shares it in a moment
     const info = await slackCall(env, "files.info", { file: fileId });
-    const ts = sharedTs(info?.file, env.SLACK_CHANNEL_ID ?? "");
+    const ts = sharedTs(info?.file, env.SLACK_CHANNEL_ID);
     if (ts !== undefined) {
       return ts;
     }
@@ -374,11 +374,11 @@ const postPhoto = async (
  * (files:read); null past `most` bytes or when Slack does not give it.
  */
 export const slackFile = async (
-  env: SlackEnv,
+  env: Env,
   url: string,
   most: number
 ): Promise<{ bytes: ArrayBuffer; type: string } | null> => {
-  const token = env.SLACK_BOT_TOKEN ?? "";
+  const token = slackSecret(env.SLACK_BOT_TOKEN);
   if (token === "" || !url.startsWith("https://files.slack.com/")) {
     return null;
   }
@@ -404,7 +404,7 @@ export const slackFile = async (
  * reactions and its taking back.
  */
 export const tellStaffOfLine = async (
-  env: SlackEnv,
+  env: Env,
   line: SupportLineOf,
   repliedTo: SupportLineOf | null
 ): Promise<void> => {
@@ -444,7 +444,7 @@ export const tellStaffOfLine = async (
 
 /** An answer written on the admin site, in the chat's thread. */
 export const tellStaffOfAnswer = async (
-  env: SlackEnv,
+  env: Env,
   userId: string,
   messageId: string,
   words: string
@@ -468,7 +468,7 @@ export const tellStaffOfAnswer = async (
  * no name for here is said in the thread instead.
  */
 export const tellStaffOfReaction = async (
-  env: SlackEnv,
+  env: Env,
   line: SupportLineOf,
   emoji: string,
   on: boolean
@@ -495,7 +495,7 @@ export const tellStaffOfReaction = async (
 
 /** A line the user took back, so said in its place in Slack. */
 export const tellStaffOfUnsend = async (
-  env: SlackEnv,
+  env: Env,
   line: SupportLineOf
 ): Promise<void> => {
   if (line.slackTs === null) {
@@ -562,7 +562,7 @@ const reportLinesOf = (context: string): string[] => {
  * one marked; with the way to the admin site.
  */
 export const tellStaffOfReport = async (
-  env: SlackEnv,
+  env: Env,
   report: {
     why: string;
     groupName: string;
