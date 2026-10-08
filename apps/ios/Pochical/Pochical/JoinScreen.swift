@@ -208,6 +208,7 @@ struct JoinScreen: View {
         let groupID = try await groupCalls.join(code: invite.code, displayName: trimmed(myName))
         onJoined(groupID)
       } catch {
+        ReviewPrompt.troubled = true
         joinError = error
       }
     }

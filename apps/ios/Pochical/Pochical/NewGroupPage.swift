@@ -87,6 +87,7 @@ struct NewGroupPage: View {
           name: trimmed(name), emoji: emoji, displayName: trimmed(myName), requestID: requestID)
         onMade(made)
       } catch {
+        ReviewPrompt.troubled = true
         failed = true
       }
     }

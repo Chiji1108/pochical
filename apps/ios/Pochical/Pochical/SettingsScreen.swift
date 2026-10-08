@@ -8,6 +8,8 @@ import SwiftUI
 /// built.
 struct SettingsScreen: View {
   @Environment(Settings.self) private var settings
+  @Environment(\.themeColors) private var colors
+  @Environment(\.openURL) private var openURL
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
@@ -16,6 +18,9 @@ struct SettingsScreen: View {
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   /// The icon in use, read again as the page comes back from changing it.
   @State private var appIcon = AppIconChoice.current
+  /// A page of the site opened from ポチカルについて.
+  @State private var page: OpenedLink?
+  @State private var reviewLater = false
 
   var body: some View {
     NavigationStack {
@@ -99,11 +104,61 @@ struct SettingsScreen: View {
           }
         }
         .settingsRows()
+
+        about
       }
       .settingsList()
       .navigationTitle("設定")
       .onAppear { appIcon = .current }
+      .sheet(item: $page) { page in
+        SafariView(url: page.url).ignoresSafeArea()
+      }
+      .alert("公開後はレビューを書く画面が開きます", isPresented: $reviewLater) {
+        Button("OK", role: .cancel) {}
+      }
     }
+  }
+
+  /// Pochical itself, at the foot (/design's AboutSection): rows that leave
+  /// the app end in ↗ instead of the arrow of rows that go on inside it.
+  /// The store's own review prompt comes by itself only now and then
+  /// (spec/review.md); the review row is there whenever someone wants to
+  /// write one.
+  private var about: some View {
+    Section {
+      outside("ヘルプ") { page = OpenedLink(url: Site.page("support")) }
+      outside("App Storeでレビューを書く") {
+        if let url = Site.writeReview {
+          openURL(url)
+        } else {
+          reviewLater = true
+        }
+      }
+      outside("利用規約") { page = OpenedLink(url: Site.page("terms")) }
+      outside("プライバシーポリシー") { page = OpenedLink(url: Site.page("privacy")) }
+    } header: {
+      Text("ポチカルについて")
+    } footer: {
+      Text("ポチカル \(ReviewPrompt.version)")
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+    .settingsRows()
+  }
+
+  private func outside(_ title: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      HStack {
+        Text(title).foregroundStyle(colors.textPrimary)
+        Spacer()
+        Image(systemName: "arrow.up.right")
+          .font(.footnote.weight(.semibold))
+          .foregroundStyle(colors.textQuaternary)
+      }
+      .contentShape(.rect)
+    }
+    .buttonStyle(.plain)
+    .accessibilityHint("ブラウザで開きます")
   }
 
   /// The choice, or the dark of a テーマ drawn so whatever it says.
@@ -213,4 +268,17 @@ private struct CalendarSettings: View {
       Circle().fill(color).frame(width: 10, height: 10)
     }
   }
+}
+
+/// Pochical's site, whose pages ポチカルについて opens.
+private enum Site {
+  static let root = URL(string: "https://pochical.app")!
+
+  static func page(_ path: String) -> URL {
+    root.appending(path: path)
+  }
+
+  /// The App Store's page for writing a review (?action=write-review),
+  /// which there is none of before release.
+  static let writeReview: URL? = nil
 }

@@ -126,6 +126,7 @@ struct ReportSheet: View {
       onSent()
       dismiss()
     } catch {
+      ReviewPrompt.troubled = true
       failed = true
     }
   }

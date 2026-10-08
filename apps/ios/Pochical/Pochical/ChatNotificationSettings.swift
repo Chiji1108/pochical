@@ -154,6 +154,7 @@ struct ChatNotificationsPage: View {
       do {
         try await groupCalls.setBlocked(person.id, false)
       } catch {
+        ReviewPrompt.troubled = true
         failed = true
       }
     }
@@ -198,6 +199,7 @@ struct ChatNotificationToggle<Content: View>: View {
         try await groupCalls.setChatMuted(threadID, in: groupID, muted: !on)
       } catch {
         turned = nil
+        ReviewPrompt.troubled = true
         failed = true
       }
     }
@@ -231,6 +233,7 @@ private struct MentionsToggle: View {
         try await groupCalls.setMentionsWhenMuted(value)
       } catch {
         turned = nil
+        ReviewPrompt.troubled = true
         failed = true
       }
     }

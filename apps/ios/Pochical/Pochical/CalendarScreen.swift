@@ -1,6 +1,7 @@
 import PochicalDesign
 import PochicalKit
 import SQLiteData
+import StoreKit
 import SwiftUI
 
 /// カレンダー: the person's month, a page a month, turned by swiping.
@@ -19,6 +20,10 @@ struct CalendarScreen: View {
   /// The day ポチポチ入力 enters next, while entering.
   @State private var entering: Day?
   @State private var gaps: [Day] = []
+  /// Something was put on the days since entering or a day was opened,
+  /// so closing them is a moment to ask for a review (spec/review.md).
+  @State private var changed = false
+  @Environment(\.requestReview) private var requestReview
   /// The day opened from the month, its week alone left above its detail.
   @State private var opened: Day?
   /// The week swiped to beside an opened one, until the swipe settles and
@@ -169,16 +174,21 @@ struct CalendarScreen: View {
       guard let day else {
         // A swipe left unsettled as the week closed goes with it.
         swipedWeek = nil
+        askForReviewIfDue()
         return
       }
       shownMonth = monthShowing(day)
     }
     .onChange(of: entering) { _, day in
+      if day == nil { askForReviewIfDue() }
       if let day, day.firstOfMonth != shownMonth {
         withAnimation(Springs.standard) {
           shownMonth = day.firstOfMonth
         }
       }
+    }
+    .onChange(of: gaps) { _, gaps in
+      if gaps.isEmpty { askForReviewIfDue() }
     }
     .fittedSheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
       gapSheet(calendar)
@@ -383,13 +393,28 @@ struct CalendarScreen: View {
     }.count
   }
 
+  /// Asks the store for its review prompt once entering, a day and 完了's
+  /// question have all closed after something was put on the days, if the
+  /// person has used Pochical long enough (spec/review.md).
+  private func askForReviewIfDue() {
+    guard changed, entering == nil, opened == nil, gaps.isEmpty else { return }
+    changed = false
+    guard ReviewPrompt.mayAsk else { return }
+    requestReview()
+    ReviewPrompt.asked()
+  }
+
   /// Writes the person's edits at once; they wait in the outbox for sync.
   private func write(_ edit: @escaping (Database, Int64) throws -> Void) {
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     do {
       try database.write { db in try edit(db, now) }
+      changed = true
+      // A memo kept as its day closes comes after the day has gone.
+      askForReviewIfDue()
     } catch {
       // Not expected: the edit is the device's own, and its tables are.
+      ReviewPrompt.troubled = true
       assertionFailure("Could not keep the edit: \(error)")
     }
   }

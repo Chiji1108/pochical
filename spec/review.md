@@ -22,7 +22,7 @@ The apps ask right after the person finished putting something on their days, on
 - closing a day after changing its shift or hours (a day off taken, a swap);
 - saving a day's memo.
 
-Never on opening the app, while looking through months, from a widget, in a group or its chat, or in the middle of anything else. Someone who only looks and never changes a day is never asked; the settings' review row is there for them.
+Never on opening the app, while looking through months, from a widget, in a group or its chat, or in the middle of anything else. Someone who only looks and never changes a day is never asked; the settings' review row is there for them. That row, under 設定's ポチカルについて with ヘルプ, 利用規約 and プライバシーポリシー, opens the store's page for writing a review (App Store's `?action=write-review`, Google Play's listing) whenever it is pressed; before Pochical is in the store, it says it will.
 
 ## What is kept
 
