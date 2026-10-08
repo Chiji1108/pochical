@@ -1,7 +1,11 @@
-import { COWORKERS_MAX, textLimits } from "@pochical/design/limits";
+import {
+  COWORKERS_MAX,
+  PATTERNS_PER_PAGE,
+  textLimits,
+} from "@pochical/design/limits";
 import { Check, ChevronRight, CircleX, Plus } from "lucide-react";
 import { useContext, useEffect, useEffectEvent, useState } from "react";
-import { css, cx } from "styled-system/css";
+import { css, cva, cx } from "styled-system/css";
 
 import { keepDetails, timeChangeOf, timeRange } from "../lib/design-days";
 import type { DayEntry } from "../lib/design-days";
@@ -13,8 +17,9 @@ import { Chip, ChipGroup } from "./design-choices";
 import { coworkersFull, useCoworkerList } from "./design-coworkers";
 import { LimitedInput, LimitedTextArea, TimeRange } from "./design-fields";
 import { List, ListRow, listRow } from "./design-list";
-import { MenuPicker, PullDownMenu } from "./design-menu";
-import { ConfirmDialog } from "./design-sheet";
+import { timeText } from "./design-pattern-editor";
+import { pickerStyle } from "./design-picker-style";
+import { ConfirmDialog, Sheet, SheetHeading } from "./design-sheet";
 import { ToastContext } from "./design-toast";
 import { DestructiveButton } from "./design-ui";
 import { ShiftMark } from "./shift-mark";
@@ -28,6 +33,20 @@ import { ShiftMark } from "./shift-mark";
 // Nothing changes on a stray tap, as it did when every shift was a chip
 // on show.
 const dayDetail = {
+  // The day's shift picked from a list, the check on the day's one; the
+  // others keep its room, so the rows line up.
+  check: cva({
+    base: { color: "accent.default", flexShrink: 0, marginRight: "-4px" },
+    variants: { picked: { false: { visibility: "hidden" }, true: {} } },
+  }),
+  choices: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    minHeight: 0,
+    overflowY: "auto",
+  }),
+  shiftValue: css({ alignItems: "center", display: "inline-flex", gap: "4px" }),
   // The people's chips, unfolded under their row inside the list, with a line above
   // as between rows; marked as a row so the row after it draws its own.
   unfolded: css({
@@ -230,6 +249,7 @@ export function DayDetail({
     };
   }, []);
   const [clearing, setClearing] = useState(false);
+  const [choosingShift, setChoosingShift] = useState(false);
   // Said in words here, where there is room: the mark only shows a shape.
   const change = timeChangeOf(entry, pattern);
   const moves =
@@ -268,33 +288,20 @@ export function DayDetail({
     <div className={dayDetail.root}>
       <List>
         <ListRow
-          control={
-            <PullDownMenu
-              label={
-                entry ? (
-                  <>
-                    <ShiftMark shift={entry.shift} size={16} />
-                    {pattern?.name}
-                  </>
-                ) : (
-                  "なし"
-                )
-              }
-            >
-              <MenuPicker
-                onValueChange={(key) => {
-                  onChange(keepDetails(entry, key));
-                }}
-                options={patternKeys.map((key) => ({
-                  icon: <ShiftMark shift={key} size={18} />,
-                  label: book[key]?.name ?? key,
-                  value: key,
-                }))}
-                value={entry?.shift ?? ""}
-              />
-            </PullDownMenu>
-          }
           label="シフト"
+          onClick={() => {
+            setChoosingShift(true);
+          }}
+          value={
+            entry ? (
+              <span className={dayDetail.shiftValue}>
+                <ShiftMark shift={entry.shift} size={16} />
+                {pattern?.name}
+              </span>
+            ) : (
+              "なし"
+            )
+          }
         />
         {entry && time && (
           <ListRow
@@ -408,6 +415,98 @@ export function DayDetail({
           title="この日のシフトを消しますか？"
         />
       )}
+      <ShiftChoices
+        onOpenChange={setChoosingShift}
+        onPick={(key) => {
+          if (key !== entry?.shift) {
+            onChange(keepDetails(entry, key));
+          }
+          setChoosingShift(false);
+        }}
+        open={choosingShift}
+        patternKeys={patternKeys}
+        picked={entry?.shift}
+      />
     </div>
+  );
+}
+
+// The day's shift picked from the person's patterns, in their order as
+// 設定's シフトパターン lists them, each with its hours, the day's with a
+// check: as the platforms pick one of many in a list of its own, since a
+// menu runs long past a few. Picking one closes it. Past a page of
+// ポチポチ入力's keys, a search narrows them by name.
+function ShiftChoices({
+  open,
+  onOpenChange,
+  patternKeys,
+  picked,
+  onPick,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  patternKeys: Shift[];
+  picked: Shift | undefined;
+  onPick: (key: Shift) => void;
+}) {
+  const book = usePatterns();
+  const [query, setQuery] = useState("");
+  const words = query.trim();
+  const shown = patternKeys.filter(
+    (key) => !words || (book[key]?.name ?? "").includes(words)
+  );
+  const change = (next: boolean) => {
+    if (!next) {
+      setQuery("");
+    }
+    onOpenChange(next);
+  };
+  return (
+    <Sheet label="シフト" onOpenChange={change} open={open}>
+      <SheetHeading
+        onClose={() => {
+          change(false);
+        }}
+        title="シフト"
+      />
+      <div className={dayDetail.choices}>
+        {patternKeys.length > PATTERNS_PER_PAGE && (
+          <input
+            aria-label="シフトを探す"
+            className={pickerStyle.search}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
+            placeholder="シフトを探す"
+            type="search"
+            value={query}
+          />
+        )}
+        <List>
+          {shown.map((key) => {
+            const pattern = book[key];
+            return (
+              <ListRow
+                aria-pressed={key === picked}
+                arrow={
+                  <Check
+                    aria-hidden="true"
+                    className={dayDetail.check({ picked: key === picked })}
+                    size={18}
+                  />
+                }
+                key={key}
+                label={pattern?.name ?? key}
+                leading={<ShiftMark shift={key} size={20} />}
+                onClick={() => {
+                  onPick(key);
+                }}
+                value={pattern && timeText(pattern)}
+              />
+            );
+          })}
+        </List>
+      </div>
+    </Sheet>
   );
 }
