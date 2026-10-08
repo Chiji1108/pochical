@@ -253,6 +253,16 @@ const slackNameOf = (emoji: string): string | undefined =>
 const QUOTE_LENGTH = 80;
 
 /**
+ * A chat's thread's first message: the user's first line, with the app
+ * and device, the way to the admin site and how to answer.
+ */
+const threadHead = (line: SupportLineOf, words: string): string => {
+  const page = `${ADMIN_SITE}/support/${encodeURIComponent(line.userId)}`;
+  const from = line.device === null ? "" : `（${toSlackText(line.device)}）`;
+  return `サポートに新しいメッセージ${from}\n${words}\n<${page}|管理サイトで開く>・このスレッドに書くと、ポチカルとして返信します`;
+};
+
+/**
  * A user's new line, in their chat's thread, shown in the channel too;
  * their first starts the thread, with the way to the admin site. A reply
  * quotes what it is to. Its message is kept with the line, for its
@@ -281,10 +291,8 @@ export const tellStaffOfLine = async (
     }
     return;
   }
-  const page = `${ADMIN_SITE}/support/${encodeURIComponent(line.userId)}`;
-  const from = line.device === null ? "" : `（${toSlackText(line.device)}）`;
   const posted = await slackCall(env, "chat.postMessage", {
-    text: `サポートに新しいメッセージ${from}\n${words}\n<${page}|管理サイトで開く>・このスレッドに書くと、ポチカルとして返信します`,
+    text: threadHead(line, words),
   });
   const ts = stringOf(posted?.ts);
   if (ts === undefined) {
@@ -362,8 +370,11 @@ export const tellStaffOfUnsend = async (
   if (line.slackTs === null) {
     return;
   }
+  const taken = "（ユーザーが送信を取り消しました）";
+  // The thread's first message keeps the way to the admin site.
+  const first = line.slackTs === (await threadOf(env, line.userId));
   await slackCall(env, "chat.update", {
-    text: "（ユーザーが送信を取り消しました）",
+    text: first ? threadHead(line, taken) : taken,
     ts: line.slackTs,
   });
 };

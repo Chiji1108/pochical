@@ -363,7 +363,8 @@ describe("reactions and lines taken back, in Slack", () => {
       calls[1]?.args.name,
       calls[1]?.args.timestamp,
       calls[3]?.args.ts,
-    ]).toStrictEqual(["+1", thread, thread]);
+      String(calls[3]?.args.text).includes("管理サイトで開く"),
+    ]).toStrictEqual(["+1", thread, thread, true]);
   });
 
   it("take Pochical's people's emoji on a user's line, not the app's own", async () => {
