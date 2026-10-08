@@ -122,8 +122,18 @@ const slackCall = async (
       method: "POST",
     });
     const result: unknown = await response.json();
-    return isRecord(result) && result.ok === true ? result : null;
-  } catch {
+    if (isRecord(result) && result.ok === true) {
+      return result;
+    }
+    // Slack's own word for why (not_in_channel, missing_scope, ...), for
+    // the Worker's logs.
+    console.error(
+      `Slack ${method} failed`,
+      isRecord(result) ? result.error : response.status
+    );
+    return null;
+  } catch (error) {
+    console.error(`Slack ${method} failed`, error);
     return null;
   }
 };
