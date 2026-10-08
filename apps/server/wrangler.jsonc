@@ -53,8 +53,8 @@
   },
   "secrets": { "required": ["APNS_KEY", "BETTER_AUTH_SECRET"] },
   // Cloudflare's rate limiting, counted per location and kept by nobody:
-  // anonymous sign-ins by the client's address, groups made and link
-  // previews asked for by the user.
+  // anonymous sign-ins by the client's address, groups made, link
+  // previews asked for and lines to Pochical's people by the user.
   // The numbers live here, where the limiters are made (src/rate-limits.ts).
   "ratelimits": [
     {
@@ -73,6 +73,13 @@
       "name": "LINK_PREVIEW_LIMIT",
       "namespace_id": "1003",
       "simple": { "limit": 30, "period": 60 },
+    },
+    // Lines to Pochical's people, by the user: plenty for someone writing,
+    // too few to flood the chat Pochical's people read.
+    {
+      "name": "SUPPORT_LIMIT",
+      "namespace_id": "1004",
+      "simple": { "limit": 20, "period": 60 },
     },
   ],
   // The apps (and later the site's sign-in) reach the server here; the

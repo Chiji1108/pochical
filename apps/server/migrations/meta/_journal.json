@@ -22,6 +22,20 @@
       "when": 1791348256836,
       "tag": "0002_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791430231600,
+      "tag": "0003_support_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791430378762,
+      "tag": "0004_support_device",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `support_messages` ADD `device` text;

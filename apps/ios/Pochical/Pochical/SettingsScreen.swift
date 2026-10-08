@@ -110,6 +110,12 @@ struct SettingsScreen: View {
         }
         .settingsRows()
 
+        // The chat with the people who make Pochical, over ポチカルについて.
+        Section {
+          SupportRow()
+        }
+        .settingsRows()
+
         about
       }
       .settingsList()
