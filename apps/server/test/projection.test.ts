@@ -292,6 +292,8 @@ describe("a member's shifts in their groups", () => {
       const retry = await state.storage.getAlarm();
       expect(retry).toBeGreaterThanOrEqual(before + PUSH_RETRY_FIRST_MS);
       expect(retry).toBeLessThanOrEqual(Date.now() + PUSH_RETRY_FIRST_MS);
+      // No retry left to run after the test, its group failing still.
+      await state.storage.deleteAlarm();
     });
 
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
@@ -327,19 +329,30 @@ describe("a member's shifts in their groups", () => {
 
   it("leaves the next round to a change made while it pushes", async () => {
     const { maker, user } = await someone();
-    // The change comes as the push to the group fails.
+    // The change comes as the push below fails, once: every round it
+    // made would fail and make it again, on past the file's last test.
+    let changing = false;
     await failPushesTo(user, ["!unreachable"], (instance) => {
-      instance.addMembership("!unreachable", { emoji: null, name: "届かない" });
+      if (changing) {
+        changing = false;
+        instance.addMembership("!unreachable", {
+          emoji: null,
+          name: "届かない",
+        });
+      }
     });
     await enterADay(maker);
 
     await runInDurableObject(user, async (instance, state) => {
       await state.storage.deleteAlarm();
       const before = Date.now();
+      changing = true;
       await instance.alarm();
       await expect(state.storage.getAlarm()).resolves.toBeLessThan(
         before + PUSH_RETRY_FIRST_MS
       );
+      // Nor that round, to fail as the file's tests end.
+      await state.storage.deleteAlarm();
     });
   });
 });
