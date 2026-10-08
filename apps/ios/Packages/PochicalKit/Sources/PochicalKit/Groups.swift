@@ -85,6 +85,7 @@ public struct GroupCalls: Sendable {
   let client: Pochical_V1_GroupServiceClient
   let users: Pochical_V1_UserServiceClient
   let chats: Pochical_V1_ChatServiceClient
+  let support: Pochical_V1_SupportServiceClient
 
   public init(account: Account, server: URL = Server.url) {
     self.account = account
@@ -95,6 +96,7 @@ public struct GroupCalls: Sendable {
     client = Pochical_V1_GroupServiceClient(client: protocolClient)
     users = Pochical_V1_UserServiceClient(client: protocolClient)
     chats = Pochical_V1_ChatServiceClient(client: protocolClient)
+    support = Pochical_V1_SupportServiceClient(client: protocolClient)
   }
 
   /// A link's page as the server reads it (spec/chat.md, Reading a page),

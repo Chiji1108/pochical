@@ -14,6 +14,7 @@ import {
 import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
 import type { SessionUser } from "./session";
+import { registerSupportService } from "./support-service";
 import { SESSION_HEADER, USER_HEADER } from "./sync-socket";
 import { registerSystemService } from "./system-service";
 import { registerUserService } from "./user-service";
@@ -28,6 +29,7 @@ registerInviteService(router);
 registerGroupService(router);
 registerUserService(router);
 registerChatService(router);
+registerSupportService(router);
 
 const rpcHandlers = new Map(
   router.handlers.map((handler) => [

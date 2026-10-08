@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package pochical.v1;
+
+// The chat with the people who make Pochical (/design's SupportChatPage):
+// a user's own, read and answered by Pochical's people, who answer under
+// the app's name. Signed-in users only; each sees only their own.
+service SupportService {
+  // The user's chat with Pochical's people, oldest first, and how many of
+  // the answers the user has not read.
+  rpc GetSupportChat(GetSupportChatRequest) returns (GetSupportChatResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // A line to Pochical's people. The id is the app's, so a send tried
+  // again is kept once. INVALID_ARGUMENT for no words or more than
+  // textLimits.chatMessage; RESOURCE_EXHAUSTED past the limiter.
+  rpc SendSupportMessage(SendSupportMessageRequest) returns (SendSupportMessageResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
+  // The answers so far are read, as the chat is open.
+  rpc MarkSupportRead(MarkSupportReadRequest) returns (MarkSupportReadResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+}
+
+// A line of the chat.
+message SupportMessage {
+  string id = 1;
+  // Written by Pochical's people, not the user.
+  bool from_support = 2;
+  string text = 3;
+  int64 sent_at_ms = 4;
+}
+
+message GetSupportChatRequest {}
+
+message GetSupportChatResponse {
+  repeated SupportMessage messages = 1;
+  // Answers after the user last read the chat.
+  int32 unread = 2;
+}
+
+message SendSupportMessageRequest {
+  // The app's own id for the line, a UUID.
+  string id = 1;
+  string text = 2;
+  // The app's version and the device, as the chat's head says reach
+  // Pochical's people with what is written: ポチカル 1.0・iPhone (iOS 26.0).
+  string device = 3;
+}
+
+message SendSupportMessageResponse {
+  SupportMessage message = 1;
+}
+
+message MarkSupportReadRequest {}
+
+message MarkSupportReadResponse {}

@@ -149,3 +149,12 @@ A message may be as long as `textLimits.chatMessage` and share up to `SHARED_DAY
 - A message's words longer than `chatRules.foldLines` lines are cut at the last with `…`, and 続きを読む under them, in the color the bubble's links take, opens the rest in place, as LINE's 全文表示 does. Whether words run past it is measured as they are laid out, not guessed from their length. Opened stays opened while the chat is open.
 - A card of shared days shows `chatRules.dayCardRows` of them, a week, in rows (or `chatRules.dayCardColumns` across when its people do not fit across, as it turns), and ほか{n}日 under them; シフト表で見る under the card shows them all.
 - Choosing days to share stops at `SHARED_DAYS_MAX`: a day past it stays unpicked and a problem toast says 一度に送れるのは{n}日までです. The server refuses a message with more.
+
+## The chat with Pochical's people
+
+設定 has a chat with the people who make Pochical (作っている人とチャット), over ポチカルについて: a small wish or trouble is easier written in a chat than a mail, and the answer comes back in the same place. Its row is drawn as a chat in the chats' list: the app's icon, the latest line and the answers not read yet. Its head says who it reaches and everything that does: what is written there, and the app's version and the device, sent with each line.
+
+- Each user's chat is their own, kept by the server (`proto/pochical/v1/support.proto`, D1's `support_messages` and `support_chats`), so Pochical's people can read every user's in one place. Pochical's people answer under the app's name and icon.
+- A line is the user's words, up to `textLimits.chatMessage`, sent with an id of the app's so a send tried again is kept once; past `SUPPORT_LIMIT` (wrangler.jsonc) it waits. A line not sent stays faint, with a way to send it again.
+- Opening the chat reads its answers; until then they are counted on its row.
+- For now in words only. Photos, reactions, 返信 and 送信取消, as /design has them, and answering from the admin page, with a notification on the person's device, come next.
