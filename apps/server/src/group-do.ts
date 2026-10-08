@@ -354,13 +354,27 @@ export class GroupDO extends DurableObject<Env> {
   reportContext(
     reporterId: string,
     target: { threadId: string; seq: number } | { userId: string }
-  ): { targetId: string; context: string } | null {
+  ): {
+    targetId: string;
+    targetName: string;
+    context: string;
+    groupName: string;
+    reporterName: string;
+  } | null {
     if (!this.isMember(reporterId)) {
       return null;
     }
-    return reportContext(this.db, reporterId, target, (id) =>
-      this.memberList().find((member) => member.userId === id)
-    );
+    const everyone = this.memberList();
+    const memberOf = (id: string) =>
+      everyone.find((member) => member.userId === id);
+    const found = reportContext(this.db, reporterId, target, memberOf);
+    return found === null
+      ? null
+      : {
+          ...found,
+          groupName: this.getProfile()?.name ?? "",
+          reporterName: memberOf(reporterId)?.displayName ?? "メンバー",
+        };
   }
 
   /**

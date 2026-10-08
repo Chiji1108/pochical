@@ -71,7 +71,7 @@ export const registerChatService = (router: ConnectRouter): void => {
           threadId: target.case === "line" ? target.value.threadId : null,
         })
         .run();
-      waitUntil(tellStaffOfReport(env, why));
+      waitUntil(tellStaffOfReport(env, { ...reported, why }));
       return create(ReportResponseSchema, {});
     },
   });
