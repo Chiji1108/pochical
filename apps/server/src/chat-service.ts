@@ -14,7 +14,7 @@ import {
 import { linkPreview, mayRead } from "./link-preview";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
-import { tellStaff } from "./staff";
+import { ADMIN_SITE, tellStaff } from "./staff";
 
 /** Each reason as a report keeps it. */
 const REASONS: Partial<Record<ReportReason, string>> = {
@@ -71,10 +71,7 @@ export const registerChatService = (router: ConnectRouter): void => {
           threadId: target.case === "line" ? target.value.threadId : null,
         })
         .run();
-      await tellStaff(
-        env,
-        `新しい通報（${why}）\n${env.BETTER_AUTH_URL}/admin/reports`
-      );
+      await tellStaff(env, `新しい通報（${why}）\n${ADMIN_SITE}/reports`);
       return create(ReportResponseSchema, {});
     },
   });

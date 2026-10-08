@@ -5,6 +5,9 @@
 
 type StaffEnv = Env & { DISCORD_WEBHOOK_URL?: string };
 
+/** Pochical's people's admin site (apps/admin). */
+export const ADMIN_SITE = "https://admin.pochical.app";
+
 export const tellStaff = async (
   env: StaffEnv,
   content: string

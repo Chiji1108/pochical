@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { imageSize, linkPreview, mayRead, pageTags } from "../src/link-preview";
 
-const html = (body: string) => new TextEncoder().encode(body);
+const html = (body: string) => new Uint8Array(new TextEncoder().encode(body));
 
 // A 2×3 PNG's first bytes: the signature and its IHDR chunk.
 const PNG = new Uint8Array([

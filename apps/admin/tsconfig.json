@@ -1,0 +1,35 @@
+{
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "worker-configuration.d.ts"
+  ],
+  "exclude": ["node_modules", "dist"],
+  "compilerOptions": {
+    "target": "ES2024",
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": [
+      "./worker-configuration.d.ts",
+      "../server/worker-configuration.d.ts",
+      "vite/client",
+      "bun"
+    ],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    // The server's entrypoint is typed from its own source, checked here too:
+    // drizzle-kit writes its Durable Objects' migrations as JS.
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  }
+}

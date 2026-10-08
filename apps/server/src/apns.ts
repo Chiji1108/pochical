@@ -38,7 +38,7 @@ const text = (value: string): string =>
   base64url(new TextEncoder().encode(value));
 
 /** The .p8 file's PKCS #8 key, from its PEM text. */
-const pkcs8 = (pem: string): Uint8Array => {
+const pkcs8 = (pem: string): Uint8Array<ArrayBuffer> => {
   const body = pem.replaceAll(/-----[^-]+-----|\s/gu, "");
   return Uint8Array.from(atob(body), (char) => char.codePointAt(0) ?? 0);
 };

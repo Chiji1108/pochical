@@ -1,7 +1,6 @@
 import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
-import { ADMIN_PATH, adminRequest } from "./admin";
 import { registerChatService } from "./chat-service";
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
@@ -20,7 +19,9 @@ import { SESSION_HEADER, USER_HEADER } from "./sync-socket";
 import { registerSystemService } from "./system-service";
 import { registerUserService } from "./user-service";
 
-// Workers only binds Durable Object classes exported from the entry module.
+// Workers only binds Durable Object classes and named entrypoints exported
+// from the entry module.
+export { AdminEntrypoint } from "./admin-entrypoint";
 export { GroupDO } from "./group-do";
 export { UserDO } from "./user-do";
 
@@ -108,11 +109,6 @@ export default {
 
     if (pathname.startsWith(AUTH_PATH)) {
       return await authRequest(request, env, pathname);
-    }
-
-    // Pochical's people's own pages, behind Cloudflare Access.
-    if (pathname === ADMIN_PATH || pathname.startsWith(`${ADMIN_PATH}/`)) {
-      return await adminRequest(request, env);
     }
 
     const rpc = rpcHandlers.get(pathname);
