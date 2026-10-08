@@ -33,11 +33,19 @@ public interface SupportMessageOrBuilder extends
   boolean getFromSupport();
 
   /**
+   * <pre>
+   * Empty once taken back.
+   * </pre>
+   *
    * <code>string text = 3 [json_name = "text"];</code>
    * @return The text.
    */
   java.lang.String getText();
   /**
+   * <pre>
+   * Empty once taken back.
+   * </pre>
+   *
    * <code>string text = 3 [json_name = "text"];</code>
    * @return The bytes for text.
    */
@@ -49,4 +57,60 @@ public interface SupportMessageOrBuilder extends
    * @return The sentAtMs.
    */
   long getSentAtMs();
+
+  /**
+   * <pre>
+   * The line it is a reply to, by id; empty when none, or taken back.
+   * </pre>
+   *
+   * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+   * @return The replyTo.
+   */
+  java.lang.String getReplyTo();
+  /**
+   * <pre>
+   * The line it is a reply to, by id; empty when none, or taken back.
+   * </pre>
+   *
+   * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+   * @return The bytes for replyTo.
+   */
+  com.google.protobuf.ByteString
+      getReplyToBytes();
+
+  /**
+   * <pre>
+   * Taken back by its writer.
+   * </pre>
+   *
+   * <code>bool unsent = 6 [json_name = "unsent"];</code>
+   * @return The unsent.
+   */
+  boolean getUnsent();
+
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  java.util.List<app.pochical.v1.SupportReaction> 
+      getReactionsList();
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  app.pochical.v1.SupportReaction getReactions(int index);
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  int getReactionsCount();
 }

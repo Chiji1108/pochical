@@ -423,6 +423,10 @@ private struct MenuRowStyle: ButtonStyle {
         .compactMap({ $0 as? UIWindowScene })
         .first(where: { $0.activationState == .foregroundActive })
     else { return }
+    // The keyboard's own window stands over any of the app's, so it goes
+    // first, as a menu over the chat is not typed into.
+    UIApplication.shared.sendAction(
+      #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     let host = UIHostingController(rootView: AnyView(view))
     host.view.backgroundColor = .clear
     let window = UIWindow(windowScene: scene)
@@ -442,5 +446,65 @@ private struct MenuRowStyle: ButtonStyle {
       try? await Task.sleep(for: delay)
       closing.isHidden = true
     }
+  }
+}
+
+/// A bubble held for its reactions and menu: it gives a little under the
+/// finger, as Messages' bubble does, and opens them once held; the finger
+/// then picks one by lifting over it, as a system menu's does.
+private struct HeldBubble: ViewModifier {
+  /// Its bubble is lifted over the chat, its place standing empty.
+  let lifted: Bool
+  /// Opens the reactions and menu, from where the bubble is, with the
+  /// finger that opened them while it stays down.
+  let onActions: (CGRect, HeldFinger?) -> Void
+  /// Where the bubble is on the screen, for its menu.
+  @State private var frame = CGRect.zero
+  @State private var pressing = false
+  /// The finger that opened the menu, followed until it lifts.
+  @State private var held: HeldFinger?
+
+  func body(content: Content) -> some View {
+    content
+      // Its own size and where its middle is: the press's give shrinks
+      // its frame on the screen, not its size.
+      .onGeometryChange(for: CGRect.self) { proxy in
+        let global = proxy.frame(in: .global)
+        return CGRect(
+          x: global.midX - proxy.size.width / 2, y: global.midY - proxy.size.height / 2,
+          width: proxy.size.width, height: proxy.size.height)
+      } action: {
+        frame = $0
+      }
+      .scaleEffect(pressing ? 0.96 : 1)
+      .opacity(lifted ? 0 : 1)
+      .animation(.easeOut(duration: 0.2), value: pressing)
+      .onLongPressGesture(minimumDuration: HeldPress.duration) {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        pressing = false
+        let finger = HeldFinger()
+        held = finger
+        onActions(frame, finger)
+      } onPressingChanged: {
+        pressing = $0
+      }
+      .gesture(
+        HeldPress {
+          held?.point = $0
+        } onLift: {
+          held?.point = $0
+          held?.lifted = true
+          held = nil
+        })
+      .accessibilityAction(named: "リアクションとメニュー") { onActions(frame, nil) }
+  }
+}
+
+extension View {
+  /// Held, opens the bubble's reactions and menu (HeldBubble).
+  func heldForActions(lifted: Bool, onActions: @escaping (CGRect, HeldFinger?) -> Void)
+    -> some View
+  {
+    modifier(HeldBubble(lifted: lifted, onActions: onActions))
   }
 }

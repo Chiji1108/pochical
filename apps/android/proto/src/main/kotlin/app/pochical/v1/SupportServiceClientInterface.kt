@@ -30,4 +30,17 @@ public interface SupportServiceClientInterface {
    *  The answers so far are read, as the chat is open.
    */
   public suspend fun markSupportRead(request: MarkSupportReadRequest, headers: Headers = emptyMap()): ResponseMessage<MarkSupportReadResponse>
+
+  /**
+   *  The user's reaction on a line, put on or taken off. NOT_FOUND for a
+   *  line not in their chat or taken back; INVALID_ARGUMENT for anything
+   *  but one emoji.
+   */
+  public suspend fun reactSupport(request: ReactSupportRequest, headers: Headers = emptyMap()): ResponseMessage<ReactSupportResponse>
+
+  /**
+   *  One of the user's own lines taken back: its words, reactions and reply
+   *  go, from Pochical's people's chat too. NOT_FOUND for a line not theirs.
+   */
+  public suspend fun unsendSupportMessage(request: UnsendSupportMessageRequest, headers: Headers = emptyMap()): ResponseMessage<UnsendSupportMessageResponse>
 }

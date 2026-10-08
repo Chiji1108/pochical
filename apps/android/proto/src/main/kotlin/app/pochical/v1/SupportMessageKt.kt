@@ -76,6 +76,10 @@ public object SupportMessageKt {
     }
 
     /**
+     * ```
+     * Empty once taken back.
+     * ```
+     *
      * `string text = 3 [json_name = "text"];`
      */
     public var text: kotlin.String
@@ -86,6 +90,10 @@ public object SupportMessageKt {
         _builder.text = value
       }
     /**
+     * ```
+     * Empty once taken back.
+     * ```
+     *
      * `string text = 3 [json_name = "text"];`
      */
     public fun clearText() {
@@ -107,6 +115,155 @@ public object SupportMessageKt {
      */
     public fun clearSentAtMs() {
       _builder.clearSentAtMs()
+    }
+
+    /**
+     * ```
+     * The line it is a reply to, by id; empty when none, or taken back.
+     * ```
+     *
+     * `string reply_to = 5 [json_name = "replyTo"];`
+     */
+    public var replyTo: kotlin.String
+      @kotlin.jvm.JvmName("getReplyTo")
+        get() = _builder.replyTo
+      @kotlin.jvm.JvmName("setReplyTo")
+        set(value) {
+        _builder.replyTo = value
+      }
+    /**
+     * ```
+     * The line it is a reply to, by id; empty when none, or taken back.
+     * ```
+     *
+     * `string reply_to = 5 [json_name = "replyTo"];`
+     */
+    public fun clearReplyTo() {
+      _builder.clearReplyTo()
+    }
+
+    /**
+     * ```
+     * Taken back by its writer.
+     * ```
+     *
+     * `bool unsent = 6 [json_name = "unsent"];`
+     */
+    public var unsent: kotlin.Boolean
+      @kotlin.jvm.JvmName("getUnsent")
+        get() = _builder.unsent
+      @kotlin.jvm.JvmName("setUnsent")
+        set(value) {
+        _builder.unsent = value
+      }
+    /**
+     * ```
+     * Taken back by its writer.
+     * ```
+     *
+     * `bool unsent = 6 [json_name = "unsent"];`
+     */
+    public fun clearUnsent() {
+      _builder.clearUnsent()
+    }
+
+    /**
+     * An uninstantiable, behaviorless type to represent the field in
+     * generics.
+     */
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+    public class ReactionsProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
+    /**
+     * ```
+     * Each emoji on it, and who put it there; none once taken back.
+     * ```
+     *
+     * `repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];`
+     */
+     public val reactions: com.google.protobuf.kotlin.DslList<app.pochical.v1.SupportReaction, ReactionsProxy>
+      @kotlin.jvm.JvmSynthetic
+  get() = com.google.protobuf.kotlin.DslList(
+        _builder.reactionsList
+      )
+    /**
+     * ```
+     * Each emoji on it, and who put it there; none once taken back.
+     * ```
+     *
+     * `repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];`
+     * @param value The reactions to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addReactions")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.SupportReaction, ReactionsProxy>.add(value: app.pochical.v1.SupportReaction) {
+      _builder.addReactions(value)
+    }
+    /**
+     * ```
+     * Each emoji on it, and who put it there; none once taken back.
+     * ```
+     *
+     * `repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];`
+     * @param value The reactions to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignReactions")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.SupportReaction, ReactionsProxy>.plusAssign(value: app.pochical.v1.SupportReaction) {
+      add(value)
+    }
+    /**
+     * ```
+     * Each emoji on it, and who put it there; none once taken back.
+     * ```
+     *
+     * `repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];`
+     * @param values The reactions to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addAllReactions")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.SupportReaction, ReactionsProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.SupportReaction>) {
+      _builder.addAllReactions(values)
+    }
+    /**
+     * ```
+     * Each emoji on it, and who put it there; none once taken back.
+     * ```
+     *
+     * `repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];`
+     * @param values The reactions to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignAllReactions")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.SupportReaction, ReactionsProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.SupportReaction>) {
+      addAll(values)
+    }
+    /**
+     * ```
+     * Each emoji on it, and who put it there; none once taken back.
+     * ```
+     *
+     * `repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];`
+     * @param index The index to set the value at.
+     * @param value The reactions to set.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setReactions")
+    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.SupportReaction, ReactionsProxy>.set(index: kotlin.Int, value: app.pochical.v1.SupportReaction) {
+      _builder.setReactions(index, value)
+    }
+    /**
+     * ```
+     * Each emoji on it, and who put it there; none once taken back.
+     * ```
+     *
+     * `repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];`
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("clearReactions")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.SupportReaction, ReactionsProxy>.clear() {
+      _builder.clearReactions()
     }
   }
 }

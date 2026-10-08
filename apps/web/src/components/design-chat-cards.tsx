@@ -344,10 +344,14 @@ export function PhotoLine({
 export function ReactionPill({
   reaction,
   people,
+  counted = false,
   onToggle,
 }: {
   reaction: Reaction;
   people: Member[];
+  // In a chat of two, who chose it needs no face: the emoji alone, and
+  // how many once both did.
+  counted?: boolean;
   onToggle: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -363,6 +367,7 @@ export function ReactionPill({
           aria-label={`${reaction.emoji} ${people.map((person) => person.name).join("、")}`}
           aria-pressed={reaction.by.includes("me")}
           className={reactionPill.pill}
+          data-counted={counted || undefined}
           onClick={() => {
             if (!press.consumeLongPress()) {
               onToggle();
@@ -372,12 +377,22 @@ export function ReactionPill({
           {...press.handlers}
         >
           {reaction.emoji}
-          <span className={reactionPill.faces}>
-            {faces.map((person) => (
-              <Avatar key={person.id} member={person} size={reactionFaceSize} />
-            ))}
-          </span>
-          {crowded && (
+          {counted ? (
+            people.length > 1 && (
+              <small className={reactionPill.count}>{people.length}</small>
+            )
+          ) : (
+            <span className={reactionPill.faces}>
+              {faces.map((person) => (
+                <Avatar
+                  key={person.id}
+                  member={person}
+                  size={reactionFaceSize}
+                />
+              ))}
+            </span>
+          )}
+          {!counted && crowded && (
             <small className={reactionPill.more}>
               +{people.length - faces.length}
             </small>
@@ -396,6 +411,10 @@ export function ReactionPill({
 }
 
 const reactionPill = {
+  count: css({
+    color: "text.secondary",
+    textStyle: "caption",
+  }),
   // The faces overlap a little, each ringed in the pill's own color. A
   // letter in place of a photo is inked dark with the letter cut out in
   // the pill's color, so its round shows on the pill as a photo would.
@@ -435,6 +454,7 @@ const reactionPill = {
     height: "24px",
     padding: "0 2px 0 8px",
     textStyle: "subheadline",
+    "&[data-counted]": { paddingInlineEnd: "8px" },
     // A long press opens the list, not the phone's own callout or a
     // text selection.
     userSelect: "none",

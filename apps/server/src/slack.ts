@@ -3,14 +3,14 @@
 // new reports are posted with the way to the admin site. Without the
 // secrets nothing is posted and no reply is taken; Slack failing never
 // fails what the user did.
-import { waitUntil } from "cloudflare:workers";
 import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
-import { answerSupport } from "./support-answers";
+import { keepSlackTs } from "./support-chat";
+import type { SupportLineOf } from "./support-chat";
 
-type SlackEnv = Env & {
+export type SlackEnv = Env & {
   SLACK_BOT_TOKEN?: string;
   SLACK_CHANNEL_ID?: string;
   SLACK_SIGNING_SECRET?: string;
@@ -22,10 +22,10 @@ export const ADMIN_SITE = "https://admin.pochical.app";
 /** How long a signed request from Slack stays good, against replays. */
 const SIGNATURE_AGE_S = 300;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-const stringOf = (value: unknown): string | undefined =>
+export const stringOf = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
 
 /** Words as Slack shows them as written: no mention, link or markup. */
@@ -154,7 +154,7 @@ export const signedBySlack = async (
 };
 
 /** One of Slack's Web API methods as the app; null when it did not take. */
-const slackCall = async (
+export const slackCall = async (
   env: SlackEnv,
   method: string,
   args: Record<string, unknown>
@@ -190,7 +190,7 @@ const slackCall = async (
   }
 };
 
-const threadOf = async (
+export const threadOf = async (
   env: SlackEnv,
   userId: string
 ): Promise<string | null> => {
@@ -202,40 +202,104 @@ const threadOf = async (
 };
 
 /**
+ * Each reaction the app offers first (Reactions.swift's reactionChoices)
+ * and others Pochical's people often use, by their Slack names: Slack
+ * names an emoji where the app writes it.
+ */
+const SLACK_EMOJI: Record<string, string> = {
+  "+1": "👍",
+  "-1": "👎",
+  "100": "💯",
+  bow: "🙇",
+  clap: "👏",
+  cry: "😢",
+  eyes: "👀",
+  fire: "🔥",
+  heart: "❤️",
+  heart_eyes: "😍",
+  joy: "😂",
+  muscle: "💪",
+  ok_hand: "👌",
+  pray: "🙏",
+  raised_hands: "🙌",
+  slightly_smiling_face: "🙂",
+  smile: "😄",
+  sob: "😭",
+  sparkles: "✨",
+  sweat_smile: "😅",
+  tada: "🎉",
+  thinking_face: "🤔",
+  white_check_mark: "✅",
+};
+
+/** A reaction's Slack name as the emoji, its skin tone too, if known. */
+export const emojiOfSlackName = (name: string): string | undefined => {
+  const [base = "", tone] = name.split("::skin-tone-");
+  const emoji = SLACK_EMOJI[base];
+  const shade = Number(tone);
+  if (emoji === undefined || tone === undefined) {
+    return emoji;
+  }
+  // Skin tones 2 to 6 are the five modifiers, U+1F3FB on.
+  return Number.isInteger(shade) && shade >= 2 && shade <= 6
+    ? emoji + String.fromCodePoint(0x1_f3_fb + shade - 2)
+    : emoji;
+};
+
+const slackNameOf = (emoji: string): string | undefined =>
+  Object.entries(SLACK_EMOJI).find(([, each]) => each === emoji)?.[0];
+
+/** The first words of a line, as a reply to it shows them. */
+const QUOTE_LENGTH = 80;
+
+/**
  * A user's new line, in their chat's thread, shown in the channel too;
- * their first starts the thread, with the way to the admin site.
+ * their first starts the thread, with the way to the admin site. A reply
+ * quotes what it is to. Its message is kept with the line, for its
+ * reactions and its taking back.
  */
 export const tellStaffOfLine = async (
   env: SlackEnv,
-  userId: string,
-  words: string,
-  device: string | null
+  line: SupportLineOf,
+  repliedTo: SupportLineOf | null
 ): Promise<void> => {
-  const thread = await threadOf(env, userId);
-  const quoted = toSlackText(words);
+  const thread = await threadOf(env, line.userId);
+  const quote =
+    repliedTo === null
+      ? ""
+      : `> ${toSlackText(repliedTo.text.replaceAll("\n", " ").slice(0, QUOTE_LENGTH))}\n`;
+  const words = `${quote}${toSlackText(line.text)}`;
   if (thread !== null) {
-    await slackCall(env, "chat.postMessage", {
+    const posted = await slackCall(env, "chat.postMessage", {
       reply_broadcast: true,
-      text: quoted,
+      text: words,
       thread_ts: thread,
     });
+    const ts = stringOf(posted?.ts);
+    if (ts !== undefined) {
+      await keepSlackTs(env, line.id, ts);
+    }
     return;
   }
-  const page = `${ADMIN_SITE}/support/${encodeURIComponent(userId)}`;
-  const from = device === null ? "" : `（${toSlackText(device)}）`;
+  const page = `${ADMIN_SITE}/support/${encodeURIComponent(line.userId)}`;
+  const from = line.device === null ? "" : `（${toSlackText(line.device)}）`;
   const posted = await slackCall(env, "chat.postMessage", {
-    text: `サポートに新しいメッセージ${from}\n${quoted}\n<${page}|管理サイトで開く>・このスレッドに書くと、ポチカルとして返信します`,
+    text: `サポートに新しいメッセージ${from}\n${words}\n<${page}|管理サイトで開く>・このスレッドに書くと、ポチカルとして返信します`,
   });
   const ts = stringOf(posted?.ts);
   if (ts === undefined) {
     return;
   }
+  await keepSlackTs(env, line.id, ts);
   // Two first lines at once keep the thread the first kept.
   await drizzle(env.DB)
     .update(supportChats)
     .set({ slackThreadTs: ts })
     .where(
-      and(eq(supportChats.userId, userId), isNull(supportChats.slackThreadTs))
+      and(
+        eq(supportChats.userId, line.userId),
+        isNull(supportChats.slackThreadTs)
+      )
     );
 };
 
@@ -243,15 +307,64 @@ export const tellStaffOfLine = async (
 export const tellStaffOfAnswer = async (
   env: SlackEnv,
   userId: string,
+  messageId: string,
   words: string
 ): Promise<void> => {
   const thread = await threadOf(env, userId);
   if (thread === null) {
     return;
   }
-  await slackCall(env, "chat.postMessage", {
+  const posted = await slackCall(env, "chat.postMessage", {
     text: `管理サイトから返信しました：\n${toSlackText(words)}`,
     thread_ts: thread,
+  });
+  const ts = stringOf(posted?.ts);
+  if (ts !== undefined) {
+    await keepSlackTs(env, messageId, ts);
+  }
+};
+
+/**
+ * The user's reaction on a line, on its message in Slack; one Slack has
+ * no name for here is said in the thread instead.
+ */
+export const tellStaffOfReaction = async (
+  env: SlackEnv,
+  line: SupportLineOf,
+  emoji: string,
+  on: boolean
+): Promise<void> => {
+  if (line.slackTs === null) {
+    return;
+  }
+  const name = slackNameOf(emoji);
+  if (name !== undefined) {
+    await slackCall(env, on ? "reactions.add" : "reactions.remove", {
+      name,
+      timestamp: line.slackTs,
+    });
+    return;
+  }
+  const thread = await threadOf(env, line.userId);
+  if (on && thread !== null) {
+    await slackCall(env, "chat.postMessage", {
+      text: `ユーザーが ${emoji} を付けました：「${toSlackText(line.text.slice(0, QUOTE_LENGTH))}」`,
+      thread_ts: thread,
+    });
+  }
+};
+
+/** A line the user took back, so said in its place in Slack. */
+export const tellStaffOfUnsend = async (
+  env: SlackEnv,
+  line: SupportLineOf
+): Promise<void> => {
+  if (line.slackTs === null) {
+    return;
+  }
+  await slackCall(env, "chat.update", {
+    text: "（ユーザーが送信を取り消しました）",
+    ts: line.slackTs,
   });
 };
 
@@ -263,103 +376,4 @@ export const tellStaffOfReport = async (
   await slackCall(env, "chat.postMessage", {
     text: `新しい通報（${why}）\n<${ADMIN_SITE}/reports|管理サイトで開く>`,
   });
-};
-
-/**
- * A reply in a chat's thread, by one of Pochical's people: sent to the
- * user as ポチカル and marked ✅, or answered with why not. Slack sends an
- * event again when unsure it arrived; its message id keeps it once.
- */
-const answerFromSlack = async (
-  env: SlackEnv,
-  event: Record<string, unknown>
-): Promise<void> => {
-  const thread = stringOf(event.thread_ts);
-  const ts = stringOf(event.ts);
-  if (thread === undefined || ts === undefined) {
-    return;
-  }
-  const [chat] = await drizzle(env.DB)
-    .select({ userId: supportChats.userId })
-    .from(supportChats)
-    .where(eq(supportChats.slackThreadTs, thread));
-  if (chat === undefined) {
-    return;
-  }
-  // Only words reach the user: a reply with a file is not half sent.
-  if (Array.isArray(event.files) && event.files.length > 0) {
-    await slackCall(env, "chat.postMessage", {
-      text: "届けられませんでした：写真やファイルはまだ届けられません。文だけで返信してください。",
-      thread_ts: thread,
-    });
-    return;
-  }
-  const kept = await answerSupport(
-    env,
-    chat.userId,
-    fromSlackText(stringOf(event.text) ?? "", event.blocks),
-    stringOf(event.client_msg_id) ?? `slack-${ts}`
-  );
-  await (kept
-    ? slackCall(env, "reactions.add", {
-        name: "white_check_mark",
-        timestamp: ts,
-      })
-    : slackCall(env, "chat.postMessage", {
-        text: "届けられませんでした：空か、長すぎます。",
-        thread_ts: thread,
-      }));
-};
-
-/**
- * The kinds of message a person's reply comes as: plain, also sent to the
- * channel, or with a file.
- */
-const REPLY_SUBTYPES = new Set([undefined, "thread_broadcast", "file_share"]);
-
-/** Whether an event is a person's new reply in a thread of the channel. */
-const isStaffReply = (env: SlackEnv, event: Record<string, unknown>): boolean =>
-  event.type === "message" &&
-  REPLY_SUBTYPES.has(stringOf(event.subtype)) &&
-  event.bot_id === undefined &&
-  event.channel === env.SLACK_CHANNEL_ID &&
-  typeof event.thread_ts === "string" &&
-  event.thread_ts !== event.ts;
-
-/**
- * Slack's Events API (`/slack/events`): Slack's check of the address, and
- * replies in the channel's threads, taken after Slack is answered, within
- * the three seconds it waits.
- */
-export const slackEvents = async (
-  request: Request,
-  env: SlackEnv
-): Promise<Response> => {
-  const body = await request.text();
-  const signed = await signedBySlack(
-    env.SLACK_SIGNING_SECRET ?? "",
-    request.headers,
-    body,
-    Date.now()
-  );
-  if (!signed) {
-    return new Response("Not from Slack", { status: 401 });
-  }
-  let payload: unknown = null;
-  try {
-    payload = JSON.parse(body);
-  } catch {
-    return new Response("Not JSON", { status: 400 });
-  }
-  if (!isRecord(payload)) {
-    return new Response("Not an event", { status: 400 });
-  }
-  if (payload.type === "url_verification") {
-    return Response.json({ challenge: payload.challenge });
-  }
-  const { event } = payload;
-  if (isRecord(event) && isStaffReply(env, event)) {
-    waitUntil(answerFromSlack(env, event));
-  }
-  return new Response(null, { status: 200 });
 };

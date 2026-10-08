@@ -23,6 +23,19 @@ service SupportService {
   rpc MarkSupportRead(MarkSupportReadRequest) returns (MarkSupportReadResponse) {
     option idempotency_level = IDEMPOTENT;
   }
+
+  // The user's reaction on a line, put on or taken off. NOT_FOUND for a
+  // line not in their chat or taken back; INVALID_ARGUMENT for anything
+  // but one emoji.
+  rpc ReactSupport(ReactSupportRequest) returns (ReactSupportResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
+  // One of the user's own lines taken back: its words, reactions and reply
+  // go, from Pochical's people's chat too. NOT_FOUND for a line not theirs.
+  rpc UnsendSupportMessage(UnsendSupportMessageRequest) returns (UnsendSupportMessageResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
 }
 
 // A line of the chat.
@@ -30,8 +43,23 @@ message SupportMessage {
   string id = 1;
   // Written by Pochical's people, not the user.
   bool from_support = 2;
+  // Empty once taken back.
   string text = 3;
   int64 sent_at_ms = 4;
+  // The line it is a reply to, by id; empty when none, or taken back.
+  string reply_to = 5;
+  // Taken back by its writer.
+  bool unsent = 6;
+  // Each emoji on it, and who put it there; none once taken back.
+  repeated SupportReaction reactions = 7;
+}
+
+// An emoji on a line, put there by the user, by Pochical's people, or by
+// both.
+message SupportReaction {
+  string emoji = 1;
+  bool mine = 2;
+  bool support = 3;
 }
 
 message GetSupportChatRequest {}
@@ -49,6 +77,9 @@ message SendSupportMessageRequest {
   // The app's version and the device, as the chat's head says reach
   // Pochical's people with what is written: ポチカル 1.0・iPhone (iOS 26.0).
   string device = 3;
+  // The line it is a reply to, by id, when it is one; one not in the chat
+  // is left out.
+  string reply_to = 4;
 }
 
 message SendSupportMessageResponse {
@@ -58,3 +89,23 @@ message SendSupportMessageResponse {
 message MarkSupportReadRequest {}
 
 message MarkSupportReadResponse {}
+
+message ReactSupportRequest {
+  // The line, by id.
+  string id = 1;
+  string emoji = 2;
+  // Put on, or taken off.
+  bool on = 3;
+}
+
+message ReactSupportResponse {
+  SupportMessage message = 1;
+}
+
+message UnsendSupportMessageRequest {
+  string id = 1;
+}
+
+message UnsendSupportMessageResponse {
+  SupportMessage message = 1;
+}

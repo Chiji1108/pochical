@@ -21,6 +21,8 @@ public  final class SupportMessage extends
   private SupportMessage() {
     id_ = "";
     text_ = "";
+    replyTo_ = "";
+    reactions_ = emptyProtobufList();
   }
   public static final int ID_FIELD_NUMBER = 1;
   private java.lang.String id_;
@@ -110,6 +112,10 @@ public  final class SupportMessage extends
   public static final int TEXT_FIELD_NUMBER = 3;
   private java.lang.String text_;
   /**
+   * <pre>
+   * Empty once taken back.
+   * </pre>
+   *
    * <code>string text = 3 [json_name = "text"];</code>
    * @return The text.
    */
@@ -118,6 +124,10 @@ public  final class SupportMessage extends
     return text_;
   }
   /**
+   * <pre>
+   * Empty once taken back.
+   * </pre>
+   *
    * <code>string text = 3 [json_name = "text"];</code>
    * @return The bytes for text.
    */
@@ -127,6 +137,10 @@ public  final class SupportMessage extends
     return com.google.protobuf.ByteString.copyFromUtf8(text_);
   }
   /**
+   * <pre>
+   * Empty once taken back.
+   * </pre>
+   *
    * <code>string text = 3 [json_name = "text"];</code>
    * @param value The text to set.
    */
@@ -137,6 +151,10 @@ public  final class SupportMessage extends
     text_ = value;
   }
   /**
+   * <pre>
+   * Empty once taken back.
+   * </pre>
+   *
    * <code>string text = 3 [json_name = "text"];</code>
    */
   private void clearText() {
@@ -144,6 +162,10 @@ public  final class SupportMessage extends
     text_ = getDefaultInstance().getText();
   }
   /**
+   * <pre>
+   * Empty once taken back.
+   * </pre>
+   *
    * <code>string text = 3 [json_name = "text"];</code>
    * @param value The bytes for text to set.
    */
@@ -178,6 +200,249 @@ public  final class SupportMessage extends
   private void clearSentAtMs() {
 
     sentAtMs_ = 0L;
+  }
+
+  public static final int REPLY_TO_FIELD_NUMBER = 5;
+  private java.lang.String replyTo_;
+  /**
+   * <pre>
+   * The line it is a reply to, by id; empty when none, or taken back.
+   * </pre>
+   *
+   * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+   * @return The replyTo.
+   */
+  @java.lang.Override
+  public java.lang.String getReplyTo() {
+    return replyTo_;
+  }
+  /**
+   * <pre>
+   * The line it is a reply to, by id; empty when none, or taken back.
+   * </pre>
+   *
+   * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+   * @return The bytes for replyTo.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getReplyToBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(replyTo_);
+  }
+  /**
+   * <pre>
+   * The line it is a reply to, by id; empty when none, or taken back.
+   * </pre>
+   *
+   * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+   * @param value The replyTo to set.
+   */
+  private void setReplyTo(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    replyTo_ = value;
+  }
+  /**
+   * <pre>
+   * The line it is a reply to, by id; empty when none, or taken back.
+   * </pre>
+   *
+   * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+   */
+  private void clearReplyTo() {
+
+    replyTo_ = getDefaultInstance().getReplyTo();
+  }
+  /**
+   * <pre>
+   * The line it is a reply to, by id; empty when none, or taken back.
+   * </pre>
+   *
+   * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+   * @param value The bytes for replyTo to set.
+   */
+  private void setReplyToBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    replyTo_ = value.toStringUtf8();
+
+  }
+
+  public static final int UNSENT_FIELD_NUMBER = 6;
+  private boolean unsent_;
+  /**
+   * <pre>
+   * Taken back by its writer.
+   * </pre>
+   *
+   * <code>bool unsent = 6 [json_name = "unsent"];</code>
+   * @return The unsent.
+   */
+  @java.lang.Override
+  public boolean getUnsent() {
+    return unsent_;
+  }
+  /**
+   * <pre>
+   * Taken back by its writer.
+   * </pre>
+   *
+   * <code>bool unsent = 6 [json_name = "unsent"];</code>
+   * @param value The unsent to set.
+   */
+  private void setUnsent(boolean value) {
+    
+    unsent_ = value;
+  }
+  /**
+   * <pre>
+   * Taken back by its writer.
+   * </pre>
+   *
+   * <code>bool unsent = 6 [json_name = "unsent"];</code>
+   */
+  private void clearUnsent() {
+
+    unsent_ = false;
+  }
+
+  public static final int REACTIONS_FIELD_NUMBER = 7;
+  private com.google.protobuf.Internal.ProtobufList<app.pochical.v1.SupportReaction> reactions_;
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<app.pochical.v1.SupportReaction> getReactionsList() {
+    return reactions_;
+  }
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  public java.util.List<? extends app.pochical.v1.SupportReactionOrBuilder> 
+      getReactionsOrBuilderList() {
+    return reactions_;
+  }
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  @java.lang.Override
+  public int getReactionsCount() {
+    return reactions_.size();
+  }
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.SupportReaction getReactions(int index) {
+    return reactions_.get(index);
+  }
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  public app.pochical.v1.SupportReactionOrBuilder getReactionsOrBuilder(
+      int index) {
+    return reactions_.get(index);
+  }
+  private void ensureReactionsIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<app.pochical.v1.SupportReaction> tmp = reactions_;
+    if (!tmp.isModifiable()) {
+      reactions_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  private void setReactions(
+      int index, app.pochical.v1.SupportReaction value) {
+    java.util.Objects.requireNonNull(value);
+    ensureReactionsIsMutable();
+    reactions_.set(index, value);
+  }
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  private void addReactions(app.pochical.v1.SupportReaction value) {
+    java.util.Objects.requireNonNull(value);
+    ensureReactionsIsMutable();
+    reactions_.add(value);
+  }
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  private void addReactions(
+      int index, app.pochical.v1.SupportReaction value) {
+    java.util.Objects.requireNonNull(value);
+    ensureReactionsIsMutable();
+    reactions_.add(index, value);
+  }
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  private void addAllReactions(
+      java.lang.Iterable<? extends app.pochical.v1.SupportReaction> values) {
+    ensureReactionsIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, reactions_);
+  }
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  private void clearReactions() {
+    reactions_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * Each emoji on it, and who put it there; none once taken back.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+   */
+  private void removeReactions(int index) {
+    ensureReactionsIsMutable();
+    reactions_.remove(index);
   }
 
   public static app.pochical.v1.SupportMessage parseFrom(
@@ -371,6 +636,10 @@ public  final class SupportMessage extends
     }
 
     /**
+     * <pre>
+     * Empty once taken back.
+     * </pre>
+     *
      * <code>string text = 3 [json_name = "text"];</code>
      * @return The text.
      */
@@ -379,6 +648,10 @@ public  final class SupportMessage extends
       return instance.getText();
     }
     /**
+     * <pre>
+     * Empty once taken back.
+     * </pre>
+     *
      * <code>string text = 3 [json_name = "text"];</code>
      * @return The bytes for text.
      */
@@ -388,6 +661,10 @@ public  final class SupportMessage extends
       return instance.getTextBytes();
     }
     /**
+     * <pre>
+     * Empty once taken back.
+     * </pre>
+     *
      * <code>string text = 3 [json_name = "text"];</code>
      * @param value The text to set.
      * @return This builder for chaining.
@@ -399,6 +676,10 @@ public  final class SupportMessage extends
       return this;
     }
     /**
+     * <pre>
+     * Empty once taken back.
+     * </pre>
+     *
      * <code>string text = 3 [json_name = "text"];</code>
      * @return This builder for chaining.
      */
@@ -408,6 +689,10 @@ public  final class SupportMessage extends
       return this;
     }
     /**
+     * <pre>
+     * Empty once taken back.
+     * </pre>
+     *
      * <code>string text = 3 [json_name = "text"];</code>
      * @param value The bytes for text to set.
      * @return This builder for chaining.
@@ -447,6 +732,265 @@ public  final class SupportMessage extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The line it is a reply to, by id; empty when none, or taken back.
+     * </pre>
+     *
+     * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+     * @return The replyTo.
+     */
+    @java.lang.Override
+    public java.lang.String getReplyTo() {
+      return instance.getReplyTo();
+    }
+    /**
+     * <pre>
+     * The line it is a reply to, by id; empty when none, or taken back.
+     * </pre>
+     *
+     * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+     * @return The bytes for replyTo.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getReplyToBytes() {
+      return instance.getReplyToBytes();
+    }
+    /**
+     * <pre>
+     * The line it is a reply to, by id; empty when none, or taken back.
+     * </pre>
+     *
+     * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+     * @param value The replyTo to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReplyTo(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setReplyTo(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The line it is a reply to, by id; empty when none, or taken back.
+     * </pre>
+     *
+     * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReplyTo() {
+      copyOnWrite();
+      instance.clearReplyTo();
+      return this;
+    }
+    /**
+     * <pre>
+     * The line it is a reply to, by id; empty when none, or taken back.
+     * </pre>
+     *
+     * <code>string reply_to = 5 [json_name = "replyTo"];</code>
+     * @param value The bytes for replyTo to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReplyToBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setReplyToBytes(value);
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Taken back by its writer.
+     * </pre>
+     *
+     * <code>bool unsent = 6 [json_name = "unsent"];</code>
+     * @return The unsent.
+     */
+    @java.lang.Override
+    public boolean getUnsent() {
+      return instance.getUnsent();
+    }
+    /**
+     * <pre>
+     * Taken back by its writer.
+     * </pre>
+     *
+     * <code>bool unsent = 6 [json_name = "unsent"];</code>
+     * @param value The unsent to set.
+     * @return This builder for chaining.
+     */
+    public Builder setUnsent(boolean value) {
+      copyOnWrite();
+      instance.setUnsent(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Taken back by its writer.
+     * </pre>
+     *
+     * <code>bool unsent = 6 [json_name = "unsent"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearUnsent() {
+      copyOnWrite();
+      instance.clearUnsent();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    @java.lang.Override
+    public java.util.List<app.pochical.v1.SupportReaction> getReactionsList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getReactionsList());
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    @java.lang.Override
+    public int getReactionsCount() {
+      return instance.getReactionsCount();
+    }/**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.SupportReaction getReactions(int index) {
+      return instance.getReactions(index);
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    public Builder setReactions(
+        int index, app.pochical.v1.SupportReaction value) {
+      copyOnWrite();
+      instance.setReactions(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    public Builder setReactions(
+        int index, app.pochical.v1.SupportReaction.Builder builderForValue) {
+      copyOnWrite();
+      instance.setReactions(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    public Builder addReactions(app.pochical.v1.SupportReaction value) {
+      copyOnWrite();
+      instance.addReactions(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    public Builder addReactions(
+        int index, app.pochical.v1.SupportReaction value) {
+      copyOnWrite();
+      instance.addReactions(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    public Builder addReactions(
+        app.pochical.v1.SupportReaction.Builder builderForValue) {
+      copyOnWrite();
+      instance.addReactions(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    public Builder addReactions(
+        int index, app.pochical.v1.SupportReaction.Builder builderForValue) {
+      copyOnWrite();
+      instance.addReactions(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    public Builder addAllReactions(
+        java.lang.Iterable<? extends app.pochical.v1.SupportReaction> values) {
+      copyOnWrite();
+      instance.addAllReactions(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    public Builder clearReactions() {
+      copyOnWrite();
+      instance.clearReactions();
+      return this;
+    }
+    /**
+     * <pre>
+     * Each emoji on it, and who put it there; none once taken back.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.SupportReaction reactions = 7 [json_name = "reactions"];</code>
+     */
+    public Builder removeReactions(int index) {
+      copyOnWrite();
+      instance.removeReactions(index);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.SupportMessage)
   }
   @java.lang.Override
@@ -467,10 +1011,14 @@ public  final class SupportMessage extends
             "fromSupport_",
             "text_",
             "sentAtMs_",
+            "replyTo_",
+            "unsent_",
+            "reactions_",
+            app.pochical.v1.SupportReaction.class,
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0007" +
-              "\u0003\u0208\u0004\u0002";
+              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0001\u0000\u0001\u0208\u0002\u0007" +
+              "\u0003\u0208\u0004\u0002\u0005\u0208\u0006\u0007\u0007\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

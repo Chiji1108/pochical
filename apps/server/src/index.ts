@@ -14,7 +14,7 @@ import {
 import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
 import type { SessionUser } from "./session";
-import { slackEvents } from "./slack";
+import { slackEvents } from "./slack-events";
 import { registerSupportService } from "./support-service";
 import { SESSION_HEADER, USER_HEADER } from "./sync-socket";
 import { registerSystemService } from "./system-service";

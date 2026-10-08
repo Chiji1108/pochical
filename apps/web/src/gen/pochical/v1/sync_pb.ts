@@ -177,8 +177,9 @@ export type ServerFrame = Message<"pochical.v1.ServerFrame"> & {
     case: "typing";
   } | {
     /**
-     * Pochical's people answered in the user's chat with them, on the
-     * user's own socket: the chat, if open, reads itself again.
+     * Pochical's people answered in the user's chat with them, or reacted
+     * or took a line back, on the user's own socket: the chat, if open,
+     * reads itself again.
      *
      * @generated from field: pochical.v1.SupportAnswered support_answered = 9;
      */
@@ -195,8 +196,8 @@ export const ServerFrameSchema: GenMessage<ServerFrame> = /*@__PURE__*/
   messageDesc(file_pochical_v1_sync, 1);
 
 /**
- * An answer in the chat with Pochical's people (proto/pochical/v1/support.proto),
- * told to the user's devices as it is written.
+ * A change by Pochical's people in the chat with them
+ * (proto/pochical/v1/support.proto), told to the user's devices as made.
  *
  * @generated from message pochical.v1.SupportAnswered
  */

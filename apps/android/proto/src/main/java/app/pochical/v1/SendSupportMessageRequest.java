@@ -18,6 +18,7 @@ public  final class SendSupportMessageRequest extends
     id_ = "";
     text_ = "";
     device_ = "";
+    replyTo_ = "";
   }
   public static final int ID_FIELD_NUMBER = 1;
   private java.lang.String id_;
@@ -202,6 +203,78 @@ public  final class SendSupportMessageRequest extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     device_ = value.toStringUtf8();
+
+  }
+
+  public static final int REPLY_TO_FIELD_NUMBER = 4;
+  private java.lang.String replyTo_;
+  /**
+   * <pre>
+   * The line it is a reply to, by id, when it is one; one not in the chat
+   * is left out.
+   * </pre>
+   *
+   * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+   * @return The replyTo.
+   */
+  @java.lang.Override
+  public java.lang.String getReplyTo() {
+    return replyTo_;
+  }
+  /**
+   * <pre>
+   * The line it is a reply to, by id, when it is one; one not in the chat
+   * is left out.
+   * </pre>
+   *
+   * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+   * @return The bytes for replyTo.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getReplyToBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(replyTo_);
+  }
+  /**
+   * <pre>
+   * The line it is a reply to, by id, when it is one; one not in the chat
+   * is left out.
+   * </pre>
+   *
+   * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+   * @param value The replyTo to set.
+   */
+  private void setReplyTo(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    replyTo_ = value;
+  }
+  /**
+   * <pre>
+   * The line it is a reply to, by id, when it is one; one not in the chat
+   * is left out.
+   * </pre>
+   *
+   * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+   */
+  private void clearReplyTo() {
+
+    replyTo_ = getDefaultInstance().getReplyTo();
+  }
+  /**
+   * <pre>
+   * The line it is a reply to, by id, when it is one; one not in the chat
+   * is left out.
+   * </pre>
+   *
+   * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+   * @param value The bytes for replyTo to set.
+   */
+  private void setReplyToBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    replyTo_ = value.toStringUtf8();
 
   }
 
@@ -494,6 +567,80 @@ public  final class SendSupportMessageRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The line it is a reply to, by id, when it is one; one not in the chat
+     * is left out.
+     * </pre>
+     *
+     * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+     * @return The replyTo.
+     */
+    @java.lang.Override
+    public java.lang.String getReplyTo() {
+      return instance.getReplyTo();
+    }
+    /**
+     * <pre>
+     * The line it is a reply to, by id, when it is one; one not in the chat
+     * is left out.
+     * </pre>
+     *
+     * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+     * @return The bytes for replyTo.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getReplyToBytes() {
+      return instance.getReplyToBytes();
+    }
+    /**
+     * <pre>
+     * The line it is a reply to, by id, when it is one; one not in the chat
+     * is left out.
+     * </pre>
+     *
+     * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+     * @param value The replyTo to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReplyTo(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setReplyTo(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The line it is a reply to, by id, when it is one; one not in the chat
+     * is left out.
+     * </pre>
+     *
+     * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReplyTo() {
+      copyOnWrite();
+      instance.clearReplyTo();
+      return this;
+    }
+    /**
+     * <pre>
+     * The line it is a reply to, by id, when it is one; one not in the chat
+     * is left out.
+     * </pre>
+     *
+     * <code>string reply_to = 4 [json_name = "replyTo"];</code>
+     * @param value The bytes for replyTo to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReplyToBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setReplyToBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.SendSupportMessageRequest)
   }
   @java.lang.Override
@@ -513,10 +660,11 @@ public  final class SendSupportMessageRequest extends
             "id_",
             "text_",
             "device_",
+            "replyTo_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0004\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -587,7 +587,7 @@ struct ChatScreen: View {
           time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
-          reactions: line.reactions,
+          reactions: line.reactions, countedReactions: otherID != nil,
           pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
           meID: meID, onReact: onReact, lifted: acting?.lineID == line.opID
         ) { frame, finger in
@@ -1433,6 +1433,8 @@ private struct LineView: View {
   /// A member's name, for the line's mentions.
   let nameOf: (String) -> String
   var reactions: [LineReaction] = []
+  /// A chat of two: its reactions counted, not shown by face.
+  var countedReactions = false
   /// Pinned for everyone: a small pin by its time.
   var pinned = false
   /// Gone to from the pins: ringed for a moment.
@@ -1445,11 +1447,6 @@ private struct LineView: View {
   /// Opens the line's reactions and menu, from where its bubble is, with
   /// the finger that opened them while it stays down.
   let onActions: (CGRect, HeldFinger?) -> Void
-  /// Where the bubble is on the screen, for its menu.
-  @State private var frame = CGRect.zero
-  @State private var pressing = false
-  /// The finger that opened the menu, followed until it lifts.
-  @State private var held: HeldFinger?
 
   private static var avatar: CGFloat { 32 }
 
@@ -1493,40 +1490,7 @@ private struct LineView: View {
               .stroke(colors.accentBorder, lineWidth: 6)
               .opacity(ringed ? 1 : 0)
           }
-            // Its own size and where its middle is: the press's give
-            // shrinks its frame on the screen, not its size.
-            .onGeometryChange(for: CGRect.self) { proxy in
-              let global = proxy.frame(in: .global)
-              return CGRect(
-                x: global.midX - proxy.size.width / 2, y: global.midY - proxy.size.height / 2,
-                width: proxy.size.width, height: proxy.size.height)
-            } action: {
-              frame = $0
-            }
-            // Gives a little under the finger, as Messages' bubble does,
-            // and opens its reactions and menu once held; the finger then
-            // picks one by lifting over it, as a system menu's does.
-            .scaleEffect(pressing ? 0.96 : 1)
-            .opacity(lifted ? 0 : 1)
-            .animation(.easeOut(duration: 0.2), value: pressing)
-            .onLongPressGesture(minimumDuration: HeldPress.duration) {
-              UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-              pressing = false
-              let finger = HeldFinger()
-              held = finger
-              onActions(frame, finger)
-            } onPressingChanged: {
-              pressing = $0
-            }
-            .gesture(
-              HeldPress {
-                held?.point = $0
-              } onLift: {
-                held?.point = $0
-                held?.lifted = true
-                held = nil
-              })
-            .accessibilityAction(named: "リアクションとメニュー") { onActions(frame, nil) }
+            .heldForActions(lifted: lifted, onActions: onActions)
           if !mine { meta }
         }
         if let shifts {
@@ -1547,7 +1511,9 @@ private struct LineView: View {
             .accessibilityHidden(true)
         }
         if !reactions.isEmpty {
-          ReactionRow(reactions: reactions, meID: meID, nameOf: nameOf, onReact: onReact)
+          ReactionRow(
+            reactions: reactions, meID: meID, nameOf: nameOf, counted: countedReactions,
+            onReact: onReact)
         }
       }
       .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)

@@ -43,6 +43,13 @@
       "when": 1791457285957,
       "tag": "0005_support_slack_thread",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791463681652,
+      "tag": "0006_support_actions",
+      "breakpoints": true
     }
   ]
 }

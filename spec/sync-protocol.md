@@ -275,7 +275,7 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 
 ### An answer from Pochical's people
 
-When Pochical's people answer in a user's chat with them (spec/admin.md), the User DO sends `SupportAnswered` on each of the user's sockets, with nothing in it and nothing kept: what shows the chat reads it again (`SupportService`). A device with no socket open hears it by notification instead.
+When Pochical's people answer in a user's chat with them (spec/admin.md), or react or take a line back, the User DO sends `SupportAnswered` on each of the user's sockets, with nothing in it and nothing kept: what shows the chat reads it again (`SupportService`). A device with no socket open hears of an answer by notification instead; of a reaction or a line taken back, as the chat next opens.
 
 ## Not yet specified
 

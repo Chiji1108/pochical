@@ -6,6 +6,8 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 
 import { tellStaffOfAnswer } from "./slack";
 import { answerSupport } from "./support-answers";
+import { linesOf } from "./support-chat";
+import type { SupportReactionOf } from "./support-chat";
 
 /** A user's chat as the list shows it: its latest line, and whose. */
 export type SupportChatSummary = {
@@ -13,6 +15,7 @@ export type SupportChatSummary = {
   lastAtMs: number;
   text: string;
   fromSupport: boolean;
+  unsent: boolean;
 };
 
 /** A line of a user's chat, with the app and device it came from. */
@@ -22,6 +25,10 @@ export type SupportChatLine = {
   fromSupport: boolean;
   text: string;
   device: string | null;
+  /** The line it is a reply to, by id. */
+  replyTo: string | null;
+  unsent: boolean;
+  reactions: SupportReactionOf[];
 };
 
 /** What a member reported, with what they saw. */
@@ -41,7 +48,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   /** Every user's chat, the latest first. */
   async supportChats(): Promise<SupportChatSummary[]> {
     const { results } = await this.env.DB.prepare(
-      `select c.user_id, c.last_at, m.text, m.from_support
+      `select c.user_id, c.last_at, m.text, m.from_support, m.unsent
        from support_chats c join support_messages m on m.user_id = c.user_id
        and m.id = (select id from support_messages where user_id = c.user_id
          order by created_at desc, id desc limit 1)
@@ -53,34 +60,29 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
         last_at: number;
         text: string;
         from_support: number;
+        unsent: number;
       }>();
     return results.map((row) => ({
       fromSupport: row.from_support === 1,
       lastAtMs: row.last_at,
       text: row.text,
+      unsent: row.unsent === 1,
       userId: row.user_id,
     }));
   }
 
   /** One user's chat, oldest first. */
   async supportChat(userId: string): Promise<SupportChatLine[]> {
-    const { results } = await this.env.DB.prepare(
-      "select id, created_at, from_support, text, device from support_messages where user_id = ? order by created_at, id"
-    )
-      .bind(userId)
-      .all<{
-        id: string;
-        created_at: number;
-        from_support: number;
-        text: string;
-        device: string | null;
-      }>();
-    return results.map((row) => ({
-      atMs: row.created_at,
-      device: row.device,
-      fromSupport: row.from_support === 1,
-      id: row.id,
-      text: row.text,
+    const lines = await linesOf(this.env, userId);
+    return lines.map((line) => ({
+      atMs: line.createdAt.getTime(),
+      device: line.device,
+      fromSupport: line.fromSupport,
+      id: line.id,
+      reactions: line.reactions,
+      replyTo: line.replyTo,
+      text: line.text,
+      unsent: line.unsent,
     }));
   }
 
@@ -91,10 +93,11 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
    */
   async answerSupport(userId: string, text: string): Promise<boolean> {
     const kept = await answerSupport(this.env, userId, text);
-    if (kept) {
-      this.ctx.waitUntil(tellStaffOfAnswer(this.env, userId, text.trim()));
+    if (kept === null) {
+      return false;
     }
-    return kept;
+    this.ctx.waitUntil(tellStaffOfAnswer(this.env, userId, kept, text.trim()));
+    return true;
   }
 
   /** What members reported, the latest first. */
