@@ -22,6 +22,8 @@ struct CalendarScreen: View {
   @State private var gaps: [Day] = []
   /// The month being saved as a picture.
   @State private var picturing: Day?
+  /// The month being put in the device's calendar.
+  @State private var addingToCalendar: Day?
   /// Something was put on the days since entering or a day was opened,
   /// so closing them is a moment to ask for a review (spec/review.md).
   @State private var changed = false
@@ -192,6 +194,11 @@ struct CalendarScreen: View {
     .sheet(isPresented: Binding { picturing != nil } set: { if !$0 { picturing = nil } }) {
       if let month = picturing {
         MonthPicturePage(month: month, calendar: currentCalendar)
+      }
+    }
+    .sheet(isPresented: Binding { addingToCalendar != nil } set: { if !$0 { addingToCalendar = nil } }) {
+      if let month = addingToCalendar {
+        DeviceCalendarSheet(month: month, calendar: currentCalendar)
       }
     }
     .onChange(of: gaps) { _, gaps in
@@ -461,12 +468,19 @@ struct CalendarScreen: View {
           }
           .buttonStyle(BarButton())
         }
-        // The month kept as a picture (/design's save menu, whose 端末
-        // カレンダーに追加 comes once it is built).
-        Button("この月のシフトを保存", systemImage: "square.and.arrow.down") {
-          picturing = shownMonth ?? thisMonth
+        // The month kept as a picture or put in the device's calendar
+        // (/design's save menu).
+        Menu {
+          Button("画像で保存", systemImage: "photo") {
+            picturing = shownMonth ?? thisMonth
+          }
+          Button("端末カレンダーに追加", systemImage: "calendar.badge.plus") {
+            addingToCalendar = shownMonth ?? thisMonth
+          }
+        } label: {
+          Label("この月のシフトを保存", systemImage: "square.and.arrow.down")
+            .labelStyle(.iconOnly)
         }
-        .labelStyle(.iconOnly)
         .buttonStyle(BarButton())
       }
     }
