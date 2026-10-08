@@ -51,7 +51,12 @@ import type { Preset } from "../src/themes";
 import { textStyles } from "../src/type";
 import { widgetRules } from "../src/widgets";
 import { kotlinHolidays, swiftHolidays, webHolidays } from "./holidays";
-import { kotlinMarkIcons, swiftMarkIcons } from "./mark-icon-code";
+import {
+  kotlinMarkIconNames,
+  kotlinMarkIcons,
+  swiftMarkIconNames,
+  swiftMarkIcons,
+} from "./mark-icon-code";
 import { kotlinReadyPatterns, swiftReadyPatterns } from "./pattern-code";
 import { swiftPhrases } from "./phrases";
 
@@ -587,6 +592,8 @@ const outputs = {
   [`${KOTLIN_DIR}/Holidays.kt`]: kotlinFile(kotlinHolidays()),
   [`${SWIFT_DIR}/MarkIcons.swift`]: swiftFile(swiftMarkIcons()),
   [`${KOTLIN_DIR}/MarkIcons.kt`]: kotlinFile(kotlinMarkIcons()),
+  [`${SWIFT_DIR}/MarkIconNames.swift`]: swiftFile(swiftMarkIconNames()),
+  [`${KOTLIN_DIR}/MarkIconNames.kt`]: kotlinFile(kotlinMarkIconNames()),
   [`${SWIFT_DIR}/ReadyPatterns.swift`]: swiftFile(swiftReadyPatterns()),
   [`${KOTLIN_DIR}/ReadyPatterns.kt`]: kotlinFile(kotlinReadyPatterns()),
   "apps/web/src/lib/holiday-names.ts": webHolidays(HEADER),

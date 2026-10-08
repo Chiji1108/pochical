@@ -1,3 +1,4 @@
+import { iconNames } from "@pochical/design/mark-icon-names";
 import { offeredMarkIcons } from "@pochical/design/patterns";
 import { Plus } from "lucide-react";
 import { useContext, useState } from "react";
@@ -14,7 +15,7 @@ import {
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import { MarkLetterInput, markPreview } from "./design-fields";
 import { PageHeader } from "./design-header";
-import { IconPickerSheet, iconNames } from "./design-icon-picker";
+import { IconPickerSheet } from "./design-icon-picker";
 import { List, ListRow } from "./design-list";
 import { Button, fieldLabel, Note } from "./design-ui";
 import {

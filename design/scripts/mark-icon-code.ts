@@ -5,6 +5,7 @@
 // Phosphor's paths as they are, which Compose's PathParser reads whole.
 import svgpath from "svgpath";
 
+import { iconNames, iconSections, iconWords } from "../src/mark-icon-names";
 import { markIconPaths } from "../src/mark-icon-paths";
 import { markIconGlyphs } from "../src/mark-icons";
 
@@ -200,6 +201,79 @@ export function kotlinMarkIcons() {
     }),
     "    )",
     "  }",
+    "}",
+  ];
+}
+
+const quoted = (text: string) => JSON.stringify(text);
+
+// The icons' names, words and kinds (src/mark-icon-names.ts), for the
+// native apps' icon picker sheet.
+export function swiftMarkIconNames() {
+  return [
+    "/// The marks' icons by name, in words, and in the kinds the icon picker sheet sorts them into (design/src/mark-icon-names.ts).",
+    "public enum MarkIconNames {",
+    "  /// A kind of icons, under its title.",
+    "  public struct Section: Sendable, Identifiable {",
+    "    public let title: String",
+    "    public let icons: [String]",
+    "    public var id: String { title }",
+    "",
+    "    public init(title: String, icons: [String]) {",
+    "      self.title = title",
+    "      self.icons = icons",
+    "    }",
+    "  }",
+    "",
+    "  /// Each icon's name, as a screen reader says it and a search finds it.",
+    "  public static let names: [String: String] = [",
+    ...Object.entries(iconNames).map(
+      ([icon, name]) => `    ${quoted(icon)}: ${quoted(name)},`
+    ),
+    "  ]",
+    "",
+    "  /// Other words someone may look an icon up by, split by spaces.",
+    "  public static let words: [String: String] = [",
+    ...Object.entries(iconWords).map(
+      ([icon, words]) => `    ${quoted(icon)}: ${quoted(words ?? "")},`
+    ),
+    "  ]",
+    "",
+    "  /// The kinds, each starting with the icons offered first.",
+    "  public static let sections: [Section] = [",
+    ...iconSections.map(
+      ({ title, icons }) =>
+        `    Section(title: ${quoted(title)}, icons: [${icons.map(quoted).join(", ")}]),`
+    ),
+    "  ]",
+    "}",
+  ];
+}
+
+export function kotlinMarkIconNames() {
+  return [
+    "/** The marks' icons by name, in words, and in the kinds the icon picker sheet sorts them into (design/src/mark-icon-names.ts). */",
+    "object MarkIconNames {",
+    "  data class Section(val title: String, val icons: List<String>)",
+    "",
+    "  val names: Map<String, String> = mapOf(",
+    ...Object.entries(iconNames).map(
+      ([icon, name]) => `    ${quoted(icon)} to ${quoted(name)},`
+    ),
+    "  )",
+    "",
+    "  val words: Map<String, String> = mapOf(",
+    ...Object.entries(iconWords).map(
+      ([icon, words]) => `    ${quoted(icon)} to ${quoted(words ?? "")},`
+    ),
+    "  )",
+    "",
+    "  val sections: List<Section> = listOf(",
+    ...iconSections.map(
+      ({ title, icons }) =>
+        `    Section(${quoted(title)}, listOf(${icons.map(quoted).join(", ")})),`
+    ),
+    "  )",
     "}",
   ];
 }

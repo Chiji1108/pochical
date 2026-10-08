@@ -62,3 +62,13 @@ import Testing
   #expect(day.yearSlashText == "2026/10/12")
   #expect(day.yearMonthText == "2026年10月")
 }
+
+@Test func findsIconsWhateverTheKanaWidthOrCase() {
+  let found = { (query: String) in MarkIconSearch.sections(matching: query).flatMap(\.icons) }
+  #expect(found("ケア") == found("けあ"))
+  #expect(found("ｹｱ") == found("けあ"))
+  #expect(!found("けあ").isEmpty)
+  #expect(found("猫") == ["cat"])
+  #expect(found("") == MarkIconNames.sections.flatMap(\.icons))
+  #expect(found("ないはずのことば").isEmpty)
+}
