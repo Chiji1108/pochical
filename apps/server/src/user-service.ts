@@ -3,7 +3,9 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
 import { env } from "cloudflare:workers";
 
+import { deleteAccount } from "./account-deletion";
 import {
+  DeleteAccountResponseSchema,
   GetMeResponseSchema,
   RegisterPushTokenResponseSchema,
   SetBlockedResponseSchema,
@@ -20,6 +22,11 @@ const PUSH_TOKEN = /^[0-9a-f]{32,200}$/u;
 
 export const registerUserService = (router: ConnectRouter): void => {
   router.service(UserService, {
+    deleteAccount: async ({ appleAuthorizationCode }, context) => {
+      const { id } = await requireUser(context);
+      await deleteAccount(env, id, appleAuthorizationCode);
+      return create(DeleteAccountResponseSchema, {});
+    },
     getMe: async (_request, context) => {
       const { id, anonymous } = await requireUser(context);
       return create(GetMeResponseSchema, { anonymous, userId: id });

@@ -36,14 +36,17 @@ struct ChatSummaryRequest: FetchKeyRequest, Hashable {
     var summary = ChatSummary()
     /// Everyone who has been in the group by id, those who left too.
     var names: [String: String] = [:]
+    /// Those whose account is deleted, whose lines are gone.
+    var deleted: Set<String> = []
   }
 
   func fetch(_ db: Database) throws -> Value {
-    Value(
+    let writers = try Chats.writers(in: groupID, db: db)
+    return Value(
       summary: try Chats.summary(of: threadID, in: groupID, me: me, db: db),
       names: Dictionary(
-        try Chats.writers(in: groupID, db: db).map { ($0.userID, $0.displayName) },
-        uniquingKeysWith: { _, last in last }))
+        writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last }),
+      deleted: Set(writers.filter(\.deleted).map(\.userID)))
   }
 }
 
@@ -64,8 +67,9 @@ struct UnreadCount: View {
 }
 
 /// The line a line taken back leaves (spec/chat.md, Editing and unsending).
-func unsentLine(_ writer: String?, mine: Bool) -> String {
-  mine ? "メッセージの送信を取り消しました" : "\(writer ?? "メンバー")がメッセージの送信を取り消しました"
+func unsentLine(_ writer: String?, mine: Bool, deleted: Bool = false) -> String {
+  if deleted { return "削除されたメッセージ" }
+  return mine ? "メッセージの送信を取り消しました" : "\(writer ?? "メンバー")がメッセージの送信を取り消しました"
 }
 
 /// A chat's times as the messaging apps write them.
@@ -302,7 +306,7 @@ struct ChatScreen: View {
       // A one-to-one chat with someone who left stays to be read, but
       // takes no more lines.
       if let otherID, let gone = chat.writers.first(where: { $0.userID == otherID && $0.left }) {
-        Text("\(gone.displayName)はグループを抜けました")
+        Text(gone.deleted ? "相手のアカウントは削除されました" : "\(gone.displayName)はグループを抜けました")
           .font(.footnote)
           .foregroundStyle(colors.textTertiary)
           .frame(maxWidth: .infinity, minHeight: Metrics.touch)
@@ -563,7 +567,10 @@ struct ChatScreen: View {
       // folded ones, with their face, the way to their profile.
       let startsRun = runStart || (otherID == nil && blocked.contains(line.authorID))
       if line.unsent {
-        Text(unsentLine(names[line.authorID], mine: line.authorID == meID))
+        Text(
+          unsentLine(
+            names[line.authorID], mine: line.authorID == meID,
+            deleted: deletedIDs.contains(line.authorID)))
           .font(.caption)
           .foregroundStyle(colors.textTertiary)
           .multilineTextAlignment(.center)
@@ -845,7 +852,12 @@ struct ChatScreen: View {
   /// Everyone who has been in the group by id, those who left too.
   private var names: [String: String] {
     Dictionary(
-      chat.writers.map { ($0.userID, $0.displayName) }, uniquingKeysWith: { _, last in last })
+      chat.writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last })
+  }
+
+  /// Those in the group whose account is deleted, whose lines are gone.
+  private var deletedIDs: Set<String> {
+    Set(chat.writers.filter(\.deleted).map(\.userID))
   }
 
   /// A member's name in the group as it is now, for their mentions.

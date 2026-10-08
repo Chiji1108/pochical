@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/user.proto.
  */
 export const file_pochical_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIjoKGFJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIPCgdzYW5kYm94GAIgASgIIhsKGVJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiNQoRU2V0QmxvY2tlZFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIPCgdibG9ja2VkGAIgASgIIhQKElNldEJsb2NrZWRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiMwoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCWFub255bW91cxgCIAEoCDLbAwoLVXNlclNlcnZpY2USQwoFR2V0TWUSGS5wb2NoaWNhbC52MS5HZXRNZVJlcXVlc3QaGi5wb2NoaWNhbC52MS5HZXRNZVJlc3BvbnNlIgOQAgESUgoKU2V0QmxvY2tlZBIeLnBvY2hpY2FsLnYxLlNldEJsb2NrZWRSZXF1ZXN0Gh8ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlc3BvbnNlIgOQAgISZwoRUmVnaXN0ZXJQdXNoVG9rZW4SJS5wb2NoaWNhbC52MS5SZWdpc3RlclB1c2hUb2tlblJlcXVlc3QaJi5wb2NoaWNhbC52MS5SZWdpc3RlclB1c2hUb2tlblJlc3BvbnNlIgOQAgISWAoMU2V0Q2hhdE11dGVkEiAucG9jaGljYWwudjEuU2V0Q2hhdE11dGVkUmVxdWVzdBohLnBvY2hpY2FsLnYxLlNldENoYXRNdXRlZFJlc3BvbnNlIgOQAgIScAoUU2V0Q2hhdE5vdGlmaWNhdGlvbnMSKC5wb2NoaWNhbC52MS5TZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QaKS5wb2NoaWNhbC52MS5TZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIgOQAgJCaQoPYXBwLnBvY2hpY2FsLnYxQglVc2VyUHJvdG9QAaICA1BYWKoCC1BvY2hpY2FsLlYxygILUG9jaGljYWxcVjHiAhdQb2NoaWNhbFxWMVxHUEJNZXRhZGF0YeoCDFBvY2hpY2FsOjpWMWIGcHJvdG8z");
+  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIjoKGFJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIPCgdzYW5kYm94GAIgASgIIhsKGVJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiNQoRU2V0QmxvY2tlZFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIPCgdibG9ja2VkGAIgASgIIhQKElNldEJsb2NrZWRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiMwoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCWFub255bW91cxgCIAEoCCI4ChREZWxldGVBY2NvdW50UmVxdWVzdBIgChhhcHBsZV9hdXRob3JpemF0aW9uX2NvZGUYASABKAkiFwoVRGVsZXRlQWNjb3VudFJlc3BvbnNlMrgECgtVc2VyU2VydmljZRJbCg1EZWxldGVBY2NvdW50EiEucG9jaGljYWwudjEuRGVsZXRlQWNjb3VudFJlcXVlc3QaIi5wb2NoaWNhbC52MS5EZWxldGVBY2NvdW50UmVzcG9uc2UiA5ACAhJDCgVHZXRNZRIZLnBvY2hpY2FsLnYxLkdldE1lUmVxdWVzdBoaLnBvY2hpY2FsLnYxLkdldE1lUmVzcG9uc2UiA5ACARJSCgpTZXRCbG9ja2VkEh4ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVzcG9uc2UiA5ACAhJnChFSZWdpc3RlclB1c2hUb2tlbhIlLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBomLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiA5ACAhJYCgxTZXRDaGF0TXV0ZWQSIC5wb2NoaWNhbC52MS5TZXRDaGF0TXV0ZWRSZXF1ZXN0GiEucG9jaGljYWwudjEuU2V0Q2hhdE11dGVkUmVzcG9uc2UiA5ACAhJwChRTZXRDaGF0Tm90aWZpY2F0aW9ucxIoLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVxdWVzdBopLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVzcG9uc2UiA5ACAkJpCg9hcHAucG9jaGljYWwudjFCCVVzZXJQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
 
 /**
  * @generated from message pochical.v1.SetChatMutedRequest
@@ -196,6 +196,39 @@ export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
   messageDesc(file_pochical_v1_user, 9);
 
 /**
+ * @generated from message pochical.v1.DeleteAccountRequest
+ */
+export type DeleteAccountRequest = Message<"pochical.v1.DeleteAccountRequest"> & {
+  /**
+   * Sign in with Apple's authorization code, asked for again just before
+   * deleting; empty for a user not linked to Apple.
+   *
+   * @generated from field: string apple_authorization_code = 1;
+   */
+  appleAuthorizationCode: string;
+};
+
+/**
+ * Describes the message pochical.v1.DeleteAccountRequest.
+ * Use `create(DeleteAccountRequestSchema)` to create a new message.
+ */
+export const DeleteAccountRequestSchema: GenMessage<DeleteAccountRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 10);
+
+/**
+ * @generated from message pochical.v1.DeleteAccountResponse
+ */
+export type DeleteAccountResponse = Message<"pochical.v1.DeleteAccountResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.DeleteAccountResponse.
+ * Use `create(DeleteAccountResponseSchema)` to create a new message.
+ */
+export const DeleteAccountResponseSchema: GenMessage<DeleteAccountResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 11);
+
+/**
  * The signed-in user. Every call here needs the session token from
  * better-auth (/api/auth) as `Authorization: Bearer <token>`; without a
  * valid one it fails with UNAUTHENTICATED.
@@ -203,6 +236,21 @@ export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
  * @generated from service pochical.v1.UserService
  */
 export const UserService: GenService<{
+  /**
+   * Deletes the user's account and everything of it (spec/sync-protocol.md,
+   * Deleting an account): their own values, their place in each group with
+   * every line they wrote taken back, their chat with Pochical's people,
+   * and their sign-ins. A user linked to Sign in with Apple sends a fresh
+   * authorization code, with which the server revokes the app's Apple
+   * tokens as Apple asks; FAILED_PRECONDITION without one Apple takes.
+   *
+   * @generated from rpc pochical.v1.UserService.DeleteAccount
+   */
+  deleteAccount: {
+    methodKind: "unary";
+    input: typeof DeleteAccountRequestSchema;
+    output: typeof DeleteAccountResponseSchema;
+  },
   /**
    * Who the token belongs to, for the apps to check a stored session.
    *

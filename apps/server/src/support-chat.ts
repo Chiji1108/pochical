@@ -4,7 +4,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { supportMessages, supportReactions } from "./db/schema";
+import { supportChats, supportMessages, supportReactions } from "./db/schema";
 import { supportPhotoKey } from "./photos";
 
 export type SupportRow = typeof supportMessages.$inferSelect;
@@ -175,4 +175,48 @@ export const keepSlackTs = async (
     .set({ slackTs })
     .where(eq(supportMessages.id, messageId))
     .run();
+};
+
+/** Every object under `prefix` in the photos bucket deleted, page by page. */
+export const deletePhotosUnder = async (
+  env: Env,
+  prefix: string
+): Promise<void> => {
+  let cursor: string | undefined;
+  do {
+    // oxlint-disable-next-line no-await-in-loop -- each page names the next
+    const page = await env.PHOTOS.list({ cursor, prefix });
+    if (page.objects.length > 0) {
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await env.PHOTOS.delete(page.objects.map(({ key }) => key));
+    }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor !== undefined);
+};
+
+/**
+ * A user's chat with Pochical's people gone as their account is: its
+ * lines, their reactions, the chat and its photos.
+ */
+export const eraseSupportChat = async (
+  env: Env,
+  userId: string
+): Promise<void> => {
+  const db = drizzle(env.DB);
+  await db.batch([
+    db
+      .delete(supportReactions)
+      .where(
+        inArray(
+          supportReactions.messageId,
+          db
+            .select({ id: supportMessages.id })
+            .from(supportMessages)
+            .where(eq(supportMessages.userId, userId))
+        )
+      ),
+    db.delete(supportMessages).where(eq(supportMessages.userId, userId)),
+    db.delete(supportChats).where(eq(supportChats.userId, userId)),
+  ]);
+  await deletePhotosUnder(env, `support/${userId}/`);
 };

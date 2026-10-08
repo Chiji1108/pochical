@@ -19,6 +19,7 @@ import {
   chatHead,
   chatPage,
   alertOf,
+  eraseMemberChat,
   forReader,
   GROUP_THREAD,
   hearsFrom,
@@ -92,6 +93,7 @@ const profileChange = ({ cursor, emoji, name }: ProfileRow): Change =>
 
 const memberChange = ({
   cursor,
+  deleted,
   displayName,
   joinedAt,
   leftAt,
@@ -102,6 +104,7 @@ const memberChange = ({
     kind: {
       case: "member",
       value: {
+        deleted,
         displayName,
         joinedAtMs: BigInt(joinedAt.getTime()),
         left: leftAt !== null,
@@ -253,6 +256,75 @@ export class GroupDO extends DurableObject<Env> {
     broadcastChanges(this.ctx, [memberChange(left)]);
   }
 
+  /**
+   * A member's account deleted (spec/sync-protocol.md, Deleting an
+   * account): out of the group as on leaving, with no name, every line
+   * they wrote taken back and their photos deleted, their reactions and
+   * votes taken off. Whether no one is left in the group, which then goes
+   * whole (`erase`).
+   */
+  async deleteMember(userId: string): Promise<boolean> {
+    const taken = this.ctx.storage.transactionSync(() => {
+      const known = this.db
+        .select()
+        .from(members)
+        .where(eq(members.userId, userId))
+        .get();
+      if (known === undefined || known.deleted) {
+        return undefined;
+      }
+      this.db.delete(memberDays).where(eq(memberDays.userId, userId)).run();
+      this.db
+        .delete(memberPatterns)
+        .where(eq(memberPatterns.userId, userId))
+        .run();
+      this.db
+        .delete(memberRepeatOrders)
+        .where(eq(memberRepeatOrders.userId, userId))
+        .run();
+      const chat = eraseMemberChat(this.db, userId, () => this.nextCursor());
+      const row = this.db
+        .update(members)
+        .set({
+          cursor: this.nextCursor(),
+          deleted: true,
+          displayName: "",
+          leftAt: known.leftAt ?? new Date(),
+        })
+        .where(eq(members.userId, userId))
+        .returning()
+        .get();
+      return { ...chat, row };
+    });
+    if (taken !== undefined) {
+      const groupId = this.ctx.id.name;
+      if (groupId !== undefined && taken.photosGone.length > 0) {
+        await this.env.PHOTOS.delete(
+          taken.photosGone.map((id) => photoKey(groupId, id))
+        );
+      }
+      closeUserSockets(this.ctx, userId);
+      broadcastChanges(this.ctx, taken.changes, seenBy, (change, reader) =>
+        forReader(this.db, change, reader)
+      );
+      if (taken.row !== undefined) {
+        broadcastChanges(this.ctx, [memberChange(taken.row)]);
+      }
+    }
+    return this.memberList().length === 0;
+  }
+
+  /** Everything the group holds gone, as its last member's account is. */
+  async erase(): Promise<void> {
+    for (const socket of this.ctx.getWebSockets()) {
+      socket.close(1000, "The group is gone");
+    }
+    await this.ctx.storage.deleteAlarm();
+    await this.ctx.storage.deleteAll();
+    // Empty, not broken: its tables again, for whatever still asks.
+    await migrate(this.db, migrations);
+  }
+
   /** Closes a member's sockets opened with a session that has ended. */
   endSession(sessionId: string): void {
     closeSessionSockets(this.ctx, sessionId);
@@ -297,6 +369,7 @@ export class GroupDO extends DurableObject<Env> {
   private writeMember({ userId, displayName }: NewMember): Change {
     const row = {
       cursor: this.nextCursor(),
+      deleted: false,
       displayName,
       joinedAt: new Date(),
       leftAt: null,

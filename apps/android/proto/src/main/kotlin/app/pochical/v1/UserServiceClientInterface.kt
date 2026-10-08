@@ -14,6 +14,16 @@ import com.connectrpc.ResponseMessage
  */
 public interface UserServiceClientInterface {
   /**
+   *  Deletes the user's account and everything of it (spec/sync-protocol.md,
+   *  Deleting an account): their own values, their place in each group with
+   *  every line they wrote taken back, their chat with Pochical's people,
+   *  and their sign-ins. A user linked to Sign in with Apple sends a fresh
+   *  authorization code, with which the server revokes the app's Apple
+   *  tokens as Apple asks; FAILED_PRECONDITION without one Apple takes.
+   */
+  public suspend fun deleteAccount(request: DeleteAccountRequest, headers: Headers = emptyMap()): ResponseMessage<DeleteAccountResponse>
+
+  /**
    *  Who the token belongs to, for the apps to check a stored session.
    */
   public suspend fun getMe(request: GetMeRequest, headers: Headers = emptyMap()): ResponseMessage<GetMeResponse>

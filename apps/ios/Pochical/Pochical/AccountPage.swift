@@ -1,7 +1,9 @@
 import AuthenticationServices
 import PochicalDesign
 import PochicalKit
+import SQLiteData
 import SwiftUI
+import WidgetKit
 
 /// 設定's アカウント row (/design's AccountRow): the provider signed in
 /// with, or ログインしていません.
@@ -42,7 +44,12 @@ struct AccountPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.account) private var account
+  @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.userSocket) private var userSocket
+  @Dependency(\.defaultDatabase) private var database
   @Binding var linked: LinkedAccount?
+  @State private var confirmingDelete = false
+  @State private var deleted = false
   /// The nonce the sign-in under way was asked with.
   @State private var nonce = SignInNonce()
   @State private var busy = false
@@ -51,6 +58,7 @@ struct AccountPage: View {
   enum Problem: String, Identifiable {
     case inUse = "このAppleアカウントは、ほかの端末のデータですでに使われています。"
     case failed = "ログインできませんでした。時間をおいてもう一度お試しください。"
+    case notDeleted = "削除できませんでした。時間をおいてもう一度お試しください。"
     var id: String { rawValue }
   }
 
@@ -70,6 +78,12 @@ struct AccountPage: View {
           Text("シフトとグループはこのアカウントに保存され、ほかの端末でも同じデータを使えます。")
         }
         .settingsRows()
+        // Asks first, on the spot, so no arrow as for a page.
+        Section {
+          Button("アカウントを削除", role: .destructive) { confirmingDelete = true }
+            .disabled(busy)
+        }
+        .settingsRows()
       } else {
         signIn
       }
@@ -79,6 +93,20 @@ struct AccountPage: View {
     .navigationBarTitleDisplayMode(.inline)
     .alert(item: $problem) { problem in
       Alert(title: Text(problem.rawValue))
+    }
+    .alert("アカウントを削除しますか？", isPresented: $confirmingDelete) {
+      Button("キャンセル", role: .cancel) {}
+      Button("アカウントとすべてのデータを削除", role: .destructive) {
+        Task { await deleteAccount() }
+      }
+    } message: {
+      Text("シフト、グループ、チャットがすべて削除されます。元に戻せません。")
+    }
+    .alert("アカウントを削除しました", isPresented: $deleted) {
+      Button("OK", role: .cancel) {}
+    }
+    .overlay {
+      if busy { ProgressView() }
     }
   }
 
@@ -155,5 +183,88 @@ struct AccountPage: View {
     case nil:
       problem = .failed
     }
+  }
+
+  /// Deletes the account (spec/sync-protocol.md, Deleting an account):
+  /// Apple asked once more first, for the code the server revokes Apple's
+  /// tokens with; then the device holds nothing of the user, and goes on
+  /// as someone new.
+  private func deleteAccount() async {
+    busy = true
+    defer { busy = false }
+    let code: String
+    do {
+      code = try await AppleCode.ask()
+    } catch {
+      if (error as? ASAuthorizationError)?.code != .canceled {
+        problem = .notDeleted
+      }
+      return
+    }
+    do {
+      try await groupCalls.deleteAccount(appleAuthorizationCode: code)
+    } catch {
+      problem = .notDeleted
+      return
+    }
+    await userSocket?.stop()
+    try? await database.write { try LocalData.erase(in: $0) }
+    try? await account.forget()
+    LocalData.eraseFiles()
+    WidgetCenter.shared.reloadAllTimelines()
+    await userSocket?.startAfresh()
+    withAnimation { linked = nil }
+    deleted = true
+  }
+}
+
+/// Sign in with Apple asked once more, for a fresh authorization code, as
+/// deleting an account needs one to revoke Apple's tokens with.
+@MainActor private final class AppleCode: NSObject, ASAuthorizationControllerDelegate,
+  ASAuthorizationControllerPresentationContextProviding
+{
+  private var answer: CheckedContinuation<String, Error>?
+  private var controller: ASAuthorizationController?
+  /// The one asking now, kept until Apple answers, as the controller holds
+  /// its delegate weakly.
+  private static var asking: AppleCode?
+
+  static func ask() async throws -> String {
+    let asking = AppleCode()
+    Self.asking = asking
+    defer { Self.asking = nil }
+    return try await withCheckedThrowingContinuation { continuation in
+      asking.answer = continuation
+      let controller = ASAuthorizationController(
+        authorizationRequests: [ASAuthorizationAppleIDProvider().createRequest()])
+      controller.delegate = asking
+      controller.presentationContextProvider = asking
+      asking.controller = controller
+      controller.performRequests()
+    }
+  }
+
+  func authorizationController(
+    controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization
+  ) {
+    guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+      let data = credential.authorizationCode, let code = String(data: data, encoding: .utf8)
+    else {
+      answer?.resume(throwing: ASAuthorizationError(.failed))
+      answer = nil
+      return
+    }
+    answer?.resume(returning: code)
+    answer = nil
+  }
+
+  func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+    answer?.resume(throwing: error)
+    answer = nil
+  }
+
+  func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+    UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+      .flatMap(\.windows).first { $0.isKeyWindow } ?? ASPresentationAnchor()
   }
 }

@@ -60,6 +60,8 @@
       "SLACK_BOT_TOKEN",
       "SLACK_CHANNEL_ID",
       "SLACK_SIGNING_SECRET",
+      "APPLE_SIGNIN_KEY",
+      "APPLE_SIGNIN_KEY_ID",
     ],
   },
   // Cloudflare's rate limiting, counted per location and kept by nobody:

@@ -6,6 +6,16 @@ package pochical.v1;
 // better-auth (/api/auth) as `Authorization: Bearer <token>`; without a
 // valid one it fails with UNAUTHENTICATED.
 service UserService {
+  // Deletes the user's account and everything of it (spec/sync-protocol.md,
+  // Deleting an account): their own values, their place in each group with
+  // every line they wrote taken back, their chat with Pochical's people,
+  // and their sign-ins. A user linked to Sign in with Apple sends a fresh
+  // authorization code, with which the server revokes the app's Apple
+  // tokens as Apple asks; FAILED_PRECONDITION without one Apple takes.
+  rpc DeleteAccount(DeleteAccountRequest) returns (DeleteAccountResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
   // Who the token belongs to, for the apps to check a stored session.
   rpc GetMe(GetMeRequest) returns (GetMeResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
@@ -76,3 +86,11 @@ message GetMeResponse {
   // Signed in without Apple or Google yet; linking one keeps the user.
   bool anonymous = 2;
 }
+
+message DeleteAccountRequest {
+  // Sign in with Apple's authorization code, asked for again just before
+  // deleting; empty for a user not linked to Apple.
+  string apple_authorization_code = 1;
+}
+
+message DeleteAccountResponse {}

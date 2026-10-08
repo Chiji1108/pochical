@@ -43,6 +43,8 @@ export const logHead = sqliteTable(
 // member's User DO keeps a copy of their own groups for checking sockets.
 export const members = sqliteTable("members", {
   cursor: integer().notNull().default(0),
+  // Their account is deleted: left, with no name, their lines taken back.
+  deleted: integer({ mode: "boolean" }).notNull().default(false),
   displayName: text("display_name").notNull(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
   // Set once they leave: the row stays, at the cursor of their leaving, so

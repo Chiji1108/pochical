@@ -70,9 +70,9 @@ struct ChatList: View {
           separator
           ChatRow(
             group: group, threadID: directThread(meID, member.userID), me: meID,
-            label: member.displayName
+            label: member.shownName
           ) {
-            LetterAvatar(name: member.displayName, size: 28)
+            LetterAvatar(name: member.shownName, size: 28)
           } onOpen: {
             onOpen(directThread(meID, member.userID), member.userID)
           }
@@ -213,7 +213,9 @@ private struct ChatRow<Icon: View>: View {
     }
     guard let last = summary.last else { return "まだメッセージはありません" }
     if last.unsent {
-      return unsentLine(chat.names[last.authorID], mine: last.authorID == me)
+      return unsentLine(
+        chat.names[last.authorID], mine: last.authorID == me,
+        deleted: chat.deleted.contains(last.authorID))
     }
     if blocked.contains(last.authorID) {
       return "ブロック中のメンバーのメッセージ"

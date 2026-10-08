@@ -87,6 +87,17 @@ public enum ChatPhotos {
     try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
   }
 
+  /// Every photo kept on the device, to send or to show, gone.
+  static func eraseAll() {
+    for (base, path) in [
+      (FileManager.SearchPathDirectory.applicationSupportDirectory, "PendingPhotos"),
+      (.cachesDirectory, "ChatPhotos"),
+    ] {
+      let url = FileManager.default.urls(for: base, in: .userDomainMask)[0].appending(path: path)
+      try? FileManager.default.removeItem(at: url)
+    }
+  }
+
   /// The photo's bytes held on the device, if any.
   public static func held(_ photoID: String, in groupID: String) -> Data? {
     (try? Data(contentsOf: cached(photoID, in: groupID)))

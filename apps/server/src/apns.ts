@@ -4,6 +4,8 @@
 // HTTP/2, which a deployed Worker's fetch is upgraded to by Cloudflare;
 // `wrangler dev` cannot reach it, so a local server sends nothing.
 
+import { signES256 } from "./es256";
+
 /** The app's bundle id, the topic every notification is for. */
 const TOPIC = "app.pochical";
 
@@ -28,21 +30,6 @@ export type Sent = "sent" | "gone" | "failed";
 
 let signed: { jwt: string; at: number; keyId: string } | undefined;
 
-const base64url = (bytes: Uint8Array): string =>
-  btoa(String.fromCodePoint(...bytes))
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replace(/=+$/u, "");
-
-const text = (value: string): string =>
-  base64url(new TextEncoder().encode(value));
-
-/** The .p8 file's PKCS #8 key, from its PEM text. */
-const pkcs8 = (pem: string): Uint8Array<ArrayBuffer> => {
-  const body = pem.replaceAll(/-----[^-]+-----|\s/gu, "");
-  return Uint8Array.from(atob(body), (char) => char.codePointAt(0) ?? 0);
-};
-
 /** The provider token APNs takes, signed now or kept from before. */
 const providerToken = async (
   key: string,
@@ -53,23 +40,10 @@ const providerToken = async (
   if (signed && signed.keyId === keyId && now - signed.at < TOKEN_MS) {
     return signed.jwt;
   }
-  const header = text(JSON.stringify({ alg: "ES256", kid: keyId }));
-  const claims = text(
-    JSON.stringify({ iat: Math.floor(now / 1000), iss: teamId })
-  );
-  const signer = await crypto.subtle.importKey(
-    "pkcs8",
-    pkcs8(key),
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
-  const signature = await crypto.subtle.sign(
-    { hash: "SHA-256", name: "ECDSA" },
-    signer,
-    new TextEncoder().encode(`${header}.${claims}`)
-  );
-  const jwt = `${header}.${claims}.${base64url(new Uint8Array(signature))}`;
+  const jwt = await signES256(key, keyId, {
+    iat: Math.floor(now / 1000),
+    iss: teamId,
+  });
   signed = { at: now, jwt, keyId };
   return jwt;
 };

@@ -301,6 +301,30 @@ export class UserDO extends DurableObject<Env> {
    * Whether the user is in the group or was once, so a leaving whose
    * second step failed can be finished.
    */
+  /** Every group the user was ever in, left ones too. */
+  groupsEver(): string[] {
+    return this.db
+      .select({ groupId: memberships.groupId })
+      .from(memberships)
+      .all()
+      .map(({ groupId }) => groupId);
+  }
+
+  /**
+   * The user's account deleted (spec/sync-protocol.md, Deleting an
+   * account): every socket closed, and everything kept here gone, their
+   * days, patterns, coworkers, groups and push tokens with it.
+   */
+  async erase(): Promise<void> {
+    for (const socket of this.ctx.getWebSockets()) {
+      socket.close(1000, "The account is deleted");
+    }
+    await this.ctx.storage.deleteAlarm();
+    await this.ctx.storage.deleteAll();
+    // Empty, not broken: its tables again, for whatever still asks.
+    await migrate(this.db, migrations);
+  }
+
   wasMember(groupId: string): boolean {
     return (
       this.db

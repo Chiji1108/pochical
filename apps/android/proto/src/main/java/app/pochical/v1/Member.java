@@ -212,6 +212,47 @@ public  final class Member extends
     left_ = false;
   }
 
+  public static final int DELETED_FIELD_NUMBER = 5;
+  private boolean deleted_;
+  /**
+   * <pre>
+   * Their account is deleted: left, with no name, and every line they
+   * wrote taken back (spec/sync-protocol.md, Deleting an account).
+   * </pre>
+   *
+   * <code>bool deleted = 5 [json_name = "deleted"];</code>
+   * @return The deleted.
+   */
+  @java.lang.Override
+  public boolean getDeleted() {
+    return deleted_;
+  }
+  /**
+   * <pre>
+   * Their account is deleted: left, with no name, and every line they
+   * wrote taken back (spec/sync-protocol.md, Deleting an account).
+   * </pre>
+   *
+   * <code>bool deleted = 5 [json_name = "deleted"];</code>
+   * @param value The deleted to set.
+   */
+  private void setDeleted(boolean value) {
+    
+    deleted_ = value;
+  }
+  /**
+   * <pre>
+   * Their account is deleted: left, with no name, and every line they
+   * wrote taken back (spec/sync-protocol.md, Deleting an account).
+   * </pre>
+   *
+   * <code>bool deleted = 5 [json_name = "deleted"];</code>
+   */
+  private void clearDeleted() {
+
+    deleted_ = false;
+  }
+
   public static app.pochical.v1.Member parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -511,6 +552,49 @@ public  final class Member extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Their account is deleted: left, with no name, and every line they
+     * wrote taken back (spec/sync-protocol.md, Deleting an account).
+     * </pre>
+     *
+     * <code>bool deleted = 5 [json_name = "deleted"];</code>
+     * @return The deleted.
+     */
+    @java.lang.Override
+    public boolean getDeleted() {
+      return instance.getDeleted();
+    }
+    /**
+     * <pre>
+     * Their account is deleted: left, with no name, and every line they
+     * wrote taken back (spec/sync-protocol.md, Deleting an account).
+     * </pre>
+     *
+     * <code>bool deleted = 5 [json_name = "deleted"];</code>
+     * @param value The deleted to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeleted(boolean value) {
+      copyOnWrite();
+      instance.setDeleted(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Their account is deleted: left, with no name, and every line they
+     * wrote taken back (spec/sync-protocol.md, Deleting an account).
+     * </pre>
+     *
+     * <code>bool deleted = 5 [json_name = "deleted"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDeleted() {
+      copyOnWrite();
+      instance.clearDeleted();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Member)
   }
   @java.lang.Override
@@ -531,10 +615,11 @@ public  final class Member extends
             "displayName_",
             "joinedAtMs_",
             "left_",
+            "deleted_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0002\u0004\u0007";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0002\u0004\u0007\u0005\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

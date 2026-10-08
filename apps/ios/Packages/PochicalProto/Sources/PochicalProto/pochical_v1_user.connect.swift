@@ -14,6 +14,15 @@ import SwiftProtobuf
 /// valid one it fails with UNAUTHENTICATED.
 public protocol Pochical_V1_UserServiceClientInterface: Sendable {
 
+    /// Deletes the user's account and everything of it (spec/sync-protocol.md,
+    /// Deleting an account): their own values, their place in each group with
+    /// every line they wrote taken back, their chat with Pochical's people,
+    /// and their sign-ins. A user linked to Sign in with Apple sends a fresh
+    /// authorization code, with which the server revokes the app's Apple
+    /// tokens as Apple asks; FAILED_PRECONDITION without one Apple takes.
+    @available(iOS 13, *)
+    func `deleteAccount`(request: Pochical_V1_DeleteAccountRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_DeleteAccountResponse>
+
     /// Who the token belongs to, for the apps to check a stored session.
     @available(iOS 13, *)
     func `getMe`(request: Pochical_V1_GetMeRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_GetMeResponse>
@@ -50,6 +59,11 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
     }
 
     @available(iOS 13, *)
+    public func `deleteAccount`(request: Pochical_V1_DeleteAccountRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_DeleteAccountResponse> {
+        return await self.client.unary(path: "/pochical.v1.UserService/DeleteAccount", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
     public func `getMe`(request: Pochical_V1_GetMeRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_GetMeResponse> {
         return await self.client.unary(path: "/pochical.v1.UserService/GetMe", idempotencyLevel: .noSideEffects, request: request, headers: headers)
     }
@@ -76,6 +90,7 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
 
     public enum Metadata {
         public enum Methods {
+            public static let deleteAccount = Connect.MethodSpec(name: "DeleteAccount", service: "pochical.v1.UserService", type: .unary)
             public static let getMe = Connect.MethodSpec(name: "GetMe", service: "pochical.v1.UserService", type: .unary)
             public static let setBlocked = Connect.MethodSpec(name: "SetBlocked", service: "pochical.v1.UserService", type: .unary)
             public static let registerPushToken = Connect.MethodSpec(name: "RegisterPushToken", service: "pochical.v1.UserService", type: .unary)

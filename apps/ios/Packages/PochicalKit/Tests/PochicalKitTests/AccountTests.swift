@@ -14,6 +14,7 @@ private final class MemoryStore: TokenStore {
 
   func token() -> String? { kept.withLock { $0 } }
   func keep(_ token: String) { kept.withLock { $0 = token } }
+  func forget() { kept.withLock { $0 = nil } }
 }
 
 /// What a fake server was asked, and answers sign-ins with `token`.

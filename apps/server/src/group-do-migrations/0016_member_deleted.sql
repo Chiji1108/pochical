@@ -1,0 +1,1 @@
+ALTER TABLE `members` ADD `deleted` integer DEFAULT false NOT NULL;

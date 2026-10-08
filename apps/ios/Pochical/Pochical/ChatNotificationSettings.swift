@@ -140,13 +140,13 @@ struct ChatNotificationsPage: View {
     blocked.sorted().map { id in
       let member = members.first { $0.userID == id }
       return Person(
-        id: id, name: member?.displayName ?? "メンバー",
+        id: id, name: member?.shownName ?? "メンバー",
         group: member.flatMap { member in groups.first { $0.id == member.groupID }?.name } ?? "")
     }
   }
 
   private func nameOf(_ userID: String?, in groupID: String) -> String {
-    members.first { $0.groupID == groupID && $0.userID == userID }?.displayName ?? "メンバー"
+    members.first { $0.groupID == groupID && $0.userID == userID }?.shownName ?? "メンバー"
   }
 
   private func unblock(_ person: Person) {

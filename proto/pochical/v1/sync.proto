@@ -284,6 +284,9 @@ message Member {
   int64 joined_at_ms = 3;
   // They left the group: they go from it, with their shifts.
   bool left = 4;
+  // Their account is deleted: left, with no name, and every line they
+  // wrote taken back (spec/sync-protocol.md, Deleting an account).
+  bool deleted = 5;
 }
 
 // One field of a member's day, as the group sees it: pattern and times,
