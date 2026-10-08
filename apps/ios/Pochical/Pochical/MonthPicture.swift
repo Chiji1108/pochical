@@ -15,6 +15,9 @@ struct MonthPicturePage: View {
   let month: Day
   let calendar: OwnCalendar
   @State private var notice: String?
+  /// The picture made as it now looks, made again only when its look
+  /// changes.
+  @State private var image: UIImage?
 
   var body: some View {
     @Bindable var settings = settings
@@ -78,7 +81,10 @@ struct MonthPicturePage: View {
         }
       }
       .safeAreaInset(edge: .bottom) {
-        actions(dark: dark)
+        actions
+      }
+      .task(id: PictureKey(dark: dark, look: picture)) {
+        image = rendered(dark: dark)
       }
       .overlay(alignment: .top) {
         if let notice {
@@ -89,19 +95,22 @@ struct MonthPicturePage: View {
     }
   }
 
-  /// 共有 and 保存 under the page, the picture made as it now looks.
-  private func actions(dark: Bool) -> some View {
-    let image = rendered(dark: dark)
-    return HStack(spacing: 12) {
+  /// 共有 and 保存 under the page.
+  private var actions: some View {
+    HStack(spacing: 12) {
+      // In its place while the picture is being made, so nothing moves.
       if let image {
         ShareLink(
           item: Image(uiImage: image),
           preview: SharePreview("\(month.yearMonthText)のシフト", image: Image(uiImage: image))
         ) {
-          Label("共有", systemImage: "square.and.arrow.up")
-            .frame(maxWidth: .infinity, minHeight: Metrics.control)
+          shareLabel
         }
         .buttonStyle(.bordered)
+      } else {
+        Button {} label: { shareLabel }
+          .buttonStyle(.bordered)
+          .disabled(true)
       }
       Button {
         Task { await save(image) }
@@ -116,6 +125,11 @@ struct MonthPicturePage: View {
     .padding(.horizontal, 16)
     .padding(.vertical, 8)
     .background(colors.backgroundBase)
+  }
+
+  private var shareLabel: some View {
+    Label("共有", systemImage: "square.and.arrow.up")
+      .frame(maxWidth: .infinity, minHeight: Metrics.control)
   }
 
   /// The picture in the テーマ's light or dark, whatever the screen is in.
@@ -159,6 +173,12 @@ struct MonthPicturePage: View {
       }
     }
   }
+}
+
+/// What the picture is made again for.
+private struct PictureKey: Equatable {
+  let dark: Bool
+  let look: PictureLook
 }
 
 /// A month as it goes out in a picture: its name, the weekdays and its
