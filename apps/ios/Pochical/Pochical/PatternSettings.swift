@@ -458,6 +458,7 @@ private struct LookEditor: View {
   let others: [Pattern]
   @State private var tab: MarkStyle?
   @State private var choosingEmoji = false
+  @State private var choosingIcon = false
   @FocusState private var letterFocused: Bool
 
   var body: some View {
@@ -480,7 +481,7 @@ private struct LookEditor: View {
       Section {
         switch shown {
         case .icon:
-          grid(ReadyPatterns.markIcons, chosen: draft.icon) { icon in
+          grid(withPicked(ReadyPatterns.markIcons, draft.icon), chosen: draft.icon) { icon in
             var sample = draft
             sample.icon = icon
             return ShiftMark(pattern: sample, size: 28)
@@ -489,6 +490,7 @@ private struct LookEditor: View {
             draft.icon = icon
             picked.insert(.icon)
           }
+          Button("ほかのアイコンを選ぶ", systemImage: "plus") { choosingIcon = true }
         case .emoji:
           grid(withPicked(ReadyPatterns.markEmojis, draft.emoji), chosen: draft.emoji) { emoji in
             Text(emoji).font(.system(size: 26))
@@ -536,6 +538,17 @@ private struct LookEditor: View {
     .settingsList()
     .navigationTitle("印と色")
     .navigationBarTitleDisplayMode(.inline)
+    .sheet(isPresented: $choosingIcon) {
+      IconPickerSheet(picked: draft.icon) { icon in
+        var sample = draft
+        sample.icon = icon
+        return ShiftMark(pattern: sample, size: 26)
+          .environment(\.look, sampleLook(.icon))
+      } onPick: { icon in
+        draft.icon = icon
+        picked.insert(.icon)
+      }
+    }
     .sheet(isPresented: $choosingEmoji) {
       EmojiKeyboardSheet { emoji in
         guard isEmoji(emoji) else { return }
@@ -593,8 +606,10 @@ private struct LookEditor: View {
 
   /// The emoji offered, the one picked from the keyboard first when it is
   /// not among them.
-  private func withPicked(_ emoji: [String], _ chosen: String) -> [String] {
-    emoji.contains(chosen) || chosen.isEmpty ? emoji : [chosen] + emoji
+  /// The offered ones, the one picked from all of them first when it is
+  /// not among them.
+  private func withPicked(_ offered: [String], _ chosen: String) -> [String] {
+    offered.contains(chosen) || chosen.isEmpty ? offered : [chosen] + offered
   }
 
   /// Another pattern drawn the same in this look, said under the choices.

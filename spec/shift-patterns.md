@@ -44,6 +44,10 @@ So a day may hold a memo and no shift. It is blank wherever blanks count (Blanks
 
 Many people leave days off blank, moving on with 翌日へ. Rather than stop them while entering, 完了 asks once about the blank days of the month before its last entered day, and fills them with a day off in one tap. Blanks after the last entered day are left alone: those are more likely not decided yet (`spec/vectors/entering.json`, gaps). Someone with no pattern that counts as off leaves days off blank on purpose, so nothing is asked of them.
 
+## Picking a mark's icon
+
+Beyond the icons offered first, ほかのアイコンを選ぶ shows every icon a mark can take, sorted into kinds, each drawn as the mark would be with the one picked edged. A search keeps the icons whose name or words hold every word typed (`design/src/mark-icon-names.ts`), width, case and katakana folded, so ケア, けあ and ｹｱ find the same. An icon picked from there leads the offered ones while it is the mark's.
+
 ## Deleting a pattern
 
 - It goes from the list, and nothing that names it is rewritten: the days that have it, of their own or from a repeating order, keep its id and show empty, counting as blank; their memos and people stay. The person is told how many days before confirming (spec/sync-protocol.md, Deleted values; `spec/vectors/patterns.json`, deleted).

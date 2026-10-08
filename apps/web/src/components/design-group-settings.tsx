@@ -1,3 +1,4 @@
+import { iconNames } from "@pochical/design/mark-icon-names";
 import { UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import { css } from "styled-system/css";
@@ -35,7 +36,7 @@ import {
   markPart,
 } from "./design-group-parts";
 import { HeaderAction, PageHeader } from "./design-header";
-import { IconPickerSheet, iconNames } from "./design-icon-picker";
+import { IconPickerSheet } from "./design-icon-picker";
 import { List, ListRow, SwitchRow } from "./design-list";
 import { OtherChoicesButton, withPicked } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";
