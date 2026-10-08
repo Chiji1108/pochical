@@ -116,10 +116,12 @@ public actor Account {
   }
 
   /// better-auth's anonymous sign-in, which answers 415 without the JSON
-  /// type and body; the token comes back in `set-auth-token`.
+  /// type and body; the token comes back in `set-auth-token`. Its cookie is
+  /// not kept: the app calls with the token alone (`linkApple`).
   private func signInAnonymously() async throws -> String {
     var request = URLRequest(url: server.appending(path: "api/auth/sign-in/anonymous"))
     request.httpMethod = "POST"
+    request.httpShouldHandleCookies = false
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.httpBody = Data("{}".utf8)
     let (_, response) = try await send(request)

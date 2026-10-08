@@ -53,6 +53,7 @@ private let server = URL(string: "http://localhost:8787")!
   #expect(request.httpMethod == "POST")
   #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
   #expect(request.httpBody == Data("{}".utf8))
+  #expect(!request.httpShouldHandleCookies)
   #expect(try await account.headers() == ["Authorization": ["Bearer made"]])
 }
 
@@ -87,6 +88,7 @@ private let server = URL(string: "http://localhost:8787")!
     let request = try #require(fake.requests.withLock { $0.first })
     #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/link-social")
     #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer kept")
+    #expect(!request.httpShouldHandleCookies)
     let body = try #require(
       try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
     #expect(body["provider"] as? String == "apple")
