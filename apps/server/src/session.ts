@@ -13,6 +13,7 @@ let auth: Auth | undefined;
 /** better-auth for this Worker's D1, made on first use. */
 export const getAuth = (): Auth => {
   auth ??= createAuth(env.DB, {
+    appleAppId: env.APPLE_APP_ID,
     baseURL: env.BETTER_AUTH_URL,
     // Its sockets close on the user's DO and their groups'.
     onSessionEnd: async ({ id, userId }) => {

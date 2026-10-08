@@ -78,3 +78,39 @@ private let server = URL(string: "http://localhost:8787")!
   await #expect(throws: SignInError.self) { try await account.token() }
   #expect(store.token() == nil)
 }
+
+@Test func linksAppleOnTheSessionAndSaysWhenTheAccountIsInUse() async throws {
+  for (status, said) in [(200, LinkResult.linked), (409, .inUse)] {
+    let fake = FakeServer(status: status)
+    let account = Account(server: server, store: MemoryStore("kept"), send: fake.send)
+    #expect(try await account.linkApple(idToken: "id-token", nonce: "raw") == said)
+    let request = try #require(fake.requests.withLock { $0.first })
+    #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/link-social")
+    #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer kept")
+    let body = try #require(
+      try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
+    #expect(body["provider"] as? String == "apple")
+    #expect(body["idToken"] as? [String: String] == ["nonce": "raw", "token": "id-token"])
+  }
+  let refused = Account(server: server, store: MemoryStore("kept"), send: FakeServer(status: 401).send)
+  await #expect(throws: LinkError.self) {
+    try await refused.linkApple(idToken: "id-token", nonce: "raw")
+  }
+}
+
+@Test func readsTheEmailAnIDTokenCarries() {
+  // {"email":"a+b@privaterelay.appleid.com","sub":"001"}, base64url without padding.
+  let body = Data(#"{"email":"a+b@privaterelay.appleid.com","sub":"001"}"#.utf8)
+    .base64EncodedString().replacingOccurrences(of: "+", with: "-")
+    .replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+  #expect(LinkedAccount.email(in: "head.\(body).signature") == "a+b@privaterelay.appleid.com")
+  #expect(LinkedAccount.email(in: "not-a-token") == nil)
+}
+
+@Test func asksAppleWithTheNoncesSHA256() {
+  let nonce = SignInNonce()
+  #expect(nonce.raw.count == 64)
+  #expect(nonce.hashed.count == 64)
+  #expect(nonce.hashed != nonce.raw)
+  #expect(SignInNonce().raw != nonce.raw)
+}

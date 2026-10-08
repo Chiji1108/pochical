@@ -291,10 +291,10 @@
 				};
 			};
 			buildConfigurationList = C6C382DD307343AF00C0C5B8 /* Build configuration list for PBXProject "Pochical" */;
-			developmentRegion = en;
+			developmentRegion = ja;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				ja,
 				Base,
 			);
 			mainGroup = C6C382D9307343AF00C0C5B8;
