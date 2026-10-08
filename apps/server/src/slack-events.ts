@@ -16,6 +16,7 @@ import {
   signedBySlack,
   slackCall,
   slackFile,
+  slackSecret,
   stringOf,
 } from "./slack";
 import { answerSupport, tellSupportChanged } from "./support-answers";
@@ -198,7 +199,7 @@ const workOf = (
   event: Record<string, unknown>
 ): Promise<void> | undefined => {
   const channel = isRecord(event.item) ? event.item.channel : event.channel;
-  if (channel !== env.SLACK_CHANNEL_ID) {
+  if (channel !== slackSecret(env.SLACK_CHANNEL_ID)) {
     return undefined;
   }
   if (event.type === "reaction_added" || event.type === "reaction_removed") {
@@ -224,7 +225,7 @@ export const slackEvents = async (
 ): Promise<Response> => {
   const body = await request.text();
   const signed = await signedBySlack(
-    env.SLACK_SIGNING_SECRET,
+    slackSecret(env.SLACK_SIGNING_SECRET),
     request.headers,
     body,
     Date.now()

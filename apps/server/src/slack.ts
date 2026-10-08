@@ -11,6 +11,12 @@ import { supportPhotoKey } from "./photos";
 import { keepSlackTs } from "./support-chat";
 import type { SupportLineOf } from "./support-chat";
 
+/**
+ * A Slack secret, or "" where this server has none: Env says they are
+ * there, as production has them, but a local server may not.
+ */
+export const slackSecret = (value: string | undefined): string => value ?? "";
+
 /** Pochical's people's admin site (apps/admin). */
 export const ADMIN_SITE = "https://admin.pochical.app";
 
@@ -154,8 +160,8 @@ export const slackCall = async (
   method: string,
   args: Record<string, unknown>
 ): Promise<Record<string, unknown> | null> => {
-  const token = env.SLACK_BOT_TOKEN;
-  const channel = env.SLACK_CHANNEL_ID;
+  const token = slackSecret(env.SLACK_BOT_TOKEN);
+  const channel = slackSecret(env.SLACK_CHANNEL_ID);
   if (token === "" || channel === "") {
     return null;
   }
@@ -372,7 +378,7 @@ export const slackFile = async (
   url: string,
   most: number
 ): Promise<{ bytes: ArrayBuffer; type: string } | null> => {
-  const token = env.SLACK_BOT_TOKEN;
+  const token = slackSecret(env.SLACK_BOT_TOKEN);
   if (token === "" || !url.startsWith("https://files.slack.com/")) {
     return null;
   }
