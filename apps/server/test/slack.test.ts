@@ -561,8 +561,17 @@ describe("a user's photo, in Slack", () => {
     const withWords = await send({ text: "これです" });
     const id = crypto.randomUUID();
     const kept = await send({ id });
+    const again = await send({ id });
+    const twice = await send({});
     await call("SupportService/UnsendSupportMessage", { id }, token);
     const gone = await env.PHOTOS.head(`support/${userId}/photos/${photoId}`);
-    expect([early, withWords, kept, gone]).toStrictEqual([400, 400, 200, null]);
+    expect([early, withWords, kept, again, twice, gone]).toStrictEqual([
+      400,
+      400,
+      200,
+      200,
+      409,
+      null,
+    ]);
   });
 });

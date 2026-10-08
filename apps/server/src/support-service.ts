@@ -104,6 +104,19 @@ const contentOf = async (
   if ((await env.PHOTOS.head(supportPhotoKey(userId, photo.id))) === null) {
     throw new ConnectError("Upload the photo first", Code.FailedPrecondition);
   }
+  // A photo is one line's: taking that line back deletes it.
+  const [used] = await drizzle(env.DB)
+    .select({ id: supportMessages.id })
+    .from(supportMessages)
+    .where(
+      and(
+        eq(supportMessages.userId, userId),
+        eq(supportMessages.photoId, photo.id)
+      )
+    );
+  if (used !== undefined) {
+    throw new ConnectError("The photo is sent already", Code.AlreadyExists);
+  }
   return {
     photoHeight: photo.height,
     photoId: photo.id,
@@ -199,7 +212,6 @@ export const registerSupportService = (router: ConnectRouter): void => {
       if (!UUID.test(id)) {
         throw new ConnectError("id is not a UUID", Code.InvalidArgument);
       }
-      const content = await contentOf(user.id, text, photo);
       const db = drizzle(env.DB);
       // A send tried again finds its line kept, and is not counted again.
       const [before] = await db
@@ -214,6 +226,7 @@ export const registerSupportService = (router: ConnectRouter): void => {
           message: messageOf(await lineInChat(user.id, id)),
         });
       }
+      const content = await contentOf(user.id, text, photo);
       await holdBack(user.id);
       const repliedTo = await replyToIn(user.id, replyTo);
       const row: SupportRow = {
