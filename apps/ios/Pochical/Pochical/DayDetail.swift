@@ -29,6 +29,8 @@ struct DayDetail: View {
   @State private var newCoworker = ""
   /// 一緒に働く人's list, a check by each one on the day.
   @State private var choosingPeople = false
+  /// The patterns' list, to pick the day's shift.
+  @State private var choosingShift = false
   /// 人を追加 past coworkersMax.
   @State private var coworkersAreFull = false
 
@@ -113,31 +115,44 @@ struct DayDetail: View {
     entry.flatMap { entry in patterns.first { $0.id == entry.shift } }
   }
 
-  /// The shift, picked from the person's patterns; picking another keeps
-  /// the day's memo and people, as entering does.
+  /// The shift, picked from the person's patterns in a list of its own,
+  /// as iOS picks one of many (a ringtone, an event's calendar): a menu
+  /// runs long past a few, and the list shows each one's hours too.
+  /// Picking another keeps the day's memo and people, as entering does.
   private var shiftRow: some View {
-    Picker(
-      "シフト",
-      selection: Binding(
-        get: { entry?.shift ?? "" },
-        set: { shift in
-          guard !shift.isEmpty, shift != entry?.shift else { return }
-          onChange(DayEntry(shift: shift, note: entry?.note, people: entry?.people))
-        })
-    ) {
-      if entry == nil {
-        Text("なし").tag("")
-      }
-      ForEach(patterns, id: \.id) { pattern in
-        Label {
-          Text(pattern.name)
-        } icon: {
-          ShiftMark(pattern: pattern, size: 18)
+    Button {
+      choosingShift = true
+    } label: {
+      HStack(spacing: 8) {
+        LabeledContent("シフト") {
+          if let pattern {
+            Label {
+              Text(pattern.name).lineLimit(1)
+            } icon: {
+              ShiftMark(pattern: pattern, size: 18)
+            }
+          } else {
+            Text("なし")
+          }
         }
-        .tag(pattern.id)
+        Image(systemName: "chevron.right")
+          .font(.footnote.weight(.semibold))
+          .foregroundStyle(colors.textQuaternary)
       }
+      .contentShape(.rect)
     }
-    .pickerStyle(.menu)
+    .buttonStyle(.plain)
+    // The line under it from where its words start, not the mark's.
+    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+    .sheet(isPresented: $choosingShift) {
+      ShiftChoices(patterns: patterns, picked: entry?.shift) { shift in
+        if shift != entry?.shift {
+          onChange(DayEntry(shift: shift, note: entry?.note, people: entry?.people))
+        }
+        choosingShift = false
+      }
+      .presentationDetents([.medium, .large])
+    }
   }
 
   /// The day's own hours, a change from the pattern's said in words: 早出
@@ -369,6 +384,80 @@ private struct PeopleChecklist: View {
           Button("完了", systemImage: "checkmark", role: .confirm) { dismiss() }
         }
       }
+    }
+  }
+}
+
+/// The day's shift picked from the person's patterns, in their order as
+/// 設定's シフトパターン lists them, each with its hours, the day's with a
+/// check. Picking one closes it. Past a page of ポチポチ入力's keys, a
+/// search narrows them by name.
+private struct ShiftChoices: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.dismiss) private var dismiss
+  let patterns: [Pattern]
+  let picked: PatternID?
+  let onPick: (PatternID) -> Void
+  @State private var query = ""
+
+  var body: some View {
+    let searching = patterns.count > patternsPerPage
+    let words = query.trimmingCharacters(in: .whitespaces)
+    let shown = words.isEmpty ? patterns : patterns.filter { $0.name.localizedStandardContains(words) }
+    NavigationStack {
+      List {
+        Section {
+          ForEach(shown) { pattern in
+            let isPicked = pattern.id == picked
+            Button {
+              onPick(pattern.id)
+            } label: {
+              HStack(spacing: 12) {
+                LabeledContent {
+                  Text(patternTimeText(pattern.time))
+                } label: {
+                  Label {
+                    Text(pattern.name).lineLimit(1).foregroundStyle(colors.textPrimary)
+                  } icon: {
+                    ShiftMark(pattern: pattern, size: 22)
+                  }
+                }
+                Image(systemName: "checkmark")
+                  .fontWeight(.semibold)
+                  .foregroundStyle(colors.accentDefault)
+                  .opacity(isPicked ? 1 : 0)
+              }
+              .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(isPicked ? .isSelected : [])
+          }
+        }
+        .settingsRows()
+      }
+      .settingsList()
+      .navigationTitle("シフト")
+      .navigationBarTitleDisplayMode(.inline)
+      .modifier(Searching(on: searching, query: $query))
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+        }
+      }
+    }
+  }
+}
+
+/// A search over a list, only when it is long enough to want one.
+private struct Searching: ViewModifier {
+  let on: Bool
+  @Binding var query: String
+
+  func body(content: Content) -> some View {
+    if on {
+      content.searchable(text: $query, prompt: "シフトを探す")
+    } else {
+      content
     }
   }
 }

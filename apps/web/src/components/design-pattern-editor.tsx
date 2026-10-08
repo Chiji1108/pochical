@@ -104,7 +104,9 @@ function pageDivider(index: number) {
   );
 }
 
-function timeText({ time }: Pattern) {
+// A pattern's hours as its rows say them: 9:00 – 18:00, 翌 before an end
+// the next day, or 時間なし.
+export function timeText({ time }: Pattern) {
   if (!time) {
     return "時間なし";
   }
