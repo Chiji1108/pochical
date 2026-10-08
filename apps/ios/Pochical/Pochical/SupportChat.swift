@@ -1,3 +1,4 @@
+import PhotosUI
 import PochicalDesign
 import PochicalKit
 import SwiftUI
@@ -82,11 +83,24 @@ struct SupportChatScreen: View {
   @State private var unfolded: Set<String> = []
   /// The line a tapped quote goes to.
   @State private var going: String?
+  /// Photos picked to send, waiting over the composer.
+  @State private var pickedPhotos: [PickedPhoto] = []
+  /// What the photo picker just handed over, read into `pickedPhotos`.
+  @State private var photoItems: [PhotosPickerItem] = []
+  @State private var readingPhotos = false
+  /// The photo open large.
+  @State private var viewing: LinePhoto?
+  /// Said over the lines for a moment, as a toast.
+  @State private var notice: String?
+  @State private var notices = 0
+  /// The sends so far, one after another, so the lines keep their order.
+  @State private var sending: Task<Void, Never>?
   private let field = ComposerBox()
 
   struct Waiting: Identifiable, Hashable {
     let id: String
-    let text: String
+    var text = ""
+    var photo: LinePhoto?
     var replyTo: String?
     var failed = false
   }
@@ -166,6 +180,15 @@ struct SupportChatScreen: View {
     .sheet(item: $reactingTo) { line in
       EmojiKeyboardSheet { react($0, on: line) }
     }
+    .fullScreenCover(item: $viewing) { photo in
+      PhotoViewer(photo: photo, groupID: ChatPhotos.support) { save(photo) }
+    }
+    .overlay(alignment: .top) {
+      if let notice {
+        NoticeCapsule(words: notice)
+          .transition(.opacity.combined(with: .move(edge: .top)))
+      }
+    }
     .alert(
       "送信を取り消しますか？",
       isPresented: Binding { unsending != nil } set: { if !$0 { unsending = nil } }
@@ -189,7 +212,7 @@ struct SupportChatScreen: View {
       Text("使いにくいところ、ほしい機能、不具合のこと。ちょっとしたことでも、気軽に書いてください。返事は数日のうちに、ここに届きます。")
         .font(.subheadline)
         .foregroundStyle(colors.textSecondary)
-      Text("届くのは、ここに書いたことと、アプリと端末の情報だけです。\n\(Self.device)")
+      Text("届くのは、ここに書いたことと写真、それにアプリと端末の情報だけです。\n\(Self.device)")
         .font(.caption)
         .foregroundStyle(colors.textTertiary)
     }
@@ -235,42 +258,53 @@ struct SupportChatScreen: View {
     .padding(.horizontal, 16)
   }
 
+  /// Its words in a bubble, or its photo, under the line it answers; a
+  /// photo opens large at a tap.
   private func bubble(_ line: SupportLine, first: Bool) -> some View {
-    MessageBubble(
-      text: line.text, mine: !line.fromSupport, first: first, waiting: false,
-      nameOf: { _ in "" }, quote: line.replyTo.map(quote(of:)),
-      onOpenQuote: { going = line.replyTo },
-      unfolded: unfolded.contains(line.id),
-      onUnfold: { withAnimation { _ = unfolded.insert(line.id) } })
+    LineContent(
+      text: line.text, days: [], members: [], photo: line.photo,
+      quote: line.replyTo.map(quote(of:)), groupID: ChatPhotos.support,
+      mine: !line.fromSupport, first: first, waiting: false, nameOf: { _ in "" },
+      onOpenQuote: { going = line.replyTo }, unfolded: unfolded.contains(line.id),
+      onUnfold: { withAnimation { _ = unfolded.insert(line.id) } }
+    )
+    .onTapGesture { if let photo = line.photo { viewing = photo } }
   }
 
-  /// A line on its way, faint; held, only コピー yet.
+  /// A line on its way, faint; held, only コピー yet for words.
   private func waitingRow(_ line: Waiting) -> some View {
-    let bubble = MessageBubble(
-      text: line.text, mine: true, first: false, waiting: !line.failed, nameOf: { _ in "" },
-      quote: line.replyTo.map(quote(of:)))
+    let content = LineContent(
+      text: line.text, days: [], members: [], photo: line.photo,
+      quote: line.replyTo.map(quote(of:)), groupID: ChatPhotos.support, mine: true,
+      first: false, waiting: !line.failed, nameOf: { _ in "" })
     return HStack(alignment: .top, spacing: 8) {
       Spacer(minLength: 48)
-      bubble.heldForActions(lifted: acting == line.id) { frame, finger in
+      content.heldForActions(lifted: acting == line.id) { frame, finger in
+        guard line.photo == nil else { return }
         openActions(
           MessageActionsRequest(
-            lineID: line.id, frame: frame, mine: true, bubble: AnyView(bubble), finger: finger,
+            lineID: line.id, frame: frame, mine: true, bubble: AnyView(content), finger: finger,
             actions: [copy(line.text)]))
       }
     }
     .padding(.horizontal, 16)
   }
 
-  /// A line's menu (/design's): 返信 and コピー, and for one's own,
-  /// 送信取消 apart in the danger color.
+  /// A line's menu (/design's): 返信, then コピー for words or 保存 for a
+  /// photo, and for one's own, 送信取消 apart in the danger color.
   private func actions(for line: SupportLine) -> [MessageAction] {
     var actions = [
       MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") {
         withAnimation { replying = line }
         field.focus()
-      },
-      copy(line.text),
+      }
     ]
+    if let photo = line.photo {
+      actions.append(
+        MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(photo) })
+    } else {
+      actions.append(copy(line.text))
+    }
     if !line.fromSupport {
       actions.append(
         MessageAction(
@@ -302,12 +336,36 @@ struct SupportChatScreen: View {
     if line.unsent {
       return LineQuote(seq: 0, writer: writer, words: "取り消されたメッセージ")
     }
-    return LineQuote(seq: 0, writer: writer, words: lineWords(line.text, days: [], nameOf: { _ in "" }))
+    return LineQuote(
+      seq: 0, writer: writer,
+      words: lineWords(line.text, days: [], photo: line.photo != nil, nameOf: { _ in "" }),
+      photo: line.photo)
   }
 
   /// The last line, as 設定's row shows it.
   static func summary(_ line: SupportLine) -> String {
-    line.unsent ? unsentLine(supportName, mine: !line.fromSupport) : line.text
+    if line.unsent { return unsentLine(supportName, mine: !line.fromSupport) }
+    return lineWords(line.text, days: [], photo: line.photo != nil, nameOf: { _ in "" })
+  }
+
+  private func save(_ photo: LinePhoto) {
+    Task {
+      let saved = await savePhoto(photo, in: ChatPhotos.support, calls: groupCalls)
+      say(saved ? "写真を保存しました" : "保存できませんでした")
+    }
+  }
+
+  /// Says `words` over the lines for a moment, as a toast does.
+  private func say(_ words: String) {
+    notices += 1
+    let said = notices
+    withAnimation { notice = words }
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(2.5))
+      if notices == said {
+        withAnimation { notice = nil }
+      }
+    }
   }
 
   /// Opens a line's reactions and menu over everything (ChatScreen's).
@@ -339,6 +397,7 @@ struct SupportChatScreen: View {
     if replying?.id == line.id { replying = nil }
     Task {
       guard let kept = try? await groupCalls.unsendSupport(line.id) else { return }
+      if let photo = line.photo { ChatPhotos.forget(photo.id, in: ChatPhotos.support) }
       replace(kept)
     }
   }
@@ -353,11 +412,15 @@ struct SupportChatScreen: View {
     let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     return VStack(spacing: 0) {
       if let replying {
-        ReplyBar(quote: quote(of: replying.id), groupID: "") {
+        ReplyBar(quote: quote(of: replying.id), groupID: ChatPhotos.support) {
           withAnimation { self.replying = nil }
         }
       }
+      if !pickedPhotos.isEmpty {
+        PhotoTray(photos: $pickedPhotos)
+      }
       HStack(alignment: .bottom, spacing: 8) {
+        photoButton
         ComposerField(
           placeholder: "メッセージ", text: $draft, limit: TextLimits.chatMessage,
           composing: $composing, box: field
@@ -375,13 +438,7 @@ struct SupportChatScreen: View {
         .frame(minHeight: 38)
         .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
         Button {
-          let text = String(field.commit().prefix(TextLimits.chatMessage))
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-          guard !text.isEmpty else { return }
-          draft = ""
-          let replyTo = replying?.id
-          replying = nil
-          send(Waiting(id: UUID().uuidString.lowercased(), text: text, replyTo: replyTo))
+          sendAll()
         } label: {
           Image(systemName: "arrow.up")
             .font(.system(size: 16, weight: .bold))
@@ -391,7 +448,7 @@ struct SupportChatScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("送る")
-        .opacity(trimmed.isEmpty && !composing ? 0.5 : 1)
+        .opacity((trimmed.isEmpty && pickedPhotos.isEmpty && !composing) || readingPhotos ? 0.5 : 1)
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
@@ -407,18 +464,104 @@ struct SupportChatScreen: View {
     }
   }
 
-  /// Sends a line, faint until kept; one that could not go stays to be
-  /// tried again with the same id, so it is kept once.
+  /// The photo tool: the system's picker, chatRules.photosPerSend photos
+  /// at most (ChatScreen's).
+  @ViewBuilder private var photoButton: some View {
+    let room = Chat.photosPerSend - pickedPhotos.count
+    if room > 0 {
+      PhotosPicker(
+        selection: $photoItems, maxSelectionCount: room, matching: .images,
+        preferredItemEncoding: .compatible
+      ) {
+        Image(systemName: "photo")
+          .font(.system(size: 20))
+          .foregroundStyle(colors.textSecondary)
+          .frame(width: 38, height: 38)
+      }
+      .accessibilityLabel("写真を送る")
+      .onChange(of: photoItems) { _, items in
+        guard !items.isEmpty else { return }
+        photoItems = []
+        Task { await readPhotos(items) }
+      }
+    } else {
+      Button("写真を送る", systemImage: "photo") {
+        say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
+      }
+      .labelStyle(.iconOnly)
+      .font(.system(size: 20))
+      .foregroundStyle(colors.textQuaternary)
+      .frame(width: 38, height: 38)
+    }
+  }
+
+  /// Reads picked photos and shrinks them to send, into the tray.
+  private func readPhotos(_ items: [PhotosPickerItem]) async {
+    readingPhotos = true
+    defer { readingPhotos = false }
+    var unreadable = false
+    for item in items {
+      guard let data = try? await item.loadTransferable(type: Data.self),
+        let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
+      else {
+        unreadable = true
+        continue
+      }
+      let picked = PickedPhoto(
+        shrunk: shrunk,
+        thumbnail: UIImage(data: shrunk.jpeg)?.preparingThumbnail(of: CGSize(width: 128, height: 128)))
+      if pickedPhotos.count < Chat.photosPerSend {
+        withAnimation { pickedPhotos.append(picked) }
+      }
+    }
+    if unreadable {
+      say("開けない写真がありました")
+    }
+  }
+
+  /// Sends the tray's photos, each its own line, then the words; the reply
+  /// goes with the first.
+  private func sendAll() {
+    guard !readingPhotos else { return }
+    let text = String(field.commit().prefix(TextLimits.chatMessage))
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    var replyTo = replying?.id
+    var lines: [Waiting] = []
+    for picked in pickedPhotos {
+      guard (try? ChatPhotos.keep(picked.shrunk.jpeg, as: picked.id, in: ChatPhotos.support)) != nil
+      else { continue }
+      let photo = LinePhoto(id: picked.id, width: picked.shrunk.width, height: picked.shrunk.height)
+      lines.append(Waiting(id: UUID().uuidString.lowercased(), photo: photo, replyTo: replyTo))
+      replyTo = nil
+    }
+    if !text.isEmpty {
+      lines.append(Waiting(id: UUID().uuidString.lowercased(), text: text, replyTo: replyTo))
+    }
+    guard !lines.isEmpty else { return }
+    draft = ""
+    replying = nil
+    withAnimation { pickedPhotos = [] }
+    for line in lines { send(line) }
+  }
+
+  /// Sends a line, faint until kept, after the ones before it; a photo is
+  /// uploaded first. One that could not go stays to be tried again with
+  /// the same id, so it is kept once.
   private func send(_ line: Waiting) {
     if let index = waiting.firstIndex(where: { $0.id == line.id }) {
       waiting[index].failed = false
     } else {
       waiting.append(line)
     }
-    Task {
+    let before = sending
+    sending = Task {
+      await before?.value
       do {
+        if let photo = line.photo {
+          try await groupCalls.uploadSupportPhoto(photo.id)
+        }
         let kept = try await groupCalls.sendSupport(
-          line.text, id: line.id, device: Self.device, replyTo: line.replyTo)
+          line.text, id: line.id, device: Self.device, replyTo: line.replyTo, photo: line.photo)
         waiting.removeAll { $0.id == line.id }
         lines.append(kept)
       } catch {

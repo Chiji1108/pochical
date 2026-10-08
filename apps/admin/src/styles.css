@@ -75,6 +75,16 @@ th {
   background: var(--staff);
 }
 
+.photo {
+  border-radius: 8px;
+  display: block;
+  height: auto;
+  max-height: 260px;
+  max-width: 220px;
+  object-fit: contain;
+  width: auto;
+}
+
 .quote {
   border-left: 3px solid var(--line);
   color: var(--quiet);

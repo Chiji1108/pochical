@@ -2,27 +2,71 @@
 // Slack's Events API tells it at `/slack/events`: a reply in a chat's
 // thread is an answer, an emoji on a user's line is their reaction, and
 // an answer deleted there is taken back.
+import { chatRules } from "@pochical/design/chat";
 import { waitUntil } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
+import { supportPhotoKey } from "./photos";
 import {
   emojiOfSlackName,
   fromSlackText,
   isRecord,
   signedBySlack,
   slackCall,
+  slackFile,
   stringOf,
 } from "./slack";
 import type { SlackEnv } from "./slack";
 import { answerSupport, tellSupportChanged } from "./support-answers";
-import { lineWhere, reactTo, unsendLine } from "./support-chat";
+import type { SupportPhotoOf } from "./support-answers";
+import {
+  lineWhere,
+  linesWithSlackTs,
+  reactTo,
+  unsendLine,
+} from "./support-chat";
 
 /**
- * A reply in a chat's thread, by one of Pochical's people: sent to the
- * user as ポチカル and marked ✅, or answered with why not. Slack sends an
- * event again when unsure it arrived; its message id keeps it once.
+ * An image Pochical's people shared, kept under the user's support photos
+ * at a size the chat shows: Slack's 1024 pixel picture of it, or the
+ * image itself when it has none and fits chatRules.photoMaxBytes.
+ */
+const keepSlackPhoto = async (
+  env: SlackEnv,
+  userId: string,
+  file: Record<string, unknown>
+): Promise<SupportPhotoOf | null> => {
+  const fileId = stringOf(file.id);
+  const thumb = stringOf(file.thumb_1024);
+  const url = thumb ?? stringOf(file.url_private_download);
+  const width = thumb === undefined ? file.original_w : file.thumb_1024_w;
+  const height = thumb === undefined ? file.original_h : file.thumb_1024_h;
+  if (
+    fileId === undefined ||
+    url === undefined ||
+    typeof width !== "number" ||
+    typeof height !== "number"
+  ) {
+    return null;
+  }
+  const image = await slackFile(env, url, chatRules.photoMaxBytes);
+  if (image === null) {
+    return null;
+  }
+  const id = `slack-${fileId}`;
+  await env.PHOTOS.put(supportPhotoKey(userId, id), image.bytes, {
+    httpMetadata: { contentType: image.type },
+  });
+  return { height, id, width };
+};
+
+/**
+ * A reply in a chat's thread, by one of Pochical's people: each image in
+ * it, then its words, sent to the user as ポチカル and marked ✅, or
+ * answered with what did not go. Slack sends an event again when unsure it
+ * arrived; its message and files' ids keep each once.
  */
 const answerFromSlack = async (
   env: SlackEnv,
@@ -40,39 +84,66 @@ const answerFromSlack = async (
   if (chat === undefined) {
     return;
   }
-  // Only words reach the user: a reply with a file is not half sent.
-  if (Array.isArray(event.files) && event.files.length > 0) {
-    await slackCall(env, "chat.postMessage", {
-      text: "届けられませんでした：写真やファイルはまだ届けられません。文だけで返信してください。",
-      thread_ts: thread,
-    });
-    return;
+  const base = stringOf(event.client_msg_id) ?? `slack-${ts}`;
+  const files = Array.isArray(event.files) ? event.files.filter(isRecord) : [];
+  const images = files
+    .filter((file) => stringOf(file.mimetype)?.startsWith("image/") === true)
+    .slice(0, chatRules.photosPerSend);
+  const missed: string[] = [];
+  if (images.length < files.length) {
+    missed.push("写真のほかのファイルや、一度に送れる枚数を超えた写真");
   }
-  const kept = await answerSupport(
-    env,
-    chat.userId,
-    fromSlackText(stringOf(event.text) ?? "", event.blocks),
-    { id: stringOf(event.client_msg_id) ?? `slack-${ts}`, slackTs: ts }
-  );
-  await (kept === null
-    ? slackCall(env, "chat.postMessage", {
-        text: "届けられませんでした：空か、長すぎます。",
-        thread_ts: thread,
-      })
-    : slackCall(env, "reactions.add", {
+  for (const [index, image] of images.entries()) {
+    // oxlint-disable-next-line no-await-in-loop -- the photos go in order
+    const photo = await keepSlackPhoto(env, chat.userId, image);
+    const kept =
+      photo !== null &&
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      (await answerSupport(env, chat.userId, "", {
+        id: `${base}-photo-${index}`,
+        photo,
+        slackTs: ts,
+      })) !== null;
+    if (!kept) {
+      missed.push("読めなかった写真");
+    }
+  }
+  const words = fromSlackText(stringOf(event.text) ?? "", event.blocks);
+  if (words.trim() !== "" || images.length === 0) {
+    const kept = await answerSupport(env, chat.userId, words, {
+      id: base,
+      slackTs: ts,
+    });
+    if (kept === null) {
+      missed.push("空か、長すぎる文");
+    }
+  }
+  await (missed.length === 0
+    ? slackCall(env, "reactions.add", {
         name: "white_check_mark",
         timestamp: ts,
+      })
+    : slackCall(env, "chat.postMessage", {
+        text: `届けられなかったもの：${[...new Set(missed)].join("、")}`,
+        thread_ts: thread,
       }));
 };
 
-/** An answer deleted in Slack, taken back from the user's chat too. */
+/**
+ * An answer deleted in Slack, taken back from the user's chat too: each
+ * line it was, its photos and its words.
+ */
 const unsendFromSlack = async (env: SlackEnv, ts: string): Promise<void> => {
-  const line = await lineWhere(env, { slackTs: ts });
-  if (line === undefined || !line.fromSupport || line.unsent) {
-    return;
+  const withTs = await linesWithSlackTs(env, ts);
+  const lines = withTs.filter((line) => line.fromSupport && !line.unsent);
+  for (const line of lines) {
+    // oxlint-disable-next-line no-await-in-loop -- a few at most
+    await unsendLine(env, line);
   }
-  await unsendLine(env, line.id);
-  await tellSupportChanged(env, line.userId);
+  const [first] = lines;
+  if (first !== undefined) {
+    await tellSupportChanged(env, first.userId);
+  }
 };
 
 /**

@@ -10,6 +10,8 @@ import {
   PHOTO_PATH,
   PREVIEW_IMAGE_PATH,
   putPhoto,
+  SUPPORT_PHOTO_PATH,
+  supportPhoto,
 } from "./photos";
 import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
@@ -87,6 +89,39 @@ const photoRequest = async (
   }
 };
 
+/** A picture by its path: a preview's, or a photo in a chat; else none. */
+const pictureRequest = async (
+  request: Request,
+  env: Env,
+  pathname: string
+): Promise<Response | undefined> => {
+  // A link preview's picture, for anyone signed in: its id comes only
+  // with a preview.
+  const previewImage = PREVIEW_IMAGE_PATH.exec(pathname)?.groups?.imageId;
+  if (previewImage !== undefined) {
+    if (!(await sessionUser(request.headers))) {
+      return signInFirst();
+    }
+    return await getPreviewImage(env, previewImage);
+  }
+
+  // The user's photos in their chat with Pochical's people.
+  const supportPhotoId = SUPPORT_PHOTO_PATH.exec(pathname)?.groups?.photoId;
+  if (supportPhotoId !== undefined) {
+    const user = await sessionUser(request.headers);
+    return user
+      ? await supportPhoto(request, env, supportPhotoId, user.id)
+      : signInFirst();
+  }
+
+  // A group's photos, as its socket: its members alone, by their own DO.
+  const photo = PHOTO_PATH.exec(pathname)?.groups;
+  if (photo?.groupId !== undefined && photo.photoId !== undefined) {
+    return await photoRequest(request, env, photo.groupId, photo.photoId);
+  }
+  return undefined;
+};
+
 /** better-auth's own paths, anonymous sign-ins held back by address. */
 const authRequest = async (
   request: Request,
@@ -145,22 +180,9 @@ export default {
       return await env.GROUPS.getByName(groupId).fetch(forUser(request, user));
     }
 
-    // A link preview's picture, for anyone signed in: its id comes only
-    // with a preview.
-    const previewImage = PREVIEW_IMAGE_PATH.exec(pathname)?.groups?.imageId;
-    if (previewImage !== undefined) {
-      if (!(await sessionUser(request.headers))) {
-        return signInFirst();
-      }
-      return await getPreviewImage(env, previewImage);
-    }
-
-    // A group's photos, as its socket: its members alone, by their own DO.
-    const photo = PHOTO_PATH.exec(pathname)?.groups;
-    if (photo?.groupId !== undefined && photo.photoId !== undefined) {
-      return await photoRequest(request, env, photo.groupId, photo.photoId);
-    }
-
-    return new Response("Not found", { status: 404 });
+    return (
+      (await pictureRequest(request, env, pathname)) ??
+      new Response("Not found", { status: 404 })
+    );
   },
 } satisfies ExportedHandler<Env>;

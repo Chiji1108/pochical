@@ -45,9 +45,23 @@ public nonisolated struct Pochical_V1_SupportMessage: Sendable {
   /// Each emoji on it, and who put it there; none once taken back.
   public var reactions: [Pochical_V1_SupportReaction] = []
 
+  /// A photo, as the line instead of words; uploaded to the user's support
+  /// photos (PUT /v1/support/photos/{id}) before the line is sent, read
+  /// from there (GET). None once taken back.
+  public var photo: Pochical_V1_ChatPhoto {
+    get {_photo ?? Pochical_V1_ChatPhoto()}
+    set {_photo = newValue}
+  }
+  /// Returns true if `photo` has been explicitly set.
+  public var hasPhoto: Bool {self._photo != nil}
+  /// Clears the value of `photo`. Subsequent reads from it will return its default value.
+  public mutating func clearPhoto() {self._photo = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _photo: Pochical_V1_ChatPhoto? = nil
 }
 
 /// An emoji on a line, put there by the user, by Pochical's people, or by
@@ -111,9 +125,22 @@ public nonisolated struct Pochical_V1_SendSupportMessageRequest: Sendable {
   /// is left out.
   public var replyTo: String = String()
 
+  /// A photo already uploaded, sent with no words. FAILED_PRECONDITION
+  /// while it is not uploaded.
+  public var photo: Pochical_V1_ChatPhoto {
+    get {_photo ?? Pochical_V1_ChatPhoto()}
+    set {_photo = newValue}
+  }
+  /// Returns true if `photo` has been explicitly set.
+  public var hasPhoto: Bool {self._photo != nil}
+  /// Clears the value of `photo`. Subsequent reads from it will return its default value.
+  public mutating func clearPhoto() {self._photo = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _photo: Pochical_V1_ChatPhoto? = nil
 }
 
 public nonisolated struct Pochical_V1_SendSupportMessageResponse: Sendable {
@@ -235,7 +262,7 @@ fileprivate nonisolated let _protobuf_package = "pochical.v1"
 
 nonisolated extension Pochical_V1_SupportMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SupportMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}from_support\0\u{1}text\0\u{3}sent_at_ms\0\u{3}reply_to\0\u{1}unsent\0\u{1}reactions\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}from_support\0\u{1}text\0\u{3}sent_at_ms\0\u{3}reply_to\0\u{1}unsent\0\u{1}reactions\0\u{1}photo\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -250,12 +277,17 @@ nonisolated extension Pochical_V1_SupportMessage: SwiftProtobuf.Message, SwiftPr
       case 5: try { try decoder.decodeSingularStringField(value: &self.replyTo) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.unsent) }()
       case 7: try { try decoder.decodeRepeatedMessageField(value: &self.reactions) }()
+      case 8: try { try decoder.decodeSingularMessageField(value: &self._photo) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
@@ -277,6 +309,9 @@ nonisolated extension Pochical_V1_SupportMessage: SwiftProtobuf.Message, SwiftPr
     if !self.reactions.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.reactions, fieldNumber: 7)
     }
+    try { if let v = self._photo {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -288,6 +323,7 @@ nonisolated extension Pochical_V1_SupportMessage: SwiftProtobuf.Message, SwiftPr
     if lhs.replyTo != rhs.replyTo {return false}
     if lhs.unsent != rhs.unsent {return false}
     if lhs.reactions != rhs.reactions {return false}
+    if lhs._photo != rhs._photo {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -389,7 +425,7 @@ nonisolated extension Pochical_V1_GetSupportChatResponse: SwiftProtobuf.Message,
 
 nonisolated extension Pochical_V1_SendSupportMessageRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SendSupportMessageRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}text\0\u{1}device\0\u{3}reply_to\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}text\0\u{1}device\0\u{3}reply_to\0\u{1}photo\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -401,12 +437,17 @@ nonisolated extension Pochical_V1_SendSupportMessageRequest: SwiftProtobuf.Messa
       case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.device) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.replyTo) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._photo) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
@@ -419,6 +460,9 @@ nonisolated extension Pochical_V1_SendSupportMessageRequest: SwiftProtobuf.Messa
     if !self.replyTo.isEmpty {
       try visitor.visitSingularStringField(value: self.replyTo, fieldNumber: 4)
     }
+    try { if let v = self._photo {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -427,6 +471,7 @@ nonisolated extension Pochical_V1_SendSupportMessageRequest: SwiftProtobuf.Messa
     if lhs.text != rhs.text {return false}
     if lhs.device != rhs.device {return false}
     if lhs.replyTo != rhs.replyTo {return false}
+    if lhs._photo != rhs._photo {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -168,7 +168,14 @@ public enum ChatPhotos {
     return data
   }
 
+  /// Where photos in the chat with Pochical's people are kept, in place of
+  /// a group's id: on the device beside the groups', and on the server
+  /// under the user's own support photos. A group's id is never this.
+  public static let support = "support"
+
   private static func photoURL(_ photoID: String, in groupID: String, server: URL) -> URL {
-    server.appending(path: "v1/groups/\(groupID)/photos/\(photoID)")
+    groupID == support
+      ? server.appending(path: "v1/support/photos/\(photoID)")
+      : server.appending(path: "v1/groups/\(groupID)/photos/\(photoID)")
   }
 }

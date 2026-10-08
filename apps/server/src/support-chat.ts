@@ -5,6 +5,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { supportMessages, supportReactions } from "./db/schema";
+import { supportPhotoKey } from "./photos";
 
 export type SupportRow = typeof supportMessages.$inferSelect;
 
@@ -101,6 +102,16 @@ export const lineWhere = async (
   return withReactions([row], reactions)[0];
 };
 
+/** The lines that are one message in Slack: an answer's photos and words. */
+export const linesWithSlackTs = async (
+  env: Env,
+  slackTs: string
+): Promise<SupportRow[]> =>
+  await drizzle(env.DB)
+    .select()
+    .from(supportMessages)
+    .where(eq(supportMessages.slackTs, slackTs));
+
 /** An emoji put on a line or taken off, by the user or Pochical's people. */
 export const reactTo = async (
   env: Env,
@@ -128,21 +139,29 @@ export const reactTo = async (
         .run());
 };
 
-/** A line taken back by its writer: its words, reply and reactions go. */
-export const unsendLine = async (
-  env: Env,
-  messageId: string
-): Promise<void> => {
+/**
+ * A line taken back by its writer: its words, photo, reply and reactions
+ * go, the photo from the bucket too.
+ */
+export const unsendLine = async (env: Env, line: SupportRow): Promise<void> => {
   const db = drizzle(env.DB);
   await db.batch([
     db
       .update(supportMessages)
-      .set({ replyTo: null, text: "", unsent: true })
-      .where(eq(supportMessages.id, messageId)),
-    db
-      .delete(supportReactions)
-      .where(eq(supportReactions.messageId, messageId)),
+      .set({
+        photoHeight: null,
+        photoId: null,
+        photoWidth: null,
+        replyTo: null,
+        text: "",
+        unsent: true,
+      })
+      .where(eq(supportMessages.id, line.id)),
+    db.delete(supportReactions).where(eq(supportReactions.messageId, line.id)),
   ]);
+  if (line.photoId !== null) {
+    await env.PHOTOS.delete(supportPhotoKey(line.userId, line.photoId));
+  }
 };
 
 /** A line's message in Slack, as it is posted. */

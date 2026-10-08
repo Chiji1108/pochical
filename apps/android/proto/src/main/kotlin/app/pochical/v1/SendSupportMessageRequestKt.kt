@@ -124,8 +124,53 @@ public object SendSupportMessageRequestKt {
     public fun clearReplyTo() {
       _builder.clearReplyTo()
     }
+
+    /**
+     * ```
+     * A photo already uploaded, sent with no words. FAILED_PRECONDITION
+     * while it is not uploaded.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];`
+     */
+    public var photo: app.pochical.v1.ChatPhoto
+      @kotlin.jvm.JvmName("getPhoto")
+        get() = _builder.photo
+      @kotlin.jvm.JvmName("setPhoto")
+        set(value) {
+        _builder.photo = value
+      }
+    /**
+     * ```
+     * A photo already uploaded, sent with no words. FAILED_PRECONDITION
+     * while it is not uploaded.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];`
+     */
+    public fun clearPhoto() {
+      _builder.clearPhoto()
+    }
+    /**
+     * ```
+     * A photo already uploaded, sent with no words. FAILED_PRECONDITION
+     * while it is not uploaded.
+     * ```
+     *
+     * `.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];`
+     * @return Whether the photo field is set.
+     */
+    public fun hasPhoto(): kotlin.Boolean {
+      return _builder.hasPhoto()
+    }
+
+    public val SendSupportMessageRequestKt.Dsl.photoOrNull: app.pochical.v1.ChatPhoto?
+      get() = _builder.photoOrNull
   }
 }
 public inline fun app.pochical.v1.SendSupportMessageRequest.copy(block: `app.pochical.v1`.SendSupportMessageRequestKt.Dsl.() -> kotlin.Unit): app.pochical.v1.SendSupportMessageRequest =
   `app.pochical.v1`.SendSupportMessageRequestKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.SendSupportMessageRequestOrBuilder.photoOrNull: app.pochical.v1.ChatPhoto?
+  get() = if (hasPhoto()) getPhoto() else null
 

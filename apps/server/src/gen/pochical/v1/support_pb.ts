@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { ChatPhoto } from "./sync_pb";
+import { file_pochical_v1_sync } from "./sync_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file pochical/v1/support.proto.
  */
 export const file_pochical_v1_support: GenFile = /*@__PURE__*/
-  fileDesc("Chlwb2NoaWNhbC92MS9zdXBwb3J0LnByb3RvEgtwb2NoaWNhbC52MSKnAQoOU3VwcG9ydE1lc3NhZ2USCgoCaWQYASABKAkSFAoMZnJvbV9zdXBwb3J0GAIgASgIEgwKBHRleHQYAyABKAkSEgoKc2VudF9hdF9tcxgEIAEoAxIQCghyZXBseV90bxgFIAEoCRIOCgZ1bnNlbnQYBiABKAgSLwoJcmVhY3Rpb25zGAcgAygLMhwucG9jaGljYWwudjEuU3VwcG9ydFJlYWN0aW9uIj8KD1N1cHBvcnRSZWFjdGlvbhINCgVlbW9qaRgBIAEoCRIMCgRtaW5lGAIgASgIEg8KB3N1cHBvcnQYAyABKAgiFwoVR2V0U3VwcG9ydENoYXRSZXF1ZXN0IlcKFkdldFN1cHBvcnRDaGF0UmVzcG9uc2USLQoIbWVzc2FnZXMYASADKAsyGy5wb2NoaWNhbC52MS5TdXBwb3J0TWVzc2FnZRIOCgZ1bnJlYWQYAiABKAUiVwoZU2VuZFN1cHBvcnRNZXNzYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEg4KBmRldmljZRgDIAEoCRIQCghyZXBseV90bxgEIAEoCSJKChpTZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZRIsCgdtZXNzYWdlGAEgASgLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2UiGAoWTWFya1N1cHBvcnRSZWFkUmVxdWVzdCIZChdNYXJrU3VwcG9ydFJlYWRSZXNwb25zZSI8ChNSZWFjdFN1cHBvcnRSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWVtb2ppGAIgASgJEgoKAm9uGAMgASgIIkQKFFJlYWN0U3VwcG9ydFJlc3BvbnNlEiwKB21lc3NhZ2UYASABKAsyGy5wb2NoaWNhbC52MS5TdXBwb3J0TWVzc2FnZSIpChtVbnNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QSCgoCaWQYASABKAkiTAocVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZRIsCgdtZXNzYWdlGAEgASgLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2UyiwQKDlN1cHBvcnRTZXJ2aWNlEl4KDkdldFN1cHBvcnRDaGF0EiIucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXF1ZXN0GiMucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXNwb25zZSIDkAIBEmoKElNlbmRTdXBwb3J0TWVzc2FnZRImLnBvY2hpY2FsLnYxLlNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QaJy5wb2NoaWNhbC52MS5TZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZSIDkAICEmEKD01hcmtTdXBwb3J0UmVhZBIjLnBvY2hpY2FsLnYxLk1hcmtTdXBwb3J0UmVhZFJlcXVlc3QaJC5wb2NoaWNhbC52MS5NYXJrU3VwcG9ydFJlYWRSZXNwb25zZSIDkAICElgKDFJlYWN0U3VwcG9ydBIgLnBvY2hpY2FsLnYxLlJlYWN0U3VwcG9ydFJlcXVlc3QaIS5wb2NoaWNhbC52MS5SZWFjdFN1cHBvcnRSZXNwb25zZSIDkAICEnAKFFVuc2VuZFN1cHBvcnRNZXNzYWdlEigucG9jaGljYWwudjEuVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXF1ZXN0GikucG9jaGljYWwudjEuVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZSIDkAICQmwKD2FwcC5wb2NoaWNhbC52MUIMU3VwcG9ydFByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
+  fileDesc("Chlwb2NoaWNhbC92MS9zdXBwb3J0LnByb3RvEgtwb2NoaWNhbC52MSLOAQoOU3VwcG9ydE1lc3NhZ2USCgoCaWQYASABKAkSFAoMZnJvbV9zdXBwb3J0GAIgASgIEgwKBHRleHQYAyABKAkSEgoKc2VudF9hdF9tcxgEIAEoAxIQCghyZXBseV90bxgFIAEoCRIOCgZ1bnNlbnQYBiABKAgSLwoJcmVhY3Rpb25zGAcgAygLMhwucG9jaGljYWwudjEuU3VwcG9ydFJlYWN0aW9uEiUKBXBob3RvGAggASgLMhYucG9jaGljYWwudjEuQ2hhdFBob3RvIj8KD1N1cHBvcnRSZWFjdGlvbhINCgVlbW9qaRgBIAEoCRIMCgRtaW5lGAIgASgIEg8KB3N1cHBvcnQYAyABKAgiFwoVR2V0U3VwcG9ydENoYXRSZXF1ZXN0IlcKFkdldFN1cHBvcnRDaGF0UmVzcG9uc2USLQoIbWVzc2FnZXMYASADKAsyGy5wb2NoaWNhbC52MS5TdXBwb3J0TWVzc2FnZRIOCgZ1bnJlYWQYAiABKAUifgoZU2VuZFN1cHBvcnRNZXNzYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEg4KBmRldmljZRgDIAEoCRIQCghyZXBseV90bxgEIAEoCRIlCgVwaG90bxgFIAEoCzIWLnBvY2hpY2FsLnYxLkNoYXRQaG90byJKChpTZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZRIsCgdtZXNzYWdlGAEgASgLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2UiGAoWTWFya1N1cHBvcnRSZWFkUmVxdWVzdCIZChdNYXJrU3VwcG9ydFJlYWRSZXNwb25zZSI8ChNSZWFjdFN1cHBvcnRSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWVtb2ppGAIgASgJEgoKAm9uGAMgASgIIkQKFFJlYWN0U3VwcG9ydFJlc3BvbnNlEiwKB21lc3NhZ2UYASABKAsyGy5wb2NoaWNhbC52MS5TdXBwb3J0TWVzc2FnZSIpChtVbnNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QSCgoCaWQYASABKAkiTAocVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZRIsCgdtZXNzYWdlGAEgASgLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2UyiwQKDlN1cHBvcnRTZXJ2aWNlEl4KDkdldFN1cHBvcnRDaGF0EiIucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXF1ZXN0GiMucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXNwb25zZSIDkAIBEmoKElNlbmRTdXBwb3J0TWVzc2FnZRImLnBvY2hpY2FsLnYxLlNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QaJy5wb2NoaWNhbC52MS5TZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZSIDkAICEmEKD01hcmtTdXBwb3J0UmVhZBIjLnBvY2hpY2FsLnYxLk1hcmtTdXBwb3J0UmVhZFJlcXVlc3QaJC5wb2NoaWNhbC52MS5NYXJrU3VwcG9ydFJlYWRSZXNwb25zZSIDkAICElgKDFJlYWN0U3VwcG9ydBIgLnBvY2hpY2FsLnYxLlJlYWN0U3VwcG9ydFJlcXVlc3QaIS5wb2NoaWNhbC52MS5SZWFjdFN1cHBvcnRSZXNwb25zZSIDkAICEnAKFFVuc2VuZFN1cHBvcnRNZXNzYWdlEigucG9jaGljYWwudjEuVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXF1ZXN0GikucG9jaGljYWwudjEuVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZSIDkAICQmwKD2FwcC5wb2NoaWNhbC52MUIMU3VwcG9ydFByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw", [file_pochical_v1_sync]);
 
 /**
  * A line of the chat.
@@ -62,6 +64,15 @@ export type SupportMessage = Message<"pochical.v1.SupportMessage"> & {
    * @generated from field: repeated pochical.v1.SupportReaction reactions = 7;
    */
   reactions: SupportReaction[];
+
+  /**
+   * A photo, as the line instead of words; uploaded to the user's support
+   * photos (PUT /v1/support/photos/{id}) before the line is sent, read
+   * from there (GET). None once taken back.
+   *
+   * @generated from field: pochical.v1.ChatPhoto photo = 8;
+   */
+  photo?: ChatPhoto | undefined;
 };
 
 /**
@@ -169,6 +180,14 @@ export type SendSupportMessageRequest = Message<"pochical.v1.SendSupportMessageR
    * @generated from field: string reply_to = 4;
    */
   replyTo: string;
+
+  /**
+   * A photo already uploaded, sent with no words. FAILED_PRECONDITION
+   * while it is not uploaded.
+   *
+   * @generated from field: pochical.v1.ChatPhoto photo = 5;
+   */
+  photo?: ChatPhoto | undefined;
 };
 
 /**
@@ -323,9 +342,10 @@ export const SupportService: GenService<{
     output: typeof GetSupportChatResponseSchema;
   },
   /**
-   * A line to Pochical's people. The id is the app's, so a send tried
-   * again is kept once. INVALID_ARGUMENT for no words or more than
-   * textLimits.chatMessage; RESOURCE_EXHAUSTED past the limiter.
+   * A line to Pochical's people: words, or a photo. The id is the app's,
+   * so a send tried again is kept once. INVALID_ARGUMENT for no words or
+   * more than textLimits.chatMessage, or words with a photo;
+   * RESOURCE_EXHAUSTED past the limiter.
    *
    * @generated from rpc pochical.v1.SupportService.SendSupportMessage
    */

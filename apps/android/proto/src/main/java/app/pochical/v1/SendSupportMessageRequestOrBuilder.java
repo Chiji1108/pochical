@@ -85,4 +85,25 @@ public interface SendSupportMessageRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getReplyToBytes();
+
+  /**
+   * <pre>
+   * A photo already uploaded, sent with no words. FAILED_PRECONDITION
+   * while it is not uploaded.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+   * @return Whether the photo field is set.
+   */
+  boolean hasPhoto();
+  /**
+   * <pre>
+   * A photo already uploaded, sent with no words. FAILED_PRECONDITION
+   * while it is not uploaded.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
+   * @return The photo.
+   */
+  app.pochical.v1.ChatPhoto getPhoto();
 }

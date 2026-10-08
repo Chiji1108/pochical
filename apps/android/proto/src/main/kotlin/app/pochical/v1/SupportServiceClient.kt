@@ -37,9 +37,10 @@ public class SupportServiceClient(
 
 
   /**
-   *  A line to Pochical's people. The id is the app's, so a send tried
-   *  again is kept once. INVALID_ARGUMENT for no words or more than
-   *  textLimits.chatMessage; RESOURCE_EXHAUSTED past the limiter.
+   *  A line to Pochical's people: words, or a photo. The id is the app's,
+   *  so a send tried again is kept once. INVALID_ARGUMENT for no words or
+   *  more than textLimits.chatMessage, or words with a photo;
+   *  RESOURCE_EXHAUSTED past the limiter.
    */
   override suspend fun sendSupportMessage(request: SendSupportMessageRequest, headers: Headers): ResponseMessage<SendSupportMessageResponse> = client.unary(
     request,

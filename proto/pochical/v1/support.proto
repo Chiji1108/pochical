@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package pochical.v1;
 
+import "pochical/v1/sync.proto";
+
 // The chat with the people who make Pochical (/design's SupportChatPage):
 // a user's own, read and answered by Pochical's people, who answer under
 // the app's name. Signed-in users only; each sees only their own.
@@ -12,9 +14,10 @@ service SupportService {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
-  // A line to Pochical's people. The id is the app's, so a send tried
-  // again is kept once. INVALID_ARGUMENT for no words or more than
-  // textLimits.chatMessage; RESOURCE_EXHAUSTED past the limiter.
+  // A line to Pochical's people: words, or a photo. The id is the app's,
+  // so a send tried again is kept once. INVALID_ARGUMENT for no words or
+  // more than textLimits.chatMessage, or words with a photo;
+  // RESOURCE_EXHAUSTED past the limiter.
   rpc SendSupportMessage(SendSupportMessageRequest) returns (SendSupportMessageResponse) {
     option idempotency_level = IDEMPOTENT;
   }
@@ -52,6 +55,10 @@ message SupportMessage {
   bool unsent = 6;
   // Each emoji on it, and who put it there; none once taken back.
   repeated SupportReaction reactions = 7;
+  // A photo, as the line instead of words; uploaded to the user's support
+  // photos (PUT /v1/support/photos/{id}) before the line is sent, read
+  // from there (GET). None once taken back.
+  ChatPhoto photo = 8;
 }
 
 // An emoji on a line, put there by the user, by Pochical's people, or by
@@ -80,6 +87,9 @@ message SendSupportMessageRequest {
   // The line it is a reply to, by id, when it is one; one not in the chat
   // is left out.
   string reply_to = 4;
+  // A photo already uploaded, sent with no words. FAILED_PRECONDITION
+  // while it is not uploaded.
+  ChatPhoto photo = 5;
 }
 
 message SendSupportMessageResponse {

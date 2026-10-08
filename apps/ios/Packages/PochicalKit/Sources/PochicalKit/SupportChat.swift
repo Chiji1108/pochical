@@ -20,10 +20,12 @@ public struct SupportLine: Hashable, Sendable, Identifiable {
   public let unsent: Bool
   /// Each emoji on it, by `SupportLine.me` or `SupportLine.support`.
   public let reactions: [LineReaction]
+  /// A photo, as the line instead of words, kept in `ChatPhotos.support`.
+  public let photo: LinePhoto?
 
   public init(
     id: String, fromSupport: Bool, text: String, sentAt: Date, replyTo: String? = nil,
-    unsent: Bool = false, reactions: [LineReaction] = []
+    unsent: Bool = false, reactions: [LineReaction] = [], photo: LinePhoto? = nil
   ) {
     self.id = id
     self.fromSupport = fromSupport
@@ -32,6 +34,7 @@ public struct SupportLine: Hashable, Sendable, Identifiable {
     self.replyTo = replyTo
     self.unsent = unsent
     self.reactions = reactions
+    self.photo = photo
   }
 
   /// Posted as Pochical's people answer, react or take a line back, told
@@ -47,7 +50,10 @@ public struct SupportLine: Hashable, Sendable, Identifiable {
         LineReaction(
           emoji: reaction.emoji,
           userIDs: (reaction.mine ? [Self.me] : []) + (reaction.support ? [Self.support] : []))
-      })
+      },
+      photo: wire.hasPhoto
+        ? LinePhoto(id: wire.photo.id, width: Int(wire.photo.width), height: Int(wire.photo.height))
+        : nil)
   }
 }
 
@@ -63,15 +69,21 @@ extension GroupCalls {
 
   /// A line to Pochical's people, its id the app's so a send tried again
   /// is kept once, with the app's version and the device it came from,
-  /// and the line it is a reply to.
+  /// and the line it is a reply to: words, or a photo uploaded first
+  /// (`uploadSupportPhoto`) and no words.
   public func sendSupport(
-    _ text: String, id: String, device: String, replyTo: String? = nil
+    _ text: String, id: String, device: String, replyTo: String? = nil, photo: LinePhoto? = nil
   ) async throws -> SupportLine {
     var request = Pochical_V1_SendSupportMessageRequest()
     request.id = id
     request.text = text
     request.device = device
     request.replyTo = replyTo ?? ""
+    if let photo {
+      request.photo.id = photo.id
+      request.photo.width = UInt32(photo.width)
+      request.photo.height = UInt32(photo.height)
+    }
     let answer = try await support.sendSupportMessage(request: request, headers: account.headers())
       .result.get()
     return SupportLine(answer.message)
@@ -96,6 +108,12 @@ extension GroupCalls {
       request: request, headers: account.headers()
     ).result.get()
     return SupportLine(answer.message)
+  }
+
+  /// A photo kept on the device to send (`ChatPhotos.keep` in
+  /// `ChatPhotos.support`), uploaded before its line goes; again is fine.
+  public func uploadSupportPhoto(_ photoID: String) async throws {
+    try await ChatPhotos.upload(photoID, in: ChatPhotos.support, account: account)
   }
 
   /// The answers so far are read.
