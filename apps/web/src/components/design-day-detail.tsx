@@ -451,9 +451,11 @@ function ShiftChoices({
 }) {
   const book = usePatterns();
   const [query, setQuery] = useState("");
-  const words = query.trim();
+  // Whatever the case or width, as iOS's search matches: ＯＦＦ finds off.
+  const fold = (text: string) => text.normalize("NFKC").toLowerCase();
+  const words = fold(query.trim());
   const shown = patternKeys.filter(
-    (key) => !words || (book[key]?.name ?? "").includes(words)
+    (key) => !words || fold(book[key]?.name ?? "").includes(words)
   );
   const change = (next: boolean) => {
     if (!next) {
