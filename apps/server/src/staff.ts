@@ -1,7 +1,7 @@
 // A word to Pochical's people where they already look (spec/admin.md): a
 // message on their Discord channel through its webhook, with the way to
-// the admin page. Never in the way of what the user did: one that fails
-// is dropped.
+// the admin page. Never in the way of what the user did: it is sent after
+// the answer (waitUntil), and one that fails is dropped.
 
 type StaffEnv = Env & { DISCORD_WEBHOOK_URL?: string };
 

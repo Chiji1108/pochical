@@ -17,6 +17,7 @@ export type SupportChatSummary = {
 
 /** A line of a user's chat, with the app and device it came from. */
 export type SupportChatLine = {
+  id: string;
   atMs: number;
   fromSupport: boolean;
   text: string;
@@ -42,7 +43,8 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     const { results } = await this.env.DB.prepare(
       `select c.user_id, c.last_at, m.text, m.from_support
        from support_chats c join support_messages m on m.user_id = c.user_id
-       and m.created_at = (select max(created_at) from support_messages where user_id = c.user_id)
+       and m.id = (select id from support_messages where user_id = c.user_id
+         order by created_at desc, id desc limit 1)
        order by c.last_at desc limit ?`
     )
       .bind(PAGE)
@@ -63,10 +65,11 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   /** One user's chat, oldest first. */
   async supportChat(userId: string): Promise<SupportChatLine[]> {
     const { results } = await this.env.DB.prepare(
-      "select created_at, from_support, text, device from support_messages where user_id = ? order by created_at"
+      "select id, created_at, from_support, text, device from support_messages where user_id = ? order by created_at, id"
     )
       .bind(userId)
       .all<{
+        id: string;
         created_at: number;
         from_support: number;
         text: string;
@@ -76,6 +79,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       atMs: row.created_at,
       device: row.device,
       fromSupport: row.from_support === 1,
+      id: row.id,
       text: row.text,
     }));
   }
@@ -100,7 +104,13 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
         "insert into support_chats (user_id, last_at) values (?, ?) on conflict (user_id) do update set last_at = excluded.last_at"
       ).bind(userId, now),
     ]);
-    await this.env.USERS.getByName(userId).supportAnswered(words);
+    // The answer is kept: the user reads it as their chat next opens, even
+    // when telling them now fails.
+    try {
+      await this.env.USERS.getByName(userId).supportAnswered(words);
+    } catch {
+      // Nothing more to do: saying it was not kept would only send it twice.
+    }
     return true;
   }
 

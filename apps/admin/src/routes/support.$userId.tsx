@@ -37,7 +37,7 @@ function SupportChat() {
         <div
           className="line"
           data-from={line.fromSupport ? "staff" : "user"}
-          key={line.atMs}
+          key={line.id}
         >
           <div className="meta">
             {line.fromSupport ? "ポチカル" : "ユーザー"}・{when(line.atMs)}

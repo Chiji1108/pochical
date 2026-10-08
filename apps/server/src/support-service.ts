@@ -2,7 +2,7 @@ import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
 import { textLimits } from "@pochical/design/limits";
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import { and, asc, count, eq, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -132,9 +132,11 @@ export const registerSupportService = (router: ConnectRouter): void => {
       if (kept?.userId !== user.id) {
         throw new ConnectError("id is taken", Code.AlreadyExists);
       }
-      await tellStaff(
-        env,
-        `サポートに新しいメッセージ：${words.slice(0, 200)}\n${ADMIN_SITE}/support/${encodeURIComponent(user.id)}`
+      waitUntil(
+        tellStaff(
+          env,
+          `サポートに新しいメッセージ：${words.slice(0, 200)}\n${ADMIN_SITE}/support/${encodeURIComponent(user.id)}`
+        )
       );
       return create(SendSupportMessageResponseSchema, {
         message: messageOf(kept),
