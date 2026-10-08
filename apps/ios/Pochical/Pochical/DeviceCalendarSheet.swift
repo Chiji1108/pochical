@@ -69,23 +69,28 @@ import UIKit
       }
     }
     var made: [(Day, EKEvent)] = []
-    for shift in events {
-      let event = EKEvent(eventStore: store)
-      event.calendar = target
-      event.title = shift.title
-      let midnight = date(of: shift.day)
-      if let start = shift.start, let end = shift.end {
-        event.startDate = midnight.addingTimeInterval(TimeInterval(start * 60))
-        event.endDate = midnight.addingTimeInterval(TimeInterval(end * 60))
-      } else {
-        event.isAllDay = true
-        event.startDate = midnight
-        event.endDate = midnight
+    do {
+      for shift in events {
+        let event = EKEvent(eventStore: store)
+        event.calendar = target
+        event.title = shift.title
+        if let start = shift.start, let end = shift.end {
+          event.startDate = date(of: shift.day, at: start)
+          event.endDate = date(of: shift.day, at: end)
+        } else {
+          event.isAllDay = true
+          event.startDate = date(of: shift.day, at: 0)
+          event.endDate = date(of: shift.day, at: 0)
+        }
+        try store.save(event, span: .thisEvent, commit: false)
+        made.append((shift.day, event))
       }
-      try store.save(event, span: .thisEvent, commit: false)
-      made.append((shift.day, event))
+      try store.commit()
+    } catch {
+      // Nothing half done stays waiting to go with a later add.
+      store.reset()
+      throw error
     }
-    try store.commit()
     for (day, event) in made {
       if let id = event.eventIdentifier {
         added[day.key] = id
@@ -95,10 +100,17 @@ import UIKit
     UserDefaults.standard.set(calendarID, forKey: Self.lastKey)
   }
 
-  private func date(of day: Day) -> Date {
-    Calendar.current.date(from: DateComponents(year: day.year, month: day.month, day: day.day))
+  /// The clock time `minutes` after the start of `day`, a day on past
+  /// 24 hours: by the clock, so a changeover to summer time moves nothing.
+  private func date(of day: Day, at minutes: Int) -> Date {
+    let on = day.adding(days: minutes / (24 * 60))
+    let time = minutes % (24 * 60)
+    return Calendar.current.date(
+      from: DateComponents(
+        year: on.year, month: on.month, day: on.day, hour: time / 60, minute: time % 60))
       ?? .now
   }
+
 }
 
 /// 端末カレンダーに追加 (/design's SaveSheet, its calendar step): the
