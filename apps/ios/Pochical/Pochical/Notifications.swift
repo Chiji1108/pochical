@@ -25,6 +25,10 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   var openChat: OpenedChat?
   /// A chat a tapped notification asks to open.
   var opening: OpenedChat?
+  /// A tapped answer from Pochical's people asks to open their chat.
+  var openingSupport = false
+  /// The chat with Pochical's people is on screen, its answers not shown.
+  var supportOpen = false
   /// Whether the person has let Pochical notify, as the system last said.
   private(set) var permission = Permission.notAsked
   private var token: Data?
@@ -94,6 +98,9 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   func userNotificationCenter(
     _ center: UNUserNotificationCenter, willPresent notification: UNNotification
   ) async -> UNNotificationPresentationOptions {
+    if Self.isSupport(notification) {
+      return supportOpen ? [] : [.banner, .list, .sound]
+    }
     let chat = Self.chat(of: notification)
     return chat != nil && chat == openChat ? [] : [.banner, .list, .sound]
   }
@@ -101,13 +108,24 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   func userNotificationCenter(
     _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse
   ) async {
+    if Self.isSupport(response.notification) {
+      openingSupport = true
+      return
+    }
     guard let chat = Self.chat(of: response.notification) else { return }
     opening = chat
   }
 
+  /// An answer from Pochical's people: no group, their chat's thread.
+  private nonisolated static func isSupport(_ notification: UNNotification) -> Bool {
+    let info = notification.request.content.userInfo
+    return (info["groupId"] as? String)?.isEmpty == true && info["threadId"] as? String == "support"
+  }
+
   private nonisolated static func chat(of notification: UNNotification) -> OpenedChat? {
     let info = notification.request.content.userInfo
-    guard let groupID = info["groupId"] as? String, let threadID = info["threadId"] as? String
+    guard let groupID = info["groupId"] as? String, !groupID.isEmpty,
+      let threadID = info["threadId"] as? String
     else { return nil }
     return OpenedChat(groupID: groupID, threadID: threadID)
   }

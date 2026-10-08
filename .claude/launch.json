@@ -16,7 +16,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd apps/server && exec bun x wrangler dev --port 8787"
+        "cd apps/server && exec bun x wrangler dev --port 8787 --var ADMIN_LOCAL:1"
       ],
       "port": 8787
     }

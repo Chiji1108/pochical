@@ -13,6 +13,8 @@ export default defineConfig({
       // test/setup.ts applies these to the test database.
       miniflare: {
         bindings: {
+          // The admin pages let in a local server's requests, as tests are.
+          ADMIN_LOCAL: "1",
           // A key of the kind Apple gives, for signing what tests send.
           APNS_KEY: generateKeyPairSync("ec", {
             namedCurve: "P-256",

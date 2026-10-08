@@ -17,7 +17,8 @@ export type Localized = { key: string; args: string[] };
 export type Alert = {
   title: Localized;
   body: Localized;
-  // Which chat it opens, and groups it with the chat's others.
+  // Which chat it opens, and groups it with the chat's others: a group's,
+  // or with no group the chat with Pochical's people.
   groupId: string;
   threadId: string;
 };

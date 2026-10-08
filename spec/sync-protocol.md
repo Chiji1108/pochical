@@ -273,6 +273,10 @@ Presence means "has this thread open on screen", not "online in the app": mobile
 - Receivers show the indicator for `chatRules.typingShowMs` unless it is refreshed, so a lost stop frame cannot leave it stuck.
 - The frames are `Typing` (thread, on) on the group socket. The Group DO relays each, with the writer's id it sets itself, to the sockets of the other users who may read that thread (both members alone for a one-to-one chat), never to the writer's own devices, and keeps nothing. The app also stops when the chat closes.
 
+### An answer from Pochical's people
+
+When Pochical's people answer in a user's chat with them (spec/admin.md), the User DO sends `SupportAnswered` on each of the user's sockets, with nothing in it and nothing kept: what shows the chat reads it again (`SupportService`). A device with no socket open hears it by notification instead.
+
 ## Not yet specified
 
 - Deleting an account: what goes (the User DO, memberships and what groups hold of the user, their messages' authorship) and how the user's other devices learn of it. Apple asks apps to revoke a deleted user's Sign in with Apple tokens; with none kept, deletion has the person sign in with Apple once more for a fresh code to revoke with

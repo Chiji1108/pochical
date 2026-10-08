@@ -49,8 +49,15 @@ message ServerFrame {
     ChatPage chat_page = 7;
     // Someone else is writing in a chat the device may read, or stopped.
     Typing typing = 8;
+    // Pochical's people answered in the user's chat with them, on the
+    // user's own socket: the chat, if open, reads itself again.
+    SupportAnswered support_answered = 9;
   }
 }
+
+// An answer in the chat with Pochical's people (proto/pochical/v1/support.proto),
+// told to the user's devices as it is written.
+message SupportAnswered {}
 
 // Someone writing in a chat, or no longer (spec/sync-protocol.md,
 // Typing): sent at most every chatRules.typingSendMs while writing, and

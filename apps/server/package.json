@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --var ADMIN_LOCAL:1",
     "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types",
     "auth:schema": "bunx @better-auth/cli@1 generate --config better-auth.config.ts --output src/db/auth-schema.ts -y",

@@ -1,6 +1,7 @@
 import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
+import { ADMIN_PATH, adminRequest } from "./admin";
 import { registerChatService } from "./chat-service";
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
@@ -83,21 +84,35 @@ const photoRequest = async (
   }
 };
 
+/** better-auth's own paths, anonymous sign-ins held back by address. */
+const authRequest = async (
+  request: Request,
+  env: Env,
+  pathname: string
+): Promise<Response> => {
+  if (
+    pathname === ANONYMOUS_SIGN_IN &&
+    (await tooManySignIns(env.SIGN_IN_LIMIT, request))
+  ) {
+    return Response.json(
+      { code: "TOO_MANY_REQUESTS", message: "Try again in a minute" },
+      { status: 429 }
+    );
+  }
+  return await getAuth().handler(request);
+};
+
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
 
     if (pathname.startsWith(AUTH_PATH)) {
-      if (
-        pathname === ANONYMOUS_SIGN_IN &&
-        (await tooManySignIns(env.SIGN_IN_LIMIT, request))
-      ) {
-        return Response.json(
-          { code: "TOO_MANY_REQUESTS", message: "Try again in a minute" },
-          { status: 429 }
-        );
-      }
-      return await getAuth().handler(request);
+      return await authRequest(request, env, pathname);
+    }
+
+    // Pochical's people's own pages, behind Cloudflare Access.
+    if (pathname === ADMIN_PATH || pathname.startsWith(`${ADMIN_PATH}/`)) {
+      return await adminRequest(request, env);
     }
 
     const rpc = rpcHandlers.get(pathname);

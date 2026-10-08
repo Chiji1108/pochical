@@ -16,6 +16,10 @@ public struct SupportLine: Hashable, Sendable, Identifiable {
     self.sentAt = sentAt
   }
 
+  /// Posted as Pochical's people answer, told on the user's socket: what
+  /// shows the chat reads it again.
+  public static let answered = Notification.Name("SupportLine.answered")
+
   init(_ wire: Pochical_V1_SupportMessage) {
     self.init(
       id: wire.id, fromSupport: wire.fromSupport, text: wire.text,

@@ -63,6 +63,10 @@ struct RootView: View {
       openingChat = chat
       Notifications.shared.opening = nil
     }
+    // An answer from Pochical's people opens their chat, under 設定.
+    .onChange(of: Notifications.shared.openingSupport, initial: true) { _, opening in
+      if opening { tab = .settings }
+    }
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)

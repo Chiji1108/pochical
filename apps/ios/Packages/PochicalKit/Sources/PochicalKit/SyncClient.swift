@@ -308,6 +308,8 @@ public actor SyncClient {
       for watcher in typingWatchers.values {
         watcher.yield(typing)
       }
+    case .supportAnswered:
+      NotificationCenter.default.post(name: SupportLine.answered, object: nil)
     case .pong(let pong):
       if pong.nonce == catchUpNonce {
         caughtUp = true

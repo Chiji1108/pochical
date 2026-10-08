@@ -121,6 +121,14 @@ struct SettingsScreen: View {
       .settingsList()
       .navigationTitle("設定")
       .onAppear { appIcon = .current }
+      // A tapped answer from Pochical's people opens their chat.
+      .navigationDestination(
+        isPresented: Binding(
+          get: { Notifications.shared.openingSupport },
+          set: { Notifications.shared.openingSupport = $0 })
+      ) {
+        SupportChatScreen()
+      }
       .sheet(item: $page) { page in
         SafariView(url: page.url).ignoresSafeArea()
       }

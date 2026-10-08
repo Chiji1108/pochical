@@ -157,4 +157,5 @@ A message may be as long as `textLimits.chatMessage` and share up to `SHARED_DAY
 - Each user's chat is their own, kept by the server (`proto/pochical/v1/support.proto`, D1's `support_messages` and `support_chats`), so Pochical's people can read every user's in one place. Pochical's people answer under the app's name and icon.
 - A line is the user's words, up to `textLimits.chatMessage`, sent with an id of the app's so a send tried again is kept once; past `SUPPORT_LIMIT` (wrangler.jsonc) it waits. A line not sent stays faint, with a way to send it again.
 - Opening the chat reads its answers; until then they are counted on its row.
-- For now in words only. Photos, reactions, 返信 and 送信取消, as /design has them, and answering from the admin page, with a notification on the person's device, come next.
+- Pochical's people answer from the admin pages (spec/admin.md). An answer shows at once in the open chat and on 設定's row, and comes as a notification that opens the chat.
+- For now in words only. Photos, reactions, 返信 and 送信取消, as /design has them, come next.
