@@ -39,6 +39,8 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   public var appearance = Appearance.system
   /// How a month saved as a picture looks, apart from the app's own look.
   public var picture = PictureLook()
+  /// Reminders of the person's shifts, sent by this device on its own.
+  public var reminders = Reminder.defaults
 
   public var theme: Theme {
     get { Theme(rawValue: themeID) ?? .pochical }
@@ -54,6 +56,7 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     themeID = try container.decodeIfPresent(String.self, forKey: .themeID) ?? Theme.pochical.rawValue
     appearance = try container.decodeIfPresent(Appearance.self, forKey: .appearance) ?? .system
     picture = try container.decodeIfPresent(PictureLook.self, forKey: .picture) ?? PictureLook()
+    reminders = try container.decodeIfPresent([Reminder].self, forKey: .reminders) ?? Reminder.defaults
   }
 }
 

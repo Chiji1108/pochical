@@ -94,6 +94,11 @@ struct SettingsScreen: View {
 
         Section("通知") {
           NavigationLink {
+            RemindersPage()
+          } label: {
+            LabeledContent("リマインド", value: remindersSummary)
+          }
+          NavigationLink {
             ChatNotificationsPage()
           } label: {
             LabeledContent(
@@ -159,6 +164,14 @@ struct SettingsScreen: View {
     }
     .buttonStyle(.plain)
     .accessibilityHint("ブラウザで開きます")
+  }
+
+  /// What arrives of the reminders: オフ until the system allows it or
+  /// none is on, else the one, else how many.
+  private var remindersSummary: String {
+    let on = settings.device.reminders.filter(\.on)
+    guard Notifications.shared.permission == .allowed, let first = on.first else { return "オフ" }
+    return on.count == 1 ? first.name : "\(on.count)件"
   }
 
   /// The choice, or the dark of a テーマ drawn so whatever it says.

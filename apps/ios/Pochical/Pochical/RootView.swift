@@ -41,6 +41,8 @@ struct RootView: View {
     }
     .tint(colors.accentDefault)
     .environment(\.look, settings.device.look)
+    // The reminders' notifications, put in anew as what they read changes.
+    .modifier(ReminderUpdates())
     .task { meID = await groupCalls.userID() }
     .task(id: meID) {
       guard let meID else { return }
