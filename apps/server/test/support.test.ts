@@ -72,6 +72,14 @@ describe("the chat with Pochical's people", () => {
   it("counts the answers not read until the chat is read", async () => {
     const token = await signInAnonymously();
     const userId = await userIdOf(token);
+    // Read before anything is written, the chat gets no row of its own.
+    await call("SupportService/MarkSupportRead", {}, token);
+    const rows = await env.DB.prepare(
+      "select count(*) as n from support_chats where user_id = ?"
+    )
+      .bind(userId)
+      .first<{ n: number }>();
+    expect(rows?.n).toBe(0);
     await sent(token, "質問");
     await env.DB.prepare(
       "insert into support_messages (id, user_id, from_support, text, created_at) values (?, ?, 1, ?, ?)"
@@ -86,6 +94,17 @@ describe("the chat with Pochical's people", () => {
     await call("SupportService/MarkSupportRead", {}, token);
     const after = await chatOf(token);
     expect(after.unread).toBe(0);
+  });
+
+  it("keeps one line when the same send comes in twice at once", async () => {
+    const token = await signInAnonymously();
+    const id = crypto.randomUUID();
+    const both = await Promise.all([
+      sent(token, "同時", id),
+      sent(token, "同時", id),
+    ]);
+    const chat = await chatOf(token);
+    expect([both, chat.messages.length]).toStrictEqual([[200, 200], 1]);
   });
 
   it("is for signed-in users only", async () => {

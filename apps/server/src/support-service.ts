@@ -72,14 +72,11 @@ export const registerSupportService = (router: ConnectRouter): void => {
     },
     markSupportRead: async (_request, context) => {
       const user = await requireUser(context);
-      const now = new Date();
+      // A chat with no lines has no answers to read, and gets no row.
       await drizzle(env.DB)
-        .insert(supportChats)
-        .values({ lastAt: now, userId: user.id, userReadAt: now })
-        .onConflictDoUpdate({
-          set: { userReadAt: now },
-          target: supportChats.userId,
-        })
+        .update(supportChats)
+        .set({ userReadAt: new Date() })
+        .where(eq(supportChats.userId, user.id))
         .run();
       return create(MarkSupportReadResponseSchema, {});
     },
@@ -91,16 +88,16 @@ export const registerSupportService = (router: ConnectRouter): void => {
       const words = requireText(text, textLimits.chatMessage, "text");
       const db = drizzle(env.DB);
       // A send tried again finds its line kept, and is not counted again.
-      const [kept] = await db
+      const [before] = await db
         .select()
         .from(supportMessages)
         .where(eq(supportMessages.id, id));
-      if (kept !== undefined) {
-        if (kept.userId !== user.id) {
+      if (before !== undefined) {
+        if (before.userId !== user.id) {
           throw new ConnectError("id is taken", Code.AlreadyExists);
         }
         return create(SendSupportMessageResponseSchema, {
-          message: messageOf(kept),
+          message: messageOf(before),
         });
       }
       if (await overLimit(env.SUPPORT_LIMIT, user.id)) {
@@ -115,8 +112,10 @@ export const registerSupportService = (router: ConnectRouter): void => {
         text: words,
         userId: user.id,
       };
+      // The same send coming in twice at once keeps one line: the other
+      // finds it below, as a send tried again does.
       await db.batch([
-        db.insert(supportMessages).values(row),
+        db.insert(supportMessages).values(row).onConflictDoNothing(),
         db
           .insert(supportChats)
           .values({ lastAt: row.createdAt, userId: user.id })
@@ -125,8 +124,15 @@ export const registerSupportService = (router: ConnectRouter): void => {
             target: supportChats.userId,
           }),
       ]);
+      const [kept] = await db
+        .select()
+        .from(supportMessages)
+        .where(eq(supportMessages.id, id));
+      if (kept?.userId !== user.id) {
+        throw new ConnectError("id is taken", Code.AlreadyExists);
+      }
       return create(SendSupportMessageResponseSchema, {
-        message: messageOf(row),
+        message: messageOf(kept),
       });
     },
   });
