@@ -328,14 +328,6 @@ function SettingsTop({
       <PageHeader title="設定" />
       <ListSection title="シフト">
         <ListRow
-          label="繰り返し"
-          onClick={() => {
-            onOpen("repeat");
-          }}
-          // How long it runs, in short: the order itself is on the page.
-          value={current ? `${current.sequence.length}日ごと` : "なし"}
-        />
-        <ListRow
           label="シフトパターン"
           onClick={() => {
             onOpen("patterns");
@@ -350,6 +342,14 @@ function SettingsTop({
               {patternKeys.length}つ
             </>
           }
+        />
+        <ListRow
+          label="繰り返し"
+          onClick={() => {
+            onOpen("repeat");
+          }}
+          // How long it runs, in short: the order itself is on the page.
+          value={current ? `${current.sequence.length}日ごと` : "なし"}
         />
         <ListRow
           label="一緒に働く人"
