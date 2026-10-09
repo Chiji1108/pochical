@@ -22,6 +22,8 @@ struct CalendarScreen: View {
   @State private var entering: Day?
   @State private var gaps: [Day] = []
   /// The month being saved as a picture.
+  /// The month whose 今月の内訳 is open.
+  @State private var breakingDown: Day?
   @State private var picturing: Day?
   /// The month being put in the device's calendar.
   @State private var addingToCalendar: Day?
@@ -190,6 +192,19 @@ struct CalendarScreen: View {
         withAnimation(Springs.standard) {
           shownMonth = day.firstOfMonth
         }
+      }
+    }
+    .sheet(isPresented: Binding { breakingDown != nil } set: { if !$0 { breakingDown = nil } }) {
+      if let month = breakingDown {
+        let days = monthDays(month, calendar)
+        MonthBreakdownSheet(
+          month: month,
+          counts: calendar.patterns.map { pattern in
+            (pattern, days.values.count { $0.shift == pattern.id })
+          },
+          unfilled: month.daysOfMonth.count - days.count
+        )
+        .presentationDetents([.medium, .large])
       }
     }
     .sheet(isPresented: Binding { picturing != nil } set: { if !$0 { picturing = nil } }) {
@@ -369,6 +384,15 @@ struct CalendarScreen: View {
         onPickDay: { entering = $0 }
       )
     } else {
+      let month = shownMonth ?? thisMonth
+      let days = monthDays(month, calendar)
+      SummaryRow(
+        label: "\(month == thisMonth ? "今月" : month.monthText)のお休み",
+        days: days.values.count { calendar.patternsByID[$0.shift]?.countsAsOff == true }
+      ) {
+        breakingDown = month
+      }
+      .padding(.bottom, 12)
       Button {
         let month = shownMonth ?? thisMonth
         entering = firstBlankDay(in: month, days: monthDays(month, calendar))
