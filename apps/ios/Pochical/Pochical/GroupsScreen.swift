@@ -35,6 +35,8 @@ extension EnvironmentValues {
   @Entry var photoGroupID = ""
   /// Each member's photo by their id, for faces given only who it is.
   @Entry var memberFaces: [String: String] = [:]
+  /// The signed-in user's id, once known, for faces to know their own.
+  @Entry var meID: String?
 }
 
 /// The グループ tab (/design's DesignGroup): with no group yet, what groups

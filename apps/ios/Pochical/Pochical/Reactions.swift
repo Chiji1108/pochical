@@ -60,7 +60,7 @@ private struct ReactionPill: View {
         } else {
           HStack(spacing: -2) {
             ForEach(faces, id: \.self) { id in
-              MemberAvatar(name: nameOf(id), photoID: photos[id] ?? "", size: 18)
+              MemberAvatar(name: nameOf(id), photoID: photos[id] ?? "", size: 18, userID: id)
                 .overlay(
                   Circle().strokeBorder(mine ? colors.accentContainer : colors.backgroundCard))
             }

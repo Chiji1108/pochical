@@ -42,6 +42,7 @@ struct RootView: View {
     }
     .tint(colors.accentDefault)
     .environment(\.look, settings.device.look)
+    .environment(\.meID, meID)
     // The reminders' notifications, put in anew as what they read changes.
     .modifier(ReminderUpdates())
     .task { meID = await groupCalls.userID() }

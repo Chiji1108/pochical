@@ -270,13 +270,16 @@ struct LetterAvatar: View {
   @Environment(\.themeColors) private var colors
   let name: String
   let size: CGFloat
+  /// The viewer's own: in the テーマ's accent, as /design marks yours, so it
+  /// stands out among the others' gray.
+  var me = false
 
   var body: some View {
     Text(name.first.map(String.init) ?? "")
       .font(.system(size: max(9, (size * 0.45).rounded()), weight: .semibold))
-      .foregroundStyle(colors.textSecondary)
+      .foregroundStyle(me ? colors.accentOnFill : colors.textSecondary)
       .frame(width: size, height: size)
-      .background(colors.fillSecondary, in: Circle())
+      .background(me ? colors.accentFill : colors.fillSecondary, in: Circle())
   }
 }
 

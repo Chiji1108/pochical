@@ -10,11 +10,16 @@ struct MemberAvatar: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.displayScale) private var displayScale
   @Environment(\.photoGroupID) private var openGroupID
+  @Environment(\.meID) private var meID
   let name: String
   let photoID: String
   /// Whose photos it is among; the open group's when not given.
   var groupID: String?
   let size: CGFloat
+  /// Whose face it is, for the viewer's own to show as theirs.
+  var userID: String?
+  /// The viewer's own, known without an id.
+  var me = false
   @State private var image: UIImage?
 
   var body: some View {
@@ -26,7 +31,7 @@ struct MemberAvatar: View {
           .frame(width: size, height: size)
           .clipShape(Circle())
       } else {
-        LetterAvatar(name: name, size: size)
+        LetterAvatar(name: name, size: size, me: me || (userID != nil && userID == meID))
       }
     }
     .task(id: photoID) {
@@ -127,7 +132,7 @@ struct PhotoEditor: View {
   /// The face, and 写真を編集 under it.
   private var face: some View {
     VStack(spacing: 8) {
-      MemberAvatar(name: name, photoID: photoID, groupID: groupID, size: 88)
+      MemberAvatar(name: name, photoID: photoID, groupID: groupID, size: 88, me: true)
         .overlay {
           if busy { ProgressView() }
         }

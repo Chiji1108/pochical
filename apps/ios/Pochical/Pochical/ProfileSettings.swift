@@ -21,7 +21,8 @@ struct ProfileRow: View {
         } else {
           HStack(spacing: 6) {
             MemberAvatar(
-              name: usual.name, photoID: usual.photoID, groupID: ChatPhotos.mine, size: 22)
+              name: usual.name, photoID: usual.photoID, groupID: ChatPhotos.mine, size: 22,
+              me: true)
             Text(usual.name).lineLimit(1)
           }
         }

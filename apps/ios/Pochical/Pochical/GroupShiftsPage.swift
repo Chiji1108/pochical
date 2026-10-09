@@ -370,7 +370,9 @@ private struct DaySheet: View {
         let pattern = entry.flatMap { member.calendar.patternsByID[$0.shift] }
         // On one line, as /design's: the mark, the pattern and its hours.
         HStack(spacing: 8) {
-          MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 28)
+          MemberAvatar(
+            name: member.name, photoID: member.photoID, groupID: groupID, size: 28,
+            userID: member.userID)
           Text(member.name).lineLimit(1)
           Spacer(minLength: 8)
           if let pattern {
