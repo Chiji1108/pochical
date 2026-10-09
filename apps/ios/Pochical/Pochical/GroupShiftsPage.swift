@@ -142,7 +142,7 @@ struct GroupShiftsPage: View {
     .task(id: settings.device.week.start) {
       let first = thisMonth.addingMonths(-monthSpan).adding(days: -6)
       let last = thisMonth.addingMonths(monthSpan + 1).adding(days: 6)
-      try? await $members.load(GroupMembersRequest(groupID: group.id, from: first, through: last))
+      _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: first, through: last))
     }
     .sheet(item: $picked) { day in
       // As tall as its rows, as /design's.

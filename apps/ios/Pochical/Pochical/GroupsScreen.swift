@@ -3,11 +3,25 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 
+/// The account the environment holds until the app puts its own: one,
+/// made once, so reading the default makes no new one each time.
+private let placeholderAccount = Account()
+
+/// Opens one of Pochical's invitations on its join screen, as an action
+/// the environment carries, as SwiftUI's OpenURLAction is.
+struct OpenInviteAction {
+  let open: @MainActor (String) -> Void
+
+  @MainActor func callAsFunction(_ code: String) {
+    open(code)
+  }
+}
+
 extension EnvironmentValues {
   /// The signed-in user, whom the calls and sockets go as.
-  @Entry var account = Account()
+  @Entry var account = placeholderAccount
   /// The server's GroupService, as the signed-in user.
-  @Entry var groupCalls = GroupCalls(account: Account())
+  @Entry var groupCalls = GroupCalls(account: placeholderAccount)
   /// The open group's socket, for its screens to ask it for chat pages.
   @Entry var groupSocket: SyncClient?
   /// The user's own socket, connected again as someone else once the
@@ -15,7 +29,7 @@ extension EnvironmentValues {
   @Entry var userSocket: SyncClient?
   /// Opens one of Pochical's invitations on its join screen, as reading
   /// its link does.
-  @Entry var openInvite: @MainActor (String) -> Void = { _ in }
+  @Entry var openInvite = OpenInviteAction { _ in }
 }
 
 /// The グループ tab (/design's DesignGroup): with no group yet, what groups
@@ -354,7 +368,7 @@ private struct GroupHub: View {
     }
     .scrollIndicators(.hidden)
     .task(id: request) {
-      try? await $members.load(request)
+      _ = try? await $members.load(request)
     }
   }
 

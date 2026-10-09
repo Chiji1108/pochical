@@ -102,7 +102,7 @@ struct ChatList: View {
     .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
     .task { meID = await groupCalls.userID() }
     .task(id: group.id) {
-      try? await $chats.load(ChatThreadsRequest(groupID: group.id))
+      _ = try? await $chats.load(ChatThreadsRequest(groupID: group.id))
     }
     .sheet(isPresented: $starting) {
       StartChatSheet(members: untouched) { member in
@@ -197,7 +197,7 @@ private struct ChatRow<Icon: View>: View {
     }
     .buttonStyle(.plain)
     .task(id: ChatSummaryRequest(groupID: group.id, threadID: threadID, me: me)) {
-      try? await $chat.load(ChatSummaryRequest(groupID: group.id, threadID: threadID, me: me))
+      _ = try? await $chat.load(ChatSummaryRequest(groupID: group.id, threadID: threadID, me: me))
     }
   }
 

@@ -358,9 +358,9 @@ struct ChatScreen: View {
       }
     }
     .task {
-      try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID))
+      _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID))
       meID = await groupCalls.userID()
-      try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: meID))
+      _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: meID))
       // Opened from a notification as the app starts, its new lines are
       // still coming: where it opens waits for them, a little.
       await socket?.catchUp(within: .seconds(2))
@@ -430,7 +430,7 @@ struct ChatScreen: View {
     }
     .task(id: sharedSpan) {
       guard let span = sharedSpan else { return }
-      try? await $dayMembers.load(
+      _ = try? await $dayMembers.load(
         GroupMembersRequest(groupID: group.id, from: span.from, through: span.through))
     }
     .task(id: previewLink(draft)) { await readPreview(of: previewLink(draft)) }
@@ -643,6 +643,8 @@ struct ChatScreen: View {
   /// once; past it the picker does not open.
   @ViewBuilder private var photoButton: some View {
     let room = Chat.photosPerSend - pickedPhotos.count
+    // Read here: the picker's label is drawn off the main actor.
+    let iconColor = colors.textSecondary
     if room > 0 {
       PhotosPicker(
         selection: $photoItems, maxSelectionCount: room, matching: .images,
@@ -650,7 +652,7 @@ struct ChatScreen: View {
       ) {
         Image(systemName: "photo")
           .font(.system(size: 20))
-          .foregroundStyle(colors.textSecondary)
+          .foregroundStyle(iconColor)
           .frame(width: 38, height: 38)
       }
       .accessibilityLabel("写真を送る")

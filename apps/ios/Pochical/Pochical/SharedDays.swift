@@ -333,7 +333,7 @@ struct ShareDaysSheet: View {
       }
     }
     .task(id: month) {
-      try? await $members.load(
+      _ = try? await $members.load(
         GroupMembersRequest(
           groupID: groupID, from: min(month, today),
           through: max(month.addingMonths(1).adding(days: -1), suggestionEnd)))
