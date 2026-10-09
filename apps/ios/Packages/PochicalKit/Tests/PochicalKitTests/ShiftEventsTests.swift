@@ -19,6 +19,7 @@ struct DeviceCalendarVectors: Decodable {
     let title: String
     let start: Int?
     let end: Int?
+    var notes: String? = nil
   }
 
   struct Case: VectorCase {
@@ -27,6 +28,8 @@ struct DeviceCalendarVectors: Decodable {
     let patterns: [String: PatternCase]
     let days: [String: DayCase]
     let includeOff: Bool
+    let notes: [String: String]?
+    let people: [String: [String]]?
     let expected: [Event]
   }
 
@@ -49,9 +52,15 @@ func shiftsAsEvents(_ vector: DeviceCalendarVectors.Case) throws {
   for (key, day) in vector.days {
     days[try #require(Day(key))] = DayEntry(shift: day.shift, start: day.start, end: day.end)
   }
+  let notes = Dictionary(
+    uniqueKeysWithValues: (vector.notes ?? [:]).compactMap { key, memo in Day(key).map { ($0, memo) } })
+  let people = Dictionary(
+    uniqueKeysWithValues: (vector.people ?? [:]).compactMap { key, names in Day(key).map { ($0, names) } })
   let events = ShiftEvents.month(
-    try #require(Day(vector.month)), days: days, patterns: patterns, includeOff: vector.includeOff)
+    try #require(Day(vector.month)), days: days, patterns: patterns, includeOff: vector.includeOff,
+    notes: notes, people: people)
   #expect(
-    events.map { .init(day: $0.day.key, title: $0.title, start: $0.start, end: $0.end) }
-      == vector.expected)
+    events.map {
+      .init(day: $0.day.key, title: $0.title, start: $0.start, end: $0.end, notes: $0.notes)
+    } == vector.expected)
 }

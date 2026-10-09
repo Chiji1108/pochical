@@ -88,6 +88,7 @@ import UIKit
           event.endDate = date(of: shift.day, at: 0)
         }
         event.url = Self.dayURL(shift.day, by: user)
+        event.notes = shift.notes
         try store.save(event, span: .thisEvent, commit: false)
       }
       try store.commit()
@@ -145,9 +146,16 @@ struct DeviceCalendarSheet: View {
   @Environment(\.meID) private var meID
   let month: Day
   let calendar: OwnCalendar
+  /// The person's coworkers' names by id, for 一緒に働く人も入れる.
+  let coworkers: [String: String]
   @State private var calendars = DeviceCalendars()
   @State private var calendarID: String?
   @State private var includeOff = false
+  /// The days' memos, and who works them, put in too: each on at first
+  /// and kept as last left, so someone adding to a calendar shared with
+  /// family turns them off once.
+  @AppStorage("deviceCalendar.notes") private var includeNotes = true
+  @AppStorage("deviceCalendar.people") private var includePeople = true
   /// What was done, once added.
   @State private var done: String?
   @State private var failed = false
@@ -155,7 +163,8 @@ struct DeviceCalendarSheet: View {
   var body: some View {
     let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
     let events = ShiftEvents.month(
-      month, days: shown, patterns: calendar.patternsByID, includeOff: includeOff)
+      month, days: shown, patterns: calendar.patternsByID, includeOff: includeOff,
+      notes: includeNotes ? notes : [:], people: includePeople ? people(shown) : [:])
     NavigationStack {
       Form {
         switch calendars.access {
@@ -248,13 +257,37 @@ struct DeviceCalendarSheet: View {
       // from where the picked calendar's dot puts its words.
       .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
       Toggle("休みの日も入れる", isOn: $includeOff)
+      Toggle(isOn: $includeNotes) {
+        Text("メモも入れる")
+        Text("予定がない日は、メモだけの予定にします")
+      }
+      Toggle(isOn: $includePeople) {
+        Text("一緒に働く人も入れる")
+        Text("シフトの予定のメモ欄に入ります")
+      }
     } header: {
       Text("\(month.monthText)のシフトを、1日ずつ予定として入れます。")
         .textCase(nil)
     } footer: {
-      Text("前に入れた\(month.monthText)の予定は、入れ直します。メモと一緒に働く人は入れません。")
+      Text("前に入れた\(month.monthText)の予定は、入れ直します。")
     }
     .settingsRows()
+  }
+
+  /// Each day's memo in the month.
+  private var notes: [Day: String] {
+    Dictionary(
+      uniqueKeysWithValues: month.daysOfMonth.compactMap { day in
+        calendar.note(on: day).map { (day, $0) }
+      })
+  }
+
+  /// Each day's people by name, those still among the coworkers.
+  private func people(_ shown: [Day: DayEntry]) -> [Day: [String]] {
+    shown.compactMapValues { entry in
+      let names = (entry.people ?? []).compactMap { coworkers[$0] }
+      return names.isEmpty ? nil : names
+    }
   }
 
   private func add(_ events: [ShiftEvent]) {
@@ -266,7 +299,7 @@ struct DeviceCalendarSheet: View {
       try calendars.add(events, of: month, by: meID, to: calendarID)
       let name = calendars.calendar(calendarID)?.title ?? ""
       withAnimation {
-        done = "「\(name)」に\(month.monthText)のシフトを\(events.count)件追加しました。"
+        done = "「\(name)」に\(month.monthText)の予定を\(events.count)件追加しました。"
       }
     } catch {
       ReviewPrompt.troubled = true

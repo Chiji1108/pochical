@@ -1,5 +1,5 @@
 {
-  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name, its time (none is all day) and whether it counts as off. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day, or null for all day. Days off are left out unless `includeOff`.",
+  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name, its time (none is all day) and whether it counts as off. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day, or null for all day. Days off are left out unless `includeOff`. Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a day off left out) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer.",
   "events": [
     {
       "name": "work at its pattern's time, days off left out",
@@ -78,6 +78,70 @@
       "includeOff": false,
       "expected": [
         { "day": "2026-11-01", "title": "当番", "start": null, "end": null }
+      ]
+    },
+    {
+      "name": "the memo and who works the day go in the notes when asked for",
+      "month": "2026-11-01",
+      "patterns": {
+        "day": { "name": "日勤", "time": ["08:30", "17:30"], "off": false }
+      },
+      "days": {
+        "2026-11-02": { "shift": "day" },
+        "2026-11-04": { "shift": "day" },
+        "2026-11-05": { "shift": "day" }
+      },
+      "includeOff": false,
+      "notes": { "2026-11-02": "歓迎会", "2026-11-05": "引き継ぎ" },
+      "people": { "2026-11-02": ["田中", "佐藤"], "2026-11-04": ["田中"] },
+      "expected": [
+        {
+          "day": "2026-11-02",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "歓迎会\n一緒に働く人：田中、佐藤"
+        },
+        {
+          "day": "2026-11-04",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "一緒に働く人：田中"
+        },
+        {
+          "day": "2026-11-05",
+          "title": "日勤",
+          "start": 510,
+          "end": 1050,
+          "notes": "引き継ぎ"
+        }
+      ]
+    },
+    {
+      "name": "a memo with no shift's event gets one of its own",
+      "month": "2026-11-01",
+      "patterns": {
+        "day": { "name": "日勤", "time": ["08:30", "17:30"], "off": false },
+        "off": { "name": "休み", "off": true }
+      },
+      "days": {
+        "2026-11-02": { "shift": "day" },
+        "2026-11-03": { "shift": "off" }
+      },
+      "includeOff": false,
+      "notes": { "2026-11-03": "歓迎会", "2026-11-07": "旅行\n京都まで" },
+      "people": { "2026-11-03": ["田中"] },
+      "expected": [
+        { "day": "2026-11-02", "title": "日勤", "start": 510, "end": 1050 },
+        { "day": "2026-11-03", "title": "歓迎会", "start": null, "end": null },
+        {
+          "day": "2026-11-07",
+          "title": "旅行",
+          "start": null,
+          "end": null,
+          "notes": "旅行\n京都まで"
+        }
       ]
     }
   ]
