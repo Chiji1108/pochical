@@ -124,24 +124,32 @@ struct CoworkersPage: View {
   }
 }
 
-/// Someone's name, changed on every day they are on; deleting takes them
-/// off those days, asked first when there are any.
+/// Someone's name, changed on every day they are on and kept as its field,
+/// the page or the app is left, as every name is (spec/calendar.md, Text
+/// fields); deleting takes them off those days, asked first when there are
+/// any.
 private struct CoworkerEditor: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.scenePhase) private var scenePhase
   @Dependency(\.defaultDatabase) private var database
   let person: Coworker
   let days: Int
   /// The others' names: one of them cannot be taken.
   let taken: [String]
   @State private var draft: String
+  /// The name last kept.
+  @State private var kept: String
   @State private var confirming = false
+  /// Deleted: nothing of them is kept any more.
+  @State private var deleted = false
 
   init(person: Coworker, days: Int, taken: [String]) {
     self.person = person
     self.days = days
     self.taken = taken
     _draft = State(initialValue: person.name)
+    _kept = State(initialValue: person.name)
   }
 
   var body: some View {
@@ -150,8 +158,8 @@ private struct CoworkerEditor: View {
     Form {
       Section {
         LabeledContent("名前") {
-          LimitedTextField(placeholder: "", text: $draft, limit: TextLimits.personName)
-            .multilineTextAlignment(.trailing)
+          LimitedTextField(
+            placeholder: "", text: $draft, limit: TextLimits.personName, onEndEditing: keep)
         }
       } footer: {
         Text(
@@ -174,18 +182,11 @@ private struct CoworkerEditor: View {
       .settingsRows()
     }
     .settingsList()
-    .navigationTitle(person.name)
+    .navigationTitle(kept)
     .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      ToolbarItem(placement: .confirmationAction) {
-        Button("保存", role: .confirm) {
-          try? database.write {
-            try OwnValues.renameCoworker(person.id, to: trimmed, now: nowMs(), in: $0)
-          }
-          dismiss()
-        }
-        .disabled(trimmed.isEmpty || duplicate || trimmed == person.name)
-      }
+    .onDisappear(perform: keep)
+    .onChange(of: scenePhase) { _, phase in
+      if phase != .active { keep() }
     }
     .alert("\(person.name)を削除しますか？", isPresented: $confirming) {
       Button("キャンセル", role: .cancel) {}
@@ -195,7 +196,19 @@ private struct CoworkerEditor: View {
     }
   }
 
+  /// Keeps the name typed; an empty one or another's is not kept, and
+  /// the person keeps theirs.
+  private func keep() {
+    let name = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !deleted, !name.isEmpty, !taken.contains(name), name != kept else { return }
+    try? database.write {
+      try OwnValues.renameCoworker(person.id, to: name, now: nowMs(), in: $0)
+    }
+    kept = name
+  }
+
   private func delete() {
+    deleted = true
     try? database.write { try OwnValues.deleteCoworker(person.id, now: nowMs(), in: $0) }
     dismiss()
   }
