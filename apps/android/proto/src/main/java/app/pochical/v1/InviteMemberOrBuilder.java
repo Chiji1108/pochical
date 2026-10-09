@@ -21,4 +21,26 @@ public interface InviteMemberOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDisplayNameBytes();
+
+  /**
+   * <pre>
+   * Their photo as the group shows it, read by the code's holder at
+   * /v1/invites/{code}/photos/{id}; empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  java.lang.String getPhotoId();
+  /**
+   * <pre>
+   * Their photo as the group shows it, read by the code's holder at
+   * /v1/invites/{code}/photos/{id}; empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  com.google.protobuf.ByteString
+      getPhotoIdBytes();
 }

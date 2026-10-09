@@ -160,8 +160,11 @@ export const registerGroupService = (router: ConnectRouter): void => {
         groupEmoji: profile.emoji ?? "",
         groupId,
         groupName: profile.name,
-        // Names only: who they are stays inside the group.
-        members: memberList.map(({ displayName }) => ({ displayName })),
+        // Names and faces only: who they are stays inside the group.
+        members: memberList.map(({ displayName, photoId }) => ({
+          displayName,
+          photoId,
+        })),
       });
     },
 

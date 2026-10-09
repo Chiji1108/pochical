@@ -149,4 +149,37 @@ describe("members' photos", () => {
       ).resolves.toBeNull();
     });
   });
+
+  it("show on the join screen to whoever holds the invitation", async () => {
+    const { groupId, inviteCode, maker, makerId } = await pair();
+    const photoId = crypto.randomUUID();
+    await upload(`/v1/me/photos/${photoId}`, maker);
+    await call("UserService/SetProfile", { name: "さくら", photoId }, maker);
+    await push(makerId);
+    await vi.waitFor(async () => {
+      await expect(
+        env.PHOTOS.head(photoKey(groupId, photoId))
+      ).resolves.not.toBeNull();
+    });
+    const outsider = await signInAnonymously();
+    const invite = await call(
+      "GroupService/GetInvite",
+      { inviteCode },
+      outsider
+    );
+    await expect(invite.json()).resolves.toMatchObject({
+      members: [{ displayName: "さくら", photoId }, { displayName: "ゆうき" }],
+    });
+    const face = await read(
+      `/v1/invites/${inviteCode}/photos/${photoId}`,
+      outsider
+    );
+    expect(face.status).toBe(200);
+    // Only a photo the group shows of someone in it.
+    const other = await read(
+      `/v1/invites/${inviteCode}/photos/${crypto.randomUUID()}`,
+      outsider
+    );
+    expect(other.status).toBe(404);
+  });
 });

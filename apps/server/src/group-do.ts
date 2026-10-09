@@ -211,13 +211,23 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /** Everyone in the group as they appear in it, in the order they joined. */
-  memberList(): { displayName: string; userId: string }[] {
+  memberList(): { displayName: string; userId: string; photoId: string }[] {
     return this.db
-      .select({ displayName: members.displayName, userId: members.userId })
+      .select()
       .from(members)
       .where(inGroup())
       .orderBy(asc(members.joinedAt))
-      .all();
+      .all()
+      .map(({ displayName, userId, ownPhoto, usualPhoto }) => ({
+        displayName,
+        photoId: ownPhoto ?? usualPhoto,
+        userId,
+      }));
+  }
+
+  /** Whether the photo is one the group shows of someone in it now. */
+  showsPhoto(photoId: string): boolean {
+    return this.memberList().some((member) => member.photoId === photoId);
   }
 
   /**

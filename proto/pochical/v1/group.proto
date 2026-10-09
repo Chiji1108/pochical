@@ -112,6 +112,9 @@ message GetInviteResponse {
 // Someone in a group, as the join screen shows them.
 message InviteMember {
   string display_name = 1;
+  // Their photo as the group shows it, read by the code's holder at
+  // /v1/invites/{code}/photos/{id}; empty for none.
+  string photo_id = 2;
 }
 
 message JoinGroupRequest {

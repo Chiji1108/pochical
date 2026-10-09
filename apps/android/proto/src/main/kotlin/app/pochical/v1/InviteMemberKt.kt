@@ -49,6 +49,33 @@ public object InviteMemberKt {
     public fun clearDisplayName() {
       _builder.clearDisplayName()
     }
+
+    /**
+     * ```
+     * Their photo as the group shows it, read by the code's holder at
+     * /v1/invites/{code}/photos/{id}; empty for none.
+     * ```
+     *
+     * `string photo_id = 2 [json_name = "photoId"];`
+     */
+    public var photoId: kotlin.String
+      @kotlin.jvm.JvmName("getPhotoId")
+        get() = _builder.photoId
+      @kotlin.jvm.JvmName("setPhotoId")
+        set(value) {
+        _builder.photoId = value
+      }
+    /**
+     * ```
+     * Their photo as the group shows it, read by the code's holder at
+     * /v1/invites/{code}/photos/{id}; empty for none.
+     * ```
+     *
+     * `string photo_id = 2 [json_name = "photoId"];`
+     */
+    public fun clearPhotoId() {
+      _builder.clearPhotoId()
+    }
   }
 }
 public inline fun app.pochical.v1.InviteMember.copy(block: `app.pochical.v1`.InviteMemberKt.Dsl.() -> kotlin.Unit): app.pochical.v1.InviteMember =
