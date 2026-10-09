@@ -8,8 +8,6 @@ import SwiftUI
 struct EntryTray: View {
   @Environment(\.themeColors) private var colors
   let day: Day
-  /// Which days take their colors (the person's カレンダー settings).
-  let week: DeviceSettings.Week
   let patterns: [Pattern]
   /// Whether the day has a shift to clear.
   let canClear: Bool
@@ -24,7 +22,7 @@ struct EntryTray: View {
 
   var body: some View {
     VStack(spacing: 8) {
-      TrayDateLabel(day: day, week: week, onPick: onPickDay)
+      TrayDateLabel(day: day, onPick: onPickDay)
       PatternKeys(patterns: patterns, page: $page) { pattern in
         keys += 1
         onEnter(pattern.id)
@@ -49,52 +47,23 @@ struct EntryTray: View {
   }
 }
 
-/// The day ポチポチ入力 enters next, over its keys: tapped, another day
-/// is picked (/design's InputDatePicker).
+/// The day ポチポチ入力 enters next, over its keys: the system's date
+/// picker, which opens a month of days where it is pressed, so another day
+/// is picked without a sheet (/design's InputDatePicker).
 struct TrayDateLabel: View {
-  @Environment(\.themeColors) private var colors
   let day: Day
-  /// Which days take their colors (the person's カレンダー settings).
-  let week: DeviceSettings.Week
   let onPick: (Day) -> Void
-  @State private var choosing = false
 
   var body: some View {
-    Button {
-      choosing = true
-    } label: {
-      HStack(spacing: 2) {
-        Text(day.monthDayText)
-          .font(.system(size: 17, weight: .semibold))
-          .foregroundStyle(colors.textPrimary)
-        Text("(\(day.weekdayName))")
-          .font(.system(size: 14))
-          .foregroundStyle(weekdayColor)
-        Image(systemName: "chevron.down")
-          .font(.system(size: 13, weight: .semibold))
-          .foregroundStyle(colors.accentDefault)
-          .padding(.leading, 4)
-      }
-      .frame(minHeight: Metrics.touch)
-      .contentShape(.rect)
-    }
-    .buttonStyle(.plain)
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel("入力する日付：\(day.monthDayText)")
-    .accessibilityHint("押すと日付を選べます")
-    .sheet(isPresented: $choosing) {
-      DayChoiceSheet(title: "入力する日付", day: day, onPick: onPick)
-    }
+    DatePicker(
+      "入力する日付",
+      selection: Binding { day.date(in: .current) } set: { onPick(Day($0, in: .current)) },
+      displayedComponents: .date
+    )
+    .datePickerStyle(.compact)
+    .labelsHidden()
+    .frame(minHeight: Metrics.touch)
   }
-
-  private var weekdayColor: Color {
-    let isHoliday = day.holidayName != nil
-    if (isHoliday && week.holiday) || (day.weekday == 0 && week.sunday) {
-      return colors.calendarHoliday
-    }
-    return day.weekday == 6 && week.saturday ? colors.calendarSaturday : colors.textTertiary
-  }
-
 }
 
 /// A tray's words under its keys with the pages' dots between them, the

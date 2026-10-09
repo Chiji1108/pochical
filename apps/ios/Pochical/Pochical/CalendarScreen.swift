@@ -359,7 +359,7 @@ struct CalendarScreen: View {
     if let day = entering {
       let shown = calendar.shown(from: day, through: day)
       EntryTray(
-        day: day, week: settings.device.week, patterns: calendar.patterns,
+        day: day, patterns: calendar.patterns,
         canClear: shown[day] != nil,
         canSkip: day != day.daysOfMonth.last,
         onEnter: { shift in
