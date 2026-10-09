@@ -129,7 +129,7 @@ struct DayDetail: View {
             Label {
               Text(pattern.name).lineLimit(1)
             } icon: {
-              ShiftMark(pattern: pattern, size: 18)
+              ShiftMark(pattern: pattern, size: 16)
             }
           } else {
             Text("なし")
@@ -167,19 +167,19 @@ struct DayDetail: View {
         if change != nil {
           Text(moves.isEmpty ? "変更済み" : moves)
             .font(.caption)
-            .foregroundStyle(colors.accentDefault)
+            .foregroundStyle(colors.textTertiary)
         }
       }
       Spacer()
-      clock(entry.start ?? time.start) { setTime(entry, start: $0, standard: time) }
+      clock("開始時刻", entry.start ?? time.start) { setTime(entry, start: $0, standard: time) }
       Text("–").foregroundStyle(colors.textTertiary)
-      clock(entry.end ?? time.end) { setTime(entry, end: $0, standard: time) }
+      clock("終了時刻", entry.end ?? time.end) { setTime(entry, end: $0, standard: time) }
     }
   }
 
-  private func clock(_ time: String, set: @escaping (String) -> Void) -> some View {
+  private func clock(_ label: String, _ time: String, set: @escaping (String) -> Void) -> some View {
     DatePicker(
-      "", selection: Binding(get: { Self.date(time) }, set: { set(Self.time($0)) }),
+      label, selection: Binding(get: { Self.date(time) }, set: { set(Self.time($0)) }),
       displayedComponents: .hourAndMinute
     )
     .labelsHidden()
@@ -419,7 +419,7 @@ private struct ShiftChoices: View {
                   Label {
                     Text(pattern.name).lineLimit(1).foregroundStyle(colors.textPrimary)
                   } icon: {
-                    ShiftMark(pattern: pattern, size: 22)
+                    ShiftMark(pattern: pattern, size: 20)
                   }
                 }
                 Image(systemName: "checkmark")
