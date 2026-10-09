@@ -27,23 +27,26 @@ struct MonthPicturePage: View {
     NavigationStack {
       List {
         Section {
-          VStack(spacing: 12) {
-            framed(dark: dark)
-              .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
-              .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.separator))
-              .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
-              .accessibilityElement(children: .ignore)
-              .accessibilityLabel("\(month.yearMonthText)のシフトの画像")
-            // An always-dark テーマ saves its dark.
-            Picker("明るさ", selection: Binding(get: { dark }, set: { settings.device.picture.dark = $0 })) {
-              Image(systemName: "sun.max").accessibilityLabel("ライト").tag(false)
-              Image(systemName: "moon").accessibilityLabel("ダーク").tag(true)
+          framed(dark: dark)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
+            .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
+            .shadow(Shadow.md)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(month.yearMonthText)のシフトの画像")
+            // ☀︎ / ☾ on the picture's top edge, as every calendar preview
+            // has them; an always-dark テーマ saves its dark.
+            .overlay(alignment: .topLeading) {
+              SchemeSwitch(
+                shown: Binding { dark ? .dark : .light } set: {
+                  settings.device.picture.dark = $0 == .dark
+                },
+                disabled: theme.isAlwaysDark
+              )
+              .offset(x: 12, y: -10)
             }
-            .pickerStyle(.segmented)
-            .frame(width: 120)
-            .disabled(theme.isAlwaysDark)
-          }
-          .settingsOnPage()
+            // Room for the switch over the edge.
+            .padding(.top, 10)
+            .settingsOnPage()
         }
         // The style page's choices, with the picture's own values: it
         // goes to people who do not know the marks, so names start on.
@@ -119,6 +122,8 @@ struct MonthPicturePage: View {
           .frame(maxWidth: .infinity, minHeight: Metrics.control)
       }
       .buttonStyle(.borderedProminent)
+      .tint(colors.accentFill)
+      .foregroundStyle(colors.accentOnFill)
       .disabled(image == nil)
     }
     .buttonBorderShape(.capsule)
@@ -204,7 +209,7 @@ struct MonthPicture: View {
         .foregroundStyle(colors.textPrimary)
         .padding(.horizontal, 4)
         .padding(.bottom, 12)
-      WeekdayRow(week: week)
+      WeekdayRow(week: week, compact: true)
       VStack(spacing: 4) {
         ForEach(weeks, id: \.self) { days in
           HStack(spacing: 4) {

@@ -393,20 +393,12 @@ struct CalendarScreen: View {
   /// and a pattern that counts as off to fill them with.
   private func gapSheet(_ calendar: OwnCalendar) -> GapSheet? {
     let offPatterns = calendar.patterns.filter(\.countsAsOff)
-    guard !offPatterns.isEmpty, let month = gaps.first?.firstOfMonth else { return nil }
+    guard !offPatterns.isEmpty, !gaps.isEmpty else { return nil }
     return GapSheet(
-      month: month, days: gaps, offPatterns: offPatterns,
-      offCount: offCount(in: month, calendar: calendar),
-      completes: monthDays(month, calendar).count + gaps.count == month.daysOfMonth.count
+      days: gaps, offPatterns: offPatterns, blankOff: settings.device.look.options.blankOff
     ) { off in
       write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
     }
-  }
-
-  private func offCount(in month: Day, calendar: OwnCalendar) -> Int {
-    calendar.shown(from: month, through: month.daysOfMonth.last!).values.filter {
-      calendar.patternsByID[$0.shift]?.countsAsOff == true
-    }.count
   }
 
   /// Asks the store for its review prompt once entering, a day and 完了's
@@ -545,6 +537,8 @@ struct CalendarScreen: View {
 struct WeekdayRow: View {
   @Environment(\.themeColors) private var colors
   let week: DeviceSettings.Week
+  /// Closer to the days, as a picture of the month draws it.
+  var compact = false
 
   var body: some View {
     HStack(spacing: 4) {
@@ -556,7 +550,7 @@ struct WeekdayRow: View {
           .frame(maxWidth: .infinity)
       }
     }
-    .padding(.bottom, 12)
+    .padding(.bottom, compact ? 8 : 12)
     .accessibilityHidden(true)
   }
 

@@ -120,7 +120,6 @@ export function DesignCalendar({
   const ownPatterns = useUser((state) => state.patterns);
   const patternKeys = ownPatterns.map((pattern) => pattern.id);
   const book = usePatterns();
-  const sharing = useUser((state) => state.groups.length > 0);
   const weekTools = useWeek();
   const dates = weekTools.monthDates(month);
   const monthDays = dates.filter(
@@ -546,14 +545,9 @@ export function DesignCalendar({
           .map((pattern) => ({ key: pattern.id, label: pattern.name }))}
         days={gapDays}
         onFill={fillGaps}
-        blankOff={offDisplay === "blank"}
-        completes={unfilled === gapDays.length}
-        month={month}
-        offCount={daysOff}
-        sharing={sharing}
         offerBlank={offerBlank}
-        onBlankOff={(blankOff) => {
-          setCalendarOptions({ blankOff });
+        onBlankOff={() => {
+          setCalendarOptions({ blankOff: true });
         }}
         onOpenChange={sheetChange("gap")}
         open={openSheet === "gap"}

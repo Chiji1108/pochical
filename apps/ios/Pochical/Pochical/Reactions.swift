@@ -93,7 +93,7 @@ private struct ReactionPill: View {
 }
 
 /// Views side by side, starting a new row when one would not fit.
-private struct WrappingRow: Layout {
+struct WrappingRow: Layout {
   let spacing: CGFloat
 
   func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {

@@ -55,7 +55,6 @@ export const Route = createFileRoute("/design_/flows")({
 const variants = parseDesignVariants({});
 const october = new Date(2026, 9, 1);
 const OCTOBER = 9;
-const OCTOBER_DAYS = 31;
 
 // 前日 21:00's notification for the sample's 25th, a day of 残業, and the
 // family chat's latest line, as they reach the lock screen.
@@ -159,11 +158,6 @@ function FlowsPage() {
               />
             </FrameRow>
             <FrameRow branch="人によって変わるところ" fan>
-              <GapFrame
-                label="共有していない人"
-                note="グループの一文がない"
-                sharing={false}
-              />
               <OffDisplayContext value="blank">
                 <GapFrame
                   label="休みを空白で見せている人"
@@ -337,10 +331,6 @@ function GapFrame({
   schedule?: Schedule;
 } & Partial<GapSheetProps>) {
   const days = gapDaysIn(schedule, october);
-  const offCount = Object.values(schedule).filter(
-    (entry) => entry && isDayOff(samplePatterns[entry.shift])
-  ).length;
-  const filled = Object.keys(schedule).length;
   return (
     <CalendarFrame
       label={label}
@@ -348,16 +338,11 @@ function GapFrame({
       note={note}
       overlay={
         <GapSheetPreview
-          blankOff={false}
           choices={[{ key: "off", label: presetPatterns.off.name }]}
-          completes={filled + days.length === OCTOBER_DAYS}
           days={days}
-          month={october}
-          offCount={offCount}
           offerBlank
           onBlankOff={() => undefined}
           onFill={() => undefined}
-          sharing
           {...sheet}
         />
       }

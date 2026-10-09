@@ -156,7 +156,7 @@ struct DeviceCalendarSheet: View {
               Label {
                 Text(done).foregroundStyle(colors.textPrimary)
               } icon: {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(colors.accentDefault)
+                Image(systemName: "checkmark").foregroundStyle(colors.accentDefault)
               }
             }
             .settingsRows()
@@ -173,7 +173,7 @@ struct DeviceCalendarSheet: View {
         }
       }
       .settingsList()
-      .navigationTitle("端末カレンダーに追加")
+      .navigationTitle(done == nil ? "端末カレンダーに追加" : "保存しました")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -199,6 +199,8 @@ struct DeviceCalendarSheet: View {
     }
     .buttonStyle(.borderedProminent)
     .buttonBorderShape(.capsule)
+    .tint(colors.accentFill)
+    .foregroundStyle(colors.accentOnFill)
     .settingsOnPage()
   }
 
