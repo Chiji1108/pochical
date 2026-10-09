@@ -32,10 +32,12 @@ struct ProfileRow: View {
 }
 
 /// プロフィール: the usual photo, saved as it is picked, and the usual
-/// name, saved a moment after typing stops.
+/// name, saved as the field is left (or the page, or the app), so no name
+/// half typed or still being converted reaches the groups.
 private struct ProfilePage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.scenePhase) private var scenePhase
   @Fetch(UsualProfileRequest()) private var saved = UsualProfile()
   /// What is typed, from the saved name once it has loaded.
   @State private var name: String?
@@ -64,7 +66,7 @@ private struct ProfilePage: View {
           LimitedTextField(
             placeholder: "例：さくら",
             text: Binding { name ?? saved.name } set: { name = $0 },
-            limit: TextLimits.personName)
+            limit: TextLimits.personName, onEndEditing: saveName)
         }
       } footer: {
         if failed {
@@ -79,22 +81,17 @@ private struct ProfilePage: View {
     .settingsList()
     .navigationTitle("プロフィール")
     .navigationBarTitleDisplayMode(.inline)
-    // Saved once typing pauses, as the server keeps it for every device.
-    .task(id: name) {
-      guard let kept = unsaved else { return }
-      try? await Task.sleep(for: .milliseconds(800))
-      guard !Task.isCancelled else { return }
-      await save {
-        try await groupCalls.setProfile(UsualProfile(name: kept, photoID: saved.photoID))
-      }
+    .onDisappear(perform: saveName)
+    .onChange(of: scenePhase) { _, phase in
+      if phase != .active { saveName() }
     }
-    // Leaving before the pause is over still saves what was typed, past
-    // the page.
-    .onDisappear {
-      guard let kept = unsaved else { return }
-      let profile = UsualProfile(name: kept, photoID: saved.photoID)
-      Task { [groupCalls] in try? await groupCalls.setProfile(profile) }
-    }
+  }
+
+  /// Saves what is typed, when it differs from the saved name.
+  private func saveName() {
+    guard let kept = unsaved else { return }
+    let profile = UsualProfile(name: kept, photoID: saved.photoID)
+    Task { await save { try await groupCalls.setProfile(profile) } }
   }
 
   /// The name as it will be kept: what is typed, else the saved one.

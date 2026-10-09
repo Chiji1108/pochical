@@ -246,11 +246,13 @@ private struct GroupEditPage: View {
 /// How the person is called in the group, which its members see
 /// (/design's GroupProfilePage): a name of its own, or, left empty, their
 /// usual one, which it then follows (spec/sync-protocol.md, Profile). Both
-/// are kept as they change, as プロフィール's are: the photo as it is
-/// picked, the name once typing pauses. Neither tells the group's chat.
+/// are kept as プロフィール's are: the photo as it is picked, the name as
+/// the field is left (or the page, or the app). Neither tells the group's
+/// chat.
 private struct DisplayNamePage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.scenePhase) private var scenePhase
   @Fetch(ProfileNameRequest()) private var usualName = ""
   @Fetch private var members: [GroupMember] = []
   let group: GroupRow
@@ -295,7 +297,7 @@ private struct DisplayNamePage: View {
         LabeledContent("名前") {
           LimitedTextField(
             placeholder: usualName.isEmpty ? "例：さくら" : usualName, text: $name,
-            limit: TextLimits.personName)
+            limit: TextLimits.personName, onEndEditing: saveName)
         }
       } footer: {
         if nameFailed {
@@ -317,29 +319,28 @@ private struct DisplayNamePage: View {
       let today = Day.today
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
     }
-    // Saved once typing pauses, as the server keeps it for every device.
-    .task(id: name) {
-      guard let kept = unsaved else { return }
-      try? await Task.sleep(for: .milliseconds(800))
-      guard !Task.isCancelled else { return }
-      do {
-        try await groupCalls.setDisplayName(kept, in: group.id)
-        saved = kept
-        nameFailed = false
-      } catch {
-        nameFailed = !Task.isCancelled
-      }
-    }
-    // Leaving before the pause is over still saves what was typed, past
-    // the page.
-    .onDisappear {
-      guard let kept = unsaved else { return }
-      Task { [groupCalls, group] in try? await groupCalls.setDisplayName(kept, in: group.id) }
+    .onDisappear(perform: saveName)
+    .onChange(of: scenePhase) { _, phase in
+      if phase != .active { saveName() }
     }
     .alert("保存できませんでした", isPresented: $failed) {
       Button("OK", role: .cancel) {}
     } message: {
       Text("通信できる場所で、もう一度お試しください。")
+    }
+  }
+
+  /// Saves what is typed, when it differs from the kept name.
+  private func saveName() {
+    guard let kept = unsaved else { return }
+    Task {
+      do {
+        try await groupCalls.setDisplayName(kept, in: group.id)
+        saved = kept
+        nameFailed = false
+      } catch {
+        nameFailed = true
+      }
     }
   }
 
