@@ -384,12 +384,14 @@ struct CalendarScreen: View {
         onPickDay: { entering = $0 }
       )
     } else {
-      let month = shownMonth ?? thisMonth
-      let days = monthDays(month, calendar)
-      SummaryRow(
-        label: "\(month == thisMonth ? "今月" : month.monthText)のお休み",
-        days: days.values.count { calendar.patternsByID[$0.shift]?.countsAsOff == true }
-      ) {
+      MonthSummary(
+        position: position, monthAt: monthOfPage,
+        daysOff: { month in
+          monthDays(month, calendar).values.count {
+            calendar.patternsByID[$0.shift]?.countsAsOff == true
+          }
+        }
+      ) { month in
         breakingDown = month
       }
       .padding(.bottom, 12)
