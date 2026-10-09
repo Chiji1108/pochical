@@ -120,10 +120,10 @@ struct MonthBreakdownSheet: View {
       .padding(.horizontal, 16)
       .padding(.top, 16)
       .padding(.bottom, 12)
-      ViewThatFits(in: .vertical) {
-        rows
-        ScrollView { rows }
-      }
+      // As tall as its rows; past the screen, the sheet stops at its
+      // largest and they scroll.
+      ScrollView { rows }
+        .scrollBounceBehavior(.basedOnSize)
     }
   }
 
