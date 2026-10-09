@@ -19,3 +19,23 @@ struct BarButton: ButtonStyle {
       .glassEffect(.regular.tint(tint).interactive(), in: .capsule)
   }
 }
+
+/// A screen's main button (/design's primary Button): a capsule of the
+/// accent's fill as high as a control, its words body medium, as wide as
+/// it is given. The system's prominent style adds padding of its own, which
+/// would make it taller than the rows beside it.
+struct PrimaryButton: ButtonStyle {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.isEnabled) private var isEnabled
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.body.weight(.medium))
+      .foregroundStyle(colors.accentOnFill)
+      .frame(maxWidth: .infinity, minHeight: Metrics.control)
+      .background(colors.accentFill, in: .capsule)
+      .contentShape(.capsule)
+      .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.4)
+      .animation(Springs.quick, value: configuration.isPressed)
+  }
+}
