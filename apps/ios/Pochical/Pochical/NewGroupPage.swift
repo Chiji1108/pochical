@@ -114,15 +114,14 @@ private let groupHints: [(emoji: String, words: [String])] = [
   ("👭", ["友達", "友だち", "仲間"]),
 ]
 
-/// The emoji the picker offers (/design's groupEmojis).
-let groupEmojis = ["🏠", "👭", "🎓", "💼", "🌷", "🍙", "☕️", "✈️", "🎵", "⚽️", "🐾", "⭐️"]
+/// The emoji offered for a group's mark, a row of eight for each kind
+/// (design/src/patterns.ts, groupMarkEmojis).
+let groupEmojis = ReadyPatterns.groupMarkEmojis
 
-/// From the name alone: a fitting emoji, else the last of the picker's,
-/// where /design takes the name's first letter, a mark the server does not
-/// keep yet.
+/// From the name alone: a fitting emoji, else a star, where /design takes
+/// the name's first letter, a mark the server does not keep yet.
 private func guessedEmoji(for name: String) -> String {
-  groupHints.first { hint in hint.words.contains { name.contains($0) } }?.emoji
-    ?? groupEmojis[groupEmojis.count - 1]
+  groupHints.first { hint in hint.words.contains { name.contains($0) } }?.emoji ?? "⭐️"
 }
 
 /// The group's mark, picked from /design's emoji.
@@ -134,7 +133,8 @@ struct EmojiPage: View {
 
   var body: some View {
     ScrollView {
-      LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 12)
+      // Eight a row, a kind to each, as a pattern's marks are offered.
+      LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 8), spacing: 6)
       {
         ForEach(groupEmojis, id: \.self) { choice in
           let isPicked = choice == emoji
@@ -143,8 +143,8 @@ struct EmojiPage: View {
             dismiss()
           } label: {
             Text(choice)
-              .font(.system(size: 28))
-              .frame(maxWidth: .infinity, minHeight: 64)
+              .font(.system(size: 24))
+              .frame(maxWidth: .infinity, minHeight: 44)
               .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.lg))
               .overlay {
                 if isPicked {

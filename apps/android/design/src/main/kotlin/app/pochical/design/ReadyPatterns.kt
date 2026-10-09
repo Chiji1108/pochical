@@ -40,6 +40,10 @@ object ReadyPatterns {
 
   val markIcons: List<String> = listOf("letter", "sunHorizon", "cloudSun", "sun", "cloudMoon", "moon", "moonStar", "star", "leaf", "flower", "bed", "couch", "coffee", "treePalm", "plane", "heart", "briefcase", "laptop", "building", "house", "users", "phone", "book", "clock", "storefront", "utensils", "scissors", "wrench", "truck", "car", "train", "teacher", "hospital", "stethoscope", "syringe", "ambulance", "siren", "shield", "handHeart", "baby", "graduationCap", "music", "dumbbell", "pawPrint", "shoppingBag", "gift", "partyPopper", "calendarCheck")
 
+  val groupMarkEmojis: List<String> = listOf("🏠", "👨‍👩‍👧", "👶", "💑", "❤️", "🫶", "🐾", "🌷", "👭", "🤝", "🎉", "🥂", "🍻", "💬", "⭐️", "🌈", "🎓", "🏫", "📚", "✏️", "🧪", "🎒", "🏀", "🎵", "💼", "🏢", "🏥", "🏪", "🍳", "🚒", "🏭", "💻", "⚽️", "🎾", "🏃", "🎮", "🎨", "🎤", "📷", "🎬", "🍙", "☕️", "🍰", "✈️", "🏕️", "⛰️", "🌸", "🌊")
+
+  val groupMarkIcons: List<String> = listOf("house", "users", "heart", "baby", "babyCarriage", "handHeart", "pawPrint", "flower", "smiley", "handshake", "partyPopper", "balloon", "beer", "wine", "star", "rainbow", "graduationCap", "books", "backpack", "pencil", "microscope", "teacher", "calculator", "music", "briefcase", "building", "hospital", "storefront", "chefHat", "fireTruck", "factory", "laptop", "soccer", "tennis", "run", "game", "paintBrush", "microphone", "camera", "film", "utensils", "coffee", "cake", "plane", "tent", "mountains", "tree", "island")
+
   data class LookHint(val words: List<String>, val emoji: String, val icon: String)
 
   val lookHints: List<LookHint> = listOf(
