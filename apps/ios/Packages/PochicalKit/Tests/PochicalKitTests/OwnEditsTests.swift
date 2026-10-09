@@ -237,3 +237,36 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
     #expect(try OwnValues.repeatOrders(in: db).last?.sequence.count == 3)
   }
 }
+
+@Test func theFirstRunGivesAKindOfWorksPatternsAndItsOrderFromTheMonthBefore() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let ids: Set<PatternID> = ["duty", "offDuty", "off"]
+    let incoming = ["duty", "offDuty", "off"].compactMap(ReadyPatterns.pattern).map {
+      Pattern($0, keeping: ids)
+    }
+    try OwnValues.begin(
+      with: incoming, sequence: ["duty", "offDuty", "off"], anchor: Day("2026-10-20")!,
+      today: Day("2026-10-09")!, holidayCountry: "JP", now: 1, in: db)
+    #expect(try OwnValues.patterns(in: db).map(\.name) == ["当番", "非番", "休み"])
+    let orders = try OwnValues.repeatOrders(in: db)
+    #expect(orders.count == 1)
+    #expect(orders.first?.start == Day("2026-09-01"))
+    #expect(orders.first?.anchor == Day("2026-10-20"))
+  }
+}
+
+@Test func theFirstRunWithoutAnOrderGivesOnlyPatterns() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let ids: Set<PatternID> = ["day", "off"]
+    let incoming = ["day", "off"].compactMap(ReadyPatterns.pattern).map {
+      Pattern($0, keeping: ids)
+    }
+    try OwnValues.begin(
+      with: incoming, sequence: [], anchor: Day("2026-10-09")!, today: Day("2026-10-09")!,
+      holidayCountry: "JP", now: 1, in: db)
+    #expect(try OwnValues.patterns(in: db).count == 2)
+    #expect(try OwnValues.repeatOrders(in: db).isEmpty)
+  }
+}

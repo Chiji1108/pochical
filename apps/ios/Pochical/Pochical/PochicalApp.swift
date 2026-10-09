@@ -35,7 +35,7 @@ struct PochicalApp: App {
 
   var body: some Scene {
     WindowGroup {
-      RootView()
+      AppRoot()
         .modifier(Themed(theme: settings.device.theme, appearance: settings.device.appearance))
         .environment(settings)
         .environment(\.groupCalls, groupCalls)

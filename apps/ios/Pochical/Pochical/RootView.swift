@@ -5,8 +5,8 @@ import SwiftUI
 import UserNotifications
 
 /// The app's tabs, as /design's tab bar has them: カレンダー, グループ and
-/// 設定. An invitation link opened in the app shows its join screen over
-/// them, and once in, the group.
+/// 設定. An invitation link opened in the app (AppRoot) shows its join
+/// screen over them, and once in, the group.
 struct RootView: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
@@ -18,7 +18,8 @@ struct RootView: View {
   @State private var openGroupID: String?
   /// A chat a notification opened, for the groups to show.
   @State private var openingChat: OpenedChat?
-  @State private var invite: OpenedInvite?
+  /// An invitation opened, its join screen shown over the tabs.
+  @Binding var invite: OpenedInvite?
   @State private var scanning = false
   /// An invitation read by the camera, opened once the camera has gone:
   /// one cover cannot come up while another is going.
@@ -66,11 +67,6 @@ struct RootView: View {
     // An answer from Pochical's people opens their chat, under 設定.
     .onChange(of: Notifications.shared.openingSupport, initial: true) { _, opening in
       if opening { tab = .settings }
-    }
-    .onOpenURL { url in
-      if let code = openedInviteCode(of: url) {
-        invite = OpenedInvite(code: code)
-      }
     }
     .fullScreenCover(isPresented: $scanning) {
       if let scanned {

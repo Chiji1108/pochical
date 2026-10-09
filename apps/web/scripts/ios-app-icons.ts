@@ -1,7 +1,8 @@
 // Paints the iOS app's icons from the poodle drawing, the way /design
 // paints them (src/components/design-app-icon.tsx): each pickable color as
 // an app icon set, with its dark twin for a home screen set to dark icons,
-// and a small preview of each for 設定 > アプリアイコン to show.
+// and a small preview of each for 設定 > アプリアイコン to show; and the
+// drawing alone, as the first run's welcome shows it.
 // Run again after changing the drawing or the colors: bun run icon:ios
 import { mkdir, rm, writeFile } from "node:fs/promises";
 
@@ -27,6 +28,12 @@ const CHANNELS = 3;
 const RGBA = 4;
 // Big enough for 設定's two-across grid on a 3x screen.
 const PREVIEW_SIZE = 312;
+// The welcome's 200-point dog on a 3x screen.
+const WELCOME_SIZE = 600;
+// /design's light welcome brightens the scan before multiplying it into
+// the ground (src/components/design-work-setup.tsx, onboarding.poodle).
+const WELCOME_BRIGHTNESS = 1.12;
+const WELCOME_CONTRAST = 1.2;
 // The app's own icon set; the others are named after it.
 const PRIMARY = "moss";
 
@@ -143,3 +150,59 @@ const writeIconSet = async (option: IconColors) => {
 };
 
 await Promise.all(iconColorOptions.map(writeIconSet));
+
+// The welcome's dog, the whole drawing as /design shows it: in light its
+// lines alone, the ground showing through as /design's multiplied scan
+// lets it; in dark the default icon's dark twin without its ground.
+const writeWelcome = async () => {
+  const folder = `${ASSETS}WelcomePoodle.imageset/`;
+  await rm(folder, { force: true, recursive: true });
+  await mkdir(folder, { recursive: true });
+  const lines = new Uint8ClampedArray(width * height * RGBA);
+  for (let index = 0; index < lightness.length; index += 1) {
+    const bright = ((lightness[index] ?? 255) / 255) * WELCOME_BRIGHTNESS;
+    const shown = Math.min(
+      1,
+      Math.max(0, (bright - 0.5) * WELCOME_CONTRAST + 0.5)
+    );
+    lines[index * RGBA + 3] = Math.round((1 - shown) * 255);
+  }
+  const darkLook = paintedPixels(
+    lightness,
+    width,
+    height,
+    colorsOf("moss-dark"),
+    true
+  );
+  const [light, dark] = await Promise.all(
+    [lines, darkLook].map(
+      async (pixels) =>
+        await sharp(Buffer.from(pixels.buffer), {
+          raw: { channels: RGBA, height, width },
+        })
+          .resize(WELCOME_SIZE, WELCOME_SIZE, { kernel: "lanczos3" })
+          .png({ compressionLevel: 9 })
+          .toBuffer()
+    )
+  );
+  await Promise.all([
+    writeFile(`${folder}light.png`, light),
+    writeFile(`${folder}dark.png`, dark),
+    writeFile(
+      `${folder}Contents.json`,
+      json({
+        images: [
+          { filename: "light.png", idiom: "universal" },
+          {
+            appearances: [{ appearance: "luminosity", value: "dark" }],
+            filename: "dark.png",
+            idiom: "universal",
+          },
+        ],
+        info: author,
+      })
+    ),
+  ]);
+};
+
+await writeWelcome();

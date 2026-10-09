@@ -9,7 +9,7 @@ import SwiftUI
 // patterns taking over and its order from that day.
 
 /// The ready-made patterns by id, as the questions show them.
-private let readyByID: [PatternID: Pattern] = Dictionary(
+let readyByID: [PatternID: Pattern] = Dictionary(
   ReadyPatterns.all.map { ready in
     (ready.id, Pattern(ready, keeping: Set(ReadyPatterns.all.map(\.id))))
   },

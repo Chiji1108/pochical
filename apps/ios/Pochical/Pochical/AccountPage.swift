@@ -3,7 +3,6 @@ import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
-import WidgetKit
 
 /// 設定's アカウント row (/design's AccountRow): the provider signed in
 /// with, or ログインしていません.
@@ -53,7 +52,6 @@ private struct ProviderName: View {
 /// page never pushes it beyond saying what it keeps safe.
 struct AccountPage: View {
   @Environment(\.themeColors) private var colors
-  @Environment(\.colorScheme) private var colorScheme
   @Environment(\.account) private var account
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.userSocket) private var userSocket
@@ -62,25 +60,10 @@ struct AccountPage: View {
   @State private var confirmingDelete = false
   @State private var confirmingSignOut = false
   @State private var deleted = false
-  /// The choice of which side to keep, when the Apple account is in use.
-  @State private var choosing: Choice?
-
-  /// An Apple account in use by another user, and what each side holds.
-  struct Choice: Identifiable {
-    let idToken: String
-    let nonce: String
-    let email: String?
-    let account: Holdings
-    let device: Holdings
-    var id: String { idToken }
-  }
-  /// The nonce the sign-in under way was asked with.
-  @State private var nonce = SignInNonce()
   @State private var busy = false
   @State private var problem: Problem?
 
   enum Problem: String, Identifiable {
-    case failed = "ログインできませんでした。時間をおいてもう一度お試しください。"
     case notDeleted = "削除できませんでした。時間をおいてもう一度お試しください。"
     case notSignedOut = "ログアウトできませんでした。時間をおいてもう一度お試しください。"
     var id: String { rawValue }
@@ -131,27 +114,15 @@ struct AccountPage: View {
     } message: {
       Text("シフト、グループ、チャットがすべて削除されます。元に戻せません。")
     }
+    // Then the device starts over as a new one does, with はじめの設定.
     .alert("アカウントを削除しました", isPresented: $deleted) {
-      Button("OK", role: .cancel) {}
+      Button("OK", role: .cancel) { FirstRun.again() }
     }
     .alert("ログアウトしますか？", isPresented: $confirmingSignOut) {
       Button("キャンセル", role: .cancel) {}
       Button("ログアウト", role: .destructive) { Task { await signOut() } }
     } message: {
       Text("この端末からデータが消えます。もう一度ログインすれば、同じデータを使えます。")
-    }
-    .alert(
-      "どちらのデータを使いますか？",
-      isPresented: Binding { choosing != nil } set: { if !$0 { choosing = nil } },
-      presenting: choosing
-    ) { choice in
-      Button("アカウントのデータを使う") { Task { await useAccount(choice) } }
-      Button("この端末のデータを使う") { Task { await keepDevice(choice) } }
-      Button("キャンセル", role: .cancel) {}
-    } message: { choice in
-      Text(
-        "このAppleアカウントには、ほかの端末で使っていたデータがあります。\n\nアカウント：\(Self.summary(choice.account))\nこの端末：\(Self.summary(choice.device))\n\n使わないほうのデータは削除されます。"
-      )
     }
     .overlay {
       if busy { ProgressView() }
@@ -181,116 +152,12 @@ struct AccountPage: View {
       .padding(.vertical, 8)
       .settingsOnPage()
       .listRowSeparator(.hidden)
-      SignInWithAppleButton(.continue) { request in
-        nonce = SignInNonce()
-        request.requestedScopes = [.email]
-        request.nonce = nonce.hashed
-      } onCompletion: { result in
-        Task { await signedIn(result) }
+      AppleSignInButton { account, _ in
+        withAnimation { linked = account }
       }
-      .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-      .frame(height: 50)
-      .clipShape(Capsule())
-      .disabled(busy)
-      .opacity(busy ? 0.5 : 1)
       .settingsOnPage()
     } footer: {
       Text("はじめてなら、この端末のデータがそのまま引き継がれます。すでにアカウントがあれば、そのデータを開きます。ログインしなくても、この端末ではそのまま使えます。")
-    }
-  }
-
-  /// Links Apple's account to this user, keeping everything the device
-  /// holds; one the person cancelled says nothing, any other failure says
-  /// it could not.
-  private func signedIn(_ result: Result<ASAuthorization, Error>) async {
-    let authorization: ASAuthorization
-    switch result {
-    case .success(let signed):
-      authorization = signed
-    case .failure(let error):
-      if (error as? ASAuthorizationError)?.code != .canceled {
-        problem = .failed
-      }
-      return
-    }
-    guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
-      let data = credential.identityToken, let idToken = String(data: data, encoding: .utf8)
-    else {
-      problem = .failed
-      return
-    }
-    busy = true
-    defer { busy = false }
-    let email = LinkedAccount.email(in: idToken)
-    switch try? await account.linkApple(idToken: idToken, nonce: nonce.raw) {
-    case .linked:
-      keepLinked(email: email)
-    case .inUse:
-      await chooseSide(idToken: idToken, nonce: nonce.raw, email: email)
-    case nil:
-      problem = .failed
-    }
-  }
-
-  private func keepLinked(email: String?) {
-    let account = LinkedAccount(provider: .apple, email: email)
-    LinkedAccount.keep(account)
-    withAnimation { linked = account }
-  }
-
-  /// The Apple account is another user's already (spec/sync-protocol.md,
-  /// Switching to an account in use): a side that holds nothing goes
-  /// without asking, the device's first, as a new phone's first sign-in
-  /// does; else the person chooses, seeing what each holds.
-  private func chooseSide(idToken: String, nonce: String, email: String?) async {
-    guard let held = try? await groupCalls.peekAccount(appleIDToken: idToken, nonce: nonce),
-      let here = try? await database.read({ try Holdings.onDevice(in: $0) })
-    else {
-      problem = .failed
-      return
-    }
-    let choice = Choice(idToken: idToken, nonce: nonce, email: email, account: held, device: here)
-    if here.isEmpty {
-      await useAccount(choice)
-    } else if held.isEmpty {
-      await keepDevice(choice)
-    } else {
-      choosing = choice
-    }
-  }
-
-  /// アカウントのデータを使う: signed in to the account's user, the device's
-  /// own deleted, and the device catching up from the account.
-  private func useAccount(_ choice: Choice) async {
-    busy = true
-    defer { busy = false }
-    // Not to connect as the account's user meanwhile, and send it what
-    // the device's own outbox holds.
-    await userSocket?.stop()
-    guard
-      let before = try? await account.signInApple(idToken: choice.idToken, nonce: choice.nonce)
-    else {
-      problem = .failed
-      await userSocket?.start()
-      return
-    }
-    // The device's user, left behind: everything of it goes.
-    try? await groupCalls.deleteAccount(signedInAs: before)
-    await forgetDevice()
-    keepLinked(email: choice.email)
-    await userSocket?.startAfresh()
-  }
-
-  /// この端末のデータを使う: the account's user deleted, and the Apple
-  /// account linked here instead.
-  private func keepDevice(_ choice: Choice) async {
-    busy = true
-    defer { busy = false }
-    do {
-      try await groupCalls.takeAccount(appleIDToken: choice.idToken, nonce: choice.nonce)
-      keepLinked(email: choice.email)
-    } catch {
-      problem = .failed
     }
   }
 
@@ -309,28 +176,11 @@ struct AccountPage: View {
       await userSocket?.start()
       return
     }
-    await forgetDevice()
+    await forgetDevice(database: database, userSocket: userSocket)
     withAnimation { linked = nil }
     await userSocket?.startAfresh()
-  }
-
-  /// The device holding nothing of the user, as a new install does: its
-  /// own settings stay.
-  private func forgetDevice() async {
-    await userSocket?.stop()
-    try? await database.write { try LocalData.erase(in: $0) }
-    LocalData.eraseFiles()
-    WidgetCenter.shared.reloadAllTimelines()
-  }
-
-  /// What one side holds, in a few words.
-  private static func summary(_ held: Holdings) -> String {
-    var parts: [String] = []
-    if held.shiftDays > 0 { parts.append("シフト\(held.shiftDays)日") }
-    if held.repeating { parts.append("繰り返しの設定") }
-    if held.coworkers > 0 { parts.append("一緒に働く人\(held.coworkers)人") }
-    if held.groups > 0 { parts.append("グループ\(held.groups)つ") }
-    return parts.isEmpty ? "なし" : parts.joined(separator: "、")
+    // The device starts over as a new one does, with はじめの設定.
+    FirstRun.again()
   }
 
   /// Deletes the account (spec/sync-protocol.md, Deleting an account):
@@ -356,7 +206,7 @@ struct AccountPage: View {
       return
     }
     try? await account.forget()
-    await forgetDevice()
+    await forgetDevice(database: database, userSocket: userSocket)
     await userSocket?.startAfresh()
     withAnimation { linked = nil }
     deleted = true
