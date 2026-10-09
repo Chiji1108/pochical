@@ -43,6 +43,7 @@ import {
   LIGHT_FILL,
   markPalette,
   noteMarkerSteps,
+  noteOnTileOf,
   presets,
   roleSteps,
   themeRoles,
@@ -71,6 +72,7 @@ const schemesOf = (preset: Preset): ColorScheme[] =>
 const drawn = (preset: Preset, scheme: ColorScheme) => ({
   marks: markPalette(preset, scheme).map(({ color, tint }) => ({
     color,
+    noteOnTile: noteOnTileOf(tint, scheme),
     tint,
   })),
   roles: themeRoles(preset, scheme),
@@ -196,7 +198,7 @@ function swift() {
       );
       const markList = marks.map(
         (mark, index) =>
-          `      MarkColor(name: "${index === 0 ? "テーマカラー" : markColors[index]?.name}", color: ${swiftColor(mark.color)}, tint: ${swiftColor(mark.tint)}),`
+          `      MarkColor(name: "${index === 0 ? "テーマカラー" : markColors[index]?.name}", color: ${swiftColor(mark.color)}, tint: ${swiftColor(mark.tint)}, noteOnTint: ${swiftColor(mark.noteOnTile)}),`
       );
       return [
         `  static let ${preset.id}${pascal(scheme)} = ThemeColors(`,
@@ -246,11 +248,13 @@ function swift() {
     "}",
     "",
     "/// A shift color as a テーマ draws it: `color` for the mark and its",
-    "/// words, `tint` for the ground behind it.",
+    "/// words, `tint` for the ground behind it, and `noteOnTint` for a",
+    "/// memo's stroke on that ground, a step deeper so it stays in sight.",
     "public struct MarkColor: Sendable {",
     "  public let name: String",
     "  public let color: Color",
     "  public let tint: Color",
+    "  public let noteOnTint: Color",
     "}",
     "",
     "/// Every color role a screen reads, for one テーマ in light or dark.",
@@ -328,7 +332,7 @@ function kotlin() {
       );
       const markList = marks.map(
         (mark, index) =>
-          `          MarkColor("${index === 0 ? "テーマカラー" : markColors[index]?.name}", ${kotlinColor(mark.color)}, ${kotlinColor(mark.tint)}),`
+          `          MarkColor("${index === 0 ? "テーマカラー" : markColors[index]?.name}", ${kotlinColor(mark.color)}, ${kotlinColor(mark.tint)}, ${kotlinColor(mark.noteOnTile)}),`
       );
       return [
         `    val ${pascal(preset.id)}${pascal(scheme)} =`,
@@ -376,8 +380,8 @@ function kotlin() {
     "    }",
     "}",
     "",
-    "/** A shift color as a テーマ draws it: `color` for the mark and its words, `tint` for the ground behind it. */",
-    "data class MarkColor(val name: String, val color: Color, val tint: Color)",
+    "/** A shift color as a テーマ draws it: `color` for the mark and its words, `tint` for the ground behind it, `noteOnTint` for a memo's stroke on that ground. */",
+    "data class MarkColor(val name: String, val color: Color, val tint: Color, val noteOnTint: Color)",
     "",
     "/** Every color role a screen reads, for one テーマ in light or dark. */",
     "data class ThemeColors(",
