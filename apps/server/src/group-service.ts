@@ -14,6 +14,7 @@ import {
   RemakeInviteLinkResponseSchema,
   RenameGroupResponseSchema,
   SetDisplayNameResponseSchema,
+  SetGroupPhotoResponseSchema,
 } from "./gen/pochical/v1/group_pb";
 import { isId } from "./ids";
 import {
@@ -22,9 +23,21 @@ import {
   noGroupOfCode,
   requireGroupOfCode,
 } from "./invite-codes";
+import { sharePersonPhoto } from "./photos";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
 import { requireEmoji, requireText } from "./text-limits";
+
+/** The usual photo into a group's photos, before the group shows it. */
+const shareUsualPhoto = async (
+  userId: string,
+  photoId: string,
+  groupId: string
+): Promise<void> => {
+  if (photoId !== "") {
+    await sharePersonPhoto(env, userId, photoId, groupId);
+  }
+};
 
 /**
  * How the caller will appear in a group from the name they typed: their
@@ -36,33 +49,44 @@ const namesFor = async (
   userId: string,
   typed: string,
   adopt: boolean
-): Promise<{ usualName: string; ownName: string | null; adopted: boolean }> => {
-  const usualName = await env.USERS.getByName(userId).profileName();
+): Promise<{
+  usualName: string;
+  ownName: string | null;
+  usualPhoto: string;
+  adopted: boolean;
+}> => {
+  const { name: usualName, photoId: usualPhoto } =
+    await env.USERS.getByName(userId).profileOf();
   const name = typed.trim();
   if (name === "") {
     if (usualName === "") {
       throw new ConnectError("display_name is empty", Code.InvalidArgument);
     }
-    return { adopted: false, ownName: null, usualName };
+    return { adopted: false, ownName: null, usualName, usualPhoto };
   }
   requireText(name, textLimits.personName, "display_name");
   if (usualName === "" && adopt) {
-    return { adopted: true, ownName: null, usualName: name };
+    return { adopted: true, ownName: null, usualName: name, usualPhoto };
   }
   return {
     adopted: false,
     ownName: name === usualName ? null : name,
     usualName,
+    usualPhoto,
   };
 };
 
 /** A name given with no usual one yet becomes it, once the group has them. */
 const adoptName = async (
   userId: string,
-  { adopted, usualName }: { adopted: boolean; usualName: string }
+  {
+    adopted,
+    usualName,
+    usualPhoto,
+  }: { adopted: boolean; usualName: string; usualPhoto: string }
 ): Promise<void> => {
   if (adopted) {
-    await env.USERS.getByName(userId).setProfile(usualName);
+    await env.USERS.getByName(userId).setProfile(usualName, usualPhoto);
   }
 };
 
@@ -102,9 +126,15 @@ export const registerGroupService = (router: ConnectRouter): void => {
       }
       const names = await namesFor(user.id, request.displayName, true);
       const groupId = await users.groupIdFor(request.requestId);
+      await shareUsualPhoto(user.id, names.usualPhoto, groupId);
       await env.GROUPS.getByName(groupId).create(
         { emoji, name },
-        { ownName: names.ownName, userId: user.id, usualName: names.usualName }
+        {
+          ownName: names.ownName,
+          userId: user.id,
+          usualName: names.usualName,
+          usualPhoto: names.usualPhoto,
+        }
       );
       await adoptName(user.id, names);
       await users.addMembership(groupId, { emoji, name });
@@ -145,6 +175,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const user = await requireUser(context);
       const groupId = await requireGroupOfCode(env.DB, inviteCode);
       const names = await namesFor(user.id, displayName, true);
+      await shareUsualPhoto(user.id, names.usualPhoto, groupId);
       // The Group DO decides; the user's DO then keeps its copy. Both are
       // idempotent, so a retry after a failure in between completes it.
       const group = env.GROUPS.getByName(groupId);
@@ -152,6 +183,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
         ownName: names.ownName,
         userId: user.id,
         usualName: names.usualName,
+        usualPhoto: names.usualPhoto,
       });
       if (result === "full") {
         throw new ConnectError(
@@ -218,6 +250,21 @@ export const registerGroupService = (router: ConnectRouter): void => {
         ownName
       );
       return create(SetDisplayNameResponseSchema, {});
+    },
+
+    setGroupPhoto: async ({ groupId, usual, photoId }, context) => {
+      const userId = await requireMember(context, groupId);
+      if (!(usual || photoId === "" || isId(photoId))) {
+        throw new ConnectError("Malformed photo_id", Code.InvalidArgument);
+      }
+      const kept = await env.GROUPS.getByName(groupId).setGroupPhoto(userId, {
+        photoId,
+        usual,
+      });
+      if (!kept) {
+        throw new ConnectError("Not your photo", Code.InvalidArgument);
+      }
+      return create(SetGroupPhotoResponseSchema, {});
     },
   });
 };

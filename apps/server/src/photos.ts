@@ -135,6 +135,76 @@ export const supportPhoto = async (
   }
 };
 
+/**
+ * Where a user's own photo is kept: their usual photo (spec/sync-protocol.md,
+ * Profile), read by them alone and copied into each group that shows it.
+ */
+export const personPhotoKey = (userId: string, photoId: string): string =>
+  `people/${userId}/photos/${photoId}`;
+
+/** The user's own photo: /v1/me/photos/{photoId}. */
+export const PERSON_PHOTO_PATH = /^\/v1\/me\/photos\/(?<photoId>[^/]+)$/u;
+
+/** The user's upload of their own photo, or a read of one. */
+export const personPhoto = async (
+  request: Request,
+  env: Env,
+  photoId: string,
+  userId: string
+): Promise<Response> => {
+  switch (request.method) {
+    case "PUT": {
+      const bytes = await jpegOf(request, photoId);
+      if (bytes instanceof Response) {
+        return bytes;
+      }
+      await env.PHOTOS.put(personPhotoKey(userId, photoId), bytes, {
+        httpMetadata: { contentType: "image/jpeg" },
+      });
+      return new Response(null, { status: 204 });
+    }
+    case "GET": {
+      return await servePhoto(env, personPhotoKey(userId, photoId));
+    }
+    default: {
+      return new Response("Method not allowed", { status: 405 });
+    }
+  }
+};
+
+/** Whether the user has uploaded this photo of their own. */
+export const hasPersonPhoto = async (
+  env: Env,
+  userId: string,
+  photoId: string
+): Promise<boolean> =>
+  isId(photoId) &&
+  (await env.PHOTOS.head(personPhotoKey(userId, photoId))) !== null;
+
+/**
+ * The user's usual photo copied into a group's photos, for its members to
+ * read as they read the rest; once, as a photo never changes.
+ */
+export const sharePersonPhoto = async (
+  env: Env,
+  userId: string,
+  photoId: string,
+  groupId: string
+): Promise<void> => {
+  const key = photoKey(groupId, photoId);
+  if ((await env.PHOTOS.head(key)) !== null) {
+    return;
+  }
+  const photo = await env.PHOTOS.get(personPhotoKey(userId, photoId));
+  if (photo === null) {
+    return;
+  }
+  await env.PHOTOS.put(key, photo.body, {
+    customMetadata: { userId },
+    httpMetadata: { contentType: "image/jpeg" },
+  });
+};
+
 /** A link preview's picture by its path: /v1/previews/{imageId}. */
 export const PREVIEW_IMAGE_PATH = /^\/v1\/previews\/(?<imageId>[^/]+)$/u;
 

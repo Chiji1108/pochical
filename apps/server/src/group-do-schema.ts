@@ -53,10 +53,16 @@ export const members = sqliteTable("members", {
   leftAt: integer("left_at", { mode: "timestamp_ms" }),
   // A name of their own for this group (このグループだけ), or none.
   ownName: text("own_name"),
+  // A photo of their own for this group, one of its photos; empty for none
+  // on purpose, or not set to follow their usual one.
+  ownPhoto: text("own_photo"),
   userId: text("user_id").primaryKey(),
   // Their usual name, as their User DO pushes it (spec/sync-protocol.md,
   // Profile).
   usualName: text("usual_name").notNull().default(""),
+  // Their usual photo, copied into the group's photos as their User DO
+  // pushes it; empty for none.
+  usualPhoto: text("usual_photo").notNull().default(""),
 });
 
 // Members' shared days as their User DOs push them (spec/sync-protocol.md,

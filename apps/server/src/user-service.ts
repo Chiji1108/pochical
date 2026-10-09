@@ -20,6 +20,7 @@ import {
 } from "./gen/pochical/v1/user_pb";
 import { GROUP_THREAD, otherIn } from "./group-chat";
 import { isId } from "./ids";
+import { hasPersonPhoto, personPhotoKey } from "./photos";
 import { requireUser } from "./session";
 import { requireText } from "./text-limits";
 
@@ -83,12 +84,22 @@ export const registerUserService = (router: ConnectRouter): void => {
       );
       return create(SetChatNotificationsResponseSchema, {});
     },
-    setProfile: async ({ name }, context) => {
+    setProfile: async ({ name, photoId }, context) => {
       const user = await requireUser(context);
       const kept = name.trim();
-      await env.USERS.getByName(user.id).setProfile(
-        kept === "" ? "" : requireText(kept, textLimits.personName, "name")
+      const shown =
+        kept === "" ? "" : requireText(kept, textLimits.personName, "name");
+      if (photoId !== "" && !(await hasPersonPhoto(env, user.id, photoId))) {
+        throw new ConnectError("No such photo of yours", Code.InvalidArgument);
+      }
+      const replaced = await env.USERS.getByName(user.id).setProfile(
+        shown,
+        photoId
       );
+      // The photo it replaces goes: each group drops its copy as it hears.
+      if (replaced !== "") {
+        await env.PHOTOS.delete(personPhotoKey(user.id, replaced));
+      }
       return create(SetProfileResponseSchema, {});
     },
     takeAccount: async ({ appleIdToken, nonce }, context) => {

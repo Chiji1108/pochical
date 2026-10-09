@@ -76,7 +76,9 @@ The user's usual name (いつもの名前, 設定 › プロフィール) is kep
 - The User DO pushes it to the user's groups as it pushes their shifts (Group projection), retried the same way. The Group DO keeps each member's usual name and their own name for the group, if any (`members.usual_name`, `members.own_name`), and sends `Member.display_name` as the one shown, with `own_name` set when it is the group's own: only the member's own devices make anything of that, to say いつもと同じ or このグループだけ.
 - Creating or joining a group, and `SetDisplayName`, take the name typed: the usual name, or nothing, follows the usual one; any other is the group's own. Someone with no usual name yet must give a name, and creating or joining a group makes it their usual one, once they are in the group.
 - The apps save it a moment after typing stops, as the settings around it save at once; offline, the page says it could not be saved.
-- A photo of the person, shared by their groups as /design's ProfilePage has it, comes when the server keeps members' photos.
+- The usual photo works as the name does. The user uploads it to their own photos (`PUT /v1/me/photos/{id}`, `people/{userId}/photos/` in R2, a JPEG shrunk as a chat's photo is, read back by them alone) and names it in `SetProfile`; the photo it replaces is deleted. Pushing it to a group copies it into the group's photos first (`groups/{groupId}/photos/{id}`), so its members read it as they read the chat's, and no one outside the group can.
+- A group's own photo for someone is one of the group's photos they uploaded, set with `GroupService.SetGroupPhoto`, which also sets none on purpose or goes back to the usual one. `Member.photo_id` is the one shown, empty for none, and `own_photo` says it is the group's own. A photo no longer shown goes from the group's photos, as do a member's photos when they leave it, their old lines then showing their letter; deleting the account deletes the user's photos everywhere.
+- Faces show the photo, else the name's first letter (/design's PhotoAvatar). The join screen shows letters only, as the people in a group are not its members' to see before joining.
 
 ## Sockets
 

@@ -180,6 +180,60 @@ public object MemberKt {
     public fun clearOwnName() {
       _builder.clearOwnName()
     }
+
+    /**
+     * ```
+     * Their photo as the group shows it, one of the group's photos (its own
+     * for them, else their usual one); empty for none.
+     * ```
+     *
+     * `string photo_id = 7 [json_name = "photoId"];`
+     */
+    public var photoId: kotlin.String
+      @kotlin.jvm.JvmName("getPhotoId")
+        get() = _builder.photoId
+      @kotlin.jvm.JvmName("setPhotoId")
+        set(value) {
+        _builder.photoId = value
+      }
+    /**
+     * ```
+     * Their photo as the group shows it, one of the group's photos (its own
+     * for them, else their usual one); empty for none.
+     * ```
+     *
+     * `string photo_id = 7 [json_name = "photoId"];`
+     */
+    public fun clearPhotoId() {
+      _builder.clearPhotoId()
+    }
+
+    /**
+     * ```
+     * photo_id is the group's own for them, or none on purpose, rather than
+     * their usual one.
+     * ```
+     *
+     * `bool own_photo = 8 [json_name = "ownPhoto"];`
+     */
+    public var ownPhoto: kotlin.Boolean
+      @kotlin.jvm.JvmName("getOwnPhoto")
+        get() = _builder.ownPhoto
+      @kotlin.jvm.JvmName("setOwnPhoto")
+        set(value) {
+        _builder.ownPhoto = value
+      }
+    /**
+     * ```
+     * photo_id is the group's own for them, or none on purpose, rather than
+     * their usual one.
+     * ```
+     *
+     * `bool own_photo = 8 [json_name = "ownPhoto"];`
+     */
+    public fun clearOwnPhoto() {
+      _builder.clearOwnPhoto()
+    }
   }
 }
 public inline fun app.pochical.v1.Member.copy(block: `app.pochical.v1`.MemberKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Member =

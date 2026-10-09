@@ -220,6 +220,34 @@ public nonisolated struct Pochical_V1_RenameGroupResponse: Sendable {
   public init() {}
 }
 
+public nonisolated struct Pochical_V1_SetGroupPhotoRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var groupID: String = String()
+
+  /// Follow the usual photo; photo_id is then ignored.
+  public var usual: Bool = false
+
+  /// One of the group's photos the caller uploaded, or empty for none.
+  public var photoID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pochical_V1_SetGroupPhotoResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public nonisolated struct Pochical_V1_SetDisplayNameRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -711,6 +739,65 @@ nonisolated extension Pochical_V1_RenameGroupResponse: SwiftProtobuf.Message, Sw
   }
 
   public static func ==(lhs: Pochical_V1_RenameGroupResponse, rhs: Pochical_V1_RenameGroupResponse) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_SetGroupPhotoRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetGroupPhotoRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_id\0\u{1}usual\0\u{3}photo_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.groupID) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.usual) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.groupID.isEmpty {
+      try visitor.visitSingularStringField(value: self.groupID, fieldNumber: 1)
+    }
+    if self.usual != false {
+      try visitor.visitSingularBoolField(value: self.usual, fieldNumber: 2)
+    }
+    if !self.photoID.isEmpty {
+      try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_SetGroupPhotoRequest, rhs: Pochical_V1_SetGroupPhotoRequest) -> Bool {
+    if lhs.groupID != rhs.groupID {return false}
+    if lhs.usual != rhs.usual {return false}
+    if lhs.photoID != rhs.photoID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_SetGroupPhotoResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetGroupPhotoResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_SetGroupPhotoResponse, rhs: Pochical_V1_SetGroupPhotoResponse) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

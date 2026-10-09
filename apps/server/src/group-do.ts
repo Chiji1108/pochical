@@ -81,6 +81,8 @@ export type NewMember = {
   userId: string;
   usualName: string;
   ownName: string | null;
+  // Their usual photo, already in the group's photos; empty for none.
+  usualPhoto: string;
 };
 
 /** How a member appears: their own name for the group, else their usual one. */
@@ -109,7 +111,9 @@ const memberChange = ({
   joinedAt,
   leftAt,
   ownName,
+  ownPhoto,
   userId,
+  usualPhoto,
 }: MemberRow): Change =>
   create(ChangeSchema, {
     cursor: BigInt(cursor),
@@ -121,6 +125,8 @@ const memberChange = ({
         joinedAtMs: BigInt(joinedAt.getTime()),
         left: leftAt !== null,
         ownName: ownName !== null,
+        ownPhoto: ownPhoto !== null,
+        photoId: ownPhoto ?? usualPhoto,
         userId,
       },
     },
@@ -243,13 +249,60 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
+   * The member's photo in the group from now on: their usual one, one of
+   * the group's photos they uploaded, or none (empty); false when they are
+   * not in it or the photo is not theirs. The one it replaces goes.
+   */
+  setGroupPhoto(
+    userId: string,
+    photo: { usual: boolean; photoId: string }
+  ): boolean {
+    const ownPhoto = photo.usual ? null : photo.photoId;
+    const changed = this.ctx.storage.transactionSync(() => {
+      const known = this.db.select().from(members).where(inGroup(userId)).get();
+      if (known === undefined) {
+        return undefined;
+      }
+      if (
+        ownPhoto !== null &&
+        ownPhoto !== "" &&
+        !notePhoto(this.db, ownPhoto, userId)
+      ) {
+        return undefined;
+      }
+      const row = this.db
+        .update(members)
+        .set({ cursor: this.nextCursor(), ownPhoto })
+        .where(eq(members.userId, userId))
+        .returning()
+        .get();
+      return { known, row };
+    });
+    if (changed?.row === undefined) {
+      return false;
+    }
+    const { known, row } = changed;
+    if (
+      known.ownPhoto !== null &&
+      known.ownPhoto !== "" &&
+      known.ownPhoto !== ownPhoto
+    ) {
+      this.forgetPhoto(known.ownPhoto, known.usualPhoto);
+    }
+    broadcastChanges(this.ctx, [memberChange(row)]);
+    return true;
+  }
+
+  /**
    * Takes the member out: their row stays as left, at the next cursor, so
-   * devices catching up hear of it, and their shifts go. Their sockets
-   * here close. Leaving when not in it changes nothing.
+   * devices catching up hear of it, and their shifts go, and the photos the
+   * group showed of them, as it hears of them no more. Their sockets here
+   * close. Leaving when not in it changes nothing.
    */
   removeMember(userId: string): void {
     const left = this.ctx.storage.transactionSync(() => {
-      if (!this.isMember(userId)) {
+      const known = this.db.select().from(members).where(inGroup(userId)).get();
+      if (known === undefined) {
         return undefined;
       }
       this.db.delete(memberDays).where(eq(memberDays.userId, userId)).run();
@@ -261,18 +314,29 @@ export class GroupDO extends DurableObject<Env> {
         .delete(memberRepeatOrders)
         .where(eq(memberRepeatOrders.userId, userId))
         .run();
-      return this.db
+      const row = this.db
         .update(members)
-        .set({ cursor: this.nextCursor(), leftAt: new Date() })
+        .set({
+          cursor: this.nextCursor(),
+          leftAt: new Date(),
+          ownPhoto: null,
+          usualPhoto: "",
+        })
         .where(eq(members.userId, userId))
         .returning()
         .get();
+      return row === undefined ? undefined : { known, row };
     });
     if (left === undefined) {
       return;
     }
+    for (const photoId of [left.known.usualPhoto, left.known.ownPhoto ?? ""]) {
+      if (photoId !== "") {
+        this.forgetPhoto(photoId, null);
+      }
+    }
     closeUserSockets(this.ctx, userId);
-    broadcastChanges(this.ctx, [memberChange(left)]);
+    broadcastChanges(this.ctx, [memberChange(left.row)]);
   }
 
   /**
@@ -309,11 +373,21 @@ export class GroupDO extends DurableObject<Env> {
           deleted: true,
           displayName: "",
           leftAt: known.leftAt ?? new Date(),
+          ownName: null,
+          ownPhoto: null,
+          usualName: "",
+          usualPhoto: "",
         })
         .where(eq(members.userId, userId))
         .returning()
         .get();
-      return { ...chat, row };
+      // Their lines' photos, and the photos the group showed of them.
+      const photosGone = [
+        ...chat.photosGone,
+        known.usualPhoto,
+        known.ownPhoto ?? "",
+      ].filter((id) => id !== "");
+      return { ...chat, photosGone, row };
     });
     if (taken !== undefined) {
       const groupId = this.ctx.id.name;
@@ -385,34 +459,56 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * A member's usual name as their User DO pushes it, at `cursor`: shown
-   * unless they gave the group a name of their own. Nothing when it is
-   * the one known.
+   * A member's usual name and photo as their User DO pushes them, at
+   * `cursor`: shown unless they gave the group their own. Nothing when they
+   * are the ones known. A usual photo replaced goes from the group's
+   * photos, unless it is their own for the group too.
    */
-  private takeUsualName(
+  private takeUsualProfile(
     userId: string,
-    usualName: string,
+    { name, photoId }: { name: string; photoId: string },
     cursor: number
   ): Change | undefined {
     const known = this.db.select().from(members).where(inGroup(userId)).get();
-    if (known === undefined || known.usualName === usualName) {
+    if (
+      known === undefined ||
+      (known.usualName === name && known.usualPhoto === photoId)
+    ) {
       return undefined;
     }
     const row = this.db
       .update(members)
       .set({
         cursor,
-        displayName: shownName(known.ownName, usualName, known.displayName),
-        usualName,
+        displayName: shownName(known.ownName, name, known.displayName),
+        usualName: name,
+        usualPhoto: photoId,
       })
       .where(eq(members.userId, userId))
       .returning()
       .get();
+    if (known.usualPhoto !== "" && known.usualPhoto !== photoId) {
+      this.forgetPhoto(known.usualPhoto, known.ownPhoto);
+    }
     return row === undefined ? undefined : memberChange(row);
   }
 
+  /** A member's photo no longer shown goes, unless still in use as `kept`. */
+  private forgetPhoto(photoId: string, kept: string | null): void {
+    const groupId = this.ctx.id.name;
+    if (groupId === undefined || photoId === kept) {
+      return;
+    }
+    this.ctx.waitUntil(this.env.PHOTOS.delete(photoKey(groupId, photoId)));
+  }
+
   /** A new member at the next cursor, or one who left coming back, as a change. */
-  private writeMember({ userId, usualName, ownName }: NewMember): Change {
+  private writeMember({
+    userId,
+    usualName,
+    ownName,
+    usualPhoto,
+  }: NewMember): Change {
     const row = {
       cursor: this.nextCursor(),
       deleted: false,
@@ -420,8 +516,10 @@ export class GroupDO extends DurableObject<Env> {
       joinedAt: new Date(),
       leftAt: null,
       ownName,
+      ownPhoto: null,
       userId,
       usualName,
+      usualPhoto,
     };
     this.db
       .insert(members)
@@ -573,7 +671,7 @@ export class GroupDO extends DurableObject<Env> {
             cursor + 1
           );
         } else if (kind.case === "profile") {
-          change = this.takeUsualName(userId, kind.value.name, cursor + 1);
+          change = this.takeUsualProfile(userId, kind.value, cursor + 1);
         }
         if (change) {
           cursor = Number(change.cursor);

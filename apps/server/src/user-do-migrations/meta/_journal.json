@@ -99,6 +99,13 @@
       "when": 1791513893904,
       "tag": "0013_profile",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1791516639105,
+      "tag": "0014_profile_photo",
+      "breakpoints": true
     }
   ]
 }

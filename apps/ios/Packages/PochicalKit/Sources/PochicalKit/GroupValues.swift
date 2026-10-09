@@ -22,6 +22,10 @@ public struct GroupMemberRow: Hashable, Sendable {
   /// displayName is a name of their own for this group (このグループだけ),
   /// not their usual one, which it follows otherwise.
   public var ownName = false
+  /// Their photo as the group shows it, one of its photos; empty for none.
+  public var photoID = ""
+  /// photoID is the group's own for them, or none on purpose.
+  public var ownPhoto = false
 
   /// How the app names them: one whose account is deleted has no name.
   public var shownName: String {
@@ -180,6 +184,20 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep members' photos") { db in
+      try #sql(
+        """
+        ALTER TABLE "groupMembers" ADD COLUMN "photoID" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "groupMembers" ADD COLUMN "ownPhoto" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -242,7 +260,7 @@ public enum GroupSync {
       let row = GroupMemberRow(
         groupID: groupID, userID: member.userID, displayName: member.displayName,
         joinedAtMs: member.joinedAtMs, left: member.left, deleted: member.deleted,
-        ownName: member.ownName)
+        ownName: member.ownName, photoID: member.photoID, ownPhoto: member.ownPhoto)
       try GroupMemberRow.insert { row }.execute(db)
     case .memberDay(let member):
       try takeDay(member.day, of: member.userID, in: groupID, db: db)
@@ -311,6 +329,10 @@ public struct GroupMember: Hashable, Sendable, Identifiable {
   public let name: String
   /// The name is one of their own for this group, not their usual one.
   public var ownName = false
+  /// Their photo as the group shows it; empty for none.
+  public var photoID = ""
+  /// The photo is the group's own for them, or none on purpose.
+  public var ownPhoto = false
   public let calendar: MemberCalendar
   public var id: String { userID }
 }
@@ -361,6 +383,7 @@ extension GroupSync {
       let timeline = orders.filter { $0.userID == member.userID }.compactMap(\.order)
       return GroupMember(
         userID: member.userID, name: member.displayName, ownName: member.ownName,
+        photoID: member.photoID, ownPhoto: member.ownPhoto,
         calendar: MemberCalendar(patternsByID: byID, days: own, orders: timeline))
     }
   }

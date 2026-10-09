@@ -76,6 +76,9 @@ public nonisolated struct Pochical_V1_SetProfileRequest: Sendable {
 
   public var name: String = String()
 
+  /// One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+  public var photoID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -365,7 +368,7 @@ nonisolated extension Pochical_V1_SetChatNotificationsResponse: SwiftProtobuf.Me
 
 nonisolated extension Pochical_V1_SetProfileRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SetProfileRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{3}photo_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -374,6 +377,7 @@ nonisolated extension Pochical_V1_SetProfileRequest: SwiftProtobuf.Message, Swif
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
       default: break
       }
     }
@@ -383,11 +387,15 @@ nonisolated extension Pochical_V1_SetProfileRequest: SwiftProtobuf.Message, Swif
     if !self.name.isEmpty {
       try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
     }
+    if !self.photoID.isEmpty {
+      try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_SetProfileRequest, rhs: Pochical_V1_SetProfileRequest) -> Bool {
     if lhs.name != rhs.name {return false}
+    if lhs.photoID != rhs.photoID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

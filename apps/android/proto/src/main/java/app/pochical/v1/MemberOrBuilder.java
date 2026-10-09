@@ -84,4 +84,37 @@ public interface MemberOrBuilder extends
    * @return The ownName.
    */
   boolean getOwnName();
+
+  /**
+   * <pre>
+   * Their photo as the group shows it, one of the group's photos (its own
+   * for them, else their usual one); empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 7 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  java.lang.String getPhotoId();
+  /**
+   * <pre>
+   * Their photo as the group shows it, one of the group's photos (its own
+   * for them, else their usual one); empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 7 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  com.google.protobuf.ByteString
+      getPhotoIdBytes();
+
+  /**
+   * <pre>
+   * photo_id is the group's own for them, or none on purpose, rather than
+   * their usual one.
+   * </pre>
+   *
+   * <code>bool own_photo = 8 [json_name = "ownPhoto"];</code>
+   * @return The ownPhoto.
+   */
+  boolean getOwnPhoto();
 }

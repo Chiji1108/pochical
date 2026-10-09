@@ -130,6 +130,7 @@ describe("the usual name", () => {
             ownName: null,
             userId: `filler-${index}`,
             usualName: `メンバー${index}`,
+            usualPhoto: "",
           })
       )
     );

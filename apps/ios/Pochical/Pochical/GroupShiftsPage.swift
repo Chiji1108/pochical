@@ -101,7 +101,7 @@ struct GroupShiftsPage: View {
         .padding(.vertical, 2)
       }
       switch layout {
-      case .days: GroupDayHeader(members: members).padding(.horizontal, 16)
+      case .days: GroupDayHeader(members: members, groupID: group.id).padding(.horizontal, 16)
       // Over the blocks' columns, which keep room at their trailing end.
       case .weeks:
         GroupWeekdays().padding(.leading, 16).padding(.trailing, 20).padding(.bottom, 6)
@@ -109,7 +109,9 @@ struct GroupShiftsPage: View {
       }
       if layout == .person {
         ScrollView {
-          GroupPersonView(members: members, meID: meID, picked: $picked) { togetherSheet = $0 }
+          GroupPersonView(members: members, groupID: group.id, meID: meID, picked: $picked) {
+            togetherSheet = $0
+          }
             .padding(.vertical, 8)
         }
       } else {
@@ -147,7 +149,7 @@ struct GroupShiftsPage: View {
     .sheet(item: $picked) { day in
       // As tall as its rows, as /design's.
       let fitted = PresentationDetent.height(daySheetHeight)
-      DaySheet(day: day, members: members)
+      DaySheet(day: day, members: members, groupID: group.id)
         .presentationDetents([fitted, .large])
         .presentationBackgroundInteraction(.enabled(upThrough: fitted))
     }
@@ -358,6 +360,7 @@ private struct DaySheet: View {
   @Environment(\.dismiss) private var dismiss
   let day: Day
   let members: [GroupMember]
+  let groupID: String
 
   var body: some View {
     let offs = members.map { $0.offDays(from: day, through: day)[day] }
@@ -367,7 +370,7 @@ private struct DaySheet: View {
         let pattern = entry.flatMap { member.calendar.patternsByID[$0.shift] }
         // On one line, as /design's: the mark, the pattern and its hours.
         HStack(spacing: 8) {
-          LetterAvatar(name: member.name, size: 28)
+          MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 28)
           Text(member.name).lineLimit(1)
           Spacer(minLength: 8)
           if let pattern {

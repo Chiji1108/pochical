@@ -63,8 +63,9 @@ service UserService {
     option idempotency_level = IDEMPOTENT;
   }
 
-  // Sets the user's usual name, empty for none; the devices hear of it as
-  // a Profile change. INVALID_ARGUMENT over personName characters.
+  // Sets the user's usual name and photo, each empty for none; the devices
+  // hear of it as a Profile change. INVALID_ARGUMENT over personName
+  // characters, or for a photo the user has not uploaded.
   rpc SetProfile(SetProfileRequest) returns (SetProfileResponse) {
     option idempotency_level = IDEMPOTENT;
   }
@@ -87,6 +88,8 @@ message SetChatNotificationsResponse {}
 
 message SetProfileRequest {
   string name = 1;
+  // One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+  string photo_id = 2;
 }
 
 message SetProfileResponse {}

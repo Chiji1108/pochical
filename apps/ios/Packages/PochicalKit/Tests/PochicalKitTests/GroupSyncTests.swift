@@ -113,7 +113,7 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
   }
 }
 
-@Test func aMemberSaysWhetherTheirNameIsTheGroupsOwn() throws {
+@Test func aMemberSaysWhetherTheirNameAndPhotoAreTheGroupsOwn() throws {
   let database = try appDatabase()
   try database.write { db in
     try GroupSync.take(
@@ -126,10 +126,14 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
           $0.member.userID = "u2"
           $0.member.displayName = "ゆうちゃん"
           $0.member.ownName = true
+          $0.member.photoID = "p2"
+          $0.member.ownPhoto = true
         },
       ], of: "g1", in: db)
     let day = Day("2026-10-01")!
     let members = try GroupSync.members(of: "g1", from: day, through: day, in: db)
     #expect(members.map(\.ownName) == [false, true])
+    #expect(members.map(\.photoID) == ["", "p2"])
+    #expect(members.map(\.ownPhoto) == [false, true])
   }
 }

@@ -139,6 +139,22 @@ public class GroupServiceClient(
 
 
   /**
+   *  The caller's photo in the group from now on: their usual one, one of
+   *  the group's photos they uploaded, or none. Members only.
+   */
+  override suspend fun setGroupPhoto(request: SetGroupPhotoRequest, headers: Headers): ResponseMessage<SetGroupPhotoResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.GroupService/SetGroupPhoto",
+      app.pochical.v1.SetGroupPhotoRequest::class,
+      app.pochical.v1.SetGroupPhotoResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
+
+  /**
    *  Takes the caller out of the group: what it holds of their shifts goes,
    *  and its socket and calls refuse them until they join again by a live
    *  link. Leaving a group you are not in changes nothing.

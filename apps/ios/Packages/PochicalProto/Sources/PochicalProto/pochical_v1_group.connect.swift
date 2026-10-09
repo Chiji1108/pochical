@@ -54,6 +54,11 @@ public protocol Pochical_V1_GroupServiceClientInterface: Sendable {
     @available(iOS 13, *)
     func `setDisplayName`(request: Pochical_V1_SetDisplayNameRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetDisplayNameResponse>
 
+    /// The caller's photo in the group from now on: their usual one, one of
+    /// the group's photos they uploaded, or none. Members only.
+    @available(iOS 13, *)
+    func `setGroupPhoto`(request: Pochical_V1_SetGroupPhotoRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetGroupPhotoResponse>
+
     /// Takes the caller out of the group: what it holds of their shifts goes,
     /// and its socket and calls refuse them until they join again by a live
     /// link. Leaving a group you are not in changes nothing.
@@ -105,6 +110,11 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
     }
 
     @available(iOS 13, *)
+    public func `setGroupPhoto`(request: Pochical_V1_SetGroupPhotoRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_SetGroupPhotoResponse> {
+        return await self.client.unary(path: "/pochical.v1.GroupService/SetGroupPhoto", idempotencyLevel: .unknown, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
     public func `leaveGroup`(request: Pochical_V1_LeaveGroupRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_LeaveGroupResponse> {
         return await self.client.unary(path: "/pochical.v1.GroupService/LeaveGroup", idempotencyLevel: .unknown, request: request, headers: headers)
     }
@@ -118,6 +128,7 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
             public static let joinGroup = Connect.MethodSpec(name: "JoinGroup", service: "pochical.v1.GroupService", type: .unary)
             public static let renameGroup = Connect.MethodSpec(name: "RenameGroup", service: "pochical.v1.GroupService", type: .unary)
             public static let setDisplayName = Connect.MethodSpec(name: "SetDisplayName", service: "pochical.v1.GroupService", type: .unary)
+            public static let setGroupPhoto = Connect.MethodSpec(name: "SetGroupPhoto", service: "pochical.v1.GroupService", type: .unary)
             public static let leaveGroup = Connect.MethodSpec(name: "LeaveGroup", service: "pochical.v1.GroupService", type: .unary)
         }
     }

@@ -63,8 +63,9 @@ public protocol Pochical_V1_UserServiceClientInterface: Sendable {
     @available(iOS 13, *)
     func `setChatNotifications`(request: Pochical_V1_SetChatNotificationsRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetChatNotificationsResponse>
 
-    /// Sets the user's usual name, empty for none; the devices hear of it as
-    /// a Profile change. INVALID_ARGUMENT over personName characters.
+    /// Sets the user's usual name and photo, each empty for none; the devices
+    /// hear of it as a Profile change. INVALID_ARGUMENT over personName
+    /// characters, or for a photo the user has not uploaded.
     @available(iOS 13, *)
     func `setProfile`(request: Pochical_V1_SetProfileRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetProfileResponse>
 }

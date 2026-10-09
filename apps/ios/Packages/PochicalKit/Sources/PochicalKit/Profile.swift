@@ -2,13 +2,15 @@ import Foundation
 import PochicalProto
 import SQLiteData
 
-/// The user's usual name (いつもの名前), as their User DO sends it, once
-/// they have set one (spec/sync-protocol.md, Profile).
+/// The user's usual name (いつもの名前) and photo, as their User DO sends
+/// them, once they have set them (spec/sync-protocol.md, Profile).
 @Table("profile")
 struct ProfileRow: Hashable, Sendable {
   @Column(primaryKey: true)
   var id = 1
   var name: String
+  /// One of the user's own photos (ChatPhotos.mine); empty for none.
+  var photoID = ""
 }
 
 extension DatabaseMigrator {
@@ -24,6 +26,25 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the usual photo") { db in
+      try #sql(
+        """
+        ALTER TABLE "profile" ADD COLUMN "photoID" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+    }
+  }
+}
+
+/// The usual name and photo, each empty before the user sets them.
+public struct UsualProfile: Hashable, Sendable {
+  public var name = ""
+  public var photoID = ""
+
+  public init(name: String = "", photoID: String = "") {
+    self.name = name
+    self.photoID = photoID
   }
 }
 
@@ -32,7 +53,7 @@ extension DatabaseMigrator {
 public enum Profile {
   /// The usual name, from the user's socket.
   static func take(_ profile: Pochical_V1_Profile, in db: Database) throws {
-    try ProfileRow.upsert { ProfileRow(name: profile.name) }.execute(db)
+    try ProfileRow.upsert { ProfileRow(name: profile.name, photoID: profile.photoID) }.execute(db)
   }
 
   /// The usual name, empty before the user sets one.
@@ -40,9 +61,24 @@ public enum Profile {
     try ProfileRow.fetchOne(db)?.name ?? ""
   }
 
+  /// The usual name and photo.
+  public static func usual(in db: Database) throws -> UsualProfile {
+    let row = try ProfileRow.fetchOne(db)
+    return UsualProfile(name: row?.name ?? "", photoID: row?.photoID ?? "")
+  }
+
   /// A Reset: it comes again with everything else.
   static func reset(in db: Database) throws {
     try ProfileRow.delete().execute(db)
+  }
+}
+
+/// The usual name and photo, read again as they change.
+public struct UsualProfileRequest: FetchKeyRequest, Hashable {
+  public init() {}
+
+  public func fetch(_ db: Database) throws -> UsualProfile {
+    try Profile.usual(in: db)
   }
 }
 
@@ -56,11 +92,31 @@ public struct ProfileNameRequest: FetchKeyRequest, Hashable {
 }
 
 extension GroupCalls {
-  /// Sets the usual name, empty for none; the device hears of it from the
-  /// user's socket.
-  public func setProfileName(_ name: String) async throws {
+  /// Sets the usual name and photo, each empty for none; the device hears
+  /// of them from the user's socket. A photo goes up first
+  /// (`ChatPhotos.send` to `ChatPhotos.mine`).
+  public func setProfile(_ profile: UsualProfile) async throws {
     var request = Pochical_V1_SetProfileRequest()
-    request.name = name
+    request.name = profile.name
+    request.photoID = profile.photoID
     _ = try await users.setProfile(request: request, headers: account.headers()).result.get()
+  }
+
+  /// The caller's photo in the group: their usual one, one of the group's
+  /// photos they sent up (`ChatPhotos.send`), or none (empty).
+  public func setGroupPhoto(usual: Bool, photoID: String = "", in groupID: String) async throws {
+    var request = Pochical_V1_SetGroupPhotoRequest()
+    request.groupID = groupID
+    request.usual = usual
+    request.photoID = photoID
+    _ = try await client.setGroupPhoto(request: request, headers: account.headers()).result.get()
+  }
+
+  /// Sends a photo of the user's up, to the group's photos or their own
+  /// (`ChatPhotos.mine`), and gives the id to name it by.
+  public func sendPhoto(_ jpeg: Data, to groupID: String) async throws -> String {
+    let photoID = UUID().uuidString.lowercased()
+    try await ChatPhotos.send(jpeg, as: photoID, in: groupID, account: account)
+    return photoID
   }
 }

@@ -140,6 +140,8 @@ struct MemberProfileSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   let name: String
+  /// Their photo as the group shows it; empty for none.
+  var photoID = ""
   let groupName: String
   let blocked: Bool
   let onReport: () -> Void
@@ -149,7 +151,7 @@ struct MemberProfileSheet: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 12) {
-        LetterAvatar(name: name, size: 88)
+        MemberAvatar(name: name, photoID: photoID, size: 88)
         Text(name).font(.title2.bold())
         if blocked {
           Text("ブロック中")

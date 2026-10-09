@@ -43,6 +43,10 @@ service GroupService {
   // How the caller appears in the group from now on. Members only.
   rpc SetDisplayName(SetDisplayNameRequest) returns (SetDisplayNameResponse);
 
+  // The caller's photo in the group from now on: their usual one, one of
+  // the group's photos they uploaded, or none. Members only.
+  rpc SetGroupPhoto(SetGroupPhotoRequest) returns (SetGroupPhotoResponse);
+
   // Takes the caller out of the group: what it holds of their shifts goes,
   // and its socket and calls refuse them until they join again by a live
   // link. Leaving a group you are not in changes nothing.
@@ -131,6 +135,16 @@ message RenameGroupRequest {
 }
 
 message RenameGroupResponse {}
+
+message SetGroupPhotoRequest {
+  string group_id = 1;
+  // Follow the usual photo; photo_id is then ignored.
+  bool usual = 2;
+  // One of the group's photos the caller uploaded, or empty for none.
+  string photo_id = 3;
+}
+
+message SetGroupPhotoResponse {}
 
 message SetDisplayNameRequest {
   string group_id = 1;

@@ -29,4 +29,26 @@ public interface ProfileOrBuilder extends
    */
   com.google.protobuf.ByteString
       getNameBytes();
+
+  /**
+   * <pre>
+   * The usual photo, one of the user's own photos (/v1/me/photos/{id});
+   * empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  java.lang.String getPhotoId();
+  /**
+   * <pre>
+   * The usual photo, one of the user's own photos (/v1/me/photos/{id});
+   * empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  com.google.protobuf.ByteString
+      getPhotoIdBytes();
 }

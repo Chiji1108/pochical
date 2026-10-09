@@ -9,6 +9,8 @@ import {
   getPreviewImage,
   PHOTO_PATH,
   PREVIEW_IMAGE_PATH,
+  PERSON_PHOTO_PATH,
+  personPhoto,
   putPhoto,
   SUPPORT_PHOTO_PATH,
   supportPhoto,
@@ -111,6 +113,15 @@ const pictureRequest = async (
     const user = await sessionUser(request.headers);
     return user
       ? await supportPhoto(request, env, supportPhotoId, user.id)
+      : signInFirst();
+  }
+
+  // The user's own photos: their usual one, for them alone.
+  const personPhotoId = PERSON_PHOTO_PATH.exec(pathname)?.groups?.photoId;
+  if (personPhotoId !== undefined) {
+    const user = await sessionUser(request.headers);
+    return user
+      ? await personPhoto(request, env, personPhotoId, user.id)
       : signInFirst();
   }
 

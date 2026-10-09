@@ -261,6 +261,7 @@ describe("GroupService", () => {
             ownName: null,
             userId: `filler-${index}`,
             usualName: `メンバー${index}`,
+            usualPhoto: "",
           })
       )
     );
