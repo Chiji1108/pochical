@@ -32,8 +32,9 @@ import { ConfirmDialog } from "./design-sheet";
 import { Button, fieldLabel, Note } from "./design-ui";
 import { WorkSetupSteps } from "./design-work-setup";
 
-// The pages about how someone works: a repeating order and its history,
-// changing jobs, and switching to a roster.
+// 繰り返し's pages: the repeating order and its history, setting,
+// correcting and stopping it; and 新しい仕事にする, opened from
+// シフトパターン.
 
 // The order in use and what can change about it: a new one from a day,
 // the one in use corrected, or no order from a day.

@@ -36,8 +36,8 @@ import { MarkPage, StyleRow } from "./design-settings-style";
 import {
   JobChangePage,
   RepeatEditorPage,
-  StopRepeatPage,
   RepeatPage,
+  StopRepeatPage,
 } from "./design-settings-work";
 import { SupportChatPage, SupportRow } from "./design-support-chat";
 import { TabBar } from "./design-tab-bar";
@@ -129,7 +129,7 @@ export function DesignSettings({
             mode={current ? "switch" : "first"}
             onApply={(rule) => {
               onApplyRule(rule);
-              setPage(current ? "repeat" : "top");
+              setPage("repeat");
             }}
             onBack={() => {
               setPage("repeat");
@@ -224,7 +224,7 @@ export function DesignSettings({
           <StopRepeatPage
             onApply={(start) => {
               onApplyRule({ sequence: [], start });
-              setPage("top");
+              setPage("repeat");
             }}
             onBack={() => {
               setPage("repeat");
@@ -333,11 +333,7 @@ function SettingsTop({
             onOpen("repeat");
           }}
           // How long it runs, in short: the order itself is on the page.
-          value={
-            current && current.sequence.length > 0
-              ? `${current.sequence.length}日ごと`
-              : "なし"
-          }
+          value={current ? `${current.sequence.length}日ごと` : "なし"}
         />
         <ListRow
           label="シフトパターン"

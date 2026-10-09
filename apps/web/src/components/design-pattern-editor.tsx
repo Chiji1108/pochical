@@ -116,9 +116,8 @@ export function timeText({ time }: Pattern) {
 }
 
 // The person's patterns: what ポチポチ入力, the calendar and their groups
-// show. A change here is theirs at once.
-// The person's patterns, and below them 新しい仕事にする, which chooses them
-// again with the repeat.
+// show. A change here is theirs at once. Below them, 新しい仕事にする
+// chooses them again with the repeat.
 export function PatternsPage({
   onBack,
   onJob,
