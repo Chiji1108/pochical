@@ -1,106 +1,56 @@
 import PochicalDesign
 import PochicalKit
 import SwiftUI
+import UIKit
 
-/// 月を選ぶ (/design's MonthChoiceSheet), as Google Calendar's title opens
-/// a small calendar: a year with its arrows, as a picker keeps them, and
-/// its twelve months. The month shown is filled, this month outlined, and
-/// months past the list's ends can't be picked.
-struct MonthChoiceSheet: View {
-  @Environment(\.themeColors) private var colors
-  @Environment(\.dismiss) private var dismiss
-  /// The month on screen, whose year the sheet opens on.
+/// 月を選ぶ: the system's year and month wheels, turning the pages as they
+/// stop, the list's ends kept to (`first`, `last`).
+private struct MonthWheels: UIViewRepresentable {
   let month: Day
   let first: Day
   let last: Day
   let onPick: (Day) -> Void
-  @State private var year: Int
 
-  init(month: Day, first: Day, last: Day, onPick: @escaping (Day) -> Void) {
-    self.month = month
-    self.first = first
-    self.last = last
-    self.onPick = onPick
-    _year = State(initialValue: month.year)
+  func makeUIView(context: Context) -> UIDatePicker {
+    let picker = UIDatePicker()
+    picker.datePickerMode = .yearAndMonth
+    picker.preferredDatePickerStyle = .wheels
+    picker.addTarget(context.coordinator, action: #selector(Coordinator.changed), for: .valueChanged)
+    return picker
   }
 
-  var body: some View {
-    let today = Day.today
-    NavigationStack {
-      ScrollView {
-        grid(today: today)
-      }
-      .scrollBounceBehavior(.basedOnSize)
-      .navigationTitle("月を選ぶ")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
-        }
-      }
+  func updateUIView(_ picker: UIDatePicker, context: Context) {
+    context.coordinator.onPick = onPick
+    picker.minimumDate = first.firstOfMonth.date(in: .current)
+    picker.maximumDate = last.firstOfMonth.date(in: .current)
+    let shown = month.firstOfMonth.date(in: .current)
+    if Day(picker.date, in: .current).firstOfMonth != month.firstOfMonth {
+      picker.setDate(shown, animated: false)
     }
-    .presentationDetents([.medium])
   }
 
-  /// The year, turned with ‹ ›, over its twelve months.
-  private func grid(today: Day) -> some View {
-    VStack(spacing: 16) {
-      HStack(spacing: 8) {
-        Button("前の年", systemImage: "chevron.left") { year -= 1 }
-          .disabled(year <= first.year)
-        Text(verbatim: "\(year)年")
-          .font(.headline)
-          .monospacedDigit()
-          .contentTransition(.numericText(value: Double(year)))
-          .animation(.default, value: year)
-        Button("次の年", systemImage: "chevron.right") { year += 1 }
-          .disabled(year >= last.year)
-      }
-      .labelStyle(.iconOnly)
-      .buttonStyle(.plain)
-      .foregroundStyle(colors.accentDefault)
-      .frame(minHeight: Metrics.touch)
-      LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8)
-      {
-        ForEach(1...12, id: \.self) { number in
-          let choice = Day(year: year, month: number, day: 1)
-          let shown = choice == month.firstOfMonth
-          let current = choice == today.firstOfMonth
-          let outside = choice < first.firstOfMonth || choice > last.firstOfMonth
-          Button {
-            onPick(choice)
-            dismiss()
-          } label: {
-            Text("\(number)月")
-              .font(.body.weight(.semibold))
-              .foregroundStyle(
-                outside
-                  ? colors.textDisabled
-                  : shown ? colors.accentOnFill : current ? colors.accentDefault : colors.textPrimary
-              )
-              .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-              .background(shown ? colors.accentFill : colors.fillQuaternary, in: Capsule())
-              .overlay {
-                if current, !shown {
-                  Capsule().strokeBorder(colors.accentDefault, lineWidth: 1.5)
-                }
-              }
-          }
-          .buttonStyle(.plain)
-          .disabled(outside)
-          .accessibilityAddTraits(shown ? .isSelected : [])
-        }
-      }
+  func makeCoordinator() -> Coordinator {
+    Coordinator(onPick: onPick)
+  }
+
+  final class Coordinator: NSObject {
+    var onPick: (Day) -> Void
+
+    init(onPick: @escaping (Day) -> Void) {
+      self.onPick = onPick
     }
-    .padding(.horizontal, 20)
-    .padding(.top, 8)
-    .padding(.bottom, 20)
+
+    @objc func changed(_ picker: UIDatePicker) {
+      onPick(Day(picker.date, in: .current).firstOfMonth)
+    }
   }
 }
 
 /// A month's name that opens 月を選ぶ, with a small chevron after it saying
 /// so (/design's MonthTitleButton); `label` draws the name. The calendar's
-/// own heading goes without the chevron, as large as it is.
+/// own heading goes without the chevron, as large as it is. 月を選ぶ is a
+/// popover of the system's year and month wheels under the name, so the
+/// month stays in sight as it turns; a tap outside closes it.
 struct MonthTitleButton<Label: View>: View {
   @Environment(\.themeColors) private var colors
   let month: Day
@@ -126,8 +76,10 @@ struct MonthTitleButton<Label: View>: View {
     }
     .buttonStyle(.plain)
     .accessibilityHint("押すと月を選べます")
-    .sheet(isPresented: $choosing) {
-      MonthChoiceSheet(month: month, first: first, last: last, onPick: onPick)
+    .popover(isPresented: $choosing) {
+      MonthWheels(month: month, first: first, last: last, onPick: onPick)
+        .frame(width: 300, height: 216)
+        .presentationCompactAdaptation(.popover)
     }
   }
 }
