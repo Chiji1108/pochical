@@ -43,7 +43,9 @@ struct GroupDayHeader: View {
       Color.clear.frame(width: dateWidth, height: 1)
       ForEach(members) { member in
         HStack(spacing: 4) {
-          MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 24)
+          MemberAvatar(
+            name: member.name, photoID: member.photoID, groupID: groupID, size: 24,
+            userID: member.userID)
           if density == .names {
             Text(member.name)
               .font(.footnote.weight(.semibold))

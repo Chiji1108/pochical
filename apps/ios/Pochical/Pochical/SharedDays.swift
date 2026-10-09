@@ -91,7 +91,8 @@ struct DayCard: View {
             ForEach(members[start..<min(start + columns, members.count)]) { member in
               let pattern = shifts.pattern(of: member, on: day)
               VStack(spacing: 4) {
-                MemberAvatar(name: member.name, photoID: member.photoID, size: 24)
+                MemberAvatar(
+                  name: member.name, photoID: member.photoID, size: 24, userID: member.userID)
                 mark(pattern, size: 16)
                 Text(pattern?.name ?? "未入力")
                   .font(.system(size: 9))
@@ -119,7 +120,8 @@ struct DayCard: View {
       HStack(spacing: 4) {
         Color.clear.frame(width: Self.dateWidth, height: 1)
         ForEach(members) { member in
-          MemberAvatar(name: member.name, photoID: member.photoID, size: 22)
+          MemberAvatar(
+            name: member.name, photoID: member.photoID, size: 22, userID: member.userID)
             .frame(width: 26)
             .accessibilityLabel(member.name)
         }
@@ -185,7 +187,8 @@ struct DayCard: View {
       .frame(minHeight: 30)
       ForEach(members) { member in
         HStack(spacing: 4) {
-          MemberAvatar(name: member.name, photoID: member.photoID, size: 22)
+          MemberAvatar(
+            name: member.name, photoID: member.photoID, size: 22, userID: member.userID)
             .frame(width: 26)
             .accessibilityLabel(member.name)
           ForEach(shown, id: \.self) { day in

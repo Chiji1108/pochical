@@ -61,7 +61,8 @@ struct GroupSettingsPage: View {
               Text(me?.name ?? "").lineLimit(1)
             } icon: {
               MemberAvatar(
-                name: me?.name ?? "", photoID: me?.photoID ?? "", groupID: group.id, size: 28)
+                name: me?.name ?? "", photoID: me?.photoID ?? "", groupID: group.id, size: 28,
+                me: true)
             }
           }
         }
@@ -91,7 +92,9 @@ struct GroupSettingsPage: View {
           Label {
             Text(member.userID == meID ? "\(member.name)（自分）" : member.name).lineLimit(1)
           } icon: {
-            MemberAvatar(name: member.name, photoID: member.photoID, groupID: group.id, size: 28)
+            MemberAvatar(
+              name: member.name, photoID: member.photoID, groupID: group.id, size: 28,
+              userID: member.userID)
           }
         }
         Button(action: onInvite) {

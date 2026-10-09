@@ -182,11 +182,18 @@ struct AppleSignInButton: View {
   }
 }
 
+extension Notification.Name {
+  /// The device goes on as another user: switched to an account, signed
+  /// out or deleted. Who the screens' \.meID is is read again.
+  static let accountChanged = Notification.Name("app.pochical.accountChanged")
+}
+
 /// The device holding nothing of the user, as a new install does: its own
-/// settings stay.
+/// settings stay. Told to the app, as the user is someone else from now.
 @MainActor func forgetDevice(database: any DatabaseWriter, userSocket: SyncClient?) async {
   await userSocket?.stop()
   try? await database.write { try LocalData.erase(in: $0) }
   LocalData.eraseFiles()
   WidgetCenter.shared.reloadAllTimelines()
+  NotificationCenter.default.post(name: .accountChanged, object: nil)
 }

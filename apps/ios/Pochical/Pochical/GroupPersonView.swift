@@ -85,7 +85,9 @@ struct GroupPersonView: View {
             personID = member.userID
           } label: {
             HStack(spacing: 6) {
-              MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 22)
+              MemberAvatar(
+                name: member.name, photoID: member.photoID, groupID: groupID, size: 22,
+                userID: member.userID)
               Text(member.name)
                 .font(.subheadline.weight(isPicked ? .semibold : .regular))
                 .foregroundStyle(isPicked ? colors.accentDefault : colors.textSecondary)

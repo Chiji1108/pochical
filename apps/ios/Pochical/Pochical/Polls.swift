@@ -197,7 +197,8 @@ private struct Voters: View {
     } label: {
       HStack(spacing: -4) {
         ForEach(Array(shown.enumerated()), id: \.offset) { _, person in
-          MemberAvatar(name: person.name, photoID: faces[person.id] ?? "", size: 22)
+          MemberAvatar(
+            name: person.name, photoID: faces[person.id] ?? "", size: 22, userID: person.id)
             .overlay(Circle().stroke(colors.backgroundCard, lineWidth: 1.5))
         }
         if !people.isEmpty {
@@ -219,7 +220,8 @@ private struct Voters: View {
         Text(day.fullText).font(.footnote.weight(.semibold))
         ForEach(Array(people.enumerated()), id: \.offset) { _, person in
           HStack(spacing: 8) {
-            MemberAvatar(name: person.name, photoID: faces[person.id] ?? "", size: 24)
+            MemberAvatar(
+              name: person.name, photoID: faces[person.id] ?? "", size: 24, userID: person.id)
             Text(person.name).font(.subheadline)
           }
         }
