@@ -89,6 +89,8 @@ export function DesignCalendar({
   };
   // Blank days between entered ones, asked about when entering ends.
   const [gapDays, setGapDays] = useState<Date[]>([]);
+  // The pattern picked in the gap sheet, shown faint on its days.
+  const [gapFill, setGapFill] = useState<Shift>();
   // Whether the sheet offers showing days off blank: decided as it opens,
   // so switching it on there does not take the switch away.
   const [offerBlank, setOfferBlank] = useState(false);
@@ -253,6 +255,7 @@ export function DesignCalendar({
     const gaps = ownPatterns.some(isDayOff) ? gapDaysIn(schedule, month) : [];
     if (gaps.length > 0) {
       setGapDays(gaps);
+      setGapFill(undefined);
       setOfferBlank(offDisplay === "show");
       setOpenSheet("gap");
       return;
@@ -261,6 +264,18 @@ export function DesignCalendar({
     if (unfilled === 0 && enteredBlank) {
       openSave(true);
     }
+  }
+  // While the gap sheet asks, its days drawn faint as the pattern picked
+  // would fill them, so the question points at them.
+  function previewOf(date: Date): DayEntry | undefined {
+    if (
+      openSheet !== "gap" ||
+      !gapDays.some((day) => dateKey(day) === dateKey(date))
+    ) {
+      return undefined;
+    }
+    const shift = gapFill ?? ownPatterns.find(isDayOff)?.id;
+    return shift === undefined ? undefined : { shift };
   }
   // Fills the blanks with the person's day off.
   function fillGaps(key: Shift | undefined) {
@@ -382,7 +397,11 @@ export function DesignCalendar({
                       }
                       date={date}
                       editing={editing}
-                      entry={schedule[dateKey(date)]}
+                      entry={schedule[dateKey(date)] ?? previewOf(date)}
+                      preview={
+                        !schedule[dateKey(date)] &&
+                        previewOf(date) !== undefined
+                      }
                       key={dateKey(date)}
                       note={own[dateKey(date)]?.note}
                       onPress={() => {
@@ -537,6 +556,7 @@ export function DesignCalendar({
           .map((pattern) => ({ key: pattern.id, label: pattern.name }))}
         days={gapDays}
         onFill={fillGaps}
+        onPick={setGapFill}
         offerBlank={offerBlank}
         onBlankOff={() => {
           setCalendarOptions({ blankOff: true });

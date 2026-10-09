@@ -21,6 +21,8 @@ struct CalendarScreen: View {
   /// The day ポチポチ入力 enters next, while entering.
   @State private var entering: Day?
   @State private var gaps: [Day] = []
+  /// The pattern picked in the gap sheet to fill them with.
+  @State private var gapFill: PatternID?
   /// The month being saved as a picture.
   /// The month whose 今月の内訳 is open.
   @State private var breakingDown: Day?
@@ -216,7 +218,10 @@ struct CalendarScreen: View {
       }
     }
     .onChange(of: gaps) { _, gaps in
-      if gaps.isEmpty { askForReviewIfDue() }
+      if gaps.isEmpty {
+        gapFill = nil
+        askForReviewIfDue()
+      }
     }
     .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
       gapSheet(calendar)
@@ -340,10 +345,21 @@ struct CalendarScreen: View {
     return entering != nil || opened != nil ? .faint : .hidden
   }
 
+  /// While the gap sheet asks, its days drawn faint as the pattern picked
+  /// would fill them, so the question points at them.
+  private func gapPreview(_ calendar: OwnCalendar) -> [Day: Pattern] {
+    let offPatterns = calendar.patterns.filter(\.countsAsOff)
+    guard let fill = offPatterns.first(where: { $0.id == gapFill }) ?? offPatterns.first else {
+      return [:]
+    }
+    return Dictionary(uniqueKeysWithValues: gaps.map { ($0, fill) })
+  }
+
   private func pageDays(_ calendar: OwnCalendar) -> PageDays {
     PageDays(
       today: today, calendar: calendar, colorsHolidays: settings.device.week.holiday,
       offShown: offShown, selected: entering ?? opened, isEntering: entering != nil,
+      preview: gapPreview(calendar),
       onSelect: { day in
         if pulled { return }
         if entering != nil {
@@ -430,7 +446,8 @@ struct CalendarScreen: View {
     let offPatterns = calendar.patterns.filter(\.countsAsOff)
     guard !offPatterns.isEmpty, !gaps.isEmpty else { return nil }
     return GapSheet(
-      days: gaps, offPatterns: offPatterns, blankOff: settings.device.look.options.blankOff
+      days: gaps, offPatterns: offPatterns, picked: $gapFill,
+      blankOff: settings.device.look.options.blankOff
     ) { off in
       write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
     }
@@ -624,6 +641,9 @@ struct PageDays {
   /// The day being entered or opened, framed.
   let selected: Day?
   let isEntering: Bool
+  /// Days drawn faint as a pattern would fill them, while the gap sheet
+  /// asks about them.
+  var preview: [Day: Pattern] = [:]
   /// Picks a day: to enter while entering, else to open.
   let onSelect: ((Day) -> Void)?
 
@@ -632,13 +652,14 @@ struct PageDays {
     HStack(spacing: 4) {
       ForEach(week, id: \.self) { day in
         let entry = shown[day]
+        let previewed = entry == nil ? preview[day] : nil
         DayCell(
           day: day, entry: entry, note: calendar.note(on: day),
-          pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
+          pattern: previewed ?? entry.flatMap { calendar.patternsByID[$0.shift] },
           outside: month.map { day.month != $0.month } ?? false, isToday: day == today,
           isHoliday: day.holidayName != nil,
           colorsHoliday: colorsHolidays, offShown: offShown, isSelected: day == selected,
-          isEntering: isEntering,
+          isEntering: isEntering, preview: previewed != nil,
           onSelect: onSelect)
       }
     }

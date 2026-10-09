@@ -15,7 +15,9 @@ struct GapSheet: View {
   /// which fills the days, the first to begin with.
   let offPatterns: [Pattern]
   let onFill: (Pattern) -> Void
-  @State private var picked: PatternID?
+  /// The pattern picked to fill with, shared with the calendar behind,
+  /// which shows it faint on the days; none for the first.
+  @Binding var picked: PatternID?
   /// カレンダーでは空白で見せる is offered to whoever was not showing days
   /// off blank as the sheet opened, and stays while it is open: many
   /// leave days off blank for the look, which they keep while the days
@@ -25,8 +27,12 @@ struct GapSheet: View {
   /// before, so × changes nothing.
   @State private var blank = false
 
-  init(days: [Day], offPatterns: [Pattern], blankOff: Bool, onFill: @escaping (Pattern) -> Void) {
+  init(
+    days: [Day], offPatterns: [Pattern], picked: Binding<PatternID?>, blankOff: Bool,
+    onFill: @escaping (Pattern) -> Void
+  ) {
     self.days = days
+    _picked = picked
     self.offPatterns = offPatterns
     self.onFill = onFill
     _offerBlank = State(initialValue: !blankOff)
@@ -69,7 +75,7 @@ struct GapSheet: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xxl))
+            .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -106,6 +112,9 @@ struct GapSheet: View {
       }
     }
     .presentationDetents([.medium])
+    // Opaque, so the calendar's own buttons do not show through the glass
+    // under this one's.
+    .presentationBackground(colors.backgroundBase)
   }
 }
 
