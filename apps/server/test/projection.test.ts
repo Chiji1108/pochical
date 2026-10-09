@@ -284,11 +284,12 @@ describe("a member's shifts in their groups", () => {
           "SELECT group_id, pushed_cursor FROM memberships ORDER BY group_id"
         )
         .toArray();
-      // Past the membership, which groups never get, and the day.
-      expect(reached).toStrictEqual({ group_id: groupId, pushed_cursor: 2 });
+      // Past the usual name the group adopted, the membership, which groups
+      // never get, and the day.
+      expect(reached).toStrictEqual({ group_id: groupId, pushed_cursor: 3 });
       // The day is still to go to the group that failed.
       expect(unreached).toMatchObject({ group_id: "!unreachable" });
-      expect(unreached?.pushed_cursor).toBeLessThan(2);
+      expect(unreached?.pushed_cursor).toBeLessThan(3);
       const retry = await state.storage.getAlarm();
       expect(retry).toBeGreaterThanOrEqual(before + PUSH_RETRY_FIRST_MS);
       expect(retry).toBeLessThanOrEqual(Date.now() + PUSH_RETRY_FIRST_MS);

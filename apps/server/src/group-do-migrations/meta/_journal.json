@@ -120,6 +120,13 @@
       "when": 1791503166699,
       "tag": "0016_member_deleted",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1791516103080,
+      "tag": "0017_member_names",
+      "breakpoints": true
     }
   ]
 }

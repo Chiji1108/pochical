@@ -258,8 +258,9 @@ describe("GroupService", () => {
         { length: GROUP_MAX_MEMBERS - 1 },
         async (_, index) =>
           await group.addMember({
-            displayName: `メンバー${index}`,
+            ownName: null,
             userId: `filler-${index}`,
+            usualName: `メンバー${index}`,
           })
       )
     );
@@ -332,6 +333,10 @@ describe("who is in a group, on members' devices", () => {
     const maker = await signInAnonymously();
     const phone = await device(maker);
     const { groupId, inviteCode } = await createGroup(maker);
+    // The name they gave, with no usual one yet, becomes their usual one.
+    expect(changesIn(await phone.frames.next())).toMatchObject([
+      { kind: { case: "profile", value: { name: "さくら" } } },
+    ]);
     expect(changesIn(await phone.frames.next())).toMatchObject([
       {
         kind: {
@@ -347,6 +352,7 @@ describe("who is in a group, on members' devices", () => {
     await join(inviteCode, guest);
     const tablet = await device(guest);
     expect(changesIn(await tablet.frames.next())).toMatchObject([
+      { kind: { case: "profile" } },
       { kind: { case: "membership", value: { groupId } } },
     ]);
     await expect(settled(tablet.socket, tablet.frames)).resolves.toMatchObject({

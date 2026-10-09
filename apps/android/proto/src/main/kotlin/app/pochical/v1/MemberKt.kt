@@ -151,6 +151,35 @@ public object MemberKt {
     public fun clearDeleted() {
       _builder.clearDeleted()
     }
+
+    /**
+     * ```
+     * display_name is a name of their own for this group (このグループだけ),
+     * not their usual one, which it follows otherwise (spec/sync-protocol.md,
+     * Profile).
+     * ```
+     *
+     * `bool own_name = 6 [json_name = "ownName"];`
+     */
+    public var ownName: kotlin.Boolean
+      @kotlin.jvm.JvmName("getOwnName")
+        get() = _builder.ownName
+      @kotlin.jvm.JvmName("setOwnName")
+        set(value) {
+        _builder.ownName = value
+      }
+    /**
+     * ```
+     * display_name is a name of their own for this group (このグループだけ),
+     * not their usual one, which it follows otherwise (spec/sync-protocol.md,
+     * Profile).
+     * ```
+     *
+     * `bool own_name = 6 [json_name = "ownName"];`
+     */
+    public fun clearOwnName() {
+      _builder.clearOwnName()
+    }
   }
 }
 public inline fun app.pochical.v1.Member.copy(block: `app.pochical.v1`.MemberKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Member =

@@ -12,9 +12,10 @@ public inline fun profile(block: app.pochical.v1.ProfileKt.Dsl.() -> kotlin.Unit
   app.pochical.v1.ProfileKt.Dsl._create(app.pochical.v1.Profile.newBuilder()).apply { block() }._build()
 /**
  * ```
- * The user's usual name (いつもの名前), kept with the account: creating or
- * joining a group starts with it, and each group keeps its own after.
- * Before the user sets one, none is sent.
+ * The user's usual name (いつもの名前), kept with the account: each group
+ * shows it unless the user gave that group a name of its own, and hears of
+ * it from the User DO as it hears of their shifts. Before the user sets
+ * one, none is sent.
  * ```
  *
  * Protobuf type `pochical.v1.Profile`

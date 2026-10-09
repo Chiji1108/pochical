@@ -48,7 +48,8 @@ public object SetDisplayNameRequestKt {
 
     /**
      * ```
-     * personName: 1 to 20 characters.
+     * A name of the caller's own for this group, at most personName
+     * characters; empty, or their usual name, to follow the usual one again.
      * ```
      *
      * `string display_name = 2 [json_name = "displayName"];`
@@ -62,7 +63,8 @@ public object SetDisplayNameRequestKt {
       }
     /**
      * ```
-     * personName: 1 to 20 characters.
+     * A name of the caller's own for this group, at most personName
+     * characters; empty, or their usual name, to follow the usual one again.
      * ```
      *
      * `string display_name = 2 [json_name = "displayName"];`

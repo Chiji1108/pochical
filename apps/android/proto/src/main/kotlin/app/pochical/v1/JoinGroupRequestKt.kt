@@ -48,7 +48,7 @@ public object JoinGroupRequestKt {
 
     /**
      * ```
-     * How the caller appears in this group; personName: 1 to 20 characters.
+     * As CreateGroupRequest's display_name.
      * ```
      *
      * `string display_name = 2 [json_name = "displayName"];`
@@ -62,7 +62,7 @@ public object JoinGroupRequestKt {
       }
     /**
      * ```
-     * How the caller appears in this group; personName: 1 to 20 characters.
+     * As CreateGroupRequest's display_name.
      * ```
      *
      * `string display_name = 2 [json_name = "displayName"];`

@@ -219,9 +219,10 @@ message Change {
   }
 }
 
-// The user's usual name (いつもの名前), kept with the account: creating or
-// joining a group starts with it, and each group keeps its own after.
-// Before the user sets one, none is sent.
+// The user's usual name (いつもの名前), kept with the account: each group
+// shows it unless the user gave that group a name of its own, and hears of
+// it from the User DO as it hears of their shifts. Before the user sets
+// one, none is sent.
 message Profile {
   // personName characters at most (design/src/limits.ts); empty for none.
   string name = 1;
@@ -298,6 +299,10 @@ message Member {
   // Their account is deleted: left, with no name, and every line they
   // wrote taken back (spec/sync-protocol.md, Deleting an account).
   bool deleted = 5;
+  // display_name is a name of their own for this group (このグループだけ),
+  // not their usual one, which it follows otherwise (spec/sync-protocol.md,
+  // Profile).
+  bool own_name = 6;
 }
 
 // One field of a member's day, as the group sees it: pattern and times,

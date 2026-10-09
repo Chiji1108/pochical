@@ -4,8 +4,9 @@ import SQLiteData
 import SwiftUI
 
 // 設定 › プロフィール (/design's ProfilePage; spec/sync-protocol.md,
-// Profile): the usual name, kept with the account, which creating or
-// joining a group starts with. Photos come when the server keeps members'.
+// Profile): the usual name, kept with the account, which every group shows
+// unless it has a name of its own. Photos come when the server keeps
+// members'.
 
 /// 設定's プロフィール row: the usual name with its letter, or 未設定.
 struct ProfileRow: View {
@@ -52,7 +53,7 @@ private struct ProfilePage: View {
           Text("保存できませんでした。通信できるときに、もう一度お試しください。")
             .foregroundStyle(colors.dangerDefault)
         } else {
-          Text("グループを作るときや参加するときに、最初に入る名前です。グループごとに違う名前にしたいときは、各グループの設定で変えられます。")
+          Text("グループでは、この名前で表示されます。グループごとに違う名前にしたいときは、各グループの設定で変えられます。")
         }
       }
       .settingsRows()

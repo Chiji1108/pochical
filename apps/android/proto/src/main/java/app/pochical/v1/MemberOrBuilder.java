@@ -72,4 +72,16 @@ public interface MemberOrBuilder extends
    * @return The deleted.
    */
   boolean getDeleted();
+
+  /**
+   * <pre>
+   * display_name is a name of their own for this group (このグループだけ),
+   * not their usual one, which it follows otherwise (spec/sync-protocol.md,
+   * Profile).
+   * </pre>
+   *
+   * <code>bool own_name = 6 [json_name = "ownName"];</code>
+   * @return The ownName.
+   */
+  boolean getOwnName();
 }

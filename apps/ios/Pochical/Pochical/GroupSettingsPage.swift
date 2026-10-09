@@ -47,11 +47,20 @@ struct GroupSettingsPage: View {
       }
       .settingsRows()
 
+      // /design's GroupProfileRow: the name, and whether it is the usual one.
       Section("このグループでのあなた") {
         NavigationLink {
-          DisplayNamePage(group: group, name: me?.name ?? "")
+          DisplayNamePage(group: group, name: me?.ownName == true ? me?.name ?? "" : "")
         } label: {
-          LabeledContent("名前", value: me?.name ?? "")
+          LabeledContent {
+            Text(me?.ownName == true ? "このグループだけ" : "いつもと同じ")
+          } label: {
+            Label {
+              Text(me?.name ?? "").lineLimit(1)
+            } icon: {
+              LetterAvatar(name: me?.name ?? "", size: 28)
+            }
+          }
         }
         .disabled(me == nil)
       }
@@ -221,10 +230,13 @@ private struct GroupEditPage: View {
   }
 }
 
-/// How the person is called in the group, which its members see.
+/// How the person is called in the group, which its members see
+/// (/design's GroupProfilePage): a name of its own, or, left empty, their
+/// usual one, which it then follows (spec/sync-protocol.md, Profile).
 private struct DisplayNamePage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.dismiss) private var dismiss
+  @Fetch(ProfileNameRequest()) private var usualName = ""
   let group: GroupRow
   @State var name: String
   @State private var saving = false
@@ -235,10 +247,15 @@ private struct DisplayNamePage: View {
     List {
       Section {
         LabeledContent("名前") {
-          LimitedTextField(placeholder: "例：さくら", text: $name, limit: TextLimits.personName)
+          LimitedTextField(
+            placeholder: usualName.isEmpty ? "例：さくら" : usualName, text: $name,
+            limit: TextLimits.personName)
         }
       } footer: {
-        Text("「\(group.name)」のメンバーに、この名前で表示されます。")
+        Text(
+          usualName.isEmpty
+            ? "「\(group.name)」の人にだけ、この名前で表示されます。"
+            : "「\(group.name)」の人にだけ、この名前で表示されます。空欄なら「\(usualName)」のままです。")
       }
       .settingsRows()
     }
@@ -250,8 +267,10 @@ private struct DisplayNamePage: View {
         if saving {
           ProgressView()
         } else {
+          // Empty goes back to the usual name, when there is one.
           Button("保存", role: .confirm) { save(trimmed) }
-            .disabled(trimmed.isEmpty || name.count > TextLimits.personName)
+            .disabled(
+              (trimmed.isEmpty && usualName.isEmpty) || name.count > TextLimits.personName)
         }
       }
     }

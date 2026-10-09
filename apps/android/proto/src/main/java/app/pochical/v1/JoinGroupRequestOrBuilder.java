@@ -24,7 +24,7 @@ public interface JoinGroupRequestOrBuilder extends
 
   /**
    * <pre>
-   * How the caller appears in this group; personName: 1 to 20 characters.
+   * As CreateGroupRequest's display_name.
    * </pre>
    *
    * <code>string display_name = 2 [json_name = "displayName"];</code>
@@ -33,7 +33,7 @@ public interface JoinGroupRequestOrBuilder extends
   java.lang.String getDisplayName();
   /**
    * <pre>
-   * How the caller appears in this group; personName: 1 to 20 characters.
+   * As CreateGroupRequest's display_name.
    * </pre>
    *
    * <code>string display_name = 2 [json_name = "displayName"];</code>

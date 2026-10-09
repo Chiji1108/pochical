@@ -830,9 +830,10 @@ public nonisolated struct Pochical_V1_Change: Sendable {
   public init() {}
 }
 
-/// The user's usual name (いつもの名前), kept with the account: creating or
-/// joining a group starts with it, and each group keeps its own after.
-/// Before the user sets one, none is sent.
+/// The user's usual name (いつもの名前), kept with the account: each group
+/// shows it unless the user gave that group a name of its own, and hears of
+/// it from the User DO as it hears of their shifts. Before the user sets
+/// one, none is sent.
 public nonisolated struct Pochical_V1_Profile: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -984,6 +985,11 @@ public nonisolated struct Pochical_V1_Member: Sendable {
   /// Their account is deleted: left, with no name, and every line they
   /// wrote taken back (spec/sync-protocol.md, Deleting an account).
   public var deleted: Bool = false
+
+  /// display_name is a name of their own for this group (このグループだけ),
+  /// not their usual one, which it follows otherwise (spec/sync-protocol.md,
+  /// Profile).
+  public var ownName: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3480,7 +3486,7 @@ nonisolated extension Pochical_V1_GroupProfile: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Member"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0\u{1}left\0\u{1}deleted\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0\u{1}left\0\u{1}deleted\0\u{3}own_name\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3493,6 +3499,7 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.joinedAtMs) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.left) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.deleted) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.ownName) }()
       default: break
       }
     }
@@ -3514,6 +3521,9 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     if self.deleted != false {
       try visitor.visitSingularBoolField(value: self.deleted, fieldNumber: 5)
     }
+    if self.ownName != false {
+      try visitor.visitSingularBoolField(value: self.ownName, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3523,6 +3533,7 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.joinedAtMs != rhs.joinedAtMs {return false}
     if lhs.left != rhs.left {return false}
     if lhs.deleted != rhs.deleted {return false}
+    if lhs.ownName != rhs.ownName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -200,10 +200,8 @@ export function AccountPage({ onBack }: { onBack: () => void }) {
   );
 }
 
-// Your name and picture, shown to the people in your groups. The picture
-// is shared by every group; each group can use its own name for you.
-// Your usual name and picture. New groups start with them; each group can
-// use its own instead.
+// Your usual name and picture, which every group shows unless it has its
+// own for you (spec/sync-protocol.md, Profile).
 export function ProfilePage({
   profile,
   onChange,
@@ -251,7 +249,7 @@ export function ProfilePage({
         />
       </List>
       <Note>
-        グループを作るときや参加するときに、最初に入る名前と写真です。グループごとに違う名前や写真にしたいときは、各グループの設定で変えられます。
+        グループでは、この名前と写真で表示されます。グループごとに違う名前や写真にしたいときは、各グループの設定で変えられます。
       </Note>
     </>
   );

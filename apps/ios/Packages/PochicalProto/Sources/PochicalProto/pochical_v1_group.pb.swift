@@ -31,7 +31,10 @@ public nonisolated struct Pochical_V1_CreateGroupRequest: Sendable {
   /// The group's mark: one emoji. Other marks come later.
   public var emoji: String = String()
 
-  /// How the caller appears in this group; personName: 1 to 20 characters.
+  /// How the caller appears in this group, at most personName characters:
+  /// their usual name, which it then follows, or one of its own; empty for
+  /// the usual one. A caller with no usual name gives one, and it becomes
+  /// their usual name (spec/sync-protocol.md, Profile).
   public var displayName: String = String()
 
   /// An id the app makes once for each group it sets out to create, up to
@@ -166,7 +169,7 @@ public nonisolated struct Pochical_V1_JoinGroupRequest: Sendable {
 
   public var inviteCode: String = String()
 
-  /// How the caller appears in this group; personName: 1 to 20 characters.
+  /// As CreateGroupRequest's display_name.
   public var displayName: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -224,7 +227,8 @@ public nonisolated struct Pochical_V1_SetDisplayNameRequest: Sendable {
 
   public var groupID: String = String()
 
-  /// personName: 1 to 20 characters.
+  /// A name of the caller's own for this group, at most personName
+  /// characters; empty, or their usual name, to follow the usual one again.
   public var displayName: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

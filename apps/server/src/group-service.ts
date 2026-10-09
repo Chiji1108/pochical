@@ -26,8 +26,33 @@ import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
 import { requireEmoji, requireText } from "./text-limits";
 
-const displayNameOf = (text: string): string =>
-  requireText(text, textLimits.personName, "display_name");
+/**
+ * How the caller will appear in a group from the name they typed: their
+ * usual name, which the group then follows, or one of its own; empty for
+ * the usual one (spec/sync-protocol.md, Profile). A caller with no usual
+ * name must give one, and joining or making a group adopts it as theirs.
+ */
+const namesFor = async (
+  userId: string,
+  typed: string,
+  adopt: boolean
+): Promise<{ usualName: string; ownName: string | null }> => {
+  const users = env.USERS.getByName(userId);
+  const usualName = await users.profileName();
+  const name = typed.trim();
+  if (name === "") {
+    if (usualName === "") {
+      throw new ConnectError("display_name is empty", Code.InvalidArgument);
+    }
+    return { ownName: null, usualName };
+  }
+  requireText(name, textLimits.personName, "display_name");
+  if (usualName === "" && adopt) {
+    await users.setProfile(name);
+    return { ownName: null, usualName: name };
+  }
+  return { ownName: name === usualName ? null : name, usualName };
+};
 
 /** The caller's id, when they are in the group; PERMISSION_DENIED otherwise. */
 const requireMember = async (
@@ -48,7 +73,6 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const user = await requireUser(context);
       const name = requireText(request.name, textLimits.groupName, "name");
       const emoji = requireEmoji(request.emoji);
-      const displayName = displayNameOf(request.displayName);
       if (!isId(request.requestId)) {
         throw new ConnectError("Malformed request_id", Code.InvalidArgument);
       }
@@ -64,10 +88,11 @@ export const registerGroupService = (router: ConnectRouter): void => {
           Code.ResourceExhausted
         );
       }
+      const names = await namesFor(user.id, request.displayName, true);
       const groupId = await users.groupIdFor(request.requestId);
       await env.GROUPS.getByName(groupId).create(
         { emoji, name },
-        { displayName, userId: user.id }
+        { ...names, userId: user.id }
       );
       await users.addMembership(groupId, { emoji, name });
       const inviteCode = await liveInviteCode(env.DB, groupId);
@@ -105,15 +130,12 @@ export const registerGroupService = (router: ConnectRouter): void => {
 
     joinGroup: async ({ inviteCode, displayName }, context) => {
       const user = await requireUser(context);
-      const shownAs = displayNameOf(displayName);
       const groupId = await requireGroupOfCode(env.DB, inviteCode);
+      const names = await namesFor(user.id, displayName, true);
       // The Group DO decides; the user's DO then keeps its copy. Both are
       // idempotent, so a retry after a failure in between completes it.
       const group = env.GROUPS.getByName(groupId);
-      const result = await group.addMember({
-        displayName: shownAs,
-        userId: user.id,
-      });
+      const result = await group.addMember({ ...names, userId: user.id });
       if (result === "full") {
         throw new ConnectError(
           `The group has its most members (${GROUP_MAX_MEMBERS})`,
@@ -172,10 +194,10 @@ export const registerGroupService = (router: ConnectRouter): void => {
 
     setDisplayName: async (request, context) => {
       const userId = await requireMember(context, request.groupId);
-      const displayName = displayNameOf(request.displayName);
+      const { ownName } = await namesFor(userId, request.displayName, false);
       await env.GROUPS.getByName(request.groupId).setDisplayName(
         userId,
-        displayName
+        ownName
       );
       return create(SetDisplayNameResponseSchema, {});
     },

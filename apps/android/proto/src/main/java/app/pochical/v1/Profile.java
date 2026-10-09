@@ -7,9 +7,10 @@ package app.pochical.v1;
 
 /**
  * <pre>
- * The user's usual name (いつもの名前), kept with the account: creating or
- * joining a group starts with it, and each group keeps its own after.
- * Before the user sets one, none is sent.
+ * The user's usual name (いつもの名前), kept with the account: each group
+ * shows it unless the user gave that group a name of its own, and hears of
+ * it from the User DO as it hears of their shifts. Before the user sets
+ * one, none is sent.
  * </pre>
  *
  * Protobuf type {@code pochical.v1.Profile}
@@ -175,9 +176,10 @@ public  final class Profile extends
 
   /**
    * <pre>
-   * The user's usual name (いつもの名前), kept with the account: creating or
-   * joining a group starts with it, and each group keeps its own after.
-   * Before the user sets one, none is sent.
+   * The user's usual name (いつもの名前), kept with the account: each group
+   * shows it unless the user gave that group a name of its own, and hears of
+   * it from the User DO as it hears of their shifts. Before the user sets
+   * one, none is sent.
    * </pre>
    *
    * Protobuf type {@code pochical.v1.Profile}

@@ -253,6 +253,50 @@ public  final class Member extends
     deleted_ = false;
   }
 
+  public static final int OWN_NAME_FIELD_NUMBER = 6;
+  private boolean ownName_;
+  /**
+   * <pre>
+   * display_name is a name of their own for this group (このグループだけ),
+   * not their usual one, which it follows otherwise (spec/sync-protocol.md,
+   * Profile).
+   * </pre>
+   *
+   * <code>bool own_name = 6 [json_name = "ownName"];</code>
+   * @return The ownName.
+   */
+  @java.lang.Override
+  public boolean getOwnName() {
+    return ownName_;
+  }
+  /**
+   * <pre>
+   * display_name is a name of their own for this group (このグループだけ),
+   * not their usual one, which it follows otherwise (spec/sync-protocol.md,
+   * Profile).
+   * </pre>
+   *
+   * <code>bool own_name = 6 [json_name = "ownName"];</code>
+   * @param value The ownName to set.
+   */
+  private void setOwnName(boolean value) {
+    
+    ownName_ = value;
+  }
+  /**
+   * <pre>
+   * display_name is a name of their own for this group (このグループだけ),
+   * not their usual one, which it follows otherwise (spec/sync-protocol.md,
+   * Profile).
+   * </pre>
+   *
+   * <code>bool own_name = 6 [json_name = "ownName"];</code>
+   */
+  private void clearOwnName() {
+
+    ownName_ = false;
+  }
+
   public static app.pochical.v1.Member parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -595,6 +639,52 @@ public  final class Member extends
       return this;
     }
 
+    /**
+     * <pre>
+     * display_name is a name of their own for this group (このグループだけ),
+     * not their usual one, which it follows otherwise (spec/sync-protocol.md,
+     * Profile).
+     * </pre>
+     *
+     * <code>bool own_name = 6 [json_name = "ownName"];</code>
+     * @return The ownName.
+     */
+    @java.lang.Override
+    public boolean getOwnName() {
+      return instance.getOwnName();
+    }
+    /**
+     * <pre>
+     * display_name is a name of their own for this group (このグループだけ),
+     * not their usual one, which it follows otherwise (spec/sync-protocol.md,
+     * Profile).
+     * </pre>
+     *
+     * <code>bool own_name = 6 [json_name = "ownName"];</code>
+     * @param value The ownName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOwnName(boolean value) {
+      copyOnWrite();
+      instance.setOwnName(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * display_name is a name of their own for this group (このグループだけ),
+     * not their usual one, which it follows otherwise (spec/sync-protocol.md,
+     * Profile).
+     * </pre>
+     *
+     * <code>bool own_name = 6 [json_name = "ownName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOwnName() {
+      copyOnWrite();
+      instance.clearOwnName();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Member)
   }
   @java.lang.Override
@@ -616,10 +706,11 @@ public  final class Member extends
             "joinedAtMs_",
             "left_",
             "deleted_",
+            "ownName_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0002\u0004\u0007\u0005\u0007";
+              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0002\u0004\u0007\u0005\u0007\u0006\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

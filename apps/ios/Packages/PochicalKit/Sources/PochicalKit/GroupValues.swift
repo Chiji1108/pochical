@@ -19,6 +19,9 @@ public struct GroupMemberRow: Hashable, Sendable {
   public var left = false
   /// Their account is deleted: no name, and their lines taken back.
   public var deleted = false
+  /// displayName is a name of their own for this group (このグループだけ),
+  /// not their usual one, which it follows otherwise.
+  public var ownName = false
 
   /// How the app names them: one whose account is deleted has no name.
   public var shownName: String {
@@ -169,6 +172,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep whose name is the group's own") { db in
+      try #sql(
+        """
+        ALTER TABLE "groupMembers" ADD COLUMN "ownName" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -230,7 +241,8 @@ public enum GroupSync {
       }
       let row = GroupMemberRow(
         groupID: groupID, userID: member.userID, displayName: member.displayName,
-        joinedAtMs: member.joinedAtMs, left: member.left, deleted: member.deleted)
+        joinedAtMs: member.joinedAtMs, left: member.left, deleted: member.deleted,
+        ownName: member.ownName)
       try GroupMemberRow.insert { row }.execute(db)
     case .memberDay(let member):
       try takeDay(member.day, of: member.userID, in: groupID, db: db)
@@ -297,6 +309,8 @@ public enum GroupSync {
 public struct GroupMember: Hashable, Sendable, Identifiable {
   public let userID: String
   public let name: String
+  /// The name is one of their own for this group, not their usual one.
+  public var ownName = false
   public let calendar: MemberCalendar
   public var id: String { userID }
 }
@@ -346,7 +360,7 @@ extension GroupSync {
         uniquingKeysWith: { first, _ in first })
       let timeline = orders.filter { $0.userID == member.userID }.compactMap(\.order)
       return GroupMember(
-        userID: member.userID, name: member.displayName,
+        userID: member.userID, name: member.displayName, ownName: member.ownName,
         calendar: MemberCalendar(patternsByID: byID, days: own, orders: timeline))
     }
   }
