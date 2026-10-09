@@ -38,6 +38,7 @@ private struct ReactionPill: View {
   let reaction: LineReaction
   let mine: Bool
   let nameOf: (String) -> String
+  @Environment(\.memberFaces) private var photos
   var counted = false
   let onToggle: () -> Void
 
@@ -59,7 +60,7 @@ private struct ReactionPill: View {
         } else {
           HStack(spacing: -2) {
             ForEach(faces, id: \.self) { id in
-              LetterAvatar(name: nameOf(id), size: 18)
+              MemberAvatar(name: nameOf(id), photoID: photos[id] ?? "", size: 18)
                 .overlay(
                   Circle().strokeBorder(mine ? colors.accentContainer : colors.backgroundCard))
             }

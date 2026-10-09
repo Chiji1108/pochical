@@ -33,6 +33,8 @@ extension EnvironmentValues {
   /// The group whose photos its screens' faces are, for those that know a
   /// member's photo but not the group (MemberAvatar).
   @Entry var photoGroupID = ""
+  /// Each member's photo by their id, for faces given only who it is.
+  @Entry var memberFaces: [String: String] = [:]
 }
 
 /// The グループ tab (/design's DesignGroup): with no group yet, what groups

@@ -44,8 +44,8 @@ struct MemberAvatar: View {
 }
 
 /// A face to change (/design's PhotoEditor): tapping it, or 写真を編集 under
-/// it, offers a photo from the library, and going back to the usual one or
-/// deleting it when that applies.
+/// it, offers taking a photo or picking one, and going back to the usual
+/// one or deleting it when that applies.
 struct PhotoEditor: View {
   @Environment(\.themeColors) private var colors
   let name: String
@@ -56,47 +56,67 @@ struct PhotoEditor: View {
   var onUsual: (() async -> Void)?
   var onRemove: (() async -> Void)?
   @State private var picking = false
+  @State private var taking = false
   @State private var item: PhotosPickerItem?
   @State private var busy = false
 
   var body: some View {
     let removable = onRemove != nil && !photoID.isEmpty
-    Group {
-      // With nothing but a photo to pick, a tap picks one.
-      if onUsual == nil && !removable {
-        Button { picking = true } label: { face }
-          .buttonStyle(.plain)
-      } else {
-        Menu {
-          Button("写真を選ぶ", systemImage: "photo.on.rectangle") { picking = true }
-          if let onUsual {
-            Button("いつもの写真に戻す", systemImage: "arrow.uturn.backward") {
-              run(onUsual)
-            }
-          }
-          if let onRemove, removable {
-            Button("写真を削除", systemImage: "trash", role: .destructive) { run(onRemove) }
-          }
-        } label: {
-          face
+    Menu {
+      // Taking one first, as /design's sheet has it; not on a device
+      // without a camera.
+      if UIImagePickerController.isSourceTypeAvailable(.camera) {
+        Button("写真を撮る", systemImage: "camera") { taking = true }
+      }
+      Button("写真を選ぶ", systemImage: "photo.on.rectangle") { picking = true }
+      if let onUsual {
+        Button("いつもの写真に戻す", systemImage: "arrow.uturn.backward") {
+          run(onUsual)
         }
       }
+      if let onRemove, removable {
+        Button("写真を削除", systemImage: "trash", role: .destructive) { run(onRemove) }
+      }
+    } label: {
+      face
     }
     .disabled(busy)
     .frame(maxWidth: .infinity)
     .photosPicker(isPresented: $picking, selection: $item, matching: .images)
+    .fullScreenCover(isPresented: $taking) {
+      CameraPicker { jpeg in
+        taking = false
+        guard let jpeg else { return }
+        take(jpeg)
+      }
+      .ignoresSafeArea()
+    }
     .onChange(of: item) { _, picked in
       guard let picked else { return }
       item = nil
       busy = true
       Task {
         defer { busy = false }
-        guard let data = try? await picked.loadTransferable(type: Data.self),
-          let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
-        else { return }
-        await onPhoto(shrunk.jpeg)
+        guard let data = try? await picked.loadTransferable(type: Data.self) else { return }
+        await send(data)
       }
     }
+  }
+
+  /// A photo just taken, sent as a picked one is.
+  private func take(_ data: Data) {
+    busy = true
+    Task {
+      defer { busy = false }
+      await send(data)
+    }
+  }
+
+  /// Shrunk as a chat's photo is, then told.
+  private func send(_ data: Data) async {
+    guard let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
+    else { return }
+    await onPhoto(shrunk.jpeg)
   }
 
   /// The face, and 写真を編集 under it.
@@ -117,6 +137,47 @@ struct PhotoEditor: View {
     Task {
       defer { busy = false }
       await action()
+    }
+  }
+}
+
+/// The system's camera, for a photo to use as a face; nil when cancelled.
+private struct CameraPicker: UIViewControllerRepresentable {
+  let onDone: (Data?) -> Void
+
+  func makeUIViewController(context: Context) -> UIImagePickerController {
+    let picker = UIImagePickerController()
+    picker.sourceType = .camera
+    picker.cameraDevice = .front
+    picker.delegate = context.coordinator
+    return picker
+  }
+
+  func updateUIViewController(_ picker: UIImagePickerController, context: Context) {}
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(onDone: onDone)
+  }
+
+  final class Coordinator: NSObject, UIImagePickerControllerDelegate,
+    UINavigationControllerDelegate
+  {
+    let onDone: (Data?) -> Void
+
+    init(onDone: @escaping (Data?) -> Void) {
+      self.onDone = onDone
+    }
+
+    func imagePickerController(
+      _ picker: UIImagePickerController,
+      didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+    ) {
+      let image = info[.originalImage] as? UIImage
+      onDone(image?.jpegData(compressionQuality: 0.9))
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+      onDone(nil)
     }
   }
 }

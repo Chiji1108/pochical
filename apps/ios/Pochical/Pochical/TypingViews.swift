@@ -8,10 +8,11 @@ struct TypingLine: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let name: String
+  var photoID = ""
 
   var body: some View {
     HStack(alignment: .top, spacing: 8) {
-      LetterAvatar(name: name, size: 32)
+      MemberAvatar(name: name, photoID: photoID, size: 32)
       PhaseAnimator([0, 1, 2]) { phase in
         HStack(spacing: 4) {
           ForEach(0..<3, id: \.self) { dot in

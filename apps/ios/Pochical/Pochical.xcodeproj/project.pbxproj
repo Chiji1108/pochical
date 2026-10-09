@@ -512,7 +512,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "シフトを予定として端末のカレンダーに入れるときに使います。追加先のカレンダーを選び、前に入れた予定を入れ直すために、カレンダーを読む必要があります。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QRコードや画像、チャットの写真を写真に保存するときに使います。";
-				INFOPLIST_KEY_NSCameraUsageDescription = "グループの招待QRコードを読み取るときに使います。";
+				INFOPLIST_KEY_NSCameraUsageDescription = "グループの招待QRコードを読み取るときと、プロフィールの写真を撮るときに使います。";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Pochical/Pochical.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -552,7 +552,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "シフトを予定として端末のカレンダーに入れるときに使います。追加先のカレンダーを選び、前に入れた予定を入れ直すために、カレンダーを読む必要があります。";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QRコードや画像、チャットの写真を写真に保存するときに使います。";
-				INFOPLIST_KEY_NSCameraUsageDescription = "グループの招待QRコードを読み取るときに使います。";
+				INFOPLIST_KEY_NSCameraUsageDescription = "グループの招待QRコードを読み取るときと、プロフィールの写真を撮るときに使います。";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Pochical/Pochical.entitlements;
 				CODE_SIGN_STYLE = Automatic;
