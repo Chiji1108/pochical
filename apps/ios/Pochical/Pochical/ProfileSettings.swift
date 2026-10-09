@@ -62,9 +62,7 @@ private struct ProfilePage: View {
     .navigationBarTitleDisplayMode(.inline)
     // Saved once typing pauses, as the server keeps it for every device.
     .task(id: name) {
-      guard let name else { return }
-      let kept = name.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard kept != saved, kept.count <= TextLimits.personName else { return }
+      guard let kept = unsaved else { return }
       try? await Task.sleep(for: .milliseconds(800))
       guard !Task.isCancelled else { return }
       do {
@@ -74,5 +72,18 @@ private struct ProfilePage: View {
         failed = !Task.isCancelled
       }
     }
+    // Leaving before the pause is over still saves what was typed, past
+    // the page.
+    .onDisappear {
+      guard let kept = unsaved else { return }
+      Task { [groupCalls] in try? await groupCalls.setProfileName(kept) }
+    }
+  }
+
+  /// What is typed, trimmed, when it differs from the saved name and fits.
+  private var unsaved: String? {
+    guard let name else { return nil }
+    let kept = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    return kept != saved && kept.count <= TextLimits.personName ? kept : nil
   }
 }
