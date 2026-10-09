@@ -126,6 +126,11 @@ private func initialLetter(of name: String) -> String {
   name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init) ?? "グ"
 }
 
+/// Said when a photo picked for a mark was let go of by the device before
+/// the group was saved with it (`MarkPhotoGone`).
+let markPhotoGoneTitle = "写真をもう一度選んでください"
+let markPhotoGoneMessage = "選んだ写真がこの端末から消えていたため、アイコンを元に戻しました。"
+
 /// The kinds of mark the tabs pick from; a photo is picked above them.
 private enum MarkKind: Hashable {
   case emoji, icon, letter

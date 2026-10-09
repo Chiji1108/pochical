@@ -168,6 +168,7 @@ private struct GroupEditPage: View {
   @State private var mark = GroupMarkValue()
   @State private var saving = false
   @State private var failed = false
+  @State private var photoGone = false
 
   var body: some View {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -213,6 +214,11 @@ private struct GroupEditPage: View {
     } message: {
       Text("通信できる場所で、もう一度お試しください。")
     }
+    .alert(markPhotoGoneTitle, isPresented: $photoGone) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text(markPhotoGoneMessage)
+    }
   }
 
   private func save(name: String) {
@@ -226,6 +232,9 @@ private struct GroupEditPage: View {
         }
         try await groupCalls.rename(group.id, name: name, mark: mark)
         dismiss()
+      } catch is MarkPhotoGone {
+        mark = group.mark
+        photoGone = true
       } catch {
         ReviewPrompt.troubled = true
         failed = true

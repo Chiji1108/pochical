@@ -91,6 +91,11 @@ public struct ProfileNameRequest: FetchKeyRequest, Hashable {
   }
 }
 
+/// A photo picked for a group's mark that the device has let go of, as
+/// the system clears its caches: sending again cannot help, picking again
+/// does.
+public struct MarkPhotoGone: Error {}
+
 extension GroupCalls {
   /// Sets the usual name and photo, each empty for none; the device hears
   /// of them from the user's socket. A photo goes up first
@@ -123,8 +128,13 @@ extension GroupCalls {
 
   /// Sends up a photo picked for a group's mark (`holdMarkPhoto`), as one
   /// of the user's own for the group to take as it is saved with it.
+  /// `MarkPhotoGone` once the device has let it go, to be picked again.
   public func sendMarkPhoto(_ photoID: String) async throws {
-    try await ChatPhotos.uploadHeld(photoID, in: ChatPhotos.mine, account: account)
+    do {
+      try await ChatPhotos.uploadHeld(photoID, in: ChatPhotos.mine, account: account)
+    } catch ChatPhotos.UploadError.gone {
+      throw MarkPhotoGone()
+    }
   }
 
   /// Sends a photo of the user's up, to the group's photos or their own
