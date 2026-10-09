@@ -21,9 +21,10 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
 }
 
 /// A group's mark (/design's GroupMark): one emoji, one of the mark icons
-/// (design/src/mark-icons.ts) or letters, the last two in one of the mark
-/// palette's colors. Exactly one of emoji, icon and letter is set. Every
-/// member sees it as it is, whatever their style for shifts.
+/// (design/src/mark-icons.ts), letters, the last two in one of the mark
+/// palette's colors, or a photo. Exactly one of emoji, icon, letter and
+/// photo_id is set. Every member sees it as it is, whatever their style for
+/// shifts.
 public nonisolated struct Pochical_V1_GroupMark: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -42,6 +43,12 @@ public nonisolated struct Pochical_V1_GroupMark: Sendable {
   /// (design/src/colors.ts, markColors).
   public var color: UInt32 = 0
 
+  /// One of the group's photos, which members read at
+  /// /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+  /// one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+  /// group takes a copy of.
+  public var photoID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -53,7 +60,7 @@ fileprivate nonisolated let _protobuf_package = "pochical.v1"
 
 nonisolated extension Pochical_V1_GroupMark: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GroupMark"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}emoji\0\u{1}icon\0\u{1}letter\0\u{1}color\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}emoji\0\u{1}icon\0\u{1}letter\0\u{1}color\0\u{3}photo_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -65,6 +72,7 @@ nonisolated extension Pochical_V1_GroupMark: SwiftProtobuf.Message, SwiftProtobu
       case 2: try { try decoder.decodeSingularStringField(value: &self.icon) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.letter) }()
       case 4: try { try decoder.decodeSingularUInt32Field(value: &self.color) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
       default: break
       }
     }
@@ -83,6 +91,9 @@ nonisolated extension Pochical_V1_GroupMark: SwiftProtobuf.Message, SwiftProtobu
     if self.color != 0 {
       try visitor.visitSingularUInt32Field(value: self.color, fieldNumber: 4)
     }
+    if !self.photoID.isEmpty {
+      try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -91,6 +102,7 @@ nonisolated extension Pochical_V1_GroupMark: SwiftProtobuf.Message, SwiftProtobu
     if lhs.icon != rhs.icon {return false}
     if lhs.letter != rhs.letter {return false}
     if lhs.color != rhs.color {return false}
+    if lhs.photoID != rhs.photoID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

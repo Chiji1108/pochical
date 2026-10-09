@@ -6,8 +6,10 @@ import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
 import {
   getPhoto,
+  getInviteMark,
   getInvitePhoto,
   getPreviewImage,
+  INVITE_MARK_PATH,
   INVITE_PHOTO_PATH,
   PHOTO_PATH,
   PREVIEW_IMAGE_PATH,
@@ -149,6 +151,11 @@ const pictureRequest = async (
   env: Env,
   pathname: string
 ): Promise<Response | undefined> => {
+  // A group's photo mark, shown with its name to anyone holding its link.
+  const mark = INVITE_MARK_PATH.exec(pathname)?.groups;
+  if (mark?.code !== undefined && mark.photoId !== undefined) {
+    return await getInviteMark(env, mark.code, mark.photoId);
+  }
   const shared = await sharedPictureRequest(request, env, pathname);
   if (shared) {
     return shared;

@@ -145,8 +145,8 @@ struct InviteCard: View {
   var body: some View {
     HStack(spacing: 12) {
       Group {
-        if let invite, !unusable, !invite.mark.icon.isEmpty || !invite.mark.letter.isEmpty {
-          GroupMarkView(mark: invite.mark, size: 42)
+        if let invite, !unusable, invite.mark.emoji.isEmpty {
+          GroupMarkView(mark: invite.mark, size: 42, shelf: ChatPhotos.invitation(code))
         } else {
           Text(unusable ? "🔗" : (invite?.mark.emoji.isEmpty == false ? invite?.mark.emoji ?? "" : "👥"))
             .font(.system(size: 22))

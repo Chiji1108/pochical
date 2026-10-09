@@ -3,20 +3,28 @@ import PochicalKit
 import SwiftUI
 
 // A group's mark (/design's GroupMark and GroupMarkPage): one emoji, one of
-// the mark icons, or letters, the last two in a color of the mark palette.
-// Every member sees it as it is, whatever their style for shifts.
+// the mark icons, letters, the last two in a color of the mark palette, or
+// a photo. Every member sees it as it is, whatever their style for shifts.
 
-/// A group's mark filling `size`: an emoji as it is, an icon or letters in
-/// its color on that color's tint (/design's GroupIcon).
+/// A group's mark filling `size`: a photo filling its square, an emoji as
+/// it is, an icon or letters in its color on that color's tint (/design's
+/// GroupIcon).
 struct GroupMarkView: View {
   @Environment(\.themeColors) private var colors
   let mark: GroupMarkValue
   let size: CGFloat
+  /// Where a photo mark is read from: the group's photos, or an
+  /// invitation's (`ChatPhotos.invitation`). One the user just picked is on
+  /// the device already.
+  var shelf = ""
 
   var body: some View {
     let color = colors.mark(mark.color)
     let shape = RoundedRectangle(cornerRadius: size * 0.28)
-    if !mark.icon.isEmpty, let layers = MarkIcons.layers(mark.icon, filled: true, size: size * 0.62) {
+    if !mark.photoID.isEmpty {
+      MarkPhoto(photoID: mark.photoID, shelf: shelf, size: size)
+        .clipShape(shape)
+    } else if !mark.icon.isEmpty, let layers = MarkIcons.layers(mark.icon, filled: true, size: size * 0.62) {
       ZStack {
         shape.fill(color.tint)
         ZStack {
@@ -43,14 +51,57 @@ struct GroupMarkView: View {
   }
 }
 
+/// A group's photo mark, from the device or else `shelf`; its ground while
+/// it loads.
+private struct MarkPhoto: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.displayScale) private var displayScale
+  let photoID: String
+  let shelf: String
+  let size: CGFloat
+  @State private var image: UIImage?
+
+  var body: some View {
+    Group {
+      if let image {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+      } else {
+        colors.fillQuaternary
+      }
+    }
+    .frame(width: size, height: size)
+    .task(id: photoID) {
+      image = nil
+      // One the user picked waits on the device as theirs until the group
+      // has it.
+      let data: Data? =
+        if let mine = ChatPhotos.held(photoID, in: ChatPhotos.mine) {
+          mine
+        } else if shelf.isEmpty {
+          nil
+        } else {
+          try? await groupCalls.photo(photoID, in: shelf)
+        }
+      guard let data, let whole = UIImage(data: data) else { return }
+      let edge = size * displayScale
+      image = await whole.byPreparingThumbnail(ofSize: CGSize(width: edge, height: edge)) ?? whole
+    }
+  }
+}
+
 /// A group's mark on its small rounded square, as rows show it.
 struct GroupMarkBadge: View {
   @Environment(\.themeColors) private var colors
   let mark: GroupMarkValue
   var size: CGFloat = 28
+  /// Where a photo mark is read from (GroupMarkView).
+  var shelf = ""
 
   var body: some View {
-    GroupMarkView(mark: mark, size: size)
+    GroupMarkView(mark: mark, size: size, shelf: shelf)
       .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
       .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
   }
@@ -80,20 +131,25 @@ private func initialLetter(of name: String) -> String {
   name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init) ?? "グ"
 }
 
-/// The kinds of mark the tabs pick from; a photo comes later.
+/// The kinds of mark the tabs pick from; a photo is picked above them.
 private enum MarkKind: Hashable {
   case emoji, icon, letter
 }
 
-/// アイコン (/design's GroupMarkPage): a kind, then one of it, from rows of
-/// eight by kind or from everything (ほかの…を選ぶ), and for an icon or
-/// letters their color.
+/// アイコン (/design's GroupMarkPage): a photo, taken or picked, or a kind,
+/// then one of it, from rows of eight by kind or from everything (ほかの…を
+/// 選ぶ), and for an icon or letters their color.
 struct GroupMarkPage: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.groupCalls) private var groupCalls
   let name: String
   @State var mark: GroupMarkValue
+  /// Where the group's photo mark is read from (GroupMarkView).
+  var shelf = ""
   let onPick: (GroupMarkValue) -> Void
+  /// The tab shown; none for a photo until one is chosen.
   @State private var kind: MarkKind?
+  @State private var photoFailed = false
   @State private var choosingEmoji = false
   @State private var choosingIcon = false
   /// The letters while they are being written.
@@ -104,11 +160,17 @@ struct GroupMarkPage: View {
     Form {
       Section {
         VStack(spacing: 16) {
-          GroupMarkView(mark: mark, size: 64)
+          // Drawn marks are picked with the tabs below, so this only
+          // brings in a photo.
+          PhotoEditor(label: mark.photoID.isEmpty ? "写真を使う" : "写真を変更") {
+            GroupMarkView(mark: mark, size: 64, shelf: shelf)
+          } onPhoto: { jpeg in
+            await usePhoto(jpeg)
+          }
           Picker("アイコンの種類", selection: Binding(get: { shown }, set: { kind = $0 })) {
-            Text("絵文字").tag(MarkKind.emoji)
-            Text("アイコン").tag(MarkKind.icon)
-            Text("文字").tag(MarkKind.letter)
+            Text("絵文字").tag(MarkKind?.some(.emoji))
+            Text("アイコン").tag(MarkKind?.some(.icon))
+            Text("文字").tag(MarkKind?.some(.letter))
           }
           .pickerStyle(.segmented)
         }
@@ -118,6 +180,8 @@ struct GroupMarkPage: View {
 
       Section {
         switch shown {
+        case nil:
+          EmptyView()
         case .emoji:
           MarkChoiceGrid(withPicked(ReadyPatterns.groupMarkEmojis, mark.emoji), chosen: mark.emoji) { emoji in
             Text(emoji).font(.system(size: 26))
@@ -146,8 +210,8 @@ struct GroupMarkPage: View {
       }
       .settingsRows()
 
-      // Emoji bring colors of their own.
-      if shown != .emoji {
+      // Emoji and photos bring colors of their own.
+      if shown == .icon || shown == .letter {
         Section("色") {
           MarkColorGrid(chosen: mark.color) { slot in
             if shown == .icon {
@@ -175,6 +239,11 @@ struct GroupMarkPage: View {
         set(GroupMarkValue(icon: icon, color: mark.color))
       }
     }
+    .alert("写真を送れませんでした", isPresented: $photoFailed) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("通信できる場所で、もう一度お試しください。")
+    }
     .sheet(isPresented: $choosingEmoji) {
       EmojiKeyboardSheet { emoji in
         guard isEmoji(emoji) else { return }
@@ -188,7 +257,22 @@ struct GroupMarkPage: View {
     onPick(picked)
   }
 
-  private func kindOf(_ mark: GroupMarkValue) -> MarkKind {
+  /// A photo taken or picked, sent up as one of the user's own for the
+  /// group to take a copy of as it is saved.
+  private func usePhoto(_ jpeg: Data) async {
+    do {
+      let photoID = try await groupCalls.sendPhoto(jpeg, to: ChatPhotos.mine)
+      set(GroupMarkValue(photoID: photoID))
+      kind = nil
+    } catch {
+      ReviewPrompt.troubled = true
+      photoFailed = true
+    }
+  }
+
+  /// The tab a mark is drawn in; none for a photo.
+  private func kindOf(_ mark: GroupMarkValue) -> MarkKind? {
+    if !mark.photoID.isEmpty { return nil }
     if !mark.icon.isEmpty { return .icon }
     if !mark.letter.isEmpty { return .letter }
     return .emoji

@@ -13,9 +13,10 @@ public inline fun groupMark(block: app.pochical.v1.GroupMarkKt.Dsl.() -> kotlin.
 /**
  * ```
  * A group's mark (/design's GroupMark): one emoji, one of the mark icons
- * (design/src/mark-icons.ts) or letters, the last two in one of the mark
- * palette's colors. Exactly one of emoji, icon and letter is set. Every
- * member sees it as it is, whatever their style for shifts.
+ * (design/src/mark-icons.ts), letters, the last two in one of the mark
+ * palette's colors, or a photo. Exactly one of emoji, icon, letter and
+ * photo_id is set. Every member sees it as it is, whatever their style for
+ * shifts.
  * ```
  *
  * Protobuf type `pochical.v1.GroupMark`
@@ -136,6 +137,37 @@ public object GroupMarkKt {
      */
     public fun clearColor() {
       _builder.clearColor()
+    }
+
+    /**
+     * ```
+     * One of the group's photos, which members read at
+     * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+     * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+     * group takes a copy of.
+     * ```
+     *
+     * `string photo_id = 5 [json_name = "photoId"];`
+     */
+    public var photoId: kotlin.String
+      @kotlin.jvm.JvmName("getPhotoId")
+        get() = _builder.photoId
+      @kotlin.jvm.JvmName("setPhotoId")
+        set(value) {
+        _builder.photoId = value
+      }
+    /**
+     * ```
+     * One of the group's photos, which members read at
+     * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+     * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+     * group takes a copy of.
+     * ```
+     *
+     * `string photo_id = 5 [json_name = "photoId"];`
+     */
+    public fun clearPhotoId() {
+      _builder.clearPhotoId()
     }
   }
 }

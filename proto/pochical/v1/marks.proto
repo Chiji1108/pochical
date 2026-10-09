@@ -3,9 +3,10 @@ syntax = "proto3";
 package pochical.v1;
 
 // A group's mark (/design's GroupMark): one emoji, one of the mark icons
-// (design/src/mark-icons.ts) or letters, the last two in one of the mark
-// palette's colors. Exactly one of emoji, icon and letter is set. Every
-// member sees it as it is, whatever their style for shifts.
+// (design/src/mark-icons.ts), letters, the last two in one of the mark
+// palette's colors, or a photo. Exactly one of emoji, icon, letter and
+// photo_id is set. Every member sees it as it is, whatever their style for
+// shifts.
 message GroupMark {
   // One emoji (spec/text-limits.md, isEmoji).
   string emoji = 1;
@@ -16,4 +17,9 @@ message GroupMark {
   // The icon's or letters' color slot, an index into the mark palette
   // (design/src/colors.ts, markColors).
   uint32 color = 4;
+  // One of the group's photos, which members read at
+  // /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+  // one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+  // group takes a copy of.
+  string photo_id = 5;
 }

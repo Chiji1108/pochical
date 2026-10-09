@@ -62,7 +62,11 @@ function Invite() {
           {/* The group is what the page is about, so its mark leads, in a
               frame like the app's join screen; the header says ポチカル. */}
           <span aria-hidden="true" className="invite-mark">
-            <InviteMark mark={invite.groupMark} size={66} />
+            <InviteMark
+              mark={invite.groupMark}
+              photo={`/invite/${encodeURIComponent(inviteCode)}/mark/${invite.groupMark.photoId}`}
+              size={66}
+            />
           </span>
           <p className="eyebrow">YOU'RE INVITED</p>
           <h1>{invite.groupName}</h1>

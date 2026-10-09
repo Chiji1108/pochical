@@ -125,7 +125,7 @@ private func change(_ value: String, cursor: UInt64, ms: Int64) -> Pochical_V1_C
   }
 }
 
-@Test func aGroupsIconOrLettersComeInTheirColor() throws {
+@Test func aGroupsIconLettersOrPhotoComeAsTheyAre() throws {
   let database = try appDatabase()
   try database.write { db in
     var icon = Pochical_V1_Change()
@@ -140,9 +140,17 @@ private func change(_ value: String, cursor: UInt64, ms: Int64) -> Pochical_V1_C
     letters.membership.name = "ミニバス"
     letters.membership.mark.letter = "MB"
     letters.membership.mark.color = 8
-    try Sync.take([icon, letters], in: db)
+    var photo = Pochical_V1_Change()
+    photo.cursor = 3
+    photo.membership.groupID = "g3"
+    photo.membership.name = "いとこ会"
+    photo.membership.mark.photoID = "p1"
+    try Sync.take([icon, letters, photo], in: db)
     let marks = try GroupRow.order(by: \.id).fetchAll(db).map(\.mark)
     #expect(
-      marks == [GroupMarkValue(icon: "house", color: 3), GroupMarkValue(letter: "MB", color: 8)])
+      marks == [
+        GroupMarkValue(icon: "house", color: 3), GroupMarkValue(letter: "MB", color: 8),
+        GroupMarkValue(photoID: "p1"),
+      ])
   }
 }

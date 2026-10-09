@@ -27,6 +27,8 @@ export const profile = sqliteTable(
     // Set when the group's mark is letters.
     letter: text(),
     name: text().notNull(),
+    // Set when the group's mark is a photo, one of the group's photos.
+    photo: text(),
   },
   (table) => [check("profile_single_row", sql`${table.id} = 1`)]
 );

@@ -20,32 +20,43 @@ public struct GroupRow: Hashable, Sendable, Identifiable {
   public var letter = ""
   /// The icon's or letters' color slot.
   public var color = 0
+  /// The group's mark when it is a photo, one of the group's photos.
+  public var photoID = ""
 
   /// The group's mark, whichever it is.
   public var mark: GroupMarkValue {
-    GroupMarkValue(emoji: emoji, icon: icon, letter: letter, color: color)
+    GroupMarkValue(emoji: emoji, icon: icon, letter: letter, color: color, photoID: photoID)
   }
 }
 
 /// A group's mark (/design's GroupMark; proto GroupMark): one emoji, one of
-/// the mark icons, or letters, the last two in one of the mark palette's
-/// colors. Every member sees it as it is, whatever their style for shifts.
+/// the mark icons, letters, the last two in one of the mark palette's
+/// colors, or a photo. Every member sees it as it is, whatever their style
+/// for shifts.
 public struct GroupMarkValue: Hashable, Sendable {
   public var emoji = ""
   public var icon = ""
   public var letter = ""
   public var color = 0
+  /// One of the group's photos; a new one is one of the user's own
+  /// (`ChatPhotos.mine`), which the group takes a copy of.
+  public var photoID = ""
 
-  public init(emoji: String = "", icon: String = "", letter: String = "", color: Int = 0) {
+  public init(
+    emoji: String = "", icon: String = "", letter: String = "", color: Int = 0,
+    photoID: String = ""
+  ) {
     self.emoji = emoji
     self.icon = icon
     self.letter = letter
     self.color = color
+    self.photoID = photoID
   }
 
   init(_ wire: Pochical_V1_GroupMark) {
     self.init(
-      emoji: wire.emoji, icon: wire.icon, letter: wire.letter, color: Int(wire.color))
+      emoji: wire.emoji, icon: wire.icon, letter: wire.letter, color: Int(wire.color),
+      photoID: wire.photoID)
   }
 
   var wire: Pochical_V1_GroupMark {
@@ -54,6 +65,7 @@ public struct GroupMarkValue: Hashable, Sendable {
     mark.icon = icon
     mark.letter = letter
     mark.color = UInt32(max(color, 0))
+    mark.photoID = photoID
     return mark
   }
 }
@@ -81,6 +93,9 @@ extension DatabaseMigrator {
       ] {
         try db.execute(sql: column)
       }
+    }
+    registerMigration("Keep groups' photo marks") { db in
+      try db.execute(sql: #"ALTER TABLE "groups" ADD COLUMN "photoID" TEXT NOT NULL DEFAULT ''"#)
     }
   }
 }
@@ -121,7 +136,8 @@ enum Groups {
     let mark = GroupMarkValue(membership.mark)
     let row = GroupRow(
       id: membership.groupID, name: membership.name, emoji: mark.emoji,
-      joinedAtMs: membership.joinedAtMs, icon: mark.icon, letter: mark.letter, color: mark.color)
+      joinedAtMs: membership.joinedAtMs, icon: mark.icon, letter: mark.letter, color: mark.color,
+      photoID: mark.photoID)
     try GroupRow.upsert { row }.execute(db)
   }
 

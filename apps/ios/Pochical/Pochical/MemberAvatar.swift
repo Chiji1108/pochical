@@ -48,14 +48,16 @@ struct MemberAvatar: View {
   }
 }
 
-/// A face to change (/design's PhotoEditor): tapping it, or 写真を編集 under
-/// it, offers taking a photo or picking one, and going back to the usual
-/// one or deleting it when that applies.
-struct PhotoEditor: View {
+/// A picture to change (/design's PhotoPicker): tapping it, or the label
+/// under it, offers taking a photo or picking one, and going back to the
+/// usual one or deleting it when that applies.
+struct PhotoEditor<Picture: View>: View {
   @Environment(\.themeColors) private var colors
-  let name: String
-  let photoID: String
-  let groupID: String
+  /// Said under the picture, as what tapping it does.
+  let label: String
+  /// Whether there is a photo to delete.
+  var hasPhoto = false
+  @ViewBuilder let picture: () -> Picture
   /// Told of a picked photo, shrunk as a chat's are.
   let onPhoto: (Data) async -> Void
   var onUsual: (() async -> Void)?
@@ -66,7 +68,7 @@ struct PhotoEditor: View {
   @State private var busy = false
 
   var body: some View {
-    let removable = onRemove != nil && !photoID.isEmpty
+    let removable = onRemove != nil && hasPhoto
     Menu {
       // Taking one first, as /design's sheet has it; not on a device
       // without a camera.
@@ -129,14 +131,14 @@ struct PhotoEditor: View {
     await onPhoto(shrunk.jpeg)
   }
 
-  /// The face, and 写真を編集 under it.
+  /// The picture, and the label under it.
   private var face: some View {
     VStack(spacing: 8) {
-      MemberAvatar(name: name, photoID: photoID, groupID: groupID, size: 88, me: true)
+      picture()
         .overlay {
           if busy { ProgressView() }
         }
-      Text("写真を編集")
+      Text(label)
         .font(.subheadline)
         .foregroundStyle(colors.accentDefault)
     }
@@ -148,6 +150,19 @@ struct PhotoEditor: View {
       defer { busy = false }
       await action()
     }
+  }
+}
+
+extension PhotoEditor where Picture == MemberAvatar {
+  /// A face to change: the person's own, 写真を編集 under it.
+  init(
+    name: String, photoID: String, groupID: String, onPhoto: @escaping (Data) async -> Void,
+    onUsual: (() async -> Void)? = nil, onRemove: (() async -> Void)? = nil
+  ) {
+    self.init(
+      label: "写真を編集", hasPhoto: !photoID.isEmpty,
+      picture: { MemberAvatar(name: name, photoID: photoID, groupID: groupID, size: 88, me: true) },
+      onPhoto: onPhoto, onUsual: onUsual, onRemove: onRemove)
   }
 }
 

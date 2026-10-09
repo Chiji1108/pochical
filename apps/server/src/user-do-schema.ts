@@ -32,6 +32,8 @@ export const memberships = sqliteTable("memberships", {
   // Set when the group's mark is letters.
   letter: text(),
   name: text().notNull().default(""),
+  // Set when the group's mark is a photo, one of the group's photos.
+  photo: text(),
   // How far this user's shared values have reached the group: the cursor
   // up to which they were pushed and taken (spec/sync-protocol.md, Group
   // projection). Everything after it is still to go.

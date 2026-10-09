@@ -31,7 +31,7 @@ const HASH_RADIX = 36;
 
 /**
  * A short name for what an invitation's share image draws: its group's
- * name, mark and member count. It changes with any of them, so the image
+ * name, mark (a photo by its id) and member count. It changes with any of them, so the image
  * is drawn again, and its address on the page changes for the apps that
  * keep a link's card by the image's address.
  */
@@ -44,13 +44,14 @@ export const inviteImageVersion = ({
   groupMark: InviteGroupMark;
   memberCount: number;
 }): string => {
-  const { emoji, icon, letter, color } = groupMark;
+  const { emoji, icon, letter, color, photoId } = groupMark;
   const drawn = JSON.stringify([
     groupName,
     emoji,
     icon,
     letter,
     color,
+    photoId,
     memberCount,
   ]);
   let hash = 0;
@@ -88,6 +89,7 @@ export async function fetchInvitePreview(
         emoji: groupMark?.emoji ?? "",
         icon: groupMark?.icon ?? "",
         letter: groupMark?.letter ?? "",
+        photoId: groupMark?.photoId ?? "",
       },
       groupName,
       memberCount,
@@ -98,4 +100,23 @@ export async function fetchInvitePreview(
     const gone = reason === Code.NotFound || reason === Code.InvalidArgument;
     return { status: gone ? "invalid" : "unavailable" };
   }
+}
+
+/**
+ * A group's photo mark for anyone holding its live invitation, as the
+ * server gives it; null when it is not the group's mark (any longer).
+ */
+export async function fetchInviteMark(
+  code: string,
+  photoId: string,
+  server: InviteFetch
+): Promise<Response | null> {
+  if (!INVITE_CODE.test(code)) {
+    return null;
+  }
+  const response = await server(
+    `${SERVER_ORIGIN}/v1/invites/${code}/mark/${encodeURIComponent(photoId)}`,
+    { redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS) }
+  );
+  return response.ok ? response : null;
 }

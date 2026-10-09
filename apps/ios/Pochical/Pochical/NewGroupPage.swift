@@ -6,7 +6,7 @@ import SwiftUI
 /// グループを作る (/design's NewGroupPage): its name, its mark and how the
 /// person is called in it. The mark follows the name until one is picked:
 /// a fitting emoji, else its first letter in a color the user's other
-/// groups do not use yet. A photo comes when the server keeps groups'.
+/// groups do not use yet.
 struct NewGroupPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls

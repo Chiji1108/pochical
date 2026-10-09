@@ -21,7 +21,7 @@ test("asks the server's InviteService over Connect", async () => {
     })(input, init);
   };
   expect(await fetchInvitePreview("Abcd2345", recording)).toEqual({
-    groupMark: { color: 0, emoji: "🌿", icon: "", letter: "" },
+    groupMark: { color: 0, emoji: "🌿", icon: "", letter: "", photoId: "" },
     groupName: "同期",
     memberCount: 3,
     status: "valid",
@@ -42,12 +42,12 @@ test("reads a group with an icon mark, or none", async () => {
       })
     )
   ).toMatchObject({
-    groupMark: { color: 3, emoji: "", icon: "house", letter: "" },
+    groupMark: { color: 3, emoji: "", icon: "house", letter: "", photoId: "" },
   });
   expect(
     await fetchInvitePreview("Abcd2345", respond(200, { groupName: "同期" }))
   ).toEqual({
-    groupMark: { color: 0, emoji: "", icon: "", letter: "" },
+    groupMark: { color: 0, emoji: "", icon: "", letter: "", photoId: "" },
     groupName: "同期",
     memberCount: 0,
     status: "valid",
@@ -84,7 +84,7 @@ test("rejects malformed codes without asking the server", async () => {
 
 test("names a new share image whenever what it draws changes", () => {
   const group = {
-    groupMark: { color: 0, emoji: "🌿", icon: "", letter: "" },
+    groupMark: { color: 0, emoji: "🌿", icon: "", letter: "", photoId: "" },
     groupName: "同期",
     memberCount: 3,
   };
@@ -93,8 +93,34 @@ test("names a new share image whenever what it draws changes", () => {
   const changed = [
     { ...group, groupName: "同期会" },
     { ...group, memberCount: 4 },
-    { ...group, groupMark: { color: 3, emoji: "", icon: "house", letter: "" } },
-    { ...group, groupMark: { color: 4, emoji: "", icon: "house", letter: "" } },
+    {
+      ...group,
+      groupMark: {
+        color: 3,
+        emoji: "",
+        icon: "house",
+        letter: "",
+        photoId: "",
+      },
+    },
+    {
+      ...group,
+      groupMark: {
+        color: 4,
+        emoji: "",
+        icon: "house",
+        letter: "",
+        photoId: "",
+      },
+    },
+    {
+      ...group,
+      groupMark: { color: 0, emoji: "", icon: "", letter: "", photoId: "p1" },
+    },
+    {
+      ...group,
+      groupMark: { color: 0, emoji: "", icon: "", letter: "", photoId: "p2" },
+    },
   ].map(inviteImageVersion);
   expect(new Set([version, ...changed]).size).toBe(changed.length + 1);
 });
