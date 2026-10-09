@@ -194,7 +194,7 @@ struct CalendarScreen: View {
         }
       }
     }
-    .sheet(isPresented: Binding { breakingDown != nil } set: { if !$0 { breakingDown = nil } }) {
+    .fittedSheet(isPresented: Binding { breakingDown != nil } set: { if !$0 { breakingDown = nil } }) {
       if let month = breakingDown {
         let days = monthDays(month, calendar)
         MonthBreakdownSheet(
@@ -202,9 +202,7 @@ struct CalendarScreen: View {
           counts: calendar.patterns.map { pattern in
             (pattern, days.values.count { $0.shift == pattern.id })
           },
-          unfilled: month.daysOfMonth.count - days.count
-        )
-        .presentationDetents([.medium, .large])
+          unfilled: month.daysOfMonth.count - days.count)
       }
     }
     .sheet(isPresented: Binding { picturing != nil } set: { if !$0 { picturing = nil } }) {
