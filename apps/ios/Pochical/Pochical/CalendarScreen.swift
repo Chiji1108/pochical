@@ -216,7 +216,9 @@ struct CalendarScreen: View {
     }
     .sheet(isPresented: Binding { addingToCalendar != nil } set: { if !$0 { addingToCalendar = nil } }) {
       if let month = addingToCalendar {
-        DeviceCalendarSheet(month: month, calendar: currentCalendar)
+        DeviceCalendarSheet(
+          month: month, calendar: currentCalendar,
+          coworkers: Dictionary(uniqueKeysWithValues: coworkerRows.map { ($0.id, $0.name) }))
       }
     }
     .onChange(of: gaps) { _, gaps in
