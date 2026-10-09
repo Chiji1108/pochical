@@ -133,6 +133,9 @@ public actor SyncClient {
     socket?.cancel(with: .goingAway, reason: nil)
     socket = nil
     connected = false
+    // What the next socket brings is not taken yet, as when switching to
+    // another user.
+    caughtUp = false
   }
 
   /// Going to the background: the socket stays until the outbox is sent
