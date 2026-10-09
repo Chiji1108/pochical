@@ -69,4 +69,10 @@ public interface UserServiceClientInterface {
    *  ChatNotifications change.
    */
   public suspend fun setChatNotifications(request: SetChatNotificationsRequest, headers: Headers = emptyMap()): ResponseMessage<SetChatNotificationsResponse>
+
+  /**
+   *  Sets the user's usual name, empty for none; the devices hear of it as
+   *  a Profile change. INVALID_ARGUMENT over personName characters.
+   */
+  public suspend fun setProfile(request: SetProfileRequest, headers: Headers = emptyMap()): ResponseMessage<SetProfileResponse>
 }

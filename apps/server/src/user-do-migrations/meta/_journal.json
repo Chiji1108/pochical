@@ -92,6 +92,13 @@
       "when": 1791360052695,
       "tag": "0012_chat_mutes",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1791513893904,
+      "tag": "0013_profile",
+      "breakpoints": true
     }
   ]
 }

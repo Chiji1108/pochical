@@ -1,6 +1,7 @@
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { ConnectRouter } from "@connectrpc/connect";
+import { textLimits } from "@pochical/design/limits";
 import { env } from "cloudflare:workers";
 
 import { deleteAccount } from "./account-deletion";
@@ -14,11 +15,13 @@ import {
   SetBlockedResponseSchema,
   SetChatMutedResponseSchema,
   SetChatNotificationsResponseSchema,
+  SetProfileResponseSchema,
   UserService,
 } from "./gen/pochical/v1/user_pb";
 import { GROUP_THREAD, otherIn } from "./group-chat";
 import { isId } from "./ids";
 import { requireUser } from "./session";
+import { requireText } from "./text-limits";
 
 /** An APNs device token, as hex. */
 const PUSH_TOKEN = /^[0-9a-f]{32,200}$/u;
@@ -79,6 +82,14 @@ export const registerUserService = (router: ConnectRouter): void => {
         mentionsWhenMuted
       );
       return create(SetChatNotificationsResponseSchema, {});
+    },
+    setProfile: async ({ name }, context) => {
+      const user = await requireUser(context);
+      const kept = name.trim();
+      await env.USERS.getByName(user.id).setProfile(
+        kept === "" ? "" : requireText(kept, textLimits.personName, "name")
+      );
+      return create(SetProfileResponseSchema, {});
     },
     takeAccount: async ({ appleIdToken, nonce }, context) => {
       const { id } = await requireUser(context);

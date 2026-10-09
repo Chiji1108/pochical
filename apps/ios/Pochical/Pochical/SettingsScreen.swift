@@ -111,6 +111,7 @@ struct SettingsScreen: View {
         .settingsRows()
 
         Section("アカウント") {
+          ProfileRow()
           AccountRow()
         }
         .settingsRows()

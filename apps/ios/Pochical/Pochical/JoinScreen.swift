@@ -1,5 +1,6 @@
 import PochicalDesign
 import PochicalKit
+import SQLiteData
 import SwiftUI
 
 /// An invitation code opened in the app, to show over the screens.
@@ -24,6 +25,8 @@ struct JoinScreen: View {
   @State private var details: InviteDetails?
   @State private var loadError: InviteError?
   @State private var myName = ""
+  /// The usual name, which the field starts with (設定 › プロフィール).
+  @Fetch(ProfileNameRequest()) private var usualName = ""
   @State private var joining = false
   @State private var joinError: InviteError?
   @State private var showingMembers = false
@@ -48,6 +51,9 @@ struct JoinScreen: View {
       }
     }
     .task { await load() }
+    .onChange(of: usualName, initial: true) { _, usual in
+      if myName.isEmpty { myName = usual }
+    }
     .alert(
       joinError == .full ? "このグループには参加できません" : "参加できませんでした",
       isPresented: Binding { joinError != nil } set: { if !$0 { joinError = nil } }

@@ -605,6 +605,45 @@ public object ChangeKt {
     public fun hasChatNotifications(): kotlin.Boolean {
       return _builder.hasChatNotifications()
     }
+
+    /**
+     * ```
+     * The user's usual name, which new groups start with
+     * (spec/sync-protocol.md, Profile); User DO only.
+     * ```
+     *
+     * `.pochical.v1.Profile profile = 20 [json_name = "profile"];`
+     */
+    public var profile: app.pochical.v1.Profile
+      @kotlin.jvm.JvmName("getProfile")
+        get() = _builder.profile
+      @kotlin.jvm.JvmName("setProfile")
+        set(value) {
+        _builder.profile = value
+      }
+    /**
+     * ```
+     * The user's usual name, which new groups start with
+     * (spec/sync-protocol.md, Profile); User DO only.
+     * ```
+     *
+     * `.pochical.v1.Profile profile = 20 [json_name = "profile"];`
+     */
+    public fun clearProfile() {
+      _builder.clearProfile()
+    }
+    /**
+     * ```
+     * The user's usual name, which new groups start with
+     * (spec/sync-protocol.md, Profile); User DO only.
+     * ```
+     *
+     * `.pochical.v1.Profile profile = 20 [json_name = "profile"];`
+     * @return Whether the profile field is set.
+     */
+    public fun hasProfile(): kotlin.Boolean {
+      return _builder.hasProfile()
+    }
     public val kindCase: app.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -670,4 +709,7 @@ public val app.pochical.v1.ChangeOrBuilder.chatMuteOrNull: app.pochical.v1.ChatM
 
 public val app.pochical.v1.ChangeOrBuilder.chatNotificationsOrNull: app.pochical.v1.ChatNotifications?
   get() = if (hasChatNotifications()) getChatNotifications() else null
+
+public val app.pochical.v1.ChangeOrBuilder.profileOrNull: app.pochical.v1.Profile?
+  get() = if (hasProfile()) getProfile() else null
 

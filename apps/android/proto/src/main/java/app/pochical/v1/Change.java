@@ -43,6 +43,7 @@ public  final class Change extends
     BLOCK(17),
     CHAT_MUTE(18),
     CHAT_NOTIFICATIONS(19),
+    PROFILE(20),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -76,6 +77,7 @@ public  final class Change extends
         case 17: return BLOCK;
         case 18: return CHAT_MUTE;
         case 19: return CHAT_NOTIFICATIONS;
+        case 20: return PROFILE;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -1223,6 +1225,81 @@ public  final class Change extends
    */
   private void clearChatNotifications() {
     if (kindCase_ == 19) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int PROFILE_FIELD_NUMBER = 20;
+  /**
+   * <pre>
+   * The user's usual name, which new groups start with
+   * (spec/sync-protocol.md, Profile); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+   */
+  @java.lang.Override
+  public boolean hasProfile() {
+    return kindCase_ == 20;
+  }
+  /**
+   * <pre>
+   * The user's usual name, which new groups start with
+   * (spec/sync-protocol.md, Profile); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.Profile getProfile() {
+    if (kindCase_ == 20) {
+       return (app.pochical.v1.Profile) kind_;
+    }
+    return app.pochical.v1.Profile.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The user's usual name, which new groups start with
+   * (spec/sync-protocol.md, Profile); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+   */
+  private void setProfile(app.pochical.v1.Profile value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 20;
+  }
+  /**
+   * <pre>
+   * The user's usual name, which new groups start with
+   * (spec/sync-protocol.md, Profile); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+   */
+  private void mergeProfile(app.pochical.v1.Profile value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 20 &&
+        kind_ != app.pochical.v1.Profile.getDefaultInstance()) {
+      kind_ = app.pochical.v1.Profile.newBuilder((app.pochical.v1.Profile) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 20;
+  }
+  /**
+   * <pre>
+   * The user's usual name, which new groups start with
+   * (spec/sync-protocol.md, Profile); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+   */
+  private void clearProfile() {
+    if (kindCase_ == 20) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -2480,6 +2557,84 @@ public  final class Change extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The user's usual name, which new groups start with
+     * (spec/sync-protocol.md, Profile); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+     */
+    @java.lang.Override
+    public boolean hasProfile() {
+      return instance.hasProfile();
+    }
+    /**
+     * <pre>
+     * The user's usual name, which new groups start with
+     * (spec/sync-protocol.md, Profile); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.Profile getProfile() {
+      return instance.getProfile();
+    }
+    /**
+     * <pre>
+     * The user's usual name, which new groups start with
+     * (spec/sync-protocol.md, Profile); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+     */
+    public Builder setProfile(app.pochical.v1.Profile value) {
+      copyOnWrite();
+      instance.setProfile(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The user's usual name, which new groups start with
+     * (spec/sync-protocol.md, Profile); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+     */
+    public Builder setProfile(
+        app.pochical.v1.Profile.Builder builderForValue) {
+      copyOnWrite();
+      instance.setProfile(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The user's usual name, which new groups start with
+     * (spec/sync-protocol.md, Profile); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+     */
+    public Builder mergeProfile(app.pochical.v1.Profile value) {
+      copyOnWrite();
+      instance.mergeProfile(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The user's usual name, which new groups start with
+     * (spec/sync-protocol.md, Profile); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+     */
+    public Builder clearProfile() {
+      copyOnWrite();
+      instance.clearProfile();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
   }
   @java.lang.Override
@@ -2517,12 +2672,13 @@ public  final class Change extends
             app.pochical.v1.Block.class,
             app.pochical.v1.ChatMute.class,
             app.pochical.v1.ChatNotifications.class,
+            app.pochical.v1.Profile.class,
           };
           java.lang.String info =
-              "\u0000\u0013\u0001\u0000\u0001\u0013\u0013\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
+              "\u0000\u0014\u0001\u0000\u0001\u0014\u0014\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
               "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000" +
               "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
-              "<\u0000\u0012<\u0000\u0013<\u0000";
+              "<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

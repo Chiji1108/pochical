@@ -263,7 +263,7 @@ public enum GroupSync {
     case .chatLine, .readMark:
       try Chats.take(change, of: groupID, in: db)
     case .day, .pattern, .patternOrder, .repeatOrders, .coworker, .coworkerOrder, .membership,
-      .unreadCount, .block, .chatMute, .chatNotifications,
+      .unreadCount, .block, .chatMute, .chatNotifications, .profile,
       nil:
       return
     }

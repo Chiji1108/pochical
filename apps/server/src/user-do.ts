@@ -69,6 +69,7 @@ import {
   blocks,
   chatMutes,
   chatSettings,
+  profile,
   pushTokens,
   unreadCounts,
 } from "./user-do-schema";
@@ -85,6 +86,7 @@ import {
   chatMuteChange,
   chatSettingsChange,
   notifyingCount,
+  profileChange,
   unreadCountChange,
 } from "./user-do-values";
 
@@ -125,7 +127,8 @@ type SyncedLog = {
     | typeof unreadCounts
     | typeof blocks
     | typeof chatMutes
-    | typeof chatSettings;
+    | typeof chatSettings
+    | typeof profile;
 };
 
 /**
@@ -559,6 +562,23 @@ export class UserDO extends DurableObject<Env> {
     broadcastChanges(this.ctx, [chatSettingsChange(changed)]);
   }
 
+  /** Sets the usual name, empty for none, sent to the user's devices. */
+  setProfile(name: string): void {
+    const changed = this.ctx.storage.transactionSync(() => {
+      const row = { cursor: this.head() + 1, id: 1, name };
+      return this.db
+        .insert(profile)
+        .values(row)
+        .onConflictDoUpdate({
+          set: { cursor: row.cursor, name },
+          target: profile.id,
+        })
+        .returning()
+        .get();
+    });
+    broadcastChanges(this.ctx, [profileChange(changed)]);
+  }
+
   /**
    * Keeps a device's push token, sent each launch as iOS may change it
    * (spec/sync-protocol.md, Push).
@@ -934,6 +954,17 @@ export class UserDO extends DurableObject<Env> {
             .map(chatSettingsChange),
         shared: false,
         table: chatSettings,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
+            .from(profile)
+            .where(gt(profile.cursor, cursor))
+            .all()
+            .map(profileChange),
+        shared: false,
+        table: profile,
       },
     ];
   }
