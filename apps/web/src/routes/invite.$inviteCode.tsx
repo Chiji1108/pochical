@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { InviteMark } from "../components/invite-mark";
 import { StoreLinks } from "../components/store-links";
+import { inviteImageVersion } from "../lib/invite-preview";
 import { getInvite } from "../lib/invites";
 import { pageMeta } from "../lib/site";
 
@@ -27,8 +28,12 @@ export const Route = createFileRoute("/invite/$inviteCode")({
       "ポチカルでシフトを共有しましょう。",
       path,
       true,
-      // Drawn for the group by the site's Worker (src/server.ts).
-      { alt: `${group}への招待`, path: `${path}/og.png` }
+      // Drawn for the group by the site's Worker (src/server.ts), at an
+      // address of its own for each version of the group.
+      {
+        alt: `${group}への招待`,
+        path: `${path}/og.png?v=${inviteImageVersion(loaderData)}`,
+      }
     );
   },
   // Typed by hand so head, which comes first, can read its result.

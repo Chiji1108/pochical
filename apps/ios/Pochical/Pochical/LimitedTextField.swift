@@ -15,13 +15,22 @@ struct LimitedTextField: View {
   let placeholder: String
   @Binding var text: String
   let limit: Int
+  /// Off where what the field makes shows what fits already, as a mark's
+  /// letters do (spec/text-limits.md).
+  var showsCount = true
+  /// Told as the field is left.
+  var onEndEditing: () -> Void = {}
   @State private var composing = false
 
   var body: some View {
     let used = text.count
     HStack(spacing: 8) {
-      Field(placeholder: placeholder, text: $text, limit: limit, composing: $composing)
-      if limit <= TextFields.countAlwaysUpTo || limit - used <= TextFields.countWhenLeft {
+      Field(
+        placeholder: placeholder, text: $text, limit: limit, composing: $composing,
+        onEndEditing: onEndEditing)
+      if showsCount,
+        limit <= TextFields.countAlwaysUpTo || limit - used <= TextFields.countWhenLeft
+      {
         Text("\(used)/\(limit)")
           .font(.footnote.monospacedDigit())
           .foregroundStyle(composing && used > limit ? colors.dangerDefault : colors.textTertiary)
@@ -36,6 +45,7 @@ private struct Field: UIViewRepresentable {
   @Binding var text: String
   let limit: Int
   @Binding var composing: Bool
+  let onEndEditing: () -> Void
 
   func makeUIView(context: Context) -> UITextField {
     let field = UITextField()
@@ -93,6 +103,10 @@ private struct Field: UIViewRepresentable {
 
     func textFieldShouldReturn(_ field: UITextField) -> Bool {
       field.resignFirstResponder()
+    }
+
+    func textFieldDidEndEditing(_ field: UITextField) {
+      parent.onEndEditing()
     }
 
     @objc func changed(_ field: UITextField) {

@@ -72,8 +72,12 @@ func guessedMark(for name: String, color: Int) -> GroupMarkValue {
   if let hint = groupHints.first(where: { hint in hint.words.contains { name.contains($0) } }) {
     return GroupMarkValue(emoji: hint.emoji)
   }
-  let first = name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init) ?? "グ"
-  return GroupMarkValue(letter: first, color: color)
+  return GroupMarkValue(letter: initialLetter(of: name), color: color)
+}
+
+/// A name's first letter, as a group's letters start.
+private func initialLetter(of name: String) -> String {
+  name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init) ?? "グ"
 }
 
 /// The kinds of mark the tabs pick from; a photo comes later.
@@ -92,6 +96,8 @@ struct GroupMarkPage: View {
   @State private var kind: MarkKind?
   @State private var choosingEmoji = false
   @State private var choosingIcon = false
+  /// The letters while they are being written.
+  @State private var letterDraft: String?
 
   var body: some View {
     let shown = kind ?? kindOf(mark)
@@ -113,14 +119,14 @@ struct GroupMarkPage: View {
       Section {
         switch shown {
         case .emoji:
-          grid(withPicked(ReadyPatterns.groupMarkEmojis, mark.emoji), chosen: mark.emoji) { emoji in
+          MarkChoiceGrid(withPicked(ReadyPatterns.groupMarkEmojis, mark.emoji), chosen: mark.emoji) { emoji in
             Text(emoji).font(.system(size: 26))
           } pick: { emoji in
             set(GroupMarkValue(emoji: emoji))
           }
           Button("ほかの絵文字を選ぶ", systemImage: "plus") { choosingEmoji = true }
         case .icon:
-          grid(withPicked(ReadyPatterns.groupMarkIcons, mark.icon), chosen: mark.icon) { icon in
+          MarkChoiceGrid(withPicked(ReadyPatterns.groupMarkIcons, mark.icon), chosen: mark.icon) { icon in
             GroupMarkView(mark: GroupMarkValue(icon: icon, color: mark.color), size: 32)
               .accessibilityLabel(MarkIconNames.names[icon] ?? icon)
           } pick: { icon in
@@ -130,7 +136,11 @@ struct GroupMarkPage: View {
         case .letter:
           LabeledContent("文字") {
             LimitedTextField(
-              placeholder: firstLetter, text: letterBinding, limit: TextLimits.groupMark)
+              placeholder: firstLetter, text: letterBinding, limit: TextLimits.groupMark,
+              showsCount: false
+            ) {
+              letterDraft = nil
+            }
           }
         }
       }
@@ -139,12 +149,7 @@ struct GroupMarkPage: View {
       // Emoji bring colors of their own.
       if shown != .emoji {
         Section("色") {
-          grid(Array(colors.marks.indices), chosen: mark.color) { slot in
-            Circle()
-              .fill(colors.marks[slot].color)
-              .frame(width: 28, height: 28)
-              .accessibilityLabel(colors.marks[slot].name)
-          } pick: { slot in
+          MarkColorGrid(chosen: mark.color) { slot in
             if shown == .icon {
               set(GroupMarkValue(icon: mark.icon.isEmpty ? ReadyPatterns.groupMarkIcons[0] : mark.icon, color: slot))
             } else {
@@ -190,51 +195,21 @@ struct GroupMarkPage: View {
   }
 
   /// The name's first letter, as letters start.
-  private var firstLetter: String {
-    name.trimmingCharacters(in: .whitespacesAndNewlines).first.map(String.init) ?? "グ"
-  }
+  private var firstLetter: String { initialLetter(of: name) }
 
-  /// The letters, kept to groupMark characters; left empty, the name's
-  /// first letter.
+  /// The letters as they are written; a group's mark takes them while they
+  /// are some and fit, and the field shows the mark's again once left
+  /// (spec/text-limits.md).
   private var letterBinding: Binding<String> {
     Binding {
-      mark.letter
+      letterDraft ?? (mark.letter.isEmpty ? firstLetter : mark.letter)
     } set: { text in
-      let letters = text.trimmingCharacters(in: .whitespaces)
-      set(GroupMarkValue(letter: letters.isEmpty ? firstLetter : letters, color: mark.color))
-    }
-  }
-
-  /// A grid of choices, eight across, the chosen one ringed.
-  private func grid<Item: Hashable>(
-    _ items: [Item], chosen: Item, @ViewBuilder cell: @escaping (Item) -> some View,
-    pick: @escaping (Item) -> Void
-  ) -> some View {
-    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 8), spacing: 6) {
-      ForEach(items, id: \.self) { item in
-        Button {
-          pick(item)
-        } label: {
-          cell(item)
-            .frame(width: 38, height: 38)
-            .background {
-              if item == chosen {
-                RoundedRectangle(cornerRadius: Radius.sm)
-                  .strokeBorder(colors.accentDefault, lineWidth: 2)
-              }
-            }
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(item == chosen ? .isSelected : [])
+      letterDraft = text
+      let letters = text.trimmingCharacters(in: .whitespacesAndNewlines)
+      if !letters.isEmpty, letters.count <= TextLimits.groupMark {
+        set(GroupMarkValue(letter: letters, color: mark.color))
       }
     }
-    .padding(.vertical, 4)
   }
 
-  /// The offered ones, the one picked from all of them first when it is
-  /// not among them.
-  private func withPicked(_ offered: [String], _ chosen: String) -> [String] {
-    offered.contains(chosen) || chosen.isEmpty ? offered : [chosen] + offered
-  }
 }

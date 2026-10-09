@@ -2,11 +2,11 @@ import handler from "@tanstack/react-start/server-entry";
 import { env } from "cloudflare:workers";
 
 import { drawInviteImage } from "./lib/invite-image";
-import { fetchInvitePreview } from "./lib/invite-preview";
+import { fetchInvitePreview, inviteImageVersion } from "./lib/invite-preview";
 
 const INVITE_IMAGE = /^\/invite\/(?<code>[^/]+)\/og\.png$/u;
-// An image keeps for an hour: a new member or a new name shows by then, and
-// a remade link is a new address.
+// An image keeps for an hour; one whose group changed has a new address
+// on the page by then (inviteImageVersion).
 const IMAGE_CACHE = "public, max-age=3600";
 
 // An invitation's share image, drawn for its group; any link that does
@@ -16,21 +16,24 @@ const inviteImage = async (
   code: string,
   ctx: ExecutionContext
 ): Promise<Response> => {
-  const cache = await caches.open("invite-images");
-  // Kept by its path alone: a query, which changes nothing in the image,
-  // must not make it be drawn again.
-  const { origin, pathname } = new URL(request.url);
-  const key = new Request(`${origin}${pathname}`);
-  const cached = await cache.match(key);
-  if (cached) {
-    return cached;
-  }
   const invite = await fetchInvitePreview(
     code,
     async (input, init) => await env.SERVER.fetch(input, init)
   );
   if (invite.status !== "valid") {
     return Response.redirect(new URL("/share.png", request.url).href, 302);
+  }
+  // Kept by what it draws, so a group renamed, given a new mark or joined
+  // is drawn again; the request's own query, which changes nothing in the
+  // image, must not make it be drawn again.
+  const cache = await caches.open("invite-images");
+  const { origin, pathname } = new URL(request.url);
+  const key = new Request(
+    `${origin}${pathname}?v=${inviteImageVersion(invite)}`
+  );
+  const cached = await cache.match(key);
+  if (cached) {
+    return cached;
   }
   try {
     const png = await drawInviteImage({

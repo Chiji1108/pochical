@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 
-import { fetchInvitePreview } from "../src/lib/invite-preview";
+import {
+  fetchInvitePreview,
+  inviteImageVersion,
+} from "../src/lib/invite-preview";
 import type { InviteFetch } from "../src/lib/invite-preview";
 
 const respond =
@@ -77,4 +80,21 @@ test("rejects malformed codes without asking the server", async () => {
   expect(await fetchInvitePreview("../other", unexpected)).toEqual({
     status: "invalid",
   });
+});
+
+test("names a new share image whenever what it draws changes", () => {
+  const group = {
+    groupMark: { color: 0, emoji: "🌿", icon: "", letter: "" },
+    groupName: "同期",
+    memberCount: 3,
+  };
+  const version = inviteImageVersion(group);
+  expect(inviteImageVersion({ ...group })).toBe(version);
+  const changed = [
+    { ...group, groupName: "同期会" },
+    { ...group, memberCount: 4 },
+    { ...group, groupMark: { color: 3, emoji: "", icon: "house", letter: "" } },
+    { ...group, groupMark: { color: 4, emoji: "", icon: "house", letter: "" } },
+  ].map(inviteImageVersion);
+  expect(new Set([version, ...changed]).size).toBe(changed.length + 1);
 });

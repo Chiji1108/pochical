@@ -23,6 +23,43 @@ export type InviteFetch = (
 const SERVER_ORIGIN = "https://api.pochical.app";
 const TIMEOUT_MS = 5000;
 
+// A string hash's base and modulus: a 32-bit polynomial hash, enough to
+// tell one invitation's versions apart.
+const HASH_BASE = 31;
+const HASH_MODULUS = 2 ** 32;
+const HASH_RADIX = 36;
+
+/**
+ * A short name for what an invitation's share image draws: its group's
+ * name, mark and member count. It changes with any of them, so the image
+ * is drawn again, and its address on the page changes for the apps that
+ * keep a link's card by the image's address.
+ */
+export const inviteImageVersion = ({
+  groupName,
+  groupMark,
+  memberCount,
+}: {
+  groupName: string;
+  groupMark: InviteGroupMark;
+  memberCount: number;
+}): string => {
+  const { emoji, icon, letter, color } = groupMark;
+  const drawn = JSON.stringify([
+    groupName,
+    emoji,
+    icon,
+    letter,
+    color,
+    memberCount,
+  ]);
+  let hash = 0;
+  for (const character of drawn) {
+    hash = (hash * HASH_BASE + (character.codePointAt(0) ?? 0)) % HASH_MODULUS;
+  }
+  return hash.toString(HASH_RADIX);
+};
+
 export async function fetchInvitePreview(
   code: string,
   server: InviteFetch
