@@ -120,7 +120,11 @@ export const createAuth = (
         },
       },
     },
-    plugins: [anonymous(), bearer()],
+    // An anonymous user is deleted only through DeleteAccount, which takes
+    // everything of them with them, never by better-auth alone, which
+    // would leave their groups and chats behind (spec/sync-protocol.md,
+    // Deleting an account).
+    plugins: [anonymous({ disableDeleteAnonymousUser: true }), bearer()],
     rateLimit: { enabled: false },
     secret,
     session: {

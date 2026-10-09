@@ -199,4 +199,20 @@ describe("deleting an account", () => {
     );
     expect(response.status).toBe(401);
   });
+
+  it("is not done by better-auth alone, which would leave the groups behind", async () => {
+    const token = await signInAnonymously();
+    const response = await exports.default.fetch(
+      `${ORIGIN}/api/auth/delete-anonymous-user`,
+      {
+        body: "{}",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      }
+    );
+    expect([response.status, await signedIn(token)]).toStrictEqual([400, 200]);
+  });
 });
