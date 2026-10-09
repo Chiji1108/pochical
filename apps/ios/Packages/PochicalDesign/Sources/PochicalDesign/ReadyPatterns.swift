@@ -50,6 +50,12 @@ public enum ReadyPatterns {
   /// The icons offered first for a mark.
   public static let markIcons: [String] = ["letter", "sunHorizon", "cloudSun", "sun", "cloudMoon", "moon", "moonStar", "star", "leaf", "flower", "bed", "couch", "coffee", "treePalm", "plane", "heart", "briefcase", "laptop", "building", "house", "users", "phone", "book", "clock", "storefront", "utensils", "scissors", "wrench", "truck", "car", "train", "teacher", "hospital", "stethoscope", "syringe", "ambulance", "siren", "shield", "handHeart", "baby", "graduationCap", "music", "dumbbell", "pawPrint", "shoppingBag", "gift", "partyPopper", "calendarCheck"]
 
+  /// The emoji offered first for a group's mark.
+  public static let groupMarkEmojis: [String] = ["🏠", "👨‍👩‍👧", "👶", "💑", "❤️", "🫶", "🐾", "🌷", "👭", "🤝", "🎉", "🥂", "🍻", "💬", "⭐️", "🌈", "🎓", "🏫", "📚", "✏️", "🧪", "🎒", "🏀", "🎵", "💼", "🏢", "🏥", "🏪", "🍳", "🚒", "🏭", "💻", "⚽️", "🎾", "🏃", "🎮", "🎨", "🎤", "📷", "🎬", "🍙", "☕️", "🍰", "✈️", "🏕️", "⛰️", "🌸", "🌊"]
+
+  /// The icons offered first for a group's mark.
+  public static let groupMarkIcons: [String] = ["house", "users", "heart", "baby", "babyCarriage", "handHeart", "pawPrint", "flower", "smiley", "handshake", "partyPopper", "balloon", "beer", "wine", "star", "rainbow", "graduationCap", "books", "backpack", "pencil", "microscope", "teacher", "calculator", "music", "briefcase", "building", "hospital", "storefront", "chefHat", "fireTruck", "factory", "laptop", "soccer", "tennis", "run", "game", "paintBrush", "microphone", "camera", "film", "utensils", "coffee", "cake", "plane", "tent", "mountains", "tree", "island"]
+
   /// The words that suggest a mark from a pattern's name, the first matching winning (spec/vectors/patterns.json, guessLook).
   public static let lookHints: [(words: [String], emoji: String, icon: String)] = [
     (["待機", "オンコール"], "📞", "phone"),

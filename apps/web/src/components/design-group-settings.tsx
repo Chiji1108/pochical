@@ -1,4 +1,5 @@
 import { iconNames } from "@pochical/design/mark-icon-names";
+import { groupMarkEmojis, groupMarkIcons } from "@pochical/design/patterns";
 import { UserPlus, X } from "lucide-react";
 import { useState } from "react";
 import { css } from "styled-system/css";
@@ -48,7 +49,6 @@ import {
   Section,
 } from "./design-ui";
 import { useMarkColors, nextColor } from "./shift-mark";
-import type { MarkIcon } from "./shift-mark";
 
 // A group's settings: its name and mark, your profile in it, and making
 // a new group.
@@ -467,39 +467,10 @@ export function colorOfMark(mark: GroupMark) {
   return mark.kind === "icon" || mark.kind === "letter" ? mark.color : 0;
 }
 
-const groupIcons: MarkIcon[] = [
-  "house",
-  "users",
-  "heart",
-  "baby",
-  "graduationCap",
-  "briefcase",
-  "hospital",
-  "utensils",
-  "coffee",
-  "plane",
-  "music",
-  "dumbbell",
-  "star",
-  "flower",
-  "pawPrint",
-  "partyPopper",
-];
-
-const groupEmojis = [
-  "🏠",
-  "👭",
-  "🎓",
-  "💼",
-  "🌷",
-  "🍙",
-  "☕️",
-  "✈️",
-  "🎵",
-  "⚽️",
-  "🐾",
-  "⭐️",
-];
+// The marks offered first, a row of eight for each kind as a pattern's
+// are (design/src/patterns.ts).
+const groupIcons = groupMarkIcons;
+const groupEmojis = groupMarkEmojis;
 
 // A photo is uploaded from the picture itself, as with your profile, so
 // only the marks made here have tabs.
