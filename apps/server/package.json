@@ -16,6 +16,7 @@
     "fix": "bun run --cwd ../.. fix"
   },
   "dependencies": {
+    "@better-auth/core": "1.7.7",
     "@bufbuild/protobuf": "2.15.0",
     "@connectrpc/connect": "2.2.0",
     "@pochical/design": "workspace:*",

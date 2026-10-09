@@ -23,6 +23,20 @@ public protocol Pochical_V1_UserServiceClientInterface: Sendable {
     @available(iOS 13, *)
     func `deleteAccount`(request: Pochical_V1_DeleteAccountRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_DeleteAccountResponse>
 
+    /// What the account a Sign in with Apple ID token is linked to holds,
+    /// when it is another user's than the caller (spec/sync-protocol.md,
+    /// Switching to an account in use): the ID token, with the nonce it was
+    /// asked with, proves the person holds it. NOT_FOUND when the account is
+    /// no other user's; UNAUTHENTICATED for a token that does not check out.
+    @available(iOS 13, *)
+    func `peekAccount`(request: Pochical_V1_PeekAccountRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_PeekAccountResponse>
+
+    /// Keeps this device's data: the account's user is deleted, everything
+    /// of it with it, and its Sign in with Apple account linked to the caller
+    /// instead, in one call. As PeekAccount for the token.
+    @available(iOS 13, *)
+    func `takeAccount`(request: Pochical_V1_TakeAccountRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_TakeAccountResponse>
+
     /// Who the token belongs to, for the apps to check a stored session.
     @available(iOS 13, *)
     func `getMe`(request: Pochical_V1_GetMeRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_GetMeResponse>
@@ -64,6 +78,16 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
     }
 
     @available(iOS 13, *)
+    public func `peekAccount`(request: Pochical_V1_PeekAccountRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_PeekAccountResponse> {
+        return await self.client.unary(path: "/pochical.v1.UserService/PeekAccount", idempotencyLevel: .noSideEffects, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
+    public func `takeAccount`(request: Pochical_V1_TakeAccountRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_TakeAccountResponse> {
+        return await self.client.unary(path: "/pochical.v1.UserService/TakeAccount", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
+    @available(iOS 13, *)
     public func `getMe`(request: Pochical_V1_GetMeRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_GetMeResponse> {
         return await self.client.unary(path: "/pochical.v1.UserService/GetMe", idempotencyLevel: .noSideEffects, request: request, headers: headers)
     }
@@ -91,6 +115,8 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
     public enum Metadata {
         public enum Methods {
             public static let deleteAccount = Connect.MethodSpec(name: "DeleteAccount", service: "pochical.v1.UserService", type: .unary)
+            public static let peekAccount = Connect.MethodSpec(name: "PeekAccount", service: "pochical.v1.UserService", type: .unary)
+            public static let takeAccount = Connect.MethodSpec(name: "TakeAccount", service: "pochical.v1.UserService", type: .unary)
             public static let getMe = Connect.MethodSpec(name: "GetMe", service: "pochical.v1.UserService", type: .unary)
             public static let setBlocked = Connect.MethodSpec(name: "SetBlocked", service: "pochical.v1.UserService", type: .unary)
             public static let registerPushToken = Connect.MethodSpec(name: "RegisterPushToken", service: "pochical.v1.UserService", type: .unary)

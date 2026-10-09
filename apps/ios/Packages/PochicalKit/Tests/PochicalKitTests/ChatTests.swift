@@ -752,3 +752,15 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
     #expect(try Int.fetchOne(db, sql: "SELECT count(*) FROM syncState") == 0)
   }
 }
+
+@Test func countsWhatTheDeviceHolds() throws {
+  let database = try appDatabase()
+  let fresh = try database.read { try Holdings.onDevice(in: $0) }
+  #expect(fresh.isEmpty)
+  try database.write { db in
+    try db.execute(sql: #"INSERT INTO "days" ("date", "pattern") VALUES ('2026-10-01', 'day'), ('2026-10-02', '')"#)
+    let held = try Holdings.onDevice(in: db)
+    #expect(held == Holdings(shiftDays: 1))
+    #expect(!held.isEmpty)
+  }
+}

@@ -41,6 +41,44 @@ public class UserServiceClient(
 
 
   /**
+   *  What the account a Sign in with Apple ID token is linked to holds,
+   *  when it is another user's than the caller (spec/sync-protocol.md,
+   *  Switching to an account in use): the ID token, with the nonce it was
+   *  asked with, proves the person holds it. NOT_FOUND when the account is
+   *  no other user's; UNAUTHENTICATED for a token that does not check out.
+   */
+  override suspend fun peekAccount(request: PeekAccountRequest, headers: Headers): ResponseMessage<PeekAccountResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.UserService/PeekAccount",
+      app.pochical.v1.PeekAccountRequest::class,
+      app.pochical.v1.PeekAccountResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.NO_SIDE_EFFECTS,
+    ),
+  )
+
+
+  /**
+   *  Keeps this device's data: the account's user is deleted, everything
+   *  of it with it, and its Sign in with Apple account linked to the caller
+   *  instead, in one call. As PeekAccount for the token.
+   */
+  override suspend fun takeAccount(request: TakeAccountRequest, headers: Headers): ResponseMessage<TakeAccountResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.UserService/TakeAccount",
+      app.pochical.v1.TakeAccountRequest::class,
+      app.pochical.v1.TakeAccountResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
+
+  /**
    *  Who the token belongs to, for the apps to check a stored session.
    */
   override suspend fun getMe(request: GetMeRequest, headers: Headers): ResponseMessage<GetMeResponse> = client.unary(

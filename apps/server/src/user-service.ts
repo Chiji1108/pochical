@@ -4,9 +4,12 @@ import type { ConnectRouter } from "@connectrpc/connect";
 import { env } from "cloudflare:workers";
 
 import { deleteAccount } from "./account-deletion";
+import { peekAccount, takeAccount } from "./account-switch";
 import {
   DeleteAccountResponseSchema,
   GetMeResponseSchema,
+  PeekAccountResponseSchema,
+  TakeAccountResponseSchema,
   RegisterPushTokenResponseSchema,
   SetBlockedResponseSchema,
   SetChatMutedResponseSchema,
@@ -30,6 +33,13 @@ export const registerUserService = (router: ConnectRouter): void => {
     getMe: async (_request, context) => {
       const { id, anonymous } = await requireUser(context);
       return create(GetMeResponseSchema, { anonymous, userId: id });
+    },
+    peekAccount: async ({ appleIdToken, nonce }, context) => {
+      const { id } = await requireUser(context);
+      return create(
+        PeekAccountResponseSchema,
+        await peekAccount(env, id, appleIdToken, nonce)
+      );
     },
     registerPushToken: async ({ token, sandbox }, context) => {
       const user = await requireUser(context);
@@ -69,6 +79,11 @@ export const registerUserService = (router: ConnectRouter): void => {
         mentionsWhenMuted
       );
       return create(SetChatNotificationsResponseSchema, {});
+    },
+    takeAccount: async ({ appleIdToken, nonce }, context) => {
+      const { id } = await requireUser(context);
+      await takeAccount(env, id, appleIdToken, nonce);
+      return create(TakeAccountResponseSchema, {});
     },
   });
 };
