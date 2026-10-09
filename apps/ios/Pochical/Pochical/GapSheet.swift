@@ -3,8 +3,9 @@ import PochicalKit
 import SwiftUI
 
 /// What 完了 asks when the month has blank days before its last entered
-/// one: whether to make them days off, all at once (spec/shift-patterns.md,
-/// Blanks when entering ends).
+/// one: whether they are days off, made so all at once with the button
+/// (spec/shift-patterns.md, Blanks when entering ends). Asked, not
+/// explained: a blank day is most often a day off not entered.
 ///
 /// It stands as tall as it holds (`fittedSheet`), so it draws its own bar
 /// rather than a NavigationStack's.
@@ -12,34 +13,21 @@ struct GapSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Environment(Settings.self) private var settings
-  let month: Day
   let days: [Day]
   /// The patterns that count as off; with more than one, chips pick
   /// which fills the days, the first to begin with.
   let offPatterns: [Pattern]
-  /// The month's days off now.
-  let offCount: Int
-  /// Whether filling the days leaves the month with no blank day.
-  let completes: Bool
-  /// Whether the person shares their days with a group, who will see
-  /// the days off too.
-  let sharing: Bool
   let onFill: (Pattern) -> Void
   @State private var picked: PatternID?
-  /// 休みの日は空白で見せる is offered to whoever was not showing days off
-  /// blank as the sheet opened, and stays while it is open.
+  /// カレンダーでは空白で見せる is offered to whoever was not showing days
+  /// off blank as the sheet opened, and stays while it is open: many
+  /// leave days off blank for the look, which they keep while the days
+  /// are filled.
   @State private var offerBlank: Bool
 
-  init(
-    month: Day, days: [Day], offPatterns: [Pattern], offCount: Int, completes: Bool,
-    sharing: Bool, blankOff: Bool, onFill: @escaping (Pattern) -> Void
-  ) {
-    self.month = month
+  init(days: [Day], offPatterns: [Pattern], blankOff: Bool, onFill: @escaping (Pattern) -> Void) {
     self.days = days
     self.offPatterns = offPatterns
-    self.offCount = offCount
-    self.completes = completes
-    self.sharing = sharing
     self.onFill = onFill
     _offerBlank = State(initialValue: !blankOff)
   }
@@ -53,7 +41,7 @@ struct GapSheet: View {
       // The bar of an iOS sheet: × at the leading edge, the title in the
       // middle.
       ZStack {
-        Text("空いている日が\(days.count)日あります")
+        Text(days.count == 1 ? "この日はお休みですか？" : "この\(days.count)日はお休みですか？")
           .font(.headline)
           .foregroundStyle(colors.textPrimary)
           .padding(.horizontal, Metrics.touch + 8)
@@ -68,11 +56,6 @@ struct GapSheet: View {
       .padding(.top, 16)
       .padding(.bottom, 16)
       VStack(alignment: .leading, spacing: 0) {
-        lead
-          .font(.body)
-          .foregroundStyle(colors.textPrimary)
-          .fixedSize(horizontal: false, vertical: true)
-          .padding(.bottom, 20)
         // The days, as /design's tags: words to read, not to press.
         WrappingRow(spacing: 8) {
           ForEach(days, id: \.self) { day in
@@ -100,8 +83,8 @@ struct GapSheet: View {
         if offerBlank {
           @Bindable var settings = settings
           Toggle(isOn: $settings.device.look.options.blankOff) {
-            Text("休みの日は空白で見せる")
-            Text("入力中と週表示では薄く出ます")
+            Text("カレンダーでは空白で見せる")
+            Text("お休みとして入れて、印は出しません")
           }
           .padding(.horizontal, 16)
           .padding(.vertical, 10)
@@ -120,33 +103,10 @@ struct GapSheet: View {
         .buttonBorderShape(.capsule)
         .tint(colors.accentFill)
         .foregroundStyle(colors.accentOnFill)
-        Button("あとで入れる") { dismiss() }
-          .buttonStyle(.plain)
-          .font(.body)
-          .foregroundStyle(colors.textTertiary)
-          .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-          .padding(.top, 4)
       }
     }
     .padding(.horizontal, 24)
-    .padding(.bottom, 12)
-  }
-
-  /// What filling the days does: the month's days off, which the summary
-  /// counts, grow by them, and a month left with no blank is complete.
-  private var lead: Text {
-    let count = Text("\(offCount)日 → \(offCount + days.count)日")
-      .fontWeight(.bold)
-      .foregroundStyle(colors.accentDefault)
-    var said = Text(
-      "\(offPattern.name)にすると、\(month.monthText)のお休みが\(count)になります。")
-    if sharing {
-      said = Text("\(said)\nグループの人にもお休みが見えます。")
-    }
-    if completes {
-      said = Text("\(said)\nこれで\(month.monthText)が全部埋まります。")
-    }
-    return said
+    .padding(.bottom, 20)
   }
 }
 

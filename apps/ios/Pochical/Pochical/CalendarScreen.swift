@@ -9,8 +9,6 @@ struct CalendarScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  /// The groups the person is in, who see their days off too.
-  @FetchAll private var groups: [GroupRow]
   @Dependency(\.defaultDatabase) private var database
   @FetchAll private var days: [DayRow]
   @FetchAll private var patterns: [PatternRow]
@@ -395,21 +393,12 @@ struct CalendarScreen: View {
   /// and a pattern that counts as off to fill them with.
   private func gapSheet(_ calendar: OwnCalendar) -> GapSheet? {
     let offPatterns = calendar.patterns.filter(\.countsAsOff)
-    guard !offPatterns.isEmpty, let month = gaps.first?.firstOfMonth else { return nil }
+    guard !offPatterns.isEmpty, !gaps.isEmpty else { return nil }
     return GapSheet(
-      month: month, days: gaps, offPatterns: offPatterns,
-      offCount: offCount(in: month, calendar: calendar),
-      completes: monthDays(month, calendar).count + gaps.count == month.daysOfMonth.count,
-      sharing: !groups.isEmpty, blankOff: settings.device.look.options.blankOff
+      days: gaps, offPatterns: offPatterns, blankOff: settings.device.look.options.blankOff
     ) { off in
       write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
     }
-  }
-
-  private func offCount(in month: Day, calendar: OwnCalendar) -> Int {
-    calendar.shown(from: month, through: month.daysOfMonth.last!).values.filter {
-      calendar.patternsByID[$0.shift]?.countsAsOff == true
-    }.count
   }
 
   /// Asks the store for its review prompt once entering, a day and 完了's

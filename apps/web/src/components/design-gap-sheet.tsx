@@ -1,17 +1,10 @@
 import { useState } from "react";
 import { css } from "styled-system/css";
 
-import { formatMonth } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
 import { Chip, ChipGroup, Tag } from "./design-choices";
 import { List, SwitchRow } from "./design-list";
-import {
-  Sheet,
-  SheetHeading,
-  SheetPicture,
-  sheetBody,
-  sheetLead,
-} from "./design-sheet";
+import { Sheet, SheetHeading, SheetPicture, sheetBody } from "./design-sheet";
 import { Button } from "./design-ui";
 import { weekdayNames } from "./design-week";
 
@@ -29,43 +22,30 @@ const gap = {
   // the sheet. One piece, so the scrolling part's gap stays out of the
   // spacing below.
   body: css({ display: "flex", flexDirection: "column" }),
-  // How the month's days off change, kept on one line.
-  count: css({
-    color: "accent.default",
-    fontWeight: 700,
-    margin: "0 2px",
-    whiteSpace: "nowrap",
-  }),
-  line: css({ display: "block" }),
 };
 
 export type GapSheetProps = {
-  month: Date;
   // The blank days to fill.
   days: Date[];
-  // Why to fill them, for everyone: the month's days off, which the
-  // summary counts, grow by the blanks. Friends seeing them only matters
-  // to people in a group, and filling the whole month leads on to saving.
-  offCount: number;
-  sharing: boolean;
-  completes: boolean;
-  // The person's patterns that count as a day off, in their order. None
-  // means they removed 休み, most likely because blank meant off to them,
-  // so it is added back to fill with.
+  // The person's patterns that count as a day off, in their order; it is
+  // asked only with one.
   choices: OffChoice[];
   // Offered to people not showing days off blank yet: many leave them
-  // blank for the look, which they can keep while the day is still a day
-  // off. The same setting as on the style page, said as what it does.
+  // blank for the look, which they keep while the days are filled. The
+  // same setting as on the style page, said as what it does here.
   offerBlank: boolean;
   blankOff: boolean;
   onFill: (key: Shift | undefined) => void;
   onBlankOff: (blankOff: boolean) => void;
 };
 
-// The month is in the heading above, so the title leaves it out and fits
-// one line.
+// Asked, not explained: a blank day is most often a day off not entered,
+// so the question is whether it is, and the button answers. The month is
+// in the heading above, so the title leaves it out and fits one line.
 function titleOf(days: Date[]) {
-  return `空いている日が${days.length}日あります`;
+  return days.length === 1
+    ? "この日はお休みですか？"
+    : `この${days.length}日はお休みですか？`;
 }
 
 export function GapSheet({
@@ -99,11 +79,7 @@ export function GapSheetPreview(props: GapSheetProps) {
 }
 
 function GapSheetBody({
-  month,
   days,
-  offCount,
-  sharing,
-  completes,
   choices,
   offerBlank,
   blankOff,
@@ -113,29 +89,11 @@ function GapSheetBody({
 }: GapSheetProps & { onClose: () => void }) {
   const [picked, setPicked] = useState<Shift>();
   const current = choices.find(({ key }) => key === picked) ?? choices[0];
-  const monthLabel = formatMonth(month);
   return (
     <>
       <SheetHeading onClose={close} title={titleOf(days)} />
       <div className={sheetBody}>
         <div className={gap.body}>
-          <p className={sheetLead}>
-            {current?.label ?? "休み"}にすると、{monthLabel}のお休みが
-            <strong className={gap.count}>
-              {offCount}日 → {offCount + days.length}日
-            </strong>
-            になります。
-            {sharing && (
-              <span className={gap.line}>
-                グループの人にもお休みが見えます。
-              </span>
-            )}
-            {completes && (
-              <span className={gap.line}>
-                これで{monthLabel}が全部埋まります。
-              </span>
-            )}
-          </p>
           <ChipGroup as="ul" className={spaced}>
             {days.map((day) => (
               <Tag as="li" key={day.getDate()}>
@@ -161,9 +119,8 @@ function GapSheetBody({
           {offerBlank && (
             <List className={gap.blank}>
               <SwitchRow
-                detail="入力中と週表示では薄く出ます"
-                label="休みの日は空白で見せる"
-
+                detail="お休みとして入れて、印は出しません"
+                label="カレンダーでは空白で見せる"
                 checked={blankOff}
                 onChange={(checked) => {
                   onBlankOff(checked);
@@ -179,9 +136,6 @@ function GapSheetBody({
             }}
           >
             {current?.label ?? "休み"}にする
-          </Button>
-          <Button variant="subtle" onClick={close}>
-            あとで入れる
           </Button>
         </div>
       </div>
