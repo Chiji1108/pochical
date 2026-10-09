@@ -8,6 +8,7 @@ import SwiftUI
 struct CalendarScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Dependency(\.defaultDatabase) private var database
   @FetchAll private var days: [DayRow]
   @FetchAll private var patterns: [PatternRow]
@@ -258,7 +259,7 @@ struct CalendarScreen: View {
     guard share > 0 else { return }
     let speed = drag.velocity.height
     let unfolds = abs(speed) > Self.unfoldFlick ? speed > 0 : share > Self.unfoldShare
-    withAnimation(Springs.standard) {
+    withAnimation(folding) {
       if unfolds { opened = nil }
       pull = 0
     }
@@ -335,7 +336,7 @@ struct CalendarScreen: View {
         if entering != nil {
           entering = day
         } else {
-          withAnimation(Springs.standard) { opened = day }
+          withAnimation(folding) { opened = day }
         }
       })
   }
@@ -352,7 +353,8 @@ struct CalendarScreen: View {
           write { db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }
           entering = selectedAfterEntering(shift, on: day, patterns: calendar.patternsByID)
         },
-        onSkip: { entering = selectedAfterEntering(nil, on: day, patterns: [:]) }
+        onSkip: { entering = selectedAfterEntering(nil, on: day, patterns: [:]) },
+        onPickDay: { entering = $0 }
       )
     } else {
       Button {
@@ -360,7 +362,7 @@ struct CalendarScreen: View {
         entering = firstBlankDay(in: month, days: monthDays(month, calendar))
       } label: {
         Label("ポチポチ入力", systemImage: "pencil")
-          .font(.headline)
+          .font(.body.weight(.medium))
           .frame(maxWidth: .infinity, minHeight: Metrics.control)
       }
       .buttonStyle(.borderedProminent)
@@ -433,6 +435,12 @@ struct CalendarScreen: View {
     }
   }
 
+  /// How the month folds into a day's week and back: at once with Reduce
+  /// Motion on, as /design's fold.
+  private var folding: Animation? {
+    reduceMotion ? nil : Springs.standard
+  }
+
   /// The heading's buttons, on the month's line: 今月 away from this
   /// month, 完了 while entering, and in a day's week 今週 away from this
   /// week and × (spec/calendar.md).
@@ -442,13 +450,10 @@ struct CalendarScreen: View {
       // stand apart.
       HStack(spacing: 12) {
         TodayFade(position: position, todayPage: todayPage) {
-          Button("今週") {
-            opened = today
-          }
-          .buttonStyle(BarButton())
+          TodayButton(unit: "週") { opened = today }
         }
         Button("閉じる", systemImage: "xmark", role: .close) {
-          withAnimation(Springs.standard) { opened = nil }
+          withAnimation(folding) { opened = nil }
         }
         .labelStyle(.iconOnly)
         .buttonStyle(BarButton())
@@ -463,10 +468,9 @@ struct CalendarScreen: View {
     } else {
       HStack(spacing: 12) {
         TodayFade(position: position, todayPage: todayPage) {
-          Button("今月") {
+          TodayButton(unit: "月") {
             withAnimation(Springs.standard) { shownMonth = thisMonth }
           }
-          .buttonStyle(BarButton())
         }
         // The month kept as a picture or put in the device's calendar
         // (/design's save menu).
@@ -488,7 +492,20 @@ struct CalendarScreen: View {
 
   private var heading: some View {
     HStack(alignment: .bottom) {
-      MonthName(position: position, monthAt: monthOfPage)
+      // Only the month on its own opens 月を選ぶ; entering and a day's week
+      // keep to the days around (/design's calendar heading).
+      if entering == nil, opened == nil {
+        MonthTitleButton(
+          month: shownMonth ?? thisMonth, first: thisMonth.addingMonths(-Self.monthsAround),
+          last: thisMonth.addingMonths(Self.monthsAround), chevron: false
+        ) { picked in
+          withAnimation(Springs.standard) { shownMonth = picked }
+        } label: {
+          MonthName(position: position, monthAt: monthOfPage)
+        }
+      } else {
+        MonthName(position: position, monthAt: monthOfPage)
+      }
       Spacer()
       actions
         .foregroundStyle(colors.textPrimary)

@@ -89,12 +89,14 @@ struct MonthChoiceSheet: View {
 }
 
 /// A month's name that opens 月を選ぶ, with a small chevron after it saying
-/// so (/design's MonthTitleButton); `label` draws the name.
+/// so (/design's MonthTitleButton); `label` draws the name. The calendar's
+/// own heading goes without the chevron, as large as it is.
 struct MonthTitleButton<Label: View>: View {
   @Environment(\.themeColors) private var colors
   let month: Day
   let first: Day
   let last: Day
+  var chevron = true
   let onPick: (Day) -> Void
   @ViewBuilder let label: () -> Label
   @State private var choosing = false
@@ -105,9 +107,11 @@ struct MonthTitleButton<Label: View>: View {
     } label: {
       HStack(alignment: .firstTextBaseline, spacing: 4) {
         label()
-        Image(systemName: "chevron.down")
-          .font(.footnote.weight(.semibold))
-          .foregroundStyle(colors.textTertiary)
+        if chevron {
+          Image(systemName: "chevron.down")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(colors.textTertiary)
+        }
       }
     }
     .buttonStyle(.plain)
@@ -130,5 +134,50 @@ struct TodayButton: View {
       .buttonStyle(BarButton())
       .accessibilityLabel("今\(unit)に戻る")
       .transition(.opacity)
+  }
+}
+
+/// A day to pick, as a month of days (/design's InputDatePicker's sheet):
+/// × to close, the title, and 今日.
+struct DayChoiceSheet: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.dismiss) private var dismiss
+  let title: String
+  let day: Day
+  let onPick: (Day) -> Void
+
+  var body: some View {
+    VStack(spacing: 8) {
+      ZStack {
+        Text(title).font(.headline)
+        HStack {
+          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+            .labelStyle(.iconOnly)
+            .buttonStyle(BarButton())
+            .foregroundStyle(colors.textPrimary)
+          Spacer()
+          Button("今日") { pick(.today) }
+            .buttonStyle(.plain)
+            .font(.body.weight(.medium))
+            .foregroundStyle(colors.accentDefault)
+            .frame(minHeight: Metrics.touch)
+        }
+      }
+      DatePicker(
+        title,
+        selection: Binding { day.date(in: .current) } set: { pick(Day($0, in: .current)) },
+        displayedComponents: .date
+      )
+      .datePickerStyle(.graphical)
+      .labelsHidden()
+    }
+    .padding(.horizontal, 20)
+    .padding(.top, 16)
+    .padding(.bottom, 12)
+  }
+
+  private func pick(_ picked: Day) {
+    onPick(picked)
+    dismiss()
   }
 }
