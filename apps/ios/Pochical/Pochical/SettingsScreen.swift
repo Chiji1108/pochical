@@ -25,12 +25,9 @@ struct SettingsScreen: View {
   var body: some View {
     NavigationStack {
       List {
+        // The patterns first: every way of working has them, and the
+        // repeating order is made of them.
         Section("シフト") {
-          NavigationLink {
-            RepeatPage()
-          } label: {
-            LabeledContent("繰り返し", value: repeatSummary(orders))
-          }
           NavigationLink {
             PatternsPage()
           } label: {
@@ -43,6 +40,11 @@ struct SettingsScreen: View {
               }
             }
             .accessibilityValue("\(ownPatterns.count)つ")
+          }
+          NavigationLink {
+            RepeatPage()
+          } label: {
+            LabeledContent("繰り返し", value: repeatSummary(orders))
           }
           NavigationLink {
             CoworkersPage()
