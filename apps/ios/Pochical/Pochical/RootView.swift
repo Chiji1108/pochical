@@ -46,9 +46,9 @@ struct RootView: View {
     .task { meID = await groupCalls.userID() }
     .task(id: meID) {
       guard let meID else { return }
-      try? await $unread.load(UnreadRequest(me: meID))
+      _ = try? await $unread.load(UnreadRequest(me: meID))
     }
-    .environment(\.openInvite) { code in invite = OpenedInvite(code: code) }
+    .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
     // The app icon's badge follows what is read here too, as the
     // notifications set it from the server.
     .onChange(of: unread.values.reduce(0, +), initial: true) { _, total in

@@ -39,7 +39,7 @@ private func trimLink(_ found: Substring) -> Substring {
   }
   dropTrailing()
   for (open, close) in [("(", ")"), ("[", "]")] as [(Character, Character)] {
-    while link.last == close, link.count { $0 == close } > link.count { $0 == open } {
+    while link.last == close, link.count(where: { $0 == close }) > link.count(where: { $0 == open }) {
       link = link.dropLast()
       dropTrailing()
     }

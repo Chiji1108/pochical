@@ -437,7 +437,7 @@ struct CalendarScreen: View {
   /// month, 完了 while entering, and in a day's week 今週 away from this
   /// week and × (spec/calendar.md).
   @ViewBuilder private var actions: some View {
-    if let day = opened {
+    if opened != nil {
       // Back to this week and closing are of different kinds, so they
       // stand apart.
       HStack(spacing: 12) {

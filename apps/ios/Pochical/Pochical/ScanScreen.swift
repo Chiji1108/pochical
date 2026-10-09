@@ -21,7 +21,9 @@ struct ScanScreen: View {
   @State private var camera = AVCaptureDevice.authorizationStatus(for: .video)
 
   var body: some View {
-    ZStack {
+    // Read here: the photo picker's label is drawn off the main actor.
+    let mediaFill = colors.mediaFill
+    return ZStack {
       colors.mediaBackground.ignoresSafeArea()
       if camera == .authorized {
         QRCamera { read($0, fromPhoto: false) }
@@ -60,7 +62,7 @@ struct ScanScreen: View {
             .font(.body.weight(.semibold))
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
-            .background(colors.mediaFill, in: Capsule())
+            .background(mediaFill, in: Capsule())
         }
         .buttonStyle(.plain)
       }

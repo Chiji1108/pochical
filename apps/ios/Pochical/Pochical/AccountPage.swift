@@ -409,7 +409,12 @@ struct AccountPage: View {
   }
 
   func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-    UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-      .flatMap(\.windows).first { $0.isKeyWindow } ?? ASPresentationAnchor()
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    if let window = scenes.flatMap(\.windows).first(where: \.isKeyWindow) ?? scenes.first?.windows.first {
+      return window
+    }
+    // Asked only while the app shows the account page, so a scene is there.
+    guard let scene = scenes.first else { preconditionFailure("No window scene to present in") }
+    return ASPresentationAnchor(windowScene: scene)
   }
 }

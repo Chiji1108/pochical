@@ -113,7 +113,7 @@ struct GroupSettingsPage: View {
     .toolbarVisibility(.visible, for: .navigationBar)
     .task {
       let today = Day.today
-      try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
+      _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
     }
     .task { meID = await groupCalls.userID() }
     .alert("グループから抜けますか？", isPresented: $confirmingLeave) {

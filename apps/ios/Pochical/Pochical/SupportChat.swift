@@ -468,6 +468,8 @@ struct SupportChatScreen: View {
   /// at most (ChatScreen's).
   @ViewBuilder private var photoButton: some View {
     let room = Chat.photosPerSend - pickedPhotos.count
+    // Read here: the picker's label is drawn off the main actor.
+    let iconColor = colors.textSecondary
     if room > 0 {
       PhotosPicker(
         selection: $photoItems, maxSelectionCount: room, matching: .images,
@@ -475,7 +477,7 @@ struct SupportChatScreen: View {
       ) {
         Image(systemName: "photo")
           .font(.system(size: 20))
-          .foregroundStyle(colors.textSecondary)
+          .foregroundStyle(iconColor)
           .frame(width: 38, height: 38)
       }
       .accessibilityLabel("写真を送る")
