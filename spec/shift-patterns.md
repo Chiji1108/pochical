@@ -82,6 +82,17 @@ An order with 祝日は休みにする on puts its `holidayShift` on the nationa
 - Days the person changed keep their own value either way, so nothing they entered is overwritten.
 - A new order starts with it on when it reads as office hours: a week (seven shifts) with a pattern counting as off on a Saturday or Sunday (`spec/vectors/repeat.json`, holidaysOffByDefault).
 
+## The first run
+
+A device that holds no pattern starts with はじめの設定 (/design's DesignOnboarding) rather than an empty calendar: on its first launch, and again after signing out or deleting the account, when it holds nothing of anyone (spec/sync-protocol.md). Once done, or once patterns arrive from an account signed in to, it is not asked again on that device, even if every pattern is deleted later.
+
+1. A welcome: the app icon's poodle, the app's name and what it is for, with はじめる and アカウントをお持ちの方はログイン.
+2. ログイン is for someone moving to a new phone. Signing in switches to the account's data as any sign-in does, without asking, as the device holds nothing; the account's patterns end the first run. An account with nothing in it yet goes on to the questions.
+3. はじめる asks the questions 新しい仕事にする asks (below), as large cards: how shifts are decided, then the kind of work. A roster's work gives its patterns only; a weekly order starts on a Sunday; any other order is typed on the calendar from this month's 1st, covering every day, and 完了 asks nothing, as no day is there yet.
+4. The kind of work's patterns become the person's, and its order repeats from the month before this one, or from its first day when that is earlier, so the days just past show it too.
+
+An invitation opened meanwhile waits until the calendar shows, and is asked about there as at any other time.
+
 ## Changing jobs
 
 The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are small tiles, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will. In 新しい仕事にする the answers are rows of one list, as the settings pages around them are; はじめの設定, with no list around it, shows them as large cards.

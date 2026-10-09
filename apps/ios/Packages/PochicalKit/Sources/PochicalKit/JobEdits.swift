@@ -29,6 +29,34 @@ extension OwnValues {
     to incoming: [Pattern], sequence: [PatternID], start: Day, anchor: Day,
     holidayCountry: String, now: Int64, in db: Database
   ) throws {
+    let changed = try takePatterns(incoming, sequence: sequence, start: start, now: now, in: db)
+    try repeatFrom(
+      start, anchor: anchor, sequence: changed.sequence, patterns: changed.patterns,
+      holidayCountry: holidayCountry, now: now, in: db)
+  }
+
+  /// はじめの設定 (spec/shift-patterns.md, The first run): a kind of
+  /// work's patterns become the person's, and its sequence, if it has one,
+  /// repeats counted from `anchor`, from the month before `today`'s or
+  /// from `anchor` when that is earlier.
+  public static func begin(
+    with incoming: [Pattern], sequence: [PatternID], anchor: Day, today: Day,
+    holidayCountry: String, now: Int64, in db: Database
+  ) throws {
+    let monthBefore = today.firstOfMonth.addingMonths(-1)
+    let start = min(anchor, monthBefore)
+    let changed = try takePatterns(incoming, sequence: sequence, start: start, now: now, in: db)
+    guard !changed.sequence.isEmpty else { return }
+    try repeatFrom(
+      start, anchor: anchor, sequence: changed.sequence, patterns: changed.patterns,
+      holidayCountry: holidayCountry, now: now, in: db)
+  }
+
+  /// `incoming` take over the patterns from `start`, a pattern of the
+  /// person's still on a day before it staying after them.
+  private static func takePatterns(
+    _ incoming: [Pattern], sequence: [PatternID], start: Day, now: Int64, in db: Database
+  ) throws -> (patterns: [Pattern], sequence: [PatternID]) {
     let own = try patterns(in: db)
     let before = try patternsShown(before: start, in: db)
     let changed = patternsForJob(
@@ -53,15 +81,22 @@ extension OwnValues {
       try edit(change, opID: UUID().uuidString.lowercased(), in: db)
     }
     try order(changed.patterns.map(\.id), now: now, in: db)
+    return (changed.patterns, changed.sequence)
+  }
 
-    let byID = Dictionary(
-      changed.patterns.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    let offShift = holidayShift(of: changed.patterns)
+  /// `sequence` repeats from `start` counted from `anchor`, holidays off
+  /// as its days suggest; an empty sequence ends repeating there.
+  private static func repeatFrom(
+    _ start: Day, anchor: Day, sequence: [PatternID], patterns: [Pattern],
+    holidayCountry: String, now: Int64, in db: Database
+  ) throws {
+    let byID = Dictionary(patterns.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let offShift = holidayShift(of: patterns)
     let holidaysOff =
-      offShift != nil && holidaysOffByDefault(changed.sequence, start: anchor, patterns: byID)
+      offShift != nil && holidaysOffByDefault(sequence, start: anchor, patterns: byID)
     try self.start(
       RepeatOrder(
-        sequence: changed.sequence, start: start, anchor: anchor, holidaysOff: holidaysOff,
+        sequence: sequence, start: start, anchor: anchor, holidaysOff: holidaysOff,
         holidayShift: holidaysOff ? offShift : nil, holidayCountry: holidayCountry),
       now: now, in: db)
   }

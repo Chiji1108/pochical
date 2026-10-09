@@ -39,7 +39,7 @@ What the device holds may be a few taps tried before signing in, or months of sh
 
 ### Signing out
 
-設定 › アカウント's ログアウト, asked first (ログアウトしますか？ / この端末からデータが消えます。もう一度ログインすれば、同じデータを使えます。), sends what waits in the outbox, ends the session on the server (`/sign-out`, which closes its sockets), erases what the device holds of the user as deleting does, and goes on as a new anonymous user. Signing in with Apple again brings the account's data back, through the switch above, as the device then holds nothing.
+設定 › アカウント's ログアウト, asked first (ログアウトしますか？ / この端末からデータが消えます。もう一度ログインすれば、同じデータを使えます。), sends what waits in the outbox, ends the session on the server (`/sign-out`, which closes its sockets), erases what the device holds of the user as deleting does, and goes on as a new anonymous user, starting from はじめの設定's welcome as a new phone does (spec/shift-patterns.md, The first run). Signing in with Apple again brings the account's data back, through the switch above, as the device then holds nothing.
 
 ### Deleting an account
 
@@ -51,7 +51,7 @@ What the device holds may be a few taps tried before signing in, or months of sh
 4. The User DO's storage goes: days, patterns, coworkers, groups, push tokens. Its sockets close.
 5. better-auth deletes the user, their sessions and their provider accounts, which closes what is still open. Their other devices are signed out, as on a 401 (Reconnecting).
 
-The device that deleted the account erases what it holds of the user (every table, the outbox and the chats' photos), forgets its token, and goes on as a new anonymous user, as on a first launch; its own settings stay. In the groups, the members left see each line of theirs as 削除されたメッセージ, and a one-to-one chat with them as 相手のアカウントは削除されました, where it takes no more lines. Reports made by or about them stay, as what Pochical's people act on, as the privacy policy says. better-auth's own deletion of an anonymous user (`/delete-anonymous-user`, and after a switching sign-in) is turned off, as it would leave their groups and chats behind.
+The device that deleted the account erases what it holds of the user (every table, the outbox and the chats' photos), forgets its token, and goes on as a new anonymous user, as on a first launch, はじめの設定 and all once アカウントを削除しました is dismissed; its own settings stay. In the groups, the members left see each line of theirs as 削除されたメッセージ, and a one-to-one chat with them as 相手のアカウントは削除されました, where it takes no more lines. Reports made by or about them stay, as what Pochical's people act on, as the privacy policy says. better-auth's own deletion of an anonymous user (`/delete-anonymous-user`, and after a switching sign-in) is turned off, as it would leave their groups and chats behind.
 
 ## Groups
 
