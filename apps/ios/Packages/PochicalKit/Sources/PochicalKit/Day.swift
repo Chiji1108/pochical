@@ -20,6 +20,11 @@ public struct Day: Hashable, Comparable, Sendable {
     self.init(year: parts.year!, month: parts.month!, day: parts.day!)
   }
 
+  /// The day's start in `calendar`, for the system's date pickers.
+  public func date(in calendar: Calendar) -> Date {
+    calendar.date(from: DateComponents(year: year, month: month, day: day)) ?? .now
+  }
+
   /// Today, where the device is.
   public static var today: Day {
     Day(.now, in: .current)

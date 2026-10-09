@@ -17,12 +17,14 @@ struct EntryTray: View {
   let canSkip: Bool
   let onEnter: (PatternID?) -> Void
   let onSkip: () -> Void
+  /// Another day picked to enter, from the date over the keys.
+  let onPickDay: (Day) -> Void
   @State private var keys = 0
   @State private var page = 0
 
   var body: some View {
     VStack(spacing: 8) {
-      TrayDateLabel(day: day, week: week)
+      TrayDateLabel(day: day, week: week, onPick: onPickDay)
       PatternKeys(patterns: patterns, page: $page) { pattern in
         keys += 1
         onEnter(pattern.id)
@@ -47,24 +49,42 @@ struct EntryTray: View {
   }
 }
 
-/// The day ポチポチ入力 enters next, over its keys.
+/// The day ポチポチ入力 enters next, over its keys: tapped, another day
+/// is picked (/design's InputDatePicker).
 struct TrayDateLabel: View {
   @Environment(\.themeColors) private var colors
   let day: Day
   /// Which days take their colors (the person's カレンダー settings).
   let week: DeviceSettings.Week
+  let onPick: (Day) -> Void
+  @State private var choosing = false
 
   var body: some View {
-    HStack(spacing: 2) {
-      Text(day.monthDayText)
-        .font(.system(size: 17, weight: .semibold))
-        .foregroundStyle(colors.textPrimary)
-      Text("(\(day.weekdayName))")
-        .font(.system(size: 14))
-        .foregroundStyle(weekdayColor)
+    Button {
+      choosing = true
+    } label: {
+      HStack(spacing: 2) {
+        Text(day.monthDayText)
+          .font(.system(size: 17, weight: .semibold))
+          .foregroundStyle(colors.textPrimary)
+        Text("(\(day.weekdayName))")
+          .font(.system(size: 14))
+          .foregroundStyle(weekdayColor)
+        Image(systemName: "chevron.down")
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(colors.accentDefault)
+          .padding(.leading, 4)
+      }
+      .frame(minHeight: Metrics.touch)
+      .contentShape(.rect)
     }
+    .buttonStyle(.plain)
     .accessibilityElement(children: .combine)
     .accessibilityLabel("入力する日付：\(day.monthDayText)")
+    .accessibilityHint("押すと日付を選べます")
+    .fittedSheet(isPresented: $choosing) {
+      DayChoiceSheet(title: "入力する日付", day: day, onPick: onPick)
+    }
   }
 
   private var weekdayColor: Color {
@@ -166,7 +186,7 @@ struct PatternKeys: View {
     if pages.count > 1 {
       TabView(selection: $page) {
         ForEach(pages.indices, id: \.self) { index in
-          grid(pages[index], columns: 5)
+          grid(pages[index], columns: 5, paged: true)
             .frame(maxHeight: .infinity, alignment: .top)
             .tag(index)
         }
@@ -174,7 +194,7 @@ struct PatternKeys: View {
       .tabViewStyle(.page(indexDisplayMode: .never))
       .frame(height: 2 * 64 + 8)
     } else {
-      grid(patterns, columns: columns)
+      grid(patterns, columns: columns, paged: false)
     }
   }
 
@@ -188,8 +208,10 @@ struct PatternKeys: View {
     }
   }
 
-  private func grid(_ patterns: [Pattern], columns: Int) -> some View {
-    let tall = patterns.count <= 4
+  /// A page's keys. Four or fewer on the only page stand taller; paged,
+  /// every page's keys are alike, a short last page's too.
+  private func grid(_ patterns: [Pattern], columns: Int, paged: Bool) -> some View {
+    let tall = !paged && patterns.count <= 4
     return LazyVGrid(
       columns: Array(repeating: GridItem(.flexible(maximum: 72), spacing: 8), count: max(columns, 1)),
       spacing: 8
