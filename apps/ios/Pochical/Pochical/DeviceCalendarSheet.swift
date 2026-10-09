@@ -59,7 +59,7 @@ import UIKit
   /// days before go first, from any device and any calendar, found by the
   /// day each names (`dayURL`), so a month added again is put in anew
   /// rather than twice, whatever was reinstalled or synced since.
-  func add(_ events: [ShiftEvent], of month: Day, to calendarID: String) throws {
+  func add(_ events: [ShiftEvent], of month: Day, by user: String, to calendarID: String) throws {
     guard let target = store.calendar(withIdentifier: calendarID) else { return }
     let days = Set(month.daysOfMonth.map(\.key))
     // From the month's first day to two past its last: a night's event
@@ -68,7 +68,9 @@ import UIKit
       withStart: date(of: month.firstOfMonth, at: 0),
       end: date(of: month.daysOfMonth.last!, at: 2 * 24 * 60), calendars: nil)
     for old in store.events(matching: range) {
-      if let day = Self.day(of: old.url), days.contains(day), old.calendar.allowsContentModifications {
+      if let mark = Self.mark(of: old.url), mark.user == user, days.contains(mark.day),
+        old.calendar.allowsContentModifications
+      {
         try store.remove(old, span: .thisEvent, commit: false)
       }
     }
@@ -85,7 +87,7 @@ import UIKit
           event.startDate = date(of: shift.day, at: 0)
           event.endDate = date(of: shift.day, at: 0)
         }
-        event.url = Self.dayURL(shift.day)
+        event.url = Self.dayURL(shift.day, by: user)
         try store.save(event, span: .thisEvent, commit: false)
       }
       try store.commit()
@@ -97,17 +99,27 @@ import UIKit
     UserDefaults.standard.set(calendarID, forKey: Self.lastKey)
   }
 
-  /// The mark Pochical leaves on an event it puts in: the day it is for,
-  /// as the app's own link to that day (spec/widgets.md's pochical://day).
-  static func dayURL(_ day: Day) -> URL? {
-    URL(string: "pochical://day/\(day.key)")
+  /// The mark Pochical leaves on an event it puts in: the app's own link
+  /// to the day it is for (spec/widgets.md's pochical://day), and whose
+  /// shift it is, so a calendar shared with family keeps theirs.
+  static func dayURL(_ day: Day, by user: String) -> URL? {
+    var parts = URLComponents()
+    parts.scheme = "pochical"
+    parts.host = "day"
+    parts.path = "/\(day.key)"
+    parts.queryItems = [URLQueryItem(name: "by", value: user)]
+    return parts.url
   }
 
-  /// The day an event's mark names, nil for an event not Pochical's.
-  private static func day(of url: URL?) -> String? {
-    guard let url, url.scheme == "pochical", url.host() == "day" else { return nil }
+  /// The day and the user an event's mark names, nil for an event not
+  /// Pochical's.
+  private static func mark(of url: URL?) -> (day: String, user: String)? {
+    guard let url, url.scheme == "pochical", url.host() == "day",
+      let user = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+        .queryItems?.first(where: { $0.name == "by" })?.value
+    else { return nil }
     let key = url.path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    return Day(key) == nil ? nil : key
+    return Day(key) == nil ? nil : (key, user)
   }
 
   /// The clock time `minutes` after the start of `day`, a day on past
@@ -130,6 +142,7 @@ struct DeviceCalendarSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Environment(\.openURL) private var openURL
+  @Environment(\.meID) private var meID
   let month: Day
   let calendar: OwnCalendar
   @State private var calendars = DeviceCalendars()
@@ -245,9 +258,12 @@ struct DeviceCalendarSheet: View {
   }
 
   private func add(_ events: [ShiftEvent]) {
-    guard let calendarID else { return }
+    guard let calendarID, let meID else {
+      failed = true
+      return
+    }
     do {
-      try calendars.add(events, of: month, to: calendarID)
+      try calendars.add(events, of: month, by: meID, to: calendarID)
       let name = calendars.calendar(calendarID)?.title ?? ""
       withAnimation {
         done = "「\(name)」に\(month.monthText)のシフトを\(events.count)件追加しました。"
