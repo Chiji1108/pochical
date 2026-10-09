@@ -106,7 +106,7 @@ function FlowsPage() {
               <OnboardingFrame label="働き方" screen="kind" />
               <OnboardingFrame
                 label="順番"
-                note="決まった順番の人"
+                note="繰り返しがある人"
                 screen="rotation"
               />
               <OnboardingFrame label="最初の日" screen="anchor" />

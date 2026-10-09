@@ -88,10 +88,10 @@ struct JobChangePage: View {
   }
 
   @ViewBuilder private var kindStep: some View {
-    question("新しい仕事のシフトはどう決まりますか？", "前の仕事のシフトは、そのまま残ります。")
+    question("新しい仕事のシフトに繰り返しはありますか？", "前の仕事のシフトは、そのまま残ります。")
     Section {
-      option("📋", "シフトがその都度決まる", "勤務表・シフト表・店長からの連絡など") { go(.roster) }
-      option("🔁", "決まった順番で回っている", "消防・工場の交代勤務・曜日で固定など") { go(.rotation) }
+      option("🔁", "繰り返しがある", "当番・非番、工場の交代勤務、曜日で固定など") { go(.rotation) }
+      option("📋", "繰り返しはない", "勤務表やシフト表で、その都度決まる") { go(.roster) }
     }
     .settingsRows()
   }

@@ -64,6 +64,8 @@ A person may follow a repeating order: a sequence of their patterns laid over th
 - Starting a new order, or correcting the one in use, clears the days' own pattern and times from its start, so the new order shows there; memos and people stay (`spec/vectors/own-days.json`, givenToOrder).
 - Everything that reads days reads them this way, the day's own value, else its order's: the month, counting days off, 次の休み, widgets, reminders and a group's tables.
 
+Whether shifts repeat is all that tells ways of working apart: someone whose shifts repeat still changes a day with ポチポチ入力, as a day's own value wins over its order. So the apps never ask how shifts are decided, only whether they repeat (シフトに繰り返しはありますか？, はじめの設定 and 新しい仕事にする), and 設定 › 働き方 shows the order in use, or none, with what can change about it: 繰り返しを設定する with none; with one, 祝日は休みにする, 新しい繰り返しにする from a day, 今の繰り返しを直す, and 繰り返しをやめる from a day, which starts an order with an empty sequence. 新しい仕事にする, which asks for the patterns again, sits apart under 仕事, and past orders under これまで.
+
 ### Typing an order
 
 An order is typed on a month, as ポチポチ入力 enters days (settings' 新しい繰り返し and 今の繰り返しを直す, and the order of はじめの設定 and 新しい仕事にする alike). The month fills the screen as 1人ずつ's does, swiped a month at a time with room for six weeks, so the tray at its foot stays put. The tray is ポチポチ入力's, its 消す and 翌日へ too, the pages' dots in the middle of both, with no date over the keys: the framed day shows where typing goes, and the room is the month's; the order's first day and length go under the page's title, and 祝日は休みにする beside the month's name. There is no 今月: the month that matters is the order's, which typing keeps in sight. The page's 完了 saves it, asking first where days already there change (settings and 新しい仕事にする, not a first run).
@@ -88,7 +90,7 @@ A device that holds no pattern starts with はじめの設定 (/design's DesignO
 
 1. A welcome: the app icon's poodle, the app's name and what it is for, with はじめる and アカウントをお持ちの方はログイン.
 2. ログイン is for someone moving to a new phone. Signing in switches to the account's data as any sign-in does, without asking, as the device holds nothing; the account's patterns end the first run. An account with nothing in it yet goes on to the questions.
-3. はじめる asks the questions 新しい仕事にする asks (below), as large cards: how shifts are decided, then the kind of work. A roster's work gives its patterns only; a weekly order starts on a Sunday; any other order is typed on the calendar from this month's 1st, covering every day, and 完了 asks nothing, as no day is there yet.
+3. はじめる asks the questions 新しい仕事にする asks (below), as large cards: whether shifts repeat (繰り返しがある first, as the answer that sets up more), then the kind of work. A roster's work gives its patterns only; a weekly order starts on a Sunday; any other order is typed on the calendar from this month's 1st, covering every day, and 完了 asks nothing, as no day is there yet.
 4. The kind of work's patterns become the person's, and its order repeats from the month before this one, or from its first day when that is earlier, so the days just past show it too.
 
 An invitation opened meanwhile waits until the calendar shows, and is asked about there as at any other time.

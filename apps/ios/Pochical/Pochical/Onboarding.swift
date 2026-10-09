@@ -218,20 +218,23 @@ private struct LoginStep: View {
   }
 }
 
+/// The one question that tells ways of working apart: whether shifts
+/// repeat, yes first, as the answer that sets up more (spec/shift-patterns.md,
+/// Repeating orders).
 private struct KindStep: View {
   let onPick: (OnboardingStep) -> Void
 
   var body: some View {
     StepPage(
-      title: "シフトはどう決まりますか？",
-      description: "答えに合わせて、入れやすい形で始めます。",
+      title: "シフトに繰り返しはありますか？",
+      description: "繰り返しがあっても、違う日だけポチポチ入力で変えられます。",
       footnote: "あとから設定で変えられます"
     ) {
-      OptionCard(icon: "📋", title: "シフトがその都度決まる", note: "勤務表・シフト表・店長からの連絡など") {
-        onPick(.roster)
-      }
-      OptionCard(icon: "🔁", title: "決まった順番で回っている", note: "消防・工場の交代勤務・曜日で固定など") {
+      OptionCard(icon: "🔁", title: "繰り返しがある", note: "当番・非番、工場の交代勤務、曜日で固定など") {
         onPick(.rotation)
+      }
+      OptionCard(icon: "📋", title: "繰り返しはない", note: "勤務表やシフト表で、その都度決まる") {
+        onPick(.roster)
       }
     }
   }

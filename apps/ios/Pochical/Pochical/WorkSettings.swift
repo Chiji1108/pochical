@@ -4,9 +4,9 @@ import SQLiteData
 import SwiftUI
 
 // 設定 › 働き方 (/design's WorkStylePage, RepeatEditorPage and
-// RosterSwitchPage; spec/shift-patterns.md, Repeating orders): whether
-// shifts come round in a fixed order, the order in use, starting a new one
-// or correcting it, and stopping it.
+// StopRepeatPage; spec/shift-patterns.md, Repeating orders): the order in
+// use, or none, starting a new one, correcting it or stopping it, and a
+// new job.
 
 /// The milliseconds now, for an edit's clock.
 private func nowMs() -> Int64 {
@@ -76,15 +76,6 @@ struct WorkStylePage: View {
     let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
     let current = values.orders.current
     List {
-      Section("今の働き方") {
-        Label {
-          Text(current == nil ? "シフトがその都度決まる" : "決まった順番で回っている")
-        } icon: {
-          Text(current == nil ? "📋" : "🔁")
-        }
-      }
-      .settingsRows()
-
       if let current {
         Section {
           VStack(alignment: .leading, spacing: 10) {
@@ -111,35 +102,39 @@ struct WorkStylePage: View {
           NavigationLink("今の繰り返しを直す") {
             RepeatEditor(mode: .fix)
           }
+          NavigationLink("繰り返しをやめる") {
+            StopRepeatPage()
+          }
+        } header: {
+          Text("繰り返し")
         } footer: {
           Text("異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。")
         }
         .settingsRows()
+      } else {
+        Section {
+          NavigationLink {
+            RepeatEditor(mode: .first)
+          } label: {
+            LabeledContent("繰り返しを設定する", value: "なし")
+          }
+        } header: {
+          Text("繰り返し")
+        } footer: {
+          Text("当番・非番や交代勤務のように順番で回るシフトを、カレンダーに入れておけます。違う日だけ、ポチポチ入力で変えられます。")
+        }
+        .settingsRows()
       }
 
-      Section("働き方を変える") {
-        NavigationLink {
-          if current == nil {
-            RepeatEditor(mode: .first)
-          } else {
-            RosterSwitchPage()
-          }
-        } label: {
-          Label {
-            Text(current == nil ? "決まった順番で回すようにする" : "順番で入れるのをやめる")
-            Text("シフトパターンはそのまま")
-          } icon: {
-            Text(current == nil ? "🔁" : "📋")
-          }
-        }
+      Section("仕事") {
         NavigationLink {
           JobChangePage()
         } label: {
-          Label {
+          VStack(alignment: .leading, spacing: 2) {
             Text("新しい仕事にする")
             Text("シフトパターンも選び直す")
-          } icon: {
-            Text("💼")
+              .font(.footnote)
+              .foregroundStyle(colors.textSecondary)
           }
         }
       }
@@ -375,9 +370,9 @@ private struct RepeatEditor: View {
   }
 }
 
-/// 順番をやめる: from a day, days are entered by hand again; those before
-/// keep their shifts.
-private struct RosterSwitchPage: View {
+/// 繰り返しをやめる: from a day, days are entered by hand again; those
+/// before keep their shifts.
+private struct StopRepeatPage: View {
   @Environment(\.dismiss) private var dismiss
   @Dependency(\.defaultDatabase) private var database
   @State private var day = nextMonthStart
@@ -404,7 +399,7 @@ private struct RosterSwitchPage: View {
           try? database.write { try OwnValues.start(order, now: nowMs(), in: $0) }
           dismiss()
         } label: {
-          Label("\(day.slashText)から順番をやめる", systemImage: "arrow.right")
+          Label("\(day.slashText)から繰り返しをやめる", systemImage: "arrow.right")
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
@@ -412,7 +407,7 @@ private struct RosterSwitchPage: View {
       }
     }
     .settingsList()
-    .navigationTitle("順番をやめる")
+    .navigationTitle("繰り返しをやめる")
     .navigationBarTitleDisplayMode(.inline)
   }
 }

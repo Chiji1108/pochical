@@ -36,7 +36,7 @@ import { MarkPage, StyleRow } from "./design-settings-style";
 import {
   JobChangePage,
   RepeatEditorPage,
-  RosterSwitchPage,
+  StopRepeatPage,
   WorkStylePage,
 } from "./design-settings-work";
 import { SupportChatPage, SupportRow } from "./design-support-chat";
@@ -55,7 +55,7 @@ type Page =
   | "repeat-fix"
   | "job"
   | "work"
-  | "roster"
+  | "stop-repeat"
   | "patterns"
   | "coworkers"
   | "mark"
@@ -217,14 +217,14 @@ export function DesignSettings({
             onRepeat={() => {
               setPage("repeat-new");
             }}
-            onRoster={() => {
-              setPage("roster");
+            onStop={() => {
+              setPage("stop-repeat");
             }}
             rules={rules}
           />
         )}
-        {page === "roster" && (
-          <RosterSwitchPage
+        {page === "stop-repeat" && (
+          <StopRepeatPage
             onApply={(start) => {
               onApplyRule({ sequence: [], start });
               setPage("top");
