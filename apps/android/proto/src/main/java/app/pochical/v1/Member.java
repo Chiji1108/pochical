@@ -21,6 +21,7 @@ public  final class Member extends
   private Member() {
     userId_ = "";
     displayName_ = "";
+    photoId_ = "";
   }
   public static final int USER_ID_FIELD_NUMBER = 1;
   private java.lang.String userId_;
@@ -295,6 +296,119 @@ public  final class Member extends
   private void clearOwnName() {
 
     ownName_ = false;
+  }
+
+  public static final int PHOTO_ID_FIELD_NUMBER = 7;
+  private java.lang.String photoId_;
+  /**
+   * <pre>
+   * Their photo as the group shows it, one of the group's photos (its own
+   * for them, else their usual one); empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 7 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  @java.lang.Override
+  public java.lang.String getPhotoId() {
+    return photoId_;
+  }
+  /**
+   * <pre>
+   * Their photo as the group shows it, one of the group's photos (its own
+   * for them, else their usual one); empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 7 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPhotoIdBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(photoId_);
+  }
+  /**
+   * <pre>
+   * Their photo as the group shows it, one of the group's photos (its own
+   * for them, else their usual one); empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 7 [json_name = "photoId"];</code>
+   * @param value The photoId to set.
+   */
+  private void setPhotoId(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    photoId_ = value;
+  }
+  /**
+   * <pre>
+   * Their photo as the group shows it, one of the group's photos (its own
+   * for them, else their usual one); empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 7 [json_name = "photoId"];</code>
+   */
+  private void clearPhotoId() {
+
+    photoId_ = getDefaultInstance().getPhotoId();
+  }
+  /**
+   * <pre>
+   * Their photo as the group shows it, one of the group's photos (its own
+   * for them, else their usual one); empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 7 [json_name = "photoId"];</code>
+   * @param value The bytes for photoId to set.
+   */
+  private void setPhotoIdBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    photoId_ = value.toStringUtf8();
+
+  }
+
+  public static final int OWN_PHOTO_FIELD_NUMBER = 8;
+  private boolean ownPhoto_;
+  /**
+   * <pre>
+   * photo_id is the group's own for them, or none on purpose, rather than
+   * their usual one.
+   * </pre>
+   *
+   * <code>bool own_photo = 8 [json_name = "ownPhoto"];</code>
+   * @return The ownPhoto.
+   */
+  @java.lang.Override
+  public boolean getOwnPhoto() {
+    return ownPhoto_;
+  }
+  /**
+   * <pre>
+   * photo_id is the group's own for them, or none on purpose, rather than
+   * their usual one.
+   * </pre>
+   *
+   * <code>bool own_photo = 8 [json_name = "ownPhoto"];</code>
+   * @param value The ownPhoto to set.
+   */
+  private void setOwnPhoto(boolean value) {
+    
+    ownPhoto_ = value;
+  }
+  /**
+   * <pre>
+   * photo_id is the group's own for them, or none on purpose, rather than
+   * their usual one.
+   * </pre>
+   *
+   * <code>bool own_photo = 8 [json_name = "ownPhoto"];</code>
+   */
+  private void clearOwnPhoto() {
+
+    ownPhoto_ = false;
   }
 
   public static app.pochical.v1.Member parseFrom(
@@ -685,6 +799,123 @@ public  final class Member extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Their photo as the group shows it, one of the group's photos (its own
+     * for them, else their usual one); empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 7 [json_name = "photoId"];</code>
+     * @return The photoId.
+     */
+    @java.lang.Override
+    public java.lang.String getPhotoId() {
+      return instance.getPhotoId();
+    }
+    /**
+     * <pre>
+     * Their photo as the group shows it, one of the group's photos (its own
+     * for them, else their usual one); empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 7 [json_name = "photoId"];</code>
+     * @return The bytes for photoId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getPhotoIdBytes() {
+      return instance.getPhotoIdBytes();
+    }
+    /**
+     * <pre>
+     * Their photo as the group shows it, one of the group's photos (its own
+     * for them, else their usual one); empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 7 [json_name = "photoId"];</code>
+     * @param value The photoId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhotoId(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setPhotoId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Their photo as the group shows it, one of the group's photos (its own
+     * for them, else their usual one); empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 7 [json_name = "photoId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPhotoId() {
+      copyOnWrite();
+      instance.clearPhotoId();
+      return this;
+    }
+    /**
+     * <pre>
+     * Their photo as the group shows it, one of the group's photos (its own
+     * for them, else their usual one); empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 7 [json_name = "photoId"];</code>
+     * @param value The bytes for photoId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhotoIdBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setPhotoIdBytes(value);
+      return this;
+    }
+
+    /**
+     * <pre>
+     * photo_id is the group's own for them, or none on purpose, rather than
+     * their usual one.
+     * </pre>
+     *
+     * <code>bool own_photo = 8 [json_name = "ownPhoto"];</code>
+     * @return The ownPhoto.
+     */
+    @java.lang.Override
+    public boolean getOwnPhoto() {
+      return instance.getOwnPhoto();
+    }
+    /**
+     * <pre>
+     * photo_id is the group's own for them, or none on purpose, rather than
+     * their usual one.
+     * </pre>
+     *
+     * <code>bool own_photo = 8 [json_name = "ownPhoto"];</code>
+     * @param value The ownPhoto to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOwnPhoto(boolean value) {
+      copyOnWrite();
+      instance.setOwnPhoto(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * photo_id is the group's own for them, or none on purpose, rather than
+     * their usual one.
+     * </pre>
+     *
+     * <code>bool own_photo = 8 [json_name = "ownPhoto"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOwnPhoto() {
+      copyOnWrite();
+      instance.clearOwnPhoto();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Member)
   }
   @java.lang.Override
@@ -707,10 +938,12 @@ public  final class Member extends
             "left_",
             "deleted_",
             "ownName_",
+            "photoId_",
+            "ownPhoto_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0002\u0004\u0007\u0005\u0007\u0006\u0007";
+              "\u0000\b\u0000\u0000\u0001\b\b\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0002" +
+              "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0208\b\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

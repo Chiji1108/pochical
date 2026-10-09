@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/group.proto.
  */
 export const file_pochical_v1_group: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb2NoaWNhbC92MS9ncm91cC5wcm90bxILcG9jaGljYWwudjEiWwoSQ3JlYXRlR3JvdXBSZXF1ZXN0EgwKBG5hbWUYASABKAkSDQoFZW1vamkYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEhIKCnJlcXVlc3RfaWQYBCABKAkiPAoTQ3JlYXRlR3JvdXBSZXNwb25zZRIQCghncm91cF9pZBgBIAEoCRITCgtpbnZpdGVfY29kZRgCIAEoCSIoChRHZXRJbnZpdGVMaW5rUmVxdWVzdBIQCghncm91cF9pZBgBIAEoCSIsChVHZXRJbnZpdGVMaW5rUmVzcG9uc2USEwoLaW52aXRlX2NvZGUYASABKAkiKwoXUmVtYWtlSW52aXRlTGlua1JlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkiLwoYUmVtYWtlSW52aXRlTGlua1Jlc3BvbnNlEhMKC2ludml0ZV9jb2RlGAEgASgJIicKEEdldEludml0ZVJlcXVlc3QSEwoLaW52aXRlX2NvZGUYASABKAkioAEKEUdldEludml0ZVJlc3BvbnNlEhAKCGdyb3VwX2lkGAEgASgJEhIKCmdyb3VwX25hbWUYAiABKAkSEwoLZ3JvdXBfZW1vamkYAyABKAkSKgoHbWVtYmVycxgEIAMoCzIZLnBvY2hpY2FsLnYxLkludml0ZU1lbWJlchIWCg5hbHJlYWR5X21lbWJlchgFIAEoCBIMCgRmdWxsGAYgASgIIiQKDEludml0ZU1lbWJlchIUCgxkaXNwbGF5X25hbWUYASABKAkiPQoQSm9pbkdyb3VwUmVxdWVzdBITCgtpbnZpdGVfY29kZRgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkiPQoRSm9pbkdyb3VwUmVzcG9uc2USEAoIZ3JvdXBfaWQYASABKAkSFgoOYWxyZWFkeV9tZW1iZXIYAiABKAgiQwoSUmVuYW1lR3JvdXBSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEgwKBG5hbWUYAiABKAkSDQoFZW1vamkYAyABKAkiFQoTUmVuYW1lR3JvdXBSZXNwb25zZSI/ChVTZXREaXNwbGF5TmFtZVJlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJIhgKFlNldERpc3BsYXlOYW1lUmVzcG9uc2UiJQoRTGVhdmVHcm91cFJlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkiFAoSTGVhdmVHcm91cFJlc3BvbnNlMrcFCgxHcm91cFNlcnZpY2USUAoLQ3JlYXRlR3JvdXASHy5wb2NoaWNhbC52MS5DcmVhdGVHcm91cFJlcXVlc3QaIC5wb2NoaWNhbC52MS5DcmVhdGVHcm91cFJlc3BvbnNlElsKDUdldEludml0ZUxpbmsSIS5wb2NoaWNhbC52MS5HZXRJbnZpdGVMaW5rUmVxdWVzdBoiLnBvY2hpY2FsLnYxLkdldEludml0ZUxpbmtSZXNwb25zZSIDkAIBEl8KEFJlbWFrZUludml0ZUxpbmsSJC5wb2NoaWNhbC52MS5SZW1ha2VJbnZpdGVMaW5rUmVxdWVzdBolLnBvY2hpY2FsLnYxLlJlbWFrZUludml0ZUxpbmtSZXNwb25zZRJPCglHZXRJbnZpdGUSHS5wb2NoaWNhbC52MS5HZXRJbnZpdGVSZXF1ZXN0Gh4ucG9jaGljYWwudjEuR2V0SW52aXRlUmVzcG9uc2UiA5ACARJKCglKb2luR3JvdXASHS5wb2NoaWNhbC52MS5Kb2luR3JvdXBSZXF1ZXN0Gh4ucG9jaGljYWwudjEuSm9pbkdyb3VwUmVzcG9uc2USUAoLUmVuYW1lR3JvdXASHy5wb2NoaWNhbC52MS5SZW5hbWVHcm91cFJlcXVlc3QaIC5wb2NoaWNhbC52MS5SZW5hbWVHcm91cFJlc3BvbnNlElkKDlNldERpc3BsYXlOYW1lEiIucG9jaGljYWwudjEuU2V0RGlzcGxheU5hbWVSZXF1ZXN0GiMucG9jaGljYWwudjEuU2V0RGlzcGxheU5hbWVSZXNwb25zZRJNCgpMZWF2ZUdyb3VwEh4ucG9jaGljYWwudjEuTGVhdmVHcm91cFJlcXVlc3QaHy5wb2NoaWNhbC52MS5MZWF2ZUdyb3VwUmVzcG9uc2VCagoPYXBwLnBvY2hpY2FsLnYxQgpHcm91cFByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
+  fileDesc("Chdwb2NoaWNhbC92MS9ncm91cC5wcm90bxILcG9jaGljYWwudjEiWwoSQ3JlYXRlR3JvdXBSZXF1ZXN0EgwKBG5hbWUYASABKAkSDQoFZW1vamkYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEhIKCnJlcXVlc3RfaWQYBCABKAkiPAoTQ3JlYXRlR3JvdXBSZXNwb25zZRIQCghncm91cF9pZBgBIAEoCRITCgtpbnZpdGVfY29kZRgCIAEoCSIoChRHZXRJbnZpdGVMaW5rUmVxdWVzdBIQCghncm91cF9pZBgBIAEoCSIsChVHZXRJbnZpdGVMaW5rUmVzcG9uc2USEwoLaW52aXRlX2NvZGUYASABKAkiKwoXUmVtYWtlSW52aXRlTGlua1JlcXVlc3QSEAoIZ3JvdXBfaWQYASABKAkiLwoYUmVtYWtlSW52aXRlTGlua1Jlc3BvbnNlEhMKC2ludml0ZV9jb2RlGAEgASgJIicKEEdldEludml0ZVJlcXVlc3QSEwoLaW52aXRlX2NvZGUYASABKAkioAEKEUdldEludml0ZVJlc3BvbnNlEhAKCGdyb3VwX2lkGAEgASgJEhIKCmdyb3VwX25hbWUYAiABKAkSEwoLZ3JvdXBfZW1vamkYAyABKAkSKgoHbWVtYmVycxgEIAMoCzIZLnBvY2hpY2FsLnYxLkludml0ZU1lbWJlchIWCg5hbHJlYWR5X21lbWJlchgFIAEoCBIMCgRmdWxsGAYgASgIIiQKDEludml0ZU1lbWJlchIUCgxkaXNwbGF5X25hbWUYASABKAkiPQoQSm9pbkdyb3VwUmVxdWVzdBITCgtpbnZpdGVfY29kZRgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkiPQoRSm9pbkdyb3VwUmVzcG9uc2USEAoIZ3JvdXBfaWQYASABKAkSFgoOYWxyZWFkeV9tZW1iZXIYAiABKAgiQwoSUmVuYW1lR3JvdXBSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEgwKBG5hbWUYAiABKAkSDQoFZW1vamkYAyABKAkiFQoTUmVuYW1lR3JvdXBSZXNwb25zZSJJChRTZXRHcm91cFBob3RvUmVxdWVzdBIQCghncm91cF9pZBgBIAEoCRINCgV1c3VhbBgCIAEoCBIQCghwaG90b19pZBgDIAEoCSIXChVTZXRHcm91cFBob3RvUmVzcG9uc2UiPwoVU2V0RGlzcGxheU5hbWVSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCSIYChZTZXREaXNwbGF5TmFtZVJlc3BvbnNlIiUKEUxlYXZlR3JvdXBSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJIhQKEkxlYXZlR3JvdXBSZXNwb25zZTKPBgoMR3JvdXBTZXJ2aWNlElAKC0NyZWF0ZUdyb3VwEh8ucG9jaGljYWwudjEuQ3JlYXRlR3JvdXBSZXF1ZXN0GiAucG9jaGljYWwudjEuQ3JlYXRlR3JvdXBSZXNwb25zZRJbCg1HZXRJbnZpdGVMaW5rEiEucG9jaGljYWwudjEuR2V0SW52aXRlTGlua1JlcXVlc3QaIi5wb2NoaWNhbC52MS5HZXRJbnZpdGVMaW5rUmVzcG9uc2UiA5ACARJfChBSZW1ha2VJbnZpdGVMaW5rEiQucG9jaGljYWwudjEuUmVtYWtlSW52aXRlTGlua1JlcXVlc3QaJS5wb2NoaWNhbC52MS5SZW1ha2VJbnZpdGVMaW5rUmVzcG9uc2USTwoJR2V0SW52aXRlEh0ucG9jaGljYWwudjEuR2V0SW52aXRlUmVxdWVzdBoeLnBvY2hpY2FsLnYxLkdldEludml0ZVJlc3BvbnNlIgOQAgESSgoJSm9pbkdyb3VwEh0ucG9jaGljYWwudjEuSm9pbkdyb3VwUmVxdWVzdBoeLnBvY2hpY2FsLnYxLkpvaW5Hcm91cFJlc3BvbnNlElAKC1JlbmFtZUdyb3VwEh8ucG9jaGljYWwudjEuUmVuYW1lR3JvdXBSZXF1ZXN0GiAucG9jaGljYWwudjEuUmVuYW1lR3JvdXBSZXNwb25zZRJZCg5TZXREaXNwbGF5TmFtZRIiLnBvY2hpY2FsLnYxLlNldERpc3BsYXlOYW1lUmVxdWVzdBojLnBvY2hpY2FsLnYxLlNldERpc3BsYXlOYW1lUmVzcG9uc2USVgoNU2V0R3JvdXBQaG90bxIhLnBvY2hpY2FsLnYxLlNldEdyb3VwUGhvdG9SZXF1ZXN0GiIucG9jaGljYWwudjEuU2V0R3JvdXBQaG90b1Jlc3BvbnNlEk0KCkxlYXZlR3JvdXASHi5wb2NoaWNhbC52MS5MZWF2ZUdyb3VwUmVxdWVzdBofLnBvY2hpY2FsLnYxLkxlYXZlR3JvdXBSZXNwb25zZUJqCg9hcHAucG9jaGljYWwudjFCCkdyb3VwUHJvdG9QAaICA1BYWKoCC1BvY2hpY2FsLlYxygILUG9jaGljYWxcVjHiAhdQb2NoaWNhbFxWMVxHUEJNZXRhZGF0YeoCDFBvY2hpY2FsOjpWMWIGcHJvdG8z");
 
 /**
  * @generated from message pochical.v1.CreateGroupRequest
@@ -328,6 +328,50 @@ export const RenameGroupResponseSchema: GenMessage<RenameGroupResponse> = /*@__P
   messageDesc(file_pochical_v1_group, 12);
 
 /**
+ * @generated from message pochical.v1.SetGroupPhotoRequest
+ */
+export type SetGroupPhotoRequest = Message<"pochical.v1.SetGroupPhotoRequest"> & {
+  /**
+   * @generated from field: string group_id = 1;
+   */
+  groupId: string;
+
+  /**
+   * Follow the usual photo; photo_id is then ignored.
+   *
+   * @generated from field: bool usual = 2;
+   */
+  usual: boolean;
+
+  /**
+   * One of the group's photos the caller uploaded, or empty for none.
+   *
+   * @generated from field: string photo_id = 3;
+   */
+  photoId: string;
+};
+
+/**
+ * Describes the message pochical.v1.SetGroupPhotoRequest.
+ * Use `create(SetGroupPhotoRequestSchema)` to create a new message.
+ */
+export const SetGroupPhotoRequestSchema: GenMessage<SetGroupPhotoRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 13);
+
+/**
+ * @generated from message pochical.v1.SetGroupPhotoResponse
+ */
+export type SetGroupPhotoResponse = Message<"pochical.v1.SetGroupPhotoResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.SetGroupPhotoResponse.
+ * Use `create(SetGroupPhotoResponseSchema)` to create a new message.
+ */
+export const SetGroupPhotoResponseSchema: GenMessage<SetGroupPhotoResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_group, 14);
+
+/**
  * @generated from message pochical.v1.SetDisplayNameRequest
  */
 export type SetDisplayNameRequest = Message<"pochical.v1.SetDisplayNameRequest"> & {
@@ -350,7 +394,7 @@ export type SetDisplayNameRequest = Message<"pochical.v1.SetDisplayNameRequest">
  * Use `create(SetDisplayNameRequestSchema)` to create a new message.
  */
 export const SetDisplayNameRequestSchema: GenMessage<SetDisplayNameRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_group, 13);
+  messageDesc(file_pochical_v1_group, 15);
 
 /**
  * @generated from message pochical.v1.SetDisplayNameResponse
@@ -363,7 +407,7 @@ export type SetDisplayNameResponse = Message<"pochical.v1.SetDisplayNameResponse
  * Use `create(SetDisplayNameResponseSchema)` to create a new message.
  */
 export const SetDisplayNameResponseSchema: GenMessage<SetDisplayNameResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_group, 14);
+  messageDesc(file_pochical_v1_group, 16);
 
 /**
  * @generated from message pochical.v1.LeaveGroupRequest
@@ -380,7 +424,7 @@ export type LeaveGroupRequest = Message<"pochical.v1.LeaveGroupRequest"> & {
  * Use `create(LeaveGroupRequestSchema)` to create a new message.
  */
 export const LeaveGroupRequestSchema: GenMessage<LeaveGroupRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_group, 15);
+  messageDesc(file_pochical_v1_group, 17);
 
 /**
  * @generated from message pochical.v1.LeaveGroupResponse
@@ -393,7 +437,7 @@ export type LeaveGroupResponse = Message<"pochical.v1.LeaveGroupResponse"> & {
  * Use `create(LeaveGroupResponseSchema)` to create a new message.
  */
 export const LeaveGroupResponseSchema: GenMessage<LeaveGroupResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_group, 16);
+  messageDesc(file_pochical_v1_group, 18);
 
 /**
  * Making groups and getting into them. Every call needs the session token
@@ -484,6 +528,17 @@ export const GroupService: GenService<{
     methodKind: "unary";
     input: typeof SetDisplayNameRequestSchema;
     output: typeof SetDisplayNameResponseSchema;
+  },
+  /**
+   * The caller's photo in the group from now on: their usual one, one of
+   * the group's photos they uploaded, or none. Members only.
+   *
+   * @generated from rpc pochical.v1.GroupService.SetGroupPhoto
+   */
+  setGroupPhoto: {
+    methodKind: "unary";
+    input: typeof SetGroupPhotoRequestSchema;
+    output: typeof SetGroupPhotoResponseSchema;
   },
   /**
    * Takes the caller out of the group: what it holds of their shifts goes,

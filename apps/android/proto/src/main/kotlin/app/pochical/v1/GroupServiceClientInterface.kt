@@ -61,6 +61,12 @@ public interface GroupServiceClientInterface {
   public suspend fun setDisplayName(request: SetDisplayNameRequest, headers: Headers = emptyMap()): ResponseMessage<SetDisplayNameResponse>
 
   /**
+   *  The caller's photo in the group from now on: their usual one, one of
+   *  the group's photos they uploaded, or none. Members only.
+   */
+  public suspend fun setGroupPhoto(request: SetGroupPhotoRequest, headers: Headers = emptyMap()): ResponseMessage<SetGroupPhotoResponse>
+
+  /**
    *  Takes the caller out of the group: what it holds of their shifts goes,
    *  and its socket and calls refuse them until they join again by a live
    *  link. Leaving a group you are not in changes nothing.

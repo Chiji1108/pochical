@@ -184,9 +184,25 @@ public enum ChatPhotos {
   /// under the user's own support photos. A group's id is never this.
   public static let support = "support"
 
+  /// Where the user's own photos are kept, in place of a group's id: their
+  /// usual photo, on the server for them alone (spec/sync-protocol.md,
+  /// Profile). A group's id is never this.
+  public static let mine = "me"
+
+  /// Keeps a photo of the user's and sends it up at once, to the group's
+  /// photos or their own (`mine`), for a profile to name it after.
+  public static func send(
+    _ jpeg: Data, as photoID: String, in groupID: String, account: Account
+  ) async throws {
+    try keep(jpeg, as: photoID, in: groupID)
+    try await upload(photoID, in: groupID, account: account)
+  }
+
   private static func photoURL(_ photoID: String, in groupID: String, server: URL) -> URL {
-    groupID == support
-      ? server.appending(path: "v1/support/photos/\(photoID)")
-      : server.appending(path: "v1/groups/\(groupID)/photos/\(photoID)")
+    switch groupID {
+    case support: server.appending(path: "v1/support/photos/\(photoID)")
+    case mine: server.appending(path: "v1/me/photos/\(photoID)")
+    default: server.appending(path: "v1/groups/\(groupID)/photos/\(photoID)")
+    }
   }
 }

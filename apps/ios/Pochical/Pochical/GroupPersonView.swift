@@ -13,6 +13,7 @@ struct GroupPersonView: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
   let members: [GroupMember]
+  let groupID: String
   /// The viewer among the members, once known.
   let meID: String?
   @Binding var picked: Day?
@@ -84,7 +85,7 @@ struct GroupPersonView: View {
             personID = member.userID
           } label: {
             HStack(spacing: 6) {
-              LetterAvatar(name: member.name, size: 22)
+              MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 22)
               Text(member.name)
                 .font(.subheadline.weight(isPicked ? .semibold : .regular))
                 .foregroundStyle(isPicked ? colors.accentDefault : colors.textSecondary)

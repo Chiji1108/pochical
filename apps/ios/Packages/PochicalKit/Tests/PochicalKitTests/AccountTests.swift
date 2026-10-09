@@ -150,8 +150,9 @@ private let server = URL(string: "http://localhost:8787")!
     var change = Pochical_V1_Change()
     change.cursor = 1
     change.profile.name = "さくら"
+    change.profile.photoID = "p1"
     try Groups.take(change, in: db)
-    #expect(try Profile.name(in: db) == "さくら")
+    #expect(try Profile.usual(in: db) == UsualProfile(name: "さくら", photoID: "p1"))
     try LocalData.erase(in: db)
     #expect(try Profile.name(in: db) == "")
   }

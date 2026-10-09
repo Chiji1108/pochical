@@ -248,7 +248,7 @@ type ProfileRow = typeof profile.$inferSelect;
 export const profileChange = (row: ProfileRow): Change =>
   create(ChangeSchema, {
     cursor: BigInt(row.cursor),
-    kind: { case: "profile", value: { name: row.name } },
+    kind: { case: "profile", value: { name: row.name, photoId: row.photoId } },
   });
 
 /**

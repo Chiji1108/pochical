@@ -56,6 +56,8 @@ export const eraseUser = async (env: Env, userId: string): Promise<void> => {
     .from(supportChats)
     .where(eq(supportChats.userId, userId));
   await eraseSupportChat(env, userId);
+  // Their usual photo, and any before it.
+  await deletePhotosUnder(env, `people/${userId}/`);
   if (chat?.thread !== undefined && chat.thread !== null) {
     waitUntil(tellStaffOfDeletion(env, chat.thread));
   }

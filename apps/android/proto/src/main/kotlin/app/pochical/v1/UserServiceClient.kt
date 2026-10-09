@@ -165,8 +165,9 @@ public class UserServiceClient(
 
 
   /**
-   *  Sets the user's usual name, empty for none; the devices hear of it as
-   *  a Profile change. INVALID_ARGUMENT over personName characters.
+   *  Sets the user's usual name and photo, each empty for none; the devices
+   *  hear of it as a Profile change. INVALID_ARGUMENT over personName
+   *  characters, or for a photo the user has not uploaded.
    */
   override suspend fun setProfile(request: SetProfileRequest, headers: Headers): ResponseMessage<SetProfileResponse> = client.unary(
     request,

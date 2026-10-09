@@ -14,6 +14,7 @@ import {
   RemakeInviteLinkResponseSchema,
   RenameGroupResponseSchema,
   SetDisplayNameResponseSchema,
+  SetGroupPhotoResponseSchema,
 } from "./gen/pochical/v1/group_pb";
 import { isId } from "./ids";
 import {
@@ -22,9 +23,21 @@ import {
   noGroupOfCode,
   requireGroupOfCode,
 } from "./invite-codes";
+import { sharePersonPhoto } from "./photos";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
 import { requireEmoji, requireText } from "./text-limits";
+
+/** The usual photo into a group's photos, before the group shows it. */
+const shareUsualPhoto = async (
+  userId: string,
+  photoId: string,
+  groupId: string
+): Promise<void> => {
+  if (photoId !== "") {
+    await sharePersonPhoto(env, userId, photoId, groupId);
+  }
+};
 
 /**
  * How the caller will appear in a group from the name they typed: their
@@ -36,22 +49,26 @@ const namesFor = async (
   userId: string,
   typed: string,
   adopt: boolean
-): Promise<{ usualName: string; ownName: string | null }> => {
+): Promise<{
+  usualName: string;
+  ownName: string | null;
+  usualPhoto: string;
+}> => {
   const users = env.USERS.getByName(userId);
-  const usualName = await users.profileName();
+  const { name: usualName, photoId: usualPhoto } = await users.profileOf();
   const name = typed.trim();
   if (name === "") {
     if (usualName === "") {
       throw new ConnectError("display_name is empty", Code.InvalidArgument);
     }
-    return { ownName: null, usualName };
+    return { ownName: null, usualName, usualPhoto };
   }
   requireText(name, textLimits.personName, "display_name");
   if (usualName === "" && adopt) {
-    await users.setProfile(name);
-    return { ownName: null, usualName: name };
+    await users.setProfile(name, usualPhoto);
+    return { ownName: null, usualName: name, usualPhoto };
   }
-  return { ownName: name === usualName ? null : name, usualName };
+  return { ownName: name === usualName ? null : name, usualName, usualPhoto };
 };
 
 /** The caller's id, when they are in the group; PERMISSION_DENIED otherwise. */
@@ -90,6 +107,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       }
       const names = await namesFor(user.id, request.displayName, true);
       const groupId = await users.groupIdFor(request.requestId);
+      await shareUsualPhoto(user.id, names.usualPhoto, groupId);
       await env.GROUPS.getByName(groupId).create(
         { emoji, name },
         { ...names, userId: user.id }
@@ -132,6 +150,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const user = await requireUser(context);
       const groupId = await requireGroupOfCode(env.DB, inviteCode);
       const names = await namesFor(user.id, displayName, true);
+      await shareUsualPhoto(user.id, names.usualPhoto, groupId);
       // The Group DO decides; the user's DO then keeps its copy. Both are
       // idempotent, so a retry after a failure in between completes it.
       const group = env.GROUPS.getByName(groupId);
@@ -200,6 +219,21 @@ export const registerGroupService = (router: ConnectRouter): void => {
         ownName
       );
       return create(SetDisplayNameResponseSchema, {});
+    },
+
+    setGroupPhoto: async ({ groupId, usual, photoId }, context) => {
+      const userId = await requireMember(context, groupId);
+      if (!(usual || photoId === "" || isId(photoId))) {
+        throw new ConnectError("Malformed photo_id", Code.InvalidArgument);
+      }
+      const kept = await env.GROUPS.getByName(groupId).setGroupPhoto(userId, {
+        photoId,
+        usual,
+      });
+      if (!kept) {
+        throw new ConnectError("Not your photo", Code.InvalidArgument);
+      }
+      return create(SetGroupPhotoResponseSchema, {});
     },
   });
 };

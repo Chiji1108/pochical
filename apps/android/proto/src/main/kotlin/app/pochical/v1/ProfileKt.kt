@@ -60,6 +60,33 @@ public object ProfileKt {
     public fun clearName() {
       _builder.clearName()
     }
+
+    /**
+     * ```
+     * The usual photo, one of the user's own photos (/v1/me/photos/{id});
+     * empty for none.
+     * ```
+     *
+     * `string photo_id = 2 [json_name = "photoId"];`
+     */
+    public var photoId: kotlin.String
+      @kotlin.jvm.JvmName("getPhotoId")
+        get() = _builder.photoId
+      @kotlin.jvm.JvmName("setPhotoId")
+        set(value) {
+        _builder.photoId = value
+      }
+    /**
+     * ```
+     * The usual photo, one of the user's own photos (/v1/me/photos/{id});
+     * empty for none.
+     * ```
+     *
+     * `string photo_id = 2 [json_name = "photoId"];`
+     */
+    public fun clearPhotoId() {
+      _builder.clearPhotoId()
+    }
   }
 }
 public inline fun app.pochical.v1.Profile.copy(block: `app.pochical.v1`.ProfileKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Profile =

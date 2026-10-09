@@ -79,7 +79,7 @@ struct GroupWeek: View {
       VStack(spacing: 0) {
         Color.clear.frame(height: dateHeight)
         ForEach(members) { member in
-          LetterAvatar(name: member.name, size: compact ? 20 : 24)
+          MemberAvatar(name: member.name, photoID: member.photoID, size: compact ? 20 : 24)
             .frame(height: rowHeight)
             .accessibilityLabel(member.name)
         }

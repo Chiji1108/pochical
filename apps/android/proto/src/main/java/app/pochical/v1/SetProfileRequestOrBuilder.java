@@ -21,4 +21,24 @@ public interface SetProfileRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getNameBytes();
+
+  /**
+   * <pre>
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  java.lang.String getPhotoId();
+  /**
+   * <pre>
+   * One of the user's own photos, uploaded to /v1/me/photos/{id} first.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  com.google.protobuf.ByteString
+      getPhotoIdBytes();
 }

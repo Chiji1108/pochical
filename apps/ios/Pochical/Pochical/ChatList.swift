@@ -72,7 +72,9 @@ struct ChatList: View {
             group: group, threadID: directThread(meID, member.userID), me: meID,
             label: member.shownName
           ) {
-            LetterAvatar(name: member.shownName, size: 28)
+            MemberAvatar(
+              name: member.shownName, photoID: member.deleted ? "" : member.photoID,
+              groupID: group.id, size: 28)
           } onOpen: {
             onOpen(directThread(meID, member.userID), member.userID)
           }
@@ -105,7 +107,7 @@ struct ChatList: View {
       _ = try? await $chats.load(ChatThreadsRequest(groupID: group.id))
     }
     .sheet(isPresented: $starting) {
-      StartChatSheet(members: untouched) { member in
+      StartChatSheet(members: untouched, groupID: group.id) { member in
         starting = false
         if let meID {
           onOpen(directThread(meID, member.userID), member.userID)
@@ -233,6 +235,7 @@ private struct ChatRow<Icon: View>: View {
 private struct StartChatSheet: View {
   @Environment(\.dismiss) private var dismiss
   let members: [GroupMember]
+  let groupID: String
   let onPick: (GroupMember) -> Void
 
   var body: some View {
@@ -244,7 +247,7 @@ private struct StartChatSheet: View {
           Label {
             Text(member.name).lineLimit(1)
           } icon: {
-            LetterAvatar(name: member.name, size: 28)
+            MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 28)
           }
         }
         .tint(.primary)

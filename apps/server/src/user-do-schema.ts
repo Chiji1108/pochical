@@ -233,13 +233,16 @@ export const chatSettings = sqliteTable(
   ]
 );
 
-// The user's usual name (いつもの名前), one row once they set it.
+// The user's usual name (いつもの名前) and photo, one row once they set
+// them.
 export const profile = sqliteTable(
   "profile",
   {
     cursor: integer().notNull(),
     id: integer().primaryKey(),
     name: text().notNull(),
+    // The usual photo, one of the user's own photos; empty for none.
+    photoId: text("photo_id").notNull().default(""),
   },
   (table) => [
     check("profile_one_row", sql`${table.id} = 1`),

@@ -127,6 +127,13 @@
       "when": 1791516103080,
       "tag": "0017_member_names",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1791516639443,
+      "tag": "0018_member_photos",
+      "breakpoints": true
     }
   ]
 }

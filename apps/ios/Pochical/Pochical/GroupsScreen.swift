@@ -30,6 +30,9 @@ extension EnvironmentValues {
   /// Opens one of Pochical's invitations on its join screen, as reading
   /// its link does.
   @Entry var openInvite = OpenInviteAction { _ in }
+  /// The group whose photos its screens' faces are, for those that know a
+  /// member's photo but not the group (MemberAvatar).
+  @Entry var photoGroupID = ""
 }
 
 /// The グループ tab (/design's DesignGroup): with no group yet, what groups
@@ -105,6 +108,7 @@ struct GroupsScreen: View {
       }
     }
     .environment(\.groupSocket, socket)
+    .environment(\.photoGroupID, (groups.first { $0.id == openID } ?? groups.first)?.id ?? "")
     // Once its group has come, at launch.
     .task(id: OpeningKey(chat: openingChat, groupIDs: groups.map(\.id))) {
       await showOpeningChat()

@@ -842,6 +842,10 @@ public nonisolated struct Pochical_V1_Profile: Sendable {
   /// personName characters at most (design/src/limits.ts); empty for none.
   public var name: String = String()
 
+  /// The usual photo, one of the user's own photos (/v1/me/photos/{id});
+  /// empty for none.
+  public var photoID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -990,6 +994,14 @@ public nonisolated struct Pochical_V1_Member: Sendable {
   /// not their usual one, which it follows otherwise (spec/sync-protocol.md,
   /// Profile).
   public var ownName: Bool = false
+
+  /// Their photo as the group shows it, one of the group's photos (its own
+  /// for them, else their usual one); empty for none.
+  public var photoID: String = String()
+
+  /// photo_id is the group's own for them, or none on purpose, rather than
+  /// their usual one.
+  public var ownPhoto: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3221,7 +3233,7 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
 
 nonisolated extension Pochical_V1_Profile: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Profile"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{3}photo_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3230,6 +3242,7 @@ nonisolated extension Pochical_V1_Profile: SwiftProtobuf.Message, SwiftProtobuf.
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
       default: break
       }
     }
@@ -3239,11 +3252,15 @@ nonisolated extension Pochical_V1_Profile: SwiftProtobuf.Message, SwiftProtobuf.
     if !self.name.isEmpty {
       try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
     }
+    if !self.photoID.isEmpty {
+      try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_Profile, rhs: Pochical_V1_Profile) -> Bool {
     if lhs.name != rhs.name {return false}
+    if lhs.photoID != rhs.photoID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -3486,7 +3503,7 @@ nonisolated extension Pochical_V1_GroupProfile: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Member"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0\u{1}left\0\u{1}deleted\0\u{3}own_name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0\u{1}left\0\u{1}deleted\0\u{3}own_name\0\u{3}photo_id\0\u{3}own_photo\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3500,6 +3517,8 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
       case 4: try { try decoder.decodeSingularBoolField(value: &self.left) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.deleted) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.ownName) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.ownPhoto) }()
       default: break
       }
     }
@@ -3524,6 +3543,12 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     if self.ownName != false {
       try visitor.visitSingularBoolField(value: self.ownName, fieldNumber: 6)
     }
+    if !self.photoID.isEmpty {
+      try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 7)
+    }
+    if self.ownPhoto != false {
+      try visitor.visitSingularBoolField(value: self.ownPhoto, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3534,6 +3559,8 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.left != rhs.left {return false}
     if lhs.deleted != rhs.deleted {return false}
     if lhs.ownName != rhs.ownName {return false}
+    if lhs.photoID != rhs.photoID {return false}
+    if lhs.ownPhoto != rhs.ownPhoto {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

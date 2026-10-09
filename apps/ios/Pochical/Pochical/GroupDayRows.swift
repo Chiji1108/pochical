@@ -35,6 +35,7 @@ private let rowInset = EdgeInsets(top: 3, leading: todayBar + 3, bottom: 3, trai
 struct GroupDayHeader: View {
   @Environment(\.themeColors) private var colors
   let members: [GroupMember]
+  let groupID: String
 
   var body: some View {
     let density = DayRowsDensity(members: members.count)
@@ -42,7 +43,7 @@ struct GroupDayHeader: View {
       Color.clear.frame(width: dateWidth, height: 1)
       ForEach(members) { member in
         HStack(spacing: 4) {
-          LetterAvatar(name: member.name, size: 24)
+          MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 24)
           if density == .names {
             Text(member.name)
               .font(.footnote.weight(.semibold))

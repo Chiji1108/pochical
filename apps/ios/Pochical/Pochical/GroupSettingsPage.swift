@@ -50,15 +50,18 @@ struct GroupSettingsPage: View {
       // /design's GroupProfileRow: the name, and whether it is the usual one.
       Section("このグループでのあなた") {
         NavigationLink {
-          DisplayNamePage(group: group, name: me?.ownName == true ? me?.name ?? "" : "")
+          if let me {
+            DisplayNamePage(group: group, meID: me.userID, name: me.ownName ? me.name : "")
+          }
         } label: {
           LabeledContent {
-            Text(me?.ownName == true ? "このグループだけ" : "いつもと同じ")
+            Text(me?.ownName == true || me?.ownPhoto == true ? "このグループだけ" : "いつもと同じ")
           } label: {
             Label {
               Text(me?.name ?? "").lineLimit(1)
             } icon: {
-              LetterAvatar(name: me?.name ?? "", size: 28)
+              MemberAvatar(
+                name: me?.name ?? "", photoID: me?.photoID ?? "", groupID: group.id, size: 28)
             }
           }
         }
@@ -88,7 +91,7 @@ struct GroupSettingsPage: View {
           Label {
             Text(member.userID == meID ? "\(member.name)（自分）" : member.name).lineLimit(1)
           } icon: {
-            LetterAvatar(name: member.name, size: 28)
+            MemberAvatar(name: member.name, photoID: member.photoID, groupID: group.id, size: 28)
           }
         }
         Button(action: onInvite) {
@@ -237,14 +240,37 @@ private struct DisplayNamePage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.dismiss) private var dismiss
   @Fetch(ProfileNameRequest()) private var usualName = ""
+  @Fetch private var members: [GroupMember] = []
   let group: GroupRow
+  let meID: String
   @State var name: String
   @State private var saving = false
   @State private var failed = false
 
   var body: some View {
     let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    // As the group shows them, read again as it changes.
+    let me = members.first { $0.userID == meID }
     List {
+      // The photo changes at once, as /design's does; the name on 保存.
+      Section {
+        PhotoEditor(
+          name: me?.name ?? "", photoID: me?.photoID ?? "", groupID: group.id,
+          onPhoto: { jpeg in
+            await change {
+              let photoID = try await groupCalls.sendPhoto(jpeg, to: group.id)
+              try await groupCalls.setGroupPhoto(usual: false, photoID: photoID, in: group.id)
+            }
+          },
+          // Back to the usual photo, once the group has one of its own.
+          onUsual: me?.ownPhoto == true
+            ? { await change { try await groupCalls.setGroupPhoto(usual: true, in: group.id) } }
+            : nil,
+          onRemove: {
+            await change { try await groupCalls.setGroupPhoto(usual: false, in: group.id) }
+          })
+        .settingsOnPage()
+      }
       Section {
         LabeledContent("名前") {
           LimitedTextField(
@@ -254,13 +280,17 @@ private struct DisplayNamePage: View {
       } footer: {
         Text(
           usualName.isEmpty
-            ? "「\(group.name)」の人にだけ、この名前で表示されます。"
-            : "「\(group.name)」の人にだけ、この名前で表示されます。空欄なら「\(usualName)」のままです。")
+            ? "「\(group.name)」の人にだけ、この名前と写真で表示されます。"
+            : "「\(group.name)」の人にだけ、この名前と写真で表示されます。名前が空欄なら「\(usualName)」、写真を入れなければいつもの写真のままです。")
       }
       .settingsRows()
     }
     .settingsList()
     .navigationTitle("このグループでのあなた")
+    .task {
+      let today = Day.today
+      _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
+    }
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
@@ -278,6 +308,16 @@ private struct DisplayNamePage: View {
       Button("OK", role: .cancel) {}
     } message: {
       Text("通信できる場所で、もう一度お試しください。")
+    }
+  }
+
+  /// A change of the photo, which says so if it could not be made.
+  private func change(_ making: () async throws -> Void) async {
+    do {
+      try await making()
+    } catch {
+      ReviewPrompt.troubled = true
+      failed = true
     }
   }
 

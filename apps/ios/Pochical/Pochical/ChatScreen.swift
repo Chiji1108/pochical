@@ -588,11 +588,14 @@ struct ChatScreen: View {
           groupID: group.id, onOpenPhoto: { viewing = line.photo },
           onOpenQuote: { line.replyTo.map(jump(to:)) },
           onOpenProfile: {
-            profileOf = ProfileOf(id: line.authorID, name: names[line.authorID] ?? "メンバー")
+            profileOf = ProfileOf(
+              id: line.authorID, name: names[line.authorID] ?? "メンバー",
+              photoID: faces[line.authorID] ?? "")
           },
           shifts: line.poll ? nil : line.days.first.map { GroupRoute.shifts(group, day: $0) },
           time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
+          writerPhoto: faces[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
           reactions: line.reactions, countedReactions: otherID != nil,
           pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
@@ -857,6 +860,13 @@ struct ChatScreen: View {
       chat.writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last })
   }
 
+  /// Everyone's photo as the group shows it, by id.
+  private var faces: [String: String] {
+    Dictionary(
+      chat.writers.map { ($0.userID, $0.deleted ? "" : $0.photoID) },
+      uniquingKeysWith: { _, last in last })
+  }
+
   /// Those in the group whose account is deleted, whose lines are gone.
   private var deletedIDs: Set<String> {
     Set(chat.writers.filter(\.deleted).map(\.userID))
@@ -891,7 +901,8 @@ struct ChatScreen: View {
               picked.append(PickedMember(id: member.userID, name: member.displayName))
             } label: {
               HStack(spacing: 12) {
-                LetterAvatar(name: member.displayName, size: 28)
+                MemberAvatar(
+                  name: member.displayName, photoID: member.photoID, groupID: group.id, size: 28)
                 Text(member.displayName)
                   .foregroundStyle(colors.textPrimary)
                   .lineLimit(1)
@@ -1436,6 +1447,8 @@ private struct LineView: View {
   /// The writer's name at the start of a run of others' lines, for their
   /// face.
   let writer: String?
+  /// The writer's photo, one of the group's; empty for none.
+  var writerPhoto = ""
   /// Their name shows over the run too, as in a group chat.
   let named: Bool
   /// It starts a run of one writer's lines, its bubble's corner drawn in.
@@ -1470,7 +1483,7 @@ private struct LineView: View {
         Group {
           if let writer {
             Button { onOpenProfile() } label: {
-              LetterAvatar(name: writer, size: Self.avatar)
+              MemberAvatar(name: writer, photoID: writerPhoto, groupID: groupID, size: Self.avatar)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(writer)のプロフィール")
@@ -1789,6 +1802,7 @@ struct BubbleShape: Shape {
 private struct ProfileOf: Identifiable {
   let id: String
   let name: String
+  var photoID = ""
 }
 
 /// Reporting a line or a member, their profile, and blocking them asked
@@ -1813,7 +1827,8 @@ private struct ReportAndBlock: ViewModifier {
       }
       .sheet(item: $profileOf, onDismiss: runNext) { person in
         MemberProfileSheet(
-          name: person.name, groupName: groupName, blocked: blocked.contains(person.id),
+          name: person.name, photoID: person.photoID, groupName: groupName,
+          blocked: blocked.contains(person.id),
           onReport: { next = { reporting = .member(id: person.id, name: person.name) } },
           onBlock: {
             next = {

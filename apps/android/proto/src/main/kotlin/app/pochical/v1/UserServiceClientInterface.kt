@@ -71,8 +71,9 @@ public interface UserServiceClientInterface {
   public suspend fun setChatNotifications(request: SetChatNotificationsRequest, headers: Headers = emptyMap()): ResponseMessage<SetChatNotificationsResponse>
 
   /**
-   *  Sets the user's usual name, empty for none; the devices hear of it as
-   *  a Profile change. INVALID_ARGUMENT over personName characters.
+   *  Sets the user's usual name and photo, each empty for none; the devices
+   *  hear of it as a Profile change. INVALID_ARGUMENT over personName
+   *  characters, or for a photo the user has not uploaded.
    */
   public suspend fun setProfile(request: SetProfileRequest, headers: Headers = emptyMap()): ResponseMessage<SetProfileResponse>
 }

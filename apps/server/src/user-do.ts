@@ -35,6 +35,7 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import type { GroupProfile } from "./group-do";
 import { isAhead } from "./hlc";
+import { sharePersonPhoto } from "./photos";
 import {
   acceptSyncSocket,
   answerKeepalive,
@@ -562,23 +563,26 @@ export class UserDO extends DurableObject<Env> {
     broadcastChanges(this.ctx, [chatSettingsChange(changed)]);
   }
 
-  /** The usual name, empty before the user sets one. */
-  profileName(): string {
-    return this.db.select().from(profile).get()?.name ?? "";
+  /** The usual name and photo, each empty before the user sets them. */
+  profileOf(): { name: string; photoId: string } {
+    const row = this.db.select().from(profile).get();
+    return { name: row?.name ?? "", photoId: row?.photoId ?? "" };
   }
 
   /**
-   * Sets the usual name, empty for none, sent to the user's devices and
-   * pushed to their groups.
+   * Sets the usual name and photo, each empty for none, sent to the user's
+   * devices and pushed to their groups. The photo it replaces, for the
+   * caller to delete; empty when none.
    */
-  setProfile(name: string): void {
+  setProfile(name: string, photoId: string): string {
+    const before = this.profileOf().photoId;
     const changed = this.ctx.storage.transactionSync(() => {
-      const row = { cursor: this.head() + 1, id: 1, name };
+      const row = { cursor: this.head() + 1, id: 1, name, photoId };
       return this.db
         .insert(profile)
         .values(row)
         .onConflictDoUpdate({
-          set: { cursor: row.cursor, name },
+          set: { cursor: row.cursor, name, photoId },
           target: profile.id,
         })
         .returning()
@@ -586,6 +590,7 @@ export class UserDO extends DurableObject<Env> {
     });
     broadcastChanges(this.ctx, [profileChange(changed)]);
     this.schedulePush();
+    return before === photoId ? "" : before;
   }
 
   /**
@@ -1015,6 +1020,14 @@ export class UserDO extends DurableObject<Env> {
     changes: Change[]
   ): Promise<void> {
     const group = this.env.GROUPS.getByName(groupId);
+    // The usual photo goes into the group's photos before the group hears
+    // of it, so its members can read it at once.
+    for (const { kind } of changes) {
+      if (kind.case === "profile" && kind.value.photoId !== "") {
+        // oxlint-disable-next-line no-await-in-loop -- one at most a push
+        await sharePersonPhoto(this.env, userId, kind.value.photoId, groupId);
+      }
+    }
     for (let at = 0; at < changes.length; at += VALUES_PER_PUSH) {
       const pushed = toBinary(
         ChangesSchema,
