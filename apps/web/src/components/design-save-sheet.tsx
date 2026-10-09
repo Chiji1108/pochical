@@ -134,7 +134,7 @@ const picture = {
   title: css({ fontSize: "15px", fontWeight: 600, margin: "0 4px 12px" }),
 };
 
-function stepTitle(step: Step, completion: boolean, monthLabel: string) {
+function stepTitle(step: Step, monthLabel: string) {
   if (step === "calendar") {
     return "端末カレンダーに追加";
   }
@@ -144,21 +144,18 @@ function stepTitle(step: Step, completion: boolean, monthLabel: string) {
   if (typeof step === "object") {
     return "保存しました";
   }
-  return completion
-    ? `${monthLabel}のシフトが揃いました`
-    : `${monthLabel}のシフトを保存`;
+  return `${monthLabel}のシフトを保存`;
 }
 
-// Saving a month: as a picture to show, or into the device calendar. It
-// also opens by itself when a month has just been filled in, the moment
-// people most want to keep it.
+// Saving a month: as a picture to show, or into the device calendar, from
+// the heading's corner. It never opens by itself: a filled month shows as
+// filled, and the corner is there whenever it is wanted.
 export function SaveSheet({
   open,
   onOpenChange,
   month,
   shiftCount,
   offCount,
-  completion,
   toCalendar = false,
   onImage,
 }: {
@@ -168,7 +165,6 @@ export function SaveSheet({
   // Days with a shift this month, and how many of them are days off.
   shiftCount: number;
   offCount: number;
-  completion: boolean;
   // Opened from カレンダーに追加: straight to choosing the calendar.
   toCalendar?: boolean;
   // Opens the picture's preview, where it is saved or shared.
@@ -193,7 +189,7 @@ export function SaveSheet({
   const monthLabel = formatMonth(month);
   const count = includeOff ? shiftCount : shiftCount - offCount;
   const calendar = deviceCalendars.find((item) => item.id === calendarId);
-  const title = stepTitle(step, completion, monthLabel);
+  const title = stepTitle(step, monthLabel);
   return (
     <Sheet label={title} onOpenChange={change} open={open}>
       <SheetHeading
@@ -210,7 +206,6 @@ export function SaveSheet({
       {step === "choose" && (
         <>
           <p className={sheetLead}>
-            {completion ? "お疲れさまでした。" : ""}
             画像にして見せたり、端末のカレンダーにまとめて入れたりできます。
           </p>
           <div className={save.actions}>
@@ -235,11 +230,6 @@ export function SaveSheet({
               端末カレンダーに追加
             </Button>
           </div>
-          {completion && (
-            <Button variant="subtle" onClick={close}>
-              あとで
-            </Button>
-          )}
         </>
       )}
       {step === "calendar" && (
