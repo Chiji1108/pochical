@@ -26,15 +26,25 @@ struct MonthChoiceSheet: View {
 
   var body: some View {
     let today = Day.today
-    VStack(spacing: 16) {
-      ZStack {
-        Text("月を選ぶ").font(.headline)
-        Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
-          .labelStyle(.iconOnly)
-          .buttonStyle(BarButton())
-          .foregroundStyle(colors.textPrimary)
-          .frame(maxWidth: .infinity, alignment: .leading)
+    NavigationStack {
+      ScrollView {
+        grid(today: today)
       }
+      .scrollBounceBehavior(.basedOnSize)
+      .navigationTitle("月を選ぶ")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+        }
+      }
+    }
+    .presentationDetents([.medium])
+  }
+
+  /// The year, turned with ‹ ›, over its twelve months.
+  private func grid(today: Day) -> some View {
+    VStack(spacing: 16) {
       HStack(spacing: 8) {
         Button("前の年", systemImage: "chevron.left") { year -= 1 }
           .disabled(year <= first.year)
@@ -83,7 +93,7 @@ struct MonthChoiceSheet: View {
       }
     }
     .padding(.horizontal, 20)
-    .padding(.top, 16)
+    .padding(.top, 8)
     .padding(.bottom, 20)
   }
 }
@@ -116,7 +126,7 @@ struct MonthTitleButton<Label: View>: View {
     }
     .buttonStyle(.plain)
     .accessibilityHint("押すと月を選べます")
-    .fittedSheet(isPresented: $choosing) {
+    .sheet(isPresented: $choosing) {
       MonthChoiceSheet(month: month, first: first, last: last, onPick: onPick)
     }
   }
@@ -138,7 +148,7 @@ struct TodayButton: View {
 }
 
 /// A day to pick, as a month of days (/design's InputDatePicker's sheet):
-/// × to close, the title, and 今日.
+/// the title, × to close and 今日.
 struct DayChoiceSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -147,33 +157,30 @@ struct DayChoiceSheet: View {
   let onPick: (Day) -> Void
 
   var body: some View {
-    VStack(spacing: 8) {
-      ZStack {
-        Text(title).font(.headline)
-        HStack {
+    NavigationStack {
+      ScrollView {
+        DatePicker(
+          title,
+          selection: Binding { day.date(in: .current) } set: { pick(Day($0, in: .current)) },
+          displayedComponents: .date
+        )
+        .datePickerStyle(.graphical)
+        .labelsHidden()
+        .padding(.horizontal, 20)
+      }
+      .scrollBounceBehavior(.basedOnSize)
+      .navigationTitle(title)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
           Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
-            .labelStyle(.iconOnly)
-            .buttonStyle(BarButton())
-            .foregroundStyle(colors.textPrimary)
-          Spacer()
+        }
+        ToolbarItem(placement: .primaryAction) {
           Button("今日") { pick(.today) }
-            .buttonStyle(.plain)
-            .font(.body.weight(.medium))
-            .foregroundStyle(colors.accentDefault)
-            .frame(minHeight: Metrics.touch)
         }
       }
-      DatePicker(
-        title,
-        selection: Binding { day.date(in: .current) } set: { pick(Day($0, in: .current)) },
-        displayedComponents: .date
-      )
-      .datePickerStyle(.graphical)
-      .labelsHidden()
     }
-    .padding(.horizontal, 20)
-    .padding(.top, 16)
-    .padding(.bottom, 12)
+    .presentationDetents([.medium])
   }
 
   private func pick(_ picked: Day) {

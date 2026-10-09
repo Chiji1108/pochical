@@ -82,7 +82,7 @@ struct TrayDateLabel: View {
     .accessibilityElement(children: .combine)
     .accessibilityLabel("入力する日付：\(day.monthDayText)")
     .accessibilityHint("押すと日付を選べます")
-    .fittedSheet(isPresented: $choosing) {
+    .sheet(isPresented: $choosing) {
       DayChoiceSheet(title: "入力する日付", day: day, onPick: onPick)
     }
   }

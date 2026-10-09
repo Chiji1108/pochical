@@ -194,7 +194,7 @@ struct CalendarScreen: View {
         }
       }
     }
-    .fittedSheet(isPresented: Binding { breakingDown != nil } set: { if !$0 { breakingDown = nil } }) {
+    .sheet(isPresented: Binding { breakingDown != nil } set: { if !$0 { breakingDown = nil } }) {
       if let month = breakingDown {
         let days = monthDays(month, calendar)
         MonthBreakdownSheet(
@@ -218,7 +218,7 @@ struct CalendarScreen: View {
     .onChange(of: gaps) { _, gaps in
       if gaps.isEmpty { askForReviewIfDue() }
     }
-    .fittedSheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
+    .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
       gapSheet(calendar)
     }
     .task {
