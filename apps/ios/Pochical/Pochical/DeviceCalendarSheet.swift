@@ -151,10 +151,11 @@ struct DeviceCalendarSheet: View {
   @State private var calendars = DeviceCalendars()
   @State private var calendarID: String?
   @State private var includeOff = false
-  /// The day's memo and people in each event's notes: on at first, and
-  /// kept as last left, so someone adding to a calendar shared with family
-  /// turns it off once.
-  @AppStorage("deviceCalendar.details") private var includeDetails = true
+  /// The days' memos, and who works them, put in too: each on at first
+  /// and kept as last left, so someone adding to a calendar shared with
+  /// family turns them off once.
+  @AppStorage("deviceCalendar.notes") private var includeNotes = true
+  @AppStorage("deviceCalendar.people") private var includePeople = true
   /// What was done, once added.
   @State private var done: String?
   @State private var failed = false
@@ -163,7 +164,7 @@ struct DeviceCalendarSheet: View {
     let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
     let events = ShiftEvents.month(
       month, days: shown, patterns: calendar.patternsByID, includeOff: includeOff,
-      notes: includeDetails ? notes : [:], people: includeDetails ? people(shown) : [:])
+      notes: includeNotes ? notes : [:], people: includePeople ? people(shown) : [:])
     NavigationStack {
       Form {
         switch calendars.access {
@@ -256,7 +257,14 @@ struct DeviceCalendarSheet: View {
       // from where the picked calendar's dot puts its words.
       .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
       Toggle("休みの日も入れる", isOn: $includeOff)
-      Toggle("メモと一緒に働く人も入れる", isOn: $includeDetails)
+      Toggle(isOn: $includeNotes) {
+        Text("メモも入れる")
+        Text("予定がない日は、メモだけの予定にします")
+      }
+      Toggle(isOn: $includePeople) {
+        Text("一緒に働く人も入れる")
+        Text("シフトの予定のメモ欄に入ります")
+      }
     } header: {
       Text("\(month.monthText)のシフトを、1日ずつ予定として入れます。")
         .textCase(nil)

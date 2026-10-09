@@ -20,25 +20,44 @@ public enum ShiftEvents {
   /// The month's days with a shift as events, days off only when asked:
   /// each at the day's own time, else its pattern's. `notes` and `people`,
   /// given only when asked for, are each day's memo and the names of those
-  /// on it, which go in the event's notes.
+  /// on it: they go in a shift's event's notes, and a day with a memo and
+  /// no shift's event gets one of its own, all day, named by the memo.
   public static func month(
     _ month: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], includeOff: Bool,
     notes: [Day: String] = [:], people: [Day: [String]] = [:]
   ) -> [ShiftEvent] {
     month.daysOfMonth.compactMap { day in
-      guard let entry = days[day], let pattern = patterns[entry.shift] else { return nil }
-      guard includeOff || !pattern.countsAsOff else { return nil }
-      let said = notesOf(memo: notes[day], people: people[day] ?? [])
-      let start = (entry.start ?? pattern.time?.start).flatMap(minutes)
-      let end = (entry.end ?? pattern.time?.end).flatMap(minutes)
-      guard let start, let end else {
-        return ShiftEvent(day: day, title: pattern.name, start: nil, end: nil, notes: said)
-      }
-      // A shift ending at or before its start ends the next day.
-      return ShiftEvent(
-        day: day, title: pattern.name, start: start, end: end > start ? end : end + 24 * 60,
-        notes: said)
+      shiftEvent(on: day, days: days, patterns: patterns, includeOff: includeOff,
+        notes: notes, people: people)
+        ?? notes[day].flatMap { memo in memoEvent(memo, on: day) }
     }
+  }
+
+  private static func shiftEvent(
+    on day: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], includeOff: Bool,
+    notes: [Day: String], people: [Day: [String]]
+  ) -> ShiftEvent? {
+    guard let entry = days[day], let pattern = patterns[entry.shift] else { return nil }
+    guard includeOff || !pattern.countsAsOff else { return nil }
+    let said = notesOf(memo: notes[day], people: people[day] ?? [])
+    let start = (entry.start ?? pattern.time?.start).flatMap(minutes)
+    let end = (entry.end ?? pattern.time?.end).flatMap(minutes)
+    guard let start, let end else {
+      return ShiftEvent(day: day, title: pattern.name, start: nil, end: nil, notes: said)
+    }
+    // A shift ending at or before its start ends the next day.
+    return ShiftEvent(
+      day: day, title: pattern.name, start: start, end: end > start ? end : end + 24 * 60,
+      notes: said)
+  }
+
+  /// A memo on a day with no shift's event: all day, named by its first
+  /// line, the whole memo in its notes when it runs longer.
+  private static func memoEvent(_ memo: String, on day: Day) -> ShiftEvent? {
+    let lines = memo.split(separator: "\n", omittingEmptySubsequences: true)
+    guard let first = lines.first else { return nil }
+    return ShiftEvent(
+      day: day, title: String(first), start: nil, end: nil, notes: lines.count > 1 ? memo : nil)
   }
 
   /// The memo, then 一緒に働く人：A、B on a line of its own.
