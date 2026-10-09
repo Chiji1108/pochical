@@ -14,6 +14,7 @@ import m0011 from './0011_push_tokens.sql';
 import m0012 from './0012_chat_mutes.sql';
 import m0013 from './0013_profile.sql';
 import m0014 from './0014_profile_photo.sql';
+import m0015 from './0015_membership_mark.sql';
 
   export default {
     journal,
@@ -32,7 +33,8 @@ m0010,
 m0011,
 m0012,
 m0013,
-m0014
+m0014,
+m0015
     }
   }
   

@@ -16,10 +16,16 @@ import {
 export const profile = sqliteTable(
   "profile",
   {
+    // The color slot of an icon or letters mark.
+    color: integer().notNull().default(0),
     cursor: integer().notNull().default(0),
     // Set when the group's mark is an emoji.
     emoji: text(),
+    // Set when the group's mark is a mark icon, by its name.
+    icon: text(),
     id: integer().primaryKey(),
+    // Set when the group's mark is letters.
+    letter: text(),
     name: text().notNull(),
   },
   (table) => [check("profile_single_row", sql`${table.id} = 1`)]

@@ -4,6 +4,8 @@ import type { CSSProperties } from "react";
 
 import { SHARE_IMAGE } from "../lib/site";
 import { paleSkyFromTop, themeSkyId } from "./design-surprise";
+import { InviteMark } from "./invite-mark";
+import type { InviteGroupMark } from "./invite-mark";
 
 // The picture an invitation link shows where it is shared (og:image): the
 // group it invites to, under the same ポチカル sky as the site's own share
@@ -13,7 +15,7 @@ import { paleSkyFromTop, themeSkyId } from "./design-surprise";
 
 export type InviteImageGroup = {
   name: string;
-  emoji: string;
+  mark: InviteGroupMark;
   memberCount: number;
 };
 
@@ -115,7 +117,9 @@ export function InviteShareImage({
         ポチカル
       </div>
       <div style={styles.group}>
-        <div style={styles.mark}>{group.emoji}</div>
+        <div style={styles.mark}>
+          <InviteMark mark={group.mark} size={124} />
+        </div>
         <div style={{ ...styles.name, fontSize: nameSize(group.name) }}>
           {group.name}
         </div>

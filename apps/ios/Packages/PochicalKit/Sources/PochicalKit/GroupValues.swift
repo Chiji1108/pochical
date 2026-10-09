@@ -239,9 +239,13 @@ public enum GroupSync {
     switch change.kind {
     case .groupProfile(let profile):
       // The list of groups shows the name and mark the group last said.
+      let mark = GroupMarkValue(profile.mark)
       try GroupRow.find(groupID).update {
         $0.name = profile.name
-        $0.emoji = profile.emoji
+        $0.emoji = mark.emoji
+        $0.icon = mark.icon
+        $0.letter = mark.letter
+        $0.color = mark.color
       }
       .execute(db)
     case .member(let member):

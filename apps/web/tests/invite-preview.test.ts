@@ -12,13 +12,13 @@ test("asks the server's InviteService over Connect", async () => {
   const recording: InviteFetch = async (input, init) => {
     requests.push(new Request(input, init));
     return await respond(200, {
-      groupEmoji: "🌿",
+      groupMark: { emoji: "🌿" },
       groupName: "同期",
       memberCount: 3,
     })(input, init);
   };
   expect(await fetchInvitePreview("Abcd2345", recording)).toEqual({
-    groupEmoji: "🌿",
+    groupMark: { color: 0, emoji: "🌿", icon: "", letter: "" },
     groupName: "同期",
     memberCount: 3,
     status: "valid",
@@ -29,11 +29,22 @@ test("asks the server's InviteService over Connect", async () => {
   );
   expect(await request?.json()).toEqual({ inviteCode: "Abcd2345" });
 });
-test("reads a group without an emoji mark", async () => {
+test("reads a group with an icon mark, or none", async () => {
+  expect(
+    await fetchInvitePreview(
+      "Abcd2345",
+      respond(200, {
+        groupMark: { color: 3, icon: "house" },
+        groupName: "同期",
+      })
+    )
+  ).toMatchObject({
+    groupMark: { color: 3, emoji: "", icon: "house", letter: "" },
+  });
   expect(
     await fetchInvitePreview("Abcd2345", respond(200, { groupName: "同期" }))
   ).toEqual({
-    groupEmoji: "",
+    groupMark: { color: 0, emoji: "", icon: "", letter: "" },
     groupName: "同期",
     memberCount: 0,
     status: "valid",

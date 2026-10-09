@@ -119,7 +119,7 @@ export const pair = async () => {
     "GroupService/CreateGroup",
     {
       displayName: "さくら",
-      emoji: "🍉",
+      mark: { emoji: "🍉" },
       name: "いとこ会",
       requestId: crypto.randomUUID(),
     },

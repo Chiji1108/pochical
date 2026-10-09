@@ -14,33 +14,39 @@ const getInvitePreview = async (inviteCode: string): Promise<Response> =>
 const addGroup = async (
   groupId: string,
   inviteCode: string,
-  emoji: string | null
+  mark: { emoji?: string; icon?: string; color?: number }
 ): Promise<void> => {
-  await env.GROUPS.getByName(groupId).setProfile({ emoji, name: "同期" });
+  await env.GROUPS.getByName(groupId).setProfile({
+    mark: { color: 0, emoji: "", icon: "", letter: "", ...mark },
+    name: "同期",
+  });
   await db.insert(invites).values({ code: inviteCode, groupId });
 };
 
 describe("InviteService.GetInvitePreview", () => {
   it("names the group a live code opens", async () => {
-    await addGroup("dokis", "Abcd2345", "🌿");
+    await addGroup("dokis", "Abcd2345", { emoji: "🌿" });
 
     const response = await getInvitePreview("Abcd2345");
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toStrictEqual({
-      groupEmoji: "🌿",
+      groupMark: { emoji: "🌿" },
       groupName: "同期",
     });
   });
 
-  it("leaves the emoji out for other marks", async () => {
-    await addGroup("photo-mark", "Photo234", null);
+  it("gives an icon mark with its color", async () => {
+    await addGroup("icon-mark", "Mark2345", { color: 3, icon: "house" });
 
-    const response = await getInvitePreview("Photo234");
-    await expect(response.json()).resolves.toStrictEqual({ groupName: "同期" });
+    const response = await getInvitePreview("Mark2345");
+    await expect(response.json()).resolves.toStrictEqual({
+      groupMark: { color: 3, icon: "house" },
+      groupName: "同期",
+    });
   });
 
   it("answers NOT_FOUND once the code is replaced", async () => {
-    await addGroup("remade", "Before23", "🌿");
+    await addGroup("remade", "Before23", { emoji: "🌿" });
     await db
       .update(invites)
       .set({ code: "After234" })

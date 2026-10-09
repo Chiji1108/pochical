@@ -14,6 +14,48 @@ public struct GroupRow: Hashable, Sendable, Identifiable {
   public var emoji: String
   /// When the user joined, in ms since the epoch: the list's order.
   public var joinedAtMs: Int64
+  /// The group's mark when it is a mark icon, by its name.
+  public var icon = ""
+  /// The group's mark when it is letters.
+  public var letter = ""
+  /// The icon's or letters' color slot.
+  public var color = 0
+
+  /// The group's mark, whichever it is.
+  public var mark: GroupMarkValue {
+    GroupMarkValue(emoji: emoji, icon: icon, letter: letter, color: color)
+  }
+}
+
+/// A group's mark (/design's GroupMark; proto GroupMark): one emoji, one of
+/// the mark icons, or letters, the last two in one of the mark palette's
+/// colors. Every member sees it as it is, whatever their style for shifts.
+public struct GroupMarkValue: Hashable, Sendable {
+  public var emoji = ""
+  public var icon = ""
+  public var letter = ""
+  public var color = 0
+
+  public init(emoji: String = "", icon: String = "", letter: String = "", color: Int = 0) {
+    self.emoji = emoji
+    self.icon = icon
+    self.letter = letter
+    self.color = color
+  }
+
+  init(_ wire: Pochical_V1_GroupMark) {
+    self.init(
+      emoji: wire.emoji, icon: wire.icon, letter: wire.letter, color: Int(wire.color))
+  }
+
+  var wire: Pochical_V1_GroupMark {
+    var mark = Pochical_V1_GroupMark()
+    mark.emoji = emoji
+    mark.icon = icon
+    mark.letter = letter
+    mark.color = UInt32(max(color, 0))
+    return mark
+  }
 }
 
 extension DatabaseMigrator {
@@ -30,6 +72,15 @@ extension DatabaseMigrator {
         """
       )
       .execute(db)
+    }
+    registerMigration("Keep groups' icon and letter marks") { db in
+      for column in [
+        #"ALTER TABLE "groups" ADD COLUMN "icon" TEXT NOT NULL DEFAULT ''"#,
+        #"ALTER TABLE "groups" ADD COLUMN "letter" TEXT NOT NULL DEFAULT ''"#,
+        #"ALTER TABLE "groups" ADD COLUMN "color" INTEGER NOT NULL DEFAULT 0"#,
+      ] {
+        try db.execute(sql: column)
+      }
     }
   }
 }
@@ -67,9 +118,10 @@ enum Groups {
       try Chats.dropUnread(of: membership.groupID, in: db)
       return
     }
+    let mark = GroupMarkValue(membership.mark)
     let row = GroupRow(
-      id: membership.groupID, name: membership.name, emoji: membership.emoji,
-      joinedAtMs: membership.joinedAtMs)
+      id: membership.groupID, name: membership.name, emoji: mark.emoji,
+      joinedAtMs: membership.joinedAtMs, icon: mark.icon, letter: mark.letter, color: mark.color)
     try GroupRow.upsert { row }.execute(db)
   }
 
@@ -143,12 +195,12 @@ public struct GroupCalls: Sendable {
   /// made once for each group the person sets out to make and sent again
   /// with every retry, so a retry after a lost answer makes no second one.
   /// The new group's id.
-  public func create(name: String, emoji: String, displayName: String, requestID: String)
-    async throws -> String
-  {
+  public func create(
+    name: String, mark: GroupMarkValue, displayName: String, requestID: String
+  ) async throws -> String {
     var request = Pochical_V1_CreateGroupRequest()
     request.name = name
-    request.emoji = emoji
+    request.mark = mark.wire
     request.displayName = displayName
     request.requestID = requestID
     return try await client.createGroup(request: request, headers: account.headers()).result
@@ -164,11 +216,11 @@ public struct GroupCalls: Sendable {
   }
 
   /// Gives the group a new name and mark, which every member sees.
-  public func rename(_ groupID: String, name: String, emoji: String) async throws {
+  public func rename(_ groupID: String, name: String, mark: GroupMarkValue) async throws {
     var request = Pochical_V1_RenameGroupRequest()
     request.groupID = groupID
     request.name = name
-    request.emoji = emoji
+    request.mark = mark.wire
     _ = try await client.renameGroup(request: request, headers: account.headers()).result.get()
   }
 

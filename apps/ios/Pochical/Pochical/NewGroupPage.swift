@@ -4,19 +4,20 @@ import SQLiteData
 import SwiftUI
 
 /// グループを作る (/design's NewGroupPage): its name, its mark and how the
-/// person is called in it. The mark follows the name until one is picked.
-/// Marks are emoji for now; /design's icons, letters and photos come when
-/// the server keeps them.
+/// person is called in it. The mark follows the name until one is picked:
+/// a fitting emoji, else its first letter in a color the user's other
+/// groups do not use yet. A photo comes when the server keeps groups'.
 struct NewGroupPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @FetchAll private var groups: [GroupRow]
   /// Called with the new group's id once it is made.
   let onMade: (String) -> Void
   @State private var name = ""
   @State private var myName = ""
   /// The usual name, which the field starts with (設定 › プロフィール).
   @Fetch(ProfileNameRequest()) private var usualName = ""
-  @State private var emoji = guessedEmoji(for: "")
+  @State private var mark = guessedMark(for: "", color: 0)
   /// Once picked, the mark stays when the name changes afterwards.
   @State private var picked = false
   /// Made once for the group being made and sent with every try, so a
@@ -35,16 +36,13 @@ struct NewGroupPage: View {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
         NavigationLink {
-          EmojiPage(emoji: emoji) { pick in
-            emoji = pick
+          GroupMarkPage(name: name, mark: mark) { pick in
+            mark = pick
             picked = true
           }
         } label: {
           LabeledContent("アイコン") {
-            Text(emoji)
-              .font(.system(size: 16))
-              .frame(width: 28, height: 28)
-              .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
+            GroupMarkBadge(mark: mark)
           }
         }
         LabeledContent("このグループでの名前") {
@@ -62,9 +60,9 @@ struct NewGroupPage: View {
     .onChange(of: usualName, initial: true) { _, usual in
       if myName.isEmpty { myName = usual }
     }
-    .onChange(of: name) { _, name in
+    .onChange(of: name, initial: true) { _, name in
       if !picked {
-        emoji = guessedEmoji(for: name)
+        mark = guessedMark(for: name, color: nextColor)
       }
     }
     .toolbar {
@@ -84,13 +82,20 @@ struct NewGroupPage: View {
     }
   }
 
+  /// The first color the user's groups do not use yet, as /design picks a
+  /// new group's.
+  private var nextColor: Int {
+    let used = Set(groups.map(\.color))
+    return colors.marks.indices.first { !used.contains($0) } ?? groups.count % colors.marks.count
+  }
+
   private func make() {
     making = true
     Task {
       defer { making = false }
       do {
         let made = try await groupCalls.create(
-          name: trimmed(name), emoji: emoji, displayName: trimmed(myName), requestID: requestID)
+          name: trimmed(name), mark: mark, displayName: trimmed(myName), requestID: requestID)
         onMade(made)
       } catch {
         ReviewPrompt.troubled = true
@@ -102,65 +107,4 @@ struct NewGroupPage: View {
 
 private func trimmed(_ text: String) -> String {
   text.trimmingCharacters(in: .whitespacesAndNewlines)
-}
-
-/// Words in a name that suggest an emoji (/design's groupHints).
-private let groupHints: [(emoji: String, words: [String])] = [
-  ("🏠", ["家族", "家", "夫婦"]),
-  ("🎓", ["学校", "同期", "クラス", "ゼミ"]),
-  ("💼", ["職場", "会社", "仕事", "病棟"]),
-  ("✈️", ["旅行", "旅"]),
-  ("🍙", ["ごはん", "飲み", "ランチ"]),
-  ("👭", ["友達", "友だち", "仲間"]),
-]
-
-/// The emoji offered for a group's mark, a row of eight for each kind
-/// (design/src/patterns.ts, groupMarkEmojis).
-let groupEmojis = ReadyPatterns.groupMarkEmojis
-
-/// From the name alone: a fitting emoji, else a star, where /design takes
-/// the name's first letter, a mark the server does not keep yet.
-private func guessedEmoji(for name: String) -> String {
-  groupHints.first { hint in hint.words.contains { name.contains($0) } }?.emoji ?? "⭐️"
-}
-
-/// The group's mark, picked from /design's emoji.
-struct EmojiPage: View {
-  @Environment(\.themeColors) private var colors
-  @Environment(\.dismiss) private var dismiss
-  let emoji: String
-  let onPick: (String) -> Void
-
-  var body: some View {
-    ScrollView {
-      // Eight a row, a kind to each, as a pattern's marks are offered.
-      LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 8), spacing: 6)
-      {
-        ForEach(groupEmojis, id: \.self) { choice in
-          let isPicked = choice == emoji
-          Button {
-            onPick(choice)
-            dismiss()
-          } label: {
-            Text(choice)
-              .font(.system(size: 24))
-              .frame(maxWidth: .infinity, minHeight: 44)
-              .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.lg))
-              .overlay {
-                if isPicked {
-                  RoundedRectangle(cornerRadius: Radius.lg)
-                    .strokeBorder(colors.accentDefault, lineWidth: 2)
-                }
-              }
-          }
-          .buttonStyle(.plain)
-          .accessibilityAddTraits(isPicked ? .isSelected : [])
-        }
-      }
-      .padding(16)
-    }
-    .background(colors.backgroundBase)
-    .navigationTitle("アイコン")
-    .navigationBarTitleDisplayMode(.inline)
-  }
 }

@@ -41,8 +41,14 @@ public nonisolated struct Pochical_V1_GetInvitePreviewResponse: Sendable {
 
   public var groupName: String = String()
 
-  /// The group's mark when it is an emoji; empty for other marks.
-  public var groupEmoji: String = String()
+  public var groupMark: Pochical_V1_GroupMark {
+    get {_groupMark ?? Pochical_V1_GroupMark()}
+    set {_groupMark = newValue}
+  }
+  /// Returns true if `groupMark` has been explicitly set.
+  public var hasGroupMark: Bool {self._groupMark != nil}
+  /// Clears the value of `groupMark`. Subsequent reads from it will return its default value.
+  public mutating func clearGroupMark() {self._groupMark = nil}
 
   /// How many are in the group, for 「{n}人」 on the page and cards.
   public var memberCount: UInt32 = 0
@@ -50,6 +56,8 @@ public nonisolated struct Pochical_V1_GetInvitePreviewResponse: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _groupMark: Pochical_V1_GroupMark? = nil
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -88,7 +96,7 @@ nonisolated extension Pochical_V1_GetInvitePreviewRequest: SwiftProtobuf.Message
 
 nonisolated extension Pochical_V1_GetInvitePreviewResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetInvitePreviewResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_name\0\u{3}group_emoji\0\u{3}member_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}group_name\0\u{4}\u{2}member_count\0\u{3}group_mark\0\u{b}group_emoji\0\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -97,29 +105,33 @@ nonisolated extension Pochical_V1_GetInvitePreviewResponse: SwiftProtobuf.Messag
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.groupName) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.groupEmoji) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.memberCount) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._groupMark) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.groupName.isEmpty {
       try visitor.visitSingularStringField(value: self.groupName, fieldNumber: 1)
-    }
-    if !self.groupEmoji.isEmpty {
-      try visitor.visitSingularStringField(value: self.groupEmoji, fieldNumber: 2)
     }
     if self.memberCount != 0 {
       try visitor.visitSingularUInt32Field(value: self.memberCount, fieldNumber: 3)
     }
+    try { if let v = self._groupMark {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_GetInvitePreviewResponse, rhs: Pochical_V1_GetInvitePreviewResponse) -> Bool {
     if lhs.groupName != rhs.groupName {return false}
-    if lhs.groupEmoji != rhs.groupEmoji {return false}
+    if lhs._groupMark != rhs._groupMark {return false}
     if lhs.memberCount != rhs.memberCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

@@ -2,6 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { ArrowUpRight, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
+import { InviteMark } from "../components/invite-mark";
 import { StoreLinks } from "../components/store-links";
 import { getInvite } from "../lib/invites";
 import { pageMeta } from "../lib/site";
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/invite/$inviteCode")({
         true
       );
     }
-    const group = `${loaderData.groupEmoji}「${loaderData.groupName}」`;
+    const group = `${loaderData.groupMark.emoji}「${loaderData.groupName}」`;
     return pageMeta(
       `${group}への招待`,
       "ポチカルでシフトを共有しましょう。",
@@ -55,11 +56,9 @@ function Invite() {
         <>
           {/* The group is what the page is about, so its mark leads, in a
               frame like the app's join screen; the header says ポチカル. */}
-          {invite.groupEmoji === "" ? null : (
-            <span aria-hidden="true" className="invite-mark">
-              {invite.groupEmoji}
-            </span>
-          )}
+          <span aria-hidden="true" className="invite-mark">
+            <InviteMark mark={invite.groupMark} size={66} />
+          </span>
           <p className="eyebrow">YOU'RE INVITED</p>
           <h1>{invite.groupName}</h1>
           {invite.memberCount > 0 && (

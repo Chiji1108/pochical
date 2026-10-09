@@ -3,6 +3,7 @@ syntax = "proto3";
 package pochical.v1;
 
 import "pochical/v1/chat.proto";
+import "pochical/v1/marks.proto";
 
 // Every binary WebSocket message from a client is one ClientFrame.
 message ClientFrame {
@@ -273,8 +274,9 @@ message Membership {
   string group_id = 1;
   // groupName characters at most (design/src/limits.ts).
   string name = 2;
-  // The group's mark when it is an emoji; empty for other marks.
-  string emoji = 3;
+  reserved 3;
+  reserved "emoji";
+  GroupMark mark = 6;
   // When the user joined, in ms since the epoch: the list's order.
   int64 joined_at_ms = 4;
   // The user left the group: it goes from their list, with what the
@@ -286,8 +288,9 @@ message Membership {
 message GroupProfile {
   // groupName characters at most (design/src/limits.ts).
   string name = 1;
-  // The group's mark when it is an emoji; empty for other marks.
-  string emoji = 2;
+  reserved 2;
+  reserved "emoji";
+  GroupMark mark = 3;
 }
 
 // Someone in the group, as they appear in it.

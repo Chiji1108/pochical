@@ -17,6 +17,7 @@ import type {
   RepeatOrder,
   RepeatOrders,
 } from "./gen/pochical/v1/sync_pb";
+import { markOfRow } from "./group-marks";
 import { compareClocks } from "./hlc";
 import type { Clock } from "./hlc";
 import type {
@@ -188,10 +189,10 @@ export const membershipChange = (row: MembershipRow): Change =>
     kind: {
       case: "membership",
       value: {
-        emoji: row.emoji ?? "",
         groupId: row.groupId,
         joinedAtMs: BigInt(row.joinedAt.getTime()),
         left: row.leftAt !== null,
+        mark: markOfRow(row),
         name: row.name,
       },
     },

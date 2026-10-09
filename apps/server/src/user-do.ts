@@ -34,6 +34,7 @@ import type {
   RepeatOrdersEdits,
 } from "./gen/pochical/v1/sync_pb";
 import type { GroupProfile } from "./group-do";
+import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
 import { sharePersonPhoto } from "./photos";
 import {
@@ -227,7 +228,7 @@ export class UserDO extends DurableObject<Env> {
       // A group left before starts again, its values pushed whole.
       const row = {
         cursor: this.head() + 1,
-        emoji: group.emoji,
+        ...markColumns(group.mark),
         groupId,
         joinedAt: new Date(),
         leftAt: null,
@@ -408,7 +409,11 @@ export class UserDO extends DurableObject<Env> {
       }
       return this.db
         .update(memberships)
-        .set({ cursor: this.head() + 1, emoji: group.emoji, name: group.name })
+        .set({
+          cursor: this.head() + 1,
+          name: group.name,
+          ...markColumns(group.mark),
+        })
         .where(eq(memberships.groupId, groupId))
         .returning()
         .get();

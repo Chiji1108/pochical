@@ -2,13 +2,14 @@ import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { INVITE_CODE } from "@pochical/design/invite";
 
+import type { InviteGroupMark } from "../components/invite-mark";
 import { InviteService } from "../gen/pochical/v1/invite_pb";
 
 export type InvitePreview =
   | {
       status: "valid";
       groupName: string;
-      groupEmoji: string;
+      groupMark: InviteGroupMark;
       memberCount: number;
     }
   | { status: "invalid" | "unavailable" };
@@ -40,12 +41,21 @@ export async function fetchInvitePreview(
     })
   );
   try {
-    const { groupEmoji, groupName, memberCount } =
-      await client.getInvitePreview(
-        { inviteCode: code },
-        { timeoutMs: TIMEOUT_MS }
-      );
-    return { groupEmoji, groupName, memberCount, status: "valid" };
+    const { groupMark, groupName, memberCount } = await client.getInvitePreview(
+      { inviteCode: code },
+      { timeoutMs: TIMEOUT_MS }
+    );
+    return {
+      groupMark: {
+        color: groupMark?.color ?? 0,
+        emoji: groupMark?.emoji ?? "",
+        icon: groupMark?.icon ?? "",
+        letter: groupMark?.letter ?? "",
+      },
+      groupName,
+      memberCount,
+      status: "valid",
+    };
   } catch (error) {
     const { code: reason } = ConnectError.from(error);
     const gone = reason === Code.NotFound || reason === Code.InvalidArgument;

@@ -59,31 +59,36 @@ public object GroupProfileKt {
     }
 
     /**
-     * ```
-     * The group's mark when it is an emoji; empty for other marks.
-     * ```
-     *
-     * `string emoji = 2 [json_name = "emoji"];`
+     * `.pochical.v1.GroupMark mark = 3 [json_name = "mark"];`
      */
-    public var emoji: kotlin.String
-      @kotlin.jvm.JvmName("getEmoji")
-        get() = _builder.emoji
-      @kotlin.jvm.JvmName("setEmoji")
+    public var mark: app.pochical.v1.GroupMark
+      @kotlin.jvm.JvmName("getMark")
+        get() = _builder.mark
+      @kotlin.jvm.JvmName("setMark")
         set(value) {
-        _builder.emoji = value
+        _builder.mark = value
       }
     /**
-     * ```
-     * The group's mark when it is an emoji; empty for other marks.
-     * ```
-     *
-     * `string emoji = 2 [json_name = "emoji"];`
+     * `.pochical.v1.GroupMark mark = 3 [json_name = "mark"];`
      */
-    public fun clearEmoji() {
-      _builder.clearEmoji()
+    public fun clearMark() {
+      _builder.clearMark()
     }
+    /**
+     * `.pochical.v1.GroupMark mark = 3 [json_name = "mark"];`
+     * @return Whether the mark field is set.
+     */
+    public fun hasMark(): kotlin.Boolean {
+      return _builder.hasMark()
+    }
+
+    public val GroupProfileKt.Dsl.markOrNull: app.pochical.v1.GroupMark?
+      get() = _builder.markOrNull
   }
 }
 public inline fun app.pochical.v1.GroupProfile.copy(block: `app.pochical.v1`.GroupProfileKt.Dsl.() -> kotlin.Unit): app.pochical.v1.GroupProfile =
   `app.pochical.v1`.GroupProfileKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.GroupProfileOrBuilder.markOrNull: app.pochical.v1.GroupMark?
+  get() = if (hasMark()) getMark() else null
 

@@ -43,7 +43,7 @@ export const userIdOf = async (token: string): Promise<string> => {
 export const memberOf = async (groupId: string): Promise<string> => {
   const token = await signInAnonymously();
   await env.USERS.getByName(await userIdOf(token)).addMembership(groupId, {
-    emoji: "🍉",
+    mark: { color: 0, emoji: "🍉", icon: "", letter: "" },
     name: "テスト",
   });
   return token;

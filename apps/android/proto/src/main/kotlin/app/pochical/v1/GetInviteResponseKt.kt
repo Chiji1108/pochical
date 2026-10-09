@@ -64,29 +64,31 @@ public object GetInviteResponseKt {
     }
 
     /**
-     * ```
-     * The group's mark when it is an emoji; empty for other marks.
-     * ```
-     *
-     * `string group_emoji = 3 [json_name = "groupEmoji"];`
+     * `.pochical.v1.GroupMark group_mark = 7 [json_name = "groupMark"];`
      */
-    public var groupEmoji: kotlin.String
-      @kotlin.jvm.JvmName("getGroupEmoji")
-        get() = _builder.groupEmoji
-      @kotlin.jvm.JvmName("setGroupEmoji")
+    public var groupMark: app.pochical.v1.GroupMark
+      @kotlin.jvm.JvmName("getGroupMark")
+        get() = _builder.groupMark
+      @kotlin.jvm.JvmName("setGroupMark")
         set(value) {
-        _builder.groupEmoji = value
+        _builder.groupMark = value
       }
     /**
-     * ```
-     * The group's mark when it is an emoji; empty for other marks.
-     * ```
-     *
-     * `string group_emoji = 3 [json_name = "groupEmoji"];`
+     * `.pochical.v1.GroupMark group_mark = 7 [json_name = "groupMark"];`
      */
-    public fun clearGroupEmoji() {
-      _builder.clearGroupEmoji()
+    public fun clearGroupMark() {
+      _builder.clearGroupMark()
     }
+    /**
+     * `.pochical.v1.GroupMark group_mark = 7 [json_name = "groupMark"];`
+     * @return Whether the groupMark field is set.
+     */
+    public fun hasGroupMark(): kotlin.Boolean {
+      return _builder.hasGroupMark()
+    }
+
+    public val GetInviteResponseKt.Dsl.groupMarkOrNull: app.pochical.v1.GroupMark?
+      get() = _builder.groupMarkOrNull
 
     /**
      * An uninstantiable, behaviorless type to represent the field in
@@ -240,4 +242,7 @@ public object GetInviteResponseKt {
 }
 public inline fun app.pochical.v1.GetInviteResponse.copy(block: `app.pochical.v1`.GetInviteResponseKt.Dsl.() -> kotlin.Unit): app.pochical.v1.GetInviteResponse =
   `app.pochical.v1`.GetInviteResponseKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.GetInviteResponseOrBuilder.groupMarkOrNull: app.pochical.v1.GroupMark?
+  get() = if (hasGroupMark()) getGroupMark() else null
 

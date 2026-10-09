@@ -34,7 +34,7 @@ const inviteImage = async (
   }
   try {
     const png = await drawInviteImage({
-      emoji: invite.groupEmoji,
+      mark: invite.groupMark,
       memberCount: invite.memberCount,
       name: invite.groupName,
     });

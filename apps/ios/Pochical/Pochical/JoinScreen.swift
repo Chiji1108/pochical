@@ -71,10 +71,9 @@ struct JoinScreen: View {
       List {
         Section {
           VStack(spacing: 12) {
-            Text(details.emoji)
-              .font(.system(size: 40))
-              .frame(width: 76, height: 76)
+            GroupMarkView(mark: details.mark, size: 76)
               .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
+              .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
               .accessibilityHidden(true)
             Text(details.name)
               .font(.title.bold())

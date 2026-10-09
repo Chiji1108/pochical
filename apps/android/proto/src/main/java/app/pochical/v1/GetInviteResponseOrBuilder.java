@@ -35,24 +35,15 @@ public interface GetInviteResponseOrBuilder extends
       getGroupNameBytes();
 
   /**
-   * <pre>
-   * The group's mark when it is an emoji; empty for other marks.
-   * </pre>
-   *
-   * <code>string group_emoji = 3 [json_name = "groupEmoji"];</code>
-   * @return The groupEmoji.
+   * <code>.pochical.v1.GroupMark group_mark = 7 [json_name = "groupMark"];</code>
+   * @return Whether the groupMark field is set.
    */
-  java.lang.String getGroupEmoji();
+  boolean hasGroupMark();
   /**
-   * <pre>
-   * The group's mark when it is an emoji; empty for other marks.
-   * </pre>
-   *
-   * <code>string group_emoji = 3 [json_name = "groupEmoji"];</code>
-   * @return The bytes for groupEmoji.
+   * <code>.pochical.v1.GroupMark group_mark = 7 [json_name = "groupMark"];</code>
+   * @return The groupMark.
    */
-  com.google.protobuf.ByteString
-      getGroupEmojiBytes();
+  app.pochical.v1.GroupMark getGroupMark();
 
   /**
    * <pre>

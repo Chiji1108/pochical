@@ -43,6 +43,8 @@ import {
   members,
   profile,
 } from "./group-do-schema";
+import { markColumns, markOfRow } from "./group-marks";
+import type { MarkValue } from "./group-marks";
 import {
   memberDayChange,
   memberPatternChange,
@@ -69,8 +71,7 @@ import {
 /** What the group shows of itself to members and to invite links. */
 export type GroupProfile = {
   name: string;
-  // Set when the group's mark is an emoji.
-  emoji: string | null;
+  mark: MarkValue;
 };
 
 /**
@@ -92,16 +93,13 @@ const shownName = (ownName: string | null, usualName: string, before = "") =>
 /** How a join went: in now, in already, or kept out of a full group. */
 type JoinResult = "added" | "already" | "full";
 
-type ProfileRow = Pick<
-  typeof profile.$inferSelect,
-  "cursor" | "emoji" | "name"
->;
+type ProfileRow = { cursor: number } & GroupProfile;
 type MemberRow = typeof members.$inferSelect;
 
-const profileChange = ({ cursor, emoji, name }: ProfileRow): Change =>
+const profileChange = ({ cursor, mark, name }: ProfileRow): Change =>
   create(ChangeSchema, {
     cursor: BigInt(cursor),
-    kind: { case: "groupProfile", value: { emoji: emoji ?? "", name } },
+    kind: { case: "groupProfile", value: { mark, name } },
   });
 
 const memberChange = ({
@@ -160,11 +158,8 @@ export class GroupDO extends DurableObject<Env> {
 
   /** The group's name and mark, or null before the group is set up. */
   getProfile(): GroupProfile | null {
-    const row = this.db
-      .select({ emoji: profile.emoji, name: profile.name })
-      .from(profile)
-      .get();
-    return row ?? null;
+    const row = this.db.select().from(profile).get();
+    return row === undefined ? null : { mark: markOfRow(row), name: row.name };
   }
 
   /**
@@ -458,14 +453,15 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /** The group's name and mark at the next cursor, as a change. */
-  private writeProfile({ name, emoji }: GroupProfile): Change {
+  private writeProfile({ name, mark }: GroupProfile): Change {
     const cursor = this.nextCursor();
+    const row = { cursor, name, ...markColumns(mark) };
     this.db
       .insert(profile)
-      .values({ cursor, emoji, id: 1, name })
-      .onConflictDoUpdate({ set: { cursor, emoji, name }, target: profile.id })
+      .values({ id: 1, ...row })
+      .onConflictDoUpdate({ set: row, target: profile.id })
       .run();
-    return profileChange({ cursor, emoji, name });
+    return profileChange({ cursor, mark, name });
   }
 
   /**
@@ -861,7 +857,13 @@ export class GroupDO extends DurableObject<Env> {
             .from(profile)
             .where(gt(profile.cursor, cursor))
             .all()
-            .map(profileChange),
+            .map((row) =>
+              profileChange({
+                cursor: row.cursor,
+                mark: markOfRow(row),
+                name: row.name,
+              })
+            ),
       },
       {
         after: (cursor) =>
