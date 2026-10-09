@@ -295,12 +295,14 @@ export class GroupDO extends DurableObject<Env> {
 
   /**
    * Takes the member out: their row stays as left, at the next cursor, so
-   * devices catching up hear of it, and their shifts go. Their sockets
-   * here close. Leaving when not in it changes nothing.
+   * devices catching up hear of it, and their shifts go, and the photos the
+   * group showed of them, as it hears of them no more. Their sockets here
+   * close. Leaving when not in it changes nothing.
    */
   removeMember(userId: string): void {
     const left = this.ctx.storage.transactionSync(() => {
-      if (!this.isMember(userId)) {
+      const known = this.db.select().from(members).where(inGroup(userId)).get();
+      if (known === undefined) {
         return undefined;
       }
       this.db.delete(memberDays).where(eq(memberDays.userId, userId)).run();
@@ -312,18 +314,29 @@ export class GroupDO extends DurableObject<Env> {
         .delete(memberRepeatOrders)
         .where(eq(memberRepeatOrders.userId, userId))
         .run();
-      return this.db
+      const row = this.db
         .update(members)
-        .set({ cursor: this.nextCursor(), leftAt: new Date() })
+        .set({
+          cursor: this.nextCursor(),
+          leftAt: new Date(),
+          ownPhoto: null,
+          usualPhoto: "",
+        })
         .where(eq(members.userId, userId))
         .returning()
         .get();
+      return row === undefined ? undefined : { known, row };
     });
     if (left === undefined) {
       return;
     }
+    for (const photoId of [left.known.usualPhoto, left.known.ownPhoto ?? ""]) {
+      if (photoId !== "") {
+        this.forgetPhoto(photoId, null);
+      }
+    }
     closeUserSockets(this.ctx, userId);
-    broadcastChanges(this.ctx, [memberChange(left)]);
+    broadcastChanges(this.ctx, [memberChange(left.row)]);
   }
 
   /**

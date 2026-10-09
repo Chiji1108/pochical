@@ -125,4 +125,28 @@ describe("members' photos", () => {
       env.PHOTOS.head(personPhotoKey(makerId, photoId))
     ).resolves.toBeNull();
   });
+
+  it("go from a group its member leaves", async () => {
+    const { groupId, guest, maker, makerId } = await pair();
+    const photoId = crypto.randomUUID();
+    await upload(`/v1/me/photos/${photoId}`, maker);
+    await call("UserService/SetProfile", { name: "さくら", photoId }, maker);
+    await push(makerId);
+    await vi.waitFor(async () => {
+      await expect(
+        env.PHOTOS.head(photoKey(groupId, photoId))
+      ).resolves.not.toBeNull();
+    });
+    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    await group.frames.next();
+    await call("GroupService/LeaveGroup", { groupId }, maker);
+    expect(
+      memberOf(changesIn(await group.frames.next()), makerId)
+    ).toMatchObject([{ kind: { value: { left: true, photoId: "" } } }]);
+    await vi.waitFor(async () => {
+      await expect(
+        env.PHOTOS.head(photoKey(groupId, photoId))
+      ).resolves.toBeNull();
+    });
+  });
 });

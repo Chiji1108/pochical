@@ -1,8 +1,16 @@
-import { textLimits } from "@pochical/design/limits";
+import { GROUP_MAX_MEMBERS, textLimits } from "@pochical/design/limits";
+import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { call, signInAnonymously, userIdOf } from "./helpers";
-import { changesIn, device, pair, push, syncSocket } from "./sync-helpers";
+import {
+  changesIn,
+  device,
+  pair,
+  push,
+  settled,
+  syncSocket,
+} from "./sync-helpers";
 
 const profilesIn = (changes: ReturnType<typeof changesIn>) =>
   changes.filter(({ kind }) => kind.case === "profile");
@@ -109,5 +117,34 @@ describe("the usual name", () => {
     expect(mine).toMatchObject([
       { kind: { value: { displayName: "はると", ownName: false } } },
     ]);
+  });
+
+  it("is not taken from a join refused as the group is full", async () => {
+    const { groupId, inviteCode } = await pair();
+    const group = env.GROUPS.getByName(groupId);
+    await Promise.all(
+      Array.from(
+        { length: GROUP_MAX_MEMBERS - 2 },
+        async (_, index) =>
+          await group.addMember({
+            ownName: null,
+            userId: `filler-${index}`,
+            usualName: `メンバー${index}`,
+            usualPhoto: "",
+          })
+      )
+    );
+    const late = await signInAnonymously();
+    const refused = await call(
+      "GroupService/JoinGroup",
+      { displayName: "はると", inviteCode },
+      late
+    );
+    expect(refused.status).toBe(429);
+    // Nothing to catch up on: the pong comes first.
+    const phone = await device(late);
+    await expect(settled(phone.socket, phone.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
   });
 });

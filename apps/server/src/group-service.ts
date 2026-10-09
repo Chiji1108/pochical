@@ -53,22 +53,41 @@ const namesFor = async (
   usualName: string;
   ownName: string | null;
   usualPhoto: string;
+  adopted: boolean;
 }> => {
-  const users = env.USERS.getByName(userId);
-  const { name: usualName, photoId: usualPhoto } = await users.profileOf();
+  const { name: usualName, photoId: usualPhoto } =
+    await env.USERS.getByName(userId).profileOf();
   const name = typed.trim();
   if (name === "") {
     if (usualName === "") {
       throw new ConnectError("display_name is empty", Code.InvalidArgument);
     }
-    return { ownName: null, usualName, usualPhoto };
+    return { adopted: false, ownName: null, usualName, usualPhoto };
   }
   requireText(name, textLimits.personName, "display_name");
   if (usualName === "" && adopt) {
-    await users.setProfile(name, usualPhoto);
-    return { ownName: null, usualName: name, usualPhoto };
+    return { adopted: true, ownName: null, usualName: name, usualPhoto };
   }
-  return { ownName: name === usualName ? null : name, usualName, usualPhoto };
+  return {
+    adopted: false,
+    ownName: name === usualName ? null : name,
+    usualName,
+    usualPhoto,
+  };
+};
+
+/** A name given with no usual one yet becomes it, once the group has them. */
+const adoptName = async (
+  userId: string,
+  {
+    adopted,
+    usualName,
+    usualPhoto,
+  }: { adopted: boolean; usualName: string; usualPhoto: string }
+): Promise<void> => {
+  if (adopted) {
+    await env.USERS.getByName(userId).setProfile(usualName, usualPhoto);
+  }
 };
 
 /** The caller's id, when they are in the group; PERMISSION_DENIED otherwise. */
@@ -110,8 +129,14 @@ export const registerGroupService = (router: ConnectRouter): void => {
       await shareUsualPhoto(user.id, names.usualPhoto, groupId);
       await env.GROUPS.getByName(groupId).create(
         { emoji, name },
-        { ...names, userId: user.id }
+        {
+          ownName: names.ownName,
+          userId: user.id,
+          usualName: names.usualName,
+          usualPhoto: names.usualPhoto,
+        }
       );
+      await adoptName(user.id, names);
       await users.addMembership(groupId, { emoji, name });
       const inviteCode = await liveInviteCode(env.DB, groupId);
       return create(CreateGroupResponseSchema, { groupId, inviteCode });
@@ -154,13 +179,19 @@ export const registerGroupService = (router: ConnectRouter): void => {
       // The Group DO decides; the user's DO then keeps its copy. Both are
       // idempotent, so a retry after a failure in between completes it.
       const group = env.GROUPS.getByName(groupId);
-      const result = await group.addMember({ ...names, userId: user.id });
+      const result = await group.addMember({
+        ownName: names.ownName,
+        userId: user.id,
+        usualName: names.usualName,
+        usualPhoto: names.usualPhoto,
+      });
       if (result === "full") {
         throw new ConnectError(
           `The group has its most members (${GROUP_MAX_MEMBERS})`,
           Code.ResourceExhausted
         );
       }
+      await adoptName(user.id, names);
       const profile = await group.getProfile();
       if (profile === null) {
         throw noGroupOfCode();
