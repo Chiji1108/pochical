@@ -3,10 +3,9 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 
-// 設定 › 働き方 (/design's WorkStylePage, RepeatEditorPage and
+// 設定 › 繰り返し (/design's RepeatPage, RepeatEditorPage and
 // StopRepeatPage; spec/shift-patterns.md, Repeating orders): the order in
-// use, or none, starting a new one, correcting it or stopping it, and a
-// new job.
+// use, or none, starting a new one, correcting it or stopping it.
 
 /// The milliseconds now, for an edit's clock.
 private func nowMs() -> Int64 {
@@ -46,9 +45,9 @@ struct RepeatOrdersRequest: FetchKeyRequest, Hashable {
   }
 }
 
-/// 設定's 働き方 row: how long the order in use runs, or 繰り返しなし.
-func workSummary(_ orders: [RepeatOrder]) -> String {
-  orders.current.map { "\($0.sequence.count)日ごとの繰り返し" } ?? "繰り返しなし"
+/// 設定's 繰り返し row: how long the order in use runs, or なし.
+func repeatSummary(_ orders: [RepeatOrder]) -> String {
+  orders.current.map { "\($0.sequence.count)日ごと" } ?? "なし"
 }
 
 /// A sequence in a line, runs of a pattern counted: 日勤×2・夕勤×2.
@@ -66,8 +65,8 @@ private func sequenceLabel(_ sequence: [PatternID], _ patterns: [PatternID: Patt
   return runs.map { $0.1 > 1 ? "\($0.0)×\($0.1)" : $0.0 }.joined(separator: "・")
 }
 
-/// 設定 › 働き方.
-struct WorkStylePage: View {
+/// 設定 › 繰り返し.
+struct RepeatPage: View {
   @Environment(\.themeColors) private var colors
   @Dependency(\.defaultDatabase) private var database
   @Fetch(WorkValues()) private var values = WorkValues.Value()
@@ -105,8 +104,6 @@ struct WorkStylePage: View {
           NavigationLink("繰り返しをやめる") {
             StopRepeatPage()
           }
-        } header: {
-          Text("繰り返し")
         } footer: {
           Text("異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。")
         }
@@ -118,27 +115,11 @@ struct WorkStylePage: View {
           } label: {
             LabeledContent("繰り返しを設定する", value: "なし")
           }
-        } header: {
-          Text("繰り返し")
         } footer: {
           Text("当番・非番や交代勤務のように順番で回るシフトを、カレンダーに自動で入れられます。違う日だけ、カレンダーで変えられます。")
         }
         .settingsRows()
       }
-
-      Section("仕事") {
-        NavigationLink {
-          JobChangePage()
-        } label: {
-          VStack(alignment: .leading, spacing: 2) {
-            Text("新しい仕事にする")
-            Text("シフトパターンも選び直す")
-              .font(.footnote)
-              .foregroundStyle(colors.textSecondary)
-          }
-        }
-      }
-      .settingsRows()
 
       if values.orders.count > 1 {
         Section("これまで") {
@@ -154,7 +135,7 @@ struct WorkStylePage: View {
       }
     }
     .settingsList()
-    .navigationTitle("働き方")
+    .navigationTitle("繰り返し")
   }
 
   private func setHolidaysOff(_ on: Bool) {

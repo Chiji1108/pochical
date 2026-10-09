@@ -151,7 +151,7 @@ private struct TrayPress: ButtonStyle {
 
 /// A key for each pattern, as ポチポチ入力's tray has them: up to
 /// `patternsPerPage` on a page, fewer in fewer columns, more paged and
-/// swiped. The tray and 働き方's order are entered with them alike.
+/// swiped. The tray and 繰り返し's order are entered with them alike.
 struct PatternKeys: View {
   @Environment(\.themeColors) private var colors
   let patterns: [Pattern]

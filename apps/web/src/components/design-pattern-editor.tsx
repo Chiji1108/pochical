@@ -117,7 +117,15 @@ export function timeText({ time }: Pattern) {
 
 // The person's patterns: what ポチポチ入力, the calendar and their groups
 // show. A change here is theirs at once.
-export function PatternsPage({ onBack }: { onBack: () => void }) {
+// The person's patterns, and below them 新しい仕事にする, which chooses them
+// again with the repeat.
+export function PatternsPage({
+  onBack,
+  onJob,
+}: {
+  onBack: () => void;
+  onJob: () => void;
+}) {
   const style = useContext(ShiftMarkStyleContext);
   const items = useUser((state) => state.patterns);
   const setItems = useUser((state) => state.setPatterns);
@@ -263,6 +271,17 @@ export function PatternsPage({ onBack }: { onBack: () => void }) {
         >
           パターンを追加
         </AddButton>
+      )}
+      {!sorting && (
+        <Section title="仕事">
+          <List>
+            <ListRow
+              detail="シフトパターンと繰り返しを選び直す"
+              label="新しい仕事にする"
+              onClick={onJob}
+            />
+          </List>
+        </Section>
       )}
       {sorting && (
         <Note>
@@ -543,7 +562,7 @@ function PatternEditor({
       </Section>
       {!isNew && inOrder && (
         <Note>
-          繰り返しの並びに入っているので、削除できません。先に「働き方」で並びを変えてください。
+          繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。
         </Note>
       )}
       {!(isNew || inOrder) && (

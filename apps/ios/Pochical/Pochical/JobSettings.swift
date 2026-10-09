@@ -3,7 +3,7 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 
-// 設定 › 働き方 › 新しい仕事にする (/design's JobChangePage and
+// 設定 › シフトパターン › 新しい仕事にする (/design's JobChangePage and
 // WorkSetupSteps; spec/shift-patterns.md, Changing jobs): the day the new
 // job starts, then the questions はじめの設定 asks, ending with its
 // patterns taking over and its order from that day.
@@ -76,7 +76,7 @@ struct JobChangePage: View {
         selection: Binding { date(of: start) } set: { start = Day($0, in: .current) },
         displayedComponents: .date)
     } header: {
-      Text("新しい仕事の働き方とシフトパターンを、はじめの設定と同じ質問で選び直します。")
+      Text("新しい仕事の繰り返しとシフトパターンを、はじめの設定と同じ質問で選び直します。")
         .textCase(nil)
     } footer: {
       Text("前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。")

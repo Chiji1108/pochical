@@ -189,7 +189,7 @@ export function RepeatEditorPage({
   return (
     <div className={settingsParts.fullPage}>
       <PageHeader
-        back="働き方"
+        back="繰り返し"
         inlineTitle={
           <OrderTitle anchor={anchor} sequence={sequence} title={text.title} />
         }
@@ -287,9 +287,13 @@ export function JobChangePage({
   }
   return (
     <>
-      <PageHeader back="働き方" onBack={onBack} title="新しい仕事にする" />
+      <PageHeader
+        back="シフトパターン"
+        onBack={onBack}
+        title="新しい仕事にする"
+      />
       <Note>
-        新しい仕事の働き方とシフトパターンを、はじめの設定と同じ質問で選び直します。
+        新しい仕事の繰り返しとシフトパターンを、はじめの設定と同じ質問で選び直します。
       </Note>
       <div className={settingsParts.field}>
         <span className={fieldLabel({ place: "row" })}>新しい仕事の初日</span>
@@ -320,15 +324,14 @@ export function JobChangePage({
 }
 
 // Whether shifts repeat is all that tells ways of working apart: someone
-// whose shifts repeat still changes a day with ポチポチ入力. So there is no
-// work style to pick, only an order to set, change or stop, and a new job,
-// which asks for the shift patterns again as onboarding does.
-export function WorkStylePage({
+// whose shifts repeat still changes a day on the calendar. So there is no
+// work style to pick, only an order to set, change or stop. A new job,
+// which asks for the shift patterns again, is under シフトパターン.
+export function RepeatPage({
   rules,
   onBack,
   onRepeat,
   onStop,
-  onJob,
   onNew,
   onFix,
   onHolidaysOff,
@@ -337,7 +340,6 @@ export function WorkStylePage({
   onBack: () => void;
   onRepeat: () => void;
   onStop: () => void;
-  onJob: () => void;
   onNew: () => void;
   onFix: () => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
@@ -345,7 +347,7 @@ export function WorkStylePage({
   const current = rules.at(-1);
   return (
     <>
-      <PageHeader back="設定" onBack={onBack} title="働き方" />
+      <PageHeader back="設定" onBack={onBack} title="繰り返し" />
       {isRepeating(rules) && current ? (
         <RepeatDetails
           current={current}
@@ -356,25 +358,18 @@ export function WorkStylePage({
         />
       ) : (
         <>
-          <ListSection title="繰り返し">
+          <List>
             <ListRow
               label="繰り返しを設定する"
               onClick={onRepeat}
               value="なし"
             />
-          </ListSection>
+          </List>
           <Note>
             当番・非番や交代勤務のように順番で回るシフトを、カレンダーに自動で入れられます。違う日だけ、カレンダーで変えられます。
           </Note>
         </>
       )}
-      <ListSection title="仕事">
-        <ListRow
-          detail="シフトパターンも選び直す"
-          label="新しい仕事にする"
-          onClick={onJob}
-        />
-      </ListSection>
       <RuleHistory rules={rules} />
     </>
   );
@@ -391,7 +386,7 @@ export function StopRepeatPage({
   const [start, setStart] = useState(nextMonthStart);
   return (
     <>
-      <PageHeader back="働き方" onBack={onBack} title="繰り返しをやめる" />
+      <PageHeader back="繰り返し" onBack={onBack} title="繰り返しをやめる" />
       <div className={settingsParts.field}>
         <span className={fieldLabel({ place: "row" })}>やめる日</span>
         <InputDatePicker

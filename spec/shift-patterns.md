@@ -64,7 +64,7 @@ A person may follow a repeating order: a sequence of their patterns laid over th
 - Starting a new order, or correcting the one in use, clears the days' own pattern and times from its start, so the new order shows there; memos and people stay (`spec/vectors/own-days.json`, givenToOrder).
 - Everything that reads days reads them this way, the day's own value, else its order's: the month, counting days off, 次の休み, widgets, reminders and a group's tables.
 
-Whether shifts repeat is all that tells ways of working apart: someone whose shifts repeat still changes a day with ポチポチ入力, as a day's own value wins over its order. So the apps never ask how shifts are decided, only whether they repeat (シフトに繰り返しはありますか？, はじめの設定 and 新しい仕事にする), and 設定 › 働き方 shows the order in use, or none, with what can change about it: 繰り返しを設定する with none; with one, 祝日は休みにする, 新しい繰り返しにする from a day, 今の繰り返しを直す, and 繰り返しをやめる from a day, which starts an order with an empty sequence. 新しい仕事にする, which asks for the patterns again, sits apart under 仕事, and past orders under これまで.
+Whether shifts repeat is all that tells ways of working apart: someone whose shifts repeat still changes a day with ポチポチ入力, as a day's own value wins over its order. So the apps never ask how shifts are decided, only whether they repeat (シフトに繰り返しはありますか？, はじめの設定 and 新しい仕事にする), and 設定 has no work style, only 繰り返し, which shows the order in use, or none, with what can change about it: 繰り返しを設定する with none; with one, 祝日は休みにする, 新しい繰り返しにする from a day, 今の繰り返しを直す, and 繰り返しをやめる from a day, which starts an order with an empty sequence; past orders under これまで. 新しい仕事にする, which chooses the patterns again with the repeat, is under シフトパターン, below the list.
 
 ### Typing an order
 
