@@ -54,6 +54,9 @@ struct CalendarScreen: View {
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
   private static let monthsAround = 120
+  /// The day's sheet as it opens: up to just under the folded week, which
+  /// stays in sight to tap.
+  private static let underWeek = PresentationDetent.fraction(0.7)
   /// Past this share of the way, a pull let go unfolds the month; short of
   /// it, the week folds back. A flick faster than `unfoldFlick`, in points
   /// a second, goes the way it is flicked wherever it is let go.
@@ -116,47 +119,9 @@ struct CalendarScreen: View {
           }
           .onEnded(pullEnded),
         including: opened == nil ? .none : .all)
-      if let day = opened {
-        let entry = calendar.shown(from: day, through: day)[day]
-        // The day's detail is new for each day, its fields with it, inside
-        // what shows as the week opens.
-        VStack(spacing: 0) {
-          DayDetail(
-            day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-            coworkers: ordered(coworkerRows, by: coworkerOrder),
-            onChange: { entry in
-              write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
-            },
-            onNoteChange: { note in
-              write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
-            },
-            // Someone added from a day is on that day too.
-            onAddCoworker: { name in
-              write { db, now in
-                let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-                if var entry {
-                  entry.people = (entry.people ?? []) + [id]
-                  try OwnValues.set(day, to: entry, now: now, in: db)
-                }
-              }
-            },
-            onStep: { step in opened = day.adding(days: step) }
-          )
-          .id(day)
-        }
-        .padding(.top, 16)
-        // A line from edge to edge between the week and the day, as a
-        // bar's runs.
-        .overlay(alignment: .top) {
-          Rectangle().fill(colors.separator).frame(height: 1)
-        }
-        .padding(.top, 12)
-        .opacity(max(1 - 2 * pull, 0))
-        // It shows as the month folds into the week, and goes at once as
-        // the month unfolds, as /design's does.
-        .transition(
-          .asymmetric(
-            insertion: .opacity.animation(Springs.quick.delay(0.1)), removal: .identity))
+      if opened != nil {
+        // The day's detail is a sheet over the week (below).
+        Spacer(minLength: 0)
       } else {
         Spacer(minLength: 0)
         bottom(calendar)
@@ -196,6 +161,44 @@ struct CalendarScreen: View {
         withAnimation(Springs.standard) {
           shownMonth = day.firstOfMonth
         }
+      }
+    }
+    // A day's detail rises as the system's sheet over the folded week, half
+    // the screen with the week still to tap, and goes down as it is swiped
+    // away, the month unfolding behind it.
+    .sheet(
+      isPresented: Binding { opened != nil } set: { open in
+        if !open { withAnimation(folding) { opened = nil } }
+      }
+    ) {
+      if let day = opened {
+        let entry = calendar.shown(from: day, through: day)[day]
+      DayDetail(
+        day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+        coworkers: ordered(coworkerRows, by: coworkerOrder),
+        onChange: { entry in
+          write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+        },
+        onNoteChange: { note in
+          write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
+        },
+        // Someone added from a day is on that day too.
+        onAddCoworker: { name in
+          write { db, now in
+            let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+            if var entry {
+              entry.people = (entry.people ?? []) + [id]
+              try OwnValues.set(day, to: entry, now: now, in: db)
+            }
+          }
+        },
+        onStep: { step in opened = day.adding(days: step) }
+      )
+        .id(day)
+        .presentationDetents([Self.underWeek, .large])
+        .presentationBackgroundInteraction(.enabled(upThrough: Self.underWeek))
+        .presentationDragIndicator(.visible)
+        .presentationBackground(colors.backgroundBase)
       }
     }
     .sheet(isPresented: Binding { breakingDown != nil } set: { if !$0 { breakingDown = nil } }) {

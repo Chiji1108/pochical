@@ -100,6 +100,8 @@ struct DayDetail: View {
       .buttonStyle(.borderless)
       .tint(colors.textPrimary)
       .padding(.horizontal, 20)
+      // Clear of the sheet's grabber.
+      .padding(.top, 20)
     }
     .tint(colors.accentDefault)
     .onAppear { draft = note ?? "" }
