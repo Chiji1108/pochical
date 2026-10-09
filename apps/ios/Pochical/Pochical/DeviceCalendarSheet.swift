@@ -299,7 +299,7 @@ struct DeviceCalendarSheet: View {
       try calendars.add(events, of: month, by: meID, to: calendarID)
       let name = calendars.calendar(calendarID)?.title ?? ""
       withAnimation {
-        done = "「\(name)」に\(month.monthText)のシフトを\(events.count)件追加しました。"
+        done = "「\(name)」に\(month.monthText)の予定を\(events.count)件追加しました。"
       }
     } catch {
       ReviewPrompt.troubled = true

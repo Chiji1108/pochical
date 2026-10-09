@@ -268,7 +268,7 @@ export function SaveSheet({
             disabled={!calendar || count === 0}
             onClick={() => {
               setStep({
-                done: `「${calendar?.name}」に${monthLabel}のシフトを${count}件追加しました。`,
+                done: `「${calendar?.name}」に${monthLabel}の予定を${count}件追加しました。`,
               });
             }}
           >
