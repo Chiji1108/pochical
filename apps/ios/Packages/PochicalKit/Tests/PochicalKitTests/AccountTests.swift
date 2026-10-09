@@ -117,3 +117,26 @@ private let server = URL(string: "http://localhost:8787")!
   #expect(nonce.hashed != nonce.raw)
   #expect(SignInNonce().raw != nonce.raw)
 }
+
+@Test func signsInToTheAccountsUserKeepingItsSessionFromNowOn() async throws {
+  let store = MemoryStore("anonymous")
+  let fake = FakeServer(token: "theirs")
+  let account = Account(server: server, store: store, send: fake.send)
+  #expect(try await account.signInApple(idToken: "id-token", nonce: "raw") == "anonymous")
+  #expect(store.token() == "theirs")
+  let request = try #require(fake.requests.withLock { $0.first })
+  #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/sign-in/social")
+  #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer anonymous")
+  #expect(!request.httpShouldHandleCookies)
+}
+
+@Test func signingOutEndsTheSessionAndForgetsIt() async throws {
+  let store = MemoryStore("kept")
+  let fake = FakeServer()
+  let account = Account(server: server, store: store, send: fake.send)
+  try await account.signOut()
+  #expect(store.token() == nil)
+  let request = try #require(fake.requests.withLock { $0.first })
+  #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/sign-out")
+  #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer kept")
+}

@@ -19,7 +19,7 @@ struct AccountRow: View {
         if linked == nil {
           Text("ログインしていません")
         } else {
-          Label("Apple", systemImage: "apple.logo")
+          ProviderName()
         }
       }
     }
@@ -37,6 +37,17 @@ struct AccountRow: View {
   }
 }
 
+/// The provider signed in with, its mark before its name, as 設定's
+/// アプリアイコン row shows its icon.
+private struct ProviderName: View {
+  var body: some View {
+    HStack(spacing: 6) {
+      Image(systemName: "apple.logo")
+      Text("Apple")
+    }
+  }
+}
+
 /// アカウント (/design's AccountPage): before signing in, what it keeps and
 /// the way in; after, which account it is. Signing in is optional, so the
 /// page never pushes it beyond saying what it keeps safe.
@@ -49,16 +60,29 @@ struct AccountPage: View {
   @Dependency(\.defaultDatabase) private var database
   @Binding var linked: LinkedAccount?
   @State private var confirmingDelete = false
+  @State private var confirmingSignOut = false
   @State private var deleted = false
+  /// The choice of which side to keep, when the Apple account is in use.
+  @State private var choosing: Choice?
+
+  /// An Apple account in use by another user, and what each side holds.
+  struct Choice: Identifiable {
+    let idToken: String
+    let nonce: String
+    let email: String?
+    let account: Holdings
+    let device: Holdings
+    var id: String { idToken }
+  }
   /// The nonce the sign-in under way was asked with.
   @State private var nonce = SignInNonce()
   @State private var busy = false
   @State private var problem: Problem?
 
   enum Problem: String, Identifiable {
-    case inUse = "このAppleアカウントは、ほかの端末のデータですでに使われています。"
     case failed = "ログインできませんでした。時間をおいてもう一度お試しください。"
     case notDeleted = "削除できませんでした。時間をおいてもう一度お試しください。"
+    case notSignedOut = "ログアウトできませんでした。時間をおいてもう一度お試しください。"
     var id: String { rawValue }
   }
 
@@ -70,7 +94,7 @@ struct AccountPage: View {
             Text(linked.email ?? "")
               .foregroundStyle(colors.textTertiary)
           } label: {
-            Label("Apple", systemImage: "apple.logo")
+            ProviderName()
           }
         } header: {
           Text("ログイン中")
@@ -78,7 +102,12 @@ struct AccountPage: View {
           Text("シフトとグループはこのアカウントに保存され、ほかの端末でも同じデータを使えます。")
         }
         .settingsRows()
-        // Asks first, on the spot, so no arrow as for a page.
+        // Each asks first, on the spot, so no arrow as for a page.
+        Section {
+          Button("ログアウト", role: .destructive) { confirmingSignOut = true }
+            .disabled(busy)
+        }
+        .settingsRows()
         Section {
           Button("アカウントを削除", role: .destructive) { confirmingDelete = true }
             .disabled(busy)
@@ -104,6 +133,25 @@ struct AccountPage: View {
     }
     .alert("アカウントを削除しました", isPresented: $deleted) {
       Button("OK", role: .cancel) {}
+    }
+    .alert("ログアウトしますか？", isPresented: $confirmingSignOut) {
+      Button("キャンセル", role: .cancel) {}
+      Button("ログアウト", role: .destructive) { Task { await signOut() } }
+    } message: {
+      Text("この端末からデータが消えます。もう一度ログインすれば、同じデータを使えます。")
+    }
+    .alert(
+      "どちらのデータを使いますか？",
+      isPresented: Binding { choosing != nil } set: { if !$0 { choosing = nil } },
+      presenting: choosing
+    ) { choice in
+      Button("アカウントのデータを使う") { Task { await useAccount(choice) } }
+      Button("この端末のデータを使う") { Task { await keepDevice(choice) } }
+      Button("キャンセル", role: .cancel) {}
+    } message: { choice in
+      Text(
+        "このAppleアカウントには、ほかの端末で使っていたデータがあります。\n\nアカウント：\(Self.summary(choice.account))\nこの端末：\(Self.summary(choice.device))\n\n使わないほうのデータは削除されます。"
+      )
     }
     .overlay {
       if busy { ProgressView() }
@@ -147,7 +195,7 @@ struct AccountPage: View {
       .opacity(busy ? 0.5 : 1)
       .settingsOnPage()
     } footer: {
-      Text("はじめてなら、この端末のデータがそのまま引き継がれます。ログインしなくても、この端末ではそのまま使えます。")
+      Text("はじめてなら、この端末のデータがそのまま引き継がれます。すでにアカウントがあれば、そのデータを開きます。ログインしなくても、この端末ではそのまま使えます。")
     }
   }
 
@@ -173,16 +221,116 @@ struct AccountPage: View {
     }
     busy = true
     defer { busy = false }
+    let email = LinkedAccount.email(in: idToken)
     switch try? await account.linkApple(idToken: idToken, nonce: nonce.raw) {
     case .linked:
-      let account = LinkedAccount(provider: .apple, email: LinkedAccount.email(in: idToken))
-      LinkedAccount.keep(account)
-      withAnimation { linked = account }
+      keepLinked(email: email)
     case .inUse:
-      problem = .inUse
+      await chooseSide(idToken: idToken, nonce: nonce.raw, email: email)
     case nil:
       problem = .failed
     }
+  }
+
+  private func keepLinked(email: String?) {
+    let account = LinkedAccount(provider: .apple, email: email)
+    LinkedAccount.keep(account)
+    withAnimation { linked = account }
+  }
+
+  /// The Apple account is another user's already (spec/sync-protocol.md,
+  /// Switching to an account in use): a side that holds nothing goes
+  /// without asking, the device's first, as a new phone's first sign-in
+  /// does; else the person chooses, seeing what each holds.
+  private func chooseSide(idToken: String, nonce: String, email: String?) async {
+    guard let held = try? await groupCalls.peekAccount(appleIDToken: idToken, nonce: nonce),
+      let here = try? await database.read({ try Holdings.onDevice(in: $0) })
+    else {
+      problem = .failed
+      return
+    }
+    let choice = Choice(idToken: idToken, nonce: nonce, email: email, account: held, device: here)
+    if here.isEmpty {
+      await useAccount(choice)
+    } else if held.isEmpty {
+      await keepDevice(choice)
+    } else {
+      choosing = choice
+    }
+  }
+
+  /// アカウントのデータを使う: signed in to the account's user, the device's
+  /// own deleted, and the device catching up from the account.
+  private func useAccount(_ choice: Choice) async {
+    busy = true
+    defer { busy = false }
+    // Not to connect as the account's user meanwhile, and send it what
+    // the device's own outbox holds.
+    await userSocket?.stop()
+    guard
+      let before = try? await account.signInApple(idToken: choice.idToken, nonce: choice.nonce)
+    else {
+      problem = .failed
+      await userSocket?.start()
+      return
+    }
+    // The device's user, left behind: everything of it goes.
+    try? await groupCalls.deleteAccount(signedInAs: before)
+    await forgetDevice()
+    keepLinked(email: choice.email)
+    await userSocket?.startAfresh()
+  }
+
+  /// この端末のデータを使う: the account's user deleted, and the Apple
+  /// account linked here instead.
+  private func keepDevice(_ choice: Choice) async {
+    busy = true
+    defer { busy = false }
+    do {
+      try await groupCalls.takeAccount(appleIDToken: choice.idToken, nonce: choice.nonce)
+      keepLinked(email: choice.email)
+    } catch {
+      problem = .failed
+    }
+  }
+
+  /// ログアウト: the session ends, and the device goes on as someone new,
+  /// holding nothing of the user; signing in again brings it all back.
+  private func signOut() async {
+    busy = true
+    defer { busy = false }
+    // What waits to be sent goes first, so signing in again finds it.
+    await userSocket?.finishSending()
+    await userSocket?.stop()
+    do {
+      try await account.signOut()
+    } catch {
+      problem = .notSignedOut
+      await userSocket?.start()
+      return
+    }
+    await forgetDevice()
+    withAnimation { linked = nil }
+    await userSocket?.startAfresh()
+  }
+
+  /// The device holding nothing of the user, as a new install does: its
+  /// own settings stay.
+  private func forgetDevice() async {
+    await userSocket?.stop()
+    try? await database.write { try LocalData.erase(in: $0) }
+    LocalData.eraseFiles()
+    WidgetCenter.shared.reloadAllTimelines()
+  }
+
+  /// What one side holds, in a few words.
+  private static func summary(_ held: Holdings) -> String {
+    var parts: [String] = []
+    if held.shiftDays > 0 { parts.append("シフト\(held.shiftDays)日") }
+    if held.repeating { parts.append("繰り返しの設定") }
+    if held.coworkers > 0 { parts.append("一緒に働く人\(held.coworkers)人") }
+    if held.groups > 0 { parts.append("グループ\(held.groups)つ") }
+    return parts.isEmpty ? "なし" : parts.joined(separator: "、")
   }
 
   /// Deletes the account (spec/sync-protocol.md, Deleting an account):
@@ -207,11 +355,8 @@ struct AccountPage: View {
       problem = .notDeleted
       return
     }
-    await userSocket?.stop()
-    try? await database.write { try LocalData.erase(in: $0) }
     try? await account.forget()
-    LocalData.eraseFiles()
-    WidgetCenter.shared.reloadAllTimelines()
+    await forgetDevice()
     await userSocket?.startAfresh()
     withAnimation { linked = nil }
     deleted = true

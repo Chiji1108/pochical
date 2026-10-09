@@ -24,6 +24,22 @@ public interface UserServiceClientInterface {
   public suspend fun deleteAccount(request: DeleteAccountRequest, headers: Headers = emptyMap()): ResponseMessage<DeleteAccountResponse>
 
   /**
+   *  What the account a Sign in with Apple ID token is linked to holds,
+   *  when it is another user's than the caller (spec/sync-protocol.md,
+   *  Switching to an account in use): the ID token, with the nonce it was
+   *  asked with, proves the person holds it. NOT_FOUND when the account is
+   *  no other user's; UNAUTHENTICATED for a token that does not check out.
+   */
+  public suspend fun peekAccount(request: PeekAccountRequest, headers: Headers = emptyMap()): ResponseMessage<PeekAccountResponse>
+
+  /**
+   *  Keeps this device's data: the account's user is deleted, everything
+   *  of it with it, and its Sign in with Apple account linked to the caller
+   *  instead, in one call. As PeekAccount for the token.
+   */
+  public suspend fun takeAccount(request: TakeAccountRequest, headers: Headers = emptyMap()): ResponseMessage<TakeAccountResponse>
+
+  /**
    *  Who the token belongs to, for the apps to check a stored session.
    */
   public suspend fun getMe(request: GetMeRequest, headers: Headers = emptyMap()): ResponseMessage<GetMeResponse>

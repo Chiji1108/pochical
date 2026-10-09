@@ -16,6 +16,22 @@ service UserService {
     option idempotency_level = IDEMPOTENT;
   }
 
+  // What the account a Sign in with Apple ID token is linked to holds,
+  // when it is another user's than the caller (spec/sync-protocol.md,
+  // Switching to an account in use): the ID token, with the nonce it was
+  // asked with, proves the person holds it. NOT_FOUND when the account is
+  // no other user's; UNAUTHENTICATED for a token that does not check out.
+  rpc PeekAccount(PeekAccountRequest) returns (PeekAccountResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Keeps this device's data: the account's user is deleted, everything
+  // of it with it, and its Sign in with Apple account linked to the caller
+  // instead, in one call. As PeekAccount for the token.
+  rpc TakeAccount(TakeAccountRequest) returns (TakeAccountResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
   // Who the token belongs to, for the apps to check a stored session.
   rpc GetMe(GetMeRequest) returns (GetMeResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
@@ -94,3 +110,27 @@ message DeleteAccountRequest {
 }
 
 message DeleteAccountResponse {}
+
+message PeekAccountRequest {
+  string apple_id_token = 1;
+  string nonce = 2;
+}
+
+// What a user holds that the person entered, for telling a few taps tried
+// from months of use.
+message PeekAccountResponse {
+  // Days with a shift of their own.
+  int32 shift_days = 1;
+  // A repeating order is set.
+  bool repeating = 2;
+  int32 coworkers = 3;
+  // Groups they are in.
+  int32 groups = 4;
+}
+
+message TakeAccountRequest {
+  string apple_id_token = 1;
+  string nonce = 2;
+}
+
+message TakeAccountResponse {}

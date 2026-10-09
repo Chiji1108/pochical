@@ -94,7 +94,7 @@ public actor Account {
   public typealias Send = @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
   let server: URL
-  private let store: TokenStore
+  let store: TokenStore
   let send: Send
   /// A sign-in under way, which callers at the same time wait on rather
   /// than each making a user.

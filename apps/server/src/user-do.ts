@@ -1,7 +1,17 @@
 import { create, toBinary } from "@bufbuild/protobuf";
 import { syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
-import { and, eq, gt, inArray, isNull, max } from "drizzle-orm";
+import {
+  and,
+  count as rowCount,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  max,
+  ne,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
@@ -11,6 +21,7 @@ import type { Alert, Sent } from "./apns";
 import { hasKey, SHARED_DAY_FIELDS } from "./day-values";
 import {
   ChangesSchema,
+  DayField,
   ServerError_Code,
   SupportAnsweredSchema,
 } from "./gen/pochical/v1/sync_pb";
@@ -76,6 +87,9 @@ import {
   notifyingCount,
   unreadCountChange,
 } from "./user-do-values";
+
+/** The count a `select({ n: rowCount() })` gives. */
+const counted = (rows: { n: number }[]): number => rows[0]?.n ?? 0;
 
 /** How much of an answer from Pochical's people its notification shows. */
 const SUPPORT_PREVIEW = 200;
@@ -301,6 +315,50 @@ export class UserDO extends DurableObject<Env> {
    * Whether the user is in the group or was once, so a leaving whose
    * second step failed can be finished.
    */
+  /**
+   * What the user holds that the person entered (spec/sync-protocol.md,
+   * Switching to an account in use): days with a shift, whether a
+   * repeating order is set, coworkers, and the groups they are in.
+   */
+  holdings(): {
+    shiftDays: number;
+    repeating: boolean;
+    coworkers: number;
+    groups: number;
+  } {
+    const shiftDays = counted(
+      this.db
+        .select({ n: rowCount() })
+        .from(dayFields)
+        .where(
+          and(
+            eq(dayFields.field, DayField.PATTERN),
+            isNotNull(dayFields.value),
+            ne(dayFields.value, "")
+          )
+        )
+        .all()
+    );
+    const named = counted(
+      this.db
+        .select({ n: rowCount() })
+        .from(coworkers)
+        .where(isNotNull(coworkers.name))
+        .all()
+    );
+    const groups = counted(
+      this.db
+        .select({ n: rowCount() })
+        .from(memberships)
+        .where(isNull(memberships.leftAt))
+        .all()
+    );
+    const order = this.db.select().from(repeatOrders).get();
+    // Set when its timeline holds any order at all.
+    const repeating = order !== undefined && /\[\s*\{/u.test(order.data);
+    return { coworkers: named, groups, repeating, shiftDays };
+  }
+
   /** Every group the user was ever in, left ones too. */
   groupsEver(): string[] {
     return this.db

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/user.proto.
  */
 export const file_pochical_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIjoKGFJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIPCgdzYW5kYm94GAIgASgIIhsKGVJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiNQoRU2V0QmxvY2tlZFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIPCgdibG9ja2VkGAIgASgIIhQKElNldEJsb2NrZWRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiMwoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCWFub255bW91cxgCIAEoCCI4ChREZWxldGVBY2NvdW50UmVxdWVzdBIgChhhcHBsZV9hdXRob3JpemF0aW9uX2NvZGUYASABKAkiFwoVRGVsZXRlQWNjb3VudFJlc3BvbnNlMrgECgtVc2VyU2VydmljZRJbCg1EZWxldGVBY2NvdW50EiEucG9jaGljYWwudjEuRGVsZXRlQWNjb3VudFJlcXVlc3QaIi5wb2NoaWNhbC52MS5EZWxldGVBY2NvdW50UmVzcG9uc2UiA5ACAhJDCgVHZXRNZRIZLnBvY2hpY2FsLnYxLkdldE1lUmVxdWVzdBoaLnBvY2hpY2FsLnYxLkdldE1lUmVzcG9uc2UiA5ACARJSCgpTZXRCbG9ja2VkEh4ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVzcG9uc2UiA5ACAhJnChFSZWdpc3RlclB1c2hUb2tlbhIlLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBomLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiA5ACAhJYCgxTZXRDaGF0TXV0ZWQSIC5wb2NoaWNhbC52MS5TZXRDaGF0TXV0ZWRSZXF1ZXN0GiEucG9jaGljYWwudjEuU2V0Q2hhdE11dGVkUmVzcG9uc2UiA5ACAhJwChRTZXRDaGF0Tm90aWZpY2F0aW9ucxIoLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVxdWVzdBopLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVzcG9uc2UiA5ACAkJpCg9hcHAucG9jaGljYWwudjFCCVVzZXJQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
+  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIjoKGFJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIPCgdzYW5kYm94GAIgASgIIhsKGVJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiNQoRU2V0QmxvY2tlZFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIPCgdibG9ja2VkGAIgASgIIhQKElNldEJsb2NrZWRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiMwoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCWFub255bW91cxgCIAEoCCI4ChREZWxldGVBY2NvdW50UmVxdWVzdBIgChhhcHBsZV9hdXRob3JpemF0aW9uX2NvZGUYASABKAkiFwoVRGVsZXRlQWNjb3VudFJlc3BvbnNlIjsKElBlZWtBY2NvdW50UmVxdWVzdBIWCg5hcHBsZV9pZF90b2tlbhgBIAEoCRINCgVub25jZRgCIAEoCSJfChNQZWVrQWNjb3VudFJlc3BvbnNlEhIKCnNoaWZ0X2RheXMYASABKAUSEQoJcmVwZWF0aW5nGAIgASgIEhEKCWNvd29ya2VycxgDIAEoBRIOCgZncm91cHMYBCABKAUiOwoSVGFrZUFjY291bnRSZXF1ZXN0EhYKDmFwcGxlX2lkX3Rva2VuGAEgASgJEg0KBW5vbmNlGAIgASgJIhUKE1Rha2VBY2NvdW50UmVzcG9uc2Uy5gUKC1VzZXJTZXJ2aWNlElsKDURlbGV0ZUFjY291bnQSIS5wb2NoaWNhbC52MS5EZWxldGVBY2NvdW50UmVxdWVzdBoiLnBvY2hpY2FsLnYxLkRlbGV0ZUFjY291bnRSZXNwb25zZSIDkAICElUKC1BlZWtBY2NvdW50Eh8ucG9jaGljYWwudjEuUGVla0FjY291bnRSZXF1ZXN0GiAucG9jaGljYWwudjEuUGVla0FjY291bnRSZXNwb25zZSIDkAIBElUKC1Rha2VBY2NvdW50Eh8ucG9jaGljYWwudjEuVGFrZUFjY291bnRSZXF1ZXN0GiAucG9jaGljYWwudjEuVGFrZUFjY291bnRSZXNwb25zZSIDkAICEkMKBUdldE1lEhkucG9jaGljYWwudjEuR2V0TWVSZXF1ZXN0GhoucG9jaGljYWwudjEuR2V0TWVSZXNwb25zZSIDkAIBElIKClNldEJsb2NrZWQSHi5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVxdWVzdBofLnBvY2hpY2FsLnYxLlNldEJsb2NrZWRSZXNwb25zZSIDkAICEmcKEVJlZ2lzdGVyUHVzaFRva2VuEiUucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXF1ZXN0GiYucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXNwb25zZSIDkAICElgKDFNldENoYXRNdXRlZBIgLnBvY2hpY2FsLnYxLlNldENoYXRNdXRlZFJlcXVlc3QaIS5wb2NoaWNhbC52MS5TZXRDaGF0TXV0ZWRSZXNwb25zZSIDkAICEnAKFFNldENoYXROb3RpZmljYXRpb25zEigucG9jaGljYWwudjEuU2V0Q2hhdE5vdGlmaWNhdGlvbnNSZXF1ZXN0GikucG9jaGljYWwudjEuU2V0Q2hhdE5vdGlmaWNhdGlvbnNSZXNwb25zZSIDkAICQmkKD2FwcC5wb2NoaWNhbC52MUIJVXNlclByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
 
 /**
  * @generated from message pochical.v1.SetChatMutedRequest
@@ -229,6 +229,104 @@ export const DeleteAccountResponseSchema: GenMessage<DeleteAccountResponse> = /*
   messageDesc(file_pochical_v1_user, 11);
 
 /**
+ * @generated from message pochical.v1.PeekAccountRequest
+ */
+export type PeekAccountRequest = Message<"pochical.v1.PeekAccountRequest"> & {
+  /**
+   * @generated from field: string apple_id_token = 1;
+   */
+  appleIdToken: string;
+
+  /**
+   * @generated from field: string nonce = 2;
+   */
+  nonce: string;
+};
+
+/**
+ * Describes the message pochical.v1.PeekAccountRequest.
+ * Use `create(PeekAccountRequestSchema)` to create a new message.
+ */
+export const PeekAccountRequestSchema: GenMessage<PeekAccountRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 12);
+
+/**
+ * What a user holds that the person entered, for telling a few taps tried
+ * from months of use.
+ *
+ * @generated from message pochical.v1.PeekAccountResponse
+ */
+export type PeekAccountResponse = Message<"pochical.v1.PeekAccountResponse"> & {
+  /**
+   * Days with a shift of their own.
+   *
+   * @generated from field: int32 shift_days = 1;
+   */
+  shiftDays: number;
+
+  /**
+   * A repeating order is set.
+   *
+   * @generated from field: bool repeating = 2;
+   */
+  repeating: boolean;
+
+  /**
+   * @generated from field: int32 coworkers = 3;
+   */
+  coworkers: number;
+
+  /**
+   * Groups they are in.
+   *
+   * @generated from field: int32 groups = 4;
+   */
+  groups: number;
+};
+
+/**
+ * Describes the message pochical.v1.PeekAccountResponse.
+ * Use `create(PeekAccountResponseSchema)` to create a new message.
+ */
+export const PeekAccountResponseSchema: GenMessage<PeekAccountResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 13);
+
+/**
+ * @generated from message pochical.v1.TakeAccountRequest
+ */
+export type TakeAccountRequest = Message<"pochical.v1.TakeAccountRequest"> & {
+  /**
+   * @generated from field: string apple_id_token = 1;
+   */
+  appleIdToken: string;
+
+  /**
+   * @generated from field: string nonce = 2;
+   */
+  nonce: string;
+};
+
+/**
+ * Describes the message pochical.v1.TakeAccountRequest.
+ * Use `create(TakeAccountRequestSchema)` to create a new message.
+ */
+export const TakeAccountRequestSchema: GenMessage<TakeAccountRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 14);
+
+/**
+ * @generated from message pochical.v1.TakeAccountResponse
+ */
+export type TakeAccountResponse = Message<"pochical.v1.TakeAccountResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.TakeAccountResponse.
+ * Use `create(TakeAccountResponseSchema)` to create a new message.
+ */
+export const TakeAccountResponseSchema: GenMessage<TakeAccountResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 15);
+
+/**
  * The signed-in user. Every call here needs the session token from
  * better-auth (/api/auth) as `Authorization: Bearer <token>`; without a
  * valid one it fails with UNAUTHENTICATED.
@@ -250,6 +348,32 @@ export const UserService: GenService<{
     methodKind: "unary";
     input: typeof DeleteAccountRequestSchema;
     output: typeof DeleteAccountResponseSchema;
+  },
+  /**
+   * What the account a Sign in with Apple ID token is linked to holds,
+   * when it is another user's than the caller (spec/sync-protocol.md,
+   * Switching to an account in use): the ID token, with the nonce it was
+   * asked with, proves the person holds it. NOT_FOUND when the account is
+   * no other user's; UNAUTHENTICATED for a token that does not check out.
+   *
+   * @generated from rpc pochical.v1.UserService.PeekAccount
+   */
+  peekAccount: {
+    methodKind: "unary";
+    input: typeof PeekAccountRequestSchema;
+    output: typeof PeekAccountResponseSchema;
+  },
+  /**
+   * Keeps this device's data: the account's user is deleted, everything
+   * of it with it, and its Sign in with Apple account linked to the caller
+   * instead, in one call. As PeekAccount for the token.
+   *
+   * @generated from rpc pochical.v1.UserService.TakeAccount
+   */
+  takeAccount: {
+    methodKind: "unary";
+    input: typeof TakeAccountRequestSchema;
+    output: typeof TakeAccountResponseSchema;
   },
   /**
    * Who the token belongs to, for the apps to check a stored session.

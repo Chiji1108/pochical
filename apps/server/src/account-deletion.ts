@@ -36,6 +36,35 @@ const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
 };
 
 /**
+ * Everything of a user gone but Apple's tokens: their part in every group
+ * they were ever in, a group they were the last of gone whole; their chat
+ * with Pochical's people, said in its Slack thread; their own values; and
+ * last their sign-ins and provider accounts, which closes what is still
+ * open. Also how switching to an account in use deletes the side not kept.
+ */
+export const eraseUser = async (env: Env, userId: string): Promise<void> => {
+  const user = env.USERS.getByName(userId);
+  for (const groupId of await user.groupsEver()) {
+    // oxlint-disable-next-line no-await-in-loop -- one group at a time
+    if (await env.GROUPS.getByName(groupId).deleteMember(userId)) {
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await eraseGroup(env, groupId);
+    }
+  }
+  const [chat] = await drizzle(env.DB)
+    .select({ thread: supportChats.slackThreadTs })
+    .from(supportChats)
+    .where(eq(supportChats.userId, userId));
+  await eraseSupportChat(env, userId);
+  if (chat?.thread !== undefined && chat.thread !== null) {
+    waitUntil(tellStaffOfDeletion(env, chat.thread));
+  }
+  await user.erase();
+  const auth = await getAuth().$context;
+  await auth.internalAdapter.deleteUser(userId);
+};
+
+/**
  * Deletes everything of the user's account: Apple's tokens revoked first
  * (from `appleCode`, FAILED_PRECONDITION when one is needed and Apple
  * takes none); their part in every group they were ever in, a group they
@@ -64,23 +93,5 @@ export const deleteAccount = async (
       );
     }
   }
-  const user = env.USERS.getByName(userId);
-  for (const groupId of await user.groupsEver()) {
-    // oxlint-disable-next-line no-await-in-loop -- one group at a time
-    if (await env.GROUPS.getByName(groupId).deleteMember(userId)) {
-      // oxlint-disable-next-line no-await-in-loop -- as above
-      await eraseGroup(env, groupId);
-    }
-  }
-  const [chat] = await drizzle(env.DB)
-    .select({ thread: supportChats.slackThreadTs })
-    .from(supportChats)
-    .where(eq(supportChats.userId, userId));
-  await eraseSupportChat(env, userId);
-  if (chat?.thread !== undefined && chat.thread !== null) {
-    waitUntil(tellStaffOfDeletion(env, chat.thread));
-  }
-  await user.erase();
-  const auth = await getAuth().$context;
-  await auth.internalAdapter.deleteUser(userId);
+  await eraseUser(env, userId);
 };
