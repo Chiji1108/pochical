@@ -264,10 +264,14 @@ struct AccountPage: View {
   private func useAccount(_ choice: Choice) async {
     busy = true
     defer { busy = false }
+    // Not to connect as the account's user meanwhile, and send it what
+    // the device's own outbox holds.
+    await userSocket?.stop()
     guard
       let before = try? await account.signInApple(idToken: choice.idToken, nonce: choice.nonce)
     else {
       problem = .failed
+      await userSocket?.start()
       return
     }
     // The device's user, left behind: everything of it goes.
@@ -297,10 +301,12 @@ struct AccountPage: View {
     defer { busy = false }
     // What waits to be sent goes first, so signing in again finds it.
     await userSocket?.finishSending()
+    await userSocket?.stop()
     do {
       try await account.signOut()
     } catch {
       problem = .notSignedOut
+      await userSocket?.start()
       return
     }
     await forgetDevice()
