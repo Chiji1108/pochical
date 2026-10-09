@@ -71,8 +71,8 @@ struct DayCell: View {
     .frame(maxWidth: .infinity)
     .frame(height: Self.height)
     .background {
-      if look.options.highlight, offShown == .shown, !faint, let pattern, pattern.countsAsOff {
-        RoundedRectangle(cornerRadius: Radius.md).fill(colors.mark(look.colored ? pattern.color : 0).tint)
+      if let tile {
+        RoundedRectangle(cornerRadius: Radius.md).fill(tile.tint)
       }
     }
     .overlay {
@@ -89,6 +89,13 @@ struct DayCell: View {
     .accessibilityLabel(accessibilityText)
   }
 
+  /// A day off's tile, when the look draws days off on a tint.
+  private var tile: MarkColor? {
+    guard look.options.highlight, offShown == .shown, !faint, let pattern, pattern.countsAsOff
+    else { return nil }
+    return colors.mark(look.colored ? pattern.color : 0)
+  }
+
   private var date: some View {
     Text(day.day, format: .number)
       .font(.system(size: 11, weight: isToday ? .heavy : outside ? .regular : .semibold))
@@ -97,8 +104,10 @@ struct DayCell: View {
         // A note: a highlighter stroke over the date's lower half, as in a
         // paper diary.
         if note?.isEmpty == false {
+          // On a day off's tile, the tile's own color a step deeper, or
+          // it would be as pale as the tile and vanish into it.
           RoundedRectangle(cornerRadius: Radius.xxs)
-            .fill(colors.calendarNoteMarker)
+            .fill(tile?.noteOnTint ?? colors.calendarNoteMarker)
             .frame(height: 7)
             .padding(.horizontal, -3)
             .offset(y: -1)

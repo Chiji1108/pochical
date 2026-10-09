@@ -318,6 +318,18 @@ export const noteMarkerSteps = {
   },
 } as const;
 
+// The stroke on a day off's tile of `tint`, as /design works it out in
+// CSS from the tile itself (design-day-cell.tsx), for the native apps.
+export function noteOnTileOf(tint: string, scheme: ColorScheme) {
+  const { chroma, hue, lightness } = hexToOklch(tint);
+  const step = noteMarkerSteps[scheme].onTile;
+  return oklchToHex({
+    chroma: chroma * step.chroma,
+    hue,
+    lightness: lightness + step.lightness,
+  });
+}
+
 // The stroke on a day without a tile, from the テーマ's tile color.
 function noteMarkerOf(tile: string, scheme: ColorScheme) {
   const { chroma, hue } = hexToOklch(tile);

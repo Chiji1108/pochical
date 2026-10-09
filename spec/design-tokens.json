@@ -103,50 +103,62 @@
             "marks": [
               {
                 "color": "#496444",
+                "noteOnTile": "#bfcebc",
                 "tint": "#e1e9df"
               },
               {
                 "color": "#8a6d1a",
+                "noteOnTile": "#ddcc9b",
                 "tint": "#f3ead0"
               },
               {
                 "color": "#95602e",
+                "noteOnTile": "#e3c4a2",
                 "tint": "#f5e4d2"
               },
               {
                 "color": "#93503a",
+                "noteOnTile": "#e2bead",
                 "tint": "#f3dfd6"
               },
               {
                 "color": "#9b3f35",
+                "noteOnTile": "#e5b9b2",
                 "tint": "#f4dcd8"
               },
               {
                 "color": "#8d4a5a",
+                "noteOnTile": "#dfbec6",
                 "tint": "#f2e0e4"
               },
               {
                 "color": "#75497a",
+                "noteOnTile": "#d7bfd9",
                 "tint": "#eee1ef"
               },
               {
                 "color": "#5f4f86",
+                "noteOnTile": "#cdc2dc",
                 "tint": "#e8e2f0"
               },
               {
                 "color": "#4a5388",
+                "noteOnTile": "#c3c8de",
                 "tint": "#e3e6f2"
               },
               {
                 "color": "#3d4a73",
+                "noteOnTile": "#bcc5db",
                 "tint": "#dde2ee"
               },
               {
                 "color": "#36706c",
+                "noteOnTile": "#b4d1cf",
                 "tint": "#dcebea"
               },
               {
                 "color": "#56636d",
+                "noteOnTile": "#c3cad0",
                 "tint": "#e3e7ea"
               }
             ],
@@ -201,50 +213,62 @@
             "marks": [
               {
                 "color": "#a4c19f",
+                "noteOnTile": "#566653",
                 "tint": "#3d493b"
               },
               {
                 "color": "#d6bb77",
+                "noteOnTile": "#6b5e3d",
                 "tint": "#4d432a"
               },
               {
                 "color": "#e6b285",
+                "noteOnTile": "#735941",
                 "tint": "#533f2d"
               },
               {
                 "color": "#efab95",
+                "noteOnTile": "#79554a",
                 "tint": "#573c34"
               },
               {
                 "color": "#fea194",
+                "noteOnTile": "#79554e",
                 "tint": "#573c37"
               },
               {
                 "color": "#eda8b6",
+                "noteOnTile": "#77545a",
                 "tint": "#563b40"
               },
               {
                 "color": "#d8acdd",
+                "noteOnTile": "#6d566f",
                 "tint": "#4e3d50"
               },
               {
                 "color": "#c2b4ec",
+                "noteOnTile": "#615979",
                 "tint": "#453f57"
               },
               {
                 "color": "#afbaf1",
+                "noteOnTile": "#565d7b",
                 "tint": "#3d4259"
               },
               {
                 "color": "#c0d0fc",
+                "noteOnTile": "#565e76",
                 "tint": "#3d4355"
               },
               {
                 "color": "#95cac5",
+                "noteOnTile": "#496663",
                 "tint": "#334947"
               },
               {
                 "color": "#b3c0ca",
+                "noteOnTile": "#596066",
                 "tint": "#3f4449"
               }
             ],
@@ -325,50 +349,62 @@
             "marks": [
               {
                 "color": "#5b6851",
+                "noteOnTile": "#c3ccbd",
                 "tint": "#e3e8e0"
               },
               {
                 "color": "#846f39",
+                "noteOnTile": "#d9cca8",
                 "tint": "#f1ead7"
               },
               {
                 "color": "#8c6441",
+                "noteOnTile": "#dec6ab",
                 "tint": "#f2e5d7"
               },
               {
                 "color": "#895646",
+                "noteOnTile": "#dbc0b3",
                 "tint": "#efe0d9"
               },
               {
                 "color": "#8e4a41",
+                "noteOnTile": "#debdb7",
                 "tint": "#f0dedb"
               },
               {
                 "color": "#83515c",
+                "noteOnTile": "#dac0c6",
                 "tint": "#efe1e4"
               },
               {
                 "color": "#6f4f73",
+                "noteOnTile": "#d4c1d6",
                 "tint": "#ece2ed"
               },
               {
                 "color": "#5e527b",
+                "noteOnTile": "#cbc4d6",
                 "tint": "#e7e3ed"
               },
               {
                 "color": "#4d557c",
+                "noteOnTile": "#c5c8d9",
                 "tint": "#e4e6ef"
               },
               {
                 "color": "#414b6a",
+                "noteOnTile": "#bdc5d5",
                 "tint": "#dee2eb"
               },
               {
                 "color": "#456d6a",
+                "noteOnTile": "#bacfcd",
                 "tint": "#dfeae9"
               },
               {
                 "color": "#59636a",
+                "noteOnTile": "#c5cace",
                 "tint": "#e4e7e9"
               }
             ],
@@ -423,50 +459,62 @@
             "marks": [
               {
                 "color": "#aebda4",
+                "noteOnTile": "#5c6356",
                 "tint": "#42473d"
               },
               {
                 "color": "#d0bc8b",
+                "noteOnTile": "#695e46",
                 "tint": "#4b4331"
               },
               {
                 "color": "#dcb594",
+                "noteOnTile": "#6e5a49",
                 "tint": "#4f4033"
               },
               {
                 "color": "#e4b0a0",
+                "noteOnTile": "#725850",
                 "tint": "#523e38"
               },
               {
                 "color": "#efa99f",
+                "noteOnTile": "#735752",
                 "tint": "#533e3a"
               },
               {
                 "color": "#e2aeb8",
+                "noteOnTile": "#72565c",
                 "tint": "#523d41"
               },
               {
                 "color": "#d2b1d5",
+                "noteOnTile": "#6a596b",
                 "tint": "#4c3f4d"
               },
               {
                 "color": "#c1b7e1",
+                "noteOnTile": "#605a72",
                 "tint": "#444052"
               },
               {
                 "color": "#b2bbe4",
+                "noteOnTile": "#595d75",
                 "tint": "#3f4254"
               },
               {
                 "color": "#c4d0f1",
+                "noteOnTile": "#595e71",
                 "tint": "#3f4351"
               },
               {
                 "color": "#a0c7c3",
+                "noteOnTile": "#4f6562",
                 "tint": "#384846"
               },
               {
                 "color": "#b6bfc7",
+                "noteOnTile": "#5a5f65",
                 "tint": "#404448"
               }
             ],
@@ -541,50 +589,62 @@
             "marks": [
               {
                 "color": "#3c3f3b",
+                "noteOnTile": "#c7c9c7",
                 "tint": "#e5e6e5"
               },
               {
                 "color": "#8a6d1a",
+                "noteOnTile": "#ddcc9b",
                 "tint": "#f3ead0"
               },
               {
                 "color": "#95602e",
+                "noteOnTile": "#e3c4a2",
                 "tint": "#f5e4d2"
               },
               {
                 "color": "#93503a",
+                "noteOnTile": "#e2bead",
                 "tint": "#f3dfd6"
               },
               {
                 "color": "#9b3f35",
+                "noteOnTile": "#e5b9b2",
                 "tint": "#f4dcd8"
               },
               {
                 "color": "#8d4a5a",
+                "noteOnTile": "#dfbec6",
                 "tint": "#f2e0e4"
               },
               {
                 "color": "#75497a",
+                "noteOnTile": "#d7bfd9",
                 "tint": "#eee1ef"
               },
               {
                 "color": "#5f4f86",
+                "noteOnTile": "#cdc2dc",
                 "tint": "#e8e2f0"
               },
               {
                 "color": "#4a5388",
+                "noteOnTile": "#c3c8de",
                 "tint": "#e3e6f2"
               },
               {
                 "color": "#3d4a73",
+                "noteOnTile": "#bcc5db",
                 "tint": "#dde2ee"
               },
               {
                 "color": "#36706c",
+                "noteOnTile": "#b4d1cf",
                 "tint": "#dcebea"
               },
               {
                 "color": "#56636d",
+                "noteOnTile": "#c3cad0",
                 "tint": "#e3e7ea"
               }
             ],
@@ -639,50 +699,62 @@
             "marks": [
               {
                 "color": "#b5b9b4",
+                "noteOnTile": "#5f605f",
                 "tint": "#444544"
               },
               {
                 "color": "#d6bb77",
+                "noteOnTile": "#6b5e3d",
                 "tint": "#4d432a"
               },
               {
                 "color": "#e6b285",
+                "noteOnTile": "#735941",
                 "tint": "#533f2d"
               },
               {
                 "color": "#efab95",
+                "noteOnTile": "#79554a",
                 "tint": "#573c34"
               },
               {
                 "color": "#fea194",
+                "noteOnTile": "#79554e",
                 "tint": "#573c37"
               },
               {
                 "color": "#eda8b6",
+                "noteOnTile": "#77545a",
                 "tint": "#563b40"
               },
               {
                 "color": "#d8acdd",
+                "noteOnTile": "#6d566f",
                 "tint": "#4e3d50"
               },
               {
                 "color": "#c2b4ec",
+                "noteOnTile": "#615979",
                 "tint": "#453f57"
               },
               {
                 "color": "#afbaf1",
+                "noteOnTile": "#565d7b",
                 "tint": "#3d4259"
               },
               {
                 "color": "#c0d0fc",
+                "noteOnTile": "#565e76",
                 "tint": "#3d4355"
               },
               {
                 "color": "#95cac5",
+                "noteOnTile": "#496663",
                 "tint": "#334947"
               },
               {
                 "color": "#b3c0ca",
+                "noteOnTile": "#596066",
                 "tint": "#3f4449"
               }
             ],
@@ -763,50 +835,62 @@
             "marks": [
               {
                 "color": "#7c6447",
+                "noteOnTile": "#d4c7b6",
                 "tint": "#ece5dc"
               },
               {
                 "color": "#846f39",
+                "noteOnTile": "#d9cca8",
                 "tint": "#f1ead7"
               },
               {
                 "color": "#8c6441",
+                "noteOnTile": "#dec6ab",
                 "tint": "#f2e5d7"
               },
               {
                 "color": "#895646",
+                "noteOnTile": "#dbc0b3",
                 "tint": "#efe0d9"
               },
               {
                 "color": "#8e4a41",
+                "noteOnTile": "#debdb7",
                 "tint": "#f0dedb"
               },
               {
                 "color": "#83515c",
+                "noteOnTile": "#dac0c6",
                 "tint": "#efe1e4"
               },
               {
                 "color": "#6f4f73",
+                "noteOnTile": "#d4c1d6",
                 "tint": "#ece2ed"
               },
               {
                 "color": "#5e527b",
+                "noteOnTile": "#cbc4d6",
                 "tint": "#e7e3ed"
               },
               {
                 "color": "#4d557c",
+                "noteOnTile": "#c5c8d9",
                 "tint": "#e4e6ef"
               },
               {
                 "color": "#414b6a",
+                "noteOnTile": "#bdc5d5",
                 "tint": "#dee2eb"
               },
               {
                 "color": "#456d6a",
+                "noteOnTile": "#bacfcd",
                 "tint": "#dfeae9"
               },
               {
                 "color": "#59636a",
+                "noteOnTile": "#c5cace",
                 "tint": "#e4e7e9"
               }
             ],
@@ -861,50 +945,62 @@
             "marks": [
               {
                 "color": "#ccb395",
+                "noteOnTile": "#6b5e4f",
                 "tint": "#4d4338"
               },
               {
                 "color": "#d0bc8b",
+                "noteOnTile": "#695e46",
                 "tint": "#4b4331"
               },
               {
                 "color": "#dcb594",
+                "noteOnTile": "#6e5a49",
                 "tint": "#4f4033"
               },
               {
                 "color": "#e4b0a0",
+                "noteOnTile": "#725850",
                 "tint": "#523e38"
               },
               {
                 "color": "#efa99f",
+                "noteOnTile": "#735752",
                 "tint": "#533e3a"
               },
               {
                 "color": "#e2aeb8",
+                "noteOnTile": "#72565c",
                 "tint": "#523d41"
               },
               {
                 "color": "#d2b1d5",
+                "noteOnTile": "#6a596b",
                 "tint": "#4c3f4d"
               },
               {
                 "color": "#c1b7e1",
+                "noteOnTile": "#605a72",
                 "tint": "#444052"
               },
               {
                 "color": "#b2bbe4",
+                "noteOnTile": "#595d75",
                 "tint": "#3f4254"
               },
               {
                 "color": "#c4d0f1",
+                "noteOnTile": "#595e71",
                 "tint": "#3f4351"
               },
               {
                 "color": "#a0c7c3",
+                "noteOnTile": "#4f6562",
                 "tint": "#384846"
               },
               {
                 "color": "#b6bfc7",
+                "noteOnTile": "#5a5f65",
                 "tint": "#404448"
               }
             ],
@@ -980,50 +1076,62 @@
             "marks": [
               {
                 "color": "#616a22",
+                "noteOnTile": "#c7ceaa",
                 "tint": "#e5e9d6"
               },
               {
                 "color": "#846f39",
+                "noteOnTile": "#d9cca8",
                 "tint": "#f1ead7"
               },
               {
                 "color": "#8c6441",
+                "noteOnTile": "#dec6ab",
                 "tint": "#f2e5d7"
               },
               {
                 "color": "#895646",
+                "noteOnTile": "#dbc0b3",
                 "tint": "#efe0d9"
               },
               {
                 "color": "#8e4a41",
+                "noteOnTile": "#debdb7",
                 "tint": "#f0dedb"
               },
               {
                 "color": "#83515c",
+                "noteOnTile": "#dac0c6",
                 "tint": "#efe1e4"
               },
               {
                 "color": "#6f4f73",
+                "noteOnTile": "#d4c1d6",
                 "tint": "#ece2ed"
               },
               {
                 "color": "#5e527b",
+                "noteOnTile": "#cbc4d6",
                 "tint": "#e7e3ed"
               },
               {
                 "color": "#4d557c",
+                "noteOnTile": "#c5c8d9",
                 "tint": "#e4e6ef"
               },
               {
                 "color": "#414b6a",
+                "noteOnTile": "#bdc5d5",
                 "tint": "#dee2eb"
               },
               {
                 "color": "#456d6a",
+                "noteOnTile": "#bacfcd",
                 "tint": "#dfeae9"
               },
               {
                 "color": "#59636a",
+                "noteOnTile": "#c5cace",
                 "tint": "#e4e7e9"
               }
             ],
@@ -1078,50 +1186,62 @@
             "marks": [
               {
                 "color": "#b4bf7b",
+                "noteOnTile": "#5f6442",
                 "tint": "#44482e"
               },
               {
                 "color": "#d0bc8b",
+                "noteOnTile": "#695e46",
                 "tint": "#4b4331"
               },
               {
                 "color": "#dcb594",
+                "noteOnTile": "#6e5a49",
                 "tint": "#4f4033"
               },
               {
                 "color": "#e4b0a0",
+                "noteOnTile": "#725850",
                 "tint": "#523e38"
               },
               {
                 "color": "#efa99f",
+                "noteOnTile": "#735752",
                 "tint": "#533e3a"
               },
               {
                 "color": "#e2aeb8",
+                "noteOnTile": "#72565c",
                 "tint": "#523d41"
               },
               {
                 "color": "#d2b1d5",
+                "noteOnTile": "#6a596b",
                 "tint": "#4c3f4d"
               },
               {
                 "color": "#c1b7e1",
+                "noteOnTile": "#605a72",
                 "tint": "#444052"
               },
               {
                 "color": "#b2bbe4",
+                "noteOnTile": "#595d75",
                 "tint": "#3f4254"
               },
               {
                 "color": "#c4d0f1",
+                "noteOnTile": "#595e71",
                 "tint": "#3f4351"
               },
               {
                 "color": "#a0c7c3",
+                "noteOnTile": "#4f6562",
                 "tint": "#384846"
               },
               {
                 "color": "#b6bfc7",
+                "noteOnTile": "#5a5f65",
                 "tint": "#404448"
               }
             ],
@@ -1197,50 +1317,62 @@
             "marks": [
               {
                 "color": "#573a30",
+                "noteOnTile": "#d7c5bd",
                 "tint": "#eee4e0"
               },
               {
                 "color": "#846f39",
+                "noteOnTile": "#d9cca8",
                 "tint": "#f1ead7"
               },
               {
                 "color": "#8c6441",
+                "noteOnTile": "#dec6ab",
                 "tint": "#f2e5d7"
               },
               {
                 "color": "#895646",
+                "noteOnTile": "#dbc0b3",
                 "tint": "#efe0d9"
               },
               {
                 "color": "#8e4a41",
+                "noteOnTile": "#debdb7",
                 "tint": "#f0dedb"
               },
               {
                 "color": "#83515c",
+                "noteOnTile": "#dac0c6",
                 "tint": "#efe1e4"
               },
               {
                 "color": "#6f4f73",
+                "noteOnTile": "#d4c1d6",
                 "tint": "#ece2ed"
               },
               {
                 "color": "#5e527b",
+                "noteOnTile": "#cbc4d6",
                 "tint": "#e7e3ed"
               },
               {
                 "color": "#4d557c",
+                "noteOnTile": "#c5c8d9",
                 "tint": "#e4e6ef"
               },
               {
                 "color": "#414b6a",
+                "noteOnTile": "#bdc5d5",
                 "tint": "#dee2eb"
               },
               {
                 "color": "#456d6a",
+                "noteOnTile": "#bacfcd",
                 "tint": "#dfeae9"
               },
               {
                 "color": "#59636a",
+                "noteOnTile": "#c5cace",
                 "tint": "#e4e7e9"
               }
             ],
@@ -1295,50 +1427,62 @@
             "marks": [
               {
                 "color": "#d1afa3",
+                "noteOnTile": "#6e5c56",
                 "tint": "#4f423d"
               },
               {
                 "color": "#d0bc8b",
+                "noteOnTile": "#695e46",
                 "tint": "#4b4331"
               },
               {
                 "color": "#dcb594",
+                "noteOnTile": "#6e5a49",
                 "tint": "#4f4033"
               },
               {
                 "color": "#e4b0a0",
+                "noteOnTile": "#725850",
                 "tint": "#523e38"
               },
               {
                 "color": "#efa99f",
+                "noteOnTile": "#735752",
                 "tint": "#533e3a"
               },
               {
                 "color": "#e2aeb8",
+                "noteOnTile": "#72565c",
                 "tint": "#523d41"
               },
               {
                 "color": "#d2b1d5",
+                "noteOnTile": "#6a596b",
                 "tint": "#4c3f4d"
               },
               {
                 "color": "#c1b7e1",
+                "noteOnTile": "#605a72",
                 "tint": "#444052"
               },
               {
                 "color": "#b2bbe4",
+                "noteOnTile": "#595d75",
                 "tint": "#3f4254"
               },
               {
                 "color": "#c4d0f1",
+                "noteOnTile": "#595e71",
                 "tint": "#3f4351"
               },
               {
                 "color": "#a0c7c3",
+                "noteOnTile": "#4f6562",
                 "tint": "#384846"
               },
               {
                 "color": "#b6bfc7",
+                "noteOnTile": "#5a5f65",
                 "tint": "#404448"
               }
             ],
@@ -1413,50 +1557,62 @@
             "marks": [
               {
                 "color": "#1d6971",
+                "noteOnTile": "#aed0d4",
                 "tint": "#d8eaec"
               },
               {
                 "color": "#8a6d1a",
+                "noteOnTile": "#ddcc9b",
                 "tint": "#f3ead0"
               },
               {
                 "color": "#95602e",
+                "noteOnTile": "#e3c4a2",
                 "tint": "#f5e4d2"
               },
               {
                 "color": "#93503a",
+                "noteOnTile": "#e2bead",
                 "tint": "#f3dfd6"
               },
               {
                 "color": "#9b3f35",
+                "noteOnTile": "#e5b9b2",
                 "tint": "#f4dcd8"
               },
               {
                 "color": "#8d4a5a",
+                "noteOnTile": "#dfbec6",
                 "tint": "#f2e0e4"
               },
               {
                 "color": "#75497a",
+                "noteOnTile": "#d7bfd9",
                 "tint": "#eee1ef"
               },
               {
                 "color": "#5f4f86",
+                "noteOnTile": "#cdc2dc",
                 "tint": "#e8e2f0"
               },
               {
                 "color": "#4a5388",
+                "noteOnTile": "#c3c8de",
                 "tint": "#e3e6f2"
               },
               {
                 "color": "#3d4a73",
+                "noteOnTile": "#bcc5db",
                 "tint": "#dde2ee"
               },
               {
                 "color": "#36706c",
+                "noteOnTile": "#b4d1cf",
                 "tint": "#dcebea"
               },
               {
                 "color": "#56636d",
+                "noteOnTile": "#c3cad0",
                 "tint": "#e3e7ea"
               }
             ],
@@ -1511,50 +1667,62 @@
             "marks": [
               {
                 "color": "#82c5cc",
+                "noteOnTile": "#45676b",
                 "tint": "#304a4d"
               },
               {
                 "color": "#d6bb77",
+                "noteOnTile": "#6b5e3d",
                 "tint": "#4d432a"
               },
               {
                 "color": "#e6b285",
+                "noteOnTile": "#735941",
                 "tint": "#533f2d"
               },
               {
                 "color": "#efab95",
+                "noteOnTile": "#79554a",
                 "tint": "#573c34"
               },
               {
                 "color": "#fea194",
+                "noteOnTile": "#79554e",
                 "tint": "#573c37"
               },
               {
                 "color": "#eda8b6",
+                "noteOnTile": "#77545a",
                 "tint": "#563b40"
               },
               {
                 "color": "#d8acdd",
+                "noteOnTile": "#6d566f",
                 "tint": "#4e3d50"
               },
               {
                 "color": "#c2b4ec",
+                "noteOnTile": "#615979",
                 "tint": "#453f57"
               },
               {
                 "color": "#afbaf1",
+                "noteOnTile": "#565d7b",
                 "tint": "#3d4259"
               },
               {
                 "color": "#c0d0fc",
+                "noteOnTile": "#565e76",
                 "tint": "#3d4355"
               },
               {
                 "color": "#95cac5",
+                "noteOnTile": "#496663",
                 "tint": "#334947"
               },
               {
                 "color": "#b3c0ca",
+                "noteOnTile": "#596066",
                 "tint": "#3f4449"
               }
             ],
@@ -1630,50 +1798,62 @@
             "marks": [
               {
                 "color": "#88515d",
+                "noteOnTile": "#e0bfc5",
                 "tint": "#f3e1e4"
               },
               {
                 "color": "#846f39",
+                "noteOnTile": "#d9cca8",
                 "tint": "#f1ead7"
               },
               {
                 "color": "#8c6441",
+                "noteOnTile": "#dec6ab",
                 "tint": "#f2e5d7"
               },
               {
                 "color": "#895646",
+                "noteOnTile": "#dbc0b3",
                 "tint": "#efe0d9"
               },
               {
                 "color": "#8e4a41",
+                "noteOnTile": "#debdb7",
                 "tint": "#f0dedb"
               },
               {
                 "color": "#83515c",
+                "noteOnTile": "#dac0c6",
                 "tint": "#efe1e4"
               },
               {
                 "color": "#6f4f73",
+                "noteOnTile": "#d4c1d6",
                 "tint": "#ece2ed"
               },
               {
                 "color": "#5e527b",
+                "noteOnTile": "#cbc4d6",
                 "tint": "#e7e3ed"
               },
               {
                 "color": "#4d557c",
+                "noteOnTile": "#c5c8d9",
                 "tint": "#e4e6ef"
               },
               {
                 "color": "#414b6a",
+                "noteOnTile": "#bdc5d5",
                 "tint": "#dee2eb"
               },
               {
                 "color": "#456d6a",
+                "noteOnTile": "#bacfcd",
                 "tint": "#dfeae9"
               },
               {
                 "color": "#59636a",
+                "noteOnTile": "#c5cace",
                 "tint": "#e4e7e9"
               }
             ],
@@ -1728,50 +1908,62 @@
             "marks": [
               {
                 "color": "#e0a5b0",
+                "noteOnTile": "#76575c",
                 "tint": "#553e42"
               },
               {
                 "color": "#d0bc8b",
+                "noteOnTile": "#695e46",
                 "tint": "#4b4331"
               },
               {
                 "color": "#dcb594",
+                "noteOnTile": "#6e5a49",
                 "tint": "#4f4033"
               },
               {
                 "color": "#e4b0a0",
+                "noteOnTile": "#725850",
                 "tint": "#523e38"
               },
               {
                 "color": "#efa99f",
+                "noteOnTile": "#735752",
                 "tint": "#533e3a"
               },
               {
                 "color": "#e2aeb8",
+                "noteOnTile": "#72565c",
                 "tint": "#523d41"
               },
               {
                 "color": "#d2b1d5",
+                "noteOnTile": "#6a596b",
                 "tint": "#4c3f4d"
               },
               {
                 "color": "#c1b7e1",
+                "noteOnTile": "#605a72",
                 "tint": "#444052"
               },
               {
                 "color": "#b2bbe4",
+                "noteOnTile": "#595d75",
                 "tint": "#3f4254"
               },
               {
                 "color": "#c4d0f1",
+                "noteOnTile": "#595e71",
                 "tint": "#3f4351"
               },
               {
                 "color": "#a0c7c3",
+                "noteOnTile": "#4f6562",
                 "tint": "#384846"
               },
               {
                 "color": "#b6bfc7",
+                "noteOnTile": "#5a5f65",
                 "tint": "#404448"
               }
             ],
@@ -1846,50 +2038,62 @@
             "marks": [
               {
                 "color": "#5f5286",
+                "noteOnTile": "#cac5e2",
                 "tint": "#e7e4f4"
               },
               {
                 "color": "#8a6d1a",
+                "noteOnTile": "#ddcc9b",
                 "tint": "#f3ead0"
               },
               {
                 "color": "#95602e",
+                "noteOnTile": "#e3c4a2",
                 "tint": "#f5e4d2"
               },
               {
                 "color": "#93503a",
+                "noteOnTile": "#e2bead",
                 "tint": "#f3dfd6"
               },
               {
                 "color": "#9b3f35",
+                "noteOnTile": "#e5b9b2",
                 "tint": "#f4dcd8"
               },
               {
                 "color": "#8d4a5a",
+                "noteOnTile": "#dfbec6",
                 "tint": "#f2e0e4"
               },
               {
                 "color": "#75497a",
+                "noteOnTile": "#d7bfd9",
                 "tint": "#eee1ef"
               },
               {
                 "color": "#5f4f86",
+                "noteOnTile": "#cdc2dc",
                 "tint": "#e8e2f0"
               },
               {
                 "color": "#4a5388",
+                "noteOnTile": "#c3c8de",
                 "tint": "#e3e6f2"
               },
               {
                 "color": "#3d4a73",
+                "noteOnTile": "#bcc5db",
                 "tint": "#dde2ee"
               },
               {
                 "color": "#36706c",
+                "noteOnTile": "#b4d1cf",
                 "tint": "#dcebea"
               },
               {
                 "color": "#56636d",
+                "noteOnTile": "#c3cad0",
                 "tint": "#e3e7ea"
               }
             ],
@@ -1944,50 +2148,62 @@
             "marks": [
               {
                 "color": "#baaee6",
+                "noteOnTile": "#625b78",
                 "tint": "#464157"
               },
               {
                 "color": "#d6bb77",
+                "noteOnTile": "#6b5e3d",
                 "tint": "#4d432a"
               },
               {
                 "color": "#e6b285",
+                "noteOnTile": "#735941",
                 "tint": "#533f2d"
               },
               {
                 "color": "#efab95",
+                "noteOnTile": "#79554a",
                 "tint": "#573c34"
               },
               {
                 "color": "#fea194",
+                "noteOnTile": "#79554e",
                 "tint": "#573c37"
               },
               {
                 "color": "#eda8b6",
+                "noteOnTile": "#77545a",
                 "tint": "#563b40"
               },
               {
                 "color": "#d8acdd",
+                "noteOnTile": "#6d566f",
                 "tint": "#4e3d50"
               },
               {
                 "color": "#c2b4ec",
+                "noteOnTile": "#615979",
                 "tint": "#453f57"
               },
               {
                 "color": "#afbaf1",
+                "noteOnTile": "#565d7b",
                 "tint": "#3d4259"
               },
               {
                 "color": "#c0d0fc",
+                "noteOnTile": "#565e76",
                 "tint": "#3d4355"
               },
               {
                 "color": "#95cac5",
+                "noteOnTile": "#496663",
                 "tint": "#334947"
               },
               {
                 "color": "#b3c0ca",
+                "noteOnTile": "#596066",
                 "tint": "#3f4449"
               }
             ],
@@ -2072,50 +2288,62 @@
             "marks": [
               {
                 "color": "#efaf69",
+                "noteOnTile": "#765a47",
                 "tint": "#554032"
               },
               {
                 "color": "#d0bc8b",
+                "noteOnTile": "#695e46",
                 "tint": "#4b4331"
               },
               {
                 "color": "#dcb594",
+                "noteOnTile": "#6e5a49",
                 "tint": "#4f4033"
               },
               {
                 "color": "#e4b0a0",
+                "noteOnTile": "#725850",
                 "tint": "#523e38"
               },
               {
                 "color": "#efa99f",
+                "noteOnTile": "#735752",
                 "tint": "#533e3a"
               },
               {
                 "color": "#e2aeb8",
+                "noteOnTile": "#72565c",
                 "tint": "#523d41"
               },
               {
                 "color": "#d2b1d5",
+                "noteOnTile": "#6a596b",
                 "tint": "#4c3f4d"
               },
               {
                 "color": "#c1b7e1",
+                "noteOnTile": "#605a72",
                 "tint": "#444052"
               },
               {
                 "color": "#b2bbe4",
+                "noteOnTile": "#595d75",
                 "tint": "#3f4254"
               },
               {
                 "color": "#c4d0f1",
+                "noteOnTile": "#595e71",
                 "tint": "#3f4351"
               },
               {
                 "color": "#a0c7c3",
+                "noteOnTile": "#4f6562",
                 "tint": "#384846"
               },
               {
                 "color": "#b6bfc7",
+                "noteOnTile": "#5a5f65",
                 "tint": "#404448"
               }
             ],
@@ -2197,50 +2425,62 @@
             "marks": [
               {
                 "color": "#ebd47d",
+                "noteOnTile": "#6b6037",
                 "tint": "#4d4526"
               },
               {
                 "color": "#d2bc83",
+                "noteOnTile": "#6a5e42",
                 "tint": "#4c432e"
               },
               {
                 "color": "#e0b48e",
+                "noteOnTile": "#715a46",
                 "tint": "#514031"
               },
               {
                 "color": "#e8ae9b",
+                "noteOnTile": "#75564d",
                 "tint": "#543d36"
               },
               {
                 "color": "#f5a69a",
+                "noteOnTile": "#755651",
                 "tint": "#543d39"
               },
               {
                 "color": "#e7acb7",
+                "noteOnTile": "#73555c",
                 "tint": "#533c41"
               },
               {
                 "color": "#d4afd8",
+                "noteOnTile": "#6b576d",
                 "tint": "#4d3e4e"
               },
               {
                 "color": "#c1b6e5",
+                "noteOnTile": "#615a75",
                 "tint": "#454054"
               },
               {
                 "color": "#b1bbe9",
+                "noteOnTile": "#585d77",
                 "tint": "#3e4256"
               },
               {
                 "color": "#c3d0f6",
+                "noteOnTile": "#585e72",
                 "tint": "#3e4352"
               },
               {
                 "color": "#9cc8c4",
+                "noteOnTile": "#4d6563",
                 "tint": "#364847"
               },
               {
                 "color": "#b5c0c8",
+                "noteOnTile": "#5a5f65",
                 "tint": "#404448"
               }
             ],
@@ -2326,50 +2566,62 @@
             "marks": [
               {
                 "color": "#e4eee9",
+                "noteOnTile": "#436b57",
                 "tint": "#2f4d3e"
               },
               {
                 "color": "#d1bc87",
+                "noteOnTile": "#695e45",
                 "tint": "#4b4330"
               },
               {
                 "color": "#deb591",
+                "noteOnTile": "#6f5a48",
                 "tint": "#504032"
               },
               {
                 "color": "#e6af9d",
+                "noteOnTile": "#73584e",
                 "tint": "#533e37"
               },
               {
                 "color": "#f2a89d",
+                "noteOnTile": "#735752",
                 "tint": "#533e3a"
               },
               {
                 "color": "#e4adb8",
+                "noteOnTile": "#73565b",
                 "tint": "#533d41"
               },
               {
                 "color": "#d3b0d7",
+                "noteOnTile": "#6a586d",
                 "tint": "#4c3e4e"
               },
               {
                 "color": "#c1b6e3",
+                "noteOnTile": "#615a73",
                 "tint": "#454053"
               },
               {
                 "color": "#b2bbe7",
+                "noteOnTile": "#585d76",
                 "tint": "#3e4255"
               },
               {
                 "color": "#c3d0f4",
+                "noteOnTile": "#585e72",
                 "tint": "#3e4352"
               },
               {
                 "color": "#9ec8c4",
+                "noteOnTile": "#4e6562",
                 "tint": "#374846"
               },
               {
                 "color": "#b5c0c8",
+                "noteOnTile": "#5a5f65",
                 "tint": "#404448"
               }
             ],
