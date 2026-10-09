@@ -148,15 +148,6 @@ function FlowsPage() {
                 person={{ schedule: filledGaps(partialOctober) }}
               />
             </FrameRow>
-            <FrameRow branch="月が全部埋まるとき">
-              <GapFrame label="確認" schedule={fullOctober} />
-              <CalendarFrame
-                label="カレンダー"
-                month={OCTOBER}
-                note="揃った月の保存のシートが開く"
-                person={{ schedule: filledGaps(fullOctober) }}
-              />
-            </FrameRow>
             <FrameRow branch="人によって変わるところ" fan>
               <OffDisplayContext value="blank">
                 <GapFrame
@@ -298,14 +289,6 @@ const partialOctober: Schedule = Object.fromEntries(
     ] as const
   ).map(([day, shift]) => [dateKey(new Date(2026, OCTOBER, day)), { shift }])
 );
-// The samples' patterns are the ready-made ones.
-const samplePatterns: PatternBook = presetPatterns;
-const fullOctober: Schedule = Object.fromEntries(
-  Object.entries(initialDesignSchedule(4, OCTOBER)).filter(
-    ([, entry]) => entry && !isDayOff(samplePatterns[entry.shift])
-  )
-);
-
 function filledGaps(schedule: Schedule): Schedule {
   return {
     ...schedule,

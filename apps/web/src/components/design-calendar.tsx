@@ -96,7 +96,6 @@ export function DesignCalendar({
   const [offerBlank, setOfferBlank] = useState(false);
   const setCalendarOptions = useSettings((state) => state.setCalendarOptions);
   // Whether the save sheet opened because the month was just filled in.
-  const [saveCompletion, setSaveCompletion] = useState(false);
   // Whether it opened straight on adding to the device calendar.
   const [saveToCalendar, setSaveToCalendar] = useState(false);
   const [imagePreview, setImagePreview] = useState(false);
@@ -159,7 +158,6 @@ export function DesignCalendar({
     enterFrom,
     enterShift,
     enterMonth,
-    enteredBlank,
     lastDay,
     selectedDate,
     selectedDay,
@@ -233,8 +231,7 @@ export function DesignCalendar({
     shown.show(undefined);
     startEntering();
   }
-  function openSave(completion: boolean, toCalendar = false) {
-    setSaveCompletion(completion);
+  function openSave(toCalendar = false) {
     setSaveToCalendar(toCalendar);
     setOpenSheet("save");
   }
@@ -258,11 +255,6 @@ export function DesignCalendar({
       setGapFill(undefined);
       setOfferBlank(offDisplay === "show");
       setOpenSheet("gap");
-      return;
-    }
-    // A month just filled in is worth keeping, so saving is offered then.
-    if (unfilled === 0 && enteredBlank) {
-      openSave(true);
     }
   }
   // While the gap sheet asks, its days drawn faint as the pattern picked
@@ -288,9 +280,6 @@ export function DesignCalendar({
       ...previous,
       ...Object.fromEntries(gapDays.map((date) => [dateKey(date), { shift }])),
     }));
-    if (unfilled === gapDays.length) {
-      openSave(true);
-    }
   }
   function changeEntry(date: Date, entry: DayEntry | undefined) {
     onChange((previous) => ({ ...previous, [dateKey(date)]: entry }));
@@ -336,7 +325,7 @@ export function DesignCalendar({
             month={month}
             onDone={finishHeading}
             onCalendar={() => {
-              openSave(false, true);
+              openSave(true);
             }}
             onImage={() => {
               setImagePreview(true);
@@ -539,7 +528,6 @@ export function DesignCalendar({
         unfilled={unfilled}
       />
       <SaveSheet
-        completion={saveCompletion}
         month={month}
         offCount={daysOff}
         onImage={() => {
@@ -593,10 +581,6 @@ function useShiftEntry({
   const book = usePatterns();
   const [editing, setEditing] = useState(initialEditing);
   const [selectedDay, setSelectedDay] = useState(initialDay);
-  // Whether the month being entered had blank days when it came up, as
-  // only then can 完了 have just filled it. A filled month can be entered
-  // too, with ポチポチ入力 always offered in the 保存を右上 variant.
-  const [enteredBlank, setEnteredBlank] = useState(true);
   const [announcement, setAnnouncement] = useState("");
   const selectedDate = new Date(
     month.getFullYear(),
@@ -624,19 +608,16 @@ function useShiftEntry({
     }
     const target = monthAfter(date, 0);
     turnTo(target);
-    setEnteredBlank(hasBlanks(schedule, target));
     announcePicked(date);
   }
   // A month turned to while entering starts on its first blank day, as
   // entering does (spec/calendar.md).
   function enterMonth(target: Date) {
     setSelectedDay(firstBlankDay(schedule, target).getDate());
-    setEnteredBlank(hasBlanks(schedule, target));
     setAnnouncement(`${formatYearMonthDay(target)}を選択中`);
   }
   function start() {
     setSelectedDay(firstBlankDay(schedule, month).getDate());
-    setEnteredBlank(hasBlanks(schedule, month));
     setEditing(true);
   }
   function stop() {
@@ -667,7 +648,6 @@ function useShiftEntry({
     enterFrom,
     enterMonth,
     enterShift,
-    enteredBlank,
     lastDay,
     selectedDate,
     selectedDay,
@@ -746,9 +726,4 @@ function screenMode(editing: boolean, weekDetail: boolean) {
     return "edit";
   }
   return weekDetail ? "week" : "view";
-}
-
-// Whether any day of the month has nothing entered.
-function hasBlanks(schedule: Schedule, month: Date) {
-  return daysOfMonth(month).some((date) => !schedule[dateKey(date)]);
 }
