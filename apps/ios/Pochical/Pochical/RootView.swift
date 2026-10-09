@@ -46,6 +46,10 @@ struct RootView: View {
     // The reminders' notifications, put in anew as what they read changes.
     .modifier(ReminderUpdates())
     .task { meID = await groupCalls.userID() }
+    // Another user from now: switched to an account, signed out or deleted.
+    .onReceive(NotificationCenter.default.publisher(for: .accountChanged)) { _ in
+      Task { meID = await groupCalls.userID() }
+    }
     .task(id: meID) {
       guard let meID else { return }
       _ = try? await $unread.load(UnreadRequest(me: meID))
