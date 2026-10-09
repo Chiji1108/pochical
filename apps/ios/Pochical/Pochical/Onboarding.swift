@@ -227,7 +227,7 @@ private struct KindStep: View {
   var body: some View {
     StepPage(
       title: "シフトに繰り返しはありますか？",
-      description: "繰り返しがあっても、違う日だけポチポチ入力で変えられます。",
+      description: "繰り返しがあっても、違う日だけあとから変えられます。",
       footnote: "あとから設定で変えられます"
     ) {
       OptionCard(icon: "🔁", title: "繰り返しがある", note: "当番・非番、工場の交代勤務、曜日で固定など") {

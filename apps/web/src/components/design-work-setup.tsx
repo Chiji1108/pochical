@@ -336,7 +336,7 @@ function KindStep({
       <StepHeader
         description={
           first
-            ? "繰り返しがあっても、違う日だけポチポチ入力で変えられます。"
+            ? "繰り返しがあっても、違う日だけあとから変えられます。"
             : "前の仕事のシフトは、そのまま残ります。"
         }
         onBack={onBack}
