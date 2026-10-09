@@ -189,6 +189,12 @@ public enum ChatPhotos {
   /// Profile). A group's id is never this.
   public static let mine = "me"
 
+  /// Where the faces on an invitation's join screen are kept, in place of
+  /// a group's id: read by the code's holder before joining.
+  public static func invitation(_ code: String) -> String {
+    "invites/\(code)"
+  }
+
   /// Keeps a photo of the user's and sends it up at once, to the group's
   /// photos or their own (`mine`), for a profile to name it after.
   public static func send(
@@ -202,6 +208,8 @@ public enum ChatPhotos {
     switch groupID {
     case support: server.appending(path: "v1/support/photos/\(photoID)")
     case mine: server.appending(path: "v1/me/photos/\(photoID)")
+    case let shelf where shelf.hasPrefix("invites/"):
+      server.appending(path: "v1/\(shelf)/photos/\(photoID)")
     default: server.appending(path: "v1/groups/\(groupID)/photos/\(photoID)")
     }
   }

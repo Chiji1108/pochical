@@ -157,6 +157,10 @@ public nonisolated struct Pochical_V1_InviteMember: Sendable {
 
   public var displayName: String = String()
 
+  /// Their photo as the group shows it, read by the code's holder at
+  /// /v1/invites/{code}/photos/{id}; empty for none.
+  public var photoID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -587,7 +591,7 @@ nonisolated extension Pochical_V1_GetInviteResponse: SwiftProtobuf.Message, Swif
 
 nonisolated extension Pochical_V1_InviteMember: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".InviteMember"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_name\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_name\0\u{3}photo_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -596,6 +600,7 @@ nonisolated extension Pochical_V1_InviteMember: SwiftProtobuf.Message, SwiftProt
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.displayName) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
       default: break
       }
     }
@@ -605,11 +610,15 @@ nonisolated extension Pochical_V1_InviteMember: SwiftProtobuf.Message, SwiftProt
     if !self.displayName.isEmpty {
       try visitor.visitSingularStringField(value: self.displayName, fieldNumber: 1)
     }
+    if !self.photoID.isEmpty {
+      try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_InviteMember, rhs: Pochical_V1_InviteMember) -> Bool {
     if lhs.displayName != rhs.displayName {return false}
+    if lhs.photoID != rhs.photoID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

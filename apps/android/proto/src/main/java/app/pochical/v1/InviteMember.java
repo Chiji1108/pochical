@@ -20,6 +20,7 @@ public  final class InviteMember extends
     InviteMemberOrBuilder {
   private InviteMember() {
     displayName_ = "";
+    photoId_ = "";
   }
   public static final int DISPLAY_NAME_FIELD_NUMBER = 1;
   private java.lang.String displayName_;
@@ -65,6 +66,78 @@ public  final class InviteMember extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     displayName_ = value.toStringUtf8();
+
+  }
+
+  public static final int PHOTO_ID_FIELD_NUMBER = 2;
+  private java.lang.String photoId_;
+  /**
+   * <pre>
+   * Their photo as the group shows it, read by the code's holder at
+   * /v1/invites/{code}/photos/{id}; empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  @java.lang.Override
+  public java.lang.String getPhotoId() {
+    return photoId_;
+  }
+  /**
+   * <pre>
+   * Their photo as the group shows it, read by the code's holder at
+   * /v1/invites/{code}/photos/{id}; empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPhotoIdBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(photoId_);
+  }
+  /**
+   * <pre>
+   * Their photo as the group shows it, read by the code's holder at
+   * /v1/invites/{code}/photos/{id}; empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @param value The photoId to set.
+   */
+  private void setPhotoId(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    photoId_ = value;
+  }
+  /**
+   * <pre>
+   * Their photo as the group shows it, read by the code's holder at
+   * /v1/invites/{code}/photos/{id}; empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   */
+  private void clearPhotoId() {
+
+    photoId_ = getDefaultInstance().getPhotoId();
+  }
+  /**
+   * <pre>
+   * Their photo as the group shows it, read by the code's holder at
+   * /v1/invites/{code}/photos/{id}; empty for none.
+   * </pre>
+   *
+   * <code>string photo_id = 2 [json_name = "photoId"];</code>
+   * @param value The bytes for photoId to set.
+   */
+  private void setPhotoIdBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    photoId_ = value.toStringUtf8();
 
   }
 
@@ -218,6 +291,80 @@ public  final class InviteMember extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Their photo as the group shows it, read by the code's holder at
+     * /v1/invites/{code}/photos/{id}; empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * @return The photoId.
+     */
+    @java.lang.Override
+    public java.lang.String getPhotoId() {
+      return instance.getPhotoId();
+    }
+    /**
+     * <pre>
+     * Their photo as the group shows it, read by the code's holder at
+     * /v1/invites/{code}/photos/{id}; empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * @return The bytes for photoId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getPhotoIdBytes() {
+      return instance.getPhotoIdBytes();
+    }
+    /**
+     * <pre>
+     * Their photo as the group shows it, read by the code's holder at
+     * /v1/invites/{code}/photos/{id}; empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * @param value The photoId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhotoId(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setPhotoId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Their photo as the group shows it, read by the code's holder at
+     * /v1/invites/{code}/photos/{id}; empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPhotoId() {
+      copyOnWrite();
+      instance.clearPhotoId();
+      return this;
+    }
+    /**
+     * <pre>
+     * Their photo as the group shows it, read by the code's holder at
+     * /v1/invites/{code}/photos/{id}; empty for none.
+     * </pre>
+     *
+     * <code>string photo_id = 2 [json_name = "photoId"];</code>
+     * @param value The bytes for photoId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhotoIdBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setPhotoIdBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.InviteMember)
   }
   @java.lang.Override
@@ -235,9 +382,11 @@ public  final class InviteMember extends
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
             "displayName_",
+            "photoId_",
           };
           java.lang.String info =
-              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0208";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

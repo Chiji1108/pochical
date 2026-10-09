@@ -6,7 +6,9 @@ import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
 import {
   getPhoto,
+  getInvitePhoto,
   getPreviewImage,
+  INVITE_PHOTO_PATH,
   PHOTO_PATH,
   PREVIEW_IMAGE_PATH,
   PERSON_PHOTO_PATH,
@@ -91,40 +93,70 @@ const photoRequest = async (
   }
 };
 
-/** A picture by its path: a preview's, or a photo in a chat; else none. */
+/**
+ * A picture anyone signed in may read by holding its link: a preview's, or
+ * a face on a join screen; else none.
+ */
+const sharedPictureRequest = async (
+  request: Request,
+  env: Env,
+  pathname: string
+): Promise<Response | undefined> => {
+  // A link preview's picture: its id comes only with a preview.
+  const previewImage = PREVIEW_IMAGE_PATH.exec(pathname)?.groups?.imageId;
+  // Faces on a join screen, for whoever holds a live invitation.
+  const invitePhoto = INVITE_PHOTO_PATH.exec(pathname)?.groups;
+  if (previewImage === undefined && invitePhoto === undefined) {
+    return undefined;
+  }
+  if (!(await sessionUser(request.headers))) {
+    return signInFirst();
+  }
+  if (previewImage !== undefined) {
+    return await getPreviewImage(env, previewImage);
+  }
+  return invitePhoto?.code !== undefined && invitePhoto.photoId !== undefined
+    ? await getInvitePhoto(env, invitePhoto.code, invitePhoto.photoId)
+    : undefined;
+};
+
+/**
+ * One of the user's own photos: in their chat with Pochical's people, or
+ * their usual one, for them alone; else none.
+ */
+const ownPictureRequest = async (
+  request: Request,
+  env: Env,
+  pathname: string
+): Promise<Response | undefined> => {
+  const supportPhotoId = SUPPORT_PHOTO_PATH.exec(pathname)?.groups?.photoId;
+  const personPhotoId = PERSON_PHOTO_PATH.exec(pathname)?.groups?.photoId;
+  if (supportPhotoId === undefined && personPhotoId === undefined) {
+    return undefined;
+  }
+  const user = await sessionUser(request.headers);
+  if (!user) {
+    return signInFirst();
+  }
+  return supportPhotoId === undefined
+    ? await personPhoto(request, env, personPhotoId ?? "", user.id)
+    : await supportPhoto(request, env, supportPhotoId, user.id);
+};
+
+/** A picture by its path: a preview's, a face, or a photo in a chat; else none. */
 const pictureRequest = async (
   request: Request,
   env: Env,
   pathname: string
 ): Promise<Response | undefined> => {
-  // A link preview's picture, for anyone signed in: its id comes only
-  // with a preview.
-  const previewImage = PREVIEW_IMAGE_PATH.exec(pathname)?.groups?.imageId;
-  if (previewImage !== undefined) {
-    if (!(await sessionUser(request.headers))) {
-      return signInFirst();
-    }
-    return await getPreviewImage(env, previewImage);
+  const shared = await sharedPictureRequest(request, env, pathname);
+  if (shared) {
+    return shared;
   }
-
-  // The user's photos in their chat with Pochical's people.
-  const supportPhotoId = SUPPORT_PHOTO_PATH.exec(pathname)?.groups?.photoId;
-  if (supportPhotoId !== undefined) {
-    const user = await sessionUser(request.headers);
-    return user
-      ? await supportPhoto(request, env, supportPhotoId, user.id)
-      : signInFirst();
+  const own = await ownPictureRequest(request, env, pathname);
+  if (own) {
+    return own;
   }
-
-  // The user's own photos: their usual one, for them alone.
-  const personPhotoId = PERSON_PHOTO_PATH.exec(pathname)?.groups?.photoId;
-  if (personPhotoId !== undefined) {
-    const user = await sessionUser(request.headers);
-    return user
-      ? await personPhoto(request, env, personPhotoId, user.id)
-      : signInFirst();
-  }
-
   // A group's photos, as its socket: its members alone, by their own DO.
   const photo = PHOTO_PATH.exec(pathname)?.groups;
   if (photo?.groupId !== undefined && photo.photoId !== undefined) {

@@ -86,7 +86,10 @@ struct JoinScreen: View {
               showingMembers = true
             } label: {
               VStack(spacing: 8) {
-                Faces(names: Array(details.members.prefix(5)))
+                Faces(
+                  names: Array(details.members.prefix(5)),
+                  photos: Array(details.memberPhotos.prefix(5)),
+                  shelf: ChatPhotos.invitation(invite.code))
                 HStack(spacing: 2) {
                   Text(memberLine(details.members)).lineLimit(1)
                   Image(systemName: "chevron.right").imageScale(.small)
@@ -145,7 +148,9 @@ struct JoinScreen: View {
       .padding(.vertical, 12)
     }
     .sheet(isPresented: $showingMembers) {
-      MembersSheet(group: details.name, members: details.members)
+      MembersSheet(
+        group: details.name, members: details.members, photos: details.memberPhotos,
+        shelf: ChatPhotos.invitation(invite.code))
     }
   }
 
@@ -242,11 +247,16 @@ private func memberLine(_ names: [String]) -> String {
 private struct Faces: View {
   @Environment(\.themeColors) private var colors
   let names: [String]
+  let photos: [String]
+  /// Where the invitation's faces are read from.
+  let shelf: String
 
   var body: some View {
     HStack(spacing: -8) {
-      ForEach(Array(names.enumerated()), id: \.offset) { _, name in
-        LetterAvatar(name: name, size: 32)
+      ForEach(Array(names.enumerated()), id: \.offset) { index, name in
+        MemberAvatar(
+          name: name, photoID: photos.indices.contains(index) ? photos[index] : "",
+          groupID: shelf, size: 32)
           .overlay(Circle().strokeBorder(colors.backgroundBase, lineWidth: 2).padding(-2))
       }
     }
@@ -276,14 +286,18 @@ private struct MembersSheet: View {
   @Environment(\.dismiss) private var dismiss
   let group: String
   let members: [String]
+  let photos: [String]
+  let shelf: String
 
   var body: some View {
     NavigationStack {
-      List(Array(members.enumerated()), id: \.offset) { _, name in
+      List(Array(members.enumerated()), id: \.offset) { index, name in
         Label {
           Text(name).lineLimit(1)
         } icon: {
-          LetterAvatar(name: name, size: 28)
+          MemberAvatar(
+            name: name, photoID: photos.indices.contains(index) ? photos[index] : "",
+            groupID: shelf, size: 28)
         }
       }
       .navigationTitle("\(members.count)人のメンバー")

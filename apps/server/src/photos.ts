@@ -1,6 +1,7 @@
 import { chatRules } from "@pochical/design/chat";
 
 import { isId } from "./ids";
+import { groupOfCode } from "./invite-codes";
 import { previewImageKey } from "./link-preview";
 
 // Photos sent in a group's chats (spec/chat.md, Photos), kept in R2 under
@@ -203,6 +204,34 @@ export const sharePersonPhoto = async (
     customMetadata: { userId },
     httpMetadata: { contentType: "image/jpeg" },
   });
+};
+
+/**
+ * A face on an invitation's join screen, by its path:
+ * /v1/invites/{code}/photos/{photoId}.
+ */
+export const INVITE_PHOTO_PATH =
+  /^\/v1\/invites\/(?<code>[^/]+)\/photos\/(?<photoId>[^/]+)$/u;
+
+/**
+ * A member's face for whoever holds a live invitation to their group, as
+ * its join screen shows them with their names: only photos the group
+ * shows of someone in it now.
+ */
+export const getInvitePhoto = async (
+  env: Env,
+  code: string,
+  photoId: string
+): Promise<Response> => {
+  const groupId = await groupOfCode(env.DB, code);
+  if (
+    groupId === null ||
+    !isId(photoId) ||
+    !(await env.GROUPS.getByName(groupId).showsPhoto(photoId))
+  ) {
+    return new Response("No such photo", { status: 404 });
+  }
+  return await servePhoto(env, photoKey(groupId, photoId));
 };
 
 /** A link preview's picture by its path: /v1/previews/{imageId}. */

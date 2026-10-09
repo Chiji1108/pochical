@@ -44,6 +44,9 @@ public struct InviteDetails: Hashable, Sendable {
   public var emoji: String
   /// Everyone in the group as they appear in it, in the order they joined.
   public var members: [String]
+  /// Their photos, as members, read by the code's holder
+  /// (`ChatPhotos.invitation`); empty for none.
+  public var memberPhotos: [String] = []
   /// The user is in the group already.
   public var alreadyMember: Bool
   /// The group has its most members: joining would fail.
@@ -70,7 +73,8 @@ extension GroupCalls {
     case .success(let invite):
       return InviteDetails(
         groupID: invite.groupID, name: invite.groupName, emoji: invite.groupEmoji,
-        members: invite.members.map(\.displayName), alreadyMember: invite.alreadyMember,
+        members: invite.members.map(\.displayName),
+        memberPhotos: invite.members.map(\.photoID), alreadyMember: invite.alreadyMember,
         full: invite.full)
     case .failure(let error):
       throw InviteError(error)
