@@ -91,7 +91,6 @@ export function CoworkersPage({
         }}
         onSave={(name) => {
           coworkers.onRename(editing.id, name);
-          setEditingID(undefined);
         }}
         taken={names.filter((name) => name !== editing.name)}
       />
@@ -207,8 +206,10 @@ export function CoworkersPage({
   );
 }
 
-// Renaming shows on every day the person is on; deleting takes them off
-// those days, which the second press confirms when there are any.
+// Renaming shows on every day the person is on, and is kept as the field
+// is left or the page goes back, as every name is (spec/calendar.md, Text
+// fields); deleting takes them off those days, which the second press
+// confirms when there are any.
 function CoworkerEditor({
   name,
   days,
@@ -228,21 +229,20 @@ function CoworkerEditor({
   const [confirming, setConfirming] = useState(false);
   const trimmed = draft.trim();
   const duplicate = taken.includes(trimmed);
+  // An empty name or another's is not kept: the person keeps theirs.
+  const keep = () => {
+    if (trimmed !== "" && !duplicate && trimmed !== name) {
+      onSave(trimmed);
+    }
+  };
   return (
     <>
       <PageHeader
         back="一緒に働く人"
-        onBack={onBack}
-        trailing={
-          <HeaderAction
-            disabled={!trimmed || duplicate}
-            onClick={() => {
-              onSave(trimmed);
-            }}
-          >
-            保存
-          </HeaderAction>
-        }
+        onBack={() => {
+          keep();
+          onBack();
+        }}
         title={name}
       />
       <List>
@@ -254,6 +254,7 @@ function CoworkerEditor({
                 align="end"
                 look="inline"
                 kind="personName"
+                onBlur={keep}
                 onValueChange={setDraft}
                 value={draft}
               />
