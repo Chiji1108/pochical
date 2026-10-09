@@ -25,7 +25,11 @@ import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
 import { isDate } from "./day-values";
 import type { LinkPreview } from "./gen/pochical/v1/chat_pb";
-import { ChangeSchema, ChatLineSchema } from "./gen/pochical/v1/sync_pb";
+import {
+  ChangeSchema,
+  ChatLineSchema,
+  ChatUnsendSchema,
+} from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
   ChatEdit,
@@ -893,6 +897,80 @@ export const takeChatEdit = (
       return {};
     }
   }
+};
+
+/**
+ * A deleted account's part in the group's chats taken out (spec/sync-
+ * protocol.md, Deleting an account): each line they wrote taken back, as
+ * 送信取消 takes one, their photos with them; their reactions and votes
+ * taken off the lines they were on, which move to new cursors; and their
+ * read marks and blocks dropped. The changes, and the photos to delete.
+ */
+export const eraseMemberChat = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  nextCursor: () => number
+): { changes: Change[]; photosGone: string[] } => {
+  const changes: Change[] = [];
+  const photosGone: string[] = [];
+  const written = db
+    .select({ seq: chatLines.seq, threadId: chatLines.threadId })
+    .from(chatLines)
+    .where(and(eq(chatLines.authorId, userId), eq(chatLines.unsent, false)))
+    .all();
+  for (const { seq, threadId } of written) {
+    const taken = takeWords(
+      db,
+      userId,
+      {
+        case: "unsend",
+        value: create(ChatUnsendSchema, { seq: BigInt(seq), threadId }),
+      },
+      nextCursor()
+    );
+    if (taken.change !== undefined) {
+      changes.push(taken.change);
+    }
+    if (taken.photoGone !== undefined) {
+      photosGone.push(taken.photoGone);
+    }
+  }
+  // The lines others wrote that their reactions or votes were on.
+  const touched = new Map<string, { seq: number; threadId: string }>();
+  for (const table of [chatReactions, chatVotes]) {
+    for (const { seq, threadId } of db
+      .select({ seq: table.seq, threadId: table.threadId })
+      .from(table)
+      .where(eq(table.userId, userId))
+      .all()) {
+      touched.set(`${threadId}\n${seq}`, { seq, threadId });
+    }
+    db.delete(table).where(eq(table.userId, userId)).run();
+  }
+  for (const { seq, threadId } of touched.values()) {
+    const row = db
+      .update(chatLines)
+      .set({ cursor: nextCursor() })
+      .where(
+        and(
+          eq(chatLines.threadId, threadId),
+          eq(chatLines.seq, seq),
+          eq(chatLines.unsent, false)
+        )
+      )
+      .returning()
+      .get();
+    if (row !== undefined) {
+      changes.push(chatLineChange(db, row));
+    }
+  }
+  db.delete(readMarks).where(eq(readMarks.userId, userId)).run();
+  db.delete(memberBlocks)
+    .where(
+      or(eq(memberBlocks.userId, userId), eq(memberBlocks.blockedId, userId))
+    )
+    .run();
+  return { changes, photosGone };
 };
 
 /**

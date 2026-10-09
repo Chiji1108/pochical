@@ -40,6 +40,7 @@ struct PochicalApp: App {
         .environment(settings)
         .environment(\.groupCalls, groupCalls)
         .environment(\.account, account)
+        .environment(\.userSocket, sync)
     }
     // The socket is open only in the foreground (spec/sync-protocol.md,
     // Sockets), and the shared database lets go of its locks before iOS

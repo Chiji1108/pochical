@@ -10,6 +10,9 @@ extension EnvironmentValues {
   @Entry var groupCalls = GroupCalls(account: Account())
   /// The open group's socket, for its screens to ask it for chat pages.
   @Entry var groupSocket: SyncClient?
+  /// The user's own socket, connected again as someone else once the
+  /// account is deleted.
+  @Entry var userSocket: SyncClient?
   /// Opens one of Pochical's invitations on its join screen, as reading
   /// its link does.
   @Entry var openInvite: @MainActor (String) -> Void = { _ in }

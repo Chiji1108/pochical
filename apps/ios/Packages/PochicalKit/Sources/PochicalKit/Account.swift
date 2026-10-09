@@ -17,6 +17,8 @@ public enum Server {
 public protocol TokenStore: Sendable {
   func token() throws -> String?
   func keep(_ token: String) throws
+  /// No token kept, as after the account is deleted.
+  func forget() throws
 }
 
 /// The session token in the Keychain, which outlives the app, so a
@@ -27,8 +29,8 @@ public protocol TokenStore: Sendable {
 /// Google. Readable after the phone's first unlock, as the app syncs in
 /// the background.
 public struct KeychainTokenStore: TokenStore {
-  private let service = "app.pochical.session"
-  private let account = "token"
+  let service = "app.pochical.session"
+  let account = "token"
 
   public init() {}
 
@@ -60,6 +62,20 @@ public struct KeychainTokenStore: TokenStore {
         kSecValueData: Data(token.utf8),
       ] as CFDictionary, nil)
     guard status == errSecSuccess else {
+      throw KeychainError(status: status)
+    }
+  }
+}
+
+extension KeychainTokenStore {
+  public func forget() throws {
+    let status = SecItemDelete(
+      [
+        kSecClass: kSecClassGenericPassword,
+        kSecAttrService: service,
+        kSecAttrAccount: account,
+      ] as CFDictionary)
+    guard status == errSecSuccess || status == errSecItemNotFound else {
       throw KeychainError(status: status)
     }
   }
@@ -107,6 +123,12 @@ public actor Account {
     let token = try await signing.value
     try store.keep(token)
     return token
+  }
+
+  /// The session forgotten, as its user's account is deleted: the next
+  /// call signs in anonymously as a new user.
+  public func forget() throws {
+    try store.forget()
   }
 
   /// The headers that say who is calling, as Connect's calls and the

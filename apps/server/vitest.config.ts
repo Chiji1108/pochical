@@ -17,6 +17,11 @@ export default defineConfig({
           APNS_KEY: generateKeyPairSync("ec", {
             namedCurve: "P-256",
           }).privateKey.export({ format: "pem", type: "pkcs8" }),
+          // A key of the kind Apple gives for Sign in with Apple.
+          APPLE_SIGNIN_KEY: generateKeyPairSync("ec", {
+            namedCurve: "P-256",
+          }).privateKey.export({ format: "pem", type: "pkcs8" }),
+          APPLE_SIGNIN_KEY_ID: "SIWATEST01",
           BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
           BETTER_AUTH_URL: "https://server.test",
           // Pochical's people's Slack, as tests answer for it.

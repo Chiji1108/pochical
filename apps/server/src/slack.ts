@@ -583,3 +583,17 @@ export const tellStaffOfReport = async (
     ].join("\n"),
   });
 };
+
+/**
+ * The user deleted their account: said in their chat's thread, whose
+ * lines are gone from the app and the admin site.
+ */
+export const tellStaffOfDeletion = async (
+  env: Env,
+  thread: string
+): Promise<void> => {
+  await slackCall(env, "chat.postMessage", {
+    text: "（ユーザーがアカウントを削除しました。このチャットはアプリと管理サイトから消えています）",
+    thread_ts: thread,
+  });
+};

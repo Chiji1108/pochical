@@ -37,6 +37,18 @@ What the device holds may be a few taps tried before signing in, or months of sh
    - この端末のデータを使う. The server deletes the account's user, as deleting an account deletes it, its groups and messages with it, and links the provider's account to the anonymous user in the same call, clearing `isAnonymous` as linking does. Devices still signed in to the deleted user are signed out, and say so as on a 401 (Reconnecting).
 3. When one side holds nothing the person entered (no day values, repeating orders or coworkers, and no patterns but unchanged ready-made ones) and no groups, the app does not ask, and keeps the other. A new phone's first launch offers signing in before anything is entered, so most switches go this way.
 
+### Deleting an account
+
+設定 › アカウント's アカウントを削除 deletes the account and everything of it, as the privacy policy and pochical.app/account/delete say, asked first (アカウントを削除しますか？ / シフト、グループ、チャットがすべて削除されます。元に戻せません。 / アカウントとすべてのデータを削除). It is `UserService.DeleteAccount` (`apps/server/src/account-deletion.ts`), whose steps can be run again, so a deletion cut off part way is finished by trying again, the session going last:
+
+1. A user linked to Sign in with Apple has Apple's tokens revoked first, as Apple asks apps that offer it. The server keeps none of them, so the app asks Apple once more for an authorization code and sends it; the server exchanges it for the app's refresh token, with a client secret signed by the Sign in with Apple key (`APPLE_SIGNIN_KEY`, `APPLE_SIGNIN_KEY_ID`, from the team), checks the token is of the Apple account linked, and revokes it. Without a code, or with one Apple does not take or of another Apple account, nothing is deleted (`FAILED_PRECONDITION`).
+2. In each group the user was ever in, left ones too, the Group DO takes them out as leaving does, their shifts with them, and marks them `deleted` with no name (`Member.deleted`): every line they wrote is taken back as 送信取消 takes one, their photos deleted, and their reactions and votes come off the lines they were on. A group with no one left in it goes whole: the Group DO's storage, its invitation and its photos.
+3. Their chat with Pochical's people goes, its photos with it; its Slack thread says the account was deleted.
+4. The User DO's storage goes: days, patterns, coworkers, groups, push tokens. Its sockets close.
+5. better-auth deletes the user, their sessions and their provider accounts, which closes what is still open. Their other devices are signed out, as on a 401 (Reconnecting).
+
+The device that deleted the account erases what it holds of the user (every table, the outbox and the chats' photos), forgets its token, and goes on as a new anonymous user, as on a first launch; its own settings stay. In the groups, the members left see each line of theirs as 削除されたメッセージ, and a one-to-one chat with them as 相手のアカウントは削除されました, where it takes no more lines. Reports made by or about them stay, as what Pochical's people act on, as the privacy policy says. better-auth's own deletion of an anonymous user (`/delete-anonymous-user`, and after a switching sign-in) is turned off, as it would leave their groups and chats behind.
+
 ## Groups
 
 `GroupService` (`proto/pochical/v1/group.proto`) makes groups and lets people into them; every call needs a session.
@@ -279,7 +291,6 @@ When Pochical's people answer in a user's chat with them (spec/admin.md), or rea
 
 ## Not yet specified
 
-- Deleting an account: what goes (the User DO, memberships and what groups hold of the user, their messages' authorship) and how the user's other devices learn of it. Apple asks apps to revoke a deleted user's Sign in with Apple tokens; with none kept, deletion has the person sign in with Apple once more for a fresh code to revoke with
 - Snapshot format for resets and how long each DO keeps its change log
 - Resets for DOs that do not keep values as registers
 - Presence and "last seen": whether to show them at all. Pochical is for family and friends, where visible presence and read markers can feel like pressure; typing alone may be enough. "Last seen" would also need storing in the User DO.

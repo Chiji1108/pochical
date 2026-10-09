@@ -61,4 +61,15 @@ public interface MemberOrBuilder extends
    * @return The left.
    */
   boolean getLeft();
+
+  /**
+   * <pre>
+   * Their account is deleted: left, with no name, and every line they
+   * wrote taken back (spec/sync-protocol.md, Deleting an account).
+   * </pre>
+   *
+   * <code>bool deleted = 5 [json_name = "deleted"];</code>
+   * @return The deleted.
+   */
+  boolean getDeleted();
 }

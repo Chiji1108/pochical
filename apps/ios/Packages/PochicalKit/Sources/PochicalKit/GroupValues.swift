@@ -17,6 +17,13 @@ public struct GroupMemberRow: Hashable, Sendable {
   public var joinedAtMs: Int64
   /// They left: kept for the name on their lines in the chats.
   public var left = false
+  /// Their account is deleted: no name, and their lines taken back.
+  public var deleted = false
+
+  /// How the app names them: one whose account is deleted has no name.
+  public var shownName: String {
+    deleted ? "削除されたアカウント" : displayName
+  }
 }
 
 /// A member's day as the group sees it: its pattern and times only.
@@ -154,6 +161,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep whose account was deleted") { db in
+      try #sql(
+        """
+        ALTER TABLE "groupMembers" ADD COLUMN "deleted" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -215,7 +230,7 @@ public enum GroupSync {
       }
       let row = GroupMemberRow(
         groupID: groupID, userID: member.userID, displayName: member.displayName,
-        joinedAtMs: member.joinedAtMs, left: member.left)
+        joinedAtMs: member.joinedAtMs, left: member.left, deleted: member.deleted)
       try GroupMemberRow.insert { row }.execute(db)
     case .memberDay(let member):
       try takeDay(member.day, of: member.userID, in: groupID, db: db)

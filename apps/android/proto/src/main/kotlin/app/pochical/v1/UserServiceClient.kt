@@ -20,6 +20,27 @@ public class UserServiceClient(
   private val client: ProtocolClientInterface,
 ) : UserServiceClientInterface {
   /**
+   *  Deletes the user's account and everything of it (spec/sync-protocol.md,
+   *  Deleting an account): their own values, their place in each group with
+   *  every line they wrote taken back, their chat with Pochical's people,
+   *  and their sign-ins. A user linked to Sign in with Apple sends a fresh
+   *  authorization code, with which the server revokes the app's Apple
+   *  tokens as Apple asks; FAILED_PRECONDITION without one Apple takes.
+   */
+  override suspend fun deleteAccount(request: DeleteAccountRequest, headers: Headers): ResponseMessage<DeleteAccountResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.UserService/DeleteAccount",
+      app.pochical.v1.DeleteAccountRequest::class,
+      app.pochical.v1.DeleteAccountResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
+
+  /**
    *  Who the token belongs to, for the apps to check a stored session.
    */
   override suspend fun getMe(request: GetMeRequest, headers: Headers): ResponseMessage<GetMeResponse> = client.unary(

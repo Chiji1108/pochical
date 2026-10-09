@@ -727,3 +727,28 @@ func aMarkGuessedFromTheName(_ vector: LookVectors.GuessCase) {
 func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   #expect(nextColor(vector.used, slots: 12) == vector.expected)
 }
+
+@Test func aDeletedMembersLinesAreHeldWithNoName() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var member = Pochical_V1_Change()
+    member.cursor = 1
+    member.member.userID = "u1"
+    member.member.left = true
+    member.member.deleted = true
+    try GroupSync.take([member, line(1, "")], of: "g", in: db)
+    let writer = try #require(try Chats.writers(in: "g", db: db).first)
+    #expect(writer.deleted)
+    #expect(writer.shownName == "削除されたアカウント")
+  }
+}
+
+@Test func erasingLeavesTheDeviceAsNew() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take([line(1, "やあ")], of: "g", in: db)
+    try LocalData.erase(in: db)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.isEmpty)
+    #expect(try Int.fetchOne(db, sql: "SELECT count(*) FROM syncState") == 0)
+  }
+}

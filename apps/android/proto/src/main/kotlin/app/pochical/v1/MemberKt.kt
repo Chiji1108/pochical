@@ -124,6 +124,33 @@ public object MemberKt {
     public fun clearLeft() {
       _builder.clearLeft()
     }
+
+    /**
+     * ```
+     * Their account is deleted: left, with no name, and every line they
+     * wrote taken back (spec/sync-protocol.md, Deleting an account).
+     * ```
+     *
+     * `bool deleted = 5 [json_name = "deleted"];`
+     */
+    public var deleted: kotlin.Boolean
+      @kotlin.jvm.JvmName("getDeleted")
+        get() = _builder.deleted
+      @kotlin.jvm.JvmName("setDeleted")
+        set(value) {
+        _builder.deleted = value
+      }
+    /**
+     * ```
+     * Their account is deleted: left, with no name, and every line they
+     * wrote taken back (spec/sync-protocol.md, Deleting an account).
+     * ```
+     *
+     * `bool deleted = 5 [json_name = "deleted"];`
+     */
+    public fun clearDeleted() {
+      _builder.clearDeleted()
+    }
   }
 }
 public inline fun app.pochical.v1.Member.copy(block: `app.pochical.v1`.MemberKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Member =
