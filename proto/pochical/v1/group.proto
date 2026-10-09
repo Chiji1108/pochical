@@ -54,7 +54,10 @@ message CreateGroupRequest {
   string name = 1;
   // The group's mark: one emoji. Other marks come later.
   string emoji = 2;
-  // How the caller appears in this group; personName: 1 to 20 characters.
+  // How the caller appears in this group, at most personName characters:
+  // their usual name, which it then follows, or one of its own; empty for
+  // the usual one. A caller with no usual name gives one, and it becomes
+  // their usual name (spec/sync-protocol.md, Profile).
   string display_name = 3;
   // An id the app makes once for each group it sets out to create, up to
   // syncLimits.idLength characters without spaces, and sends again with
@@ -109,7 +112,7 @@ message InviteMember {
 
 message JoinGroupRequest {
   string invite_code = 1;
-  // How the caller appears in this group; personName: 1 to 20 characters.
+  // As CreateGroupRequest's display_name.
   string display_name = 2;
 }
 
@@ -131,7 +134,8 @@ message RenameGroupResponse {}
 
 message SetDisplayNameRequest {
   string group_id = 1;
-  // personName: 1 to 20 characters.
+  // A name of the caller's own for this group, at most personName
+  // characters; empty, or their usual name, to follow the usual one again.
   string display_name = 2;
 }
 

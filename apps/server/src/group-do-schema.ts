@@ -45,12 +45,18 @@ export const members = sqliteTable("members", {
   cursor: integer().notNull().default(0),
   // Their account is deleted: left, with no name, their lines taken back.
   deleted: integer({ mode: "boolean" }).notNull().default(false),
+  // As they appear: their own name for the group, else their usual one.
   displayName: text("display_name").notNull(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
   // Set once they leave: the row stays, at the cursor of their leaving, so
   // a device catching up hears of it; their values go.
   leftAt: integer("left_at", { mode: "timestamp_ms" }),
+  // A name of their own for this group (このグループだけ), or none.
+  ownName: text("own_name"),
   userId: text("user_id").primaryKey(),
+  // Their usual name, as their User DO pushes it (spec/sync-protocol.md,
+  // Profile).
+  usualName: text("usual_name").notNull().default(""),
 });
 
 // Members' shared days as their User DOs push them (spec/sync-protocol.md,

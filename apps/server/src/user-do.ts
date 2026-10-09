@@ -562,7 +562,15 @@ export class UserDO extends DurableObject<Env> {
     broadcastChanges(this.ctx, [chatSettingsChange(changed)]);
   }
 
-  /** Sets the usual name, empty for none, sent to the user's devices. */
+  /** The usual name, empty before the user sets one. */
+  profileName(): string {
+    return this.db.select().from(profile).get()?.name ?? "";
+  }
+
+  /**
+   * Sets the usual name, empty for none, sent to the user's devices and
+   * pushed to their groups.
+   */
   setProfile(name: string): void {
     const changed = this.ctx.storage.transactionSync(() => {
       const row = { cursor: this.head() + 1, id: 1, name };
@@ -577,6 +585,7 @@ export class UserDO extends DurableObject<Env> {
         .get();
     });
     broadcastChanges(this.ctx, [profileChange(changed)]);
+    this.schedulePush();
   }
 
   /**
@@ -963,7 +972,8 @@ export class UserDO extends DurableObject<Env> {
             .where(gt(profile.cursor, cursor))
             .all()
             .map(profileChange),
-        shared: false,
+        // The groups show it unless the user gave one a name of its own.
+        shared: true,
         table: profile,
       },
     ];

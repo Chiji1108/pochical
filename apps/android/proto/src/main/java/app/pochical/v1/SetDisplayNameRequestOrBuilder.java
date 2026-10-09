@@ -24,7 +24,8 @@ public interface SetDisplayNameRequestOrBuilder extends
 
   /**
    * <pre>
-   * personName: 1 to 20 characters.
+   * A name of the caller's own for this group, at most personName
+   * characters; empty, or their usual name, to follow the usual one again.
    * </pre>
    *
    * <code>string display_name = 2 [json_name = "displayName"];</code>
@@ -33,7 +34,8 @@ public interface SetDisplayNameRequestOrBuilder extends
   java.lang.String getDisplayName();
   /**
    * <pre>
-   * personName: 1 to 20 characters.
+   * A name of the caller's own for this group, at most personName
+   * characters; empty, or their usual name, to follow the usual one again.
    * </pre>
    *
    * <code>string display_name = 2 [json_name = "displayName"];</code>

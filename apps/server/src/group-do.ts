@@ -73,8 +73,19 @@ export type GroupProfile = {
   emoji: string | null;
 };
 
-/** Someone in the group, as they appear in it. */
-type NewMember = { userId: string; displayName: string };
+/**
+ * Someone joining the group: their usual name, and a name of their own for
+ * it if they gave one (spec/sync-protocol.md, Profile).
+ */
+export type NewMember = {
+  userId: string;
+  usualName: string;
+  ownName: string | null;
+};
+
+/** How a member appears: their own name for the group, else their usual one. */
+const shownName = (ownName: string | null, usualName: string, before = "") =>
+  ownName ?? (usualName === "" ? before : usualName);
 
 /** How a join went: in now, in already, or kept out of a full group. */
 type JoinResult = "added" | "already" | "full";
@@ -97,6 +108,7 @@ const memberChange = ({
   displayName,
   joinedAt,
   leftAt,
+  ownName,
   userId,
 }: MemberRow): Change =>
   create(ChangeSchema, {
@@ -108,6 +120,7 @@ const memberChange = ({
         displayName,
         joinedAtMs: BigInt(joinedAt.getTime()),
         left: leftAt !== null,
+        ownName: ownName !== null,
         userId,
       },
     },
@@ -168,7 +181,8 @@ export class GroupDO extends DurableObject<Env> {
    * object takes one call at a time, so two joins cannot both take the
    * last place.
    */
-  addMember({ userId, displayName }: NewMember): JoinResult {
+  addMember(member: NewMember): JoinResult {
+    const { userId } = member;
     if (this.isMember(userId)) {
       return "already";
     }
@@ -176,7 +190,7 @@ export class GroupDO extends DurableObject<Env> {
       return "full";
     }
     const joined = this.ctx.storage.transactionSync(() => {
-      const member = this.writeMember({ displayName, userId });
+      const written = this.writeMember(member);
       // Lines from before they joined are not unread to them.
       const head = chatHead(this.db, GROUP_THREAD);
       const cursor = this.head() + 1;
@@ -184,7 +198,7 @@ export class GroupDO extends DurableObject<Env> {
       if (mark) {
         this.setHead(cursor);
       }
-      return mark ? [member, mark] : [member];
+      return mark ? [written, mark] : [written];
     });
     broadcastChanges(this.ctx, joined);
     return "added";
@@ -201,17 +215,22 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * How the member appears in the group from now on; false when they are
-   * not in it.
+   * The member's own name for the group from now on, or none to follow
+   * their usual one again; false when they are not in it.
    */
-  setDisplayName(userId: string, displayName: string): boolean {
+  setDisplayName(userId: string, ownName: string | null): boolean {
     const changed = this.ctx.storage.transactionSync(() => {
-      if (!this.isMember(userId)) {
+      const known = this.db.select().from(members).where(inGroup(userId)).get();
+      if (known === undefined) {
         return undefined;
       }
       return this.db
         .update(members)
-        .set({ cursor: this.nextCursor(), displayName })
+        .set({
+          cursor: this.nextCursor(),
+          displayName: shownName(ownName, known.usualName, known.displayName),
+          ownName,
+        })
         .where(eq(members.userId, userId))
         .returning()
         .get();
@@ -365,15 +384,44 @@ export class GroupDO extends DurableObject<Env> {
     return profileChange({ cursor, emoji, name });
   }
 
+  /**
+   * A member's usual name as their User DO pushes it, at `cursor`: shown
+   * unless they gave the group a name of their own. Nothing when it is
+   * the one known.
+   */
+  private takeUsualName(
+    userId: string,
+    usualName: string,
+    cursor: number
+  ): Change | undefined {
+    const known = this.db.select().from(members).where(inGroup(userId)).get();
+    if (known === undefined || known.usualName === usualName) {
+      return undefined;
+    }
+    const row = this.db
+      .update(members)
+      .set({
+        cursor,
+        displayName: shownName(known.ownName, usualName, known.displayName),
+        usualName,
+      })
+      .where(eq(members.userId, userId))
+      .returning()
+      .get();
+    return row === undefined ? undefined : memberChange(row);
+  }
+
   /** A new member at the next cursor, or one who left coming back, as a change. */
-  private writeMember({ userId, displayName }: NewMember): Change {
+  private writeMember({ userId, usualName, ownName }: NewMember): Change {
     const row = {
       cursor: this.nextCursor(),
       deleted: false,
-      displayName,
+      displayName: shownName(ownName, usualName),
       joinedAt: new Date(),
       leftAt: null,
+      ownName,
       userId,
+      usualName,
     };
     this.db
       .insert(members)
@@ -524,6 +572,8 @@ export class GroupDO extends DurableObject<Env> {
             kind.value,
             cursor + 1
           );
+        } else if (kind.case === "profile") {
+          change = this.takeUsualName(userId, kind.value.name, cursor + 1);
         }
         if (change) {
           cursor = Number(change.cursor);

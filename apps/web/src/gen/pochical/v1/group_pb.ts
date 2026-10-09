@@ -31,7 +31,10 @@ export type CreateGroupRequest = Message<"pochical.v1.CreateGroupRequest"> & {
   emoji: string;
 
   /**
-   * How the caller appears in this group; personName: 1 to 20 characters.
+   * How the caller appears in this group, at most personName characters:
+   * their usual name, which it then follows, or one of its own; empty for
+   * the usual one. A caller with no usual name gives one, and it becomes
+   * their usual name (spec/sync-protocol.md, Profile).
    *
    * @generated from field: string display_name = 3;
    */
@@ -242,7 +245,7 @@ export type JoinGroupRequest = Message<"pochical.v1.JoinGroupRequest"> & {
   inviteCode: string;
 
   /**
-   * How the caller appears in this group; personName: 1 to 20 characters.
+   * As CreateGroupRequest's display_name.
    *
    * @generated from field: string display_name = 2;
    */
@@ -334,7 +337,8 @@ export type SetDisplayNameRequest = Message<"pochical.v1.SetDisplayNameRequest">
   groupId: string;
 
   /**
-   * personName: 1 to 20 characters.
+   * A name of the caller's own for this group, at most personName
+   * characters; empty, or their usual name, to follow the usual one again.
    *
    * @generated from field: string display_name = 2;
    */

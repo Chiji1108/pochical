@@ -52,7 +52,10 @@ public interface CreateGroupRequestOrBuilder extends
 
   /**
    * <pre>
-   * How the caller appears in this group; personName: 1 to 20 characters.
+   * How the caller appears in this group, at most personName characters:
+   * their usual name, which it then follows, or one of its own; empty for
+   * the usual one. A caller with no usual name gives one, and it becomes
+   * their usual name (spec/sync-protocol.md, Profile).
    * </pre>
    *
    * <code>string display_name = 3 [json_name = "displayName"];</code>
@@ -61,7 +64,10 @@ public interface CreateGroupRequestOrBuilder extends
   java.lang.String getDisplayName();
   /**
    * <pre>
-   * How the caller appears in this group; personName: 1 to 20 characters.
+   * How the caller appears in this group, at most personName characters:
+   * their usual name, which it then follows, or one of its own; empty for
+   * the usual one. A caller with no usual name gives one, and it becomes
+   * their usual name (spec/sync-protocol.md, Profile).
    * </pre>
    *
    * <code>string display_name = 3 [json_name = "displayName"];</code>

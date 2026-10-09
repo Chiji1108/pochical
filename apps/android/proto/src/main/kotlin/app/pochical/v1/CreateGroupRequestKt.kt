@@ -81,7 +81,10 @@ public object CreateGroupRequestKt {
 
     /**
      * ```
-     * How the caller appears in this group; personName: 1 to 20 characters.
+     * How the caller appears in this group, at most personName characters:
+     * their usual name, which it then follows, or one of its own; empty for
+     * the usual one. A caller with no usual name gives one, and it becomes
+     * their usual name (spec/sync-protocol.md, Profile).
      * ```
      *
      * `string display_name = 3 [json_name = "displayName"];`
@@ -95,7 +98,10 @@ public object CreateGroupRequestKt {
       }
     /**
      * ```
-     * How the caller appears in this group; personName: 1 to 20 characters.
+     * How the caller appears in this group, at most personName characters:
+     * their usual name, which it then follows, or one of its own; empty for
+     * the usual one. A caller with no usual name gives one, and it becomes
+     * their usual name (spec/sync-protocol.md, Profile).
      * ```
      *
      * `string display_name = 3 [json_name = "displayName"];`
