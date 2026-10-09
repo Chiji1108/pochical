@@ -417,7 +417,7 @@ struct CalendarScreen: View {
         } label: {
           Label("ポチポチ入力", systemImage: "pencil")
         }
-        .buttonStyle(PrimaryButton())
+        .buttonStyle(RowHighButton())
       }
     }
   }
@@ -715,5 +715,24 @@ struct WeekPage: View {
     let week = (0..<7).map { self.week.adding(days: $0) }
     days.row(week, shown: days.calendar.shown(from: week[0], through: week[6]), fadingOutside: nil)
       .frame(height: DayCell.height, alignment: .top)
+  }
+}
+
+/// ポチポチ入力, the one main button not the system's: under 今月のお休み,
+/// it is drawn exactly as high as that row (Metrics.control), as /design's,
+/// so the two read as a pair; the system's prominent style adds padding of
+/// its own. Every other main button is the system's.
+private struct RowHighButton: ButtonStyle {
+  @Environment(\.themeColors) private var colors
+
+  func makeBody(configuration: ButtonStyleConfiguration) -> some View {
+    configuration.label
+      .font(.body.weight(.medium))
+      .foregroundStyle(colors.accentOnFill)
+      .frame(maxWidth: .infinity, minHeight: Metrics.control)
+      .background(colors.accentFill, in: .capsule)
+      .contentShape(.capsule)
+      .opacity(configuration.isPressed ? 0.8 : 1)
+      .animation(Springs.quick, value: configuration.isPressed)
   }
 }
