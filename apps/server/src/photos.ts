@@ -223,10 +223,9 @@ export const getInvitePhoto = async (
   code: string,
   photoId: string
 ): Promise<Response> => {
-  const groupId = await groupOfCode(env.DB, code);
+  const groupId = isId(photoId) ? await groupOfCode(env.DB, code) : null;
   if (
     groupId === null ||
-    !isId(photoId) ||
     !(await env.GROUPS.getByName(groupId).showsPhoto(photoId))
   ) {
     return new Response("No such photo", { status: 404 });
