@@ -94,6 +94,10 @@ struct NewGroupPage: View {
     Task {
       defer { making = false }
       do {
+        // A picked photo goes up first, for the group to take.
+        if !mark.photoID.isEmpty {
+          try await groupCalls.sendMarkPhoto(mark.photoID)
+        }
         let made = try await groupCalls.create(
           name: trimmed(name), mark: mark, displayName: trimmed(myName), requestID: requestID)
         onMade(made)

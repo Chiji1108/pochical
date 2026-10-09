@@ -220,6 +220,10 @@ private struct GroupEditPage: View {
     Task {
       defer { saving = false }
       do {
+        // A newly picked photo goes up first, for the group to take.
+        if !mark.photoID.isEmpty, mark.photoID != group.photoID {
+          try await groupCalls.sendMarkPhoto(mark.photoID)
+        }
         try await groupCalls.rename(group.id, name: name, mark: mark)
         dismiss()
       } catch {

@@ -5,7 +5,7 @@ import { markIconGlyphs } from "@pochical/design/mark-icons";
 
 import type { GroupMark } from "./gen/pochical/v1/marks_pb";
 import { isId } from "./ids";
-import { hasPersonPhoto, sharePersonPhoto } from "./photos";
+import { hasPersonPhoto, personPhotoKey, sharePersonPhoto } from "./photos";
 import { characterCount, isEmoji } from "./text-limits";
 
 /**
@@ -84,6 +84,21 @@ export const shareMarkPhoto = async (
     throw invalidMark();
   }
   await sharePersonPhoto(env, userId, photoId, groupId);
+};
+
+/**
+ * The caller's own copy of a photo mark gone, once the group shows its
+ * own: it was sent up only for the group to take. Their usual photo stays.
+ */
+export const dropPickedPhoto = async (
+  env: Env,
+  userId: string,
+  mark: MarkValue,
+  usualPhoto: string
+): Promise<void> => {
+  if (mark.photoId !== "" && mark.photoId !== usualPhoto) {
+    await env.PHOTOS.delete(personPhotoKey(userId, mark.photoId));
+  }
 };
 
 /** A mark as a row's columns keep it. */

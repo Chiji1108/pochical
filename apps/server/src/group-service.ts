@@ -16,7 +16,7 @@ import {
   SetDisplayNameResponseSchema,
   SetGroupPhotoResponseSchema,
 } from "./gen/pochical/v1/group_pb";
-import { requireMark, shareMarkPhoto } from "./group-marks";
+import { dropPickedPhoto, requireMark, shareMarkPhoto } from "./group-marks";
 import { isId } from "./ids";
 import {
   issueInviteCode,
@@ -128,8 +128,11 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const names = await namesFor(user.id, request.displayName, true);
       const groupId = await users.groupIdFor(request.requestId);
       await shareUsualPhoto(user.id, names.usualPhoto, groupId);
-      await shareMarkPhoto(env, user.id, mark, groupId);
-      await env.GROUPS.getByName(groupId).create(
+      const group = env.GROUPS.getByName(groupId);
+      // A retry finds the group made with it already.
+      const made = await group.getProfile();
+      await shareMarkPhoto(env, user.id, mark, groupId, made?.mark.photoId);
+      await group.create(
         { mark, name },
         {
           ownName: names.ownName,
@@ -140,6 +143,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       );
       await adoptName(user.id, names);
       await users.addMembership(groupId, { mark, name });
+      await dropPickedPhoto(env, user.id, mark, names.usualPhoto);
       const inviteCode = await liveInviteCode(env.DB, groupId);
       return create(CreateGroupResponseSchema, { groupId, inviteCode });
     },
@@ -241,6 +245,11 @@ export const registerGroupService = (router: ConnectRouter): void => {
         current?.mark.photoId
       );
       await group.setProfile({ mark, name });
+      if (mark.photoId !== "") {
+        const { photoId: usualPhoto } =
+          await env.USERS.getByName(userId).profileOf();
+        await dropPickedPhoto(env, userId, mark, usualPhoto);
+      }
       // Each member's list of groups shows the new name; one that cannot be
       // reached now hears it from the group's socket when they open it.
       const memberList = await group.memberList();

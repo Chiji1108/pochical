@@ -14,6 +14,7 @@
     "photoMaxBytes": 4000000,
     "photoMaxEdge": 2048,
     "photosPerSend": 4,
+    "pictureMaxEdge": 640,
     "runGap": 12,
     "typingSendMs": 3000,
     "typingShowMs": 5000

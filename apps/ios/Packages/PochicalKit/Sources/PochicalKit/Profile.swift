@@ -112,6 +112,21 @@ extension GroupCalls {
     _ = try await client.setGroupPhoto(request: request, headers: account.headers()).result.get()
   }
 
+  /// Keeps a photo picked for a group's mark on the device, to send up
+  /// only as the group is saved with it (`sendMarkPhoto`), and gives the id
+  /// to name it by.
+  public func holdMarkPhoto(_ jpeg: Data) throws -> String {
+    let photoID = UUID().uuidString.lowercased()
+    try ChatPhotos.hold(jpeg, as: photoID, in: ChatPhotos.mine)
+    return photoID
+  }
+
+  /// Sends up a photo picked for a group's mark (`holdMarkPhoto`), as one
+  /// of the user's own for the group to take as it is saved with it.
+  public func sendMarkPhoto(_ photoID: String) async throws {
+    try await ChatPhotos.uploadHeld(photoID, in: ChatPhotos.mine, account: account)
+  }
+
   /// Sends a photo of the user's up, to the group's photos or their own
   /// (`ChatPhotos.mine`), and gives the id to name it by.
   public func sendPhoto(_ jpeg: Data, to groupID: String) async throws -> String {

@@ -43,6 +43,9 @@ export const chatRules = {
   photoMaxEdge: 2048,
   // The most photos sent at once, each as its own line.
   photosPerSend: 4,
+  // A face or a group's photo mark is shrunk further, as it only ever
+  // shows small: past three times its largest place on screen (88pt).
+  pictureMaxEdge: 640,
   // The room before a run's first line, a day's title and ここから新着,
   // in points: where the writer changes, the lines part more.
   runGap: 12,
