@@ -74,7 +74,7 @@ The user's usual name (いつもの名前, 設定 › プロフィール) is kep
 
 - `UserService.SetProfile` sets it, trimmed and at most `personName` characters (`design/src/limits.ts`), or empty for none (`profile`, one row in the User DO), sent as a `Profile` change on the user's socket; before the user sets one, none is sent.
 - The User DO pushes it to the user's groups as it pushes their shifts (Group projection), retried the same way. The Group DO keeps each member's usual name and their own name for the group, if any (`members.usual_name`, `members.own_name`), and sends `Member.display_name` as the one shown, with `own_name` set when it is the group's own: only the member's own devices make anything of that, to say いつもと同じ or このグループだけ.
-- Creating or joining a group, and `SetDisplayName`, take the name typed: the usual name, or nothing, follows the usual one; any other is the group's own. Someone with no usual name yet must give a name, and creating or joining a group makes it their usual one.
+- Creating or joining a group, and `SetDisplayName`, take the name typed: the usual name, or nothing, follows the usual one; any other is the group's own. Someone with no usual name yet must give a name, and creating or joining a group makes it their usual one, once they are in the group.
 - The apps save it a moment after typing stops, as the settings around it save at once; offline, the page says it could not be saved.
 - A photo of the person, shared by their groups as /design's ProfilePage has it, comes when the server keeps members' photos.
 
