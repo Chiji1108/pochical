@@ -24,6 +24,9 @@ struct GapSheet: View {
   /// leave days off blank for the look, which they keep while the days
   /// are filled.
   @State private var offerBlank: Bool
+  /// Switched on: the look turns blank as the days are filled, and not
+  /// before, so × changes nothing.
+  @State private var blank = false
 
   init(days: [Day], offPatterns: [Pattern], blankOff: Bool, onFill: @escaping (Pattern) -> Void) {
     self.days = days
@@ -81,8 +84,7 @@ struct GapSheet: View {
           .padding(.bottom, 16)
         }
         if offerBlank {
-          @Bindable var settings = settings
-          Toggle(isOn: $settings.device.look.options.blankOff) {
+          Toggle(isOn: $blank) {
             Text("カレンダーでは空白で見せる")
             Text("お休みとして入れて、印は出しません")
           }
@@ -92,6 +94,9 @@ struct GapSheet: View {
           .padding(.bottom, 16)
         }
         Button {
+          if blank {
+            settings.device.look.options.blankOff = true
+          }
           onFill(offPattern)
           dismiss()
         } label: {

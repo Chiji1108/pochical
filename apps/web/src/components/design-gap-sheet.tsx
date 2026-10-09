@@ -34,9 +34,10 @@ export type GapSheetProps = {
   // blank for the look, which they keep while the days are filled. The
   // same setting as on the style page, said as what it does here.
   offerBlank: boolean;
-  blankOff: boolean;
   onFill: (key: Shift | undefined) => void;
-  onBlankOff: (blankOff: boolean) => void;
+  // Told as the days are filled with the switch on, and not before, so
+  // closing the sheet changes nothing.
+  onBlankOff: () => void;
 };
 
 // Asked, not explained: a blank day is most often a day off not entered,
@@ -82,12 +83,12 @@ function GapSheetBody({
   days,
   choices,
   offerBlank,
-  blankOff,
   onFill,
   onBlankOff,
   onClose: close,
 }: GapSheetProps & { onClose: () => void }) {
   const [picked, setPicked] = useState<Shift>();
+  const [blank, setBlank] = useState(false);
   const current = choices.find(({ key }) => key === picked) ?? choices[0];
   return (
     <>
@@ -121,10 +122,8 @@ function GapSheetBody({
               <SwitchRow
                 detail="お休みとして入れて、印は出しません"
                 label="カレンダーでは空白で見せる"
-                checked={blankOff}
-                onChange={(checked) => {
-                  onBlankOff(checked);
-                }}
+                checked={blank}
+                onChange={setBlank}
               />
             </List>
           )}
@@ -132,6 +131,9 @@ function GapSheetBody({
             variant="primary"
             onClick={() => {
               close();
+              if (blank) {
+                onBlankOff();
+              }
               onFill(current?.key);
             }}
           >

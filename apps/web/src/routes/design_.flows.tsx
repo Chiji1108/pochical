@@ -338,7 +338,6 @@ function GapFrame({
       note={note}
       overlay={
         <GapSheetPreview
-          blankOff={false}
           choices={[{ key: "off", label: presetPatterns.off.name }]}
           days={days}
           offerBlank

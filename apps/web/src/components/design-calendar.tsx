@@ -545,10 +545,9 @@ export function DesignCalendar({
           .map((pattern) => ({ key: pattern.id, label: pattern.name }))}
         days={gapDays}
         onFill={fillGaps}
-        blankOff={offDisplay === "blank"}
         offerBlank={offerBlank}
-        onBlankOff={(blankOff) => {
-          setCalendarOptions({ blankOff });
+        onBlankOff={() => {
+          setCalendarOptions({ blankOff: true });
         }}
         onOpenChange={sheetChange("gap")}
         open={openSheet === "gap"}
