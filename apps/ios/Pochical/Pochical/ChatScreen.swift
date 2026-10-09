@@ -230,7 +230,7 @@ struct ChatScreen: View {
         }
         // Who is writing now, under the latest line; not someone blocked.
         ForEach(typers.keys.filter { !blocked.contains($0) }.sorted(), id: \.self) { userID in
-          TypingLine(name: names[userID] ?? "メンバー")
+          TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")
             .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
             .id("typing-\(userID)")
             .transition(.opacity)
@@ -319,6 +319,7 @@ struct ChatScreen: View {
       }
     }
     .background(colors.backgroundBase)
+    .environment(\.memberFaces, faces)
     .navigationTitle(title)
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.visible, for: .navigationBar)

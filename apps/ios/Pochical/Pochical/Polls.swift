@@ -111,7 +111,7 @@ struct PollCard: View {
         }
       }
       .frame(width: 60, alignment: .leading)
-      Voters(day: day, people: people.map { names[$0] ?? "メンバー" })
+      Voters(day: day, people: people.map { Voter(id: $0, name: names[$0] ?? "メンバー") })
       if isDecided {
         Label("決定", systemImage: "checkmark")
           .font(.footnote.weight(.semibold))
@@ -175,26 +175,33 @@ struct PollCard: View {
 
 /// Who can come on a day, as faces; a tap lists them all by name, as a
 /// reaction's list does, since the faces stop at three.
+/// Someone who can go on a day of a poll, for their face.
+private struct Voter: Hashable {
+  let id: String
+  let name: String
+}
+
 private struct Voters: View {
   @Environment(\.themeColors) private var colors
   let day: Day
-  let people: [String]
+  @Environment(\.memberFaces) private var faces
+  let people: [Voter]
   @State private var listing = false
 
   private static var maxFaces: Int { 3 }
 
   var body: some View {
-    let faces = people.count > Self.maxFaces ? Array(people.prefix(Self.maxFaces - 1)) : people
+    let shown = people.count > Self.maxFaces ? Array(people.prefix(Self.maxFaces - 1)) : people
     Button {
       listing = true
     } label: {
       HStack(spacing: -4) {
-        ForEach(Array(faces.enumerated()), id: \.offset) { _, name in
-          LetterAvatar(name: name, size: 22)
+        ForEach(Array(shown.enumerated()), id: \.offset) { _, person in
+          MemberAvatar(name: person.name, photoID: faces[person.id] ?? "", size: 22)
             .overlay(Circle().stroke(colors.backgroundCard, lineWidth: 1.5))
         }
         if !people.isEmpty {
-          Text(people.count > faces.count ? "+\(people.count - faces.count)" : "\(people.count)人")
+          Text(people.count > shown.count ? "+\(people.count - shown.count)" : "\(people.count)人")
             .font(.caption)
             .foregroundStyle(colors.textTertiary)
             .padding(.leading, 8)
@@ -206,14 +213,14 @@ private struct Voters: View {
     }
     .buttonStyle(.plain)
     .disabled(people.isEmpty)
-    .accessibilityLabel("\(day.fullText)に行ける人：\(people.joined(separator: "、"))")
+    .accessibilityLabel("\(day.fullText)に行ける人：\(people.map(\.name).joined(separator: "、"))")
     .popover(isPresented: $listing) {
       VStack(alignment: .leading, spacing: 8) {
         Text(day.fullText).font(.footnote.weight(.semibold))
-        ForEach(Array(people.enumerated()), id: \.offset) { _, name in
+        ForEach(Array(people.enumerated()), id: \.offset) { _, person in
           HStack(spacing: 8) {
-            LetterAvatar(name: name, size: 24)
-            Text(name).font(.subheadline)
+            MemberAvatar(name: person.name, photoID: faces[person.id] ?? "", size: 24)
+            Text(person.name).font(.subheadline)
           }
         }
       }

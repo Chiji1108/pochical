@@ -65,7 +65,10 @@ struct ChatNotificationsPage: View {
             groupID: chat[0], threadID: chat[1],
             muted: notifications.isMuted(chat[1], in: chat[0]), asks: true
           ) {
-            PersonLabel(name: nameOf(other, in: chat[0]), group: group?.name ?? "")
+            let member = memberOf(other, in: chat[0])
+            PersonLabel(
+              name: member?.shownName ?? "メンバー", group: group?.name ?? "",
+              photoID: member?.photoID ?? "", groupID: chat[0])
           }
         }
       } header: {
@@ -91,7 +94,9 @@ struct ChatNotificationsPage: View {
               LabeledContent {
                 Text("解除").foregroundStyle(.tint)
               } label: {
-                PersonLabel(name: person.name, group: person.group)
+                PersonLabel(
+                  name: person.name, group: person.group, photoID: person.photoID,
+                  groupID: person.groupID)
               }
             }
             .buttonStyle(.plain)
@@ -134,6 +139,9 @@ struct ChatNotificationsPage: View {
     let id: String
     let name: String
     let group: String
+    /// Their photo in that group, for their face.
+    let photoID: String
+    let groupID: String
   }
 
   private var blockedPeople: [Person] {
@@ -141,12 +149,13 @@ struct ChatNotificationsPage: View {
       let member = members.first { $0.userID == id }
       return Person(
         id: id, name: member?.shownName ?? "メンバー",
-        group: member.flatMap { member in groups.first { $0.id == member.groupID }?.name } ?? "")
+        group: member.flatMap { member in groups.first { $0.id == member.groupID }?.name } ?? "",
+        photoID: member?.photoID ?? "", groupID: member?.groupID ?? "")
     }
   }
 
-  private func nameOf(_ userID: String?, in groupID: String) -> String {
-    members.first { $0.groupID == groupID && $0.userID == userID }?.shownName ?? "メンバー"
+  private func memberOf(_ userID: String?, in groupID: String) -> GroupMemberRow? {
+    members.first { $0.groupID == groupID && $0.userID == userID }
   }
 
   private func unblock(_ person: Person) {
@@ -244,6 +253,8 @@ private struct MentionsToggle: View {
 private struct PersonLabel: View {
   let name: String
   let group: String
+  let photoID: String
+  let groupID: String
 
   var body: some View {
     Label {
@@ -252,7 +263,7 @@ private struct PersonLabel: View {
         Text(group).lineLimit(1)
       }
     } icon: {
-      LetterAvatar(name: name, size: 28)
+      MemberAvatar(name: name, photoID: photoID, groupID: groupID, size: 28)
     }
   }
 }
