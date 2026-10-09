@@ -3,10 +3,9 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 
-// 設定 › 働き方 (/design's WorkStylePage, RepeatEditorPage and
-// RosterSwitchPage; spec/shift-patterns.md, Repeating orders): whether
-// shifts come round in a fixed order, the order in use, starting a new one
-// or correcting it, and stopping it.
+// 設定 › 繰り返し (/design's RepeatPage, RepeatEditorPage and
+// StopRepeatPage; spec/shift-patterns.md, Repeating orders): the order in
+// use, or none, starting a new one, correcting it or stopping it.
 
 /// The milliseconds now, for an edit's clock.
 private func nowMs() -> Int64 {
@@ -46,9 +45,9 @@ struct RepeatOrdersRequest: FetchKeyRequest, Hashable {
   }
 }
 
-/// 設定's 働き方 row: how long the order in use runs, or 繰り返しなし.
-func workSummary(_ orders: [RepeatOrder]) -> String {
-  orders.current.map { "\($0.sequence.count)日ごとの繰り返し" } ?? "繰り返しなし"
+/// 設定's 繰り返し row: how long the order in use runs, or なし.
+func repeatSummary(_ orders: [RepeatOrder]) -> String {
+  orders.current.map { "\($0.sequence.count)日ごと" } ?? "なし"
 }
 
 /// A sequence in a line, runs of a pattern counted: 日勤×2・夕勤×2.
@@ -66,8 +65,8 @@ private func sequenceLabel(_ sequence: [PatternID], _ patterns: [PatternID: Patt
   return runs.map { $0.1 > 1 ? "\($0.0)×\($0.1)" : $0.0 }.joined(separator: "・")
 }
 
-/// 設定 › 働き方.
-struct WorkStylePage: View {
+/// 設定 › 繰り返し.
+struct RepeatPage: View {
   @Environment(\.themeColors) private var colors
   @Dependency(\.defaultDatabase) private var database
   @Fetch(WorkValues()) private var values = WorkValues.Value()
@@ -76,15 +75,6 @@ struct WorkStylePage: View {
     let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
     let current = values.orders.current
     List {
-      Section("今の働き方") {
-        Label {
-          Text(current == nil ? "シフトがその都度決まる" : "決まった順番で回っている")
-        } icon: {
-          Text(current == nil ? "📋" : "🔁")
-        }
-      }
-      .settingsRows()
-
       if let current {
         Section {
           VStack(alignment: .leading, spacing: 10) {
@@ -111,39 +101,25 @@ struct WorkStylePage: View {
           NavigationLink("今の繰り返しを直す") {
             RepeatEditor(mode: .fix)
           }
+          NavigationLink("繰り返しをやめる") {
+            StopRepeatPage()
+          }
         } footer: {
           Text("異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。")
         }
         .settingsRows()
-      }
-
-      Section("働き方を変える") {
-        NavigationLink {
-          if current == nil {
+      } else {
+        Section {
+          NavigationLink {
             RepeatEditor(mode: .first)
-          } else {
-            RosterSwitchPage()
+          } label: {
+            LabeledContent("繰り返しを設定する", value: "なし")
           }
-        } label: {
-          Label {
-            Text(current == nil ? "決まった順番で回すようにする" : "順番で入れるのをやめる")
-            Text("シフトパターンはそのまま")
-          } icon: {
-            Text(current == nil ? "🔁" : "📋")
-          }
+        } footer: {
+          Text("当番・非番や交代勤務のように順番で回るシフトを、カレンダーに自動で入れられます。違う日だけ、カレンダーで変えられます。")
         }
-        NavigationLink {
-          JobChangePage()
-        } label: {
-          Label {
-            Text("新しい仕事にする")
-            Text("シフトパターンも選び直す")
-          } icon: {
-            Text("💼")
-          }
-        }
+        .settingsRows()
       }
-      .settingsRows()
 
       if values.orders.count > 1 {
         Section("これまで") {
@@ -159,7 +135,7 @@ struct WorkStylePage: View {
       }
     }
     .settingsList()
-    .navigationTitle("働き方")
+    .navigationTitle("繰り返し")
   }
 
   private func setHolidaysOff(_ on: Bool) {
@@ -375,9 +351,9 @@ private struct RepeatEditor: View {
   }
 }
 
-/// 順番をやめる: from a day, days are entered by hand again; those before
-/// keep their shifts.
-private struct RosterSwitchPage: View {
+/// 繰り返しをやめる: from a day, days are entered by hand again; those
+/// before keep their shifts.
+private struct StopRepeatPage: View {
   @Environment(\.dismiss) private var dismiss
   @Dependency(\.defaultDatabase) private var database
   @State private var day = nextMonthStart
@@ -404,7 +380,7 @@ private struct RosterSwitchPage: View {
           try? database.write { try OwnValues.start(order, now: nowMs(), in: $0) }
           dismiss()
         } label: {
-          Label("\(day.slashText)から順番をやめる", systemImage: "arrow.right")
+          Label("\(day.slashText)から繰り返しをやめる", systemImage: "arrow.right")
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
@@ -412,7 +388,7 @@ private struct RosterSwitchPage: View {
       }
     }
     .settingsList()
-    .navigationTitle("順番をやめる")
+    .navigationTitle("繰り返しをやめる")
     .navigationBarTitleDisplayMode(.inline)
   }
 }

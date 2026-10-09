@@ -37,12 +37,6 @@ export function shortDay(date: Date) {
 }
 
 export const settingsParts = {
-  // A work style's emoji before its name, the size of a row's icon.
-  styleIcon: css({
-    fontFamily: "emoji",
-    fontSize: "20px",
-    lineHeight: 1,
-  }),
   // A section's footer, as iOS sets explanation under a group of rows.
   footer: css({
     color: "text.tertiary",

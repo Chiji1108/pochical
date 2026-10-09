@@ -612,11 +612,7 @@ function Rows() {
       >
         <Section note="グループの人にも見えます" title="シフト">
           <List>
-            <ListRow
-              label="働き方"
-              onClick={() => undefined}
-              value="繰り返しなし"
-            />
+            <ListRow label="繰り返し" onClick={() => undefined} value="なし" />
           </List>
         </Section>
         <Note>ポチポチ入力のボタンを長押ししても、その場で直せます。</Note>
@@ -879,14 +875,14 @@ function Cards() {
         android="Card の中に ListItem（押せる）"
         ios="独自の Button（ボタンの中に絵文字と2行）"
         name="OptionCard"
-        where="働き方、はじめての設定"
+        where="はじめての設定"
         wide
       >
         <OptionCard
-          icon="📋"
-          note="看護・介護・飲食など"
+          icon="🔁"
+          note="当番・非番、工場の交代勤務、曜日で固定など"
           onClick={() => undefined}
-          title="毎月、勤務表が配られる"
+          title="繰り返しがある"
         />
       </Item>
       <Item

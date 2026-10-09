@@ -32,19 +32,23 @@ import { ConfirmDialog } from "./design-sheet";
 import { Button, fieldLabel, Note } from "./design-ui";
 import { WorkSetupSteps } from "./design-work-setup";
 
-// The pages about how someone works: a repeating order and its history,
-// changing jobs, and switching to a roster.
+// 繰り返し's pages: the repeating order and its history, setting,
+// correcting and stopping it; and 新しい仕事にする, opened from
+// シフトパターン.
 
-// The order in use and what can change about it, under the work style.
+// The order in use and what can change about it: a new one from a day,
+// the one in use corrected, or no order from a day.
 function RepeatDetails({
   current,
   onNew,
   onFix,
+  onStop,
   onHolidaysOff,
 }: {
   current: RepeatRule;
   onNew: () => void;
   onFix: () => void;
+  onStop: () => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
 }) {
   return (
@@ -71,6 +75,9 @@ function RepeatDetails({
       </Button>
       <Button variant="text" onClick={onFix}>
         今の繰り返しを直す
+      </Button>
+      <Button variant="text" onClick={onStop}>
+        繰り返しをやめる
       </Button>
       <Note>
         異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。
@@ -183,7 +190,7 @@ export function RepeatEditorPage({
   return (
     <div className={settingsParts.fullPage}>
       <PageHeader
-        back="働き方"
+        back="繰り返し"
         inlineTitle={
           <OrderTitle anchor={anchor} sequence={sequence} title={text.title} />
         }
@@ -281,9 +288,13 @@ export function JobChangePage({
   }
   return (
     <>
-      <PageHeader back="働き方" onBack={onBack} title="新しい仕事にする" />
+      <PageHeader
+        back="シフトパターン"
+        onBack={onBack}
+        title="新しい仕事にする"
+      />
       <Note>
-        新しい仕事の働き方とシフトパターンを、はじめの設定と同じ質問で選び直します。
+        新しい仕事の繰り返しとシフトパターンを、はじめの設定と同じ質問で選び直します。
       </Note>
       <div className={settingsParts.field}>
         <span className={fieldLabel({ place: "row" })}>新しい仕事の初日</span>
@@ -313,24 +324,15 @@ export function JobChangePage({
   );
 }
 
-const workStyles = {
-  repeating: { icon: "🔁", name: "決まった順番で回っている" },
-  // Not 毎月、勤務表が配られる: rosters come every three months, or
-  // whenever the manager posts them, and all of them are this.
-  roster: { icon: "📋", name: "シフトがその都度決まる" },
-};
-
-// The work style in use, then the ways to change it, each saying whether
-// the shift patterns stay: the other style keeps them, a new job asks for
-// them again as onboarding does. Unlike onboarding's two answers side by
-// side, the one in use is not a choice to press again: it is shown as it
-// is.
-export function WorkStylePage({
+// Whether shifts repeat is all that tells ways of working apart: someone
+// whose shifts repeat still changes a day on the calendar. So there is no
+// work style to pick, only an order to set, change or stop. A new job,
+// which asks for the shift patterns again, is under シフトパターン.
+export function RepeatPage({
   rules,
   onBack,
   onRepeat,
-  onRoster,
-  onJob,
+  onStop,
   onNew,
   onFix,
   onHolidaysOff,
@@ -338,62 +340,44 @@ export function WorkStylePage({
   rules: RepeatRule[];
   onBack: () => void;
   onRepeat: () => void;
-  onRoster: () => void;
-  onJob: () => void;
+  onStop: () => void;
   onNew: () => void;
   onFix: () => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
 }) {
-  const repeating = isRepeating(rules);
   const current = rules.at(-1);
-  const now = repeating ? workStyles.repeating : workStyles.roster;
-  const other = repeating ? workStyles.roster : workStyles.repeating;
-  const icon = (emoji: string) => (
-    <>
-      <span aria-hidden="true" className={settingsParts.styleIcon}>
-        {emoji}
-      </span>
-    </>
-  );
   return (
     <>
-      <PageHeader back="設定" onBack={onBack} title="働き方" />
-      <ListSection title="今の働き方">
-        <ListRow label={now.name} leading={icon(now.icon)} />
-      </ListSection>
-      {repeating && current && (
+      <PageHeader back="設定" onBack={onBack} title="繰り返し" />
+      {isRepeating(rules) && current ? (
         <RepeatDetails
           current={current}
           onFix={onFix}
           onHolidaysOff={onHolidaysOff}
           onNew={onNew}
+          onStop={onStop}
         />
+      ) : (
+        <>
+          <List>
+            <ListRow
+              label="繰り返しを設定する"
+              onClick={onRepeat}
+              value="なし"
+            />
+          </List>
+          <Note>
+            当番・非番や交代勤務のように順番で回るシフトを、カレンダーに自動で入れられます。違う日だけ、カレンダーで変えられます。
+          </Note>
+        </>
       )}
-      <ListSection title="働き方を変える">
-        <ListRow
-          detail="シフトパターンはそのまま"
-          label={
-            repeating
-              ? "順番で入れるのをやめる"
-              : "決まった順番で回すようにする"
-          }
-          leading={icon(other.icon)}
-          onClick={repeating ? onRoster : onRepeat}
-        />
-        <ListRow
-          detail="シフトパターンも選び直す"
-          label="新しい仕事にする"
-          leading={icon("💼")}
-          onClick={onJob}
-        />
-      </ListSection>
       <RuleHistory rules={rules} />
     </>
   );
 }
 
 // Stopping the repeat from a chosen day. Earlier shifts stay as they are.
-export function RosterSwitchPage({
+export function StopRepeatPage({
   onBack,
   onApply,
 }: {
@@ -403,7 +387,7 @@ export function RosterSwitchPage({
   const [start, setStart] = useState(nextMonthStart);
   return (
     <>
-      <PageHeader back="働き方" onBack={onBack} title="順番をやめる" />
+      <PageHeader back="繰り返し" onBack={onBack} title="繰り返しをやめる" />
       <div className={settingsParts.field}>
         <span className={fieldLabel({ place: "row" })}>やめる日</span>
         <InputDatePicker
@@ -425,7 +409,7 @@ export function RosterSwitchPage({
           onApply(start);
         }}
       >
-        {shortDay(start)}から順番をやめる
+        {shortDay(start)}から繰り返しをやめる
         <ArrowRight aria-hidden="true" size={16} />
       </Button>
     </>

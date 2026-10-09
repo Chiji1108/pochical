@@ -232,7 +232,7 @@ export function StartArea({
 
 // A key for each pattern, as ポチポチ入力's tray has them: up to
 // PATTERNS_PER_PAGE on a page, fewer in fewer columns, more paged and
-// swiped. The tray and 働き方's order are entered with them alike; the
+// swiped. The tray and 繰り返し's order are entered with them alike; the
 // page is kept by whoever shows its dots.
 export function PatternKeys({
   patternKeys,

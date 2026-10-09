@@ -36,8 +36,8 @@ import { MarkPage, StyleRow } from "./design-settings-style";
 import {
   JobChangePage,
   RepeatEditorPage,
-  RosterSwitchPage,
-  WorkStylePage,
+  RepeatPage,
+  StopRepeatPage,
 } from "./design-settings-work";
 import { SupportChatPage, SupportRow } from "./design-support-chat";
 import { TabBar } from "./design-tab-bar";
@@ -54,8 +54,8 @@ type Page =
   | "repeat-new"
   | "repeat-fix"
   | "job"
-  | "work"
-  | "roster"
+  | "repeat"
+  | "stop-repeat"
   | "patterns"
   | "coworkers"
   | "mark"
@@ -129,10 +129,10 @@ export function DesignSettings({
             mode={current ? "switch" : "first"}
             onApply={(rule) => {
               onApplyRule(rule);
-              setPage(current ? "work" : "top");
+              setPage("repeat");
             }}
             onBack={() => {
-              setPage("work");
+              setPage("repeat");
             }}
             patternKeys={patternKeys}
             shown={schedule}
@@ -145,10 +145,10 @@ export function DesignSettings({
             mode="fix"
             onApply={(rule) => {
               onFixRule(rule);
-              setPage("work");
+              setPage("repeat");
             }}
             onBack={() => {
-              setPage("work");
+              setPage("repeat");
             }}
             patternKeys={patternKeys}
             shown={schedule}
@@ -191,16 +191,16 @@ export function DesignSettings({
           <JobChangePage
             onApply={(job) => {
               onChangeJob(job);
-              setPage("work");
+              setPage("patterns");
             }}
             onBack={() => {
-              setPage("work");
+              setPage("patterns");
             }}
             onOrdering={setJobOrdering}
           />
         )}
-        {page === "work" && (
-          <WorkStylePage
+        {page === "repeat" && (
+          <RepeatPage
             onBack={() => {
               setPage("top");
             }}
@@ -208,29 +208,26 @@ export function DesignSettings({
               setPage("repeat-fix");
             }}
             onHolidaysOff={onHolidaysOff}
-            onJob={() => {
-              setPage("job");
-            }}
             onNew={() => {
               setPage("repeat-new");
             }}
             onRepeat={() => {
               setPage("repeat-new");
             }}
-            onRoster={() => {
-              setPage("roster");
+            onStop={() => {
+              setPage("stop-repeat");
             }}
             rules={rules}
           />
         )}
-        {page === "roster" && (
-          <RosterSwitchPage
+        {page === "stop-repeat" && (
+          <StopRepeatPage
             onApply={(start) => {
               onApplyRule({ sequence: [], start });
-              setPage("top");
+              setPage("repeat");
             }}
             onBack={() => {
-              setPage("work");
+              setPage("repeat");
             }}
           />
         )}
@@ -285,6 +282,9 @@ export function DesignSettings({
             onBack={() => {
               setPage("top");
             }}
+            onJob={() => {
+              setPage("job");
+            }}
           />
         )}
         {page === "reminders" && (
@@ -328,16 +328,12 @@ function SettingsTop({
       <PageHeader title="設定" />
       <ListSection title="シフト">
         <ListRow
-          label="働き方"
+          label="繰り返し"
           onClick={() => {
-            onOpen("work");
+            onOpen("repeat");
           }}
-          // Which style, in short: the order itself is on the page.
-          value={
-            current
-              ? `${current.sequence.length}日ごとの繰り返し`
-              : "繰り返しなし"
-          }
+          // How long it runs, in short: the order itself is on the page.
+          value={current ? `${current.sequence.length}日ごと` : "なし"}
         />
         <ListRow
           label="シフトパターン"

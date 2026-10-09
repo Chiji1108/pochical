@@ -302,18 +302,21 @@ export function StepHeader({
   );
 }
 
+// The one question that tells ways of working apart: whether shifts
+// repeat. Someone whose shifts repeat still changes a day with ポチポチ入力,
+// so yes comes first, as the answer that sets up more.
 const kinds = [
-  {
-    icon: "📋",
-    id: "roster",
-    note: "勤務表・シフト表・店長からの連絡など",
-    title: "シフトがその都度決まる",
-  },
   {
     icon: "🔁",
     id: "rotation",
-    note: "消防・工場の交代勤務・曜日で固定など",
-    title: "決まった順番で回っている",
+    note: "当番・非番、工場の交代勤務、曜日で固定など",
+    title: "繰り返しがある",
+  },
+  {
+    icon: "📋",
+    id: "roster",
+    note: "勤務表やシフト表で、その都度決まる",
+    title: "繰り返しはない",
   },
 ] as const;
 
@@ -333,14 +336,14 @@ function KindStep({
       <StepHeader
         description={
           first
-            ? "答えに合わせて、入れやすい形で始めます。"
+            ? "繰り返しがあっても、違う日だけあとから変えられます。"
             : "前の仕事のシフトは、そのまま残ります。"
         }
         onBack={onBack}
         title={
           first
-            ? "シフトはどう決まりますか？"
-            : "新しい仕事のシフトはどう決まりますか？"
+            ? "シフトに繰り返しはありますか？"
+            : "新しい仕事のシフトに繰り返しはありますか？"
         }
       />
       {first ? (

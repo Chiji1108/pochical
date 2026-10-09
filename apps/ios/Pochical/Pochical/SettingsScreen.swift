@@ -27,9 +27,9 @@ struct SettingsScreen: View {
       List {
         Section("シフト") {
           NavigationLink {
-            WorkStylePage()
+            RepeatPage()
           } label: {
-            LabeledContent("働き方", value: workSummary(orders))
+            LabeledContent("繰り返し", value: repeatSummary(orders))
           }
           NavigationLink {
             PatternsPage()

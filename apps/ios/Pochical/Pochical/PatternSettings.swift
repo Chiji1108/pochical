@@ -23,7 +23,7 @@ private func ownPatterns(_ rows: [PatternRow], _ order: [PatternOrderRow]) -> [P
   OwnCalendar(days: [], patterns: rows, patternOrder: order, orders: []).patterns
 }
 
-/// 設定 › シフトパターン.
+/// 設定 › シフトパターン, and below the list 新しい仕事にする.
 struct PatternsPage: View {
   @Environment(\.themeColors) private var colors
   @Dependency(\.defaultDatabase) private var database
@@ -71,6 +71,23 @@ struct PatternsPage: View {
           }
           .settingsRows()
         }
+      }
+
+      // Choosing the patterns again with the repeat, for a new job.
+      if !sorting {
+        Section("仕事") {
+          NavigationLink {
+            JobChangePage()
+          } label: {
+            VStack(alignment: .leading, spacing: 2) {
+              Text("新しい仕事にする")
+              Text("シフトパターンと繰り返しを選び直す")
+                .font(.footnote)
+                .foregroundStyle(colors.textSecondary)
+            }
+          }
+        }
+        .settingsRows()
       }
     }
     .settingsList()
@@ -292,7 +309,7 @@ struct PatternEditor: View {
       if !isNew {
         Section {
           if repeating {
-            Text("繰り返しの並びに入っているので、削除できません。先に「働き方」で並びを変えてください。")
+            Text("繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。")
               .font(.footnote)
               .foregroundStyle(colors.textSecondary)
               .settingsOnPage()
