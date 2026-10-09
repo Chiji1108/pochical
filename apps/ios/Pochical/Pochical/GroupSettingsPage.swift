@@ -245,24 +245,34 @@ private struct GroupEditPage: View {
 
 /// How the person is called in the group, which its members see
 /// (/design's GroupProfilePage): a name of its own, or, left empty, their
-/// usual one, which it then follows (spec/sync-protocol.md, Profile).
+/// usual one, which it then follows (spec/sync-protocol.md, Profile). Both
+/// are kept as they change, as プロフィール's are: the photo as it is
+/// picked, the name once typing pauses. Neither tells the group's chat.
 private struct DisplayNamePage: View {
+  @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.dismiss) private var dismiss
   @Fetch(ProfileNameRequest()) private var usualName = ""
   @Fetch private var members: [GroupMember] = []
   let group: GroupRow
   let meID: String
   @State var name: String
-  @State private var saving = false
+  /// The name the group keeps of its own, empty for the usual one; what
+  /// is typed is saved when it differs.
+  @State private var saved: String
+  @State private var nameFailed = false
   @State private var failed = false
 
+  init(group: GroupRow, meID: String, name: String) {
+    self.group = group
+    self.meID = meID
+    _name = State(initialValue: name)
+    _saved = State(initialValue: name)
+  }
+
   var body: some View {
-    let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
     // As the group shows them, read again as it changes.
     let me = members.first { $0.userID == meID }
     List {
-      // The photo changes at once, as /design's does; the name on 保存.
       Section {
         PhotoEditor(
           name: me?.name ?? "", photoID: me?.photoID ?? "", groupID: group.id,
@@ -288,37 +298,57 @@ private struct DisplayNamePage: View {
             limit: TextLimits.personName)
         }
       } footer: {
-        Text(
-          usualName.isEmpty
-            ? "「\(group.name)」の人にだけ、この名前と写真で表示されます。"
-            : "「\(group.name)」の人にだけ、この名前と写真で表示されます。名前が空欄なら「\(usualName)」、写真を入れなければいつもの写真のままです。")
+        if nameFailed {
+          Text("保存できませんでした。通信できるときに、もう一度お試しください。")
+            .foregroundStyle(colors.dangerDefault)
+        } else {
+          Text(
+            usualName.isEmpty
+              ? "「\(group.name)」の人にだけ、この名前と写真で表示されます。"
+              : "「\(group.name)」の人にだけ、この名前と写真で表示されます。名前が空欄なら「\(usualName)」、写真を入れなければいつもの写真のままです。")
+        }
       }
       .settingsRows()
     }
     .settingsList()
     .navigationTitle("このグループでのあなた")
+    .navigationBarTitleDisplayMode(.inline)
     .task {
       let today = Day.today
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
     }
-    .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      ToolbarItem(placement: .confirmationAction) {
-        if saving {
-          ProgressView()
-        } else {
-          // Empty goes back to the usual name, when there is one.
-          Button("保存", role: .confirm) { save(trimmed) }
-            .disabled(
-              (trimmed.isEmpty && usualName.isEmpty) || name.count > TextLimits.personName)
-        }
+    // Saved once typing pauses, as the server keeps it for every device.
+    .task(id: name) {
+      guard let kept = unsaved else { return }
+      try? await Task.sleep(for: .milliseconds(800))
+      guard !Task.isCancelled else { return }
+      do {
+        try await groupCalls.setDisplayName(kept, in: group.id)
+        saved = kept
+        nameFailed = false
+      } catch {
+        nameFailed = !Task.isCancelled
       }
+    }
+    // Leaving before the pause is over still saves what was typed, past
+    // the page.
+    .onDisappear {
+      guard let kept = unsaved else { return }
+      Task { [groupCalls, group] in try? await groupCalls.setDisplayName(kept, in: group.id) }
     }
     .alert("保存できませんでした", isPresented: $failed) {
       Button("OK", role: .cancel) {}
     } message: {
       Text("通信できる場所で、もう一度お試しください。")
     }
+  }
+
+  /// What is typed, trimmed, when it differs from the kept name and can be
+  /// kept: within the limit, and empty only with a usual name to follow.
+  private var unsaved: String? {
+    let kept = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    let fits = kept.count <= TextLimits.personName && !(kept.isEmpty && usualName.isEmpty)
+    return kept != saved && fits ? kept : nil
   }
 
   /// A change of the photo, which says so if it could not be made.
@@ -328,20 +358,6 @@ private struct DisplayNamePage: View {
     } catch {
       ReviewPrompt.troubled = true
       failed = true
-    }
-  }
-
-  private func save(_ name: String) {
-    saving = true
-    Task {
-      defer { saving = false }
-      do {
-        try await groupCalls.setDisplayName(name, in: group.id)
-        dismiss()
-      } catch {
-        ReviewPrompt.troubled = true
-        failed = true
-      }
     }
   }
 }

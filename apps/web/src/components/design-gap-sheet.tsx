@@ -178,7 +178,7 @@ function GapSheetBody({
               onFill(current?.key);
             }}
           >
-            {current ? `${current.label}にする` : "休みを追加して入れる"}
+            {current?.label ?? "休み"}にする
           </Button>
           <Button variant="subtle" onClick={close}>
             あとで入れる
