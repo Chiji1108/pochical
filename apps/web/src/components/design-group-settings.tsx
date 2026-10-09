@@ -379,7 +379,7 @@ export function GroupProfilePage({
   const usualPhoto = mine.photo === undefined && !mine.noPhoto;
   return (
     <>
-      <PageHeader back={back} onBack={onBack} title="グループでのあなた" />
+      <PageHeader back={back} onBack={onBack} title="このグループでのあなた" />
       <PhotoEditor
         name={shown.name}
         onRemove={

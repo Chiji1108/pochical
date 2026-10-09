@@ -6,7 +6,8 @@ import UserNotifications
 
 /// The app's tabs, as /design's tab bar has them: カレンダー, グループ and
 /// 設定. An invitation link opened in the app (AppRoot) shows its join
-/// screen over them, and once in, the group.
+/// screen over them, and once in, the group; one to a group the person is
+/// in already opens the group, saying so.
 struct RootView: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
@@ -24,6 +25,9 @@ struct RootView: View {
   /// An invitation read by the camera, opened once the camera has gone:
   /// one cover cannot come up while another is going.
   @State private var scanned: OpenedInvite?
+  /// Said over the tabs for a moment, as a toast is.
+  @State private var notice: String?
+  @State private var notices = 0
 
   var body: some View {
     TabView(selection: $tab) {
@@ -86,9 +90,35 @@ struct RootView: View {
     }
     .fullScreenCover(item: $invite) { invite in
       JoinScreen(invite: invite) { groupID in
-        openGroupID = groupID
-        tab = .groups
-        self.invite = nil
+        open(groupID)
+      } onAlreadyIn: { details in
+        open(details.groupID)
+        say("「\(details.name)」にはもう参加しています")
+      }
+    }
+    .overlay(alignment: .top) {
+      if let notice {
+        NoticeCapsule(words: notice)
+          .transition(.move(edge: .top).combined(with: .opacity))
+      }
+    }
+  }
+
+  /// The group an invitation led to, its join screen gone.
+  private func open(_ groupID: String) {
+    openGroupID = groupID
+    tab = .groups
+    invite = nil
+  }
+
+  private func say(_ words: String) {
+    notices += 1
+    let said = notices
+    withAnimation { notice = words }
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(2.5))
+      if notices == said {
+        withAnimation { notice = nil }
       }
     }
   }

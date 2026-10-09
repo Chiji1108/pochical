@@ -22,6 +22,9 @@ struct JoinScreen: View {
   let invite: OpenedInvite
   /// Called with the group's id once the person is in it.
   let onJoined: (String) -> Void
+  /// Called instead of showing the invitation when the person is in its
+  /// group already (/design's 「…」にはもう参加しています).
+  let onAlreadyIn: (InviteDetails) -> Void
   @State private var details: InviteDetails?
   @State private var loadError: InviteError?
   @State private var myName = ""
@@ -105,14 +108,12 @@ struct JoinScreen: View {
           .padding(.bottom, 12)
         }
         .settingsOnPage()
-        if !details.alreadyMember {
-          Section("このグループでのあなた") {
-            LabeledContent("名前") {
-              LimitedTextField(placeholder: "例：さくら", text: $myName, limit: TextLimits.personName)
-            }
+        Section("このグループでのあなた") {
+          LabeledContent("名前") {
+            LimitedTextField(placeholder: "例：さくら", text: $myName, limit: TextLimits.personName)
           }
-          .settingsRows()
         }
+        .settingsRows()
       }
       .settingsList()
       VStack(spacing: 12) {
@@ -121,17 +122,13 @@ struct JoinScreen: View {
           .foregroundStyle(colors.textTertiary)
           .multilineTextAlignment(.center)
         Button {
-          if details.alreadyMember {
-            onJoined(details.groupID)
-          } else {
-            join()
-          }
+          join()
         } label: {
           Group {
             if joining {
               ProgressView().tint(colors.accentOnFill)
             } else {
-              Text(details.alreadyMember ? "グループを開く" : "参加する")
+              Text("参加する")
             }
           }
           .font(.headline)
@@ -141,7 +138,7 @@ struct JoinScreen: View {
         .buttonBorderShape(.capsule)
         .tint(colors.accentFill)
         .foregroundStyle(colors.accentOnFill)
-        .disabled(!details.alreadyMember && (!canJoin || joining))
+        .disabled(!canJoin || joining)
       }
       .padding(.horizontal, 20)
       .padding(.vertical, 12)
@@ -154,11 +151,8 @@ struct JoinScreen: View {
   }
 
   /// What the foot says over its button: what joining shares, or why it
-  /// cannot or need not.
+  /// cannot.
   private func foot(_ details: InviteDetails) -> String {
-    if details.alreadyMember {
-      return "このグループにはもう参加しています。"
-    }
     if details.full {
       return message(for: .full)
     }
@@ -204,7 +198,12 @@ struct JoinScreen: View {
 
   private func load() async {
     do {
-      details = try await groupCalls.invite(code: invite.code)
+      let read = try await groupCalls.invite(code: invite.code)
+      if read.alreadyMember {
+        onAlreadyIn(read)
+        return
+      }
+      details = read
     } catch {
       loadError = error
     }

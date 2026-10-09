@@ -1,5 +1,6 @@
 import { chatRules } from "@pochical/design/chat";
 import {
+  ArrowUp,
   CalendarPlus,
   Check,
   ChevronRight,
@@ -19,6 +20,7 @@ import {
   plainText,
   siteOf,
 } from "../lib/chat-text";
+import { useDevice } from "../lib/design-device";
 import { spring } from "../lib/motion";
 import { PhotoInput, PhotoTray, useChosenPhotos } from "./design-chat-photos";
 import { chatStyle } from "./design-chat-style";
@@ -158,6 +160,7 @@ export function Composer({
     mentionName,
     photos,
   } = composer;
+  const platform = useDevice((state) => state.platform);
   const photoInputRef = useRef<HTMLInputElement>(null);
   // While the field is in use, the tools fold into a ›, as in LINE,
   // giving it their room: from the moment it is tapped, and while words
@@ -407,7 +410,13 @@ export function Composer({
             disabled={!composer.sendable}
             type="submit"
           >
-            <SendHorizontal aria-hidden="true" size={18} />
+            {/* Each platform's own: Messages' arrow up on iOS, Material's
+                send on Android. */}
+            {platform === "ios" ? (
+              <ArrowUp aria-hidden="true" size={18} strokeWidth={2.5} />
+            ) : (
+              <SendHorizontal aria-hidden="true" size={18} />
+            )}
           </button>
         ) : (
           // Saves rather than sends: a check, as Telegram and LINE show

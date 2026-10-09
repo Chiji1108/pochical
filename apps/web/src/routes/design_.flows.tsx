@@ -179,11 +179,6 @@ function FlowsPage() {
                 label="休みと有休がある人"
                 note="入れるパターンを選べる"
               />
-              <GapFrame
-                choices={[]}
-                label="休みを消した人"
-                note="休みを戻して入れる"
-              />
             </FrameRow>
           </FrameSection>
 
