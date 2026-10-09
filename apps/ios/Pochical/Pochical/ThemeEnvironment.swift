@@ -58,3 +58,20 @@ extension View {
       .environment(\.colorScheme, theme.isAlwaysDark ? .dark : scheme)
   }
 }
+
+extension View {
+  /// Floats the view as `shadow` says (design/'s shadows), in the テーマ's
+  /// color for it.
+  func shadow(_ shadow: Shadow) -> some View {
+    modifier(TokenShadow(shadow: shadow))
+  }
+}
+
+private struct TokenShadow: ViewModifier {
+  @Environment(\.themeColors) private var colors
+  let shadow: Shadow
+
+  func body(content: Content) -> some View {
+    content.shadow(color: colors[keyPath: shadow.color], radius: shadow.blur / 2, y: shadow.y)
+  }
+}

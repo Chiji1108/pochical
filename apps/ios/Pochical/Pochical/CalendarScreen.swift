@@ -9,6 +9,8 @@ struct CalendarScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// The groups the person is in, who see their days off too.
+  @FetchAll private var groups: [GroupRow]
   @Dependency(\.defaultDatabase) private var database
   @FetchAll private var days: [DayRow]
   @FetchAll private var patterns: [PatternRow]
@@ -397,7 +399,8 @@ struct CalendarScreen: View {
     return GapSheet(
       month: month, days: gaps, offPatterns: offPatterns,
       offCount: offCount(in: month, calendar: calendar),
-      completes: monthDays(month, calendar).count + gaps.count == month.daysOfMonth.count
+      completes: monthDays(month, calendar).count + gaps.count == month.daysOfMonth.count,
+      sharing: !groups.isEmpty, blankOff: settings.device.look.options.blankOff
     ) { off in
       write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
     }
@@ -545,6 +548,8 @@ struct CalendarScreen: View {
 struct WeekdayRow: View {
   @Environment(\.themeColors) private var colors
   let week: DeviceSettings.Week
+  /// Closer to the days, as a picture of the month draws it.
+  var compact = false
 
   var body: some View {
     HStack(spacing: 4) {
@@ -556,7 +561,7 @@ struct WeekdayRow: View {
           .frame(maxWidth: .infinity)
       }
     }
-    .padding(.bottom, 12)
+    .padding(.bottom, compact ? 8 : 12)
     .accessibilityHidden(true)
   }
 
