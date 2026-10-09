@@ -84,10 +84,10 @@ struct PhotoEditor: View {
     .frame(maxWidth: .infinity)
     .photosPicker(isPresented: $picking, selection: $item, matching: .images)
     .fullScreenCover(isPresented: $taking) {
-      CameraPicker { jpeg in
+      CameraPicker { image in
         taking = false
-        guard let jpeg else { return }
-        take(jpeg)
+        guard let image else { return }
+        take(image)
       }
       .ignoresSafeArea()
     }
@@ -103,11 +103,16 @@ struct PhotoEditor: View {
     }
   }
 
-  /// A photo just taken, sent as a picked one is.
-  private func take(_ data: Data) {
+  /// A photo just taken, sent as a picked one is, encoded off the main
+  /// thread.
+  private func take(_ image: UIImage) {
     busy = true
     Task {
       defer { busy = false }
+      guard
+        let data = await Task.detached(operation: { image.jpegData(compressionQuality: 0.9) })
+          .value
+      else { return }
       await send(data)
     }
   }
@@ -141,14 +146,16 @@ struct PhotoEditor: View {
   }
 }
 
-/// The system's camera, for a photo to use as a face; nil when cancelled.
+/// The system's camera, for a photo to use as a face, squared as the system
+/// squares one for a profile; nil when cancelled.
 private struct CameraPicker: UIViewControllerRepresentable {
-  let onDone: (Data?) -> Void
+  let onDone: (UIImage?) -> Void
 
   func makeUIViewController(context: Context) -> UIImagePickerController {
     let picker = UIImagePickerController()
     picker.sourceType = .camera
     picker.cameraDevice = .front
+    picker.allowsEditing = true
     picker.delegate = context.coordinator
     return picker
   }
@@ -162,9 +169,9 @@ private struct CameraPicker: UIViewControllerRepresentable {
   final class Coordinator: NSObject, UIImagePickerControllerDelegate,
     UINavigationControllerDelegate
   {
-    let onDone: (Data?) -> Void
+    let onDone: (UIImage?) -> Void
 
-    init(onDone: @escaping (Data?) -> Void) {
+    init(onDone: @escaping (UIImage?) -> Void) {
       self.onDone = onDone
     }
 
@@ -172,8 +179,7 @@ private struct CameraPicker: UIViewControllerRepresentable {
       _ picker: UIImagePickerController,
       didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
     ) {
-      let image = info[.originalImage] as? UIImage
-      onDone(image?.jpegData(compressionQuality: 0.9))
+      onDone((info[.editedImage] ?? info[.originalImage]) as? UIImage)
     }
 
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
