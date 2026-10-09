@@ -13,9 +13,6 @@ import UIKit
   private let store = EKEventStore()
   private(set) var access: Access
 
-  /// The events this device put in, by day, so adding a month again puts
-  /// them in anew rather than twice.
-  private static let addedKey = "deviceCalendar.added"
   /// The calendar added to last, picked first next time.
   private static let lastKey = "deviceCalendar.last"
 
@@ -58,17 +55,25 @@ import UIKit
     store.calendar(withIdentifier: id)
   }
 
-  /// Puts the month's events in the calendar: those this device put in
-  /// for its days before go first, so a month added again is put in anew.
-  func add(_ events: [ShiftEvent], of month: Day, to calendarID: String) throws {
+  /// Puts the month's events in the calendar. Those Pochical put in for its
+  /// days before go first, from any device and any calendar, found by the
+  /// day each names (`dayURL`), so a month added again is put in anew
+  /// rather than twice, whatever was reinstalled or synced since.
+  func add(_ events: [ShiftEvent], of month: Day, by user: String, to calendarID: String) throws {
     guard let target = store.calendar(withIdentifier: calendarID) else { return }
-    var added = UserDefaults.standard.dictionary(forKey: Self.addedKey) as? [String: String] ?? [:]
-    for day in month.daysOfMonth {
-      if let id = added.removeValue(forKey: day.key), let old = store.event(withIdentifier: id) {
+    let days = Set(month.daysOfMonth.map(\.key))
+    // From the month's first day to two past its last: a night's event
+    // ends the day after it.
+    let range = store.predicateForEvents(
+      withStart: date(of: month.firstOfMonth, at: 0),
+      end: date(of: month.daysOfMonth.last!, at: 2 * 24 * 60), calendars: nil)
+    for old in store.events(matching: range) {
+      if let mark = Self.mark(of: old.url), mark.user == user, days.contains(mark.day),
+        old.calendar.allowsContentModifications
+      {
         try store.remove(old, span: .thisEvent, commit: false)
       }
     }
-    var made: [(Day, EKEvent)] = []
     do {
       for shift in events {
         let event = EKEvent(eventStore: store)
@@ -82,8 +87,8 @@ import UIKit
           event.startDate = date(of: shift.day, at: 0)
           event.endDate = date(of: shift.day, at: 0)
         }
+        event.url = Self.dayURL(shift.day, by: user)
         try store.save(event, span: .thisEvent, commit: false)
-        made.append((shift.day, event))
       }
       try store.commit()
     } catch {
@@ -91,13 +96,30 @@ import UIKit
       store.reset()
       throw error
     }
-    for (day, event) in made {
-      if let id = event.eventIdentifier {
-        added[day.key] = id
-      }
-    }
-    UserDefaults.standard.set(added, forKey: Self.addedKey)
     UserDefaults.standard.set(calendarID, forKey: Self.lastKey)
+  }
+
+  /// The mark Pochical leaves on an event it puts in: the app's own link
+  /// to the day it is for (spec/widgets.md's pochical://day), and whose
+  /// shift it is, so a calendar shared with family keeps theirs.
+  static func dayURL(_ day: Day, by user: String) -> URL? {
+    var parts = URLComponents()
+    parts.scheme = "pochical"
+    parts.host = "day"
+    parts.path = "/\(day.key)"
+    parts.queryItems = [URLQueryItem(name: "by", value: user)]
+    return parts.url
+  }
+
+  /// The day and the user an event's mark names, nil for an event not
+  /// Pochical's.
+  private static func mark(of url: URL?) -> (day: String, user: String)? {
+    guard let url, url.scheme == "pochical", url.host() == "day",
+      let user = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+        .queryItems?.first(where: { $0.name == "by" })?.value
+    else { return nil }
+    let key = url.path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    return Day(key) == nil ? nil : (key, user)
   }
 
   /// The clock time `minutes` after the start of `day`, a day on past
@@ -120,6 +142,7 @@ struct DeviceCalendarSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Environment(\.openURL) private var openURL
+  @Environment(\.meID) private var meID
   let month: Day
   let calendar: OwnCalendar
   @State private var calendars = DeviceCalendars()
@@ -229,15 +252,18 @@ struct DeviceCalendarSheet: View {
       Text("\(month.monthText)のシフトを、1日ずつ予定として入れます。")
         .textCase(nil)
     } footer: {
-      Text("この端末で前に入れた\(month.monthText)の予定は、入れ直します。メモと一緒に働く人は入れません。")
+      Text("前に入れた\(month.monthText)の予定は、入れ直します。メモと一緒に働く人は入れません。")
     }
     .settingsRows()
   }
 
   private func add(_ events: [ShiftEvent]) {
-    guard let calendarID else { return }
+    guard let calendarID, let meID else {
+      failed = true
+      return
+    }
     do {
-      try calendars.add(events, of: month, to: calendarID)
+      try calendars.add(events, of: month, by: meID, to: calendarID)
       let name = calendars.calendar(calendarID)?.title ?? ""
       withAnimation {
         done = "「\(name)」に\(month.monthText)のシフトを\(events.count)件追加しました。"
