@@ -351,9 +351,21 @@ struct CalendarScreen: View {
         canSkip: day != day.daysOfMonth.last,
         onEnter: { shift in
           write { db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }
-          entering = selectedAfterEntering(shift, on: day, patterns: calendar.patternsByID)
+          let next = selectedAfterEntering(shift, on: day, patterns: calendar.patternsByID)
+          entering = next
+          let pattern = shift.flatMap { calendar.patternsByID[$0] }
+          let following = pattern?.nextDay.flatMap { calendar.patternsByID[$0] }
+          announce(
+            pattern.map { pattern in
+              following.map { "\(pattern.name)を入力しました。翌日は\($0.name)です" }
+                ?? "\(pattern.name)を入力しました"
+            } ?? "シフトを消しました", on: day, next: next)
         },
-        onSkip: { entering = selectedAfterEntering(nil, on: day, patterns: [:]) },
+        onSkip: {
+          let next = selectedAfterEntering(nil, on: day, patterns: [:])
+          entering = next
+          announce("変更せずに進みました", on: day, next: next)
+        },
         onPickDay: { entering = $0 }
       )
     } else {
@@ -425,6 +437,13 @@ struct CalendarScreen: View {
       ReviewPrompt.troubled = true
       assertionFailure("Could not keep the edit: \(error)")
     }
+  }
+
+  /// Says what entering did and where it goes on, for VoiceOver, as
+  /// /design's live region: the month's last day stays until 完了.
+  private func announce(_ done: String, on day: Day, next: Day) {
+    let after = next == day ? "月末です。入力が終わったら完了を押してください" : "\(next.day)日を選択中"
+    AccessibilityNotification.Announcement("\(day.monthDayText)、\(done)。\(after)").post()
   }
 
   /// How the month folds into a day's week and back: at once with Reduce
