@@ -102,7 +102,7 @@ const skyBackground = paleSkyFromTop(themeSkyId("pochical"));
 const variants = parseDesignVariants({});
 
 const sampleInviteGroup = {
-  mark: { color: 0, emoji: "🍉", icon: "", letter: "" },
+  mark: { color: 0, emoji: "🍉", icon: "", letter: "", photoId: "" },
   memberCount: 5,
   name: "いとこ会",
 };

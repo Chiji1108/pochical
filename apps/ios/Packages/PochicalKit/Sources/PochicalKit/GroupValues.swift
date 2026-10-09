@@ -246,6 +246,7 @@ public enum GroupSync {
         $0.icon = mark.icon
         $0.letter = mark.letter
         $0.color = mark.color
+        $0.photoID = mark.photoID
       }
       .execute(db)
     case .member(let member):

@@ -80,4 +80,30 @@ public interface GroupMarkOrBuilder extends
    * @return The color.
    */
   int getColor();
+
+  /**
+   * <pre>
+   * One of the group's photos, which members read at
+   * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+   * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+   * group takes a copy of.
+   * </pre>
+   *
+   * <code>string photo_id = 5 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  java.lang.String getPhotoId();
+  /**
+   * <pre>
+   * One of the group's photos, which members read at
+   * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+   * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+   * group takes a copy of.
+   * </pre>
+   *
+   * <code>string photo_id = 5 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  com.google.protobuf.ByteString
+      getPhotoIdBytes();
 }

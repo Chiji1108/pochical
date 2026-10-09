@@ -16,6 +16,8 @@ import type { InviteGroupMark } from "./invite-mark";
 export type InviteImageGroup = {
   name: string;
   mark: InviteGroupMark;
+  // A photo mark as a data URL, satori drawing no other address.
+  photo?: string;
   memberCount: number;
 };
 
@@ -118,7 +120,7 @@ export function InviteShareImage({
       </div>
       <div style={styles.group}>
         <div style={styles.mark}>
-          <InviteMark mark={group.mark} size={124} />
+          <InviteMark mark={group.mark} photo={group.photo} size={124} />
         </div>
         <div style={{ ...styles.name, fontSize: nameSize(group.name) }}>
           {group.name}

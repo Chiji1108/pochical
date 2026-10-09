@@ -183,3 +183,105 @@ describe("members' photos", () => {
     expect(other.status).toBe(404);
   });
 });
+
+/** A rename to `mark`, as the status it answers. */
+const renamed = async (
+  groupId: string,
+  mark: Record<string, unknown>,
+  token: string
+): Promise<number> => {
+  const response = await call(
+    "GroupService/RenameGroup",
+    { groupId, mark, name: "いとこ会" },
+    token
+  );
+  return response.status;
+};
+
+describe("a group's photo mark", () => {
+  it("is copied from the caller's own photo and shown to the link's holders", async () => {
+    const { groupId, guest, inviteCode, maker } = await pair();
+    const photoId = crypto.randomUUID();
+    await upload(`/v1/me/photos/${photoId}`, maker);
+    await expect(renamed(groupId, { photoId }, maker)).resolves.toBe(200);
+    // Members read the group's copy as they read its other photos.
+    const byMember = await read(
+      `/v1/groups/${groupId}/photos/${photoId}`,
+      guest
+    );
+    // Anyone holding the link sees it with the group's name, no session
+    // needed, and nothing else by that path.
+    const markPath = `/v1/invites/${inviteCode}/mark`;
+    const shown = await exports.default.fetch(
+      `${ORIGIN}${markPath}/${photoId}`
+    );
+    const other = await exports.default.fetch(
+      `${ORIGIN}${markPath}/${crypto.randomUUID()}`
+    );
+    // The join screen reads it as it reads the members' faces.
+    const onJoinScreen = await read(
+      `/v1/invites/${inviteCode}/photos/${photoId}`,
+      await signInAnonymously()
+    );
+    expect([
+      byMember.status,
+      shown.status,
+      other.status,
+      onJoinScreen.status,
+    ]).toStrictEqual([200, 200, 404, 200]);
+    const preview = await call("InviteService/GetInvitePreview", {
+      inviteCode,
+    });
+    await expect(preview.json()).resolves.toMatchObject({
+      groupMark: { photoId },
+    });
+    // Another member renaming keeps it without a photo of their own.
+    await expect(renamed(groupId, { photoId }, guest)).resolves.toBe(200);
+  });
+
+  it("takes only a photo the caller uploaded", async () => {
+    const { groupId, guest, maker } = await pair();
+    const photoId = crypto.randomUUID();
+    await upload(`/v1/me/photos/${photoId}`, maker);
+    const statuses = [
+      await renamed(groupId, { photoId }, guest),
+      await renamed(groupId, { photoId: crypto.randomUUID() }, maker),
+      await renamed(groupId, { emoji: "🍉", photoId }, maker),
+    ];
+    expect(statuses).toStrictEqual([400, 400, 400]);
+  });
+
+  it("makes a group with it", async () => {
+    const maker = await signInAnonymously();
+    const photoId = crypto.randomUUID();
+    await upload(`/v1/me/photos/${photoId}`, maker);
+    const created = await call(
+      "GroupService/CreateGroup",
+      {
+        displayName: "さくら",
+        mark: { photoId },
+        name: "いとこ会",
+        requestId: crypto.randomUUID(),
+      },
+      maker
+    );
+    expect(created.status).toBe(200);
+    const { groupId } = (await created.json()) as { groupId: string };
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.not.toBeNull();
+  });
+
+  it("goes once the group's mark is another", async () => {
+    const { groupId, maker } = await pair();
+    const photoId = crypto.randomUUID();
+    await upload(`/v1/me/photos/${photoId}`, maker);
+    await renamed(groupId, { photoId }, maker);
+    await renamed(groupId, { color: 2, letter: "い" }, maker);
+    await vi.waitFor(async () => {
+      await expect(
+        env.PHOTOS.head(photoKey(groupId, photoId))
+      ).resolves.toBeNull();
+    });
+  });
+});

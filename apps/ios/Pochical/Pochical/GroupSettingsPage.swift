@@ -33,7 +33,7 @@ struct GroupSettingsPage: View {
             Label {
               Text(group.name).lineLimit(1)
             } icon: {
-              GroupMarkBadge(mark: group.mark)
+              GroupMarkBadge(mark: group.mark, shelf: group.id)
             }
           }
         }
@@ -180,10 +180,10 @@ private struct GroupEditPage: View {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
         NavigationLink {
-          GroupMarkPage(name: name, mark: mark) { mark = $0 }
+          GroupMarkPage(name: name, mark: mark, shelf: group.id) { mark = $0 }
         } label: {
           LabeledContent("アイコン") {
-            GroupMarkBadge(mark: mark)
+            GroupMarkBadge(mark: mark, shelf: group.id)
           }
         }
       }

@@ -71,7 +71,7 @@ struct JoinScreen: View {
       List {
         Section {
           VStack(spacing: 12) {
-            GroupMarkView(mark: details.mark, size: 76)
+            GroupMarkView(mark: details.mark, size: 76, shelf: ChatPhotos.invitation(invite.code))
               .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
               .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
               .accessibilityHidden(true)

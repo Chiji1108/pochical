@@ -220,9 +220,15 @@ export class GroupDO extends DurableObject<Env> {
       }));
   }
 
-  /** Whether the photo is one the group shows of someone in it now. */
+  /**
+   * Whether the photo is one the group shows to whoever holds its link:
+   * its mark, or someone in it now.
+   */
   showsPhoto(photoId: string): boolean {
-    return this.memberList().some((member) => member.photoId === photoId);
+    return (
+      this.getProfile()?.mark.photoId === photoId ||
+      this.memberList().some((member) => member.photoId === photoId)
+    );
   }
 
   /**
@@ -447,9 +453,16 @@ export class GroupDO extends DurableObject<Env> {
     );
   }
 
-  /** Written when the group is created, and later when it is renamed. */
+  /**
+   * Written when the group is created, and later when it is renamed. A
+   * photo mark it replaces goes.
+   */
   setProfile(group: GroupProfile): void {
+    const before = this.getProfile()?.mark.photoId ?? "";
     broadcastChanges(this.ctx, [this.writeProfile(group)]);
+    if (before !== "" && before !== group.mark.photoId) {
+      this.forgetPhoto(before, null);
+    }
   }
 
   /** The group's name and mark at the next cursor, as a change. */

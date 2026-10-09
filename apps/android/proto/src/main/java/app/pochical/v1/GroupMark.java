@@ -8,9 +8,10 @@ package app.pochical.v1;
 /**
  * <pre>
  * A group's mark (/design's GroupMark): one emoji, one of the mark icons
- * (design/src/mark-icons.ts) or letters, the last two in one of the mark
- * palette's colors. Exactly one of emoji, icon and letter is set. Every
- * member sees it as it is, whatever their style for shifts.
+ * (design/src/mark-icons.ts), letters, the last two in one of the mark
+ * palette's colors, or a photo. Exactly one of emoji, icon, letter and
+ * photo_id is set. Every member sees it as it is, whatever their style for
+ * shifts.
  * </pre>
  *
  * Protobuf type {@code pochical.v1.GroupMark}
@@ -25,6 +26,7 @@ public  final class GroupMark extends
     emoji_ = "";
     icon_ = "";
     letter_ = "";
+    photoId_ = "";
   }
   public static final int EMOJI_FIELD_NUMBER = 1;
   private java.lang.String emoji_;
@@ -268,6 +270,88 @@ public  final class GroupMark extends
     color_ = 0;
   }
 
+  public static final int PHOTO_ID_FIELD_NUMBER = 5;
+  private java.lang.String photoId_;
+  /**
+   * <pre>
+   * One of the group's photos, which members read at
+   * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+   * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+   * group takes a copy of.
+   * </pre>
+   *
+   * <code>string photo_id = 5 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  @java.lang.Override
+  public java.lang.String getPhotoId() {
+    return photoId_;
+  }
+  /**
+   * <pre>
+   * One of the group's photos, which members read at
+   * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+   * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+   * group takes a copy of.
+   * </pre>
+   *
+   * <code>string photo_id = 5 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPhotoIdBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(photoId_);
+  }
+  /**
+   * <pre>
+   * One of the group's photos, which members read at
+   * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+   * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+   * group takes a copy of.
+   * </pre>
+   *
+   * <code>string photo_id = 5 [json_name = "photoId"];</code>
+   * @param value The photoId to set.
+   */
+  private void setPhotoId(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    photoId_ = value;
+  }
+  /**
+   * <pre>
+   * One of the group's photos, which members read at
+   * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+   * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+   * group takes a copy of.
+   * </pre>
+   *
+   * <code>string photo_id = 5 [json_name = "photoId"];</code>
+   */
+  private void clearPhotoId() {
+
+    photoId_ = getDefaultInstance().getPhotoId();
+  }
+  /**
+   * <pre>
+   * One of the group's photos, which members read at
+   * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+   * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+   * group takes a copy of.
+   * </pre>
+   *
+   * <code>string photo_id = 5 [json_name = "photoId"];</code>
+   * @param value The bytes for photoId to set.
+   */
+  private void setPhotoIdBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    photoId_ = value.toStringUtf8();
+
+  }
+
   public static app.pochical.v1.GroupMark parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -354,9 +438,10 @@ public  final class GroupMark extends
   /**
    * <pre>
    * A group's mark (/design's GroupMark): one emoji, one of the mark icons
-   * (design/src/mark-icons.ts) or letters, the last two in one of the mark
-   * palette's colors. Exactly one of emoji, icon and letter is set. Every
-   * member sees it as it is, whatever their style for shifts.
+   * (design/src/mark-icons.ts), letters, the last two in one of the mark
+   * palette's colors, or a photo. Exactly one of emoji, icon, letter and
+   * photo_id is set. Every member sees it as it is, whatever their style for
+   * shifts.
    * </pre>
    *
    * Protobuf type {@code pochical.v1.GroupMark}
@@ -622,6 +707,90 @@ public  final class GroupMark extends
       return this;
     }
 
+    /**
+     * <pre>
+     * One of the group's photos, which members read at
+     * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+     * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+     * group takes a copy of.
+     * </pre>
+     *
+     * <code>string photo_id = 5 [json_name = "photoId"];</code>
+     * @return The photoId.
+     */
+    @java.lang.Override
+    public java.lang.String getPhotoId() {
+      return instance.getPhotoId();
+    }
+    /**
+     * <pre>
+     * One of the group's photos, which members read at
+     * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+     * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+     * group takes a copy of.
+     * </pre>
+     *
+     * <code>string photo_id = 5 [json_name = "photoId"];</code>
+     * @return The bytes for photoId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getPhotoIdBytes() {
+      return instance.getPhotoIdBytes();
+    }
+    /**
+     * <pre>
+     * One of the group's photos, which members read at
+     * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+     * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+     * group takes a copy of.
+     * </pre>
+     *
+     * <code>string photo_id = 5 [json_name = "photoId"];</code>
+     * @param value The photoId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhotoId(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setPhotoId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * One of the group's photos, which members read at
+     * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+     * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+     * group takes a copy of.
+     * </pre>
+     *
+     * <code>string photo_id = 5 [json_name = "photoId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPhotoId() {
+      copyOnWrite();
+      instance.clearPhotoId();
+      return this;
+    }
+    /**
+     * <pre>
+     * One of the group's photos, which members read at
+     * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+     * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+     * group takes a copy of.
+     * </pre>
+     *
+     * <code>string photo_id = 5 [json_name = "photoId"];</code>
+     * @param value The bytes for photoId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhotoIdBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setPhotoIdBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.GroupMark)
   }
   @java.lang.Override
@@ -642,10 +811,11 @@ public  final class GroupMark extends
             "icon_",
             "letter_",
             "color_",
+            "photoId_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208\u0004\u000b";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0004\u000b\u0005\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

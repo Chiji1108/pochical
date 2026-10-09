@@ -16,7 +16,7 @@ import {
   SetDisplayNameResponseSchema,
   SetGroupPhotoResponseSchema,
 } from "./gen/pochical/v1/group_pb";
-import { requireMark } from "./group-marks";
+import { requireMark, shareMarkPhoto } from "./group-marks";
 import { isId } from "./ids";
 import {
   issueInviteCode,
@@ -128,6 +128,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const names = await namesFor(user.id, request.displayName, true);
       const groupId = await users.groupIdFor(request.requestId);
       await shareUsualPhoto(user.id, names.usualPhoto, groupId);
+      await shareMarkPhoto(env, user.id, mark, groupId);
       await env.GROUPS.getByName(groupId).create(
         { mark, name },
         {
@@ -227,20 +228,28 @@ export const registerGroupService = (router: ConnectRouter): void => {
     },
 
     renameGroup: async (request, context) => {
-      await requireMember(context, request.groupId);
+      const userId = await requireMember(context, request.groupId);
       const name = requireText(request.name, textLimits.groupName, "name");
       const mark = requireMark(request.mark);
       const group = env.GROUPS.getByName(request.groupId);
+      const current = await group.getProfile();
+      await shareMarkPhoto(
+        env,
+        userId,
+        mark,
+        request.groupId,
+        current?.mark.photoId
+      );
       await group.setProfile({ mark, name });
       // Each member's list of groups shows the new name; one that cannot be
       // reached now hears it from the group's socket when they open it.
       const memberList = await group.memberList();
       await Promise.allSettled(
-        memberList.map(async ({ userId }) => {
-          await env.USERS.getByName(userId).renameMembership(request.groupId, {
-            mark,
-            name,
-          });
+        memberList.map(async (member) => {
+          await env.USERS.getByName(member.userId).renameMembership(
+            request.groupId,
+            { mark, name }
+          );
         })
       );
       return create(RenameGroupResponseSchema, {});

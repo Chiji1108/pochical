@@ -337,7 +337,7 @@ describe("a member's shifts in their groups", () => {
       if (changing) {
         changing = false;
         instance.addMembership("!unreachable", {
-          mark: { color: 0, emoji: "🍉", icon: "", letter: "" },
+          mark: { color: 0, emoji: "🍉", icon: "", letter: "", photoId: "" },
           name: "届かない",
         });
       }

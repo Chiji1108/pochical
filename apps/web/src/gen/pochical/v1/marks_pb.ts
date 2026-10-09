@@ -10,13 +10,14 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/marks.proto.
  */
 export const file_pochical_v1_marks: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb2NoaWNhbC92MS9tYXJrcy5wcm90bxILcG9jaGljYWwudjEiRwoJR3JvdXBNYXJrEg0KBWVtb2ppGAEgASgJEgwKBGljb24YAiABKAkSDgoGbGV0dGVyGAMgASgJEg0KBWNvbG9yGAQgASgNQmoKD2FwcC5wb2NoaWNhbC52MUIKTWFya3NQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
+  fileDesc("Chdwb2NoaWNhbC92MS9tYXJrcy5wcm90bxILcG9jaGljYWwudjEiWQoJR3JvdXBNYXJrEg0KBWVtb2ppGAEgASgJEgwKBGljb24YAiABKAkSDgoGbGV0dGVyGAMgASgJEg0KBWNvbG9yGAQgASgNEhAKCHBob3RvX2lkGAUgASgJQmoKD2FwcC5wb2NoaWNhbC52MUIKTWFya3NQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
 
 /**
  * A group's mark (/design's GroupMark): one emoji, one of the mark icons
- * (design/src/mark-icons.ts) or letters, the last two in one of the mark
- * palette's colors. Exactly one of emoji, icon and letter is set. Every
- * member sees it as it is, whatever their style for shifts.
+ * (design/src/mark-icons.ts), letters, the last two in one of the mark
+ * palette's colors, or a photo. Exactly one of emoji, icon, letter and
+ * photo_id is set. Every member sees it as it is, whatever their style for
+ * shifts.
  *
  * @generated from message pochical.v1.GroupMark
  */
@@ -49,6 +50,16 @@ export type GroupMark = Message<"pochical.v1.GroupMark"> & {
    * @generated from field: uint32 color = 4;
    */
   color: number;
+
+  /**
+   * One of the group's photos, which members read at
+   * /v1/groups/{group_id}/photos/{photo_id}. A call giving a new one names
+   * one of the caller's own photos (/v1/me/photos/{photo_id}), which the
+   * group takes a copy of.
+   *
+   * @generated from field: string photo_id = 5;
+   */
+  photoId: string;
 };
 
 /**

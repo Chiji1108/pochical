@@ -44,7 +44,7 @@ struct ChatNotificationsPage: View {
             Label {
               Text(group.name).lineLimit(1)
             } icon: {
-              GroupMarkBadge(mark: group.mark)
+              GroupMarkBadge(mark: group.mark, shelf: group.id)
             }
           }
         }

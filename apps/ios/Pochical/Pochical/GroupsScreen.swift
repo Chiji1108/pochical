@@ -229,7 +229,7 @@ private struct GroupRail: View {
           Button {
             onOpen(group.id)
           } label: {
-            GroupMark(mark: group.mark, isOpen: isOpen)
+            GroupMark(mark: group.mark, shelf: group.id, isOpen: isOpen)
               .frame(width: 58, height: 46)
               .overlay(alignment: .leading) {
                 // The flag at the edge, by the open group.
@@ -306,11 +306,13 @@ private struct GroupRail: View {
 private struct GroupMark: View {
   @Environment(\.themeColors) private var colors
   let mark: GroupMarkValue
+  /// The group's photos, for a photo mark.
+  let shelf: String
   let isOpen: Bool
 
   var body: some View {
     let shape = RoundedRectangle(cornerRadius: isOpen ? Radius.md : Radius.lg)
-    GroupMarkView(mark: mark, size: 42)
+    GroupMarkView(mark: mark, size: 42, shelf: shelf)
       .background(isOpen ? colors.accentContainer : colors.backgroundCard, in: shape)
       .clipShape(shape)
       .overlay {
@@ -389,7 +391,7 @@ private struct GroupHub: View {
 
   private var heading: some View {
     HStack(spacing: 8) {
-      GroupMarkView(mark: group.mark, size: 26)
+      GroupMarkView(mark: group.mark, size: 26, shelf: group.id)
         .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.sm))
         .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
         .accessibilityHidden(true)

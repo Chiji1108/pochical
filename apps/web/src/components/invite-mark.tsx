@@ -12,22 +12,37 @@ export type InviteGroupMark = {
   icon: string;
   letter: string;
   color: number;
+  photoId: string;
 };
 
 const isMarkIcon = (name: string): name is MarkIcon =>
   Object.hasOwn(markIconGlyphs, name);
 
 // A group's mark on the invitation's page and its share image, as the
-// app's GroupIcon draws it in light: an emoji as it is, an icon or letters
-// in its palette color on that color's tint.
+// app's GroupIcon draws it in light: a photo filling its square, an emoji
+// as it is, an icon or letters in its palette color on that color's tint.
 export function InviteMark({
   mark,
   size,
+  photo,
 }: {
   mark: InviteGroupMark;
   size: number;
+  // A photo mark's address: a data URL where satori draws it.
+  photo?: string;
 }) {
   const { color, tint } = markColors[mark.color] ?? markColors[0];
+  if (mark.photoId !== "") {
+    return photo === undefined ? null : (
+      <img
+        alt=""
+        height={size}
+        src={photo}
+        style={{ borderRadius: size * 0.28, objectFit: "cover" }}
+        width={size}
+      />
+    );
+  }
   if (mark.icon !== "" && isMarkIcon(mark.icon)) {
     return (
       <div

@@ -233,6 +233,31 @@ export const getInvitePhoto = async (
   return await servePhoto(env, photoKey(groupId, photoId));
 };
 
+/**
+ * A group's photo mark, by its path: /v1/invites/{code}/mark/{photoId}.
+ */
+export const INVITE_MARK_PATH =
+  /^\/v1\/invites\/(?<code>[^/]+)\/mark\/(?<photoId>[^/]+)$/u;
+
+/**
+ * A group's photo mark for anyone holding a live invitation to it, as the
+ * invitation's page and share image show it with the group's name
+ * (spec/sync-protocol.md, Groups): only the group's mark now.
+ */
+export const getInviteMark = async (
+  env: Env,
+  code: string,
+  photoId: string
+): Promise<Response> => {
+  const groupId = isId(photoId) ? await groupOfCode(env.DB, code) : null;
+  const profile =
+    groupId === null ? null : await env.GROUPS.getByName(groupId).getProfile();
+  if (groupId === null || profile?.mark.photoId !== photoId) {
+    return new Response("No such photo", { status: 404 });
+  }
+  return await servePhoto(env, photoKey(groupId, photoId));
+};
+
 /** A link preview's picture by its path: /v1/previews/{imageId}. */
 export const PREVIEW_IMAGE_PATH = /^\/v1\/previews\/(?<imageId>[^/]+)$/u;
 
