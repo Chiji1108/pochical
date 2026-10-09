@@ -17,14 +17,12 @@ struct EntryTray: View {
   let canSkip: Bool
   let onEnter: (PatternID?) -> Void
   let onSkip: () -> Void
-  /// Another day picked to enter, from the date over the keys.
-  let onPickDay: (Day) -> Void
   @State private var keys = 0
   @State private var page = 0
 
   var body: some View {
     VStack(spacing: 8) {
-      TrayDateLabel(day: day, week: week, onPick: onPickDay)
+      TrayDateLabel(day: day, week: week)
       PatternKeys(patterns: patterns, page: $page) { pattern in
         keys += 1
         onEnter(pattern.id)
@@ -49,42 +47,26 @@ struct EntryTray: View {
   }
 }
 
-/// The day ポチポチ入力 enters next, over its keys: tapped, another day
-/// is picked (/design's InputDatePicker).
+/// The day ポチポチ入力 enters next, over its keys: words, not a button,
+/// as another day is picked on the calendar above it.
 struct TrayDateLabel: View {
   @Environment(\.themeColors) private var colors
   let day: Day
   /// Which days take their colors (the person's カレンダー settings).
   let week: DeviceSettings.Week
-  let onPick: (Day) -> Void
-  @State private var choosing = false
 
   var body: some View {
-    Button {
-      choosing = true
-    } label: {
-      HStack(spacing: 2) {
-        Text(day.monthDayText)
-          .font(.system(size: 17, weight: .semibold))
-          .foregroundStyle(colors.textPrimary)
-        Text("(\(day.weekdayName))")
-          .font(.system(size: 14))
-          .foregroundStyle(weekdayColor)
-        Image(systemName: "chevron.down")
-          .font(.system(size: 13, weight: .semibold))
-          .foregroundStyle(colors.accentDefault)
-          .padding(.leading, 4)
-      }
-      .frame(minHeight: Metrics.touch)
-      .contentShape(.rect)
+    HStack(spacing: 2) {
+      Text(day.monthDayText)
+        .font(.system(size: 17, weight: .semibold))
+        .foregroundStyle(colors.textPrimary)
+      Text("(\(day.weekdayName))")
+        .font(.system(size: 14))
+        .foregroundStyle(weekdayColor)
     }
-    .buttonStyle(.plain)
+    .frame(minHeight: Metrics.touch)
     .accessibilityElement(children: .combine)
     .accessibilityLabel("入力する日付：\(day.monthDayText)")
-    .accessibilityHint("押すと日付を選べます")
-    .fittedSheet(isPresented: $choosing) {
-      DayChoiceSheet(title: "入力する日付", day: day, onPick: onPick)
-    }
   }
 
   private var weekdayColor: Color {
@@ -94,7 +76,6 @@ struct TrayDateLabel: View {
     }
     return day.weekday == 6 && week.saturday ? colors.calendarSaturday : colors.textTertiary
   }
-
 }
 
 /// A tray's words under its keys with the pages' dots between them, the

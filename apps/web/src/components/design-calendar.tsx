@@ -33,7 +33,6 @@ import {
   MonthHeading,
   MonthSummary,
 } from "./design-calendar-heading";
-import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import { DayDetail } from "./design-day-detail";
 import { dayGrid, WeekdayRow } from "./design-day-grid";
@@ -90,6 +89,8 @@ export function DesignCalendar({
   };
   // Blank days between entered ones, asked about when entering ends.
   const [gapDays, setGapDays] = useState<Date[]>([]);
+  // The pattern picked in the gap sheet, shown faint on its days.
+  const [gapFill, setGapFill] = useState<Shift>();
   // Whether the sheet offers showing days off blank: decided as it opens,
   // so switching it on there does not take the switch away.
   const [offerBlank, setOfferBlank] = useState(false);
@@ -154,7 +155,6 @@ export function DesignCalendar({
   };
   const {
     announcement,
-    announcePicked,
     editing,
     enterFrom,
     enterShift,
@@ -175,26 +175,20 @@ export function DesignCalendar({
     schedule,
     turnTo,
   });
+  // The day being entered, said over the keys; another is picked on the
+  // calendar above, a month away by swiping.
   const datePicker = (
-    <InputDatePicker
-      ariaLabel={`入力する日付：${formatDay(selectedDate)}。タップで変更`}
-      date={selectedDate}
-      onSelect={(date) => {
-        enterFrom(date);
-        announcePicked(date);
-      }}
-    >
-      <span>
-        {formatMonthDay(selectedDate)}
-        <span
-          className={shiftInput.weekday({
-            tone: weekTools.dateTone(selectedDate),
-          })}
-        >
-          ({weekdayNames[selectedDate.getDay()]})
-        </span>
+    <p className={shiftInput.date}>
+      <span className={srOnly}>入力する日付：</span>
+      {formatMonthDay(selectedDate)}
+      <span
+        className={shiftInput.weekday({
+          tone: weekTools.dateTone(selectedDate),
+        })}
+      >
+        ({weekdayNames[selectedDate.getDay()]})
       </span>
-    </InputDatePicker>
+    </p>
   );
   const {
     besideMonths,
@@ -261,6 +255,7 @@ export function DesignCalendar({
     const gaps = ownPatterns.some(isDayOff) ? gapDaysIn(schedule, month) : [];
     if (gaps.length > 0) {
       setGapDays(gaps);
+      setGapFill(undefined);
       setOfferBlank(offDisplay === "show");
       setOpenSheet("gap");
       return;
@@ -269,6 +264,18 @@ export function DesignCalendar({
     if (unfilled === 0 && enteredBlank) {
       openSave(true);
     }
+  }
+  // While the gap sheet asks, its days drawn faint as the pattern picked
+  // would fill them, so the question points at them.
+  function previewOf(date: Date): DayEntry | undefined {
+    if (
+      openSheet !== "gap" ||
+      !gapDays.some((day) => dateKey(day) === dateKey(date))
+    ) {
+      return undefined;
+    }
+    const shift = gapFill ?? ownPatterns.find(isDayOff)?.id;
+    return shift === undefined ? undefined : { shift };
   }
   // Fills the blanks with the person's day off.
   function fillGaps(key: Shift | undefined) {
@@ -390,7 +397,11 @@ export function DesignCalendar({
                       }
                       date={date}
                       editing={editing}
-                      entry={schedule[dateKey(date)]}
+                      entry={schedule[dateKey(date)] ?? previewOf(date)}
+                      preview={
+                        !schedule[dateKey(date)] &&
+                        previewOf(date) !== undefined
+                      }
                       key={dateKey(date)}
                       note={own[dateKey(date)]?.note}
                       onPress={() => {
@@ -545,6 +556,7 @@ export function DesignCalendar({
           .map((pattern) => ({ key: pattern.id, label: pattern.name }))}
         days={gapDays}
         onFill={fillGaps}
+        onPick={setGapFill}
         offerBlank={offerBlank}
         onBlankOff={() => {
           setCalendarOptions({ blankOff: true });
@@ -650,7 +662,6 @@ function useShiftEntry({
     moveToNextDay("変更せずに進みました");
   }
   return {
-    announcePicked,
     announcement,
     editing,
     enterFrom,

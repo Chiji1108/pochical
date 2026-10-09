@@ -87,8 +87,8 @@ struct MonthSummary: View {
 }
 
 /// 今月の内訳: how many days of each pattern and how many still blank,
-/// then the month's length. As tall as it holds (`fittedSheet`), so it
-/// draws its own bar; with more patterns than fit, they scroll under it.
+/// then the month's length; half the screen, or all of it for many
+/// patterns.
 struct MonthBreakdownSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -98,76 +98,52 @@ struct MonthBreakdownSheet: View {
   let unfilled: Int
 
   var body: some View {
-    VStack(spacing: 0) {
-      // The bar of an iOS sheet: × at the leading edge, the title and the
-      // month in the middle.
-      ZStack {
-        VStack(spacing: 2) {
-          Text("今月の内訳")
-            .font(.headline)
-            .foregroundStyle(colors.textPrimary)
-            .accessibilityAddTraits(.isHeader)
-          Text(month.yearMonthText)
-            .font(.caption)
-            .foregroundStyle(colors.textTertiary)
-        }
-        Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
-          .labelStyle(.iconOnly)
-          .buttonStyle(BarButton())
-          .foregroundStyle(colors.textPrimary)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      }
-      .padding(.horizontal, 16)
-      .padding(.top, 16)
-      .padding(.bottom, 12)
-      // As tall as its rows; past the screen, the sheet stops at its
-      // largest and they scroll.
-      ScrollView { rows }
-        .scrollBounceBehavior(.basedOnSize)
-    }
-  }
-
-  private var rows: some View {
-    VStack(spacing: 0) {
-      VStack(spacing: 0) {
-        ForEach(counts, id: \.pattern.id) { count in
-          row(days: count.days) {
-            Label {
-              Text(count.pattern.name).foregroundStyle(colors.textPrimary)
-            } icon: {
-              ShiftMark(pattern: count.pattern, size: 18)
+    NavigationStack {
+      List {
+        Section {
+          ForEach(counts, id: \.pattern.id) { count in
+            LabeledContent {
+              days(count.days)
+            } label: {
+              Label {
+                Text(count.pattern.name).foregroundStyle(colors.textPrimary)
+              } icon: {
+                ShiftMark(pattern: count.pattern, size: 18)
+              }
             }
           }
-          Divider().padding(.leading, 16)
+          LabeledContent {
+            days(unfilled)
+          } label: {
+            Text("未入力").foregroundStyle(colors.textTertiary)
+          }
+        } footer: {
+          Text("この月は全\(month.daysOfMonth.count)日")
+            .frame(maxWidth: .infinity)
         }
-        row(days: unfilled) {
-          Text("未入力").foregroundStyle(colors.textTertiary)
+        .settingsRows()
+      }
+      .settingsList()
+      .navigationTitle("今月の内訳")
+      .navigationSubtitle(month.yearMonthText)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
         }
       }
-      .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xxl))
-      Text("この月は全\(month.daysOfMonth.count)日")
-        .font(.footnote)
-        .foregroundStyle(colors.textTertiary)
-        .padding(.top, 8)
     }
-    .padding(.horizontal, 20)
-    .padding(.bottom, 20)
+    .presentationDetents([.medium, .large])
   }
 
-  private func row(days count: Int, @ViewBuilder label: () -> some View) -> some View {
-    HStack {
-      label()
-      Spacer()
-      HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text(count, format: .number)
-          .font(.title3.weight(.semibold))
-          .monospacedDigit()
-        Text("日").font(.footnote)
-      }
-      .foregroundStyle(colors.accentDefault)
+  private func days(_ count: Int) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: 8) {
+      Text(count, format: .number)
+        .font(.title3.weight(.semibold))
+        .monospacedDigit()
+      Text("日").font(.footnote)
     }
-    .padding(.horizontal, 16)
-    .frame(minHeight: 52)
+    .foregroundStyle(colors.accentDefault)
     .accessibilityElement(children: .combine)
   }
 }

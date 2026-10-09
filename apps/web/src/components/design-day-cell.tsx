@@ -217,7 +217,8 @@ export function DayCell({
   onPress,
   plain = false,
   dimmed = false,
-  faint = false,
+  faint: fainted = false,
+  preview = false,
   className,
 }: {
   date: Date;
@@ -236,9 +237,13 @@ export function DayCell({
   plain?: boolean;
   // A shift still to come of an order being typed: its mark faint.
   faint?: boolean;
+  // A blank day drawn faint as the gap sheet would fill it, read as the
+  // blank it still is.
+  preview?: boolean;
   className?: string;
 }) {
   const markStyle = useContext(ShiftMarkStyleContext);
+  const faint = fainted || preview;
   // A picture of the month keeps to the month; on screen the days around it
   // show what they hold, faded, and open like any other day.
   const blank = outside && plain;
@@ -249,7 +254,8 @@ export function DayCell({
   const { tint } = useDisplayColor(pattern?.color ?? presetPatterns.off.color);
   const offDisplay = useContext(OffDisplayContext);
   const dayOff = isDayOff(pattern);
-  const hideOff = dayOff && offDisplay === "blank" && !editing;
+  // A preview shows whatever the look: it is what would be filled.
+  const hideOff = dayOff && offDisplay === "blank" && !editing && !preview;
   const faintOff =
     dayOff && (offDisplay === "faint" || (offDisplay === "blank" && editing));
   const offStyle =
@@ -311,7 +317,9 @@ export function DayCell({
       </div>
     );
   }
-  const details = dayDetails(date, pattern, entry, note);
+  const details = preview
+    ? dayDetails(date, undefined, undefined, note)
+    : dayDetails(date, pattern, entry, note);
   return (
     <button
       aria-haspopup={editing ? undefined : "dialog"}

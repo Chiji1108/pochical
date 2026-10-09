@@ -27,6 +27,9 @@ struct DayCell: View {
   var isEntering = false
   /// A shift still to come of an order being typed: its mark faint.
   var faint = false
+  /// A blank day drawn faint as the gap sheet would fill it, read as the
+  /// blank it still is.
+  var preview = false
   /// Picks the day: to enter while entering, else to open.
   var onSelect: ((Day) -> Void)?
 
@@ -49,12 +52,13 @@ struct DayCell: View {
   private var cell: some View {
     VStack(spacing: 2) {
       date
-      if let pattern, !(pattern.countsAsOff && offShown == .hidden) {
+      // A preview shows whatever the look: it is what would be filled.
+      if let pattern, preview || !(pattern.countsAsOff && offShown == .hidden) {
         ShiftMark(
           pattern: pattern, size: markSize,
           change: timeChange(start: entry?.start, end: entry?.end, standard: pattern.time)
         )
-        .opacity(faint || (pattern.countsAsOff && offShown == .faint) ? 0.35 : 1)
+        .opacity(faint || preview || (pattern.countsAsOff && offShown == .faint) ? 0.35 : 1)
         .frame(maxHeight: look.options.names ? nil : .infinity)
         if look.options.names {
           Text(dayName(pattern.name))
@@ -91,7 +95,8 @@ struct DayCell: View {
 
   /// A day off's tile, when the look draws days off on a tint.
   private var tile: MarkColor? {
-    guard look.options.highlight, offShown == .shown, !faint, let pattern, pattern.countsAsOff
+    guard look.options.highlight, offShown == .shown, !faint, !preview, let pattern,
+      pattern.countsAsOff
     else { return nil }
     return colors.mark(look.colored ? pattern.color : 0)
   }
@@ -139,8 +144,8 @@ struct DayCell: View {
     if isHoliday, let name = day.holidayName {
       parts.append(name)
     }
-    parts.append(pattern?.name ?? "未入力")
-    if let pattern, let entry,
+    parts.append(preview ? "未入力" : pattern?.name ?? "未入力")
+    if !preview, let pattern, let entry,
       let change = timeChange(start: entry.start, end: entry.end, standard: pattern.time)
     {
       let moves = [change.early ? "早出" : nil, change.late ? "残業" : nil].compactMap(\.self)

@@ -35,6 +35,9 @@ export type GapSheetProps = {
   // same setting as on the style page, said as what it does here.
   offerBlank: boolean;
   onFill: (key: Shift | undefined) => void;
+  // Told of the pattern picked, which the calendar behind shows faint on
+  // the days.
+  onPick?: (key: Shift) => void;
   // Told as the days are filled with the switch on, and not before, so
   // closing the sheet changes nothing.
   onBlankOff: () => void;
@@ -85,6 +88,7 @@ function GapSheetBody({
   offerBlank,
   onFill,
   onBlankOff,
+  onPick,
   onClose: close,
 }: GapSheetProps & { onClose: () => void }) {
   const [picked, setPicked] = useState<Shift>();
@@ -110,6 +114,7 @@ function GapSheetBody({
                   key={key}
                   onClick={() => {
                     setPicked(key);
+                    onPick?.(key);
                   }}
                 >
                   {label}

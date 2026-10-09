@@ -125,6 +125,18 @@ export const shiftInput = {
       },
     },
   }),
+  // The day being entered, over the keys: words, not a button, as a day
+  // is picked on the calendar above it.
+  date: css({
+    alignItems: "center",
+    color: "text.primary",
+    display: "flex",
+    fontWeight: 600,
+    justifyContent: "center",
+    margin: "0 auto 8px",
+    minHeight: "touch",
+    textStyle: "headline",
+  }),
   // The pages of patterns, past ten: the pager and nothing around it.
   patternPages: css({ border: 0, margin: 0, minWidth: 0, padding: 0 }),
   startButton: css({ flex: 1 }),
