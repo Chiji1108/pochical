@@ -161,7 +161,9 @@ struct CalendarScreen: View {
         Spacer(minLength: 0)
         bottom(calendar)
           .padding(.horizontal, Self.screenEdge)
-          .padding(.bottom, 8)
+          // Clear of the tab bar's glass, as /design's; while entering the
+          // tabs give way, and the tray sits low for the thumb.
+          .padding(.bottom, entering == nil ? 24 : 8)
       }
     }
     .background(colors.backgroundBase)
@@ -397,29 +399,31 @@ struct CalendarScreen: View {
         }
       )
     } else {
-      MonthSummary(
-        position: position, monthAt: monthOfPage,
-        daysOff: { month in
-          monthDays(month, calendar).values.count {
-            calendar.patternsByID[$0.shift]?.countsAsOff == true
+      // One piece, so what is padded below it is padded once.
+      VStack(spacing: 12) {
+        MonthSummary(
+          position: position, monthAt: monthOfPage,
+          daysOff: { month in
+            monthDays(month, calendar).values.count {
+              calendar.patternsByID[$0.shift]?.countsAsOff == true
+            }
           }
+        ) { month in
+          breakingDown = month
         }
-      ) { month in
-        breakingDown = month
+        Button {
+          let month = shownMonth ?? thisMonth
+          entering = firstBlankDay(in: month, days: monthDays(month, calendar))
+        } label: {
+          Label("ポチポチ入力", systemImage: "pencil")
+            .font(.headline)
+            .frame(maxWidth: .infinity, minHeight: Metrics.control)
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+        .tint(colors.accentFill)
+        .foregroundStyle(colors.accentOnFill)
       }
-      .padding(.bottom, 12)
-      Button {
-        let month = shownMonth ?? thisMonth
-        entering = firstBlankDay(in: month, days: monthDays(month, calendar))
-      } label: {
-        Label("ポチポチ入力", systemImage: "pencil")
-          .font(.body.weight(.medium))
-          .frame(maxWidth: .infinity, minHeight: Metrics.control)
-      }
-      .buttonStyle(.borderedProminent)
-      .buttonBorderShape(.capsule)
-      .tint(colors.accentFill)
-      .foregroundStyle(colors.accentOnFill)
     }
   }
 

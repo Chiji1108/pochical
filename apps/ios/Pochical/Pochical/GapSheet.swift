@@ -93,7 +93,7 @@ struct GapSheet: View {
           dismiss()
         } label: {
           Text("\(offPattern.name)にする")
-            .font(.body.weight(.medium))
+            .font(.headline)
             .frame(maxWidth: .infinity, minHeight: Metrics.control)
         }
         .buttonStyle(.borderedProminent)
