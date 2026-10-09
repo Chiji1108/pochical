@@ -13,7 +13,7 @@ const makeGroup = async (token: string): Promise<void> => {
     "GroupService/CreateGroup",
     {
       displayName: "さくら",
-      emoji: "🍉",
+      mark: { emoji: "🍉" },
       name: "いとこ会",
       requestId: crypto.randomUUID(),
     },

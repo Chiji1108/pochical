@@ -110,7 +110,7 @@ describe("deleting an account", () => {
       "GroupService/CreateGroup",
       {
         displayName: "さくら",
-        emoji: "🍉",
+        mark: { emoji: "🍉" },
         name: "ひとり",
         requestId: crypto.randomUUID(),
       },

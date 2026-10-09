@@ -498,7 +498,7 @@ private struct LookEditor: View {
       Section {
         switch shown {
         case .icon:
-          grid(withPicked(ReadyPatterns.markIcons, draft.icon), chosen: draft.icon) { icon in
+          MarkChoiceGrid(withPicked(ReadyPatterns.markIcons, draft.icon), chosen: draft.icon) { icon in
             var sample = draft
             sample.icon = icon
             return ShiftMark(pattern: sample, size: 28)
@@ -509,7 +509,7 @@ private struct LookEditor: View {
           }
           Button("ほかのアイコンを選ぶ", systemImage: "plus") { choosingIcon = true }
         case .emoji:
-          grid(withPicked(ReadyPatterns.markEmojis, draft.emoji), chosen: draft.emoji) { emoji in
+          MarkChoiceGrid(withPicked(ReadyPatterns.markEmojis, draft.emoji), chosen: draft.emoji) { emoji in
             Text(emoji).font(.system(size: 26))
           } pick: { emoji in
             draft.emoji = emoji
@@ -534,12 +534,7 @@ private struct LookEditor: View {
       // Emoji bring colors of their own.
       if shown != .emoji {
         Section {
-          grid(Array(colors.marks.indices), chosen: draft.color) { slot in
-            Circle()
-              .fill(colors.marks[slot].color)
-              .frame(width: 28, height: 28)
-              .accessibilityLabel(colors.marks[slot].name)
-          } pick: { slot in
+          MarkColorGrid(chosen: draft.color) { slot in
             draft.color = slot
           }
         } header: {
@@ -594,38 +589,6 @@ private struct LookEditor: View {
     }
   }
 
-  /// A grid of choices, eight across, the chosen one ringed.
-  private func grid<Item: Hashable>(
-    _ items: [Item], chosen: Item, @ViewBuilder cell: @escaping (Item) -> some View,
-    pick: @escaping (Item) -> Void
-  ) -> some View {
-    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 8), spacing: 6) {
-      ForEach(items, id: \.self) { item in
-        Button {
-          pick(item)
-        } label: {
-          cell(item)
-            .frame(width: 38, height: 38)
-            .background {
-              if item == chosen {
-                RoundedRectangle(cornerRadius: Radius.sm)
-                  .strokeBorder(colors.accentDefault, lineWidth: 2)
-              }
-            }
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(item == chosen ? .isSelected : [])
-      }
-    }
-    .padding(.vertical, 4)
-  }
-
-  /// The icons or emoji offered, the one picked from all of them (the
-  /// icon sheet, the emoji keyboard) first when it is not among them.
-  private func withPicked(_ offered: [String], _ chosen: String) -> [String] {
-    offered.contains(chosen) || chosen.isEmpty ? offered : [chosen] + offered
-  }
 
   /// Another pattern drawn the same in this look, said under the choices.
   private func lookalike(in style: MarkStyle) -> String? {

@@ -56,28 +56,42 @@ public object CreateGroupRequestKt {
 
     /**
      * ```
-     * The group's mark: one emoji. Other marks come later.
+     * The group's mark.
      * ```
      *
-     * `string emoji = 2 [json_name = "emoji"];`
+     * `.pochical.v1.GroupMark mark = 5 [json_name = "mark"];`
      */
-    public var emoji: kotlin.String
-      @kotlin.jvm.JvmName("getEmoji")
-        get() = _builder.emoji
-      @kotlin.jvm.JvmName("setEmoji")
+    public var mark: app.pochical.v1.GroupMark
+      @kotlin.jvm.JvmName("getMark")
+        get() = _builder.mark
+      @kotlin.jvm.JvmName("setMark")
         set(value) {
-        _builder.emoji = value
+        _builder.mark = value
       }
     /**
      * ```
-     * The group's mark: one emoji. Other marks come later.
+     * The group's mark.
      * ```
      *
-     * `string emoji = 2 [json_name = "emoji"];`
+     * `.pochical.v1.GroupMark mark = 5 [json_name = "mark"];`
      */
-    public fun clearEmoji() {
-      _builder.clearEmoji()
+    public fun clearMark() {
+      _builder.clearMark()
     }
+    /**
+     * ```
+     * The group's mark.
+     * ```
+     *
+     * `.pochical.v1.GroupMark mark = 5 [json_name = "mark"];`
+     * @return Whether the mark field is set.
+     */
+    public fun hasMark(): kotlin.Boolean {
+      return _builder.hasMark()
+    }
+
+    public val CreateGroupRequestKt.Dsl.markOrNull: app.pochical.v1.GroupMark?
+      get() = _builder.markOrNull
 
     /**
      * ```
@@ -146,4 +160,7 @@ public object CreateGroupRequestKt {
 }
 public inline fun app.pochical.v1.CreateGroupRequest.copy(block: `app.pochical.v1`.CreateGroupRequestKt.Dsl.() -> kotlin.Unit): app.pochical.v1.CreateGroupRequest =
   `app.pochical.v1`.CreateGroupRequestKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.CreateGroupRequestOrBuilder.markOrNull: app.pochical.v1.GroupMark?
+  get() = if (hasMark()) getMark() else null
 

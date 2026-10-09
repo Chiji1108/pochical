@@ -166,7 +166,7 @@ describe("a member's shifts in their groups", () => {
       "GroupService/CreateGroup",
       {
         displayName: "さくら",
-        emoji: "🍉",
+        mark: { emoji: "🍉" },
         name: "同期",
         requestId: crypto.randomUUID(),
       },
@@ -264,7 +264,7 @@ describe("a member's shifts in their groups", () => {
       "GroupService/CreateGroup",
       {
         displayName: "さくら",
-        emoji: "🍉",
+        mark: { emoji: "🍉" },
         name: "いとこ会",
         requestId: crypto.randomUUID(),
       },
@@ -337,7 +337,7 @@ describe("a member's shifts in their groups", () => {
       if (changing) {
         changing = false;
         instance.addMembership("!unreachable", {
-          emoji: null,
+          mark: { color: 0, emoji: "🍉", icon: "", letter: "" },
           name: "届かない",
         });
       }

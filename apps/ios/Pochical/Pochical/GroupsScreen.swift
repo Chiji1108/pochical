@@ -229,7 +229,7 @@ private struct GroupRail: View {
           Button {
             onOpen(group.id)
           } label: {
-            GroupMark(emoji: group.emoji, isOpen: isOpen)
+            GroupMark(mark: group.mark, isOpen: isOpen)
               .frame(width: 58, height: 46)
               .overlay(alignment: .leading) {
                 // The flag at the edge, by the open group.
@@ -305,15 +305,14 @@ private struct GroupRail: View {
 /// open on the accent's with a ring round it, the corners drawn in.
 private struct GroupMark: View {
   @Environment(\.themeColors) private var colors
-  let emoji: String
+  let mark: GroupMarkValue
   let isOpen: Bool
 
   var body: some View {
     let shape = RoundedRectangle(cornerRadius: isOpen ? Radius.md : Radius.lg)
-    Text(emoji)
-      .font(.system(size: 22))
-      .frame(width: 42, height: 42)
+    GroupMarkView(mark: mark, size: 42)
       .background(isOpen ? colors.accentContainer : colors.backgroundCard, in: shape)
+      .clipShape(shape)
       .overlay {
         if isOpen {
           shape.strokeBorder(colors.accentDefault, lineWidth: 2)
@@ -390,10 +389,9 @@ private struct GroupHub: View {
 
   private var heading: some View {
     HStack(spacing: 8) {
-      Text(group.emoji)
-        .font(.system(size: 16))
-        .frame(width: 26, height: 26)
+      GroupMarkView(mark: group.mark, size: 26)
         .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.sm))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
         .accessibilityHidden(true)
       Text(group.name)
         .font(.title2.bold())

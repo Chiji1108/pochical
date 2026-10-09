@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GroupMark } from "./marks_pb";
+import { file_pochical_v1_marks } from "./marks_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file pochical/v1/invite.proto.
  */
 export const file_pochical_v1_invite: GenFile = /*@__PURE__*/
-  fileDesc("Chhwb2NoaWNhbC92MS9pbnZpdGUucHJvdG8SC3BvY2hpY2FsLnYxIi4KF0dldEludml0ZVByZXZpZXdSZXF1ZXN0EhMKC2ludml0ZV9jb2RlGAEgASgJIlkKGEdldEludml0ZVByZXZpZXdSZXNwb25zZRISCgpncm91cF9uYW1lGAEgASgJEhMKC2dyb3VwX2Vtb2ppGAIgASgJEhQKDG1lbWJlcl9jb3VudBgDIAEoDTJ1Cg1JbnZpdGVTZXJ2aWNlEmQKEEdldEludml0ZVByZXZpZXcSJC5wb2NoaWNhbC52MS5HZXRJbnZpdGVQcmV2aWV3UmVxdWVzdBolLnBvY2hpY2FsLnYxLkdldEludml0ZVByZXZpZXdSZXNwb25zZSIDkAIBQmsKD2FwcC5wb2NoaWNhbC52MUILSW52aXRlUHJvdG9QAaICA1BYWKoCC1BvY2hpY2FsLlYxygILUG9jaGljYWxcVjHiAhdQb2NoaWNhbFxWMVxHUEJNZXRhZGF0YeoCDFBvY2hpY2FsOjpWMWIGcHJvdG8z");
+  fileDesc("Chhwb2NoaWNhbC92MS9pbnZpdGUucHJvdG8SC3BvY2hpY2FsLnYxIi4KF0dldEludml0ZVByZXZpZXdSZXF1ZXN0EhMKC2ludml0ZV9jb2RlGAEgASgJIoMBChhHZXRJbnZpdGVQcmV2aWV3UmVzcG9uc2USEgoKZ3JvdXBfbmFtZRgBIAEoCRIqCgpncm91cF9tYXJrGAQgASgLMhYucG9jaGljYWwudjEuR3JvdXBNYXJrEhQKDG1lbWJlcl9jb3VudBgDIAEoDUoECAIQA1ILZ3JvdXBfZW1vamkydQoNSW52aXRlU2VydmljZRJkChBHZXRJbnZpdGVQcmV2aWV3EiQucG9jaGljYWwudjEuR2V0SW52aXRlUHJldmlld1JlcXVlc3QaJS5wb2NoaWNhbC52MS5HZXRJbnZpdGVQcmV2aWV3UmVzcG9uc2UiA5ACAUJrCg9hcHAucG9jaGljYWwudjFCC0ludml0ZVByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw", [file_pochical_v1_marks]);
 
 /**
  * @generated from message pochical.v1.GetInvitePreviewRequest
@@ -42,11 +44,9 @@ export type GetInvitePreviewResponse = Message<"pochical.v1.GetInvitePreviewResp
   groupName: string;
 
   /**
-   * The group's mark when it is an emoji; empty for other marks.
-   *
-   * @generated from field: string group_emoji = 2;
+   * @generated from field: pochical.v1.GroupMark group_mark = 4;
    */
-  groupEmoji: string;
+  groupMark?: GroupMark | undefined;
 
   /**
    * How many are in the group, for 「{n}人」 on the page and cards.

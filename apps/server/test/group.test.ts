@@ -29,7 +29,7 @@ const createGroup = async (
     "GroupService/CreateGroup",
     {
       displayName: "さくら",
-      emoji: "🍉",
+      mark: { emoji: "🍉" },
       name,
       requestId: crypto.randomUUID(),
     },
@@ -65,7 +65,7 @@ describe("GroupService", () => {
     const { groupId, inviteCode } = await createGroup(maker);
 
     await expect(previewOf(inviteCode)).resolves.toStrictEqual({
-      groupEmoji: "🍉",
+      groupMark: { emoji: "🍉" },
       groupName: "いとこ会",
       memberCount: 1,
     });
@@ -78,7 +78,7 @@ describe("GroupService", () => {
     const maker = await signInAnonymously();
     const body = {
       displayName: "さくら",
-      emoji: "🍉",
+      mark: { emoji: "🍉" },
       name: "いとこ会",
       requestId: "the-same-request",
     };
@@ -173,7 +173,7 @@ describe("GroupService", () => {
   it("needs a session", async () => {
     const response = await call("GroupService/CreateGroup", {
       displayName: "さくら",
-      emoji: "🍉",
+      mark: { emoji: "🍉" },
       name: "いとこ会",
       requestId: crypto.randomUUID(),
     });
@@ -183,7 +183,7 @@ describe("GroupService", () => {
   it("holds names to spec/text-limits.md, counting characters as seen", async () => {
     const ok = {
       displayName: "さくら",
-      emoji: "🍉",
+      mark: { emoji: "🍉" },
       name: "いとこ会",
       requestId: "request-1",
     };
@@ -193,15 +193,23 @@ describe("GroupService", () => {
       { ...ok, name: "👨‍👩‍👧".repeat(30) },
       { ...ok, displayName: "あ".repeat(20) },
       // What one emoji is: spec/vectors/text.json, isEmoji.
-      { ...ok, emoji: "👨‍👩‍👧" },
+      { ...ok, mark: { emoji: "👨‍👩‍👧" } },
+      // An icon or letters, in a palette color.
+      { ...ok, mark: { color: 3, icon: "house" } },
+      { ...ok, mark: { color: 1, letter: "3F" } },
     ];
     const refused = [
       { ...ok, name: "あ".repeat(31) },
       { ...ok, name: "  " },
       { ...ok, displayName: "あ".repeat(21) },
       { ...ok, displayName: "" },
-      { ...ok, emoji: "" },
-      { ...ok, emoji: "🍉🍉" },
+      { ...ok, mark: {} },
+      { ...ok, mark: { emoji: "🍉🍉" } },
+      { ...ok, mark: { emoji: "🍉", icon: "house" } },
+      { ...ok, mark: { icon: "letter" } },
+      { ...ok, mark: { icon: "nosuchicon" } },
+      { ...ok, mark: { letter: "あいう" } },
+      { ...ok, mark: { color: 99, letter: "A" } },
       { ...ok, requestId: "" },
       { ...ok, requestId: "has space" },
       { ...ok, requestId: "x".repeat(syncLimits.idLength + 1) },
@@ -227,8 +235,8 @@ describe("GroupService", () => {
 
     const before = await call("GroupService/GetInvite", { inviteCode }, guest);
     await expect(before.json()).resolves.toStrictEqual({
-      groupEmoji: "🍉",
       groupId,
+      groupMark: { emoji: "🍉" },
       groupName: "いとこ会",
       members: [{ displayName: "さくら" }],
     });
@@ -292,7 +300,7 @@ describe("GroupService", () => {
           "GroupService/CreateGroup",
           {
             displayName: "さくら",
-            emoji: "🍉",
+            mark: { emoji: "🍉" },
             name: `グループ${attempt}`,
             requestId: `request-${attempt}`,
           },
@@ -315,7 +323,7 @@ describe("GroupService", () => {
           "GroupService/CreateGroup",
           {
             displayName: "さくら",
-            emoji: "🍉",
+            mark: { emoji: "🍉" },
             name: "いとこ会",
             requestId: "retried",
           },
@@ -342,7 +350,7 @@ describe("who is in a group, on members' devices", () => {
       {
         kind: {
           case: "membership",
-          value: { emoji: "🍉", groupId, name: "いとこ会" },
+          value: { groupId, mark: { emoji: "🍉" }, name: "いとこ会" },
         },
       },
     ]);
@@ -369,7 +377,7 @@ describe("who is in a group, on members' devices", () => {
         cursor: 1n,
         kind: {
           case: "groupProfile",
-          value: { emoji: "🍉", name: "いとこ会" },
+          value: { mark: { emoji: "🍉" }, name: "いとこ会" },
         },
       },
       {
@@ -410,7 +418,7 @@ describe("changing a group and leaving it", () => {
 
     const renamed = await call(
       "GroupService/RenameGroup",
-      { emoji: "🏠", groupId, name: "いとこの家" },
+      { groupId, mark: { color: 2, icon: "house" }, name: "いとこの家" },
       guest
     );
     expect(renamed.status).toBe(200);
@@ -418,7 +426,7 @@ describe("changing a group and leaving it", () => {
       {
         kind: {
           case: "groupProfile",
-          value: { emoji: "🏠", name: "いとこの家" },
+          value: { mark: { color: 2, icon: "house" }, name: "いとこの家" },
         },
       },
     ]);
@@ -426,7 +434,11 @@ describe("changing a group and leaving it", () => {
       {
         kind: {
           case: "membership",
-          value: { emoji: "🏠", groupId, name: "いとこの家" },
+          value: {
+            groupId,
+            mark: { color: 2, icon: "house" },
+            name: "いとこの家",
+          },
         },
       },
     ]);

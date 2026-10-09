@@ -40,8 +40,8 @@ private func codeIn(path: String, after prefix: String) -> String? {
 public struct InviteDetails: Hashable, Sendable {
   public var groupID: String
   public var name: String
-  /// The group's mark when it is an emoji; empty for other marks.
-  public var emoji: String
+  /// The group's mark.
+  public var mark: GroupMarkValue
   /// Everyone in the group as they appear in it, in the order they joined.
   public var members: [String]
   /// Their photos, as members, read by the code's holder
@@ -72,7 +72,7 @@ extension GroupCalls {
     switch answer.result {
     case .success(let invite):
       return InviteDetails(
-        groupID: invite.groupID, name: invite.groupName, emoji: invite.groupEmoji,
+        groupID: invite.groupID, name: invite.groupName, mark: GroupMarkValue(invite.groupMark),
         members: invite.members.map(\.displayName),
         memberPhotos: invite.members.map(\.photoID), alreadyMember: invite.alreadyMember,
         full: invite.full)

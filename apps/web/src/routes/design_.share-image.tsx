@@ -101,7 +101,11 @@ const skyBackground = paleSkyFromTop(themeSkyId("pochical"));
 // The current proposal for each open design choice, as on the top page.
 const variants = parseDesignVariants({});
 
-const sampleInviteGroup = { emoji: "🍉", memberCount: 5, name: "いとこ会" };
+const sampleInviteGroup = {
+  mark: { color: 0, emoji: "🍉", icon: "", letter: "" },
+  memberCount: 5,
+  name: "いとこ会",
+};
 
 function ShareImage() {
   const person = useSamplePerson();

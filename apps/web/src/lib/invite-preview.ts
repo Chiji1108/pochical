@@ -2,13 +2,14 @@ import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { INVITE_CODE } from "@pochical/design/invite";
 
+import type { InviteGroupMark } from "../components/invite-mark";
 import { InviteService } from "../gen/pochical/v1/invite_pb";
 
 export type InvitePreview =
   | {
       status: "valid";
       groupName: string;
-      groupEmoji: string;
+      groupMark: InviteGroupMark;
       memberCount: number;
     }
   | { status: "invalid" | "unavailable" };
@@ -21,6 +22,43 @@ export type InviteFetch = (
 // the same server.
 const SERVER_ORIGIN = "https://api.pochical.app";
 const TIMEOUT_MS = 5000;
+
+// A string hash's base and modulus: a 32-bit polynomial hash, enough to
+// tell one invitation's versions apart.
+const HASH_BASE = 31;
+const HASH_MODULUS = 2 ** 32;
+const HASH_RADIX = 36;
+
+/**
+ * A short name for what an invitation's share image draws: its group's
+ * name, mark and member count. It changes with any of them, so the image
+ * is drawn again, and its address on the page changes for the apps that
+ * keep a link's card by the image's address.
+ */
+export const inviteImageVersion = ({
+  groupName,
+  groupMark,
+  memberCount,
+}: {
+  groupName: string;
+  groupMark: InviteGroupMark;
+  memberCount: number;
+}): string => {
+  const { emoji, icon, letter, color } = groupMark;
+  const drawn = JSON.stringify([
+    groupName,
+    emoji,
+    icon,
+    letter,
+    color,
+    memberCount,
+  ]);
+  let hash = 0;
+  for (const character of drawn) {
+    hash = (hash * HASH_BASE + (character.codePointAt(0) ?? 0)) % HASH_MODULUS;
+  }
+  return hash.toString(HASH_RADIX);
+};
 
 export async function fetchInvitePreview(
   code: string,
@@ -40,12 +78,21 @@ export async function fetchInvitePreview(
     })
   );
   try {
-    const { groupEmoji, groupName, memberCount } =
-      await client.getInvitePreview(
-        { inviteCode: code },
-        { timeoutMs: TIMEOUT_MS }
-      );
-    return { groupEmoji, groupName, memberCount, status: "valid" };
+    const { groupMark, groupName, memberCount } = await client.getInvitePreview(
+      { inviteCode: code },
+      { timeoutMs: TIMEOUT_MS }
+    );
+    return {
+      groupMark: {
+        color: groupMark?.color ?? 0,
+        emoji: groupMark?.emoji ?? "",
+        icon: groupMark?.icon ?? "",
+        letter: groupMark?.letter ?? "",
+      },
+      groupName,
+      memberCount,
+      status: "valid",
+    };
   } catch (error) {
     const { code: reason } = ConnectError.from(error);
     const gone = reason === Code.NotFound || reason === Code.InvalidArgument;

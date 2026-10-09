@@ -144,11 +144,17 @@ struct InviteCard: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      Text(unusable ? "🔗" : (invite?.emoji.isEmpty == false ? invite?.emoji ?? "" : "👥"))
-        .font(.system(size: 22))
-        .frame(width: 42, height: 42)
-        .background(colors.accentContainer, in: RoundedRectangle(cornerRadius: Radius.lg))
-        .opacity(unusable ? 0.5 : 1)
+      Group {
+        if let invite, !unusable, !invite.mark.icon.isEmpty || !invite.mark.letter.isEmpty {
+          GroupMarkView(mark: invite.mark, size: 42)
+        } else {
+          Text(unusable ? "🔗" : (invite?.mark.emoji.isEmpty == false ? invite?.mark.emoji ?? "" : "👥"))
+            .font(.system(size: 22))
+            .frame(width: 42, height: 42)
+            .background(colors.accentContainer, in: RoundedRectangle(cornerRadius: Radius.lg))
+        }
+      }
+      .opacity(unusable ? 0.5 : 1)
       VStack(alignment: .leading, spacing: 2) {
         Text(unusable ? "この招待は使えません" : invite?.name ?? "読み込み中…")
           .font(.footnote.weight(.semibold))

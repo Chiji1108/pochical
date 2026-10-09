@@ -17,8 +17,8 @@ public  final class RenameGroupRequest extends
   private RenameGroupRequest() {
     groupId_ = "";
     name_ = "";
-    emoji_ = "";
   }
+  private int bitField0_;
   public static final int GROUP_ID_FIELD_NUMBER = 1;
   private java.lang.String groupId_;
   /**
@@ -133,71 +133,71 @@ public  final class RenameGroupRequest extends
 
   }
 
-  public static final int EMOJI_FIELD_NUMBER = 3;
-  private java.lang.String emoji_;
+  public static final int MARK_FIELD_NUMBER = 4;
+  private app.pochical.v1.GroupMark mark_;
   /**
    * <pre>
-   * The group's mark: one emoji.
+   * The group's mark.
    * </pre>
    *
-   * <code>string emoji = 3 [json_name = "emoji"];</code>
-   * @return The emoji.
+   * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
    */
   @java.lang.Override
-  public java.lang.String getEmoji() {
-    return emoji_;
+  public boolean hasMark() {
+    return ((bitField0_ & 0x00000001) != 0);
   }
   /**
    * <pre>
-   * The group's mark: one emoji.
+   * The group's mark.
    * </pre>
    *
-   * <code>string emoji = 3 [json_name = "emoji"];</code>
-   * @return The bytes for emoji.
+   * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString
-      getEmojiBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(emoji_);
+  public app.pochical.v1.GroupMark getMark() {
+    return mark_ == null ? app.pochical.v1.GroupMark.getDefaultInstance() : mark_;
   }
   /**
    * <pre>
-   * The group's mark: one emoji.
+   * The group's mark.
    * </pre>
    *
-   * <code>string emoji = 3 [json_name = "emoji"];</code>
-   * @param value The emoji to set.
+   * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
    */
-  private void setEmoji(
-      java.lang.String value) {
+  private void setMark(app.pochical.v1.GroupMark value) {
     java.util.Objects.requireNonNull(value);
-
-    emoji_ = value;
+    mark_ = value;
+    bitField0_ |= 0x00000001;
   }
   /**
    * <pre>
-   * The group's mark: one emoji.
+   * The group's mark.
    * </pre>
    *
-   * <code>string emoji = 3 [json_name = "emoji"];</code>
+   * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
    */
-  private void clearEmoji() {
-
-    emoji_ = getDefaultInstance().getEmoji();
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergeMark(app.pochical.v1.GroupMark value) {
+    java.util.Objects.requireNonNull(value);
+    if (mark_ != null &&
+        mark_ != app.pochical.v1.GroupMark.getDefaultInstance()) {
+      mark_ =
+        app.pochical.v1.GroupMark.newBuilder(mark_).mergeFrom(value).buildPartial();
+    } else {
+      mark_ = value;
+    }
+    bitField0_ |= 0x00000001;
   }
   /**
    * <pre>
-   * The group's mark: one emoji.
+   * The group's mark.
    * </pre>
    *
-   * <code>string emoji = 3 [json_name = "emoji"];</code>
-   * @param value The bytes for emoji to set.
+   * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
    */
-  private void setEmojiBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    emoji_ = value.toStringUtf8();
-
+  private void clearMark() {
+    mark_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static app.pochical.v1.RenameGroupRequest parseFrom(
@@ -417,70 +417,72 @@ public  final class RenameGroupRequest extends
 
     /**
      * <pre>
-     * The group's mark: one emoji.
+     * The group's mark.
      * </pre>
      *
-     * <code>string emoji = 3 [json_name = "emoji"];</code>
-     * @return The emoji.
+     * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
      */
     @java.lang.Override
-    public java.lang.String getEmoji() {
-      return instance.getEmoji();
+    public boolean hasMark() {
+      return instance.hasMark();
     }
     /**
      * <pre>
-     * The group's mark: one emoji.
+     * The group's mark.
      * </pre>
      *
-     * <code>string emoji = 3 [json_name = "emoji"];</code>
-     * @return The bytes for emoji.
+     * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
      */
     @java.lang.Override
-    public com.google.protobuf.ByteString
-        getEmojiBytes() {
-      return instance.getEmojiBytes();
+    public app.pochical.v1.GroupMark getMark() {
+      return instance.getMark();
     }
     /**
      * <pre>
-     * The group's mark: one emoji.
+     * The group's mark.
      * </pre>
      *
-     * <code>string emoji = 3 [json_name = "emoji"];</code>
-     * @param value The emoji to set.
-     * @return This builder for chaining.
+     * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
      */
-    public Builder setEmoji(
-        java.lang.String value) {
+    public Builder setMark(app.pochical.v1.GroupMark value) {
       copyOnWrite();
-      instance.setEmoji(value);
+      instance.setMark(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * The group's mark.
+     * </pre>
+     *
+     * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
+     */
+    public Builder setMark(
+        app.pochical.v1.GroupMark.Builder builderForValue) {
+      copyOnWrite();
+      instance.setMark(builderForValue.build());
       return this;
     }
     /**
      * <pre>
-     * The group's mark: one emoji.
+     * The group's mark.
      * </pre>
      *
-     * <code>string emoji = 3 [json_name = "emoji"];</code>
-     * @return This builder for chaining.
+     * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
      */
-    public Builder clearEmoji() {
+    public Builder mergeMark(app.pochical.v1.GroupMark value) {
       copyOnWrite();
-      instance.clearEmoji();
+      instance.mergeMark(value);
       return this;
     }
     /**
      * <pre>
-     * The group's mark: one emoji.
+     * The group's mark.
      * </pre>
      *
-     * <code>string emoji = 3 [json_name = "emoji"];</code>
-     * @param value The bytes for emoji to set.
-     * @return This builder for chaining.
+     * <code>.pochical.v1.GroupMark mark = 4 [json_name = "mark"];</code>
      */
-    public Builder setEmojiBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setEmojiBytes(value);
+    public Builder clearMark() {  copyOnWrite();
+      instance.clearMark();
       return this;
     }
 
@@ -500,13 +502,14 @@ public  final class RenameGroupRequest extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "groupId_",
             "name_",
-            "emoji_",
+            "mark_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208";
+              "\u0000\u0003\u0000\u0001\u0001\u0004\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0004\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

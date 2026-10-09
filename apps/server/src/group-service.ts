@@ -16,6 +16,7 @@ import {
   SetDisplayNameResponseSchema,
   SetGroupPhotoResponseSchema,
 } from "./gen/pochical/v1/group_pb";
+import { requireMark } from "./group-marks";
 import { isId } from "./ids";
 import {
   issueInviteCode,
@@ -26,7 +27,7 @@ import {
 import { sharePersonPhoto } from "./photos";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
-import { requireEmoji, requireText } from "./text-limits";
+import { requireText } from "./text-limits";
 
 /** The usual photo into a group's photos, before the group shows it. */
 const shareUsualPhoto = async (
@@ -108,7 +109,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
     createGroup: async (request, context) => {
       const user = await requireUser(context);
       const name = requireText(request.name, textLimits.groupName, "name");
-      const emoji = requireEmoji(request.emoji);
+      const mark = requireMark(request.mark);
       if (!isId(request.requestId)) {
         throw new ConnectError("Malformed request_id", Code.InvalidArgument);
       }
@@ -128,7 +129,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const groupId = await users.groupIdFor(request.requestId);
       await shareUsualPhoto(user.id, names.usualPhoto, groupId);
       await env.GROUPS.getByName(groupId).create(
-        { emoji, name },
+        { mark, name },
         {
           ownName: names.ownName,
           userId: user.id,
@@ -137,7 +138,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
         }
       );
       await adoptName(user.id, names);
-      await users.addMembership(groupId, { emoji, name });
+      await users.addMembership(groupId, { mark, name });
       const inviteCode = await liveInviteCode(env.DB, groupId);
       return create(CreateGroupResponseSchema, { groupId, inviteCode });
     },
@@ -157,8 +158,8 @@ export const registerGroupService = (router: ConnectRouter): void => {
       return create(GetInviteResponseSchema, {
         alreadyMember,
         full: !alreadyMember && memberList.length >= GROUP_MAX_MEMBERS,
-        groupEmoji: profile.emoji ?? "",
         groupId,
+        groupMark: profile.mark,
         groupName: profile.name,
         // Names and faces only: who they are stays inside the group.
         members: memberList.map(({ displayName, photoId }) => ({
@@ -228,16 +229,16 @@ export const registerGroupService = (router: ConnectRouter): void => {
     renameGroup: async (request, context) => {
       await requireMember(context, request.groupId);
       const name = requireText(request.name, textLimits.groupName, "name");
-      const emoji = requireEmoji(request.emoji);
+      const mark = requireMark(request.mark);
       const group = env.GROUPS.getByName(request.groupId);
-      await group.setProfile({ emoji, name });
+      await group.setProfile({ mark, name });
       // Each member's list of groups shows the new name; one that cannot be
       // reached now hears it from the group's socket when they open it.
       const memberList = await group.memberList();
       await Promise.allSettled(
         memberList.map(async ({ userId }) => {
           await env.USERS.getByName(userId).renameMembership(request.groupId, {
-            emoji,
+            mark,
             name,
           });
         })

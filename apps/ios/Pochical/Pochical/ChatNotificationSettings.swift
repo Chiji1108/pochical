@@ -44,7 +44,7 @@ struct ChatNotificationsPage: View {
             Label {
               Text(group.name).lineLimit(1)
             } icon: {
-              GroupEmoji(emoji: group.emoji)
+              GroupMarkBadge(mark: group.mark)
             }
           }
         }
@@ -265,19 +265,6 @@ private struct PersonLabel: View {
     } icon: {
       MemberAvatar(name: name, photoID: photoID, groupID: groupID, size: 28)
     }
-  }
-}
-
-/// A group's mark on its small rounded square, as 設定's rows show it.
-struct GroupEmoji: View {
-  @Environment(\.themeColors) private var colors
-  let emoji: String
-
-  var body: some View {
-    Text(emoji)
-      .font(.system(size: 16))
-      .frame(width: 28, height: 28)
-      .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
   }
 }
 

@@ -18,6 +18,7 @@ import m0015 from './0015_chat_replies.sql';
 import m0016 from './0016_member_deleted.sql';
 import m0017 from './0017_member_names.sql';
 import m0018 from './0018_member_photos.sql';
+import m0019 from './0019_group_mark.sql';
 
   export default {
     journal,
@@ -40,7 +41,8 @@ m0014,
 m0015,
 m0016,
 m0017,
-m0018
+m0018,
+m0019
     }
   }
   

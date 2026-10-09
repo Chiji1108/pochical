@@ -18,7 +18,7 @@ export const registerInviteService = (router: ConnectRouter): void => {
         throw noGroupOfCode();
       }
       return create(GetInvitePreviewResponseSchema, {
-        groupEmoji: profile.emoji ?? "",
+        groupMark: profile.mark,
         groupName: profile.name,
         memberCount: await group.memberCount(),
       });

@@ -33,10 +33,7 @@ struct GroupSettingsPage: View {
             Label {
               Text(group.name).lineLimit(1)
             } icon: {
-              Text(group.emoji)
-                .font(.system(size: 16))
-                .frame(width: 28, height: 28)
-                .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
+              GroupMarkBadge(mark: group.mark)
             }
           }
         }
@@ -168,7 +165,7 @@ private struct GroupEditPage: View {
   @Environment(\.dismiss) private var dismiss
   let group: GroupRow
   @State private var name = ""
-  @State private var emoji = ""
+  @State private var mark = GroupMarkValue()
   @State private var saving = false
   @State private var failed = false
 
@@ -176,20 +173,17 @@ private struct GroupEditPage: View {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     let canSave =
       !trimmedName.isEmpty && name.count <= TextLimits.groupName
-      && (trimmedName != group.name || emoji != group.emoji)
+      && (trimmedName != group.name || mark != group.mark)
     List {
       Section {
         LabeledContent("グループ名") {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
         NavigationLink {
-          EmojiPage(emoji: emoji) { emoji = $0 }
+          GroupMarkPage(name: name, mark: mark) { mark = $0 }
         } label: {
           LabeledContent("アイコン") {
-            Text(emoji)
-              .font(.system(size: 16))
-              .frame(width: 28, height: 28)
-              .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
+            GroupMarkBadge(mark: mark)
           }
         }
       }
@@ -201,7 +195,7 @@ private struct GroupEditPage: View {
     .onAppear {
       if name.isEmpty {
         name = group.name
-        emoji = group.emoji
+        mark = group.mark
       }
     }
     .toolbar {
@@ -226,7 +220,7 @@ private struct GroupEditPage: View {
     Task {
       defer { saving = false }
       do {
-        try await groupCalls.rename(group.id, name: name, emoji: emoji)
+        try await groupCalls.rename(group.id, name: name, mark: mark)
         dismiss()
       } catch {
         ReviewPrompt.troubled = true

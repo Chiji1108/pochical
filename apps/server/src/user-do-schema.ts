@@ -17,14 +17,20 @@ import {
 // or join a group, as it is renamed, and as they leave.
 // Cursors are shared with day_fields.
 export const memberships = sqliteTable("memberships", {
+  // The color slot of an icon or letters mark.
+  color: integer().notNull().default(0),
   cursor: integer().notNull().default(0),
   // Set when the group's mark is an emoji.
   emoji: text(),
   groupId: text("group_id").primaryKey(),
+  // Set when the group's mark is a mark icon, by its name.
+  icon: text(),
   joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
   // Set once the user leaves: the row stays, at the cursor of their
   // leaving, so their devices catching up hear of it.
   leftAt: integer("left_at", { mode: "timestamp_ms" }),
+  // Set when the group's mark is letters.
+  letter: text(),
   name: text().notNull().default(""),
   // How far this user's shared values have reached the group: the cursor
   // up to which they were pushed and taken (spec/sync-protocol.md, Group

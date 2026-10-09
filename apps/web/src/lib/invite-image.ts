@@ -31,7 +31,7 @@ const FONT_URL = /src: url\((?<url>[^)]+)\)/u;
 // mark does not change under it.
 const EMOJI_SVG =
   "https://cdn.jsdelivr.net/gh/jdecked/twemoji@16.0.1/assets/svg";
-// The text the image always holds besides the group's name.
+// The text the image always holds besides the group's name and mark.
 const FIXED_TEXT = "ポチカルグループへの招待・メンバー0123456789人 ";
 // External assets keep for a day at Cloudflare's edge.
 const ASSET_CACHE = { cf: { cacheEverything: true, cacheTtl: 86_400 } };
@@ -103,7 +103,7 @@ export const drawInviteImage = async (
   group: InviteImageGroup
 ): Promise<Uint8Array> => {
   await loadEngines();
-  const text = `${FIXED_TEXT}${group.name}`;
+  const text = `${FIXED_TEXT}${group.name}${group.mark.letter}`;
   const fonts = await Promise.all(
     INVITE_IMAGE_FONTS.flatMap((name) =>
       WEIGHTS.map(async (weight) => ({

@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 
-import { fetchInvitePreview } from "../src/lib/invite-preview";
+import {
+  fetchInvitePreview,
+  inviteImageVersion,
+} from "../src/lib/invite-preview";
 import type { InviteFetch } from "../src/lib/invite-preview";
 
 const respond =
@@ -12,13 +15,13 @@ test("asks the server's InviteService over Connect", async () => {
   const recording: InviteFetch = async (input, init) => {
     requests.push(new Request(input, init));
     return await respond(200, {
-      groupEmoji: "🌿",
+      groupMark: { emoji: "🌿" },
       groupName: "同期",
       memberCount: 3,
     })(input, init);
   };
   expect(await fetchInvitePreview("Abcd2345", recording)).toEqual({
-    groupEmoji: "🌿",
+    groupMark: { color: 0, emoji: "🌿", icon: "", letter: "" },
     groupName: "同期",
     memberCount: 3,
     status: "valid",
@@ -29,11 +32,22 @@ test("asks the server's InviteService over Connect", async () => {
   );
   expect(await request?.json()).toEqual({ inviteCode: "Abcd2345" });
 });
-test("reads a group without an emoji mark", async () => {
+test("reads a group with an icon mark, or none", async () => {
+  expect(
+    await fetchInvitePreview(
+      "Abcd2345",
+      respond(200, {
+        groupMark: { color: 3, icon: "house" },
+        groupName: "同期",
+      })
+    )
+  ).toMatchObject({
+    groupMark: { color: 3, emoji: "", icon: "house", letter: "" },
+  });
   expect(
     await fetchInvitePreview("Abcd2345", respond(200, { groupName: "同期" }))
   ).toEqual({
-    groupEmoji: "",
+    groupMark: { color: 0, emoji: "", icon: "", letter: "" },
     groupName: "同期",
     memberCount: 0,
     status: "valid",
@@ -66,4 +80,21 @@ test("rejects malformed codes without asking the server", async () => {
   expect(await fetchInvitePreview("../other", unexpected)).toEqual({
     status: "invalid",
   });
+});
+
+test("names a new share image whenever what it draws changes", () => {
+  const group = {
+    groupMark: { color: 0, emoji: "🌿", icon: "", letter: "" },
+    groupName: "同期",
+    memberCount: 3,
+  };
+  const version = inviteImageVersion(group);
+  expect(inviteImageVersion({ ...group })).toBe(version);
+  const changed = [
+    { ...group, groupName: "同期会" },
+    { ...group, memberCount: 4 },
+    { ...group, groupMark: { color: 3, emoji: "", icon: "house", letter: "" } },
+    { ...group, groupMark: { color: 4, emoji: "", icon: "house", letter: "" } },
+  ].map(inviteImageVersion);
+  expect(new Set([version, ...changed]).size).toBe(changed.length + 1);
 });

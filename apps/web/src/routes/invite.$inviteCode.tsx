@@ -2,7 +2,9 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { ArrowUpRight, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
+import { InviteMark } from "../components/invite-mark";
 import { StoreLinks } from "../components/store-links";
+import { inviteImageVersion } from "../lib/invite-preview";
 import { getInvite } from "../lib/invites";
 import { pageMeta } from "../lib/site";
 
@@ -20,14 +22,18 @@ export const Route = createFileRoute("/invite/$inviteCode")({
         true
       );
     }
-    const group = `${loaderData.groupEmoji}「${loaderData.groupName}」`;
+    const group = `${loaderData.groupMark.emoji}「${loaderData.groupName}」`;
     return pageMeta(
       `${group}への招待`,
       "ポチカルでシフトを共有しましょう。",
       path,
       true,
-      // Drawn for the group by the site's Worker (src/server.ts).
-      { alt: `${group}への招待`, path: `${path}/og.png` }
+      // Drawn for the group by the site's Worker (src/server.ts), at an
+      // address of its own for each version of the group.
+      {
+        alt: `${group}への招待`,
+        path: `${path}/og.png?v=${inviteImageVersion(loaderData)}`,
+      }
     );
   },
   // Typed by hand so head, which comes first, can read its result.
@@ -55,11 +61,9 @@ function Invite() {
         <>
           {/* The group is what the page is about, so its mark leads, in a
               frame like the app's join screen; the header says ポチカル. */}
-          {invite.groupEmoji === "" ? null : (
-            <span aria-hidden="true" className="invite-mark">
-              {invite.groupEmoji}
-            </span>
-          )}
+          <span aria-hidden="true" className="invite-mark">
+            <InviteMark mark={invite.groupMark} size={66} />
+          </span>
           <p className="eyebrow">YOU'RE INVITED</p>
           <h1>{invite.groupName}</h1>
           {invite.memberCount > 0 && (

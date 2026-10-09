@@ -31,22 +31,13 @@ public interface GroupProfileOrBuilder extends
       getNameBytes();
 
   /**
-   * <pre>
-   * The group's mark when it is an emoji; empty for other marks.
-   * </pre>
-   *
-   * <code>string emoji = 2 [json_name = "emoji"];</code>
-   * @return The emoji.
+   * <code>.pochical.v1.GroupMark mark = 3 [json_name = "mark"];</code>
+   * @return Whether the mark field is set.
    */
-  java.lang.String getEmoji();
+  boolean hasMark();
   /**
-   * <pre>
-   * The group's mark when it is an emoji; empty for other marks.
-   * </pre>
-   *
-   * <code>string emoji = 2 [json_name = "emoji"];</code>
-   * @return The bytes for emoji.
+   * <code>.pochical.v1.GroupMark mark = 3 [json_name = "mark"];</code>
+   * @return The mark.
    */
-  com.google.protobuf.ByteString
-      getEmojiBytes();
+  app.pochical.v1.GroupMark getMark();
 }

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package pochical.v1;
 
+import "pochical/v1/marks.proto";
+
 // Making groups and getting into them. Every call needs the session token
 // from better-auth as `Authorization: Bearer <token>` (UNAUTHENTICATED
 // without one). Names follow spec/text-limits.md, counted in characters as
@@ -56,8 +58,10 @@ service GroupService {
 message CreateGroupRequest {
   // groupName: 1 to 30 characters.
   string name = 1;
-  // The group's mark: one emoji. Other marks come later.
-  string emoji = 2;
+  reserved 2;
+  reserved "emoji";
+  // The group's mark.
+  GroupMark mark = 5;
   // How the caller appears in this group, at most personName characters:
   // their usual name, which it then follows, or one of its own; empty for
   // the usual one. A caller with no usual name gives one, and it becomes
@@ -99,8 +103,9 @@ message GetInviteRequest {
 message GetInviteResponse {
   string group_id = 1;
   string group_name = 2;
-  // The group's mark when it is an emoji; empty for other marks.
-  string group_emoji = 3;
+  reserved 3;
+  reserved "group_emoji";
+  GroupMark group_mark = 7;
   // Everyone in the group, in the order they joined.
   repeated InviteMember members = 4;
   // The caller is in the group already.
@@ -133,8 +138,10 @@ message RenameGroupRequest {
   string group_id = 1;
   // groupName: 1 to 30 characters.
   string name = 2;
-  // The group's mark: one emoji.
-  string emoji = 3;
+  reserved 3;
+  reserved "emoji";
+  // The group's mark.
+  GroupMark mark = 4;
 }
 
 message RenameGroupResponse {}
