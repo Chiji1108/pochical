@@ -20,13 +20,18 @@ const IMAGE_CACHE = "public, max-age=3600";
 const fromServer = async (input: RequestInfo | URL, init?: RequestInit) =>
   await env.SERVER.fetch(input, init);
 
-/** A group's photo mark as a data URL for satori; none for another mark. */
+/**
+ * A group's photo mark as a data URL for satori; none for another mark, or
+ * when it cannot be read, the image drawn without it.
+ */
 const markPhotoData = async (
   code: string,
   photoId: string
 ): Promise<string | undefined> => {
   const photo =
-    photoId === "" ? null : await fetchInviteMark(code, photoId, fromServer);
+    photoId === ""
+      ? null
+      : await fetchInviteMark(code, photoId, fromServer).catch(() => null);
   if (photo === null) {
     return undefined;
   }

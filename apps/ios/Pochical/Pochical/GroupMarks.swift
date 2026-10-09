@@ -75,16 +75,15 @@ private struct MarkPhoto: View {
     .frame(width: size, height: size)
     .task(id: photoID) {
       image = nil
-      // One the user picked waits on the device as theirs until the group
-      // has it.
-      let data: Data? =
-        if let mine = ChatPhotos.held(photoID, in: ChatPhotos.mine) {
-          mine
-        } else if shelf.isEmpty {
-          nil
-        } else {
-          try? await groupCalls.photo(photoID, in: shelf)
-        }
+      // One the user picked is theirs, on the device or the server, until
+      // the group has it.
+      var data = ChatPhotos.held(photoID, in: ChatPhotos.mine)
+      if data == nil, !shelf.isEmpty {
+        data = try? await groupCalls.photo(photoID, in: shelf)
+      }
+      if data == nil {
+        data = try? await groupCalls.photo(photoID, in: ChatPhotos.mine)
+      }
       guard let data, let whole = UIImage(data: data) else { return }
       let edge = size * displayScale
       image = await whole.byPreparingThumbnail(ofSize: CGSize(width: edge, height: edge)) ?? whole
