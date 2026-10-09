@@ -21,7 +21,7 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 ## ポチポチ入力
 
 - ポチポチ入力 starts entering on the month's first blank day, the 1st when none is blank. A month swiped to while entering starts on its first blank day the same way; a day tapped is entered next, turning to its month when it is one of the months around.
-- The tray holds the day being entered, a date picker that opens a month of days where it is pressed to pick another (the platform's own: iOS's compact DatePicker), a button for each pattern in the person's order (pages of `PATTERNS_PER_PAGE` past that many, `design/src/limits.ts`), 消す and 翌日へ. 消す is offered only when the day has a shift, and 翌日へ only before the month's last day.
+- The tray holds the day being entered, in words with its weekday colored as the calendar's (not a button: another day is picked on the calendar above, a month away by swiping), a button for each pattern in the person's order (pages of `PATTERNS_PER_PAGE` past that many, `design/src/limits.ts`), 消す and 翌日へ. 消す is offered only when the day has a shift, and 翌日へ only before the month's last day.
 - A pattern entered moves the selection on as spec/shift-patterns.md (The next day) has it.
 - A screen reader hears what each key did and where entering goes on, as /design's live region says it: 「10月3日、日勤を入力しました。翌日は明けです。5日を選択中」, シフトを消しました for 消す, 変更せずに進みました for 翌日へ, and on the month's last day 「月末です。入力が終わったら完了を押してください」. A day is read with its hours when they differ from the pattern's (早出 7:00 – 16:00).
 - 消す clears the day's shift, with its own hours and people; its memo stays (spec/shift-patterns.md, A day's memo). The tray is a keyboard, so it asks nothing.

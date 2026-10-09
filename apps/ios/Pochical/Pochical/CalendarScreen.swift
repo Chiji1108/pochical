@@ -359,7 +359,7 @@ struct CalendarScreen: View {
     if let day = entering {
       let shown = calendar.shown(from: day, through: day)
       EntryTray(
-        day: day, patterns: calendar.patterns,
+        day: day, week: settings.device.week, patterns: calendar.patterns,
         canClear: shown[day] != nil,
         canSkip: day != day.daysOfMonth.last,
         onEnter: { shift in
@@ -378,8 +378,7 @@ struct CalendarScreen: View {
           let next = selectedAfterEntering(nil, on: day, patterns: [:])
           entering = next
           announce("変更せずに進みました", on: day, next: next)
-        },
-        onPickDay: { entering = $0 }
+        }
       )
     } else {
       MonthSummary(

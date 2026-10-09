@@ -33,7 +33,6 @@ import {
   MonthHeading,
   MonthSummary,
 } from "./design-calendar-heading";
-import { InputDatePicker } from "./design-date-picker";
 import { DayCell } from "./design-day-cell";
 import { DayDetail } from "./design-day-detail";
 import { dayGrid, WeekdayRow } from "./design-day-grid";
@@ -154,7 +153,6 @@ export function DesignCalendar({
   };
   const {
     announcement,
-    announcePicked,
     editing,
     enterFrom,
     enterShift,
@@ -175,26 +173,20 @@ export function DesignCalendar({
     schedule,
     turnTo,
   });
+  // The day being entered, said over the keys; another is picked on the
+  // calendar above, a month away by swiping.
   const datePicker = (
-    <InputDatePicker
-      ariaLabel={`入力する日付：${formatDay(selectedDate)}。タップで変更`}
-      date={selectedDate}
-      onSelect={(date) => {
-        enterFrom(date);
-        announcePicked(date);
-      }}
-    >
-      <span>
-        {formatMonthDay(selectedDate)}
-        <span
-          className={shiftInput.weekday({
-            tone: weekTools.dateTone(selectedDate),
-          })}
-        >
-          ({weekdayNames[selectedDate.getDay()]})
-        </span>
+    <p className={shiftInput.date}>
+      <span className={srOnly}>入力する日付：</span>
+      {formatMonthDay(selectedDate)}
+      <span
+        className={shiftInput.weekday({
+          tone: weekTools.dateTone(selectedDate),
+        })}
+      >
+        ({weekdayNames[selectedDate.getDay()]})
       </span>
-    </InputDatePicker>
+    </p>
   );
   const {
     besideMonths,
@@ -650,7 +642,6 @@ function useShiftEntry({
     moveToNextDay("変更せずに進みました");
   }
   return {
-    announcePicked,
     announcement,
     editing,
     enterFrom,

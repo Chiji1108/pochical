@@ -8,6 +8,8 @@ import SwiftUI
 struct EntryTray: View {
   @Environment(\.themeColors) private var colors
   let day: Day
+  /// Which days take their colors (the person's カレンダー settings).
+  let week: DeviceSettings.Week
   let patterns: [Pattern]
   /// Whether the day has a shift to clear.
   let canClear: Bool
@@ -15,14 +17,12 @@ struct EntryTray: View {
   let canSkip: Bool
   let onEnter: (PatternID?) -> Void
   let onSkip: () -> Void
-  /// Another day picked to enter, from the date over the keys.
-  let onPickDay: (Day) -> Void
   @State private var keys = 0
   @State private var page = 0
 
   var body: some View {
     VStack(spacing: 8) {
-      TrayDateLabel(day: day, onPick: onPickDay)
+      TrayDateLabel(day: day, week: week)
       PatternKeys(patterns: patterns, page: $page) { pattern in
         keys += 1
         onEnter(pattern.id)
@@ -47,22 +47,34 @@ struct EntryTray: View {
   }
 }
 
-/// The day ポチポチ入力 enters next, over its keys: the system's date
-/// picker, which opens a month of days where it is pressed, so another day
-/// is picked without a sheet (/design's InputDatePicker).
+/// The day ポチポチ入力 enters next, over its keys: words, not a button,
+/// as another day is picked on the calendar above it.
 struct TrayDateLabel: View {
+  @Environment(\.themeColors) private var colors
   let day: Day
-  let onPick: (Day) -> Void
+  /// Which days take their colors (the person's カレンダー settings).
+  let week: DeviceSettings.Week
 
   var body: some View {
-    DatePicker(
-      "入力する日付",
-      selection: Binding { day.date(in: .current) } set: { onPick(Day($0, in: .current)) },
-      displayedComponents: .date
-    )
-    .datePickerStyle(.compact)
-    .labelsHidden()
+    HStack(spacing: 2) {
+      Text(day.monthDayText)
+        .font(.system(size: 17, weight: .semibold))
+        .foregroundStyle(colors.textPrimary)
+      Text("(\(day.weekdayName))")
+        .font(.system(size: 14))
+        .foregroundStyle(weekdayColor)
+    }
     .frame(minHeight: Metrics.touch)
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel("入力する日付：\(day.monthDayText)")
+  }
+
+  private var weekdayColor: Color {
+    let isHoliday = day.holidayName != nil
+    if (isHoliday && week.holiday) || (day.weekday == 0 && week.sunday) {
+      return colors.calendarHoliday
+    }
+    return day.weekday == 6 && week.saturday ? colors.calendarSaturday : colors.textTertiary
   }
 }
 
