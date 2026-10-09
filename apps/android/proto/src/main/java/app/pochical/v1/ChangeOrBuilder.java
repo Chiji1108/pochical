@@ -296,5 +296,26 @@ public interface ChangeOrBuilder extends
    */
   app.pochical.v1.ChatNotifications getChatNotifications();
 
+  /**
+   * <pre>
+   * The user's usual name, which new groups start with
+   * (spec/sync-protocol.md, Profile); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+   * @return Whether the profile field is set.
+   */
+  boolean hasProfile();
+  /**
+   * <pre>
+   * The user's usual name, which new groups start with
+   * (spec/sync-protocol.md, Profile); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.Profile profile = 20 [json_name = "profile"];</code>
+   * @return The profile.
+   */
+  app.pochical.v1.Profile getProfile();
+
   public app.pochical.v1.Change.KindCase getKindCase();
 }

@@ -68,6 +68,14 @@ The device that deleted the account erases what it holds of the user (every tabl
 - Any member renames the group (`RenameGroup`) and sets how they appear in it (`SetDisplayName`). A member leaves with `LeaveGroup`: their User DO marks the group left first, then the Group DO marks them left, deletes what it holds of their shifts and closes their sockets there. Both steps can be repeated. The rows stay, marked left at a new cursor, so devices catching up hear of the leaving; a member who left joins again by a live link like anyone, their values pushed whole again.
 - On a group's socket, the group's name and mark (`GroupProfile`) and each member as they appear in it, in the order they joined (`Member`), are values in the Group DO's log with the members' shifts, so a device catching up learns who is in the group with their days, and a join reaches members with the group open at once.
 
+### Profile
+
+The user's usual name (いつもの名前, 設定 › プロフィール) is kept with the account, so a new phone signed in to it has it too. Creating or joining a group starts the name the person goes by in it with the usual name, and each group keeps its own after: changing one changes neither the other nor the groups already joined.
+
+- `UserService.SetProfile` sets it, trimmed and at most `personName` characters (`design/src/limits.ts`), or empty for none (`profile`, one row in the User DO), sent as a `Profile` change on the user's socket; before the user sets one, none is sent. The groups never hear of it.
+- The apps save it a moment after typing stops, as the settings around it save at once; offline, the page says it could not be saved.
+- A photo of the person, shared by their groups as /design's ProfilePage has it, comes when the server keeps members' photos.
+
 ## Sockets
 
 Clients open one WebSocket to their User DO, at `/v1/me/socket`, and one per group they are viewing, at `/v1/groups/{groupId}/socket`. The Worker checks the session before either reaches a Durable Object, and lets a group socket through only when the user's own DO lists the group, so an id that is not theirs is refused (403) without waking or creating a Group DO. A socket remembers the session it was opened with: when that session ends (the user signs out, or their account is deleted), the server closes the sockets it opened, on the user's DO and in their groups, and the device's next try gets 401 (Reconnecting). Every message is binary: clients send `pochical.v1.ClientFrame`, the server sends `pochical.v1.ServerFrame` (see `proto/pochical/v1/sync.proto`). Text messages are protocol errors, but for the keepalive text (Keepalive).

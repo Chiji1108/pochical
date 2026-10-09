@@ -1,4 +1,6 @@
 import Foundation
+import PochicalProto
+import SQLiteData
 import Synchronization
 import Testing
 
@@ -139,4 +141,18 @@ private let server = URL(string: "http://localhost:8787")!
   let request = try #require(fake.requests.withLock { $0.first })
   #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/sign-out")
   #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer kept")
+}
+
+@Test func theUsualNameComesFromTheUsersSocketAndGoesWithTheirData() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    #expect(try Profile.name(in: db) == "")
+    var change = Pochical_V1_Change()
+    change.cursor = 1
+    change.profile.name = "さくら"
+    try Groups.take(change, in: db)
+    #expect(try Profile.name(in: db) == "さくら")
+    try LocalData.erase(in: db)
+    #expect(try Profile.name(in: db) == "")
+  }
 }

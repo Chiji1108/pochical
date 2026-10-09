@@ -232,3 +232,17 @@ export const chatSettings = sqliteTable(
     uniqueIndex("chat_settings_cursor").on(table.cursor),
   ]
 );
+
+// The user's usual name (いつもの名前), one row once they set it.
+export const profile = sqliteTable(
+  "profile",
+  {
+    cursor: integer().notNull(),
+    id: integer().primaryKey(),
+    name: text().notNull(),
+  },
+  (table) => [
+    check("profile_one_row", sql`${table.id} = 1`),
+    uniqueIndex("profile_cursor").on(table.cursor),
+  ]
+);

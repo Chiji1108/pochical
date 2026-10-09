@@ -1,5 +1,6 @@
 import PochicalDesign
 import PochicalKit
+import SQLiteData
 import SwiftUI
 
 /// グループを作る (/design's NewGroupPage): its name, its mark and how the
@@ -13,6 +14,8 @@ struct NewGroupPage: View {
   let onMade: (String) -> Void
   @State private var name = ""
   @State private var myName = ""
+  /// The usual name, which the field starts with (設定 › プロフィール).
+  @Fetch(ProfileNameRequest()) private var usualName = ""
   @State private var emoji = guessedEmoji(for: "")
   /// Once picked, the mark stays when the name changes afterwards.
   @State private var picked = false
@@ -56,6 +59,9 @@ struct NewGroupPage: View {
     .navigationTitle("グループを作る")
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.visible, for: .navigationBar)
+    .onChange(of: usualName, initial: true) { _, usual in
+      if myName.isEmpty { myName = usual }
+    }
     .onChange(of: name) { _, name in
       if !picked {
         emoji = guessedEmoji(for: name)

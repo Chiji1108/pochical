@@ -62,6 +62,11 @@ public protocol Pochical_V1_UserServiceClientInterface: Sendable {
     /// ChatNotifications change.
     @available(iOS 13, *)
     func `setChatNotifications`(request: Pochical_V1_SetChatNotificationsRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetChatNotificationsResponse>
+
+    /// Sets the user's usual name, empty for none; the devices hear of it as
+    /// a Profile change. INVALID_ARGUMENT over personName characters.
+    @available(iOS 13, *)
+    func `setProfile`(request: Pochical_V1_SetProfileRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetProfileResponse>
 }
 
 /// Concrete implementation of `Pochical_V1_UserServiceClientInterface`.
@@ -112,6 +117,11 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
         return await self.client.unary(path: "/pochical.v1.UserService/SetChatNotifications", idempotencyLevel: .idempotent, request: request, headers: headers)
     }
 
+    @available(iOS 13, *)
+    public func `setProfile`(request: Pochical_V1_SetProfileRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_SetProfileResponse> {
+        return await self.client.unary(path: "/pochical.v1.UserService/SetProfile", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
     public enum Metadata {
         public enum Methods {
             public static let deleteAccount = Connect.MethodSpec(name: "DeleteAccount", service: "pochical.v1.UserService", type: .unary)
@@ -122,6 +132,7 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
             public static let registerPushToken = Connect.MethodSpec(name: "RegisterPushToken", service: "pochical.v1.UserService", type: .unary)
             public static let setChatMuted = Connect.MethodSpec(name: "SetChatMuted", service: "pochical.v1.UserService", type: .unary)
             public static let setChatNotifications = Connect.MethodSpec(name: "SetChatNotifications", service: "pochical.v1.UserService", type: .unary)
+            public static let setProfile = Connect.MethodSpec(name: "SetProfile", service: "pochical.v1.UserService", type: .unary)
         }
     }
 }

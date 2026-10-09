@@ -158,7 +158,7 @@ extension Pochical_V1_ClientFrame {
       if case .coworker(let value) = change.kind { edit.coworker = value }
       if case .coworkerOrder(let order) = change.kind { edit.order = order }
       coworkerEdits.edits.append(edit)
-    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications,
+    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications, .profile,
       .groupProfile,
       .member,
       .chatLine, .readMark, nil:
@@ -188,7 +188,7 @@ extension Pochical_V1_Change {
     case .repeatOrders(let value): value.hasHlc ? value.hlc : nil
     case .coworker(let value): value.hasHlc ? value.hlc : nil
     case .coworkerOrder(let value): value.hasHlc ? value.hlc : nil
-    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications,
+    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications, .profile,
       .groupProfile,
       .member,
       .chatLine, .readMark, nil:
@@ -205,7 +205,7 @@ extension Pochical_V1_Change {
     case .repeatOrders: repeatOrders.hlc = hlc
     case .coworker: coworker.hlc = hlc
     case .coworkerOrder: coworkerOrder.hlc = hlc
-    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications,
+    case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications, .profile,
       .groupProfile,
       .member,
       .chatLine, .readMark, nil:

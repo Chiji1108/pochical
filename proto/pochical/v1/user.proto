@@ -62,6 +62,12 @@ service UserService {
   rpc SetChatNotifications(SetChatNotificationsRequest) returns (SetChatNotificationsResponse) {
     option idempotency_level = IDEMPOTENT;
   }
+
+  // Sets the user's usual name, empty for none; the devices hear of it as
+  // a Profile change. INVALID_ARGUMENT over personName characters.
+  rpc SetProfile(SetProfileRequest) returns (SetProfileResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
 }
 
 message SetChatMutedRequest {
@@ -78,6 +84,12 @@ message SetChatNotificationsRequest {
 }
 
 message SetChatNotificationsResponse {}
+
+message SetProfileRequest {
+  string name = 1;
+}
+
+message SetProfileResponse {}
 
 message RegisterPushTokenRequest {
   // The device's APNs token, as hex.

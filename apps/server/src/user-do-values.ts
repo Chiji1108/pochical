@@ -29,6 +29,7 @@ import type {
   memberships,
   patternOrder,
   patterns,
+  profile,
   repeatOrders,
   unreadCounts,
 } from "./user-do-schema";
@@ -240,6 +241,14 @@ export const chatSettingsChange = (row: ChatSettingsRow): Change =>
       case: "chatNotifications",
       value: { mentionsWhenMuted: row.mentionsWhenMuted },
     },
+  });
+
+type ProfileRow = typeof profile.$inferSelect;
+
+export const profileChange = (row: ProfileRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: { case: "profile", value: { name: row.name } },
   });
 
 /**

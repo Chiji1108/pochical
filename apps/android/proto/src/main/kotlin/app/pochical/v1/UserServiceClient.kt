@@ -163,4 +163,21 @@ public class UserServiceClient(
     ),
   )
 
+
+  /**
+   *  Sets the user's usual name, empty for none; the devices hear of it as
+   *  a Profile change. INVALID_ARGUMENT over personName characters.
+   */
+  override suspend fun setProfile(request: SetProfileRequest, headers: Headers): ResponseMessage<SetProfileResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.UserService/SetProfile",
+      app.pochical.v1.SetProfileRequest::class,
+      app.pochical.v1.SetProfileResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
 }

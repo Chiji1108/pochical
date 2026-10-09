@@ -213,7 +213,18 @@ message Change {
     // Notifications); User DO only.
     ChatMute chat_mute = 18;
     ChatNotifications chat_notifications = 19;
+    // The user's usual name, which new groups start with
+    // (spec/sync-protocol.md, Profile); User DO only.
+    Profile profile = 20;
   }
+}
+
+// The user's usual name (いつもの名前), kept with the account: creating or
+// joining a group starts with it, and each group keeps its own after.
+// Before the user sets one, none is sent.
+message Profile {
+  // personName characters at most (design/src/limits.ts); empty for none.
+  string name = 1;
 }
 
 // A chat whose notifications the user turned off, or back on: one value
