@@ -31,17 +31,17 @@ public struct ShrunkPhoto: Hashable, Sendable {
 /// sender's own until uploaded, uploading it, and fetching the group's as
 /// they show.
 public enum ChatPhotos {
-  /// Shrinks a picked photo to send, turned upright, as JPEG at a quality
-  /// that keeps it within `Chat.photoMaxBytes`; nil for what is not a
-  /// photo the device can read.
-  public static func shrink(_ data: Data) -> ShrunkPhoto? {
+  /// Shrinks a picked photo to send, turned upright, its longer side at
+  /// most `maxEdge`, as JPEG at a quality that keeps it within
+  /// `Chat.photoMaxBytes`; nil for what is not a photo the device can read.
+  public static func shrink(_ data: Data, maxEdge: Int = Chat.photoMaxEdge) -> ShrunkPhoto? {
     guard let source = CGImageSourceCreateWithData(data as CFData, nil),
       let image = CGImageSourceCreateThumbnailAtIndex(
         source, 0,
         [
           kCGImageSourceCreateThumbnailFromImageAlways: true,
           kCGImageSourceCreateThumbnailWithTransform: true,
-          kCGImageSourceThumbnailMaxPixelSize: Chat.photoMaxEdge,
+          kCGImageSourceThumbnailMaxPixelSize: maxEdge,
         ] as CFDictionary)
     else { return nil }
     for quality in [0.8, 0.6, 0.4] {
@@ -78,6 +78,12 @@ public enum ChatPhotos {
   /// Keeps the member's own photo to send: until uploaded, and to show.
   public static func keep(_ jpeg: Data, as photoID: String, in groupID: String) throws {
     try jpeg.write(to: pending(photoID, in: groupID), options: .atomic)
+    try jpeg.write(to: cached(photoID, in: groupID), options: .atomic)
+  }
+
+  /// Keeps a photo picked to send later among the device's caches, so one
+  /// never sent leaves nothing for long.
+  static func hold(_ jpeg: Data, as photoID: String, in groupID: String) throws {
     try jpeg.write(to: cached(photoID, in: groupID), options: .atomic)
   }
 
@@ -133,6 +139,25 @@ public enum ChatPhotos {
       }
       throw UploadError.gone
     }
+    try await put(jpeg, as: photoID, in: groupID, account: account, server: server, send: send)
+    try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
+  }
+
+  /// Uploads a photo held to send later (`hold`); `gone` once the device
+  /// has let it go.
+  static func uploadHeld(_ photoID: String, in groupID: String, account: Account) async throws {
+    guard let jpeg = try? Data(contentsOf: cached(photoID, in: groupID)) else {
+      throw UploadError.gone
+    }
+    try await put(jpeg, as: photoID, in: groupID, account: account, server: Server.url) {
+      try await URLSession.shared.data(for: $0)
+    }
+  }
+
+  private static func put(
+    _ jpeg: Data, as photoID: String, in groupID: String, account: Account, server: URL,
+    send: Account.Send
+  ) async throws {
     var request = URLRequest(url: photoURL(photoID, in: groupID, server: server))
     request.httpMethod = "PUT"
     request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
@@ -141,7 +166,6 @@ public enum ChatPhotos {
     let (_, response) = try await send(request)
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
     guard status == 204 else { throw UploadError.refused(status) }
-    try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
   }
 
   /// The group's photo, from the device or else the server, kept once

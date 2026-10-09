@@ -17,6 +17,7 @@ object Chat {
   const val photoMaxBytes = 4000000
   const val photoMaxEdge = 2048
   const val photosPerSend = 4
+  const val pictureMaxEdge = 640
   const val runGap = 12
   const val typingSendMs = 3000
   const val typingShowMs = 5000

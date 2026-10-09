@@ -75,14 +75,10 @@ private struct MarkPhoto: View {
     .frame(width: size, height: size)
     .task(id: photoID) {
       image = nil
-      // One the user picked is theirs, on the device or the server, until
-      // the group has it.
+      // One the user picked waits on the device until the group has it.
       var data = ChatPhotos.held(photoID, in: ChatPhotos.mine)
       if data == nil, !shelf.isEmpty {
         data = try? await groupCalls.photo(photoID, in: shelf)
-      }
-      if data == nil {
-        data = try? await groupCalls.photo(photoID, in: ChatPhotos.mine)
       }
       guard let data, let whole = UIImage(data: data) else { return }
       let edge = size * displayScale
@@ -238,10 +234,10 @@ struct GroupMarkPage: View {
         set(GroupMarkValue(icon: icon, color: mark.color))
       }
     }
-    .alert("写真を送れませんでした", isPresented: $photoFailed) {
+    .alert("写真を使えませんでした", isPresented: $photoFailed) {
       Button("OK", role: .cancel) {}
     } message: {
-      Text("通信できる場所で、もう一度お試しください。")
+      Text("もう一度お試しください。")
     }
     .sheet(isPresented: $choosingEmoji) {
       EmojiKeyboardSheet { emoji in
@@ -256,15 +252,13 @@ struct GroupMarkPage: View {
     onPick(picked)
   }
 
-  /// A photo taken or picked, sent up as one of the user's own for the
-  /// group to take a copy of as it is saved.
+  /// A photo taken or picked, kept on the device until the group is saved
+  /// with it (`sendMarkPhoto`).
   private func usePhoto(_ jpeg: Data) async {
     do {
-      let photoID = try await groupCalls.sendPhoto(jpeg, to: ChatPhotos.mine)
-      set(GroupMarkValue(photoID: photoID))
+      set(GroupMarkValue(photoID: try groupCalls.holdMarkPhoto(jpeg)))
       kind = nil
     } catch {
-      ReviewPrompt.troubled = true
       photoFailed = true
     }
   }

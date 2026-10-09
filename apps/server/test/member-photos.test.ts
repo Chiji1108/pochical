@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 
 import { personPhotoKey, photoKey } from "../src/photos";
-import { call, ORIGIN, signInAnonymously } from "./helpers";
+import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import { changesIn, pair, push, syncSocket } from "./sync-helpers";
 
 // A JPEG's first bytes and a little more, as the app sends one.
@@ -251,24 +251,41 @@ describe("a group's photo mark", () => {
     expect(statuses).toStrictEqual([400, 400, 400]);
   });
 
-  it("makes a group with it", async () => {
+  it("makes a group with it, moved out of the maker's own photos", async () => {
     const maker = await signInAnonymously();
     const photoId = crypto.randomUUID();
     await upload(`/v1/me/photos/${photoId}`, maker);
-    const created = await call(
-      "GroupService/CreateGroup",
-      {
-        displayName: "さくら",
-        mark: { photoId },
-        name: "いとこ会",
-        requestId: crypto.randomUUID(),
-      },
-      maker
-    );
+    const body = {
+      displayName: "さくら",
+      mark: { photoId },
+      name: "いとこ会",
+      requestId: crypto.randomUUID(),
+    };
+    const created = await call("GroupService/CreateGroup", body, maker);
     expect(created.status).toBe(200);
     const { groupId } = (await created.json()) as { groupId: string };
+    // A retry after a lost answer, its own copy gone already, still works.
+    const retried = await call("GroupService/CreateGroup", body, maker);
+    const makerId = await userIdOf(maker);
+    const [inGroup, ownCopy] = await Promise.all([
+      env.PHOTOS.head(photoKey(groupId, photoId)),
+      env.PHOTOS.head(personPhotoKey(makerId, photoId)),
+    ]);
+    expect([retried.status, inGroup !== null, ownCopy]).toStrictEqual([
+      200,
+      true,
+      null,
+    ]);
+  });
+
+  it("leaves the usual photo it was made from", async () => {
+    const { groupId, maker, makerId } = await pair();
+    const photoId = crypto.randomUUID();
+    await upload(`/v1/me/photos/${photoId}`, maker);
+    await call("UserService/SetProfile", { name: "さくら", photoId }, maker);
+    await expect(renamed(groupId, { photoId }, maker)).resolves.toBe(200);
     await expect(
-      env.PHOTOS.head(photoKey(groupId, photoId))
+      env.PHOTOS.head(personPhotoKey(makerId, photoId))
     ).resolves.not.toBeNull();
   });
 

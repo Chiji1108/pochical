@@ -58,7 +58,7 @@ struct PhotoEditor<Picture: View>: View {
   /// Whether there is a photo to delete.
   var hasPhoto = false
   @ViewBuilder let picture: () -> Picture
-  /// Told of a picked photo, shrunk as a chat's are.
+  /// Told of a picked photo, shrunk for how small it shows.
   let onPhoto: (Data) async -> Void
   var onUsual: (() async -> Void)?
   var onRemove: (() async -> Void)?
@@ -124,9 +124,12 @@ struct PhotoEditor<Picture: View>: View {
     }
   }
 
-  /// Shrunk as a chat's photo is, then told.
+  /// Shrunk for how small it shows, then told.
   private func send(_ data: Data) async {
-    guard let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
+    guard
+      let shrunk = await Task.detached(operation: {
+        ChatPhotos.shrink(data, maxEdge: Chat.pictureMaxEdge)
+      }).value
     else { return }
     await onPhoto(shrunk.jpeg)
   }
