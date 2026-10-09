@@ -25,6 +25,7 @@ struct NewGroupPage: View {
   @State private var requestID = UUID().uuidString.lowercased()
   @State private var making = false
   @State private var failed = false
+  @State private var photoGone = false
 
   var body: some View {
     let canMake =
@@ -80,6 +81,11 @@ struct NewGroupPage: View {
     } message: {
       Text("通信できる場所で、もう一度お試しください。")
     }
+    .alert(markPhotoGoneTitle, isPresented: $photoGone) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text(markPhotoGoneMessage)
+    }
   }
 
   /// The first color the user's groups do not use yet, as /design picks a
@@ -101,6 +107,11 @@ struct NewGroupPage: View {
         let made = try await groupCalls.create(
           name: trimmed(name), mark: mark, displayName: trimmed(myName), requestID: requestID)
         onMade(made)
+      } catch is MarkPhotoGone {
+        // Back to following the name, as before a photo was picked.
+        picked = false
+        mark = guessedMark(for: name, color: nextColor)
+        photoGone = true
       } catch {
         ReviewPrompt.troubled = true
         failed = true
