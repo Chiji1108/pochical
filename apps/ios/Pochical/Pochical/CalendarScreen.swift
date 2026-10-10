@@ -54,9 +54,18 @@ struct CalendarScreen: View {
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
   private static let monthsAround = 120
+  /// Where the folded week ends and the screen's own room does, on the
+  /// screen, for the day's sheet to rise to just under the week.
+  @State private var weekEnd: CGFloat = 0
+  @State private var foot: CGFloat = 0
   /// The day's sheet as it opens: up to just under the folded week, which
-  /// stays in sight to tap.
-  private static let underWeek = PresentationDetent.fraction(0.7)
+  /// stays in sight to tap, measured so it fits each screen.
+  private var underWeek: PresentationDetent {
+    let room = foot - weekEnd - Self.underWeekGap
+    return room > 0 ? .height(room) : .medium
+  }
+  /// Between the folded week and the sheet.
+  private static let underWeekGap: CGFloat = 8
   /// Past this share of the way, a pull let go unfolds the month; short of
   /// it, the week folds back. A flick faster than `unfoldFlick`, in points
   /// a second, goes the way it is flicked wherever it is let go.
@@ -108,6 +117,10 @@ struct CalendarScreen: View {
         position.pages = pages
       }
       .frame(height: DayCell.height + (MonthPage.height - DayCell.height) * (1 - fold))
+      // Where the folded week ends, however folded the pages are now.
+      .onGeometryChange(for: CGFloat.self) { proxy in
+        proxy.frame(in: .global).minY + DayCell.height
+      } action: { weekEnd = $0 }
       // While a day is open, a pull down unfolds the month, following the
       // finger (spec/calendar.md, A day's detail).
       .simultaneousGesture(
@@ -131,6 +144,9 @@ struct CalendarScreen: View {
           .padding(.bottom, entering == nil ? 24 : 8)
       }
     }
+    .onGeometryChange(for: CGFloat.self) { proxy in
+      proxy.frame(in: .global).maxY
+    } action: { foot = $0 }
     .background(colors.backgroundBase)
     // The tabs give way to entering and to a day's week, as /design's do.
     .toolbarVisibility(entering == nil && opened == nil ? .visible : .hidden, for: .tabBar)
@@ -195,8 +211,8 @@ struct CalendarScreen: View {
         onStep: { step in opened = day.adding(days: step) }
       )
         .id(day)
-        .presentationDetents([Self.underWeek, .large])
-        .presentationBackgroundInteraction(.enabled(upThrough: Self.underWeek))
+        .presentationDetents([underWeek, .large])
+        .presentationBackgroundInteraction(.enabled(upThrough: underWeek))
         .presentationDragIndicator(.visible)
         .presentationBackground(colors.backgroundBase)
       }
