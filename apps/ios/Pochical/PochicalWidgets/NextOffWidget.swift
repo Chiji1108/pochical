@@ -91,8 +91,8 @@ private struct NextOffSmall: View {
       Group {
         if let soonest, soonest.inDays > 1 {
           // The number large, with 日後 small after it.
-          (Text("\(soonest.inDays)").font(.system(size: 48, weight: .bold))
-            + Text(english ? " days" : "日後").font(.system(size: 13, weight: .semibold)))
+          let unit = Text(english ? " days" : "日後").font(.system(size: 13, weight: .semibold))
+          Text("\(Text("\(soonest.inDays)").font(.system(size: 48, weight: .bold)))\(unit)")
         } else if let soonest {
           Text(words.inDays(soonest.inDays)).font(.system(size: 36, weight: .bold))
         } else {

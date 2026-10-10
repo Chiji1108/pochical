@@ -168,11 +168,7 @@ extension WidgetDay {
   /// The whole day read aloud: its date, the shift and its hours, in the
   /// language its date is shown in (Sat, Oct 10).
   func spoken(english: Bool) -> String {
-    let date =
-      english
-      ? "\(self.date.weekdayName(english: true)), \(self.date.shortMonth(english: true)) \(self.date.day)"
-      : self.date.fullText
-    let parts = [date, pattern?.name ?? "予定なし"] + [time].compactMap { $0 }
+    let parts = [WidgetWords(english: english).date(date), pattern?.name ?? "予定なし"] + [time].compactMap { $0 }
     let memo = noted ? (english ? "memo" : "メモあり") : nil
     return (parts + [memo].compactMap { $0 }).joined(separator: english ? ", " : "、")
   }

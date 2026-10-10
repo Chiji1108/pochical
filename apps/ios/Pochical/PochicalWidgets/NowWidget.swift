@@ -146,7 +146,7 @@ private struct NowView: View {
 /// it going: あと3時間12分, or 3 hr, 12 min left.
 private func leftText(until date: Date, english: Bool) -> Text {
   let time = Text(date, style: .relative)
-  return english ? time + Text(" left") : Text("あと") + time
+  return english ? Text("\(time) left") : Text("あと\(time)")
 }
 
 /// What is left of a shift as a ring, draining as it runs, as the system
@@ -308,9 +308,9 @@ private struct NowRectangular: View {
           if let inDays {
             Text(words.words.inDays(inDays))
           } else if words.english {
-            Text("in ") + Text(span.start, style: .relative)
+            Text("in \(Text(span.start, style: .relative))")
           } else {
-            Text("あと") + Text(span.start, style: .relative)
+            Text("あと\(Text(span.start, style: .relative))")
           }
         }
         .font(.headline.weight(.bold).monospacedDigit())
