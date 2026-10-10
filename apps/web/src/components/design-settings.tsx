@@ -1,10 +1,10 @@
 import { ArrowUpRight } from "lucide-react";
 import { useContext, useState } from "react";
 
-import { isRepeating } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
 import { APP_VERSION, useDevice } from "../lib/design-device";
 import type { Pattern, Shift } from "../lib/design-patterns";
+import { designToday } from "../lib/design-today";
 import { site } from "../lib/site";
 import { CoworkersPage, useCoworkerList } from "./design-coworkers";
 import type { Profile } from "./design-group-data";
@@ -113,8 +113,10 @@ export function DesignSettings({
     weekTools.weekDates,
     holidayWeekDay
   );
-  const repeating = isRepeating(rules);
-  const current = repeating ? rules.at(-1) : undefined;
+  // The period in use today, while it repeats: 設定's 繰り返し row says
+  // how often it comes round.
+  const inUse = rules.findLast((rule) => rule.start <= designToday);
+  const current = inUse?.sequence.length ? inUse : undefined;
   // The period opened from 繰り返し's list, by its start.
   const [periodStart, setPeriodStart] = useState<Date>();
   const period = rules.find(

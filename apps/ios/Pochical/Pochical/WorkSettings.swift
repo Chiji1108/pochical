@@ -33,9 +33,10 @@ private struct WorkValues: FetchKeyRequest, Hashable {
 }
 
 extension [RepeatOrder] {
-  /// The order in use, while it repeats.
+  /// The period in use today, while it repeats.
   var current: RepeatOrder? {
-    last.flatMap { $0.sequence.isEmpty ? nil : $0 }
+    let today = Day.today
+    return last { $0.start <= today }.flatMap { $0.sequence.isEmpty ? nil : $0 }
   }
 }
 
@@ -46,7 +47,7 @@ struct RepeatOrdersRequest: FetchKeyRequest, Hashable {
   }
 }
 
-/// 設定's 繰り返し row: how long the order in use runs, or なし.
+/// 設定's 繰り返し row: how often today's period comes round, or なし.
 func repeatSummary(_ orders: [RepeatOrder]) -> String {
   orders.current.map { "\($0.sequence.count)日ごと" } ?? "なし"
 }
