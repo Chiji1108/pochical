@@ -53,11 +53,27 @@ import { useWeek } from "./design-week";
 // A group's hub: the rail of groups at its side, this week's shifts and
 // the chats, the group without members yet, and a member's sheet.
 
+// みさき's week in the sample, the same every week from Sunday, with
+// Saturday off as the others are, so the week shows a day everyone is off.
+const sampleNurseWeek = [
+  "after",
+  "off",
+  "day",
+  "day",
+  "night",
+  "after",
+  "off",
+] as const;
+
 // A made-up group for the no-group screen's picture of sharing.
 const sampleGroup = (): Group => ({
   id: "sample",
   mark: { emoji: "🏠", kind: "emoji" },
-  members: [partner, mother, misaki()],
+  members: [
+    partner,
+    mother,
+    { ...misaki(), shiftOn: (date) => sampleNurseWeek[date.getDay()] },
+  ],
   name: "サンプル",
 });
 
@@ -87,7 +103,9 @@ export function NoGroups({
         />
       </div>
       <p className={noGroups.note}>
-        家族や友達とシフトを見せ合って、休みが重なる日がすぐ分かります。
+        家族や友達とシフトを見せ合って、
+        <br />
+        休みが重なる日がすぐ分かります。
       </p>
       <div className={noGroups.actions}>
         <Button onClick={onNew}>

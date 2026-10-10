@@ -36,6 +36,10 @@ struct MemberAvatar: View {
     }
     .task(id: photoID) {
       image = nil
+      if photoID.hasPrefix(samplePhoto) {
+        image = UIImage(named: String(photoID.dropFirst(samplePhoto.count)))
+        return
+      }
       guard !photoID.isEmpty,
         let data = try? await groupCalls.photo(photoID, in: groupID ?? openGroupID),
         let whole = UIImage(data: data)
@@ -47,6 +51,10 @@ struct MemberAvatar: View {
     }
   }
 }
+
+/// Starts a sample's face: the rest is the name of one of the app's own
+/// pictures, as made-up people have no photos anywhere.
+let samplePhoto = "sample:"
 
 /// A picture to change (/design's PhotoPicker): tapping it, or the label
 /// under it, offers taking a photo or picking one, and going back to the

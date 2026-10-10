@@ -198,7 +198,7 @@ private struct NoGroups: View {
       .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
       .accessibilityElement(children: .ignore)
       .accessibilityLabel("サンプルの共有シフト表")
-      Text("家族や友達とシフトを見せ合って、休みが重なる日がすぐ分かります。")
+      Text("家族や友達とシフトを見せ合って、\n休みが重なる日がすぐ分かります。")
         .font(.subheadline)
         .foregroundStyle(colors.textTertiary)
         .multilineTextAlignment(.center)
@@ -227,9 +227,9 @@ private struct NoGroups: View {
 }
 
 /// The sample's people, as /design's: a partner at the office, home on
-/// Wednesdays; a mother part-time on Mondays, Wednesdays and Fridays; a
-/// nurse on 日勤・日勤・夜勤・明け・休み・休み. Days off on weekends and
-/// holidays for the first two.
+/// Wednesdays; a mother part-time on Mondays, Wednesdays and Fridays, both
+/// off on weekends and holidays; a nurse whose week, the same every week,
+/// has Saturday off too, so everyone is off one day.
 private func sampleMembers(_ week: [Day]) -> [GroupMember] {
   let off = sample("off", "休み", "🌿", "leaf", 0, off: true)
   let office = sample("office", "出勤", "💼", "briefcase", 9)
@@ -241,28 +241,37 @@ private func sampleMembers(_ week: [Day]) -> [GroupMember] {
       color: ready.color, time: ready.time.map { ShiftTime(start: $0.start, end: $0.end) },
       countsAsOff: ready.countsAsOff)
   }
-  let order = ["day", "day", "night", "after", "off", "off"]
+  // Sunday on: 明け, 休み, 日勤, 日勤, 夜勤, 明け, 休み.
+  let nurseWeek = ["after", "off", "day", "day", "night", "after", "off"]
   let rests = { (day: Day) in day.weekday == 0 || day.weekday == 6 || day.holidayName != nil }
   let days = { (shift: (Day) -> PatternID) in
     Dictionary(uniqueKeysWithValues: week.map { ($0, shift($0)) })
   }
   return [
-    GroupMember(
-      userID: "yuki", name: "ゆうき",
-      calendar: MemberCalendar(
+    sampleMember(
+      "yuki", "ゆうき", face: 1005,
+      MemberCalendar(
         patterns: [office, home, off],
         days: days { rests($0) ? off.id : $0.weekday == 3 ? home.id : office.id })),
-    GroupMember(
-      userID: "mother", name: "お母さん",
-      calendar: MemberCalendar(
+    sampleMember(
+      "mother", "お母さん", face: 429,
+      MemberCalendar(
         patterns: [part, off],
         days: days { [1, 3, 5].contains($0.weekday) && $0.holidayName == nil ? part.id : off.id })),
-    GroupMember(
-      userID: "misaki", name: "みさき",
-      calendar: MemberCalendar(
-        patterns: nurse,
-        days: days { order[(($0.days(since: Day(year: 2026, month: 1, day: 4)) + 3) % 6 + 6) % 6] })),
+    sampleMember(
+      "misaki", "みさき", face: 823,
+      MemberCalendar(patterns: nurse, days: days { nurseWeek[$0.weekday] })),
   ]
+}
+
+/// One of the sample's people, with /design's sample photo of the id, held
+/// in the app as SampleFace〈id〉.
+private func sampleMember(_ id: String, _ name: String, face: Int, _ calendar: MemberCalendar)
+  -> GroupMember
+{
+  var member = GroupMember(userID: id, name: name, calendar: calendar)
+  member.photoID = "\(samplePhoto)SampleFace\(face)"
+  return member
 }
 
 private func sample(
