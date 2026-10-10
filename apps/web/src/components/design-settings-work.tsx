@@ -10,13 +10,14 @@ import {
   holidayShiftOf,
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
-import { presetList, usePatterns } from "../lib/design-patterns";
+import { isDayOff, presetList, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
+import { Chip, ChipGroup } from "./design-choices";
 import { InputDatePicker } from "./design-date-picker";
 import { DoneButton, PageHeader } from "./design-header";
-import { AddRow, List, ListRow, SwitchRow, Toggle } from "./design-list";
+import { AddRow, List, ListRow, SwitchRow } from "./design-list";
 import {
   OrderTitle,
   RepeatCalendar,
@@ -27,7 +28,7 @@ import {
   settingsParts,
   shortDay,
 } from "./design-settings-parts";
-import { ConfirmDialog } from "./design-sheet";
+import { ConfirmDialog, Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { ToastContext } from "./design-toast";
 import {
   Button,
@@ -37,6 +38,7 @@ import {
   Section,
 } from "./design-ui";
 import { WorkSetupSteps } from "./design-work-setup";
+import { ShiftMark } from "./shift-mark";
 
 // 繰り返し's pages: the repeating order and its history, setting,
 // correcting and stopping it; and 新しい仕事にする, opened from
@@ -53,6 +55,7 @@ function OrderCard({
   period: string;
   onOpen: () => void;
 }) {
+  const book = usePatterns();
   const repeats = rule.sequence.length > 0;
   return (
     <button
@@ -74,7 +77,9 @@ function OrderCard({
           <span className={settingsParts.cardMeta}>自分で入れる期間</span>
         )}
         {repeats && rule.holidaysOff && (
-          <span className={settingsParts.cardMeta}>祝日は休み</span>
+          <span className={settingsParts.cardMeta}>
+            祝日は{book[rule.holidayShift ?? ""]?.name ?? "休み"}
+          </span>
         )}
       </span>
       <ChevronRight aria-hidden="true" className={orderCard.arrow} size={17} />
@@ -247,16 +252,19 @@ export function RepeatPeriodPage({
           }
           label="始まる日"
         />
-        {repeats && (
-          <SwitchRow
-            checked={rule.holidaysOff ?? false}
-            label="祝日は休みにする"
-            onChange={(holidaysOff) => {
-              onPut({ ...rule, holidaysOff });
-            }}
-          />
-        )}
       </List>
+      {repeats && (
+        <HolidayChoice
+          holidayShift={rule.holidayShift}
+          holidaysOff={rule.holidaysOff ?? false}
+          onHolidayShift={(holidayShift) => {
+            onPut({ ...rule, holidayShift });
+          }}
+          onHolidaysOff={(holidaysOff) => {
+            onPut({ ...rule, holidaysOff });
+          }}
+        />
+      )}
       <Note>
         {repeats
           ? "並びを直しても、自分で入れた日は、そのまま残ります。"
@@ -283,6 +291,63 @@ export function RepeatPeriodPage({
           onConfirm={onRemove}
           title="この期間を削除しますか？"
         />
+      )}
+    </>
+  );
+}
+
+const orderConfirm = {
+  lead: css({ color: "text.secondary", margin: 0, textStyle: "subheadline" }),
+};
+
+// 祝日は休みにする, asked as an order is saved and kept with its period:
+// on, holidays take a pattern that counts as off, picked among them when
+// there are more than one, as 完了's blanks pick theirs. With none, there
+// is nothing for holidays to take, so it is not asked.
+function HolidayChoice({
+  holidaysOff,
+  holidayShift,
+  onHolidaysOff,
+  onHolidayShift,
+}: {
+  holidaysOff: boolean;
+  holidayShift?: Shift;
+  onHolidaysOff: (holidaysOff: boolean) => void;
+  onHolidayShift: (shift: Shift) => void;
+}) {
+  const patterns = useUser((state) => state.patterns);
+  const offs = patterns.filter(isDayOff);
+  // The one holidays take: the one picked while it counts as off, else
+  // the first that does.
+  const taken = holidayShiftOf(patterns, holidayShift);
+  if (offs.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <List>
+        <SwitchRow
+          checked={holidaysOff}
+          detail="祝日は、並びの代わりに休みにします"
+          label="祝日は休みにする"
+          onChange={onHolidaysOff}
+        />
+      </List>
+      {holidaysOff && offs.length > 1 && (
+        <ChipGroup label="祝日に入れるパターン">
+          {offs.map((pattern) => (
+            <Chip
+              key={pattern.id}
+              onClick={() => {
+                onHolidayShift(pattern.id);
+              }}
+              selected={pattern.id === taken}
+            >
+              <ShiftMark shift={pattern.id} size={16} />
+              {pattern.name}
+            </Chip>
+          ))}
+        </ChipGroup>
       )}
     </>
   );
@@ -351,13 +416,25 @@ export function RepeatEditorPage({
   }));
   const { anchor, sequence } = order;
   const start = fixing ? current.start : anchor;
-  // Follows the order until the person sets it.
+  // Follows the order until the person sets it, in what 完了 asks.
   const [holidaysChoice, setHolidaysChoice] = useState(
     fixing ? current.holidaysOff : undefined
   );
+  const [holidayPick, setHolidayPick] = useState(
+    fixing ? current.holidayShift : undefined
+  );
   const holidaysOff =
     holidaysChoice ?? defaultHolidaysOff(sequence, anchor, book);
-  const rule: RepeatRule = { anchor, holidaysOff, sequence, start };
+  const holidayShift = holidaysOff
+    ? holidayShiftOf(patterns, holidayPick)
+    : undefined;
+  const rule: RepeatRule = {
+    anchor,
+    holidayShift,
+    holidaysOff,
+    sequence,
+    start,
+  };
   const [confirming, setConfirming] = useState(false);
   // A new period on a day another starts takes its place: 完了 says so.
   const replaces =
@@ -380,41 +457,47 @@ export function RepeatEditorPage({
         }
       />
       <RepeatCalendar
-        accessory={
-          <span className={settingsParts.holidays}>
-            <span aria-hidden="true">祝日は休み</span>
-            <Toggle
-              checked={holidaysOff}
-              label="祝日は休みにする"
-              onChange={setHolidaysChoice}
-            />
-          </span>
-        }
         anchor={anchor}
         before={shown}
         from={fixing ? current.start : undefined}
-        holidayShift={holidaysOff ? holidayShiftOf(patterns) : undefined}
+        holidayShift={holidayShift}
         onChange={setOrder}
         patternKeys={patternKeys}
         sequence={sequence}
       />
-      {confirming && (
-        <ConfirmDialog
-          action={text.action}
-          message={
-            replaces
-              ? "この日から始まる繰り返しと入れ替えます。自分で入れた日は、そのまま残ります。"
-              : text.message
-          }
-          onCancel={() => {
+      <Sheet
+        label={`${shortDay(start)}${text.question}`}
+        onOpenChange={setConfirming}
+        open={confirming}
+      >
+        <SheetHeading
+          onClose={() => {
             setConfirming(false);
-          }}
-          onConfirm={() => {
-            onApply(rule);
           }}
           title={`${shortDay(start)}${text.question}`}
         />
-      )}
+        <div className={sheetBody}>
+          <p className={orderConfirm.lead}>
+            {replaces
+              ? "この日から始まる繰り返しと入れ替えます。自分で入れた日は、そのまま残ります。"
+              : text.message}
+          </p>
+          <HolidayChoice
+            holidayShift={holidayShift}
+            holidaysOff={holidaysOff}
+            onHolidayShift={setHolidayPick}
+            onHolidaysOff={setHolidaysChoice}
+          />
+          <Button
+            onClick={() => {
+              onApply(rule);
+            }}
+            variant="primary"
+          >
+            {text.action}
+          </Button>
+        </div>
+      </Sheet>
     </div>
   );
 }

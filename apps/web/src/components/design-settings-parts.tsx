@@ -55,14 +55,6 @@ export const settingsParts = {
     paddingBottom: "8px",
     paddingInline: "16px",
   }),
-  holidays: css({
-    alignItems: "center",
-    color: "text.secondary",
-    display: "flex",
-    flexShrink: 0,
-    gap: "8px",
-    textStyle: "caption",
-  }),
   // Grows to the screen's height, so an order's keys sit at its foot.
   job: css({ display: "flex", flex: 1, flexDirection: "column", gap: "16px" }),
   marks: css({
