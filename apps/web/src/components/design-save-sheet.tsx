@@ -10,6 +10,7 @@ import { css, cva, cx } from "styled-system/css";
 
 import { dateKey, formatMonth } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
+import { useSettings } from "../lib/design-settings-store";
 import type { ImageOptions } from "../lib/design-settings-store";
 import { AppIcon } from "./design-app-icon";
 import { DayCell } from "./design-day-cell";
@@ -63,6 +64,16 @@ const calendarSources = Object.entries(
 );
 
 type Step = "choose" | "calendar" | "pick" | { done: string };
+
+// How 端末カレンダーに追加 goes in the demo: the calendars allowed,
+// refused, or allowed and the adding failing.
+export type CalendarAccess = "granted" | "denied" | "fails";
+
+// A day with a memo: whether it has a shift, and a day off. A memo goes in
+// a shift's event, or where there is none (no shift, or a day off left
+// out), as an all-day event of its own (spec/calendar.md).
+type NoteDay = { shift: boolean; off: boolean };
+const noNoteDays: NoteDay[] = [];
 
 const save = {
   // 画像で保存 over 端末カレンダーに追加.
@@ -156,9 +167,13 @@ export function SaveSheet({
   month,
   shiftCount,
   offCount,
+  noteDays = noNoteDays,
+  access = "granted",
   toCalendar = false,
   onImage,
 }: {
+  noteDays?: NoteDay[];
+  access?: CalendarAccess;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   month: Date;
@@ -176,6 +191,9 @@ export function SaveSheet({
   // so adding is a single tap.
   const [calendarId, setCalendarId] = useState(DEFAULT_CALENDAR_ID);
   const [includeOff, setIncludeOff] = useState(false);
+  const putting = useSettings((state) => state.device.calendarAdd);
+  const setPutting = useSettings((state) => state.setCalendarAdd);
+  const toast = useContext(ToastContext);
   // Closed, it starts from the choice again next time.
   const change = (next: boolean) => {
     if (!next) {
@@ -187,7 +205,11 @@ export function SaveSheet({
     change(false);
   };
   const monthLabel = formatMonth(month);
-  const count = includeOff ? shiftCount : shiftCount - offCount;
+  // The shifts' events, and the memos' own where no shift's event is.
+  const memoOnly = putting.notes
+    ? noteDays.filter((day) => !day.shift || (day.off && !includeOff)).length
+    : 0;
+  const count = (includeOff ? shiftCount : shiftCount - offCount) + memoOnly;
   const calendar = deviceCalendars.find((item) => item.id === calendarId);
   const title = stepTitle(step, monthLabel);
   return (
@@ -232,7 +254,15 @@ export function SaveSheet({
           </div>
         </>
       )}
-      {step === "calendar" && (
+      {step === "calendar" && access === "denied" && (
+        <>
+          <p className={sheetLead}>
+            カレンダーへのアクセスが許可されていません。設定アプリで、ポチカルにカレンダーへのフルアクセスを許可してください。
+          </p>
+          <Button variant="primary">設定を開く</Button>
+        </>
+      )}
+      {step === "calendar" && access !== "denied" && (
         <>
           <p className={sheetLead}>
             {monthLabel}のシフトを、1日ずつ予定として入れます。
@@ -261,12 +291,33 @@ export function SaveSheet({
                 setIncludeOff(checked);
               }}
             />
+            <SwitchRow
+              checked={putting.notes}
+              detail="予定がない日は、メモだけの予定にします"
+              label="メモも入れる"
+              onChange={(notes) => {
+                setPutting({ ...putting, notes });
+              }}
+            />
+            <SwitchRow
+              checked={putting.people}
+              detail="シフトの予定のメモ欄に入ります"
+              label="一緒に働く人も入れる"
+              onChange={(people) => {
+                setPutting({ ...putting, people });
+              }}
+            />
           </List>
+          <Note>前に入れた{monthLabel}の予定は、入れ直します。</Note>
           <Button
             variant="primary"
             className={save.add}
             disabled={!calendar || count === 0}
             onClick={() => {
+              if (access === "fails") {
+                toast("追加できませんでした", "problem");
+                return;
+              }
               setStep({
                 done: `「${calendar?.name}」に${monthLabel}の予定を${count}件追加しました。`,
               });
