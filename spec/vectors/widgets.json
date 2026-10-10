@@ -1,5 +1,5 @@
 {
-  "about": "What a widget's entry says of a day and of days off (spec/widgets.md). day: a day's own `start` and `end`, if set, over its pattern's standard `time` (null for a pattern without one); `expected.time` is the range read aloud (a leading zero dropped from the hour, 翌 before an end at or before the start) and `expected.change` the words shown on a day whose hours differ from its pattern's (null on an ordinary day); `expected.column` the same, short enough for a column of これから on one line (the new start alone for 早出, the new end alone for 残業, else both ends), and `expected.columnShort` that written shorter for a column it does not fit even shrunk to 8pt, its hours without :00. offs: what 次の休み counts. Each one's `days` are keyed by how many days from today (0 is today): work, off, or null where not entered; days not listed are `rest`, else not entered. `with` is who the widget is set to: nobody, one person, or the people of a group. `expected.today` says today is off (together); `expected.next` is how many days on the next day off after today is, looking no further than design/src/widgets.ts's widgetRules.offLookaheadDays (62), or null; `expected.none`, only when neither today nor any day ahead counts, is why: waiting (with the names of those who have not entered days the person is off and no one who has entered them works, as they come), apart (set to someone and the person has entered days), else notEntered. A day counts only when the person and everyone picked are off, as みんな休み (spec/vectors/together.json).",
+  "about": "What a widget's entry says of a day and of days off (spec/widgets.md). day: a day's own `start` and `end`, if set, over its pattern's standard `time` (null for a pattern without one); `expected.time` is the range read aloud (a leading zero dropped from the hour, 翌 before an end at or before the start) and `expected.change` the words shown on a day whose hours differ from its pattern's (null on an ordinary day); `expected.column` the same, short enough for a column of これから on one line (the new start alone for 早出, the new end alone for 残業, else both ends), and `expected.columnShort` that written shorter for a column it does not fit even shrunk to 8pt, its hours without :00. offs: what 次の休み counts. Each one's `days` are keyed by how many days from today (0 is today): work, off, or null where not entered; days not listed are `rest`, else not entered. `with` is who the widget is set to: nobody, one person, or the people of a group. `expected.today` says today is off (together); `expected.next` is how many days on the next day off after today is, looking no further than design/src/widgets.ts's widgetRules.offLookaheadDays (62), or null; `expected.none`, only when neither today nor any day ahead counts, is why: waiting (with the names of those who have not entered days the person is off and no one who has entered them works, as they come), apart (set to someone and the person has entered days), else notEntered. A day counts only when the person and everyone picked are off, as みんな休み (spec/vectors/together.json). now: いまのシフト at `at` (\"HH:MM\" on the Monday of offset 0), with each day's shift by its offset from it (day 09:00–18:00, night 16:30–09:30, duty 08:30–08:30, after and offDuty without hours, off a day off) and any own `start` or `end`; `expected.on` and `.next` are [start offset, start, end offset, end] or null, `.nextInDays` the whole days to the next shift's day when it is more than widgetRules.countdownHours away, and `.refresh` [offset, time] when the entry is made again.",
   "day": [
     {
       "name": "an ordinary day says nothing, and is read with its pattern's hours",
@@ -389,6 +389,162 @@
         "none": {
           "kind": "apart"
         }
+      }
+    }
+  ],
+  "now": [
+    {
+      "name": "on a day shift, it counts to the end",
+      "at": "10:00",
+      "days": {
+        "0": {
+          "shift": "day"
+        }
+      },
+      "expected": {
+        "on": [0, "09:00", 0, "18:00"],
+        "next": null,
+        "nextInDays": null,
+        "refresh": [0, "18:00"]
+      }
+    },
+    {
+      "name": "before it starts, it counts to the start, within a day",
+      "at": "07:00",
+      "days": {
+        "0": {
+          "shift": "day"
+        }
+      },
+      "expected": {
+        "on": null,
+        "next": [0, "09:00", 0, "18:00"],
+        "nextInDays": null,
+        "refresh": [0, "09:00"]
+      }
+    },
+    {
+      "name": "the end is not still on",
+      "at": "18:00",
+      "days": {
+        "0": {
+          "shift": "day"
+        },
+        "1": {
+          "shift": "day"
+        }
+      },
+      "expected": {
+        "on": null,
+        "next": [1, "09:00", 1, "18:00"],
+        "nextInDays": null,
+        "refresh": [1, "00:00"]
+      }
+    },
+    {
+      "name": "yesterday's 当番 is on until this morning",
+      "at": "07:00",
+      "days": {
+        "-1": {
+          "shift": "duty"
+        },
+        "0": {
+          "shift": "offDuty"
+        },
+        "2": {
+          "shift": "duty"
+        }
+      },
+      "expected": {
+        "on": [-1, "08:30", 0, "08:30"],
+        "next": [2, "08:30", 3, "08:30"],
+        "nextInDays": 2,
+        "refresh": [0, "08:30"]
+      }
+    },
+    {
+      "name": "a night shift runs past midnight",
+      "at": "23:00",
+      "days": {
+        "0": {
+          "shift": "night"
+        }
+      },
+      "expected": {
+        "on": [0, "16:30", 1, "09:30"],
+        "next": null,
+        "nextInDays": null,
+        "refresh": [1, "00:00"]
+      }
+    },
+    {
+      "name": "a day's own hours count, 早出 from its new start",
+      "at": "07:30",
+      "days": {
+        "0": {
+          "shift": "day",
+          "start": "07:00"
+        }
+      },
+      "expected": {
+        "on": [0, "07:00", 0, "18:00"],
+        "next": null,
+        "nextInDays": null,
+        "refresh": [0, "18:00"]
+      }
+    },
+    {
+      "name": "more than a day off, it says the day, and turns to counting a day before",
+      "at": "10:00",
+      "days": {
+        "0": {
+          "shift": "off"
+        },
+        "3": {
+          "shift": "day"
+        }
+      },
+      "expected": {
+        "on": null,
+        "next": [3, "09:00", 3, "18:00"],
+        "nextInDays": 3,
+        "refresh": [1, "00:00"]
+      }
+    },
+    {
+      "name": "a day before it, the words turn to counting",
+      "at": "20:00",
+      "days": {
+        "0": {
+          "shift": "off"
+        },
+        "1": {
+          "shift": "night"
+        }
+      },
+      "expected": {
+        "on": null,
+        "next": [1, "16:30", 2, "09:30"],
+        "nextInDays": null,
+        "refresh": [1, "00:00"]
+      }
+    },
+    {
+      "name": "days off and shifts without hours are time off",
+      "at": "10:00",
+      "days": {
+        "0": {
+          "shift": "after"
+        },
+        "1": {
+          "shift": "off"
+        }
+      },
+      "expected": {
+        "on": null,
+        "next": null,
+        "nextInDays": null,
+        "refresh": [1, "00:00"]
       }
     }
   ]

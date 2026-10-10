@@ -45,6 +45,9 @@ export type WidgetDay = {
   // "9:00 – 18:00", when the shift has a time. Read aloud, not shown:
   // a shift's hours are the same day after day.
   time?: string;
+  // The day's own start and end, else its pattern's, "HH:MM", for a shift
+  // with hours: いまのシフト counts by them.
+  hours?: { start: string; end: string };
   // What is shown instead, and only on a day whose hours differ from its
   // pattern's: "早出 7:00〜", "残業 〜20:00", or the hours alone where
   // both moved and for new hours.
@@ -104,9 +107,30 @@ export type WidgetPair = {
   days: { theirs?: WidgetPersonDay; together: boolean }[];
 };
 
+// A shift with hours, as a stretch of the clock: from its day's start to
+// its end, the next day where the end comes at or before the start.
+export type WidgetSpan = { day: WidgetDay; start: Date; end: Date };
+
+// いまのシフト: the shift on at `at`, else the next with hours, as far as
+// widgetRules.shiftLookaheadDays. Days off and shifts without hours (明け)
+// are not counted: they are time off. `refresh` is when the entry is made
+// again: as the shift ends or the next starts, a day before it starts,
+// when the words turn from a day to a countdown, and at midnight.
+export type WidgetNow = {
+  at: Date;
+  on?: WidgetSpan;
+  next?: WidgetSpan;
+  // Whole days from today to the next shift's day, when it is more than
+  // countdownHours off; within them the words count down instead.
+  nextInDays?: number;
+  refresh: Date;
+};
+
 export type WidgetEntry = {
   // When the entry is for; a new one starts each day at midnight.
   date: Date;
+  // いまのシフト, worked out at the moment the entry is made.
+  now: WidgetNow;
   // The person has entered no day at all yet, as on first opening the
   // app: the widgets then say where their days will come from.
   nothingEntered: boolean;
@@ -197,12 +221,18 @@ function widgetDay(
   const pattern = entry && book[entry.shift];
   const moved = timeChangeOf(entry, pattern);
   const time = entry && timeRange(entry, pattern);
+  const standard = pattern?.time;
+  const hours =
+    entry && standard
+      ? { end: entry.end ?? standard[1], start: entry.start ?? standard[0] }
+      : undefined;
   return {
     change: changeOf(time, moved),
     color: pattern?.color,
     date,
     early: moved?.early ?? false,
     holiday: week.colored.holiday && holidayName(date) !== undefined,
+    hours,
     late: moved?.late ?? false,
     name: pattern?.name,
     noted: Boolean(entry?.note),
@@ -211,6 +241,75 @@ function widgetDay(
     time,
     tone: dateToneOf(date, week.colored),
     weekday: weekdayNames[date.getDay()] ?? "",
+  };
+}
+
+const hourMilliseconds = 3_600_000;
+
+// The day at a clock time, "HH:MM".
+function atClock(date: Date, clock: string) {
+  const [hours = 0, minutes = 0] = clock.split(":").map(Number);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    hours,
+    minutes
+  );
+}
+
+// A working day's shift as a stretch of the clock; none for a day off or a
+// shift without hours.
+function spanOf(day: WidgetDay): WidgetSpan | undefined {
+  if (day.off || !day.hours) {
+    return undefined;
+  }
+  const start = atClock(day.date, day.hours.start);
+  let end = atClock(day.date, day.hours.end);
+  if (end <= start) {
+    end = atClock(addDays(day.date, 1), day.hours.end);
+  }
+  return { day, end, start };
+}
+
+// Whole days between two dates, as a calendar counts them.
+function daysBetween(from: Date, to: Date) {
+  const day = (date: Date) =>
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.round((day(to) - day(from)) / (hourMilliseconds * 24));
+}
+
+// いまのシフト at `at`: yesterday's shift may still be on past midnight.
+function nowOf(at: Date, dayAt: (inDays: number) => WidgetDay): WidgetNow {
+  const spans: WidgetSpan[] = [];
+  for (let inDays = -1; inDays <= widgetRules.shiftLookaheadDays; inDays += 1) {
+    const span = spanOf(dayAt(inDays));
+    if (span) {
+      spans.push(span);
+    }
+  }
+  const on = spans.find(({ start, end }) => start <= at && at < end);
+  const next = spans.find(({ start }) => start > at);
+  const today = new Date(at.getFullYear(), at.getMonth(), at.getDate());
+  const midnight = addDays(today, 1);
+  const countdown = widgetRules.countdownHours * hourMilliseconds;
+  const turns = [midnight, on?.end, next?.start];
+  if (next) {
+    turns.push(new Date(next.start.getTime() - countdown));
+  }
+  let refresh = midnight;
+  for (const turn of turns) {
+    if (turn !== undefined && turn > at && turn < refresh) {
+      refresh = turn;
+    }
+  }
+  const far = next && next.start.getTime() - at.getTime() > countdown;
+  return {
+    at,
+    next,
+    nextInDays: far ? daysBetween(today, next.start) : undefined,
+    on,
+    refresh,
   };
 }
 
@@ -356,6 +455,9 @@ export function widgetEntry(
     },
     nothingEntered: !Object.values(schedule).some(
       (day) => day?.shift !== undefined
+    ),
+    now: nowOf(now, (inDays) =>
+      widgetDay(addDays(date, inDays), schedule, week, book)
     ),
     offs: offsFrom(
       today,

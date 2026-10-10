@@ -27,6 +27,8 @@ export const widgetVariantOptions = {
       { label: "早出と残業", value: "earlyLate" },
       { label: "休み", value: "off" },
       { label: "明日休み", value: "offTomorrow" },
+      { label: "当番", value: "duty" },
+      { label: "当番明けの非番", value: "afterDuty" },
       { label: "未入力", value: "blank" },
       { label: "何も入れていない", value: "empty" },
     ],
@@ -39,9 +41,21 @@ export const widgetVariantOptions = {
       { label: "次の休み", value: "nextOff" },
       { label: "これから", value: "upcoming" },
       { label: "カレンダー", value: "calendar" },
+      { label: "いまのシフト", value: "now" },
       { label: "ロック画面", value: "lock" },
     ],
     label: "種類",
+  },
+  // The time the widgets are looked at, for いまのシフト: before the
+  // day's shift, during it, and after it; tHHMM, as a URL keeps a value
+  // of digits alone as a number.
+  clock: {
+    choices: [
+      { label: "6:45", value: "t0645" },
+      { label: "10:00", value: "t1000" },
+      { label: "19:00", value: "t1900" },
+    ],
+    label: "時刻",
   },
   language: {
     choices: [
@@ -136,6 +150,7 @@ export type WidgetVariants = {
 export const widgetVariantKeys: WidgetVariantKey[] = [
   "kind",
   "day",
+  "clock",
   "companion",
   "month",
   "platform",

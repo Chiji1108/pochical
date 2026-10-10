@@ -646,6 +646,77 @@ describe("spec/vectors/widgets.json", () => {
   }
 });
 
+describe("spec/vectors/widgets.json いまのシフト", () => {
+  // A Monday with no holiday near it, as the other widget vectors.
+  const monday = dayOf("2026-10-05");
+  const book: PatternBook = {
+    after: patternOf({ id: "after" }),
+    day: patternOf({ id: "day", time: ["09:00", "18:00"] }),
+    duty: patternOf({ id: "duty", time: ["08:30", "08:30"] }),
+    night: patternOf({ id: "night", time: ["16:30", "09:30"] }),
+    off: patternOf({ countsAsOff: true, id: "off" }),
+    offDuty: patternOf({ id: "offDuty" }),
+  };
+  const at = (inDays: number, clock: string) => {
+    const [hours = 0, minutes = 0] = clock.split(":").map(Number);
+    const day = addDays(monday, inDays);
+    day.setHours(hours, minutes, 0, 0);
+    return day;
+  };
+  // [start offset, start, end offset, end] as the vectors write a span.
+  const written = (span?: { start: Date; end: Date }) => {
+    if (!span) {
+      return null;
+    }
+    const clock = (date: Date) =>
+      `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    const offset = (date: Date) =>
+      Math.round(
+        (new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate()
+        ).getTime() -
+          monday.getTime()) /
+          dayMilliseconds
+      );
+    return [
+      offset(span.start),
+      clock(span.start),
+      offset(span.end),
+      clock(span.end),
+    ];
+  };
+  for (const { name, expected, ...now } of widgets.now) {
+    test(name, () => {
+      const schedule: Schedule = {};
+      const days: Record<string, { shift: string; start?: string }> = now.days;
+      for (const [inDays, day] of Object.entries(days)) {
+        schedule[dateKey(addDays(monday, Number(inDays)))] = {
+          shift: day.shift,
+          start: day.start,
+        };
+      }
+      const entry = widgetEntry(
+        schedule,
+        defaultWeekSettings,
+        at(0, now.at),
+        book
+      );
+      const refresh = written({
+        end: entry.now.refresh,
+        start: entry.now.refresh,
+      });
+      expect({
+        next: written(entry.now.next),
+        nextInDays: entry.now.nextInDays ?? null,
+        on: written(entry.now.on),
+        refresh: refresh && [refresh[0], refresh[1]],
+      }).toEqual(expected);
+    });
+  }
+});
+
 describe("spec/vectors/hlc.json", () => {
   for (const { name, last, now, expected } of hlc.tick) {
     test(name, () => {
