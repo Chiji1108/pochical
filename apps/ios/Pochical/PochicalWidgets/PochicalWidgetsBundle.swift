@@ -6,5 +6,7 @@ import WidgetKit
 struct PochicalWidgetsBundle: WidgetBundle {
   var body: some Widget {
     SimpleWidget()
+    UpcomingWidget()
+    CalendarWidget()
   }
 }

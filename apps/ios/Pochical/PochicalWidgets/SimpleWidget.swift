@@ -61,7 +61,7 @@ private struct SimpleDay: View {
   var label: String?
 
   var body: some View {
-    let said = day.pattern == nil || day.change != nil
+    let said = day.news != nil
     var size: CGFloat = said ? 48 : 60
     let named = names && day.pattern != nil
     if named { size -= 8 }
@@ -73,42 +73,19 @@ private struct SimpleDay: View {
             .tracking(english ? 1.3 : 0)
             .foregroundStyle(colors.textSecondary)
         } else {
-          Text(dateText)
+          Text(day.shortDate(english: english))
             .font(.headline.weight(.bold))
             .foregroundStyle(colors.textPrimary)
         }
       }
       .lineLimit(1)
       .frame(height: 22)
-      .background(alignment: .bottom) {
-        // A memo: the calendar's stroke under the date; its words are the
-        // app's to show.
-        if day.noted {
-          RoundedRectangle(cornerRadius: Radius.xxs)
-            .fill(colors.calendarNoteMarker)
-            .frame(height: 7)
-            .padding(.horizontal, -3)
-            .offset(y: -4)
-        }
-      }
-      VStack(spacing: 2) {
-        if let pattern = day.pattern {
-          ShiftMark(pattern: pattern, size: size, change: day.timeChange)
-          if named {
-            Text(dayName(pattern.name))
-              .font(.system(size: 11))
-              .foregroundStyle(colors.textSecondary)
-              .lineLimit(1)
-          }
-        } else {
-          Text("–")
-            .font(.system(size: size * 0.5))
-            .foregroundStyle(colors.textTertiary)
-            .frame(width: size, height: size)
-        }
-      }
+      // A memo: the calendar's stroke under the date; its words are the
+      // app's to show.
+      .noteStroke(day.noted, offset: -4)
+      WidgetMark(day: day, size: size, named: named, large: true)
       if said {
-        Text(day.pattern == nil ? "予定なし" : day.change ?? "")
+        Text(day.news ?? "")
           .font(.subheadline.monospacedDigit())
           .foregroundStyle(colors.textSecondary)
           .lineLimit(1)
@@ -116,26 +93,7 @@ private struct SimpleDay: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(spoken)
-  }
-
-  private var dateText: String {
-    english
-      ? "\(day.date.shortMonth(english: true)) \(day.date.day)."
-      : day.date.monthDayText
-  }
-
-  /// The whole day read aloud: its date, the shift and its hours, in the
-  /// language its date is shown in (Sat, Oct 10).
-  private var spoken: String {
-    let date =
-      english
-      ? "\(day.date.weekdayName(english: true)), \(day.date.shortMonth(english: true)) \(day.date.day)"
-      : day.date.fullText
-    let parts = [date, day.pattern?.name ?? "予定なし"] + [day.time].compactMap { $0 }
-    let memo = day.noted ? (english ? "memo" : "メモあり") : nil
-    return (parts + [memo].compactMap { $0 }).joined(separator: english ? ", " : "、")
+    .modifier(SpokenDay(day: day))
   }
 }
 
