@@ -98,7 +98,7 @@ public  final class PreferenceValue extends
   /**
    * <pre>
    * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: back to the apps' own default.
+   * most. Unset: none kept, so each device keeps its own.
    * </pre>
    *
    * <code>optional string value = 2 [json_name = "value"];</code>
@@ -111,7 +111,7 @@ public  final class PreferenceValue extends
   /**
    * <pre>
    * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: back to the apps' own default.
+   * most. Unset: none kept, so each device keeps its own.
    * </pre>
    *
    * <code>optional string value = 2 [json_name = "value"];</code>
@@ -124,7 +124,7 @@ public  final class PreferenceValue extends
   /**
    * <pre>
    * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: back to the apps' own default.
+   * most. Unset: none kept, so each device keeps its own.
    * </pre>
    *
    * <code>optional string value = 2 [json_name = "value"];</code>
@@ -138,7 +138,7 @@ public  final class PreferenceValue extends
   /**
    * <pre>
    * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: back to the apps' own default.
+   * most. Unset: none kept, so each device keeps its own.
    * </pre>
    *
    * <code>optional string value = 2 [json_name = "value"];</code>
@@ -153,7 +153,7 @@ public  final class PreferenceValue extends
   /**
    * <pre>
    * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: back to the apps' own default.
+   * most. Unset: none kept, so each device keeps its own.
    * </pre>
    *
    * <code>optional string value = 2 [json_name = "value"];</code>
@@ -165,7 +165,7 @@ public  final class PreferenceValue extends
   /**
    * <pre>
    * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: back to the apps' own default.
+   * most. Unset: none kept, so each device keeps its own.
    * </pre>
    *
    * <code>optional string value = 2 [json_name = "value"];</code>
@@ -401,7 +401,7 @@ public  final class PreferenceValue extends
     /**
      * <pre>
      * As the apps write it, JSON, syncLimits.preferenceLength characters at
-     * most. Unset: back to the apps' own default.
+     * most. Unset: none kept, so each device keeps its own.
      * </pre>
      *
      * <code>optional string value = 2 [json_name = "value"];</code>
@@ -414,7 +414,7 @@ public  final class PreferenceValue extends
     /**
      * <pre>
      * As the apps write it, JSON, syncLimits.preferenceLength characters at
-     * most. Unset: back to the apps' own default.
+     * most. Unset: none kept, so each device keeps its own.
      * </pre>
      *
      * <code>optional string value = 2 [json_name = "value"];</code>
@@ -427,7 +427,7 @@ public  final class PreferenceValue extends
     /**
      * <pre>
      * As the apps write it, JSON, syncLimits.preferenceLength characters at
-     * most. Unset: back to the apps' own default.
+     * most. Unset: none kept, so each device keeps its own.
      * </pre>
      *
      * <code>optional string value = 2 [json_name = "value"];</code>
@@ -441,7 +441,7 @@ public  final class PreferenceValue extends
     /**
      * <pre>
      * As the apps write it, JSON, syncLimits.preferenceLength characters at
-     * most. Unset: back to the apps' own default.
+     * most. Unset: none kept, so each device keeps its own.
      * </pre>
      *
      * <code>optional string value = 2 [json_name = "value"];</code>
@@ -457,7 +457,7 @@ public  final class PreferenceValue extends
     /**
      * <pre>
      * As the apps write it, JSON, syncLimits.preferenceLength characters at
-     * most. Unset: back to the apps' own default.
+     * most. Unset: none kept, so each device keeps its own.
      * </pre>
      *
      * <code>optional string value = 2 [json_name = "value"];</code>
@@ -471,7 +471,7 @@ public  final class PreferenceValue extends
     /**
      * <pre>
      * As the apps write it, JSON, syncLimits.preferenceLength characters at
-     * most. Unset: back to the apps' own default.
+     * most. Unset: none kept, so each device keeps its own.
      * </pre>
      *
      * <code>optional string value = 2 [json_name = "value"];</code>

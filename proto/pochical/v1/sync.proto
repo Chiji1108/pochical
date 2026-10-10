@@ -473,7 +473,7 @@ message PreferenceValue {
   // Which preference, as the apps name it: an id (syncLimits.idLength).
   string key = 1;
   // As the apps write it, JSON, syncLimits.preferenceLength characters at
-  // most. Unset: back to the apps' own default.
+  // most. Unset: none kept, so each device keeps its own.
   optional string value = 2;
   Hlc hlc = 3;
 }

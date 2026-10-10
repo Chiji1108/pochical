@@ -1544,7 +1544,7 @@ public nonisolated struct Pochical_V1_PreferenceValue: Sendable {
   public var key: String = String()
 
   /// As the apps write it, JSON, syncLimits.preferenceLength characters at
-  /// most. Unset: back to the apps' own default.
+  /// most. Unset: none kept, so each device keeps its own.
   public var value: String {
     get {_value ?? String()}
     set {_value = newValue}

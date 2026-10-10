@@ -1557,7 +1557,7 @@ export type PreferenceValue = Message<"pochical.v1.PreferenceValue"> & {
 
   /**
    * As the apps write it, JSON, syncLimits.preferenceLength characters at
-   * most. Unset: back to the apps' own default.
+   * most. Unset: none kept, so each device keeps its own.
    *
    * @generated from field: optional string value = 2;
    */
