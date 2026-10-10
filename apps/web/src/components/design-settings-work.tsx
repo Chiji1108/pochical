@@ -157,7 +157,7 @@ function RepeatList({
     <>
       {/* Over the newest first, where a new period mostly lands. */}
       <List>
-        <AddRow label="新しい繰り返しを追加" onClick={onNew} />
+        <AddRow label="新しい繰り返しを追加" onClick={onNew} opensPage />
         <ListRow
           label="繰り返しをやめる"
           leading={<CircleSlash aria-hidden="true" size={20} />}

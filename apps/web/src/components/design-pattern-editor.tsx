@@ -273,6 +273,7 @@ export function PatternsPage({
         <List>
           <AddRow
             label="パターンを追加"
+            opensPage
             onClick={() => {
               setView("add");
             }}
