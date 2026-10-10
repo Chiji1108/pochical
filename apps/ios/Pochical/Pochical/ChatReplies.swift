@@ -71,36 +71,39 @@ private struct QuoteThumbnail: View {
   }
 }
 
-/// Over the composer while answering a line: whom, what, and × to stop,
-/// as the bar for editing one's own line is drawn.
-struct ReplyBar: View {
+/// A bar over the composer, as /design's quote: a rule in the accent, what
+/// it is quiet over what it holds, a picture small at the end when there
+/// is one, and × to stop. Answering a line, editing one's own, and a
+/// link's page all take it.
+struct ComposerBar<Picture: View>: View {
   @Environment(\.themeColors) private var colors
-  let quote: LineQuote
-  let groupID: String
+  let title: String
+  let words: String
+  let stop: String
   let onStop: () -> Void
+  @ViewBuilder let picture: () -> Picture
 
   var body: some View {
     HStack(spacing: 8) {
       VStack(alignment: .leading, spacing: 2) {
-        Text("\(quote.writer ?? "メンバー")に返信")
-          .font(.caption.weight(.semibold))
-          .foregroundStyle(colors.accentDefault)
-        Text(quote.words)
-          .font(.footnote)
-          .foregroundStyle(colors.textSecondary)
+        Text(title)
+          .font(.caption2.weight(.semibold))
+          .foregroundStyle(colors.textTertiary)
+          .lineLimit(1)
+        Text(words)
+          .font(.caption)
+          .foregroundStyle(colors.textQuaternary)
           .lineLimit(1)
       }
-      .padding(.leading, 10)
+      .padding(.leading, 12)
       .overlay(alignment: .leading) {
         RoundedRectangle(cornerRadius: Radius.xxs)
           .fill(colors.accentDefault)
           .frame(width: 3)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      if let photo = quote.photo {
-        QuoteThumbnail(photo: photo, groupID: groupID)
-      }
-      Button("返信をやめる", systemImage: "xmark", action: onStop)
+      picture()
+      Button(stop, systemImage: "xmark", action: onStop)
         .labelStyle(.iconOnly)
         .font(.footnote.weight(.semibold))
         .foregroundStyle(colors.textSecondary)
@@ -109,5 +112,29 @@ struct ReplyBar: View {
     .padding(.leading, 16)
     .padding(.trailing, 4)
     .padding(.top, 4)
+  }
+}
+
+extension ComposerBar where Picture == EmptyView {
+  init(title: String, words: String, stop: String, onStop: @escaping () -> Void) {
+    self.init(title: title, words: words, stop: stop, onStop: onStop) { EmptyView() }
+  }
+}
+
+/// Over the composer while answering a line: whom, what, and × to stop.
+struct ReplyBar: View {
+  let quote: LineQuote
+  let groupID: String
+  let onStop: () -> Void
+
+  var body: some View {
+    ComposerBar(
+      title: "\(quote.writer ?? "メンバー")に返信", words: quote.words, stop: "返信をやめる",
+      onStop: onStop
+    ) {
+      if let photo = quote.photo {
+        QuoteThumbnail(photo: photo, groupID: groupID)
+      }
+    }
   }
 }

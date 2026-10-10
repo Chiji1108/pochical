@@ -120,6 +120,7 @@ struct ChatScreen: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.groupSocket) private var socket
   @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.openGroupRoute) private var openGroupRoute
   @Dependency(\.defaultDatabase) private var database
   @Fetch private var chat = ChatRequest.Value()
   /// Everyone with their shifts over the days the chat's lines share.
@@ -325,29 +326,43 @@ struct ChatScreen: View {
     .toolbarVisibility(.visible, for: .navigationBar)
     .toolbarVisibility(.hidden, for: .tabBar)
     .toolbar {
-      // The title drawn here only to carry 通知オフ's bell after it, which
-      // the bar's own title does not draw.
+      // The title drawn here to carry 通知オフ's bell after it, which the
+      // bar's own title does not draw, and to open what the chat is of:
+      // the group's settings, or the other member's profile.
       ToolbarItem(placement: .principal) {
-        VStack(spacing: 0) {
-          HStack(spacing: 4) {
-            Text(title).font(.headline).lineLimit(1)
-            if isMuted {
-              Image(systemName: "bell.slash")
-                .font(.caption)
+        Button(action: openTitle) {
+          VStack(spacing: 0) {
+            HStack(spacing: 4) {
+              Text(title).font(.headline).lineLimit(1)
+              if isMuted {
+                Image(systemName: "bell.slash")
+                  .font(.caption)
+                  .foregroundStyle(colors.textTertiary)
+                  .accessibilityLabel("通知オフ")
+              }
+            }
+            if otherID == nil {
+              Text("\(chat.writers.count { !$0.left })人")
+                .font(.caption2)
                 .foregroundStyle(colors.textTertiary)
-                .accessibilityLabel("通知オフ")
             }
           }
-          Text(subtitle)
-            .font(.caption)
-            .foregroundStyle(colors.textSecondary)
-            .lineLimit(1)
+          .foregroundStyle(colors.textPrimary)
+          .contentShape(.rect)
         }
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
+        .accessibilityHint(otherID == nil ? "押すとグループの設定" : "押すとプロフィール")
       }
       ToolbarItem(placement: .primaryAction) {
         Menu("チャットのメニュー", systemImage: "ellipsis") {
+          if otherID == nil {
+            Button("みんなのシフト", systemImage: "calendar") {
+              openGroupRoute(.shifts(group, day: nil))
+            }
+            Divider()
+          }
           let muted = isMuted
           Button(
             muted ? "通知をオンにする" : "通知をオフにする",
@@ -454,16 +469,16 @@ struct ChatScreen: View {
     }
     .modifier(
       ReportAndBlock(
-        groupID: group.id, groupName: group.name, blocked: blocked, reporting: $reporting,
-        profileOf: $profileOf, blockQuestion: $blockQuestion, onReported: reported,
-        onSetBlocked: setBlocked))
+        groupID: group.id, groupName: group.name, groupMark: group.mark, blocked: blocked,
+        reporting: $reporting, profileOf: $profileOf, blockQuestion: $blockQuestion,
+        onMessage: message(_:), onReported: reported, onSetBlocked: setBlocked))
     .sheet(item: $deciding) { line in
       DecidePollSheet(days: line.days, votes: line.votes, decided: line.decided) { day in
         decide(line, on: day)
       }
     }
     .sheet(item: $reactingTo) { line in
-      EmojiKeyboardSheet { react($0, on: line) }
+      EmojiKeyboardSheet(title: "リアクション") { react($0, on: line) }
     }
     .sheet(item: $browsing) { link in
       SafariView(url: link.url).ignoresSafeArea()
@@ -742,46 +757,25 @@ struct ChatScreen: View {
       : trimmed.isEmpty || unchanged
     return VStack(spacing: 0) {
       mentionList
-      if editing == nil, !pickedPhotos.isEmpty {
-        PhotoTray(photos: $pickedPhotos)
-      }
-      if let composerPreview, !composerPreview.none, composerPreview.url != previewRemoved {
-        ComposerPreviewBar(state: composerPreview) {
-          withAnimation { previewRemoved = composerPreview.url }
-        }
+      // What the message is, then what goes with it, the photos last
+      // nearest the field, as /design's.
+      if let editing {
+        ComposerBar(
+          title: "メッセージを編集", words: plainText(editing.text, nameOf: nameOf),
+          stop: "編集をやめる", onStop: stopEditing)
       }
       if editing == nil, let replying {
         ReplyBar(quote: quote(of: replying.seq), groupID: group.id) {
           withAnimation { self.replying = nil }
         }
       }
-      if let editing {
-        HStack(spacing: 8) {
-          VStack(alignment: .leading, spacing: 2) {
-            Text("メッセージを編集")
-              .font(.caption.weight(.semibold))
-              .foregroundStyle(colors.accentDefault)
-            Text(plainText(editing.text, nameOf: nameOf))
-              .font(.footnote)
-              .foregroundStyle(colors.textSecondary)
-              .lineLimit(1)
-          }
-          .padding(.leading, 10)
-          .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: Radius.xxs)
-              .fill(colors.accentDefault)
-              .frame(width: 3)
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
-          Button("編集をやめる", systemImage: "xmark") { stopEditing() }
-            .labelStyle(.iconOnly)
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(colors.textSecondary)
-            .frame(width: Metrics.touch, height: Metrics.touch)
+      if let composerPreview, !composerPreview.none, composerPreview.url != previewRemoved {
+        ComposerPreviewBar(state: composerPreview) {
+          withAnimation { previewRemoved = composerPreview.url }
         }
-        .padding(.leading, 16)
-        .padding(.trailing, 4)
-        .padding(.top, 4)
+      }
+      if editing == nil, !pickedPhotos.isEmpty {
+        PhotoTray(photos: $pickedPhotos)
       }
       HStack(alignment: .bottom, spacing: 8) {
         if editing == nil {
@@ -931,7 +925,13 @@ struct ChatScreen: View {
   /// A link tapped in a line: Pochical's invitations on their join
   /// screen, other pages in the browser sheet over the chat.
   private func open(_ url: URL) -> OpenURLAction.Result {
-    if let code = inviteCode(of: url) {
+    if let mentioned = mentioned(by: url) {
+      // The reader's own opens nothing.
+      if mentioned != meID {
+        profileOf = ProfileOf(
+          id: mentioned, name: names[mentioned] ?? "メンバー", photoID: faces[mentioned] ?? "")
+      }
+    } else if let code = inviteCode(of: url) {
       openInvite(code)
     } else {
       browsing = OpenedLink(url: url)
@@ -1085,9 +1085,24 @@ struct ChatScreen: View {
     otherID.flatMap { names[$0] } ?? group.name
   }
 
-  /// How many are in the group's chat, or the group a one-to-one chat is in.
-  private var subtitle: String {
-    otherID == nil ? "\(chat.writers.count { !$0.left })人" : group.name
+  /// The group's settings from 全体チャット's title, the other member's
+  /// profile from a one-to-one chat's.
+  private func openTitle() {
+    guard let otherID else {
+      openGroupRoute(.settings(group))
+      return
+    }
+    profileOf = ProfileOf(
+      id: otherID, name: names[otherID] ?? "メンバー", photoID: faces[otherID] ?? "")
+  }
+
+  /// The one-to-one chat with someone, from their profile; none for the
+  /// one open already.
+  private func message(_ person: ProfileOf) -> (() -> Void)? {
+    guard person.id != otherID, let meID else { return nil }
+    return {
+      openGroupRoute(.chat(group, thread: directThread(meID, person.id), with: person.id))
+    }
   }
 
   /// Turns this chat's notifications off or on, and says so.
@@ -1317,6 +1332,7 @@ struct ChatScreen: View {
   private func copy(_ text: String) -> MessageAction {
     MessageAction(title: "コピー", systemImage: "doc.on.doc") {
       UIPasteboard.general.string = plainText(text, nameOf: nameOf)
+      say("コピーしました")
     }
   }
 
@@ -1534,7 +1550,7 @@ private struct LineView: View {
         }
         if failed {
           Text("送れませんでした")
-            .font(.caption)
+            .font(.caption2)
             .foregroundStyle(colors.dangerDefault)
             .accessibilityHidden(true)
         }
@@ -1744,7 +1760,7 @@ struct MessageBubble: View {
       }
       // An invitation's card takes the place of the one page.
       if let invitation {
-        InviteCard(code: invitation, mine: mine)
+        InviteCard(code: invitation)
       } else if let preview {
         LinkPreviewCard(preview: preview, mine: mine)
       }
@@ -1767,9 +1783,11 @@ struct MessageBubble: View {
     var words = AttributedString()
     for part in textParts(text) {
       var piece = AttributedString(part.mention.map { "@\(nameOf($0))" } ?? part.text)
-      if part.mention != nil {
+      if let mentioned = part.mention {
         piece.font = .body.weight(.semibold)
-        if !mine { piece.foregroundColor = colors.accentDefault }
+        piece.foregroundColor = mine ? colors.accentOnFill : colors.accentDefault
+        // Opens their profile, as a link would (spec/chat.md, Mentions).
+        piece.link = mentionLink(mentioned)
       } else if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
         piece.link = link
         piece.underlineStyle = .single
@@ -1780,6 +1798,22 @@ struct MessageBubble: View {
   }
 
 }
+
+/// A mention's link in a message's words, which the chat opens as the
+/// member's profile rather than as a page.
+private func mentionLink(_ userID: String) -> URL? {
+  var parts = URLComponents()
+  parts.scheme = mentionScheme
+  parts.path = userID
+  return parts.url
+}
+
+/// The member a mention's link names.
+private func mentioned(by url: URL) -> String? {
+  url.scheme == mentionScheme ? url.path : nil
+}
+
+private let mentionScheme = "pochical-mention"
 
 /// A bubble's outline: round all over, but the first of a run, as LINE
 /// and WhatsApp draw one: its top corner by the writer's side drawn in, by
@@ -1811,10 +1845,13 @@ private struct ProfileOf: Identifiable {
 private struct ReportAndBlock: ViewModifier {
   let groupID: String
   let groupName: String
+  let groupMark: GroupMarkValue
   let blocked: Set<String>
   @Binding var reporting: ReportTarget?
   @Binding var profileOf: ProfileOf?
   @Binding var blockQuestion: BlockQuestion?
+  /// Opens the one-to-one chat with someone, when it is not the one open.
+  let onMessage: (ProfileOf) -> (() -> Void)?
   let onReported: (ReportTarget) -> Void
   let onSetBlocked: (BlockQuestion) -> Void
   /// What follows once a sheet has gone: one cannot come up while another
@@ -1829,7 +1866,8 @@ private struct ReportAndBlock: ViewModifier {
       .sheet(item: $profileOf, onDismiss: runNext) { person in
         MemberProfileSheet(
           name: person.name, photoID: person.photoID, groupName: groupName,
-          blocked: blocked.contains(person.id),
+          groupMark: groupMark, blocked: blocked.contains(person.id),
+          onMessage: onMessage(person).map { open in { next = open } },
           onReport: { next = { reporting = .member(id: person.id, name: person.name) } },
           onBlock: {
             next = {

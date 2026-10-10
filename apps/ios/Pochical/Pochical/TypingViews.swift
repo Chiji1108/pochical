@@ -2,7 +2,8 @@ import PochicalDesign
 import SwiftUI
 
 /// Someone writing, under the latest line (spec/chat.md, Unread lines and
-/// typing): three dots rising in turn, in a bubble of the others' kind with
+/// typing): three dots brightening and rising in turn, as /design's, in a
+/// bubble of the others' kind with
 /// their face. A screen reader hears 〇〇が入力中.
 struct TypingLine: View {
   @Environment(\.themeColors) private var colors
@@ -18,13 +19,14 @@ struct TypingLine: View {
           ForEach(0..<3, id: \.self) { dot in
             Circle()
               .fill(colors.textTertiary)
-              .frame(width: 7, height: 7)
+              .frame(width: 6, height: 6)
+              .opacity(reduceMotion || dot == phase ? 1 : 0.35)
               .offset(y: !reduceMotion && dot == phase ? -3 : 0)
           }
         }
-      } animation: { _ in .easeInOut(duration: 0.3) }
-      .padding(.horizontal, 14)
-      .padding(.vertical, 13)
+      } animation: { _ in .easeInOut(duration: 0.4) }
+      .padding(.horizontal, 16)
+      .frame(height: 36)
       .background(colors.fillTertiary, in: BubbleShape(mine: false, first: true))
       Spacer(minLength: 0)
     }

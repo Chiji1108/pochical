@@ -240,6 +240,9 @@ export function InviteCard({
   );
 }
 
+// How far in from a reply's bubble its photo sits (chatStyle.photoInBubble).
+const photoInset = 4;
+
 // A photo in a chat, as the messaging apps show one: in its own shape
 // with no bubble, unless it answers a line, when the quote's bubble holds
 // it. A tap opens it large, with 保存; its reactions and menu (with 保存
@@ -270,7 +273,7 @@ export function PhotoLine({
   const open = (
     <button
       aria-label={`${label}。押すと大きく表示、長押しでリアクションと返信`}
-      className={chatStyle.photoButton}
+      className={cx(chatStyle.photoButton, quoted && chatStyle.photoInBubble)}
       onClick={() => {
         setViewing(true);
       }}
@@ -278,7 +281,7 @@ export function PhotoLine({
     >
       <img
         alt=""
-        className={chatStyle.photoImage({ quoted })}
+        className={chatStyle.photoImage}
         draggable={false}
         height={size.height}
         src={photo.src}
@@ -313,7 +316,7 @@ export function PhotoLine({
           quoted ? chatStyle.bubble({ first: true, mine }) : chatStyle.photo
         }
         data-part="bubble"
-        style={{ width: size.width }}
+        style={{ width: quoted ? size.width + photoInset * 2 : size.width }}
       >
         {quote}
         <MessageActions

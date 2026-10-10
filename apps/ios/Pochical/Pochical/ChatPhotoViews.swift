@@ -84,12 +84,11 @@ struct PhotoLine: View {
       )
       .overlay {
         if waiting {
+          // Dimmed as a photo's controls are, 送信中 said to screen
+          // readers in the label below.
           ZStack {
-            Color.black.opacity(0.35)
-            VStack(spacing: 6) {
-              ProgressView().tint(.white)
-              Text("送信中").font(.caption).foregroundStyle(.white)
-            }
+            colors.mediaDim
+            ProgressView().tint(colors.mediaText).controlSize(.large)
           }
           .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
         }
@@ -101,12 +100,13 @@ struct PhotoLine: View {
 }
 
 /// A photo opened large (/design's PhotoViewer): whole on black, × to
-/// close, pulled down to close too, and 保存.
+/// close, pulled down to close too, and 保存 for a chat's.
 struct PhotoViewer: View {
   @Environment(\.dismiss) private var dismiss
   let photo: LinePhoto
   let groupID: String
-  let onSave: () -> Void
+  /// None for someone's face, which is theirs to keep.
+  var onSave: (() -> Void)?
   @State private var pull: CGFloat = 0
 
   /// How far a pull down closes it.
@@ -131,13 +131,15 @@ struct PhotoViewer: View {
         .padding(16)
     }
     .overlay(alignment: .bottomTrailing) {
-      Button("保存", systemImage: "square.and.arrow.down", action: onSave)
-        .labelStyle(.iconOnly)
-        .font(.title3.weight(.semibold))
-        .foregroundStyle(.white)
-        .frame(width: Metrics.touch, height: Metrics.touch)
-        .glassEffect(.regular.interactive(), in: .circle)
-        .padding(16)
+      if let onSave {
+        Button("保存", systemImage: "square.and.arrow.down", action: onSave)
+          .labelStyle(.iconOnly)
+          .font(.title3.weight(.semibold))
+          .foregroundStyle(.white)
+          .frame(width: Metrics.touch, height: Metrics.touch)
+          .glassEffect(.regular.interactive(), in: .circle)
+          .padding(16)
+      }
     }
     .gesture(
       DragGesture()
@@ -184,7 +186,7 @@ struct PhotoTray: View {
 
   var body: some View {
     ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 12) {
+      HStack(spacing: 8) {
         ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
           Group {
             if let thumbnail = photo.thumbnail {
@@ -195,15 +197,19 @@ struct PhotoTray: View {
           }
           .frame(width: 64, height: 64)
           .clipShape(RoundedRectangle(cornerRadius: Radius.md))
+          .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.borderDefault))
           .overlay(alignment: .topTrailing) {
+            // On a photo's shade, ringed in the page's ground so it stands
+            // off the picture.
             Button("\(index + 1)枚目の写真を外す", systemImage: "xmark") {
               withAnimation { photos.removeAll { $0.id == photo.id } }
             }
             .labelStyle(.iconOnly)
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(colors.inverseText)
-            .frame(width: 24, height: 24)
-            .background(colors.inverseBackground, in: Circle())
+            .font(.system(size: 10, weight: .heavy))
+            .foregroundStyle(colors.mediaText)
+            .frame(width: 22, height: 22)
+            .background(colors.mediaShade, in: Circle())
+            .overlay(Circle().strokeBorder(colors.backgroundBase, lineWidth: 2))
             .offset(x: 6, y: -6)
           }
         }

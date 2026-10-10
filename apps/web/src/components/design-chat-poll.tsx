@@ -321,9 +321,10 @@ export function DecidePollSheet({
       }}
       open={poll !== undefined}
     >
+      {/* The day it is settled on already would change nothing. */}
       <DecideHeading
         action="決める"
-        disabled={picked === null}
+        disabled={picked === null || picked === poll?.decided}
         onAction={() => {
           if (picked) {
             onDecide(picked);

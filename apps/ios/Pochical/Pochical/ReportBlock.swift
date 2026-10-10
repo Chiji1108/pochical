@@ -133,25 +133,41 @@ struct ReportSheet: View {
 }
 
 /// Someone else in the group, from their face in a chat (/design's member
-/// sheet): their name, ブロック中 while blocked, and 通報 and ブロック in ⋯,
+/// sheet): their face, which opens large when it is a photo, their name,
+/// ブロック中 while blocked, メッセージを送る, and ブロック and 通報 in ⋯
 /// beside ×, not in sight: rarely used, and a family member's profile
-/// should not show it in red.
+/// should not show ブロック in red (spec/chat.md, Reporting and blocking).
 struct MemberProfileSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.photoGroupID) private var groupID
   let name: String
   /// Their photo as the group shows it; empty for none.
   var photoID = ""
   let groupName: String
+  let groupMark: GroupMarkValue
   let blocked: Bool
+  /// Opens the one-to-one chat with them; none from inside it.
+  let onMessage: (() -> Void)?
   let onReport: () -> Void
   let onBlock: () -> Void
   let onUnblock: () -> Void
+  @State private var viewingPhoto = false
 
   var body: some View {
     NavigationStack {
       VStack(spacing: 12) {
-        MemberAvatar(name: name, photoID: photoID, size: 88)
+        if photoID.isEmpty {
+          MemberAvatar(name: name, photoID: photoID, size: 72)
+        } else {
+          Button {
+            viewingPhoto = true
+          } label: {
+            MemberAvatar(name: name, photoID: photoID, size: 72)
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("\(name)の写真を大きく見る")
+        }
         Text(name).font(.title2.bold())
         if blocked {
           Text("ブロック中")
@@ -161,10 +177,30 @@ struct MemberProfileSheet: View {
             .padding(.vertical, 3)
             .background(colors.fillTertiary, in: Capsule())
         }
-        Text("\(groupName)でのプロフィール")
-          .font(.footnote)
-          .foregroundStyle(colors.textTertiary)
+        HStack(spacing: 8) {
+          GroupMarkView(mark: groupMark, size: 14, shelf: groupID)
+            .accessibilityHidden(true)
+          Text("\(groupName)でのプロフィール")
+        }
+        .font(.footnote)
+        .foregroundStyle(colors.textTertiary)
+        if let onMessage, !blocked {
+          Button {
+            onMessage()
+            dismiss()
+          } label: {
+            Label("メッセージを送る", systemImage: "message")
+              .font(.headline)
+              .frame(maxWidth: .infinity, minHeight: Metrics.control)
+          }
+          .buttonStyle(.borderedProminent)
+          .buttonBorderShape(.capsule)
+          .tint(colors.accentFill)
+          .foregroundStyle(colors.accentOnFill)
+          .padding(.top, 8)
+        }
       }
+      .padding(.horizontal, 24)
       .frame(maxWidth: .infinity)
       .padding(.top, 24)
       .frame(maxHeight: .infinity, alignment: .top)
@@ -173,27 +209,31 @@ struct MemberProfileSheet: View {
           Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
         }
         ToolbarItem(placement: .primaryAction) {
-          Menu("その他", systemImage: "ellipsis") {
-            Button("通報", systemImage: "exclamationmark.bubble") {
-              onReport()
-              dismiss()
-            }
+          Menu("\(name)のメニュー", systemImage: "ellipsis") {
             if blocked {
               Button("ブロックを解除", systemImage: "person.crop.circle.badge.checkmark") {
                 onUnblock()
                 dismiss()
               }
             } else {
-              Button("ブロック", systemImage: "nosign", role: .destructive) {
+              Button("ブロック", systemImage: "nosign") {
                 onBlock()
                 dismiss()
               }
+            }
+            Divider()
+            Button("通報", systemImage: "flag", role: .destructive) {
+              onReport()
+              dismiss()
             }
           }
         }
       }
     }
     .presentationDetents([.medium])
+    .fullScreenCover(isPresented: $viewingPhoto) {
+      PhotoViewer(photo: LinePhoto(id: photoID, width: 1, height: 1), groupID: groupID)
+    }
   }
 }
 
@@ -228,17 +268,28 @@ struct BlockedLine: View {
   let onShow: () -> Void
 
   var body: some View {
+    // Not a bubble: a dashed outline where one would be, with 表示 to
+    // show it this once, as /design's.
     Button(action: onShow) {
-      Text("ブロック中のメンバーのメッセージ")
-        .font(.caption)
-        .foregroundStyle(colors.textTertiary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(colors.fillQuaternary, in: Capsule())
+      HStack(spacing: 8) {
+        Text("ブロック中のメンバーのメッセージ")
+          .foregroundStyle(colors.textTertiary)
+        Text("表示")
+          .fontWeight(.semibold)
+          .foregroundStyle(colors.accentDefault)
+      }
+      .font(.footnote)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .overlay(
+        RoundedRectangle(cornerRadius: Radius.lg)
+          .strokeBorder(colors.borderStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
+      .contentShape(.rect)
     }
     .buttonStyle(.plain)
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.leading, 40)
+    .accessibilityElement(children: .combine)
     .accessibilityHint("押すと表示")
   }
 }

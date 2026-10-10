@@ -105,7 +105,7 @@ struct MessageActionsOverlay: View {
   private static var barHeight: CGFloat { 48 }
   private static var gap: CGFloat { 8 }
   private static var menuWidth: CGFloat { 250 }
-  private static var rowHeight: CGFloat { 44 }
+  private static var rowHeight: CGFloat { Metrics.touch }
   private static var groupGap: CGFloat { 8 }
   private static var margin: CGFloat { 12 }
   /// How small a tall bubble is drawn at least; past that its end is cut
@@ -207,7 +207,8 @@ struct MessageActionsOverlay: View {
     // under it through the dimming.
     .background(colors.backgroundElevated, in: Capsule())
     .overlay(Capsule().strokeBorder(colors.borderDefault, lineWidth: 0.5))
-    .shadow(color: colors.shadowMedium, radius: 12, y: 4)
+    // Picked up off the line, as the reactions are (design/src/metrics.ts).
+    .shadow(.md)
   }
 
   private var menu: some View {
@@ -241,7 +242,8 @@ struct MessageActionsOverlay: View {
     .overlay(
       RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.borderDefault, lineWidth: 0.5)
     )
-    .shadow(color: colors.shadowMedium, radius: 12, y: 4)
+    // A card floating free, as a menu is.
+    .shadow(.lg)
   }
 
   // MARK: Placing
