@@ -1157,7 +1157,7 @@ struct ChatScreen: View {
 
   /// To the latest line, by its id: scrolling to the edge would also
   /// move the lines sideways. Lines shorter than the screen are at its
-  /// foot already: scrolling to one there moved it out of sight above.
+  /// foot already: scrolling to one there carried them out of sight.
   private func toLatest() {
     guard !place.fits else { return }
     if let latest = items(chat.state).last {
