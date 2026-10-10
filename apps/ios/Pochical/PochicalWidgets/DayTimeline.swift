@@ -16,53 +16,52 @@ struct DayEntryMoment: TimelineEntry {
 /// entry now, and the next at its turn (midnight, or いまのシフト's).
 struct DayTimeline: TimelineProvider {
   func placeholder(in context: Context) -> DayEntryMoment {
-    sample(at: .now)
+    sample(at: .now, settings: DeviceSettings.kept())
   }
 
   /// The person's own entry once they have entered days, else the sample
   /// week, as the gallery shows before a widget is placed.
   func getSnapshot(in context: Context, completion: @escaping (DayEntryMoment) -> Void) {
-    let moment = own(at: .now)
-    completion(moment.map { $0.entry.nothingEntered ? sample(at: .now) : $0 } ?? sample(at: .now))
+    let settings = DeviceSettings.kept()
+    guard let calendar = ownCalendar(),
+      case let entry = calendar.widgetEntry(at: .now, week: settings.week), !entry.nothingEntered
+    else { return completion(sample(at: .now, settings: settings)) }
+    completion(DayEntryMoment(date: .now, entry: entry, settings: settings))
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<DayEntryMoment>) -> Void) {
     let now = Date.now
-    guard let moment = own(at: now) else {
+    let settings = DeviceSettings.kept()
+    guard let calendar = ownCalendar() else {
       // No database yet: as before anything is entered, until the app
       // makes one and asks again.
-      let settings = DeviceSettings.kept()
       var empty = WidgetEntry.sample(at: now, week: settings.week)
       empty.nothingEntered = true
       completion(Timeline(entries: [DayEntryMoment(date: now, entry: empty, settings: settings)], policy: .never))
       return
     }
-    let refresh = moment.entry.now.refresh
-    var entries = [moment]
-    if let next = own(at: refresh) {
-      entries.append(next)
-    }
-    completion(Timeline(entries: entries, policy: .after(next(after: refresh, entries: entries))))
+    // This entry, and the next at its turn, read from one read of the days.
+    let first = calendar.widgetEntry(at: now, week: settings.week)
+    let refresh = first.now.refresh
+    let next = calendar.widgetEntry(at: refresh, week: settings.week)
+    completion(
+      Timeline(
+        entries: [
+          DayEntryMoment(date: now, entry: first, settings: settings),
+          DayEntryMoment(date: refresh, entry: next, settings: settings),
+        ],
+        // Asked again as the last entry's own turn comes.
+        policy: .after(next.now.refresh)))
   }
 
-  /// When to ask again: as the last entry's own turn comes.
-  private func next(after refresh: Date, entries: [DayEntryMoment]) -> Date {
-    entries.last?.entry.now.refresh ?? refresh
+  /// The person's own calendar, nil until the app has made its database.
+  private func ownCalendar() -> OwnCalendar? {
+    guard let database = try? widgetDatabase() else { return nil }
+    return try? database.read { try OwnCalendar($0) }
   }
 
-  private func own(at date: Date) -> DayEntryMoment? {
-    let settings = DeviceSettings.kept()
-    guard let database = try? widgetDatabase(),
-      let calendar = try? database.read({ try OwnCalendar($0) })
-    else { return nil }
-    return DayEntryMoment(
-      date: date, entry: calendar.widgetEntry(at: date, week: settings.week), settings: settings)
-  }
-
-  private func sample(at date: Date) -> DayEntryMoment {
-    let settings = DeviceSettings.kept()
-    return DayEntryMoment(
-      date: date, entry: .sample(at: date, week: settings.week), settings: settings)
+  private func sample(at date: Date, settings: DeviceSettings) -> DayEntryMoment {
+    DayEntryMoment(date: date, entry: .sample(at: date, week: settings.week), settings: settings)
   }
 }
 

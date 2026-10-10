@@ -126,11 +126,16 @@ private struct SimpleDay: View {
       : day.date.monthDayText
   }
 
-  /// The whole day read aloud: its date, the shift and its hours.
+  /// The whole day read aloud: its date, the shift and its hours, in the
+  /// language its date is shown in (Sat, Oct 10).
   private var spoken: String {
-    let name = day.pattern?.name ?? "予定なし"
-    let memo = day.noted ? "、メモあり" : ""
-    return "\(day.date.fullText)、\(name)\(day.time.map { "、\($0)" } ?? "")\(memo)"
+    let date =
+      english
+      ? "\(day.date.weekdayName(english: true)), \(day.date.shortMonth(english: true)) \(day.date.day)"
+      : day.date.fullText
+    let parts = [date, day.pattern?.name ?? "予定なし"] + [day.time].compactMap { $0 }
+    let memo = day.noted ? (english ? "memo" : "メモあり") : nil
+    return (parts + [memo].compactMap { $0 }).joined(separator: english ? ", " : "、")
   }
 }
 
