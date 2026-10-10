@@ -24,7 +24,7 @@ import { FitText, soonestOff, spokenOff } from "./design-widgets-next-off";
 // full size, Today a little smaller.
 const CIRCULAR_COUNT_ROOM = 48;
 
-const circular = {
+export const circular = {
   count: css({
     fontVariantNumeric: "tabular-nums",
     fontWeight: 700,

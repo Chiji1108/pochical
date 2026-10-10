@@ -43,6 +43,11 @@ import {
   UpcomingRectangular,
 } from "../components/design-widgets-lock";
 import { NextOffSmall } from "../components/design-widgets-next-off";
+import {
+  NowCircular,
+  NowRectangular,
+  NowSmall,
+} from "../components/design-widgets-now";
 import { SimpleMedium, SimpleSmall } from "../components/design-widgets-simple";
 import {
   UpcomingMedium,
@@ -193,10 +198,23 @@ const me = { name: "さくら", photo: samplePhoto(1011) };
 // Today as 今日 asks; the rest of the sample stays as it is.
 const todayKey = dateKey(designToday);
 const tomorrowKey = dateKey(addDays(designToday, 1));
+const yesterdayKey = dateKey(addDays(designToday, -1));
+const afterTomorrowKey = dateKey(addDays(designToday, 2));
 const plainDay: DayEntry = { shift: "day" };
 function scheduleFor(day: WidgetVariants["day"]): Schedule {
   const days: Record<WidgetVariants["day"], Schedule> = {
+    // A firefighter's 当番 from 8:30 to the next morning's, then 非番.
+    afterDuty: {
+      [yesterdayKey]: { shift: "duty" },
+      [todayKey]: { shift: "offDuty" },
+      [tomorrowKey]: { shift: "off" },
+      [afterTomorrowKey]: { shift: "duty" },
+    },
     blank: { [todayKey]: undefined },
+    duty: {
+      [todayKey]: { shift: "duty" },
+      [tomorrowKey]: { shift: "offDuty" },
+    },
     busy: {},
     early: { [todayKey]: { shift: "day", start: "07:00" } },
     earlyLate: { [todayKey]: { end: "20:00", shift: "day", start: "07:00" } },
@@ -248,6 +266,13 @@ const kinds: {
       { View: UpcomingSmall, size: "small" },
       { View: UpcomingMedium, size: "medium" },
     ],
+  },
+  {
+    description:
+      "いまのシフトがあと何時間で終わるか、なければ次のシフトまであと何時間か。当番のように長い勤務向けに。1日より先は「3日後」。数字は端末の時計に合わせて進みます。休みと時間のないシフト（明け・非番）は数えません。",
+    id: "now",
+    name: "いまのシフト",
+    sizes: [{ View: NowSmall, size: "small" }],
   },
   {
     description:
@@ -362,21 +387,18 @@ const shapeStyles = {
   line: "icon",
 } as const;
 
-// The lock screen at 6:45 on the day shown, as it is looked at before a
-// shift.
-const LOCK_HOUR = 6;
-const LOCK_MINUTE = 45;
+// The moment the widgets are looked at, on the day shown: 6:45 before a
+// shift, as the lock screen is most looked at, unless 時刻 picks another.
+function momentOf(day: Date, clock: WidgetVariants["clock"]) {
+  const at = new Date(day);
+  at.setHours(Number(clock.slice(1, 3)), Number(clock.slice(3)), 0, 0);
+  return at;
+}
 
 // A phone's width, as the flows draw their screens, drawn smaller where
 // the page is narrower, since the widgets keep their real sizes.
 const PHONE_WIDTH = 390;
 const lockPhone = css({ flexShrink: 0, width: `${PHONE_WIDTH}px` });
-
-function lockTime(day: Date) {
-  const at = new Date(day);
-  at.setHours(LOCK_HOUR, LOCK_MINUTE, 0, 0);
-  return at;
-}
 
 // The widgets of one kind, or all, on the device's home screen as the
 // choices set it.
@@ -384,10 +406,11 @@ function Stage({ variants }: { variants: WidgetVariants }) {
   const android = variants.platform === "android";
   const week = weekOf(variants);
   const august = variants.month === "august";
+  const at = momentOf(august ? augustDay : designToday, variants.clock);
   const entry = widgetEntry(
     august ? augustSchedule : scheduleFor(variants.day),
     week,
-    august ? augustDay : designToday,
+    at,
     presetPatterns,
     { companion: companionOf(variants.companion), me }
   );
@@ -418,7 +441,7 @@ function Stage({ variants }: { variants: WidgetVariants }) {
                   <TodayInline entry={entry} />
                 </WidgetFrame>
               }
-              when={lockTime(entry.today.date)}
+              when={at}
               widgets={
                 <>
                   <WidgetFrame appearance="lock" family="accessoryCircular">
@@ -429,6 +452,27 @@ function Stage({ variants }: { variants: WidgetVariants }) {
                   </WidgetFrame>
                   <WidgetFrame appearance="lock" family="accessoryRectangular">
                     <UpcomingRectangular entry={entry} />
+                  </WidgetFrame>
+                </>
+              }
+            />
+          </div>
+        </Fit>
+        <p className={page.caption}>
+          いまのシフトを置いたところ。円形は勤務中ならその進み具合を輪で、長方形はあと何時間かを。
+        </p>
+        <Fit width={PHONE_WIDTH}>
+          <div className={lockPhone}>
+            <LockScreen
+              ground={wallpaperFor({ appearance: "lock" })}
+              when={at}
+              widgets={
+                <>
+                  <WidgetFrame appearance="lock" family="accessoryCircular">
+                    <NowCircular entry={entry} />
+                  </WidgetFrame>
+                  <WidgetFrame appearance="lock" family="accessoryRectangular">
+                    <NowRectangular entry={entry} />
                   </WidgetFrame>
                 </>
               }

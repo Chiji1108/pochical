@@ -3243,6 +3243,8 @@
     }
   },
   "widgets": {
-    "offLookaheadDays": 62
+    "countdownHours": 24,
+    "offLookaheadDays": 62,
+    "shiftLookaheadDays": 62
   }
 }
