@@ -7,6 +7,7 @@ import SwiftUI
 struct DayDetail: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.dismiss) private var dismiss
   let day: Day
   let entry: DayEntry?
   /// The day's memo, its own whether it has a shift or not.
@@ -27,14 +28,38 @@ struct DayDetail: View {
   @State private var clearing = false
   @State private var addingCoworker = false
   @State private var newCoworker = ""
-  /// 一緒に働く人's list, a check by each one on the day.
-  @State private var choosingPeople = false
-  /// The patterns' list, to pick the day's shift.
-  @State private var choosingShift = false
   /// 人を追加 past coworkersMax.
   @State private var coworkersAreFull = false
 
+  /// The sheet's own bar, as the app's other sheets have: the date, ×,
+  /// and ‹ › to the day before and after; シフト and 一緒に働く人 push
+  /// their lists within it.
   var body: some View {
+    NavigationStack {
+      form
+        .navigationTitle(day.fullText)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+          }
+          // The day before and after, a week's end no stop.
+          ToolbarItemGroup(placement: .primaryAction) {
+            Button("前の日", systemImage: "chevron.left") { onStep(-1) }
+            Button("次の日", systemImage: "chevron.right") { onStep(1) }
+          }
+        }
+    }
+    .onAppear { draft = note ?? "" }
+    .onDisappear { keepNote() }
+    .onChange(of: scenePhase) { _, phase in
+      if phase != .active {
+        keepNote()
+      }
+    }
+  }
+
+  private var form: some View {
     Form {
       // Rows on a quiet ground on the page's own, as /design's lists.
       Section {
@@ -82,35 +107,9 @@ struct DayDetail: View {
       }
     }
     .listSectionSpacing(.compact)
-    .contentMargins(.top, 12, for: .scrollContent)
     .scrollContentBackground(.hidden)
     .background(colors.backgroundBase)
-    .safeAreaInset(edge: .top, spacing: 0) {
-      HStack {
-        Text(day.fullText)
-          .font(.title3.weight(.semibold))
-          .foregroundStyle(colors.textPrimary)
-          .accessibilityAddTraits(.isHeader)
-        Spacer()
-        // The day before and after, a week's end no stop.
-        Button("前の日", systemImage: "chevron.left") { onStep(-1) }
-        Button("次の日", systemImage: "chevron.right") { onStep(1) }
-      }
-      .labelStyle(.iconOnly)
-      .buttonStyle(.borderless)
-      .tint(colors.textPrimary)
-      .padding(.horizontal, 20)
-      // Clear of the sheet's grabber.
-      .padding(.top, 20)
-    }
     .tint(colors.accentDefault)
-    .onAppear { draft = note ?? "" }
-    .onDisappear { keepNote() }
-    .onChange(of: scenePhase) { _, phase in
-      if phase != .active {
-        keepNote()
-      }
-    }
   }
 
   private var pattern: Pattern? {
@@ -122,39 +121,27 @@ struct DayDetail: View {
   /// runs long past a few, and the list shows each one's hours too.
   /// Picking another keeps the day's memo and people, as entering does.
   private var shiftRow: some View {
-    Button {
-      choosingShift = true
-    } label: {
-      HStack(spacing: 8) {
-        LabeledContent("シフト") {
-          if let pattern {
-            Label {
-              Text(pattern.name).lineLimit(1)
-            } icon: {
-              ShiftMark(pattern: pattern, size: 16)
-            }
-          } else {
-            Text("なし")
-          }
-        }
-        Image(systemName: "chevron.right")
-          .font(.footnote.weight(.semibold))
-          .foregroundStyle(colors.textQuaternary)
-      }
-      .contentShape(.rect)
-    }
-    .buttonStyle(.plain)
-    // The line under it from where its words start, not the mark's.
-    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
-    .sheet(isPresented: $choosingShift) {
+    NavigationLink {
       ShiftChoices(patterns: patterns, picked: entry?.shift) { shift in
         if shift != entry?.shift {
           onChange(DayEntry(shift: shift, note: entry?.note, people: entry?.people))
         }
-        choosingShift = false
       }
-      .presentationDetents([.medium, .large])
+    } label: {
+      LabeledContent("シフト") {
+        if let pattern {
+          Label {
+            Text(pattern.name).lineLimit(1)
+          } icon: {
+            ShiftMark(pattern: pattern, size: 16)
+          }
+        } else {
+          Text("なし")
+        }
+      }
     }
+    // The line under it from where its words start, not the mark's.
+    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
   }
 
   /// The day's own hours, a change from the pattern's said in words: 早出
@@ -203,22 +190,7 @@ struct DayDetail: View {
   /// to check them in, as the Clock app's 繰り返し picks days (Android
   /// keeps /design's filter chips; spec/calendar.md, A day's detail).
   private func peopleRows(_ entry: DayEntry) -> some View {
-    Button {
-      choosingPeople = true
-    } label: {
-      HStack(spacing: 8) {
-        LabeledContent("一緒に働く人") {
-          Text(names(entry.people ?? []))
-            .lineLimit(1)
-        }
-        Image(systemName: "chevron.right")
-          .font(.footnote.weight(.semibold))
-          .foregroundStyle(colors.textQuaternary)
-      }
-      .contentShape(.rect)
-    }
-    .buttonStyle(.plain)
-    .sheet(isPresented: $choosingPeople) {
+    NavigationLink {
       PeopleChecklist(
         coworkers: coworkers, picked: entry.people ?? [],
         onToggle: { coworker in toggle(coworker, in: entry) },
@@ -229,7 +201,6 @@ struct DayDetail: View {
             addingCoworker = true
           }
         })
-      .presentationDetents([.medium, .large])
       .alert("一緒に働く人を追加", isPresented: $addingCoworker) {
         TextField("名前", text: $newCoworker)
         Button("追加") {
@@ -244,6 +215,11 @@ struct DayDetail: View {
       }
       .alert(coworkersFull, isPresented: $coworkersAreFull) {
         Button("OK", role: .cancel) {}
+      }
+    } label: {
+      LabeledContent("一緒に働く人") {
+        Text(names(entry.people ?? []))
+          .lineLimit(1)
       }
     }
   }
@@ -333,67 +309,59 @@ struct DayDetail: View {
   }
 }
 
-/// 一緒に働く人 to check in on a day: a check by each one on it, 人を追加
-/// at the foot, and 完了.
+/// 一緒に働く人 to check in on a day: a check by each one on it and 人を追加
+/// at the foot, pushed in the day's sheet and left by going back.
 private struct PeopleChecklist: View {
   @Environment(\.themeColors) private var colors
-  @Environment(\.dismiss) private var dismiss
   let coworkers: [Coworker]
   let picked: [String]
   let onToggle: (Coworker) -> Void
   let onAdd: () -> Void
 
   var body: some View {
-    NavigationStack {
-      List {
-        if !coworkers.isEmpty {
-          Section {
-            ForEach(coworkers) { coworker in
-              let isPicked = picked.contains(coworker.id)
-              Button {
-                onToggle(coworker)
-              } label: {
-                HStack {
-                  Text(coworker.name).foregroundStyle(colors.textPrimary)
-                  Spacer()
-                  Image(systemName: "checkmark")
-                    .foregroundStyle(colors.accentDefault)
-                    .opacity(isPicked ? 1 : 0)
-                }
-                .contentShape(.rect)
-              }
-              .buttonStyle(.plain)
-              .accessibilityAddTraits(isPicked ? .isSelected : [])
-            }
-          }
-          .settingsRows()
-        }
+    List {
+      if !coworkers.isEmpty {
         Section {
-          Button(action: onAdd) {
-            Label("人を追加…", systemImage: "plus")
-              .foregroundStyle(colors.accentDefault)
+          ForEach(coworkers) { coworker in
+            let isPicked = picked.contains(coworker.id)
+            Button {
+              onToggle(coworker)
+            } label: {
+              HStack {
+                Text(coworker.name).foregroundStyle(colors.textPrimary)
+                Spacer()
+                Image(systemName: "checkmark")
+                  .foregroundStyle(colors.accentDefault)
+                  .opacity(isPicked ? 1 : 0)
+              }
+              .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(isPicked ? .isSelected : [])
           }
-        } footer: {
-          Text("同じシフトに入る人などを、この日にメモできます。名前や並び順は、設定の「一緒に働く人」で直せます。")
         }
         .settingsRows()
       }
-      .settingsList()
-      .navigationTitle("一緒に働く人")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .confirmationAction) {
-          Button("完了", systemImage: "checkmark", role: .confirm) { dismiss() }
+      Section {
+        Button(action: onAdd) {
+          Label("人を追加…", systemImage: "plus")
+            .foregroundStyle(colors.accentDefault)
         }
+      } footer: {
+        Text("同じシフトに入る人などを、この日にメモできます。名前や並び順は、設定の「一緒に働く人」で直せます。")
       }
+      .settingsRows()
     }
+    .settingsList()
+    .navigationTitle("一緒に働く人")
+    .navigationBarTitleDisplayMode(.inline)
   }
 }
 
 /// The day's shift picked from the person's patterns, in their order as
 /// 設定's シフトパターン lists them, each with its hours, the day's with a
-/// check. Picking one closes it. Past a page of ポチポチ入力's keys, a
-/// search narrows them by name.
+/// check. Picking one goes back to the day. Past a page of ポチポチ入力's
+/// keys, a search narrows them by name.
 private struct ShiftChoices: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -406,47 +374,41 @@ private struct ShiftChoices: View {
     let searching = patterns.count > patternsPerPage
     let words = query.trimmingCharacters(in: .whitespaces)
     let shown = words.isEmpty ? patterns : patterns.filter { $0.name.localizedStandardContains(words) }
-    NavigationStack {
-      List {
-        Section {
-          ForEach(shown) { pattern in
-            let isPicked = pattern.id == picked
-            Button {
-              onPick(pattern.id)
-            } label: {
-              HStack(spacing: 12) {
-                LabeledContent {
-                  Text(patternTimeText(pattern.time))
-                } label: {
-                  Label {
-                    Text(pattern.name).lineLimit(1).foregroundStyle(colors.textPrimary)
-                  } icon: {
-                    ShiftMark(pattern: pattern, size: 20)
-                  }
+    List {
+      Section {
+        ForEach(shown) { pattern in
+          let isPicked = pattern.id == picked
+          Button {
+            onPick(pattern.id)
+            dismiss()
+          } label: {
+            HStack(spacing: 12) {
+              LabeledContent {
+                Text(patternTimeText(pattern.time))
+              } label: {
+                Label {
+                  Text(pattern.name).lineLimit(1).foregroundStyle(colors.textPrimary)
+                } icon: {
+                  ShiftMark(pattern: pattern, size: 20)
                 }
-                Image(systemName: "checkmark")
-                  .fontWeight(.semibold)
-                  .foregroundStyle(colors.accentDefault)
-                  .opacity(isPicked ? 1 : 0)
               }
-              .contentShape(.rect)
+              Image(systemName: "checkmark")
+                .fontWeight(.semibold)
+                .foregroundStyle(colors.accentDefault)
+                .opacity(isPicked ? 1 : 0)
             }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(isPicked ? .isSelected : [])
+            .contentShape(.rect)
           }
-        }
-        .settingsRows()
-      }
-      .settingsList()
-      .navigationTitle("シフト")
-      .navigationBarTitleDisplayMode(.inline)
-      .modifier(Searching(on: searching, query: $query))
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+          .buttonStyle(.plain)
+          .accessibilityAddTraits(isPicked ? .isSelected : [])
         }
       }
+      .settingsRows()
     }
+    .settingsList()
+    .navigationTitle("シフト")
+    .navigationBarTitleDisplayMode(.inline)
+    .modifier(Searching(on: searching, query: $query))
   }
 }
 

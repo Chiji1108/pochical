@@ -173,8 +173,8 @@ struct CalendarScreen: View {
     ) {
       if let day = opened {
         let entry = calendar.shown(from: day, through: day)[day]
-      DayDetail(
-        day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+        DayDetail(
+          day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
         coworkers: ordered(coworkerRows, by: coworkerOrder),
         onChange: { entry in
           write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
@@ -503,20 +503,12 @@ struct CalendarScreen: View {
 
   /// The heading's buttons, on the month's line: 今月 away from this
   /// month, 完了 while entering, and in a day's week 今週 away from this
-  /// week and × (spec/calendar.md).
+  /// week (spec/calendar.md).
   @ViewBuilder private var actions: some View {
     if opened != nil {
-      // Back to this week and closing are of different kinds, so they
-      // stand apart.
-      HStack(spacing: 12) {
-        TodayFade(position: position, todayPage: todayPage) {
-          TodayButton(unit: "週") { opened = today }
-        }
-        Button("閉じる", systemImage: "xmark", role: .close) {
-          withAnimation(folding) { opened = nil }
-        }
-        .labelStyle(.iconOnly)
-        .buttonStyle(BarButton())
+      // The detail's sheet closes the day, with its own ×.
+      TodayFade(position: position, todayPage: todayPage) {
+        TodayButton(unit: "週") { opened = today }
       }
     } else if entering != nil {
       Button("完了", systemImage: "checkmark", role: .confirm) {
