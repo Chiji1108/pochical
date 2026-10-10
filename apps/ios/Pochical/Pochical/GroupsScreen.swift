@@ -43,6 +43,7 @@ extension EnvironmentValues {
 /// are for and a way to start one; else the groups down the side, as
 /// /design's rail, and the one open beside them.
 struct GroupsScreen: View {
+  @Environment(\.themeColors) private var colors
   @Environment(\.account) private var account
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.scenePhase) private var scenePhase
@@ -92,6 +93,9 @@ struct GroupsScreen: View {
             .padding(.horizontal, 20)
         }
       }
+      // The app's ground, as the calendar's, which dark mode lifts off black.
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(colors.backgroundBase)
       .toolbarVisibility(.hidden, for: .navigationBar)
       .navigationDestination(for: GroupRoute.self) { route in
         // Pages show the group as it is now, renamed meanwhile or not.
