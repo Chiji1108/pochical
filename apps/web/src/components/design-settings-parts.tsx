@@ -52,8 +52,8 @@ export const settingsParts = {
     flexDirection: "column",
     gap: "8px",
     minHeight: 0,
+    // The phone keeps the screen's sides, as for the calendar itself.
     paddingBottom: "8px",
-    paddingInline: "16px",
   }),
   // Grows to the screen's height, so an order's keys sit at its foot.
   job: css({ display: "flex", flex: 1, flexDirection: "column", gap: "16px" }),

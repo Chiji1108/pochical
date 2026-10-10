@@ -38,6 +38,9 @@ import { ShiftMark } from "./shift-mark";
 // which typing keeps in sight, and the month's name picks any other.
 const repeatCalendar = {
   foot: css({ marginTop: "auto", paddingTop: "2px" }),
+  // Room around the grid for the framed day's outline, as the
+  // calendar's month keeps, so both line up.
+  month: css({ paddingInline: "4px" }),
   monthRow: css({
     alignItems: "center",
     display: "flex",
@@ -323,7 +326,7 @@ export function RepeatCalendar({
           </ReturnButton>
         </TodayCorner>
       </div>
-      <div>
+      <div className={repeatCalendar.month}>
         <WeekdayRow compact />
         <Pager
           onStep={(direction) => {
