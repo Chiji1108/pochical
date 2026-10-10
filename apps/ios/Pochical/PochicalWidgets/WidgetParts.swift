@@ -119,7 +119,7 @@ struct WidgetMark: View {
       } else {
         Text("–")
           .font(.system(size: size * 0.5))
-          .foregroundStyle(colors.textTertiary)
+          .foregroundStyle(colors.textQuaternary)
           .frame(width: size, height: size)
       }
       if named && (day.pattern != nil || reserve) {
