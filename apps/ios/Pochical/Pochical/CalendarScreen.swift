@@ -38,6 +38,9 @@ struct CalendarScreen: View {
   /// The week swiped to beside an opened one, until the swipe settles and
   /// opens the same weekday there.
   @State private var swipedWeek: Day?
+  /// The day ‹ › or 今週 opens in another week, once the pages have slid
+  /// to it; a swipe opens the same weekday.
+  @State private var landing: Day?
   /// How far a pull down has unfolded the month around an opened week, 0
   /// to 1, while the finger is on it.
   @State private var pull: CGFloat = 0
@@ -166,6 +169,7 @@ struct CalendarScreen: View {
       guard let day else {
         // A swipe left unsettled as the week closed goes with it.
         swipedWeek = nil
+        landing = nil
         askForReviewIfDue()
         return
       }
@@ -189,28 +193,33 @@ struct CalendarScreen: View {
     ) {
       if let day = opened {
         let entry = calendar.shown(from: day, through: day)[day]
-        DayDetail(
-          day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-        coworkers: ordered(coworkerRows, by: coworkerOrder),
-        onChange: { entry in
-          write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
-        },
-        onNoteChange: { note in
-          write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
-        },
-        // Someone added from a day is on that day too.
-        onAddCoworker: { name in
-          write { db, now in
-            let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-            if var entry {
-              entry.people = (entry.people ?? []) + [id]
-              try OwnValues.set(day, to: entry, now: now, in: db)
-            }
-          }
-        },
-        onStep: { step in opened = day.adding(days: step) }
-      )
-        .id(day)
+        // One day gives way to the next however it is opened, by a tap,
+        // ‹ ›, 今週 or a swipe.
+        ZStack {
+          DayDetail(
+            day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+            coworkers: ordered(coworkerRows, by: coworkerOrder),
+            onChange: { entry in
+              write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+            },
+            onNoteChange: { note in
+              write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
+            },
+            // Someone added from a day is on that day too.
+            onAddCoworker: { name in
+              write { db, now in
+                let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+                if var entry {
+                  entry.people = (entry.people ?? []) + [id]
+                  try OwnValues.set(day, to: entry, now: now, in: db)
+                }
+              }
+            },
+            onStep: { step in go(to: day.adding(days: step)) }
+          )
+          .id(day)
+        }
+        .animation(folding, value: day)
         .presentationDetents([underWeek, .large])
         .presentationBackgroundInteraction(.enabled(upThrough: underWeek))
         .presentationDragIndicator(.visible)
@@ -330,6 +339,7 @@ struct CalendarScreen: View {
         case .month(let month):
           shownMonth = month
           swipedWeek = nil
+          landing = nil
         case .week(let week):
           swipedWeek = week
         case nil:
@@ -342,11 +352,24 @@ struct CalendarScreen: View {
   /// folded week in place of the page beside it, drawn the same.
   private func openSwipedWeek() {
     guard let week = swipedWeek, let day = opened else { return }
-    let next = day.adding(days: week.days(since: weekOf(day)))
+    let next = landing ?? day.adding(days: week.days(since: weekOf(day)))
+    landing = nil
     // All at once, so the pages never stand on the month left behind.
     opened = next
     shownMonth = monthShowing(next)
     swipedWeek = nil
+  }
+
+  /// Opens a day from the one open: in its week the frame moves to it, as
+  /// a tap does; in another the pages slide to that week first, as a swipe
+  /// does, and with reduced motion it just opens.
+  private func go(to day: Day) {
+    guard let open = opened, weekOf(day) != weekOf(open), folding != nil else {
+      withAnimation(folding) { opened = day }
+      return
+    }
+    landing = day
+    withAnimation(folding) { swipedWeek = weekOf(day) }
   }
 
   /// The month shown with `day` opened: the one shown while the day's week
@@ -524,7 +547,7 @@ struct CalendarScreen: View {
     if opened != nil {
       // The detail's sheet closes the day, with its own ×.
       TodayFade(position: position, todayPage: todayPage) {
-        TodayButton(unit: "週") { opened = today }
+        TodayButton(unit: "週") { go(to: today) }
       }
     } else if entering != nil {
       Button("完了", systemImage: "checkmark", role: .confirm) {
