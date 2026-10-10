@@ -106,3 +106,5 @@ A new job's ready-made pattern can share an id with one the person already has. 
 ## Days everyone is off
 
 In a group, a day everyone is off (みんな休み) is one on which every member's pattern counts as a day off. A day someone has not entered never counts. A month's count also says whether more may yet come: when no one who has entered a day works but someone has not entered it, the group's screens say 未入力の日あり rather than that there are none (`spec/vectors/together.json`).
+
+The group's hub shows everyone's next seven days, from today, rather than the week from its start: what a group looks there for is days still to come, and seven always hold a weekend. Each column heads with its own weekday, in English three capitals (THU), as one letter could not tell Tuesday from Thursday when the columns do not start the week, and today, always the first, takes no accent, as in the widgets' これから (spec/widgets.md). Under it, 次のみんな休み looks on past the seven days. 月で見る keeps the weeks as the calendar has them, from the day the week starts on.

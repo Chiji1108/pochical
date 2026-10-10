@@ -48,7 +48,6 @@ import {
   Note,
   Section,
 } from "./design-ui";
-import { useWeek } from "./design-week";
 
 // A group's hub: the rail of groups at its side, this week's shifts and
 // the chats, the group without members yet, and a member's sheet.
@@ -64,6 +63,10 @@ const sampleNurseWeek = [
   "after",
   "off",
 ] as const;
+
+// Today and the six days after it, as the hub shows everyone's shifts.
+const upcomingDays = () =>
+  Array.from({ length: 7 }, (_, index) => addDays(designToday, index));
 
 // A made-up group for the no-group screen's picture of sharing.
 const sampleGroup = (): Group => ({
@@ -86,7 +89,6 @@ export function NoGroups({
   onNew: () => void;
   onScan: () => void;
 }) {
-  const weekTools = useWeek();
   return (
     <div className={noGroups.root}>
       <h3 className={noGroups.title}>グループでシフトを共有できます</h3>
@@ -97,9 +99,9 @@ export function NoGroups({
       >
         <MemberTable
           compact
-          dates={weekTools.weekDates(designToday)}
+          dates={upcomingDays()}
           group={sampleGroup()}
-          month={designToday}
+          upcoming
         />
       </div>
       <p className={noGroups.note}>
@@ -301,8 +303,8 @@ export function GroupHub({
   onInvite: () => void;
   onSettings: () => void;
 }) {
-  const weekTools = useWeek();
-  const week = weekTools.weekDates(designToday);
+  // Today and the six days after it, so a weekend is always in sight.
+  const week = upcomingDays();
   const nextOff = Array.from({ length: 60 }, (_, index) =>
     addDays(designToday, index)
   ).find(
@@ -347,17 +349,12 @@ export function GroupHub({
       >
         <div className={hub.weekCard}>
           <button
-            aria-label="今週のみんなのシフト。押すと月で見られます"
+            aria-label="今日から7日間のみんなのシフト。押すと月で見られます"
             className={hub.weekCardTable}
             onClick={onShifts}
             type="button"
           >
-            <MemberTable
-              compact
-              dates={week}
-              group={group}
-              month={designToday}
-            />
+            <MemberTable compact dates={week} group={group} upcoming />
           </button>
           {nextOff ? (
             <button

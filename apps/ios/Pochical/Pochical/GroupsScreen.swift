@@ -206,7 +206,6 @@ enum GroupRoute: Hashable {
 /// then 作成 and QR参加 (/design's NoGroups).
 private struct NoGroups: View {
   @Environment(\.themeColors) private var colors
-  @Environment(Settings.self) private var settings
   let onNew: () -> Void
   let onScan: () -> Void
 
@@ -216,8 +215,8 @@ private struct NoGroups: View {
         .font(.title2.bold())
         .multilineTextAlignment(.center)
       VStack(spacing: 4) {
-        GroupWeekdays(compact: true)
-        GroupWeek(days: week, members: sampleMembers(week), compact: true)
+        GroupWeekdays(compact: true, days: week)
+        GroupWeek(days: week, members: sampleMembers(week), compact: true, marksToday: false)
       }
       .padding(EdgeInsets(top: 8, leading: 4, bottom: 12, trailing: 8))
       .background(colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl))
@@ -249,7 +248,7 @@ private struct NoGroups: View {
     .frame(maxHeight: .infinity)
   }
 
-  private var week: [Day] { thisWeek(start: settings.device.week.start) }
+  private var week: [Day] { upcomingWeek() }
 }
 
 /// The sample's people, as /design's: a partner at the office, home on
@@ -435,7 +434,6 @@ private struct GroupMark: View {
 /// shifts and its chat (/design's GroupHub).
 private struct GroupHub: View {
   @Environment(\.themeColors) private var colors
-  @Environment(Settings.self) private var settings
   @Fetch private var members: [GroupMember] = []
   let group: GroupRow
   let onInvite: () -> Void
@@ -488,12 +486,11 @@ private struct GroupHub: View {
     }
   }
 
-  /// The group's members with their days of this week and as far ahead
-  /// as 次のみんな休み looks.
+  /// The group's members with their days from today, as far ahead as
+  /// 次のみんな休み looks.
   private var request: GroupMembersRequest {
-    let week = thisWeek(start: settings.device.week.start)
     let ahead = Day.today.adding(days: nextTogetherDays - 1)
-    return GroupMembersRequest(groupID: group.id, from: week[0], through: max(week[6], ahead))
+    return GroupMembersRequest(groupID: group.id, from: Day.today, through: ahead)
   }
 
   private var heading: some View {
