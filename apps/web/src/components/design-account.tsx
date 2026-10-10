@@ -3,8 +3,6 @@
 
 import { css, cva } from "styled-system/css";
 
-import { useDevice } from "../lib/design-device";
-
 export type AccountProvider = "apple" | "google";
 
 export type Account = { provider: AccountProvider; email: string };
@@ -115,8 +113,8 @@ const providerButton = {
 // How long the prototype pretends the provider's sign-in takes.
 export const signInMilliseconds = 900;
 
-// Apple, and on Android Google after it (the iOS app offers Apple alone),
-// each saying ログイン中… while its sign-in runs.
+// Apple, then Google, on both platforms, each saying ログイン中… while its
+// sign-in runs.
 export function ProviderButtons({
   busy,
   onPick,
@@ -124,13 +122,9 @@ export function ProviderButtons({
   busy: AccountProvider | undefined;
   onPick: (provider: AccountProvider) => void;
 }) {
-  const android = useDevice((state) => state.platform) === "android";
-  const providers: readonly AccountProvider[] = android
-    ? ["apple", "google"]
-    : ["apple"];
   return (
     <div className={providerButton.column}>
-      {providers.map((provider) => (
+      {(["apple", "google"] as const).map((provider) => (
         <button
           className={providerButton.button({ provider })}
           disabled={busy !== undefined}
