@@ -1,9 +1,10 @@
+import { themeSkyId } from "@pochical/design/skies";
 import { createFileRoute } from "@tanstack/react-router";
 import { css } from "styled-system/css";
 
 import { DesignApp } from "../components/design-app";
 import { DesignProviders } from "../components/design-providers";
-import { paleSkyFromTop, themeSkyId } from "../components/design-surprise";
+import { paleSkyFromTop } from "../components/design-surprise";
 import { InviteShareImage } from "../components/invite-share-image";
 import { useSamplePerson } from "../lib/design-sample-person";
 import { UserStoreContext } from "../lib/design-user-store";

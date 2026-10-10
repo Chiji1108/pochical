@@ -281,6 +281,18 @@ private struct CalendarSettings: View {
         .labelsHidden()
         .settingsOnPage()
       }
+      // おたのしみ lights a sky over the calendar's month, a tap on its
+      // name drifting it to another; never before the first tap, not even
+      // in the preview above.
+      Section("月名をタップしたとき") {
+        Picker("月名をタップしたとき", selection: $settings.device.heading.surprise) {
+          Text("月を選ぶ").tag(false)
+          Text("おたのしみ").tag(true)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .settingsOnPage()
+      }
       Section("週の始まり") {
         Picker("週の始まり", selection: $settings.device.week.start) {
           ForEach(0..<7, id: \.self) { day in

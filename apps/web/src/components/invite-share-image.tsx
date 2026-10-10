@@ -1,9 +1,10 @@
+import { themeSkyId } from "@pochical/design/skies";
 /* @jsxImportSource react */
 // satori breaks its own lines and draws no <wbr> (src/jsx).
 import type { CSSProperties } from "react";
 
 import { SHARE_IMAGE } from "../lib/site";
-import { paleSkyFromTop, themeSkyId } from "./design-surprise";
+import { paleSkyFromTop } from "./design-surprise";
 import { InviteMark } from "./invite-mark";
 import type { InviteGroupMark } from "./invite-mark";
 

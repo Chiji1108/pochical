@@ -1,4 +1,12 @@
-import { oklchToHex } from "@pochical/design/oklch";
+import {
+  darkGroundOf,
+  skies,
+  skyLights,
+  skyMotion,
+  themeSkies,
+  themeSkyId,
+} from "@pochical/design/skies";
+import type { Sky } from "@pochical/design/skies";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useContext } from "react";
 import { css } from "styled-system/css";
@@ -8,7 +16,6 @@ import {
   ColorSchemeContext,
   ThemeContext,
   DEVICE_COLORS,
-  presetOf,
 } from "./design-theme";
 import type { PresetId } from "./design-theme";
 
@@ -22,41 +29,6 @@ import type { PresetId } from "./design-theme";
 // Plain gradients, which SwiftUI's MeshGradient and Compose's brushes
 // draw the same.
 
-// Three hues, warm to cool across the top: the left corner's, the middle's
-// and the right corner's; `vivid` scales the tones' chroma.
-type Sky = { name: string; hues: [number, number, number]; vivid?: number };
-
-// The skies anyone may get, by the id the device settings keep.
-const skies: Record<string, Sky> = {
-  asayake: { hues: [55, 235, 300], name: "朝焼け" },
-  hakumei: { hues: [290, 250, 15], name: "薄明" },
-  koori: { hues: [215, 280, 180], name: "氷" },
-  mikan: { hues: [75, 100, 5], name: "蜜柑" },
-  momo: { hues: [10, 65, 320], name: "桃" },
-  ramune: { hues: [165, 105, 215], name: "ラムネ" },
-  wakakusa: { hues: [130, 95, 195], name: "若草" },
-  yunagi: { hues: [35, 350, 275], name: "夕凪" },
-};
-
-// Each テーマ's own sky, picked to its mood rather than drawn from its
-// accent alone: 墨's nearly a silver haze, 抹茶's with a sakura sweet's
-// pink, 喫茶's its lamps' amber, 月夜's the night's blues (its accent is
-// the moon), 黒板's chalk.
-const themeSkies: Record<Exclude<PresetId, typeof DEVICE_COLORS>, Sky> = {
-  cocoa: { hues: [45, 75, 10], name: "ココア", vivid: 0.8 },
-  kissa: { hues: [60, 35, 85], name: "喫茶" },
-  kokuban: { hues: [165, 215, 345], name: "黒板", vivid: 0.8 },
-  matcha: { hues: [120, 90, 350], name: "抹茶" },
-  milktea: { hues: [55, 80, 20], name: "ミルクティー", vivid: 0.8 },
-  pochical: { hues: [100, 150, 225], name: "ポチカル" },
-  sakura: { hues: [35, 355, 300], name: "さくら" },
-  soda: { hues: [170, 215, 100], name: "ソーダ" },
-  sumi: { hues: [250, 90, 300], name: "墨", vivid: 0.4 },
-  sumire: { hues: [310, 280, 20], name: "すみれ" },
-  tsukiyo: { hues: [290, 250, 215], name: "月夜" },
-  zen: { hues: [110, 90, 150], name: "禅", vivid: 0.6 },
-};
-
 // 端末の色's sky: Android's color, and two steps cooler across.
 const WALLPAPER_SKY_STEP = 30;
 function wallpaperSky(hue: number): Sky {
@@ -66,42 +38,19 @@ function wallpaperSky(hue: number): Sky {
   };
 }
 
-// A テーマ's sky is kept as its own id, so it stays when the テーマ changes.
-export const themeSkyId = (theme: PresetId) => `theme-${theme}`;
-
 // Every sky by its id, the テーマ's among them.
 const allSkies: Record<string, Sky | undefined> = {
   ...skies,
   ...Object.fromEntries(
-    Object.entries(themeSkies).map(([theme, sky]) => [`theme-${theme}`, sky])
+    Object.entries(themeSkies).map(([theme, sky]) => [themeSkyId(theme), sky])
   ),
 };
-
-// Pale and airy in light mode; deep, like jewels in shade, in dark mode,
-// a step lighter than the screen, whose ground a night テーマ colors (月夜's
-// navy, 黒板's board).
-const tones = {
-  dark: { chroma: 0.05, lift: 0.05 },
-  light: { chroma: 0.04, lightness: 0.95 },
-} as const;
-// The dark gray screen (background-base) in OKLCH lightness.
-const DARK_GROUND = 0.28;
-
-// A sky's three lights, left, middle and right.
-function lightsOf(sky: Sky, scheme: "light" | "dark", ground: number) {
-  const { chroma } = tones[scheme];
-  const lightness =
-    scheme === "light" ? tones.light.lightness : ground + tones.dark.lift;
-  return sky.hues.map((hue) =>
-    oklchToHex({ chroma: chroma * (sky.vivid ?? 1), hue, lightness })
-  );
-}
 
 // A sky's lights in light mode, by its id, for the site's own sky (the
 // ground only matters in dark mode).
 export function paleSkyLights(id: string) {
   const sky = allSkies[id];
-  return sky === undefined ? undefined : lightsOf(sky, "light", DARK_GROUND);
+  return sky === undefined ? undefined : skyLights(sky, "light");
 }
 
 // Light spreading from both top corners and the middle, fading down. Each
@@ -117,7 +66,7 @@ function lightFromTop([left, middle, right]: string[]) {
 }
 
 function skyBackground(sky: Sky, scheme: "light" | "dark", ground: number) {
-  return lightFromTop(lightsOf(sky, scheme, ground));
+  return lightFromTop(skyLights(sky, scheme, ground));
 }
 
 // A sky in light mode falling from the top, as over the app's calendar,
@@ -130,17 +79,15 @@ export function paleSkyFromTop(id: string) {
 // How one sky gives way to the next: at once from the tap, so the tap is
 // seen to change it, and settling softly. And how slowly the light
 // breathes while it stays.
-export const SKY_CHANGE = { duration: 0.9, ease: "easeOut" } as const;
-export const BREATH_SECONDS = 9;
+export const SKY_CHANGE = {
+  duration: skyMotion.changeSeconds,
+  ease: "easeOut",
+} as const;
+export const BREATH_SECONDS = skyMotion.breathSeconds;
 
 function SkyLight({ sky }: { sky: Sky }) {
   const scheme = useContext(ColorSchemeContext);
-  const preset = presetOf(useContext(ThemeContext).theme);
-  // A light テーマ's own ground is only its light mode's.
-  const ground =
-    preset.scheme === "dark"
-      ? (preset.ground?.lightness ?? DARK_GROUND)
-      : DARK_GROUND;
+  const ground = darkGroundOf(useContext(ThemeContext).theme);
   const still = useReducedMotion() ?? false;
   return (
     <motion.div

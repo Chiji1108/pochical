@@ -150,7 +150,18 @@ struct CalendarScreen: View {
     .onGeometryChange(for: CGFloat.self) { proxy in
       proxy.frame(in: .global).maxY
     } action: { foot = $0 }
-    .background(colors.backgroundBase)
+    // おたのしみ's sky, over the heading only, behind everything else.
+    .background {
+      GeometryReader { proxy in
+        ZStack(alignment: .top) {
+          colors.backgroundBase
+          SurpriseSky()
+            .frame(height: proxy.size.height * 0.34)
+            .frame(maxHeight: .infinity, alignment: .top)
+        }
+      }
+      .ignoresSafeArea()
+    }
     // The tabs give way to entering and to a day's week, as /design's do.
     .toolbarVisibility(entering == nil && opened == nil ? .visible : .hidden, for: .tabBar)
     // A month turned to while entering starts on its first blank day; a
@@ -587,7 +598,17 @@ struct CalendarScreen: View {
     HStack(alignment: .bottom) {
       // Only the month on its own opens 月を選ぶ; entering and a day's week
       // keep to the days around (/design's calendar heading).
-      if entering == nil, opened == nil {
+      if entering == nil, opened == nil, settings.device.heading.surprise {
+        // おたのしみ: the name drifts the sky to another.
+        Button {
+          settings.device.heading.sky = SurpriseSky.next(
+            after: settings.device.heading.sky, theme: settings.device.theme)
+        } label: {
+          MonthName(position: position, monthAt: monthOfPage)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("空の色を変えます")
+      } else if entering == nil, opened == nil {
         MonthTitleButton(
           month: shownMonth ?? thisMonth, first: thisMonth.addingMonths(-Self.monthsAround),
           last: thisMonth.addingMonths(Self.monthsAround), chevron: false
