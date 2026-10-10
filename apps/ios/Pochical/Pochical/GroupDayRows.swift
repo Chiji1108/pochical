@@ -35,13 +35,15 @@ private let rowInset = EdgeInsets(top: 3, leading: todayBar + 3, bottom: 3, trai
 /// their face, and their name while few.
 struct GroupDayHeader: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.english) private var english
   let members: [GroupMember]
   let groupID: String
 
   var body: some View {
     let density = DayRowsDensity(members: members.count)
     HStack(spacing: 0) {
-      Color.clear.frame(width: dateWidth, height: 1)
+      // Over the rows' dates, as wide as theirs.
+      Color.clear.frame(width: english ? englishDateWidth : dateWidth, height: 1)
       ForEach(members) { member in
         HStack(spacing: 4) {
           MemberAvatar(
