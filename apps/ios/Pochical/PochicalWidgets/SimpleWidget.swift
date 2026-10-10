@@ -14,7 +14,7 @@ struct SimpleWidget: Widget {
     }
     .configurationDisplayName("シンプル")
     .description("今日のシフトを大きく。中は明日も。")
-    .supportedFamilies([.systemSmall, .systemMedium])
+    .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryInline])
   }
 }
 
@@ -25,7 +25,14 @@ private struct SimpleView: View {
   let names: Bool
 
   var body: some View {
-    if entry.nothingEntered {
+    if family == .accessoryCircular {
+      // The round ones stay as on a day with nothing entered, a dash.
+      TodayCircular(day: entry.today)
+        .widgetURL(dayLink(entry.date))
+    } else if family == .accessoryInline {
+      TodayInline(entry: entry)
+        .widgetURL(dayLink(entry.date))
+    } else if entry.nothingEntered {
       FirstRun()
         .widgetURL(dayLink(entry.date))
     } else if family == .systemMedium, entry.upcoming.count > 1 {
@@ -109,5 +116,71 @@ struct FirstRun: View {
       .multilineTextAlignment(.center)
       .foregroundStyle(colors.textSecondary)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+}
+
+/// Today's mark on the lock screen's round face, with 早出 or 残業 under it
+/// on such a day, and なし with nothing entered.
+private struct TodayCircular: View {
+  let day: WidgetDay
+
+  var body: some View {
+    let word = day.pattern == nil ? "なし" : movedWord
+    ZStack {
+      AccessoryWidgetBackground()
+      VStack(spacing: 2) {
+        WidgetMark(day: day, size: word == nil ? 36 : 28)
+        if let word {
+          Text(word).font(.caption2.weight(.semibold))
+        }
+      }
+    }
+    .modifier(SpokenDay(day: day))
+  }
+
+  /// 早出 and 残業 alone, all a round face this small has room to say.
+  private var movedWord: String? {
+    switch (day.timeChange?.early ?? false, day.timeChange?.late ?? false) {
+    case (true, true): "早出・残業"
+    case (true, false): "早出"
+    case (false, true): "残業"
+    case (false, false): nil
+    }
+  }
+}
+
+/// One line over the clock, after the system's date: today's mark and
+/// name, as a line of text names the shift; 早出 and 残業 show on the
+/// mark's sides. A line holds text and one image, so the mark is drawn
+/// into an image.
+private struct TodayInline: View {
+  @Environment(\.english) private var english
+  @Environment(\.themeColors) private var colors
+  @Environment(\.look) private var look
+  let entry: WidgetEntry
+
+  var body: some View {
+    let day = entry.today
+    if entry.nothingEntered {
+      Text(WidgetWords(english: english).firstRunLine)
+    } else if let pattern = day.pattern {
+      Label {
+        Text(pattern.name)
+      } icon: {
+        markImage(pattern)
+      }
+      .modifier(SpokenDay(day: day))
+    } else {
+      Text("予定なし")
+    }
+  }
+
+  @MainActor private func markImage(_ pattern: Pattern) -> Image {
+    let renderer = ImageRenderer(
+      content: ShiftMark(pattern: pattern, size: 18, change: entry.today.timeChange)
+        .environment(\.themeColors, colors)
+        .environment(\.look, look))
+    renderer.scale = 3
+    return renderer.uiImage.map { Image(uiImage: $0).renderingMode(.template) } ?? Image(systemName: "circle")
   }
 }

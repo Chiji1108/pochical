@@ -127,8 +127,14 @@ const rectangular = {
     height: "100%",
   }),
   // Today is always the first, so it is drawn as the others, as in
-  // これから's columns.
-  weekday: css({ color: "text.secondary", textStyle: "caption" }),
+  // これから's columns. One size for every weekday, small enough for MON
+  // and WED in a cramped column.
+  weekday: css({
+    color: "text.secondary",
+    fontSize: "10px",
+    fontWeight: 500,
+    lineHeight: "13px",
+  }),
 };
 
 // Five days from today, each weekday over its mark: the days ahead at a

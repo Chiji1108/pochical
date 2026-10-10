@@ -89,7 +89,8 @@ A tap opens the app on what the widget shows, so it can be checked there, as a n
 | 次の休み | the day off it counts (today on a day off), alone in the calendar, set to someone or a group in the group's table; with none ahead, today |
 | これから | small: today. Medium: the day of the column tapped. Set to someone: in the group's table |
 | カレンダー | the day tapped; elsewhere, today |
-| Lock screen | today; the round 次の休み as 次の休み does |
+| いまのシフト | the day of the shift it counts, on or next; with none, today |
+| Lock screen | today; the round 次の休み and いまのシフト's as their home screen ones do |
 
 Before anything is entered, every widget opens the calendar on today, where days are entered. On the iPhone a small widget and the lock screen's take one link for the whole widget (WidgetKit's `widgetURL`), and a medium or large one a link for each day (`Link`). Android could set one for every element, but its widgets open the same places as the iPhone's, its small ones as a whole too, so the two behave alike.
 
@@ -103,6 +104,7 @@ Each kind is one widget in the gallery, offering the sizes in the table above; o
 | 次の休み | small; lock screen round | 次の休み | 次の休みまであと何日か。一緒に休む人も選べます。 |
 | これから | small, medium; lock screen rectangular | これから | 今日からの数日のシフト。一緒に見る人も選べます。 |
 | カレンダー | medium, large (Android 4×2, 4×4) | カレンダー | 2週間と、1か月のシフト。 |
+| いまのシフト | small; lock screen round and rectangular | いまのシフト | 勤務があと何時間か。なければ次の勤務まで。 |
 
 What a gallery shows of a kind before it is placed: on the iPhone the person's own entry once they have entered days (WidgetKit's snapshot), else the sample week /design/widgets shows on an ordinary day (ふつう), which is also the placeholder while an entry loads. Android's picker shows the sample, as a generated preview where the launcher supports it (Android 15), else as a picture of it.
 

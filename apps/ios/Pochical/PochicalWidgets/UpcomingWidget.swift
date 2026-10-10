@@ -15,7 +15,7 @@ struct UpcomingWidget: Widget {
     }
     .configurationDisplayName("これから")
     .description("今日からの数日のシフト。一緒に見る人も選べます。")
-    .supportedFamilies([.systemSmall, .systemMedium])
+    .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
   }
 }
 
@@ -24,7 +24,16 @@ private struct UpcomingView: View {
   let entry: WidgetEntry
 
   var body: some View {
-    if entry.nothingEntered {
+    if family == .accessoryRectangular {
+      Group {
+        if entry.nothingEntered {
+          FirstRunLine()
+        } else {
+          LockDays(days: Array(entry.upcoming.prefix(5)))
+        }
+      }
+      .widgetURL(dayLink(entry.date))
+    } else if entry.nothingEntered {
       FirstRun()
         .widgetURL(dayLink(entry.date))
     } else if family == .systemMedium {
@@ -210,5 +219,40 @@ private struct ColumnLine: View {
       .font(.system(size: size).monospacedDigit())
       .lineLimit(1)
       .fixedSize(horizontal: true, vertical: false)
+  }
+}
+
+/// Five days from today on the lock screen, each weekday over its mark,
+/// as これから's medium: the days ahead at a glance, a day of 早出 or 残業
+/// showing on its mark's sides. No memo stroke: at this size it reads as
+/// a line through the weekday.
+private struct LockDays: View {
+  @Environment(\.look) private var look
+  @Environment(\.english) private var english
+  let days: [WidgetDay]
+
+  var body: some View {
+    let named = look.options.names
+    // A little room between the columns, so their weekdays never touch.
+    HStack(spacing: 2) {
+      ForEach(days, id: \.date) { day in
+        // A day off as in the calendar's week: faint where 休みの見せ方
+        // leaves it empty.
+        let off = OffLook(day, look: look, inWeek: true)
+        VStack(spacing: 4) {
+          // One size for every weekday, small enough for MON and WED in
+          // a cramped column, so no one of them shrinks alone.
+          Text(day.date.weekdayHead(english: english))
+            .font(.system(size: 10, weight: .medium))
+            .lineLimit(1)
+            .opacity(0.75)
+          WidgetMark(
+            day: day, size: named ? 24 - nameRoom : 24, faint: off.mark == .faint, named: named,
+            reserve: true)
+        }
+        .frame(maxWidth: .infinity)
+        .modifier(SpokenDay(day: day))
+      }
+    }
   }
 }

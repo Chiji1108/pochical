@@ -15,6 +15,7 @@ import {
   ICON_SIZE,
   iconColorOptions,
   inkBounds,
+  lightDrawing,
   paintedPixels,
 } from "../src/components/design-app-icon";
 import type { IconColors } from "../src/components/design-app-icon";
@@ -24,12 +25,18 @@ const ASSETS = new URL(
   "../../ios/Pochical/Pochical/Assets.xcassets/",
   import.meta.url
 ).pathname;
+const WIDGET_ASSETS = new URL(
+  "../../ios/Pochical/PochicalWidgets/Assets.xcassets/",
+  import.meta.url
+).pathname;
 const CHANNELS = 3;
 const RGBA = 4;
 // Big enough for 設定's two-across grid on a 3x screen.
 const PREVIEW_SIZE = 312;
 // The welcome's 200-point dog on a 3x screen.
 const WELCOME_SIZE = 600;
+// 次の休み's 92-point dog peeking from the corner, on a 3x screen.
+const PEEKING_SIZE = 276;
 // /design's light welcome brightens the scan before multiplying it into
 // the ground (src/components/design-work-setup.tsx, onboarding.poodle).
 const WELCOME_BRIGHTNESS = 1.12;
@@ -206,3 +213,46 @@ const writeWelcome = async () => {
 };
 
 await writeWelcome();
+
+// The dog 次の休み's widget peeks from its corner with on a day off, as
+// /design draws it: the whole drawing, white in dark lines in light and
+// the default icon's dark look in dark, each without its ground.
+const writePeeking = async () => {
+  const folder = `${WIDGET_ASSETS}PeekingPoodle.imageset/`;
+  await rm(folder, { force: true, recursive: true });
+  await mkdir(folder, { recursive: true });
+  const [light, dark] = await Promise.all(
+    [lightDrawing, colorsOf("moss-dark")].map(
+      async (colors) =>
+        await sharp(
+          Buffer.from(
+            paintedPixels(lightness, width, height, colors, true).buffer
+          ),
+          { raw: { channels: RGBA, height, width } }
+        )
+          .resize(PEEKING_SIZE, PEEKING_SIZE, { kernel: "lanczos3" })
+          .png({ compressionLevel: 9 })
+          .toBuffer()
+    )
+  );
+  await Promise.all([
+    writeFile(`${folder}light.png`, light),
+    writeFile(`${folder}dark.png`, dark),
+    writeFile(
+      `${folder}Contents.json`,
+      json({
+        images: [
+          { filename: "light.png", idiom: "universal" },
+          {
+            appearances: [{ appearance: "luminosity", value: "dark" }],
+            filename: "dark.png",
+            idiom: "universal",
+          },
+        ],
+        info: author,
+      })
+    ),
+  ]);
+};
+
+await writePeeking();

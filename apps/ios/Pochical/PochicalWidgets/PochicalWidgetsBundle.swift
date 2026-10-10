@@ -8,5 +8,7 @@ struct PochicalWidgetsBundle: WidgetBundle {
     SimpleWidget()
     UpcomingWidget()
     CalendarWidget()
+    NextOffWidget()
+    NowWidget()
   }
 }
