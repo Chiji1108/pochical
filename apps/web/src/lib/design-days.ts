@@ -242,6 +242,30 @@ export function withOrder(
   return [...rules.filter(({ start }) => start < rule.start), rule];
 }
 
+// 繰り返し's list of periods: an order put in on its start, the periods
+// around it kept, each running to the next one's start. It takes the
+// place of one that started that day, and of `replacing` when its own
+// start was moved.
+export function withOrderPut(
+  rules: readonly RepeatRule[],
+  rule: RepeatRule,
+  replacing?: Date
+): RepeatRule[] {
+  const gone = new Set([rule.start.getTime(), replacing?.getTime()]);
+  return [
+    ...rules.filter(({ start }) => !gone.has(start.getTime())),
+    rule,
+  ].toSorted((a, b) => a.start.getTime() - b.start.getTime());
+}
+
+// A period taken out: the one before it runs on to the next.
+export function withoutOrder(
+  rules: readonly RepeatRule[],
+  start: Date
+): RepeatRule[] {
+  return rules.filter((rule) => rule.start.getTime() !== start.getTime());
+}
+
 // Each day's shift by the repeating orders alone, through `through`: a day
 // follows the latest order that starts on or before it, and an order with
 // an empty sequence ends repeating. A pattern that is gone (not in

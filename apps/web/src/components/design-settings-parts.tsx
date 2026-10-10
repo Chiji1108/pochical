@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { css } from "styled-system/css";
 
 import { monthAfter } from "../lib/design-days";
-import type { PatternBook, Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import { List } from "./design-list";
 import { Section } from "./design-ui";
@@ -11,26 +10,6 @@ import { Section } from "./design-ui";
 // days their previews and examples count from.
 
 export const previewDays = 14;
-
-// Shortens runs of the same shift, e.g. 日勤×2・夕勤×2. An order from
-// before may name a pattern deleted since.
-export function sequenceLabel(sequence: Shift[], book: PatternBook) {
-  const runs: { shift: Shift; count: number }[] = [];
-  for (const shift of sequence) {
-    const last = runs.at(-1);
-    if (last?.shift === shift) {
-      last.count += 1;
-    } else {
-      runs.push({ count: 1, shift });
-    }
-  }
-  return runs
-    .map(
-      ({ shift, count }) =>
-        `${book[shift]?.name ?? "削除したパターン"}${count > 1 ? `×${count}` : ""}`
-    )
-    .join("・");
-}
 
 export function shortDay(date: Date) {
   return `${date.getMonth() + 1}/${date.getDate()}`;

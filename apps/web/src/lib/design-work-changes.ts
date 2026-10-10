@@ -4,6 +4,8 @@ import {
   giveDaysToOrder,
   holidayShiftOf,
   withOrder,
+  withOrderPut,
+  withoutOrder,
 } from "./design-days";
 import type { RepeatRule, Schedule } from "./design-days";
 import { bookOf, patternsForJob } from "./design-patterns";
@@ -11,7 +13,8 @@ import type { Pattern } from "./design-patterns";
 import { useUser } from "./design-user-store";
 
 // What the settings change about how someone works: a repeating order
-// added or corrected, a new job with its own patterns, and holidays off.
+// put in, set again, moved or taken out, and a new job with its own
+// patterns.
 // `schedule` is the days as they show, to see which patterns are on days
 // before a change.
 export function useWorkChanges(schedule: Schedule) {
@@ -23,7 +26,8 @@ export function useWorkChanges(schedule: Schedule) {
   // days give their own shifts and times back to it, keeping memos and
   // people, and an empty sequence leaves a roster to fill in. A new job
   // brings its own patterns, so it passes them in.
-  function fillRule(rule: RepeatRule, patterns = ownPatterns) {
+  // An order with the pattern its holidays take, when they are off.
+  function withHolidays(rule: RepeatRule, patterns = ownPatterns) {
     const holidaysOff =
       rule.sequence.length > 0 &&
       (rule.holidaysOff ??
@@ -33,19 +37,27 @@ export function useWorkChanges(schedule: Schedule) {
           bookOf(patterns)
         ));
     const holidayShift = holidaysOff ? holidayShiftOf(patterns) : undefined;
-    setOwnDays((previous) => giveDaysToOrder(previous, rule.start));
     return rule.sequence.length > 0
       ? { ...rule, holidayShift, holidaysOff }
       : rule;
+  }
+  function fillRule(rule: RepeatRule, patterns = ownPatterns) {
+    setOwnDays((previous) => giveDaysToOrder(previous, rule.start));
+    return withHolidays(rule, patterns);
   }
   function applyRule(rule: RepeatRule, patterns?: Pattern[]) {
     const filled = fillRule(rule, patterns);
     setRules((previous) => withOrder(previous, filled));
   }
-  // Corrects the rule in use from its own start, rather than adding one.
-  function fixRule(rule: RepeatRule) {
-    const filled = fillRule(rule);
-    setRules((previous) => withOrder(previous.slice(0, -1), filled));
+  // 繰り返し's periods: one put in, set again, or moved (`replacing` its
+  // old start), the others kept, and the days the person entered kept
+  // over it, as they are on any order.
+  function putOrder(rule: RepeatRule, replacing?: Date) {
+    const put = withHolidays(rule);
+    setRules((previous) => withOrderPut(previous, put, replacing));
+  }
+  function removeOrder(start: Date) {
+    setRules((previous) => withoutOrder(previous, start));
   }
   // The new job's patterns take over, keeping any old one still on a day
   // before the switch so those days keep their marks. A ready-made one the
@@ -66,20 +78,5 @@ export function useWorkChanges(schedule: Schedule) {
     setPatterns(patterns);
     applyRule({ ...job.rule, sequence }, patterns);
   }
-  // Holidays follow the order in use: on, they take the day off now first;
-  // off, they show the sequence again. Days the person changed keep theirs.
-  function setHolidaysOff(holidaysOff: boolean) {
-    const holidayShift = holidaysOff ? holidayShiftOf(ownPatterns) : undefined;
-    if (holidaysOff && !holidayShift) {
-      return;
-    }
-    // The order in use as it is by then, should another change come first.
-    setRules((previous) => {
-      const rule = previous.at(-1);
-      return rule
-        ? [...previous.slice(0, -1), { ...rule, holidayShift, holidaysOff }]
-        : previous;
-    });
-  }
-  return { applyRule, changeJob, fixRule, setHolidaysOff };
+  return { changeJob, putOrder, removeOrder };
 }

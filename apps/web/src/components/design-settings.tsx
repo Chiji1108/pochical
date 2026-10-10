@@ -37,6 +37,7 @@ import {
   JobChangePage,
   RepeatEditorPage,
   RepeatPage,
+  RepeatPeriodPage,
   StopRepeatPage,
 } from "./design-settings-work";
 import { SupportChatPage, SupportRow } from "./design-support-chat";
@@ -53,6 +54,7 @@ type Page =
   | "top"
   | "repeat-new"
   | "repeat-fix"
+  | "repeat-period"
   | "job"
   | "repeat"
   | "stop-repeat"
@@ -76,10 +78,9 @@ export function DesignSettings({
   schedule,
   profile,
   onProfile,
-  onApplyRule,
-  onFixRule,
+  onPutRule,
+  onRemoveRule,
   onChangeJob,
-  onHolidaysOff,
   onTab,
   initialPage = "top",
 }: {
@@ -88,10 +89,11 @@ export function DesignSettings({
   schedule: Schedule;
   profile: Profile;
   onProfile: (profile: Profile) => void;
-  onApplyRule: (rule: RepeatRule) => void;
-  onFixRule: (rule: RepeatRule) => void;
+  // 繰り返し's periods: one put in or set again (`replacing` its old
+  // start when moved), or taken out.
+  onPutRule: (rule: RepeatRule, replacing?: Date) => void;
+  onRemoveRule: (start: Date) => void;
   onChangeJob: (job: { patterns: Pattern[]; rule: RepeatRule }) => void;
-  onHolidaysOff: (holidaysOff: boolean) => void;
   onTab: (tab: Tab) => void;
   // For the flow diagrams: a page to open on.
   initialPage?: Page;
@@ -113,6 +115,11 @@ export function DesignSettings({
   );
   const repeating = isRepeating(rules);
   const current = repeating ? rules.at(-1) : undefined;
+  // The period opened from 繰り返し's list, by its start.
+  const [periodStart, setPeriodStart] = useState<Date>();
+  const period = rules.find(
+    (rule) => rule.start.getTime() === periodStart?.getTime()
+  );
   // The order to start from when repeating again.
   const lastSequence =
     [...rules].reverse().find((rule) => rule.sequence.length > 0)?.sequence ??
@@ -126,9 +133,9 @@ export function DesignSettings({
         {page === "repeat-new" && (
           <RepeatEditorPage
             initialSequence={lastSequence}
-            mode={current ? "switch" : "first"}
+            mode={rules.length > 0 ? "switch" : "first"}
             onApply={(rule) => {
-              onApplyRule(rule);
+              onPutRule(rule);
               setPage("repeat");
             }}
             onBack={() => {
@@ -138,17 +145,17 @@ export function DesignSettings({
             shown={schedule}
           />
         )}
-        {page === "repeat-fix" && current && (
+        {page === "repeat-fix" && period && (
           <RepeatEditorPage
-            current={current}
-            initialSequence={current.sequence}
+            current={period}
+            initialSequence={period.sequence}
             mode="fix"
             onApply={(rule) => {
-              onFixRule(rule);
-              setPage("repeat");
+              onPutRule(rule);
+              setPage("repeat-period");
             }}
             onBack={() => {
-              setPage("repeat");
+              setPage("repeat-period");
             }}
             patternKeys={patternKeys}
             shown={schedule}
@@ -204,15 +211,12 @@ export function DesignSettings({
             onBack={() => {
               setPage("top");
             }}
-            onFix={() => {
-              setPage("repeat-fix");
-            }}
-            onHolidaysOff={onHolidaysOff}
             onNew={() => {
               setPage("repeat-new");
             }}
-            onRepeat={() => {
-              setPage("repeat-new");
+            onOpen={(start) => {
+              setPeriodStart(start);
+              setPage("repeat-period");
             }}
             onStop={() => {
               setPage("stop-repeat");
@@ -220,10 +224,36 @@ export function DesignSettings({
             rules={rules}
           />
         )}
+        {page === "repeat-period" && period && (
+          <RepeatPeriodPage
+            onBack={() => {
+              setPage("repeat");
+            }}
+            onFix={() => {
+              setPage("repeat-fix");
+            }}
+            onMove={(start) => {
+              onPutRule(
+                { ...period, anchor: period.anchor ?? period.start, start },
+                period.start
+              );
+              setPeriodStart(start);
+            }}
+            onPut={(rule) => {
+              onPutRule(rule);
+            }}
+            onRemove={() => {
+              onRemoveRule(period.start);
+              setPage("repeat");
+            }}
+            rule={period}
+            rules={rules}
+          />
+        )}
         {page === "stop-repeat" && (
           <StopRepeatPage
             onApply={(start) => {
-              onApplyRule({ sequence: [], start });
+              onPutRule({ sequence: [], start });
               setPage("repeat");
             }}
             onBack={() => {
