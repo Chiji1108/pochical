@@ -252,7 +252,8 @@ private struct RepeatPeriodPage: View {
             patterns: values.patterns,
             on: Binding(get: { order.holidaysOff }, set: { setHolidaysOff($0) }),
             shift: Binding(
-              get: { holidayShift(of: values.patterns, picked: order.holidayShift) },
+              // The one it takes, even one that no longer counts as off.
+              get: { order.holidayShift ?? holidayShift(of: values.patterns) },
               set: { setHolidaysOff(true, picking: $0) }))
         }
         Section {

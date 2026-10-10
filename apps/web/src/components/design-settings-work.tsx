@@ -317,9 +317,9 @@ function HolidayChoice({
 }) {
   const patterns = useUser((state) => state.patterns);
   const offs = patterns.filter(isDayOff);
-  // The one holidays take: the one picked while it counts as off, else
+  // The one holidays take, even one that no longer counts as off; else
   // the first that does.
-  const taken = holidayShiftOf(patterns, holidayShift);
+  const taken = holidayShift ?? holidayShiftOf(patterns);
   if (offs.length === 0) {
     return null;
   }
