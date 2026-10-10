@@ -1,5 +1,6 @@
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronRight, CircleSlash } from "lucide-react";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { css, cx } from "styled-system/css";
 
 import {
@@ -38,69 +39,93 @@ import { WorkSetupSteps } from "./design-work-setup";
 // correcting and stopping it; and 新しい仕事にする, opened from
 // シフトパターン.
 
-// One order on 繰り返し: its days and how often it comes round, on a
-// card. The newest is the one to correct, so it alone opens the editor;
-// the one in use before a later one starts is only shown.
+// One order on 繰り返し: its days and how often it comes round, at the
+// head of a card of its own. The newest is the one to correct, so it alone
+// opens the editor, and its 祝日は休みにする sits under it in the same
+// card; the one in use before a later one starts is only shown.
 function OrderCard({
   rule,
   period,
   onFix,
+  children,
 }: {
   rule: RepeatRule;
   period: string;
   onFix?: () => void;
+  children?: ReactNode;
 }) {
   const content = (
-    <>
-      <p className={settingsParts.cardLabel}>
+    <span className={orderCard.body}>
+      <span className={settingsParts.cardLabel}>
         {period}
         <span className={settingsParts.cardCount}>
           {rule.sequence.length > 0
             ? `${rule.sequence.length}日ごと`
             : "繰り返しなし"}
         </span>
-      </p>
+      </span>
       {rule.sequence.length > 0 ? (
         <SequenceTiles sequence={rule.sequence} />
       ) : (
-        <p className={settingsParts.cardMeta}>
+        <span className={settingsParts.cardMeta}>
           この日から、カレンダーで1日ずつ入れます。
-        </p>
+        </span>
       )}
-    </>
+    </span>
   );
-  if (!onFix) {
-    return <div className={settingsParts.card}>{content}</div>;
-  }
   return (
-    <button
-      aria-label={`${period}の繰り返しを直す`}
-      className={cx(settingsParts.card, orderCard.pressable)}
-      onClick={onFix}
-      type="button"
-    >
-      <span className={orderCard.body}>{content}</span>
-      <ChevronRight aria-hidden="true" className={orderCard.arrow} size={17} />
-    </button>
+    <List>
+      {onFix ? (
+        <button
+          aria-label={`${period}の繰り返しを直す`}
+          className={cx(orderCard.head, orderCard.pressable)}
+          data-list-row=""
+          onClick={onFix}
+          type="button"
+        >
+          {content}
+          <ChevronRight
+            aria-hidden="true"
+            className={orderCard.arrow}
+            size={17}
+          />
+        </button>
+      ) : (
+        <div className={orderCard.head} data-list-row="">
+          {content}
+        </div>
+      )}
+      {children}
+    </List>
   );
 }
 
 const orderCard = {
-  // A section's cards and the switch under them, apart as lists are.
-  stack: css({ display: "flex", flexDirection: "column", gap: "12px" }),
   arrow: css({ color: "text.quaternary", flexShrink: 0 }),
-  body: css({ display: "block", flex: 1, minWidth: 0 }),
-  pressable: css({
-    _hover: { bg: "fill.tertiary" },
+  body: css({
+    "& > span": { display: "flex" },
+    display: "block",
+    flex: 1,
+    minWidth: 0,
+  }),
+  head: css({
     alignItems: "center",
-    border: 0,
     color: "text.primary",
-    cursor: "pointer",
     display: "flex",
     gap: "12px",
+    padding: "16px",
+    position: "relative",
     textAlign: "left",
     width: "100%",
   }),
+  pressable: css({
+    _hover: { bg: "fill.tertiary" },
+    bg: "transparent",
+    border: 0,
+    cursor: "pointer",
+  }),
+  // A section's cards, apart as lists are.
+  stack: css({ display: "flex", flexDirection: "column", gap: "12px" }),
 };
 
 // When an order runs: from its start to the day before the next one.
@@ -141,7 +166,9 @@ function PastOrders({ rules, until }: { rules: RepeatRule[]; until: number }) {
 
 // The orders as a timeline: the one in use today, any starting later
 // under これから, and those over under これまで. The newest, in use or
-// to come, is the one to correct, and 祝日は休みにする is about it.
+// to come, is the one to correct, with 祝日は休みにする in its card.
+// A new order and stopping both change things from a day on, not any
+// one order, so they go together under the cards.
 function RepeatTimeline({
   rules,
   onNew,
@@ -158,56 +185,50 @@ function RepeatTimeline({
   const inUse = rules.findLastIndex((rule) => rule.start <= designToday);
   const newest = rules.length - 1;
   const latest = rules[newest];
-  const card = (index: number) => (
-    <OrderCard
-      key={dateKey(rules[index].start)}
-      onFix={index === newest && latest.sequence.length > 0 ? onFix : undefined}
-      period={periodOf(rules, index)}
-      rule={rules[index]}
-    />
-  );
-  const holidays = latest.sequence.length > 0 && (
-    <List>
-      <SwitchRow
-        checked={latest.holidaysOff ?? false}
-        label="祝日は休みにする"
-        onChange={onHolidaysOff}
-      />
-    </List>
-  );
+  const card = (index: number) => {
+    const editable = index === newest && latest.sequence.length > 0;
+    return (
+      <OrderCard
+        key={dateKey(rules[index].start)}
+        onFix={editable ? onFix : undefined}
+        period={periodOf(rules, index)}
+        rule={rules[index]}
+      >
+        {editable && (
+          <SwitchRow
+            checked={latest.holidaysOff ?? false}
+            label="祝日は休みにする"
+            onChange={onHolidaysOff}
+          />
+        )}
+      </OrderCard>
+    );
+  };
   const upcoming = rules
     .slice(inUse + 1)
     .map((_, offset) => inUse + 1 + offset);
   return (
     <>
-      {inUse !== -1 && (
-        <Section title="今の繰り返し">
-          <div className={orderCard.stack}>
-            {card(inUse)}
-            {inUse === newest && holidays}
-          </div>
-        </Section>
-      )}
+      {inUse !== -1 && <Section title="今の繰り返し">{card(inUse)}</Section>}
       {upcoming.length > 0 && (
         <Section title="これから">
-          <div className={orderCard.stack}>
-            {upcoming.map(card)}
-            {holidays}
-          </div>
+          <div className={orderCard.stack}>{upcoming.map(card)}</div>
         </Section>
       )}
-      {/* As シフトパターン's パターンを追加: a row under the cards. */}
+      {/* As シフトパターン's パターンを追加: rows under the cards. */}
       <List>
         <AddRow label="新しい繰り返しを追加" onClick={onNew} />
+        {latest.sequence.length > 0 && (
+          <ListRow
+            label="繰り返しをやめる"
+            leading={<CircleSlash aria-hidden="true" size={20} />}
+            onClick={onStop}
+          />
+        )}
       </List>
       <Note>
-        異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。
+        どちらも、選んだ日から切り替わります。それより前のシフトは、そのまま残ります。
       </Note>
-      {latest.sequence.length > 0 && (
-        <Button variant="text" onClick={onStop}>
-          繰り返しをやめる
-        </Button>
-      )}
       <PastOrders rules={rules} until={inUse} />
     </>
   );
