@@ -11,7 +11,6 @@ import SwiftUI
 struct StylePreview: View {
   @Environment(Settings.self) private var settings
   @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.themeColors) private var colors
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
   var heading = false
@@ -61,9 +60,20 @@ struct StylePreview: View {
       }
     }
     .padding(12)
-    .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xl))
-    .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.separator))
+    .modifier(PreviewGround())
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(heading ? "今週の見え方" : "今週と来週の見え方")
+  }
+}
+
+/// The preview's card, in the colors of the light or dark it is shown in,
+/// read where `shown(in:_:)` has set them rather than from the page.
+private struct PreviewGround: ViewModifier {
+  @Environment(\.themeColors) private var colors
+
+  func body(content: Content) -> some View {
+    content
+      .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xl))
+      .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.separator))
   }
 }
