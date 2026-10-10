@@ -119,12 +119,7 @@ export const onboarding = {
     margin: 0,
     textStyle: "body",
   }),
-  name: css({
-    fontSize: "24px",
-    fontWeight: 700,
-    lineHeight: 1.4,
-    margin: "8px 0 0",
-  }),
+  name: css({ fontWeight: 700, margin: "8px 0 0", textStyle: "title1" }),
   // Each phrase stays whole, so the line breaks after the comma.
   phrase: css({ display: "inline-block" }),
   // In light, the scan's black lines on white paper are multiplied into
