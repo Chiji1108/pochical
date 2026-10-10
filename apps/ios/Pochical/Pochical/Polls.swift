@@ -252,7 +252,7 @@ struct DecidePollSheet: View {
           HStack {
             Text(day.fullText).foregroundStyle(colors.textPrimary)
             Spacer()
-            Text("\(votes.voters(on: day).count)人")
+            Text("\(votes.voters(on: day).count)人が行ける")
               .foregroundStyle(colors.textTertiary)
             Image(systemName: "checkmark")
               .foregroundStyle(colors.accentDefault)

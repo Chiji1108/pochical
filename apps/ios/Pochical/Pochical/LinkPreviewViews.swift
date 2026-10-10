@@ -30,7 +30,8 @@ struct PreviewImage: View {
 
 /// The page under a message's words, inside its bubble: the picture cropped
 /// to chatRules.linkPreviewAspect, the title on two lines at most, and the
-/// site's name. A tap opens the link.
+/// site's name, on a card of its own in either bubble, as /design's. A tap
+/// opens the link.
 struct LinkPreviewCard: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.openURL) private var openURL
@@ -54,16 +55,17 @@ struct LinkPreviewCard: View {
           .multilineTextAlignment(.leading)
         Text(preview.site)
           .font(.caption2)
-          .opacity(0.7)
+          .foregroundStyle(colors.textTertiary)
           .lineLimit(1)
       }
-      .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-      .padding(.horizontal, 10)
+      .foregroundStyle(colors.textPrimary)
+      .padding(.horizontal, 12)
       .padding(.vertical, 8)
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .background(mine ? Color.black.opacity(0.12) : colors.backgroundCard)
+    .background(colors.backgroundCard)
     .clipShape(RoundedRectangle(cornerRadius: Radius.md))
+    .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.borderDefault))
     .contentShape(.rect)
     .onTapGesture {
       if let url = URL(string: preview.url) {
@@ -90,41 +92,21 @@ struct ComposerPreview: Equatable {
 /// site, the title (読み込み中… until it comes) and the picture small at the
 /// end, with × to send without it.
 struct ComposerPreviewBar: View {
-  @Environment(\.themeColors) private var colors
   let state: ComposerPreview
   let onRemove: () -> Void
 
   var body: some View {
-    HStack(spacing: 10) {
-      RoundedRectangle(cornerRadius: Radius.xxs)
-        .fill(colors.accentDefault)
-        .frame(width: 3)
-      VStack(alignment: .leading, spacing: 2) {
-        Text(state.preview?.site ?? URL(string: state.url)?.host() ?? state.url)
-          .font(.caption.weight(.semibold))
-          .foregroundStyle(colors.accentDefault)
-          .lineLimit(1)
-        Text(state.preview?.title ?? "読み込み中…")
-          .font(.footnote)
-          .foregroundStyle(state.preview == nil ? colors.textTertiary : colors.textSecondary)
-          .lineLimit(1)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
+    ComposerBar(
+      title: state.preview?.site ?? URL(string: state.url)?.host() ?? state.url,
+      words: state.preview?.title ?? "読み込み中…", stop: "リンクのプレビューを付けない",
+      onStop: onRemove
+    ) {
       if let imageID = state.preview?.imageID, !imageID.isEmpty {
         PreviewImage(imageID: imageID)
-          .frame(width: 40, height: 40)
+          .frame(width: 32, height: 32)
           .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
       }
-      Button("リンクのプレビューを外す", systemImage: "xmark", action: onRemove)
-        .labelStyle(.iconOnly)
-        .font(.footnote.weight(.semibold))
-        .foregroundStyle(colors.textSecondary)
-        .frame(width: Metrics.touch, height: Metrics.touch)
     }
-    .frame(height: 48)
-    .padding(.leading, 16)
-    .padding(.trailing, 4)
-    .padding(.top, 4)
   }
 }
 
@@ -138,39 +120,48 @@ struct InviteCard: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.openInvite) private var openInvite
   let code: String
-  let mine: Bool
   @State private var invite: InviteDetails?
   @State private var unusable = false
 
   var body: some View {
     HStack(spacing: 12) {
+      // The group's mark on its tile, as the hub's; a link that cannot be
+      // used, a link's sign in its place.
       Group {
-        if let invite, !unusable, invite.mark.emoji.isEmpty {
+        if let invite, !unusable {
           GroupMarkView(mark: invite.mark, size: 42, shelf: ChatPhotos.invitation(code))
         } else {
-          Text(unusable ? "🔗" : (invite?.mark.emoji.isEmpty == false ? invite?.mark.emoji ?? "" : "👥"))
-            .font(.system(size: 22))
-            .frame(width: 42, height: 42)
-            .background(colors.accentContainer, in: RoundedRectangle(cornerRadius: Radius.lg))
+          Image(systemName: "link")
+            .font(.system(size: 18))
+            .foregroundStyle(colors.textTertiary)
+            .opacity(unusable ? 1 : 0)
         }
       }
-      .opacity(unusable ? 0.5 : 1)
+      .frame(width: 42, height: 42)
+      .background(colors.fillQuaternary)
+      .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
       VStack(alignment: .leading, spacing: 2) {
         Text(unusable ? "この招待は使えません" : invite?.name ?? "読み込み中…")
           .font(.footnote.weight(.semibold))
           .lineLimit(2)
-        if let invite, !unusable {
+        if unusable {
+          Text("グループへの招待")
+            .font(.caption2)
+            .foregroundStyle(colors.textTertiary)
+        } else if let invite {
           Text(invite.alreadyMember ? "参加中のグループ" : "グループへの招待・\(invite.members.count)人")
             .font(.caption2)
-            .opacity(0.7)
+            .foregroundStyle(colors.textTertiary)
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-    .padding(10)
-    .background(mine ? Color.black.opacity(0.12) : colors.backgroundCard)
+    .foregroundStyle(colors.textPrimary)
+    .padding(.horizontal, 12)
+    .padding(.vertical, 10)
+    .background(colors.backgroundCard)
     .clipShape(RoundedRectangle(cornerRadius: Radius.md))
+    .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.borderDefault))
     .contentShape(.rect)
     // A tap, not a button, so the long press stays the line's.
     .onTapGesture {

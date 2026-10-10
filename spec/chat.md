@@ -4,6 +4,14 @@ How chat messages behave beyond sync (spec/sync-protocol.md): which words are li
 
 The numbers named `chatRules.*` here are in `design/src/chat.ts`, the one place they are written; `mise run gen` gives the apps the same values.
 
+## The chat's page
+
+- The title is the group's name for 全体チャット, with how many are in it under it, or the other member's name for a one-to-one chat. A tap on it opens what the chat is of: the group's settings, or the member's profile.
+- A member's profile, from their face, their mention or a one-to-one chat's title, is a sheet: their face, which opens large when it is a photo, their name, ブロック中 while blocked, 〇〇でのプロフィール with the group's mark, and メッセージを送る for the one-to-one chat with them, but in that chat itself and while they are blocked. ブロック and 通報 are in its ⋯ (Reporting and blocking).
+- ⋯ beside the title holds みんなのシフト for 全体チャット, then the chat's notifications (Mentions).
+- In the group's hub, under its chats, a group of one says メンバーを招待すると、1対1でも話せます。 Starting a one-to-one chat lists the members with 〇〇での名前とアイコンで話します。, as the chat belongs to the group.
+- コピー says コピーしました.
+
 ## Opening a message's menu
 
 A long press on a message (a right click on the web) opens its reactions and menu, as LINE, WhatsApp and iMessage do: the rest of the screen dims, the message stays where it was, lifted a little, with the reactions in a bar over it and the menu under it, or over the bar when there is no room under it, as LINE turns it; only when neither fits are they all moved together to stay on the screen (a message too tall for the room drawn smaller about its top corner by the writer, as the system's context menu draws a tall preview, down to half its size and past that cut short at its end), and the message's place in the chat left empty meanwhile. A tap outside closes it; a pick closes it, then acts. On the phones the finger that opened it may stay down and slide onto a reaction or a menu item, which lights up under it with a light tick; lifting there picks it, and lifting anywhere else leaves it open for a tap, as the system's context menu does. The apps draw it themselves rather than the system's context menu, which puts reactions inside the menu. The press gives a little under the finger and a light haptic marks it opening. A tap is the message's own: a link or a mention opens, a photo opens large, a shared day or a poll's head does nothing. So scrolling past a line never opens its menu by accident. A long press on a link opens the link's menu instead. With a keyboard or a screen reader, activating the message opens its menu (a photo's activation opens it large; its menu is in the screen reader's actions).
@@ -101,7 +109,7 @@ A member can change or take back their own messages, at any time. Others' messag
 The stores require a way to report what people post and to block someone (App Store Review Guideline 1.2; Google Play's user-generated content policy). Neither is shown to the member concerned, and neither changes anything for the rest of the group.
 
 - **通報** is in the menu of someone else's message (last, apart and in the danger color) and in the ⋯ menu of their profile sheet. A sheet asks the reason, one of 迷惑・スパム / 嫌がらせ・いじめ / 性的・暴力的な内容 / なりすまし / その他, and sends it with ✓. Then a centered alert says 通報しました and offers to block them too (〇〇をブロックしますか？… / しない | ブロック), unless they are already blocked; otherwise the app says 通報しました. The sheet says what is sent, and nothing else of the chat is: 通報すると、このメッセージと前後の数件がポチカルに送られます。 (Pochical's people read it on the admin site and in their Slack channel, spec/admin.md.) (for a member: 〇〇の名前とアイコン) 相手には知らされません。 It does not say who reads it, so it does not read as the chat being watched.
-- **ブロック** is in the ⋯ menu of someone's profile sheet (beside ×, not in sight under their face: it is rarely used, and a family member's profile should not show it in red), asked first (〇〇をブロックしますか？). While blocked, their profile says ブロック中 under the name, and the menu has ブロックを解除. It applies to the account, in every group the two share:
+- **ブロック** is in the ⋯ menu of someone's profile sheet (beside ×, not in sight under their face: it is rarely used, and a family member's profile should not show it in red), first, with 通報 after a line in the danger color, asked first (〇〇をブロックしますか？). While blocked, their profile says ブロック中 under the name, and the menu has ブロックを解除. It applies to the account, in every group the two share:
   - their messages in group chats are folded to one line, ブロック中のメンバーのメッセージ, which shows the message for now on a tap; the chat list's last line says the same;
   - their one-to-one chat with you is hidden, cannot be started, and their messages to it are not delivered;
   - their shifts still show: the group exists to share shifts, and leaving the group or taking them out is the step for that.
@@ -131,7 +139,7 @@ A group chat can put days to the vote, as LINE's 日程調整 does, for the step
 - The poll is a card: a head (日にちの投票, and N人が投票) whose long press opens the line's reactions and menu like any line's, then a row per day: the date (in the week's colors), みんな休み under it when everyone's shifts are off, the faces of who can come (three, or two and +N), and a 行ける button that toggles your vote. Anyone in the group votes, on as many days as they like, and can change it until the poll is settled.
 - Its writer has 日にちを決める at the card's foot (anyone has it once the writer has left the group, so a poll is never stuck): a sheet lists the days with how many can come; ✓ settles it. The chosen row is marked 決定 on the accent's container, the other days fade, voting ends, and the poll is pinned (Pins) so the day stays found. The app says 〇月〇日(〇)に決めました to the writer. A settled poll's foot is gone, so the day reads as decided; whoever can settle it finds 決め直す in its long-press menu, opening the same sheet on the day chosen. Choosing another moves 決定 to it, and the pin bar follows, for everyone; no line from the app says so.
 - A tap on a day's faces lists everyone who can come that day by name, as a reaction's list does.
-- In a line of words (quotes, the chat list, the pin bar) a poll reads 📅 日にちの投票：〇月〇日(〇)ほか, and once settled 📅 〇月〇日(〇)に決定.
+- In a line of words (quotes, the chat list, the pin bar) a poll reads 📅 日にちの投票：〇月〇日(〇)ほか, and once settled 📅 〇月〇日(〇)に決定. The chat list says what a line did: shared days and a poll still open end with を共有しました (📅 10月5日(日)ほかを共有しました); a settled poll keeps its day.
 
 ## Photos
 

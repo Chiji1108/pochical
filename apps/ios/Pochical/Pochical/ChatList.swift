@@ -53,61 +53,70 @@ struct ChatList: View {
       member.userID != meID && !talking.contains { $0.userID == member.userID }
         && !blocked.contains(member.userID)
     }
-    VStack(spacing: 0) {
-      if let meID {
-        ChatRow(
-          group: group, threadID: groupThread, me: meID, label: "全体チャット", blocked: blocked
-        ) {
-          Image(systemName: "bubble.left.and.bubble.right")
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(colors.accentDefault)
-            .frame(width: 28, height: 28)
-            .background(colors.accentContainer, in: RoundedRectangle(cornerRadius: Radius.sm))
-        } onOpen: {
-          onOpen(groupThread, nil)
-        }
-        ForEach(talking, id: \.userID) { member in
-          separator
+    VStack(alignment: .leading, spacing: 8) {
+      VStack(spacing: 0) {
+        if let meID {
           ChatRow(
-            group: group, threadID: directThread(meID, member.userID), me: meID,
-            label: member.shownName
+            group: group, threadID: groupThread, me: meID, label: "全体チャット", blocked: blocked
           ) {
-            MemberAvatar(
-              name: member.shownName, photoID: member.deleted ? "" : member.photoID,
-              groupID: group.id, size: 28)
+            Image(systemName: "bubble.left.and.bubble.right")
+              .font(.system(size: 13, weight: .semibold))
+              .foregroundStyle(colors.accentDefault)
+              .frame(width: 28, height: 28)
+              .background(colors.accentContainer, in: RoundedRectangle(cornerRadius: Radius.sm))
           } onOpen: {
-            onOpen(directThread(meID, member.userID), member.userID)
+            onOpen(groupThread, nil)
           }
-        }
-        if !untouched.isEmpty {
-          separator
-          Button {
-            starting = true
-          } label: {
-            HStack(spacing: 12) {
-              Image(systemName: "plus")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(colors.accentDefault)
-                .frame(width: 28, height: 28)
-              Text("個人チャットを始める")
-                .foregroundStyle(colors.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+          ForEach(talking, id: \.userID) { member in
+            separator
+            ChatRow(
+              group: group, threadID: directThread(meID, member.userID), me: meID,
+              label: member.shownName
+            ) {
+              MemberAvatar(
+                name: member.shownName, photoID: member.deleted ? "" : member.photoID,
+                groupID: group.id, size: 28)
+            } onOpen: {
+              onOpen(directThread(meID, member.userID), member.userID)
             }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 52)
-            .contentShape(.rect)
           }
-          .buttonStyle(.plain)
+          if !untouched.isEmpty {
+            separator
+            Button {
+              starting = true
+            } label: {
+              HStack(spacing: 12) {
+                Image(systemName: "plus")
+                  .font(.body.weight(.semibold))
+                  .foregroundStyle(colors.accentDefault)
+                  .frame(width: 28, height: 28)
+                Text("個人チャットを始める")
+                  .foregroundStyle(colors.textPrimary)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+              }
+              .padding(.horizontal, 16)
+              .frame(minHeight: 52)
+              .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+          }
         }
       }
+      .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
+      // Alone in the group, why there is no one to talk to one to one.
+      if members.count <= 1 {
+        Text("メンバーを招待すると、1対1でも話せます。")
+          .font(.footnote)
+          .foregroundStyle(colors.textTertiary)
+          .padding(.horizontal, 16)
+      }
     }
-    .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
     .task { meID = await groupCalls.userID() }
     .task(id: group.id) {
       _ = try? await $chats.load(ChatThreadsRequest(groupID: group.id))
     }
     .sheet(isPresented: $starting) {
-      StartChatSheet(members: untouched, groupID: group.id) { member in
+      StartChatSheet(members: untouched, groupID: group.id, groupName: group.name) { member in
         starting = false
         if let meID {
           onOpen(directThread(meID, member.userID), member.userID)
@@ -211,7 +220,7 @@ private struct ChatRow<Icon: View>: View {
       return "自分：写真を送りました"
     }
     if let waiting = summary.waiting {
-      return "自分：\(lineWords(waiting.text, days: waiting.days, poll: waiting.poll, nameOf: nameOf))"
+      return "自分：\(Self.words(waiting.text, days: waiting.days, poll: waiting.poll, nameOf: nameOf))"
     }
     guard let last = summary.last else { return "まだメッセージはありません" }
     if last.unsent {
@@ -225,9 +234,19 @@ private struct ChatRow<Icon: View>: View {
     if last.photo != nil {
       return last.authorID == me ? "自分：写真を送りました" : "写真を送りました"
     }
-    let words = lineWords(
+    let words = Self.words(
       last.text, days: last.days, poll: last.poll, decided: last.decided, nameOf: nameOf)
     return last.authorID == me ? "自分：\(words)" : words
+  }
+
+  /// A line as the list says it: days shared, or a poll still open, as
+  /// 〜を共有しました (/design's lastLine); a decided poll says its day.
+  private static func words(
+    _ text: String, days: [Day], poll: Bool, decided: Day? = nil, nameOf: (String) -> String
+  ) -> String {
+    let words = lineWords(text, days: days, poll: poll, decided: decided, nameOf: nameOf)
+    let shared = !days.isEmpty && !(poll && decided != nil)
+    return shared ? "\(words)を共有しました" : words
   }
 }
 
@@ -236,21 +255,29 @@ private struct StartChatSheet: View {
   @Environment(\.dismiss) private var dismiss
   let members: [GroupMember]
   let groupID: String
+  let groupName: String
   let onPick: (GroupMember) -> Void
 
   var body: some View {
     NavigationStack {
-      List(members) { member in
-        Button {
-          onPick(member)
-        } label: {
-          Label {
-            Text(member.name).lineLimit(1)
-          } icon: {
-            MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 28)
+      List {
+        Section {
+          ForEach(members) { member in
+            Button {
+              onPick(member)
+            } label: {
+              Label {
+                Text(member.name).lineLimit(1)
+              } icon: {
+                MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 28)
+              }
+            }
+            .tint(.primary)
           }
+        } footer: {
+          // The chat is the group's, with the names and faces it shows.
+          Text("\(groupName)での名前とアイコンで話します。")
         }
-        .tint(.primary)
       }
       .navigationTitle("個人チャットを始める")
       .navigationBarTitleDisplayMode(.inline)

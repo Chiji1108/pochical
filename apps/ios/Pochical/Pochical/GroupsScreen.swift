@@ -17,6 +17,17 @@ struct OpenInviteAction {
   }
 }
 
+/// Opens one of the グループ tab's pages over the one showing, as a link
+/// within the group does, for what cannot be a link: a menu's button or a
+/// sheet's.
+struct OpenGroupRouteAction {
+  let open: @MainActor (GroupRoute) -> Void
+
+  @MainActor func callAsFunction(_ route: GroupRoute) {
+    open(route)
+  }
+}
+
 extension EnvironmentValues {
   /// The signed-in user, whom the calls and sockets go as.
   @Entry var account = placeholderAccount
@@ -30,6 +41,8 @@ extension EnvironmentValues {
   /// Opens one of Pochical's invitations on its join screen, as reading
   /// its link does.
   @Entry var openInvite = OpenInviteAction { _ in }
+  /// Opens a page of the グループ tab over the one showing.
+  @Entry var openGroupRoute = OpenGroupRouteAction { _ in }
   /// The group whose photos its screens' faces are, for those that know a
   /// member's photo but not the group (MemberAvatar).
   @Entry var photoGroupID = ""
@@ -124,6 +137,7 @@ struct GroupsScreen: View {
         }
       }
     }
+    .environment(\.openGroupRoute, OpenGroupRouteAction { path.append($0) })
     .onChange(of: groups.map(\.id)) { inviteMade() }
     // Gone somewhere else meanwhile, the person is left there.
     .onChange(of: path) { _, path in

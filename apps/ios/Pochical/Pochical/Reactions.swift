@@ -143,6 +143,8 @@ struct WrappingRow: Layout {
 /// it, taking the first emoji typed.
 struct EmojiKeyboardSheet: View {
   @Environment(\.dismiss) private var dismiss
+  /// What the emoji is for: リアクション for a line's.
+  var title = "ほかの絵文字"
   let onPick: (String) -> Void
 
   var body: some View {
@@ -159,7 +161,7 @@ struct EmojiKeyboardSheet: View {
           .font(.footnote)
           .foregroundStyle(.secondary)
       }
-      .navigationTitle("ほかの絵文字")
+      .navigationTitle(title)
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {

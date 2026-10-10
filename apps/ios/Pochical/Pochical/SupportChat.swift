@@ -178,7 +178,7 @@ struct SupportChatScreen: View {
     .onAppear { Notifications.shared.supportOpen = true }
     .onDisappear { Notifications.shared.supportOpen = false }
     .sheet(item: $reactingTo) { line in
-      EmojiKeyboardSheet { react($0, on: line) }
+      EmojiKeyboardSheet(title: "リアクション") { react($0, on: line) }
     }
     .fullScreenCover(item: $viewing) { photo in
       PhotoViewer(photo: photo, groupID: ChatPhotos.support) { save(photo) }
