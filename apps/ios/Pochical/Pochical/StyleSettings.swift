@@ -275,6 +275,9 @@ private struct ThemeChoices: View {
               card(theme)
             }
           }
+          // The page clips what it holds: room for the picked tile's
+          // frame at its edges.
+          .padding(2)
           .frame(maxHeight: .infinity, alignment: .top)
           .tag(index)
         }

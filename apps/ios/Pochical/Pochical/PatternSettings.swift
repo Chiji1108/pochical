@@ -58,9 +58,11 @@ struct PatternsPage: View {
 
       Section {
         if sorting {
+          // Set in from the cards' edge, as a section's footer.
           Text("つまみを上下に動かして並べ替えます。ポチポチ入力のボタンも、この順に並びます。")
             .font(.footnote)
             .foregroundStyle(colors.textSecondary)
+            .padding(.horizontal, 16)
             .settingsOnPage()
         } else {
           NavigationLink {
@@ -312,6 +314,7 @@ struct PatternEditor: View {
             Text("繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。")
               .font(.footnote)
               .foregroundStyle(colors.textSecondary)
+              .padding(.horizontal, 16)
               .settingsOnPage()
           } else {
             Button("このパターンを削除", role: .destructive) { askToDelete() }
