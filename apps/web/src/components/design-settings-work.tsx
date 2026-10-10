@@ -1,4 +1,4 @@
-import { ArrowRight, ChevronRight, Plus } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { css, cx } from "styled-system/css";
 
@@ -17,7 +17,7 @@ import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import { InputDatePicker } from "./design-date-picker";
 import { DoneButton, PageHeader } from "./design-header";
-import { List, ListRow, SwitchRow, Toggle } from "./design-list";
+import { AddRow, List, ListRow, SwitchRow, Toggle } from "./design-list";
 import {
   OrderTitle,
   RepeatCalendar,
@@ -31,7 +31,7 @@ import {
   shortDay,
 } from "./design-settings-parts";
 import { ConfirmDialog } from "./design-sheet";
-import { Button, fieldLabel, IconButton, Note, Section } from "./design-ui";
+import { Button, fieldLabel, Note, Section } from "./design-ui";
 import { WorkSetupSteps } from "./design-work-setup";
 
 // 繰り返し's pages: the repeating order and its history, setting,
@@ -144,11 +144,13 @@ function PastOrders({ rules, until }: { rules: RepeatRule[]; until: number }) {
 // to come, is the one to correct, and 祝日は休みにする is about it.
 function RepeatTimeline({
   rules,
+  onNew,
   onFix,
   onStop,
   onHolidaysOff,
 }: {
   rules: RepeatRule[];
+  onNew: () => void;
   onFix: () => void;
   onStop: () => void;
   onHolidaysOff: (holidaysOff: boolean) => void;
@@ -194,14 +196,18 @@ function RepeatTimeline({
           </div>
         </Section>
       )}
+      {/* As シフトパターン's パターンを追加: a row under the cards. */}
+      <List>
+        <AddRow label="新しい繰り返しを追加" onClick={onNew} />
+      </List>
+      <Note>
+        異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。
+      </Note>
       {latest.sequence.length > 0 && (
         <Button variant="text" onClick={onStop}>
           繰り返しをやめる
         </Button>
       )}
-      <Note>
-        異動などで順番が変わるときは、＋で切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。
-      </Note>
       <PastOrders rules={rules} until={inUse} />
     </>
   );
@@ -437,21 +443,10 @@ export function RepeatPage({
 }) {
   return (
     <>
-      <PageHeader
-        back="設定"
-        onBack={onBack}
-        title="繰り返し"
-        // A new order from a day, once there is one to follow on from.
-        trailing={
-          isRepeating(rules) && (
-            <IconButton label="新しい繰り返し" onClick={onNew}>
-              <Plus aria-hidden="true" size={20} />
-            </IconButton>
-          )
-        }
-      />
+      <PageHeader back="設定" onBack={onBack} title="繰り返し" />
       {isRepeating(rules) ? (
         <RepeatTimeline
+          onNew={onNew}
           onFix={onFix}
           onHolidaysOff={onHolidaysOff}
           onStop={onStop}
