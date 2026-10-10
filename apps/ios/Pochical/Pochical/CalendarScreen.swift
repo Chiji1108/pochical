@@ -176,6 +176,14 @@ struct CalendarScreen: View {
         withAnimation(Springs.standard) { pull = 0 }
       }
     }
+    // A widget's day: its month, the day open in its week.
+    .onChange(of: OpenedDay.shared.day, initial: true) { _, day in
+      guard let day else { return }
+      OpenedDay.shared.day = nil
+      entering = nil
+      shownMonth = monthShowing(day)
+      withAnimation(folding) { opened = day }
+    }
     .onChange(of: opened) { _, day in
       guard let day else {
         // A swipe left unsettled as the week closed goes with it.

@@ -1,16 +1,10 @@
-//
-//  PochicalWidgetsBundle.swift
-//  PochicalWidgets
-//
-//  Created by Shingo Chijiiwa on 2026/10/05.
-//
-
-import WidgetKit
 import SwiftUI
+import WidgetKit
 
+/// The widgets in the gallery (spec/widgets.md, In the widget gallery).
 @main
 struct PochicalWidgetsBundle: WidgetBundle {
-    var body: some Widget {
-        PochicalWidgets()
-    }
+  var body: some Widget {
+    SimpleWidget()
+  }
 }

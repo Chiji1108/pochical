@@ -1,4 +1,5 @@
 import Foundation
+import PochicalDesign
 
 // How days are written (spec/calendar.md, How days are written): every
 // screen writes a day, its weekday and its month through these, so
@@ -89,4 +90,11 @@ extension Day {
     let name = Self.englishMonths[month - 1].lowercased()
     return name.count > 3 ? "\(name.prefix(3))." : name
   }
+}
+
+/// A shift's name as a day has room for: up to `TextFields.dayNameLength`
+/// characters, else cut short with …, as /design's dayName.
+public func dayName(_ name: String) -> String {
+  let length = TextFields.dayNameLength
+  return name.count <= length ? name : "\(name.prefix(length - 1))…"
 }

@@ -235,19 +235,19 @@ public struct Look: Codable, Equatable, Sendable {
   @ObservationIgnored var watching: Task<Void, Never>?
 
   private let store: UserDefaults
-  private static let key = "deviceSettings"
+  nonisolated static let storeKey = "deviceSettings"
 
   public init(store: UserDefaults = UserDefaults(suiteName: appGroup) ?? .standard) {
     self.store = store
     device =
-      store.data(forKey: Self.key).flatMap {
+      store.data(forKey: Self.storeKey).flatMap {
         try? JSONDecoder().decode(DeviceSettings.self, from: $0)
       } ?? DeviceSettings()
   }
 
   private func keep() {
     if let data = try? JSONEncoder().encode(device) {
-      store.set(data, forKey: Self.key)
+      store.set(data, forKey: Self.storeKey)
     }
   }
 }

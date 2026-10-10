@@ -180,10 +180,3 @@ enum OffShown {
   case faint
   case hidden
 }
-
-/// A shift's name as a day has room for: up to `TextFields.dayNameLength`
-/// characters, else cut short with …, as /design's dayName.
-func dayName(_ name: String) -> String {
-  let length = TextFields.dayNameLength
-  return name.count <= length ? name : "\(name.prefix(length - 1))…"
-}
