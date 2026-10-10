@@ -341,6 +341,42 @@ public object ClientFrameKt {
     public fun hasTyping(): kotlin.Boolean {
       return _builder.hasTyping()
     }
+
+    /**
+     * ```
+     * The owner's preferences, from the same outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];`
+     */
+    public var preferenceEdits: app.pochical.v1.PreferenceEdits
+      @kotlin.jvm.JvmName("getPreferenceEdits")
+        get() = _builder.preferenceEdits
+      @kotlin.jvm.JvmName("setPreferenceEdits")
+        set(value) {
+        _builder.preferenceEdits = value
+      }
+    /**
+     * ```
+     * The owner's preferences, from the same outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];`
+     */
+    public fun clearPreferenceEdits() {
+      _builder.clearPreferenceEdits()
+    }
+    /**
+     * ```
+     * The owner's preferences, from the same outbox; User DO socket only.
+     * ```
+     *
+     * `.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];`
+     * @return Whether the preferenceEdits field is set.
+     */
+    public fun hasPreferenceEdits(): kotlin.Boolean {
+      return _builder.hasPreferenceEdits()
+    }
     public val kindCase: app.pochical.v1.ClientFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -379,4 +415,7 @@ public val app.pochical.v1.ClientFrameOrBuilder.chatPageRequestOrNull: app.pochi
 
 public val app.pochical.v1.ClientFrameOrBuilder.typingOrNull: app.pochical.v1.Typing?
   get() = if (hasTyping()) getTyping() else null
+
+public val app.pochical.v1.ClientFrameOrBuilder.preferenceEditsOrNull: app.pochical.v1.PreferenceEdits?
+  get() = if (hasPreferenceEdits()) getPreferenceEdits() else null
 

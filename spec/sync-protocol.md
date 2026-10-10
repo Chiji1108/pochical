@@ -154,7 +154,7 @@ HLC, not arrival order, decides the winner: an edit made offline at 10:00 and de
 
 Free text is edited once it is written, when its field is left, not on each change (spec/calendar.md, Text fields).
 
-What a device shows of a value while its edits wait (`spec/vectors/local-edits.json`). A value is what one change carries: a field of a day, a pattern, the patterns' order, the repeating orders, a coworker or the coworkers' order.
+What a device shows of a value while its edits wait (`spec/vectors/local-edits.json`). A value is what one change carries: a field of a day, a pattern, the patterns' order, the repeating orders, a coworker, the coworkers' order or a preference.
 
 - A device keeps, for each value, the server's (the last `Change` it took for it) apart from its own edits of it still in the outbox, and shows the latest waiting edit's value if there is one, else the server's.
 - A `Change` replaces the server's value and leaves the outbox alone, so a waiting edit keeps showing whatever arrives meanwhile. Its `Acked` ends the wait, and the device then shows the server's value, which by then is the edit's own, the correction for it, or the newer value it lost to: the server sends a frame's `Changes` before its `Acked`.
@@ -194,6 +194,15 @@ The people a user notes on a day, like who is on the same shift. They are names 
 - A day's people are one more day field, `DAY_FIELD_PEOPLE`: coworker ids separated by spaces, in the order they were added; no id the apps make holds a space (`apps/server/src/ids.ts`). Days hold ids, so renaming a coworker changes one value; a deleted coworker's id is skipped where it is shown and needs no rewrite of days. When a device next writes a day's people, it leaves out the ids of coworkers no longer listed, so such ids go as the days are touched, without edits of their own.
 - A user keeps at most `COWORKERS_MAX` coworkers (`design/src/limits.ts`). Adding past it, in 一緒に働く人 or from a day, stops with a problem toast, 一緒に働く人は{n}人までです, and the User DO refuses a new coworker past it: it answers with the coworker deleted, as a value that does not fit. Their order holds at most as many ids; a longer one names coworkers the server refused, and is answered with the person's order of those they keep.
 - Like the memo, coworkers and a day's people stay with their owner: they name people outside the app, so they are never pushed to groups.
+
+### Preferences
+
+How the person likes their screens is kept with the account, so each of their devices shows the same and a new phone, or signing in again, brings it back; what belongs to the device stays on it, as apps usually split settings that follow the person from those tied to one device.
+
+- Kept with the account: the テーマ, the スタイル (the marks' shape and each shape's options, シフトの色), the calendar's week (the day it starts on, the colors of Saturdays, Sundays and holidays), a picture's 休みの見せ方 and シフト名, and what 端末カレンダーに追加 puts in besides the shifts (メモも入れる, 一緒に働く人も入れる).
+- Kept on the device: 外観, which follows the device's own by default; the app's icon, which the system sets for each device; the reminders, which the device sends itself, and would go off on every device; the calendar last added to, one of the device's own calendars; a picture's light or dark, the screen's until picked.
+- Each preference is one last-writer-wins `PreferenceValue`, a key and its value as JSON the apps write and read (`syncLimits.preferenceLength` characters at most), sent as `PreferenceEdits` and acknowledged and sent on as `Changes` like coworkers. The server keeps a value without reading it: a key that is no id, or a value too long, is answered as a value that does not fit is. A value a device cannot read, or a key it has none of, leaves the device's own, which also stands until the account holds one.
+- A device keeps them in its own settings too, which its widgets read, and takes each the account holds as it comes, sending only what the person changes on it. The account's are never pushed to groups: each member's marks are drawn in the viewer's own look.
 
 ### Deleted values
 

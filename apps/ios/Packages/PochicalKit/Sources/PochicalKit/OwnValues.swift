@@ -65,6 +65,7 @@ public enum OwnValues {
     try RepeatOrderRow.delete().execute(db)
     try CoworkerRow.delete().execute(db)
     try CoworkerOrderRow.delete().execute(db)
+    try PreferenceRow.delete().execute(db)
     for edit in try OutboxEdit.order(by: \.id).fetchAll(db) {
       try show(Pochical_V1_Change(serializedBytes: edit.change), in: db)
     }
@@ -125,6 +126,13 @@ public enum OwnValues {
         try CoworkerOrderRow.insert { CoworkerOrderRow(position: position, coworkerID: id) }
           .execute(db)
       }
+    case .preference(let value):
+      if value.hasValue {
+        let row = PreferenceRow(key: value.key, value: value.value)
+        try PreferenceRow.upsert { row }.execute(db)
+      } else {
+        try PreferenceRow.find(value.key).delete().execute(db)
+      }
     case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications, .profile,
       .groupProfile,
       .member,
@@ -150,6 +158,7 @@ extension Pochical_V1_Change {
     case .repeatOrders: "repeatOrders"
     case .coworker(let value): "coworker/\(value.id)"
     case .coworkerOrder: "coworkerOrder"
+    case .preference(let value): "preference/\(value.key)"
     case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications, .profile,
       .groupProfile,
       .member,
@@ -177,6 +186,9 @@ extension Pochical_V1_Change {
       change.coworker = value
     case .coworkerOrder:
       change.coworkerOrder = Pochical_V1_CoworkerOrder()
+    case .preference(var value):
+      value.clearValue()
+      change.preference = value
     case .memberDay, .memberPattern, .memberRepeatOrders, .membership, .unreadCount, .block, .chatMute, .chatNotifications, .profile,
       .groupProfile,
       .member,

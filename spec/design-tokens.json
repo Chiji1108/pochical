@@ -3112,6 +3112,7 @@
       "orders": 200,
       "patterns": 200,
       "peopleADay": 50,
+      "preferenceLength": 2000,
       "sequence": 366
     },
     "text": {

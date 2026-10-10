@@ -21,7 +21,7 @@ public enum LocalData {
   private static let tables = [
     "blocks", "chatLines", "chatMutes", "chatNotificationSettings", "chatOutbox",
     "coworkerOrder", "coworkers", "days", "groupCursors", "groupMembers", "groups",
-    "memberDays", "memberOrders", "memberPatterns", "outbox", "patternOrder", "patterns", "profile",
+    "memberDays", "memberOrders", "memberPatterns", "outbox", "patternOrder", "patterns", "preferences", "profile",
     "readMarks", "repeatOrders", "serverValues", "syncState", "unreadCounts",
   ]
 

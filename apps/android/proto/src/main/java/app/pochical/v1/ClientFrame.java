@@ -33,6 +33,7 @@ public  final class ClientFrame extends
     CHAT_EDITS(7),
     CHAT_PAGE_REQUEST(8),
     TYPING(9),
+    PREFERENCE_EDITS(10),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -57,6 +58,7 @@ public  final class ClientFrame extends
         case 7: return CHAT_EDITS;
         case 8: return CHAT_PAGE_REQUEST;
         case 9: return TYPING;
+        case 10: return PREFERENCE_EDITS;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -678,6 +680,76 @@ public  final class ClientFrame extends
    */
   private void clearTyping() {
     if (kindCase_ == 9) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int PREFERENCE_EDITS_FIELD_NUMBER = 10;
+  /**
+   * <pre>
+   * The owner's preferences, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPreferenceEdits() {
+    return kindCase_ == 10;
+  }
+  /**
+   * <pre>
+   * The owner's preferences, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.PreferenceEdits getPreferenceEdits() {
+    if (kindCase_ == 10) {
+       return (app.pochical.v1.PreferenceEdits) kind_;
+    }
+    return app.pochical.v1.PreferenceEdits.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * The owner's preferences, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+   */
+  private void setPreferenceEdits(app.pochical.v1.PreferenceEdits value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 10;
+  }
+  /**
+   * <pre>
+   * The owner's preferences, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+   */
+  private void mergePreferenceEdits(app.pochical.v1.PreferenceEdits value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 10 &&
+        kind_ != app.pochical.v1.PreferenceEdits.getDefaultInstance()) {
+      kind_ = app.pochical.v1.PreferenceEdits.newBuilder((app.pochical.v1.PreferenceEdits) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 10;
+  }
+  /**
+   * <pre>
+   * The owner's preferences, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+   */
+  private void clearPreferenceEdits() {
+    if (kindCase_ == 10) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1414,6 +1486,78 @@ public  final class ClientFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The owner's preferences, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPreferenceEdits() {
+      return instance.hasPreferenceEdits();
+    }
+    /**
+     * <pre>
+     * The owner's preferences, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.PreferenceEdits getPreferenceEdits() {
+      return instance.getPreferenceEdits();
+    }
+    /**
+     * <pre>
+     * The owner's preferences, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+     */
+    public Builder setPreferenceEdits(app.pochical.v1.PreferenceEdits value) {
+      copyOnWrite();
+      instance.setPreferenceEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's preferences, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+     */
+    public Builder setPreferenceEdits(
+        app.pochical.v1.PreferenceEdits.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPreferenceEdits(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's preferences, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+     */
+    public Builder mergePreferenceEdits(app.pochical.v1.PreferenceEdits value) {
+      copyOnWrite();
+      instance.mergePreferenceEdits(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The owner's preferences, from the same outbox; User DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+     */
+    public Builder clearPreferenceEdits() {
+      copyOnWrite();
+      instance.clearPreferenceEdits();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ClientFrame)
   }
   @java.lang.Override
@@ -1441,10 +1585,12 @@ public  final class ClientFrame extends
             app.pochical.v1.ChatEdits.class,
             app.pochical.v1.ChatPageRequest.class,
             app.pochical.v1.Typing.class,
+            app.pochical.v1.PreferenceEdits.class,
           };
           java.lang.String info =
-              "\u0000\t\u0001\u0000\u0001\t\t\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000";
+              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<" +
+              "\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

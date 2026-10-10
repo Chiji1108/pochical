@@ -16,6 +16,7 @@ import type {
   CoworkerEdits,
   DayEdits,
   PatternEdits,
+  PreferenceEdits,
   RepeatOrdersEdits,
   Typing,
 } from "./gen/pochical/v1/sync_pb";
@@ -51,6 +52,7 @@ type EditFrames = {
   patternEdits: PatternEdits;
   repeatOrdersEdits: RepeatOrdersEdits;
   coworkerEdits: CoworkerEdits;
+  preferenceEdits: PreferenceEdits;
 };
 
 // What a DO does with each kind of edit; only a User DO takes them.
@@ -386,7 +388,8 @@ export const handleSyncMessage = (
     case "dayEdits":
     case "patternEdits":
     case "repeatOrdersEdits":
-    case "coworkerEdits": {
+    case "coworkerEdits":
+    case "preferenceEdits": {
       handleEdits(ws, kind, handlers);
       return;
     }

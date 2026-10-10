@@ -90,5 +90,6 @@ var migrator: DatabaseMigrator {
   migrator.registerChatNotifications()
   migrator.registerChatReplies()
   migrator.registerProfile()
+  migrator.registerPreferences()
   return migrator
 }

@@ -29,6 +29,7 @@ object SyncLimits {
   const val orders = 200
   const val patterns = 200
   const val peopleADay = 50
+  const val preferenceLength = 2000
   const val sequence = 366
 }
 

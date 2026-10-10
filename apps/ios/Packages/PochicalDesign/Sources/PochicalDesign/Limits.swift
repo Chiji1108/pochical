@@ -27,6 +27,7 @@ public enum SyncLimits {
   public static let orders = 200
   public static let patterns = 200
   public static let peopleADay = 50
+  public static let preferenceLength = 2000
   public static let sequence = 366
 }
 

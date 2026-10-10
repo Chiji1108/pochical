@@ -644,6 +644,45 @@ public object ChangeKt {
     public fun hasProfile(): kotlin.Boolean {
       return _builder.hasProfile()
     }
+
+    /**
+     * ```
+     * One of the user's preferences, as one of their devices last set it
+     * (spec/sync-protocol.md, Preferences); User DO only.
+     * ```
+     *
+     * `.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];`
+     */
+    public var preference: app.pochical.v1.PreferenceValue
+      @kotlin.jvm.JvmName("getPreference")
+        get() = _builder.preference
+      @kotlin.jvm.JvmName("setPreference")
+        set(value) {
+        _builder.preference = value
+      }
+    /**
+     * ```
+     * One of the user's preferences, as one of their devices last set it
+     * (spec/sync-protocol.md, Preferences); User DO only.
+     * ```
+     *
+     * `.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];`
+     */
+    public fun clearPreference() {
+      _builder.clearPreference()
+    }
+    /**
+     * ```
+     * One of the user's preferences, as one of their devices last set it
+     * (spec/sync-protocol.md, Preferences); User DO only.
+     * ```
+     *
+     * `.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];`
+     * @return Whether the preference field is set.
+     */
+    public fun hasPreference(): kotlin.Boolean {
+      return _builder.hasPreference()
+    }
     public val kindCase: app.pochical.v1.Change.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -712,4 +751,7 @@ public val app.pochical.v1.ChangeOrBuilder.chatNotificationsOrNull: app.pochical
 
 public val app.pochical.v1.ChangeOrBuilder.profileOrNull: app.pochical.v1.Profile?
   get() = if (hasProfile()) getProfile() else null
+
+public val app.pochical.v1.ChangeOrBuilder.preferenceOrNull: app.pochical.v1.PreferenceValue?
+  get() = if (hasPreference()) getPreference() else null
 

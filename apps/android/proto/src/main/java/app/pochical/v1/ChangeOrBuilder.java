@@ -317,5 +317,26 @@ public interface ChangeOrBuilder extends
    */
   app.pochical.v1.Profile getProfile();
 
+  /**
+   * <pre>
+   * One of the user's preferences, as one of their devices last set it
+   * (spec/sync-protocol.md, Preferences); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+   * @return Whether the preference field is set.
+   */
+  boolean hasPreference();
+  /**
+   * <pre>
+   * One of the user's preferences, as one of their devices last set it
+   * (spec/sync-protocol.md, Preferences); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+   * @return The preference.
+   */
+  app.pochical.v1.PreferenceValue getPreference();
+
   public app.pochical.v1.Change.KindCase getKindCase();
 }

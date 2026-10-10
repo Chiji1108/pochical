@@ -31,6 +31,7 @@ import type {
   DayEdits,
   Hlc,
   PatternEdits,
+  PreferenceEdits,
   RepeatOrdersEdits,
 } from "./gen/pochical/v1/sync_pb";
 import type { GroupProfile } from "./group-do";
@@ -55,6 +56,7 @@ import {
   applyDay,
   applyPattern,
   applyPatternOrder,
+  applyPreference,
   applyRepeatOrders,
   orderFloors,
 } from "./user-do-edits";
@@ -67,6 +69,7 @@ import {
   memberships,
   patternOrder,
   patterns,
+  preferences,
   repeatOrders,
   blocks,
   chatMutes,
@@ -83,6 +86,7 @@ import {
   membershipChange,
   orderChange,
   patternChange,
+  preferenceChange,
   repeatOrdersChange,
   blockChange,
   chatMuteChange,
@@ -125,6 +129,7 @@ type SyncedLog = {
     | typeof repeatOrders
     | typeof coworkers
     | typeof coworkerOrder
+    | typeof preferences
     | typeof memberships
     | typeof unreadCounts
     | typeof blocks
@@ -923,6 +928,17 @@ export class UserDO extends DurableObject<Env> {
         after: (cursor) =>
           db
             .select()
+            .from(preferences)
+            .where(gt(preferences.cursor, cursor))
+            .all()
+            .map(preferenceChange),
+        shared: false,
+        table: preferences,
+      },
+      {
+        after: (cursor) =>
+          db
+            .select()
             .from(memberships)
             .where(gt(memberships.cursor, cursor))
             .all()
@@ -1061,6 +1077,9 @@ export class UserDO extends DurableObject<Env> {
       patternEdits: (socket, edits) => {
         this.takePatternEdits(socket, edits);
       },
+      preferenceEdits: (socket, edits) => {
+        this.takePreferenceEdits(socket, edits);
+      },
       repeatOrdersEdits: (socket, edits) => {
         this.takeRepeatOrdersEdits(socket, edits);
       },
@@ -1192,6 +1211,19 @@ export class UserDO extends DurableObject<Env> {
         }
         return undefined;
       }
+    );
+  }
+
+  /** The owner's preferences, taken as their coworkers are. */
+  private takePreferenceEdits(ws: WebSocket, { edits }: PreferenceEdits): void {
+    this.takeEdits(
+      ws,
+      edits,
+      ({ value }) => value?.hlc,
+      ({ value }, cursor) =>
+        value === undefined
+          ? undefined
+          : applyPreference(this.db, value, cursor)
     );
   }
 }
