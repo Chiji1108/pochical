@@ -38,6 +38,9 @@ struct CalendarScreen: View {
   /// The week swiped to beside an opened one, until the swipe settles and
   /// opens the same weekday there.
   @State private var swipedWeek: Day?
+  /// The day ‹ › or 今週 opens in another week, once the pages have slid
+  /// to it; a swipe opens the same weekday.
+  @State private var landing: Day?
   /// How far a pull down has unfolded the month around an opened week, 0
   /// to 1, while the finger is on it.
   @State private var pull: CGFloat = 0
@@ -54,6 +57,18 @@ struct CalendarScreen: View {
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
   private static let monthsAround = 120
+  /// Where the folded week ends and the screen's own room does, on the
+  /// screen, for the day's sheet to rise to just under the week.
+  @State private var weekEnd: CGFloat = 0
+  @State private var foot: CGFloat = 0
+  /// The day's sheet as it opens: up to just under the folded week, which
+  /// stays in sight to tap, measured so it fits each screen.
+  private var underWeek: PresentationDetent {
+    let room = foot - weekEnd - Self.underWeekGap
+    return room > 0 ? .height(room) : .medium
+  }
+  /// Between the folded week and the sheet.
+  private static let underWeekGap: CGFloat = 8
   /// Past this share of the way, a pull let go unfolds the month; short of
   /// it, the week folds back. A flick faster than `unfoldFlick`, in points
   /// a second, goes the way it is flicked wherever it is let go.
@@ -105,6 +120,10 @@ struct CalendarScreen: View {
         position.pages = pages
       }
       .frame(height: DayCell.height + (MonthPage.height - DayCell.height) * (1 - fold))
+      // Where the folded week ends, however folded the pages are now.
+      .onGeometryChange(for: CGFloat.self) { proxy in
+        proxy.frame(in: .global).minY + DayCell.height
+      } action: { weekEnd = $0 }
       // While a day is open, a pull down unfolds the month, following the
       // finger (spec/calendar.md, A day's detail).
       .simultaneousGesture(
@@ -116,47 +135,9 @@ struct CalendarScreen: View {
           }
           .onEnded(pullEnded),
         including: opened == nil ? .none : .all)
-      if let day = opened {
-        let entry = calendar.shown(from: day, through: day)[day]
-        // The day's detail is new for each day, its fields with it, inside
-        // what shows as the week opens.
-        VStack(spacing: 0) {
-          DayDetail(
-            day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-            coworkers: ordered(coworkerRows, by: coworkerOrder),
-            onChange: { entry in
-              write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
-            },
-            onNoteChange: { note in
-              write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
-            },
-            // Someone added from a day is on that day too.
-            onAddCoworker: { name in
-              write { db, now in
-                let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-                if var entry {
-                  entry.people = (entry.people ?? []) + [id]
-                  try OwnValues.set(day, to: entry, now: now, in: db)
-                }
-              }
-            },
-            onStep: { step in opened = day.adding(days: step) }
-          )
-          .id(day)
-        }
-        .padding(.top, 16)
-        // A line from edge to edge between the week and the day, as a
-        // bar's runs.
-        .overlay(alignment: .top) {
-          Rectangle().fill(colors.separator).frame(height: 1)
-        }
-        .padding(.top, 12)
-        .opacity(max(1 - 2 * pull, 0))
-        // It shows as the month folds into the week, and goes at once as
-        // the month unfolds, as /design's does.
-        .transition(
-          .asymmetric(
-            insertion: .opacity.animation(Springs.quick.delay(0.1)), removal: .identity))
+      if opened != nil {
+        // The day's detail is a sheet over the week (below).
+        Spacer(minLength: 0)
       } else {
         Spacer(minLength: 0)
         bottom(calendar)
@@ -166,6 +147,9 @@ struct CalendarScreen: View {
           .padding(.bottom, entering == nil ? 24 : 8)
       }
     }
+    .onGeometryChange(for: CGFloat.self) { proxy in
+      proxy.frame(in: .global).maxY
+    } action: { foot = $0 }
     .background(colors.backgroundBase)
     // The tabs give way to entering and to a day's week, as /design's do.
     .toolbarVisibility(entering == nil && opened == nil ? .visible : .hidden, for: .tabBar)
@@ -185,6 +169,7 @@ struct CalendarScreen: View {
       guard let day else {
         // A swipe left unsettled as the week closed goes with it.
         swipedWeek = nil
+        landing = nil
         askForReviewIfDue()
         return
       }
@@ -196,6 +181,49 @@ struct CalendarScreen: View {
         withAnimation(Springs.standard) {
           shownMonth = day.firstOfMonth
         }
+      }
+    }
+    // A day's detail rises as the system's sheet over the folded week, to
+    // just under it with the week still to tap, and goes down as it is
+    // swiped away, the month unfolding behind it.
+    .sheet(
+      isPresented: Binding { opened != nil } set: { open in
+        if !open { withAnimation(folding) { opened = nil } }
+      }
+    ) {
+      if let day = opened {
+        let entry = calendar.shown(from: day, through: day)[day]
+        // One day gives way to the next however it is opened, by a tap,
+        // ‹ ›, 今週 or a swipe.
+        ZStack {
+          DayDetail(
+            day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+            coworkers: ordered(coworkerRows, by: coworkerOrder),
+            onChange: { entry in
+              write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+            },
+            onNoteChange: { note in
+              write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
+            },
+            // Someone added from a day is on that day too.
+            onAddCoworker: { name in
+              write { db, now in
+                let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+                if var entry {
+                  entry.people = (entry.people ?? []) + [id]
+                  try OwnValues.set(day, to: entry, now: now, in: db)
+                }
+              }
+            },
+            onStep: { step in go(to: day.adding(days: step)) }
+          )
+          .id(day)
+        }
+        .animation(folding, value: day)
+        .presentationDetents([underWeek, .large])
+        .presentationBackgroundInteraction(.enabled(upThrough: underWeek))
+        .presentationDragIndicator(.visible)
+        .presentationBackground(colors.backgroundBase)
       }
     }
     .sheet(isPresented: Binding { breakingDown != nil } set: { if !$0 { breakingDown = nil } }) {
@@ -311,6 +339,7 @@ struct CalendarScreen: View {
         case .month(let month):
           shownMonth = month
           swipedWeek = nil
+          landing = nil
         case .week(let week):
           swipedWeek = week
         case nil:
@@ -323,11 +352,24 @@ struct CalendarScreen: View {
   /// folded week in place of the page beside it, drawn the same.
   private func openSwipedWeek() {
     guard let week = swipedWeek, let day = opened else { return }
-    let next = day.adding(days: week.days(since: weekOf(day)))
+    let next = landing ?? day.adding(days: week.days(since: weekOf(day)))
+    landing = nil
     // All at once, so the pages never stand on the month left behind.
     opened = next
     shownMonth = monthShowing(next)
     swipedWeek = nil
+  }
+
+  /// Opens a day from the one open: in its week the frame moves to it, as
+  /// a tap does; in another the pages slide to that week first, as a swipe
+  /// does, and with reduced motion it just opens.
+  private func go(to day: Day) {
+    guard let open = opened, weekOf(day) != weekOf(open), folding != nil else {
+      withAnimation(folding) { opened = day }
+      return
+    }
+    landing = day
+    withAnimation(folding) { swipedWeek = weekOf(day) }
   }
 
   /// The month shown with `day` opened: the one shown while the day's week
@@ -365,7 +407,9 @@ struct CalendarScreen: View {
       offShown: offShown, selected: entering ?? opened, isEntering: entering != nil,
       preview: gapPreview(calendar),
       onSelect: { day in
-        if pulled { return }
+        // Not after a pull, nor while the pages slide to another week,
+        // which opens its own day as they settle.
+        if pulled || swipedWeek != nil { return }
         if entering != nil {
           entering = day
         } else {
@@ -500,20 +544,12 @@ struct CalendarScreen: View {
 
   /// The heading's buttons, on the month's line: 今月 away from this
   /// month, 完了 while entering, and in a day's week 今週 away from this
-  /// week and × (spec/calendar.md).
+  /// week (spec/calendar.md).
   @ViewBuilder private var actions: some View {
     if opened != nil {
-      // Back to this week and closing are of different kinds, so they
-      // stand apart.
-      HStack(spacing: 12) {
-        TodayFade(position: position, todayPage: todayPage) {
-          TodayButton(unit: "週") { opened = today }
-        }
-        Button("閉じる", systemImage: "xmark", role: .close) {
-          withAnimation(folding) { opened = nil }
-        }
-        .labelStyle(.iconOnly)
-        .buttonStyle(BarButton())
+      // The detail's sheet closes the day, with its own ×.
+      TodayFade(position: position, todayPage: todayPage) {
+        TodayButton(unit: "週") { go(to: today) }
       }
     } else if entering != nil {
       Button("完了", systemImage: "checkmark", role: .confirm) {
