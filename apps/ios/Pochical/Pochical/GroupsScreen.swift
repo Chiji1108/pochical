@@ -302,12 +302,12 @@ private struct GroupRail: View {
             onOpen(group.id)
           } label: {
             GroupMark(mark: group.mark, shelf: group.id, isOpen: isOpen)
-              .frame(width: 58, height: 46)
+              .frame(width: 60, height: 48)
               .overlay(alignment: .leading) {
                 // The flag at the edge, by the open group.
                 UnevenRoundedRectangle(bottomTrailingRadius: Radius.xs, topTrailingRadius: Radius.xs)
                   .fill(colors.accentDefault)
-                  .frame(width: 4, height: isOpen ? 30 : 0)
+                  .frame(width: 4, height: isOpen ? 32 : 0)
               }
               .overlay(alignment: .bottomTrailing) {
                 // Its chats' unread, ringed in the rail's ground.
@@ -333,14 +333,14 @@ private struct GroupRail: View {
           .labelStyle(.iconOnly)
           .font(.title3)
           .foregroundStyle(colors.accentDefault)
-          .frame(width: 42, height: 42)
+          .frame(width: 44, height: 44)
           .background(colors.backgroundCard, in: Circle())
           .buttonStyle(.plain)
         Button("QRコードで参加", systemImage: "qrcode.viewfinder", action: onScan)
           .labelStyle(.iconOnly)
           .font(.title3)
           .foregroundStyle(colors.accentDefault)
-          .frame(width: 42, height: 42)
+          .frame(width: 44, height: 44)
           .background(colors.backgroundCard, in: Circle())
           .buttonStyle(.plain)
       }
@@ -350,7 +350,7 @@ private struct GroupRail: View {
     .scrollIndicators(.hidden)
     // The last of many groups can rise clear of the fade.
     .contentMargins(.bottom, barTop + Self.fade, for: .scrollContent)
-    .frame(width: 58)
+    .frame(width: 60)
     .background(
       colors.fillQuaternary,
       in: UnevenRoundedRectangle(topTrailingRadius: Radius.xl)
@@ -384,7 +384,7 @@ private struct GroupMark: View {
 
   var body: some View {
     let shape = RoundedRectangle(cornerRadius: isOpen ? Radius.md : Radius.lg)
-    GroupMarkView(mark: mark, size: 42, shelf: shelf)
+    GroupMarkView(mark: mark, size: 44, shelf: shelf)
       .background(isOpen ? colors.accentContainer : colors.backgroundCard, in: shape)
       .clipShape(shape)
       .overlay {

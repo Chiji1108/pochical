@@ -137,9 +137,9 @@ const rail = {
     borderRadius: "circle",
     color: "accent.default",
     display: "grid",
-    height: "42px",
+    height: "44px",
     placeItems: "center",
-    width: "42px",
+    width: "44px",
   }),
   badge: css({
     bottom: 0,
@@ -168,15 +168,15 @@ const rail = {
       transition: "height 0.15s",
       width: "4px",
     },
-    "&[aria-current=page]::before": { height: "30px" },
+    "&[aria-current=page]::before": { height: "32px" },
     bg: "transparent",
     border: 0,
     display: "grid",
-    height: "46px",
+    height: "48px",
     padding: 0,
     placeItems: "center",
     position: "relative",
-    width: "58px",
+    width: "60px",
   }),
   // Beside the page and like it, it runs on to the screen's foot and
   // scrolls when the groups outgrow it, so only its top is rounded. It
@@ -196,7 +196,7 @@ const rail = {
     overflowY: "auto",
     // The last of many groups can rise clear of the fade.
     padding: "12px 0 calc(var(--tab-bar-bottom) + 128px)",
-    width: "58px",
+    width: "60px",
   }),
 };
 
@@ -233,7 +233,7 @@ export function GroupRail({
             type="button"
           >
             <span aria-hidden="true" className={markFrame()}>
-              <GroupIcon mark={group.mark} size={24} />
+              <GroupIcon mark={group.mark} size={25} />
             </span>
             {unread > 0 && (
               <span aria-hidden="true" className={cx(badge, rail.badge)}>

@@ -53,13 +53,13 @@ export const markFrame = cva({
     borderRadius: "lg",
     display: "grid",
     fontFamily: "emoji",
-    fontSize: "22px",
-    height: "42px",
+    fontSize: "23px",
+    height: "44px",
     overflow: "hidden",
     placeItems: "center",
     position: "relative",
     transition: "border-radius 0.15s",
-    width: "42px",
+    width: "44px",
   },
   variants: {
     size: {
