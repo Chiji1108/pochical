@@ -43,6 +43,7 @@ import {
 import { PhotoAvatar } from "../components/design-group-parts";
 import {
   BackButton,
+  ReturnButton,
   TodayButton,
   DoneButton,
   HeaderAction,
@@ -534,6 +535,14 @@ function Buttons() {
           where="今の月・週・日から離れたとき"
         >
           <TodayButton unit="月" />
+        </Item>
+        <Item
+          android="TopAppBar の actions の TextButton"
+          ios="ToolbarItem の Button（ガラスは OS）"
+          name="ReturnButton"
+          where="並びを入れる月で、1日目の月から離れたとき（1日目へ）"
+        >
+          <ReturnButton onClick={() => undefined}>1日目へ</ReturnButton>
         </Item>
         <Item
           android="TopAppBar の actions に IconButton を並べる"
