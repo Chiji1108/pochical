@@ -60,6 +60,7 @@ import {
 } from "./mark-icon-code";
 import { kotlinReadyPatterns, swiftReadyPatterns } from "./pattern-code";
 import { swiftPhrases } from "./phrases";
+import { kotlinSkies, swiftSkies } from "./sky-code";
 
 const root = path.join(import.meta.dir, "../..");
 const themes: readonly Preset[] = presets;
@@ -600,6 +601,8 @@ const outputs = {
   [`${KOTLIN_DIR}/MarkIconNames.kt`]: kotlinFile(kotlinMarkIconNames()),
   [`${SWIFT_DIR}/ReadyPatterns.swift`]: swiftFile(swiftReadyPatterns()),
   [`${KOTLIN_DIR}/ReadyPatterns.kt`]: kotlinFile(kotlinReadyPatterns()),
+  [`${SWIFT_DIR}/Skies.swift`]: swiftFile(swiftSkies()),
+  [`${KOTLIN_DIR}/Skies.kt`]: kotlinFile(kotlinSkies()),
   "apps/web/src/lib/holiday-names.ts": webHolidays(HEADER),
   ...sharedOutputs,
   "spec/design-tokens.json": json(),

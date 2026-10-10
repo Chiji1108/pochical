@@ -1,3 +1,4 @@
+import { themeSkyId } from "@pochical/design/skies";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -20,7 +21,6 @@ import {
   paleSkyFromTop,
   paleSkyLights,
   SKY_CHANGE,
-  themeSkyId,
 } from "./design-surprise";
 import type { Tab } from "./design-tab-bar";
 import { ColorSchemeContext } from "./design-theme";
