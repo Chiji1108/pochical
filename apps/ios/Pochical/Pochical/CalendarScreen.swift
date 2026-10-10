@@ -183,9 +183,9 @@ struct CalendarScreen: View {
         }
       }
     }
-    // A day's detail rises as the system's sheet over the folded week, half
-    // the screen with the week still to tap, and goes down as it is swiped
-    // away, the month unfolding behind it.
+    // A day's detail rises as the system's sheet over the folded week, to
+    // just under it with the week still to tap, and goes down as it is
+    // swiped away, the month unfolding behind it.
     .sheet(
       isPresented: Binding { opened != nil } set: { open in
         if !open { withAnimation(folding) { opened = nil } }
@@ -407,7 +407,9 @@ struct CalendarScreen: View {
       offShown: offShown, selected: entering ?? opened, isEntering: entering != nil,
       preview: gapPreview(calendar),
       onSelect: { day in
-        if pulled { return }
+        // Not after a pull, nor while the pages slide to another week,
+        // which opens its own day as they settle.
+        if pulled || swipedWeek != nil { return }
         if entering != nil {
           entering = day
         } else {
