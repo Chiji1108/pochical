@@ -120,8 +120,8 @@ function periodOf(rules: readonly RepeatRule[], index: number) {
     : `${shortDay(rule.start)}から`;
 }
 
-// The periods as a list that never overlaps, newest first: those to
-// come, the one in use today, and those over. Each opens to be set
+// The periods as a list that never overlaps, newest first under the
+// rows that add one: those to come, the one in use today, and those over. Each opens to be set
 // again, moved or taken out; a new one, or one without repeating, goes
 // in from a day, the periods around it kept.
 function RepeatList({
@@ -155,12 +155,7 @@ function RepeatList({
   const past = indices.filter((index) => index < inUse);
   return (
     <>
-      {upcoming.length > 0 && (
-        <Section title="これから">{cards(upcoming)}</Section>
-      )}
-      {inUse !== -1 && <Section title="今の繰り返し">{cards([inUse])}</Section>}
-      {past.length > 0 && <Section title="これまで">{cards(past)}</Section>}
-      {/* As シフトパターン's パターンを追加: rows under the cards. */}
+      {/* Over the newest first, where a new period mostly lands. */}
       <List>
         <AddRow label="新しい繰り返しを追加" onClick={onNew} />
         <ListRow
@@ -172,6 +167,11 @@ function RepeatList({
       <Note>
         どちらも、選んだ日から切り替わります。前後の期間と、自分で入れた日は、そのまま残ります。
       </Note>
+      {upcoming.length > 0 && (
+        <Section title="これから">{cards(upcoming)}</Section>
+      )}
+      {inUse !== -1 && <Section title="今の繰り返し">{cards([inUse])}</Section>}
+      {past.length > 0 && <Section title="これまで">{cards(past)}</Section>}
     </>
   );
 }
