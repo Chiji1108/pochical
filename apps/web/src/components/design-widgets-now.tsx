@@ -101,9 +101,15 @@ function useNowWords() {
     // In English the time left is said after it: 3 hr, 12 min left.
     left: english ? "left" : "あと",
     next: (name: string) => (english ? `Next: ${name}` : `次は${name}`),
-    // How many days off the next one is, short for the round face: 2日後.
-    daysOff: (inDays: number) =>
-      english ? `${inDays} days` : words.inDays(inDays),
+    // How many days off the next one is, short for the round face: 明日,
+    // 2日後; in English the weekday for tomorrow (Fri), as 次の休み's, else
+    // 2 days. Tomorrow comes here when its shift is more than a day off.
+    daysOff: (span: WidgetSpan, inDays: number) => {
+      if (!english) {
+        return words.inDays(inDays);
+      }
+      return inDays === 1 ? words.dayName(span.start) : `${inDays} days`;
+    },
     none: english
       ? "No shifts with\nhours ahead"
       : "これからの勤務は\nまだ入っていません",
@@ -441,7 +447,7 @@ function NowCircularView({ entry }: { entry: WidgetEntry }) {
     word =
       state.inDays === undefined
         ? clockWords(span.start)
-        : said.daysOff(state.inDays);
+        : said.daysOff(span, state.inDays);
   }
   return (
     <div className={cx(circular.root, lock.circle)}>

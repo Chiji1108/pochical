@@ -530,6 +530,22 @@
       }
     },
     {
+      "name": "tomorrow's shift more than a day off says the day, 明日",
+      "at": "07:00",
+      "days": {
+        "1": {
+          "shift": "day",
+          "start": "13:00"
+        }
+      },
+      "expected": {
+        "on": null,
+        "next": [1, "13:00", 1, "18:00"],
+        "nextInDays": 1,
+        "refresh": [0, "13:00"]
+      }
+    },
+    {
       "name": "days off and shifts without hours are time off",
       "at": "10:00",
       "days": {
