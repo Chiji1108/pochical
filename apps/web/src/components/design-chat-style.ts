@@ -503,27 +503,21 @@ export const chatStyle = {
     userSelect: "none",
     WebkitTouchCallout: "none",
   }),
-  photoImage: cva({
-    base: {
-      bg: "fill.tertiary",
-      display: "block",
-      height: "auto",
-      maxWidth: "100%",
-      objectFit: "cover",
-    },
-    variants: {
-      quoted: {
-        // A pale photo, like a paper roster, keeps its edge on the ground.
-        false: {
-          borderRadius: "lg",
-          outline: "1px solid token(colors.border.default)",
-          outlineOffset: "-1px",
-        },
-        // Inside a reply's bubble, below the quote's rule, edge to edge.
-        true: {},
-      },
-    },
+  // A pale photo, like a paper roster, keeps its edge on the ground, and
+  // inside a reply's bubble the same, so it reads as the photo it is.
+  photoImage: css({
+    bg: "fill.tertiary",
+    borderRadius: "lg",
+    display: "block",
+    height: "auto",
+    maxWidth: "100%",
+    objectFit: "cover",
+    outline: "1px solid token(colors.border.default)",
+    outlineOffset: "-1px",
   }),
+  // In a reply's bubble, under the quote, a little in from its edge, as
+  // WhatsApp sets one.
+  photoInBubble: css({ margin: "8px 4px 4px" }),
   // A photo going up: dimmed, with a ring filling as it goes, as LINE
   // draws one.
   uploading: css({
