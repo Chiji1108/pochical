@@ -157,9 +157,12 @@ describe("spec/vectors/repeat.json", () => {
       );
     });
   }
-  for (const { name, patterns, expected } of repeat.holidayShift) {
+  for (const { name, patterns, expected, ...rest } of repeat.holidayShift) {
+    const picked = "picked" in rest ? rest.picked : undefined;
     test(name, () => {
-      expect(holidayShiftOf(patterns.map(patternOf)) ?? null).toBe(expected);
+      expect(holidayShiftOf(patterns.map(patternOf), picked) ?? null).toBe(
+        expected
+      );
     });
   }
   const ruleOf = (order: { sequence: string[]; start: string }) => ({

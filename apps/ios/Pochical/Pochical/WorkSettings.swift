@@ -167,7 +167,7 @@ private struct OrderCard: View {
         if repeats {
           SequenceTiles(sequence: order.sequence, patterns: patterns)
           if order.holidaysOff {
-            Text("祝日は休み")
+            Text("祝日は\(order.holidayShift.flatMap { patterns[$0]?.name } ?? "休み")")
               .font(.footnote)
               .foregroundStyle(colors.textTertiary)
               .padding(.top, 12)
@@ -240,12 +240,6 @@ private struct RepeatPeriodPage: View {
                 from: DateComponents(year: start.year, month: start.month, day: start.day)) ?? .now
             } set: { move(order, index: index, to: Day($0, in: .current)) },
             displayedComponents: .date)
-          if repeats {
-            Toggle(
-              "祝日は休みにする",
-              isOn: Binding(get: { order.holidaysOff }, set: { setHolidaysOff($0) }))
-            .disabled(!order.holidaysOff && holidayShift(of: values.patterns) == nil)
-          }
         } footer: {
           Text(
             repeats
@@ -253,6 +247,15 @@ private struct RepeatPeriodPage: View {
               : "この期間は繰り返さず、カレンダーで1日ずつ入れます。")
         }
         .settingsRows()
+        if repeats {
+          HolidayChoice(
+            patterns: values.patterns,
+            on: Binding(get: { order.holidaysOff }, set: { setHolidaysOff($0) }),
+            shift: Binding(
+              // The one it takes, even one that no longer counts as off.
+              get: { order.holidayShift ?? holidayShift(of: values.patterns) },
+              set: { setHolidaysOff(true, picking: $0) }))
+        }
         Section {
           Button("この期間を削除", role: .destructive) { removing = true }
             .frame(maxWidth: .infinity)
@@ -293,8 +296,10 @@ private struct RepeatPeriodPage: View {
     start = day
   }
 
-  private func setHolidaysOff(_ on: Bool) {
-    try? database.write { try OwnValues.setHolidaysOff(on, from: start, now: nowMs(), in: $0) }
+  private func setHolidaysOff(_ on: Bool, picking: PatternID? = nil) {
+    try? database.write {
+      try OwnValues.setHolidaysOff(on, picking: picking, from: start, now: nowMs(), in: $0)
+    }
   }
 
   private func remove() {
@@ -380,6 +385,47 @@ struct KeysPreview: View {
   }
 }
 
+/// 祝日は休みにする (/design's HolidayChoice), asked as an order is saved
+/// and kept with its period: on, holidays take a pattern that counts as
+/// off, picked among them as chips when there are more than one, as
+/// 完了's blanks pick theirs. With none, there is nothing for holidays to
+/// take, so it is not asked (spec/shift-patterns.md, Holidays).
+struct HolidayChoice: View {
+  let patterns: [Pattern]
+  @Binding var on: Bool
+  /// The pattern holidays take while on.
+  @Binding var shift: PatternID?
+
+  var body: some View {
+    let offs = patterns.filter(\.countsAsOff)
+    if !offs.isEmpty {
+      Section {
+        Toggle(isOn: $on) {
+          Text("祝日は休みにする")
+          Text("祝日は、並びの代わりに休みにします")
+        }
+      }
+      .settingsRows()
+      if on, offs.count > 1 {
+        Section {
+          WrappingRow(spacing: 8) {
+            ForEach(offs, id: \.id) { pattern in
+              ChoiceChip(name: pattern.name, picked: pattern.id == shift) {
+                shift = pattern.id
+              } leading: {
+                ShiftMark(pattern: pattern, size: 16)
+              }
+            }
+          }
+          .accessibilityElement(children: .contain)
+          .accessibilityLabel("祝日に入れるパターン")
+          .settingsOnPage()
+        }
+      }
+    }
+  }
+}
+
 /// How a sequence is being set: the first, a new period from a day, or
 /// the period starting on a day set again.
 enum RepeatMode: Hashable {
@@ -437,8 +483,11 @@ private struct RepeatEditor: View {
   let mode: RepeatMode
   @State private var sequence: [PatternID]?
   @State private var day: Day?
-  /// Set by hand; until then it follows holidaysOffByDefault.
+  /// Set by hand in 完了's sheet; until then it follows
+  /// holidaysOffByDefault, or the period's own.
   @State private var holidaysOff: Bool?
+  /// The pattern holidays take, picked in 完了's sheet.
+  @State private var holidayPick: PatternID?
   @State private var confirming = false
 
   var body: some View {
@@ -447,7 +496,8 @@ private struct RepeatEditor: View {
     let steps = sequence ?? initialSequence
     let picked = day ?? current.map { $0.anchor ?? $0.start } ?? nextMonthStart
     let start = current?.start ?? picked
-    let offShift = holidayShift(of: values.patterns)
+    let offShift = holidayShift(
+      of: values.patterns, picked: holidayPick ?? current?.holidayShift)
     let holidays =
       offShift != nil
       && (holidaysOff ?? current?.holidaysOff
@@ -459,13 +509,7 @@ private struct RepeatEditor: View {
       anchor: Binding(get: { picked }, set: { day = $0 }),
       cover: current == nil ? .anchor : .from(start), patterns: values.patterns,
       before: shown, holidayShift: holidays ? offShift : nil, holidayCountry: HolidayCountry.current
-    ) {
-      Toggle(isOn: Binding(get: { holidays }, set: { holidaysOff = $0 })) {
-        Text("祝日は休み").font(.footnote).foregroundStyle(colors.textSecondary)
-      }
-      .fixedSize()
-      .disabled(offShift == nil)
-    }
+    )
     .background(colors.backgroundBase)
     .navigationTitle(mode.title)
     .navigationBarTitleDisplayMode(.inline)
@@ -476,16 +520,47 @@ private struct RepeatEditor: View {
           .disabled(steps.isEmpty)
       }
     }
-    // The days from its start change, so 完了 asks first.
-    .alert("\(start.slashText)\(mode.question)", isPresented: $confirming) {
-      Button("キャンセル", role: .cancel) {}
-      Button(mode.action) {
-        save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
-      }
-    } message: {
+    // The days from its start change, so 完了 asks first, with
+    // 祝日は休みにする, which shows behind it on the days.
+    .sheet(isPresented: $confirming) {
       // A new period on a day another starts takes its place.
       let replaces = fixing == nil && values.orders.contains { $0.start == start }
-      Text(replaces ? "この日から始まる繰り返しと入れ替えます。自分で入れた日は、そのまま残ります。" : mode.message)
+      NavigationStack {
+        Form {
+          Section {
+            Text(
+              replaces
+                ? "この日から始まる繰り返しと入れ替えます。自分で入れた日は、そのまま残ります。" : mode.message
+            )
+            .font(.subheadline)
+            .foregroundStyle(colors.textSecondary)
+            .settingsOnPage()
+          }
+          HolidayChoice(
+            patterns: values.patterns,
+            on: Binding(get: { holidays }, set: { holidaysOff = $0 }),
+            shift: Binding(get: { offShift }, set: { holidayPick = $0 }))
+          Section {
+            Button {
+              confirming = false
+              save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
+            } label: {
+              Text(mode.action).frame(maxWidth: .infinity)
+            }
+            .mainButton()
+            .settingsOnPage()
+          }
+        }
+        .settingsList()
+        .navigationTitle("\(start.slashText)\(mode.question)")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("閉じる", systemImage: "xmark", role: .close) { confirming = false }
+          }
+        }
+      }
+      .presentationDetents([.medium, .large])
     }
   }
 

@@ -1,7 +1,6 @@
 import { ArrowRight, Trash2 } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import { useState } from "react";
-import type { ReactNode } from "react";
 import { css, cva } from "styled-system/css";
 
 import {
@@ -25,8 +24,9 @@ import {
 } from "./design-day-grid";
 import { MonthRow } from "./design-group-shifts-list";
 import { monthKey } from "./design-group-shifts-parts";
+import { ReturnButton } from "./design-header";
 import { Pager } from "./design-pager";
-import { monthIndex } from "./design-rolling";
+import { monthIndex, TodayCorner } from "./design-rolling";
 import { PatternKeys, patternPagesOf, shiftInput } from "./design-shift-input";
 import { useWeek, weekdayNameOf } from "./design-week";
 import { ShiftMark } from "./shift-mark";
@@ -38,6 +38,9 @@ import { ShiftMark } from "./shift-mark";
 // which typing keeps in sight, and the month's name picks any other.
 const repeatCalendar = {
   foot: css({ marginTop: "auto", paddingTop: "2px" }),
+  // Room around the grid for the framed day's outline, as the
+  // calendar's month keeps, so both line up.
+  month: css({ paddingInline: "4px" }),
   monthRow: css({
     alignItems: "center",
     display: "flex",
@@ -212,8 +215,8 @@ function OrderMonth({
 // moves on, 翌日へ moves it without typing, and 消す takes the framed day
 // out, those after it closing up. A day typed, pressed, takes the frame;
 // any other moves the order to start there, keeping what was typed.
-// `accessory` goes at the end of the month's row; what saves it is the
-// page's 完了.
+// Away from the month of its 1st day, 1日目へ brings it back, where
+// 1人ずつ offers 今月; what saves it is the page's 完了.
 export function RepeatCalendar({
   sequence,
   anchor,
@@ -222,7 +225,6 @@ export function RepeatCalendar({
   holidayShift,
   patternKeys,
   onChange,
-  accessory,
 }: {
   sequence: Shift[];
   // The order's 1st day.
@@ -237,7 +239,6 @@ export function RepeatCalendar({
   holidayShift?: Shift;
   patternKeys: Shift[];
   onChange: (order: { sequence: Shift[]; anchor: Date }) => void;
-  accessory?: ReactNode;
 }) {
   const weekTools = useWeek();
   const [month, setMonth] = useState(() => monthOf(anchor));
@@ -304,9 +305,28 @@ export function RepeatCalendar({
           swiped={swipedTo === monthIndex(month)}
           unit="月"
         />
-        {accessory}
+        <TodayCorner
+          atToday={monthKey(month) === monthKey(monthOf(anchor))}
+          nextIsToday={
+            monthKey(monthAfter(month, 1)) === monthKey(monthOf(anchor))
+          }
+          previousIsToday={
+            monthKey(monthAfter(month, -1)) === monthKey(monthOf(anchor))
+          }
+          progress={pageDrag}
+          swiped={swipedTo === monthIndex(month)}
+        >
+          <ReturnButton
+            aria-label="並びの1日目の月に戻る"
+            onClick={() => {
+              goTo(anchor);
+            }}
+          >
+            1日目へ
+          </ReturnButton>
+        </TodayCorner>
       </div>
-      <div>
+      <div className={repeatCalendar.month}>
         <WeekdayRow compact />
         <Pager
           onStep={(direction) => {

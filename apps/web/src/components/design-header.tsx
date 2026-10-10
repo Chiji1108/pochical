@@ -55,18 +55,24 @@ const todayButtonStyle = css({
 
 export function TodayButton({
   unit,
-  className,
   ...props
 }: ButtonProps & { unit: "月" | "週" | "日" }) {
   return (
+    <ReturnButton aria-label={`今${unit}に戻る`} {...props}>
+      今{unit}
+    </ReturnButton>
+  );
+}
+
+// The same word in glass, back to where a page belongs, as 今月 is to
+// today: 1日目へ, back to the month of an order's 1st day.
+export function ReturnButton({ className, ...props }: ButtonProps) {
+  return (
     <button
-      aria-label={`今${unit}に戻る`}
       className={cx(todayButtonStyle, className)}
       type="button"
       {...props}
-    >
-      今{unit}
-    </button>
+    />
   );
 }
 

@@ -23,12 +23,12 @@ enum OrderCover: Hashable {
 /// the order to start there, keeping what was typed.
 ///
 /// It fills the screen as 1人ずつ's month does, swiped sideways a month at
-/// a time, with the keys kept at the foot as ポチポチ入力's are. No 今月:
-/// the month that matters is the order's, which typing keeps in sight, and
-/// the month's name picks any other. Its first
-/// day and length go under the page's title, `accessory` at the end of the
-/// month's row; what saves it is the page's 完了.
-struct RepeatCalendar<Accessory: View>: View {
+/// a time, with the keys kept at the foot as ポチポチ入力's are. Where
+/// 1人ずつ offers 今月, 1日目へ brings back the month of the order's 1st
+/// day while it is out of sight: the month that matters is the order's,
+/// and the month's name picks any other. Its first day and length go under
+/// the page's title; what saves it is the page's 完了.
+struct RepeatCalendar: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   @Binding var sequence: [PatternID]
@@ -41,7 +41,6 @@ struct RepeatCalendar<Accessory: View>: View {
   /// 祝日は休みにする's pattern, when it is on.
   var holidayShift: PatternID?
   var holidayCountry = HolidayCountry.current
-  @ViewBuilder let accessory: () -> Accessory
   /// The month shown, from the swiped pages; until then the 1st day's.
   @State private var month: Day?
   /// Where the pages are as a finger moves them, for the month's name.
@@ -72,7 +71,14 @@ struct RepeatCalendar<Accessory: View>: View {
             .foregroundStyle(colors.textPrimary)
         }
         Spacer(minLength: 8)
-        accessory()
+        if shown != anchor.firstOfMonth {
+          Button("1日目へ") {
+            withAnimation(Springs.standard) { month = anchor.firstOfMonth }
+          }
+          .buttonStyle(BarButton())
+          .accessibilityLabel("並びの1日目の月に戻る")
+          .transition(.opacity)
+        }
       }
       .frame(minHeight: Metrics.touch)
       // Under the weekdays as the calendar's month is.

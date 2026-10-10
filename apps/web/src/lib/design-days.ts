@@ -134,10 +134,15 @@ export function defaultHolidaysOff(
   });
 }
 
-// What a holiday becomes for someone off on them: their first pattern
-// that counts as a day off, which is 休み unless they put another first.
-export function holidayShiftOf(patterns: readonly Pattern[]) {
-  return patterns.find((pattern) => pattern.countsAsOff)?.id;
+// What a holiday becomes for someone off on them: the pattern they
+// picked, while it still counts as a day off, else their first that does,
+// which is 休み unless they put another first.
+export function holidayShiftOf(
+  patterns: readonly Pattern[],
+  picked?: Shift
+): Shift | undefined {
+  const offs = patterns.filter((pattern) => pattern.countsAsOff);
+  return (offs.find((pattern) => pattern.id === picked) ?? offs[0])?.id;
 }
 
 const sampleDetails: Record<string, Omit<DayEntry, "shift">> = {

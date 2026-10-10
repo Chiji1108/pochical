@@ -36,7 +36,9 @@ export function useWorkChanges(schedule: Schedule) {
           rule.anchor ?? rule.start,
           bookOf(patterns)
         ));
-    const holidayShift = holidaysOff ? holidayShiftOf(patterns) : undefined;
+    const holidayShift = holidaysOff
+      ? holidayShiftOf(patterns, rule.holidayShift)
+      : undefined;
     // Off only with a pattern for them to take.
     return rule.sequence.length > 0
       ? { ...rule, holidayShift, holidaysOff: holidayShift !== undefined }
