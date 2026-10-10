@@ -40,6 +40,7 @@ import { GapSheet } from "./design-gap-sheet";
 import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
 import { Pager } from "./design-pager";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
+import type { CalendarAccess } from "./design-save-sheet";
 import {
   ShiftInputControls,
   shiftInput,
@@ -66,7 +67,10 @@ export function DesignCalendar({
   shown: tabShown,
   covered,
   onTab,
+  calendarAccess = "granted",
 }: {
+  // How 端末カレンダーに追加 goes, as the demo picks.
+  calendarAccess?: CalendarAccess;
   initialEditing: boolean;
   initialDay: number;
   initialDetail?: Date;
@@ -528,7 +532,17 @@ export function DesignCalendar({
         unfilled={unfilled}
       />
       <SaveSheet
+        access={calendarAccess}
         month={month}
+        noteDays={monthDays
+          .filter((date) => own[dateKey(date)]?.note)
+          .map((date) => {
+            const shift = schedule[dateKey(date)]?.shift;
+            return {
+              off: shift !== undefined && isDayOff(book[shift]),
+              shift: shift !== undefined,
+            };
+          })}
         offCount={daysOff}
         onImage={() => {
           setImagePreview(true);
