@@ -96,6 +96,13 @@ struct SettingsScreen: View {
             LabeledContent("外観", value: appearanceName)
           }
           NavigationLink {
+            CalendarSettings()
+          } label: {
+            LabeledContent(
+              "カレンダー", value: "\(Day.weekdayNames[settings.device.week.start])曜はじまり")
+          }
+          // Outside the app, and changed least, so last.
+          NavigationLink {
             AppIconSettings()
           } label: {
             LabeledContent("アプリアイコン") {
@@ -104,12 +111,6 @@ struct SettingsScreen: View {
                 Text(appIcon.name)
               }
             }
-          }
-          NavigationLink {
-            CalendarSettings()
-          } label: {
-            LabeledContent(
-              "カレンダー", value: "\(Day.weekdayNames[settings.device.week.start])曜はじまり")
           }
         }
         .settingsRows()
