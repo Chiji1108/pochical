@@ -57,6 +57,9 @@ export type MonthName = "number" | "english";
 // colors on each tap.
 export type MonthTap = "pick" | "surprise";
 
+// 端末カレンダーに追加's メモも入れる and 一緒に働く人も入れる.
+export type CalendarAdd = { notes: boolean; people: boolean };
+
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {
   preset: PresetId;
@@ -76,6 +79,9 @@ export type DeviceSettings = {
   calendar: Record<ShiftMarkStyle, CalendarOptions>;
   // How 画像で保存 last drew the month.
   imageOptions: ImageOptions;
+  // What 端末カレンダーに追加 puts in besides the shifts, as last left:
+  // each off at first, as a calendar may be shared with family.
+  calendarAdd: CalendarAdd;
   // Reminders of the person's shifts, sent by this device on its own.
   reminders: Reminder[];
 };
@@ -96,6 +102,7 @@ type SettingsState = {
   setSky: (sky: string) => void;
   setAppIcon: (icon: string) => void;
   setImageOptions: (options: ImageOptions) => void;
+  setCalendarAdd: (calendarAdd: CalendarAdd) => void;
   setReminders: (reminders: Reminder[]) => void;
   // Changes the options of the shape in use.
   setCalendarOptions: (change: Partial<CalendarOptions>) => void;
@@ -133,6 +140,7 @@ export const useSettings = create<SettingsState>()(
         appIcon: "moss",
         appearance: "system",
         calendar: defaultCalendar,
+        calendarAdd: { notes: false, people: false },
         imageOptions: defaultImageOptions,
         monthName: "number",
         monthTap: "pick",
@@ -150,6 +158,9 @@ export const useSettings = create<SettingsState>()(
       },
       setAppearance: (appearance) => {
         set((state) => ({ device: { ...state.device, appearance } }));
+      },
+      setCalendarAdd: (calendarAdd) => {
+        set((state) => ({ device: { ...state.device, calendarAdd } }));
       },
       setCalendarOptions: (change) => {
         set((state) => {

@@ -59,6 +59,16 @@ export const designVariantOptions = {
     ],
     label: "パターン",
   },
+  // How 端末カレンダーに追加 goes: the calendars allowed, refused, or
+  // allowed and the adding failing.
+  calendarAccess: {
+    choices: [
+      { label: "許可済み", value: "granted" },
+      { label: "許可しない", value: "denied" },
+      { label: "追加に失敗", value: "fails" },
+    ],
+    label: "端末カレンダー",
+  },
   photoSend: {
     choices: [
       { label: "届く", value: "ok" },

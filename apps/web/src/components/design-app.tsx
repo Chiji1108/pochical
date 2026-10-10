@@ -126,6 +126,7 @@ export function DesignApp({
                 />
               )}
               <DesignCalendar
+                calendarAccess={variants.calendarAccess}
                 covered={joining}
                 initialDay={initialDay}
                 initialDetail={initialDetail}
