@@ -8,6 +8,7 @@ import {
   PatternOrderSchema,
   PatternSchema,
   PatternValueSchema,
+  PreferenceValueSchema,
   RepeatOrdersSchema,
 } from "./gen/pochical/v1/sync_pb";
 import type {
@@ -30,6 +31,7 @@ import type {
   memberships,
   patternOrder,
   patterns,
+  preferences,
   profile,
   repeatOrders,
   unreadCounts,
@@ -44,6 +46,7 @@ export type OrderRow = typeof patternOrder.$inferSelect;
 export type RepeatOrdersRow = typeof repeatOrders.$inferSelect;
 export type CoworkerRow = typeof coworkers.$inferSelect;
 export type CoworkerOrderRow = typeof coworkerOrder.$inferSelect;
+export type PreferenceRow = typeof preferences.$inferSelect;
 
 type ClockColumns = { hlcMs: number; hlcCounter: number; hlcDevice: string };
 
@@ -177,6 +180,19 @@ export const coworkerOrderChange = (row: CoworkerOrderRow): Change =>
       value: create(CoworkerOrderSchema, {
         hlc: hlcOf(row),
         ids: parseIds(row.ids),
+      }),
+    },
+  });
+
+export const preferenceChange = (row: PreferenceRow): Change =>
+  create(ChangeSchema, {
+    cursor: BigInt(row.cursor),
+    kind: {
+      case: "preference",
+      value: create(PreferenceValueSchema, {
+        hlc: hlcOf(row),
+        key: row.key,
+        value: row.value ?? undefined,
       }),
     },
   });

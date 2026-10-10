@@ -144,6 +144,7 @@ struct DeviceCalendarSheet: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.openURL) private var openURL
   @Environment(\.meID) private var meID
+  @Environment(Settings.self) private var settings
   let month: Day
   let calendar: OwnCalendar
   /// The person's coworkers' names by id, for 一緒に働く人も入れる.
@@ -151,20 +152,19 @@ struct DeviceCalendarSheet: View {
   @State private var calendars = DeviceCalendars()
   @State private var calendarID: String?
   @State private var includeOff = false
-  /// The days' memos, and who works them, put in too: each on at first
-  /// and kept as last left, so someone adding to a calendar shared with
-  /// family turns them off once.
-  @AppStorage("deviceCalendar.notes") private var includeNotes = true
-  @AppStorage("deviceCalendar.people") private var includePeople = true
   /// What was done, once added.
   @State private var done: String?
   @State private var failed = false
 
   var body: some View {
+    // The days' memos, and who works them, put in too when asked: each off
+    // at first, as a calendar may be shared with family, and kept with the
+    // account as last left.
+    let putting = settings.device.calendarAdd
     let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
     let events = ShiftEvents.month(
       month, days: shown, patterns: calendar.patternsByID, includeOff: includeOff,
-      notes: includeNotes ? notes : [:], people: includePeople ? people(shown) : [:])
+      notes: putting.notes ? notes : [:], people: putting.people ? people(shown) : [:])
     NavigationStack {
       Form {
         switch calendars.access {
@@ -237,6 +237,7 @@ struct DeviceCalendarSheet: View {
   }
 
   @ViewBuilder private var form: some View {
+    @Bindable var settings = settings
     Section {
       Picker("追加先", selection: $calendarID) {
         ForEach(calendars.sources, id: \.title) { source in
@@ -257,11 +258,11 @@ struct DeviceCalendarSheet: View {
       // from where the picked calendar's dot puts its words.
       .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
       Toggle("休みの日も入れる", isOn: $includeOff)
-      Toggle(isOn: $includeNotes) {
+      Toggle(isOn: $settings.device.calendarAdd.notes) {
         Text("メモも入れる")
         Text("予定がない日は、メモだけの予定にします")
       }
-      Toggle(isOn: $includePeople) {
+      Toggle(isOn: $settings.device.calendarAdd.people) {
         Text("一緒に働く人も入れる")
         Text("シフトの予定のメモ欄に入ります")
       }

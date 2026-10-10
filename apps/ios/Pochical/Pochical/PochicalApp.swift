@@ -17,6 +17,7 @@ struct PochicalApp: App {
   /// The calls that make and join groups, as the same user.
   private let groupCalls: GroupCalls
   @State private var settings = Settings()
+  private let database: any DatabaseWriter
 
   init() {
     prepareDependencies {
@@ -27,6 +28,7 @@ struct PochicalApp: App {
       #endif
     }
     @Dependency(\.defaultDatabase) var database
+    self.database = database
     account = Account()
     sync = SyncClient(account: account, database: database)
     groupCalls = GroupCalls(account: account)
@@ -41,6 +43,8 @@ struct PochicalApp: App {
         .environment(\.groupCalls, groupCalls)
         .environment(\.account, account)
         .environment(\.userSocket, sync)
+        // The person's preferences, kept with the account from launch.
+        .task { settings.sync(with: database) }
     }
     // The socket is open only in the foreground (spec/sync-protocol.md,
     // Sockets), and the shared database lets go of its locks before iOS

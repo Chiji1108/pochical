@@ -120,6 +120,13 @@
       "when": 1791530350908,
       "tag": "0016_membership_photo_mark",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1791602144222,
+      "tag": "0017_preferences",
+      "breakpoints": true
     }
   ]
 }

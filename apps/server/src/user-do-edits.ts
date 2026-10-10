@@ -10,6 +10,7 @@ import type {
   DayValue,
   PatternOrder,
   PatternValue,
+  PreferenceValue,
   RepeatOrdersEdit,
 } from "./gen/pochical/v1/sync_pb";
 import { clockAfter } from "./hlc";
@@ -24,6 +25,7 @@ import {
   fitsOrders,
 } from "./order-values";
 import { fitsOrder, fitsPattern } from "./pattern-values";
+import { fitsPreference } from "./preference-values";
 import {
   coworkerOrder,
   coworkers,
@@ -31,6 +33,7 @@ import {
   orderClears,
   patternOrder,
   patterns,
+  preferences,
   repeatOrders,
 } from "./user-do-schema";
 import {
@@ -47,6 +50,7 @@ import {
   ordersOfRow,
   parseIds,
   patternChange,
+  preferenceChange,
   repeatOrdersChange,
 } from "./user-do-values";
 import type {
@@ -55,6 +59,7 @@ import type {
   DayRow,
   OrderRow,
   PatternRow,
+  PreferenceRow,
   RepeatOrdersRow,
 } from "./user-do-values";
 
@@ -372,4 +377,36 @@ export const applyCoworkerOrder = (
     .onConflictDoUpdate({ set: row, target: coworkerOrder.id })
     .run();
   return coworkerOrderChange(row);
+};
+
+export const applyPreference = (
+  db: DrizzleSqliteDODatabase,
+  edit: PreferenceValue,
+  cursor: number
+): Change | undefined => {
+  if (!(isId(edit.key) && hasDeviceClock(edit))) {
+    return undefined;
+  }
+  const stored = db
+    .select()
+    .from(preferences)
+    .where(eq(preferences.key, edit.key))
+    .get();
+  const clock = clockOfHlc(edit.hlc);
+  if (!isNewer(clock, stored)) {
+    return undefined;
+  }
+  // One too long keeps what was there, as a name that does not fit.
+  const fits = edit.value === undefined || fitsPreference(edit.value);
+  const row: PreferenceRow = {
+    ...clockColumns(writtenClock(clock, fits)),
+    cursor,
+    key: edit.key,
+    value: fits ? (edit.value ?? null) : (stored?.value ?? null),
+  };
+  db.insert(preferences)
+    .values(row)
+    .onConflictDoUpdate({ set: row, target: preferences.key })
+    .run();
+  return preferenceChange(row);
 };

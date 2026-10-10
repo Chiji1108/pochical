@@ -1,10 +1,13 @@
 import Foundation
 import Observation
 import PochicalDesign
+import SQLiteData
 
-/// What the person set for their own screen, kept on this device alone, as
-/// /design's device settings are (apps/web/src/lib/design-settings-store.ts).
-/// Kept in the App Group, so the widgets draw the same week.
+/// What the person set for their own screen, as /design's device settings
+/// are (apps/web/src/lib/design-settings-store.ts). Kept in the App Group,
+/// so the widgets draw the same week; the parts that are the person's own
+/// liking are kept with the account too (Preferences.swift), and 外観,
+/// the reminders and a picture's light or dark stay with the device.
 public struct DeviceSettings: Codable, Equatable, Sendable {
   /// The calendar's week: the day it starts on, and which days take a
   /// color of their own (/design's カレンダー page).
@@ -41,6 +44,8 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   public var picture = PictureLook()
   /// Reminders of the person's shifts, sent by this device on its own.
   public var reminders = Reminder.defaults
+  /// What 端末カレンダーに追加 puts in besides the shifts, as last left.
+  public var calendarAdd = CalendarAdd()
 
   public var theme: Theme {
     get { Theme(rawValue: themeID) ?? .pochical }
@@ -57,6 +62,7 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     appearance = try container.decodeIfPresent(Appearance.self, forKey: .appearance) ?? .system
     picture = try container.decodeIfPresent(PictureLook.self, forKey: .picture) ?? PictureLook()
     reminders = try container.decodeIfPresent([Reminder].self, forKey: .reminders) ?? Reminder.defaults
+    calendarAdd = try container.decodeIfPresent(CalendarAdd.self, forKey: .calendarAdd) ?? CalendarAdd()
   }
 }
 
@@ -75,6 +81,22 @@ public struct PictureLook: Codable, Equatable, Sendable {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     options = try container.decodeIfPresent(MarkOptions.self, forKey: .options) ?? PictureLook().options
     dark = try container.decodeIfPresent(Bool.self, forKey: .dark)
+  }
+}
+
+/// What 端末カレンダーに追加 puts in besides the shifts (spec/calendar.md):
+/// the day's memo and those on it, each off until turned on, as a calendar
+/// may be shared with family.
+public struct CalendarAdd: Codable, Equatable, Sendable {
+  public var notes = false
+  public var people = false
+
+  public init() {}
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    notes = try container.decodeIfPresent(Bool.self, forKey: .notes) ?? false
+    people = try container.decodeIfPresent(Bool.self, forKey: .people) ?? false
   }
 }
 
@@ -175,8 +197,17 @@ public struct Look: Codable, Equatable, Sendable {
 /// change is made.
 @MainActor @Observable public final class Settings {
   public var device: DeviceSettings {
-    didSet { keep() }
+    didSet {
+      keep()
+      send(changedFrom: oldValue)
+    }
   }
+
+  /// Where the preferences go as edits, once the app syncs them.
+  @ObservationIgnored var database: (any DatabaseWriter)?
+  /// Taking the account's preferences, which go nowhere again.
+  @ObservationIgnored var adopting = false
+  @ObservationIgnored var watching: Task<Void, Never>?
 
   private let store: UserDefaults
   private static let key = "deviceSettings"

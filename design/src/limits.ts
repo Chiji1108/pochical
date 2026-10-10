@@ -86,6 +86,9 @@ export const syncLimits = {
   patterns: 200,
   // People noted on one day.
   peopleADay: 50,
+  // Characters in one preference's value, its JSON as the apps write it
+  // (spec/sync-protocol.md, Preferences).
+  preferenceLength: 2000,
   // Shifts in one repeating order: a rotation a year long.
   sequence: 366,
 } as const;

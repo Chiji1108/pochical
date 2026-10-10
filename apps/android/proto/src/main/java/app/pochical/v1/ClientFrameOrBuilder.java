@@ -171,5 +171,24 @@ public interface ClientFrameOrBuilder extends
    */
   app.pochical.v1.Typing getTyping();
 
+  /**
+   * <pre>
+   * The owner's preferences, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+   * @return Whether the preferenceEdits field is set.
+   */
+  boolean hasPreferenceEdits();
+  /**
+   * <pre>
+   * The owner's preferences, from the same outbox; User DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceEdits preference_edits = 10 [json_name = "preferenceEdits"];</code>
+   * @return The preferenceEdits.
+   */
+  app.pochical.v1.PreferenceEdits getPreferenceEdits();
+
   public app.pochical.v1.ClientFrame.KindCase getKindCase();
 }

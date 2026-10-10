@@ -44,6 +44,7 @@ public  final class Change extends
     CHAT_MUTE(18),
     CHAT_NOTIFICATIONS(19),
     PROFILE(20),
+    PREFERENCE(21),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -78,6 +79,7 @@ public  final class Change extends
         case 18: return CHAT_MUTE;
         case 19: return CHAT_NOTIFICATIONS;
         case 20: return PROFILE;
+        case 21: return PREFERENCE;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -1300,6 +1302,81 @@ public  final class Change extends
    */
   private void clearProfile() {
     if (kindCase_ == 20) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int PREFERENCE_FIELD_NUMBER = 21;
+  /**
+   * <pre>
+   * One of the user's preferences, as one of their devices last set it
+   * (spec/sync-protocol.md, Preferences); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPreference() {
+    return kindCase_ == 21;
+  }
+  /**
+   * <pre>
+   * One of the user's preferences, as one of their devices last set it
+   * (spec/sync-protocol.md, Preferences); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.PreferenceValue getPreference() {
+    if (kindCase_ == 21) {
+       return (app.pochical.v1.PreferenceValue) kind_;
+    }
+    return app.pochical.v1.PreferenceValue.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * One of the user's preferences, as one of their devices last set it
+   * (spec/sync-protocol.md, Preferences); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+   */
+  private void setPreference(app.pochical.v1.PreferenceValue value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 21;
+  }
+  /**
+   * <pre>
+   * One of the user's preferences, as one of their devices last set it
+   * (spec/sync-protocol.md, Preferences); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+   */
+  private void mergePreference(app.pochical.v1.PreferenceValue value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 21 &&
+        kind_ != app.pochical.v1.PreferenceValue.getDefaultInstance()) {
+      kind_ = app.pochical.v1.PreferenceValue.newBuilder((app.pochical.v1.PreferenceValue) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 21;
+  }
+  /**
+   * <pre>
+   * One of the user's preferences, as one of their devices last set it
+   * (spec/sync-protocol.md, Preferences); User DO only.
+   * </pre>
+   *
+   * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+   */
+  private void clearPreference() {
+    if (kindCase_ == 21) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -2635,6 +2712,84 @@ public  final class Change extends
       return this;
     }
 
+    /**
+     * <pre>
+     * One of the user's preferences, as one of their devices last set it
+     * (spec/sync-protocol.md, Preferences); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPreference() {
+      return instance.hasPreference();
+    }
+    /**
+     * <pre>
+     * One of the user's preferences, as one of their devices last set it
+     * (spec/sync-protocol.md, Preferences); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.PreferenceValue getPreference() {
+      return instance.getPreference();
+    }
+    /**
+     * <pre>
+     * One of the user's preferences, as one of their devices last set it
+     * (spec/sync-protocol.md, Preferences); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+     */
+    public Builder setPreference(app.pochical.v1.PreferenceValue value) {
+      copyOnWrite();
+      instance.setPreference(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * One of the user's preferences, as one of their devices last set it
+     * (spec/sync-protocol.md, Preferences); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+     */
+    public Builder setPreference(
+        app.pochical.v1.PreferenceValue.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPreference(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * One of the user's preferences, as one of their devices last set it
+     * (spec/sync-protocol.md, Preferences); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+     */
+    public Builder mergePreference(app.pochical.v1.PreferenceValue value) {
+      copyOnWrite();
+      instance.mergePreference(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * One of the user's preferences, as one of their devices last set it
+     * (spec/sync-protocol.md, Preferences); User DO only.
+     * </pre>
+     *
+     * <code>.pochical.v1.PreferenceValue preference = 21 [json_name = "preference"];</code>
+     */
+    public Builder clearPreference() {
+      copyOnWrite();
+      instance.clearPreference();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Change)
   }
   @java.lang.Override
@@ -2673,12 +2828,13 @@ public  final class Change extends
             app.pochical.v1.ChatMute.class,
             app.pochical.v1.ChatNotifications.class,
             app.pochical.v1.Profile.class,
+            app.pochical.v1.PreferenceValue.class,
           };
           java.lang.String info =
-              "\u0000\u0014\u0001\u0000\u0001\u0014\u0014\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
+              "\u0000\u0015\u0001\u0000\u0001\u0015\u0015\u0000\u0000\u0000\u0001\u0003\u0002<\u0000" +
               "\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000" +
               "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011" +
-              "<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000";
+              "<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000\u0015<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

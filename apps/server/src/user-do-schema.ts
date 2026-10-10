@@ -149,6 +149,22 @@ export const coworkerOrder = sqliteTable(
   (table) => [check("coworker_order_single_row", sql`${table.id} = 1`)]
 );
 
+// The user's preferences, each key one last-writer-wins value, as the
+// apps write it: a value, or none once set back to the apps' own default
+// (kept, so an older edit cannot bring it back).
+export const preferences = sqliteTable(
+  "preferences",
+  {
+    cursor: integer().notNull(),
+    hlcCounter: integer("hlc_counter").notNull(),
+    hlcDevice: text("hlc_device").notNull(),
+    hlcMs: integer("hlc_ms").notNull(),
+    key: text().primaryKey(),
+    value: text(),
+  },
+  (table) => [uniqueIndex("preferences_cursor").on(table.cursor)]
+);
+
 // Where taken repeating orders cleared the user's days: from each
 // clear_from, the clock of the orders that cleared it (the newest, when
 // orders cleared from the same day twice). An edit of a pattern or time on

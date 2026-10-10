@@ -27,6 +27,8 @@ message ClientFrame {
     // The member is writing in a chat, or stopped; Group DO socket only.
     // Relayed as it comes and never kept (spec/sync-protocol.md, Typing).
     Typing typing = 9;
+    // The owner's preferences, from the same outbox; User DO socket only.
+    PreferenceEdits preference_edits = 10;
   }
 }
 
@@ -217,6 +219,9 @@ message Change {
     // The user's usual name, which new groups start with
     // (spec/sync-protocol.md, Profile); User DO only.
     Profile profile = 20;
+    // One of the user's preferences, as one of their devices last set it
+    // (spec/sync-protocol.md, Preferences); User DO only.
+    PreferenceValue preference = 21;
   }
 }
 
@@ -458,6 +463,29 @@ message CoworkerEdit {
     CoworkerValue coworker = 2;
     CoworkerOrder order = 3;
   }
+}
+
+// One of the owner's preferences, how they like their screens: one
+// last-writer-wins value a key, kept with the account so each of their
+// devices shows the same (spec/sync-protocol.md, Preferences). The server
+// keeps what it is given without reading it; the apps read the value.
+message PreferenceValue {
+  // Which preference, as the apps name it: an id (syncLimits.idLength).
+  string key = 1;
+  // As the apps write it, JSON, syncLimits.preferenceLength characters at
+  // most. Unset: back to the apps' own default.
+  optional string value = 2;
+  Hlc hlc = 3;
+}
+
+message PreferenceEdits {
+  repeated PreferenceEdit edits = 1;
+}
+
+message PreferenceEdit {
+  // Unique per edit, as a DayEdit's.
+  string op_id = 1;
+  PreferenceValue value = 2;
 }
 
 message Reset {}
