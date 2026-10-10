@@ -155,7 +155,7 @@ private struct WelcomeStep: View {
           .padding(.bottom, -20)
           .accessibilityHidden(true)
         Text("ポチカル")
-          .font(.system(size: 24, weight: .bold))
+          .font(.title.bold())
           .foregroundStyle(colors.textPrimary)
           .padding(.top, 8)
         // Each phrase stays whole, so the line breaks after the comma.

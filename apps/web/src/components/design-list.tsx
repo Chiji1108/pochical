@@ -96,10 +96,24 @@ export function List({
 // A quiet line inside a list, where its rows go on as something else, as
 // where the patterns' buttons go on to their next page. Not a row, so the
 // row after it draws no line of its own.
+// Its line is a row's separator, as iOS draws the page's first row with
+// its caption inside: inset as the rows' lines are, from where the words
+// start after a mark.
 const listDividerStyle = css({
-  borderTop: "1px solid token(colors.separator)",
+  "&::before": {
+    borderTop: "1px solid token(colors.separator)",
+    content: '""',
+    left: "16px",
+    position: "absolute",
+    right: "16px",
+    top: 0,
+  },
+  "[data-list-row]:has(> [data-part=leading]) + &": {
+    "&::before": { left: "56px" },
+  },
   color: "text.tertiary",
   padding: "12px 16px 4px",
+  position: "relative",
   textStyle: "caption",
 });
 
