@@ -318,14 +318,15 @@ export function GroupHub({
           </IconButton>
         </BarGroup>
       </header>
-      <section>
-        <div className={hub.sectionHead}>
-          <h4 className={hub.sectionHeadTitle}>シフト</h4>
+      <Section
+        title="シフト"
+        trailing={
           <button className={hub.sectionLink} onClick={onShifts} type="button">
             月で見る
             <ChevronRight aria-hidden="true" size={15} />
           </button>
-        </div>
+        }
+      >
         <div className={hub.weekCard}>
           <button
             aria-label="今週のみんなのシフト。押すと月で見られます"
@@ -357,11 +358,11 @@ export function GroupHub({
           ) : (
             <div className={hub.weekCardNext}>
               <span>次のみんな休み</span>
-              <span className={hub.weekCardNextValue}>なし</span>
+              <span className={hub.weekCardNextNone}>なし</span>
             </div>
           )}
         </div>
-      </section>
+      </Section>
       <Section title="チャット">
         <List>
           <ChatRow

@@ -60,7 +60,7 @@ struct GapSheet: View {
           if offPatterns.count > 1 {
             WrappingRow(spacing: 8) {
               ForEach(offPatterns, id: \.id) { pattern in
-                GapChoice(name: pattern.name, picked: pattern.id == offPattern.id) {
+                ChoiceChip(name: pattern.name, picked: pattern.id == offPattern.id) {
                   picked = pattern.id
                 }
               }
@@ -115,28 +115,5 @@ struct GapSheet: View {
     // Opaque, so the calendar's own buttons do not show through the glass
     // under this one's.
     .presentationBackground(colors.backgroundBase)
-  }
-}
-
-/// One of the patterns to fill with, as /design's chips: picked, on the
-/// accent's container.
-private struct GapChoice: View {
-  @Environment(\.themeColors) private var colors
-  let name: String
-  let picked: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      Text(name)
-        .font(.footnote.weight(picked ? .semibold : .regular))
-        .foregroundStyle(picked ? colors.accentDefault : colors.textSecondary)
-        .padding(.horizontal, 12)
-        .frame(minHeight: 34)
-        .background(picked ? colors.accentContainer : colors.backgroundCard, in: Capsule())
-        .overlay(Capsule().strokeBorder(picked ? colors.accentBorder : colors.borderDefault))
-    }
-    .buttonStyle(.plain)
-    .accessibilityAddTraits(picked ? .isSelected : [])
   }
 }

@@ -155,7 +155,7 @@ struct GroupDayRow: View {
       }
     return HStack(alignment: .firstTextBaseline, spacing: 3) {
       Text("\(day.day)")
-        .font(.system(size: 12, weight: day == Day.today ? .bold : .semibold))
+        .font(.system(size: 12, weight: day == Day.today ? .heavy : .semibold))
       Text(day.weekdayName)
         .font(.system(size: 9))
     }

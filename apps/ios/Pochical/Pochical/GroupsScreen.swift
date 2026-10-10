@@ -60,6 +60,9 @@ struct GroupsScreen: View {
   /// Opens the camera to read a group's QR code.
   let onScan: () -> Void
   @State private var path: [GroupRoute] = []
+  /// A group just made, whose メンバーを招待 opens over its hub once the
+  /// group has come, as /design goes on to it.
+  @State private var inviting: String?
 
   var body: some View {
     NavigationStack(path: $path) {
@@ -93,7 +96,9 @@ struct GroupsScreen: View {
         case .newGroup:
           NewGroupPage { made in
             openID = made
+            inviting = made
             path.removeAll()
+            inviteMade()
           }
         case .invite(let group):
           InvitePage(group: live(group))
@@ -111,6 +116,7 @@ struct GroupsScreen: View {
         }
       }
     }
+    .onChange(of: groups.map(\.id)) { inviteMade() }
     .environment(\.groupSocket, socket)
     .environment(\.photoGroupID, (groups.first { $0.id == openID } ?? groups.first)?.id ?? "")
     // Once its group has come, at launch.
@@ -146,6 +152,13 @@ struct GroupsScreen: View {
     openingChat = nil
   }
 
+  /// Opens メンバーを招待 for the group just made, once it is here.
+  private func inviteMade() {
+    guard let id = inviting, let made = groups.first(where: { $0.id == id }) else { return }
+    inviting = nil
+    path = [.invite(made)]
+  }
+
   /// The group open, whose socket is kept.
   private var openGroupID: String? {
     (groups.first { $0.id == openID } ?? groups.first)?.id
@@ -163,10 +176,11 @@ enum GroupRoute: Hashable {
   case chat(GroupRow, thread: String, with: String?)
 }
 
-/// No group yet: what sharing shifts is for, then 作成 and QR参加
-/// (/design's NoGroups). The sample of a shared week comes later.
+/// No group yet: a sample of a shared week and what sharing shifts is for,
+/// then 作成 and QR参加 (/design's NoGroups).
 private struct NoGroups: View {
   @Environment(\.themeColors) private var colors
+  @Environment(Settings.self) private var settings
   let onNew: () -> Void
   let onScan: () -> Void
 
@@ -175,6 +189,15 @@ private struct NoGroups: View {
       Text("グループでシフトを共有できます")
         .font(.title2.bold())
         .multilineTextAlignment(.center)
+      VStack(spacing: 4) {
+        GroupWeekdays(compact: true)
+        GroupWeek(days: week, members: sampleMembers(week), compact: true)
+      }
+      .padding(EdgeInsets(top: 8, leading: 4, bottom: 12, trailing: 8))
+      .background(colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl))
+      .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel("サンプルの共有シフト表")
       Text("家族や友達とシフトを見せ合って、休みが重なる日がすぐ分かります。")
         .font(.subheadline)
         .foregroundStyle(colors.textTertiary)
@@ -195,10 +218,59 @@ private struct NoGroups: View {
       }
       .buttonStyle(.bordered)
       .buttonBorderShape(.capsule)
-      .tint(colors.textPrimary)
+      .tint(colors.accentDefault)
     }
     .frame(maxHeight: .infinity)
   }
+
+  private var week: [Day] { thisWeek(start: settings.device.week.start) }
+}
+
+/// The sample's people, as /design's: a partner at the office, home on
+/// Wednesdays; a mother part-time on Mondays, Wednesdays and Fridays; a
+/// nurse on 日勤・日勤・夜勤・明け・休み・休み. Days off on weekends and
+/// holidays for the first two.
+private func sampleMembers(_ week: [Day]) -> [GroupMember] {
+  let off = sample("off", "休み", "🌿", "leaf", 0, off: true)
+  let office = sample("office", "出勤", "💼", "briefcase", 9)
+  let home = sample("home", "在宅", "🏠", "house", 10)
+  let part = sample("part", "パート", "🛒", "shoppingBag", 2)
+  let nurse = ["day", "night", "after", "off"].compactMap(ReadyPatterns.pattern).map { ready in
+    Pattern(
+      id: ready.id, name: ready.name, emoji: ready.emoji, symbol: ready.symbol, icon: ready.icon,
+      color: ready.color, time: ready.time.map { ShiftTime(start: $0.start, end: $0.end) },
+      countsAsOff: ready.countsAsOff)
+  }
+  let order = ["day", "day", "night", "after", "off", "off"]
+  let rests = { (day: Day) in day.weekday == 0 || day.weekday == 6 || day.holidayName != nil }
+  let days = { (shift: (Day) -> PatternID) in
+    Dictionary(uniqueKeysWithValues: week.map { ($0, shift($0)) })
+  }
+  return [
+    GroupMember(
+      userID: "yuki", name: "ゆうき",
+      calendar: MemberCalendar(
+        patterns: [office, home, off],
+        days: days { rests($0) ? off.id : $0.weekday == 3 ? home.id : office.id })),
+    GroupMember(
+      userID: "mother", name: "お母さん",
+      calendar: MemberCalendar(
+        patterns: [part, off],
+        days: days { [1, 3, 5].contains($0.weekday) && $0.holidayName == nil ? part.id : off.id })),
+    GroupMember(
+      userID: "misaki", name: "みさき",
+      calendar: MemberCalendar(
+        patterns: nurse,
+        days: days { order[(($0.days(since: Day(year: 2026, month: 1, day: 4)) + 3) % 6 + 6) % 6] })),
+  ]
+}
+
+private func sample(
+  _ id: String, _ name: String, _ emoji: String, _ icon: String, _ color: Int, off: Bool = false
+) -> Pattern {
+  Pattern(
+    id: id, name: name, emoji: emoji, symbol: String(name.prefix(1)), icon: icon, color: color,
+    countsAsOff: off)
 }
 
 /// The groups down the left edge, as the messaging apps' server rails: a

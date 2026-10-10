@@ -91,7 +91,7 @@ struct GroupWeek: View {
         let column = VStack(spacing: 0) {
           // A month's 1st says its month, where the week runs into it.
           Text(day.day == 1 && day != days[0] ? day.slashText : "\(day.day)")
-            .font(.system(size: 11, weight: day == today ? .bold : .semibold))
+            .font(.system(size: 11, weight: day == today ? .heavy : .semibold))
             .foregroundStyle(dateColor(day, today: today))
             .frame(height: dateHeight)
           ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
@@ -162,7 +162,7 @@ struct GroupWeek: View {
       if let pattern {
         ShiftMark(pattern: pattern, size: 18, change: change)
       } else {
-        Circle().fill(colors.fillSecondary).frame(width: 4, height: 4)
+        Circle().fill(colors.fillSecondary).frame(width: 6, height: 6)
       }
     }
     .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight)
@@ -203,10 +203,11 @@ struct MemberWeek: View {
       .accessibilityHint("押すと月で見られます")
       next(today: today)
     }
-    .padding(12)
-    .padding(.bottom, -4)
-    .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xl))
-    .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.separator))
+    // Only a frame on the screen's own ground: the card's ground is lifted
+    // in dark mode, where the week would float.
+    .padding(EdgeInsets(top: 8, leading: 4, bottom: 12, trailing: 8))
+    .background(colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl))
+    .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
   }
 
   /// 次のみんな休み: the first day from today, within `nextTogetherDays`,
@@ -220,8 +221,8 @@ struct MemberWeek: View {
         .foregroundStyle(colors.textSecondary)
       Spacer()
       Text(next.map { "\($0.fullText)・\(fromToday($0, today: today))" } ?? "なし")
-        .fontWeight(next == nil ? .regular : .semibold)
-        .foregroundStyle(next == nil ? colors.textTertiary : colors.textPrimary)
+        .fontWeight(.semibold)
+        .foregroundStyle(next == nil ? colors.textTertiary : colors.accentDefault)
       if next != nil {
         Image(systemName: "chevron.right")
           .imageScale(.small)
@@ -229,9 +230,7 @@ struct MemberWeek: View {
       }
     }
     .font(.footnote)
-    .padding(.top, 12)
-    .padding(.bottom, 2)
-    .padding(.horizontal, 4)
+    .padding(EdgeInsets(top: 12, leading: 12, bottom: 2, trailing: 8))
     .overlay(alignment: .top) {
       Rectangle().fill(colors.separator).frame(height: 1)
     }

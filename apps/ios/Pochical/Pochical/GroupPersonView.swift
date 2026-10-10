@@ -81,29 +81,13 @@ struct GroupPersonView: View {
       HStack(spacing: 8) {
         ForEach(members) { member in
           let isPicked = member.userID == person?.userID
-          Button {
+          ChoiceChip(name: member.name, picked: isPicked) {
             personID = member.userID
-          } label: {
-            HStack(spacing: 6) {
-              MemberAvatar(
-                name: member.name, photoID: member.photoID, groupID: groupID, size: 22,
-                userID: member.userID)
-              Text(member.name)
-                .font(.subheadline.weight(isPicked ? .semibold : .regular))
-                .foregroundStyle(isPicked ? colors.accentDefault : colors.textSecondary)
-                .lineLimit(1)
-            }
-            .padding(.leading, 4)
-            .padding(.trailing, 12)
-            .frame(minHeight: 32)
-            .background(isPicked ? colors.accentContainer : colors.backgroundCard, in: Capsule())
-            .overlay {
-              Capsule().strokeBorder(
-                isPicked ? colors.accentDefault : colors.separator, lineWidth: isPicked ? 1.5 : 1)
-            }
+          } leading: {
+            MemberAvatar(
+              name: member.name, photoID: member.photoID, groupID: groupID, size: 24,
+              userID: member.userID)
           }
-          .buttonStyle(.plain)
-          .accessibilityAddTraits(isPicked ? .isSelected : [])
         }
       }
       .padding(.horizontal, 16)
@@ -177,7 +161,7 @@ struct GroupPersonView: View {
   }
 
   /// The month's みんな休み, which lists its days.
-  @ViewBuilder private func together(in month: Day) -> some View {
+  private func together(in month: Day) -> some View {
     let days = month.daysOfMonth
     let offs = members.map { $0.offDays(from: days[0], through: days[days.count - 1]) }
     let together =
@@ -185,31 +169,8 @@ struct GroupPersonView: View {
       ? Together.days(offs, from: days[0], through: days[days.count - 1])
       : (days: [], unsure: false)
     let title = "\(month == Day.today.firstOfMonth ? "今月" : month.monthText)のみんな休み"
-    let row = HStack {
-      Text(title).foregroundStyle(colors.textSecondary)
-      Spacer()
-      if together.days.isEmpty {
-        Text(together.unsure ? "未入力あり" : "なし").foregroundStyle(colors.textTertiary)
-      } else {
-        TogetherCount(count: together.days.count)
-        Image(systemName: "chevron.right")
-          .imageScale(.small)
-          .foregroundStyle(colors.textQuaternary)
-      }
-    }
-    .font(.subheadline)
-    .padding(.horizontal, 16)
-    .frame(minHeight: Metrics.touch)
-    .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.lg))
-    if together.days.isEmpty {
-      row.accessibilityElement(children: .combine)
-    } else {
-      Button {
-        onTogether(TogetherList(title: title, days: together.days))
-      } label: {
-        row
-      }
-      .buttonStyle(.plain)
+    return TogetherSummary(label: title, together: together) {
+      onTogether(TogetherList(title: title, days: together.days))
     }
   }
 

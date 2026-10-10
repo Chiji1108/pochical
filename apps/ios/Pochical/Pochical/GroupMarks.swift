@@ -17,27 +17,35 @@ struct GroupMarkView: View {
   /// invitation's (`ChatPhotos.invitation`). One the user just picked is on
   /// the device already.
   var shelf = ""
+  /// An icon alone, its glyph `size` in its color without the tint round
+  /// it, as the choices of one show it.
+  var bare = false
+
+  /// How much of the square an icon's glyph and an emoji take; letters
+  /// take most of that across, so one sits as large as a glyph does.
+  private static let inner: CGFloat = 0.62
 
   var body: some View {
     let color = colors.mark(mark.color)
     let shape = RoundedRectangle(cornerRadius: size * 0.28)
+    let glyph = bare ? size : size * Self.inner
     if !mark.photoID.isEmpty {
       MarkPhoto(photoID: mark.photoID, shelf: shelf, size: size)
         .clipShape(shape)
-    } else if !mark.icon.isEmpty, let layers = MarkIcons.layers(mark.icon, filled: true, size: size * 0.62) {
+    } else if !mark.icon.isEmpty, let layers = MarkIcons.layers(mark.icon, filled: true, size: glyph) {
       ZStack {
-        shape.fill(color.tint)
+        if !bare { shape.fill(color.tint) }
         ZStack {
           ForEach(layers.indices, id: \.self) { index in
             layers[index].path.fill(color.color.opacity(layers[index].opacity))
           }
         }
-        .frame(width: size * 0.62, height: size * 0.62)
+        .frame(width: glyph, height: glyph)
       }
       .frame(width: size, height: size)
     } else if !mark.letter.isEmpty {
       Text(mark.letter)
-        .font(.system(size: (size * 0.5).rounded(), weight: .bold))
+        .font(.system(size: (size * Self.inner * 0.6).rounded(), weight: .bold))
         .minimumScaleFactor(0.5)
         .lineLimit(1)
         .foregroundStyle(color.color)
@@ -45,7 +53,7 @@ struct GroupMarkView: View {
         .background(color.tint, in: shape)
     } else {
       Text(mark.emoji)
-        .font(.system(size: (size * 0.6).rounded()))
+        .font(.system(size: (size * Self.inner).rounded()))
         .frame(width: size, height: size)
     }
   }
@@ -163,7 +171,10 @@ struct GroupMarkPage: View {
           // Drawn marks are picked with the tabs below, so this only
           // brings in a photo.
           PhotoEditor(label: mark.photoID.isEmpty ? "写真を使う" : "写真を変更") {
-            GroupMarkView(mark: mark, size: 64, shelf: shelf)
+            // On its frame, an emoji's too, as large as the join screen's.
+            GroupMarkView(mark: mark, size: 76, shelf: shelf)
+              .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
+              .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
           } onPhoto: { jpeg in
             await usePhoto(jpeg)
           }
@@ -191,7 +202,7 @@ struct GroupMarkPage: View {
           Button("ほかの絵文字を選ぶ", systemImage: "plus") { choosingEmoji = true }
         case .icon:
           MarkChoiceGrid(withPicked(ReadyPatterns.groupMarkIcons, mark.icon), chosen: mark.icon) { icon in
-            GroupMarkView(mark: GroupMarkValue(icon: icon, color: mark.color), size: 32)
+            GroupMarkView(mark: GroupMarkValue(icon: icon, color: mark.color), size: 22, bare: true)
               .accessibilityLabel(MarkIconNames.names[icon] ?? icon)
           } pick: { icon in
             set(GroupMarkValue(icon: icon, color: mark.color))
@@ -234,7 +245,7 @@ struct GroupMarkPage: View {
     .navigationBarTitleDisplayMode(.inline)
     .sheet(isPresented: $choosingIcon) {
       IconPickerSheet(picked: mark.icon) { icon in
-        GroupMarkView(mark: GroupMarkValue(icon: icon, color: mark.color), size: 30)
+        GroupMarkView(mark: GroupMarkValue(icon: icon, color: mark.color), size: 24, bare: true)
       } onPick: { icon in
         set(GroupMarkValue(icon: icon, color: mark.color))
       }
