@@ -256,8 +256,12 @@ struct ChatScreen: View {
       let below =
         geometry.contentSize.height + geometry.contentInsets.bottom
         - geometry.visibleRect.maxY
+      // Not the top inset: the bottom anchor itself pads short lines
+      // down to the foot with it.
+      let tall = geometry.contentSize.height + geometry.contentInsets.bottom
       return ScrollPlace(
-        atLatest: below < 24, away: below > geometry.containerSize.height / 2)
+        atLatest: below < 24, away: below > geometry.containerSize.height / 2,
+        fits: tall <= geometry.containerSize.height)
     } action: { _, now in
       place = now
     }
@@ -956,7 +960,7 @@ struct ChatScreen: View {
     // measured, and ここから新着 near the foot can then go only so far.
     try? await Task.sleep(for: .milliseconds(50))
     toLatest()
-    if unreadFrom != nil {
+    if unreadFrom != nil, !place.fits {
       try? await Task.sleep(for: .milliseconds(50))
       position.scrollTo(id: ChatItem.unread.id, anchor: .top)
     }
@@ -1152,8 +1156,10 @@ struct ChatScreen: View {
   }
 
   /// To the latest line, by its id: scrolling to the edge would also
-  /// move the lines sideways.
+  /// move the lines sideways. Lines shorter than the screen are at its
+  /// foot already: scrolling to one there moved it out of sight above.
   private func toLatest() {
+    guard !place.fits else { return }
     if let latest = items(chat.state).last {
       position.scrollTo(id: latest.id, anchor: .bottom)
     }
@@ -1418,6 +1424,9 @@ private enum ChatItem: Identifiable {
 private struct ScrollPlace: Hashable {
   var atLatest = true
   var away = false
+  /// The lines are shorter than the screen, held at its foot by the
+  /// bottom anchor, with nowhere to scroll.
+  var fits = true
 }
 
 private struct ReadKey: Hashable {
