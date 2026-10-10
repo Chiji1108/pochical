@@ -83,6 +83,16 @@ export const designVariantOptions = {
     ],
     label: "端末",
   },
+  // The person's repeating orders: none, one in use, or one in use with
+  // an earlier one over and a later one to come, for 繰り返し's timeline.
+  repeatSample: {
+    choices: [
+      { label: "なし", value: "none" },
+      { label: "今だけ", value: "now" },
+      { label: "切り替え予定", value: "planned" },
+    ],
+    label: "繰り返し",
+  },
   scanResult: {
     choices: [
       { label: "招待", value: "invite" },
