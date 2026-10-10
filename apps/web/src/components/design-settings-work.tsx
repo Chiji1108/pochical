@@ -253,6 +253,11 @@ export function RepeatPeriodPage({
           label="始まる日"
         />
       </List>
+      <Note>
+        {repeats
+          ? "並びを直しても、自分で入れた日は、そのまま残ります。"
+          : "この期間は繰り返さず、カレンダーで1日ずつ入れます。"}
+      </Note>
       {repeats && (
         <HolidayChoice
           holidayShift={rule.holidayShift}
@@ -265,11 +270,6 @@ export function RepeatPeriodPage({
           }}
         />
       )}
-      <Note>
-        {repeats
-          ? "並びを直しても、自分で入れた日は、そのまま残ります。"
-          : "この期間は繰り返さず、カレンダーで1日ずつ入れます。"}
-      </Note>
       <DestructiveButton
         onClick={() => {
           setRemoving(true);

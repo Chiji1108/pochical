@@ -34,15 +34,17 @@ extension OwnValues {
   }
 
   /// Turns 祝日は休みにする on or off for the period starting on `start`,
-  /// holidays then taking the person's first pattern that counts as off;
-  /// with none it cannot be turned on (spec/shift-patterns.md, Holidays).
+  /// holidays then taking the pattern picked, else the one they took, else
+  /// the person's first that counts as off; with none it cannot be turned
+  /// on (spec/shift-patterns.md, Holidays).
   public static func setHolidaysOff(
-    _ on: Bool, from start: Day, now: Int64, in db: Database
+    _ on: Bool, picking picked: PatternID? = nil, from start: Day, now: Int64,
+    in db: Database
   ) throws {
     guard var order = try repeatOrders(in: db).first(where: { $0.start == start }) else {
       return
     }
-    let shift = holidayShift(of: try patterns(in: db))
+    let shift = holidayShift(of: try patterns(in: db), picked: picked ?? order.holidayShift)
     if on, shift == nil { return }
     order.holidaysOff = on
     order.holidayShift = on ? shift : nil

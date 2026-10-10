@@ -143,9 +143,7 @@ struct JobChangePage: View {
     return RepeatCalendar(
       sequence: $sequence, anchor: $anchor, cover: .from(start),
       patterns: template.patternIDs.compactMap { readyByID[$0] }, holidayCountry: HolidayCountry.current
-    ) {
-      EmptyView()
-    }
+    )
     .background(colors.backgroundBase)
     .navigationTitle(template.custom || first == nil ? "並びを入れる" : "「\(first ?? "")」の日を押す")
     .navigationBarTitleDisplayMode(.inline)

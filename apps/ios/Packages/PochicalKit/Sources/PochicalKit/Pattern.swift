@@ -49,10 +49,12 @@ public struct ShiftTime: Hashable, Sendable {
   }
 }
 
-/// What a holiday becomes for someone off on them: their first pattern
-/// that counts as a day off.
-public func holidayShift(of patterns: [Pattern]) -> PatternID? {
-  patterns.first(where: \.countsAsOff)?.id
+/// What a holiday becomes for someone off on them: the pattern picked,
+/// while it counts as a day off, else their first that does
+/// (spec/vectors/repeat.json, holidayShift).
+public func holidayShift(of patterns: [Pattern], picked: PatternID? = nil) -> PatternID? {
+  let offs = patterns.filter(\.countsAsOff)
+  return (offs.first { $0.id == picked } ?? offs.first)?.id
 }
 
 /// The patterns once `id` is deleted (spec/shift-patterns.md, Deleting a
