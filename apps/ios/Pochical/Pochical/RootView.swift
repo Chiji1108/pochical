@@ -50,6 +50,8 @@ struct RootView: View {
     .environment(\.meID, meID)
     // The reminders' notifications, put in anew as what they read changes.
     .modifier(ReminderUpdates())
+    // The widgets' entries, made again as what they show changes.
+    .modifier(WidgetReloads())
     .task { meID = await groupCalls.userID() }
     // Another user from now: switched to an account, signed out or deleted.
     .onReceive(NotificationCenter.default.publisher(for: .accountChanged)) { _ in
@@ -78,6 +80,10 @@ struct RootView: View {
     // An answer from Pochical's people opens their chat, under 設定.
     .onChange(of: Notifications.shared.openingSupport, initial: true) { _, opening in
       if opening { tab = .settings }
+    }
+    // A widget's day opens on the calendar (spec/widgets.md).
+    .onChange(of: OpenedDay.shared.day, initial: true) { _, day in
+      if day != nil { tab = .calendar }
     }
     .fullScreenCover(isPresented: $scanning) {
       if let scanned {
@@ -124,6 +130,19 @@ struct RootView: View {
       }
     }
   }
+}
+
+/// A day a widget asks to open, pochical://day/{yyyy-mm-dd}, for the
+/// calendar to open as a tap does.
+@MainActor @Observable final class OpenedDay {
+  static let shared = OpenedDay()
+  var day: Day?
+}
+
+/// The day a link names, pochical://day/2026-09-24.
+func openedDay(of url: URL) -> Day? {
+  guard url.scheme == "pochical", url.host() == "day" else { return nil }
+  return Day(url.path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/")))
 }
 
 /// Says a few words over the tabs for a moment, as /design's toast: for a

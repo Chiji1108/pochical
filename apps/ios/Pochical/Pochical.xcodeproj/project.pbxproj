@@ -14,6 +14,7 @@
 		C6C3832C307345D500C0C5B8 /* PochicalDesign in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3832B307345D500C0C5B8 /* PochicalDesign */; };
 		C6C3832F307345FB00C0C5B8 /* PochicalProto in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3832E307345FB00C0C5B8 /* PochicalProto */; };
 		C6C383423073460000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C383413073460000C0C5B8 /* PochicalKit */; };
+		C6C38351307347A000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C38350307347A000C0C5B8 /* PochicalKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +64,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C685E523307A71F900914608 /* Exceptions for "Pochical" folder in "PochicalWidgetsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				ShiftMark.swift,
+				ThemeEnvironment.swift,
+			);
+			target = C6C3830D307344A900C0C5B8 /* PochicalWidgetsExtension */;
+		};
 		C6C38321307344AB00C0C5B8 /* Exceptions for "PochicalWidgets" folder in "PochicalWidgetsExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -84,6 +93,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				C6C3A0013073A00100C0C5B8 /* Exceptions for "Pochical" folder in "Pochical" target */,
+				C685E523307A71F900914608 /* Exceptions for "Pochical" folder in "PochicalWidgetsExtension" target */,
 			);
 			path = Pochical;
 			sourceTree = "<group>";
@@ -132,6 +142,7 @@
 			files = (
 				C6C38313307344A900C0C5B8 /* SwiftUI.framework in Frameworks */,
 				C6C3832C307345D500C0C5B8 /* PochicalDesign in Frameworks */,
+				C6C38351307347A000C0C5B8 /* PochicalKit in Frameworks */,
 				C6C38311307344A900C0C5B8 /* WidgetKit.framework in Frameworks */,
 			);
 		};
@@ -259,6 +270,7 @@
 			name = PochicalWidgetsExtension;
 			packageProductDependencies = (
 				C6C3832B307345D500C0C5B8 /* PochicalDesign */,
+				C6C38350307347A000C0C5B8 /* PochicalKit */,
 			);
 			productName = PochicalWidgetsExtension;
 			productReference = C6C3830E307344A900C0C5B8 /* PochicalWidgetsExtension.appex */;
@@ -507,19 +519,19 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				INFOPLIST_FILE = Pochical/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "シフトを予定として端末のカレンダーに入れるときに使います。追加先のカレンダーを選び、前に入れた予定を入れ直すために、カレンダーを読む必要があります。";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QRコードや画像、チャットの写真を写真に保存するときに使います。";
-				INFOPLIST_KEY_NSCameraUsageDescription = "グループの招待QRコードを読み取るときと、プロフィールの写真を撮るときに使います。";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Pochical/Pochical.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6KC44WPYLJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Pochical/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "シフトを予定として端末のカレンダーに入れるときに使います。追加先のカレンダーを選び、前に入れた予定を入れ直すために、カレンダーを読む必要があります。";
+				INFOPLIST_KEY_NSCameraUsageDescription = "グループの招待QRコードを読み取るときと、プロフィールの写真を撮るときに使います。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QRコードや画像、チャットの写真を写真に保存するときに使います。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -547,19 +559,19 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				INFOPLIST_FILE = Pochical/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
-				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "シフトを予定として端末のカレンダーに入れるときに使います。追加先のカレンダーを選び、前に入れた予定を入れ直すために、カレンダーを読む必要があります。";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QRコードや画像、チャットの写真を写真に保存するときに使います。";
-				INFOPLIST_KEY_NSCameraUsageDescription = "グループの招待QRコードを読み取るときと、プロフィールの写真を撮るときに使います。";
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = Pochical/Pochical.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6KC44WPYLJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Pochical/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "シフトを予定として端末のカレンダーに入れるときに使います。追加先のカレンダーを選び、前に入れた予定を入れ直すために、カレンダーを読む必要があります。";
+				INFOPLIST_KEY_NSCameraUsageDescription = "グループの招待QRコードを読み取るときと、プロフィールの写真を撮るときに使います。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "QRコードや画像、チャットの写真を写真に保存するときに使います。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -804,6 +816,11 @@
 			productName = PochicalProto;
 		};
 		C6C383413073460000C0C5B8 /* PochicalKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6C383403073460000C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalKit" */;
+			productName = PochicalKit;
+		};
+		C6C38350307347A000C0C5B8 /* PochicalKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C6C383403073460000C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalKit" */;
 			productName = PochicalKit;

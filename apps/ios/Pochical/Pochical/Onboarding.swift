@@ -56,6 +56,8 @@ struct AppRoot: View {
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)
+      } else if let day = openedDay(of: url) {
+        OpenedDay.shared.day = day
       }
     }
   }
