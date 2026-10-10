@@ -8,32 +8,45 @@ import SQLiteData
 // person's own.
 
 extension OwnValues {
-  /// Starts an order on its start: an order starting on or after that day
-  /// gives way to it, and the days from it show the new one. An empty
-  /// sequence ends repeating there.
+  /// Starts a new job's order on its start: an order starting on or after
+  /// that day gives way to it, and the days from it show the new one. An
+  /// empty sequence ends repeating there.
   public static func start(_ order: RepeatOrder, now: Int64, in db: Database) throws {
     try setOrders(orders(try repeatOrders(in: db), adding: order), clearFrom: order.start,
       now: now, in: db)
   }
 
-  /// Corrects the order in use in place, its days from its start shown by
-  /// it again.
-  public static func fix(_ order: RepeatOrder, now: Int64, in db: Database) throws {
-    let kept = try repeatOrders(in: db).dropLast()
-    try setOrders(Array(kept) + [order], clearFrom: order.start, now: now, in: db)
+  /// 繰り返し's periods: an order put in on its start among the others, or
+  /// set again, or moved from `replacing`, the rest kept. The days the
+  /// person entered stay over it (spec/shift-patterns.md, Repeating orders).
+  public static func put(
+    _ order: RepeatOrder, replacing: Day? = nil, now: Int64, in db: Database
+  ) throws {
+    try setOrders(
+      orders(try repeatOrders(in: db), putting: order, replacing: replacing), clearFrom: nil,
+      now: now, in: db)
   }
 
-  /// Turns 祝日は休みにする on or off for the order in use, holidays then
-  /// taking the person's first pattern that counts as off; with none it
-  /// cannot be turned on (spec/shift-patterns.md, Holidays).
-  public static func setHolidaysOff(_ on: Bool, now: Int64, in db: Database) throws {
-    var all = try repeatOrders(in: db)
-    guard var current = all.popLast() else { return }
+  /// Takes out the period starting on `start`, the one before running on.
+  public static func remove(_ start: Day, now: Int64, in db: Database) throws {
+    try setOrders(
+      orders(try repeatOrders(in: db), removing: start), clearFrom: nil, now: now, in: db)
+  }
+
+  /// Turns 祝日は休みにする on or off for the period starting on `start`,
+  /// holidays then taking the person's first pattern that counts as off;
+  /// with none it cannot be turned on (spec/shift-patterns.md, Holidays).
+  public static func setHolidaysOff(
+    _ on: Bool, from start: Day, now: Int64, in db: Database
+  ) throws {
+    guard var order = try repeatOrders(in: db).first(where: { $0.start == start }) else {
+      return
+    }
     let shift = holidayShift(of: try patterns(in: db))
     if on, shift == nil { return }
-    current.holidaysOff = on
-    current.holidayShift = on ? shift : nil
-    try setOrders(all + [current], clearFrom: nil, now: now, in: db)
+    order.holidaysOff = on
+    order.holidayShift = on ? shift : nil
+    try put(order, now: now, in: db)
   }
 
   /// The orders as one value; from `clearFrom`, the days give their own

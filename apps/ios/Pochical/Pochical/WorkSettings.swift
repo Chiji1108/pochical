@@ -3,9 +3,10 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 
-// 設定 › 繰り返し (/design's RepeatPage, RepeatEditorPage and
-// StopRepeatPage; spec/shift-patterns.md, Repeating orders): the order in
-// use, or none, starting a new one, correcting it or stopping it.
+// 設定 › 繰り返し (/design's RepeatPage, RepeatPeriodPage,
+// RepeatEditorPage and StopRepeatPage; spec/shift-patterns.md, Repeating
+// orders): the periods of orders, each set again, moved or taken out, and
+// new ones, or ones without repeating, put in from a day.
 
 /// The milliseconds now, for an edit's clock.
 private func nowMs() -> Int64 {
@@ -50,85 +51,30 @@ func repeatSummary(_ orders: [RepeatOrder]) -> String {
   orders.current.map { "\($0.sequence.count)日ごと" } ?? "なし"
 }
 
-/// A sequence in a line, runs of a pattern counted: 日勤×2・夕勤×2.
-private func sequenceLabel(_ sequence: [PatternID], _ patterns: [PatternID: Pattern]) -> String {
-  guard !sequence.isEmpty else { return "繰り返しなし" }
-  var runs: [(String, Int)] = []
-  for id in sequence {
-    let name = patterns[id]?.name ?? "削除したパターン"
-    if let last = runs.last, last.0 == name {
-      runs[runs.count - 1].1 += 1
-    } else {
-      runs.append((name, 1))
-    }
-  }
-  return runs.map { $0.1 > 1 ? "\($0.0)×\($0.1)" : $0.0 }.joined(separator: "・")
+/// When a period runs: from its start to the day before the next one's.
+private func periodText(_ orders: [RepeatOrder], _ index: Int) -> String {
+  let start = orders[index].start.slashText
+  guard index + 1 < orders.count else { return "\(start)から" }
+  return "\(start)〜\(orders[index + 1].start.adding(days: -1).slashText)"
 }
 
-/// 設定 › 繰り返し (/design's RepeatPage): the order in use as a card of
-/// its own, 祝日は休みにする in its own list, then 新しい繰り返しにする as
-/// the page's main button and the rarer two as plain ones under it.
+/// 設定 › 繰り返し (/design's RepeatPage): the periods, which never
+/// overlap, as cards newest first under the rows that add one: those to
+/// come, the one in use today and those over. Each opens to be set again,
+/// moved or taken out (spec/shift-patterns.md, Repeating orders).
 struct RepeatPage: View {
   @Environment(\.themeColors) private var colors
-  @Dependency(\.defaultDatabase) private var database
   @Fetch(WorkValues()) private var values = WorkValues.Value()
-  /// Where a button under the card goes.
   @State private var going: RepeatGoing?
 
   var body: some View {
+    let orders = values.orders
     let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-    let current = values.orders.current
+    let today = Day.today
+    let inUse = orders.lastIndex { $0.start <= today }
+    let newestFirst = Array(orders.indices.reversed())
     List {
-      if let current {
-        Section {
-          VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-              Text("今の繰り返し").font(.footnote.weight(.semibold))
-              Spacer()
-              Text("\(current.sequence.count)日ごと")
-                .font(.footnote)
-                .foregroundStyle(colors.textTertiary)
-            }
-            .padding(.bottom, 12)
-            SequenceTiles(sequence: current.sequence, patterns: byID)
-            Text("\(current.start.fullText)から")
-              .font(.footnote)
-              .foregroundStyle(colors.textTertiary)
-              .padding(.top, 12)
-          }
-          .padding(16)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
-          .settingsOnPage()
-        }
-        Section {
-          Toggle(
-            "祝日は休みにする",
-            isOn: Binding(get: { current.holidaysOff }, set: setHolidaysOff))
-          .disabled(!current.holidaysOff && holidayShift(of: values.patterns) == nil)
-        }
-        .settingsRows()
-        Section {
-          VStack(spacing: 4) {
-            Button {
-              going = .editor(.switch)
-            } label: {
-              Text("新しい繰り返しにする").frame(maxWidth: .infinity)
-            }
-            .mainButton()
-            .padding(.bottom, 4)
-            Button("今の繰り返しを直す") { going = .editor(.fix) }
-              .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-            Button("繰り返しをやめる") { going = .stop }
-              .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-          }
-          .buttonStyle(.borderless)
-          .tint(colors.accentDefault)
-          .settingsOnPage()
-        } footer: {
-          Text("異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。")
-        }
-      } else {
+      if orders.isEmpty {
         Section {
           NavigationLink {
             RepeatEditor(mode: .first)
@@ -139,33 +85,220 @@ struct RepeatPage: View {
           Text("当番・非番や交代勤務のように順番で回るシフトを、カレンダーに自動で入れられます。違う日だけ、カレンダーで変えられます。")
         }
         .settingsRows()
-      }
-
-      if values.orders.count > 1 {
-        Section("これまで") {
-          ForEach(Array(values.orders.enumerated().reversed()), id: \.offset) { index, order in
-            let end = index + 1 < values.orders.count
-              ? values.orders[index + 1].start.adding(days: -1) : nil
-            LabeledContent(
-              "\(order.start.slashText)〜\(end.map(\.slashText) ?? "")",
-              value: sequenceLabel(order.sequence, byID))
+      } else {
+        // Over the newest first, where a new period mostly lands.
+        Section {
+          NavigationLink {
+            RepeatEditor(mode: .switch)
+          } label: {
+            Label("新しい繰り返しを追加", systemImage: "plus")
+              .foregroundStyle(colors.accentDefault)
           }
+          NavigationLink {
+            StopRepeatPage()
+          } label: {
+            Label {
+              Text("繰り返しをやめる")
+            } icon: {
+              Image(systemName: "circle.slash").foregroundStyle(colors.textSecondary)
+            }
+          }
+        } footer: {
+          Text("どちらも、選んだ日から切り替わります。前後の期間と、自分で入れた日は、そのまま残ります。")
         }
         .settingsRows()
+        cards("これから", newestFirst.filter { $0 > (inUse ?? -1) }, byID)
+        cards("今の繰り返し", inUse.map { [$0] } ?? [], byID)
+        cards("これまで", newestFirst.filter { $0 < (inUse ?? -1) }, byID)
       }
     }
     .settingsList()
     .navigationTitle("繰り返し")
     .navigationDestination(item: $going) { going in
       switch going {
-      case .editor(let mode): RepeatEditor(mode: mode)
-      case .stop: StopRepeatPage()
+      case .period(let start): RepeatPeriodPage(start: start)
       }
     }
   }
 
+  @ViewBuilder private func cards(
+    _ title: String, _ indices: [Int], _ byID: [PatternID: Pattern]
+  ) -> some View {
+    if !indices.isEmpty {
+      Section(title) {
+        ForEach(indices, id: \.self) { index in
+          let order = values.orders[index]
+          Button {
+            going = .period(order.start)
+          } label: {
+            OrderCard(order: order, period: periodText(values.orders, index), patterns: byID)
+          }
+          .buttonStyle(.plain)
+          .settingsOnPage()
+          .listRowSeparator(.hidden)
+          .padding(.bottom, index == indices.last ? 0 : 12)
+        }
+      }
+    }
+  }
+}
+
+/// One period on 繰り返し (/design's OrderCard): when it runs, its days
+/// and how often they come round, on a card that opens it.
+private struct OrderCard: View {
+  @Environment(\.themeColors) private var colors
+  let order: RepeatOrder
+  let period: String
+  let patterns: [PatternID: Pattern]
+
+  var body: some View {
+    let repeats = !order.sequence.isEmpty
+    HStack(spacing: 12) {
+      VStack(alignment: .leading, spacing: 0) {
+        HStack(alignment: .firstTextBaseline) {
+          Text(period).font(.footnote.weight(.semibold))
+          Spacer()
+          Text(repeats ? "\(order.sequence.count)日ごと" : "繰り返しなし")
+            .font(.footnote)
+            .foregroundStyle(colors.textTertiary)
+        }
+        .padding(.bottom, 12)
+        if repeats {
+          SequenceTiles(sequence: order.sequence, patterns: patterns)
+          if order.holidaysOff {
+            Text("祝日は休み")
+              .font(.footnote)
+              .foregroundStyle(colors.textTertiary)
+              .padding(.top, 12)
+          }
+        } else {
+          Text("自分で入れる期間")
+            .font(.footnote)
+            .foregroundStyle(colors.textTertiary)
+        }
+      }
+      Image(systemName: "chevron.right")
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(colors.textQuaternary)
+        .accessibilityHidden(true)
+    }
+    .foregroundStyle(colors.textPrimary)
+    .padding(16)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
+    .contentShape(RoundedRectangle(cornerRadius: Radius.xxl))
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel("\(period)の繰り返し")
+  }
+}
+
+/// A period opened from 繰り返し (/design's RepeatPeriodPage): its order to
+/// type again on the calendar, the day it starts, 祝日は休みにする, and
+/// taking it out. It starts after the period before starts and before the
+/// next one does, so moving it never runs over either.
+private struct RepeatPeriodPage: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.dismiss) private var dismiss
+  @Environment(\.say) private var say
+  @Dependency(\.defaultDatabase) private var database
+  @Fetch(WorkValues()) private var values = WorkValues.Value()
+  @State var start: Day
+  @State private var removing = false
+
+  var body: some View {
+    let orders = values.orders
+    let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+    if let index = orders.firstIndex(where: { $0.start == start }) {
+      let order = orders[index]
+      let repeats = !order.sequence.isEmpty
+      List {
+        if repeats {
+          Section {
+            VStack(alignment: .leading, spacing: 12) {
+              HStack(alignment: .firstTextBaseline) {
+                Text("並び").font(.footnote.weight(.semibold))
+                Spacer()
+                Text("\(order.sequence.count)日ごと")
+                  .font(.footnote)
+                  .foregroundStyle(colors.textTertiary)
+              }
+              SequenceTiles(sequence: order.sequence, patterns: byID)
+            }
+            .padding(.vertical, 6)
+            NavigationLink("カレンダーで直す") {
+              RepeatEditor(mode: .fix(start))
+            }
+          }
+          .settingsRows()
+        }
+        Section {
+          DatePicker(
+            "始まる日",
+            selection: Binding {
+              Calendar.current.date(
+                from: DateComponents(year: start.year, month: start.month, day: start.day)) ?? .now
+            } set: { move(order, index: index, to: Day($0, in: .current)) },
+            displayedComponents: .date)
+          if repeats {
+            Toggle(
+              "祝日は休みにする",
+              isOn: Binding(get: { order.holidaysOff }, set: { setHolidaysOff($0) }))
+            .disabled(!order.holidaysOff && holidayShift(of: values.patterns) == nil)
+          }
+        } footer: {
+          Text(
+            repeats
+              ? "並びを直しても、自分で入れた日は、そのまま残ります。"
+              : "この期間は繰り返さず、カレンダーで1日ずつ入れます。")
+        }
+        .settingsRows()
+        Section {
+          Button("この期間を削除", role: .destructive) { removing = true }
+            .frame(maxWidth: .infinity)
+        }
+        .settingsRows()
+      }
+      .settingsList()
+      .navigationTitle(periodText(orders, index))
+      .navigationBarTitleDisplayMode(.inline)
+      .alert("この期間を削除しますか？", isPresented: $removing) {
+        Button("キャンセル", role: .cancel) {}
+        Button("削除", role: .destructive) { remove() }
+      } message: {
+        Text(
+          index > 0
+            ? "前の期間の繰り返しが、そのまま続きます。自分で入れた日は、そのまま残ります。"
+            : "この期間には、繰り返しのシフトが入らなくなります。自分で入れた日は、そのまま残ります。")
+      }
+    }
+  }
+
+  /// A new start, kept between the periods around it; its first shift
+  /// stays on the day it fell on.
+  private func move(_ order: RepeatOrder, index: Int, to day: Day) {
+    let orders = values.orders
+    let fits =
+      (index == 0 || day > orders[index - 1].start)
+      && (index + 1 >= orders.count || day < orders[index + 1].start)
+    guard fits else {
+      say("前後の期間と重なる日にはできません")
+      return
+    }
+    guard day != order.start else { return }
+    var moved = order
+    moved.anchor = order.anchor ?? order.start
+    moved.start = day
+    try? database.write { try OwnValues.put(moved, replacing: order.start, now: nowMs(), in: $0) }
+    start = day
+  }
+
   private func setHolidaysOff(_ on: Bool) {
-    try? database.write { try OwnValues.setHolidaysOff(on, now: nowMs(), in: $0) }
+    try? database.write { try OwnValues.setHolidaysOff(on, from: start, now: nowMs(), in: $0) }
+  }
+
+  private func remove() {
+    try? database.write { try OwnValues.remove(start, now: nowMs(), in: $0) }
+    dismiss()
   }
 }
 
@@ -246,16 +379,17 @@ struct KeysPreview: View {
   }
 }
 
-/// How a sequence is being set: the first, a new one from a day, or the
-/// one in use corrected.
-enum RepeatMode {
-  case first, `switch`, fix
+/// How a sequence is being set: the first, a new period from a day, or
+/// the period starting on a day set again.
+enum RepeatMode: Hashable {
+  case first, `switch`
+  case fix(Day)
 
   var title: String {
     switch self {
     case .first: "繰り返しを設定"
     case .switch: "新しい繰り返し"
-    case .fix: "今の繰り返しを直す"
+    case .fix: "繰り返しを直す"
     }
   }
 
@@ -278,16 +412,17 @@ enum RepeatMode {
 
   var message: String {
     switch self {
-    case .first: "この日から、並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。"
-    case .switch: "この日から、新しい並びのとおりにシフトが入ります。前の日までのシフトは、そのまま残ります。"
-    case .fix: "並びのとおりにシフトを入れ直します。その間に自分で直した日も、並びのとおりに戻ります。"
+    case .first: "この日から、並びのとおりにシフトが入ります。自分で入れた日は、そのまま残ります。"
+    case .switch: "この日から、新しい並びのとおりにシフトが入ります。前後の期間と、自分で入れた日は、そのまま残ります。"
+    case .fix: "この期間のシフトを、並びのとおりに入れ直します。自分で入れた日は、そのまま残ります。"
     }
   }
 }
 
 /// An order typed on the calendar, from the day pressed, with
-/// 祝日は休みにする; saved as a new order, or as the one in use corrected,
-/// which keeps its start and moves only the day its first shift falls on.
+/// 祝日は休みにする; saved as a new period among the others, or as the
+/// period being set again, which keeps its start and moves only the day
+/// its first shift falls on. The days the person entered stay.
 private struct RepeatEditor: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -307,21 +442,21 @@ private struct RepeatEditor: View {
 
   var body: some View {
     let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-    let current = values.orders.current
+    let current = fixing
     let steps = sequence ?? initialSequence
-    let picked = day ?? (mode == .fix ? (current?.anchor ?? current?.start) : nil) ?? nextMonthStart
-    let start = mode == .fix ? current?.start ?? picked : picked
+    let picked = day ?? current.map { $0.anchor ?? $0.start } ?? nextMonthStart
+    let start = current?.start ?? picked
     let offShift = holidayShift(of: values.patterns)
     let holidays =
       offShift != nil
-      && (holidaysOff ?? (mode == .fix ? current?.holidaysOff : nil)
+      && (holidaysOff ?? current?.holidaysOff
         ?? holidaysOffByDefault(steps, start: picked, patterns: byID))
     let shown = OwnCalendar(
       days: days, patterns: patternRows, patternOrder: patternOrder, orders: orderRows)
     RepeatCalendar(
       sequence: Binding(get: { steps }, set: { sequence = $0 }),
       anchor: Binding(get: { picked }, set: { day = $0 }),
-      cover: mode == .fix ? .from(start) : .anchor, patterns: values.patterns,
+      cover: current == nil ? .anchor : .from(start), patterns: values.patterns,
       before: shown, holidayShift: holidays ? offShift : nil, holidayCountry: HolidayCountry.current
     ) {
       Toggle(isOn: Binding(get: { holidays }, set: { holidaysOff = $0 })) {
@@ -351,10 +486,16 @@ private struct RepeatEditor: View {
     }
   }
 
-  /// The sequence it starts from: the order in use's when correcting it,
+  /// The period being set again, by its start.
+  private var fixing: RepeatOrder? {
+    guard case .fix(let start) = mode else { return nil }
+    return values.orders.first { $0.start == start }
+  }
+
+  /// The sequence it starts from: the period's own when setting it again,
   /// else the newest that repeated.
   private var initialSequence: [PatternID] {
-    if mode == .fix { return values.orders.current?.sequence ?? [] }
+    if let fixing { return fixing.sequence }
     return values.orders.last { !$0.sequence.isEmpty }?.sequence ?? []
   }
 
@@ -365,20 +506,14 @@ private struct RepeatEditor: View {
     let order = RepeatOrder(
       sequence: steps, start: start, anchor: anchor, holidaysOff: holidays,
       holidayShift: holidays ? shift : nil,
-      holidayCountry: mode == .fix ? values.orders.current?.holidayCountry ?? HolidayCountry.current : HolidayCountry.current)
-    try? database.write {
-      if mode == .fix {
-        try OwnValues.fix(order, now: nowMs(), in: $0)
-      } else {
-        try OwnValues.start(order, now: nowMs(), in: $0)
-      }
-    }
+      holidayCountry: fixing?.holidayCountry ?? HolidayCountry.current)
+    try? database.write { try OwnValues.put(order, now: nowMs(), in: $0) }
     dismiss()
   }
 }
 
-/// 繰り返しをやめる: from a day, days are entered by hand again; those
-/// before keep their shifts.
+/// 繰り返しをやめる: a period without repeating from a day, days entered
+/// by hand until the next period; the others, and days entered, stay.
 private struct StopRepeatPage: View {
   @Environment(\.dismiss) private var dismiss
   @Dependency(\.defaultDatabase) private var database
@@ -395,7 +530,7 @@ private struct StopRepeatPage: View {
           } set: { day = Day($0, in: .current) },
           displayedComponents: .date)
       } footer: {
-        Text("この日からの繰り返しのシフトは消えて、空いた状態になります。前の日までのシフトは、そのまま残ります。")
+        Text("この日から、繰り返しのシフトが入らなくなります。あとに別の期間があれば、そこからはその繰り返しになります。自分で入れた日は、そのまま残ります。")
       }
       .settingsRows()
 
@@ -403,7 +538,7 @@ private struct StopRepeatPage: View {
         Button {
           let order = RepeatOrder(
             sequence: [], start: day, holidayCountry: HolidayCountry.current)
-          try? database.write { try OwnValues.start(order, now: nowMs(), in: $0) }
+          try? database.write { try OwnValues.put(order, now: nowMs(), in: $0) }
           dismiss()
         } label: {
           HStack(spacing: 6) {
@@ -422,8 +557,7 @@ private struct StopRepeatPage: View {
   }
 }
 
-/// Where a button under 今の繰り返し goes.
+/// Where a card on 繰り返し goes: its period, by its start.
 private enum RepeatGoing: Hashable {
-  case editor(RepeatMode)
-  case stop
+  case period(Day)
 }

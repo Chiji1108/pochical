@@ -116,8 +116,25 @@ struct RepeatVectors: Decodable, Sendable {
   let schedule: [Schedule]
   let shown: [Shown]
   let holidaysOffByDefault: [HolidaysOffByDefault]
+  struct Put: VectorCase {
+    let name: String
+    let orders: [VectorOrder]
+    let order: VectorOrder
+    let replacing: Day?
+    let expected: [VectorOrder]
+  }
+
+  struct Removed: VectorCase {
+    let name: String
+    let orders: [VectorOrder]
+    let start: Day
+    let expected: [VectorOrder]
+  }
+
   let holidayShift: [HolidayShift]
   let added: [Added]
+  let put: [Put]
+  let removed: [Removed]
 }
 
 @Test(arguments: try vectors("repeat", as: RepeatVectors.self).schedule)
@@ -161,6 +178,18 @@ func holidayShift(_ vector: RepeatVectors.HolidayShift) {
 func added(_ vector: RepeatVectors.Added) {
   let added = orders(vector.orders.map(\.order), adding: vector.order.order)
   #expect(added == vector.expected.map(\.order))
+}
+
+@Test(arguments: try vectors("repeat", as: RepeatVectors.self).put)
+func put(_ vector: RepeatVectors.Put) {
+  let put = orders(
+    vector.orders.map(\.order), putting: vector.order.order, replacing: vector.replacing)
+  #expect(put == vector.expected.map(\.order))
+}
+
+@Test(arguments: try vectors("repeat", as: RepeatVectors.self).removed)
+func removed(_ vector: RepeatVectors.Removed) {
+  #expect(orders(vector.orders.map(\.order), removing: vector.start) == vector.expected.map(\.order))
 }
 
 struct OwnDaysVectors: Decodable, Sendable {

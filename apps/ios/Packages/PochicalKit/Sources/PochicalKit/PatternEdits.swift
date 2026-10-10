@@ -45,11 +45,20 @@ extension OwnValues {
     try edit(change, opID: UUID().uuidString.lowercased(), in: db)
   }
 
-  /// Whether the repeating order in use puts the pattern on days, in its
-  /// sequence or on holidays: it cannot be deleted until the order changes.
-  public static func isRepeating(_ id: PatternID, in db: Database) throws -> Bool {
-    guard let current = try repeatOrders(in: db).last else { return false }
-    return current.sequence.contains(id) || (current.holidaysOff && current.holidayShift == id)
+  /// Whether a repeating order in use or to come puts the pattern on days,
+  /// in its sequence or on holidays: it cannot be deleted until that order
+  /// changes. One only in periods over can.
+  public static func isRepeating(_ id: PatternID, today: Day = .today, in db: Database) throws
+    -> Bool
+  {
+    let all = try repeatOrders(in: db)
+    // A period in use or to come still needs it; one over does not.
+    return all.indices.contains { index in
+      let order = all[index]
+      let over = index + 1 < all.count && all[index + 1].start <= today
+      return !over
+        && (order.sequence.contains(id) || (order.holidaysOff && order.holidayShift == id))
+    }
   }
 
   /// How many days show the pattern, of their own or from an order: from

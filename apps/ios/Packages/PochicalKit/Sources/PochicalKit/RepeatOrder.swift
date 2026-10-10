@@ -83,6 +83,23 @@ public func orders(_ orders: [RepeatOrder], adding order: RepeatOrder) -> [Repea
   orders.filter { $0.start < order.start } + [order]
 }
 
+/// 繰り返し's periods with `order` put in on its start among the others,
+/// in place of one that started that day, and of the one starting on
+/// `replacing` when that period's start was moved; the rest stay
+/// (spec/vectors/repeat.json, put).
+public func orders(
+  _ orders: [RepeatOrder], putting order: RepeatOrder, replacing: Day? = nil
+) -> [RepeatOrder] {
+  (orders.filter { $0.start != order.start && $0.start != replacing } + [order])
+    .sorted { $0.start < $1.start }
+}
+
+/// 繰り返し's periods without the one starting on `start`, the one before
+/// running on to the next (spec/vectors/repeat.json, removed).
+public func orders(_ orders: [RepeatOrder], removing start: Day) -> [RepeatOrder] {
+  orders.filter { $0.start != start }
+}
+
 /// Whether a new order starts with 祝日は休みにする on: a week of shifts
 /// with a pattern that counts as off on a Saturday or Sunday reads as
 /// office hours, which usually have national holidays off too.
