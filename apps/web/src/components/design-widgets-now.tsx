@@ -1,11 +1,20 @@
+import { useContext } from "react";
 import { css, cx } from "styled-system/css";
 
+import { presetPatterns } from "../lib/design-patterns";
 import type { WidgetEntry, WidgetSpan } from "../lib/design-widgets";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
-import { DayMark, firstRunOr, oneLine, useWords } from "./design-widgets";
+import {
+  DayMark,
+  WidgetRenderingModeContext,
+  firstRunOr,
+  oneLine,
+  useWords,
+} from "./design-widgets";
 import { circular } from "./design-widgets-lock";
 import { FitText } from "./design-widgets-next-off";
+import { useDisplayColor } from "./shift-mark";
 
 // いまのシフト: how long the shift on now runs, else how soon the next one
 // with hours starts, for long shifts like 当番 where the hour matters more
@@ -102,6 +111,10 @@ function useNowWords() {
   };
 }
 
+// The small one's ring, round its mark between the words.
+const SMALL_RING_SIZE = 64;
+const SMALL_RING_STROKE = 6;
+
 const now = {
   // The time left, large, on one line, shrinking to the widget's width.
   count: css({
@@ -137,12 +150,32 @@ const now = {
     textStyle: "footnote",
     whiteSpace: "pre-line",
   }),
+  // On a shift, what is left of it as a ring round its mark in the
+  // middle, the words under it.
+  left: css({
+    display: "block",
+    fontVariantNumeric: "tabular-nums",
+    fontWeight: 700,
+    lineHeight: 1.2,
+    whiteSpace: "nowrap",
+  }),
+  ring: css({ inset: 0, position: "absolute" }),
+  ringed: css({
+    alignSelf: "center",
+    display: "grid",
+    flexShrink: 0,
+    height: "64px",
+    placeItems: "center",
+    position: "relative",
+    width: "64px",
+  }),
   root: css({
     display: "flex",
     flexDirection: "column",
     height: "100%",
     justifyContent: "space-between",
   }),
+  under: css({ display: "flex", flexDirection: "column", gap: "1px" }),
 };
 
 // What いまのシフト says now: on, with its end, or the next, with its
@@ -216,34 +249,65 @@ function NowSmallView({ entry }: { entry: WidgetEntry }) {
   }
   const { span, at } = state;
   const name = span.day.name ?? "";
-  const target = state.kind === "on" ? span.end : span.start;
-  const far = state.kind === "next" ? state.inDays : undefined;
+  if (state.kind === "on") {
+    const left = said.duration(at, span.end);
+    return (
+      <div className={now.root}>
+        <span className={srOnly}>{spoken}</span>
+        <span aria-hidden="true" className={now.head}>
+          <DayMark day={span.day} size={18} />
+          <span className={oneLine}>{said.on(name)}</span>
+        </span>
+        <span aria-hidden="true" className={now.ringed}>
+          <ShiftRing at={at} span={span} />
+          <DayMark day={span.day} size={30} />
+        </span>
+        <span aria-hidden="true" className={now.under}>
+          <FitText className={now.left} key={left} size={15}>
+            {said.english ? `${left} left` : `あと${left}`}
+          </FitText>
+          <span className={now.foot}>{said.until(span, at)}</span>
+        </span>
+      </div>
+    );
+  }
+  const far = state.inDays;
   const lead = said.english ? undefined : said.left;
   return (
     <div className={now.root}>
       <span className={srOnly}>{spoken}</span>
       <span aria-hidden="true" className={now.head}>
         <DayMark day={span.day} size={18} />
-        <span className={oneLine}>
-          {state.kind === "on" ? said.on(name) : said.next(name)}
-        </span>
+        <span className={oneLine}>{said.next(name)}</span>
       </span>
       <span aria-hidden="true">
         {far === undefined ? (
-          <Count
-            lead={lead}
-            size={30}
-            trail={said.english && state.kind === "on" ? said.left : undefined}
-            words={said.duration(at, target)}
-          />
+          <Count lead={lead} size={30} words={said.duration(at, span.start)} />
         ) : (
           <Count size={36} words={said.words.inDays(far)} />
         )}
       </span>
       <span aria-hidden="true" className={now.foot}>
-        {state.kind === "on" ? said.until(span, at) : said.from(span, at)}
+        {said.from(span, at)}
       </span>
     </div>
+  );
+}
+
+// The small one's ring in the shift's own color, as its mark, unless
+// the system draws the widget in one color.
+function ShiftRing({ span, at }: { span: WidgetSpan; at: Date }) {
+  const { color } = useDisplayColor(span.day.color ?? presetPatterns.off.color);
+  const accented = useContext(WidgetRenderingModeContext) === "accented";
+  return (
+    <span className={now.ring} style={accented ? undefined : { color }}>
+      <Ring
+        className={now.ring}
+        share={leftOf(span, at)}
+        size={SMALL_RING_SIZE}
+        stroke={SMALL_RING_STROKE}
+      />
+    </span>
   );
 }
 
@@ -290,46 +354,59 @@ const lock = {
   }),
 };
 
+// The lock screen's round face, and the stroke its ring is drawn in.
 const RING_SIZE = 72;
 const RING_STROKE = 5;
 
-// How far through the shift `at` is, 0 to 1.
-function progressOf(span: WidgetSpan, at: Date) {
+// How much of the shift is left at `at`, 1 to 0.
+function leftOf(span: WidgetSpan, at: Date) {
   const whole = span.end.getTime() - span.start.getTime();
-  return Math.min(
-    1,
-    Math.max(0, (at.getTime() - span.start.getTime()) / whole)
-  );
+  const left = (span.end.getTime() - at.getTime()) / whole;
+  return Math.min(1, Math.max(0, left));
 }
 
-function Ring({ share }: { share: number }) {
-  const radius = (RING_SIZE - RING_STROKE) / 2;
+// What is left of the shift as a ring, draining as it runs, as the
+// system's ProgressView(timerInterval:) counts down by default, and as
+// the words count あと: full as it starts, gone as it ends.
+function Ring({
+  share,
+  size = RING_SIZE,
+  stroke = RING_STROKE,
+  className = lock.ring,
+}: {
+  share: number;
+  size?: number;
+  stroke?: number;
+  className?: string;
+}) {
+  const radius = (size - stroke) / 2;
   const around = 2 * Math.PI * radius;
+  const middle = size / 2;
   return (
     <svg
       aria-hidden="true"
-      className={lock.ring}
-      viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+      className={className}
+      viewBox={`0 0 ${size} ${size}`}
     >
       <circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
+        cx={middle}
+        cy={middle}
         fill="none"
         r={radius}
         stroke="currentColor"
-        strokeOpacity={0.25}
-        strokeWidth={RING_STROKE}
+        strokeOpacity={0.2}
+        strokeWidth={stroke}
       />
       <circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
+        cx={middle}
+        cy={middle}
         fill="none"
         r={radius}
         stroke="currentColor"
         strokeDasharray={`${around * share} ${around}`}
         strokeLinecap="round"
-        strokeWidth={RING_STROKE}
-        transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+        strokeWidth={stroke}
+        transform={`rotate(-90 ${middle} ${middle})`}
       />
     </svg>
   );
@@ -362,7 +439,7 @@ function NowCircularView({ entry }: { entry: WidgetEntry }) {
   return (
     <div className={cx(circular.root, lock.circle)}>
       <span className={srOnly}>{spoken}</span>
-      {state.kind === "on" && <Ring share={progressOf(span, at)} />}
+      {state.kind === "on" && <Ring share={leftOf(span, at)} />}
       <DayMark day={span.day} size={word ? 24 : 30} />
       {word && (
         <span aria-hidden="true" className={lock.word}>
