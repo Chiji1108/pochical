@@ -67,6 +67,8 @@ import {
   shownDays,
   timeChangeOf,
   withOrder,
+  withOrderPut,
+  withoutOrder,
   withShiftEntered,
 } from "../src/lib/design-days";
 import type { OwnDays, Schedule } from "../src/lib/design-days";
@@ -167,6 +169,21 @@ describe("spec/vectors/repeat.json", () => {
   for (const { name, orders, order, expected } of repeat.added) {
     test(name, () => {
       expect(withOrder(orders.map(ruleOf), ruleOf(order))).toEqual(
+        expected.map(ruleOf)
+      );
+    });
+  }
+  for (const { name, orders, order, expected, ...rest } of repeat.put) {
+    const replacing = "replacing" in rest ? dayOf(rest.replacing) : undefined;
+    test(name, () => {
+      expect(
+        withOrderPut(orders.map(ruleOf), ruleOf(order), replacing)
+      ).toEqual(expected.map(ruleOf));
+    });
+  }
+  for (const { name, orders, start, expected } of repeat.removed) {
+    test(name, () => {
+      expect(withoutOrder(orders.map(ruleOf), dayOf(start))).toEqual(
         expected.map(ruleOf)
       );
     });
