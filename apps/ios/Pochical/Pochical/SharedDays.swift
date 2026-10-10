@@ -42,6 +42,7 @@ private func dateTone(_ day: Day, week: DeviceSettings.Week, colors: ThemeColors
 /// across. Either keeps to a week of days, so a month shared does not fill
 /// the chat; the rest are left to シフト表で見る under it.
 struct DayCard: View {
+  @Environment(\.english) private var english
   /// The dates' column, room for 12/28 and its weekday.
   private static var dateWidth: CGFloat { 52 }
   @Environment(\.themeColors) private var colors
@@ -131,7 +132,7 @@ struct DayCard: View {
         HStack(spacing: 4) {
           HStack(alignment: .firstTextBaseline, spacing: 2) {
             Text(day.slashText).font(.system(size: 11, weight: .semibold))
-            Text(day.weekdayName).font(.system(size: 9))
+            Text(day.weekdayName(english: english)).font(.system(size: 9))
           }
           .foregroundStyle(dateTone(day, week: settings.device.week, colors: colors))
           .lineLimit(1)
@@ -165,7 +166,7 @@ struct DayCard: View {
       HStack(spacing: 4) {
         // As in the shift table, the month once in the corner and the
         // days by number, with a new month's where it turns.
-        Text(shown.first?.monthText ?? "")
+        Text(shown.first?.shortMonth(english: english) ?? "")
           .font(.system(size: 9))
           .foregroundStyle(colors.textTertiary)
           .frame(width: 26)
@@ -174,7 +175,7 @@ struct DayCard: View {
           VStack(spacing: 0) {
             Text(turns ? day.slashText : "\(day.day)")
               .font(.system(size: 11, weight: .semibold))
-            Text(day.weekdayName).font(.system(size: 9))
+            Text(day.weekdayName(english: english)).font(.system(size: 9))
           }
           .foregroundStyle(dateTone(day, week: settings.device.week, colors: colors))
           .padding(.vertical, 2)
@@ -266,6 +267,7 @@ private struct Shifts {
 /// in the next weeks offered first, then a month to pick any from. ✓ sends
 /// them as a line of their own with everyone's shifts.
 struct ShareDaysSheet: View {
+  @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   @Environment(\.dismiss) private var dismiss
@@ -366,7 +368,7 @@ struct ShareDaysSheet: View {
               } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
                   Text(day.slashText).font(.subheadline.weight(.semibold))
-                  Text(day.weekdayName).font(.caption2)
+                  Text(day.weekdayName(english: english)).font(.caption2)
                 }
                 .foregroundStyle(on ? colors.accentOnFill : colors.accentDefault)
                 .padding(.horizontal, 12)
@@ -395,7 +397,7 @@ struct ShareDaysSheet: View {
           .labelStyle(.iconOnly)
           .frame(width: Metrics.touch, height: Metrics.touch)
         Spacer()
-        Text(fullMonthName(month)).font(.headline)
+        Text(month.monthWithYear(english: english)).font(.headline)
         Spacer()
         Button("次の月", systemImage: "chevron.right") { month = month.addingMonths(1) }
           .labelStyle(.iconOnly)

@@ -146,6 +146,7 @@ struct MonthPicturePage: View {
       .environment(\.themeColors, settings.device.theme.colors(scheme))
       .environment(\.colorScheme, scheme)
       .environment(\.look, look)
+      .environment(\.english, settings.device.heading.english)
   }
 
   /// The picture at three times its size, as a phone's screen draws it.
@@ -192,6 +193,7 @@ private struct PictureKey: Equatable {
 /// the months around it are left blank, and there is no today or memo:
 /// the picture is for any day.
 struct MonthPicture: View {
+  @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
   let month: Day
@@ -204,7 +206,7 @@ struct MonthPicture: View {
     let last = weeks.last?.last ?? month
     let shown = calendar.shown(from: first, through: last)
     VStack(alignment: .leading, spacing: 0) {
-      Text(month.yearMonthText)
+      Text(month.monthWithYear(english: english))
         .font(.system(size: 15, weight: .semibold))
         .foregroundStyle(colors.textPrimary)
         .padding(.horizontal, 4)

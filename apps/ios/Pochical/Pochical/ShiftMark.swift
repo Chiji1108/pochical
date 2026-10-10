@@ -6,6 +6,9 @@ extension EnvironmentValues {
   /// How marks are drawn: the person's スタイル, or a shape a sample shows
   /// (/design's ShiftMarkStyleContext and IconWeightContext).
   @Entry var look = Look()
+  /// 月と曜日 set to English: the headings name months and weekdays as
+  /// English does (Day's english forms).
+  @Entry var english = false
 }
 
 /// A pattern's mark, in the look of the environment, with 早出 and 残業 as

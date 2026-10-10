@@ -90,6 +90,7 @@ struct MonthSummary: View {
 /// then the month's length; half the screen, or all of it for many
 /// patterns.
 struct MonthBreakdownSheet: View {
+  @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   let month: Day
@@ -125,7 +126,7 @@ struct MonthBreakdownSheet: View {
       }
       .settingsList()
       .navigationTitle("今月の内訳")
-      .navigationSubtitle(month.yearMonthText)
+      .navigationSubtitle(month.monthWithYear(english: english))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {

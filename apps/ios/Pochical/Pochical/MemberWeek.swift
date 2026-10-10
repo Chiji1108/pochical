@@ -22,6 +22,7 @@ private func facesWidth(compact: Bool) -> CGFloat {
 /// The weekdays over a group's weeks, from the day the week starts on, or
 /// over `days` each its own, as the hub's run from today.
 struct GroupWeekdays: View {
+  @Environment(\.english) private var english
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   /// Over the hub's card, beside its narrower faces.
@@ -34,8 +35,12 @@ struct GroupWeekdays: View {
       Color.clear.frame(width: facesWidth(compact: compact), height: 1)
       ForEach(0..<7, id: \.self) { index in
         let weekday = days.map { $0[index].weekday } ?? (week.start + index) % 7
-        Text(Day.weekdayNames[weekday])
-          .font(.system(size: 10))
+        // Run from today, a column's letter could not tell T from T.
+        Text(
+          days.map { $0[index].weekdayHead(english: english) }
+            ?? Day.weekdayLetter(weekday, english: english)
+        )
+        .font(.system(size: 10))
           .foregroundStyle(color(of: weekday, week: week))
           .frame(maxWidth: .infinity)
       }

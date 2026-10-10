@@ -55,6 +55,8 @@ A phone keeps only so many notifications waiting (iOS 64), so the nearest ones, 
 
 Each platform writes a day, its weekday and its month through one set of helpers, so another language changes them in one place: Swift's `DayText.swift` in PochicalKit, and on the web `design-days.ts` (`formatDay` and its kin) with `design-week.tsx`'s weekday names. In Japanese they are 11月1日(日) in full, 11月1日, 1日(日) where the month goes without saying, 11/1 where room is short, a year before them (2026年…, 2026/…) for a day of another year, and 2026年11月 or 11月 for a month. Screens never put a day's numbers together themselves.
 
+設定 > カレンダー's 月と曜日 (日本語 or 英語, kept with the account) names the months and weekdays of the headings and short labels in English, as lettered calendars do: the calendar's month as sep. (lower case, cut to three letters with a period, may whole), over its year, with no 月; a month with its year as September 2026, alone as September, and in small text as Sep; a weekday over a column of days as one letter (S M T W T F S), where the column's place tells T from T, beside a date as Thu (24 Thu, 9/24 Thu), and as three capitals (THU) over columns that do not start the week, like the hub's run from today. The month wheels of 月を選ぶ name months as the headings do. Sentences stay Japanese, their dates with them (a day's detail's 9月24日(木), 〜から, 〇月のみんな休み), as do 週の始まり's names and the screen readers' labels. The widgets' words follow it too (spec/widgets.md).
+
 ## Text fields
 
 Free text (a day's memo, a name) is kept when the field is left, its screen closes or the app goes to the background, not on each change, so a memo typed is one edit in the outbox (spec/sync-protocol.md, Outbox) rather than one a letter.

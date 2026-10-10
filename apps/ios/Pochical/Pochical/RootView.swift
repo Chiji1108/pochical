@@ -46,6 +46,7 @@ struct RootView: View {
     }
     .tint(colors.accentDefault)
     .environment(\.look, settings.device.look)
+    .environment(\.english, settings.device.heading.english)
     .environment(\.meID, meID)
     // The reminders' notifications, put in anew as what they read changes.
     .modifier(ReminderUpdates())

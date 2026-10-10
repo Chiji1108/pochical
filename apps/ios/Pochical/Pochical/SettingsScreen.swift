@@ -98,8 +98,12 @@ struct SettingsScreen: View {
           NavigationLink {
             CalendarSettings()
           } label: {
+            // The month as small text writes it, 10月 or Oct, saying
+            // 月と曜日 without a word for it.
             LabeledContent(
-              "カレンダー", value: "\(Day.weekdayNames[settings.device.week.start])曜はじまり")
+              "カレンダー",
+              value: "\(Day.weekdayNames[settings.device.week.start])曜はじまり・"
+                + Day.today.shortMonth(english: settings.device.heading.english))
           }
           // Outside the app, and changed least, so last.
           NavigationLink {
@@ -261,6 +265,22 @@ private struct CalendarSettings: View {
         StylePreview(heading: true, picked: $picked)
       }
       .settingsOnPage()
+      // The month's name and the weekdays' together: a heading reads in
+      // one language, so English names both.
+      Section("月と曜日") {
+        let today = Day.today
+        Picker("月と曜日", selection: $settings.device.heading.english) {
+          Text("\(today.shortMonth(english: false))・\(today.weekdayName)")
+            .accessibilityLabel("日本語")
+            .tag(false)
+          Text("\(today.shortMonth(english: true))・\(today.weekdayName(english: true))")
+            .accessibilityLabel("英語")
+            .tag(true)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .settingsOnPage()
+      }
       Section("週の始まり") {
         Picker("週の始まり", selection: $settings.device.week.start) {
           ForEach(0..<7, id: \.self) { day in
@@ -287,7 +307,7 @@ private struct CalendarSettings: View {
       } header: {
         Text("色をつける日")
       } footer: {
-        Text("土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。")
+        Text("土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面やウィジェットでも、この並びと色で表示されます。")
       }
       .settingsRows()
     }

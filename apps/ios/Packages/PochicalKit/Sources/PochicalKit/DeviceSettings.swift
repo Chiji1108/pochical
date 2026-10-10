@@ -33,7 +33,31 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     }
   }
 
+  /// The calendar's month heading: 月と曜日 in Japanese or English, and
+  /// what a tap on the month's name does, with おたのしみ's sky
+  /// (/design's monthName, monthTap and sky).
+  public struct Heading: Codable, Equatable, Sendable {
+    /// 月と曜日 set to English: months as Sep, weekdays as Thu.
+    public var english = false
+    /// A tap on the month's name lights おたのしみ's sky rather than
+    /// picking a month.
+    public var surprise = false
+    /// Which sky is up, kept until the next tap; none until the name is
+    /// first tapped.
+    public var sky: String?
+
+    public init() {}
+
+    public init(from decoder: any Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      english = try container.decodeIfPresent(Bool.self, forKey: .english) ?? false
+      surprise = try container.decodeIfPresent(Bool.self, forKey: .surprise) ?? false
+      sky = try container.decodeIfPresent(String.self, forKey: .sky)
+    }
+  }
+
   public var week = Week()
+  public var heading = Heading()
   public var look = Look()
   /// The テーマ's id, as /design's preset; one no longer known is the app's
   /// own.
@@ -57,6 +81,7 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     week = try container.decodeIfPresent(Week.self, forKey: .week) ?? Week()
+    heading = try container.decodeIfPresent(Heading.self, forKey: .heading) ?? Heading()
     look = try container.decodeIfPresent(Look.self, forKey: .look) ?? Look()
     themeID = try container.decodeIfPresent(String.self, forKey: .themeID) ?? Theme.pochical.rawValue
     appearance = try container.decodeIfPresent(Appearance.self, forKey: .appearance) ?? .system

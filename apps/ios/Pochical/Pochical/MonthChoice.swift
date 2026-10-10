@@ -21,6 +21,8 @@ private struct MonthWheels: UIViewRepresentable {
 
   func updateUIView(_ picker: UIDatePicker, context: Context) {
     context.coordinator.onPick = onPick
+    // The wheels name months as the headings do: Sep in English.
+    picker.locale = Locale(identifier: context.environment.english ? "en_US" : "ja_JP")
     picker.minimumDate = first.firstOfMonth.date(in: .current)
     picker.maximumDate = last.firstOfMonth.date(in: .current)
     let shown = month.firstOfMonth.date(in: .current)
