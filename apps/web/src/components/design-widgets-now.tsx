@@ -7,9 +7,12 @@ import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
   DayMark,
+  NAME_ROOM,
+  NamedMark,
   WidgetRenderingModeContext,
   firstRunOr,
   oneLine,
+  useShiftNames,
   useWords,
 } from "./design-widgets";
 import { circular } from "./design-widgets-lock";
@@ -112,8 +115,8 @@ function useNowWords() {
 }
 
 // The small one's ring, round its mark between the words.
-const SMALL_RING_SIZE = 64;
-const SMALL_RING_STROKE = 6;
+const SMALL_RING_SIZE = 84;
+const SMALL_RING_STROKE = 7;
 
 const now = {
   // The time left, large, on one line, shrinking to the widget's width.
@@ -164,10 +167,10 @@ const now = {
     alignSelf: "center",
     display: "grid",
     flexShrink: 0,
-    height: "64px",
+    height: `${SMALL_RING_SIZE}px`,
     placeItems: "center",
     position: "relative",
-    width: "64px",
+    width: `${SMALL_RING_SIZE}px`,
   }),
   root: css({
     display: "flex",
@@ -235,6 +238,7 @@ function Count({
 
 function NowSmallView({ entry }: { entry: WidgetEntry }) {
   const said = useNowWords();
+  const named = useShiftNames();
   const spoken = useSpoken(entry);
   const state = nowState(entry);
   if (state.kind === "none") {
@@ -254,13 +258,16 @@ function NowSmallView({ entry }: { entry: WidgetEntry }) {
     return (
       <div className={now.root}>
         <span className={srOnly}>{spoken}</span>
-        <span aria-hidden="true" className={now.head}>
-          <DayMark day={span.day} size={18} />
-          <span className={oneLine}>{said.on(name)}</span>
-        </span>
+        {/* The ring says 勤務中 and its mark which shift, so no heading
+            says them again; the name under the mark where the person
+            shows names, as everywhere. */}
         <span aria-hidden="true" className={now.ringed}>
           <ShiftRing at={at} span={span} />
-          <DayMark day={span.day} size={30} />
+          <NamedMark
+            day={span.day}
+            named={named}
+            size={named ? 34 - NAME_ROOM : 34}
+          />
         </span>
         <span aria-hidden="true" className={now.under}>
           <FitText className={now.left} key={left} size={15}>
