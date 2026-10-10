@@ -70,7 +70,11 @@ struct GroupsScreen: View {
         if let open = groups.first(where: { $0.id == openID }) ?? groups.first {
           HStack(alignment: .top, spacing: 0) {
             GroupRail(
-              groups: groups, openID: open.id, unread: unread, onOpen: { openID = $0 },
+              groups: groups, openID: open.id, unread: unread,
+              onOpen: { id in
+                openID = id
+                inviting = nil
+              },
               onNew: { path.append(.newGroup) }, onScan: onScan)
             GroupHub(group: open) {
               path.append(.invite(open))
@@ -117,6 +121,10 @@ struct GroupsScreen: View {
       }
     }
     .onChange(of: groups.map(\.id)) { inviteMade() }
+    // Gone somewhere else meanwhile, the person is left there.
+    .onChange(of: path) { _, path in
+      if !path.isEmpty { inviting = nil }
+    }
     .environment(\.groupSocket, socket)
     .environment(\.photoGroupID, (groups.first { $0.id == openID } ?? groups.first)?.id ?? "")
     // Once its group has come, at launch.
