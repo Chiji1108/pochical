@@ -10,6 +10,7 @@ struct SettingsScreen: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   @Environment(\.openURL) private var openURL
+  @Environment(\.say) private var say
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
@@ -20,7 +21,6 @@ struct SettingsScreen: View {
   @State private var appIcon = AppIconChoice.current
   /// A page of the site opened from ポチカルについて.
   @State private var page: OpenedLink?
-  @State private var reviewLater = false
 
   var body: some View {
     NavigationStack {
@@ -32,9 +32,11 @@ struct SettingsScreen: View {
             PatternsPage()
           } label: {
             LabeledContent("シフトパターン") {
-              HStack(spacing: 4) {
-                ForEach(ownPatterns.prefix(6), id: \.id) { pattern in
-                  ShiftMark(pattern: pattern, size: 14)
+              HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                  ForEach(ownPatterns, id: \.id) { pattern in
+                    ShiftMark(pattern: pattern, size: 14)
+                  }
                 }
                 Text("\(ownPatterns.count)つ")
               }
@@ -54,6 +56,24 @@ struct SettingsScreen: View {
         }
         .settingsRows()
 
+        Section("通知") {
+          NavigationLink {
+            RemindersPage()
+          } label: {
+            LabeledContent("リマインド", value: remindersSummary)
+          }
+          NavigationLink {
+            ChatNotificationsPage()
+          } label: {
+            LabeledContent(
+              "チャット",
+              value: chatNotificationsSummary(
+                groups: groups, notifications: notifications,
+                allowed: Notifications.shared.permission == .allowed))
+          }
+        }
+        .settingsRows()
+
         Section("表示") {
           NavigationLink {
             StyleSettings()
@@ -61,9 +81,9 @@ struct SettingsScreen: View {
             // A look is shown rather than named, as /design's: one of the
             // person's own marks, then the テーマ's name.
             LabeledContent("スタイル") {
-              HStack(spacing: 6) {
+              HStack(spacing: 8) {
                 if let work = ownPatterns.first(where: { !$0.countsAsOff }) ?? ownPatterns.first {
-                  ShiftMark(pattern: work, size: 18)
+                  ShiftMark(pattern: work, size: 20)
                 }
                 Text(settings.device.theme.name)
               }
@@ -90,24 +110,6 @@ struct SettingsScreen: View {
           } label: {
             LabeledContent(
               "カレンダー", value: "\(Day.weekdayNames[settings.device.week.start])曜はじまり")
-          }
-        }
-        .settingsRows()
-
-        Section("通知") {
-          NavigationLink {
-            RemindersPage()
-          } label: {
-            LabeledContent("リマインド", value: remindersSummary)
-          }
-          NavigationLink {
-            ChatNotificationsPage()
-          } label: {
-            LabeledContent(
-              "チャット",
-              value: chatNotificationsSummary(
-                groups: groups, notifications: notifications,
-                allowed: Notifications.shared.permission == .allowed))
           }
         }
         .settingsRows()
@@ -140,9 +142,6 @@ struct SettingsScreen: View {
       .sheet(item: $page) { page in
         SafariView(url: page.url).ignoresSafeArea()
       }
-      .alert("公開後はレビューを書く画面が開きます", isPresented: $reviewLater) {
-        Button("OK", role: .cancel) {}
-      }
     }
   }
 
@@ -158,7 +157,7 @@ struct SettingsScreen: View {
         if let url = Site.writeReview {
           openURL(url)
         } else {
-          reviewLater = true
+          say("公開後はレビューを書く画面が開きます")
         }
       }
       outside("利用規約") { page = OpenedLink(url: Site.page("terms")) }

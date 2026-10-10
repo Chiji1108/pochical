@@ -3,6 +3,8 @@
 
 import { css, cva } from "styled-system/css";
 
+import { useDevice } from "../lib/design-device";
+
 export type AccountProvider = "apple" | "google";
 
 export type Account = { provider: AccountProvider; email: string };
@@ -70,14 +72,15 @@ export function ProviderLogo({
   );
 }
 
-// The two ways in, in each provider's own colors as their guidelines ask:
-// Apple's black (white in dark mode), Google's white with an outline.
+// The ways in, in each provider's own colors as their guidelines ask:
+// Apple's black (white in dark mode), Google's white with an outline;
+// round-ended, as the iOS app's Sign in with Apple button.
 const providerButton = {
   button: cva({
     base: {
       _disabled: { opacity: 0.6 },
       alignItems: "center",
-      borderRadius: "lg",
+      borderRadius: "full",
       display: "flex",
       fontWeight: 600,
       gap: "12px",
@@ -112,7 +115,8 @@ const providerButton = {
 // How long the prototype pretends the provider's sign-in takes.
 export const signInMilliseconds = 900;
 
-// Apple, then Google, each saying ログイン中… while its sign-in runs.
+// Apple, and on Android Google after it (the iOS app offers Apple alone),
+// each saying ログイン中… while its sign-in runs.
 export function ProviderButtons({
   busy,
   onPick,
@@ -120,9 +124,13 @@ export function ProviderButtons({
   busy: AccountProvider | undefined;
   onPick: (provider: AccountProvider) => void;
 }) {
+  const android = useDevice((state) => state.platform) === "android";
+  const providers: readonly AccountProvider[] = android
+    ? ["apple", "google"]
+    : ["apple"];
   return (
     <div className={providerButton.column}>
-      {(["apple", "google"] as const).map((provider) => (
+      {providers.map((provider) => (
         <button
           className={providerButton.button({ provider })}
           disabled={busy !== undefined}

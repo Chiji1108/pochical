@@ -420,13 +420,15 @@ export function ImagePreviewPage({
             </div>
           </OffHighlightContext>
         </CellNamesContext>
-        {/* The same tabs as the style page, with the picture's own values:
-            it goes to people who do not know the marks, so names start on. */}
+        {/* The same tabs as the style page, with the picture's own values
+            and named alone, the picture above showing them: it goes to
+            people who do not know the marks, so names start on. */}
         <Section title="休みの見せ方">
           <OffLookTabs
             onChange={(value) => {
               onOptions({ ...options, ...value });
             }}
+            samples={false}
             value={options}
           />
         </Section>
@@ -435,6 +437,7 @@ export function ImagePreviewPage({
             onChange={(names) => {
               onOptions({ ...options, names });
             }}
+            samples={false}
             value={options.names}
           />
         </Section>

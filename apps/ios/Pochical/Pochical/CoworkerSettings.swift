@@ -19,6 +19,7 @@ private func nowMs() -> Int64 {
 /// 設定 › 一緒に働く人.
 struct CoworkersPage: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.say) private var say
   @Dependency(\.defaultDatabase) private var database
   @FetchAll private var rows: [CoworkerRow]
   @FetchAll private var order: [CoworkerOrderRow]
@@ -27,7 +28,6 @@ struct CoworkersPage: View {
   @State private var editMode = EditMode.inactive
   @State private var adding = false
   @State private var newName = ""
-  @State private var full = false
 
   var body: some View {
     let list = ordered(rows, by: order)
@@ -64,7 +64,7 @@ struct CoworkersPage: View {
         if !sorting {
           Button {
             if list.count >= coworkersMax {
-              full = true
+              say(coworkersFull)
             } else {
               adding = true
             }
@@ -98,9 +98,6 @@ struct CoworkersPage: View {
       Button("追加") { add(to: list) }
       Button("キャンセル", role: .cancel) { newName = "" }
     }
-    .alert(coworkersFull, isPresented: $full) {
-      Button("OK", role: .cancel) {}
-    }
   }
 
   /// How many days note someone.
@@ -117,7 +114,7 @@ struct CoworkersPage: View {
     guard !name.isEmpty, !list.contains(where: { $0.name == name }) else { return }
     // Counted again: the list may have grown while the name was typed.
     guard list.count < coworkersMax else {
-      full = true
+      say(coworkersFull)
       return
     }
     _ = try? database.write { try OwnValues.addCoworker(named: name, now: nowMs(), in: $0) }

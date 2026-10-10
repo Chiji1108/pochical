@@ -261,13 +261,16 @@ function offLookId(value: OffLook) {
 // Segments each drawing a day off as it would look. 空白 leaves
 // days off empty on the month; they come back faint while entering and in
 // the week view. Used by the style page and by the saved image, each with
-// its own values.
+// its own values; the image's names them alone (`samples` false), as the
+// app's own look is not what it shows.
 export function OffLookTabs({
   value,
   onChange,
+  samples = true,
 }: {
   value: OffLook;
   onChange: (value: OffLook) => void;
+  samples?: boolean;
 }) {
   const { off } = useOwnSamples();
   const picked = offLookId(value);
@@ -280,18 +283,20 @@ export function OffLookTabs({
           onChange({ blankOff: option.blankOff, highlight: option.highlight });
         }
       }}
-      size="tall"
+      size={samples ? "tall" : "compact"}
       value={picked}
     >
       {offLooks.map((option) => (
         <Segment key={option.id} value={option.id}>
-          <span
-            aria-hidden="true"
-            className={offSample({ lit: option.highlight })}
-          >
-            <small>5</small>
-            {option.blankOff ? null : <ShiftMark shift={off} size={18} />}
-          </span>
+          {samples && (
+            <span
+              aria-hidden="true"
+              className={offSample({ lit: option.highlight })}
+            >
+              <small>5</small>
+              {option.blankOff ? null : <ShiftMark shift={off} size={18} />}
+            </span>
+          )}
           {option.name}
         </Segment>
       ))}
@@ -300,13 +305,15 @@ export function OffLookTabs({
 }
 
 // Tabs like 休みの見せ方's, each drawing a working day with or without its
-// name under the mark.
+// name under the mark, or naming them alone as OffLookTabs's `samples`.
 export function NameTabs({
   value,
   onChange,
+  samples = true,
 }: {
   value: boolean;
   onChange: (value: boolean) => void;
+  samples?: boolean;
 }) {
   const { work } = useOwnSamples();
   return (
@@ -315,16 +322,18 @@ export function NameTabs({
       onValueChange={(picked) => {
         onChange(picked === "true");
       }}
-      size="tall"
+      size={samples ? "tall" : "compact"}
       value={String(value)}
     >
       {[false, true].map((withName) => (
         <Segment key={String(withName)} value={String(withName)}>
-          <span aria-hidden="true" className={offSample()}>
-            <small>5</small>
-            <ShiftMark shift={work.id} size={withName ? 16 : 18} />
-            {withName && <small data-part="name">{dayName(work.name)}</small>}
-          </span>
+          {samples && (
+            <span aria-hidden="true" className={offSample()}>
+              <small>5</small>
+              <ShiftMark shift={work.id} size={withName ? 16 : 18} />
+              {withName && <small data-part="name">{dayName(work.name)}</small>}
+            </span>
+          )}
           {withName ? "あり" : "なし"}
         </Segment>
       ))}

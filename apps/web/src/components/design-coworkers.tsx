@@ -7,11 +7,11 @@ import type { Coworker } from "../lib/design-user-store";
 import { composing, limitText } from "../lib/text-limits";
 import { LimitedInput } from "./design-fields";
 import { BackButton, HeaderAction, PageHeader } from "./design-header";
-import { List, ListRow, listRow } from "./design-list";
+import { AddRow, List, ListRow, listRow } from "./design-list";
 import { ConfirmDialog } from "./design-sheet";
 import { SortableList } from "./design-sortable-list";
 import { ToastContext } from "./design-toast";
-import { AddButton, DestructiveButton, Note } from "./design-ui";
+import { DestructiveButton, Note } from "./design-ui";
 
 // Said when adding past COWORKERS_MAX, from the list or from a day.
 export const coworkersFull = `一緒に働く人は${COWORKERS_MAX}人までです`;
@@ -185,17 +185,18 @@ export function CoworkersPage({
             </div>
           </List>
         ) : (
-          <AddButton
-            onClick={() => {
-              if (names.length >= COWORKERS_MAX) {
-                toast(coworkersFull, "problem");
-                return;
-              }
-              setAdding(true);
-            }}
-          >
-            人を追加
-          </AddButton>
+          <List>
+            <AddRow
+              label="人を追加"
+              onClick={() => {
+                if (names.length >= COWORKERS_MAX) {
+                  toast(coworkersFull, "problem");
+                  return;
+                }
+                setAdding(true);
+              }}
+            />
+          </List>
         ))}
       <Note>
         {sorting

@@ -46,8 +46,8 @@ struct JobChangePage: View {
       switch step {
       case .day: dayStep
       case .kind: kindStep
-      case .roster: templates(ReadyPatterns.rosterTemplates)
-      case .rotation: templates(ReadyPatterns.rotationTemplates)
+      case .roster: templates(ReadyPatterns.rosterTemplates, asking: "近い働き方を選んでください")
+      case .rotation: templates(ReadyPatterns.rotationTemplates, asking: "どんな順番で回りますか？")
       case .order: EmptyView()
       }
     }
@@ -96,8 +96,12 @@ struct JobChangePage: View {
     .settingsRows()
   }
 
-  @ViewBuilder private func templates(_ templates: [JobTemplate]) -> some View {
-    question("近い働き方を選んでください", "あとから名前や時間を変えられます。")
+  /// The ready-made ways of working, asked as はじめの設定 asks: a roster's
+  /// work, or the order a rotation goes round in.
+  @ViewBuilder private func templates(_ templates: [JobTemplate], asking title: String)
+    -> some View
+  {
+    question(title, "あとから名前や時間を変えられます。")
     // One list, a row each, as the system's settings list choices.
     Section {
       ForEach(templates) { template in
@@ -105,16 +109,16 @@ struct JobChangePage: View {
           choose(template)
         } label: {
           HStack {
-            VStack(alignment: .leading, spacing: 6) {
-              Text(template.title).font(.headline).foregroundStyle(colors.textPrimary)
-              Text(template.note).font(.footnote).foregroundStyle(colors.textSecondary)
+            VStack(alignment: .leading, spacing: 2) {
+              Text(template.title).foregroundStyle(colors.textPrimary)
+              Text(template.note).font(.caption).foregroundStyle(colors.textTertiary)
               // An order's days, or the keys a roster's work gives.
               if let sequence = template.sequence, !template.custom {
                 SequenceTiles(sequence: sequence, patterns: readyByID, weekly: template.weekly)
-                  .padding(.top, 2)
+                  .padding(.top, 6)
               } else if !template.custom {
                 KeysPreview(patternIDs: template.patternIDs, patterns: readyByID)
-                  .padding(.top, 2)
+                  .padding(.top, 6)
               }
             }
             Spacer(minLength: 8)
@@ -173,7 +177,7 @@ struct JobChangePage: View {
     Section {
       VStack(alignment: .leading, spacing: 6) {
         Text(title).font(.title3.bold()).foregroundStyle(colors.textPrimary)
-        Text(description).font(.subheadline).foregroundStyle(colors.textSecondary)
+        Text(description).font(.subheadline).foregroundStyle(colors.textTertiary)
       }
       .settingsOnPage()
     }
@@ -187,7 +191,7 @@ struct JobChangePage: View {
         Text(emoji).font(.title2)
         VStack(alignment: .leading, spacing: 2) {
           Text(title).foregroundStyle(colors.textPrimary)
-          Text(note).font(.footnote).foregroundStyle(colors.textSecondary)
+          Text(note).font(.caption).foregroundStyle(colors.textTertiary)
         }
         Spacer()
         Image(systemName: "chevron.right")
@@ -200,11 +204,16 @@ struct JobChangePage: View {
     .buttonStyle(.plain)
   }
 
+  /// On to the next question, its arrow after the words, as /design's.
   private func next(_ title: String, action: @escaping () -> Void) -> some View {
     Button(action: action) {
-      Label(title, systemImage: "arrow.right").frame(maxWidth: .infinity)
+      HStack(spacing: 6) {
+        Text(title)
+        Image(systemName: "arrow.right")
+      }
+      .frame(maxWidth: .infinity)
     }
-    .buttonStyle(.borderedProminent)
+    .mainButton()
     .settingsOnPage()
   }
 

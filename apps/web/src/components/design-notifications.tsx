@@ -1,4 +1,4 @@
-import { Bell, BellOff, Check, Plus } from "lucide-react";
+import { Bell, BellOff, Check } from "lucide-react";
 import { useContext, useState } from "react";
 import { css, cx } from "styled-system/css";
 
@@ -22,14 +22,21 @@ import type { Firing, Reminder, ReminderKind } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
 import { AppIcon, useAppIcons } from "./design-app-icon";
-import { Chip, ChipGroup, Segment, SegmentedControl } from "./design-choices";
+import { Segment, SegmentedControl } from "./design-choices";
 import { TimeField } from "./design-fields";
 import { groupChat, isMuted, withMuted } from "./design-group-data";
 import type { Member } from "./design-group-data";
 import { Avatar, GroupIcon } from "./design-group-parts";
 import { sampleOthers } from "./design-group-samples";
 import { PageHeader } from "./design-header";
-import { List, ListRow, listRow, SwitchRow, Toggle } from "./design-list";
+import {
+  AddRow,
+  List,
+  ListRow,
+  listRow,
+  SwitchRow,
+  Toggle,
+} from "./design-list";
 import { MenuPicker, PullDownMenu } from "./design-menu";
 import {
   ConfirmDialog,
@@ -45,6 +52,9 @@ import { ShiftMark } from "./shift-mark";
 // itself like alarms, and the chats' messages, which the server pushes
 // unless a group is turned off. Neither arrives until the system allows
 // the app to notify, so both pages lead with asking for that.
+
+// 届くシフト's check, in the arrow's place.
+const sendsCheck = css({ color: "accent.default", flexShrink: 0 });
 
 const card = {
   icon: css({
@@ -350,10 +360,7 @@ export function RemindersPage({
                 reminder={reminder}
               />
             ))}
-            <ListRow
-              arrow={
-                <Plus aria-hidden="true" className={listRow.add} size={17} />
-              }
+            <AddRow
               label="リマインドを追加"
               onClick={() => {
                 setEditing({});
@@ -555,13 +562,26 @@ function ReminderSheet({
               )}
             </List>
           </section>
+          {/* A row each, checked when it sends, as iOS's lists that pick
+              several. */}
           <Section title="届くシフト">
-            <ChipGroup label="届くシフト">
+            <List>
               {shown.map((pattern) => {
                 const on = !draft.skip.includes(pattern.id);
                 return (
-                  <Chip
+                  <ListRow
+                    aria-pressed={on}
+                    arrow={
+                      <Check
+                        aria-hidden="true"
+                        className={sendsCheck}
+                        size={20}
+                        visibility={on ? "visible" : "hidden"}
+                      />
+                    }
                     key={pattern.id}
+                    label={pattern.name}
+                    leading={<ShiftMark shift={pattern.id} size={20} />}
                     onClick={() => {
                       setDraft({
                         ...draft,
@@ -570,15 +590,10 @@ function ReminderSheet({
                           : draft.skip.filter((id) => id !== pattern.id),
                       });
                     }}
-                    selected={on}
-                  >
-                    {on && <Check aria-hidden="true" size={12} />}
-                    <ShiftMark shift={pattern.id} size={16} />
-                    {pattern.name}
-                  </Chip>
+                  />
                 );
               })}
-            </ChipGroup>
+            </List>
           </Section>
           <NotificationSample
             book={book}

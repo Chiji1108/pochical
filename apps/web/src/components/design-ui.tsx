@@ -1,4 +1,4 @@
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -487,44 +487,6 @@ export function OptionCard({
 // A step's main button at the foot of its column, as the platforms' flows
 // keep it in reach of the thumb.
 export const pushToBottom = css({ marginTop: "auto" });
-
-// Adding one more to the list above: a dashed, full-width button, as the
-// platforms' "add" rows are. Grayed out when the list is full.
-const addButtonStyle = css({
-  _disabled: { color: "text.disabled", cursor: "default" },
-  alignItems: "center",
-  bg: "transparent",
-  border: "1px dashed token(colors.border.strong)",
-  borderRadius: "2xl",
-  color: "accent.default",
-  display: "flex",
-  gap: "8px",
-  justifyContent: "center",
-  minHeight: "46px",
-  textStyle: "subheadline",
-});
-
-export function AddButton({
-  children,
-  disabled = false,
-  onClick,
-}: {
-  children: ReactNode;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className={addButtonStyle}
-      disabled={disabled}
-      onClick={onClick}
-      type="button"
-    >
-      <Plus aria-hidden="true" size={14} />
-      {children}
-    </button>
-  );
-}
 
 // Removing or leaving at the foot of an editing page: quiet red words,
 // no icon, centered under the lists, as the platforms' destructive text

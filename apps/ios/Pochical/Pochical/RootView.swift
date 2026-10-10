@@ -59,6 +59,7 @@ struct RootView: View {
       _ = try? await $unread.load(UnreadRequest(me: meID))
     }
     .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
+    .environment(\.say, SayAction(say: say))
     // The app icon's badge follows what is read here too, as the
     // notifications set it from the server.
     .onChange(of: unread.values.reduce(0, +), initial: true) { _, total in
@@ -122,6 +123,20 @@ struct RootView: View {
       }
     }
   }
+}
+
+/// Says a few words over the tabs for a moment, as /design's toast: for a
+/// page to tell what it did not do without an alert to close.
+struct SayAction {
+  let say: @MainActor (String) -> Void
+
+  @MainActor func callAsFunction(_ words: String) {
+    say(words)
+  }
+}
+
+extension EnvironmentValues {
+  @Entry var say = SayAction { _ in }
 }
 
 /// Each group's unread lines that count for `me`, read again as they

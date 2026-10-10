@@ -36,3 +36,40 @@ extension ChoiceChip where Leading == EmptyView {
     self.init(name: name, picked: picked, action: action) { EmptyView() }
   }
 }
+
+/// One of a grid of choices as a tile (/design's ChoiceTile): a picture
+/// over its name, framed on a quiet ground and named in bold when picked.
+/// large for a few big pictures two to a row, as the app icons; small for
+/// three to a row, as the テーマ.
+struct ChoiceTile<Picture: View>: View {
+  enum Size { case large, small }
+
+  @Environment(\.themeColors) private var colors
+  let name: String
+  let picked: Bool
+  let size: Size
+  let action: () -> Void
+  @ViewBuilder let picture: () -> Picture
+
+  var body: some View {
+    let shape = RoundedRectangle(cornerRadius: size == .large ? Radius.xxl : Radius.xl)
+    Button(action: action) {
+      VStack(spacing: size == .large ? 8 : 4) {
+        picture()
+        Text(name)
+          .font((size == .large ? Font.body : .footnote).weight(picked ? .semibold : .regular))
+          .foregroundStyle(picked ? colors.textPrimary : colors.textSecondary)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.horizontal, size == .large ? 0 : 4)
+      .padding(.top, size == .large ? 20 : 4)
+      .padding(.bottom, size == .large ? 16 : 8)
+      .background(picked ? colors.fillQuaternary : .clear, in: shape)
+      .overlay(shape.strokeBorder(picked ? colors.accentBorder : .clear, lineWidth: 2))
+      .contentShape(shape)
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(name)
+    .accessibilityAddTraits(picked ? .isSelected : [])
+  }
+}

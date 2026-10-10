@@ -82,8 +82,8 @@ struct PatternsPage: View {
             VStack(alignment: .leading, spacing: 2) {
               Text("新しい仕事にする")
               Text("シフトパターンと繰り返しを選び直す")
-                .font(.footnote)
-                .foregroundStyle(colors.textSecondary)
+                .font(.caption)
+                .foregroundStyle(colors.textTertiary)
             }
           }
         }
