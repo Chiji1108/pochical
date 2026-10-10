@@ -234,17 +234,17 @@ private struct LockDays: View {
   var body: some View {
     let named = look.options.names
     // A little room between the columns, so their weekdays never touch.
-    HStack(spacing: 3) {
+    HStack(spacing: 2) {
       ForEach(days, id: \.date) { day in
         // A day off as in the calendar's week: faint where 休みの見せ方
         // leaves it empty.
         let off = OffLook(day, look: look, inWeek: true)
         VStack(spacing: 4) {
+          // One size for every weekday, small enough for MON and WED in
+          // a cramped column, so no one of them shrinks alone.
           Text(day.date.weekdayHead(english: english))
-            .font(.caption)
+            .font(.system(size: 10, weight: .medium))
             .lineLimit(1)
-            // MON and WED fit a cramped column a little smaller.
-            .minimumScaleFactor(0.7)
             .opacity(0.75)
           WidgetMark(
             day: day, size: named ? 24 - nameRoom : 24, faint: off.mark == .faint, named: named,
