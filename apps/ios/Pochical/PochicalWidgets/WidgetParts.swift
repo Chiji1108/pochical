@@ -189,3 +189,38 @@ struct SpokenDay: ViewModifier {
       .accessibilityLabel(day.spoken(english: english))
   }
 }
+
+/// The widgets' few words in Japanese or English (/design's useWords).
+struct WidgetWords {
+  let english: Bool
+
+  /// A date as a widget names a day: 9月24日(木), or Thu, Sep 24.
+  func date(_ day: Day) -> String {
+    english
+      ? "\(day.weekdayName(english: true)), \(day.shortMonth(english: true)) \(day.day)"
+      : day.fullText
+  }
+
+  /// When a day comes: 今日, 明日, else how many days on.
+  func inDays(_ count: Int) -> String {
+    if english {
+      return count == 0 ? "Today" : count == 1 ? "Tomorrow" : "in \(count) days"
+    }
+    return count == 0 ? "今日" : count == 1 ? "明日" : "\(count)日後"
+  }
+
+  /// The day after a day off: 明日, or its weekday (Fri) in English,
+  /// short enough to keep clear of the poodle in the corner.
+  func nextDay(_ day: Day) -> String {
+    english ? day.weekdayName(english: true) : "明日"
+  }
+
+  var nothingYet: String { english ? "Nothing yet" : "まだ入っていません" }
+  var firstRunLine: String { english ? "Enter shifts to see them" : "シフトを入れると出ます" }
+}
+
+/// A clock time without its leading zero: 8:30.
+func clockWords(_ date: Date) -> String {
+  let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+  return "\(parts.hour ?? 0):\(String(format: "%02d", parts.minute ?? 0))"
+}

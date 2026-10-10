@@ -338,7 +338,7 @@ function paintIcon(image: HTMLImageElement, colors: IconColors) {
 export const DARK_DRAWING = "drawing-dark";
 // The dog alone in its light look, white in dark lines, for light grounds.
 export const LIGHT_DRAWING = "drawing-light";
-const lightDrawing: IconColors = {
+export const lightDrawing: IconColors = {
   dog: "#ffffff",
   ground: "#ffffff",
   id: LIGHT_DRAWING,

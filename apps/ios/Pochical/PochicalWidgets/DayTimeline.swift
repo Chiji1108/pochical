@@ -66,20 +66,36 @@ struct DayTimeline: TimelineProvider {
 }
 
 /// A widget's view in the person's テーマ, in the light or dark the system
-/// draws it, their marks' shape and 月と曜日.
+/// draws it, their marks' shape and 月と曜日, which the system's relative
+/// times (3時間12分, 3 hr, 12 min) follow too. On the lock screen the
+/// system draws the ground.
 struct WidgetLook<Content: View>: View {
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.widgetFamily) private var family
   let settings: DeviceSettings
   @ViewBuilder let content: Content
 
   var body: some View {
     let theme = settings.theme
     let colors = theme.colors(theme.isAlwaysDark ? .dark : colorScheme)
+    let english = settings.heading.english
     content
       .environment(\.themeColors, colors)
       .environment(\.look, settings.look)
-      .environment(\.english, settings.heading.english)
-      .containerBackground(colors.backgroundCard, for: .widget)
+      .environment(\.english, english)
+      .environment(\.locale, Locale(identifier: english ? "en_US" : "ja_JP"))
+      .containerBackground(for: .widget) {
+        if !family.onLockScreen {
+          colors.backgroundCard
+        }
+      }
+  }
+}
+
+extension WidgetFamily {
+  /// The lock screen's sizes, drawn by the system in one color.
+  var onLockScreen: Bool {
+    self == .accessoryCircular || self == .accessoryRectangular || self == .accessoryInline
   }
 }
 
