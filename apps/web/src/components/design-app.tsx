@@ -71,8 +71,7 @@ export function DesignApp({
   // are worked out through it, however far ahead it is.
   const [month, setMonth] = useState(() => new Date(2026, initialMonth, 1));
   const schedule = useShownDays(month);
-  const { applyRule, changeJob, fixRule, setHolidaysOff } =
-    useWorkChanges(schedule);
+  const { changeJob, putOrder, removeOrder } = useWorkChanges(schedule);
   const ownPatterns = useUser((state) => state.patterns);
   // The person's own patterns, over the ready-made ones that templates
   // and samples name.
@@ -86,10 +85,9 @@ export function DesignApp({
               {tab === "settings" && (
                 <DesignSettings
                   initialPage={initialSettingsPage}
-                  onApplyRule={applyRule}
                   onChangeJob={changeJob}
-                  onFixRule={fixRule}
-                  onHolidaysOff={setHolidaysOff}
+                  onPutRule={putOrder}
+                  onRemoveRule={removeOrder}
                   onProfile={setProfile}
                   onTab={setTab}
                   patterns={ownPatterns}

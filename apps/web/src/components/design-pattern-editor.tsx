@@ -4,9 +4,10 @@ import { Plus } from "lucide-react";
 import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
 
-import { isRepeating, patternsWithout } from "../lib/design-days";
+import { patternsWithout } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import type { Pattern } from "../lib/design-patterns";
+import { designToday } from "../lib/design-today";
 import { useShownDays, useUser } from "../lib/design-user-store";
 import { ChoiceList, ChoiceRow } from "./design-choices";
 import {
@@ -144,9 +145,15 @@ export function PatternsPage({
   // with it.
   const daysOf = (id: string) =>
     Object.values(schedule).filter((entry) => entry?.shift === id).length;
-  // The repeating order in use still needs it.
+  // A period in use or to come still needs it; one over does not.
   const inOrder = (id: string) =>
-    isRepeating(rules) && (rules.at(-1)?.sequence.includes(id) ?? false);
+    rules.some((rule, index) => {
+      const next = rules[index + 1];
+      const puts =
+        rule.sequence.includes(id) ||
+        (rule.holidaysOff === true && rule.holidayShift === id);
+      return puts && (!next || next.start > designToday);
+    });
   // Gone from the list; the days that name it show empty, as it is gone.
   const remove = (id: string) => {
     setItems((previous) => patternsWithout(previous, id));
@@ -273,6 +280,7 @@ export function PatternsPage({
         <List>
           <AddRow
             label="パターンを追加"
+            opensPage
             onClick={() => {
               setView("add");
             }}

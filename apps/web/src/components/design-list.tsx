@@ -154,8 +154,9 @@ export const listRow = {
   // In the arrow's place on a row that adds rather than opens: a plus in
   // the accent, told apart from the gray arrows of rows that go on.
   add: css({ color: "accent.default", flexShrink: 0, marginRight: "-4px" }),
-  // A row that adds one more to its list, all in the accent.
-  adds: css({ "& > *": { color: "accent.default" }, color: "accent.default" }),
+  // A row that adds one more to its list: its plus and words in the
+  // accent, a page's chevron gray as on any row.
+  adds: css({ "& > span": { color: "accent.default" } }),
   label: css({
     "& small": { color: "text.tertiary", textStyle: "caption" },
     display: "flex",
@@ -477,17 +478,20 @@ export function SwitchRow({
 
 // Adding one more to a list, as the last row of its card or a card of its
 // own: a plus where an icon goes and the words after it, both in the
-// accent, as iOS's add rows (リマインドを追加, パターンを追加).
+// accent, as iOS's add rows (リマインドを追加, パターンを追加). One that
+// goes on to a page of its own ends in the chevron, as any such row.
 export function AddRow({
   label,
   onClick,
+  opensPage = false,
 }: {
   label: string;
   onClick: () => void;
+  opensPage?: boolean;
 }) {
   return (
     <ListRow
-      arrow={false}
+      arrow={opensPage}
       className={listRow.adds}
       label={label}
       leading={<Plus aria-hidden="true" size={20} />}

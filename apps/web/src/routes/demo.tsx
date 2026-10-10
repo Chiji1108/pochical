@@ -19,6 +19,7 @@ import {
 import { pageStyle } from "../components/design-theme";
 import { VariantPanel } from "../components/design-variant-panel";
 import { initialDesignSchedule, patternSets } from "../lib/design-days";
+import type { RepeatRule } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
 import { presetList } from "../lib/design-patterns";
 import { supportThreadOf } from "../lib/design-support";
@@ -45,15 +46,46 @@ function samplePatterns(count: DesignVariants["patternSample"]) {
   return presetList(patternSets[count === "many" ? 13 : 4]);
 }
 
+// The sample orders, around the prototype's today (9/24): one from 4/1,
+// and with it one over since 1/1 and one to start on 11/1.
+function sampleRules(sample: DesignVariants["repeatSample"]): RepeatRule[] {
+  const now: RepeatRule = {
+    sequence: ["day", "day", "night", "after", "off", "off"],
+    start: new Date(2026, 3, 1),
+  };
+  if (sample === "none") {
+    return [];
+  }
+  if (sample === "now") {
+    return [now];
+  }
+  return [
+    { sequence: ["day", "night", "after", "off"], start: new Date(2026, 0, 1) },
+    now,
+    {
+      holidaysOff: true,
+      sequence: ["night", "after", "off"],
+      start: new Date(2026, 10, 1),
+    },
+  ];
+}
+
 // A sample person, starting over with the sample or with nothing entered.
 function makePerson(
-  { memberSample, groupSample, patternSample, supportSample }: DesignVariants,
+  {
+    memberSample,
+    groupSample,
+    patternSample,
+    repeatSample,
+    supportSample,
+  }: DesignVariants,
   sample: DesignVariants["scheduleSample"]
 ) {
   return createUserStore({
     coworkers: memberSample === "some" ? sampleCoworkers : [],
     groups: groupSample === "some" ? sampleGroups() : [],
     patterns: samplePatterns(patternSample),
+    rules: sampleRules(repeatSample),
     schedule: sample === "empty" ? {} : initialDesignSchedule(),
     support: supportThreadOf(supportSample),
   });
@@ -164,6 +196,11 @@ function DemoPage() {
               if (key === "memberSample") {
                 person.setState({
                   coworkers: value === "some" ? sampleCoworkers : [],
+                });
+              }
+              if (key === "repeatSample") {
+                person.setState({
+                  rules: sampleRules(value as DesignVariants["repeatSample"]),
                 });
               }
               if (key === "supportSample") {

@@ -187,7 +187,7 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
   }
 }
 
-@Test func aNewOrderTakesTheDaysFromItsStartAndAFixKeepsItsStart() throws {
+@Test func aStartedOrderTakesTheDaysFromItsStart() throws {
   let database = try calendarWithAnOrder()
   try database.write { db in
     let before = Day("2026-10-20")!
@@ -204,16 +204,40 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
     #expect(try DayRow.find(before.key).fetchOne(db)?.pattern == "night")
     #expect(try DayRow.find(after.key).fetchOne(db)?.pattern == nil)
     #expect(try DayRow.find(after.key).fetchOne(db)?.note == "歯医者")
+  }
+}
 
-    var fixed = switched
-    fixed.anchor = Day("2026-11-02")
-    try OwnValues.fix(fixed, now: 5, in: db)
-    let orders = try OwnValues.repeatOrders(in: db)
-    #expect(orders.count == 2)
-    #expect(orders.last?.anchor == Day("2026-11-02"))
+@Test func periodsArePutMovedAndTakenOutKeepingTheDaysEntered() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    let entered = Day("2026-11-03")!
+    try OwnValues.enter("night", on: entered, now: 1, in: db)
+    let later = RepeatOrder(
+      sequence: ["off"], start: Day("2026-12-01")!, holidayCountry: "JP")
+    try OwnValues.put(later, now: 2, in: db)
+    let between = RepeatOrder(
+      sequence: ["day", "off"], start: Day("2026-11-01")!, holidayCountry: "JP")
+    try OwnValues.put(between, now: 3, in: db)
+    #expect(
+      try OwnValues.repeatOrders(in: db).map(\.start.key)
+        == ["2026-10-01", "2026-11-01", "2026-12-01"])
+    // The day entered stays over the period put under it.
+    #expect(try DayRow.find(entered.key).fetchOne(db)?.pattern == "night")
 
-    try OwnValues.setHolidaysOff(true, now: 6, in: db)
-    #expect(try OwnValues.repeatOrders(in: db).last?.holidayShift == "off")
+    var moved = between
+    moved.start = Day("2026-11-05")!
+    moved.anchor = between.start
+    try OwnValues.put(moved, replacing: between.start, now: 4, in: db)
+    #expect(
+      try OwnValues.repeatOrders(in: db).map(\.start.key)
+        == ["2026-10-01", "2026-11-05", "2026-12-01"])
+
+    try OwnValues.setHolidaysOff(true, from: moved.start, now: 5, in: db)
+    #expect(
+      try OwnValues.repeatOrders(in: db).first { $0.start == moved.start }?.holidayShift == "off")
+
+    try OwnValues.remove(moved.start, now: 6, in: db)
+    #expect(try OwnValues.repeatOrders(in: db).map(\.start.key) == ["2026-10-01", "2026-12-01"])
   }
 }
 
