@@ -37,8 +37,9 @@ export function useWorkChanges(schedule: Schedule) {
           bookOf(patterns)
         ));
     const holidayShift = holidaysOff ? holidayShiftOf(patterns) : undefined;
+    // Off only with a pattern for them to take.
     return rule.sequence.length > 0
-      ? { ...rule, holidayShift, holidaysOff }
+      ? { ...rule, holidayShift, holidaysOff: holidayShift !== undefined }
       : rule;
   }
   function fillRule(rule: RepeatRule, patterns = ownPatterns) {

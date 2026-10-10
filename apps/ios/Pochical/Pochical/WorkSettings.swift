@@ -483,7 +483,9 @@ private struct RepeatEditor: View {
         save(steps, start: start, anchor: picked, holidays: holidays, shift: offShift)
       }
     } message: {
-      Text(mode.message)
+      // A new period on a day another starts takes its place.
+      let replaces = fixing == nil && values.orders.contains { $0.start == start }
+      Text(replaces ? "この日から始まる繰り返しと入れ替えます。自分で入れた日は、そのまま残ります。" : mode.message)
     }
   }
 
@@ -518,6 +520,7 @@ private struct RepeatEditor: View {
 private struct StopRepeatPage: View {
   @Environment(\.dismiss) private var dismiss
   @Dependency(\.defaultDatabase) private var database
+  @Fetch(WorkValues()) private var values = WorkValues.Value()
   @State private var day = nextMonthStart
 
   var body: some View {
@@ -531,7 +534,11 @@ private struct StopRepeatPage: View {
           } set: { day = Day($0, in: .current) },
           displayedComponents: .date)
       } footer: {
-        Text("この日から、繰り返しのシフトが入らなくなります。あとに別の期間があれば、そこからはその繰り返しになります。自分で入れた日は、そのまま残ります。")
+        // A period starting that day gives way to this one.
+        let replaces = values.orders.contains { $0.start == day }
+        Text(
+          (replaces ? "この日から始まる繰り返しと入れ替わります。" : "")
+            + "この日から、繰り返しのシフトが入らなくなります。あとに別の期間があれば、そこからはその繰り返しになります。自分で入れた日は、そのまま残ります。")
       }
       .settingsRows()
 

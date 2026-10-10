@@ -149,7 +149,10 @@ export function PatternsPage({
   const inOrder = (id: string) =>
     rules.some((rule, index) => {
       const next = rules[index + 1];
-      return rule.sequence.includes(id) && (!next || next.start > designToday);
+      const puts =
+        rule.sequence.includes(id) ||
+        (rule.holidaysOff === true && rule.holidayShift === id);
+      return puts && (!next || next.start > designToday);
     });
   // Gone from the list; the days that name it show empty, as it is gone.
   const remove = (id: string) => {

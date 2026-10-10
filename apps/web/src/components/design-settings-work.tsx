@@ -342,6 +342,7 @@ export function RepeatEditorPage({
 }) {
   const book = usePatterns();
   const patterns = useUser((state) => state.patterns);
+  const rules = useUser((state) => state.rules);
   const fixing = mode === "fix" && current !== undefined;
   const text = repeatModes[mode];
   const [order, setOrder] = useState(() => ({
@@ -358,6 +359,9 @@ export function RepeatEditorPage({
     holidaysChoice ?? defaultHolidaysOff(sequence, anchor, book);
   const rule: RepeatRule = { anchor, holidaysOff, sequence, start };
   const [confirming, setConfirming] = useState(false);
+  // A new period on a day another starts takes its place: 完了 says so.
+  const replaces =
+    !fixing && rules.some((other) => other.start.getTime() === start.getTime());
   return (
     <div className={settingsParts.fullPage}>
       <PageHeader
@@ -397,7 +401,11 @@ export function RepeatEditorPage({
       {confirming && (
         <ConfirmDialog
           action={text.action}
-          message={text.message}
+          message={
+            replaces
+              ? "この日から始まる繰り返しと入れ替えます。自分で入れた日は、そのまま残ります。"
+              : text.message
+          }
           onCancel={() => {
             setConfirming(false);
           }}
@@ -545,6 +553,11 @@ export function StopRepeatPage({
   onApply: (start: Date) => void;
 }) {
   const [start, setStart] = useState(nextMonthStart);
+  const rules = useUser((state) => state.rules);
+  // A period starting that day gives way to this one.
+  const replaces = rules.some(
+    (rule) => rule.start.getTime() === start.getTime()
+  );
   return (
     <>
       <PageHeader back="繰り返し" onBack={onBack} title="繰り返しをやめる" />
@@ -561,6 +574,7 @@ export function StopRepeatPage({
         </InputDatePicker>
       </div>
       <Note>
+        {replaces && "この日から始まる繰り返しと入れ替わります。"}
         この日から、繰り返しのシフトが入らなくなります。あとに別の期間があれば、そこからはその繰り返しになります。自分で入れた日は、そのまま残ります。
       </Note>
       <Button
