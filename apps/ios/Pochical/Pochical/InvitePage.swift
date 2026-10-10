@@ -49,13 +49,13 @@ struct InvitePage: View {
           }
           .frame(width: 200, height: 200)
           Text(failed ? "リンクを読み込めませんでした" : "この画面を相手に読み取ってもらいます")
-            .font(.footnote)
-            .foregroundStyle(colors.textSecondary)
+            .font(.caption)
+            .foregroundStyle(colors.textTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(20)
-        .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xl))
-        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.separator))
+        .padding(EdgeInsets(top: 24, leading: 16, bottom: 20, trailing: 16))
+        .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xxl))
+        .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
         .padding(.bottom, 8)
 
         if let link {
@@ -77,7 +77,7 @@ struct InvitePage: View {
           }
           .buttonStyle(.bordered)
           .buttonBorderShape(.capsule)
-          .tint(colors.textPrimary)
+          .tint(colors.accentDefault)
         }
         Text("リンクを知っている人は、だれでも「\(group.name)」に参加できます。送る相手に気をつけてください。")
           .font(.footnote)

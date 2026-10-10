@@ -342,12 +342,32 @@ public struct GroupMember: Hashable, Sendable, Identifiable {
   public var id: String { userID }
 }
 
+extension GroupMember {
+  /// Someone made up, as a sample of a group shows them.
+  public init(userID: String, name: String, calendar: MemberCalendar) {
+    self.init(userID: userID, name: name, ownName: false, calendar: calendar)
+  }
+}
+
 /// A member's shifts as the group sees them: their days over their
 /// repeating orders, as their own devices work them out.
 public struct MemberCalendar: Hashable, Sendable {
   public let patternsByID: [PatternID: Pattern]
   let days: [Day: OwnDay]
   let orders: [RepeatOrder]
+
+  init(patternsByID: [PatternID: Pattern], days: [Day: OwnDay], orders: [RepeatOrder]) {
+    self.patternsByID = patternsByID
+    self.days = days
+    self.orders = orders
+  }
+
+  /// Only these days, each a pattern of `patterns`, as a sample's are.
+  public init(patterns: [Pattern], days: [Day: PatternID]) {
+    self.init(
+      patternsByID: Dictionary(patterns.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }),
+      days: days.mapValues { OwnDay(shift: $0) }, orders: [])
+  }
 
   /// Each day from `from` through `through` that shows a shift.
   public func shown(from: Day, through: Day) -> [Day: DayEntry] {

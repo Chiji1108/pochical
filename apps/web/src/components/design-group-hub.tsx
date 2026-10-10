@@ -53,11 +53,27 @@ import { useWeek } from "./design-week";
 // A group's hub: the rail of groups at its side, this week's shifts and
 // the chats, the group without members yet, and a member's sheet.
 
+// みさき's week in the sample, the same every week from Sunday, with
+// Saturday off as the others are, so the week shows a day everyone is off.
+const sampleNurseWeek = [
+  "after",
+  "off",
+  "day",
+  "day",
+  "night",
+  "after",
+  "off",
+] as const;
+
 // A made-up group for the no-group screen's picture of sharing.
 const sampleGroup = (): Group => ({
   id: "sample",
   mark: { emoji: "🏠", kind: "emoji" },
-  members: [partner, mother, misaki()],
+  members: [
+    partner,
+    mother,
+    { ...misaki(), shiftOn: (date) => sampleNurseWeek[date.getDay()] },
+  ],
   name: "サンプル",
 });
 
@@ -87,7 +103,9 @@ export function NoGroups({
         />
       </div>
       <p className={noGroups.note}>
-        家族や友達とシフトを見せ合って、休みが重なる日がすぐ分かります。
+        家族や友達とシフトを見せ合って、
+        <br />
+        休みが重なる日がすぐ分かります。
       </p>
       <div className={noGroups.actions}>
         <Button onClick={onNew}>
@@ -137,9 +155,9 @@ const rail = {
     borderRadius: "circle",
     color: "accent.default",
     display: "grid",
-    height: "42px",
+    height: "44px",
     placeItems: "center",
-    width: "42px",
+    width: "44px",
   }),
   badge: css({
     bottom: 0,
@@ -168,15 +186,15 @@ const rail = {
       transition: "height 0.15s",
       width: "4px",
     },
-    "&[aria-current=page]::before": { height: "30px" },
+    "&[aria-current=page]::before": { height: "32px" },
     bg: "transparent",
     border: 0,
     display: "grid",
-    height: "46px",
+    height: "48px",
     padding: 0,
     placeItems: "center",
     position: "relative",
-    width: "58px",
+    width: "60px",
   }),
   // Beside the page and like it, it runs on to the screen's foot and
   // scrolls when the groups outgrow it, so only its top is rounded. It
@@ -196,7 +214,7 @@ const rail = {
     overflowY: "auto",
     // The last of many groups can rise clear of the fade.
     padding: "12px 0 calc(var(--tab-bar-bottom) + 128px)",
-    width: "58px",
+    width: "60px",
   }),
 };
 
@@ -233,7 +251,7 @@ export function GroupRail({
             type="button"
           >
             <span aria-hidden="true" className={markFrame()}>
-              <GroupIcon mark={group.mark} size={24} />
+              <GroupIcon mark={group.mark} size={25} />
             </span>
             {unread > 0 && (
               <span aria-hidden="true" className={cx(badge, rail.badge)}>
@@ -318,14 +336,15 @@ export function GroupHub({
           </IconButton>
         </BarGroup>
       </header>
-      <section>
-        <div className={hub.sectionHead}>
-          <h4 className={hub.sectionHeadTitle}>シフト</h4>
+      <Section
+        title="シフト"
+        trailing={
           <button className={hub.sectionLink} onClick={onShifts} type="button">
             月で見る
             <ChevronRight aria-hidden="true" size={15} />
           </button>
-        </div>
+        }
+      >
         <div className={hub.weekCard}>
           <button
             aria-label="今週のみんなのシフト。押すと月で見られます"
@@ -357,11 +376,11 @@ export function GroupHub({
           ) : (
             <div className={hub.weekCardNext}>
               <span>次のみんな休み</span>
-              <span className={hub.weekCardNextValue}>なし</span>
+              <span className={hub.weekCardNextNone}>なし</span>
             </div>
           )}
         </div>
-      </section>
+      </Section>
       <Section title="チャット">
         <List>
           <ChatRow

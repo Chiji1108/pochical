@@ -286,11 +286,6 @@ function GroupEditPage({
         }
         title="グループを編集"
       />
-      <div className={hub.editMark}>
-        <span className={markFrame({ size: "large" })}>
-          <GroupIcon mark={mark} size={40} />
-        </span>
-      </div>
       <List>
         <ListRow
           label="グループ名"
@@ -314,9 +309,6 @@ function GroupEditPage({
           }}
         />
       </List>
-      <Note>
-        保存すると、メンバー全員の画面に反映され、グループのチャットにもお知らせが届きます。
-      </Note>
     </>
   );
 }
@@ -784,9 +776,7 @@ export function NewGroupPage({
           }
         />
       </List>
-      <Note>
-        アイコンはグループ名から自動で入ります。このグループでの名前は、最初はいつもの名前です。写真はあとからグループの設定で変えられます。
-      </Note>
+      <Note>アイコンはグループ名から自動で入ります。</Note>
     </>
   );
 }

@@ -84,8 +84,9 @@ struct GroupShiftsPage: View {
           MonthTitleButton(
             month: monthInSight, first: months[0], last: months[months.count - 1]
           ) { goal = .month($0) } label: {
+            // Quieter than the months' own headings under it.
             Text(fullMonthName(monthInSight))
-              .font(.title3.bold())
+              .font(.headline)
               .foregroundStyle(colors.textPrimary)
               .contentTransition(.numericText())
               .animation(.default, value: monthInSight)
@@ -189,24 +190,10 @@ struct GroupShiftsPage: View {
     } else {
       VStack(alignment: .leading, spacing: 12) {
         Text(name).font(.title3.bold()).accessibilityAddTraits(.isHeader)
-        Button {
-          let title = month == today.firstOfMonth ? "今月" : name
+        let title = month == today.firstOfMonth ? "今月" : name
+        TogetherSummary(label: "みんな休み", together: together) {
           togetherSheet = TogetherList(title: "\(title)のみんな休み", days: together.days)
-        } label: {
-          HStack {
-            Text("みんな休み").foregroundStyle(colors.textSecondary)
-            Spacer()
-            TogetherCount(count: together.days.count)
-            Image(systemName: "chevron.right")
-              .imageScale(.small)
-              .foregroundStyle(colors.textQuaternary)
-          }
-          .font(.subheadline)
-          .padding(.horizontal, 16)
-          .frame(minHeight: Metrics.touch)
-          .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.lg))
         }
-        .buttonStyle(.plain)
       }
     }
   }
@@ -427,20 +414,40 @@ func fullMonthName(_ month: Day) -> String {
   month.yearMonthText
 }
 
-/// How many days everyone is off, large in the accent, as /design's
-/// SummaryRow counts: 4日.
-struct TogetherCount: View {
+/// A month's days everyone is off (/design's TogetherSummary): how many,
+/// as 今月のお休み counts them, opening the dates; none, it says so, or
+/// that days not entered yet leave it open, in a row that cannot be
+/// pressed.
+struct TogetherSummary: View {
   @Environment(\.themeColors) private var colors
-  let count: Int
+  let label: String
+  let together: (days: [Day], unsure: Bool)
+  let onOpen: () -> Void
 
   var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 1) {
-      Text("\(count)").font(.title2.bold())
-      Text("日").font(.footnote.weight(.semibold))
+    if together.days.isEmpty {
+      HStack {
+        Text(label)
+          .font(.footnote)
+          .foregroundStyle(colors.textSecondary)
+        Spacer()
+        Text(together.unsure ? "未入力あり" : "なし")
+          .font(.headline)
+          .foregroundStyle(colors.textTertiary)
+      }
+      // As tall as SummaryRow, whose count is larger.
+      .frame(minHeight: 30)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+      .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
+      .accessibilityElement(children: .combine)
+    } else {
+      SummaryRow(spoken: "\(label) \(together.days.count)日", onOpen: onOpen) {
+        Text(label)
+      } days: {
+        Text(together.days.count, format: .number)
+      }
     }
-    .foregroundStyle(colors.accentDefault)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel("\(count)日")
   }
 }
 

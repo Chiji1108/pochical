@@ -43,6 +43,7 @@ extension EnvironmentValues {
 /// are for and a way to start one; else the groups down the side, as
 /// /design's rail, and the one open beside them.
 struct GroupsScreen: View {
+  @Environment(\.themeColors) private var colors
   @Environment(\.account) private var account
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.scenePhase) private var scenePhase
@@ -60,6 +61,9 @@ struct GroupsScreen: View {
   /// Opens the camera to read a group's QR code.
   let onScan: () -> Void
   @State private var path: [GroupRoute] = []
+  /// A group just made, whose メンバーを招待 opens over its hub once the
+  /// group has come, as /design goes on to it.
+  @State private var inviting: String?
 
   var body: some View {
     NavigationStack(path: $path) {
@@ -67,7 +71,11 @@ struct GroupsScreen: View {
         if let open = groups.first(where: { $0.id == openID }) ?? groups.first {
           HStack(alignment: .top, spacing: 0) {
             GroupRail(
-              groups: groups, openID: open.id, unread: unread, onOpen: { openID = $0 },
+              groups: groups, openID: open.id, unread: unread,
+              onOpen: { id in
+                openID = id
+                inviting = nil
+              },
               onNew: { path.append(.newGroup) }, onScan: onScan)
             GroupHub(group: open) {
               path.append(.invite(open))
@@ -85,6 +93,9 @@ struct GroupsScreen: View {
             .padding(.horizontal, 20)
         }
       }
+      // The app's ground, as the calendar's, which dark mode lifts off black.
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(colors.backgroundBase)
       .toolbarVisibility(.hidden, for: .navigationBar)
       .navigationDestination(for: GroupRoute.self) { route in
         // Pages show the group as it is now, renamed meanwhile or not.
@@ -93,7 +104,9 @@ struct GroupsScreen: View {
         case .newGroup:
           NewGroupPage { made in
             openID = made
+            inviting = made
             path.removeAll()
+            inviteMade()
           }
         case .invite(let group):
           InvitePage(group: live(group))
@@ -110,6 +123,11 @@ struct GroupsScreen: View {
           }
         }
       }
+    }
+    .onChange(of: groups.map(\.id)) { inviteMade() }
+    // Gone somewhere else meanwhile, the person is left there.
+    .onChange(of: path) { _, path in
+      if !path.isEmpty { inviting = nil }
     }
     .environment(\.groupSocket, socket)
     .environment(\.photoGroupID, (groups.first { $0.id == openID } ?? groups.first)?.id ?? "")
@@ -146,6 +164,13 @@ struct GroupsScreen: View {
     openingChat = nil
   }
 
+  /// Opens メンバーを招待 for the group just made, once it is here.
+  private func inviteMade() {
+    guard let id = inviting, let made = groups.first(where: { $0.id == id }) else { return }
+    inviting = nil
+    path = [.invite(made)]
+  }
+
   /// The group open, whose socket is kept.
   private var openGroupID: String? {
     (groups.first { $0.id == openID } ?? groups.first)?.id
@@ -163,10 +188,11 @@ enum GroupRoute: Hashable {
   case chat(GroupRow, thread: String, with: String?)
 }
 
-/// No group yet: what sharing shifts is for, then 作成 and QR参加
-/// (/design's NoGroups). The sample of a shared week comes later.
+/// No group yet: a sample of a shared week and what sharing shifts is for,
+/// then 作成 and QR参加 (/design's NoGroups).
 private struct NoGroups: View {
   @Environment(\.themeColors) private var colors
+  @Environment(Settings.self) private var settings
   let onNew: () -> Void
   let onScan: () -> Void
 
@@ -175,7 +201,16 @@ private struct NoGroups: View {
       Text("グループでシフトを共有できます")
         .font(.title2.bold())
         .multilineTextAlignment(.center)
-      Text("家族や友達とシフトを見せ合って、休みが重なる日がすぐ分かります。")
+      VStack(spacing: 4) {
+        GroupWeekdays(compact: true)
+        GroupWeek(days: week, members: sampleMembers(week), compact: true)
+      }
+      .padding(EdgeInsets(top: 8, leading: 4, bottom: 12, trailing: 8))
+      .background(colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl))
+      .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel("サンプルの共有シフト表")
+      Text("家族や友達とシフトを見せ合って、\n休みが重なる日がすぐ分かります。")
         .font(.subheadline)
         .foregroundStyle(colors.textTertiary)
         .multilineTextAlignment(.center)
@@ -195,10 +230,68 @@ private struct NoGroups: View {
       }
       .buttonStyle(.bordered)
       .buttonBorderShape(.capsule)
-      .tint(colors.textPrimary)
+      .tint(colors.accentDefault)
     }
     .frame(maxHeight: .infinity)
   }
+
+  private var week: [Day] { thisWeek(start: settings.device.week.start) }
+}
+
+/// The sample's people, as /design's: a partner at the office, home on
+/// Wednesdays; a mother part-time on Mondays, Wednesdays and Fridays, both
+/// off on weekends and holidays; a nurse whose week, the same every week,
+/// has Saturday off too, so everyone is off one day.
+private func sampleMembers(_ week: [Day]) -> [GroupMember] {
+  let off = sample("off", "休み", "🌿", "leaf", 0, off: true)
+  let office = sample("office", "出勤", "💼", "briefcase", 9)
+  let home = sample("home", "在宅", "🏠", "house", 10)
+  let part = sample("part", "パート", "🛒", "shoppingBag", 2)
+  let nurse = ["day", "night", "after", "off"].compactMap(ReadyPatterns.pattern).map { ready in
+    Pattern(
+      id: ready.id, name: ready.name, emoji: ready.emoji, symbol: ready.symbol, icon: ready.icon,
+      color: ready.color, time: ready.time.map { ShiftTime(start: $0.start, end: $0.end) },
+      countsAsOff: ready.countsAsOff)
+  }
+  // Sunday on: 明け, 休み, 日勤, 日勤, 夜勤, 明け, 休み.
+  let nurseWeek = ["after", "off", "day", "day", "night", "after", "off"]
+  let rests = { (day: Day) in day.weekday == 0 || day.weekday == 6 || day.holidayName != nil }
+  let days = { (shift: (Day) -> PatternID) in
+    Dictionary(uniqueKeysWithValues: week.map { ($0, shift($0)) })
+  }
+  return [
+    sampleMember(
+      "yuki", "ゆうき", face: 1005,
+      MemberCalendar(
+        patterns: [office, home, off],
+        days: days { rests($0) ? off.id : $0.weekday == 3 ? home.id : office.id })),
+    sampleMember(
+      "mother", "お母さん", face: 429,
+      MemberCalendar(
+        patterns: [part, off],
+        days: days { [1, 3, 5].contains($0.weekday) && $0.holidayName == nil ? part.id : off.id })),
+    sampleMember(
+      "misaki", "みさき", face: 823,
+      MemberCalendar(patterns: nurse, days: days { nurseWeek[$0.weekday] })),
+  ]
+}
+
+/// One of the sample's people, with /design's sample photo of the id, held
+/// in the app as SampleFace〈id〉.
+private func sampleMember(_ id: String, _ name: String, face: Int, _ calendar: MemberCalendar)
+  -> GroupMember
+{
+  var member = GroupMember(userID: id, name: name, calendar: calendar)
+  member.photoID = "\(samplePhoto)SampleFace\(face)"
+  return member
+}
+
+private func sample(
+  _ id: String, _ name: String, _ emoji: String, _ icon: String, _ color: Int, off: Bool = false
+) -> Pattern {
+  Pattern(
+    id: id, name: name, emoji: emoji, symbol: String(name.prefix(1)), icon: icon, color: color,
+    countsAsOff: off)
 }
 
 /// The groups down the left edge, as the messaging apps' server rails: a
@@ -230,12 +323,12 @@ private struct GroupRail: View {
             onOpen(group.id)
           } label: {
             GroupMark(mark: group.mark, shelf: group.id, isOpen: isOpen)
-              .frame(width: 58, height: 46)
+              .frame(width: 60, height: 48)
               .overlay(alignment: .leading) {
                 // The flag at the edge, by the open group.
                 UnevenRoundedRectangle(bottomTrailingRadius: Radius.xs, topTrailingRadius: Radius.xs)
                   .fill(colors.accentDefault)
-                  .frame(width: 4, height: isOpen ? 30 : 0)
+                  .frame(width: 4, height: isOpen ? 32 : 0)
               }
               .overlay(alignment: .bottomTrailing) {
                 // Its chats' unread, ringed in the rail's ground.
@@ -261,14 +354,14 @@ private struct GroupRail: View {
           .labelStyle(.iconOnly)
           .font(.title3)
           .foregroundStyle(colors.accentDefault)
-          .frame(width: 42, height: 42)
+          .frame(width: 44, height: 44)
           .background(colors.backgroundCard, in: Circle())
           .buttonStyle(.plain)
         Button("QRコードで参加", systemImage: "qrcode.viewfinder", action: onScan)
           .labelStyle(.iconOnly)
           .font(.title3)
           .foregroundStyle(colors.accentDefault)
-          .frame(width: 42, height: 42)
+          .frame(width: 44, height: 44)
           .background(colors.backgroundCard, in: Circle())
           .buttonStyle(.plain)
       }
@@ -278,7 +371,7 @@ private struct GroupRail: View {
     .scrollIndicators(.hidden)
     // The last of many groups can rise clear of the fade.
     .contentMargins(.bottom, barTop + Self.fade, for: .scrollContent)
-    .frame(width: 58)
+    .frame(width: 60)
     .background(
       colors.fillQuaternary,
       in: UnevenRoundedRectangle(topTrailingRadius: Radius.xl)
@@ -312,7 +405,7 @@ private struct GroupMark: View {
 
   var body: some View {
     let shape = RoundedRectangle(cornerRadius: isOpen ? Radius.md : Radius.lg)
-    GroupMarkView(mark: mark, size: 42, shelf: shelf)
+    GroupMarkView(mark: mark, size: 44, shelf: shelf)
       .background(isOpen ? colors.accentContainer : colors.backgroundCard, in: shape)
       .clipShape(shape)
       .overlay {

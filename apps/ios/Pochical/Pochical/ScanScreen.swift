@@ -8,7 +8,9 @@ import SwiftUI
 /// QRコードで参加 (/design's ScanPage): the camera reads a group's QR code
 /// in the frame, or 写真から読み取る reads one from a picture, and an
 /// invitation's opens its join screen. Anything else says what it was and
-/// lets the person try again: the camera keeps looking, as camera apps do.
+/// lets the person try again, for a moment as a toast does: the camera
+/// keeps looking, as camera apps do. An invitation that no longer works is
+/// told by its join screen, which stays.
 struct ScanScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -16,6 +18,9 @@ struct ScanScreen: View {
   let onInvite: (OpenedInvite) -> Void
   @State private var photo: PhotosPickerItem?
   @State private var problem: String?
+  /// Problems told so far, so only the last one's goes once its moment
+  /// has passed.
+  @State private var problems = 0
   /// Whether the camera may be used, known once the person has answered:
   /// the camera starts only then, or it would run without its picture.
   @State private var camera = AVCaptureDevice.authorizationStatus(for: .video)
@@ -100,7 +105,16 @@ struct ScanScreen: View {
   }
 
   private func show(_ text: String) {
+    problems += 1
+    let told = problems
     withAnimation { problem = text }
+    AccessibilityNotification.Announcement(text).post()
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(2.5))
+      if problems == told {
+        withAnimation { problem = nil }
+      }
+    }
   }
 }
 

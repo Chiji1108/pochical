@@ -53,13 +53,13 @@ export const markFrame = cva({
     borderRadius: "lg",
     display: "grid",
     fontFamily: "emoji",
-    fontSize: "22px",
-    height: "42px",
+    fontSize: "23px",
+    height: "44px",
     overflow: "hidden",
     placeItems: "center",
     position: "relative",
     transition: "border-radius 0.15s",
-    width: "42px",
+    width: "44px",
   },
   variants: {
     size: {
@@ -146,11 +146,6 @@ export const hub = {
     placeItems: "center",
     width: "28px",
   }),
-  editMark: css({
-    display: "grid",
-    margin: "4px 0 20px",
-    placeItems: "center",
-  }),
   header: css({
     alignItems: "center",
     display: "flex",
@@ -197,18 +192,6 @@ export const hub = {
   }),
   qrNote: css({ color: "text.tertiary", textStyle: "caption" }),
   rowIcon: css({ color: "accent.default", flexShrink: 0 }),
-  sectionHead: css({
-    alignItems: "center",
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: "8px",
-  }),
-  sectionHeadTitle: css({
-    color: "text.tertiary",
-    fontWeight: 600,
-    margin: "0 0 0 12px",
-    textStyle: "footnote",
-  }),
   sectionLink: css({
     alignItems: "center",
     bg: "transparent",
@@ -218,7 +201,7 @@ export const hub = {
     fontWeight: 600,
     gap: "1px",
     padding: "0 2px 0 8px",
-    textStyle: "footnote",
+    textStyle: "subheadline",
   }),
   title: css({
     alignItems: "center",
@@ -260,6 +243,12 @@ export const hub = {
     textAlign: "left",
     textStyle: "footnote",
     width: "100%",
+  }),
+  // None, as quiet as 今月のみんな休み's.
+  weekCardNextNone: css({
+    color: "text.tertiary",
+    fontWeight: 600,
+    marginLeft: "auto",
   }),
   weekCardNextValue: css({
     color: "accent.default",
