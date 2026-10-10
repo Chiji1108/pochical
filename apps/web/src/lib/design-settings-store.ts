@@ -57,10 +57,10 @@ export type MonthName = "number" | "english";
 // colors on each tap.
 export type MonthTap = "pick" | "surprise";
 
-// The rest of the person's own screen. Device only.
 // 端末カレンダーに追加's メモも入れる and 一緒に働く人も入れる.
 export type CalendarAdd = { notes: boolean; people: boolean };
 
+// The rest of the person's own screen. Device only.
 export type DeviceSettings = {
   preset: PresetId;
   // シフトの色: each shift in its own color (色分け), or all of them in the

@@ -191,6 +191,10 @@ export function SaveSheet({
   // so adding is a single tap.
   const [calendarId, setCalendarId] = useState(DEFAULT_CALENDAR_ID);
   const [includeOff, setIncludeOff] = useState(false);
+  // 設定を開く stands in for the system's settings, coming back from them
+  // with the calendars allowed, as the notifications' card does.
+  const [allowedThere, setAllowedThere] = useState(false);
+  const refused = access === "denied" && !allowedThere;
   const putting = useSettings((state) => state.device.calendarAdd);
   const setPutting = useSettings((state) => state.setCalendarAdd);
   const toast = useContext(ToastContext);
@@ -254,15 +258,22 @@ export function SaveSheet({
           </div>
         </>
       )}
-      {step === "calendar" && access === "denied" && (
+      {step === "calendar" && refused && (
         <>
           <p className={sheetLead}>
             カレンダーへのアクセスが許可されていません。設定アプリで、ポチカルにカレンダーへのフルアクセスを許可してください。
           </p>
-          <Button variant="primary">設定を開く</Button>
+          <Button
+            onClick={() => {
+              setAllowedThere(true);
+            }}
+            variant="primary"
+          >
+            設定を開く
+          </Button>
         </>
       )}
-      {step === "calendar" && access !== "denied" && (
+      {step === "calendar" && !refused && (
         <>
           <p className={sheetLead}>
             {monthLabel}のシフトを、1日ずつ予定として入れます。
