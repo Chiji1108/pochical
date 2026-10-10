@@ -10,7 +10,12 @@ import { Avatar, cornerMonth, Mark, toneColor } from "./design-group-parts";
 import { offTile, pickedFrame } from "./design-group-shifts-parts";
 import { shortMonthOf } from "./design-month-name";
 import { srOnly } from "./design-ui";
-import { useWeek, weekLength } from "./design-week";
+import {
+  englishWeekdayNames,
+  useWeek,
+  weekdayNames,
+  weekLength,
+} from "./design-week";
 
 // 週ごと: the shift table as weeks, a row per member under each week's
 // dates, also the group hub's glance at this week.
@@ -226,6 +231,7 @@ function WeekDate({
   picked,
   compact,
   onPick,
+  marksToday,
 }: {
   date: Date;
   members: Member[];
@@ -234,6 +240,7 @@ function WeekDate({
   // In the hub card's small week, as its cells are.
   compact: boolean;
   onPick?: (date: Date) => void;
+  marksToday: boolean;
 }) {
   const weekTools = useWeek();
   const look = {
@@ -251,7 +258,7 @@ function WeekDate({
       ? `${date.getMonth() + 1}/1`
       : date.getDate();
   const label =
-    dateKey(date) === dateKey(designToday) ? (
+    marksToday && dateKey(date) === dateKey(designToday) ? (
       <span className={todayMark}>{name}</span>
     ) : (
       name
@@ -339,6 +346,7 @@ export function MemberTable({
   onMember,
   onPickDay,
   picked,
+  upcoming = false,
 }: {
   group: Group;
   dates: Date[];
@@ -354,8 +362,25 @@ export function MemberTable({
   // Picks a day to list everyone's shifts with names.
   onPickDay?: (date: Date) => void;
   picked?: Date;
+  // From today rather than the week's start, as the hub's これから: each
+  // column heads with its own weekday, in English three capitals (THU),
+  // as one letter could not tell Tuesday from Thursday, and today, always
+  // the first, needs no accent (spec/widgets.md, これから).
+  upcoming?: boolean;
 }) {
   const weekTools = useWeek();
+  const heads = upcoming
+    ? dates.map((date) => {
+        const day = date.getDay();
+        const tone =
+          weekTools.weekdays.find((weekday) => weekday.day === day)?.tone ??
+          "plain";
+        const label = weekTools.english
+          ? englishWeekdayNames[day].toUpperCase()
+          : weekdayNames[day];
+        return { day, label, tone };
+      })
+    : weekTools.weekdays;
   const weeks = Array.from({ length: dates.length / weekLength }, (_, row) =>
     dates.slice(row * weekLength, (row + 1) * weekLength)
   );
@@ -376,7 +401,7 @@ export function MemberTable({
             ? shortMonthOf(month, weekTools.english)
             : ""}
         </span>
-        {weekTools.weekdays.map((day) => (
+        {heads.map((day) => (
           <span className={toneColor[day.tone]} key={day.day}>
             {day.label}
           </span>
@@ -387,6 +412,7 @@ export function MemberTable({
           <WeekBlock
             compact={compact}
             group={group}
+            marksToday={!upcoming}
             key={dateKey(week[0])}
             month={month}
             onMember={onMember}
@@ -408,12 +434,15 @@ export function WeekBlock({
   picked,
   onMember,
   onPickDay,
+  marksToday = true,
 }: {
   group: Group;
   week: Date[];
   month?: Date;
   compact?: boolean;
   picked?: Date;
+  // Today in the accent; not where it is always the first column.
+  marksToday?: boolean;
   onMember?: (member: Member) => void;
   onPickDay?: (date: Date) => void;
 }) {
@@ -433,6 +462,7 @@ export function WeekBlock({
           <WeekDate
             compact={compact}
             date={date}
+            marksToday={marksToday}
             key={dateKey(date)}
             members={group.members}
             month={month}

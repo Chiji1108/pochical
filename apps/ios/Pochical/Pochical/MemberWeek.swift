@@ -2,11 +2,11 @@ import PochicalDesign
 import PochicalKit
 import SwiftUI
 
-/// Today's week, from the day it starts on (0 for Sunday).
-func thisWeek(start: Int) -> [Day] {
+/// Today and the six days after it, as the hub shows everyone's shifts, so
+/// a weekend is always in sight.
+func upcomingWeek() -> [Day] {
   let today = Day.today
-  let first = today.adding(days: -(((today.weekday - start) % 7 + 7) % 7))
-  return (0..<7).map { first.adding(days: $0) }
+  return (0..<7).map { today.adding(days: $0) }
 }
 
 /// How far ahead the hub looks for the next day everyone is off.
@@ -19,19 +19,21 @@ private func facesWidth(compact: Bool) -> CGFloat {
   compact ? 28 : 34
 }
 
-/// The weekdays over a group's weeks, from the day the week starts on.
+/// The weekdays over a group's weeks, from the day the week starts on, or
+/// over `days` each its own, as the hub's run from today.
 struct GroupWeekdays: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   /// Over the hub's card, beside its narrower faces.
   var compact = false
+  var days: [Day]?
 
   var body: some View {
     let week = settings.device.week
     HStack(spacing: 0) {
       Color.clear.frame(width: facesWidth(compact: compact), height: 1)
       ForEach(0..<7, id: \.self) { index in
-        let weekday = (week.start + index) % 7
+        let weekday = days.map { $0[index].weekday } ?? (week.start + index) % 7
         Text(Day.weekdayNames[weekday])
           .font(.system(size: 10))
           .foregroundStyle(color(of: weekday, week: week))
@@ -67,6 +69,8 @@ struct GroupWeek: View {
   var onPick: ((Day) -> Void)?
   /// The hub's card draws its rows tighter.
   var compact = false
+  /// Today in the accent; not where it is always the first column.
+  var marksToday = true
 
   var body: some View {
     let today = Day.today
@@ -91,7 +95,7 @@ struct GroupWeek: View {
         let column = VStack(spacing: 0) {
           // A month's 1st says its month, where the week runs into it.
           Text(day.day == 1 && day != days[0] ? day.slashText : "\(day.day)")
-            .font(.system(size: 11, weight: day == today ? .heavy : .semibold))
+            .font(.system(size: 11, weight: marksToday && day == today ? .heavy : .semibold))
             .foregroundStyle(dateColor(day, today: today))
             .frame(height: dateHeight)
           ForEach(Array(members.enumerated()), id: \.element.id) { index, member in
@@ -140,7 +144,7 @@ struct GroupWeek: View {
   /// Today in the accent; else Sundays, Saturdays and holidays in their
   /// colors as the calendar has them.
   private func dateColor(_ day: Day, today: Day) -> Color {
-    if day == today {
+    if marksToday, day == today {
       return colors.accentDefault
     }
     let week = settings.device.week
@@ -177,10 +181,9 @@ struct GroupWeek: View {
   }
 }
 
-/// This week for everyone in the group on the hub's card (/design's
-/// MemberTable, compact), then the next day everyone is off.
+/// The next seven days for everyone in the group on the hub's card
+/// (/design's MemberTable, compact), then the next day everyone is off.
 struct MemberWeek: View {
-  @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   let members: [GroupMember]
   /// Opens the group's month, on a day when one is given.
@@ -188,14 +191,14 @@ struct MemberWeek: View {
 
   var body: some View {
     let today = Day.today
-    let days = thisWeek(start: settings.device.week.start)
+    let days = upcomingWeek()
     VStack(spacing: 4) {
       Button {
         onOpen(nil)
       } label: {
         VStack(spacing: 4) {
-          GroupWeekdays(compact: true)
-          GroupWeek(days: days, members: members, compact: true)
+          GroupWeekdays(compact: true, days: days)
+          GroupWeek(days: days, members: members, compact: true, marksToday: false)
         }
         .contentShape(.rect)
       }
