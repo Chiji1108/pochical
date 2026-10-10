@@ -115,8 +115,8 @@ function useNowWords() {
 }
 
 // The small one's ring, round its mark between the words.
-const SMALL_RING_SIZE = 84;
-const SMALL_RING_STROKE = 7;
+const SMALL_RING_SIZE = 76;
+const SMALL_RING_STROKE = 6;
 
 const now = {
   // The time left, large, on one line, shrinking to the widget's width.
