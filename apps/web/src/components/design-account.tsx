@@ -70,14 +70,15 @@ export function ProviderLogo({
   );
 }
 
-// The two ways in, in each provider's own colors as their guidelines ask:
-// Apple's black (white in dark mode), Google's white with an outline.
+// The ways in, in each provider's own colors as their guidelines ask:
+// Apple's black (white in dark mode), Google's white with an outline;
+// round-ended, as the iOS app's Sign in with Apple button.
 const providerButton = {
   button: cva({
     base: {
       _disabled: { opacity: 0.6 },
       alignItems: "center",
-      borderRadius: "lg",
+      borderRadius: "full",
       display: "flex",
       fontWeight: 600,
       gap: "12px",
@@ -112,7 +113,8 @@ const providerButton = {
 // How long the prototype pretends the provider's sign-in takes.
 export const signInMilliseconds = 900;
 
-// Apple, then Google, each saying ログイン中… while its sign-in runs.
+// Apple, then Google, on both platforms, each saying ログイン中… while its
+// sign-in runs.
 export function ProviderButtons({
   busy,
   onPick,

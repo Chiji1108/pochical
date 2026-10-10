@@ -13,11 +13,18 @@ extension View {
     modifier(SettingsRows())
   }
 
+  /// The page's main button, as the system draws a prominent one (/design's
+  /// primary): the accent's fill, a capsule, its height the system's own.
+  /// Its label takes the width it is given.
+  func mainButton(_ size: ControlSize = .large) -> some View {
+    modifier(MainButton(size: size))
+  }
+
   /// A row standing on the page itself, as /design's segments and cards
   /// do, between the same margins as the cards of rows.
   func settingsOnPage() -> some View {
     listRowBackground(Color.clear)
-      .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+      .listRowInsets(EdgeInsets())
   }
 }
 
@@ -36,5 +43,19 @@ private struct SettingsRows: ViewModifier {
 
   func body(content: Content) -> some View {
     content.listRowBackground(colors.fillQuaternary)
+  }
+}
+
+private struct MainButton: ViewModifier {
+  @Environment(\.themeColors) private var colors
+  let size: ControlSize
+
+  func body(content: Content) -> some View {
+    content
+      .buttonStyle(.borderedProminent)
+      .buttonBorderShape(.capsule)
+      .controlSize(size)
+      .tint(colors.accentFill)
+      .foregroundStyle(colors.accentOnFill)
   }
 }

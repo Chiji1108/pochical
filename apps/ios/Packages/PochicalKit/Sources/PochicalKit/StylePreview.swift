@@ -35,3 +35,11 @@ func sampleSequence(of patterns: [Pattern]) -> [PatternID] {
   }
   return sequence
 }
+
+/// The marks the テーマ and シフトの色 choices show side by side
+/// (/design's useOwnSamples().week): the preview's run, each pattern once,
+/// the first four.
+public func styleSamples(of patterns: [Pattern]) -> [PatternID] {
+  var seen = Set<PatternID>()
+  return Array(sampleSequence(of: patterns).filter { seen.insert($0).inserted }.prefix(4))
+}

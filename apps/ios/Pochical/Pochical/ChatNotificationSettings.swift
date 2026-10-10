@@ -72,9 +72,7 @@ struct ChatNotificationsPage: View {
           }
         }
       } header: {
-        if directOff?.isEmpty == false {
-          Text("個人チャット")
-        }
+        Text("個人チャット")
       } footer: {
         Text("個人チャットの通知は、それぞれのチャットの右上のメニューでオフにできます。")
       }
@@ -282,9 +280,9 @@ struct PermissionCard: View {
       HStack(alignment: .top, spacing: 12) {
         Image(systemName: denied ? "bell.slash" : "bell")
           .font(.system(size: 18, weight: .semibold))
-          .foregroundStyle(colors.accentOnFill)
+          .foregroundStyle(colors.accentDefault)
           .frame(width: 40, height: 40)
-          .background(colors.accentFill, in: Circle())
+          .background(colors.accentContainer, in: Circle())
           .accessibilityHidden(true)
         VStack(alignment: .leading, spacing: 4) {
           Text(denied ? "通知がオフになっています" : "通知はまだオフです")
@@ -293,11 +291,11 @@ struct PermissionCard: View {
           Text(
             denied
               ? "スマホの設定で、ポチカルの通知をオンにしてください。"
-              : "オンにすると、チャットのメッセージが届きます。"
+              : "オンにすると、リマインドとチャットのメッセージが届きます。"
           )
           .font(.footnote)
-          .foregroundStyle(colors.textSecondary)
-          Button(denied ? "設定を開く" : "通知をオンにする") {
+          .foregroundStyle(colors.textTertiary)
+          Button {
             if denied {
               if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                 openURL(url)
@@ -305,15 +303,16 @@ struct PermissionCard: View {
             } else {
               Notifications.shared.askOnce()
             }
+          } label: {
+            Text(denied ? "設定を開く" : "通知をオンにする").frame(maxWidth: .infinity)
           }
-          .buttonStyle(.bordered)
-          .controlSize(.small)
+          .mainButton(.regular)
           .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
       }
       .padding(16)
-      .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.lg))
+      .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
       .settingsOnPage()
     }
   }

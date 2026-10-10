@@ -40,7 +40,7 @@ struct AccountRow: View {
 /// アプリアイコン row shows its icon.
 private struct ProviderName: View {
   var body: some View {
-    HStack(spacing: 6) {
+    HStack(spacing: 8) {
       Image(systemName: "apple.logo")
       Text("Apple")
     }
@@ -77,7 +77,15 @@ struct AccountPage: View {
             Text(linked.email ?? "")
               .foregroundStyle(colors.textTertiary)
           } label: {
-            ProviderName()
+            HStack(spacing: 12) {
+              Image(systemName: "apple.logo")
+                .font(.system(size: 16))
+                .foregroundStyle(colors.textPrimary)
+                .frame(width: 30, height: 30)
+                .background(colors.backgroundCard, in: Circle())
+                .accessibilityHidden(true)
+              Text("Apple")
+            }
           }
         } header: {
           Text("ログイン中")

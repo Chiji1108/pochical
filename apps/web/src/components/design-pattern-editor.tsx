@@ -16,12 +16,19 @@ import {
   TimeRange,
 } from "./design-fields";
 import { BackButton, HeaderAction, PageHeader } from "./design-header";
-import { List, ListDivider, ListRow, listRow, SwitchRow } from "./design-list";
+import {
+  AddRow,
+  List,
+  ListDivider,
+  ListRow,
+  listRow,
+  SwitchRow,
+} from "./design-list";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";
 import { SortableList } from "./design-sortable-list";
-import { AddButton, DestructiveButton, Note, Section } from "./design-ui";
+import { DestructiveButton, Note, Section } from "./design-ui";
 import {
   guessLook,
   MarkGlyph,
@@ -263,13 +270,14 @@ export function PatternsPage({
         </List>
       )}
       {!sorting && (
-        <AddButton
-          onClick={() => {
-            setView("add");
-          }}
-        >
-          パターンを追加
-        </AddButton>
+        <List>
+          <AddRow
+            label="パターンを追加"
+            onClick={() => {
+              setView("add");
+            }}
+          />
+        </List>
       )}
       {!sorting && (
         <Section title="仕事">

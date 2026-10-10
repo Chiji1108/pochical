@@ -28,7 +28,7 @@ struct RemindersPage: View {
     let calendar = OwnCalendar(
       days: days, patterns: patternRows, patternOrder: patternOrder, orders: orders)
     List {
-      PermissionSection()
+      PermissionCard()
       Section {
         ForEach($settings.device.reminders) { $reminder in
           row($reminder, calendar: calendar)
@@ -117,38 +117,6 @@ struct RemindersPage: View {
     days: calendar.shown(from: today, through: through), patterns: calendar.patternsByID,
     from: today, through: through
   ).first { (ReminderSchedule.date(of: $0) ?? .distantPast) > now }
-}
-
-/// Over a page of notifications while nothing can arrive (/design's
-/// PermissionCard): before asking, a way to allow; once refused, the way
-/// to the system's settings, which alone can allow it then.
-struct PermissionSection: View {
-  @Environment(\.openURL) private var openURL
-
-  var body: some View {
-    switch Notifications.shared.permission {
-    case .allowed:
-      EmptyView()
-    case .notAsked:
-      Section {
-        Button("通知を許可") { Notifications.shared.askOnce() }
-      } footer: {
-        Text("通知を許可するまで、リマインドは届きません。")
-      }
-      .settingsRows()
-    case .denied:
-      Section {
-        Button("設定を開く") {
-          if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
-            openURL(url)
-          }
-        }
-      } footer: {
-        Text("通知がオフになっています。設定アプリでポチカルの通知をオンにすると届きます。")
-      }
-      .settingsRows()
-    }
-  }
 }
 
 /// Adding or changing a reminder: when it goes off, the shifts it goes off
@@ -346,7 +314,7 @@ struct NotificationBanner: View {
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
     .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.xxl))
-    .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
+    .shadow(Shadow.md)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("通知：\(title)")
   }

@@ -379,14 +379,15 @@ function SettingsTop({
             onOpen("appearance");
           }}
         />
-        <AppIconRow
-          onOpen={() => {
-            onOpen("appIcon");
-          }}
-        />
         <WeekRow
           onOpen={() => {
             onOpen("week");
+          }}
+        />
+        {/* Outside the app, and changed least, so last. */}
+        <AppIconRow
+          onOpen={() => {
+            onOpen("appIcon");
           }}
         />
       </ListSection>

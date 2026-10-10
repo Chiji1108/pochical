@@ -1,5 +1,5 @@
 import { Switch } from "@ark-ui/react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { createContext, useId } from "react";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
@@ -154,6 +154,8 @@ export const listRow = {
   // In the arrow's place on a row that adds rather than opens: a plus in
   // the accent, told apart from the gray arrows of rows that go on.
   add: css({ color: "accent.default", flexShrink: 0, marginRight: "-4px" }),
+  // A row that adds one more to its list, all in the accent.
+  adds: css({ "& > *": { color: "accent.default" }, color: "accent.default" }),
   label: css({
     "& small": { color: "text.tertiary", textStyle: "caption" },
     display: "flex",
@@ -470,5 +472,26 @@ export function SwitchRow({
       </Switch.Label>
       <ToggleParts />
     </Switch.Root>
+  );
+}
+
+// Adding one more to a list, as the last row of its card or a card of its
+// own: a plus where an icon goes and the words after it, both in the
+// accent, as iOS's add rows (リマインドを追加, パターンを追加).
+export function AddRow({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <ListRow
+      arrow={false}
+      className={listRow.adds}
+      label={label}
+      leading={<Plus aria-hidden="true" size={20} />}
+      onClick={onClick}
+    />
   );
 }

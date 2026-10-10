@@ -65,11 +65,15 @@ private func sequenceLabel(_ sequence: [PatternID], _ patterns: [PatternID: Patt
   return runs.map { $0.1 > 1 ? "\($0.0)×\($0.1)" : $0.0 }.joined(separator: "・")
 }
 
-/// 設定 › 繰り返し.
+/// 設定 › 繰り返し (/design's RepeatPage): the order in use as a card of
+/// its own, 祝日は休みにする in its own list, then 新しい繰り返しにする as
+/// the page's main button and the rarer two as plain ones under it.
 struct RepeatPage: View {
   @Environment(\.themeColors) private var colors
   @Dependency(\.defaultDatabase) private var database
   @Fetch(WorkValues()) private var values = WorkValues.Value()
+  /// Where a button under the card goes.
+  @State private var going: RepeatGoing?
 
   var body: some View {
     let byID = Dictionary(values.patterns.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -77,37 +81,53 @@ struct RepeatPage: View {
     List {
       if let current {
         Section {
-          VStack(alignment: .leading, spacing: 10) {
-            HStack {
-              Text("今の繰り返し").font(.subheadline.weight(.semibold))
+          VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+              Text("今の繰り返し").font(.footnote.weight(.semibold))
               Spacer()
               Text("\(current.sequence.count)日ごと")
-                .font(.subheadline)
-                .foregroundStyle(colors.textSecondary)
+                .font(.footnote)
+                .foregroundStyle(colors.textTertiary)
             }
+            .padding(.bottom, 12)
             SequenceTiles(sequence: current.sequence, patterns: byID)
             Text("\(current.start.fullText)から")
               .font(.footnote)
               .foregroundStyle(colors.textTertiary)
+              .padding(.top, 12)
           }
-          .padding(.vertical, 4)
+          .padding(16)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
+          .settingsOnPage()
+        }
+        Section {
           Toggle(
             "祝日は休みにする",
             isOn: Binding(get: { current.holidaysOff }, set: setHolidaysOff))
           .disabled(!current.holidaysOff && holidayShift(of: values.patterns) == nil)
-          NavigationLink("新しい繰り返しにする") {
-            RepeatEditor(mode: .switch)
+        }
+        .settingsRows()
+        Section {
+          VStack(spacing: 4) {
+            Button {
+              going = .editor(.switch)
+            } label: {
+              Text("新しい繰り返しにする").frame(maxWidth: .infinity)
+            }
+            .mainButton()
+            .padding(.bottom, 4)
+            Button("今の繰り返しを直す") { going = .editor(.fix) }
+              .frame(maxWidth: .infinity, minHeight: Metrics.touch)
+            Button("繰り返しをやめる") { going = .stop }
+              .frame(maxWidth: .infinity, minHeight: Metrics.touch)
           }
-          NavigationLink("今の繰り返しを直す") {
-            RepeatEditor(mode: .fix)
-          }
-          NavigationLink("繰り返しをやめる") {
-            StopRepeatPage()
-          }
+          .buttonStyle(.borderless)
+          .tint(colors.accentDefault)
+          .settingsOnPage()
         } footer: {
           Text("異動などで順番が変わるときは、切り替える日を選んで新しい繰り返しにします。それより前のシフトは、そのまま残ります。")
         }
-        .settingsRows()
       } else {
         Section {
           NavigationLink {
@@ -136,6 +156,12 @@ struct RepeatPage: View {
     }
     .settingsList()
     .navigationTitle("繰り返し")
+    .navigationDestination(item: $going) { going in
+      switch going {
+      case .editor(let mode): RepeatEditor(mode: mode)
+      case .stop: StopRepeatPage()
+      }
+    }
   }
 
   private func setHolidaysOff(_ on: Bool) {
@@ -380,10 +406,13 @@ private struct StopRepeatPage: View {
           try? database.write { try OwnValues.start(order, now: nowMs(), in: $0) }
           dismiss()
         } label: {
-          Label("\(day.slashText)から繰り返しをやめる", systemImage: "arrow.right")
-            .frame(maxWidth: .infinity)
+          HStack(spacing: 6) {
+            Text("\(day.slashText)から繰り返しをやめる")
+            Image(systemName: "arrow.right")
+          }
+          .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .mainButton()
         .settingsOnPage()
       }
     }
@@ -391,4 +420,10 @@ private struct StopRepeatPage: View {
     .navigationTitle("繰り返しをやめる")
     .navigationBarTitleDisplayMode(.inline)
   }
+}
+
+/// Where a button under 今の繰り返し goes.
+private enum RepeatGoing: Hashable {
+  case editor(RepeatMode)
+  case stop
 }

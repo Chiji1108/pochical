@@ -49,6 +49,7 @@ import {
   PageHeader,
 } from "../components/design-header";
 import {
+  AddRow,
   ListDivider,
   SummaryRow,
   List,
@@ -89,7 +90,6 @@ import { TabBar } from "../components/design-tab-bar";
 import { pageStyle, useThemeStyle } from "../components/design-theme";
 import { toastLook } from "../components/design-toast";
 import {
-  AddButton,
   BarGroup,
   Button,
   DestructiveButton,
@@ -507,13 +507,15 @@ function Buttons() {
         title="そのほかのボタン"
       >
         <Item
-          android="OutlinedButton（点線は独自）"
-          ios="独自の Button スタイル（点線の枠）"
-          name="AddButton"
-          where="リストの下に1つ足す（パターン、同僚）"
+          android="ListItem（leadingContent に Add）"
+          ios="Label の plus（accent の色）"
+          name="AddRow"
+          where="リストに1つ足す（パターン、同僚、リマインド）"
           wide
         >
-          <AddButton onClick={() => undefined}>パターンを追加</AddButton>
+          <List>
+            <AddRow label="パターンを追加" onClick={() => undefined} />
+          </List>
         </Item>
         <Item
           android="TextButton（error の色）"

@@ -26,3 +26,11 @@ private func pattern(_ id: String, off: Bool = false, next: String? = nil) -> Pa
 @Test func withoutPatternsThePreviewIsBlank() {
   #expect(stylePreviewDays([Day(year: 2026, month: 10, day: 4)], patterns: []).isEmpty)
 }
+
+@Test func theChoicesShowEachOfTheRunOnceUpToFour() {
+  let patterns = [
+    pattern("day"), pattern("night", next: "after"), pattern("after"), pattern("late"),
+    pattern("early"), pattern("off", off: true),
+  ]
+  #expect(styleSamples(of: patterns) == ["day", "night", "after", "off"])
+}

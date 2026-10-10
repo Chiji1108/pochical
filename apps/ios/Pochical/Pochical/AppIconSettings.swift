@@ -48,7 +48,7 @@ enum AppIconChoice: String, CaseIterable, Identifiable {
   }
 }
 
-/// アプリアイコン: the icons two across, the one in use outlined. iOS says
+/// アプリアイコン: the icons two across, the one in use framed. iOS says
 /// in its own alert that the icon changed.
 struct AppIconSettings: View {
   @Environment(\.themeColors) private var colors
@@ -58,27 +58,11 @@ struct AppIconSettings: View {
     ScrollView {
       LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
         ForEach(AppIconChoice.allCases) { icon in
-          let isPicked = icon == current
-          Button {
+          ChoiceTile(name: icon.name, picked: icon == current, size: .large) {
             Task { await pick(icon) }
-          } label: {
-            VStack(spacing: 8) {
-              icon.image(size: 104)
-              Text(icon.name)
-                .font(.subheadline)
-                .foregroundStyle(isPicked ? colors.accentDefault : colors.textPrimary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(colors.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.lg))
-            .overlay {
-              RoundedRectangle(cornerRadius: Radius.lg)
-                .strokeBorder(isPicked ? colors.accentDefault : colors.separator, lineWidth: isPicked ? 2 : 1)
-            }
+          } picture: {
+            icon.image(size: 104)
           }
-          .buttonStyle(.plain)
-          .accessibilityLabel(icon.name)
-          .accessibilityAddTraits(isPicked ? .isSelected : [])
         }
       }
       .padding(16)

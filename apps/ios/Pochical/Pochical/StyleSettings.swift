@@ -20,7 +20,7 @@ struct StyleSettings: View {
     let calendar = OwnCalendar(days: [], patterns: patterns, patternOrder: patternOrder, orders: [])
     let work = calendar.patterns.first { !$0.countsAsOff }
     let off = calendar.patterns.first(where: \.countsAsOff)
-    let samples = Array(calendar.patterns.prefix(3))
+    let samples = styleSamples(of: calendar.patterns).compactMap { calendar.patternsByID[$0] }
     Form {
       Section {
         StylePreview(picked: $picked)
@@ -29,7 +29,7 @@ struct StyleSettings: View {
       Section {
         Choices(
           options: Shape.allCases, picked: Shape(settings.device.look),
-          label: \.name
+          label: \.name, size: .regular
         ) { shape in
           if let work {
             ShiftMark(pattern: work, size: 20)
@@ -53,7 +53,7 @@ struct StyleSettings: View {
         Section("シフトの色") {
           Choices(
             options: [true, false], picked: settings.device.look.colored,
-            label: { $0 ? "色分け" : "ワントーン" }
+            label: { $0 ? "色分け" : "ワントーン" }, size: .tall
           ) { colored in
             HStack(spacing: 4) {
               ForEach(samples, id: \.id) { pattern in
@@ -70,7 +70,7 @@ struct StyleSettings: View {
       Section("休みの見せ方") {
         Choices(
           options: OffLook.allCases, picked: OffLook(settings.device.look.options),
-          label: \.name
+          label: \.name, size: .tall
         ) { offLook in
           sample(off) { offLook.apply(to: &$0.options) }
         } onPick: { offLook in
@@ -81,7 +81,7 @@ struct StyleSettings: View {
       Section("シフト名") {
         Choices(
           options: [false, true], picked: settings.device.look.options.names,
-          label: { $0 ? "あり" : "なし" }
+          label: { $0 ? "あり" : "なし" }, size: .tall
         ) { names in
           sample(work) { $0.options.names = names }
         } onPick: { names in
@@ -187,11 +187,26 @@ enum OffLook: CaseIterable, Hashable {
 /// picked one raised on the card's ground, which slides to the next as it
 /// is picked; track and raised ground both round-ended, as iOS 26's.
 struct Choices<Option: Hashable, Sample: View>: View {
+  /// How tall each choice stands (/design's segment sizes): compact for
+  /// names alone, regular for a mark over its name, tall for a day.
+  enum Size {
+    case compact, regular, tall
+
+    var minHeight: CGFloat {
+      switch self {
+      case .compact: Metrics.action
+      case .regular: 62
+      case .tall: 76
+      }
+    }
+  }
+
   @Environment(\.themeColors) private var colors
   @Namespace private var raised
   let options: [Option]
   let picked: Option
   let label: (Option) -> String
+  var size = Size.compact
   @ViewBuilder let sample: (Option) -> Sample
   let onPick: (Option) -> Void
 
@@ -207,11 +222,11 @@ struct Choices<Option: Hashable, Sample: View>: View {
               .allowsHitTesting(false)
               .accessibilityHidden(true)
             Text(label(option))
-              .font(.footnote.weight(isPicked ? .semibold : .regular))
+              .font(.subheadline.weight(isPicked ? .semibold : .regular))
               .foregroundStyle(isPicked ? colors.textPrimary : colors.textSecondary)
           }
           .padding(.vertical, 8)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .frame(maxWidth: .infinity, minHeight: size.minHeight, maxHeight: .infinity)
           // Where the raised ground stands when this one is picked.
           .matchedGeometryEffect(id: option, in: raised, isSource: true)
           .contentShape(Capsule())
@@ -227,7 +242,7 @@ struct Choices<Option: Hashable, Sample: View>: View {
     .background {
       Capsule()
         .fill(colors.backgroundCard)
-        .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+        .shadow(Shadow.sm)
         .matchedGeometryEffect(id: picked, in: raised, isSource: false)
     }
     .padding(4)
@@ -260,6 +275,9 @@ private struct ThemeChoices: View {
               card(theme)
             }
           }
+          // The page clips what it holds: room for the picked tile's
+          // frame at its edges.
+          .padding(2)
           .frame(maxHeight: .infinity, alignment: .top)
           .tag(index)
         }
@@ -277,41 +295,29 @@ private struct ThemeChoices: View {
   private func card(_ theme: Theme) -> some View {
     let isPicked = theme == settings.device.theme
     let own = theme.colors(theme.isAlwaysDark ? .dark : scheme)
-    return Button {
+    return ChoiceTile(name: theme.name, picked: isPicked, size: .small) {
       settings.device.theme = theme
-    } label: {
-      VStack(spacing: 6) {
-        VStack(spacing: 8) {
-          HStack(spacing: 2) {
-            ForEach(samples, id: \.id) { pattern in
-              ShiftMark(pattern: pattern, size: 14)
-            }
-          }
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 8)
-          .background(own.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
-          .overlay(RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(own.separator))
-          HStack(spacing: 4) {
-            Capsule().fill(own.textPrimary).frame(width: 20, height: 4)
-            Capsule().fill(own.accentFill).frame(width: 28, height: 4)
+    } picture: {
+      VStack(spacing: 8) {
+        HStack(spacing: 2) {
+          ForEach(samples, id: \.id) { pattern in
+            ShiftMark(pattern: pattern, size: 14)
           }
         }
-        .padding(8)
-        .padding(.bottom, 4)
-        .background(own.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.lg))
-        .overlay {
-          RoundedRectangle(cornerRadius: Radius.lg)
-            .strokeBorder(isPicked ? colors.accentDefault : own.separator, lineWidth: isPicked ? 2 : 1)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(own.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
+        .overlay(RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(own.separator))
+        HStack(spacing: 4) {
+          Capsule().fill(own.textPrimary).frame(width: 20, height: 4)
+          Capsule().fill(own.accentFill).frame(width: 28, height: 4)
         }
-        .environment(\.themeColors, own)
-        Text(theme.name)
-          .font(.footnote)
-          .foregroundStyle(isPicked ? colors.accentDefault : colors.textSecondary)
       }
-      .frame(maxWidth: .infinity)
+      .padding(8)
+      .padding(.bottom, 4)
+      .background(own.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.lg))
+      .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(own.separator))
+      .environment(\.themeColors, own)
     }
-    .buttonStyle(.plain)
-    .accessibilityLabel(theme.name)
-    .accessibilityAddTraits(isPicked ? .isSelected : [])
   }
 }
