@@ -27,14 +27,25 @@ struct SupportRow: View {
             .lineLimit(1)
         }
         Spacer(minLength: 8)
-        if unread > 0 {
-          Text("\(unread)")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(colors.accentOnFill)
-            .padding(.horizontal, 7)
-            .frame(minWidth: 20, minHeight: 20)
-            .background(colors.accentFill, in: Capsule())
-            .accessibilityLabel("未読\(unread)件")
+        // The latest line's time over the answers not read, as a chat's
+        // row in the hub has them (/design's ChatListRow).
+        if latest != nil || unread > 0 {
+          VStack(alignment: .trailing, spacing: 4) {
+            if let latest {
+              Text(ChatTime.listed(Int64(latest.sentAt.timeIntervalSince1970 * 1000)))
+                .font(.caption2)
+                .foregroundStyle(colors.textQuaternary)
+            }
+            if unread > 0 {
+              Text("\(unread)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(colors.accentOnFill)
+                .padding(.horizontal, 7)
+                .frame(minWidth: 20, minHeight: 20)
+                .background(colors.accentFill, in: Capsule())
+                .accessibilityLabel("未読\(unread)件")
+            }
+          }
         }
       }
     }

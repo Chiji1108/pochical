@@ -20,6 +20,7 @@ import SwiftUI
 /// from above, and the year rolls only when it changes. With reduced
 /// motion they just change.
 struct MonthName: View {
+  @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let position: PagerPosition
@@ -38,10 +39,16 @@ struct MonthName: View {
         .font(.system(size: 11))
         .foregroundStyle(colors.textTertiary)
       HStack(alignment: .firstTextBaseline, spacing: 4) {
-        RollingText(text: String(month.month), coming: String(coming.month), share: share)
-          .font(.system(size: 36, weight: .semibold))
-        Text("月")
-          .font(.system(size: 14, weight: .medium))
+        if english {
+          // A lettered calendar's month, lower case and cut short: sep.
+          RollingText(text: month.headingMonth, coming: coming.headingMonth, share: share)
+            .font(.system(size: 36, weight: .semibold))
+        } else {
+          RollingText(text: String(month.month), coming: String(coming.month), share: share)
+            .font(.system(size: 36, weight: .semibold))
+          Text("月")
+            .font(.system(size: 14, weight: .medium))
+        }
       }
       .foregroundStyle(colors.textPrimary)
     }
@@ -54,6 +61,7 @@ struct MonthName: View {
 /// A month and its year on one line, 2026年9月, rolling as MonthName does
 /// while the pages move (/design's MonthRow under 1人ずつ).
 struct RollingMonthTitle: View {
+  @Environment(\.english) private var english
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let position: PagerPosition
   let monthAt: (Int) -> Day
@@ -65,10 +73,19 @@ struct RollingMonthTitle: View {
     let month = monthAt(page)
     let coming = share > 0 ? monthAt(page + 1) : share < 0 ? monthAt(page - 1) : month
     HStack(alignment: .firstTextBaseline, spacing: 0) {
-      RollingText(text: String(month.year), coming: String(coming.year), share: share)
-      Text("年")
-      RollingText(text: String(month.month), coming: String(coming.month), share: share)
-      Text("月")
+      if english {
+        // September 2026
+        RollingText(
+          text: month.monthTitle(english: true), coming: coming.monthTitle(english: true),
+          share: share)
+        Text(" ")
+        RollingText(text: String(month.year), coming: String(coming.year), share: share)
+      } else {
+        RollingText(text: String(month.year), coming: String(coming.year), share: share)
+        Text("年")
+        RollingText(text: String(month.month), coming: String(coming.month), share: share)
+        Text("月")
+      }
     }
     .font(.title3.bold())
     .accessibilityElement(children: .ignore)

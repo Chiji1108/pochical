@@ -68,7 +68,7 @@ export type DeviceSettings = {
   shiftColors: boolean;
   appearance: Appearance;
   week: WeekSettings;
-  // 月と曜日: the calendar's headings as 9月 and 日, or as sep. and sun.
+  // 月と曜日: the calendar's headings as 9月 and 日, or as sep. and S.
   monthName: MonthName;
   monthTap: MonthTap;
   // Which of おたのしみ's skies is up, kept until the next tap; none until

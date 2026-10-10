@@ -31,6 +31,7 @@ enum ShiftsLayout: Hashable, CaseIterable {
 /// day asked for, else today. A day pressed shows everyone's that day in a sheet
 /// along the bottom, the table left live above it.
 struct GroupShiftsPage: View {
+  @Environment(\.english) private var english
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
@@ -85,7 +86,7 @@ struct GroupShiftsPage: View {
             month: monthInSight, first: months[0], last: months[months.count - 1]
           ) { goal = .month($0) } label: {
             // Quieter than the months' own headings under it.
-            Text(fullMonthName(monthInSight))
+            Text(monthInSight.monthWithYear(english: english))
               .font(.headline)
               .foregroundStyle(colors.textPrimary)
               .contentTransition(.numericText())
@@ -174,7 +175,7 @@ struct GroupShiftsPage: View {
   @ViewBuilder private func heading(_ month: Day) -> some View {
     let today = Day.today
     let thisYear = month.year == today.year
-    let name = thisYear ? month.monthText : month.yearMonthText
+    let name = thisYear ? month.monthTitle(english: english) : month.monthWithYear(english: english)
     let days = month.daysOfMonth
     let offs = members.map { $0.offDays(from: days[0], through: days[days.count - 1]) }
     let together =
@@ -407,11 +408,6 @@ private struct DaySheet: View {
     let moves = [change.early ? "早出" : nil, change.late ? "残業" : nil].compactMap(\.self)
     return "\(moves.joined(separator: "・")) \(hoursText(start, end))"
   }
-}
-
-/// A month with its year, as the pinned row names it: 2026年10月.
-func fullMonthName(_ month: Day) -> String {
-  month.yearMonthText
 }
 
 /// A month's days everyone is off (/design's TogetherSummary): how many,

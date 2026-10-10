@@ -22,6 +22,7 @@ enum DayRowsDensity {
 
 /// The width of a day's date at the start of its row.
 private let dateWidth: CGFloat = 46
+private let englishDateWidth: CGFloat = 56
 
 /// Today's bar at a row's start, where every row keeps the room for it.
 private let todayBar: CGFloat = 3
@@ -73,6 +74,7 @@ struct GroupDayHeader: View {
 /// along the row, date and all, and the picked day framed the same way.
 /// The whole row picks the day.
 struct GroupDayRow: View {
+  @Environment(\.english) private var english
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   let day: Day
@@ -156,12 +158,13 @@ struct GroupDayRow: View {
     return HStack(alignment: .firstTextBaseline, spacing: 3) {
       Text("\(day.day)")
         .font(.system(size: 12, weight: day == Day.today ? .heavy : .semibold))
-      Text(day.weekdayName)
+      Text(day.weekdayName(english: english))
         .font(.system(size: 9))
     }
     .foregroundStyle(tone)
     .padding(.leading, 12)
-    .frame(width: dateWidth, alignment: .leading)
+    // Thu takes more room than 木.
+    .frame(width: english ? englishDateWidth : dateWidth, alignment: .leading)
   }
 
   private func cell(_ pattern: Pattern?, change: TimeChange?, names: Bool, tiled: Bool)

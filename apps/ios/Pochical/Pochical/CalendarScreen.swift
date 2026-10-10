@@ -636,6 +636,7 @@ struct CalendarScreen: View {
 /// The weekday names over the pages, from the week start, Sundays and
 /// Saturdays in their colors unless the person turned them off.
 struct WeekdayRow: View {
+  @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
   let week: DeviceSettings.Week
   /// Closer to the days, as a picture of the month draws it.
@@ -645,7 +646,7 @@ struct WeekdayRow: View {
     HStack(spacing: 4) {
       ForEach(0..<7, id: \.self) { index in
         let weekday = (week.start + index) % 7
-        Text(Day.weekdayNames[weekday])
+        Text(Day.weekdayLetter(weekday, english: english))
           .font(.system(size: 11))
           .foregroundStyle(color(of: weekday))
           .frame(maxWidth: .infinity)

@@ -32,6 +32,7 @@ struct PollLine {
 /// your 行ける. Its writer settles it with 日にちを決める; the day stays
 /// marked, the rest fade, and the poll is pinned over the chat.
 struct PollCard: View {
+  @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   let days: [Day]
@@ -101,7 +102,7 @@ struct PollCard: View {
       VStack(alignment: .leading, spacing: 0) {
         HStack(alignment: .firstTextBaseline, spacing: 2) {
           Text(day.slashText).font(.system(size: 13, weight: .semibold))
-          Text(day.weekdayName).font(.system(size: 10))
+          Text(day.weekdayName(english: english)).font(.system(size: 10))
         }
         .foregroundStyle(dayTone(day))
         if together(day) {
