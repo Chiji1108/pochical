@@ -16,10 +16,13 @@ const addGroup = async (
   inviteCode: string,
   mark: { emoji?: string; icon?: string; color?: number }
 ): Promise<void> => {
-  await env.GROUPS.getByName(groupId).setProfile({
-    mark: { color: 0, emoji: "", icon: "", letter: "", photoId: "", ...mark },
-    name: "同期",
-  });
+  await env.GROUPS.getByName(groupId).setProfile(
+    {
+      mark: { color: 0, emoji: "", icon: "", letter: "", photoId: "", ...mark },
+      name: "同期",
+    },
+    "u"
+  );
   await db.insert(invites).values({ code: inviteCode, groupId });
 };
 

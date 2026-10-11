@@ -61,7 +61,20 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   public var hidden = false
   /// The line it answers (返信), by its seq in the same chat.
   public var replyTo: Int64?
+  /// A line from the app, as JSON, `LineNotice`; empty for a message.
+  var noticeJSON = ""
   public var id: Int64 { seq }
+
+  /// What happened to the group, for a line from the app (spec/chat.md,
+  /// Notices).
+  public var notice: LineNotice? {
+    get { try? JSONDecoder().decode(LineNotice.self, from: Data(noticeJSON.utf8)) }
+    set {
+      noticeJSON =
+        newValue.flatMap { try? JSONEncoder().encode($0) }
+        .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+    }
+  }
 
   /// Its first link's page, under its words.
   public var preview: LinePreview? {
@@ -355,6 +368,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the app's notices among the lines") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "noticeJSON" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+    }
     registerMigration("Keep the photos that could not be sent") { db in
       try #sql(
         """
@@ -413,6 +434,7 @@ public enum Chats {
     row.preview = line.hasPreview ? LinePreview(line.preview) : nil
     row.hidden = line.hidden
     row.replyTo = line.replyTo == 0 ? nil : Int64(line.replyTo)
+    row.notice = line.hasNotice ? LineNotice(line.notice) : nil
     try ChatLineRow.insert { row }.execute(db)
   }
 
@@ -568,7 +590,8 @@ public struct ChatState: Hashable, Sendable {
   /// How many of others' lines `me` has not read yet.
   public func unread(by me: String) -> Int {
     let read = lastRead(by: me)
-    return lines.count { $0.seq > read && $0.authorID != me }
+    // The app's notices are told, not counted.
+    return lines.count { $0.seq > read && $0.authorID != me && $0.notice == nil }
   }
 }
 
@@ -841,7 +864,7 @@ extension Chats {
     let read = max(mark, ownRead)
     return try ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq > read
-        && $0.authorID.neq(me) && !$0.hidden
+        && $0.authorID.neq(me) && !$0.hidden && $0.noticeJSON.eq("")
     }
     .select(\.text).fetchAll(db)
   }
@@ -891,4 +914,55 @@ extension Chats {
 /// A photo as the wire carries it.
 func linePhoto(_ photo: Pochical_V1_ChatPhoto) -> LinePhoto {
   LinePhoto(id: photo.id, width: Int(photo.width), height: Int(photo.height))
+}
+
+/// A line from the app in 全体チャット (spec/chat.md, Notices): what changed
+/// the group, its line's author being who did it.
+public struct LineNotice: Codable, Hashable, Sendable {
+  public enum Kind: String, Codable, Sendable {
+    case joined, left, removed, inviteRemade, profileChanged
+  }
+  public var kind: Kind
+  /// Who was taken out.
+  public var subjectID = ""
+  /// The group's new name, when it changed.
+  public var name = ""
+  /// The group's icon changed.
+  public var markChanged = false
+
+  public init(kind: Kind, subjectID: String = "", name: String = "", markChanged: Bool = false) {
+    self.kind = kind
+    self.subjectID = subjectID
+    self.name = name
+    self.markChanged = markChanged
+  }
+
+  init?(_ wire: Pochical_V1_ChatNotice) {
+    let kinds: [Pochical_V1_ChatNotice.Kind: Kind] = [
+      .joined: .joined, .left: .left, .removed: .removed, .inviteRemade: .inviteRemade,
+      .profileChanged: .profileChanged,
+    ]
+    guard let kind = kinds[wire.kind] else { return nil }
+    self.init(
+      kind: kind, subjectID: wire.subjectID, name: wire.name, markChanged: wire.markChanged)
+  }
+
+  /// Its words, `by` and `subject` the names the group shows now (/design's
+  /// notices).
+  public func words(by: String, subject: String) -> String {
+    switch kind {
+    case .joined: "\(by)がグループに参加しました"
+    case .left: "\(by)がグループを抜けました"
+    case .removed: "\(by)が\(subject)をグループから外しました"
+    case .inviteRemade: "\(by)が招待リンクを作り直しました"
+    case .profileChanged:
+      if !name.isEmpty && markChanged {
+        "\(by)がグループ名を「\(name)」にして、アイコンを変更しました"
+      } else if !name.isEmpty {
+        "\(by)がグループ名を「\(name)」に変更しました"
+      } else {
+        "\(by)がグループのアイコンを変更しました"
+      }
+    }
+  }
 }

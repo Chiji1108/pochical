@@ -162,6 +162,13 @@
       "when": 1791698548399,
       "tag": "0022_member_removed_by",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1791707767438,
+      "tag": "0023_chat_notices",
+      "breakpoints": true
     }
   ]
 }

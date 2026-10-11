@@ -1238,6 +1238,83 @@ public  final class ChatLine extends
     replyTo_ = 0L;
   }
 
+  public static final int NOTICE_FIELD_NUMBER = 19;
+  private app.pochical.v1.ChatNotice notice_;
+  /**
+   * <pre>
+   * A line from the app in 全体チャット, not a message (spec/chat.md,
+   * Notices): author_id is who did it. It has no words, takes no
+   * reactions, replies or pins, and is never unread.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   */
+  @java.lang.Override
+  public boolean hasNotice() {
+    return ((bitField0_ & 0x00000004) != 0);
+  }
+  /**
+   * <pre>
+   * A line from the app in 全体チャット, not a message (spec/chat.md,
+   * Notices): author_id is who did it. It has no words, takes no
+   * reactions, replies or pins, and is never unread.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatNotice getNotice() {
+    return notice_ == null ? app.pochical.v1.ChatNotice.getDefaultInstance() : notice_;
+  }
+  /**
+   * <pre>
+   * A line from the app in 全体チャット, not a message (spec/chat.md,
+   * Notices): author_id is who did it. It has no words, takes no
+   * reactions, replies or pins, and is never unread.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   */
+  private void setNotice(app.pochical.v1.ChatNotice value) {
+    java.util.Objects.requireNonNull(value);
+    notice_ = value;
+    bitField0_ |= 0x00000004;
+  }
+  /**
+   * <pre>
+   * A line from the app in 全体チャット, not a message (spec/chat.md,
+   * Notices): author_id is who did it. It has no words, takes no
+   * reactions, replies or pins, and is never unread.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergeNotice(app.pochical.v1.ChatNotice value) {
+    java.util.Objects.requireNonNull(value);
+    if (notice_ != null &&
+        notice_ != app.pochical.v1.ChatNotice.getDefaultInstance()) {
+      notice_ =
+        app.pochical.v1.ChatNotice.newBuilder(notice_).mergeFrom(value).buildPartial();
+    } else {
+      notice_ = value;
+    }
+    bitField0_ |= 0x00000004;
+  }
+  /**
+   * <pre>
+   * A line from the app in 全体チャット, not a message (spec/chat.md,
+   * Notices): author_id is who did it. It has no words, takes no
+   * reactions, replies or pins, and is never unread.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   */
+  private void clearNotice() {
+    notice_ = null;
+    bitField0_ = (bitField0_ & ~0x00000004);
+  }
+
   public static app.pochical.v1.ChatLine parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -2607,6 +2684,89 @@ public  final class ChatLine extends
       return this;
     }
 
+    /**
+     * <pre>
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): author_id is who did it. It has no words, takes no
+     * reactions, replies or pins, and is never unread.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     */
+    @java.lang.Override
+    public boolean hasNotice() {
+      return instance.hasNotice();
+    }
+    /**
+     * <pre>
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): author_id is who did it. It has no words, takes no
+     * reactions, replies or pins, and is never unread.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatNotice getNotice() {
+      return instance.getNotice();
+    }
+    /**
+     * <pre>
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): author_id is who did it. It has no words, takes no
+     * reactions, replies or pins, and is never unread.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     */
+    public Builder setNotice(app.pochical.v1.ChatNotice value) {
+      copyOnWrite();
+      instance.setNotice(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): author_id is who did it. It has no words, takes no
+     * reactions, replies or pins, and is never unread.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     */
+    public Builder setNotice(
+        app.pochical.v1.ChatNotice.Builder builderForValue) {
+      copyOnWrite();
+      instance.setNotice(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): author_id is who did it. It has no words, takes no
+     * reactions, replies or pins, and is never unread.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     */
+    public Builder mergeNotice(app.pochical.v1.ChatNotice value) {
+      copyOnWrite();
+      instance.mergeNotice(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): author_id is who did it. It has no words, takes no
+     * reactions, replies or pins, and is never unread.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     */
+    public Builder clearNotice() {  copyOnWrite();
+      instance.clearNotice();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatLine)
   }
   @java.lang.Override
@@ -2644,12 +2804,13 @@ public  final class ChatLine extends
             "preview_",
             "hidden_",
             "replyTo_",
+            "notice_",
           };
           java.lang.String info =
-              "\u0000\u0012\u0000\u0001\u0001\u0012\u0012\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
+              "\u0000\u0013\u0000\u0001\u0001\u0013\u0013\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
               "\u0003\u0208\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003" +
               "\u000b\u021a\f\u0007\r\u001b\u000e\u0208\u000f\u1009\u0000\u0010\u1009\u0001\u0011" +
-              "\u0007\u0012\u0003";
+              "\u0007\u0012\u0003\u0013\u1009\u0002";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

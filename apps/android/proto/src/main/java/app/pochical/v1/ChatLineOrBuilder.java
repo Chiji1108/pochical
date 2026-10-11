@@ -329,4 +329,27 @@ public interface ChatLineOrBuilder extends
    * @return The replyTo.
    */
   long getReplyTo();
+
+  /**
+   * <pre>
+   * A line from the app in 全体チャット, not a message (spec/chat.md,
+   * Notices): author_id is who did it. It has no words, takes no
+   * reactions, replies or pins, and is never unread.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   * @return Whether the notice field is set.
+   */
+  boolean hasNotice();
+  /**
+   * <pre>
+   * A line from the app in 全体チャット, not a message (spec/chat.md,
+   * Notices): author_id is who did it. It has no words, takes no
+   * reactions, replies or pins, and is never unread.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   * @return The notice.
+   */
+  app.pochical.v1.ChatNotice getNotice();
 }

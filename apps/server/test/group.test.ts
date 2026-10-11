@@ -11,10 +11,12 @@ import {
   userIdOf,
 } from "./helpers";
 import {
+  changesBesidesNotices,
   changesIn,
   device,
   pair,
   PAIR_ROSTER,
+  rosterIn,
   settled,
   syncSocket,
 } from "./sync-helpers";
@@ -372,7 +374,7 @@ describe("who is in a group, on members' devices", () => {
   it("shows members the group's name and who is in it, live", async () => {
     const { groupId, guest, inviteCode, makerId } = await pair();
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
-    expect(changesIn(await group.frames.next())).toMatchObject([
+    expect(rosterIn(await group.frames.next())).toMatchObject([
       {
         cursor: 1n,
         kind: {
@@ -399,8 +401,11 @@ describe("who is in a group, on members' devices", () => {
       { displayName: "あや", inviteCode },
       newcomer
     );
-    expect(changesIn(await group.frames.next())).toMatchObject([
-      { cursor: 4n, kind: { case: "member", value: { displayName: "あや" } } },
+    expect(rosterIn(await group.frames.next())).toMatchObject([
+      {
+        cursor: PAIR_ROSTER + 1n,
+        kind: { case: "member", value: { displayName: "あや" } },
+      },
     ]);
   });
 });
@@ -422,7 +427,7 @@ describe("changing a group and leaving it", () => {
       guest
     );
     expect(renamed.status).toBe(200);
-    expect(changesIn(await group.frames.next())).toMatchObject([
+    expect(changesBesidesNotices(await group.frames.next())).toMatchObject([
       {
         kind: {
           case: "groupProfile",
@@ -486,7 +491,7 @@ describe("changing a group and leaving it", () => {
     expect(changesIn(await tablet.frames.next())).toMatchObject([
       { kind: { case: "membership", value: { groupId, left: true } } },
     ]);
-    expect(changesIn(await late.frames.next())).toMatchObject([
+    expect(changesBesidesNotices(await late.frames.next())).toMatchObject([
       { kind: { case: "member", value: { left: true } } },
     ]);
   });
@@ -556,7 +561,7 @@ describe("taking a member out", () => {
       { kind: { case: "membership", value: { groupId, left: true } } },
     ]);
     // …and the group says who took them out.
-    expect(changesIn(await group.frames.next())).toMatchObject([
+    expect(changesBesidesNotices(await group.frames.next())).toMatchObject([
       {
         kind: {
           case: "member",

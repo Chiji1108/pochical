@@ -227,8 +227,10 @@ export const registerGroupService = (router: ConnectRouter): void => {
     },
 
     remakeInviteLink: async ({ groupId }, context) => {
-      await requireMember(context, groupId);
+      const by = await requireMember(context, groupId);
       const inviteCode = await issueInviteCode(env.DB, groupId);
+      // Said in the chat: a link someone already sent stops working.
+      await env.GROUPS.getByName(groupId).noteInviteRemade(by);
       return create(RemakeInviteLinkResponseSchema, { inviteCode });
     },
 
@@ -264,7 +266,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
         request.groupId,
         current?.mark.photoId
       );
-      await group.setProfile({ mark, name });
+      await group.setProfile({ mark, name }, userId);
       if (mark.photoId !== "") {
         const { photoId: usualPhoto } =
           await env.USERS.getByName(userId).profileOf();

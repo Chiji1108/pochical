@@ -755,6 +755,51 @@ public object ChatLineKt {
     public fun clearReplyTo() {
       _builder.clearReplyTo()
     }
+
+    /**
+     * ```
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): author_id is who did it. It has no words, takes no
+     * reactions, replies or pins, and is never unread.
+     * ```
+     *
+     * `.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];`
+     */
+    public var notice: app.pochical.v1.ChatNotice
+      @kotlin.jvm.JvmName("getNotice")
+        get() = _builder.notice
+      @kotlin.jvm.JvmName("setNotice")
+        set(value) {
+        _builder.notice = value
+      }
+    /**
+     * ```
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): author_id is who did it. It has no words, takes no
+     * reactions, replies or pins, and is never unread.
+     * ```
+     *
+     * `.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];`
+     */
+    public fun clearNotice() {
+      _builder.clearNotice()
+    }
+    /**
+     * ```
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): author_id is who did it. It has no words, takes no
+     * reactions, replies or pins, and is never unread.
+     * ```
+     *
+     * `.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];`
+     * @return Whether the notice field is set.
+     */
+    public fun hasNotice(): kotlin.Boolean {
+      return _builder.hasNotice()
+    }
+
+    public val ChatLineKt.Dsl.noticeOrNull: app.pochical.v1.ChatNotice?
+      get() = _builder.noticeOrNull
   }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =
@@ -765,4 +810,7 @@ public val app.pochical.v1.ChatLineOrBuilder.photoOrNull: app.pochical.v1.ChatPh
 
 public val app.pochical.v1.ChatLineOrBuilder.previewOrNull: app.pochical.v1.LinkPreview?
   get() = if (hasPreview()) getPreview() else null
+
+public val app.pochical.v1.ChatLineOrBuilder.noticeOrNull: app.pochical.v1.ChatNotice?
+  get() = if (hasNotice()) getNotice() else null
 

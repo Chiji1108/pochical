@@ -156,6 +156,14 @@ export const chatLines = sqliteTable(
     // In a one-to-one chat, the member who had blocked its writer when it
     // was sent: never delivered to them.
     hiddenFrom: text("hidden_from"),
+    // A line from the app (pochical.v1.ChatNotice's fields), none for a
+    // member's message.
+    notice: text({ mode: "json" }).$type<{
+      kind: "joined" | "left" | "removed" | "inviteRemade" | "profileChanged";
+      markChanged?: boolean;
+      name?: string;
+      subjectId?: string;
+    }>(),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),
     // The photo sent as the line, as pochical.v1.ChatPhoto's fields;

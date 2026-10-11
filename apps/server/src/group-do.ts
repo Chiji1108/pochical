@@ -38,6 +38,7 @@ import {
   notePhoto,
   reportContext,
   setMemberBlocks,
+  writeNotice,
 } from "./group-chat";
 import migrations from "./group-do-migrations/migrations.js";
 import {
@@ -48,7 +49,7 @@ import {
   members,
   profile,
 } from "./group-do-schema";
-import { markColumns, markOfRow } from "./group-marks";
+import { markColumns, markOfRow, sameMark } from "./group-marks";
 import type { MarkValue } from "./group-marks";
 import {
   memberDayChange,
@@ -203,6 +204,12 @@ export class GroupDO extends DurableObject<Env> {
     }
     const joined = this.ctx.storage.transactionSync(() => {
       const written = this.writeMember(member);
+      const notice = writeNotice(
+        this.db,
+        userId,
+        { kind: "joined" },
+        this.nextCursor()
+      );
       // Lines from before they joined are not unread to them.
       const head = chatHead(this.db, GROUP_THREAD);
       const cursor = this.head() + 1;
@@ -210,7 +217,7 @@ export class GroupDO extends DurableObject<Env> {
       if (mark) {
         this.setHead(cursor);
       }
-      return mark ? [written, mark] : [written];
+      return mark ? [written, notice, mark] : [written, notice];
     });
     broadcastChanges(this.ctx, joined);
     return "added";
@@ -349,7 +356,15 @@ export class GroupDO extends DurableObject<Env> {
         .where(eq(members.userId, userId))
         .returning()
         .get();
-      return row === undefined ? undefined : { known, row };
+      const notice = writeNotice(
+        this.db,
+        by ?? userId,
+        by === undefined
+          ? { kind: "left" }
+          : { kind: "removed", subjectId: userId },
+        this.nextCursor()
+      );
+      return row === undefined ? undefined : { known, notice, row };
     });
     if (left === undefined) {
       return;
@@ -360,7 +375,7 @@ export class GroupDO extends DurableObject<Env> {
       }
     }
     closeUserSockets(this.ctx, userId);
-    broadcastChanges(this.ctx, [memberChange(left.row)]);
+    broadcastChanges(this.ctx, [memberChange(left.row), left.notice]);
   }
 
   /**
@@ -470,12 +485,47 @@ export class GroupDO extends DurableObject<Env> {
    * Written when the group is created, and later when it is renamed. A
    * photo mark it replaces goes.
    */
-  setProfile(group: GroupProfile): void {
-    const before = this.getProfile()?.mark.photoId ?? "";
-    broadcastChanges(this.ctx, [this.writeProfile(group)]);
+  setProfile(group: GroupProfile, by: string): void {
+    const known = this.getProfile();
+    const before = known?.mark.photoId ?? "";
+    const nameChanged = known?.name !== group.name;
+    const markChanged = !sameMark(known?.mark, group.mark);
+    const changes = this.ctx.storage.transactionSync(() => {
+      const written = this.writeProfile(group);
+      // A new name or icon is said in the chat, as LINE's groups say it.
+      if (!(nameChanged || markChanged)) {
+        return [written];
+      }
+      const notice = writeNotice(
+        this.db,
+        by,
+        {
+          kind: "profileChanged",
+          markChanged,
+          name: nameChanged ? group.name : undefined,
+        },
+        this.nextCursor()
+      );
+      return [written, notice];
+    });
+    broadcastChanges(this.ctx, changes);
     if (before !== "" && before !== group.mark.photoId) {
       this.forgetPhoto(before, null);
     }
+  }
+
+  /**
+   * Says in the chat that `by` remade the invite link, so whoever sent the
+   * old one knows it stopped working and to send the new one.
+   */
+  noteInviteRemade(by: string): void {
+    if (!this.isMember(by)) {
+      return;
+    }
+    const notice = this.ctx.storage.transactionSync(() =>
+      writeNotice(this.db, by, { kind: "inviteRemade" }, this.nextCursor())
+    );
+    broadcastChanges(this.ctx, [notice]);
   }
 
   /** The group's name and mark at the next cursor, as a change. */

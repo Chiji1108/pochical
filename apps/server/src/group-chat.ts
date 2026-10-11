@@ -28,6 +28,7 @@ import type { LinkPreview } from "./gen/pochical/v1/chat_pb";
 import {
   ChangeSchema,
   ChatLineSchema,
+  ChatNotice_Kind,
   ChatUnsendSchema,
 } from "./gen/pochical/v1/sync_pb";
 import type {
@@ -168,12 +169,33 @@ const votesOf = (
   });
 };
 
+/** The wire's kind of each notice kept. */
+const noticeKinds = {
+  inviteRemade: ChatNotice_Kind.INVITE_REMADE,
+  joined: ChatNotice_Kind.JOINED,
+  left: ChatNotice_Kind.LEFT,
+  profileChanged: ChatNotice_Kind.PROFILE_CHANGED,
+  removed: ChatNotice_Kind.REMOVED,
+} as const;
+
+/** What happened to the group, as a notice line keeps it. */
+export type Notice = NonNullable<LineRow["notice"]>;
+
 const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
   create(ChatLineSchema, {
     authorId: row.authorId,
     days: row.days ?? [],
     decided: row.decided ?? "",
     edited: row.edited,
+    notice:
+      row.notice === null
+        ? undefined
+        : {
+            kind: noticeKinds[row.notice.kind],
+            markChanged: row.notice.markChanged ?? false,
+            name: row.notice.name ?? "",
+            subjectId: row.notice.subjectId ?? "",
+          },
     opId: row.opId,
     photo: row.photo ?? undefined,
     pinnedOrder: BigInt(row.pinnedAt ?? 0),
@@ -390,6 +412,11 @@ export const chatHead = (
     .where(eq(chatLines.threadId, threadId))
     .get()?.head ?? 0;
 
+/**
+ * A member's line of the chat at `seq`, for an edit, a reply or a report:
+ * the app's notices are none of these (they take no reactions, replies,
+ * pins or reports, and their author cannot change or take them back).
+ */
 const lineAt = (
   db: DrizzleSqliteDODatabase,
   threadId: string,
@@ -399,7 +426,11 @@ const lineAt = (
     .select()
     .from(chatLines)
     .where(
-      and(eq(chatLines.threadId, threadId), eq(chatLines.seq, Number(seq)))
+      and(
+        eq(chatLines.threadId, threadId),
+        eq(chatLines.seq, Number(seq)),
+        isNull(chatLines.notice)
+      )
     )
     .get();
 
@@ -484,6 +515,8 @@ export const unreadCount = (
         eq(chatLines.threadId, threadId),
         gt(chatLines.seq, read),
         ne(chatLines.authorId, userId),
+        // Lines from the app are told, not counted.
+        isNull(chatLines.notice),
         // Lines kept from them, from someone they blocked, never count.
         or(isNull(chatLines.hiddenFrom), ne(chatLines.hiddenFrom, userId))
       )
@@ -1132,7 +1165,8 @@ export const reportContext = (
     )
     .orderBy(asc(chatLines.seq))
     .all()
-    .filter((row) => row.hiddenFrom !== reporterId)
+    // The app's notices are no one's words.
+    .filter((row) => row.hiddenFrom !== reporterId && row.notice === null)
     .map((row) => ({
       authorId: row.authorId,
       days: row.days,
@@ -1199,3 +1233,32 @@ export const hearsFrom = (
   userId: string,
   authorId: string
 ): boolean => !hasBlocked(db, userId, authorId);
+
+/**
+ * A line from the app at 全体チャット's end (spec/chat.md, Notices), written
+ * as `authorId` changes the group: who is in it, the way in, or what it
+ * is. Never unread, and never notified.
+ */
+export const writeNotice = (
+  db: DrizzleSqliteDODatabase,
+  authorId: string,
+  notice: Notice,
+  cursor: number
+): Change => {
+  const row = db
+    .insert(chatLines)
+    .values({
+      authorId,
+      createdCursor: cursor,
+      cursor,
+      notice,
+      opId: `notice-${cursor}`,
+      sentAt: new Date(),
+      seq: chatHead(db, GROUP_THREAD) + 1,
+      text: "",
+      threadId: GROUP_THREAD,
+    })
+    .returning()
+    .get();
+  return chatLineChange(db, row);
+};

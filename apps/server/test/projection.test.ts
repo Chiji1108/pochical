@@ -222,9 +222,10 @@ describe("a member's shifts in their groups", () => {
       newcomer
     );
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, newcomer);
-    // One value taken, then the newcomer.
+    // One value taken, then the newcomer, the notice of their joining and
+    // their read mark.
     expect(group.welcome.kind).toMatchObject({
-      value: { cursor: PAIR_ROSTER + 2n },
+      value: { cursor: PAIR_ROSTER + 4n },
     });
     expect(shiftsIn(await group.frames.next())).toMatchObject([
       { kind: { value: { day: { value: "night" }, userId: makerId } } },
