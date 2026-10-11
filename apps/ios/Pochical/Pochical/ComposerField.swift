@@ -32,6 +32,8 @@ struct ComposerField: UIViewRepresentable {
   let limit: Int
   @Binding var composing: Bool
   let box: ComposerBox
+  /// The field taken up to write in, or left.
+  var onWriting: (Bool) -> Void = { _ in }
 
   static let maxLines = 5
 
@@ -104,6 +106,14 @@ struct ComposerField: UIViewRepresentable {
       view.text = now.replacingCharacters(in: swapped, with: String(string.prefix(room)))
       textViewDidChange(view)
       return false
+    }
+
+    func textViewDidBeginEditing(_ view: UITextView) {
+      parent.onWriting(true)
+    }
+
+    func textViewDidEndEditing(_ view: UITextView) {
+      parent.onWriting(false)
     }
 
     func textViewDidChange(_ view: UITextView) {
