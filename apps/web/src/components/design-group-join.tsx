@@ -24,7 +24,7 @@ import type {
   Profile,
 } from "./design-group-data";
 import { GroupIcon, PhotoAvatar, hub, markFrame } from "./design-group-parts";
-import { cousins, partner } from "./design-group-samples";
+import { cousins } from "./design-group-samples";
 import {
   GroupProfilePage,
   GroupProfileRow,
@@ -282,18 +282,6 @@ const joinScreen = {
     textWrap: "balance",
   }),
   foot: css({ display: "flex", flexDirection: "column", paddingTop: "12px" }),
-  from: css({
-    alignItems: "center",
-    color: "text.secondary",
-    display: "flex",
-    margin: 0,
-    maxWidth: "100%",
-    textStyle: "subheadline",
-  }),
-  // A long name is cut short, and からの招待 stays whole after it.
-  fromName: ellipsisStyle,
-  fromAvatar: css({ display: "flex", flexShrink: 0, marginRight: "8px" }),
-  fromRest: css({ flexShrink: 0 }),
   group: css({
     alignItems: "center",
     display: "flex",
@@ -356,11 +344,13 @@ function memberLine(names: string[]) {
   return `${names.slice(0, namedMembers - 1).join("、")}ほか${rest}人が参加中`;
 }
 
-// A group's invitation, as its link carries it.
+// A group's invitation, as its link carries it: the group and who is in
+// it, not who sent it. The link is the group's, as LINE's are, whoever
+// passes it on; whoever sent it is known where it came (the message, or
+// the person showing the QR code), and the members say whose group it is.
 type Invite = {
   group: string;
   mark: GroupMark;
-  from: { name: string; photo?: string };
   members: { name: string; photo?: string }[];
 };
 
@@ -372,7 +362,6 @@ export const invitedGroupId = "cousins";
 export const sampleInviteCode = "Toko2345";
 
 export const sampleInvite = (): Invite => ({
-  from: { name: partner.name, photo: partner.photo },
   group: "いとこ会",
   mark: { emoji: "🍉", kind: "emoji" },
   members: cousins().map(({ name, photo }) => ({ name, photo })),
@@ -460,17 +449,6 @@ export function JoinScreen({
           }
         />
         <div className={joinScreen.head}>
-          <p className={joinScreen.from}>
-            <span className={joinScreen.fromAvatar}>
-              <PhotoAvatar
-                name={invite.from.name}
-                photo={invite.from.photo}
-                size={20}
-              />
-            </span>
-            <span className={joinScreen.fromName}>{invite.from.name}</span>
-            <span className={joinScreen.fromRest}>からの招待</span>
-          </p>
           <div className={joinScreen.group}>
             <span className={markFrame({ size: "large" })}>
               <GroupIcon mark={invite.mark} size={40} />
