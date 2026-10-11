@@ -49,6 +49,8 @@ struct LegendSheet: View {
   let members: [GroupMember]
   let groupID: String
   @State var picked: String
+  /// The chip scrolled to as the sheet opens.
+  @State private var chipInSight: String?
 
   var body: some View {
     let member = members.first { $0.userID == picked } ?? members.first
@@ -84,11 +86,19 @@ struct LegendSheet: View {
                   name: candidate.name, photoID: candidate.photoID, groupID: groupID,
                   size: 24, userID: candidate.userID)
               }
+              .id(candidate.userID)
             }
           }
+          // From the list's card's edge.
           .padding(.horizontal, 20)
+          .scrollTargetLayout()
         }
         .scrollIndicators(.hidden)
+        // Opened on someone far along the row, it starts with them in
+        // sight.
+        .defaultScrollAnchor(.leading)
+        .scrollPosition(id: $chipInSight, anchor: .center)
+        .onAppear { chipInSight = picked }
         .padding(.bottom, 8)
       }
       .overlay {
