@@ -140,4 +140,26 @@ public interface MemberOrBuilder extends
    * @return The markLook.
    */
   app.pochical.v1.MarkLook getMarkLook();
+
+  /**
+   * <pre>
+   * Left because this member took them out (RemoveMember); empty when
+   * they left themselves, or are in the group.
+   * </pre>
+   *
+   * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+   * @return The removedBy.
+   */
+  java.lang.String getRemovedBy();
+  /**
+   * <pre>
+   * Left because this member took them out (RemoveMember); empty when
+   * they left themselves, or are in the group.
+   * </pre>
+   *
+   * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+   * @return The bytes for removedBy.
+   */
+  com.google.protobuf.ByteString
+      getRemovedByBytes();
 }

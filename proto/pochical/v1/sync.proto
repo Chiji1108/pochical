@@ -327,6 +327,9 @@ message Member {
   // widgets set to them draw them in; unset, the app's default (filled
   // icons), theirs until they change it.
   MarkLook mark_look = 9;
+  // Left because this member took them out (RemoveMember); empty when
+  // they left themselves, or are in the group.
+  string removed_by = 10;
 }
 
 // One field of a member's day, as the group sees it: pattern and times,

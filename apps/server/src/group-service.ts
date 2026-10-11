@@ -12,6 +12,7 @@ import {
   JoinGroupResponseSchema,
   LeaveGroupResponseSchema,
   RemakeInviteLinkResponseSchema,
+  RemoveMemberResponseSchema,
   RenameGroupResponseSchema,
   SetDisplayNameResponseSchema,
   SetGroupPhotoResponseSchema,
@@ -229,6 +230,25 @@ export const registerGroupService = (router: ConnectRouter): void => {
       await requireMember(context, groupId);
       const inviteCode = await issueInviteCode(env.DB, groupId);
       return create(RemakeInviteLinkResponseSchema, { inviteCode });
+    },
+
+    removeMember: async ({ groupId, userId }, context) => {
+      const by = await requireMember(context, groupId);
+      if (userId === by) {
+        throw new ConnectError(
+          "Leave the group rather than remove yourself",
+          Code.InvalidArgument
+        );
+      }
+      const group = env.GROUPS.getByName(groupId);
+      if (!(await group.isMember(userId))) {
+        throw new ConnectError("No such member", Code.NotFound);
+      }
+      // Their own DO first, as on leaving, so their devices stop opening
+      // the group even if the group's own step fails; both can be repeated.
+      await env.USERS.getByName(userId).removeMembership(groupId);
+      await group.removeMember(userId, by);
+      return create(RemoveMemberResponseSchema, {});
     },
 
     renameGroup: async (request, context) => {

@@ -117,6 +117,7 @@ const memberChange = ({
   markStyle,
   ownName,
   ownPhoto,
+  removedBy,
   userId,
   usualPhoto,
 }: MemberRow): Change =>
@@ -134,6 +135,7 @@ const memberChange = ({
         ownName: ownName !== null,
         ownPhoto: ownPhoto !== null,
         photoId: ownPhoto ?? usualPhoto,
+        removedBy: removedBy ?? "",
         userId,
       },
     },
@@ -317,9 +319,10 @@ export class GroupDO extends DurableObject<Env> {
    * Takes the member out: their row stays as left, at the next cursor, so
    * devices catching up hear of it, and their shifts go, and the photos the
    * group showed of them, as it hears of them no more. Their sockets here
-   * close. Leaving when not in it changes nothing.
+   * close. Leaving when not in it changes nothing. `by` is the member who
+   * took them out, none when they left themselves.
    */
-  removeMember(userId: string): void {
+  removeMember(userId: string, by?: string): void {
     const left = this.ctx.storage.transactionSync(() => {
       const known = this.db.select().from(members).where(inGroup(userId)).get();
       if (known === undefined) {
@@ -340,6 +343,7 @@ export class GroupDO extends DurableObject<Env> {
           cursor: this.nextCursor(),
           leftAt: new Date(),
           ownPhoto: null,
+          removedBy: by ?? null,
           usualPhoto: "",
         })
         .where(eq(members.userId, userId))
@@ -553,6 +557,8 @@ export class GroupDO extends DurableObject<Env> {
       leftAt: null,
       ownName,
       ownPhoto: null,
+      // Back in by a live link: no longer taken out.
+      removedBy: null,
       userId,
       usualName,
       usualPhoto,

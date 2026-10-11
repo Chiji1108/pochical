@@ -69,6 +69,9 @@ export const members = sqliteTable("members", {
   // A photo of their own for this group, one of its photos; empty for none
   // on purpose, or not set to follow their usual one.
   ownPhoto: text("own_photo"),
+  // Who took them out (RemoveMember), set as they leave; none when they
+  // left themselves.
+  removedBy: text("removed_by"),
   userId: text("user_id").primaryKey(),
   // Their usual name, as their User DO pushes it (spec/sync-protocol.md,
   // Profile).

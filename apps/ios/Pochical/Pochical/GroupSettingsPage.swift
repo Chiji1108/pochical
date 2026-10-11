@@ -9,7 +9,10 @@ import SwiftUI
 struct GroupSettingsPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.openGroupRoute) private var openGroupRoute
+  @Environment(\.say) private var say
   @Fetch private var members: [GroupMember] = []
+  @Fetch(BlocksRequest()) private var blocked: Set<String> = []
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   let group: GroupRow
   let onInvite: () -> Void
@@ -19,6 +22,10 @@ struct GroupSettingsPage: View {
   @State private var confirmingLeave = false
   @State private var leaving = false
   @State private var failed: String?
+  /// A member's profile, opened from their row (/design's member sheet).
+  @State private var profileOf: ProfileOf?
+  @State private var reporting: ReportTarget?
+  @State private var blockQuestion: BlockQuestion?
 
   var body: some View {
     let me = members.first { $0.userID == meID }
@@ -86,12 +93,23 @@ struct GroupSettingsPage: View {
 
       Section("メンバー") {
         ForEach(members) { member in
-          Label {
+          let label = Label {
             Text(member.userID == meID ? "\(member.name)（自分）" : member.name).lineLimit(1)
           } icon: {
             MemberAvatar(
               name: member.name, photoID: member.photoID, groupID: group.id, size: 28,
               userID: member.userID)
+          }
+          // Someone else opens their profile: メッセージを送る, their photo
+          // large, and このグループから外す.
+          if member.userID == meID {
+            label
+          } else {
+            Button {
+              profileOf = ProfileOf(id: member.userID, name: member.name, photoID: member.photoID)
+            } label: {
+              label.foregroundStyle(colors.textPrimary)
+            }
           }
         }
         Button(action: onInvite) {
@@ -128,6 +146,26 @@ struct GroupSettingsPage: View {
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
     }
     .task { meID = await groupCalls.userID() }
+    .environment(\.photoGroupID, group.id)
+    .modifier(
+      ReportAndBlock(
+        groupID: group.id, groupName: group.name, groupMark: group.mark, blocked: blocked,
+        reporting: $reporting, profileOf: $profileOf, blockQuestion: $blockQuestion,
+        onMessage: { person in
+          guard let meID else { return nil }
+          return {
+            openGroupRoute(.chat(group, thread: directThread(meID, person.id), with: person.id))
+          }
+        },
+        onReported: { target in
+          if let question = blockAfterReport(target, blocked: blocked) {
+            blockQuestion = question
+          } else {
+            say("通報しました")
+          }
+        },
+        onSetBlocked: { answer($0, calls: groupCalls, say: say) },
+        onRemove: remove))
     .alert("グループから抜けますか？", isPresented: $confirmingLeave) {
       Button("抜ける", role: .destructive) { leave() }
       Button("キャンセル", role: .cancel) {}
@@ -140,6 +178,18 @@ struct GroupSettingsPage: View {
       Button("OK", role: .cancel) {}
     } message: {
       Text("通信できる場所で、もう一度お試しください。")
+    }
+  }
+
+  /// Takes someone out of the group, and says so.
+  private func remove(_ person: ProfileOf) {
+    Task {
+      do {
+        try await groupCalls.remove(person.id, from: group.id)
+        say("\(person.name)を外しました")
+      } catch {
+        failed = "\(person.name)を外せませんでした"
+      }
     }
   }
 

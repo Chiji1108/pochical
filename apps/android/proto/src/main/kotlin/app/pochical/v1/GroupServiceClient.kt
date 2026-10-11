@@ -170,4 +170,22 @@ public class GroupServiceClient(
     ),
   )
 
+
+  /**
+   *  Takes another member out of the group, as leaving takes the caller:
+   *  any member may, as in LINE's groups. The group remembers who did it
+   *  (Member.removed_by). NOT_FOUND for someone not in it now;
+   *  INVALID_ARGUMENT for the caller themselves, who leaves instead.
+   */
+  override suspend fun removeMember(request: RemoveMemberRequest, headers: Headers): ResponseMessage<RemoveMemberResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.GroupService/RemoveMember",
+      app.pochical.v1.RemoveMemberRequest::class,
+      app.pochical.v1.RemoveMemberResponse::class,
+      StreamType.UNARY,
+    ),
+  )
+
 }

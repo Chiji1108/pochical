@@ -256,6 +256,15 @@ public struct GroupCalls: Sendable {
     _ = try await client.leaveGroup(request: request, headers: account.headers()).result.get()
   }
 
+  /// Takes another member out of the group, as leaving takes the caller;
+  /// the group remembers who did it.
+  public func remove(_ userID: String, from groupID: String) async throws {
+    var request = Pochical_V1_RemoveMemberRequest()
+    request.groupID = groupID
+    request.userID = userID
+    _ = try await client.removeMember(request: request, headers: account.headers()).result.get()
+  }
+
   /// A new invitation code for the group: the old link and QR code stop
   /// working at once.
   public func remakeInviteCode(of groupID: String) async throws -> String {

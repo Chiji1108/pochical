@@ -535,3 +535,78 @@ describe("finishing a leaving", () => {
     });
   });
 });
+
+describe("taking a member out", () => {
+  it("takes them out as leaving does, and says who did", async () => {
+    const { groupId, guest, inviteCode, maker, makerId } = await pair();
+    const guestId = await userIdOf(guest);
+    const theirs = await device(guest);
+    await theirs.frames.next();
+    const group = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    await group.frames.next();
+
+    const removed = await call(
+      "GroupService/RemoveMember",
+      { groupId, userId: guestId },
+      maker
+    );
+    expect(removed.status).toBe(200);
+    // Their devices let the group go, as on leaving…
+    expect(changesIn(await theirs.frames.next())).toMatchObject([
+      { kind: { case: "membership", value: { groupId, left: true } } },
+    ]);
+    // …and the group says who took them out.
+    expect(changesIn(await group.frames.next())).toMatchObject([
+      {
+        kind: {
+          case: "member",
+          value: { left: true, removedBy: makerId, userId: guestId },
+        },
+      },
+    ]);
+    await expect(previewOf(inviteCode)).resolves.toMatchObject({
+      memberCount: 1,
+    });
+
+    // Back by a live link, they are no longer marked as taken out.
+    await join(inviteCode, guest);
+    const back = await syncSocket(`/v1/groups/${groupId}/socket`, maker, 0n);
+    const roster = changesIn(await back.frames.next()).filter(
+      ({ kind }) => kind.case === "member"
+    );
+    expect(roster).toMatchObject([
+      { kind: { value: { userId: makerId } } },
+      { kind: { value: { left: false, removedBy: "", userId: guestId } } },
+    ]);
+  });
+
+  it("is refused for oneself, someone not in it, or by someone not in it", async () => {
+    const { groupId, guest, maker, makerId } = await pair();
+    const self = await call(
+      "GroupService/RemoveMember",
+      { groupId, userId: makerId },
+      maker
+    );
+    expect(self.status).toBe(400);
+    const stranger = await signInAnonymously();
+    const notIn = await call(
+      "GroupService/RemoveMember",
+      { groupId, userId: await userIdOf(stranger) },
+      maker
+    );
+    expect(notIn.status).toBe(404);
+    const outsider = await call(
+      "GroupService/RemoveMember",
+      { groupId, userId: makerId },
+      stranger
+    );
+    expect(outsider.status).toBe(403);
+    // Still in.
+    const still = await call(
+      "GroupService/RemoveMember",
+      { groupId, userId: await userIdOf(guest) },
+      maker
+    );
+    expect(still.status).toBe(200);
+  });
+});
