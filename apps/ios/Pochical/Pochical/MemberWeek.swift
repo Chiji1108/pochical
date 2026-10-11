@@ -60,8 +60,8 @@ struct GroupWeekdays: View {
 /// A week of a group's shifts (/design's WeekBlock): its dates across,
 /// then a row per member, their face and each day's mark. A day off is on
 /// its tile, a day everyone is off (みんな休み) one band down its column,
-/// date and all, and the picked day framed the same way. Members' marks
-/// show in the viewer's look until each member's own comes with them.
+/// date and all, and the picked day framed the same way. Each member's
+/// marks are in their own shape, in the viewer's colors.
 struct GroupWeek: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
@@ -91,6 +91,7 @@ struct GroupWeek: View {
           MemberAvatar(
             name: member.name, photoID: member.photoID, size: compact ? 20 : 24,
             userID: member.userID)
+            .opensLegend(of: member)
             .frame(height: rowHeight)
             .accessibilityLabel(member.name)
         }

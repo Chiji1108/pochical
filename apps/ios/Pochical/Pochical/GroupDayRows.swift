@@ -49,6 +49,7 @@ struct GroupDayHeader: View {
           MemberAvatar(
             name: member.name, photoID: member.photoID, groupID: groupID, size: 24,
             userID: member.userID)
+          .opensLegend(of: member)
           if density == .names {
             Text(member.name)
               .font(.footnote.weight(.semibold))

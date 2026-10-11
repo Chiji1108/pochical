@@ -35,7 +35,11 @@ struct GroupShiftsPage: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.say) private var say
+  @Environment(\.colorScheme) private var colorScheme
   @Fetch private var members: [GroupMember] = []
+  /// Whose シフトパターン is open, from a face or the menu.
+  @State private var legendOf: LegendOf?
   /// The viewer's id among the members, for 1人ずつ.
   @State private var meID: String?
   let group: GroupRow
@@ -125,20 +129,36 @@ struct GroupShiftsPage: View {
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.visible, for: .navigationBar)
     .toolbar {
-      if layouts.count > 1 {
-        ToolbarItem(placement: .primaryAction) {
+      // One pull-down for the page's secondary actions: how the table is
+      // laid out, what the marks mean, and saving it as a picture.
+      ToolbarItem(placement: .primaryAction) {
           Menu {
-            Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
-              ForEach(layouts, id: \.self) { Text($0.name).tag($0) }
+            if layouts.count > 1 {
+              Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
+                ForEach(layouts, id: \.self) { Text($0.name).tag($0) }
+              }
+              Divider()
             }
+            Button("シフトパターン", systemImage: "info.circle") {
+              let first = members.first { $0.userID != meID } ?? members.first
+              if let first { legendOf = LegendOf(userID: first.userID) }
+            }
+            Button("画像で保存", systemImage: "square.and.arrow.down") {
+              Task { await saveMonth() }
+            }
+            .disabled(members.isEmpty)
           } label: {
             HStack(spacing: 4) {
-              Text(layout.name)
+              Text(layouts.count > 1 ? layout.name : "メニュー")
               Image(systemName: "chevron.down").imageScale(.small)
             }
           }
-        }
       }
+    }
+    .environment(\.openLegend) { legendOf = LegendOf(userID: $0) }
+    .sheet(item: $legendOf) { legend in
+      LegendSheet(members: members, groupID: group.id, picked: legend.userID)
+        .presentationDetents([.medium, .large])
     }
     .task {
       meID = await groupCalls.userID()
@@ -280,6 +300,18 @@ struct GroupShiftsPage: View {
       // scrolled above the sheet.
       .contentMargins(.bottom, picked == nil ? 0 : daySheetHeight, for: .scrollContent)
     }
+  }
+
+  /// Saves the month in sight as a picture, as /design's 画像で保存.
+  private func saveMonth() async {
+    let month = monthInSight
+    let picture = GroupMonthPicture(group: group, month: month, members: members)
+      .environment(settings)
+      .environment(\.themeColors, colors)
+      .environment(\.colorScheme, colorScheme)
+      .environment(\.look, settings.device.look)
+      .environment(\.english, english)
+    await saveGroupMonth(picture, say: say, month: month)
   }
 
   /// The day's sheet: its bar and a row a member.
@@ -452,4 +484,10 @@ struct TogetherSummary: View {
 private enum ListGoal: Hashable {
   case month(Day)
   case today
+}
+
+/// Whose シフトパターン is open.
+struct LegendOf: Identifiable {
+  let userID: String
+  var id: String { userID }
 }
