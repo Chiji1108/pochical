@@ -234,8 +234,56 @@ public object MemberKt {
     public fun clearOwnPhoto() {
       _builder.clearOwnPhoto()
     }
+
+    /**
+     * ```
+     * The shape they draw their marks in, which the group's tables and the
+     * widgets set to them draw them in; unset, the app's default (filled
+     * icons), theirs until they change it.
+     * ```
+     *
+     * `.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];`
+     */
+    public var markLook: app.pochical.v1.MarkLook
+      @kotlin.jvm.JvmName("getMarkLook")
+        get() = _builder.markLook
+      @kotlin.jvm.JvmName("setMarkLook")
+        set(value) {
+        _builder.markLook = value
+      }
+    /**
+     * ```
+     * The shape they draw their marks in, which the group's tables and the
+     * widgets set to them draw them in; unset, the app's default (filled
+     * icons), theirs until they change it.
+     * ```
+     *
+     * `.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];`
+     */
+    public fun clearMarkLook() {
+      _builder.clearMarkLook()
+    }
+    /**
+     * ```
+     * The shape they draw their marks in, which the group's tables and the
+     * widgets set to them draw them in; unset, the app's default (filled
+     * icons), theirs until they change it.
+     * ```
+     *
+     * `.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];`
+     * @return Whether the markLook field is set.
+     */
+    public fun hasMarkLook(): kotlin.Boolean {
+      return _builder.hasMarkLook()
+    }
+
+    public val MemberKt.Dsl.markLookOrNull: app.pochical.v1.MarkLook?
+      get() = _builder.markLookOrNull
   }
 }
 public inline fun app.pochical.v1.Member.copy(block: `app.pochical.v1`.MemberKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Member =
   `app.pochical.v1`.MemberKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.MemberOrBuilder.markLookOrNull: app.pochical.v1.MarkLook?
+  get() = if (hasMarkLook()) getMarkLook() else null
 

@@ -26,6 +26,11 @@ public struct GroupMemberRow: Hashable, Sendable {
   public var photoID = ""
   /// photoID is the group's own for them, or none on purpose.
   public var ownPhoto = false
+  /// The shape they draw their marks in (MarkStyle's raw value); empty
+  /// before it is known, drawn in the viewer's own.
+  public var markStyle = ""
+  /// Their icons drawn filled.
+  public var markFill = true
 
   /// How the app names them: one whose account is deleted has no name.
   public var shownName: String {
@@ -198,6 +203,20 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the shape members draw their marks in") { db in
+      try #sql(
+        """
+        ALTER TABLE "groupMembers" ADD COLUMN "markStyle" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "groupMembers" ADD COLUMN "markFill" INTEGER NOT NULL DEFAULT 1
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -265,7 +284,9 @@ public enum GroupSync {
       let row = GroupMemberRow(
         groupID: groupID, userID: member.userID, displayName: member.displayName,
         joinedAtMs: member.joinedAtMs, left: member.left, deleted: member.deleted,
-        ownName: member.ownName, photoID: member.photoID, ownPhoto: member.ownPhoto)
+        ownName: member.ownName, photoID: member.photoID, ownPhoto: member.ownPhoto,
+        markStyle: member.hasMarkLook ? member.markLook.style : "",
+        markFill: member.hasMarkLook ? member.markLook.fill : true)
       try GroupMemberRow.insert { row }.execute(db)
     case .memberDay(let member):
       try takeDay(member.day, of: member.userID, in: groupID, db: db)
@@ -338,6 +359,8 @@ public struct GroupMember: Hashable, Sendable, Identifiable {
   public var photoID = ""
   /// The photo is the group's own for them, or none on purpose.
   public var ownPhoto = false
+  /// The shape they draw their marks in, nil before it is known.
+  public var markLook: MarkLook?
   public let calendar: MemberCalendar
   public var id: String { userID }
 }
@@ -409,6 +432,9 @@ extension GroupSync {
       return GroupMember(
         userID: member.userID, name: member.displayName, ownName: member.ownName,
         photoID: member.photoID, ownPhoto: member.ownPhoto,
+        // Before theirs is known, the app's own default, which is theirs
+        // until they change it.
+        markLook: MarkLook(style: member.markStyle, fill: member.markFill) ?? Look().markLook,
         calendar: MemberCalendar(patternsByID: byID, days: own, orders: timeline))
     }
   }
@@ -430,4 +456,37 @@ extension MemberOrderRow {
       holidaysOff: holidaysOff, holidayShift: holidayShift, holidayCountry: holidayCountry
     ).order
   }
+}
+
+/// The shape someone draws their marks in (proto MarkLook): their groups
+/// draw that person's marks so, in the viewer's own テーマ's colors.
+public struct MarkLook: Hashable, Sendable {
+  public var style: MarkStyle
+  public var fill: Bool
+
+  public init(style: MarkStyle, fill: Bool) {
+    self.style = style
+    self.fill = fill
+  }
+
+  /// As kept and sent; nil for an empty or unknown style.
+  public init?(style: String, fill: Bool) {
+    guard let style = MarkStyle(rawValue: style) else { return nil }
+    self.init(style: style, fill: fill)
+  }
+}
+
+extension Look {
+  /// The viewer's look with someone's shape: their style and fill, the
+  /// rest (colors, the shape's options) the viewer's own.
+  public func drawing(_ theirs: MarkLook?) -> Look {
+    guard let theirs else { return self }
+    var look = self
+    look.style = theirs.style
+    look.fill = theirs.fill
+    return look
+  }
+
+  /// The shape this look draws marks in, as the account sends it.
+  public var markLook: MarkLook { MarkLook(style: style, fill: fill) }
 }

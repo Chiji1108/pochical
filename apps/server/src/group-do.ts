@@ -13,7 +13,12 @@ import {
   ServerError_Code,
   TypingSchema,
 } from "./gen/pochical/v1/sync_pb";
-import type { Change, ChatEdits, ChatLine } from "./gen/pochical/v1/sync_pb";
+import type {
+  Change,
+  ChatEdits,
+  ChatLine,
+  Profile as UsualProfile,
+} from "./gen/pochical/v1/sync_pb";
 import {
   chatChangesAfter,
   chatHead,
@@ -108,6 +113,8 @@ const memberChange = ({
   displayName,
   joinedAt,
   leftAt,
+  markFill,
+  markStyle,
   ownName,
   ownPhoto,
   userId,
@@ -122,6 +129,8 @@ const memberChange = ({
         displayName,
         joinedAtMs: BigInt(joinedAt.getTime()),
         left: leftAt !== null,
+        markLook:
+          markStyle === "" ? undefined : { fill: markFill, style: markStyle },
         ownName: ownName !== null,
         ownPhoto: ownPhoto !== null,
         photoId: ownPhoto ?? usualPhoto,
@@ -485,13 +494,19 @@ export class GroupDO extends DurableObject<Env> {
    */
   private takeUsualProfile(
     userId: string,
-    { name, photoId }: { name: string; photoId: string },
+    { name, photoId, markLook }: UsualProfile,
     cursor: number
   ): Change | undefined {
     const known = this.db.select().from(members).where(inGroup(userId)).get();
+    // A profile from before the look was sent keeps the one known.
+    const markStyle = markLook?.style ?? known?.markStyle ?? "";
+    const markFill = markLook?.fill ?? known?.markFill ?? true;
     if (
       known === undefined ||
-      (known.usualName === name && known.usualPhoto === photoId)
+      (known.usualName === name &&
+        known.usualPhoto === photoId &&
+        known.markStyle === markStyle &&
+        known.markFill === markFill)
     ) {
       return undefined;
     }
@@ -500,6 +515,8 @@ export class GroupDO extends DurableObject<Env> {
       .set({
         cursor,
         displayName: shownName(known.ownName, name, known.displayName),
+        markFill,
+        markStyle,
         usualName: name,
         usualPhoto: photoId,
       })
@@ -540,12 +557,14 @@ export class GroupDO extends DurableObject<Env> {
       usualName,
       usualPhoto,
     };
-    this.db
+    // Their look stays as last pushed; it comes with their profile.
+    const written = this.db
       .insert(members)
       .values(row)
       .onConflictDoUpdate({ set: row, target: members.userId })
-      .run();
-    return memberChange(row);
+      .returning()
+      .get();
+    return memberChange(written);
   }
 
   /** Gives out the cursor after the newest, for a value written now. */

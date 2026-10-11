@@ -365,6 +365,7 @@ private struct DaySheet: View {
           Spacer(minLength: 8)
           if let pattern {
             ShiftMark(pattern: pattern, size: 18)
+              .marks(drawnAs: member.markLook)
           }
           Text(pattern?.name ?? "未入力")
             .foregroundStyle(pattern == nil ? colors.textTertiary : colors.textSecondary)

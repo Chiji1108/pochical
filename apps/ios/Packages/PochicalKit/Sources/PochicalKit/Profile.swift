@@ -11,6 +11,10 @@ struct ProfileRow: Hashable, Sendable {
   var name: String
   /// One of the user's own photos (ChatPhotos.mine); empty for none.
   var photoID = ""
+  /// The shape the account says the user's marks are drawn in; empty
+  /// before any device sent it.
+  var markStyle = ""
+  var markFill = true
 }
 
 extension DatabaseMigrator {
@@ -34,6 +38,20 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep the shape the account draws marks in") { db in
+      try #sql(
+        """
+        ALTER TABLE "profile" ADD COLUMN "markStyle" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "profile" ADD COLUMN "markFill" INTEGER NOT NULL DEFAULT 1
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -53,7 +71,31 @@ public struct UsualProfile: Hashable, Sendable {
 public enum Profile {
   /// The usual name, from the user's socket.
   static func take(_ profile: Pochical_V1_Profile, in db: Database) throws {
-    try ProfileRow.upsert { ProfileRow(name: profile.name, photoID: profile.photoID) }.execute(db)
+    try ProfileRow.upsert {
+      ProfileRow(
+        name: profile.name, photoID: profile.photoID,
+        markStyle: profile.hasMarkLook ? profile.markLook.style : "",
+        markFill: profile.hasMarkLook ? profile.markLook.fill : true)
+    }
+    .execute(db)
+  }
+
+  /// The shape the user's groups should draw their marks in, when it is
+  /// not what the account last said: the look the account keeps among the
+  /// preferences, never a device's own before it has taken the account's.
+  /// Unset, the account's is the app's default.
+  public static func markLookToSend(in db: Database) throws -> MarkLook? {
+    guard let row = try PreferenceRow.where({ $0.key.eq("look") }).fetchOne(db),
+      let look = try? JSONDecoder().decode(Look.self, from: Data(row.value.utf8))
+    else { return nil }
+    let kept = try markLook(in: db) ?? Look().markLook
+    return look.markLook == kept ? nil : look.markLook
+  }
+
+  /// The shape the account last said the user's marks are drawn in, nil
+  /// before any device sent it.
+  public static func markLook(in db: Database) throws -> MarkLook? {
+    try ProfileRow.fetchOne(db).flatMap { MarkLook(style: $0.markStyle, fill: $0.markFill) }
   }
 
   /// The usual name, empty before the user sets one.
@@ -107,6 +149,15 @@ extension GroupCalls {
     _ = try await users.setProfile(request: request, headers: account.headers()).result.get()
   }
 
+  /// Sets the shape the user's marks are drawn in, for their groups to
+  /// draw them so; the device hears of it from the user's socket.
+  public func setMarkLook(_ look: MarkLook) async throws {
+    var request = Pochical_V1_SetMarkLookRequest()
+    request.look.style = look.style.rawValue
+    request.look.fill = look.fill
+    _ = try await users.setMarkLook(request: request, headers: account.headers()).result.get()
+  }
+
   /// The caller's photo in the group: their usual one, one of the group's
   /// photos they sent up (`ChatPhotos.send`), or none (empty).
   public func setGroupPhoto(usual: Bool, photoID: String = "", in groupID: String) async throws {
@@ -143,5 +194,15 @@ extension GroupCalls {
     let photoID = UUID().uuidString.lowercased()
     try await ChatPhotos.send(jpeg, as: photoID, in: groupID, account: account)
     return photoID
+  }
+}
+
+/// The shape to send for the user's groups, read again as the look or
+/// the account's word on it changes.
+public struct MarkLookToSendRequest: FetchKeyRequest, Hashable {
+  public init() {}
+
+  public func fetch(_ db: Database) throws -> MarkLook? {
+    try Profile.markLookToSend(in: db)
   }
 }

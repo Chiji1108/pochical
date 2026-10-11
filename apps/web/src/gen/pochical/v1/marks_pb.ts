@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/marks.proto.
  */
 export const file_pochical_v1_marks: GenFile = /*@__PURE__*/
-  fileDesc("Chdwb2NoaWNhbC92MS9tYXJrcy5wcm90bxILcG9jaGljYWwudjEiWQoJR3JvdXBNYXJrEg0KBWVtb2ppGAEgASgJEgwKBGljb24YAiABKAkSDgoGbGV0dGVyGAMgASgJEg0KBWNvbG9yGAQgASgNEhAKCHBob3RvX2lkGAUgASgJQmoKD2FwcC5wb2NoaWNhbC52MUIKTWFya3NQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM");
+  fileDesc("Chdwb2NoaWNhbC92MS9tYXJrcy5wcm90bxILcG9jaGljYWwudjEiWQoJR3JvdXBNYXJrEg0KBWVtb2ppGAEgASgJEgwKBGljb24YAiABKAkSDgoGbGV0dGVyGAMgASgJEg0KBWNvbG9yGAQgASgNEhAKCHBob3RvX2lkGAUgASgJIicKCE1hcmtMb29rEg0KBXN0eWxlGAEgASgJEgwKBGZpbGwYAiABKAhCagoPYXBwLnBvY2hpY2FsLnYxQgpNYXJrc1Byb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
 
 /**
  * A group's mark (/design's GroupMark): one emoji, one of the mark icons
@@ -68,4 +68,34 @@ export type GroupMark = Message<"pochical.v1.GroupMark"> & {
  */
 export const GroupMarkSchema: GenMessage<GroupMark> = /*@__PURE__*/
   messageDesc(file_pochical_v1_marks, 0);
+
+/**
+ * How someone draws their shift marks, their スタイル's shape: their groups
+ * draw that person's marks so, in each viewer's own テーマ's colors
+ * (spec/sync-protocol.md, Profile).
+ *
+ * @generated from message pochical.v1.MarkLook
+ */
+export type MarkLook = Message<"pochical.v1.MarkLook"> & {
+  /**
+   * "icon", "emoji" or "badge" (letters).
+   *
+   * @generated from field: string style = 1;
+   */
+  style: string;
+
+  /**
+   * Icons drawn filled (塗り) rather than as lines.
+   *
+   * @generated from field: bool fill = 2;
+   */
+  fill: boolean;
+};
+
+/**
+ * Describes the message pochical.v1.MarkLook.
+ * Use `create(MarkLookSchema)` to create a new message.
+ */
+export const MarkLookSchema: GenMessage<MarkLook> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_marks, 1);
 

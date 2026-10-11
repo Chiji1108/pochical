@@ -23,3 +23,13 @@ message GroupMark {
   // group takes a copy of.
   string photo_id = 5;
 }
+
+// How someone draws their shift marks, their スタイル's shape: their groups
+// draw that person's marks so, in each viewer's own テーマ's colors
+// (spec/sync-protocol.md, Profile).
+message MarkLook {
+  // "icon", "emoji" or "badge" (letters).
+  string style = 1;
+  // Icons drawn filled (塗り) rather than as lines.
+  bool fill = 2;
+}

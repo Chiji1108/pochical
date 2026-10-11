@@ -87,3 +87,21 @@ struct ShiftMark: View {
       .frame(width: side, height: side)
   }
 }
+
+extension View {
+  /// Someone's marks in the shape they draw them in (their スタイル), in
+  /// the viewer's own colors, as the group's tables show them; the
+  /// viewer's own shape before theirs is known.
+  func marks(drawnAs theirs: MarkLook?) -> some View {
+    modifier(TheirMarks(theirs: theirs))
+  }
+}
+
+private struct TheirMarks: ViewModifier {
+  @Environment(\.look) private var look
+  let theirs: MarkLook?
+
+  func body(content: Content) -> some View {
+    content.environment(\.look, look.drawing(theirs))
+  }
+}

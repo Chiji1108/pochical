@@ -51,4 +51,25 @@ public interface ProfileOrBuilder extends
    */
   com.google.protobuf.ByteString
       getPhotoIdBytes();
+
+  /**
+   * <pre>
+   * The shape their marks are drawn in, unset before the user changes it
+   * from the app's default.
+   * </pre>
+   *
+   * <code>.pochical.v1.MarkLook mark_look = 3 [json_name = "markLook"];</code>
+   * @return Whether the markLook field is set.
+   */
+  boolean hasMarkLook();
+  /**
+   * <pre>
+   * The shape their marks are drawn in, unset before the user changes it
+   * from the app's default.
+   * </pre>
+   *
+   * <code>.pochical.v1.MarkLook mark_look = 3 [json_name = "markLook"];</code>
+   * @return The markLook.
+   */
+  app.pochical.v1.MarkLook getMarkLook();
 }

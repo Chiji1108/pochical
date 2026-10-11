@@ -112,6 +112,7 @@ struct GroupWeek: View {
             cell(
               pattern, change: change,
               tiled: pattern?.countsAsOff == true && !together.contains(day))
+              .marks(drawnAs: member.markLook)
               .accessibilityLabel("\(member.name)：\(pattern?.name ?? "未入力")")
           }
         }

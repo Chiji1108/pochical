@@ -76,4 +76,11 @@ public interface UserServiceClientInterface {
    *  characters, or for a photo the user has not uploaded.
    */
   public suspend fun setProfile(request: SetProfileRequest, headers: Headers = emptyMap()): ResponseMessage<SetProfileResponse>
+
+  /**
+   *  Sets the shape the user's marks are drawn in, which their groups show
+   *  (spec/sync-protocol.md, Profile); the devices hear of it as a Profile
+   *  change. INVALID_ARGUMENT for a style that is none of the three.
+   */
+  public suspend fun setMarkLook(request: SetMarkLookRequest, headers: Headers = emptyMap()): ResponseMessage<SetMarkLookResponse>
 }

@@ -59,6 +59,11 @@ export const members = sqliteTable("members", {
   // Set once they leave: the row stays, at the cursor of their leaving, so
   // a device catching up hears of it; their values go.
   leftAt: integer("left_at", { mode: "timestamp_ms" }),
+  // Their icons drawn filled (MarkLook.fill).
+  markFill: integer("mark_fill", { mode: "boolean" }).notNull().default(true),
+  // The shape they draw their marks in, as their User DO pushes it
+  // (MarkLook.style); empty while they keep the app's default.
+  markStyle: text("mark_style").notNull().default(""),
   // A name of their own for this group (このグループだけ), or none.
   ownName: text("own_name"),
   // A photo of their own for this group, one of its photos; empty for none

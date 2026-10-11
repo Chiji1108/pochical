@@ -257,7 +257,7 @@ private struct PairColumns: View {
         Link(destination: entry.link(element.0.date)) {
           PairColumn(
             mine: element.0, shown: element.1, first: index == 0, size: size, named: named,
-            name: pair.with.name)
+            name: pair.with.name, theirLook: pair.theirLook)
         }
       }
     }
@@ -274,13 +274,16 @@ private struct PairColumn: View {
   let size: CGFloat
   let named: Bool
   let name: String
+  let theirLook: MarkLook?
 
   var body: some View {
     VStack(spacing: 0) {
       ColumnHead(day: mine, first: first, compact: true)
       cell(mine)
         .modifier(SpokenDay(day: mine))
+      // Theirs in their own shape, as the group's tables draw them.
       cell(shown.theirs)
+        .marks(drawnAs: theirLook)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
           "\(name)\(english ? ", " : "さん、")\(shown.theirs?.pattern?.name ?? (english ? "not entered" : "未入力"))")

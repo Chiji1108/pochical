@@ -23,6 +23,7 @@ public  final class Member extends
     displayName_ = "";
     photoId_ = "";
   }
+  private int bitField0_;
   public static final int USER_ID_FIELD_NUMBER = 1;
   private java.lang.String userId_;
   /**
@@ -409,6 +410,83 @@ public  final class Member extends
   private void clearOwnPhoto() {
 
     ownPhoto_ = false;
+  }
+
+  public static final int MARK_LOOK_FIELD_NUMBER = 9;
+  private app.pochical.v1.MarkLook markLook_;
+  /**
+   * <pre>
+   * The shape they draw their marks in, which the group's tables and the
+   * widgets set to them draw them in; unset, the app's default (filled
+   * icons), theirs until they change it.
+   * </pre>
+   *
+   * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+   */
+  @java.lang.Override
+  public boolean hasMarkLook() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * The shape they draw their marks in, which the group's tables and the
+   * widgets set to them draw them in; unset, the app's default (filled
+   * icons), theirs until they change it.
+   * </pre>
+   *
+   * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.MarkLook getMarkLook() {
+    return markLook_ == null ? app.pochical.v1.MarkLook.getDefaultInstance() : markLook_;
+  }
+  /**
+   * <pre>
+   * The shape they draw their marks in, which the group's tables and the
+   * widgets set to them draw them in; unset, the app's default (filled
+   * icons), theirs until they change it.
+   * </pre>
+   *
+   * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+   */
+  private void setMarkLook(app.pochical.v1.MarkLook value) {
+    java.util.Objects.requireNonNull(value);
+    markLook_ = value;
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * The shape they draw their marks in, which the group's tables and the
+   * widgets set to them draw them in; unset, the app's default (filled
+   * icons), theirs until they change it.
+   * </pre>
+   *
+   * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergeMarkLook(app.pochical.v1.MarkLook value) {
+    java.util.Objects.requireNonNull(value);
+    if (markLook_ != null &&
+        markLook_ != app.pochical.v1.MarkLook.getDefaultInstance()) {
+      markLook_ =
+        app.pochical.v1.MarkLook.newBuilder(markLook_).mergeFrom(value).buildPartial();
+    } else {
+      markLook_ = value;
+    }
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * The shape they draw their marks in, which the group's tables and the
+   * widgets set to them draw them in; unset, the app's default (filled
+   * icons), theirs until they change it.
+   * </pre>
+   *
+   * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+   */
+  private void clearMarkLook() {
+    markLook_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static app.pochical.v1.Member parseFrom(
@@ -916,6 +994,89 @@ public  final class Member extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The shape they draw their marks in, which the group's tables and the
+     * widgets set to them draw them in; unset, the app's default (filled
+     * icons), theirs until they change it.
+     * </pre>
+     *
+     * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+     */
+    @java.lang.Override
+    public boolean hasMarkLook() {
+      return instance.hasMarkLook();
+    }
+    /**
+     * <pre>
+     * The shape they draw their marks in, which the group's tables and the
+     * widgets set to them draw them in; unset, the app's default (filled
+     * icons), theirs until they change it.
+     * </pre>
+     *
+     * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.MarkLook getMarkLook() {
+      return instance.getMarkLook();
+    }
+    /**
+     * <pre>
+     * The shape they draw their marks in, which the group's tables and the
+     * widgets set to them draw them in; unset, the app's default (filled
+     * icons), theirs until they change it.
+     * </pre>
+     *
+     * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+     */
+    public Builder setMarkLook(app.pochical.v1.MarkLook value) {
+      copyOnWrite();
+      instance.setMarkLook(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * The shape they draw their marks in, which the group's tables and the
+     * widgets set to them draw them in; unset, the app's default (filled
+     * icons), theirs until they change it.
+     * </pre>
+     *
+     * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+     */
+    public Builder setMarkLook(
+        app.pochical.v1.MarkLook.Builder builderForValue) {
+      copyOnWrite();
+      instance.setMarkLook(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The shape they draw their marks in, which the group's tables and the
+     * widgets set to them draw them in; unset, the app's default (filled
+     * icons), theirs until they change it.
+     * </pre>
+     *
+     * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+     */
+    public Builder mergeMarkLook(app.pochical.v1.MarkLook value) {
+      copyOnWrite();
+      instance.mergeMarkLook(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The shape they draw their marks in, which the group's tables and the
+     * widgets set to them draw them in; unset, the app's default (filled
+     * icons), theirs until they change it.
+     * </pre>
+     *
+     * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+     */
+    public Builder clearMarkLook() {  copyOnWrite();
+      instance.clearMarkLook();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Member)
   }
   @java.lang.Override
@@ -932,6 +1093,7 @@ public  final class Member extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "userId_",
             "displayName_",
             "joinedAtMs_",
@@ -940,10 +1102,11 @@ public  final class Member extends
             "ownName_",
             "photoId_",
             "ownPhoto_",
+            "markLook_",
           };
           java.lang.String info =
-              "\u0000\b\u0000\u0000\u0001\b\b\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0002" +
-              "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0208\b\u0007";
+              "\u0000\t\u0000\u0001\u0001\t\t\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0002" +
+              "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0208\b\u0007\t\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

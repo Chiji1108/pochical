@@ -117,4 +117,27 @@ public interface MemberOrBuilder extends
    * @return The ownPhoto.
    */
   boolean getOwnPhoto();
+
+  /**
+   * <pre>
+   * The shape they draw their marks in, which the group's tables and the
+   * widgets set to them draw them in; unset, the app's default (filled
+   * icons), theirs until they change it.
+   * </pre>
+   *
+   * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+   * @return Whether the markLook field is set.
+   */
+  boolean hasMarkLook();
+  /**
+   * <pre>
+   * The shape they draw their marks in, which the group's tables and the
+   * widgets set to them draw them in; unset, the app's default (filled
+   * icons), theirs until they change it.
+   * </pre>
+   *
+   * <code>.pochical.v1.MarkLook mark_look = 9 [json_name = "markLook"];</code>
+   * @return The markLook.
+   */
+  app.pochical.v1.MarkLook getMarkLook();
 }

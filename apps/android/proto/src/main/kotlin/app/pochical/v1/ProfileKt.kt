@@ -87,8 +87,53 @@ public object ProfileKt {
     public fun clearPhotoId() {
       _builder.clearPhotoId()
     }
+
+    /**
+     * ```
+     * The shape their marks are drawn in, unset before the user changes it
+     * from the app's default.
+     * ```
+     *
+     * `.pochical.v1.MarkLook mark_look = 3 [json_name = "markLook"];`
+     */
+    public var markLook: app.pochical.v1.MarkLook
+      @kotlin.jvm.JvmName("getMarkLook")
+        get() = _builder.markLook
+      @kotlin.jvm.JvmName("setMarkLook")
+        set(value) {
+        _builder.markLook = value
+      }
+    /**
+     * ```
+     * The shape their marks are drawn in, unset before the user changes it
+     * from the app's default.
+     * ```
+     *
+     * `.pochical.v1.MarkLook mark_look = 3 [json_name = "markLook"];`
+     */
+    public fun clearMarkLook() {
+      _builder.clearMarkLook()
+    }
+    /**
+     * ```
+     * The shape their marks are drawn in, unset before the user changes it
+     * from the app's default.
+     * ```
+     *
+     * `.pochical.v1.MarkLook mark_look = 3 [json_name = "markLook"];`
+     * @return Whether the markLook field is set.
+     */
+    public fun hasMarkLook(): kotlin.Boolean {
+      return _builder.hasMarkLook()
+    }
+
+    public val ProfileKt.Dsl.markLookOrNull: app.pochical.v1.MarkLook?
+      get() = _builder.markLookOrNull
   }
 }
 public inline fun app.pochical.v1.Profile.copy(block: `app.pochical.v1`.ProfileKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Profile =
   `app.pochical.v1`.ProfileKt.Dsl._create(this.toBuilder()).apply { block() }._build()
+
+public val app.pochical.v1.ProfileOrBuilder.markLookOrNull: app.pochical.v1.MarkLook?
+  get() = if (hasMarkLook()) getMarkLook() else null
 

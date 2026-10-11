@@ -124,7 +124,8 @@ struct GroupPersonView: View {
     let weeks = monthWeeks(month, weekStart: settings.device.week.start)
     let shown = person.calendar.shown(from: weeks[0][0], through: weeks[weeks.count - 1][6])
     let mine = me.map { $0.offDays(from: weeks[0][0], through: weeks[weeks.count - 1][6]) } ?? [:]
-    var theirLook = look
+    // Their marks in their own shape, with names and days off shown.
+    var theirLook = look.drawing(person.markLook)
     theirLook.options.names = true
     theirLook.options.highlight = true
     theirLook.options.blankOff = false
