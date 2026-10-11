@@ -126,9 +126,19 @@ struct SupportChatScreen: View {
         LazyVStack(spacing: 4) {
           intro
           ForEach(Array(lines.enumerated()), id: \.element.id) { index, line in
-            let runs = { (other: SupportLine) in other.fromSupport == line.fromSupport && !other.unsent }
-            let first = index == 0 || !runs(lines[index - 1]) || line.unsent
-            let last = index == lines.count - 1 || !runs(lines[index + 1]) || line.unsent
+            let before = index > 0 ? lines[index - 1] : nil
+            let after = index + 1 < lines.count ? lines[index + 1] : nil
+            let newDay = before.map { Self.day(of: $0) != Self.day(of: line) } ?? true
+            // The day over its first line, as in the group chats.
+            if newDay {
+              DayChip(day: Self.day(of: line))
+            }
+            let first = newDay || !Self.goesOn(line, after: before)
+            // One time for a run's lines sent in the same minute, by the
+            // last of them (spec/chat.md, In a message).
+            let showsTime =
+              after.map { !Self.goesOn($0, after: line) || Self.clock($0) != Self.clock(line) }
+              ?? true
             Group {
               if line.unsent {
                 Text(unsentLine(Self.supportName, mine: !line.fromSupport))
@@ -137,18 +147,11 @@ struct SupportChatScreen: View {
                   .frame(maxWidth: .infinity)
                   .padding(.vertical, 4)
               } else {
-                row(line, first: first)
+                row(line, first: first, showsTime: showsTime)
               }
             }
             .id(line.id)
-            .padding(.top, first && index > 0 ? 8 : 0)
-            if last && !line.unsent {
-              Text(Self.timeText(line.sentAt))
-                .font(.caption2)
-                .foregroundStyle(colors.textTertiary)
-                .frame(maxWidth: .infinity, alignment: line.fromSupport ? .leading : .trailing)
-                .padding(.horizontal, line.fromSupport ? 52 : 16)
-            }
+            .padding(.top, first && !newDay ? 8 : 0)
           }
           ForEach(waiting) { line in
             waitingRow(line)
@@ -165,6 +168,8 @@ struct SupportChatScreen: View {
         .padding(.vertical, 8)
       }
       .defaultScrollAnchor(.bottom)
+      // Short, it starts at the top under its intro, as /design's.
+      .defaultScrollAnchor(.top, for: .alignment)
       .onChange(of: lines.count + waiting.count) { _, _ in
         withAnimation { reader.scrollTo("end", anchor: .bottom) }
       }
@@ -236,8 +241,14 @@ struct SupportChatScreen: View {
   /// A line kept, Pochical's people's under the app's icon at the start of
   /// a run, as a member's face starts theirs; held, its reactions and
   /// menu; its emoji under it.
-  private func row(_ line: SupportLine, first: Bool) -> some View {
+  private func row(_ line: SupportLine, first: Bool, showsTime: Bool) -> some View {
     let mine = !line.fromSupport
+    // Beside the bubble toward the middle, as the group chats' time.
+    let time = Text(showsTime ? Self.clock(line) : "")
+      .font(.caption2)
+      .foregroundStyle(colors.textQuaternary)
+      .padding(.bottom, 2)
+      .fixedSize()
     return HStack(alignment: .top, spacing: 8) {
       if mine {
         Spacer(minLength: 48)
@@ -247,6 +258,8 @@ struct SupportChatScreen: View {
         Color.clear.frame(width: 28, height: 1)
       }
       VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
+        HStack(alignment: .bottom, spacing: 8) {
+          if mine { time }
         bubble(line, first: first)
           .heldForActions(lifted: acting == line.id) { frame, finger, link in
             // A link held has its own menu, without the reactions.
@@ -266,6 +279,8 @@ struct SupportChatScreen: View {
                   actions: actions(for: line)))
             }
           }
+          if !mine { time }
+        }
         if !line.reactions.isEmpty {
           ReactionRow(
             reactions: line.reactions, meID: SupportLine.me, nameOf: Self.nameOf, counted: true,
@@ -431,6 +446,8 @@ struct SupportChatScreen: View {
 
   private var composer: some View {
     let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+    // A word still being converted counts, as it goes once confirmed.
+    let blocked = (trimmed.isEmpty && pickedPhotos.isEmpty && !composing) || readingPhotos
     return VStack(spacing: 0) {
       if let replying {
         ReplyBar(quote: quote(of: replying.id), groupID: ChatPhotos.support) {
@@ -465,11 +482,12 @@ struct SupportChatScreen: View {
             .font(.system(size: 16, weight: .bold))
             .foregroundStyle(colors.accentOnFill)
             .frame(width: 38, height: 38)
-            .background(colors.accentFill, in: Circle())
+            .background(blocked ? colors.fillPrimary : colors.accentFill, in: Circle())
         }
         .buttonStyle(.plain)
+        .disabled(blocked)
         .accessibilityLabel("送る")
-        .opacity((trimmed.isEmpty && pickedPhotos.isEmpty && !composing) || readingPhotos ? 0.5 : 1)
+        .animation(.easeOut(duration: 0.15), value: blocked)
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
@@ -597,16 +615,26 @@ struct SupportChatScreen: View {
   }
 
   /// When a line was sent, as the app writes days: 10月8日 12:35.
-  private static func timeText(_ date: Date) -> String {
-    let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
-    let day = Day(date, in: .current)
-    return "\(day.monthDayText) \(parts.hour ?? 0):\(String(format: "%02d", parts.minute ?? 0))"
+  private static func day(of line: SupportLine) -> Day {
+    Day(line.sentAt, in: .current)
+  }
+
+  private static func clock(_ line: SupportLine) -> String {
+    ChatTime.clock(Int64(line.sentAt.timeIntervalSince1970 * 1000))
+  }
+
+  /// `line` goes on the run of `before`: the same writer, neither taken
+  /// back, and no reply starting a run of its own.
+  private static func goesOn(_ line: SupportLine, after before: SupportLine?) -> Bool {
+    guard let before else { return false }
+    return before.fromSupport == line.fromSupport && !before.unsent && !line.unsent
+      && line.replyTo == nil
   }
 
   /// The app's version and the device, as they reach Pochical's people.
   private static var device: String {
     let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
     let system = UIDevice.current
-    return "ポチカル \(version)・\(system.model) (\(system.systemName) \(system.systemVersion))"
+    return "ポチカル \(version)・\(system.model)・\(system.systemName) \(system.systemVersion)"
   }
 }

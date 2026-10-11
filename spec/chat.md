@@ -176,6 +176,7 @@ A message may be as long as `textLimits.chatMessage` and share up to `SHARED_DAY
 - A line is the user's words, up to `textLimits.chatMessage`, sent with an id of the app's so a send tried again is kept once; past `SUPPORT_LIMIT` (wrangler.jsonc) it waits. A line not sent stays faint, with a way to send it again.
 - Opening the chat reads its answers; until then they are counted on its row.
 - Pochical's people answer from the admin pages (spec/admin.md). An answer shows at once in the open chat and on 設定's row, and comes as a notification that opens the chat.
+- Its lines are laid out as a group chat's: the day over each day's first line, runs by writer, and the time beside the last of a run's lines sent in the same minute. Its head, first, starts the chat at the top while the lines are few.
 - A line is held as a group chat's is (/design's SupportChatPage), for what fits a chat of two: reactions, 返信 and コピー, and on one's own lines 送信取消; not days, polls, mentions, pins or reports, and no 編集, as an answer may already be written to the words.
   - A reaction is one emoji, the user's or Pochical's people's, on any line not taken back (`ReactSupport`).
   - A reply quotes the line it is to (`reply_to`), gone to at a tap; one to a line not in the chat is sent as a plain line.
