@@ -260,25 +260,25 @@ struct SupportChatScreen: View {
       VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { time }
-        bubble(line, first: first)
-          .heldForActions(lifted: acting == line.id) { frame, finger, link in
-            // A link held has its own menu, without the reactions.
-            if let link {
-              openActions(
-                MessageActionsRequest(
-                  lineID: line.id, frame: frame, mine: mine,
-                  bubble: AnyView(bubble(line, first: first)), finger: finger,
-                  actions: linkActions(link, open: { openURL(link) }, say: say)))
-            } else {
-              openActions(
-                MessageActionsRequest(
-                  lineID: line.id, frame: frame, mine: mine,
-                  bubble: AnyView(bubble(line, first: first)), finger: finger,
-                  reactions: line.reactions, meID: SupportLine.me,
-                  onReact: { react($0, on: line) }, onMoreReactions: { reactingTo = line },
-                  actions: actions(for: line)))
+          bubble(line, first: first)
+            .heldForActions(lifted: acting == line.id) { frame, finger, link in
+              // A link held has its own menu, without the reactions.
+              if let link {
+                openActions(
+                  MessageActionsRequest(
+                    lineID: line.id, frame: frame, mine: mine,
+                    bubble: AnyView(bubble(line, first: first)), finger: finger,
+                    actions: linkActions(link, open: { openURL(link) }, say: say)))
+              } else {
+                openActions(
+                  MessageActionsRequest(
+                    lineID: line.id, frame: frame, mine: mine,
+                    bubble: AnyView(bubble(line, first: first)), finger: finger,
+                    reactions: line.reactions, meID: SupportLine.me,
+                    onReact: { react($0, on: line) }, onMoreReactions: { reactingTo = line },
+                    actions: actions(for: line)))
+              }
             }
-          }
           if !mine { time }
         }
         if !line.reactions.isEmpty {
@@ -614,7 +614,7 @@ struct SupportChatScreen: View {
     }
   }
 
-  /// When a line was sent, as the app writes days: 10月8日 12:35.
+  /// The day a line was sent, for the day over its first line.
   private static func day(of line: SupportLine) -> Day {
     Day(line.sentAt, in: .current)
   }
