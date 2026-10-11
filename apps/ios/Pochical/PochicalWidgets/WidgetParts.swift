@@ -254,10 +254,28 @@ struct WidgetFace: View {
 /// frames it: a photo, an icon or letters on their tint, or an emoji.
 struct WidgetGroupMark: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.widgetRenderingMode) private var renderingMode
   let group: WidgetWith
   let size: CGFloat
 
   var body: some View {
+    if renderingMode == .fullColor {
+      drawn
+    } else {
+      // In the system's one-color looks an emoji or a photo would turn
+      // one solid shape: drawn as a picture, desaturated, as the poodle is.
+      let renderer = ImageRenderer(content: drawn.environment(\.themeColors, colors))
+      let _ = renderer.scale = 3
+      if let image = renderer.uiImage {
+        Image(uiImage: image)
+          .resizable()
+          .widgetAccentedRenderingMode(.desaturated)
+          .frame(width: size, height: size)
+      }
+    }
+  }
+
+  @ViewBuilder private var drawn: some View {
     let mark = group.mark
     let color = colors.mark(mark.color)
     let shape = RoundedRectangle(cornerRadius: size * 0.28)
