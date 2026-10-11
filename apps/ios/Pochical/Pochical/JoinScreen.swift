@@ -30,6 +30,14 @@ struct JoinScreen: View {
   @State private var myName = ""
   /// The usual name, which the field starts with (設定 › プロフィール).
   @Fetch(ProfileNameRequest()) private var usualName = ""
+  /// The usual photo, which the group shows unless another is picked.
+  @Fetch(UsualProfileRequest()) private var usual = UsualProfile()
+  /// The face for this group, sent once in it: the usual photo, another
+  /// picked here, or none on purpose.
+  @State private var face = JoinFace.usual
+  /// Joined, but the photo picked could not be set: said, and the group
+  /// opens anyway.
+  @Environment(\.say) private var say
   @State private var joining = false
   @State private var joinError: InviteError?
   @State private var showingMembers = false
@@ -108,7 +116,13 @@ struct JoinScreen: View {
           .padding(.bottom, 12)
         }
         .settingsOnPage()
+        // The face this group shows, as グループの設定's このグループでのあなた
+        // changes it later (/design's GroupProfileRow on the join screen).
         Section("このグループでのあなた") {
+          faceEditor
+            .settingsOnPage()
+        }
+        Section {
           LabeledContent("名前") {
             LimitedTextField(placeholder: "例：さくら", text: $myName, limit: TextLimits.personName)
           }
@@ -209,12 +223,39 @@ struct JoinScreen: View {
     }
   }
 
+  /// 写真を編集 for the face this group will show, picked before joining
+  /// and set once in it.
+  private var faceEditor: some View {
+    PhotoEditor(
+      label: "写真を編集", hasPhoto: face != .none && (face != .usual || !usual.photoID.isEmpty),
+      picture: { facePicture },
+      onPhoto: { jpeg in face = .picked(jpeg) },
+      onUsual: face == .usual || usual.photoID.isEmpty ? nil : { face = .usual },
+      onRemove: { face = .none })
+  }
+
+  @ViewBuilder private var facePicture: some View {
+    switch face {
+    case .picked(let jpeg):
+      if let image = UIImage(data: jpeg) {
+        Image(uiImage: image).resizable().scaledToFill()
+          .frame(width: 88, height: 88).clipShape(Circle())
+      }
+    case .usual:
+      MemberAvatar(
+        name: myName, photoID: usual.photoID, groupID: ChatPhotos.mine, size: 88, me: true)
+    case .none:
+      MemberAvatar(name: myName, photoID: "", size: 88, me: true)
+    }
+  }
+
   private func join() {
     joining = true
     Task {
       defer { joining = false }
       do throws(InviteError) {
         let groupID = try await groupCalls.join(code: invite.code, displayName: trimmed(myName))
+        await setFace(in: groupID)
         onJoined(groupID)
       } catch {
         ReviewPrompt.troubled = true
@@ -222,6 +263,32 @@ struct JoinScreen: View {
       }
     }
   }
+}
+
+extension JoinScreen {
+  /// The face picked here, set now the person is in the group; the usual
+  /// one needs nothing. Not set, the group opens anyway and says so.
+  fileprivate func setFace(in groupID: String) async {
+    do {
+      switch face {
+      case .usual: return
+      case .picked(let jpeg):
+        let photoID = try await groupCalls.sendPhoto(jpeg, to: groupID)
+        try await groupCalls.setGroupPhoto(usual: false, photoID: photoID, in: groupID)
+      case .none:
+        try await groupCalls.setGroupPhoto(usual: false, in: groupID)
+      }
+    } catch {
+      say("写真を設定できませんでした。グループの設定から変えられます")
+    }
+  }
+}
+
+/// The face a group shows of the person joining it.
+enum JoinFace: Equatable {
+  case usual
+  case picked(Data)
+  case none
 }
 
 private func trimmed(_ text: String) -> String {
