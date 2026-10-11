@@ -54,16 +54,29 @@ struct GroupShiftsPage: View {
   @State private var monthInSight = Day.today.firstOfMonth
   /// Whether today's day or week is in sight; 今日 shows while it isn't.
   @State private var todayInSight = true
+  /// How far a big group's 一覧 is scrolled sideways, and how wide its
+  /// view is, for the pinned columns and the months' headings.
+  @State private var scrollX: CGFloat = 0
+  @State private var viewWidth: CGFloat = 0
   /// Where 月を選ぶ or 今日 asked the list to go.
   @State private var goal: ListGoal?
 
-  private var layouts: [ShiftsLayout] {
-    DayRowsDensity(members: members.count) == .scroll
-      ? [.weeks, .person] : ShiftsLayout.allCases
+  /// A big group's 一覧 scrolls sideways, so it opens on 週ごと, where
+  /// everyone fits; picked, 一覧 keeps the dates and the viewer's column.
+  private var layout: ShiftsLayout {
+    pickedLayout ?? (wide ? .weeks : .days)
   }
 
-  private var layout: ShiftsLayout {
-    pickedLayout.flatMap { layouts.contains($0) ? $0 : nil } ?? layouts[0]
+  /// More people than 一覧's columns fit across the screen.
+  private var wide: Bool { DayRowsDensity(members: members.count) == .scroll }
+
+  /// 一覧's columns: the viewer's own first in a big group, pinned beside
+  /// the dates, as /design's.
+  private var tableMembers: [GroupMember] {
+    guard wide, let mine = members.firstIndex(where: { $0.userID == meID }) else { return members }
+    var ordered = members
+    ordered.insert(ordered.remove(at: mine), at: 0)
+    return ordered
   }
 
   /// The day it opens on, its sheet up.
@@ -107,7 +120,11 @@ struct GroupShiftsPage: View {
         .padding(.vertical, 2)
       }
       switch layout {
-      case .days: GroupDayHeader(members: members, groupID: group.id).padding(.horizontal, 16)
+      case .days:
+        GroupDayHeader(
+          members: tableMembers, groupID: group.id, scrollX: wide ? scrollX : nil
+        )
+        .padding(.horizontal, 16)
       // Over the blocks' columns, which keep room at their trailing end.
       case .weeks:
         GroupWeekdays().padding(.leading, 16).padding(.trailing, 20).padding(.bottom, 6)
@@ -134,12 +151,10 @@ struct GroupShiftsPage: View {
       // live, and a picture would take their shifts out of the group.
       ToolbarItem(placement: .primaryAction) {
         Menu {
-          if layouts.count > 1 {
-            Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
-              ForEach(layouts, id: \.self) { Text($0.name).tag($0) }
-            }
-            Divider()
+          Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
+            ForEach(ShiftsLayout.allCases, id: \.self) { Text($0.name).tag($0) }
           }
+          Divider()
           Button("シフトパターン", systemImage: "info.circle") {
             let first = members.first { $0.userID != meID } ?? members.first
             if let first { legendOf = LegendOf(userID: first.userID) }
@@ -245,17 +260,24 @@ struct GroupShiftsPage: View {
   /// 一覧 and 週ごと: the months as one list, opening on `opening`.
   private func list(months: [Day], opening: Day) -> some View {
     ScrollViewReader { scroll in
-      ScrollView {
+      let sideways = wide && layout == .days
+      ScrollView(sideways ? [.vertical, .horizontal] : .vertical) {
         LazyVStack(alignment: .leading, spacing: layout == .weeks ? 12 : 0) {
           ForEach(months, id: \.self) { month in
             heading(month)
               .padding(.top, layout == .weeks ? 12 : 36)
               .padding(.bottom, layout == .weeks ? 0 : 12)
+              // As wide as the view, kept at its left as the rows scroll
+              // sideways.
+              .frame(width: sideways ? max(viewWidth - 32, 0) : nil, alignment: .leading)
+              .offset(x: sideways ? scrollX : 0)
               // Not a day: the month in sight is read off the days.
               .id("heading-\(month.key)")
             if layout == .days {
               ForEach(month.daysOfMonth, id: \.self) { day in
-                GroupDayRow(day: day, members: members, picked: day == picked, onPick: pick)
+                GroupDayRow(
+                  day: day, members: tableMembers, picked: day == picked, onPick: pick,
+                  pinX: sideways ? scrollX : nil)
                   .id(day)
               }
             } else {
@@ -277,9 +299,23 @@ struct GroupShiftsPage: View {
           }
         }
         .scrollTargetLayout()
+        // Sideways, as wide as its columns: a scroll view lays its content
+        // out at its own width otherwise, leaving nothing to scroll.
+        .frame(
+          width: sideways
+            ? max(dayRowsWidth(members: members.count, english: english), viewWidth - 32) : nil,
+          alignment: .leading)
         .padding(.horizontal, 16)
         .padding(.bottom, 24)
       }
+      // A big group's 一覧: how far it is scrolled sideways, and its width.
+      .onScrollGeometryChange(for: CGSize.self) { geometry in
+        CGSize(width: max(geometry.contentOffset.x, 0), height: geometry.containerSize.width)
+      } action: { _, scrolled in
+        scrollX = scrolled.width
+        viewWidth = scrolled.height
+      }
+      .scrollIndicators(.hidden, axes: .horizontal)
       .onScrollTargetVisibilityChange(idType: Day.self, threshold: 0.5) { shown in
         // A week belongs to the month it ends in.
         if let first = shown.min() {
