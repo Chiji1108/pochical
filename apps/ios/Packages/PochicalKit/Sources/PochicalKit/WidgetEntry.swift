@@ -359,8 +359,7 @@ extension OwnCalendar {
           mine.date, entry: entry, pattern: them.calendar.patternsByID[entry.shift], noted: false,
           week: week, holiday: holiday(mine.date))
       }
-      let together = mine.pattern != nil && mine.off && theirs?.pattern != nil
-        && theirs?.off == true
+      let together = mine.off && theirs?.off == true
       return WidgetPairDay(theirs: theirs, together: together)
     }
     return WidgetPair(with: companion.with, me: companion.me, days: days)

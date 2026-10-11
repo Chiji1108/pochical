@@ -153,7 +153,7 @@ struct GroupsScreen: View {
     // has left themselves leaves them on their first group.
     .onChange(of: OpenedGroupKey(link: OpenedGroup.shared.link, groupIDs: groups.map(\.id)), initial: true) {
       _, key in
-      guard let link = key.link, !key.groupIDs.isEmpty else { return }
+      guard let link = key.link else { return }
       OpenedGroup.shared.link = nil
       guard let group = groups.first(where: { $0.id == link.groupID }) else {
         openID = nil
