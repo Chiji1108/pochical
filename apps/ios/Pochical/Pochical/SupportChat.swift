@@ -73,6 +73,7 @@ struct SupportRow: View {
 /// reaches them.
 struct SupportChatScreen: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.openURL) private var openURL
   @Environment(\.groupCalls) private var groupCalls
   @Environment(Settings.self) private var settings
   @Environment(\.look) private var look
@@ -247,14 +248,23 @@ struct SupportChatScreen: View {
       }
       VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
         bubble(line, first: first)
-          .heldForActions(lifted: acting == line.id) { frame, finger in
-            openActions(
-              MessageActionsRequest(
-                lineID: line.id, frame: frame, mine: mine,
-                bubble: AnyView(bubble(line, first: first)), finger: finger,
-                reactions: line.reactions, meID: SupportLine.me,
-                onReact: { react($0, on: line) }, onMoreReactions: { reactingTo = line },
-                actions: actions(for: line)))
+          .heldForActions(lifted: acting == line.id) { frame, finger, link in
+            // A link held has its own menu, without the reactions.
+            if let link {
+              openActions(
+                MessageActionsRequest(
+                  lineID: line.id, frame: frame, mine: mine,
+                  bubble: AnyView(bubble(line, first: first)), finger: finger,
+                  actions: linkActions(link, open: { openURL(link) }, say: say)))
+            } else {
+              openActions(
+                MessageActionsRequest(
+                  lineID: line.id, frame: frame, mine: mine,
+                  bubble: AnyView(bubble(line, first: first)), finger: finger,
+                  reactions: line.reactions, meID: SupportLine.me,
+                  onReact: { react($0, on: line) }, onMoreReactions: { reactingTo = line },
+                  actions: actions(for: line)))
+            }
           }
         if !line.reactions.isEmpty {
           ReactionRow(
@@ -290,7 +300,7 @@ struct SupportChatScreen: View {
       first: false, waiting: !line.failed, nameOf: { _ in "" })
     return HStack(alignment: .top, spacing: 8) {
       Spacer(minLength: 48)
-      content.heldForActions(lifted: acting == line.id) { frame, finger in
+      content.heldForActions(lifted: acting == line.id) { frame, finger, _ in
         guard line.photo == nil else { return }
         openActions(
           MessageActionsRequest(
