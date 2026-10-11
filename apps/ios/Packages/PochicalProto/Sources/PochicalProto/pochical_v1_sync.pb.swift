@@ -1068,6 +1068,10 @@ public nonisolated struct Pochical_V1_Member: Sendable {
   /// Clears the value of `markLook`. Subsequent reads from it will return its default value.
   public mutating func clearMarkLook() {self._markLook = nil}
 
+  /// Left because this member took them out (RemoveMember); empty when
+  /// they left themselves, or are in the group.
+  public var removedBy: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3697,7 +3701,7 @@ nonisolated extension Pochical_V1_GroupProfile: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Member"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0\u{1}left\0\u{1}deleted\0\u{3}own_name\0\u{3}photo_id\0\u{3}own_photo\0\u{3}mark_look\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0\u{1}left\0\u{1}deleted\0\u{3}own_name\0\u{3}photo_id\0\u{3}own_photo\0\u{3}mark_look\0\u{3}removed_by\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3714,6 +3718,7 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
       case 7: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.ownPhoto) }()
       case 9: try { try decoder.decodeSingularMessageField(value: &self._markLook) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.removedBy) }()
       default: break
       }
     }
@@ -3751,6 +3756,9 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     try { if let v = self._markLook {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
     } }()
+    if !self.removedBy.isEmpty {
+      try visitor.visitSingularStringField(value: self.removedBy, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3764,6 +3772,7 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.photoID != rhs.photoID {return false}
     if lhs.ownPhoto != rhs.ownPhoto {return false}
     if lhs._markLook != rhs._markLook {return false}
+    if lhs.removedBy != rhs.removedBy {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

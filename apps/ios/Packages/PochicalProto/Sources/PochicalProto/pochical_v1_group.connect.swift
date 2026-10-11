@@ -64,6 +64,13 @@ public protocol Pochical_V1_GroupServiceClientInterface: Sendable {
     /// link. Leaving a group you are not in changes nothing.
     @available(iOS 13, *)
     func `leaveGroup`(request: Pochical_V1_LeaveGroupRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_LeaveGroupResponse>
+
+    /// Takes another member out of the group, as leaving takes the caller:
+    /// any member may, as in LINE's groups. The group remembers who did it
+    /// (Member.removed_by). NOT_FOUND for someone not in it now;
+    /// INVALID_ARGUMENT for the caller themselves, who leaves instead.
+    @available(iOS 13, *)
+    func `removeMember`(request: Pochical_V1_RemoveMemberRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_RemoveMemberResponse>
 }
 
 /// Concrete implementation of `Pochical_V1_GroupServiceClientInterface`.
@@ -119,6 +126,11 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
         return await self.client.unary(path: "/pochical.v1.GroupService/LeaveGroup", idempotencyLevel: .unknown, request: request, headers: headers)
     }
 
+    @available(iOS 13, *)
+    public func `removeMember`(request: Pochical_V1_RemoveMemberRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_RemoveMemberResponse> {
+        return await self.client.unary(path: "/pochical.v1.GroupService/RemoveMember", idempotencyLevel: .unknown, request: request, headers: headers)
+    }
+
     public enum Metadata {
         public enum Methods {
             public static let createGroup = Connect.MethodSpec(name: "CreateGroup", service: "pochical.v1.GroupService", type: .unary)
@@ -130,6 +142,7 @@ public final class Pochical_V1_GroupServiceClient: Pochical_V1_GroupServiceClien
             public static let setDisplayName = Connect.MethodSpec(name: "SetDisplayName", service: "pochical.v1.GroupService", type: .unary)
             public static let setGroupPhoto = Connect.MethodSpec(name: "SetGroupPhoto", service: "pochical.v1.GroupService", type: .unary)
             public static let leaveGroup = Connect.MethodSpec(name: "LeaveGroup", service: "pochical.v1.GroupService", type: .unary)
+            public static let removeMember = Connect.MethodSpec(name: "RemoveMember", service: "pochical.v1.GroupService", type: .unary)
         }
     }
 }

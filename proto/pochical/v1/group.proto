@@ -53,6 +53,12 @@ service GroupService {
   // and its socket and calls refuse them until they join again by a live
   // link. Leaving a group you are not in changes nothing.
   rpc LeaveGroup(LeaveGroupRequest) returns (LeaveGroupResponse);
+
+  // Takes another member out of the group, as leaving takes the caller:
+  // any member may, as in LINE's groups. The group remembers who did it
+  // (Member.removed_by). NOT_FOUND for someone not in it now;
+  // INVALID_ARGUMENT for the caller themselves, who leaves instead.
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse);
 }
 
 message CreateGroupRequest {
@@ -170,3 +176,10 @@ message LeaveGroupRequest {
 }
 
 message LeaveGroupResponse {}
+
+message RemoveMemberRequest {
+  string group_id = 1;
+  string user_id = 2;
+}
+
+message RemoveMemberResponse {}

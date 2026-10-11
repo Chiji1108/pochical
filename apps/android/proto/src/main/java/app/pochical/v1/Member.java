@@ -22,6 +22,7 @@ public  final class Member extends
     userId_ = "";
     displayName_ = "";
     photoId_ = "";
+    removedBy_ = "";
   }
   private int bitField0_;
   public static final int USER_ID_FIELD_NUMBER = 1;
@@ -487,6 +488,78 @@ public  final class Member extends
   private void clearMarkLook() {
     markLook_ = null;
     bitField0_ = (bitField0_ & ~0x00000001);
+  }
+
+  public static final int REMOVED_BY_FIELD_NUMBER = 10;
+  private java.lang.String removedBy_;
+  /**
+   * <pre>
+   * Left because this member took them out (RemoveMember); empty when
+   * they left themselves, or are in the group.
+   * </pre>
+   *
+   * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+   * @return The removedBy.
+   */
+  @java.lang.Override
+  public java.lang.String getRemovedBy() {
+    return removedBy_;
+  }
+  /**
+   * <pre>
+   * Left because this member took them out (RemoveMember); empty when
+   * they left themselves, or are in the group.
+   * </pre>
+   *
+   * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+   * @return The bytes for removedBy.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRemovedByBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(removedBy_);
+  }
+  /**
+   * <pre>
+   * Left because this member took them out (RemoveMember); empty when
+   * they left themselves, or are in the group.
+   * </pre>
+   *
+   * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+   * @param value The removedBy to set.
+   */
+  private void setRemovedBy(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    removedBy_ = value;
+  }
+  /**
+   * <pre>
+   * Left because this member took them out (RemoveMember); empty when
+   * they left themselves, or are in the group.
+   * </pre>
+   *
+   * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+   */
+  private void clearRemovedBy() {
+
+    removedBy_ = getDefaultInstance().getRemovedBy();
+  }
+  /**
+   * <pre>
+   * Left because this member took them out (RemoveMember); empty when
+   * they left themselves, or are in the group.
+   * </pre>
+   *
+   * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+   * @param value The bytes for removedBy to set.
+   */
+  private void setRemovedByBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    removedBy_ = value.toStringUtf8();
+
   }
 
   public static app.pochical.v1.Member parseFrom(
@@ -1077,6 +1150,80 @@ public  final class Member extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Left because this member took them out (RemoveMember); empty when
+     * they left themselves, or are in the group.
+     * </pre>
+     *
+     * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+     * @return The removedBy.
+     */
+    @java.lang.Override
+    public java.lang.String getRemovedBy() {
+      return instance.getRemovedBy();
+    }
+    /**
+     * <pre>
+     * Left because this member took them out (RemoveMember); empty when
+     * they left themselves, or are in the group.
+     * </pre>
+     *
+     * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+     * @return The bytes for removedBy.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getRemovedByBytes() {
+      return instance.getRemovedByBytes();
+    }
+    /**
+     * <pre>
+     * Left because this member took them out (RemoveMember); empty when
+     * they left themselves, or are in the group.
+     * </pre>
+     *
+     * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+     * @param value The removedBy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRemovedBy(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setRemovedBy(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Left because this member took them out (RemoveMember); empty when
+     * they left themselves, or are in the group.
+     * </pre>
+     *
+     * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRemovedBy() {
+      copyOnWrite();
+      instance.clearRemovedBy();
+      return this;
+    }
+    /**
+     * <pre>
+     * Left because this member took them out (RemoveMember); empty when
+     * they left themselves, or are in the group.
+     * </pre>
+     *
+     * <code>string removed_by = 10 [json_name = "removedBy"];</code>
+     * @param value The bytes for removedBy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRemovedByBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setRemovedByBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Member)
   }
   @java.lang.Override
@@ -1103,10 +1250,11 @@ public  final class Member extends
             "photoId_",
             "ownPhoto_",
             "markLook_",
+            "removedBy_",
           };
           java.lang.String info =
-              "\u0000\t\u0000\u0001\u0001\t\t\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0002" +
-              "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0208\b\u0007\t\u1009\u0000";
+              "\u0000\n\u0000\u0001\u0001\n\n\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0002" +
+              "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0208\b\u0007\t\u1009\u0000\n\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

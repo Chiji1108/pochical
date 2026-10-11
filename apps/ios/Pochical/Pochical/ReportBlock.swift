@@ -152,7 +152,10 @@ struct MemberProfileSheet: View {
   let onReport: () -> Void
   let onBlock: () -> Void
   let onUnblock: () -> Void
+  /// Takes them out of the group, asked first; where the sheet offers it.
+  var onRemove: (() -> Void)?
   @State private var viewingPhoto = false
+  @State private var confirmingRemove = false
 
   var body: some View {
     NavigationStack {
@@ -204,6 +207,25 @@ struct MemberProfileSheet: View {
       .frame(maxWidth: .infinity)
       .padding(.top, 24)
       .frame(maxHeight: .infinity, alignment: .top)
+      // At the foot, apart from the face: rarely wanted, and asked first.
+      .safeAreaInset(edge: .bottom) {
+        if onRemove != nil {
+          Button("このグループから外す", role: .destructive) {
+            confirmingRemove = true
+          }
+          .frame(minHeight: Metrics.touch)
+          .padding(.bottom, 8)
+        }
+      }
+      .alert("\(name)を外しますか？", isPresented: $confirmingRemove) {
+        Button("外す", role: .destructive) {
+          onRemove?()
+          dismiss()
+        }
+        Button("キャンセル", role: .cancel) {}
+      } message: {
+        Text("\(name)は「\(groupName)」のシフトとチャットを見られなくなります。")
+      }
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
@@ -235,6 +257,25 @@ struct MemberProfileSheet: View {
       PhotoViewer(photo: LinePhoto(id: photoID, width: 1, height: 1), groupID: groupID)
     }
   }
+}
+
+/// Blocks or unblocks someone as `question` asked, and says so.
+@MainActor func answer(_ question: BlockQuestion, calls: GroupCalls, say: SayAction) {
+  Task {
+    do {
+      try await calls.setBlocked(question.userID, question.block)
+      say(question.block ? "\(question.name)をブロックしました" : "\(question.name)のブロックを解除しました")
+    } catch {
+      say("できませんでした。通信できるところでもう一度どうぞ")
+    }
+  }
+}
+
+/// What follows a report: asking to block them too, unless they are.
+func blockAfterReport(_ target: ReportTarget, blocked: Set<String>) -> BlockQuestion? {
+  blocked.contains(target.memberID)
+    ? nil
+    : BlockQuestion(userID: target.memberID, name: target.name, block: true, afterReport: true)
 }
 
 /// Someone being blocked or unblocked, asked first.

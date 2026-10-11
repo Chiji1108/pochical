@@ -1060,24 +1060,16 @@ struct ChatScreen: View {
 
   /// A report sent: blocking them is offered, unless they are already.
   private func reported(_ target: ReportTarget) {
-    if blocked.contains(target.memberID) {
-      say("通報しました")
+    if let question = blockAfterReport(target, blocked: blocked) {
+      blockQuestion = question
     } else {
-      blockQuestion = BlockQuestion(
-        userID: target.memberID, name: target.name, block: true, afterReport: true)
+      say("通報しました")
     }
   }
 
   /// Blocks or unblocks someone, and says so.
   private func setBlocked(_ question: BlockQuestion) {
-    Task {
-      do {
-        try await groupCalls.setBlocked(question.userID, question.block)
-        say(question.block ? "\(question.name)をブロックしました" : "\(question.name)のブロックを解除しました")
-      } catch {
-        say("できませんでした。通信できるところでもう一度どうぞ")
-      }
-    }
+    answer(question, calls: groupCalls, say: SayAction(say: say))
   }
 
   private var isMuted: Bool {
@@ -1843,7 +1835,7 @@ struct BubbleShape: Shape {
 }
 
 /// Someone else whose profile is open.
-private struct ProfileOf: Identifiable {
+struct ProfileOf: Identifiable {
   let id: String
   let name: String
   var photoID = ""
@@ -1851,7 +1843,7 @@ private struct ProfileOf: Identifiable {
 
 /// Reporting a line or a member, their profile, and blocking them asked
 /// first (spec/chat.md, Reporting and blocking).
-private struct ReportAndBlock: ViewModifier {
+struct ReportAndBlock: ViewModifier {
   let groupID: String
   let groupName: String
   let groupMark: GroupMarkValue
@@ -1863,6 +1855,9 @@ private struct ReportAndBlock: ViewModifier {
   let onMessage: (ProfileOf) -> (() -> Void)?
   let onReported: (ReportTarget) -> Void
   let onSetBlocked: (BlockQuestion) -> Void
+  /// Takes them out of the group, where the profile offers it (グループの
+  ///設定's members).
+  var onRemove: ((ProfileOf) -> Void)?
   /// What follows once a sheet has gone: one cannot come up while another
   /// is going.
   @State private var next: (() -> Void)?
@@ -1887,7 +1882,8 @@ private struct ReportAndBlock: ViewModifier {
             next = {
               blockQuestion = BlockQuestion(userID: person.id, name: person.name, block: false)
             }
-          })
+          },
+          onRemove: onRemove.map { remove in { remove(person) } })
       }
       .alert(
         blockQuestion?.title ?? "", isPresented: Binding(

@@ -72,4 +72,12 @@ public interface GroupServiceClientInterface {
    *  link. Leaving a group you are not in changes nothing.
    */
   public suspend fun leaveGroup(request: LeaveGroupRequest, headers: Headers = emptyMap()): ResponseMessage<LeaveGroupResponse>
+
+  /**
+   *  Takes another member out of the group, as leaving takes the caller:
+   *  any member may, as in LINE's groups. The group remembers who did it
+   *  (Member.removed_by). NOT_FOUND for someone not in it now;
+   *  INVALID_ARGUMENT for the caller themselves, who leaves instead.
+   */
+  public suspend fun removeMember(request: RemoveMemberRequest, headers: Headers = emptyMap()): ResponseMessage<RemoveMemberResponse>
 }

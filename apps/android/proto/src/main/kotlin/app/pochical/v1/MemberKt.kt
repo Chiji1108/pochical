@@ -279,6 +279,33 @@ public object MemberKt {
 
     public val MemberKt.Dsl.markLookOrNull: app.pochical.v1.MarkLook?
       get() = _builder.markLookOrNull
+
+    /**
+     * ```
+     * Left because this member took them out (RemoveMember); empty when
+     * they left themselves, or are in the group.
+     * ```
+     *
+     * `string removed_by = 10 [json_name = "removedBy"];`
+     */
+    public var removedBy: kotlin.String
+      @kotlin.jvm.JvmName("getRemovedBy")
+        get() = _builder.removedBy
+      @kotlin.jvm.JvmName("setRemovedBy")
+        set(value) {
+        _builder.removedBy = value
+      }
+    /**
+     * ```
+     * Left because this member took them out (RemoveMember); empty when
+     * they left themselves, or are in the group.
+     * ```
+     *
+     * `string removed_by = 10 [json_name = "removedBy"];`
+     */
+    public fun clearRemovedBy() {
+      _builder.clearRemovedBy()
+    }
   }
 }
 public inline fun app.pochical.v1.Member.copy(block: `app.pochical.v1`.MemberKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Member =
