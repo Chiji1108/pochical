@@ -8,7 +8,9 @@ import WidgetKit
 /// a column each.
 struct UpcomingWidget: Widget {
   var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "upcoming", provider: DayTimeline()) { moment in
+    AppIntentConfiguration(
+      kind: "upcoming", intent: UpcomingIntent.self, provider: ChosenTimeline<UpcomingIntent>()
+    ) { moment in
       WidgetLook(settings: moment.settings) {
         UpcomingView(entry: moment.entry)
       }
@@ -33,9 +35,17 @@ private struct UpcomingView: View {
         }
       }
       .widgetURL(dayLink(entry.date))
+    } else if let group = entry.pickAgain {
+      PickAgain(whom: "一緒に見る人", groupID: group)
     } else if entry.nothingEntered {
       FirstRun()
         .widgetURL(dayLink(entry.date))
+    } else if let pair = entry.pair {
+      // Set to someone: today and tomorrow in the small one, five days in
+      // the medium, theirs under the person's.
+      let count = family == .systemMedium ? 5 : 2
+      PairColumns(entry: entry, pair: pair, count: count)
+        .widgetURL(family == .systemMedium ? nil : entry.link(entry.date))
     } else if family == .systemMedium {
       DayColumns(days: Array(entry.upcoming.prefix(5)))
     } else {
@@ -148,15 +158,7 @@ private struct ColumnDay: View {
     // dash here, so the two still read apart.
     let off = OffLook(day, look: look, inWeek: false)
     VStack(spacing: 0) {
-      VStack(spacing: 0) {
-        Text(day.date.weekdayHead(english: english))
-          .font(.caption2)
-          .foregroundStyle(colors.weekday(day.tone))
-        date
-          .noteStroke(day.noted, onTile: off.tile ? day.pattern : nil)
-      }
-      .padding(.top, 4)
-      .padding(.bottom, 2)
+      ColumnHead(day: day, first: first, onTile: off.tile)
       // The mark in the middle of the room under the date, and what
       // changed hanging under it, so the marks stay level.
       Color.clear.frame(maxHeight: .infinity)
@@ -176,6 +178,34 @@ private struct ColumnDay: View {
     .offTile(day, shown: off.tile, radius: Radius.sm, inset: EdgeInsets(top: 0, leading: 3, bottom: 0, trailing: 3))
     .modifier(SpokenDay(day: day))
   }
+}
+
+/// A column's weekday over its date, as the calendar heads its columns, so
+/// the date sits right over its mark. A memo is the calendar's stroke
+/// under the date.
+private struct ColumnHead: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.english) private var english
+  let day: WidgetDay
+  /// Today's column, always the first: its month small before its date,
+  /// and its date plain.
+  let first: Bool
+  /// The day's tile is under it, which the memo's stroke goes deeper on.
+  var onTile = false
+  /// Beside someone's row, a size smaller.
+  var compact = false
+
+  var body: some View {
+    VStack(spacing: 0) {
+      Text(day.date.weekdayHead(english: english))
+        .font(.caption2)
+        .foregroundStyle(colors.weekday(day.tone))
+      date
+        .noteStroke(day.noted, onTile: onTile ? day.pattern : nil)
+    }
+    .padding(.top, 4)
+    .padding(.bottom, 2)
+  }
 
   /// The day of the month, with its month on today's column alone: five
   /// days that run into the next month say so plainly (29 30 1).
@@ -186,10 +216,118 @@ private struct ColumnDay: View {
           .font(.system(size: 10, weight: .medium))
       }
       Text(day.date.day, format: .number)
-        .font(.system(size: 15, weight: .semibold).monospacedDigit())
+        .font(.system(size: compact ? 13 : 15, weight: .semibold).monospacedDigit())
     }
     .foregroundStyle(day.holiday ? colors.calendarHoliday : colors.textPrimary)
     .lineLimit(1)
+  }
+}
+
+/// The group's 週ごと in small: the person's row and theirs, each with
+/// their face in a first column as wide as a day's, on the group tables'
+/// tiles, a band down a day both are off. Their marks are in the person's
+/// look, as the group's tables draw them.
+private struct PairColumns: View {
+  @Environment(\.look) private var look
+  let entry: WidgetEntry
+  let pair: WidgetPair
+  let count: Int
+
+  var body: some View {
+    let named = look.options.names
+    let days = Array(zip(entry.upcoming, pair.days).prefix(count))
+    let worded = days.contains { mine, shown in
+      widgetColumnHours(mine) != nil || shown.theirs.flatMap(widgetColumnHours) != nil
+    }
+    let size: CGFloat = named || worded ? 20 : 26
+    HStack(spacing: 2) {
+      VStack(spacing: 0) {
+        // As tall as a column's head, so the faces sit by their rows.
+        if let first = days.first {
+          ColumnHead(day: first.0, first: true, compact: true).hidden()
+        }
+        WidgetFace(person: pair.me, size: 24, me: true)
+          .frame(maxHeight: .infinity)
+        WidgetFace(person: pair.with, size: 24)
+          .frame(maxHeight: .infinity)
+      }
+      .frame(maxWidth: .infinity)
+      .accessibilityHidden(true)
+      ForEach(Array(days.enumerated()), id: \.element.0.date) { index, element in
+        Link(destination: entry.link(element.0.date)) {
+          PairColumn(
+            mine: element.0, shown: element.1, first: index == 0, size: size, named: named,
+            name: pair.with.name)
+        }
+      }
+    }
+  }
+}
+
+private struct PairColumn: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.widgetRenderingMode) private var renderingMode
+  @Environment(\.english) private var english
+  let mine: WidgetDay
+  let shown: WidgetPairDay
+  let first: Bool
+  let size: CGFloat
+  let named: Bool
+  let name: String
+
+  var body: some View {
+    VStack(spacing: 0) {
+      ColumnHead(day: mine, first: first, compact: true)
+      cell(mine)
+        .modifier(SpokenDay(day: mine))
+      cell(shown.theirs)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+          "\(name)\(english ? ", " : "さん、")\(shown.theirs?.pattern?.name ?? (english ? "not entered" : "未入力"))")
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    // A day both are off: one band down the column.
+    .background {
+      if shown.together {
+        RoundedRectangle(cornerRadius: Radius.sm)
+          .fill(tint)
+          .padding(.horizontal, 3)
+      }
+    }
+  }
+
+  /// A day's mark and its one line in the middle of its cell, on the
+  /// group tables' tile when it is off; a dash where not entered.
+  private func cell(_ day: WidgetDay?) -> some View {
+    VStack(spacing: 2) {
+      if let day {
+        WidgetMark(day: day, size: size)
+        if let words = widgetColumnHours(day)
+          ?? (named ? day.pattern.map { dayName($0.name) } : nil)
+        {
+          ColumnLine(words: words)
+        }
+      } else {
+        Text("–")
+          .font(.system(size: size * 0.5))
+          .foregroundStyle(colors.textQuaternary)
+          .frame(width: size, height: size)
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background {
+      if let day, day.off, !shown.together {
+        RoundedRectangle(cornerRadius: Radius.sm)
+          .fill(tint)
+          .padding(3)
+      }
+    }
+  }
+
+  /// The テーマ's light tint, whatever the pattern, as the group's tables
+  /// draw days off; faint where the system draws in one color.
+  private var tint: Color {
+    renderingMode == .fullColor ? colors.accentContainer : .white.opacity(0.24)
   }
 }
 

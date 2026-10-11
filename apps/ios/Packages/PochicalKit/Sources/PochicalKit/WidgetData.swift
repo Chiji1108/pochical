@@ -1,4 +1,5 @@
 import Foundation
+import PochicalDesign
 import SQLiteData
 
 // What a widget reads (spec/widgets.md): the database the app keeps in the
@@ -32,5 +33,92 @@ extension DeviceSettings {
     store.data(forKey: Settings.storeKey).flatMap {
       try? JSONDecoder().decode(DeviceSettings.self, from: $0)
     } ?? DeviceSettings()
+  }
+}
+
+/// The signed-in user's id as their groups know them, as the app last
+/// heard it.
+public func widgetMeID(
+  store: UserDefaults = UserDefaults(suiteName: appGroup) ?? .standard
+) -> String? {
+  store.string(forKey: "userID")
+}
+
+/// Who a widget can be set to (spec/widgets.md, 次の休み with someone or a
+/// group): a group itself, or someone in it, kept by the group they were
+/// picked under.
+public enum WidgetChoice: Hashable, Sendable {
+  case group(String)
+  case member(groupID: String, userID: String)
+
+  /// As kept in a widget's configuration: g:{group} or m:{group}:{user}.
+  public var id: String {
+    switch self {
+    case .group(let group): "g:\(group)"
+    case .member(let group, let user): "m:\(group):\(user)"
+    }
+  }
+
+  public init?(id: String) {
+    let parts = id.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
+    switch (parts.first, parts.count) {
+    case ("g", 2): self = .group(parts[1])
+    case ("m", 3): self = .member(groupID: parts[1], userID: parts[2])
+    default: return nil
+    }
+  }
+
+  public var groupID: String {
+    switch self {
+    case .group(let group), .member(let group, _): group
+    }
+  }
+}
+
+/// One of the person's groups and who else is in it, as a widget's
+/// editing lists them: in the order the app lists groups, each group's
+/// members in the order they joined, the person aside.
+public struct WidgetChoiceGroup: Sendable {
+  public var group: GroupRow
+  public var members: [GroupMemberRow]
+}
+
+/// The person's groups and who is in each, for picking.
+public func widgetChoices(me: String?, in db: Database) throws -> [WidgetChoiceGroup] {
+  let groups = try GroupRow.order(by: \.joinedAtMs).fetchAll(db)
+  let members = try GroupMemberRow.where { !$0.left && !$0.deleted }.order(by: \.joinedAtMs)
+    .fetchAll(db)
+  return groups.map { group in
+    WidgetChoiceGroup(
+      group: group,
+      members: members.filter { $0.groupID == group.id && $0.userID != me })
+  }
+}
+
+/// Who `choice` is now, with their days around `today`; nil once the
+/// person or they have left that group.
+public func widgetCompanion(
+  _ choice: WidgetChoice, me: String?, around today: Day, in db: Database
+) throws -> WidgetCompanion? {
+  guard let group = try GroupRow.where({ $0.id.eq(choice.groupID) }).fetchOne(db) else {
+    return nil
+  }
+  let members = try GroupSync.members(
+    of: group.id, from: today.adding(days: -1),
+    through: today.adding(days: Widgets.offLookaheadDays), in: db)
+  let mine = members.first { $0.userID == me }
+  let meShown = WidgetWith(
+    kind: .person, name: mine?.name ?? "", groupID: group.id, photoID: mine?.photoID ?? "")
+  switch choice {
+  case .group:
+    return WidgetCompanion(
+      with: WidgetWith(kind: .group, name: group.name, groupID: group.id, mark: group.mark),
+      people: members.filter { $0.userID != me }, me: meShown)
+  case .member(_, let userID):
+    guard let them = members.first(where: { $0.userID == userID }) else { return nil }
+    return WidgetCompanion(
+      with: WidgetWith(
+        kind: .person, name: them.name, groupID: group.id, photoID: them.photoID),
+      people: [them], me: meShown)
   }
 }

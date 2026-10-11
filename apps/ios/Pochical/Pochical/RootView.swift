@@ -85,6 +85,12 @@ struct RootView: View {
     .onChange(of: OpenedDay.shared.day, initial: true) { _, day in
       if day != nil { tab = .calendar }
     }
+    // Set to someone or a group, in that group, which shows it once here.
+    .onChange(of: OpenedGroup.shared.link, initial: true) { _, link in
+      guard let link else { return }
+      tab = .groups
+      openGroupID = link.groupID
+    }
     .fullScreenCover(isPresented: $scanning) {
       if let scanned {
         invite = scanned
@@ -143,6 +149,28 @@ struct RootView: View {
 func openedDay(of url: URL) -> Day? {
   guard url.scheme == "pochical", url.host() == "day" else { return nil }
   return Day(url.path(percentEncoded: false).trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+}
+
+/// A group a widget set to someone asks to open: its table at a day, or
+/// its top.
+struct GroupLink: Hashable {
+  let groupID: String
+  let day: Day?
+}
+
+/// pochical://group/{groupId}, or with /day/{yyyy-mm-dd} after it.
+@MainActor @Observable final class OpenedGroup {
+  static let shared = OpenedGroup()
+  var link: GroupLink?
+}
+
+/// The group, and the day, a link names.
+func openedGroup(of url: URL) -> GroupLink? {
+  guard url.scheme == "pochical", url.host() == "group" else { return nil }
+  let parts = url.path(percentEncoded: false).split(separator: "/").map(String.init)
+  guard let groupID = parts.first else { return nil }
+  let day = parts.count == 3 && parts[1] == "day" ? Day(parts[2]) : nil
+  return GroupLink(groupID: groupID, day: day)
 }
 
 /// Says a few words over the tabs for a moment, as /design's toast: for a

@@ -220,3 +220,127 @@ func clockWords(_ date: Date) -> String {
   let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
   return "\(parts.hour ?? 0):\(String(format: "%02d", parts.minute ?? 0))"
 }
+
+/// Someone's face as their group shows it: their photo once the app has
+/// it on the device, else the first letter of their name, the person's
+/// own in the テーマ's accent.
+struct WidgetFace: View {
+  @Environment(\.themeColors) private var colors
+  let person: WidgetWith
+  let size: CGFloat
+  var me = false
+
+  var body: some View {
+    if !person.photoID.isEmpty,
+      let data = ChatPhotos.held(person.photoID, in: person.groupID),
+      let image = UIImage(data: data)?.preparingThumbnail(of: CGSize(width: size * 3, height: size * 3))
+    {
+      Image(uiImage: image)
+        .resizable()
+        .scaledToFill()
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+    } else {
+      Text(person.name.first.map(String.init) ?? "")
+        .font(.system(size: max(9, (size * 0.45).rounded()), weight: .semibold))
+        .foregroundStyle(me ? colors.accentOnFill : colors.textSecondary)
+        .frame(width: size, height: size)
+        .background(me ? colors.accentFill : colors.fillSecondary, in: Circle())
+    }
+  }
+}
+
+/// A group's mark in its rounded square, as the app's list of groups
+/// frames it: a photo, an icon or letters on their tint, or an emoji.
+struct WidgetGroupMark: View {
+  @Environment(\.themeColors) private var colors
+  let group: WidgetWith
+  let size: CGFloat
+
+  var body: some View {
+    let mark = group.mark
+    let color = colors.mark(mark.color)
+    let shape = RoundedRectangle(cornerRadius: size * 0.28)
+    Group {
+      if !mark.photoID.isEmpty, let data = ChatPhotos.held(mark.photoID, in: group.groupID),
+        let image = UIImage(data: data)?.preparingThumbnail(
+          of: CGSize(width: size * 3, height: size * 3))
+      {
+        Image(uiImage: image).resizable().scaledToFill()
+      } else if !mark.icon.isEmpty,
+        let layers = MarkIcons.layers(mark.icon, filled: true, size: size * 0.62)
+      {
+        ZStack {
+          ForEach(layers.indices, id: \.self) { index in
+            layers[index].path.fill(color.color.opacity(layers[index].opacity))
+          }
+        }
+        .frame(width: size * 0.62, height: size * 0.62)
+        .frame(width: size, height: size)
+        .background(color.tint)
+      } else if !mark.letter.isEmpty {
+        Text(mark.letter)
+          .font(.system(size: (size * 0.37).rounded(), weight: .bold))
+          .minimumScaleFactor(0.5)
+          .foregroundStyle(color.color)
+          .frame(width: size, height: size)
+          .background(color.tint)
+      } else {
+        Text(mark.emoji)
+          .font(.system(size: (size * 0.62).rounded()))
+          .frame(width: size, height: size)
+          .background(colors.fillQuaternary)
+      }
+    }
+    .frame(width: size, height: size)
+    .clipShape(shape)
+  }
+}
+
+/// Who a widget is set to, by their face or the group's mark.
+struct CompanionFace: View {
+  let with: WidgetWith
+  var size: CGFloat = 20
+
+  var body: some View {
+    switch with.kind {
+    case .person: WidgetFace(person: with, size: size)
+    case .group: WidgetGroupMark(group: with, size: size)
+    }
+  }
+}
+
+/// Asking for who the widget is set to to be picked again, once the person
+/// or they have left the group they were picked under: in the secondary
+/// color in the middle of its room.
+struct PickAgain: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.english) private var english
+  /// 一緒に休む人, or これから's 一緒に見る人.
+  let whom: String
+  let groupID: String
+
+  var body: some View {
+    Text(english ? "Pick who again" : "\(whom)を\n選び直してください")
+      .font(.footnote)
+      .multilineTextAlignment(.center)
+      .foregroundStyle(colors.textSecondary)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .widgetURL(groupLink(groupID))
+  }
+}
+
+/// The group's table at a day, where whose days make it count can be
+/// seen (spec/widgets.md, Opening the app).
+func groupLink(_ groupID: String, day: Day? = nil) -> URL {
+  let path = day.map { "/day/\($0.key)" } ?? ""
+  return URL(string: "pochical://group/\(groupID)\(path)")!
+}
+
+extension WidgetEntry {
+  /// Where a day opens: the group's table set to someone, else the
+  /// calendar.
+  func link(_ day: Day) -> URL {
+    with.map { groupLink($0.groupID, day: day) } ?? dayLink(day)
+  }
+}

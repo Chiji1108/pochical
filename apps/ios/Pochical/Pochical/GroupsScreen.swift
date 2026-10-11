@@ -149,6 +149,19 @@ struct GroupsScreen: View {
     .task(id: OpeningKey(chat: openingChat, groupIDs: groups.map(\.id))) {
       await showOpeningChat()
     }
+    // A widget's group: its table at the day, else its top. One the person
+    // has left themselves leaves them on their first group.
+    .onChange(of: OpenedGroupKey(link: OpenedGroup.shared.link, groupIDs: groups.map(\.id)), initial: true) {
+      _, key in
+      guard let link = key.link, !key.groupIDs.isEmpty else { return }
+      OpenedGroup.shared.link = nil
+      guard let group = groups.first(where: { $0.id == link.groupID }) else {
+        openID = nil
+        path = []
+        return
+      }
+      path = link.day.map { [.shifts(group, day: $0)] } ?? []
+    }
     .task(id: SocketKey(groupID: openGroupID ?? "", active: scenePhase == .active)) {
       guard scenePhase == .active, let groupID = openGroupID else { return }
       let client = SyncClient(account: account, database: database, peer: .group(groupID))
@@ -159,6 +172,12 @@ struct GroupsScreen: View {
       }
       await client.stop()
     }
+  }
+
+  /// A group a widget opened, and the groups there are to show it in.
+  private struct OpenedGroupKey: Equatable {
+    let link: GroupLink?
+    let groupIDs: [String]
   }
 
   /// A chat a notification opened, and the groups there are to show it in.

@@ -58,6 +58,8 @@ struct AppRoot: View {
         invite = OpenedInvite(code: code)
       } else if let day = openedDay(of: url) {
         OpenedDay.shared.day = day
+      } else if let link = openedGroup(of: url) {
+        OpenedGroup.shared.link = link
       }
     }
   }
