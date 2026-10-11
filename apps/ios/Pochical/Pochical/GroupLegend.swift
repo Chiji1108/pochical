@@ -49,12 +49,12 @@ struct LegendSheet: View {
   let members: [GroupMember]
   let groupID: String
   @State var picked: String
+  /// The chip scrolled to as the sheet opens.
+  @State private var chipInSight: String?
 
   var body: some View {
     let member = members.first { $0.userID == picked } ?? members.first
     NavigationStack {
-      // The chips over the list on its own ground, as a section's header,
-      // so the sheet reads as one page.
       List {
         Section {
           if let member {
@@ -71,27 +71,35 @@ struct LegendSheet: View {
             }
             .marks(drawnAs: member.markLook)
           }
-        } header: {
-          ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-              ForEach(members) { candidate in
-                ChoiceChip(name: candidate.name, picked: candidate.userID == member?.userID) {
-                  picked = candidate.userID
-                } leading: {
-                  MemberAvatar(
-                    name: candidate.name, photoID: candidate.photoID, groupID: groupID,
-                    size: 24, userID: candidate.userID)
-                }
-              }
-            }
-            // From the card's edge, as the list's rows start.
-            .padding(.horizontal, 2)
-          }
-          .scrollIndicators(.hidden)
-          .padding(.horizontal, -20)
-          .textCase(nil)
-          .padding(.bottom, 8)
         }
+      }
+      // The chips stay in reach over the list, on the bar's own ground,
+      // however long one person's patterns run.
+      .safeAreaBar(edge: .top) {
+        ScrollView(.horizontal) {
+          HStack(spacing: 8) {
+            ForEach(members) { candidate in
+              ChoiceChip(name: candidate.name, picked: candidate.userID == member?.userID) {
+                picked = candidate.userID
+              } leading: {
+                MemberAvatar(
+                  name: candidate.name, photoID: candidate.photoID, groupID: groupID,
+                  size: 24, userID: candidate.userID)
+              }
+              .id(candidate.userID)
+            }
+          }
+          // From the list's card's edge.
+          .padding(.horizontal, 20)
+          .scrollTargetLayout()
+        }
+        .scrollIndicators(.hidden)
+        // Opened on someone far along the row, it starts with them in
+        // sight.
+        .defaultScrollAnchor(.leading)
+        .scrollPosition(id: $chipInSight, anchor: .center)
+        .onAppear { chipInSight = picked }
+        .padding(.bottom, 8)
       }
       .overlay {
         if member?.calendar.patternsByID.isEmpty == true {
