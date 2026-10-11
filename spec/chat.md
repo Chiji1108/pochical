@@ -80,6 +80,14 @@ A mention names one member of the group in a group chat (全体チャット). On
 - メンションはいつも通知 (設定 › 通知 › チャット › メンション, on by default) turns that exception off: off, a chat turned off sends nothing, mentions included, and the notes are not shown. It is one switch for the account, kept by the User DO, not one per group.
 - In the chat list, a chat whose unread lines mention the reader shows @ in the accent color before the unread count.
 
+## Notices
+
+全体チャット says, as a line from the app, what changes who is in the group, the way in, or what the group is, as LINE's groups do; nothing else. Someone joining (〇〇がグループに参加しました), leaving (〇〇がグループを抜けました, an account deleted while in the group too, named as deleted accounts are), being taken out by a member (〇〇が△△をグループから外しました), the invite link remade (〇〇が招待リンクを作り直しました: a link someone already sent stops working, and this tells them why and to send the new one), and a new name or icon (〇〇がグループ名を「…」に変更しました, 〇〇がグループのアイコンを変更しました, or both: 〇〇がグループ名を「…」にして、アイコンを変更しました). A member's own name or photo, shifts and the table's layout are not said: they show where they are, and would flood the chat.
+
+- The Group DO writes it as the change is made, a `ChatLine` with `notice` (`ChatNotice`: the kind, who was taken out, the new name, whether the icon changed) and no words, its author being who did it, at the chat's next seq. Each device words it with the names the group shows now, those of members who left included.
+- It sits centered in the tertiary color between the messages, as an unsent line does, and starts the run after it. The chat list says it as its last line.
+- It is never unread and never notified (spec/sync-protocol.md, Unread summary), and takes no reactions, replies, pins, reports, edits or unsending.
+
 ## Editing and unsending
 
 A member can change or take back their own messages, at any time. Others' messages cannot be changed.

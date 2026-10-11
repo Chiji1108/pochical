@@ -130,3 +130,12 @@ export const markOfRow = (row: {
   letter: row.letter ?? "",
   photoId: row.photo ?? "",
 });
+
+/** Whether two marks are the same mark, as every member sees it. */
+export const sameMark = (a: MarkValue | undefined, b: MarkValue): boolean =>
+  a !== undefined &&
+  a.color === b.color &&
+  a.emoji === b.emoji &&
+  a.icon === b.icon &&
+  a.letter === b.letter &&
+  a.photoId === b.photoId;

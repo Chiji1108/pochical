@@ -7,7 +7,11 @@ import {
   ClientFrameSchema,
   ServerFrameSchema,
 } from "../src/gen/pochical/v1/sync_pb";
-import type { DayField, ServerFrame } from "../src/gen/pochical/v1/sync_pb";
+import type {
+  Change,
+  DayField,
+  ServerFrame,
+} from "../src/gen/pochical/v1/sync_pb";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
 import { call, openSocket, signInAnonymously, userIdOf } from "./helpers";
 
@@ -145,8 +149,9 @@ export const pair = async () => {
 };
 
 // The cursor after what pair() leaves in its group's log: the group's
-// name and mark, then its two members.
-export const PAIR_ROSTER = 3n;
+// name and mark, its two members, the chat's notice of the join, and the
+// joiner's read mark at that notice.
+export const PAIR_ROSTER = 5n;
 
 // Runs the user's push now, as their alarm would.
 export const push = async (userId: string): Promise<void> => {
@@ -156,8 +161,27 @@ export const push = async (userId: string): Promise<void> => {
 export const changesIn = (frame: ServerFrame) =>
   frame.kind.case === "changes" ? frame.kind.value.changes : [];
 
-// A group's changes of its members' shifts, without who is in it.
+// A group's changes of its members' shifts, without who is in it or its
+// chat.
+const shiftKinds = new Set([
+  "memberDay",
+  "memberPattern",
+  "memberRepeatOrders",
+]);
 export const shiftsIn = (frame: ServerFrame) =>
+  changesIn(frame).filter(({ kind }) => shiftKinds.has(kind.case ?? ""));
+
+// Whether a change is a notice line the app wrote in the chat as the group
+// changed, which tests about something else leave out.
+export const isNotice = (kind: Change["kind"]): boolean =>
+  kind.case === "chatLine" && kind.value.notice !== undefined;
+
+// A frame's changes without the chat's notice lines.
+export const changesBesidesNotices = (frame: ServerFrame) =>
+  changesIn(frame).filter(({ kind }) => !isNotice(kind));
+
+// A group's changes of its name and mark and who is in it.
+export const rosterIn = (frame: ServerFrame) =>
   changesIn(frame).filter(
-    ({ kind }) => kind.case !== "groupProfile" && kind.case !== "member"
+    ({ kind }) => kind.case === "groupProfile" || kind.case === "member"
   );

@@ -1778,11 +1778,107 @@ public nonisolated struct Pochical_V1_ChatLine: @unchecked Sendable {
     set {_uniqueStorage()._replyTo = newValue}
   }
 
+  /// A line from the app in 全体チャット, not a message (spec/chat.md,
+  /// Notices): author_id is who did it. It has no words, takes no
+  /// reactions, replies or pins, and is never unread.
+  public var notice: Pochical_V1_ChatNotice {
+    get {_storage._notice ?? Pochical_V1_ChatNotice()}
+    set {_uniqueStorage()._notice = newValue}
+  }
+  /// Returns true if `notice` has been explicitly set.
+  public var hasNotice: Bool {_storage._notice != nil}
+  /// Clears the value of `notice`. Subsequent reads from it will return its default value.
+  public mutating func clearNotice() {_uniqueStorage()._notice = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+/// What a notice line says happened to the group, its names worded by
+/// each device as the group shows them now.
+public nonisolated struct Pochical_V1_ChatNotice: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var kind: Pochical_V1_ChatNotice.Kind = .unspecified
+
+  /// REMOVED: who was taken out.
+  public var subjectID: String = String()
+
+  /// PROFILE_CHANGED: the new name, when it changed; empty when only the
+  /// icon did.
+  public var name: String = String()
+
+  /// PROFILE_CHANGED: the icon changed too.
+  public var markChanged: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum Kind: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+
+    /// 〇〇がグループに参加しました
+    case joined // = 1
+
+    /// 〇〇がグループを抜けました
+    case left // = 2
+
+    /// 〇〇が△△をグループから外しました: subject_id is △△.
+    case removed // = 3
+
+    /// 〇〇が招待リンクを作り直しました: a link sent before stops working.
+    case inviteRemade // = 4
+
+    /// 〇〇がグループ名を「name」に変えました, or the group's icon, or both.
+    case profileChanged // = 5
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .joined
+      case 2: self = .left
+      case 3: self = .removed
+      case 4: self = .inviteRemade
+      case 5: self = .profileChanged
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .joined: return 1
+      case .left: return 2
+      case .removed: return 3
+      case .inviteRemade: return 4
+      case .profileChanged: return 5
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [Pochical_V1_ChatNotice.Kind] = [
+      .unspecified,
+      .joined,
+      .left,
+      .removed,
+      .inviteRemade,
+      .profileChanged,
+    ]
+
+  }
+
+  public init() {}
 }
 
 /// A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
@@ -4645,7 +4741,7 @@ nonisolated extension Pochical_V1_Reset: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatLine"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{1}photo\0\u{1}preview\0\u{1}hidden\0\u{3}reply_to\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{1}photo\0\u{1}preview\0\u{1}hidden\0\u{3}reply_to\0\u{1}notice\0")
 
   fileprivate class _StorageClass {
     var _threadID: String = String()
@@ -4666,6 +4762,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     var _preview: Pochical_V1_LinkPreview? = nil
     var _hidden: Bool = false
     var _replyTo: UInt64 = 0
+    var _notice: Pochical_V1_ChatNotice? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -4694,6 +4791,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       _preview = source._preview
       _hidden = source._hidden
       _replyTo = source._replyTo
+      _notice = source._notice
     }
   }
 
@@ -4730,6 +4828,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         case 16: try { try decoder.decodeSingularMessageField(value: &_storage._preview) }()
         case 17: try { try decoder.decodeSingularBoolField(value: &_storage._hidden) }()
         case 18: try { try decoder.decodeSingularUInt64Field(value: &_storage._replyTo) }()
+        case 19: try { try decoder.decodeSingularMessageField(value: &_storage._notice) }()
         default: break
         }
       }
@@ -4796,6 +4895,9 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       if _storage._replyTo != 0 {
         try visitor.visitSingularUInt64Field(value: _storage._replyTo, fieldNumber: 18)
       }
+      try { if let v = _storage._notice {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -4823,6 +4925,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._preview != rhs_storage._preview {return false}
         if _storage._hidden != rhs_storage._hidden {return false}
         if _storage._replyTo != rhs_storage._replyTo {return false}
+        if _storage._notice != rhs_storage._notice {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -4830,6 +4933,55 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
+}
+
+nonisolated extension Pochical_V1_ChatNotice: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ChatNotice"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{3}subject_id\0\u{1}name\0\u{3}mark_changed\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.markChanged) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.kind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
+    }
+    if !self.subjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.subjectID, fieldNumber: 2)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 3)
+    }
+    if self.markChanged != false {
+      try visitor.visitSingularBoolField(value: self.markChanged, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ChatNotice, rhs: Pochical_V1_ChatNotice) -> Bool {
+    if lhs.kind != rhs.kind {return false}
+    if lhs.subjectID != rhs.subjectID {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.markChanged != rhs.markChanged {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ChatNotice.Kind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0KIND_UNSPECIFIED\0\u{1}KIND_JOINED\0\u{1}KIND_LEFT\0\u{1}KIND_REMOVED\0\u{1}KIND_INVITE_REMADE\0\u{1}KIND_PROFILE_CHANGED\0")
 }
 
 nonisolated extension Pochical_V1_ChatPhoto: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {

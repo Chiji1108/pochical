@@ -11,11 +11,14 @@ describe("GroupDO profile", () => {
   it("keeps the latest name and mark", async () => {
     const group = env.GROUPS.getByName("renamed");
     const plain = { color: 0, emoji: "", icon: "", letter: "", photoId: "" };
-    await group.setProfile({ mark: { ...plain, emoji: "🌿" }, name: "同期" });
-    await group.setProfile({
-      mark: { ...plain, color: 2, letter: "同" },
-      name: "同期会",
-    });
+    await group.setProfile(
+      { mark: { ...plain, emoji: "🌿" }, name: "同期" },
+      "u"
+    );
+    await group.setProfile(
+      { mark: { ...plain, color: 2, letter: "同" }, name: "同期会" },
+      "u"
+    );
     await expect(group.getProfile()).resolves.toStrictEqual({
       mark: { ...plain, color: 2, letter: "同" },
       name: "同期会",

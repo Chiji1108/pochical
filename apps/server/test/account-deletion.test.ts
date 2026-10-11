@@ -65,9 +65,14 @@ describe("deleting an account", () => {
     await env.PHOTOS.put(`support/${guestId}/photos/p1`, "jpeg");
     await expect(deleteAccount(guest)).resolves.toBe(200);
 
+    // The app's notices of their joining and leaving stay, as the group's.
     const lines = await inGroup(
       groupId,
-      "select text, unsent from chat_lines order by seq"
+      "select text, unsent from chat_lines where notice is null order by seq"
+    );
+    const notices = await inGroup(
+      groupId,
+      `select author_id, notice ->> '$.kind' as kind from chat_lines where notice is not null and author_id = '${guestId}' order by seq`
     );
     const theirs = await inGroup(
       groupId,
@@ -87,6 +92,7 @@ describe("deleting an account", () => {
     expect({
       groups,
       lines,
+      notices,
       photos: photos.objects.length,
       signedIn: await signedIn(guest),
       support,
@@ -96,6 +102,10 @@ describe("deleting an account", () => {
       lines: [
         { text: "やあ", unsent: 0 },
         { text: "", unsent: 1 },
+      ],
+      notices: [
+        { author_id: guestId, kind: "joined" },
+        { author_id: guestId, kind: "left" },
       ],
       photos: 0,
       signedIn: 401,

@@ -526,7 +526,8 @@ struct ChatScreen: View {
       return starts
     }
     for line in state.lines {
-      let starts = startsRun(at: line.sentAtMs, writer: line.unsent ? nil : line.authorID)
+      let starts = startsRun(
+        at: line.sentAtMs, writer: line.unsent || line.notice != nil ? nil : line.authorID)
       if line.seq == unreadFrom {
         items.append(.unread)
       }
@@ -548,7 +549,7 @@ struct ChatScreen: View {
     var timeless: Set<String> = []
     for (item, next) in zip(items, items.dropFirst()) {
       guard case .line(let line, _) = item, case .line(let after, let startsRun) = next,
-        !startsRun, !line.unsent, !after.unsent,
+        !startsRun, !line.unsent, !after.unsent, line.notice == nil, after.notice == nil,
         ChatTime.clock(line.sentAtMs) == ChatTime.clock(after.sentAtMs)
       else { continue }
       timeless.insert(item.id)
@@ -580,13 +581,25 @@ struct ChatScreen: View {
       EmptyView()
     case .line(let line, _)
     where otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
-      && !line.unsent:
+      && !line.unsent && line.notice == nil:
       BlockedLine { shownBlocked.insert(line.seq) }
     case .line(let line, let runStart):
       // A blocked member's line shown at a tap stands alone between the
       // folded ones, with their face, the way to their profile.
       let startsRun = runStart || (otherID == nil && blocked.contains(line.authorID))
-      if line.unsent {
+      if let notice = line.notice {
+        // A line from the app, as an unsent line sits: who did what, by
+        // the names the group shows now.
+        Text(
+          notice.words(
+            by: names[line.authorID] ?? "メンバー", subject: names[notice.subjectID] ?? "メンバー"))
+          .font(.caption)
+          .foregroundStyle(colors.textTertiary)
+          .multilineTextAlignment(.center)
+          .frame(maxWidth: .infinity)
+          .padding(.horizontal, 24)
+          .padding(.vertical, 8)
+      } else if line.unsent {
         Text(
           unsentLine(
             names[line.authorID], mine: line.authorID == meID,
@@ -950,7 +963,8 @@ struct ChatScreen: View {
   private func open() async {
     if let me = meID {
       let lines = chat.state.lines
-      let writers = lines.map { $0.authorID == me ? LineWriter.me : .others }
+      // The app's notices are never unread, as one's own lines are not.
+      let writers = lines.map { $0.authorID == me || $0.notice != nil ? LineWriter.me : .others }
       if let index = firstUnread(writers, unread: chat.state.unread(by: me)) {
         unreadFrom = lines[index].seq
       }

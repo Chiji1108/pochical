@@ -223,6 +223,10 @@ private struct ChatRow<Icon: View>: View {
       return "自分：\(Self.words(waiting.text, days: waiting.days, poll: waiting.poll, nameOf: nameOf))"
     }
     guard let last = summary.last else { return "まだメッセージはありません" }
+    if let notice = last.notice {
+      return notice.words(
+        by: chat.names[last.authorID] ?? "メンバー", subject: chat.names[notice.subjectID] ?? "メンバー")
+    }
     if last.unsent {
       return unsentLine(
         chat.names[last.authorID], mine: last.authorID == me,

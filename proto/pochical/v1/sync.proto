@@ -546,6 +546,36 @@ message ChatLine {
   // The line it answers (返信), by its seq in the same chat; 0 for none,
   // and none once unsent.
   uint64 reply_to = 18;
+  // A line from the app in 全体チャット, not a message (spec/chat.md,
+  // Notices): author_id is who did it. It has no words, takes no
+  // reactions, replies or pins, and is never unread.
+  ChatNotice notice = 19;
+}
+
+// What a notice line says happened to the group, its names worded by
+// each device as the group shows them now.
+message ChatNotice {
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    // 〇〇がグループに参加しました
+    KIND_JOINED = 1;
+    // 〇〇がグループを抜けました
+    KIND_LEFT = 2;
+    // 〇〇が△△をグループから外しました: subject_id is △△.
+    KIND_REMOVED = 3;
+    // 〇〇が招待リンクを作り直しました: a link sent before stops working.
+    KIND_INVITE_REMADE = 4;
+    // 〇〇がグループ名を「name」に変えました, or the group's icon, or both.
+    KIND_PROFILE_CHANGED = 5;
+  }
+  Kind kind = 1;
+  // REMOVED: who was taken out.
+  string subject_id = 2;
+  // PROFILE_CHANGED: the new name, when it changed; empty when only the
+  // icon did.
+  string name = 3;
+  // PROFILE_CHANGED: the icon changed too.
+  bool mark_changed = 4;
 }
 
 // A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the

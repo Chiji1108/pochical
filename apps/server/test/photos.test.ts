@@ -3,7 +3,13 @@ import { describe, expect, it } from "vitest";
 
 import { photoKey } from "../src/photos";
 import { ORIGIN, signInAnonymously } from "./helpers";
-import { changesIn, pair, sendFrame, syncSocket } from "./sync-helpers";
+import {
+  changesBesidesNotices,
+  changesIn,
+  pair,
+  sendFrame,
+  syncSocket,
+} from "./sync-helpers";
 
 // A JPEG's first bytes and a little more, as the app sends one.
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
@@ -89,15 +95,16 @@ describe("a group's photos", () => {
     for (let frame = 0; frame < 7; frame += 1) {
       sent.push(
         // oxlint-disable-next-line no-await-in-loop -- frames come in order
-        ...changesIn(await mine.frames.next()).filter(
+        ...changesBesidesNotices(await mine.frames.next()).filter(
           ({ kind }) => kind.case === "chatLine"
         )
       );
     }
+    // The chat's second line, after the notice of the guest's joining.
     expect(sent).toMatchObject([
       {
         kind: {
-          value: { photo: { height: 100, id: "mine", width: 100 }, seq: 1n },
+          value: { photo: { height: 100, id: "mine", width: 100 }, seq: 2n },
         },
       },
     ]);
@@ -107,7 +114,7 @@ describe("a group's photos", () => {
       value: {
         edits: [
           {
-            kind: { case: "unsend", value: { seq: 1n, threadId: "group" } },
+            kind: { case: "unsend", value: { seq: 2n, threadId: "group" } },
             opId: "u",
           },
         ],
