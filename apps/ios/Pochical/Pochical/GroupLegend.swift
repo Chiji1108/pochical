@@ -54,42 +54,49 @@ struct LegendSheet: View {
   var body: some View {
     let member = members.first { $0.userID == picked } ?? members.first
     NavigationStack {
-      VStack(spacing: 0) {
-        // The chips stay in reach; only the marks scroll.
-        ScrollView(.horizontal) {
-          HStack(spacing: 8) {
-            ForEach(members) { candidate in
-              ChoiceChip(name: candidate.name, picked: candidate.userID == member?.userID) {
-                picked = candidate.userID
-              } leading: {
-                MemberAvatar(
-                  name: candidate.name, photoID: candidate.photoID, groupID: groupID, size: 24,
-                  userID: candidate.userID)
+      // The chips over the list on its own ground, as a section's header,
+      // so the sheet reads as one page.
+      List {
+        Section {
+          if let member {
+            ForEach(legendPatterns(of: member)) { pattern in
+              LabeledContent {
+                Text(pattern.time.map { hoursText($0.start, $0.end) } ?? "")
+              } label: {
+                Label {
+                  Text(pattern.name)
+                } icon: {
+                  ShiftMark(pattern: pattern, size: 20)
+                }
               }
             }
+            .marks(drawnAs: member.markLook)
           }
-          .padding(.horizontal, 16)
-          .padding(.vertical, 8)
+        } header: {
+          ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+              ForEach(members) { candidate in
+                ChoiceChip(name: candidate.name, picked: candidate.userID == member?.userID) {
+                  picked = candidate.userID
+                } leading: {
+                  MemberAvatar(
+                    name: candidate.name, photoID: candidate.photoID, groupID: groupID,
+                    size: 24, userID: candidate.userID)
+                }
+              }
+            }
+            // From the card's edge, as the list's rows start.
+            .padding(.horizontal, 2)
+          }
+          .scrollIndicators(.hidden)
+          .padding(.horizontal, -20)
+          .textCase(nil)
+          .padding(.bottom, 8)
         }
-        .scrollIndicators(.hidden)
-        if let member {
-          List(legendPatterns(of: member)) { pattern in
-            LabeledContent {
-              Text(pattern.time.map { hoursText($0.start, $0.end) } ?? "")
-            } label: {
-              Label {
-                Text(pattern.name)
-              } icon: {
-                ShiftMark(pattern: pattern, size: 20)
-              }
-            }
-          }
-          .marks(drawnAs: member.markLook)
-          .overlay {
-            if member.calendar.patternsByID.isEmpty {
-              ContentUnavailableView("シフトパターンはまだありません", systemImage: "square.dashed")
-            }
-          }
+      }
+      .overlay {
+        if member?.calendar.patternsByID.isEmpty == true {
+          ContentUnavailableView("シフトパターンはまだありません", systemImage: "square.dashed")
         }
       }
       .navigationTitle("シフトパターン")
@@ -159,22 +166,106 @@ struct GroupMonthPicture: View {
   }
 }
 
-/// Saves a group's month to Photos as the picture above, in the light or
-/// dark the screen is in; says how it went.
-@MainActor func saveGroupMonth(
-  _ picture: some View, say: SayAction, month: Day
-) async {
-  let renderer = ImageRenderer(content: picture.frame(width: 390))
-  renderer.scale = 3
-  guard let data = renderer.uiImage?.pngData() else { return }
-  do {
-    // Photos runs the change on its own queue, not the main actor's.
-    try await PHPhotoLibrary.shared().performChanges { @Sendable in
-      PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
+/// 画像で保存 for a group (as the calendar's MonthPicturePage): the month
+/// as it goes out, in the テーマ's light or dark, shared or saved to
+/// Photos. The group's tables always show names and days off, so it has
+/// no look of its own to pick.
+struct GroupPicturePage: View {
+  @Environment(Settings.self) private var settings
+  @Environment(\.themeColors) private var colors
+  @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.english) private var english
+  @Environment(\.dismiss) private var dismiss
+  let group: GroupRow
+  let month: Day
+  let members: [GroupMember]
+  @State private var notice: String?
+  @State private var image: UIImage?
+
+  var body: some View {
+    @Bindable var settings = settings
+    let theme = settings.device.theme
+    let dark = theme.isAlwaysDark || (settings.device.picture.dark ?? (colorScheme == .dark))
+    NavigationStack {
+      List {
+        Section {
+          framed(dark: dark)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
+            .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
+            .shadow(Shadow.md)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(group.name)の\(month.yearMonthText)のシフトの画像")
+            .overlay(alignment: .topLeading) {
+              SchemeSwitch(
+                shown: Binding { dark ? .dark : .light } set: {
+                  settings.device.picture.dark = $0 == .dark
+                },
+                disabled: theme.isAlwaysDark
+              )
+              .offset(x: 12, y: -10)
+            }
+            .padding(.top, 10)
+            .settingsOnPage()
+        }
+      }
+      .settingsList()
+      .navigationTitle("画像で保存")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+        }
+      }
+      .safeAreaInset(edge: .bottom) {
+        PictureActions(image: image, title: "\(group.name) \(month.yearMonthText)のシフト") {
+          Task { await save() }
+        }
+      }
+      .task(id: dark) {
+        let renderer = ImageRenderer(content: framed(dark: dark).frame(width: 390))
+        renderer.scale = 3
+        image = renderer.uiImage
+      }
+      .overlay(alignment: .top) {
+        if let notice {
+          NoticeCapsule(words: notice)
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+      }
     }
-    say("\(month.monthText)のシフト表を写真に保存しました")
-  } catch {
-    ReviewPrompt.troubled = true
-    say("保存できませんでした")
+  }
+
+  private func framed(dark: Bool) -> some View {
+    let scheme: ColorScheme = dark ? .dark : .light
+    return GroupMonthPicture(group: group, month: month, members: members)
+      .environment(settings)
+      .environment(\.themeColors, settings.device.theme.colors(scheme))
+      .environment(\.colorScheme, scheme)
+      .environment(\.look, settings.device.look)
+      .environment(\.english, english)
+  }
+
+  private func save() async {
+    guard let data = image?.pngData() else { return }
+    do {
+      // Photos runs the change on its own queue, not the main actor's.
+      try await PHPhotoLibrary.shared().performChanges { @Sendable in
+        PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
+      }
+      say("写真に保存しました")
+    } catch {
+      ReviewPrompt.troubled = true
+      say("保存できませんでした")
+    }
+  }
+
+  private func say(_ words: String) {
+    withAnimation { notice = words }
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(2.5))
+      if notice == words {
+        withAnimation { notice = nil }
+      }
+    }
   }
 }

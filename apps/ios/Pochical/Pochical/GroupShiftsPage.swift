@@ -35,11 +35,11 @@ struct GroupShiftsPage: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.say) private var say
-  @Environment(\.colorScheme) private var colorScheme
   @Fetch private var members: [GroupMember] = []
   /// Whose シフトパターン is open, from a face or the menu.
   @State private var legendOf: LegendOf?
+  /// The month 画像で保存 shows, as the calendar's does before it goes.
+  @State private var picturing: Day?
   /// The viewer's id among the members, for 1人ずつ.
   @State private var meID: String?
   let group: GroupRow
@@ -144,7 +144,7 @@ struct GroupShiftsPage: View {
               if let first { legendOf = LegendOf(userID: first.userID) }
             }
             Button("画像で保存", systemImage: "square.and.arrow.down") {
-              Task { await saveMonth() }
+              picturing = monthInSight
             }
             .disabled(members.isEmpty)
           } label: {
@@ -156,6 +156,9 @@ struct GroupShiftsPage: View {
       }
     }
     .environment(\.openLegend) { legendOf = LegendOf(userID: $0) }
+    .sheet(item: $picturing) { month in
+      GroupPicturePage(group: group, month: month, members: members)
+    }
     .sheet(item: $legendOf) { legend in
       LegendSheet(members: members, groupID: group.id, picked: legend.userID)
         .presentationDetents([.medium, .large])
@@ -300,18 +303,6 @@ struct GroupShiftsPage: View {
       // scrolled above the sheet.
       .contentMargins(.bottom, picked == nil ? 0 : daySheetHeight, for: .scrollContent)
     }
-  }
-
-  /// Saves the month in sight as a picture, as /design's 画像で保存.
-  private func saveMonth() async {
-    let month = monthInSight
-    let picture = GroupMonthPicture(group: group, month: month, members: members)
-      .environment(settings)
-      .environment(\.themeColors, colors)
-      .environment(\.colorScheme, colorScheme)
-      .environment(\.look, settings.device.look)
-      .environment(\.english, english)
-    await saveGroupMonth(picture, say: say, month: month)
   }
 
   /// The day's sheet: its bar and a row a member.
