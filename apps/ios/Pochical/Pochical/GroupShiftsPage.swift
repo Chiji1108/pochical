@@ -35,6 +35,7 @@ struct GroupShiftsPage: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.openGroupRoute) private var openGroupRoute
   @Fetch private var members: [GroupMember] = []
   /// Whose シフトパターン is open, from a face or the menu.
   @State private var legendOf: LegendOf?
@@ -197,9 +198,12 @@ struct GroupShiftsPage: View {
     } content: { day in
       // As tall as its rows, as /design's.
       let fitted = PresentationDetent.height(daySheetHeight)
-      DaySheet(day: day, members: members, groupID: group.id)
-        .presentationDetents([fitted, .large])
-        .presentationBackgroundInteraction(.enabled(upThrough: fitted))
+      DaySheet(day: day, members: members, groupID: group.id) {
+        picked = nil
+        openGroupRoute(.chat(group, thread: groupThread, with: nil, sharing: day))
+      }
+      .presentationDetents([fitted, .large])
+      .presentationBackgroundInteraction(.enabled(upThrough: fitted))
     }
     .sheet(item: $togetherSheet) {
       if let day = pickedFromList {
@@ -416,6 +420,8 @@ private struct DaySheet: View {
   let day: Day
   let members: [GroupMember]
   let groupID: String
+  /// Opens 全体チャット with the day set over its composer, to send.
+  let onShare: () -> Void
 
   var body: some View {
     let offs = members.map { $0.offDays(from: day, through: day)[day] }
@@ -450,6 +456,9 @@ private struct DaySheet: View {
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
+        }
+        ToolbarItem(placement: .primaryAction) {
+          Button("全体チャットで共有", systemImage: "square.and.arrow.up", action: onShare)
         }
         if members.count > 1, Together.allOff(offs) {
           ToolbarItem(placement: .principal) {

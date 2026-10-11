@@ -125,8 +125,8 @@ struct GroupsScreen: View {
           InvitePage(group: live(group))
         case .shifts(let group, let day):
           GroupShiftsPage(group: live(group), day: day)
-        case .chat(let group, let thread, let other):
-          ChatScreen(group: live(group), threadID: thread, otherID: other)
+        case .chat(let group, let thread, let other, let sharing):
+          ChatScreen(group: live(group), threadID: thread, otherID: other, sharing: sharing)
         case .settings(let group):
           GroupSettingsPage(group: live(group)) {
             path.append(.invite(group))
@@ -217,8 +217,8 @@ enum GroupRoute: Hashable {
   case shifts(GroupRow, day: Day?)
   case settings(GroupRow)
   /// One of the group's chats: 全体チャット, or a one-to-one chat with the
-  /// member `with`.
-  case chat(GroupRow, thread: String, with: String?)
+  /// member `with`; `sharing`, a day brought from みんなのシフト to share.
+  case chat(GroupRow, thread: String, with: String?, sharing: Day? = nil)
 }
 
 /// No group yet: a sample of a shared week and what sharing shifts is for,
