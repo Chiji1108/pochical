@@ -581,7 +581,7 @@ struct ChatScreen: View {
       EmptyView()
     case .line(let line, _)
     where otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
-      && !line.unsent:
+      && !line.unsent && line.notice == nil:
       BlockedLine { shownBlocked.insert(line.seq) }
     case .line(let line, let runStart):
       // A blocked member's line shown at a tap stands alone between the

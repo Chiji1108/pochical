@@ -70,6 +70,10 @@ describe("deleting an account", () => {
       groupId,
       "select text, unsent from chat_lines where notice is null order by seq"
     );
+    const notices = await inGroup(
+      groupId,
+      `select author_id, notice ->> '$.kind' as kind from chat_lines where notice is not null and author_id = '${guestId}' order by seq`
+    );
     const theirs = await inGroup(
       groupId,
       `select display_name, deleted, left_at is not null as gone from members where user_id = '${guestId}'`
@@ -88,6 +92,7 @@ describe("deleting an account", () => {
     expect({
       groups,
       lines,
+      notices,
       photos: photos.objects.length,
       signedIn: await signedIn(guest),
       support,
@@ -97,6 +102,10 @@ describe("deleting an account", () => {
       lines: [
         { text: "やあ", unsent: 0 },
         { text: "", unsent: 1 },
+      ],
+      notices: [
+        { author_id: guestId, kind: "joined" },
+        { author_id: guestId, kind: "left" },
       ],
       photos: 0,
       signedIn: 401,

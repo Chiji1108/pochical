@@ -420,6 +420,12 @@ export class GroupDO extends DurableObject<Env> {
         .where(eq(members.userId, userId))
         .returning()
         .get();
+      // Still in it, they leave as leaving says it.
+      if (known.leftAt === null) {
+        chat.changes.push(
+          writeNotice(this.db, userId, { kind: "left" }, this.nextCursor())
+        );
+      }
       // Their lines' photos, and the photos the group showed of them.
       const photosGone = [
         ...chat.photosGone,
