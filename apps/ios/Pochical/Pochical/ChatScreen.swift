@@ -162,6 +162,9 @@ struct ChatScreen: View {
   @State private var writing = false
   /// The tools opened from the › until the next letter.
   @State private var toolsOpen = false
+  /// The composer's tools folded into a ›: from the field being tapped, and
+  /// while words wait in it, until › opens them.
+  private var toolsFolded: Bool { (writing || !draft.isEmpty) && !toolsOpen }
   /// Members picked from the list of names while writing, to be sent as
   /// mentions while their @name stays.
   @State private var picked: [PickedMember] = []
@@ -801,10 +804,8 @@ struct ChatScreen: View {
         PhotoTray(photos: $pickedPhotos)
       }
       HStack(alignment: .bottom, spacing: 8) {
-        // While the field is in use the tools fold into a ›, giving it
-        // their room, from the moment it is tapped and while words wait
-        // in it; › opens them until the next letter.
-        if editing == nil, (writing || !draft.isEmpty) && !toolsOpen {
+        // Folded, the tools give the field their room.
+        if editing == nil, toolsFolded {
           Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { toolsOpen = true }
             .labelStyle(.iconOnly)
             .font(.system(size: 20, weight: .medium))
@@ -865,7 +866,7 @@ struct ChatScreen: View {
         .accessibilityLabel(editing == nil ? "送る" : "編集を保存")
         .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
       }
-      .animation(.snappy(duration: 0.25), value: (writing || !draft.isEmpty) && !toolsOpen)
+      .animation(.snappy(duration: 0.25), value: toolsFolded)
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
       if TextLimits.chatMessage - draft.count <= TextFields.countWhenLeft {
