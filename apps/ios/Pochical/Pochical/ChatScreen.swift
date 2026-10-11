@@ -157,6 +157,14 @@ struct ChatScreen: View {
   @State private var field = ComposerBox()
   /// A word is being converted in the composer.
   @State private var composing = false
+  /// The composer's field is in use, its tools folded into a › (/design's
+  /// composer, as LINE's).
+  @State private var writing = false
+  /// The tools opened from the › until the next letter.
+  @State private var toolsOpen = false
+  /// The composer's tools folded into a ›: from the field being tapped, and
+  /// while words wait in it, until › opens them.
+  private var toolsFolded: Bool { (writing || !draft.isEmpty) && !toolsOpen }
   /// Members picked from the list of names while writing, to be sent as
   /// mentions while their @name stays.
   @State private var picked: [PickedMember] = []
@@ -417,6 +425,7 @@ struct ChatScreen: View {
       if empty { stopTyping() }
     }
     .onChange(of: draft) { _, words in
+      toolsOpen = false
       guard !words.isEmpty else { return }
       let now = Date.now
       if now.timeIntervalSince(typingSentAt) * 1000 >= Double(Chat.typingSendMs) {
@@ -795,18 +804,32 @@ struct ChatScreen: View {
         PhotoTray(photos: $pickedPhotos)
       }
       HStack(alignment: .bottom, spacing: 8) {
-        if editing == nil {
-          photoButton
-          Button("日にちを共有", systemImage: "calendar.badge.plus") { sharingDays = true }
+        // Folded, the tools give the field their room.
+        if editing == nil, toolsFolded {
+          Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { toolsOpen = true }
             .labelStyle(.iconOnly)
-            .font(.system(size: 20))
+            .font(.system(size: 20, weight: .medium))
             .foregroundStyle(colors.textSecondary)
             .frame(width: 38, height: 38)
+            .transition(.opacity.combined(with: .scale(scale: 0.6)))
+        } else if editing == nil {
+          HStack(spacing: 8) {
+            photoButton
+            Button("日にちを共有", systemImage: "calendar.badge.plus") { sharingDays = true }
+              .labelStyle(.iconOnly)
+              .font(.system(size: 20))
+              .foregroundStyle(colors.textSecondary)
+              .frame(width: 38, height: 38)
+          }
+          .transition(.opacity.combined(with: .move(edge: .leading)))
         }
         ComposerField(
           placeholder: "メッセージ", text: $draft, limit: TextLimits.chatMessage,
           composing: $composing, box: field
-        )
+        ) { inUse in
+          writing = inUse
+          toolsOpen = false
+        }
         .overlay(alignment: .leading) {
           if draft.isEmpty {
             Text("メッセージ")
@@ -843,6 +866,7 @@ struct ChatScreen: View {
         .accessibilityLabel(editing == nil ? "送る" : "編集を保存")
         .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
       }
+      .animation(.snappy(duration: 0.25), value: toolsFolded)
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
       if TextLimits.chatMessage - draft.count <= TextFields.countWhenLeft {

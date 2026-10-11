@@ -151,6 +151,7 @@ A group chat can put days to the vote, as LINE's 日程調整 does, for the step
 
 ## Photos
 
+- While the composer's field is in use, from the moment it is tapped and while words wait in it, its tools (写真を送る, 日にちを共有) fold into a › (写真と日にちのボタンを表示), as LINE's do, giving the field their room; › opens them again until the next letter. The support chat, with the photo tool alone, keeps it in sight.
 - The composer's photo tool opens the system's photo picker, `chatRules.photosPerSend` photos at most; past them it says 写真は一度に{n}枚まで送れます, and a photo the phone cannot read is left out with 開けない写真がありました. Picked photos wait above the composer, 64pt squares each with × ({n}枚目の写真を外す), until sent; words written with them go after them as a line of their own.
 - Each photo is its own line, with no words. The phone shrinks it first, as chat apps send them: its longer side to `chatRules.photoMaxEdge` pixels, as JPEG within `chatRules.photoMaxBytes`, turned upright and written again from its pixels, so its location and other metadata never leave the phone.
 - In the chat a photo has no bubble (one answering a line sits in a bubble under its quote, a little in from its edge, keeping its own corners and edge): rounded at `lg` with a hairline edge, the size it was sent at within 220×260 points, cropped at its ends when wider than 2:1 or taller than 1:2. While it uploads it is dimmed with 送信中. A tap opens it large on black, whole, with × and 保存, and a pull down closes it. Its menu has 保存 and ピン留め, and 送信取消 for its sender; no コピー or 編集. Saving says 写真を保存しました.
