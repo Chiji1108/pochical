@@ -141,6 +141,13 @@ struct ChatScreen: View {
   let threadID: String
   /// The other member of a one-to-one chat; none for 全体チャット.
   let otherID: String?
+  /// A day brought from みんなのシフト, set over the composer as the chat
+  /// opens.
+  var sharing: Day?
+  /// Days to go with the next message (共有する日), sent first.
+  @State private var attachedDays: [Day]?
+  /// `sharing` has been set over the composer, once.
+  @State private var tookSharing = false
   @State private var meID: String?
   /// The line ここから新着 sits over, fixed as the chat opens.
   @State private var unreadFrom: Int64?
@@ -449,6 +456,12 @@ struct ChatScreen: View {
     // Leaving the chat takes its open menu with it.
     .onAppear {
       Notifications.shared.openChat = OpenedChat(groupID: group.id, threadID: threadID)
+      // As sharing into a chat app does: nothing reaches everyone until it
+      // is sent, with a word if one likes.
+      if let sharing, !tookSharing {
+        tookSharing = true
+        attachedDays = [sharing]
+      }
     }
     .onDisappear {
       closeActions()
@@ -787,7 +800,7 @@ struct ChatScreen: View {
     let unchanged = editing.map { $0.text == withMentions(draft, picked: picked) } ?? false
     let blocked =
       editing == nil
-      ? (trimmed.isEmpty && pickedPhotos.isEmpty) || readingPhotos
+      ? (trimmed.isEmpty && pickedPhotos.isEmpty && attachedDays == nil) || readingPhotos
       : trimmed.isEmpty || unchanged
     return VStack(spacing: 0) {
       mentionList
@@ -801,6 +814,13 @@ struct ChatScreen: View {
       if editing == nil, let replying {
         ReplyBar(quote: quote(of: replying.seq), groupID: group.id) {
           withAnimation { self.replying = nil }
+        }
+      }
+      if editing == nil, let attachedDays {
+        ComposerBar(
+          title: "共有する日", words: daysSummary(attachedDays), stop: "共有をやめる"
+        ) {
+          withAnimation { self.attachedDays = nil }
         }
       }
       if let composerPreview, !composerPreview.none, composerPreview.url != previewRemoved {
@@ -859,6 +879,11 @@ struct ChatScreen: View {
           if let editing {
             if !text.isEmpty { save(editing, text: text) }
           } else {
+            // The days first, then each photo, then the words.
+            if let attachedDays {
+              shareDays(attachedDays, poll: false)
+              self.attachedDays = nil
+            }
             sendPhotos()
             if !text.isEmpty { send(text) }
           }

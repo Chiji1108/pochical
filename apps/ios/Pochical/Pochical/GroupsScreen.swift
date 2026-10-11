@@ -125,8 +125,8 @@ struct GroupsScreen: View {
           InvitePage(group: live(group))
         case .shifts(let group, let day):
           GroupShiftsPage(group: live(group), day: day)
-        case .chat(let group, let thread, let other):
-          ChatScreen(group: live(group), threadID: thread, otherID: other)
+        case .chat(let group, let thread, let other, let sharing):
+          ChatScreen(group: live(group), threadID: thread, otherID: other, sharing: sharing)
         case .settings(let group):
           GroupSettingsPage(group: live(group)) {
             path.append(.invite(group))
@@ -137,7 +137,7 @@ struct GroupsScreen: View {
         }
       }
     }
-    .environment(\.openGroupRoute, OpenGroupRouteAction { path.append($0) })
+    .environment(\.openGroupRoute, OpenGroupRouteAction { open($0) })
     .onChange(of: groups.map(\.id)) { inviteMade() }
     // Gone somewhere else meanwhile, the person is left there.
     .onChange(of: path) { _, path in
@@ -210,6 +210,25 @@ struct GroupsScreen: View {
   }
 }
 
+extension GroupsScreen {
+  /// Goes to `route`; a chat already open below, as when its day is
+  /// shared from みんなのシフト opened from it, is gone back to rather
+  /// than opened twice.
+  fileprivate func open(_ route: GroupRoute) {
+    if case .chat(let group, let thread, _, _) = route,
+      let below = path.firstIndex(where: {
+        if case .chat(let other, let otherThread, _, _) = $0 {
+          return other.id == group.id && otherThread == thread
+        }
+        return false
+      })
+    {
+      path.removeSubrange(below...)
+    }
+    path.append(route)
+  }
+}
+
 enum GroupRoute: Hashable {
   case newGroup
   case invite(GroupRow)
@@ -217,8 +236,8 @@ enum GroupRoute: Hashable {
   case shifts(GroupRow, day: Day?)
   case settings(GroupRow)
   /// One of the group's chats: 全体チャット, or a one-to-one chat with the
-  /// member `with`.
-  case chat(GroupRow, thread: String, with: String?)
+  /// member `with`; `sharing`, a day brought from みんなのシフト to share.
+  case chat(GroupRow, thread: String, with: String?, sharing: Day? = nil)
 }
 
 /// No group yet: a sample of a shared week and what sharing shifts is for,
