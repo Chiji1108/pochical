@@ -123,7 +123,9 @@ struct JoinScreen: View {
             joinProfilePage(groupName: details.name)
           } label: {
             LabeledContent {
-              Text(trimmed(ownName).isEmpty && face == .usual ? "いつもと同じ" : "このグループだけ")
+              // The usual name typed again is still the usual one, as the
+              // group takes it.
+              Text(myName == usualName && face == .usual ? "いつもと同じ" : "このグループだけ")
             } label: {
               Label {
                 Text(myName.isEmpty ? "名前を入れてください" : myName)
