@@ -27,7 +27,8 @@ struct JoinScreen: View {
   let onAlreadyIn: (InviteDetails) -> Void
   @State private var details: InviteDetails?
   @State private var loadError: InviteError?
-  @State private var myName = ""
+  /// A name of its own for this group; empty follows the usual one.
+  @State private var ownName = ""
   /// The usual name, which the field starts with (設定 › プロフィール).
   @Fetch(ProfileNameRequest()) private var usualName = ""
   /// The usual photo, which the group shows unless another is picked.
@@ -62,9 +63,6 @@ struct JoinScreen: View {
       }
     }
     .task { await load() }
-    .onChange(of: usualName, initial: true) { _, usual in
-      if myName.isEmpty { myName = usual }
-    }
     .alert(
       joinError == .full ? "このグループには参加できません" : "参加できませんでした",
       isPresented: Binding { joinError != nil } set: { if !$0 { joinError = nil } }
@@ -77,7 +75,7 @@ struct JoinScreen: View {
 
   private func invitation(_ details: InviteDetails) -> some View {
     let canJoin =
-      !details.full && !trimmed(myName).isEmpty && myName.count <= TextLimits.personName
+      !details.full && !myName.isEmpty && myName.count <= TextLimits.personName
     return VStack(spacing: 0) {
       List {
         Section {
@@ -118,13 +116,23 @@ struct JoinScreen: View {
         .settingsOnPage()
         // The face this group shows, as グループの設定's このグループでのあなた
         // changes it later (/design's GroupProfileRow on the join screen).
+        // /design's GroupProfileRow, as グループの設定 has it: the name and
+        // face the group will show, and whether they are the usual ones.
         Section("このグループでのあなた") {
-          faceEditor
-            .settingsOnPage()
-        }
-        Section {
-          LabeledContent("名前") {
-            LimitedTextField(placeholder: "例：さくら", text: $myName, limit: TextLimits.personName)
+          NavigationLink {
+            joinProfilePage(groupName: details.name)
+          } label: {
+            LabeledContent {
+              Text(trimmed(ownName).isEmpty && face == .usual ? "いつもと同じ" : "このグループだけ")
+            } label: {
+              Label {
+                Text(myName.isEmpty ? "名前を入れてください" : myName)
+                  .foregroundStyle(myName.isEmpty ? colors.textTertiary : colors.textPrimary)
+                  .lineLimit(1)
+              } icon: {
+                facePicture(size: 28)
+              }
+            }
           }
         }
         .settingsRows()
@@ -223,29 +231,58 @@ struct JoinScreen: View {
     }
   }
 
-  /// 写真を編集 for the face this group will show, picked before joining
-  /// and set once in it.
-  private var faceEditor: some View {
-    PhotoEditor(
-      label: "写真を編集", hasPhoto: face != .none && (face != .usual || !usual.photoID.isEmpty),
-      picture: { facePicture },
-      onPhoto: { jpeg in face = .picked(jpeg) },
-      onUsual: face == .usual || usual.photoID.isEmpty ? nil : { face = .usual },
-      onRemove: { face = .none })
+  /// The name the group will show: its own, else the usual one.
+  private var myName: String {
+    let own = trimmed(ownName)
+    return own.isEmpty ? usualName : own
   }
 
-  @ViewBuilder private var facePicture: some View {
+  /// このグループでのあなた before joining (/design's GroupProfilePage on
+  /// the join screen): the face and a name of its own, kept here and sent
+  /// as the person joins.
+  private func joinProfilePage(groupName: String) -> some View {
+    List {
+      Section {
+        PhotoEditor(
+          label: "写真を編集",
+          hasPhoto: face != .none && (face != .usual || !usual.photoID.isEmpty),
+          picture: { facePicture(size: 88) },
+          onPhoto: { jpeg in face = .picked(jpeg) },
+          onUsual: face == .usual || usual.photoID.isEmpty ? nil : { face = .usual },
+          onRemove: { face = .none })
+        .settingsOnPage()
+      }
+      Section {
+        LabeledContent("名前") {
+          LimitedTextField(
+            placeholder: usualName.isEmpty ? "例：さくら" : usualName, text: $ownName,
+            limit: TextLimits.personName)
+        }
+      } footer: {
+        Text(
+          usualName.isEmpty
+            ? "参加すると、\(groupName)の人にだけ、この名前と写真で表示されます。"
+            : "参加すると、\(groupName)の人にだけ、この名前と写真で表示されます。名前が空欄なら「\(usualName)」、写真を入れなければいつもの写真のままです。")
+      }
+      .settingsRows()
+    }
+    .settingsList()
+    .navigationTitle("このグループでのあなた")
+    .navigationBarTitleDisplayMode(.inline)
+  }
+
+  @ViewBuilder private func facePicture(size: CGFloat) -> some View {
     switch face {
     case .picked(let jpeg):
       if let image = UIImage(data: jpeg) {
         Image(uiImage: image).resizable().scaledToFill()
-          .frame(width: 88, height: 88).clipShape(Circle())
+          .frame(width: size, height: size).clipShape(Circle())
       }
     case .usual:
       MemberAvatar(
-        name: myName, photoID: usual.photoID, groupID: ChatPhotos.mine, size: 88, me: true)
+        name: myName, photoID: usual.photoID, groupID: ChatPhotos.mine, size: size, me: true)
     case .none:
-      MemberAvatar(name: myName, photoID: "", size: 88, me: true)
+      MemberAvatar(name: myName, photoID: "", size: size, me: true)
     }
   }
 
@@ -254,7 +291,7 @@ struct JoinScreen: View {
     Task {
       defer { joining = false }
       do throws(InviteError) {
-        let groupID = try await groupCalls.join(code: invite.code, displayName: trimmed(myName))
+        let groupID = try await groupCalls.join(code: invite.code, displayName: myName)
         await setFace(in: groupID)
         onJoined(groupID)
       } catch {
