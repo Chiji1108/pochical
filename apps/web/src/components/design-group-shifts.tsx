@@ -1,4 +1,4 @@
-import { Download, Info, Share } from "lucide-react";
+import { Info, Share } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
@@ -7,7 +7,6 @@ import {
   dateKey,
   daysOfMonth,
   formatDay,
-  formatMonth,
   isSameMonth,
   monthAfter,
   movesText,
@@ -38,7 +37,6 @@ import {
 } from "./design-menu";
 import { monthIndex } from "./design-rolling";
 import { PhoneContext, Sheet, sheetBody, SheetHeading } from "./design-sheet";
-import { ToastContext } from "./design-toast";
 import { useWeek } from "./design-week";
 
 // Everyone's shifts in a group: by day, by week or one person at a time,
@@ -80,7 +78,6 @@ export function ShiftsPage({
   const [legendOf, setLegendOf] = useState(personId);
   const [legendOpen, setLegendOpen] = useState(false);
   const [picked, setPicked] = useState<Date | undefined>(day);
-  const toast = useContext(ToastContext);
   const dates = weekTools.monthDates(month);
   const pick = (date: Date) => {
     setPicked(picked && dateKey(picked) === dateKey(date) ? undefined : date);
@@ -98,9 +95,6 @@ export function ShiftsPage({
           onLegend={() => {
             setLegendOf(personId);
             setLegendOpen(true);
-          }}
-          onSave={() => {
-            toast(`${formatMonth(month)}のシフト表を写真に保存しました`);
           }}
         />
       }
@@ -145,17 +139,16 @@ export function ShiftsPage({
 }
 
 // One pull-down for the page's secondary actions: how the table is laid
-// out, what the marks mean, and saving it as a picture.
+// out and what the marks mean. No 画像で保存: the members see it live in
+// the app, and a picture would take their shifts out of the group.
 function ShiftsMenu({
   layout,
   onLayout,
   onLegend,
-  onSave,
 }: {
   layout: Layout;
   onLayout: (layout: Layout) => void;
   onLegend: () => void;
-  onSave: () => void;
 }) {
   const current = layoutOptions.find((option) => option.value === layout);
   return (
@@ -172,13 +165,6 @@ function ShiftsMenu({
         value="legend"
       >
         シフトパターン
-      </MenuItem>
-      <MenuItem
-        icon={<Download aria-hidden="true" size={18} />}
-        onSelect={onSave}
-        value="save"
-      >
-        画像で保存
       </MenuItem>
     </PullDownMenu>
   );
