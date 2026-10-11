@@ -106,6 +106,22 @@ enum ChatTime {
   }
 }
 
+/// The day over a day's first line in a chat.
+struct DayChip: View {
+  @Environment(\.themeColors) private var colors
+  let day: Day
+
+  var body: some View {
+    Text(ChatTime.day(day))
+      .font(.caption2)
+      .foregroundStyle(colors.textTertiary)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 2)
+      .background(colors.fillTertiary, in: RoundedRectangle(cornerRadius: Radius.sm))
+      .padding(.top, 8)
+  }
+}
+
 /// One of a group's chats (/design's ChatPage), 全体チャット or a
 /// one-to-one chat: others' lines on the left with their face, and in the
 /// group's chat their name, at the start of a run, one's own on the right
@@ -584,13 +600,7 @@ struct ChatScreen: View {
   ) -> some View {
     switch item {
     case .day(let day):
-      Text(ChatTime.day(day))
-        .font(.caption2)
-        .foregroundStyle(colors.textTertiary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 2)
-        .background(colors.fillTertiary, in: RoundedRectangle(cornerRadius: Radius.sm))
-        .padding(.top, 8)
+      DayChip(day: day)
     case .unread:
       HStack(spacing: 12) {
         Rectangle().fill(colors.accentBorder).frame(height: 1)
