@@ -83,12 +83,14 @@ struct DayCard: View {
             .background(colors.accentContainer, in: Capsule())
         }
       }
-      // The people in even columns, many wrapping onto more lines in the
-      // same columns rather than widen the card.
+      // The people in even columns across the card, a few spread over it
+      // and many wrapping onto more lines in the same columns rather than
+      // widen the card (/design's minmax(36px, 1fr)).
       let columns = max(min(members.count, Chat.dayCardColumns), 1)
+      let column = max(Self.leastColumn, Self.oneDayInside / CGFloat(columns))
       VStack(alignment: .leading, spacing: 8) {
         ForEach(Array(stride(from: 0, to: members.count, by: columns)), id: \.self) { start in
-          HStack(spacing: 4) {
+          HStack(spacing: 0) {
             ForEach(members[start..<min(start + columns, members.count)]) { member in
               let pattern = shifts.pattern(of: member, on: day)
               VStack(spacing: 4) {
@@ -101,7 +103,7 @@ struct DayCard: View {
                   .foregroundStyle(colors.textTertiary)
                   .lineLimit(1)
               }
-              .frame(width: 44)
+              .frame(width: column)
               .accessibilityElement(children: .ignore)
               .accessibilityLabel("\(member.name)：\(pattern?.name ?? "未入力")")
             }
@@ -112,8 +114,14 @@ struct DayCard: View {
     .padding(12)
     // As wide with みんな休み as without, and for any date, so shared
     // days stacked in a chat line up.
-    .frame(minWidth: 184, alignment: .leading)
+    .frame(minWidth: Self.oneDayInside + 24, alignment: .leading)
   }
+
+  /// Inside one day's card at its narrowest, room for 12月27日(日) and the
+  /// tag.
+  private static var oneDayInside: CGFloat { 160 }
+  /// A person's column at its narrowest.
+  private static var leastColumn: CGFloat { 36 }
 
   /// A row a day, a column a person.
   private func byDay(_ shifts: Shifts) -> some View {

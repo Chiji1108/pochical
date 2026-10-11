@@ -137,7 +137,7 @@ struct GroupsScreen: View {
         }
       }
     }
-    .environment(\.openGroupRoute, OpenGroupRouteAction { path.append($0) })
+    .environment(\.openGroupRoute, OpenGroupRouteAction { open($0) })
     .onChange(of: groups.map(\.id)) { inviteMade() }
     // Gone somewhere else meanwhile, the person is left there.
     .onChange(of: path) { _, path in
@@ -207,6 +207,25 @@ struct GroupsScreen: View {
   /// The group open, whose socket is kept.
   private var openGroupID: String? {
     (groups.first { $0.id == openID } ?? groups.first)?.id
+  }
+}
+
+extension GroupsScreen {
+  /// Goes to `route`; a chat already open below, as when its day is
+  /// shared from みんなのシフト opened from it, is gone back to rather
+  /// than opened twice.
+  fileprivate func open(_ route: GroupRoute) {
+    if case .chat(let group, let thread, _, _) = route,
+      let below = path.firstIndex(where: {
+        if case .chat(let other, let otherThread, _, _) = $0 {
+          return other.id == group.id && otherThread == thread
+        }
+        return false
+      })
+    {
+      path.removeSubrange(below...)
+    }
+    path.append(route)
   }
 }
 
