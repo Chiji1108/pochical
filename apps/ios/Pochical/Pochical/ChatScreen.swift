@@ -642,18 +642,26 @@ struct ChatScreen: View {
           reactions: line.reactions, countedReactions: otherID != nil,
           pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
           meID: meID, onReact: onReact, lifted: acting?.lineID == line.opID
-        ) { frame, finger in
-          openActions(
-            MessageActionsRequest(
-              lineID: line.opID, frame: frame, mine: mine,
-              bubble: AnyView(
-                LineContent(
-                  text: line.text, preview: line.preview, days: line.days, members: cardMembers,
-                  poll: poll,
-                  photo: line.photo, quote: line.replyTo.map(quote(of:)), groupID: group.id,
-                  mine: mine, first: startsRun, waiting: false, nameOf: nameOf)),
-              finger: finger, reactions: line.reactions, meID: meID, onReact: onReact,
-              onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
+        ) { frame, finger, link in
+          let bubble = AnyView(
+            LineContent(
+              text: line.text, preview: line.preview, days: line.days, members: cardMembers,
+              poll: poll,
+              photo: line.photo, quote: line.replyTo.map(quote(of:)), groupID: group.id,
+              mine: mine, first: startsRun, waiting: false, nameOf: nameOf))
+          // A link held has its own menu, without the reactions.
+          if let link {
+            openActions(
+              MessageActionsRequest(
+                lineID: line.opID, frame: frame, mine: mine, bubble: bubble, finger: finger,
+                actions: linkActions(link, open: { _ = open(link) }, say: say)))
+          } else {
+            openActions(
+              MessageActionsRequest(
+                lineID: line.opID, frame: frame, mine: mine, bubble: bubble,
+                finger: finger, reactions: line.reactions, meID: meID, onReact: onReact,
+                onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
+          }
         }
       }
     case .waiting(let line, let startsRun):
@@ -666,7 +674,7 @@ struct ChatScreen: View {
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
         failed: line.failed, onFailed: { unsentPhoto = line },
         nameOf: nameOf, lifted: acting?.lineID == line.opID
-      ) { frame, finger in
+      ) { frame, finger, _ in
         // Still on its way: nothing but コピー yet, and days have nothing
         // to copy.
         guard line.days.isEmpty, line.photo == nil else { return }
@@ -1529,7 +1537,7 @@ private struct LineView: View {
   var lifted = false
   /// Opens the line's reactions and menu, from where its bubble is, with
   /// the finger that opened them while it stays down.
-  let onActions: (CGRect, HeldFinger?) -> Void
+  let onActions: (CGRect, HeldFinger?, URL?) -> Void
 
   private static var avatar: CGFloat { 32 }
 
@@ -1722,6 +1730,8 @@ struct LineContent: View {
 
 struct MessageBubble: View {
   @Environment(\.themeColors) private var colors
+  /// Where a held bubble notes its links, for a long press on one.
+  @Environment(\.linkSpots) private var linkSpots
   let text: String
   let mine: Bool
   let first: Bool
@@ -1771,12 +1781,13 @@ struct MessageBubble: View {
           .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
       }
       VStack(alignment: .leading, spacing: 4) {
-        Text(words)
+        markedWords
           .font(.body)
           .lineSpacing(3)
           .lineLimit(unfolded ? nil : Chat.foldLines)
           .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
           .tint(mine ? colors.accentOnFill : colors.accentDefault)
+          .modifier(FindsLinks(spots: linkSpots))
           .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { shownHeight = $0 }
           // The words whole at the same width, measured, not guessed from
           // their length (spec/chat.md, Long messages).
@@ -1819,8 +1830,20 @@ struct MessageBubble: View {
   /// weight and its links underlined, both in the accent in others' lines
   /// and in the bubble's color in one's own (spec/chat.md, In a message).
   private var words: AttributedString {
-    var words = AttributedString()
-    for part in textParts(text) {
+    pieces.reduce(into: AttributedString()) { $0 += $1.words }
+  }
+
+  /// The words with their links marked, for a long press to find.
+  private var markedWords: Text {
+    pieces.reduce(Text(verbatim: "")) { sofar, piece in
+      let text = Text(piece.words)
+      return Text("\(sofar)\(piece.link.map { text.customAttribute(LinkMark(url: $0)) } ?? text)")
+    }
+  }
+
+  /// Each part of the words as drawn, and the page it links to.
+  private var pieces: [(words: AttributedString, link: URL?)] {
+    textParts(text).map { part in
       var piece = AttributedString(part.mention.map { "@\(nameOf($0))" } ?? part.text)
       if let mentioned = part.mention {
         piece.font = .body.weight(.semibold)
@@ -1830,10 +1853,10 @@ struct MessageBubble: View {
       } else if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
         piece.link = link
         piece.underlineStyle = .single
+        return (piece, link)
       }
-      words += piece
+      return (piece, nil)
     }
-    return words
   }
 
 }
@@ -1941,5 +1964,22 @@ struct ReportAndBlock: ViewModifier {
     let action = next
     next = nil
     action?()
+  }
+}
+
+/// A held bubble's words drawn noting where their links are, and where
+/// they are on the screen.
+private struct FindsLinks: ViewModifier {
+  let spots: LinkSpots?
+
+  func body(content: Content) -> some View {
+    if let spots {
+      content
+        .textRenderer(LinkFinder(spots: spots))
+        .modifier(HeldLinksOpenNothing(spots: spots))
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { spots.frame = $0 }
+    } else {
+      content
+    }
   }
 }

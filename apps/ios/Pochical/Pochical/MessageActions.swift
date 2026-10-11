@@ -33,6 +33,9 @@ struct MessageAction: Identifiable {
 /// the open menu.
 struct HeldPress: UIGestureRecognizerRepresentable {
   static let duration = 0.35
+  /// Where the finger is as the press is held, a moment before the line's
+  /// own press opens its menu.
+  var onHold: (CGPoint) -> Void = { _ in }
   let onMove: (CGPoint) -> Void
   let onLift: (CGPoint) -> Void
 
@@ -40,7 +43,7 @@ struct HeldPress: UIGestureRecognizerRepresentable {
 
   func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
     let press = UILongPressGestureRecognizer()
-    press.minimumPressDuration = Self.duration
+    press.minimumPressDuration = Self.duration - 0.05
     press.delegate = context.coordinator
     return press
   }
@@ -50,8 +53,9 @@ struct HeldPress: UIGestureRecognizerRepresentable {
   ) {
     let point = context.converter.location(in: .global)
     switch recognizer.state {
+    case .began: onHold(point)
     case .changed: onMove(point)
-    case .ended: onLift(point)
+    case .ended, .cancelled: onLift(point)
     default: break
     }
   }
@@ -458,16 +462,23 @@ private struct HeldBubble: ViewModifier {
   /// Its bubble is lifted over the chat, its place standing empty.
   let lifted: Bool
   /// Opens the reactions and menu, from where the bubble is, with the
-  /// finger that opened them while it stays down.
-  let onActions: (CGRect, HeldFinger?) -> Void
+  /// finger that opened them while it stays down, and the link held, for
+  /// its own menu instead.
+  let onActions: (CGRect, HeldFinger?, URL?) -> Void
   /// Where the bubble is on the screen, for its menu.
   @State private var frame = CGRect.zero
+  /// Where its words' links are drawn.
+  @State private var links = LinkSpots()
+  /// A link's menu is open from this press: the line's own press, which
+  /// waits on the link's own gesture and comes later, opens nothing.
+  @State private var linkHeld = false
   @State private var pressing = false
   /// The finger that opened the menu, followed until it lifts.
   @State private var held: HeldFinger?
 
   func body(content: Content) -> some View {
     content
+      .environment(\.linkSpots, links)
       // Its own size and where its middle is: the press's give shrinks
       // its frame on the screen, not its size.
       .onGeometryChange(for: CGRect.self) { proxy in
@@ -482,29 +493,50 @@ private struct HeldBubble: ViewModifier {
       .opacity(lifted ? 0 : 1)
       .animation(.easeOut(duration: 0.2), value: pressing)
       .onLongPressGesture(minimumDuration: HeldPress.duration) {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         pressing = false
-        let finger = HeldFinger()
-        held = finger
-        onActions(frame, finger)
+        guard !linkHeld else { return }
+        open(link: nil)
       } onPressingChanged: {
         pressing = $0
       }
       .gesture(
         HeldPress {
+          links.held = true
+          // A link held opens its own menu at once.
+          if let link = links.link(at: $0) {
+            linkHeld = true
+            pressing = false
+            open(link: link)
+          }
+        } onMove: {
           held?.point = $0
         } onLift: {
           held?.point = $0
           held?.lifted = true
           held = nil
+          // Past the tap a link takes as the finger lifts.
+          Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            links.held = false
+            linkHeld = false
+          }
         })
-      .accessibilityAction(named: "リアクションとメニュー") { onActions(frame, nil) }
+      .accessibilityAction(named: "リアクションとメニュー") { onActions(frame, nil, nil) }
+  }
+
+  /// Opens the menu, the link's when one is held, with the finger that
+  /// opened it.
+  private func open(link: URL?) {
+    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    let finger = HeldFinger()
+    held = finger
+    onActions(frame, finger, link)
   }
 }
 
 extension View {
   /// Held, opens the bubble's reactions and menu (HeldBubble).
-  func heldForActions(lifted: Bool, onActions: @escaping (CGRect, HeldFinger?) -> Void)
+  func heldForActions(lifted: Bool, onActions: @escaping (CGRect, HeldFinger?, URL?) -> Void)
     -> some View
   {
     modifier(HeldBubble(lifted: lifted, onActions: onActions))
