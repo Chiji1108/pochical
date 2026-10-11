@@ -287,6 +287,7 @@ export function GroupRail({
 // The group at a glance: this week for everyone, then its chats.
 export function GroupHub({
   group,
+  formerMembers,
   chatOf,
   onShifts,
   onShiftsDay,
@@ -295,6 +296,9 @@ export function GroupHub({
   onSettings,
 }: {
   group: Group;
+  // Those taken out of the group: a one-to-one chat with one stays, to
+  // be read.
+  formerMembers: Member[];
   chatOf: (chatId: string) => Chat;
   onShifts: () => void;
   // Opens the month with that day picked, as if pressed in the table.
@@ -315,10 +319,18 @@ export function GroupHub({
   const others = group.members.filter(
     (member) => !member.me && !blocked.includes(member.id)
   );
-  // Members you already have a one-to-one chat with, in this group.
-  const talking = others.filter(
+  // Members you already have a one-to-one chat with, in this group, and
+  // those who left it.
+  const talkingNow = others.filter(
     (member) => chatOf(member.id).messages.length > 0
   );
+  const talking = [
+    ...talkingNow,
+    ...formerMembers.filter(
+      (member) =>
+        !blocked.includes(member.id) && chatOf(member.id).messages.length > 0
+    ),
+  ];
   const [picking, setPicking] = useState(false);
   return (
     <>
@@ -407,7 +419,7 @@ export function GroupHub({
               }}
             />
           ))}
-          {others.length > talking.length && (
+          {others.length > talkingNow.length && (
             <ListRow
               label="個人チャットを始める"
               leading={
