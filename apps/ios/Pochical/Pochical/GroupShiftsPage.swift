@@ -38,6 +38,8 @@ struct GroupShiftsPage: View {
   @Fetch private var members: [GroupMember] = []
   /// Whose シフトパターン is open, from a face or the menu.
   @State private var legendOf: LegendOf?
+  /// シフトパターン asked for from a face while the day's sheet was up.
+  @State private var legendAfterDay: LegendOf?
   /// The viewer's id among the members, for 1人ずつ.
   @State private var meID: String?
   let group: GroupRow
@@ -131,26 +133,35 @@ struct GroupShiftsPage: View {
       // laid out and what the marks mean. No 画像で保存: the members see it
       // live, and a picture would take their shifts out of the group.
       ToolbarItem(placement: .primaryAction) {
-          Menu {
-            if layouts.count > 1 {
-              Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
-                ForEach(layouts, id: \.self) { Text($0.name).tag($0) }
-              }
-              Divider()
+        Menu {
+          if layouts.count > 1 {
+            Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
+              ForEach(layouts, id: \.self) { Text($0.name).tag($0) }
             }
-            Button("シフトパターン", systemImage: "info.circle") {
-              let first = members.first { $0.userID != meID } ?? members.first
-              if let first { legendOf = LegendOf(userID: first.userID) }
-            }
-          } label: {
-            HStack(spacing: 4) {
-              Text(layouts.count > 1 ? layout.name : "メニュー")
-              Image(systemName: "chevron.down").imageScale(.small)
-            }
+            Divider()
           }
+          Button("シフトパターン", systemImage: "info.circle") {
+            let first = members.first { $0.userID != meID } ?? members.first
+            if let first { legendOf = LegendOf(userID: first.userID) }
+          }
+        } label: {
+          HStack(spacing: 4) {
+            Text(layout.name)
+            Image(systemName: "chevron.down").imageScale(.small)
+          }
+        }
       }
     }
-    .environment(\.openLegend) { legendOf = LegendOf(userID: $0) }
+    .environment(\.openLegend) { userID in
+      // Over the day's sheet, once it has gone: one sheet cannot come up
+      // while another is up.
+      if picked != nil {
+        legendAfterDay = LegendOf(userID: userID)
+        picked = nil
+      } else {
+        legendOf = LegendOf(userID: userID)
+      }
+    }
     .sheet(item: $legendOf) { legend in
       LegendSheet(members: members, groupID: group.id, picked: legend.userID)
         .presentationDetents([.medium, .large])
@@ -163,7 +174,12 @@ struct GroupShiftsPage: View {
       let last = thisMonth.addingMonths(monthSpan + 1).adding(days: 6)
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: first, through: last))
     }
-    .sheet(item: $picked) { day in
+    .sheet(item: $picked) {
+      if let legend = legendAfterDay {
+        legendAfterDay = nil
+        legendOf = legend
+      }
+    } content: { day in
       // As tall as its rows, as /design's.
       let fitted = PresentationDetent.height(daySheetHeight)
       DaySheet(day: day, members: members, groupID: group.id)
