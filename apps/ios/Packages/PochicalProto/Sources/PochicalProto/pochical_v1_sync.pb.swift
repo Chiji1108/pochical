@@ -870,9 +870,22 @@ public nonisolated struct Pochical_V1_Profile: Sendable {
   /// empty for none.
   public var photoID: String = String()
 
+  /// The shape their marks are drawn in, unset before the user changes it
+  /// from the app's default.
+  public var markLook: Pochical_V1_MarkLook {
+    get {_markLook ?? Pochical_V1_MarkLook()}
+    set {_markLook = newValue}
+  }
+  /// Returns true if `markLook` has been explicitly set.
+  public var hasMarkLook: Bool {self._markLook != nil}
+  /// Clears the value of `markLook`. Subsequent reads from it will return its default value.
+  public mutating func clearMarkLook() {self._markLook = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _markLook: Pochical_V1_MarkLook? = nil
 }
 
 /// A chat whose notifications the user turned off, or back on: one value
@@ -1043,9 +1056,23 @@ public nonisolated struct Pochical_V1_Member: Sendable {
   /// their usual one.
   public var ownPhoto: Bool = false
 
+  /// The shape they draw their marks in, which the group's tables and the
+  /// widgets set to them draw them in; unset, the app's default (filled
+  /// icons), theirs until they change it.
+  public var markLook: Pochical_V1_MarkLook {
+    get {_markLook ?? Pochical_V1_MarkLook()}
+    set {_markLook = newValue}
+  }
+  /// Returns true if `markLook` has been explicitly set.
+  public var hasMarkLook: Bool {self._markLook != nil}
+  /// Clears the value of `markLook`. Subsequent reads from it will return its default value.
+  public mutating func clearMarkLook() {self._markLook = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _markLook: Pochical_V1_MarkLook? = nil
 }
 
 /// One field of a member's day, as the group sees it: pattern and times,
@@ -3383,7 +3410,7 @@ nonisolated extension Pochical_V1_Change: SwiftProtobuf.Message, SwiftProtobuf._
 
 nonisolated extension Pochical_V1_Profile: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Profile"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{3}photo_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{3}photo_id\0\u{3}mark_look\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3393,24 +3420,33 @@ nonisolated extension Pochical_V1_Profile: SwiftProtobuf.Message, SwiftProtobuf.
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._markLook) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.name.isEmpty {
       try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
     }
     if !self.photoID.isEmpty {
       try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 2)
     }
+    try { if let v = self._markLook {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_Profile, rhs: Pochical_V1_Profile) -> Bool {
     if lhs.name != rhs.name {return false}
     if lhs.photoID != rhs.photoID {return false}
+    if lhs._markLook != rhs._markLook {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -3661,7 +3697,7 @@ nonisolated extension Pochical_V1_GroupProfile: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Member"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0\u{1}left\0\u{1}deleted\0\u{3}own_name\0\u{3}photo_id\0\u{3}own_photo\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}display_name\0\u{3}joined_at_ms\0\u{1}left\0\u{1}deleted\0\u{3}own_name\0\u{3}photo_id\0\u{3}own_photo\0\u{3}mark_look\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3677,12 +3713,17 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
       case 6: try { try decoder.decodeSingularBoolField(value: &self.ownName) }()
       case 7: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.ownPhoto) }()
+      case 9: try { try decoder.decodeSingularMessageField(value: &self._markLook) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.userID.isEmpty {
       try visitor.visitSingularStringField(value: self.userID, fieldNumber: 1)
     }
@@ -3707,6 +3748,9 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     if self.ownPhoto != false {
       try visitor.visitSingularBoolField(value: self.ownPhoto, fieldNumber: 8)
     }
+    try { if let v = self._markLook {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -3719,6 +3763,7 @@ nonisolated extension Pochical_V1_Member: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.ownName != rhs.ownName {return false}
     if lhs.photoID != rhs.photoID {return false}
     if lhs.ownPhoto != rhs.ownPhoto {return false}
+    if lhs._markLook != rhs._markLook {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

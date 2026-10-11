@@ -264,6 +264,11 @@ export const profile = sqliteTable(
   {
     cursor: integer().notNull(),
     id: integer().primaryKey(),
+    // The user's icons drawn filled (MarkLook.fill).
+    markFill: integer("mark_fill", { mode: "boolean" }).notNull().default(true),
+    // The shape the user's marks are drawn in (MarkLook.style), which their
+    // groups show; empty while they keep the app's default.
+    markStyle: text("mark_style").notNull().default(""),
     name: text().notNull(),
     // The usual photo, one of the user's own photos; empty for none.
     photoId: text("photo_id").notNull().default(""),

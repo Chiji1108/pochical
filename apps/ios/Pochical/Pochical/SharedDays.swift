@@ -95,6 +95,7 @@ struct DayCard: View {
                 MemberAvatar(
                   name: member.name, photoID: member.photoID, size: 24, userID: member.userID)
                 mark(pattern, size: 16)
+                  .marks(drawnAs: member.markLook)
                 Text(pattern?.name ?? "未入力")
                   .font(.system(size: 9))
                   .foregroundStyle(colors.textTertiary)
@@ -141,6 +142,7 @@ struct DayCard: View {
           .frame(width: Self.dateWidth, alignment: .leading)
           ForEach(members) { member in
             cell(shifts.pattern(of: member, on: day))
+              .marks(drawnAs: member.markLook)
               .frame(width: 26)
               .accessibilityLabel(
                 "\(member.name)：\(shifts.pattern(of: member, on: day)?.name ?? "未入力")")
@@ -194,6 +196,7 @@ struct DayCard: View {
             .accessibilityLabel(member.name)
           ForEach(shown, id: \.self) { day in
             cell(shifts.pattern(of: member, on: day))
+              .marks(drawnAs: member.markLook)
               .frame(width: 28)
               .accessibilityLabel(
                 "\(day.fullText)：\(shifts.pattern(of: member, on: day)?.name ?? "未入力")")

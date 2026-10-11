@@ -107,6 +107,7 @@ struct GroupDayRow: View {
             names: density == .names,
             tiled: patterns[index]?.countsAsOff == true && !together
           )
+          .marks(drawnAs: member.markLook)
           .frame(maxWidth: density.columnWidth == nil ? .infinity : nil)
           .frame(width: density.columnWidth)
           .accessibilityLabel("\(member.name)：\(patterns[index]?.name ?? "未入力")")

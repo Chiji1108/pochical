@@ -68,6 +68,12 @@ public protocol Pochical_V1_UserServiceClientInterface: Sendable {
     /// characters, or for a photo the user has not uploaded.
     @available(iOS 13, *)
     func `setProfile`(request: Pochical_V1_SetProfileRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetProfileResponse>
+
+    /// Sets the shape the user's marks are drawn in, which their groups show
+    /// (spec/sync-protocol.md, Profile); the devices hear of it as a Profile
+    /// change. INVALID_ARGUMENT for a style that is none of the three.
+    @available(iOS 13, *)
+    func `setMarkLook`(request: Pochical_V1_SetMarkLookRequest, headers: Connect.Headers) async -> ResponseMessage<Pochical_V1_SetMarkLookResponse>
 }
 
 /// Concrete implementation of `Pochical_V1_UserServiceClientInterface`.
@@ -123,6 +129,11 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
         return await self.client.unary(path: "/pochical.v1.UserService/SetProfile", idempotencyLevel: .idempotent, request: request, headers: headers)
     }
 
+    @available(iOS 13, *)
+    public func `setMarkLook`(request: Pochical_V1_SetMarkLookRequest, headers: Connect.Headers = [:]) async -> ResponseMessage<Pochical_V1_SetMarkLookResponse> {
+        return await self.client.unary(path: "/pochical.v1.UserService/SetMarkLook", idempotencyLevel: .idempotent, request: request, headers: headers)
+    }
+
     public enum Metadata {
         public enum Methods {
             public static let deleteAccount = Connect.MethodSpec(name: "DeleteAccount", service: "pochical.v1.UserService", type: .unary)
@@ -134,6 +145,7 @@ public final class Pochical_V1_UserServiceClient: Pochical_V1_UserServiceClientI
             public static let setChatMuted = Connect.MethodSpec(name: "SetChatMuted", service: "pochical.v1.UserService", type: .unary)
             public static let setChatNotifications = Connect.MethodSpec(name: "SetChatNotifications", service: "pochical.v1.UserService", type: .unary)
             public static let setProfile = Connect.MethodSpec(name: "SetProfile", service: "pochical.v1.UserService", type: .unary)
+            public static let setMarkLook = Connect.MethodSpec(name: "SetMarkLook", service: "pochical.v1.UserService", type: .unary)
         }
     }
 }

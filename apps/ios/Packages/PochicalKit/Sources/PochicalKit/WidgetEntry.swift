@@ -134,6 +134,8 @@ public struct WidgetPair: Sendable {
   public var me: WidgetWith
   /// One for each of `upcoming`.
   public var days: [WidgetPairDay]
+  /// The shape they draw their marks in, as the group's tables draw them.
+  public var theirLook: MarkLook?
 }
 
 public struct WidgetPairDay: Sendable {
@@ -362,7 +364,8 @@ extension OwnCalendar {
       let together = mine.off && theirs?.off == true
       return WidgetPairDay(theirs: theirs, together: together)
     }
-    return WidgetPair(with: companion.with, me: companion.me, days: days)
+    return WidgetPair(
+      with: companion.with, me: companion.me, days: days, theirLook: them.markLook)
   }
 
   /// Whether the person has entered any day yet, their own or by a

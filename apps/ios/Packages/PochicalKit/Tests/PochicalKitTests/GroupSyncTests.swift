@@ -1,3 +1,4 @@
+import Foundation
 import PochicalDesign
 import PochicalProto
 import SQLiteData
@@ -135,5 +136,44 @@ private func change(_ cursor: UInt64, _ fill: (inout Pochical_V1_Change) -> Void
     #expect(members.map(\.ownName) == [false, true])
     #expect(members.map(\.photoID) == ["", "p2"])
     #expect(members.map(\.ownPhoto) == [false, true])
+  }
+}
+
+@Test func membersAreDrawnInTheShapeTheyChose() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let joined = change(1) {
+      $0.member.userID = "u1"
+      $0.member.displayName = "さくら"
+    }
+    let emoji = change(2) {
+      $0.member.userID = "u2"
+      $0.member.displayName = "あや"
+      $0.member.markLook.style = "emoji"
+      $0.member.markLook.fill = false
+    }
+    try GroupSync.take([joined, emoji], of: "g", in: db)
+    let members = try GroupSync.members(of: "g", from: .today, through: .today, in: db)
+    // Before theirs is known, the app's default, theirs until they change it.
+    #expect(members.map(\.markLook) == [Look().markLook, MarkLook(style: .emoji, fill: false)])
+  }
+}
+
+@Test func theLookGoesToTheAccountOnlyWhenItKeepsAnother() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    // Nothing the account keeps yet: a device's own look never goes.
+    #expect(try Profile.markLookToSend(in: db) == nil)
+    var look = Look()
+    look.style = .badge
+    let json = String(decoding: try JSONEncoder().encode(look), as: UTF8.self)
+    try PreferenceRow.insert { PreferenceRow(key: "look", value: json) }.execute(db)
+    #expect(try Profile.markLookToSend(in: db) == MarkLook(style: .badge, fill: true))
+    // Once the account says so, nothing more.
+    var profile = Pochical_V1_Profile()
+    profile.markLook.style = "badge"
+    profile.markLook.fill = true
+    try Profile.take(profile, in: db)
+    #expect(try Profile.markLookToSend(in: db) == nil)
   }
 }

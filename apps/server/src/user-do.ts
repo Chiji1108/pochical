@@ -604,6 +604,32 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
+   * Sets the shape the user's marks are drawn in, sent to their devices
+   * and pushed to their groups as the profile is; the same again changes
+   * nothing.
+   */
+  setMarkLook(style: string, fill: boolean): void {
+    const known = this.db.select().from(profile).get();
+    if (known?.markStyle === style && known.markFill === fill) {
+      return;
+    }
+    const changed = this.ctx.storage.transactionSync(() => {
+      const cursor = this.head() + 1;
+      return this.db
+        .insert(profile)
+        .values({ cursor, id: 1, markFill: fill, markStyle: style, name: "" })
+        .onConflictDoUpdate({
+          set: { cursor, markFill: fill, markStyle: style },
+          target: profile.id,
+        })
+        .returning()
+        .get();
+    });
+    broadcastChanges(this.ctx, [profileChange(changed)]);
+    this.schedulePush();
+  }
+
+  /**
    * Keeps a device's push token, sent each launch as iOS may change it
    * (spec/sync-protocol.md, Push).
    */

@@ -181,4 +181,22 @@ public class UserServiceClient(
     ),
   )
 
+
+  /**
+   *  Sets the shape the user's marks are drawn in, which their groups show
+   *  (spec/sync-protocol.md, Profile); the devices hear of it as a Profile
+   *  change. INVALID_ARGUMENT for a style that is none of the three.
+   */
+  override suspend fun setMarkLook(request: SetMarkLookRequest, headers: Headers): ResponseMessage<SetMarkLookResponse> = client.unary(
+    request,
+    headers,
+    MethodSpec(
+    "pochical.v1.UserService/SetMarkLook",
+      app.pochical.v1.SetMarkLookRequest::class,
+      app.pochical.v1.SetMarkLookResponse::class,
+      StreamType.UNARY,
+      idempotency = Idempotency.IDEMPOTENT,
+    ),
+  )
+
 }

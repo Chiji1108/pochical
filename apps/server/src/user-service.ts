@@ -15,6 +15,7 @@ import {
   SetBlockedResponseSchema,
   SetChatMutedResponseSchema,
   SetChatNotificationsResponseSchema,
+  SetMarkLookResponseSchema,
   SetProfileResponseSchema,
   UserService,
 } from "./gen/pochical/v1/user_pb";
@@ -23,6 +24,9 @@ import { isId } from "./ids";
 import { hasPersonPhoto, personPhotoKey } from "./photos";
 import { requireUser } from "./session";
 import { requireText } from "./text-limits";
+
+/** The shapes marks are drawn in (MarkLook.style). */
+const MARK_STYLES = new Set(["icon", "emoji", "badge"]);
 
 /** An APNs device token, as hex. */
 const PUSH_TOKEN = /^[0-9a-f]{32,200}$/u;
@@ -83,6 +87,15 @@ export const registerUserService = (router: ConnectRouter): void => {
         mentionsWhenMuted
       );
       return create(SetChatNotificationsResponseSchema, {});
+    },
+    setMarkLook: async ({ look }, context) => {
+      const user = await requireUser(context);
+      const style = look?.style ?? "";
+      if (!MARK_STYLES.has(style)) {
+        throw new ConnectError("No such mark style", Code.InvalidArgument);
+      }
+      await env.USERS.getByName(user.id).setMarkLook(style, look?.fill ?? true);
+      return create(SetMarkLookResponseSchema, {});
     },
     setProfile: async ({ name, photoId }, context) => {
       const user = await requireUser(context);

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package pochical.v1;
 
+import "pochical/v1/marks.proto";
+
 // The signed-in user. Every call here needs the session token from
 // better-auth (/api/auth) as `Authorization: Bearer <token>`; without a
 // valid one it fails with UNAUTHENTICATED.
@@ -69,6 +71,13 @@ service UserService {
   rpc SetProfile(SetProfileRequest) returns (SetProfileResponse) {
     option idempotency_level = IDEMPOTENT;
   }
+
+  // Sets the shape the user's marks are drawn in, which their groups show
+  // (spec/sync-protocol.md, Profile); the devices hear of it as a Profile
+  // change. INVALID_ARGUMENT for a style that is none of the three.
+  rpc SetMarkLook(SetMarkLookRequest) returns (SetMarkLookResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
 }
 
 message SetChatMutedRequest {
@@ -93,6 +102,12 @@ message SetProfileRequest {
 }
 
 message SetProfileResponse {}
+
+message SetMarkLookRequest {
+  MarkLook look = 1;
+}
+
+message SetMarkLookResponse {}
 
 message RegisterPushTokenRequest {
   // The device's APNs token, as hex.

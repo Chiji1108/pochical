@@ -4,13 +4,15 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { MarkLook } from "./marks_pb";
+import { file_pochical_v1_marks } from "./marks_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file pochical/v1/user.proto.
  */
 export const file_pochical_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIjMKEVNldFByb2ZpbGVSZXF1ZXN0EgwKBG5hbWUYASABKAkSEAoIcGhvdG9faWQYAiABKAkiFAoSU2V0UHJvZmlsZVJlc3BvbnNlIjoKGFJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBINCgV0b2tlbhgBIAEoCRIPCgdzYW5kYm94GAIgASgIIhsKGVJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiNQoRU2V0QmxvY2tlZFJlcXVlc3QSDwoHdXNlcl9pZBgBIAEoCRIPCgdibG9ja2VkGAIgASgIIhQKElNldEJsb2NrZWRSZXNwb25zZSIOCgxHZXRNZVJlcXVlc3QiMwoNR2V0TWVSZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCWFub255bW91cxgCIAEoCCI4ChREZWxldGVBY2NvdW50UmVxdWVzdBIgChhhcHBsZV9hdXRob3JpemF0aW9uX2NvZGUYASABKAkiFwoVRGVsZXRlQWNjb3VudFJlc3BvbnNlIjsKElBlZWtBY2NvdW50UmVxdWVzdBIWCg5hcHBsZV9pZF90b2tlbhgBIAEoCRINCgVub25jZRgCIAEoCSJfChNQZWVrQWNjb3VudFJlc3BvbnNlEhIKCnNoaWZ0X2RheXMYASABKAUSEQoJcmVwZWF0aW5nGAIgASgIEhEKCWNvd29ya2VycxgDIAEoBRIOCgZncm91cHMYBCABKAUiOwoSVGFrZUFjY291bnRSZXF1ZXN0EhYKDmFwcGxlX2lkX3Rva2VuGAEgASgJEg0KBW5vbmNlGAIgASgJIhUKE1Rha2VBY2NvdW50UmVzcG9uc2UyugYKC1VzZXJTZXJ2aWNlElsKDURlbGV0ZUFjY291bnQSIS5wb2NoaWNhbC52MS5EZWxldGVBY2NvdW50UmVxdWVzdBoiLnBvY2hpY2FsLnYxLkRlbGV0ZUFjY291bnRSZXNwb25zZSIDkAICElUKC1BlZWtBY2NvdW50Eh8ucG9jaGljYWwudjEuUGVla0FjY291bnRSZXF1ZXN0GiAucG9jaGljYWwudjEuUGVla0FjY291bnRSZXNwb25zZSIDkAIBElUKC1Rha2VBY2NvdW50Eh8ucG9jaGljYWwudjEuVGFrZUFjY291bnRSZXF1ZXN0GiAucG9jaGljYWwudjEuVGFrZUFjY291bnRSZXNwb25zZSIDkAICEkMKBUdldE1lEhkucG9jaGljYWwudjEuR2V0TWVSZXF1ZXN0GhoucG9jaGljYWwudjEuR2V0TWVSZXNwb25zZSIDkAIBElIKClNldEJsb2NrZWQSHi5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVxdWVzdBofLnBvY2hpY2FsLnYxLlNldEJsb2NrZWRSZXNwb25zZSIDkAICEmcKEVJlZ2lzdGVyUHVzaFRva2VuEiUucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXF1ZXN0GiYucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXNwb25zZSIDkAICElgKDFNldENoYXRNdXRlZBIgLnBvY2hpY2FsLnYxLlNldENoYXRNdXRlZFJlcXVlc3QaIS5wb2NoaWNhbC52MS5TZXRDaGF0TXV0ZWRSZXNwb25zZSIDkAICEnAKFFNldENoYXROb3RpZmljYXRpb25zEigucG9jaGljYWwudjEuU2V0Q2hhdE5vdGlmaWNhdGlvbnNSZXF1ZXN0GikucG9jaGljYWwudjEuU2V0Q2hhdE5vdGlmaWNhdGlvbnNSZXNwb25zZSIDkAICElIKClNldFByb2ZpbGUSHi5wb2NoaWNhbC52MS5TZXRQcm9maWxlUmVxdWVzdBofLnBvY2hpY2FsLnYxLlNldFByb2ZpbGVSZXNwb25zZSIDkAICQmkKD2FwcC5wb2NoaWNhbC52MUIJVXNlclByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw");
+  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIjMKEVNldFByb2ZpbGVSZXF1ZXN0EgwKBG5hbWUYASABKAkSEAoIcGhvdG9faWQYAiABKAkiFAoSU2V0UHJvZmlsZVJlc3BvbnNlIjkKElNldE1hcmtMb29rUmVxdWVzdBIjCgRsb29rGAEgASgLMhUucG9jaGljYWwudjEuTWFya0xvb2siFQoTU2V0TWFya0xvb2tSZXNwb25zZSI6ChhSZWdpc3RlclB1c2hUb2tlblJlcXVlc3QSDQoFdG9rZW4YASABKAkSDwoHc2FuZGJveBgCIAEoCCIbChlSZWdpc3RlclB1c2hUb2tlblJlc3BvbnNlIjUKEVNldEJsb2NrZWRSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSDwoHYmxvY2tlZBgCIAEoCCIUChJTZXRCbG9ja2VkUmVzcG9uc2UiDgoMR2V0TWVSZXF1ZXN0IjMKDUdldE1lUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIRCglhbm9ueW1vdXMYAiABKAgiOAoURGVsZXRlQWNjb3VudFJlcXVlc3QSIAoYYXBwbGVfYXV0aG9yaXphdGlvbl9jb2RlGAEgASgJIhcKFURlbGV0ZUFjY291bnRSZXNwb25zZSI7ChJQZWVrQWNjb3VudFJlcXVlc3QSFgoOYXBwbGVfaWRfdG9rZW4YASABKAkSDQoFbm9uY2UYAiABKAkiXwoTUGVla0FjY291bnRSZXNwb25zZRISCgpzaGlmdF9kYXlzGAEgASgFEhEKCXJlcGVhdGluZxgCIAEoCBIRCgljb3dvcmtlcnMYAyABKAUSDgoGZ3JvdXBzGAQgASgFIjsKElRha2VBY2NvdW50UmVxdWVzdBIWCg5hcHBsZV9pZF90b2tlbhgBIAEoCRINCgVub25jZRgCIAEoCSIVChNUYWtlQWNjb3VudFJlc3BvbnNlMpEHCgtVc2VyU2VydmljZRJbCg1EZWxldGVBY2NvdW50EiEucG9jaGljYWwudjEuRGVsZXRlQWNjb3VudFJlcXVlc3QaIi5wb2NoaWNhbC52MS5EZWxldGVBY2NvdW50UmVzcG9uc2UiA5ACAhJVCgtQZWVrQWNjb3VudBIfLnBvY2hpY2FsLnYxLlBlZWtBY2NvdW50UmVxdWVzdBogLnBvY2hpY2FsLnYxLlBlZWtBY2NvdW50UmVzcG9uc2UiA5ACARJVCgtUYWtlQWNjb3VudBIfLnBvY2hpY2FsLnYxLlRha2VBY2NvdW50UmVxdWVzdBogLnBvY2hpY2FsLnYxLlRha2VBY2NvdW50UmVzcG9uc2UiA5ACAhJDCgVHZXRNZRIZLnBvY2hpY2FsLnYxLkdldE1lUmVxdWVzdBoaLnBvY2hpY2FsLnYxLkdldE1lUmVzcG9uc2UiA5ACARJSCgpTZXRCbG9ja2VkEh4ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVzcG9uc2UiA5ACAhJnChFSZWdpc3RlclB1c2hUb2tlbhIlLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBomLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiA5ACAhJYCgxTZXRDaGF0TXV0ZWQSIC5wb2NoaWNhbC52MS5TZXRDaGF0TXV0ZWRSZXF1ZXN0GiEucG9jaGljYWwudjEuU2V0Q2hhdE11dGVkUmVzcG9uc2UiA5ACAhJwChRTZXRDaGF0Tm90aWZpY2F0aW9ucxIoLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVxdWVzdBopLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVzcG9uc2UiA5ACAhJSCgpTZXRQcm9maWxlEh4ucG9jaGljYWwudjEuU2V0UHJvZmlsZVJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRQcm9maWxlUmVzcG9uc2UiA5ACAhJVCgtTZXRNYXJrTG9vaxIfLnBvY2hpY2FsLnYxLlNldE1hcmtMb29rUmVxdWVzdBogLnBvY2hpY2FsLnYxLlNldE1hcmtMb29rUmVzcG9uc2UiA5ACAkJpCg9hcHAucG9jaGljYWwudjFCCVVzZXJQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM", [file_pochical_v1_marks]);
 
 /**
  * @generated from message pochical.v1.SetChatMutedRequest
@@ -122,6 +124,36 @@ export const SetProfileResponseSchema: GenMessage<SetProfileResponse> = /*@__PUR
   messageDesc(file_pochical_v1_user, 5);
 
 /**
+ * @generated from message pochical.v1.SetMarkLookRequest
+ */
+export type SetMarkLookRequest = Message<"pochical.v1.SetMarkLookRequest"> & {
+  /**
+   * @generated from field: pochical.v1.MarkLook look = 1;
+   */
+  look?: MarkLook | undefined;
+};
+
+/**
+ * Describes the message pochical.v1.SetMarkLookRequest.
+ * Use `create(SetMarkLookRequestSchema)` to create a new message.
+ */
+export const SetMarkLookRequestSchema: GenMessage<SetMarkLookRequest> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 6);
+
+/**
+ * @generated from message pochical.v1.SetMarkLookResponse
+ */
+export type SetMarkLookResponse = Message<"pochical.v1.SetMarkLookResponse"> & {
+};
+
+/**
+ * Describes the message pochical.v1.SetMarkLookResponse.
+ * Use `create(SetMarkLookResponseSchema)` to create a new message.
+ */
+export const SetMarkLookResponseSchema: GenMessage<SetMarkLookResponse> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 7);
+
+/**
  * @generated from message pochical.v1.RegisterPushTokenRequest
  */
 export type RegisterPushTokenRequest = Message<"pochical.v1.RegisterPushTokenRequest"> & {
@@ -145,7 +177,7 @@ export type RegisterPushTokenRequest = Message<"pochical.v1.RegisterPushTokenReq
  * Use `create(RegisterPushTokenRequestSchema)` to create a new message.
  */
 export const RegisterPushTokenRequestSchema: GenMessage<RegisterPushTokenRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 6);
+  messageDesc(file_pochical_v1_user, 8);
 
 /**
  * @generated from message pochical.v1.RegisterPushTokenResponse
@@ -158,7 +190,7 @@ export type RegisterPushTokenResponse = Message<"pochical.v1.RegisterPushTokenRe
  * Use `create(RegisterPushTokenResponseSchema)` to create a new message.
  */
 export const RegisterPushTokenResponseSchema: GenMessage<RegisterPushTokenResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 7);
+  messageDesc(file_pochical_v1_user, 9);
 
 /**
  * @generated from message pochical.v1.SetBlockedRequest
@@ -180,7 +212,7 @@ export type SetBlockedRequest = Message<"pochical.v1.SetBlockedRequest"> & {
  * Use `create(SetBlockedRequestSchema)` to create a new message.
  */
 export const SetBlockedRequestSchema: GenMessage<SetBlockedRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 8);
+  messageDesc(file_pochical_v1_user, 10);
 
 /**
  * @generated from message pochical.v1.SetBlockedResponse
@@ -193,7 +225,7 @@ export type SetBlockedResponse = Message<"pochical.v1.SetBlockedResponse"> & {
  * Use `create(SetBlockedResponseSchema)` to create a new message.
  */
 export const SetBlockedResponseSchema: GenMessage<SetBlockedResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 9);
+  messageDesc(file_pochical_v1_user, 11);
 
 /**
  * @generated from message pochical.v1.GetMeRequest
@@ -206,7 +238,7 @@ export type GetMeRequest = Message<"pochical.v1.GetMeRequest"> & {
  * Use `create(GetMeRequestSchema)` to create a new message.
  */
 export const GetMeRequestSchema: GenMessage<GetMeRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 10);
+  messageDesc(file_pochical_v1_user, 12);
 
 /**
  * @generated from message pochical.v1.GetMeResponse
@@ -230,7 +262,7 @@ export type GetMeResponse = Message<"pochical.v1.GetMeResponse"> & {
  * Use `create(GetMeResponseSchema)` to create a new message.
  */
 export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 11);
+  messageDesc(file_pochical_v1_user, 13);
 
 /**
  * @generated from message pochical.v1.DeleteAccountRequest
@@ -250,7 +282,7 @@ export type DeleteAccountRequest = Message<"pochical.v1.DeleteAccountRequest"> &
  * Use `create(DeleteAccountRequestSchema)` to create a new message.
  */
 export const DeleteAccountRequestSchema: GenMessage<DeleteAccountRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 12);
+  messageDesc(file_pochical_v1_user, 14);
 
 /**
  * @generated from message pochical.v1.DeleteAccountResponse
@@ -263,7 +295,7 @@ export type DeleteAccountResponse = Message<"pochical.v1.DeleteAccountResponse">
  * Use `create(DeleteAccountResponseSchema)` to create a new message.
  */
 export const DeleteAccountResponseSchema: GenMessage<DeleteAccountResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 13);
+  messageDesc(file_pochical_v1_user, 15);
 
 /**
  * @generated from message pochical.v1.PeekAccountRequest
@@ -285,7 +317,7 @@ export type PeekAccountRequest = Message<"pochical.v1.PeekAccountRequest"> & {
  * Use `create(PeekAccountRequestSchema)` to create a new message.
  */
 export const PeekAccountRequestSchema: GenMessage<PeekAccountRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 14);
+  messageDesc(file_pochical_v1_user, 16);
 
 /**
  * What a user holds that the person entered, for telling a few taps tried
@@ -326,7 +358,7 @@ export type PeekAccountResponse = Message<"pochical.v1.PeekAccountResponse"> & {
  * Use `create(PeekAccountResponseSchema)` to create a new message.
  */
 export const PeekAccountResponseSchema: GenMessage<PeekAccountResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 15);
+  messageDesc(file_pochical_v1_user, 17);
 
 /**
  * @generated from message pochical.v1.TakeAccountRequest
@@ -348,7 +380,7 @@ export type TakeAccountRequest = Message<"pochical.v1.TakeAccountRequest"> & {
  * Use `create(TakeAccountRequestSchema)` to create a new message.
  */
 export const TakeAccountRequestSchema: GenMessage<TakeAccountRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 16);
+  messageDesc(file_pochical_v1_user, 18);
 
 /**
  * @generated from message pochical.v1.TakeAccountResponse
@@ -361,7 +393,7 @@ export type TakeAccountResponse = Message<"pochical.v1.TakeAccountResponse"> & {
  * Use `create(TakeAccountResponseSchema)` to create a new message.
  */
 export const TakeAccountResponseSchema: GenMessage<TakeAccountResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 17);
+  messageDesc(file_pochical_v1_user, 19);
 
 /**
  * The signed-in user. Every call here needs the session token from
@@ -479,6 +511,18 @@ export const UserService: GenService<{
     methodKind: "unary";
     input: typeof SetProfileRequestSchema;
     output: typeof SetProfileResponseSchema;
+  },
+  /**
+   * Sets the shape the user's marks are drawn in, which their groups show
+   * (spec/sync-protocol.md, Profile); the devices hear of it as a Profile
+   * change. INVALID_ARGUMENT for a style that is none of the three.
+   *
+   * @generated from rpc pochical.v1.UserService.SetMarkLook
+   */
+  setMarkLook: {
+    methodKind: "unary";
+    input: typeof SetMarkLookRequestSchema;
+    output: typeof SetMarkLookResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_pochical_v1_user, 0);

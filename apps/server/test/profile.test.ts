@@ -148,3 +148,51 @@ describe("the usual name", () => {
     });
   });
 });
+
+describe("the shape of the user's marks", () => {
+  it("is told to their devices and shows in their groups", async () => {
+    const { groupId, guest, maker, makerId } = await pair();
+    const open = await device(maker);
+    await open.frames.next();
+    const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    await group.frames.next();
+    const saved = await call(
+      "UserService/SetMarkLook",
+      { look: { fill: false, style: "emoji" } },
+      maker
+    );
+    expect(saved.status).toBe(200);
+    expect(profilesIn(changesIn(await open.frames.next()))).toMatchObject([
+      { kind: { value: { markLook: { style: "emoji" } } } },
+    ]);
+    await push(makerId);
+    expect(changesIn(await group.frames.next())).toMatchObject([
+      {
+        kind: {
+          case: "member",
+          value: { markLook: { style: "emoji" }, userId: makerId },
+        },
+      },
+    ]);
+    // A name set after keeps it.
+    await call("UserService/SetProfile", { name: "さくらこ" }, maker);
+    await push(makerId);
+    expect(changesIn(await group.frames.next())).toMatchObject([
+      {
+        kind: {
+          value: { displayName: "さくらこ", markLook: { style: "emoji" } },
+        },
+      },
+    ]);
+  });
+
+  it("is one of the three shapes", async () => {
+    const token = await signInAnonymously();
+    const refused = await call(
+      "UserService/SetMarkLook",
+      { look: { fill: true, style: "plain" } },
+      token
+    );
+    expect(refused.status).toBe(400);
+  });
+});

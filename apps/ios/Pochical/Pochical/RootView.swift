@@ -52,6 +52,8 @@ struct RootView: View {
     .modifier(ReminderUpdates())
     // The widgets' entries, made again as what they show changes.
     .modifier(WidgetReloads())
+    // The shape the user's groups draw their marks in.
+    .modifier(MarkLookSync())
     .task { meID = await groupCalls.userID() }
     // Another user from now: switched to an account, signed out or deleted.
     .onReceive(NotificationCenter.default.publisher(for: .accountChanged)) { _ in
