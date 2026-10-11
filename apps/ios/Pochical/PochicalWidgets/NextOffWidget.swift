@@ -7,7 +7,9 @@ import WidgetKit
 /// Views): how soon the next day off comes.
 struct NextOffWidget: Widget {
   var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "nextOff", provider: DayTimeline()) { moment in
+    AppIntentConfiguration(
+      kind: "nextOff", intent: NextOffIntent.self, provider: ChosenTimeline<NextOffIntent>()
+    ) { moment in
       WidgetLook(settings: moment.settings) {
         NextOffView(entry: moment.entry)
       }
@@ -28,6 +30,8 @@ private struct NextOffView: View {
     Group {
       if family == .accessoryCircular {
         NextOffCircular(entry: entry, soonest: soonest)
+      } else if let group = entry.pickAgain {
+        PickAgain(whom: "一緒に休む人", groupID: group)
       } else if entry.nothingEntered {
         FirstRun()
       } else if entry.offs.today {
@@ -36,10 +40,13 @@ private struct NextOffView: View {
         NextOffSmall(entry: entry, soonest: soonest)
       }
     }
-    // The day off it counts, else today.
-    .widgetURL(dayLink(soonest?.day.date ?? entry.date))
+    // The day off it counts, else today; set to someone or a group, in
+    // the group's table.
+    .widgetURL(
+      entry.pickAgain.map { groupLink($0) } ?? entry.link(soonest?.day.date ?? entry.date))
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(spokenOff(soonest, none: entry.offs.none, english: english))
+    .accessibilityLabel(
+      spokenOff(soonest, none: entry.offs.none, with: entry.with, english: english))
   }
 }
 
@@ -64,13 +71,48 @@ private func noOffWords(_ none: WidgetNoOff?, words: WidgetWords) -> String {
 
 /// The whole of it as read aloud.
 private func spokenOff(
-  _ off: (day: WidgetDay, inDays: Int)?, none: WidgetNoOff?, english: Bool
+  _ off: (day: WidgetDay, inDays: Int)?, none: WidgetNoOff?, with: WidgetWith?, english: Bool
 ) -> String {
   let words = WidgetWords(english: english)
-  let title = english ? "Next day off" : "次の休み"
+  var title = offTitle(with, english: english)
+  if let with {
+    title =
+      with.kind == .group
+      ? (english ? "\(title), \(with.name)" : "\(with.name)のみんな休み")
+      : (english ? "\(title) with \(with.name)" : "\(with.name)さんと一緒に休める日")
+  }
   guard let off else { return "\(title), \(noOffWords(none, words: words))" }
   let parts = [title, words.inDays(off.inDays), words.date(off.day.date), off.day.pattern?.name]
   return parts.compactMap(\.self).joined(separator: english ? ", " : "、")
+}
+
+/// 次の休み, 一緒に休める日 with someone, or みんな休み with a group.
+private func offTitle(_ with: WidgetWith?, english: Bool) -> String {
+  switch with?.kind {
+  case nil: english ? "Next day off" : "次の休み"
+  case .person: english ? "Off together" : "一緒に休める日"
+  case .group: english ? "Everyone off" : "みんな休み"
+  }
+}
+
+/// The widget's title, and the face of who it is set to beside it.
+private struct OffsHead: View {
+  @Environment(\.themeColors) private var colors
+  let text: String
+  let with: WidgetWith?
+
+  var body: some View {
+    HStack(spacing: 4) {
+      Text(text)
+        .lineLimit(1)
+      Spacer(minLength: 0)
+      if let with {
+        CompanionFace(with: with)
+      }
+    }
+    .font(.footnote)
+    .foregroundStyle(colors.textSecondary)
+  }
 }
 
 /// The next day off large: how soon, and its date and mark.
@@ -83,10 +125,7 @@ private struct NextOffSmall: View {
   var body: some View {
     let words = WidgetWords(english: english)
     VStack(alignment: .leading) {
-      Text(english ? "Next day off" : "次の休み")
-        .font(.footnote)
-        .foregroundStyle(colors.textSecondary)
-        .lineLimit(1)
+      OffsHead(text: offTitle(entry.with, english: english), with: entry.with)
       Spacer(minLength: 0)
       Group {
         if let soonest, soonest.inDays > 1 {
@@ -134,11 +173,8 @@ private struct RestToday: View {
   var body: some View {
     let words = WidgetWords(english: english)
     VStack(alignment: .leading, spacing: 8) {
-      Text(words.date(entry.date))
-        .font(.footnote)
-        .foregroundStyle(colors.textSecondary)
-        .lineLimit(1)
-      Text(english ? "Day off\ntoday" : "今日は\nおやすみ")
+      OffsHead(text: words.date(entry.date), with: entry.with)
+      Text(restTitle)
         .font(.title3.weight(.semibold))
         .foregroundStyle(colors.textPrimary)
         .lineSpacing(2)
@@ -167,6 +203,17 @@ private struct RestToday: View {
   }
 }
 
+extension RestToday {
+  /// 今日はおやすみ, or with someone ふたりとも, with a group みんな.
+  fileprivate var restTitle: String {
+    switch entry.with?.kind {
+    case nil: english ? "Day off\ntoday" : "今日は\nおやすみ"
+    case .person: english ? "Both off\ntoday" : "ふたりとも\nおやすみ"
+    case .group: english ? "Everyone off\ntoday" : "みんな\nおやすみ"
+    }
+  }
+}
+
 /// How soon on the lock screen's round face: 休み over the count, or
 /// 今日 and 明日 (Today, or tomorrow's weekday in English).
 private struct NextOffCircular: View {
@@ -178,7 +225,7 @@ private struct NextOffCircular: View {
     ZStack {
       AccessoryWidgetBackground()
       VStack(spacing: 1) {
-        Text(english ? "Off" : "休み")
+        Text(word)
           .font(.caption2.weight(.semibold))
         Text(count)
           .font(.system(size: 20, weight: .bold).monospacedDigit())
@@ -191,7 +238,18 @@ private struct NextOffCircular: View {
     }
   }
 
+  /// 休み, else 一緒 with someone, or みんな with a group.
+  private var word: String {
+    switch entry.with?.kind {
+    case nil: english ? "Off" : "休み"
+    case .person: english ? "Together" : "一緒"
+    case .group: english ? "Everyone" : "みんな"
+    }
+  }
+
   private var count: String {
+    // Too small to ask for someone to be picked again.
+    if entry.pickAgain != nil { return english ? "Unset" : "未設定" }
     guard let soonest else { return "–" }
     switch soonest.inDays {
     case 0: return english ? "Today" : "今日"

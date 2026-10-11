@@ -63,9 +63,10 @@ public enum ChatPhotos {
 
   // MARK: Files
 
-  /// Where a group's photo is kept on the device once seen or sent.
+  /// Where a group's photo is kept on the device once seen or sent: among
+  /// the App Group's caches, so the widgets show the faces too.
   public static func cached(_ photoID: String, in groupID: String) -> URL {
-    directory(.cachesDirectory, "ChatPhotos/\(groupID)").appending(path: "\(photoID).jpg")
+    caches("ChatPhotos/\(groupID)").appending(path: "\(photoID).jpg")
   }
 
   /// Where the member's own photo waits until uploaded, out of the caches
@@ -95,19 +96,25 @@ public enum ChatPhotos {
 
   /// Every photo kept on the device, to send or to show, gone.
   static func eraseAll() {
-    for (base, path) in [
-      (FileManager.SearchPathDirectory.applicationSupportDirectory, "PendingPhotos"),
-      (.cachesDirectory, "ChatPhotos"),
-    ] {
-      let url = FileManager.default.urls(for: base, in: .userDomainMask)[0].appending(path: path)
-      try? FileManager.default.removeItem(at: url)
-    }
+    try? FileManager.default.removeItem(
+      at: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appending(path: "PendingPhotos"))
+    try? FileManager.default.removeItem(at: caches("ChatPhotos"))
   }
 
   /// The photo's bytes held on the device, if any.
   public static func held(_ photoID: String, in groupID: String) -> Data? {
     (try? Data(contentsOf: cached(photoID, in: groupID)))
       ?? (try? Data(contentsOf: pending(photoID, in: groupID)))
+  }
+
+  /// A folder among the App Group's caches, the app's own without one.
+  private static func caches(_ path: String) -> URL {
+    let shared = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+    guard let shared else { return directory(.cachesDirectory, path) }
+    let url = shared.appending(path: "Library/Caches/\(path)")
+    try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    return url
   }
 
   private static func directory(_ base: FileManager.SearchPathDirectory, _ path: String) -> URL {

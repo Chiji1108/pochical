@@ -5,8 +5,8 @@ import SwiftUI
 import WidgetKit
 
 /// Asks the widgets for new entries at once as what they show changes on
-/// the device: the person's days, patterns or repeating orders, or the
-/// settings they are drawn in (spec/widgets.md, When an entry is made).
+/// the device: the person's days, patterns or repeating orders, their
+/// groups and who is in them, or the settings they are drawn in (spec/widgets.md, When an entry is made).
 struct WidgetReloads: ViewModifier {
   @Environment(Settings.self) private var settings
   @Dependency(\.defaultDatabase) private var database
@@ -14,9 +14,16 @@ struct WidgetReloads: ViewModifier {
   func body(content: Content) -> some View {
     content
       .task {
-        // The tables a widget's entry is read from.
+        // Once as the app starts, for widgets made before its database
+        // was there, or while it could not be read.
+        WidgetCenter.shared.reloadAllTimelines()
+        // The tables a widget's entry is read from: the person's own, and
+        // their groups' for the widgets set to someone.
         let observation = DatabaseRegionObservation(
-          tracking: ["days", "patterns", "patternOrder", "repeatOrders"].map {
+          tracking: [
+            "days", "patterns", "patternOrder", "repeatOrders", "groups", "groupMembers",
+            "memberDays", "memberPatterns", "memberOrders",
+          ].map {
             GRDB.Table<GRDB.Row>($0)
           })
         let watching = observation.start(in: database) { _ in

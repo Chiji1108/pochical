@@ -1,3 +1,4 @@
+import AppIntents
 import GRDB
 import PochicalDesign
 import PochicalKit
@@ -16,52 +17,115 @@ struct DayEntryMoment: TimelineEntry {
 /// entry now, and the next at its turn (midnight, or いまのシフト's).
 struct DayTimeline: TimelineProvider {
   func placeholder(in context: Context) -> DayEntryMoment {
-    sample(at: .now, settings: DeviceSettings.kept())
+    DayMoments.sample(at: .now, settings: DeviceSettings.kept())
   }
 
-  /// The person's own entry once they have entered days, else the sample
-  /// week, as the gallery shows before a widget is placed.
   func getSnapshot(in context: Context, completion: @escaping (DayEntryMoment) -> Void) {
-    let settings = DeviceSettings.kept()
-    guard let calendar = ownCalendar(),
-      case let entry = calendar.widgetEntry(at: .now, week: settings.week), !entry.nothingEntered
-    else { return completion(sample(at: .now, settings: settings)) }
-    completion(DayEntryMoment(date: .now, entry: entry, settings: settings))
+    completion(DayMoments.snapshot(choice: nil))
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<DayEntryMoment>) -> Void) {
+    completion(DayMoments.timeline(choice: nil))
+  }
+}
+
+/// A widget's editing that sets it to someone or a group.
+protocol ChoosesCompanion: WidgetConfigurationIntent {
+  /// WidgetChoice's id of who is picked, nil for nobody.
+  var choiceID: String? { get }
+}
+
+extension NextOffIntent: ChoosesCompanion {
+  var choiceID: String? { with?.id }
+}
+
+extension UpcomingIntent: ChoosesCompanion {
+  var choiceID: String? { with?.id }
+}
+
+/// The person's days beside those of who the widget is set to.
+struct ChosenTimeline<Intent: ChoosesCompanion>: AppIntentTimelineProvider {
+  func placeholder(in context: Context) -> DayEntryMoment {
+    DayMoments.sample(at: .now, settings: DeviceSettings.kept())
+  }
+
+  func snapshot(for configuration: Intent, in context: Context) async -> DayEntryMoment {
+    DayMoments.snapshot(choice: configuration.choiceID.flatMap(WidgetChoice.init(id:)))
+  }
+
+  func timeline(for configuration: Intent, in context: Context) async -> Timeline<DayEntryMoment> {
+    DayMoments.timeline(choice: configuration.choiceID.flatMap(WidgetChoice.init(id:)))
+  }
+}
+
+/// How each kind's moments are made from the database.
+enum DayMoments {
+  /// The person's own entry once they have entered days, else the sample
+  /// week, as the gallery shows before a widget is placed.
+  static func snapshot(choice: WidgetChoice?) -> DayEntryMoment {
+    let settings = DeviceSettings.kept()
+    guard let read = read(choice: choice),
+      case let entry = read.entry(at: .now, settings), !entry.nothingEntered
+    else { return sample(at: .now, settings: settings) }
+    return DayEntryMoment(date: .now, entry: entry, settings: settings)
+  }
+
+  static func timeline(choice: WidgetChoice?) -> Timeline<DayEntryMoment> {
     let now = Date.now
     let settings = DeviceSettings.kept()
-    guard let calendar = ownCalendar() else {
+    guard let read = read(choice: choice) else {
       // No database yet: as before anything is entered, until the app
       // makes one and asks again.
       var empty = WidgetEntry.sample(at: now, week: settings.week)
       empty.nothingEntered = true
-      completion(Timeline(entries: [DayEntryMoment(date: now, entry: empty, settings: settings)], policy: .never))
-      return
+      return Timeline(
+        entries: [DayEntryMoment(date: now, entry: empty, settings: settings)], policy: .never)
     }
-    // This entry, and the next at its turn, read from one read of the days.
-    let first = calendar.widgetEntry(at: now, week: settings.week)
+    // This entry, and the next at its turn, from one read of the days.
+    let first = read.entry(at: now, settings)
     let refresh = first.now.refresh
-    let next = calendar.widgetEntry(at: refresh, week: settings.week)
-    completion(
-      Timeline(
-        entries: [
-          DayEntryMoment(date: now, entry: first, settings: settings),
-          DayEntryMoment(date: refresh, entry: next, settings: settings),
-        ],
-        // Asked again as the last entry's own turn comes.
-        policy: .after(next.now.refresh)))
+    let next = read.entry(at: refresh, settings)
+    return Timeline(
+      entries: [
+        DayEntryMoment(date: now, entry: first, settings: settings),
+        DayEntryMoment(date: refresh, entry: next, settings: settings),
+      ],
+      // Asked again as the last entry's own turn comes.
+      policy: .after(next.now.refresh))
   }
 
-  /// The person's own calendar, nil until the app has made its database.
-  private func ownCalendar() -> OwnCalendar? {
-    guard let database = try? widgetDatabase() else { return nil }
-    return try? database.read { try OwnCalendar($0) }
-  }
-
-  private func sample(at date: Date, settings: DeviceSettings) -> DayEntryMoment {
+  static func sample(at date: Date, settings: DeviceSettings) -> DayEntryMoment {
     DayEntryMoment(date: date, entry: .sample(at: date, week: settings.week), settings: settings)
+  }
+
+  /// What one read of the database gives: the person's calendar, and who
+  /// the widget is set to as they are now.
+  private struct Read {
+    let calendar: OwnCalendar
+    let choice: WidgetChoice?
+    let companion: WidgetCompanion?
+
+    func entry(at date: Date, _ settings: DeviceSettings) -> WidgetEntry {
+      var entry = calendar.widgetEntry(at: date, week: settings.week, companion: companion)
+      // Picked, but no longer there: what the widget shows changes only
+      // when the person changes it.
+      if let choice, companion == nil {
+        entry.pickAgain = choice.groupID
+      }
+      return entry
+    }
+  }
+
+  /// Nil until the app has made its database.
+  private static func read(choice: WidgetChoice?) -> Read? {
+    guard let database = try? widgetDatabase() else { return nil }
+    return try? database.read { db in
+      let calendar = try OwnCalendar(db)
+      let companion = try choice.flatMap {
+        try widgetCompanion($0, me: widgetMeID(), around: Day(.now, in: .current), in: db)
+      }
+      return Read(calendar: calendar, choice: choice, companion: companion)
+    }
   }
 }
 

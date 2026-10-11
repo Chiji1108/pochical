@@ -105,6 +105,52 @@ public struct WidgetEntry: Sendable {
   public var twoWeeks: [WidgetDay]
   /// Whole weeks covering today's month, from the person's week start.
   public var month: [[WidgetDay]]
+  /// Who the widget is set to, as it shows them.
+  public var with: WidgetWith?
+  /// これから set to someone: their days beside the person's.
+  public var pair: WidgetPair?
+  /// The group of someone picked whom the person or they have left: the
+  /// widget asks for them to be picked again.
+  public var pickAgain: String?
+}
+
+/// Someone or a group a widget is set to, by the name and picture they
+/// have in the group they were picked under.
+public struct WidgetWith: Hashable, Sendable {
+  public enum Kind: Hashable, Sendable { case person, group }
+  public var kind: Kind
+  public var name: String
+  public var groupID: String
+  /// A person's photo in the group; empty for none.
+  public var photoID = ""
+  /// A group's mark.
+  public var mark = GroupMarkValue()
+}
+
+/// これから's days beside someone's: theirs under each of the person's.
+public struct WidgetPair: Sendable {
+  public var with: WidgetWith
+  /// The person's own name and photo in that group.
+  public var me: WidgetWith
+  /// One for each of `upcoming`.
+  public var days: [WidgetPairDay]
+}
+
+public struct WidgetPairDay: Sendable {
+  /// Their day, nil where they have not entered it.
+  public var theirs: WidgetDay?
+  /// Both are off: one band down the column.
+  public var together: Bool
+}
+
+/// Who a widget is set to, with what the group holds of their days.
+public struct WidgetCompanion: Sendable {
+  public var with: WidgetWith
+  /// Whose days count with the person's: the one picked, or the rest of
+  /// the group.
+  public var people: [GroupMember]
+  /// The person as that group has them.
+  public var me: WidgetWith
 }
 
 extension WidgetDay {
@@ -261,7 +307,7 @@ extension OwnCalendar {
   /// The person's widget entry at `now`, their own days alone.
   public func widgetEntry(
     at now: Date, week: DeviceSettings.Week, calendar: Calendar = .current,
-    holiday: (Day) -> Bool = { $0.holidayName != nil }
+    holiday: (Day) -> Bool = { $0.holidayName != nil }, companion: WidgetCompanion? = nil
   ) -> WidgetEntry {
     let today = Day(now, in: calendar)
     let reach = max(Widgets.offLookaheadDays, Widgets.shiftLookaheadDays)
@@ -276,15 +322,47 @@ extension OwnCalendar {
     }
     let todayDay = day(today)
     let weekStart = today.adding(days: -(((today.weekday - week.start) % 7 + 7) % 7))
+    let reached = today.adding(days: Widgets.offLookaheadDays)
+    // Whose days count with the person's, each off or not on a day, nil
+    // where not entered.
+    let people = (companion?.people ?? []).map { member in
+      let offs = member.offDays(from: today, through: reached)
+      return WidgetPerson(name: member.name) { offs[$0] }
+    }
+    let upcoming = (0..<7).map { day(today.adding(days: $0)) }
     return WidgetEntry(
       date: today,
       now: widgetNow(at: now, today: today, calendar: calendar) { day(today.adding(days: $0)) },
       nothingEntered: !hasEnteredDays,
       today: todayDay,
-      offs: widgetOffs(today: todayDay, people: []) { day(today.adding(days: $0)) },
-      upcoming: (0..<7).map { day(today.adding(days: $0)) },
+      offs: widgetOffs(today: todayDay, people: people) { day(today.adding(days: $0)) },
+      upcoming: upcoming,
       twoWeeks: (0..<14).map { day(weekStart.adding(days: $0)) },
-      month: monthWeeks(today, weekStart: week.start).map { $0.map(day) })
+      month: monthWeeks(today, weekStart: week.start).map { $0.map(day) },
+      with: companion?.with,
+      pair: companion.flatMap { pair($0, upcoming: upcoming, week: week, holiday: holiday) })
+  }
+
+  /// これから beside the one picked: their days under the person's, a day
+  /// both are off together.
+  private func pair(
+    _ companion: WidgetCompanion, upcoming: [WidgetDay], week: DeviceSettings.Week,
+    holiday: (Day) -> Bool
+  ) -> WidgetPair? {
+    guard companion.with.kind == .person, let them = companion.people.first,
+      let first = upcoming.first, let last = upcoming.last
+    else { return nil }
+    let shown = them.calendar.shown(from: first.date, through: last.date)
+    let days = upcoming.map { mine in
+      let theirs = shown[mine.date].map { entry in
+        WidgetDay(
+          mine.date, entry: entry, pattern: them.calendar.patternsByID[entry.shift], noted: false,
+          week: week, holiday: holiday(mine.date))
+      }
+      let together = mine.off && theirs?.off == true
+      return WidgetPairDay(theirs: theirs, together: together)
+    }
+    return WidgetPair(with: companion.with, me: companion.me, days: days)
   }
 
   /// Whether the person has entered any day yet, their own or by a
