@@ -84,9 +84,7 @@ struct MonthPicturePage: View {
         }
       }
       .safeAreaInset(edge: .bottom) {
-        PictureActions(image: image, title: "\(month.yearMonthText)のシフト") {
-          Task { await save(image) }
-        }
+        actions
       }
       .task(id: PictureKey(dark: dark, look: picture)) {
         image = rendered(dark: dark)
@@ -98,6 +96,45 @@ struct MonthPicturePage: View {
         }
       }
     }
+  }
+
+  /// 共有 and 保存 under the page.
+  private var actions: some View {
+    HStack(spacing: 12) {
+      // In its place while the picture is being made, so nothing moves.
+      if let image {
+        ShareLink(
+          item: Image(uiImage: image),
+          preview: SharePreview("\(month.yearMonthText)のシフト", image: Image(uiImage: image))
+        ) {
+          shareLabel
+        }
+        .buttonStyle(.bordered)
+      } else {
+        Button {} label: { shareLabel }
+          .buttonStyle(.bordered)
+          .disabled(true)
+      }
+      Button {
+        Task { await save(image) }
+      } label: {
+        Label("保存", systemImage: "square.and.arrow.down")
+          .frame(maxWidth: .infinity, minHeight: Metrics.control)
+      }
+      .buttonStyle(.borderedProminent)
+      .tint(colors.accentFill)
+      .foregroundStyle(colors.accentOnFill)
+      .disabled(image == nil)
+    }
+    .buttonBorderShape(.capsule)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 8)
+    .background(colors.backgroundBase)
+  }
+
+  private var shareLabel: some View {
+    Label("共有", systemImage: "square.and.arrow.up")
+      .frame(maxWidth: .infinity, minHeight: Metrics.control)
   }
 
   /// The picture in the テーマ's light or dark, whatever the screen is in.
@@ -201,49 +238,5 @@ struct MonthPicture: View {
     }
     .padding(EdgeInsets(top: 16, leading: 12, bottom: 12, trailing: 12))
     .background(colors.backgroundBase)
-  }
-}
-
-/// 共有 and 保存 under a picture's page, the picture made or on its way.
-struct PictureActions: View {
-  @Environment(\.themeColors) private var colors
-  let image: UIImage?
-  /// What the share sheet calls it.
-  let title: String
-  let onSave: () -> Void
-
-  var body: some View {
-    HStack(spacing: 12) {
-      // In its place while the picture is being made, so nothing moves.
-      if let image {
-        ShareLink(
-          item: Image(uiImage: image), preview: SharePreview(title, image: Image(uiImage: image))
-        ) {
-          shareLabel
-        }
-        .buttonStyle(.bordered)
-      } else {
-        Button {} label: { shareLabel }
-          .buttonStyle(.bordered)
-          .disabled(true)
-      }
-      Button(action: onSave) {
-        Label("保存", systemImage: "square.and.arrow.down")
-          .frame(maxWidth: .infinity, minHeight: Metrics.control)
-      }
-      .buttonStyle(.borderedProminent)
-      .tint(colors.accentFill)
-      .foregroundStyle(colors.accentOnFill)
-      .disabled(image == nil)
-    }
-    .buttonBorderShape(.capsule)
-    .padding(.horizontal, 16)
-    .padding(.vertical, 8)
-    .background(colors.backgroundBase)
-  }
-
-  private var shareLabel: some View {
-    Label("共有", systemImage: "square.and.arrow.up")
-      .frame(maxWidth: .infinity, minHeight: Metrics.control)
   }
 }

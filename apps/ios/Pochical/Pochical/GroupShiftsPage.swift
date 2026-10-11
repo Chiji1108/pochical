@@ -38,8 +38,6 @@ struct GroupShiftsPage: View {
   @Fetch private var members: [GroupMember] = []
   /// Whose シフトパターン is open, from a face or the menu.
   @State private var legendOf: LegendOf?
-  /// The month 画像で保存 shows, as the calendar's does before it goes.
-  @State private var picturing: Day?
   /// The viewer's id among the members, for 1人ずつ.
   @State private var meID: String?
   let group: GroupRow
@@ -130,7 +128,8 @@ struct GroupShiftsPage: View {
     .toolbarVisibility(.visible, for: .navigationBar)
     .toolbar {
       // One pull-down for the page's secondary actions: how the table is
-      // laid out, what the marks mean, and saving it as a picture.
+      // laid out and what the marks mean. No 画像で保存: the members see it
+      // live, and a picture would take their shifts out of the group.
       ToolbarItem(placement: .primaryAction) {
           Menu {
             if layouts.count > 1 {
@@ -143,10 +142,6 @@ struct GroupShiftsPage: View {
               let first = members.first { $0.userID != meID } ?? members.first
               if let first { legendOf = LegendOf(userID: first.userID) }
             }
-            Button("画像で保存", systemImage: "square.and.arrow.down") {
-              picturing = monthInSight
-            }
-            .disabled(members.isEmpty)
           } label: {
             HStack(spacing: 4) {
               Text(layouts.count > 1 ? layout.name : "メニュー")
@@ -156,9 +151,6 @@ struct GroupShiftsPage: View {
       }
     }
     .environment(\.openLegend) { legendOf = LegendOf(userID: $0) }
-    .sheet(item: $picturing) { month in
-      GroupPicturePage(group: group, month: month, members: members)
-    }
     .sheet(item: $legendOf) { legend in
       LegendSheet(members: members, groupID: group.id, picked: legend.userID)
         .presentationDetents([.medium, .large])
