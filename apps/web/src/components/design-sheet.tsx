@@ -705,6 +705,8 @@ const confirm = {
   // The badge red holds white text in dark mode too; --danger is a light
   // red there, made for text.
   action: css({ bg: "danger.fill", color: "danger.onFill" }),
+  // An action that undoes nothing, in the accent rather than the danger.
+  offer: css({ bg: "accent.fill", color: "accent.onFill" }),
   cancel: css({ bg: "fill.quaternary", color: "text.primary" }),
   message: css({
     color: "text.tertiary",
@@ -731,6 +733,7 @@ export function ConfirmDialog({
   message,
   action,
   cancel = "キャンセル",
+  destructive = true,
   onConfirm,
   onCancel,
 }: {
@@ -739,6 +742,9 @@ export function ConfirmDialog({
   action: string;
   // The other answer, when it is a choice rather than calling it off.
   cancel?: string;
+  // An offer rather than something hard to undo: the action in the
+  // accent, as an alert's ordinary button.
+  destructive?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -766,7 +772,10 @@ export function ConfirmDialog({
           {cancel}
         </button>
         <button
-          className={cx(confirm.button, confirm.action)}
+          className={cx(
+            confirm.button,
+            destructive ? confirm.action : confirm.offer
+          )}
           onClick={onConfirm}
           type="button"
         >

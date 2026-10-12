@@ -214,7 +214,11 @@ private struct ReminderEditor: View {
         .settingsRows()
         if let sample = sample(draft) {
           Section(sample.next ? "次の通知・\(sample.firing.text)" : "通知の例") {
+            // On a ground of its own, as a notification lies over the lock
+            // screen: white on the white page, it would melt into it.
             NotificationBanner(title: sample.firing.title, line: sample.firing.body)
+              .padding(8)
+              .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxxxl))
               .settingsOnPage()
           }
         }

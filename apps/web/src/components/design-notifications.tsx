@@ -1,5 +1,6 @@
 import { Bell, BellOff, Check } from "lucide-react";
 import { useContext, useState } from "react";
+import type { ReactNode } from "react";
 import { css, cx } from "styled-system/css";
 
 import type { Schedule } from "../lib/design-days";
@@ -17,6 +18,7 @@ import {
   reminderName,
   remindable,
   shiftText,
+  timeOfDayText,
 } from "../lib/design-reminders";
 import type { Firing, Reminder, ReminderKind } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
@@ -143,6 +145,56 @@ function usePermissionPrompt() {
     />
   );
   return { ask, prompt };
+}
+
+// Once, the first time shifts are entered, while the system has not been
+// asked and a reminder is on: the reminders offered in words, as the
+// moment shows what they are for, and the system's question only after
+// お知らせする. あとで lets it be; 設定 › 通知 › リマインド still asks.
+export function useReminderOffer() {
+  const notifications = useDevice((state) => state.notifications);
+  const offered = useDevice((state) => state.reminderOffered);
+  const reminders = useSettings((state) => state.device.reminders);
+  const [step, setStep] = useState<"offer" | "system">();
+  // The evening's reminder the offer speaks of, the first 前日 one on.
+  const evening = reminders.find(
+    (reminder) => reminder.on && reminder.kind === "dayBefore"
+  );
+  const eveningTime = evening?.kind === "dayBefore" ? evening.time : undefined;
+  const offer = () => {
+    if (offered || notifications !== "notAsked" || eveningTime === undefined) {
+      return;
+    }
+    useDevice.setState({ reminderOffered: true });
+    setStep("offer");
+  };
+  let node: ReactNode = null;
+  if (step === "offer") {
+    node = (
+      <ConfirmDialog
+        action="お知らせする"
+        cancel="あとで"
+        destructive={false}
+        message={`${timeOfDayText(eveningTime ?? "")}に通知が届きます。`}
+        onCancel={() => {
+          setStep(undefined);
+        }}
+        onConfirm={() => {
+          setStep("system");
+        }}
+        title="前の晩に、明日のシフトをお知らせしますか？"
+      />
+    );
+  } else if (step === "system") {
+    node = (
+      <PermissionPrompt
+        onClose={() => {
+          setStep(undefined);
+        }}
+      />
+    );
+  }
+  return { node, offer };
 }
 
 // Over a page's settings while nothing can arrive: before asking, a way to
@@ -673,7 +725,11 @@ function NotificationSample({
       <h4 className={sampleTitle}>
         {next ? `次の通知・${firingText(next.when)}` : "通知の例"}
       </h4>
-      <NotificationBanner {...notificationText(reminder, { entry, pattern })} />
+      <div className={sampleGround}>
+        <NotificationBanner
+          {...notificationText(reminder, { entry, pattern })}
+        />
+      </div>
     </section>
   );
 }
@@ -702,6 +758,14 @@ export function NotificationBanner({
     </div>
   );
 }
+
+// The ground the sample lies on, as a notification lies over the lock
+// screen: a white banner on the white page would melt into it.
+const sampleGround = css({
+  bg: "fill.quaternary",
+  borderRadius: "4xl",
+  padding: "8px",
+});
 
 const sampleTitle = css({
   color: "text.tertiary",

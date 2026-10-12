@@ -54,9 +54,14 @@ export function beforeText(minutes: number) {
   return rest === 0 ? `${hours}時間` : `${hours}時間${rest}分`;
 }
 
+// A reminder's time of day as it is said: 21:00, 9:00.
+export function timeOfDayText(time: string) {
+  return time.replace(leadingZero, "");
+}
+
 export function reminderName(reminder: Reminder) {
   return reminder.kind === "dayBefore"
-    ? `前日 ${reminder.time.replace(leadingZero, "")}`
+    ? `前日 ${timeOfDayText(reminder.time)}`
     : `開始の${beforeText(reminder.minutes)}前`;
 }
 

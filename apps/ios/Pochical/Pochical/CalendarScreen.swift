@@ -33,6 +33,9 @@ struct CalendarScreen: View {
   /// so closing them is a moment to ask for a review (spec/review.md).
   @State private var changed = false
   @Environment(\.requestReview) private var requestReview
+  /// The reminders offered, once, after shifts were first entered: the
+  /// time they come at.
+  @State private var offeringReminders: String?
   /// The day opened from the month, its week alone left above its detail.
   @State private var opened: Day?
   /// The week swiped to beside an opened one, until the swipe settles and
@@ -229,7 +232,7 @@ struct CalendarScreen: View {
       shownMonth = monthShowing(day)
     }
     .onChange(of: entering) { _, day in
-      if day == nil { askForReviewIfDue() }
+      if day == nil { askForReviewIfDue(afterEntering: true) }
       if let day, day.firstOfMonth != shownMonth {
         withAnimation(Springs.standard) {
           shownMonth = day.firstOfMonth
@@ -305,11 +308,23 @@ struct CalendarScreen: View {
     .onChange(of: gaps) { _, gaps in
       if gaps.isEmpty {
         gapFill = nil
-        askForReviewIfDue()
+        askForReviewIfDue(afterEntering: true)
       }
     }
     .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
       gapSheet(calendar)
+    }
+    // Shifts first entered: what the reminders are for, then the system's
+    // question only if wanted (spec/calendar.md, Reminders).
+    .alert(
+      "前の晩に、明日のシフトをお知らせしますか？",
+      isPresented: Binding { offeringReminders != nil } set: { if !$0 { offeringReminders = nil } },
+      presenting: offeringReminders
+    ) { _ in
+      Button("あとで", role: .cancel) {}
+      Button("お知らせする") { Notifications.shared.askOnce() }
+    } message: { time in
+      Text("\(time)に通知が届きます。")
     }
     .task {
       // Past midnight, while the app is open or waiting in the background.
@@ -559,9 +574,16 @@ struct CalendarScreen: View {
   /// Asks the store for its review prompt once entering, a day and 完了's
   /// question have all closed after something was put on the days, if the
   /// person has used Pochical long enough (spec/review.md).
-  private func askForReviewIfDue() {
+  private func askForReviewIfDue(afterEntering: Bool = false) {
     guard changed, entering == nil, opened == nil, gaps.isEmpty else { return }
     changed = false
+    // The first time shifts are entered, the reminders are offered
+    // instead, once; the review waits for another time.
+    if afterEntering, let time = ReminderOffer.due(reminders: settings.device.reminders) {
+      ReminderOffer.offered()
+      offeringReminders = time
+      return
+    }
     guard ReviewPrompt.mayAsk else { return }
     requestReview()
     ReviewPrompt.asked()
