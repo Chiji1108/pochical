@@ -119,6 +119,7 @@ export function MonthSummary({
           <span aria-hidden="true">
             <RollingName
               end
+              fade
               next={dragged ? String(beside.next) : undefined}
               previous={dragged ? String(beside.previous) : undefined}
               progress={progress}
@@ -137,6 +138,7 @@ export function MonthSummary({
           </span>
           <span aria-hidden="true">
             <RollingName
+              fade
               next={dragged ? monthOf(1) : undefined}
               previous={dragged ? monthOf(-1) : undefined}
               progress={progress}

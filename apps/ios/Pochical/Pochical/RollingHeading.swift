@@ -188,6 +188,30 @@ private struct LetterRoll: View {
   }
 }
 
+/// A name crossfading in place toward `coming`, `share` of the way to its
+/// page as RollingText's, its width going along: for the small names
+/// under a heading that rolls (今月のお休み), so the screen does not move
+/// everywhere at once (/design's RollingName with `fade`).
+struct FadingText: View {
+  let text: String
+  let coming: String
+  let share: CGFloat
+
+  var body: some View {
+    let moving = coming == text ? 0 : abs(share)
+    BlendedWidth(share: moving) {
+      Text(text)
+        .fixedSize()
+        .opacity(1 - moving)
+      if moving != 0 {
+        Text(coming)
+          .fixedSize()
+          .opacity(moving)
+      }
+    }
+  }
+}
+
 /// Its first view's width going to its second's by `share`, both laid at
 /// its leading edge.
 private struct BlendedWidth: Layout {
