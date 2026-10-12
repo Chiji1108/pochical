@@ -356,6 +356,13 @@ struct CalendarScreen: View {
   }
 
   /// The days of `month`'s month that show a shift.
+  /// A month's days whose pattern counts as off.
+  private func daysOff(in month: Day, _ calendar: OwnCalendar) -> Int {
+    monthDays(month, calendar).values.count {
+      calendar.patternsByID[$0.shift]?.countsAsOff == true
+    }
+  }
+
   private func monthDays(_ month: Day, _ calendar: OwnCalendar) -> [Day: DayEntry] {
     calendar.shown(from: month.firstOfMonth, through: month.daysOfMonth.last!)
   }
@@ -527,14 +534,18 @@ struct CalendarScreen: View {
       )
     } else {
       // One piece, so what is padded below it is padded once.
+      // The months a swipe can bring in, counted as the screen is drawn,
+      // that is as the days or the month change; the rolling row only
+      // reads them while a finger moves the pages (POC-33).
+      let around = shownMonth ?? thisMonth
+      let counted = Dictionary(
+        uniqueKeysWithValues: (-2...2).map { around.addingMonths($0) }.map {
+          ($0, daysOff(in: $0, calendar))
+        })
       VStack(spacing: 12) {
         MonthSummary(
           position: position, monthAt: monthOfPage,
-          daysOff: { month in
-            monthDays(month, calendar).values.count {
-              calendar.patternsByID[$0.shift]?.countsAsOff == true
-            }
-          }
+          daysOff: { month in counted[month] ?? daysOff(in: month, calendar) }
         ) { month in
           breakingDown = month
         }
