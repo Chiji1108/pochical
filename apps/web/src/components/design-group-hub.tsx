@@ -86,9 +86,9 @@ const sampleGroup = (): Group => ({
   name: "サンプル",
 });
 
-// The sample's days, from today: more than any phone shows, the rest
-// faded out under the words.
-const sampleDays = 14;
+// The sample's days, from today: a month, more than even a tall screen
+// shows, so the table always runs on into its fade.
+const sampleDays = 31;
 
 // No group yet: a sample of 一覧, the table a group is mostly read in,
 // filling the screen and fading out under the words and the buttons, 作成
@@ -173,7 +173,6 @@ const noGroups = {
     maskImage: "linear-gradient(to bottom, black 35%, transparent 92%)",
     minHeight: "180px",
     overflow: "hidden",
-    pointerEvents: "none",
   }),
   title: css({
     fontWeight: 700,

@@ -319,9 +319,9 @@ private struct NoGroups: View {
   }
 }
 
-/// The sample's days, from today: more than any phone shows, the rest
-/// faded out under the words.
-private let sampleDays = 14
+/// The sample's days, from today: a month, more than even a tall screen
+/// shows, so the table always runs on into its fade.
+private let sampleDays = 31
 
 /// The sample's people, as /design's: a partner at the office, home on
 /// Wednesdays; a mother part-time on Mondays, Wednesdays and Fridays, both
