@@ -150,8 +150,9 @@ struct AppleSignInButton: View {
       await userSocket?.start()
       return
     }
-    // The device's user, left behind: everything of it goes.
-    try? await groupCalls.deleteAccount(signedInAs: before)
+    // The device's user, left behind: everything of it goes, tried again
+    // as the app comes back should the connection be lost meanwhile.
+    await groupCalls.deleteLeftBehind(before)
     await forgetDevice(database: database, userSocket: userSocket)
     await userSocket?.startAfresh()
     await keep(email: choice.email, .switched)
