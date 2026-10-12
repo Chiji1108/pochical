@@ -8,6 +8,7 @@ import SwiftUI
 /// a fitting emoji, else its first letter in a color the user's other
 /// groups do not use yet.
 struct NewGroupPage: View {
+  @Environment(\.dynamicTypeSize) private var typeSize
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
   @FetchAll private var groups: [GroupRow]
@@ -49,8 +50,10 @@ struct NewGroupPage: View {
         LabeledContent {
           LimitedTextField(placeholder: "例：さくら", text: $myName, limit: TextLimits.personName)
         } label: {
-          // Whole on a narrow screen too; the field takes what is left.
-          Text("このグループでの名前").fixedSize()
+          // Whole on a narrow screen too, the field taking what is left;
+          // wrapping instead at the largest text sizes.
+          Text("このグループでの名前")
+            .fixedSize(horizontal: !typeSize.isAccessibilitySize, vertical: false)
         }
       } footer: {
         Text("アイコンはグループ名から自動で入ります。")
