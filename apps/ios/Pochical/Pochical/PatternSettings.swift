@@ -264,7 +264,10 @@ struct PatternEditor: View {
   }
 
   var body: some View {
-    let others = ownPatterns(rows, order).filter { $0.id != draft.id }
+    // The next day's choices: patterns in use, and the one it names.
+    let others = ownPatterns(rows, order).filter {
+      $0.id != draft.id && (!$0.archived || $0.id == draft.nextDay)
+    }
     let saved = shaped
     Form {
       Section {

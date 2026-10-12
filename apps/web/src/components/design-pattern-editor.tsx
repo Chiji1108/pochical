@@ -201,7 +201,12 @@ export function PatternsPage({
           );
           setEditing(undefined);
         }}
-        others={items.filter((item) => item.id !== editing.id)}
+        // The next day's choices: patterns in use, and the one it names.
+        others={items.filter(
+          (item) =>
+            item.id !== editing.id &&
+            (item.archived !== true || item.id === editing.nextDay)
+        )}
       />
     );
   }
