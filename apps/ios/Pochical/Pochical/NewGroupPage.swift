@@ -46,8 +46,11 @@ struct NewGroupPage: View {
             GroupMarkBadge(mark: mark)
           }
         }
-        LabeledContent("このグループでの名前") {
+        LabeledContent {
           LimitedTextField(placeholder: "例：さくら", text: $myName, limit: TextLimits.personName)
+        } label: {
+          // Whole on a narrow screen too; the field takes what is left.
+          Text("このグループでの名前").fixedSize()
         }
       } footer: {
         Text("アイコンはグループ名から自動で入ります。")
