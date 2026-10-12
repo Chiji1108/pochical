@@ -73,14 +73,15 @@ extension GroupCalls {
     guard let kept = try? store.token() else { return }
     let answer = await users.deleteAccount(
       request: Pochical_V1_DeleteAccountRequest(), headers: ["Authorization": ["Bearer \(kept)"]])
+    // Gone, or its session no longer signing in as that user is gone
+    // already; forgotten unless a later switch left another behind meanwhile.
+    let gone: Bool
     switch answer.result {
-    case .success:
+    case .success: gone = true
+    case .failure(let error): gone = error.code == .unauthenticated
+    }
+    if gone, (try? store.token()) == kept {
       try? store.forget()
-    // Its session no longer signs in: that user is gone already.
-    case .failure(let error) where error.code == .unauthenticated:
-      try? store.forget()
-    case .failure:
-      break
     }
   }
 }
