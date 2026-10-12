@@ -7,11 +7,18 @@ import PochicalKit
 @MainActor enum ReminderOffer {
   private static let key = "reminderOffered"
 
-  /// Whether to offer now: never offered, the system not asked yet, and a
-  /// reminder on to be told by.
-  static func due(reminders: [Reminder]) -> Bool {
-    !UserDefaults.standard.bool(forKey: key) && Notifications.shared.permission == .notAsked
-      && reminders.contains(where: \.on)
+  /// The time it would say, 21:00, when it is to be offered now: never
+  /// offered, the system not asked yet, and a 前日 reminder on, the
+  /// evening's the offer speaks of.
+  static func due(reminders: [Reminder]) -> String? {
+    guard !UserDefaults.standard.bool(forKey: key), Notifications.shared.permission == .notAsked
+    else { return nil }
+    for reminder in reminders where reminder.on {
+      if case .dayBefore(let time) = reminder.kind {
+        return time.hasPrefix("0") ? String(time.dropFirst()) : time
+      }
+    }
+    return nil
   }
 
   static func offered() {

@@ -33,8 +33,9 @@ struct CalendarScreen: View {
   /// so closing them is a moment to ask for a review (spec/review.md).
   @State private var changed = false
   @Environment(\.requestReview) private var requestReview
-  /// The reminders offered, once, after shifts were first entered.
-  @State private var offeringReminders = false
+  /// The reminders offered, once, after shifts were first entered: the
+  /// time they come at.
+  @State private var offeringReminders: String?
   /// The day opened from the month, its week alone left above its detail.
   @State private var opened: Day?
   /// The week swiped to beside an opened one, until the swipe settles and
@@ -315,11 +316,15 @@ struct CalendarScreen: View {
     }
     // Shifts first entered: what the reminders are for, then the system's
     // question only if wanted (spec/calendar.md, Reminders).
-    .alert("明日のシフトを前の晩にお知らせしますか？", isPresented: $offeringReminders) {
+    .alert(
+      "前の晩に、明日のシフトをお知らせしますか？",
+      isPresented: Binding { offeringReminders != nil } set: { if !$0 { offeringReminders = nil } },
+      presenting: offeringReminders
+    ) { _ in
       Button("あとで", role: .cancel) {}
       Button("お知らせする") { Notifications.shared.askOnce() }
-    } message: {
-      Text("前の日の21時に、次の日のシフトを通知でお知らせします。あとから設定で変えられます。")
+    } message: { time in
+      Text("\(time)に通知が届きます。")
     }
     .task {
       // Past midnight, while the app is open or waiting in the background.
@@ -574,9 +579,9 @@ struct CalendarScreen: View {
     changed = false
     // The first time shifts are entered, the reminders are offered
     // instead, once; the review waits for another time.
-    if afterEntering, ReminderOffer.due(reminders: settings.device.reminders) {
+    if afterEntering, let time = ReminderOffer.due(reminders: settings.device.reminders) {
       ReminderOffer.offered()
-      offeringReminders = true
+      offeringReminders = time
       return
     }
     guard ReviewPrompt.mayAsk else { return }

@@ -52,7 +52,7 @@ The month's heading has a way to save it (/design's save menu). Saving is never 
 
 A phone keeps only so many notifications waiting (iOS 64), so the nearest ones, two weeks ahead, are put in the system's queue, and all are put in anew whenever the days, the patterns, the reminders or the permission change, and each time the app comes back. Nothing arrives until the system allows it; the page leads with asking, or once refused with the way to the system's settings.
 
-The first time ポチポチ入力 is closed with shifts entered (after the blank days' sheet, when it asks), while the system has not been asked and a reminder is on, the calendar offers the reminders once: 明日のシフトを前の晩にお知らせしますか？, saying that the shift comes the evening before at 21時 and that the settings change it, with あとで and お知らせする. お知らせする brings the system's question; あとで lets it be. It is never offered again, whatever the answer, and kept on the device only. The store's review is not asked that time (spec/review.md).
+The first time ポチポチ入力 is closed with shifts entered (after the blank days' sheet, when it asks), while the system has not been asked and a 前日 reminder is on, the calendar offers the reminders once, in few words: 前の晩に、明日のシフトをお知らせしますか？ and that reminder's time (21:00に通知が届きます。), with あとで and お知らせする. お知らせする brings the system's question; あとで lets it be. It is never offered again, whatever the answer, and kept on the device only. The store's review is not asked that time (spec/review.md).
 
 ## How days are written
 
