@@ -41,7 +41,7 @@ struct MonthName: View {
       HStack(alignment: .firstTextBaseline, spacing: 4) {
         if english {
           // A lettered calendar's month, lower case and cut short: sep.
-          RollingText(text: month.headingMonth, coming: coming.headingMonth, share: share)
+          RollingLetters(text: month.headingMonth, coming: coming.headingMonth, share: share)
             .font(.system(size: 36, weight: .semibold))
         } else {
           RollingText(text: String(month.month), coming: String(coming.month), share: share)
@@ -75,7 +75,7 @@ struct RollingMonthTitle: View {
     HStack(alignment: .firstTextBaseline, spacing: 0) {
       if english {
         // September 2026
-        RollingText(
+        RollingLetters(
           text: month.monthTitle(english: true), coming: coming.monthTitle(english: true),
           share: share)
         Text(" ")
@@ -123,6 +123,67 @@ struct RollingText: View {
       }
     }
     // Within its own line, while a wider name can still show whole.
+    .mask { Rectangle().padding(.horizontal, -24) }
+  }
+}
+
+/// An English month's name rolling a letter at a time, as /design's
+/// RollingName with `letters`: each letter starts a little after the one
+/// before, all done as the page lands. Every letter's place rolls, one
+/// repeated from the other name too. Numbers and Japanese months roll
+/// whole (RollingText), as /design's do.
+struct RollingLetters: View {
+  let text: String
+  let coming: String
+  /// As RollingText's: from the nearest page, -0.5 to 0.5.
+  let share: CGFloat
+
+  /// How much later each letter starts, of the whole roll.
+  private static let lag: CGFloat = 0.08
+  /// The most letters an English month has, as sep., so short names keep
+  /// the same pace.
+  private static let longest = 4
+
+  var body: some View {
+    // From the earlier page's name to the later one's, `turned` of the
+    // way, whichever page is nearer now.
+    let (from, to, turned) =
+      share >= 0 ? (text, coming, share) : (coming, text, 1 + share)
+    // Laid out a letter at a time at rest too, so the name does not shift
+    // as it starts or stops rolling (letters apart lose the word's kerning).
+    let first = Array(from)
+    let second = Array(to)
+    let places = max(first.count, second.count)
+    let span = 1 - CGFloat(max(places, Self.longest) - 1) * Self.lag
+    HStack(spacing: 0) {
+      ForEach(0..<places, id: \.self) { index in
+        LetterRoll(
+          from: index < first.count ? String(first[index]) : "",
+          to: index < second.count ? String(second[index]) : "",
+          turned: from == to ? 0 : min(max((turned - CGFloat(index) * Self.lag) / span, 0), 1))
+      }
+    }
+  }
+}
+
+/// One letter's place rolling from `from` to `to`, `turned` of the way:
+/// the one going up and out, the other coming up from below.
+private struct LetterRoll: View {
+  let from: String
+  let to: String
+  let turned: CGFloat
+
+  var body: some View {
+    BlendedWidth(share: turned) {
+      Text(from)
+        .fixedSize()
+        .visualEffect { content, proxy in content.offset(y: -turned * proxy.size.height) }
+        .opacity(1 - turned)
+      Text(to)
+        .fixedSize()
+        .visualEffect { content, proxy in content.offset(y: (1 - turned) * proxy.size.height) }
+        .opacity(turned)
+    }
     .mask { Rectangle().padding(.horizontal, -24) }
   }
 }
