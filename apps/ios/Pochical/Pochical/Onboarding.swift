@@ -20,8 +20,14 @@ private struct HasPatternsRequest: FetchKeyRequest, Hashable {
 /// starts as a new one does.
 enum FirstRun {
   static let doneKey = "firstRunDone"
+  /// The account was just deleted: said over the welcome, as the page it
+  /// was deleted from is gone by then.
+  static let deletedKey = "accountDeleted"
 
-  static func again() {
+  /// Kept at once, so the app ending before anything is said still starts
+  /// over with はじめの設定.
+  static func again(afterDeleting deleted: Bool = false) {
+    UserDefaults.standard.set(deleted, forKey: deletedKey)
     UserDefaults.standard.set(false, forKey: doneKey)
   }
 }
@@ -76,6 +82,8 @@ private enum OnboardingStep: Hashable {
 struct Onboarding: View {
   @Environment(\.themeColors) private var colors
   @State private var path: [OnboardingStep] = []
+  /// Starting over after deleting the account, which is said first.
+  @AppStorage(FirstRun.deletedKey) private var deleted = false
 
   var body: some View {
     NavigationStack(path: $path) {
@@ -85,6 +93,9 @@ struct Onboarding: View {
         path.append(.login)
       }
       .toolbarVisibility(.hidden, for: .navigationBar)
+      .alert("アカウントを削除しました", isPresented: $deleted) {
+        Button("OK", role: .cancel) {}
+      }
       .navigationDestination(for: OnboardingStep.self) { step in
         switch step {
         case .login:

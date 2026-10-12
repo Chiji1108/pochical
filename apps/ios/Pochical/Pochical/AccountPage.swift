@@ -59,7 +59,6 @@ struct AccountPage: View {
   @Binding var linked: LinkedAccount?
   @State private var confirmingDelete = false
   @State private var confirmingSignOut = false
-  @State private var deleted = false
   @State private var busy = false
   @State private var problem: Problem?
 
@@ -121,10 +120,6 @@ struct AccountPage: View {
       }
     } message: {
       Text("シフト、グループ、チャットがすべて削除されます。元に戻せません。")
-    }
-    // Then the device starts over as a new one does, with はじめの設定.
-    .alert("アカウントを削除しました", isPresented: $deleted) {
-      Button("OK", role: .cancel) { FirstRun.again() }
     }
     .alert("ログアウトしますか？", isPresented: $confirmingSignOut) {
       Button("キャンセル", role: .cancel) {}
@@ -217,7 +212,9 @@ struct AccountPage: View {
     await forgetDevice(database: database, userSocket: userSocket)
     await userSocket?.startAfresh()
     withAnimation { linked = nil }
-    deleted = true
+    // The device starts over as a new one does, with はじめの設定, which
+    // says the account was deleted.
+    FirstRun.again(afterDeleting: true)
   }
 }
 
