@@ -48,9 +48,13 @@ Many people leave days off blank, moving on with 翌日へ. Rather than stop the
 
 Beyond the icons offered first, ほかのアイコンを選ぶ shows every icon a mark can take, sorted into kinds, each drawn as the mark would be with the one picked edged. A search keeps the icons whose name or words hold every word typed (`design/src/mark-icon-names.ts`), width, case and katakana folded, so ケア, けあ and ｹｱ find the same. An icon picked from there leads the offered ones while it is the mark's.
 
+## Patterns no longer used
+
+A pattern can be archived (`archived`): no longer used, it keeps every mark it puts on days, of their own or from an order, but is offered nowhere a pattern is picked: ポチポチ入力's keys and a day's, an order's keys, the days off the blank days' sheet and 祝日は休みにする fill with, and the reminders' patterns. The month's 内訳 still counts its days. シフトパターン lists it under 使わなくなったパターン, below the patterns in use and 並び替え's reach, with a note that its key is gone and its days keep it. Its page has また使う in place of 使わないパターンにする, a quiet action over このパターンを削除. Changing jobs archives the old patterns kept for their days (Changing jobs). Like deleting, archiving waits while a repeating order in use or to come has it.
+
 ## Deleting a pattern
 
-- It goes from the list, and nothing that names it is rewritten: the days that have it, of their own or from a repeating order, keep its id and show empty, counting as blank; their memos and people stay. The person is told how many days before confirming (spec/sync-protocol.md, Deleted values; `spec/vectors/patterns.json`, deleted).
+- It goes from the list, and nothing that names it is rewritten: the days that have it, of their own or from a repeating order, keep its id and show empty, counting as blank; their memos and people stay. The person is told how many days before confirming, and that 使わないパターンにする keeps them (spec/sync-protocol.md, Deleted values; `spec/vectors/patterns.json`, deleted).
 - Other patterns that named it as `nextDay` keep the id and fill nothing on the next day.
 - A pattern in a repeating order in use or to come cannot be deleted; that order has to change first. One only in periods over can, those days then showing empty as any of its days.
 
@@ -100,7 +104,7 @@ An invitation opened meanwhile waits until the calendar shows, and is asked abou
 
 The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are small tiles, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will. In 新しい仕事にする the answers are rows of one list, as the settings pages around them are; はじめの設定, with no list around it, shows them as large cards.
 
-The new job's patterns replace the list, and its repeating order starts on the day of the switch. An old pattern still on a day before the switch, of its own or from an earlier order, stays in the list, so those days keep their marks.
+The new job's patterns replace the list, and its repeating order starts on the day of the switch. An old pattern still on a day before the switch, of its own or from an earlier order, stays, archived (Patterns no longer used), so those days keep their marks without its key; one the new job brings again, unchanged, is the new job's and in use.
 
 A new job's ready-made pattern can share an id with one the person already has. If theirs differs (they renamed it, changed its time or mark…) and is still on a day before the switch, theirs keeps the id and the new job's gets a fresh one; the new order and any `nextDay` links use the fresh id. Past days never change meaning because of a job change (`spec/vectors/patterns.json`, newJob).
 

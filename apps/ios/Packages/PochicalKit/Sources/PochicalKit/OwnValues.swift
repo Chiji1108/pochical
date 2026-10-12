@@ -211,7 +211,8 @@ extension PatternRow {
       id: id, name: pattern.name, emoji: pattern.emoji, symbol: pattern.symbol,
       icon: pattern.icon, color: Int(pattern.color),
       start: pattern.hasStart ? pattern.start : nil, end: pattern.hasEnd ? pattern.end : nil,
-      countsAsOff: pattern.countsAsOff, nextDay: pattern.hasNextDay ? pattern.nextDay : nil)
+      countsAsOff: pattern.countsAsOff, nextDay: pattern.hasNextDay ? pattern.nextDay : nil,
+      archived: pattern.archived)
   }
 }
 

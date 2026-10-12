@@ -267,6 +267,33 @@ public object PatternKt {
     public fun hasNextDay(): kotlin.Boolean {
       return _builder.hasNextDay()
     }
+
+    /**
+     * ```
+     * No longer used (spec/shift-patterns.md, Patterns no longer used): it
+     * keeps its days' marks but is offered nowhere a pattern is picked.
+     * ```
+     *
+     * `bool archived = 10 [json_name = "archived"];`
+     */
+    public var archived: kotlin.Boolean
+      @kotlin.jvm.JvmName("getArchived")
+        get() = _builder.archived
+      @kotlin.jvm.JvmName("setArchived")
+        set(value) {
+        _builder.archived = value
+      }
+    /**
+     * ```
+     * No longer used (spec/shift-patterns.md, Patterns no longer used): it
+     * keeps its days' marks but is offered nowhere a pattern is picked.
+     * ```
+     *
+     * `bool archived = 10 [json_name = "archived"];`
+     */
+    public fun clearArchived() {
+      _builder.clearArchived()
+    }
   }
 }
 public inline fun app.pochical.v1.Pattern.copy(block: `app.pochical.v1`.PatternKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Pattern =

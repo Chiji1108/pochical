@@ -122,7 +122,8 @@ struct DayDetail: View {
   /// Picking another keeps the day's memo and people, as entering does.
   private var shiftRow: some View {
     NavigationLink {
-      ShiftChoices(patterns: patterns, picked: entry?.shift) { shift in
+      // Patterns no longer used are not offered, though a day may show one.
+      ShiftChoices(patterns: patterns.inUse, picked: entry?.shift) { shift in
         if shift != entry?.shift {
           onChange(DayEntry(shift: shift, note: entry?.note, people: entry?.people))
         }

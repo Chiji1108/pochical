@@ -11,7 +11,12 @@ import {
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
-import { isDayOff, presetList, usePatterns } from "../lib/design-patterns";
+import {
+  isDayOff,
+  patternsInUse,
+  presetList,
+  usePatterns,
+} from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
@@ -316,7 +321,7 @@ function HolidayChoice({
   onHolidaysOff: (holidaysOff: boolean) => void;
   onHolidayShift: (shift: Shift) => void;
 }) {
-  const patterns = useUser((state) => state.patterns);
+  const patterns = patternsInUse(useUser((state) => state.patterns));
   const offs = patterns.filter(isDayOff);
   // The one holidays take, even one that no longer counts as off; else
   // the first that does.

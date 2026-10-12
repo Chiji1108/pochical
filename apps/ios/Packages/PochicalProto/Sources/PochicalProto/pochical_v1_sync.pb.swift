@@ -1181,6 +1181,10 @@ public nonisolated struct Pochical_V1_Pattern: Sendable {
   /// Clears the value of `nextDay`. Subsequent reads from it will return its default value.
   public mutating func clearNextDay() {self._nextDay = nil}
 
+  /// No longer used (spec/shift-patterns.md, Patterns no longer used): it
+  /// keeps its days' marks but is offered nowhere a pattern is picked.
+  public var archived: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3954,7 +3958,7 @@ nonisolated extension Pochical_V1_MemberPattern: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Pochical_V1_Pattern: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Pattern"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}emoji\0\u{1}symbol\0\u{1}icon\0\u{1}color\0\u{1}start\0\u{1}end\0\u{3}counts_as_off\0\u{3}next_day\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}emoji\0\u{1}symbol\0\u{1}icon\0\u{1}color\0\u{1}start\0\u{1}end\0\u{3}counts_as_off\0\u{3}next_day\0\u{1}archived\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3971,6 +3975,7 @@ nonisolated extension Pochical_V1_Pattern: SwiftProtobuf.Message, SwiftProtobuf.
       case 7: try { try decoder.decodeSingularStringField(value: &self._end) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.countsAsOff) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self._nextDay) }()
+      case 10: try { try decoder.decodeSingularBoolField(value: &self.archived) }()
       default: break
       }
     }
@@ -4008,6 +4013,9 @@ nonisolated extension Pochical_V1_Pattern: SwiftProtobuf.Message, SwiftProtobuf.
     try { if let v = self._nextDay {
       try visitor.visitSingularStringField(value: v, fieldNumber: 9)
     } }()
+    if self.archived != false {
+      try visitor.visitSingularBoolField(value: self.archived, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4021,6 +4029,7 @@ nonisolated extension Pochical_V1_Pattern: SwiftProtobuf.Message, SwiftProtobuf.
     if lhs._end != rhs._end {return false}
     if lhs.countsAsOff != rhs.countsAsOff {return false}
     if lhs._nextDay != rhs._nextDay {return false}
+    if lhs.archived != rhs.archived {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

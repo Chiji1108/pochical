@@ -18,8 +18,8 @@ struct StyleSettings: View {
   var body: some View {
     @Bindable var settings = settings
     let calendar = OwnCalendar(days: [], patterns: patterns, patternOrder: patternOrder, orders: [])
-    let work = calendar.patterns.first { !$0.countsAsOff }
-    let off = calendar.patterns.first(where: \.countsAsOff)
+    let work = calendar.patterns.inUse.first { !$0.countsAsOff }
+    let off = calendar.patterns.inUse.first(where: \.countsAsOff)
     let samples = styleSamples(of: calendar.patterns).compactMap { calendar.patternsByID[$0] }
     Form {
       Section {

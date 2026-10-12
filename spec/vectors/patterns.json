@@ -1,5 +1,5 @@
 {
-  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day. guessLook: a new pattern's mark from its name (design/src/patterns.ts, lookHints): the first hint with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon; the letter is the name's first character, trimmed. A mark picked by hand is never guessed again. nextColor: a new pattern's color, the first palette slot no pattern uses, else the count of patterns modulo the palette's 12 slots.",
+  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them, archived (`archived`, written only when true): kept for its days, offered nowhere a pattern is picked. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day. guessLook: a new pattern's mark from its name (design/src/patterns.ts, lookHints): the first hint with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon; the letter is the name's first character, trimmed. A mark picked by hand is never guessed again. nextColor: a new pattern's color, the first palette slot no pattern uses, else the count of patterns modulo the palette's 12 slots.",
   "deleted": [
     {
       "name": "it goes from the list, and patterns that name it keep it",
@@ -122,7 +122,8 @@
             "id": "day"
           },
           {
-            "id": "office"
+            "id": "office",
+            "archived": true
           }
         ],
         "sequence": ["day"]
@@ -174,7 +175,8 @@
             "id": "new-1"
           },
           {
-            "id": "day"
+            "id": "day",
+            "archived": true
           }
         ],
         "sequence": ["new-1", "night"]
@@ -241,6 +243,42 @@
       ],
       "sequence": ["day"],
       "usedBefore": [],
+      "expected": {
+        "patterns": [
+          {
+            "id": "day"
+          }
+        ],
+        "sequence": ["day"]
+      }
+    },
+    {
+      "name": "an archived pattern the new job brings again, unchanged, is the new job's, in use",
+      "own": [
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"],
+          "archived": true
+        }
+      ],
+      "incoming": [
+        {
+          "id": "day",
+          "name": "日勤",
+          "countsAsOff": false,
+          "emoji": "🌞",
+          "icon": "sun",
+          "color": 1,
+          "time": ["09:00", "18:00"]
+        }
+      ],
+      "sequence": ["day"],
+      "usedBefore": ["day"],
       "expected": {
         "patterns": [
           {

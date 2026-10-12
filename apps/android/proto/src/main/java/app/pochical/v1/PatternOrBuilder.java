@@ -173,4 +173,15 @@ public interface PatternOrBuilder extends
    */
   com.google.protobuf.ByteString
       getNextDayBytes();
+
+  /**
+   * <pre>
+   * No longer used (spec/shift-patterns.md, Patterns no longer used): it
+   * keeps its days' marks but is offered nowhere a pattern is picked.
+   * </pre>
+   *
+   * <code>bool archived = 10 [json_name = "archived"];</code>
+   * @return The archived.
+   */
+  boolean getArchived();
 }

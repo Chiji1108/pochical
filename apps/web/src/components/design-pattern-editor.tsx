@@ -29,7 +29,7 @@ import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
 import { ConfirmDialog } from "./design-sheet";
 import { SortableList } from "./design-sortable-list";
-import { DestructiveButton, Note, Section } from "./design-ui";
+import { Button, DestructiveButton, Note, Section } from "./design-ui";
 import {
   guessLook,
   MarkGlyph,
@@ -50,6 +50,8 @@ type PatternDraft = Look & {
   countsAsOff: boolean;
   // Another pattern filled in on the following day, like 明け after 夜勤.
   nextDay?: string;
+  // Under 使わなくなったパターン, kept for its days.
+  archived?: boolean;
 };
 
 const leadingZeroPattern = /^0/;
@@ -158,6 +160,17 @@ export function PatternsPage({
   const remove = (id: string) => {
     setItems((previous) => patternsWithout(previous, id));
   };
+  // No longer used, or used again: archived, a pattern keeps its days'
+  // marks but leaves the keys, and goes under 使わなくなったパターン.
+  const setArchived = (id: string, archived: boolean) => {
+    setItems((previous) =>
+      previous.map((item) =>
+        item.id === id ? { ...item, archived: archived || undefined } : item
+      )
+    );
+  };
+  const used = items.filter((item) => item.archived !== true);
+  const archived = items.filter((item) => item.archived === true);
 
   if (editing) {
     return (
@@ -173,6 +186,10 @@ export function PatternsPage({
           remove(editing.id);
           setEditing(undefined);
         }}
+        onArchive={(on) => {
+          setArchived(editing.id, on);
+          setEditing(undefined);
+        }}
         onSave={(draft) => {
           const pattern = patternOf(draft);
           setItems((previous) =>
@@ -184,7 +201,12 @@ export function PatternsPage({
           );
           setEditing(undefined);
         }}
-        others={items.filter((item) => item.id !== editing.id)}
+        // The next day's choices: patterns in use, and the one it names.
+        others={items.filter(
+          (item) =>
+            item.id !== editing.id &&
+            (item.archived !== true || item.id === editing.nextDay)
+        )}
       />
     );
   }
@@ -242,9 +264,11 @@ export function PatternsPage({
       {sorting ? (
         <SortableList
           divider={pageDivider}
-          items={items}
+          items={used}
           label={(item) => item.name}
-          onChange={setItems}
+          onChange={(sorted) => {
+            setItems([...sorted, ...archived]);
+          }}
         >
           {(item) => (
             <>
@@ -256,7 +280,7 @@ export function PatternsPage({
         </SortableList>
       ) : (
         <List>
-          {items.map((item, index) => (
+          {used.map((item, index) => (
             <Fragment key={item.id}>
               {pageDivider(index)}
               <ListRow
@@ -286,6 +310,33 @@ export function PatternsPage({
             }}
           />
         </List>
+      )}
+      {!sorting && archived.length > 0 && (
+        <Section title="使わなくなったパターン">
+          <List>
+            {archived.map((item, index) => (
+              <Fragment key={item.id}>
+                {pageDivider(index)}
+                <ListRow
+                  onClick={() => {
+                    setIsNew(false);
+                    setEditing(draftOf(item));
+                  }}
+                  label={item.name}
+                  value={timeText(item)}
+                  leading={
+                    <>
+                      <MarkGlyph look={item} size={22} style={style} />
+                    </>
+                  }
+                />
+              </Fragment>
+            ))}
+          </List>
+          <Note>
+            ポチポチ入力のボタンには出ません。入っている日には、そのまま出ます。
+          </Note>
+        </Section>
       )}
       {!sorting && (
         <Section title="仕事">
@@ -381,6 +432,7 @@ function PatternEditor({
   onBack,
   onSave,
   onDelete,
+  onArchive,
 }: {
   initial: PatternDraft;
   // How many days use this pattern.
@@ -392,6 +444,8 @@ function PatternEditor({
   onBack: () => void;
   onSave: (draft: PatternDraft) => void;
   onDelete: () => void;
+  // Archives it, or brings it back into use.
+  onArchive: (archived: boolean) => void;
 }) {
   const style = useContext(ShiftMarkStyleContext);
   const [draft, setDraft] = useState(initial);
@@ -575,9 +629,33 @@ function PatternEditor({
           />
         </List>
       </Section>
+      {!isNew && initial.archived === true && (
+        <Button
+          className={archiveButton}
+          onClick={() => {
+            onArchive(false);
+          }}
+          size="small"
+          variant="text"
+        >
+          また使う
+        </Button>
+      )}
+      {!(isNew || inOrder || initial.archived === true) && (
+        <Button
+          className={archiveButton}
+          onClick={() => {
+            onArchive(true);
+          }}
+          size="small"
+          variant="text"
+        >
+          使わないパターンにする
+        </Button>
+      )}
       {!isNew && inOrder && (
         <Note>
-          繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。
+          繰り返しの並びに入っているので、削除したり使わないパターンにしたりできません。先に「繰り返し」で並びを変えてください。
         </Note>
       )}
       {!(isNew || inOrder) && (
@@ -597,7 +675,7 @@ function PatternEditor({
       {confirming && (
         <ConfirmDialog
           action="削除"
-          message={`${days}日の予定に入っている「${initial.name}」も一緒に消えます。元に戻せません。`}
+          message={`${days}日の予定に入っている「${initial.name}」も一緒に消えます。元に戻せません。日の記号を残すなら「使わないパターンにする」を選んでください。`}
           onCancel={() => {
             setConfirming(false);
           }}
@@ -611,6 +689,9 @@ function PatternEditor({
     </>
   );
 }
+
+// Archiving, a quiet action over 削除, centered as it is.
+const archiveButton = css({ alignSelf: "center" });
 
 // The value of なし among the patterns' ids.
 const noNextDay = "none";

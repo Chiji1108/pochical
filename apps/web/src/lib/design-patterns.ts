@@ -17,7 +17,15 @@ export type Pattern = Look & {
   countsAsOff: boolean;
   // Another pattern entered on the following day too, like 明け after 夜勤.
   nextDay?: string;
+  // No longer used (使わなくなったパターン): kept for the days it is on,
+  // but offered nowhere a pattern is picked.
+  archived?: boolean;
 };
+
+// The patterns to pick from: those still in use, archived ones left out.
+export function patternsInUse(list: readonly Pattern[]): Pattern[] {
+  return list.filter((pattern) => pattern.archived !== true);
+}
 
 // A pattern's id, as a day names its shift.
 export type Shift = string;
@@ -78,7 +86,8 @@ function samePattern(a: Pattern, b: Pattern) {
 
 // The patterns after changing jobs (spec/shift-patterns.md, Changing
 // jobs): the new job's take over, and an old one still on a day before
-// the switch (`usedBefore`) stays, so those days keep their marks. A
+// the switch (`usedBefore`) stays, archived, so those days keep their
+// marks without its key. A
 // ready-made one the person has changed, still on those days, keeps its
 // id; the new job's then comes in under a fresh one (`newId`), which its
 // order and next days use.
@@ -108,10 +117,12 @@ export function patternsForJob({
     id: renameOf(pattern.id),
     nextDay: pattern.nextDay && renameOf(pattern.nextDay),
   }));
-  const kept = own.filter(
-    (pattern) =>
-      !coming.some((next) => next.id === pattern.id) && usedBefore(pattern.id)
-  );
+  const kept = own
+    .filter(
+      (pattern) =>
+        !coming.some((next) => next.id === pattern.id) && usedBefore(pattern.id)
+    )
+    .map((pattern) => ({ ...pattern, archived: true }));
   return { patterns: [...coming, ...kept], sequence: sequence.map(renameOf) };
 }
 

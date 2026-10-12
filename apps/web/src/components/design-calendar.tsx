@@ -22,7 +22,7 @@ import {
   withShiftEntered,
 } from "../lib/design-days";
 import type { DayEntry, Schedule } from "../lib/design-days";
-import { isDayOff, usePatterns } from "../lib/design-patterns";
+import { isDayOff, patternsInUse, usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
@@ -128,7 +128,9 @@ export function DesignCalendar({
   // the drag has already brought in.
   const pageDrag = useMotionValue(0);
   const [swipedTo, setSwipedTo] = useState<string>();
-  const ownPatterns = useUser((state) => state.patterns);
+  const allPatterns = useUser((state) => state.patterns);
+  // The keys and the days off to fill with: patterns still in use.
+  const ownPatterns = patternsInUse(allPatterns);
   const patternKeys = ownPatterns.map((pattern) => pattern.id);
   const book = usePatterns();
   const weekTools = useWeek();
@@ -149,7 +151,8 @@ export function DesignCalendar({
   // The months beside, for the summary to follow a drag of the pages.
   const summaryBy = (by: number) =>
     summaryIn(daysOfMonth(monthAfter(month, by)));
-  const counts = ownPatterns.map((pattern) => ({
+  // The month's breakdown counts every pattern on its days, archived too.
+  const counts = allPatterns.map((pattern) => ({
     count: monthDays.filter(
       (date) => schedule[dateKey(date)]?.shift === pattern.id
     ).length,

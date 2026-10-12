@@ -556,6 +556,47 @@ public  final class Pattern extends
     bitField0_ |= 0x00000004;
   }
 
+  public static final int ARCHIVED_FIELD_NUMBER = 10;
+  private boolean archived_;
+  /**
+   * <pre>
+   * No longer used (spec/shift-patterns.md, Patterns no longer used): it
+   * keeps its days' marks but is offered nowhere a pattern is picked.
+   * </pre>
+   *
+   * <code>bool archived = 10 [json_name = "archived"];</code>
+   * @return The archived.
+   */
+  @java.lang.Override
+  public boolean getArchived() {
+    return archived_;
+  }
+  /**
+   * <pre>
+   * No longer used (spec/shift-patterns.md, Patterns no longer used): it
+   * keeps its days' marks but is offered nowhere a pattern is picked.
+   * </pre>
+   *
+   * <code>bool archived = 10 [json_name = "archived"];</code>
+   * @param value The archived to set.
+   */
+  private void setArchived(boolean value) {
+    
+    archived_ = value;
+  }
+  /**
+   * <pre>
+   * No longer used (spec/shift-patterns.md, Patterns no longer used): it
+   * keeps its days' marks but is offered nowhere a pattern is picked.
+   * </pre>
+   *
+   * <code>bool archived = 10 [json_name = "archived"];</code>
+   */
+  private void clearArchived() {
+
+    archived_ = false;
+  }
+
   public static app.pochical.v1.Pattern parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1203,6 +1244,49 @@ public  final class Pattern extends
       return this;
     }
 
+    /**
+     * <pre>
+     * No longer used (spec/shift-patterns.md, Patterns no longer used): it
+     * keeps its days' marks but is offered nowhere a pattern is picked.
+     * </pre>
+     *
+     * <code>bool archived = 10 [json_name = "archived"];</code>
+     * @return The archived.
+     */
+    @java.lang.Override
+    public boolean getArchived() {
+      return instance.getArchived();
+    }
+    /**
+     * <pre>
+     * No longer used (spec/shift-patterns.md, Patterns no longer used): it
+     * keeps its days' marks but is offered nowhere a pattern is picked.
+     * </pre>
+     *
+     * <code>bool archived = 10 [json_name = "archived"];</code>
+     * @param value The archived to set.
+     * @return This builder for chaining.
+     */
+    public Builder setArchived(boolean value) {
+      copyOnWrite();
+      instance.setArchived(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * No longer used (spec/shift-patterns.md, Patterns no longer used): it
+     * keeps its days' marks but is offered nowhere a pattern is picked.
+     * </pre>
+     *
+     * <code>bool archived = 10 [json_name = "archived"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearArchived() {
+      copyOnWrite();
+      instance.clearArchived();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.Pattern)
   }
   @java.lang.Override
@@ -1229,11 +1313,12 @@ public  final class Pattern extends
             "end_",
             "countsAsOff_",
             "nextDay_",
+            "archived_",
           };
           java.lang.String info =
-              "\u0000\t\u0000\u0001\u0001\t\t\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0208" +
+              "\u0000\n\u0000\u0001\u0001\n\n\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0208" +
               "\u0004\u0208\u0005\u000b\u0006\u1208\u0000\u0007\u1208\u0001\b\u0007\t\u1208\u0002" +
-              "";
+              "\n\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -32,7 +32,11 @@ struct PatternsPage: View {
   @State private var editMode = EditMode.inactive
 
   var body: some View {
-    let patterns = ownPatterns(rows, order)
+    let all = ownPatterns(rows, order)
+    // Those still used, the keys' own; the archived go under their own
+    // heading (spec/shift-patterns.md, Patterns no longer used).
+    let patterns = all.inUse
+    let archived = all.filter(\.archived)
     let sorting = editMode.isEditing
     List {
       ForEach(Array(patterns.enumerated()), id: \.element.id) { index, pattern in
@@ -52,7 +56,8 @@ struct PatternsPage: View {
       .onMove { from, to in
         var ids = patterns.map(\.id)
         ids.move(fromOffsets: from, toOffset: to)
-        try? database.write { try OwnValues.order(ids, now: nowMs(), in: $0) }
+        let order = ids + archived.map(\.id)
+        try? database.write { try OwnValues.order(order, now: nowMs(), in: $0) }
       }
       .settingsRows()
 
@@ -73,6 +78,23 @@ struct PatternsPage: View {
           }
           .settingsRows()
         }
+      }
+
+      if !sorting, !archived.isEmpty {
+        Section {
+          ForEach(archived) { pattern in
+            NavigationLink {
+              PatternEditor(pattern: pattern, isNew: false)
+            } label: {
+              row(pattern, page: nil)
+            }
+          }
+        } header: {
+          Text("使わなくなったパターン")
+        } footer: {
+          Text("ポチポチ入力のボタンには出ません。入っている日には、そのまま出ます。")
+        }
+        .settingsRows()
       }
 
       // Choosing the patterns again with the repeat, for a new job.
@@ -242,7 +264,10 @@ struct PatternEditor: View {
   }
 
   var body: some View {
-    let others = ownPatterns(rows, order).filter { $0.id != draft.id }
+    // The next day's choices: patterns in use, and the one it names.
+    let others = ownPatterns(rows, order).filter {
+      $0.id != draft.id && (!$0.archived || $0.id == draft.nextDay)
+    }
     let saved = shaped
     Form {
       Section {
@@ -310,8 +335,18 @@ struct PatternEditor: View {
 
       if !isNew {
         Section {
+          if initial.archived {
+            Button("また使う") { setArchived(false) }
+              .frame(maxWidth: .infinity)
+              .settingsRows()
+          } else if !repeating {
+            // Its days keep their marks; only its key goes.
+            Button("使わないパターンにする") { setArchived(true) }
+              .frame(maxWidth: .infinity)
+              .settingsRows()
+          }
           if repeating {
-            Text("繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。")
+            Text("繰り返しの並びに入っているので、削除したり使わないパターンにしたりできません。先に「繰り返し」で並びを変えてください。")
               .font(.footnote)
               .foregroundStyle(colors.textSecondary)
               .padding(.horizontal, 16)
@@ -344,7 +379,9 @@ struct PatternEditor: View {
       Button("キャンセル", role: .cancel) {}
       Button("削除", role: .destructive) { delete() }
     } message: { days in
-      Text("\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。")
+      Text(
+        "\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。日の記号を残すなら「使わないパターンにする」を選んでください。"
+      )
     }
   }
 
@@ -385,6 +422,14 @@ struct PatternEditor: View {
     } else {
       deleting = days
     }
+  }
+
+  /// No longer used, or used again: as it is saved, its days untouched.
+  private func setArchived(_ archived: Bool) {
+    var pattern = initial
+    pattern.archived = archived
+    try? database.write { try OwnValues.save(pattern, now: nowMs(), in: $0) }
+    dismiss()
   }
 
   private func delete() {

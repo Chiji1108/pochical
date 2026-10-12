@@ -8,7 +8,7 @@ import {
   withoutOrder,
 } from "./design-days";
 import type { RepeatRule, Schedule } from "./design-days";
-import { bookOf, patternsForJob } from "./design-patterns";
+import { bookOf, patternsForJob, patternsInUse } from "./design-patterns";
 import type { Pattern } from "./design-patterns";
 import { useUser } from "./design-user-store";
 
@@ -37,7 +37,7 @@ export function useWorkChanges(schedule: Schedule) {
           bookOf(patterns)
         ));
     const holidayShift = holidaysOff
-      ? holidayShiftOf(patterns, rule.holidayShift)
+      ? holidayShiftOf(patternsInUse(patterns), rule.holidayShift)
       : undefined;
     // Off only with a pattern for them to take.
     return rule.sequence.length > 0
