@@ -13,7 +13,12 @@ import {
 import { useContext, useState } from "react";
 import { css, cx } from "styled-system/css";
 
-import { addDays, dayMilliseconds, formatDay } from "../lib/design-days";
+import {
+  addDays,
+  dateKey,
+  dayMilliseconds,
+  formatDay,
+} from "../lib/design-days";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import { Tag } from "./design-choices";
@@ -29,6 +34,7 @@ import {
   memberButton,
 } from "./design-group-parts";
 import { misaki, mother, partner } from "./design-group-samples";
+import { DayRow, DayRowsTable } from "./design-group-shifts-days";
 import { MemberTable } from "./design-group-shifts-weeks";
 import { List, ListRow } from "./design-list";
 import { IconMenu, MenuItem, MenuSeparator } from "./design-menu";
@@ -80,8 +86,13 @@ const sampleGroup = (): Group => ({
   name: "サンプル",
 });
 
-// No group yet: a sample week of shared shifts, then 作成 and QR参加, as
-// the old app showed it.
+// The sample's days, from today: a month, more than even a tall screen
+// shows, so the table always runs on into its fade.
+const sampleDays = 31;
+
+// No group yet: a sample of 一覧, the table a group is mostly read in,
+// filling the screen and fading out under the words and the buttons, 作成
+// and QR参加, at the foot where the thumb is.
 export function NoGroups({
   onNew,
   onScan,
@@ -89,35 +100,47 @@ export function NoGroups({
   onNew: () => void;
   onScan: () => void;
 }) {
+  const group = sampleGroup();
+  const dates = Array.from({ length: sampleDays }, (_, index) =>
+    addDays(designToday, index)
+  );
   return (
     <div className={noGroups.root}>
-      <h3 className={noGroups.title}>グループでシフトを共有できます</h3>
-      <div
-        aria-label="サンプルの共有シフト表"
-        className={hub.weekCard}
-        role="img"
-      >
-        <MemberTable
-          compact
-          dates={upcomingDays()}
-          group={sampleGroup()}
-          upcoming
+      {/* A picture only, nothing in it to press or read out. */}
+      <div aria-hidden="true" className={noGroups.sample} inert>
+        <DayRowsTable
+          body={dates.map((date) => (
+            <DayRow
+              date={date}
+              key={dateKey(date)}
+              members={group.members}
+              onPick={() => undefined}
+              picked={false}
+              scrolls={false}
+              withNames
+            />
+          ))}
+          group={group}
+          onMember={() => undefined}
         />
       </div>
-      <p className={noGroups.note}>
-        家族や友達とシフトを見せ合って、
-        <br />
-        休みが重なる日がすぐ分かります。
-      </p>
-      <div className={noGroups.actions}>
-        <Button onClick={onNew}>
-          <Plus aria-hidden="true" size={18} />
-          グループを作成
-        </Button>
-        <Button onClick={onScan} variant="quiet">
-          <ScanLine aria-hidden="true" size={17} />
-          QRコードで参加
-        </Button>
+      <div className={noGroups.foot}>
+        <h3 className={noGroups.title}>グループでシフトを共有できます</h3>
+        <p className={noGroups.note}>
+          家族や友達とシフトを見せ合って、
+          <br />
+          休みが重なる日がすぐ分かります。
+        </p>
+        <div className={noGroups.actions}>
+          <Button onClick={onNew}>
+            <Plus aria-hidden="true" size={18} />
+            グループを作成
+          </Button>
+          <Button onClick={onScan} variant="quiet">
+            <ScanLine aria-hidden="true" size={17} />
+            QRコードで参加
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -125,19 +148,31 @@ export function NoGroups({
 
 const noGroups = {
   actions: css({ display: "flex", flexDirection: "column", gap: "12px" }),
+  foot: css({
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    paddingBottom: "16px",
+  }),
   note: css({
     color: "text.tertiary",
     lineHeight: 1.6,
-    margin: 0,
+    margin: "0 0 12px",
     textAlign: "center",
     textStyle: "subheadline",
   }),
   root: css({
     display: "flex",
+    flex: 1,
     flexDirection: "column",
-    gap: "20px",
-    margin: "auto 0",
-    paddingBlock: "24px",
+  }),
+  // As much of the table as the screen has room for, at least a few
+  // rows, fading into the background over its lower part.
+  sample: css({
+    flex: "1 1 0",
+    maskImage: "linear-gradient(to bottom, black 35%, transparent 92%)",
+    minHeight: "180px",
+    overflow: "hidden",
   }),
   title: css({
     fontWeight: 700,
