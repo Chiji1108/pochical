@@ -67,3 +67,6 @@ tools/api-try/out/
 
 # Xcode
 xcuserdata/
+
+# Screenshots taken while checking /design, never committed.
+apps/web/.shots/
