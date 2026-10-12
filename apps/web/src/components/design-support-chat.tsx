@@ -137,7 +137,7 @@ function Intro({ icon }: { icon?: string }) {
         使いにくいところ、ほしい機能、不具合のこと。ちょっとしたことでも、気軽に書いてください。返事は数日のうちに、ここに届きます。
       </p>
       <p className={support.introNote}>
-        届くのは、ここに書いたことと写真、それにアプリと端末の情報だけです。
+        書いたことと一緒に、アプリと端末の情報が届きます。
         <br />
         {site.name} {APP_VERSION}・{deviceNames[platform]}
       </p>

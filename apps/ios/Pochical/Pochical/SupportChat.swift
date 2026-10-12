@@ -231,7 +231,7 @@ struct SupportChatScreen: View {
       Text("使いにくいところ、ほしい機能、不具合のこと。ちょっとしたことでも、気軽に書いてください。返事は数日のうちに、ここに届きます。")
         .font(.subheadline)
         .foregroundStyle(colors.textSecondary)
-      Text("届くのは、ここに書いたことと写真、それにアプリと端末の情報だけです。\n\(Self.device)")
+      Text("書いたことと一緒に、アプリと端末の情報が届きます。\n\(Self.device)")
         .font(.caption)
         .foregroundStyle(colors.textTertiary)
     }
