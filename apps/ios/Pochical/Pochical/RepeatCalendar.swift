@@ -65,11 +65,14 @@ struct RepeatCalendar: View {
     var tray: CGFloat = 0
   }
   private static let gap: CGFloat = 12
+  /// Under the tray, and kept free over it however short the screen.
+  private static let foot: CGFloat = 8
+  private static let leastSpare: CGFloat = 8
   private var cellHeight: CGFloat {
     guard room.total > 0 else { return DayCell.fullHeight }
-    // The gaps between heading, month, room and tray; the foot's padding.
-    return MonthPage.cellHeight(
-      fitting: room.total - room.heading - room.weekdays - room.tray - 3 * Self.gap - 8 - 8)
+    // The gaps between heading, month, room and tray, and the foot.
+    let around = room.heading + room.weekdays + room.tray + 3 * Self.gap + Self.foot
+    return MonthPage.cellHeight(fitting: room.total - around - Self.leastSpare)
   }
   private var base: Day { origin ?? anchor.firstOfMonth }
 
@@ -135,7 +138,7 @@ struct RepeatCalendar: View {
       .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.tray = $0 }
     }
     .padding(.horizontal, 16)
-    .padding(.bottom, 8)
+    .padding(.bottom, Self.foot)
     .environment(\.dayCellHeight, cellHeight)
     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.total = $0 }
     // Its first day and length under the page's title.
