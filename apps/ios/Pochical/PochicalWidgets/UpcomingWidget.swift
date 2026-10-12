@@ -117,6 +117,9 @@ private struct UpcomingHead: View {
         }
       }
       .lineLimit(1)
+      // A small widget is narrower on some iPhones (the SE's 148pt): the
+      // date gives a little of its size rather than be cut.
+      .minimumScaleFactor(0.75)
     }
     .modifier(SpokenDay(day: day))
   }
