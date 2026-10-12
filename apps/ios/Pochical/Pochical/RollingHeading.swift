@@ -149,20 +149,18 @@ struct RollingLetters: View {
     // way, whichever page is nearer now.
     let (from, to, turned) =
       share >= 0 ? (text, coming, share) : (coming, text, 1 + share)
-    if from == to {
-      Text(text).fixedSize()
-    } else {
-      let first = Array(from)
-      let second = Array(to)
-      let places = max(first.count, second.count)
-      let span = 1 - CGFloat(max(places, Self.longest) - 1) * Self.lag
-      HStack(spacing: 0) {
-        ForEach(0..<places, id: \.self) { index in
-          LetterRoll(
-            from: index < first.count ? String(first[index]) : "",
-            to: index < second.count ? String(second[index]) : "",
-            turned: min(max((turned - CGFloat(index) * Self.lag) / span, 0), 1))
-        }
+    // Laid out a letter at a time at rest too, so the name does not shift
+    // as it starts or stops rolling (letters apart lose the word's kerning).
+    let first = Array(from)
+    let second = Array(to)
+    let places = max(first.count, second.count)
+    let span = 1 - CGFloat(max(places, Self.longest) - 1) * Self.lag
+    HStack(spacing: 0) {
+      ForEach(0..<places, id: \.self) { index in
+        LetterRoll(
+          from: index < first.count ? String(first[index]) : "",
+          to: index < second.count ? String(second[index]) : "",
+          turned: from == to ? 0 : min(max((turned - CGFloat(index) * Self.lag) / span, 0), 1))
       }
     }
   }
