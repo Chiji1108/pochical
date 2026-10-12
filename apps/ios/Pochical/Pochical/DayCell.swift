@@ -6,6 +6,7 @@ import SwiftUI
 struct DayCell: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
+  @Environment(\.dayCellHeight) private var height
   let day: Day
   let entry: DayEntry?
   /// The day's memo, its own whether it has a shift or not
@@ -33,7 +34,8 @@ struct DayCell: View {
   /// Picks the day: to enter while entering, else to open.
   var onSelect: ((Day) -> Void)?
 
-  static let height: CGFloat = 64
+  /// Its height where the screen has room, as /design's.
+  static let fullHeight: CGFloat = 64
 
   var body: some View {
     if let onSelect {
@@ -73,7 +75,7 @@ struct DayCell: View {
     }
     .padding(.vertical, 4)
     .frame(maxWidth: .infinity)
-    .frame(height: Self.height)
+    .frame(height: height)
     .background {
       if let tile {
         RoundedRectangle(cornerRadius: Radius.md).fill(tile.tint)
@@ -179,4 +181,10 @@ enum OffShown {
   case shown
   case faint
   case hidden
+}
+
+extension EnvironmentValues {
+  /// How tall a month's day is: DayCell.fullHeight, or less on a short
+  /// screen, where the calendar fits its six weeks to the room left.
+  @Entry var dayCellHeight = DayCell.fullHeight
 }

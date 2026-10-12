@@ -10,6 +10,7 @@ import SwiftUI
 /// both off is framed. The month's みんな休み is under it.
 struct GroupPersonView: View {
   @Environment(Settings.self) private var settings
+  @Environment(\.dayCellHeight) private var cellHeight
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
   let members: [GroupMember]
@@ -26,7 +27,6 @@ struct GroupPersonView: View {
   @State private var position = PagerPosition(pages: span)
 
   private static let span = 24
-  private static let gridHeight = 6 * DayCell.height + 5 * 4
 
   var body: some View {
     let person =
@@ -117,7 +117,7 @@ struct GroupPersonView: View {
       position.pages = pages
     }
     .scrollIndicators(.hidden)
-    .frame(height: Self.gridHeight)
+    .frame(height: MonthPage.height(cell: cellHeight))
   }
 
   private func grid(_ month: Day, person: GroupMember, me: GroupMember?) -> some View {

@@ -108,7 +108,7 @@ struct JobChangePage: View {
         Button {
           choose(template)
         } label: {
-          HStack {
+          HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
               Text(template.title).foregroundStyle(colors.textPrimary)
               Text(template.note).font(.caption).foregroundStyle(colors.textTertiary)
@@ -121,7 +121,8 @@ struct JobChangePage: View {
                   .padding(.top, 6)
               }
             }
-            Spacer(minLength: 8)
+            // The keys and days across the row, however short its note.
+            .frame(maxWidth: .infinity, alignment: .leading)
             Image(systemName: "chevron.right")
               .font(.footnote.weight(.semibold))
               .foregroundStyle(colors.textQuaternary)
