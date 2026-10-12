@@ -30,11 +30,15 @@ type DeviceState = {
   // The reminders were offered once, after shifts were first entered
   // (spec/calendar.md, Reminders): never again, whatever the answer.
   reminderOffered: boolean;
+  // A repeating order was just set up (はじめの設定, 新しい仕事にする):
+  // the calendar offers the reminders as it next shows, once.
+  reminderOfferPending: boolean;
 };
 
 export const useDevice = create<DeviceState>()(() => ({
   notifications: "notAsked",
   platform: "ios",
+  reminderOfferPending: false,
   reminderOffered: false,
   wallpaperHue: wallpaperSamples[0].hue,
 }));

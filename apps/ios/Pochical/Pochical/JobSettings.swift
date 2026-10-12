@@ -249,6 +249,7 @@ struct JobChangePage: View {
         to: incoming, sequence: sequence, start: start, anchor: anchor,
         holidayCountry: HolidayCountry.current, now: now, in: $0)
     }
+    ReminderOffer.setUpOrder(sequence)
     dismiss()
   }
 
