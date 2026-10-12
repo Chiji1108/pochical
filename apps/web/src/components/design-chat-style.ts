@@ -257,6 +257,20 @@ export const chatStyle = {
     // The reply above it already draws the line.
     variants: { replying: { true: { borderTop: 0 } } },
   }),
+  // In place of the composer, in a one-to-one chat with someone who left.
+  goneBar: css({
+    alignItems: "center",
+    borderTop: "1px solid token(colors.separator)",
+    color: "text.tertiary",
+    display: "flex",
+    justifyContent: "center",
+    margin: 0,
+    marginLeft: "calc(-1 * var(--screen-left))",
+    marginRight: "calc(-1 * var(--screen-right))",
+    minHeight: "44px",
+    paddingBottom: "4px",
+    textStyle: "footnote",
+  }),
   composerButton: cva({
     base: {
       bg: "transparent",

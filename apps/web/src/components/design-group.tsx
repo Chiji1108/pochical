@@ -260,6 +260,13 @@ export function DesignGroup({
       (member) => !removed[summary.id]?.includes(member.id)
     ),
   };
+  // Those taken out of it, whose lines and one-to-one chats stay.
+  const formerMembers = membersOf(group.id).filter((member) =>
+    removed[group.id]?.includes(member.id)
+  );
+  const gone = formerMembers.find(
+    (member) => page.name === "chat" && member.id === page.chatId
+  );
   // Turns one of this group's chats' notifications off or back on.
   const setMuted = (chatId: string, muted: boolean) => {
     setGroups(
@@ -368,9 +375,8 @@ export function DesignGroup({
           unreadAtOpen={page.unread}
           backLabel={page.from ? chatTitle(group, page.from) : group.name}
           chat={chatOf(group.id, page.chatId)}
-          formerMembers={membersOf(group.id).filter((member) =>
-            removed[group.id]?.includes(member.id)
-          )}
+          formerMembers={formerMembers}
+          gone={gone}
           group={group}
           onMember={onMember}
           onBack={() => {
@@ -391,7 +397,7 @@ export function DesignGroup({
           people={
             page.chatId === groupChat
               ? group.members
-              : group.members.filter(
+              : [...group.members, ...formerMembers].filter(
                   (member) => member.me || member.id === page.chatId
                 )
           }
@@ -414,7 +420,7 @@ export function DesignGroup({
           title={
             page.chatId === groupChat
               ? group.name
-              : chatTitle(group, page.chatId)
+              : (gone?.name ?? chatTitle(group, page.chatId))
           }
           onShifts={
             page.chatId === groupChat
@@ -451,6 +457,7 @@ export function DesignGroup({
           <ScreenScroll beside>
             <GroupHub
               chatOf={(chatId) => chatOf(group.id, chatId)}
+              formerMembers={formerMembers}
               group={group}
               onChat={(chatId) => {
                 openChat(chatId);

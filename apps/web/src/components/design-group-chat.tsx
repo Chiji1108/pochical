@@ -184,6 +184,7 @@ export function ChatPage({
   onMember,
   backLabel,
   formerMembers = noMembers,
+  gone,
   attach,
   photoSend = "ok",
   sharedFirst = false,
@@ -228,6 +229,9 @@ export function ChatPage({
   backLabel: string;
   // Members taken out of the group, so their past lines keep a face.
   formerMembers?: Member[];
+  // The other member of a one-to-one chat, once they have left the
+  // group: the chat stays to be read, but takes no more lines.
+  gone?: Member;
   // Opens a member's profile from their picture.
   onMember?: (member: Member) => void;
   // Who a shared day shows: everyone, or the two people in a direct chat.
@@ -502,23 +506,27 @@ export function ChatPage({
           </span>
         )}
       </div>
-      <Composer
-        composer={composer}
-        editingMessage={byId(composer.editing)}
-        onSend={send}
-        onShareDays={() => {
-          setSharing(true);
-        }}
-        reply={
-          replying && {
-            message: replying,
-            onStop: () => {
-              setReplyTo(undefined);
-            },
-            writer: nameOf(replying.from),
+      {gone ? (
+        <p className={chatStyle.goneBar}>{gone.name}はグループを抜けました</p>
+      ) : (
+        <Composer
+          composer={composer}
+          editingMessage={byId(composer.editing)}
+          onSend={send}
+          onShareDays={() => {
+            setSharing(true);
+          }}
+          reply={
+            replying && {
+              message: replying,
+              onStop: () => {
+                setReplyTo(undefined);
+              },
+              writer: nameOf(replying.from),
+            }
           }
-        }
-      />
+        />
+      )}
       <EmojiPickerSheet
         onOpenChange={(open) => {
           if (!open) {
