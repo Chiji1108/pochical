@@ -5,9 +5,20 @@ import SwiftUI
 // みんなのシフト's シフトパターン (/design's LegendSheet): what each member's
 // marks mean.
 
+/// Opens シフトパターン on someone, as a face in the table is pressed: an
+/// action the environment carries as SwiftUI's own (OpenURLAction), not a
+/// bare closure, which it cannot compare and would update on every change.
+struct OpenLegendAction {
+  let open: @MainActor (String) -> Void
+
+  @MainActor func callAsFunction(_ userID: String) {
+    open(userID)
+  }
+}
+
 extension EnvironmentValues {
-  /// Opens シフトパターン on someone, as a face in the table is pressed.
-  @Entry var openLegend: ((String) -> Void)?
+  /// Where the table offers シフトパターン from a face; none elsewhere.
+  @Entry var openLegend: OpenLegendAction?
 }
 
 extension View {

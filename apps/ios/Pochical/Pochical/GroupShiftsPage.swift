@@ -168,16 +168,18 @@ struct GroupShiftsPage: View {
         }
       }
     }
-    .environment(\.openLegend) { userID in
-      // Over the day's sheet, once it has gone: one sheet cannot come up
-      // while another is up.
-      if picked != nil {
-        legendAfterDay = LegendOf(userID: userID)
-        picked = nil
-      } else {
-        legendOf = LegendOf(userID: userID)
-      }
-    }
+    .environment(
+      \.openLegend,
+      OpenLegendAction { userID in
+        // Over the day's sheet, once it has gone: one sheet cannot come up
+        // while another is up.
+        if picked != nil {
+          legendAfterDay = LegendOf(userID: userID)
+          picked = nil
+        } else {
+          legendOf = LegendOf(userID: userID)
+        }
+      })
     .sheet(item: $legendOf) { legend in
       LegendSheet(members: members, groupID: group.id, picked: legend.userID)
         .presentationDetents([.medium, .large])
