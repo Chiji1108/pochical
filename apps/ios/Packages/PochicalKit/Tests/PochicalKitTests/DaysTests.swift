@@ -33,19 +33,22 @@ struct VectorPattern: Decodable, Sendable {
   let time: [String]?
   let countsAsOff: Bool?
   let nextDay: String?
+  let archived: Bool?
 
   var pattern: Pattern {
     Pattern(
       id: id, name: name ?? "", emoji: emoji ?? "", symbol: symbol ?? "", icon: icon ?? "",
       color: color ?? 0, time: time.map { ShiftTime(start: $0[0], end: $0[1]) },
-      countsAsOff: countsAsOff ?? false, nextDay: nextDay)
+      countsAsOff: countsAsOff ?? false, nextDay: nextDay, archived: archived ?? false)
   }
 }
 
-/// A pattern as an expected list names it.
+/// A pattern as an expected list names it; `archived` written only when
+/// true.
 struct PatternLink: Decodable, Hashable, Sendable {
   let id: String
   let nextDay: String?
+  var archived: Bool?
 }
 
 struct VectorOrder: Decodable, Sendable {
@@ -297,7 +300,7 @@ struct PatternsVectors: Decodable, Sendable {
 }
 
 func links(_ patterns: [Pattern]) -> [PatternLink] {
-  patterns.map { PatternLink(id: $0.id, nextDay: $0.nextDay) }
+  patterns.map { PatternLink(id: $0.id, nextDay: $0.nextDay, archived: $0.archived ? true : nil) }
 }
 
 @Test(arguments: try vectors("patterns", as: PatternsVectors.self).deleted)

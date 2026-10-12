@@ -94,6 +94,7 @@ extension Pattern {
     if let nextDay {
       pattern.nextDay = nextDay
     }
+    pattern.archived = archived
     return pattern
   }
 }

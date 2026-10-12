@@ -475,7 +475,7 @@ struct CalendarScreen: View {
   /// While the gap sheet asks, its days drawn faint as the pattern picked
   /// would fill them, so the question points at them.
   private func gapPreview(_ calendar: OwnCalendar) -> [Day: Pattern] {
-    let offPatterns = calendar.patterns.filter(\.countsAsOff)
+    let offPatterns = calendar.patterns.inUse.filter(\.countsAsOff)
     guard let fill = offPatterns.first(where: { $0.id == gapFill }) ?? offPatterns.first else {
       return [:]
     }
@@ -504,7 +504,7 @@ struct CalendarScreen: View {
     if let day = entering {
       let shown = calendar.shown(from: day, through: day)
       EntryTray(
-        day: day, week: settings.device.week, patterns: calendar.patterns,
+        day: day, week: settings.device.week, patterns: calendar.patterns.inUse,
         canClear: shown[day] != nil,
         canSkip: day != day.daysOfMonth.last,
         onEnter: { shift in
@@ -563,7 +563,7 @@ struct CalendarScreen: View {
     entering = nil
     let calendar = currentCalendar
     // With no pattern that counts as off there is nothing to offer.
-    guard holidayShift(of: calendar.patterns) != nil else {
+    guard holidayShift(of: calendar.patterns.inUse) != nil else {
       return
     }
     let month = day.firstOfMonth
@@ -574,7 +574,7 @@ struct CalendarScreen: View {
   /// What 完了 asks about the month's blank days, while there are some
   /// and a pattern that counts as off to fill them with.
   private func gapSheet(_ calendar: OwnCalendar) -> GapSheet? {
-    let offPatterns = calendar.patterns.filter(\.countsAsOff)
+    let offPatterns = calendar.patterns.inUse.filter(\.countsAsOff)
     guard !offPatterns.isEmpty, !gaps.isEmpty else { return nil }
     return GapSheet(
       days: gaps, offPatterns: offPatterns, picked: $gapFill,

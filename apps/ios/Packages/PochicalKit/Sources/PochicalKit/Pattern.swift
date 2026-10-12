@@ -20,10 +20,14 @@ public struct Pattern: Hashable, Sendable, Identifiable {
   public var countsAsOff: Bool
   /// Another pattern entered on the following day too, like 明け after 夜勤.
   public var nextDay: PatternID?
+  /// No longer used (使わなくなったパターン, spec/shift-patterns.md): kept
+  /// for the days it is on, offered nowhere a pattern is picked.
+  public var archived: Bool
 
   public init(
     id: PatternID, name: String, emoji: String, symbol: String, icon: String, color: Int,
-    time: ShiftTime? = nil, countsAsOff: Bool = false, nextDay: PatternID? = nil
+    time: ShiftTime? = nil, countsAsOff: Bool = false, nextDay: PatternID? = nil,
+    archived: Bool = false
   ) {
     self.id = id
     self.name = name
@@ -34,7 +38,13 @@ public struct Pattern: Hashable, Sendable, Identifiable {
     self.time = time
     self.countsAsOff = countsAsOff
     self.nextDay = nextDay
+    self.archived = archived
   }
+}
+
+extension Array where Element == Pattern {
+  /// The patterns to pick from: those still in use, archived ones left out.
+  public var inUse: [Pattern] { filter { !$0.archived } }
 }
 
 /// A standard start and end, "HH:MM". An end at or before the start runs
@@ -88,17 +98,25 @@ public func patternsForJob(
     pattern.nextDay = pattern.nextDay.map(renameOf)
     return pattern
   }
+  // Kept for its days, but archived: the old job's keys go.
   let kept = own.filter { pattern in
     !coming.contains { $0.id == pattern.id } && usedBefore(pattern.id)
+  }
+  .map { pattern in
+    var pattern = pattern
+    pattern.archived = true
+    return pattern
   }
   return (coming + kept, sequence.map(renameOf))
 }
 
 extension Pattern {
-  /// Whether two patterns would show and count a day the same way.
+  /// Whether two patterns would show and count a day the same way,
+  /// whether in use or not.
   func isSame(as other: Pattern) -> Bool {
     var other = other
     other.id = id
+    other.archived = archived
     return self == other
   }
 }

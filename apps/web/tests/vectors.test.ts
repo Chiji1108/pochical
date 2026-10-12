@@ -399,7 +399,13 @@ describe("spec/vectors/together.json", () => {
 
 describe("spec/vectors/patterns.json", () => {
   const idsOf = (patterns: readonly Pattern[]) =>
-    plain(patterns.map(({ id, nextDay }) => ({ id, nextDay })));
+    plain(
+      patterns.map(({ id, nextDay, archived }) => ({
+        archived: archived === true ? true : undefined,
+        id,
+        nextDay,
+      }))
+    );
   for (const { name, patterns, id, expected } of patternChanges.deleted) {
     test(name, () => {
       expect(idsOf(patternsWithout(patterns.map(patternOf), id))).toEqual(

@@ -57,7 +57,7 @@ struct RemindersPage: View {
   /// What it is and when it next goes off, opening it to edit, and its
   /// switch.
   private func row(_ reminder: Binding<Reminder>, calendar: OwnCalendar) -> some View {
-    let shown = reminder.wrappedValue.remindable(calendar.patterns)
+    let shown = reminder.wrappedValue.remindable(calendar.patterns.inUse)
     let picked = shown.filter { !reminder.wrappedValue.skip.contains($0.id) }
     let next = nextFiring(reminder.wrappedValue, calendar: calendar)
     return HStack {
@@ -162,7 +162,7 @@ private struct ReminderEditor: View {
 
   var body: some View {
     let draft = self.draft
-    let shown = draft.remindable(calendar.patterns)
+    let shown = draft.remindable(calendar.patterns.inUse)
     let picked = shown.filter { !skip.contains($0.id) }
     NavigationStack {
       Form {
@@ -270,7 +270,7 @@ private struct ReminderEditor: View {
       return (next, true)
     }
     let tomorrow = Day.today.adding(days: 1)
-    for pattern in draft.remindable(calendar.patterns) where !draft.skip.contains(pattern.id) {
+    for pattern in draft.remindable(calendar.patterns.inUse) where !draft.skip.contains(pattern.id) {
       if let firing = draft.firing(on: tomorrow, entry: DayEntry(shift: pattern.id), pattern: pattern) {
         return (firing, false)
       }

@@ -34,6 +34,7 @@ public struct PatternRow: Hashable, Sendable {
   public var end: String?
   public var countsAsOff: Bool
   public var nextDay: String?
+  public var archived = false
 }
 
 /// The order the patterns are shown in, one row a place.
@@ -228,6 +229,14 @@ extension DatabaseMigrator {
           "offsetMs" INTEGER NOT NULL,
           "cursor" INTEGER NOT NULL DEFAULT 0
         ) STRICT
+        """
+      )
+      .execute(db)
+    }
+    registerMigration("Keep patterns no longer used") { db in
+      try #sql(
+        """
+        ALTER TABLE "patterns" ADD COLUMN "archived" INTEGER NOT NULL DEFAULT 0
         """
       )
       .execute(db)

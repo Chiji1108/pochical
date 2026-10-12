@@ -249,11 +249,11 @@ private struct RepeatPeriodPage: View {
         .settingsRows()
         if repeats {
           HolidayChoice(
-            patterns: values.patterns,
+            patterns: values.patterns.inUse,
             on: Binding(get: { order.holidaysOff }, set: { setHolidaysOff($0) }),
             shift: Binding(
               // The one it takes, even one that no longer counts as off.
-              get: { order.holidayShift ?? holidayShift(of: values.patterns) },
+              get: { order.holidayShift ?? holidayShift(of: values.patterns.inUse) },
               set: { setHolidaysOff(true, picking: $0) }))
         }
         Section {
@@ -497,7 +497,7 @@ private struct RepeatEditor: View {
     let picked = day ?? current.map { $0.anchor ?? $0.start } ?? nextMonthStart
     let start = current?.start ?? picked
     let offShift = holidayShift(
-      of: values.patterns, picked: holidayPick ?? current?.holidayShift)
+      of: values.patterns.inUse, picked: holidayPick ?? current?.holidayShift)
     let holidays =
       offShift != nil
       && (holidaysOff ?? current?.holidaysOff
@@ -507,7 +507,7 @@ private struct RepeatEditor: View {
     RepeatCalendar(
       sequence: Binding(get: { steps }, set: { sequence = $0 }),
       anchor: Binding(get: { picked }, set: { day = $0 }),
-      cover: current == nil ? .anchor : .from(start), patterns: values.patterns,
+      cover: current == nil ? .anchor : .from(start), patterns: values.patterns.inUse,
       before: shown, holidayShift: holidays ? offShift : nil, holidayCountry: HolidayCountry.current
     )
     .background(colors.backgroundBase)
@@ -537,7 +537,7 @@ private struct RepeatEditor: View {
             .settingsOnPage()
           }
           HolidayChoice(
-            patterns: values.patterns,
+            patterns: values.patterns.inUse,
             on: Binding(get: { holidays }, set: { holidaysOff = $0 }),
             shift: Binding(get: { offShift }, set: { holidayPick = $0 }))
           Section {

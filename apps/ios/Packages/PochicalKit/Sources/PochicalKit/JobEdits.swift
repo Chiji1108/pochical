@@ -91,7 +91,7 @@ extension OwnValues {
     holidayCountry: String, now: Int64, in db: Database
   ) throws {
     let byID = Dictionary(patterns.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    let offShift = holidayShift(of: patterns)
+    let offShift = holidayShift(of: patterns.inUse)
     let holidaysOff =
       offShift != nil && holidaysOffByDefault(sequence, start: anchor, patterns: byID)
     try self.start(

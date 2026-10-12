@@ -43,7 +43,7 @@ struct StylePreview: View {
     let days = (0..<(heading ? 7 : 14)).map { first.adding(days: $0) }
     // The person's patterns alone, without their days, so no memo shows.
     let calendar = OwnCalendar(days: [], patterns: patterns, patternOrder: patternOrder, orders: [])
-    let shown = stylePreviewDays(days, patterns: calendar.patterns)
+    let shown = stylePreviewDays(days, patterns: calendar.patterns.inUse)
     let pageDays = PageDays(
       today: today, calendar: calendar, colorsHolidays: week.holiday,
       offShown: settings.device.look.options.blankOff ? .hidden : .shown, selected: nil,

@@ -73,7 +73,7 @@ extension PatternRow {
     let time = start.flatMap { start in end.map { ShiftTime(start: start, end: $0) } }
     return Pattern(
       id: id, name: name, emoji: emoji, symbol: symbol, icon: icon, color: color, time: time,
-      countsAsOff: countsAsOff, nextDay: nextDay)
+      countsAsOff: countsAsOff, nextDay: nextDay, archived: archived)
   }
 }
 

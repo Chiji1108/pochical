@@ -3,6 +3,7 @@ import { useContext, useState } from "react";
 
 import type { RepeatRule, Schedule } from "../lib/design-days";
 import { APP_VERSION, useDevice } from "../lib/design-device";
+import { patternsInUse } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import { site } from "../lib/site";
@@ -104,7 +105,7 @@ export function DesignSettings({
   // the tab bar was, as typing an order does.
   const [jobOrdering, setJobOrdering] = useState(false);
   const weekTools = useWeek();
-  const patternKeys = patterns.map((pattern) => pattern.id);
+  const patternKeys = patternsInUse(patterns).map((pattern) => pattern.id);
   const preview = stylePreviewOf(patterns, weekTools.weekDates);
   // From the week holding the 21st, so all three holidays of the 21st to
   // 23rd fall in the fortnight whatever day the week starts on.

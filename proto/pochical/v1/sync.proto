@@ -364,6 +364,9 @@ message Pattern {
   bool counts_as_off = 8;
   // Another pattern's id, entered on the following day too.
   optional string next_day = 9;
+  // No longer used (spec/shift-patterns.md, Patterns no longer used): it
+  // keeps its days' marks but is offered nowhere a pattern is picked.
+  bool archived = 10;
 }
 
 // One of the owner's patterns as a device set it, whole: each is one

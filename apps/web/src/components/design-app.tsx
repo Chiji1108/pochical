@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 
 import {
   bookOf,
+  patternsInUse,
   OwnPatternsContext,
   PatternsContext,
   presetPatterns,
@@ -78,7 +79,7 @@ export function DesignApp({
   const book: PatternBook = { ...presetPatterns, ...bookOf(ownPatterns) };
   return (
     <PatternsContext value={book}>
-      <OwnPatternsContext value={ownPatterns}>
+      <OwnPatternsContext value={patternsInUse(ownPatterns)}>
         <PhoneContext value={phoneRef}>
           <ToastContext value={toast}>
             <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
