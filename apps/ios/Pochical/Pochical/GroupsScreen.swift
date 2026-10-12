@@ -240,32 +240,64 @@ enum GroupRoute: Hashable {
   case chat(GroupRow, thread: String, with: String?, sharing: Day? = nil)
 }
 
-/// No group yet: a sample of a shared week and what sharing shifts is for,
-/// then 作成 and QR参加 (/design's NoGroups).
+/// No group yet: a sample of 一覧, the table a group is mostly read in,
+/// filling the screen and fading out under what sharing shifts is for and
+/// the buttons, 作成 and QR参加, at the foot (/design's NoGroups). Text
+/// too large to leave the sample room scrolls the words alone.
 private struct NoGroups: View {
   @Environment(\.themeColors) private var colors
   let onNew: () -> Void
   let onScan: () -> Void
 
   var body: some View {
-    VStack(spacing: 20) {
+    ViewThatFits(in: .vertical) {
+      VStack(spacing: 0) {
+        sample
+        foot
+      }
+      ScrollView {
+        foot.padding(.vertical, 24)
+      }
+    }
+  }
+
+  /// As much of the table as there is room for, at least a few rows, its
+  /// lower part fading into the ground; a picture only.
+  private var sample: some View {
+    let days = (0..<sampleDays).map { Day.today.adding(days: $0) }
+    let members = sampleMembers(days)
+    return Color.clear
+      .frame(minHeight: 180, maxHeight: .infinity)
+      .overlay(alignment: .top) {
+        VStack(spacing: 0) {
+          GroupDayHeader(members: members, groupID: "sample")
+          ForEach(days, id: \.self) { day in
+            GroupDayRow(day: day, members: members, picked: false, onPick: { _ in })
+          }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+      }
+      .clipped()
+      .mask {
+        LinearGradient(
+          stops: [.init(color: .black, location: 0.35), .init(color: .clear, location: 0.92)],
+          startPoint: .top, endPoint: .bottom)
+      }
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
+  }
+
+  private var foot: some View {
+    VStack(spacing: 12) {
       Text("グループでシフトを共有できます")
         .font(.title2.bold())
         .multilineTextAlignment(.center)
-      VStack(spacing: 4) {
-        GroupWeekdays(compact: true, days: week)
-        GroupWeek(days: week, members: sampleMembers(week), compact: true, marksToday: false)
-      }
-      .padding(EdgeInsets(top: 8, leading: 4, bottom: 12, trailing: 8))
-      .background(colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl))
-      .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
-      .accessibilityElement(children: .ignore)
-      .accessibilityLabel("サンプルの共有シフト表")
       Text("家族や友達とシフトを見せ合って、\n休みが重なる日がすぐ分かります。")
         .font(.subheadline)
         .foregroundStyle(colors.textTertiary)
         .multilineTextAlignment(.center)
         .lineSpacing(4)
+        .padding(.bottom, 12)
       Button(action: onNew) {
         Label("グループを作成", systemImage: "plus")
           .font(.headline)
@@ -283,17 +315,19 @@ private struct NoGroups: View {
       .buttonBorderShape(.capsule)
       .tint(colors.accentDefault)
     }
-    .frame(maxHeight: .infinity)
+    .padding(.bottom, 16)
   }
-
-  private var week: [Day] { upcomingWeek() }
 }
+
+/// The sample's days, from today: more than any phone shows, the rest
+/// faded out under the words.
+private let sampleDays = 14
 
 /// The sample's people, as /design's: a partner at the office, home on
 /// Wednesdays; a mother part-time on Mondays, Wednesdays and Fridays, both
 /// off on weekends and holidays; a nurse whose week, the same every week,
 /// has Saturday off too, so everyone is off one day.
-private func sampleMembers(_ week: [Day]) -> [GroupMember] {
+private func sampleMembers(_ days: [Day]) -> [GroupMember] {
   let off = sample("off", "休み", "🌿", "leaf", 0, off: true)
   let office = sample("office", "出勤", "💼", "briefcase", 9)
   let home = sample("home", "在宅", "🏠", "house", 10)
@@ -307,23 +341,23 @@ private func sampleMembers(_ week: [Day]) -> [GroupMember] {
   // Sunday on: 明け, 休み, 日勤, 日勤, 夜勤, 明け, 休み.
   let nurseWeek = ["after", "off", "day", "day", "night", "after", "off"]
   let rests = { (day: Day) in day.weekday == 0 || day.weekday == 6 || day.holidayName != nil }
-  let days = { (shift: (Day) -> PatternID) in
-    Dictionary(uniqueKeysWithValues: week.map { ($0, shift($0)) })
+  let shifts = { (shift: (Day) -> PatternID) in
+    Dictionary(uniqueKeysWithValues: days.map { ($0, shift($0)) })
   }
   return [
     sampleMember(
       "yuki", "ゆうき", face: 1005,
       MemberCalendar(
         patterns: [office, home, off],
-        days: days { rests($0) ? off.id : $0.weekday == 3 ? home.id : office.id })),
+        days: shifts { rests($0) ? off.id : $0.weekday == 3 ? home.id : office.id })),
     sampleMember(
       "mother", "お母さん", face: 429,
       MemberCalendar(
         patterns: [part, off],
-        days: days { [1, 3, 5].contains($0.weekday) && $0.holidayName == nil ? part.id : off.id })),
+        days: shifts { [1, 3, 5].contains($0.weekday) && $0.holidayName == nil ? part.id : off.id })),
     sampleMember(
       "misaki", "みさき", face: 823,
-      MemberCalendar(patterns: nurse, days: days { nurseWeek[$0.weekday] })),
+      MemberCalendar(patterns: nurse, days: shifts { nurseWeek[$0.weekday] })),
   ]
 }
 
