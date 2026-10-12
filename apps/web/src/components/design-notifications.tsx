@@ -18,6 +18,7 @@ import {
   reminderName,
   remindable,
   shiftText,
+  timeOfDayText,
 } from "../lib/design-reminders";
 import type { Firing, Reminder, ReminderKind } from "../lib/design-reminders";
 import { useSettings } from "../lib/design-settings-store";
@@ -146,8 +147,6 @@ function usePermissionPrompt() {
   return { ask, prompt };
 }
 
-const leadingZero = /^0/u;
-
 // Once, the first time shifts are entered, while the system has not been
 // asked and a reminder is on: the reminders offered in words, as the
 // moment shows what they are for, and the system's question only after
@@ -176,7 +175,7 @@ export function useReminderOffer() {
         action="お知らせする"
         cancel="あとで"
         destructive={false}
-        message={`${(eveningTime ?? "").replace(leadingZero, "")}に通知が届きます。`}
+        message={`${timeOfDayText(eveningTime ?? "")}に通知が届きます。`}
         onCancel={() => {
           setStep(undefined);
         }}
