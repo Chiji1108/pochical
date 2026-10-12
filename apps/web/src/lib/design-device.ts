@@ -27,10 +27,14 @@ type DeviceState = {
   platform: Platform;
   wallpaperHue: number;
   notifications: NotificationPermission;
+  // The reminders were offered once, after shifts were first entered
+  // (spec/calendar.md, Reminders): never again, whatever the answer.
+  reminderOffered: boolean;
 };
 
 export const useDevice = create<DeviceState>()(() => ({
   notifications: "notAsked",
   platform: "ios",
+  reminderOffered: false,
   wallpaperHue: wallpaperSamples[0].hue,
 }));

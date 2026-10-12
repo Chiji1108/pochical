@@ -38,6 +38,7 @@ import { DayDetail } from "./design-day-detail";
 import { dayGrid, WeekdayRow } from "./design-day-grid";
 import { GapSheet } from "./design-gap-sheet";
 import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
+import { useReminderOffer } from "./design-notifications";
 import { Pager } from "./design-pager";
 import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import type { CalendarAccess } from "./design-save-sheet";
@@ -88,8 +89,14 @@ export function DesignCalendar({
   const [openSheet, setOpenSheet] = useState<
     "breakdown" | "save" | "gap" | null
   >(null);
+  // The reminders offered once shifts were first entered, after the gap
+  // sheet when it asks first.
+  const reminderOffer = useReminderOffer();
   const sheetChange = (name: typeof openSheet) => (open: boolean) => {
     setOpenSheet(open ? name : null);
+    if (!open && name === "gap") {
+      reminderOffer.offer();
+    }
   };
   // Blank days between entered ones, asked about when entering ends.
   const [gapDays, setGapDays] = useState<Date[]>([]);
@@ -259,6 +266,8 @@ export function DesignCalendar({
       setGapFill(undefined);
       setOfferBlank(offDisplay === "show");
       setOpenSheet("gap");
+    } else if (Object.values(schedule).some((entry) => entry !== undefined)) {
+      reminderOffer.offer();
     }
   }
   // While the gap sheet asks, its days drawn faint as the pattern picked
@@ -566,6 +575,7 @@ export function DesignCalendar({
         onOpenChange={sheetChange("gap")}
         open={openSheet === "gap"}
       />
+      {reminderOffer.node}
       <span aria-live="polite" className={srOnly}>
         {announcement}
       </span>

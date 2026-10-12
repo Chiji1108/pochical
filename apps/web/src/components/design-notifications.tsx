@@ -1,5 +1,6 @@
 import { Bell, BellOff, Check } from "lucide-react";
 import { useContext, useState } from "react";
+import type { ReactNode } from "react";
 import { css, cx } from "styled-system/css";
 
 import type { Schedule } from "../lib/design-days";
@@ -143,6 +144,55 @@ function usePermissionPrompt() {
     />
   );
   return { ask, prompt };
+}
+
+// Once, the first time shifts are entered, while the system has not been
+// asked and a reminder is on: the reminders offered in words, as the
+// moment shows what they are for, and the system's question only after
+// お知らせする. あとで lets it be; 設定 › 通知 › リマインド still asks.
+export function useReminderOffer() {
+  const notifications = useDevice((state) => state.notifications);
+  const offered = useDevice((state) => state.reminderOffered);
+  const reminders = useSettings((state) => state.device.reminders);
+  const [step, setStep] = useState<"offer" | "system">();
+  const offer = () => {
+    if (
+      offered ||
+      notifications !== "notAsked" ||
+      !reminders.some((reminder) => reminder.on)
+    ) {
+      return;
+    }
+    useDevice.setState({ reminderOffered: true });
+    setStep("offer");
+  };
+  let node: ReactNode = null;
+  if (step === "offer") {
+    node = (
+      <ConfirmDialog
+        action="お知らせする"
+        cancel="あとで"
+        destructive={false}
+        message="前の日の21時に、次の日のシフトを通知でお知らせします。あとから設定で変えられます。"
+        onCancel={() => {
+          setStep(undefined);
+        }}
+        onConfirm={() => {
+          setStep("system");
+        }}
+        title="明日のシフトを前の晩にお知らせしますか？"
+      />
+    );
+  } else if (step === "system") {
+    node = (
+      <PermissionPrompt
+        onClose={() => {
+          setStep(undefined);
+        }}
+      />
+    );
+  }
+  return { node, offer };
 }
 
 // Over a page's settings while nothing can arrive: before asking, a way to
