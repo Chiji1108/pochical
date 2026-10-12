@@ -327,13 +327,16 @@ struct CalendarScreen: View {
       Text("\(time)に通知が届きます。")
     }
     // A repeating order just set up fills the days without ポチポチ入力:
-    // the reminders are offered as the calendar shows.
-    .task {
+    // the reminders are offered as the calendar shows, each time it does,
+    // as 新しい仕事にする is set up from 設定 while the calendar's tab stays.
+    .onAppear {
       guard ReminderOffer.takePending() else { return }
-      await Notifications.shared.readPermission()
-      if let time = ReminderOffer.due(reminders: settings.device.reminders) {
-        ReminderOffer.offered()
-        offeringReminders = time
+      Task {
+        await Notifications.shared.readPermission()
+        if let time = ReminderOffer.due(reminders: settings.device.reminders) {
+          ReminderOffer.offered()
+          offeringReminders = time
+        }
       }
     }
     .task {
