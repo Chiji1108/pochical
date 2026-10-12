@@ -30,9 +30,20 @@ public protocol TokenStore: Sendable {
 /// the background.
 public struct KeychainTokenStore: TokenStore {
   let service = "app.pochical.session"
-  let account = "token"
+  let account: String
 
-  public init() {}
+  public init() {
+    account = "token"
+  }
+
+  private init(account: String) {
+    self.account = account
+  }
+
+  /// The session of a user the device left behind when it switched to an
+  /// account in use, kept until that user is deleted (spec/sync-protocol.md, Switching to
+  /// an account in use).
+  public static let leftBehind = KeychainTokenStore(account: "leftBehind")
 
   public func token() throws -> String? {
     var found: CFTypeRef?

@@ -1,3 +1,4 @@
+import Connect
 import Foundation
 import PochicalProto
 import SQLiteData
@@ -58,12 +59,30 @@ extension GroupCalls {
     _ = try await users.takeAccount(request: request, headers: account.headers()).result.get()
   }
 
-  /// Deletes the user whose session `token` is, rather than the one signed
-  /// in now: the device's user left behind as it switched to the account.
-  public func deleteAccount(signedInAs token: String) async throws {
-    _ = try await users.deleteAccount(
-      request: Pochical_V1_DeleteAccountRequest(), headers: ["Authorization": ["Bearer \(token)"]]
-    ).result.get()
+  /// Deletes the user the device left behind as it switched to an account
+  /// in use, its session kept in the Keychain until that is done: at the
+  /// switch, and again each time the app comes to the front while it
+  /// failed, as a connection lost meanwhile would otherwise leave that
+  /// user, their name and lines in the groups with them (POC-15).
+  public func deleteLeftBehind(_ token: String? = nil) async {
+    let store = KeychainTokenStore.leftBehind
+    if let token {
+      try? store.forget()
+      try? store.keep(token)
+    }
+    guard let kept = try? store.token() else { return }
+    let answer = await users.deleteAccount(
+      request: Pochical_V1_DeleteAccountRequest(), headers: ["Authorization": ["Bearer \(kept)"]])
+    // Gone, or its session no longer signing in as that user is gone
+    // already; forgotten unless a later switch left another behind meanwhile.
+    let gone: Bool
+    switch answer.result {
+    case .success: gone = true
+    case .failure(let error): gone = error.code == .unauthenticated
+    }
+    if gone, (try? store.token()) == kept {
+      try? store.forget()
+    }
   }
 }
 

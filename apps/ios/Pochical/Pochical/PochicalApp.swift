@@ -71,6 +71,8 @@ struct PochicalApp: App {
         // settings meanwhile.
         Task { await Notifications.shared.readPermission() }
         Task { await sync.start() }
+        // A user left behind by a switch whose deleting failed.
+        Task { await groupCalls.deleteLeftBehind() }
       default:
         break
       }
