@@ -55,6 +55,13 @@ const rollSteps = {
       : { opacity: 0, y: `${direction * -100}%` },
   shown: { opacity: 1, y: 0 },
 };
+// A name that crossfades in place rather than rolling, as 今月のお休み's.
+const fadeSteps = {
+  coming: ({ instant }: Turn) => ({ opacity: instant ? 1 : 0 }),
+  gone: ({ instant }: Turn) =>
+    instant ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0 },
+  shown: { opacity: 1 },
+};
 
 type Rolled = {
   text: string;
@@ -62,6 +69,9 @@ type Rolled = {
   previous?: string;
   next?: string;
   letters?: boolean;
+  // Crossfades in place rather than rolling: for small names under a
+  // heading that rolls, so the screen does not move everywhere at once.
+  fade?: boolean;
   // Kept to its right edge, as a value at the end of a row, so a longer
   // name coming in grows to the left.
   end?: boolean;
@@ -97,6 +107,7 @@ function RollingBox({
   previous,
   next,
   letters = false,
+  fade = false,
   end = false,
   render,
   progress,
@@ -141,6 +152,7 @@ function RollingBox({
           <RollingPlace
             count={parts.length}
             drag={drag}
+            fade={fade}
             hasNext={coming.next !== undefined}
             hasPrevious={coming.previous !== undefined}
             index={index}
@@ -158,6 +170,7 @@ function RollingBox({
         <ComingName
           drag={drag}
           end={end}
+          fade={fade}
           letters={letters}
           ref={nextRef}
           render={render}
@@ -169,6 +182,7 @@ function RollingBox({
         <ComingName
           drag={drag}
           end={end}
+          fade={fade}
           letters={letters}
           ref={previousRef}
           render={render}
@@ -187,6 +201,7 @@ function RollingPlace({
   text,
   turn,
   drag,
+  fade,
   hasNext,
   hasPrevious,
   render = asIs,
@@ -197,6 +212,7 @@ function RollingPlace({
   text: string;
   turn: Turn;
   drag: MotionValue<number>;
+  fade: boolean;
   hasNext: boolean;
   hasPrevious: boolean;
   render?: (text: string) => ReactNode;
@@ -206,9 +222,8 @@ function RollingPlace({
     const going = (value > 0 && hasNext) || (value < 0 && hasPrevious);
     return going ? letterShare(Math.abs(value), index, count) : 0;
   };
-  const y = useTransform(
-    drag,
-    (value) => `${-Math.sign(value) * out(value) * 100}%`
+  const y = useTransform(drag, (value) =>
+    fade ? "0%" : `${-Math.sign(value) * out(value) * 100}%`
   );
   const opacity = useTransform(drag, (value) => 1 - out(value));
   return (
@@ -223,7 +238,7 @@ function RollingPlace({
             initial="coming"
             key={`${text}-${index}`}
             transition={{ ...roll, delay: index * LETTER_DELAY }}
-            variants={rollSteps}
+            variants={fade ? fadeSteps : rollSteps}
           >
             {render(part)}
           </motion.span>
@@ -239,6 +254,7 @@ function ComingName({
   text,
   side,
   letters,
+  fade,
   end,
   drag,
   ref,
@@ -248,6 +264,7 @@ function ComingName({
   end: boolean;
   side: 1 | -1;
   letters: boolean;
+  fade: boolean;
   drag: MotionValue<number>;
   ref: Ref<HTMLSpanElement>;
   render?: (text: string) => ReactNode;
@@ -259,6 +276,7 @@ function ComingName({
         <ComingPart
           count={parts.length}
           drag={drag}
+          fade={fade}
           index={index}
           // oxlint-disable-next-line react/no-array-index-key
           key={index}
@@ -277,6 +295,7 @@ function ComingPart({
   count,
   side,
   drag,
+  fade,
   render = asIs,
 }: {
   part: string;
@@ -284,13 +303,13 @@ function ComingPart({
   count: number;
   side: 1 | -1;
   drag: MotionValue<number>;
+  fade: boolean;
   render?: (text: string) => ReactNode;
 }) {
   const share = (value: number) =>
     Math.sign(value) === side ? letterShare(Math.abs(value), index, count) : 0;
-  const y = useTransform(
-    drag,
-    (value) => `${side * (1 - share(value)) * 100}%`
+  const y = useTransform(drag, (value) =>
+    fade ? "0%" : `${side * (1 - share(value)) * 100}%`
   );
   const opacity = useTransform(drag, share);
   return (

@@ -8,7 +8,7 @@ import SwiftUI
 /// A number of days that opens what they are (/design's SummaryRow): a
 /// rounded row, the label quiet, the number in the accent, the chevron
 /// faint, the whole row pressed. The label and the number may be names
-/// that roll, as the calendar's do with the month.
+/// that change with the month.
 struct SummaryRow<Label: View, Days: View>: View {
   @Environment(\.themeColors) private var colors
   /// What a screen reader hears for the whole row.
@@ -49,8 +49,8 @@ struct SummaryRow<Label: View, Days: View>: View {
 }
 
 /// 今月のお休み, or 〇月のお休み away from this month (/design's
-/// MonthSummary): the month and its count roll as the heading's name does,
-/// following the pages to the month coming in, so the row is already right
+/// MonthSummary): the month and its count crossfade in place, under a
+/// heading that rolls, following the pages to the month coming in, so the row is already right
 /// as the page lands; the words around them stay put. With reduced motion
 /// they just change.
 struct MonthSummary: View {
@@ -72,11 +72,11 @@ struct MonthSummary: View {
       onOpen(month)
     } label: {
       HStack(alignment: .firstTextBaseline, spacing: 0) {
-        RollingText(text: name(month), coming: name(coming), share: share)
+        FadingText(text: name(month), coming: name(coming), share: share)
         Text("のお休み")
       }
     } days: {
-      RollingText(
+      FadingText(
         text: String(daysOff(month)), coming: String(daysOff(coming)), share: share)
     }
   }
