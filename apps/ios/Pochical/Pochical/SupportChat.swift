@@ -123,7 +123,7 @@ struct SupportChatScreen: View {
   var body: some View {
     ScrollViewReader { reader in
       ScrollView {
-        LazyVStack(spacing: 4) {
+        LazyVStack(spacing: CGFloat(Chat.lineGap)) {
           intro
           ForEach(Array(lines.enumerated()), id: \.element.id) { index, line in
             let before = index > 0 ? lines[index - 1] : nil
@@ -151,7 +151,9 @@ struct SupportChatScreen: View {
               }
             }
             .id(line.id)
-            .padding(.top, first && !newDay ? 8 : 0)
+            // Parted where a run starts, under the day too, as the group
+            // chats' lines are.
+            .padding(.top, first ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
           }
           ForEach(waiting) { line in
             waitingRow(line)

@@ -138,6 +138,7 @@ struct Onboarding: View {
       with: incoming, sequence: sequence, anchor: anchor, today: .today,
       holidayCountry: HolidayCountry.current, now: now, in: $0)
   }
+  ReminderOffer.setUpOrder(sequence)
 }
 
 // MARK: Steps

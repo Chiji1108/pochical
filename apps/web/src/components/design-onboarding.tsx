@@ -3,6 +3,7 @@ import { useContext, useState } from "react";
 
 import type { RepeatRule } from "../lib/design-days";
 import { monthAfter } from "../lib/design-days";
+import { useDevice } from "../lib/design-device";
 import { presetList } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
@@ -83,6 +84,11 @@ export function DesignOnboarding({
   }>();
 
   function finish({ patternKeys, sequence, anchor }: WorkSetup, note?: string) {
+    // A repeating order fills the days without ポチポチ入力, so the
+    // reminders are offered as the calendar shows instead.
+    if (sequence !== undefined && sequence.length > 0) {
+      useDevice.setState({ reminderOfferPending: true });
+    }
     setFinished({
       note,
       person: createUserStore({

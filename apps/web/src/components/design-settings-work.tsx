@@ -10,6 +10,7 @@ import {
   holidayShiftOf,
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
+import { useDevice } from "../lib/design-device";
 import { isDayOff, presetList, usePatterns } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
@@ -535,6 +536,10 @@ export function JobChangePage({
           }}
           onFinish={({ patternKeys, sequence, anchor }) => {
             onOrdering(false);
+            // Offered as the calendar next shows, as after はじめの設定.
+            if (sequence !== undefined && sequence.length > 0) {
+              useDevice.setState({ reminderOfferPending: true });
+            }
             onApply({
               patterns: presetList(patternKeys),
               rule: {

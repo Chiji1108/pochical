@@ -1,5 +1,5 @@
 import { Bell, BellOff, Check } from "lucide-react";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cx } from "styled-system/css";
 
@@ -168,6 +168,18 @@ export function useReminderOffer() {
     useDevice.setState({ reminderOffered: true });
     setStep("offer");
   };
+  // A repeating order just set up: offered as the calendar shows.
+  const pending = useDevice((state) => state.reminderOfferPending);
+  useEffect(() => {
+    if (!pending) {
+      return;
+    }
+    useDevice.setState({ reminderOfferPending: false });
+    if (!offered && notifications === "notAsked" && eveningTime !== undefined) {
+      useDevice.setState({ reminderOffered: true });
+      setStep("offer");
+    }
+  }, [pending, offered, notifications, eveningTime]);
   let node: ReactNode = null;
   if (step === "offer") {
     node = (

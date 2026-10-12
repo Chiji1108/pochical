@@ -326,6 +326,16 @@ struct CalendarScreen: View {
     } message: { time in
       Text("\(time)に通知が届きます。")
     }
+    // A repeating order just set up fills the days without ポチポチ入力:
+    // the reminders are offered as the calendar shows.
+    .task {
+      guard ReminderOffer.takePending() else { return }
+      await Notifications.shared.readPermission()
+      if let time = ReminderOffer.due(reminders: settings.device.reminders) {
+        ReminderOffer.offered()
+        offeringReminders = time
+      }
+    }
     .task {
       // Past midnight, while the app is open or waiting in the background.
       for await _ in NotificationCenter.default.notifications(named: .NSCalendarDayChanged) {
