@@ -61,6 +61,25 @@ struct CalendarScreen: View {
   /// screen, for the day's sheet to rise to just under the week.
   @State private var weekEnd: CGFloat = 0
   @State private var foot: CGFloat = 0
+  /// The screen's room and what stands around the month, measured, so a
+  /// short screen fits its six weeks (`cellHeight`).
+  @State private var room = Room()
+  private struct Room {
+    var total: CGFloat = 0
+    var heading: CGFloat = 0
+    var weekdays: CGFloat = 0
+    var bottom: CGFloat = 0
+  }
+  /// How tall a day is: DayCell.fullHeight where the screen has room, as
+  /// /design's; on a short screen, as tall as six weeks fit between the
+  /// heading and the bottom, which keep their size.
+  private var cellHeight: CGFloat {
+    guard room.total > 0 else { return DayCell.fullHeight }
+    return MonthPage.cellHeight(
+      fitting: room.total - room.heading - room.weekdays - room.bottom - Self.leastSpare)
+  }
+  /// Kept free over the bottom however short the screen.
+  private static let leastSpare: CGFloat = 8
   /// The day's sheet as it opens: up to just under the folded week, which
   /// stays in sight to tap, measured so it fits each screen.
   private var underWeek: PresentationDetent {
@@ -83,8 +102,10 @@ struct CalendarScreen: View {
     VStack(spacing: 0) {
       heading
         .padding(.horizontal, Self.screenEdge)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.heading = $0 }
       WeekdayRow(week: settings.device.week)
         .padding(.horizontal, Self.screenEdge)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.weekdays = $0 }
       // The pages run to the screen's edges, so a month slides out of
       // sight rather than being cut off inside them.
       ScrollView(.horizontal) {
@@ -119,11 +140,11 @@ struct CalendarScreen: View {
       } action: { _, pages in
         position.pages = pages
       }
-      .frame(height: DayCell.height + (MonthPage.height - DayCell.height) * (1 - fold))
+      .frame(height: cellHeight + (MonthPage.height(cell: cellHeight) - cellHeight) * (1 - fold))
       // Where the folded week ends, however folded the pages are now.
       .onGeometryChange(for: CGFloat.self) { proxy in
-        proxy.frame(in: .global).minY + DayCell.height
-      } action: { weekEnd = $0 }
+        proxy.frame(in: .global).minY
+      } action: { weekEnd = $0 + cellHeight }
       // While a day is open, a pull down unfolds the month, following the
       // finger (spec/calendar.md, A day's detail).
       .simultaneousGesture(
@@ -145,7 +166,15 @@ struct CalendarScreen: View {
           // Clear of the tab bar's glass, as /design's; while entering the
           // tabs give way, and the tray sits low for the thumb.
           .padding(.bottom, entering == nil ? 24 : 8)
+          // Measured at rest, so the days keep their size while entering.
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+            if entering == nil { room.bottom = height }
+          }
       }
+    }
+    .environment(\.dayCellHeight, cellHeight)
+    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+      if entering == nil, opened == nil { room.total = height }
     }
     .onGeometryChange(for: CGFloat.self) { proxy in
       proxy.frame(in: .global).maxY
@@ -316,14 +345,14 @@ struct CalendarScreen: View {
 
   /// How far a pull unfolds the month: the month's foot comes down with
   /// the finger.
-  private static let unfoldDistance = MonthPage.height - DayCell.height
+  private var unfoldDistance: CGFloat { MonthPage.height(cell: cellHeight) - cellHeight }
 
   /// How far `drag` pulls the month open, from `pull` so far.
   private func pullShare(_ drag: DragGesture.Value, from pull: CGFloat) -> CGFloat {
     let (dx, dy) = (drag.translation.width, drag.translation.height)
     // A pull starts going down, not sideways, which is the week's swipe.
     guard pull > 0 || dy > abs(dx) else { return 0 }
-    return min(max(dy / Self.unfoldDistance, 0), 1)
+    return min(max(dy / unfoldDistance, 0), 1)
   }
 
   private func pullEnded(_ drag: DragGesture.Value) {
@@ -759,10 +788,21 @@ struct MonthPage: View {
   let openedWeek: Day?
   /// How far the page is folded into that week, 0 to 1.
   let fold: CGFloat
+  @Environment(\.dayCellHeight) private var cell
 
-  private static let rowGap: CGFloat = 4
-  private static let rowStep = DayCell.height + rowGap
-  static let height = 6 * DayCell.height + 5 * rowGap
+  static let rowGap: CGFloat = 4
+
+  /// Six weeks of days `cell` tall.
+  static func height(cell: CGFloat) -> CGFloat { 6 * cell + 5 * rowGap }
+
+  /// How tall a day can be for six weeks to fit in `room`: DayCell's
+  /// full height where there is room, as /design's, else less, down to
+  /// what keeps a date and its mark clear.
+  static func cellHeight(fitting room: CGFloat) -> CGFloat {
+    let fitted = ((room - 5 * rowGap) / 6).rounded(.down)
+    return min(DayCell.fullHeight, max(leastCell, fitted))
+  }
+  private static let leastCell: CGFloat = 44
 
   var body: some View {
     let weeks = monthWeeks(month, weekStart: weekStart)
@@ -778,20 +818,21 @@ struct MonthPage: View {
           .accessibilityHidden(away)
       }
     }
-    .offset(y: -CGFloat(row) * Self.rowStep * fold)
-    .frame(height: DayCell.height + (Self.height - DayCell.height) * (1 - fold), alignment: .top)
+    .offset(y: -CGFloat(row) * (cell + Self.rowGap) * fold)
+    .frame(height: cell + (Self.height(cell: cell) - cell) * (1 - fold), alignment: .top)
   }
 }
 
 /// A week beside an opened one, drawn as the month folded into it is, so
 /// it can take that page's place once swiped to.
 struct WeekPage: View {
+  @Environment(\.dayCellHeight) private var cell
   let week: Day
   let days: PageDays
 
   var body: some View {
     let week = (0..<7).map { self.week.adding(days: $0) }
     days.row(week, shown: days.calendar.shown(from: week[0], through: week[6]), fadingOutside: nil)
-      .frame(height: DayCell.height, alignment: .top)
+      .frame(height: cell, alignment: .top)
   }
 }

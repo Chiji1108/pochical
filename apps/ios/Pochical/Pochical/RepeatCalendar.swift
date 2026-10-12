@@ -55,11 +55,27 @@ struct RepeatCalendar: View {
   /// The month the pages count from: the order's as it opened, so an
   /// order of years ago is among them.
   @State private var origin: Day?
+  /// The page's room and what stands around the month, measured, so a
+  /// short screen fits its six weeks (MonthPage.cellHeight(fitting:)).
+  @State private var room = Room()
+  private struct Room {
+    var total: CGFloat = 0
+    var heading: CGFloat = 0
+    var weekdays: CGFloat = 0
+    var tray: CGFloat = 0
+  }
+  private static let gap: CGFloat = 12
+  private var cellHeight: CGFloat {
+    guard room.total > 0 else { return DayCell.fullHeight }
+    // The gaps between heading, month, room and tray; the foot's padding.
+    return MonthPage.cellHeight(
+      fitting: room.total - room.heading - room.weekdays - room.tray - 3 * Self.gap - 8 - 8)
+  }
   private var base: Day { origin ?? anchor.firstOfMonth }
 
   var body: some View {
     let shown = month ?? anchor.firstOfMonth
-    VStack(spacing: 12) {
+    VStack(spacing: Self.gap) {
       HStack {
         MonthTitleButton(
           month: shown, first: base.addingMonths(-Self.span),
@@ -81,9 +97,11 @@ struct RepeatCalendar: View {
         }
       }
       .frame(minHeight: Metrics.touch)
+      .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.heading = $0 }
       // Under the weekdays as the calendar's month is.
       VStack(spacing: 0) {
         WeekdayRow(week: settings.device.week)
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.weekdays = $0 }
         pager
       }
       Spacer(minLength: 0)
@@ -114,9 +132,12 @@ struct RepeatCalendar: View {
         }
       }
       .sensoryFeedback(.selection, trigger: keys)
+      .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.tray = $0 }
     }
     .padding(.horizontal, 16)
     .padding(.bottom, 8)
+    .environment(\.dayCellHeight, cellHeight)
+    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room.total = $0 }
     // Its first day and length under the page's title.
     .navigationSubtitle(
       anchor.fullText + "から" + (sequence.isEmpty ? "" : "・\(sequence.count)日ごとに繰り返し"))
@@ -146,7 +167,7 @@ struct RepeatCalendar: View {
       position.pages = pages
     }
     .scrollIndicators(.hidden)
-    .frame(height: MonthPage.height)
+    .frame(height: MonthPage.height(cell: cellHeight))
   }
 
   /// A month's days: those typed solid, the rest of the order faint, and
@@ -184,7 +205,7 @@ struct RepeatCalendar: View {
         }
       }
     }
-    .frame(height: MonthPage.height, alignment: .top)
+    .frame(height: MonthPage.height(cell: cellHeight), alignment: .top)
   }
 
   /// The first day the order covers; none covers every day.
