@@ -165,9 +165,6 @@ const listRowRoot = cva({
 // One row of a list, and its parts for rows drawn by hand.
 export const listRow = {
   arrow: css({ color: "text.quaternary", flexShrink: 0, marginRight: "-4px" }),
-  // In the arrow's place on a row that adds rather than opens: a plus in
-  // the accent, told apart from the gray arrows of rows that go on.
-  add: css({ color: "accent.default", flexShrink: 0, marginRight: "-4px" }),
   // A row that adds one more to its list: its plus and words in the
   // accent, a page's chevron gray as on any row.
   adds: css({ "& > span": { color: "accent.default" } }),

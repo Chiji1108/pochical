@@ -891,7 +891,7 @@ function Cards() {
       >
         <OptionCard
           icon="🔁"
-          note="当番・非番、工場の交代勤務、曜日で固定など"
+          note="当番・非番、工場の交代勤務、平日勤務など"
           onClick={() => undefined}
           title="繰り返しがある"
         />

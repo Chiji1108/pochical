@@ -1,12 +1,11 @@
 import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
 import { readyPatternOrder } from "@pochical/design/patterns";
-import { Plus } from "lucide-react";
 import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
 
 import { patternsWithout } from "../lib/design-days";
-import { presetList } from "../lib/design-patterns";
-import type { Pattern } from "../lib/design-patterns";
+import { presetList, presetPatterns } from "../lib/design-patterns";
+import type { Pattern, PresetShift } from "../lib/design-patterns";
 import { designToday } from "../lib/design-today";
 import { useShownDays, useUser } from "../lib/design-user-store";
 import { ChoiceList, ChoiceRow } from "./design-choices";
@@ -27,6 +26,7 @@ import {
 } from "./design-list";
 import { LookEditorPage } from "./design-look-editor";
 import type { LookField } from "./design-look-editor";
+import { inChipOrder, ReadyPatternChips, toggled } from "./design-ready-chips";
 import { ConfirmDialog } from "./design-sheet";
 import { SortableList } from "./design-sortable-list";
 import { Button, DestructiveButton, Note, Section } from "./design-ui";
@@ -215,8 +215,8 @@ export function PatternsPage({
     return (
       <AddPatternPage
         items={items}
-        onAdd={(pattern) => {
-          setItems((previous) => [...previous, pattern]);
+        onAdd={(added) => {
+          setItems((previous) => [...previous, ...added]);
           setView("list");
         }}
         onBack={() => {
@@ -358,10 +358,9 @@ export function PatternsPage({
   );
 }
 
-// Common patterns to add with one tap, leaving out ones already there
-// (design/src/patterns.ts).
-const suggestionKeys = readyPatternOrder;
-
+// The ready-made patterns not in the list yet, as chips under their
+// headings as the setup questions show them: several picked, then added
+// at once (design/src/patterns.ts).
 function AddPatternPage({
   items,
   onBack,
@@ -370,51 +369,58 @@ function AddPatternPage({
 }: {
   items: Pattern[];
   onBack: () => void;
-  onAdd: (pattern: Pattern) => void;
+  onAdd: (patterns: Pattern[]) => void;
   onCustom: () => void;
 }) {
-  const style = useContext(ShiftMarkStyleContext);
-  const taken = new Set(items.flatMap((item) => [item.id, item.name]));
-  const suggestions = presetList(suggestionKeys).filter(
-    (preset) => !(taken.has(preset.id) || taken.has(preset.name))
+  const [picked, setPicked] = useState<ReadonlySet<PresetShift>>(
+    () => new Set()
   );
+  const taken = new Set(items.flatMap((item) => [item.id, item.name]));
+  const offered = (id: PresetShift) =>
+    !(taken.has(id) || taken.has(presetPatterns[id].name));
+  const any = readyPatternOrder.some(offered);
+  // Only ones not there yet: a 明け picked with its 夜勤 may be.
+  const chosen = inChipOrder(picked).filter(offered);
+  const add = () => {
+    const there = new Set([...items.map((item) => item.id), ...chosen]);
+    onAdd(
+      presetList(chosen).map((preset) =>
+        // A 夜勤 brings its 明け only when that is there too.
+        preset.nextDay && there.has(preset.nextDay)
+          ? preset
+          : { ...preset, nextDay: undefined }
+      )
+    );
+  };
   return (
     <>
       <PageHeader
         back="シフトパターン"
         onBack={onBack}
         title="パターンを追加"
+        trailing={
+          any && (
+            <HeaderAction
+              disabled={chosen.length === 0}
+              onClick={add}
+              prominent
+            >
+              追加
+            </HeaderAction>
+          )
+        }
       />
-      {suggestions.length > 0 && (
-        <Section title="よく使うパターン">
-          <List>
-            {suggestions.map((preset) => (
-              <ListRow
-                key={preset.id}
-                onClick={() => {
-                  // A 夜勤 brings its 明け only when that is there too.
-                  const follows =
-                    preset.nextDay &&
-                    items.some((item) => item.id === preset.nextDay);
-                  onAdd(follows ? preset : { ...preset, nextDay: undefined });
-                }}
-                label={preset.name}
-                value={timeText(preset)}
-                leading={
-                  <>
-                    <MarkGlyph look={preset} size={22} style={style} />
-                  </>
-                }
-                arrow={
-                  <Plus aria-hidden="true" className={listRow.add} size={17} />
-                }
-              />
-            ))}
-          </List>
-          {/* For whoever pauses at + over a time unlike their own: it
-              belongs to these, not to 自分で作る below. */}
+      {any && (
+        <div className={addPage.chips}>
+          <ReadyPatternChips
+            offered={offered}
+            onToggle={(id) => {
+              setPicked(toggled(picked, id));
+            }}
+            picked={picked}
+          />
           <Note>名前や時間は、追加したあとで直せます。</Note>
-        </Section>
+        </div>
       )}
       <List>
         <ListRow onClick={onCustom} label="自分で作る" value="" />
@@ -422,6 +428,10 @@ function AddPatternPage({
     </>
   );
 }
+
+const addPage = {
+  chips: css({ display: "flex", flexDirection: "column", gap: "20px" }),
+};
 
 function PatternEditor({
   initial,

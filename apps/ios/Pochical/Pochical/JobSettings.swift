@@ -18,7 +18,10 @@ let readyByID: [PatternID: Pattern] = Dictionary(
 /// Where the questions are.
 private enum JobStep: Hashable {
   case day, kind, roster, rotation
-  case order(JobTemplate)
+  /// The patterns to use, the kind of work's to start with.
+  case patterns(JobTemplate)
+  /// The order, typed with the patterns chosen.
+  case order(JobTemplate, [PatternID])
 }
 
 /// 新しい仕事にする.
@@ -31,11 +34,13 @@ struct JobChangePage: View {
   @State private var sequence: [PatternID] = []
   @State private var anchor = Day.today
   @State private var confirming = false
+  /// The patterns picked on 勤務や休みを選んでください.
+  @State private var picked: Set<PatternID> = []
 
   var body: some View {
     let step = steps.last ?? .day
-    if case .order(let template) = step {
-      orderStep(template)
+    if case .order(let template, let patterns) = step {
+      orderStep(template, patternIDs: patterns)
     } else {
       questions(step)
     }
@@ -47,7 +52,8 @@ struct JobChangePage: View {
       case .day: dayStep
       case .kind: kindStep
       case .roster: templates(ReadyPatterns.rosterTemplates, asking: "近い働き方を選んでください")
-      case .rotation: templates(ReadyPatterns.rotationTemplates, asking: "どんな順番で回りますか？")
+      case .rotation: templates(ReadyPatterns.rotationTemplates, asking: "近い働き方を選んでください")
+      case .patterns(let template): patternsStep(template)
       case .order: EmptyView()
       }
     }
@@ -90,7 +96,7 @@ struct JobChangePage: View {
   @ViewBuilder private var kindStep: some View {
     question("新しい仕事のシフトに繰り返しはありますか？", "前の仕事のシフトは、そのまま残ります。")
     Section {
-      option("🔁", "繰り返しがある", "当番・非番、工場の交代勤務、曜日で固定など") { go(.rotation) }
+      option("🔁", "繰り返しがある", "当番・非番、工場の交代勤務、平日勤務など") { go(.rotation) }
       option("📋", "繰り返しはない", "勤務表やシフト表で、その都度決まる") { go(.roster) }
     }
     .settingsRows()
@@ -101,12 +107,13 @@ struct JobChangePage: View {
   @ViewBuilder private func templates(_ templates: [JobTemplate], asking title: String)
     -> some View
   {
-    question(title, "あとから名前や時間を変えられます。")
+    question(title, "近いもので大丈夫です。次の画面で足したり外したりできます。")
     // One list, a row each, as the system's settings list choices.
     Section {
       ForEach(templates) { template in
         Button {
-          choose(template)
+          picked = Set(template.patternIDs)
+          go(.patterns(template))
         } label: {
           HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
@@ -136,14 +143,36 @@ struct JobChangePage: View {
     .settingsRows()
   }
 
+  /// The patterns to use, the kind of work's own already picked: 次へ
+  /// when an order is typed next, else 完了.
+  @ViewBuilder private func patternsStep(_ template: JobTemplate) -> some View {
+    let ordering = template.sequence != nil && !template.startsWeekly
+    question(patternsQuestion(template).title, patternsQuestion(template).description)
+    Section {
+      ReadyPatternChips(picked: $picked, needed: template.needed)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .settingsTextOnPage()
+    }
+    Section {
+      Button {
+        choose(template, patterns: chosenPatterns(picked))
+      } label: {
+        Text(ordering ? "次へ" : "完了").frame(maxWidth: .infinity)
+      }
+      .mainButton()
+      .disabled(picked.isEmpty)
+      .settingsOnPage()
+    }
+  }
+
   /// The order on the calendar, filling the screen: a kind of work's
   /// own, from the new job's first day, or one typed from nothing; either
   /// typed over, and the day pressed moves where it starts.
-  private func orderStep(_ template: JobTemplate) -> some View {
+  private func orderStep(_ template: JobTemplate, patternIDs: [PatternID]) -> some View {
     let first = template.sequence?.first.flatMap { readyByID[$0]?.name }
     return RepeatCalendar(
       sequence: $sequence, anchor: $anchor, cover: .from(start),
-      patterns: template.patternIDs.compactMap { readyByID[$0] }, holidayCountry: HolidayCountry.current
+      patterns: patternIDs.compactMap { readyByID[$0] }, holidayCountry: HolidayCountry.current
     )
     .background(colors.backgroundBase)
     .navigationTitle(template.custom || first == nil ? "並びを入れる" : "「\(first ?? "")」の日を押す")
@@ -164,7 +193,7 @@ struct JobChangePage: View {
     // The days from the new job's first change, so 完了 asks first.
     .alert("\(start.slashText)から新しい仕事にしますか？", isPresented: $confirming) {
       Button("キャンセル", role: .cancel) {}
-      Button("切り替える") { finish(template, sequence: sequence, anchor: anchor) }
+      Button("切り替える") { finish(patternIDs, sequence: sequence, anchor: anchor) }
     } message: {
       Text("前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。")
     }
@@ -178,7 +207,7 @@ struct JobChangePage: View {
         Text(title).font(.title3.bold()).foregroundStyle(colors.textPrimary)
         Text(description).font(.subheadline).foregroundStyle(colors.textTertiary)
       }
-      .settingsOnPage()
+      .settingsTextOnPage()
     }
   }
 
@@ -222,27 +251,24 @@ struct JobChangePage: View {
     withAnimation { steps.append(step) }
   }
 
-  /// A kind of work picked: a roster's patterns, or a weekly order, end
-  /// the questions; others go on to building their order or its first day.
-  private func choose(_ template: JobTemplate) {
+  /// The patterns chosen: a roster's work, or a weekly order, end the
+  /// questions; others go on to building their order or its first day.
+  private func choose(_ template: JobTemplate, patterns: [PatternID]) {
     if let order = template.sequence, template.weekly {
       // A week starts on Sunday: its order lines up with the weekdays.
-      finish(template, sequence: order, anchor: start.adding(days: -start.weekday))
-    } else if template.custom || template.sequence != nil {
+      finish(patterns, sequence: order, anchor: start.adding(days: -start.weekday))
+    } else if template.sequence != nil {
       // Typed from the new job's first day until another is pressed.
       sequence = template.sequence ?? []
       anchor = start
-      go(.order(template))
+      go(.order(template, patterns))
     } else {
-      finish(template, sequence: [], anchor: start)
+      finish(patterns, sequence: [], anchor: start)
     }
   }
 
-  private func finish(_ template: JobTemplate, sequence: [PatternID], anchor: Day) {
-    let ids = Set(template.patternIDs)
-    let incoming = template.patternIDs.compactMap(ReadyPatterns.pattern).map {
-      Pattern($0, keeping: ids)
-    }
+  private func finish(_ patternIDs: [PatternID], sequence: [PatternID], anchor: Day) {
+    let incoming = readyPatterns(patternIDs)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write {
       try OwnValues.changeJob(

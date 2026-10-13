@@ -29,6 +29,24 @@ export const readyPatterns = {
     name: "明け",
     symbol: "明",
   },
+  // Half a day off: worked the other half, so not counted as off.
+  amOff: {
+    color: 7,
+    emoji: "☕️",
+    icon: "coffee",
+    name: "午前休",
+    symbol: "前",
+    time: ["13:00", "18:00"],
+  },
+  // A day off in return for working one that was off.
+  compOff: {
+    color: 10,
+    countsAsOff: true,
+    emoji: "🌱",
+    icon: "pottedPlant",
+    name: "代休",
+    symbol: "代",
+  },
   day: {
     color: 1,
     emoji: "☀️",
@@ -77,6 +95,24 @@ export const readyPatterns = {
     symbol: "遅",
     time: ["12:00", "21:00"],
   },
+  // A hospital's day shift running into the evening.
+  longDay: {
+    color: 2,
+    emoji: "🔆",
+    icon: "sun",
+    name: "長日勤",
+    symbol: "長",
+    time: ["08:30", "21:00"],
+  },
+  // Between 早番 and 遅番, as shops and care homes run.
+  middle: {
+    color: 5,
+    emoji: "🌞",
+    icon: "sun",
+    name: "中番",
+    symbol: "中",
+    time: ["10:00", "19:00"],
+  },
   midnight: {
     color: 9,
     emoji: "🌛",
@@ -94,6 +130,15 @@ export const readyPatterns = {
     symbol: "夜",
     time: ["16:30", "09:30"],
   },
+  // A doctor's night in the hospital.
+  nightDuty: {
+    color: 9,
+    emoji: "🩺",
+    icon: "stethoscope",
+    name: "当直",
+    symbol: "直",
+    time: ["17:00", "09:00"],
+  },
   off: {
     color: 0,
     countsAsOff: true,
@@ -103,6 +148,15 @@ export const readyPatterns = {
     symbol: "休",
   },
   offDuty: { color: 11, emoji: "🛌", icon: "bed", name: "非番", symbol: "非" },
+  office: {
+    color: 8,
+    emoji: "💼",
+    icon: "briefcase",
+    name: "出勤",
+    symbol: "出",
+    time: ["09:00", "18:00"],
+  },
+  onCall: { color: 6, emoji: "📞", icon: "phone", name: "待機", symbol: "待" },
   paid: {
     color: 5,
     countsAsOff: true,
@@ -110,6 +164,38 @@ export const readyPatterns = {
     icon: "flower",
     name: "有休",
     symbol: "有",
+  },
+  part: {
+    color: 2,
+    emoji: "🛒",
+    icon: "shoppingBag",
+    name: "パート",
+    symbol: "パ",
+    time: ["10:00", "15:00"],
+  },
+  partTime: {
+    color: 4,
+    emoji: "🏪",
+    icon: "storefront",
+    name: "バイト",
+    symbol: "バ",
+    time: ["17:00", "22:00"],
+  },
+  pmOff: {
+    color: 7,
+    emoji: "🛋️",
+    icon: "couch",
+    name: "午後休",
+    symbol: "後",
+    time: ["09:00", "13:00"],
+  },
+  remote: {
+    color: 10,
+    emoji: "🏠",
+    icon: "house",
+    name: "在宅",
+    symbol: "在",
+    time: ["09:00", "18:00"],
   },
   training: {
     color: 10,
@@ -119,27 +205,59 @@ export const readyPatterns = {
     symbol: "研",
     time: ["09:30", "17:30"],
   },
+  trip: { color: 6, emoji: "🧳", icon: "suitcase", name: "出張", symbol: "張" },
+  // A day off asked for ahead, as rosters take them.
+  wishOff: {
+    color: 0,
+    countsAsOff: true,
+    emoji: "🙋",
+    icon: "star",
+    name: "希望休",
+    symbol: "希",
+  },
 } satisfies Record<string, ReadyPattern>;
 
 export type ReadyPatternId = keyof typeof readyPatterns;
 
-// The ready-made patterns パターンを追加 offers, in its order: through the
-// day from early to late, then the night, then days that are not shifts.
-export const readyPatternOrder: readonly ReadyPatternId[] = [
-  "early",
-  "day",
-  "late",
-  "night",
-  "after",
-  "evening",
-  "junya",
-  "midnight",
-  "duty",
-  "offDuty",
-  "training",
-  "paid",
-  "off",
+// The ready-made patterns パターンを追加 and the setup questions offer,
+// under headings: shifts through the day from early to late, then the
+// night and duties; work in the day of other kinds; then days off.
+export const readyPatternSections: readonly {
+  title: string;
+  ids: readonly ReadyPatternId[];
+}[] = [
+  {
+    ids: [
+      "early",
+      "middle",
+      "day",
+      "longDay",
+      "late",
+      "evening",
+      "junya",
+      "midnight",
+      "night",
+      "after",
+      "duty",
+      "offDuty",
+      "nightDuty",
+      "onCall",
+    ],
+    title: "交代勤務",
+  },
+  {
+    ids: ["office", "remote", "trip", "training", "part", "partTime"],
+    title: "日中の仕事",
+  },
+  {
+    ids: ["off", "wishOff", "paid", "compOff", "amOff", "pmOff"],
+    title: "休み",
+  },
 ];
+
+// The same, one after another.
+export const readyPatternOrder: readonly ReadyPatternId[] =
+  readyPatternSections.flatMap(({ ids }) => ids);
 
 // The emoji offered first for a mark, a row of eight for each kind: the
 // sky through the day, days off, work, jobs, care, and the rest of life.
@@ -364,13 +482,23 @@ export const lookHints: readonly {
   emoji: string;
 }[] = [
   { emoji: "📞", icon: "phone", words: ["待機", "オンコール"] },
-  { emoji: "🏠", icon: "house", words: ["在宅", "テレワーク"] },
-  { emoji: "💼", icon: "briefcase", words: ["出張"] },
+  { emoji: "🏠", icon: "house", words: ["在宅", "テレワーク", "リモート"] },
+  { emoji: "🧳", icon: "suitcase", words: ["出張"] },
+  { emoji: "💼", icon: "briefcase", words: ["出勤", "出社"] },
   { emoji: "👥", icon: "users", words: ["会議", "ミーティング"] },
   { emoji: "📚", icon: "book", words: ["研修", "勉強", "講習", "学校"] },
-  { emoji: "🚒", icon: "siren", words: ["当番", "当直"] },
+  { emoji: "🩺", icon: "stethoscope", words: ["当直"] },
+  { emoji: "🚒", icon: "siren", words: ["当番"] },
   { emoji: "🛌", icon: "bed", words: ["非番"] },
   { emoji: "🌷", icon: "flower", words: ["有休", "有給", "年休"] },
+  { emoji: "🙋", icon: "star", words: ["希望"] },
+  { emoji: "🌱", icon: "pottedPlant", words: ["代休", "振休"] },
+  { emoji: "☕️", icon: "coffee", words: ["午前休", "午前半休"] },
+  { emoji: "🛋️", icon: "couch", words: ["午後休", "午後半休"] },
+  { emoji: "🛒", icon: "shoppingBag", words: ["パート"] },
+  { emoji: "🏪", icon: "storefront", words: ["バイト"] },
+  { emoji: "🔆", icon: "sun", words: ["長日"] },
+  { emoji: "🌞", icon: "sun", words: ["中番"] },
   { emoji: "🌅", icon: "sunHorizon", words: ["明け"] },
   { emoji: "🌆", icon: "sunHorizon", words: ["夕"] },
   { emoji: "🌜", icon: "cloudMoon", words: ["準夜"] },
@@ -396,6 +524,9 @@ export type JobTemplate = {
   sequence?: ReadyPatternId[];
   // The sequence starts on Sunday, so the first day comes from the weekday.
   weekly?: boolean;
+  // 自分で作る: the person picks the patterns, and types any order, from
+  // nothing but 休み, which nearly everyone has and which the month's days
+  // off and みんな休み count.
   custom?: boolean;
 };
 
@@ -415,15 +546,22 @@ export const rosterTemplates: readonly JobTemplate[] = [
     title: "三交代制",
   },
   {
-    id: "two-shift-early-late",
-    note: "時間の違う日勤が混ざる",
-    patternKeys: ["early", "day", "late", "night", "after", "off"],
-    title: "二交代制 + 早番・遅番",
+    id: "shop",
+    note: "お店や介護などの早番・中番・遅番",
+    patternKeys: ["early", "middle", "late", "off"],
+    title: "早番・中番・遅番",
   },
   {
+    id: "part",
+    note: "シフト表で、入る日が決まる",
+    patternKeys: ["part", "off"],
+    title: "パート・アルバイト",
+  },
+  {
+    custom: true,
     id: "roster-custom",
-    note: "まずは二交代制で始めて、あとで設定から変えられます",
-    patternKeys: ["day", "night", "after", "off"],
+    note: "使う勤務や休みを、ひとつずつ選ぶ",
+    patternKeys: ["off"],
     title: "自分で作る",
   },
 ];
@@ -455,17 +593,17 @@ export const rotationTemplates: readonly JobTemplate[] = [
   },
   {
     id: "weekdays",
-    note: "曜日で決まっている勤務",
-    patternKeys: ["day", "off"],
-    sequence: ["off", "day", "day", "day", "day", "day", "off"],
-    title: "平日は日勤、土日は休み",
+    note: "平日は出勤、土日は休み",
+    patternKeys: ["office", "remote", "off"],
+    sequence: ["off", "office", "office", "office", "office", "office", "off"],
+    title: "会社勤め",
     weekly: true,
   },
   {
     custom: true,
     id: "rotation-custom",
     note: "並びを組み立てる",
-    patternKeys: ["duty", "offDuty", "day", "night", "after", "off"],
+    patternKeys: ["off"],
     sequence: [],
     title: "自分で作る",
   },

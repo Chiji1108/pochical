@@ -14,6 +14,7 @@ import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
 import { BackButton, DoneButton, PageHeader } from "./design-header";
 import { List, ListRow, listRow } from "./design-list";
+import { inChipOrder, ReadyPatternChips, toggled } from "./design-ready-chips";
 import {
   OrderTitle,
   RepeatCalendar,
@@ -21,7 +22,7 @@ import {
 } from "./design-repeat-editor";
 import { ConfirmDialog } from "./design-sheet";
 import { KeysPreview } from "./design-shift-input";
-import { OptionCard, optionList } from "./design-ui";
+import { Button, OptionCard, optionList } from "./design-ui";
 
 type Template = JobTemplate;
 
@@ -29,6 +30,8 @@ export type Step =
   | { name: "kind" }
   | { name: "roster" }
   | { name: "rotation" }
+  // The patterns to use, the kind of work's to start with.
+  | { name: "patterns"; template: Template; kind: "roster" | "rotation" }
   | { name: "order"; template: Template };
 
 // What a page's 完了 asks before days already there change.
@@ -203,17 +206,25 @@ export function WorkSetupSteps({
   };
 
   // The templates' patterns are ready-made ones, drawn as they come even
-  // when the person has their own under the same ids.
-  function chooseRotation(template: Template) {
-    if (template.weekly && template.sequence) {
+  // when the person has their own under the same ids. With the patterns
+  // chosen, a roster's work is done, a week's order starts on a Sunday,
+  // and any other order is typed on the calendar.
+  function goOnWith(
+    template: Template,
+    kind: "roster" | "rotation",
+    patternKeys: PresetShift[]
+  ) {
+    if (kind === "roster") {
+      onFinish({ patternKeys });
+    } else if (template.weekly && template.sequence) {
       // Any Sunday works as the first day of a week-based sequence.
       onFinish({
         anchor: addDays(month, -month.getDay()),
-        patternKeys: template.patternKeys,
+        patternKeys,
         sequence: template.sequence,
       });
     } else {
-      goTo({ name: "order", template });
+      goTo({ name: "order", template: { ...template, patternKeys } });
     }
   }
 
@@ -237,7 +248,7 @@ export function WorkSetupSteps({
             goTo({ name: "kind" });
           }}
           onChoose={(template) => {
-            onFinish({ patternKeys: template.patternKeys });
+            goTo({ kind: "roster", name: "patterns", template });
           }}
           rows={Boolean(onExit)}
           templates={rosterTemplates}
@@ -249,10 +260,29 @@ export function WorkSetupSteps({
           onBack={() => {
             goTo({ name: "kind" });
           }}
-          onChoose={chooseRotation}
+          onChoose={(template) => {
+            goTo({ kind: "rotation", name: "patterns", template });
+          }}
           rows={Boolean(onExit)}
           templates={rotationTemplates}
-          title="どんな順番で回りますか？"
+          title="近い働き方を選んでください"
+        />
+      )}
+      {step.name === "patterns" && (
+        <PatternsStep
+          first={!onExit}
+          key={step.template.id}
+          onBack={() => {
+            goTo({ name: step.kind });
+          }}
+          onNext={(patternKeys) => {
+            goOnWith(step.template, step.kind, patternKeys);
+          }}
+          ordering={
+            step.kind === "rotation" &&
+            !(step.template.weekly && step.template.sequence)
+          }
+          template={step.template}
         />
       )}
       {step.name === "order" && (
@@ -261,7 +291,11 @@ export function WorkSetupSteps({
           from={from}
           month={month}
           onBack={() => {
-            goTo({ name: "rotation" });
+            goTo({
+              kind: "rotation",
+              name: "patterns",
+              template: step.template,
+            });
           }}
           onStart={(order) => {
             onFinish({ ...order, patternKeys: step.template.patternKeys });
@@ -304,7 +338,7 @@ const kinds = [
   {
     icon: "🔁",
     id: "rotation",
-    note: "当番・非番、工場の交代勤務、曜日で固定など",
+    note: "当番・非番、工場の交代勤務、平日勤務など",
     title: "繰り返しがある",
   },
   {
@@ -371,7 +405,7 @@ function KindStep({
         </List>
       )}
       {first && (
-        <p className={onboarding.footnote}>あとから設定で変えられます</p>
+        <p className={onboarding.footnote}>あとから設定で変えられます。</p>
       )}
     </>
   );
@@ -409,7 +443,7 @@ function TemplateStep({
   return (
     <>
       <StepHeader
-        description="あとから名前や時間を変えられます。"
+        description="近いもので大丈夫です。次の画面で足したり外したりできます。"
         onBack={onBack}
         title={title}
       />
@@ -462,6 +496,85 @@ function TemplateStep({
     </>
   );
 }
+
+// The patterns to use, every ready-made one under its heading as a chip,
+// the kind of work's own already picked: the person adds what else their
+// days hold (出張, 希望休…) or drops what they never have, with no page
+// more than the one tap to go on. Those in the kind of work's order stay,
+// as the order needs them.
+function PatternsStep({
+  template,
+  first,
+  ordering,
+  onBack,
+  onNext,
+}: {
+  template: Template;
+  first: boolean;
+  // An order to type comes next, so the button goes on to it.
+  ordering: boolean;
+  onBack: () => void;
+  onNext: (patternKeys: PresetShift[]) => void;
+}) {
+  const [picked, setPicked] = useState<ReadonlySet<PresetShift>>(
+    () => new Set(template.patternKeys)
+  );
+  const needed = new Set(template.custom ? [] : (template.sequence ?? []));
+  const chosen = inChipOrder(picked);
+  let action = "完了";
+  if (ordering) {
+    action = "次へ";
+  } else if (first) {
+    action = "はじめる";
+  }
+  return (
+    <>
+      <StepHeader
+        description={
+          template.custom
+            ? "カレンダーに入れるものです。あとから足したり、名前や時間を変えたりできます。"
+            : "選んだ働き方の分は、もう選んであります。あとから足したり、名前や時間を変えたりできます。"
+        }
+        onBack={onBack}
+        title={
+          template.custom
+            ? "勤務や休みを選んでください"
+            : "ほかにも使う勤務や休みはありますか？"
+        }
+      />
+      <ReadyPatternChips
+        needed={needed}
+        onToggle={(id) => {
+          setPicked(toggled(picked, id));
+        }}
+        picked={picked}
+      />
+      {needed.size > 0 && (
+        <p className={onboarding.description}>
+          繰り返しに入っている勤務や休みは外せません。
+        </p>
+      )}
+      <Button
+        className={patternsStep.next({ pinned: first })}
+        disabled={chosen.length === 0}
+        onClick={() => {
+          onNext(chosen);
+        }}
+      >
+        {action}
+      </Button>
+    </>
+  );
+}
+
+// On the first run the button stays at the foot over the chips, in reach
+// however many; in settings it ends the page, over the tab bar.
+const patternsStep = {
+  next: cva({
+    base: { flexShrink: 0, marginTop: "auto" },
+    variants: { pinned: { true: { bottom: 0, position: "sticky" } } },
+  }),
+};
 
 // The order on the calendar: a kind of work's own, from its first day
 // as it falls, or one typed from nothing. Either is typed over as
