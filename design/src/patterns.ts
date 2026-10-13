@@ -524,6 +524,9 @@ export type JobTemplate = {
   sequence?: ReadyPatternId[];
   // The sequence starts on Sunday, so the first day comes from the weekday.
   weekly?: boolean;
+  // 自分で作る: the person picks the patterns, and types any order, from
+  // nothing but 休み, which nearly everyone has and which the month's days
+  // off and みんな休み count.
   custom?: boolean;
 };
 
@@ -561,9 +564,10 @@ export const rosterTemplates: readonly JobTemplate[] = [
     title: "パート・アルバイト",
   },
   {
+    custom: true,
     id: "roster-custom",
-    note: "まずは二交代制で始めて、あとで設定から変えられます",
-    patternKeys: ["day", "night", "after", "off"],
+    note: "使う勤務や休みを、ひとつずつ選ぶ",
+    patternKeys: ["off"],
     title: "自分で作る",
   },
 ];
@@ -605,7 +609,7 @@ export const rotationTemplates: readonly JobTemplate[] = [
     custom: true,
     id: "rotation-custom",
     note: "並びを組み立てる",
-    patternKeys: ["duty", "offDuty", "day", "night", "after", "off"],
+    patternKeys: ["off"],
     sequence: [],
     title: "自分で作る",
   },

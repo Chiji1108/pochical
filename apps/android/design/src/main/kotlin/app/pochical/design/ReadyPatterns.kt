@@ -103,14 +103,14 @@ object ReadyPatterns {
     JobTemplate(id = "two-shift-early-late", title = "二交代制 + 早番・遅番", note = "時間の違う日勤が混ざる", patternIds = listOf("early", "day", "late", "night", "after", "off"), sequence = null, weekly = false, custom = false),
     JobTemplate(id = "shop", title = "早番・中番・遅番", note = "お店や介護などの早番・中番・遅番", patternIds = listOf("early", "middle", "late", "off"), sequence = null, weekly = false, custom = false),
     JobTemplate(id = "part", title = "パート・アルバイト", note = "シフト表で、入る日が決まる", patternIds = listOf("part", "off"), sequence = null, weekly = false, custom = false),
-    JobTemplate(id = "roster-custom", title = "自分で作る", note = "まずは二交代制で始めて、あとで設定から変えられます", patternIds = listOf("day", "night", "after", "off"), sequence = null, weekly = false, custom = false),
+    JobTemplate(id = "roster-custom", title = "自分で作る", note = "使う勤務や休みを、ひとつずつ選ぶ", patternIds = listOf("off"), sequence = null, weekly = false, custom = true),
   )
 
   val rotationTemplates: List<JobTemplate> = listOf(
     JobTemplate(id = "duty", title = "当番・非番・休み", note = "消防などの24時間勤務", patternIds = listOf("duty", "offDuty", "off"), sequence = listOf("duty", "offDuty", "off"), weekly = false, custom = false),
     JobTemplate(id = "factory", title = "日勤・夕勤・深夜の交代", note = "工場などの3交代（2日ずつ回る例）", patternIds = listOf("day", "evening", "midnight", "off"), sequence = listOf("day", "day", "evening", "evening", "midnight", "midnight", "off", "off"), weekly = false, custom = false),
     JobTemplate(id = "weekdays", title = "会社勤め", note = "平日は出勤、土日は休み", patternIds = listOf("office", "remote", "off"), sequence = listOf("off", "office", "office", "office", "office", "office", "off"), weekly = true, custom = false),
-    JobTemplate(id = "rotation-custom", title = "自分で作る", note = "並びを組み立てる", patternIds = listOf("duty", "offDuty", "day", "night", "after", "off"), sequence = listOf(), weekly = false, custom = true),
+    JobTemplate(id = "rotation-custom", title = "自分で作る", note = "並びを組み立てる", patternIds = listOf("off"), sequence = listOf(), weekly = false, custom = true),
   )
 }
 

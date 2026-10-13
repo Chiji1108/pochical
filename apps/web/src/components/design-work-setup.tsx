@@ -530,9 +530,17 @@ function PatternsStep({
   return (
     <>
       <StepHeader
-        description="カレンダーに入れるものです。あとから足したり、名前や時間を変えたりできます。"
+        description={
+          template.custom
+            ? "カレンダーに入れるものです。あとから足したり、名前や時間を変えたりできます。"
+            : "選んだ働き方の分は、もう選んであります。あとから足したり、名前や時間を変えたりできます。"
+        }
         onBack={onBack}
-        title="勤務や休みを選んでください"
+        title={
+          template.custom
+            ? "勤務や休みを選んでください"
+            : "ほかにも使う勤務や休みはありますか？"
+        }
       />
       <ReadyPatternChips
         needed={needed}

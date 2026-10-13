@@ -72,6 +72,14 @@ extension JobTemplate {
   var startsWeekly: Bool { weekly && sequence != nil }
 }
 
+/// What the chips ask: a kind of work's own are picked already, so the
+/// rest are extras; 自分で作る picks them all.
+func patternsQuestion(_ template: JobTemplate) -> (title: String, description: String) {
+  template.custom
+    ? ("勤務や休みを選んでください", "カレンダーに入れるものです。あとから足したり、名前や時間を変えたりできます。")
+    : ("ほかにも使う勤務や休みはありますか？", "選んだ働き方の分は、もう選んであります。あとから足したり、名前や時間を変えたりできます。")
+}
+
 /// The picked patterns, in the order the chips show them.
 func chosenPatterns(_ picked: Set<PatternID>) -> [PatternID] {
   ReadyPatterns.offered.filter(picked.contains)

@@ -133,7 +133,7 @@ struct Onboarding: View {
       // A week starts on Sunday: its order lines up with the weekdays.
       let month = Day.today.firstOfMonth
       begin(patterns, sequence: sequence, anchor: month.adding(days: -month.weekday))
-    } else if template.custom || template.sequence != nil {
+    } else if template.sequence != nil {
       path.append(.order(template, patterns))
     } else {
       begin(patterns, sequence: [], anchor: .today)
@@ -297,10 +297,10 @@ private struct PatternsStep: View {
   }
 
   var body: some View {
-    let ordering = (template.custom || template.sequence != nil) && !template.startsWeekly
+    let ordering = template.sequence != nil && !template.startsWeekly
     StepPage(
-      title: "勤務や休みを選んでください",
-      description: "カレンダーに入れるものです。あとから足したり、名前や時間を変えたりできます。"
+      title: patternsQuestion(template).title,
+      description: patternsQuestion(template).description
     ) {
       ReadyPatternChips(picked: $picked, needed: template.needed)
         .frame(maxWidth: .infinity, alignment: .leading)

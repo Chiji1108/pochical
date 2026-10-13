@@ -117,7 +117,7 @@ public enum ReadyPatterns {
     JobTemplate(id: "two-shift-early-late", title: "二交代制 + 早番・遅番", note: "時間の違う日勤が混ざる", patternIDs: ["early", "day", "late", "night", "after", "off"], sequence: nil, weekly: false, custom: false),
     JobTemplate(id: "shop", title: "早番・中番・遅番", note: "お店や介護などの早番・中番・遅番", patternIDs: ["early", "middle", "late", "off"], sequence: nil, weekly: false, custom: false),
     JobTemplate(id: "part", title: "パート・アルバイト", note: "シフト表で、入る日が決まる", patternIDs: ["part", "off"], sequence: nil, weekly: false, custom: false),
-    JobTemplate(id: "roster-custom", title: "自分で作る", note: "まずは二交代制で始めて、あとで設定から変えられます", patternIDs: ["day", "night", "after", "off"], sequence: nil, weekly: false, custom: false),
+    JobTemplate(id: "roster-custom", title: "自分で作る", note: "使う勤務や休みを、ひとつずつ選ぶ", patternIDs: ["off"], sequence: nil, weekly: false, custom: true),
   ]
 
   /// Work whose shifts come round in a fixed order: the order too.
@@ -125,7 +125,7 @@ public enum ReadyPatterns {
     JobTemplate(id: "duty", title: "当番・非番・休み", note: "消防などの24時間勤務", patternIDs: ["duty", "offDuty", "off"], sequence: ["duty", "offDuty", "off"], weekly: false, custom: false),
     JobTemplate(id: "factory", title: "日勤・夕勤・深夜の交代", note: "工場などの3交代（2日ずつ回る例）", patternIDs: ["day", "evening", "midnight", "off"], sequence: ["day", "day", "evening", "evening", "midnight", "midnight", "off", "off"], weekly: false, custom: false),
     JobTemplate(id: "weekdays", title: "会社勤め", note: "平日は出勤、土日は休み", patternIDs: ["office", "remote", "off"], sequence: ["off", "office", "office", "office", "office", "office", "off"], weekly: true, custom: false),
-    JobTemplate(id: "rotation-custom", title: "自分で作る", note: "並びを組み立てる", patternIDs: ["duty", "offDuty", "day", "night", "after", "off"], sequence: [], weekly: false, custom: true),
+    JobTemplate(id: "rotation-custom", title: "自分で作る", note: "並びを組み立てる", patternIDs: ["off"], sequence: [], weekly: false, custom: true),
   ]
 }
 

@@ -146,10 +146,8 @@ struct JobChangePage: View {
   /// The patterns to use, the kind of work's own already picked: 次へ
   /// when an order is typed next, else 完了.
   @ViewBuilder private func patternsStep(_ template: JobTemplate) -> some View {
-    let ordering = (template.custom || template.sequence != nil) && !template.startsWeekly
-    question(
-      "勤務や休みを選んでください",
-      "カレンダーに入れるものです。あとから足したり、名前や時間を変えたりできます。")
+    let ordering = template.sequence != nil && !template.startsWeekly
+    question(patternsQuestion(template).title, patternsQuestion(template).description)
     Section {
       ReadyPatternChips(picked: $picked, needed: template.needed)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -259,7 +257,7 @@ struct JobChangePage: View {
     if let order = template.sequence, template.weekly {
       // A week starts on Sunday: its order lines up with the weekdays.
       finish(patterns, sequence: order, anchor: start.adding(days: -start.weekday))
-    } else if template.custom || template.sequence != nil {
+    } else if template.sequence != nil {
       // Typed from the new job's first day until another is pressed.
       sequence = template.sequence ?? []
       anchor = start
