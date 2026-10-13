@@ -19,7 +19,12 @@ import {
   slackSecret,
   stringOf,
 } from "./slack";
-import { answerSupport, tellSupportChanged } from "./support-answers";
+import {
+  keepSupportAnswer,
+  PHOTO_WORDS,
+  tellAnswered,
+  tellSupportChanged,
+} from "./support-answers";
 import type { SupportPhotoOf } from "./support-answers";
 import {
   lineWhere,
@@ -93,30 +98,41 @@ const answerFromSlack = async (
   if (images.length < files.length) {
     missed.push("写真のほかのファイルや、一度に送れる枚数を超えた写真");
   }
+  // Every line the message makes is kept first, and the user told once,
+  // by its words or else its photos, not once a line.
+  let added: string | undefined;
   for (const [index, image] of images.entries()) {
     // oxlint-disable-next-line no-await-in-loop -- the photos go in order
     const photo = await keepSlackPhoto(env, chat.userId, image);
     const kept =
-      photo !== null &&
-      // oxlint-disable-next-line no-await-in-loop -- as above
-      (await answerSupport(env, chat.userId, "", {
-        id: `${base}-photo-${index}`,
-        photo,
-        slackTs: ts,
-      })) !== null;
-    if (!kept) {
+      photo === null
+        ? null
+        : // oxlint-disable-next-line no-await-in-loop -- as above
+          await keepSupportAnswer(env, chat.userId, "", {
+            id: `${base}-photo-${index}`,
+            photo,
+            slackTs: ts,
+          });
+    if (kept === null) {
       missed.push("読めなかった写真");
+    } else if (kept.added) {
+      added = PHOTO_WORDS;
     }
   }
   const words = fromSlackText(stringOf(event.text) ?? "", event.blocks);
   if (words.trim() !== "" || images.length === 0) {
-    const kept = await answerSupport(env, chat.userId, words, {
+    const kept = await keepSupportAnswer(env, chat.userId, words, {
       id: base,
       slackTs: ts,
     });
     if (kept === null) {
       missed.push("空か、長すぎる文");
+    } else if (kept.added) {
+      added = words.trim();
     }
+  }
+  if (added !== undefined) {
+    await tellAnswered(env, chat.userId, added);
   }
   await (missed.length === 0
     ? slackCall(env, "reactions.add", {

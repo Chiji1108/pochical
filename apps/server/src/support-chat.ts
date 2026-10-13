@@ -112,31 +112,58 @@ export const linesWithSlackTs = async (
     .from(supportMessages)
     .where(eq(supportMessages.slackTs, slackTs));
 
-/** An emoji put on a line or taken off, by the user or Pochical's people. */
+/**
+ * An emoji put on a line or taken off, by the user or Pochical's people.
+ * Taking one off gives back where the Slack thread was told of it, if it
+ * was (keepReactionNotice).
+ */
 export const reactTo = async (
   env: Env,
   messageId: string,
   fromSupport: boolean,
   emoji: string,
   on: boolean
-): Promise<void> => {
+): Promise<string | null> => {
   const db = drizzle(env.DB);
-  await (on
-    ? db
-        .insert(supportReactions)
-        .values({ emoji, fromSupport, messageId })
-        .onConflictDoNothing()
-        .run()
-    : db
-        .delete(supportReactions)
-        .where(
-          and(
-            eq(supportReactions.messageId, messageId),
-            eq(supportReactions.fromSupport, fromSupport),
-            eq(supportReactions.emoji, emoji)
-          )
-        )
-        .run());
+  if (on) {
+    await db
+      .insert(supportReactions)
+      .values({ emoji, fromSupport, messageId })
+      .onConflictDoNothing()
+      .run();
+    return null;
+  }
+  const [removed] = await db
+    .delete(supportReactions)
+    .where(
+      and(
+        eq(supportReactions.messageId, messageId),
+        eq(supportReactions.fromSupport, fromSupport),
+        eq(supportReactions.emoji, emoji)
+      )
+    )
+    .returning({ notice: supportReactions.slackNoticeTs });
+  return removed?.notice ?? null;
+};
+
+/** Where the Slack thread was told of the user's reaction, for its removal. */
+export const keepReactionNotice = async (
+  env: Env,
+  messageId: string,
+  emoji: string,
+  ts: string
+): Promise<void> => {
+  await drizzle(env.DB)
+    .update(supportReactions)
+    .set({ slackNoticeTs: ts })
+    .where(
+      and(
+        eq(supportReactions.messageId, messageId),
+        eq(supportReactions.fromSupport, false),
+        eq(supportReactions.emoji, emoji)
+      )
+    )
+    .run();
 };
 
 /**

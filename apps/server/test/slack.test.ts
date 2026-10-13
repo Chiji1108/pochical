@@ -210,6 +210,15 @@ const startedChat = async () => {
   return { thread: await threadOf(userId), token, userId };
 };
 
+/** An image file in a Slack message, with its 1024 pixel picture. */
+const slackImage = (id: string) => ({
+  id,
+  mimetype: "image/png",
+  thumb_1024: `https://files.slack.com/files-tmb/${id}-1024.png`,
+  thumb_1024_h: 768,
+  thumb_1024_w: 1024,
+});
+
 const replyIn = (thread: string | null, more: Record<string, unknown>) => ({
   event: {
     channel: "C-SUPPORT",
@@ -382,6 +391,42 @@ describe("a support chat in Slack", () => {
       true,
     ]);
   });
+
+  it("tells the user of a reply's photos and words once, by its words", async () => {
+    const calls = slackCalls();
+    const { thread, token, userId } = await startedChat();
+    await call(
+      "UserService/RegisterPushToken",
+      { sandbox: true, token: "b2".repeat(32) },
+      token
+    );
+    await postEvent(
+      replyIn(thread, {
+        files: [slackImage("F3"), slackImage("F4")],
+        subtype: "file_share",
+        text: "2枚送ります",
+        ts: "1700000200.000003",
+      })
+    );
+    await vi.waitFor(() => {
+      expect(
+        calls.some(({ method }) => method === "reactions.add")
+      ).toBeTruthy();
+    });
+    // Time for a notification that should not come.
+    await scheduler.wait(100);
+    const alerts = calls.filter(({ method }) => method.startsWith("/3/device"));
+    const { results } = await env.DB.prepare(
+      "select count(*) as lines from support_messages where user_id = ? and from_support = 1"
+    )
+      .bind(userId)
+      .all<{ lines: number }>();
+    expect([results[0]?.lines, alerts.length, alerts[0]?.args]).toMatchObject([
+      3,
+      1,
+      { aps: { alert: { "loc-args": ["2枚送ります"] } } },
+    ]);
+  });
 });
 
 /** A user's line in the chat, by its text. */
@@ -437,6 +482,49 @@ describe("reactions and lines taken back, in Slack", () => {
       calls[3]?.args.ts,
       String(calls[3]?.args.text).includes("管理サイトで開く"),
     ]).toStrictEqual(["+1", thread, thread, true]);
+  });
+
+  it("say an emoji Slack has no name for in the thread, once however often put on and taken off", async () => {
+    const calls = slackCalls();
+    const { token, userId } = await startedChat();
+    const line = await lineOf(userId, "質問です");
+    const id = line?.id ?? "";
+    const react = async (on: boolean) => {
+      await call("SupportService/ReactSupport", { emoji: "🦄", id, on }, token);
+    };
+    const notice = async () => {
+      const row = await env.DB.prepare(
+        "select slack_notice_ts as ts from support_reactions where message_id = ? and from_support = 0"
+      )
+        .bind(id)
+        .first<{ ts: string | null }>();
+      return row?.ts ?? null;
+    };
+    await react(true);
+    await vi.waitFor(async () => {
+      await expect(notice()).resolves.toBeTruthy();
+    });
+    const told = await notice();
+    await react(false);
+    await vi.waitFor(() => {
+      expect(calls).toHaveLength(3);
+    });
+    await react(true);
+    await vi.waitFor(() => {
+      expect(calls).toHaveLength(4);
+    });
+    expect([
+      calls.map(({ method }) => method),
+      calls[2]?.args.ts,
+    ]).toStrictEqual([
+      [
+        "chat.postMessage",
+        "chat.postMessage",
+        "chat.delete",
+        "chat.postMessage",
+      ],
+      told,
+    ]);
   });
 
   it("take Pochical's people's emoji on a user's line, not the app's own", async () => {
