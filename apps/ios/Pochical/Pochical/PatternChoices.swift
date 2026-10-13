@@ -2,10 +2,10 @@ import PochicalDesign
 import PochicalKit
 import SwiftUI
 
-// 使うパターンを選んでください, after the kind of work in はじめの設定 and
-// 新しい仕事にする (/design's PatternsStep; spec/shift-patterns.md,
-// Changing jobs): every ready-made pattern as a chip under its heading,
-// the kind of work's own already picked.
+// The ready-made patterns as chips under their headings (/design's
+// ReadyPatternChips), for picking several at once: 使うパターンを選んで
+// ください, after the kind of work in はじめの設定 and 新しい仕事にする,
+// and パターンを追加 (spec/shift-patterns.md).
 
 /// The chips, the person adding what else their days hold (出張, 希望休…)
 /// or dropping what they never have. Those the kind of work's order needs
@@ -14,10 +14,15 @@ struct ReadyPatternChips: View {
   @Environment(\.themeColors) private var colors
   @Binding var picked: Set<PatternID>
   let needed: Set<PatternID>
+  /// The ones to show; a heading left with none goes.
+  var offered: (PatternID) -> Bool = { _ in true }
 
   var body: some View {
+    let sections = ReadyPatterns.offeredSections
+      .map { (title: $0.title, ids: $0.ids.filter(offered)) }
+      .filter { !$0.ids.isEmpty }
     VStack(alignment: .leading, spacing: 16) {
-      ForEach(ReadyPatterns.offeredSections, id: \.title) { section in
+      ForEach(sections, id: \.title) { section in
         VStack(alignment: .leading, spacing: 8) {
           Text(section.title)
             .font(.footnote.weight(.semibold))

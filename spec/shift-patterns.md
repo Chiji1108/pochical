@@ -17,7 +17,7 @@ Each person has their own list of patterns, in their order. ポチポチ入力 s
 
 The ready-made patterns, the marks offered first in each look and the words that suggest a mark from a name are shared data in `design/src/patterns.ts`, which `mise run gen` writes out for the native apps (`ReadyPatterns`).
 
-There is no fixed catalogue of pattern kinds: whether a day is off, and what follows it, come only from these fields. The ready-made patterns (日勤, 夜勤, 明け, …) are templates copied into the person's list; パターンを追加 offers those not in it yet under the headings the setup questions use (`readyPatternSections`), with 自分で作る after them.
+There is no fixed catalogue of pattern kinds: whether a day is off, and what follows it, come only from these fields. The ready-made patterns (日勤, 夜勤, 明け, …) are templates copied into the person's list; パターンを追加 offers those not in it yet as the setup questions do (使うパターンを選んでください, below): chips under the same headings (`readyPatternSections`), several picked and added at once with 追加, in the chips' order, at the list's end, a 夜勤 bringing its 明け as its next day only when that is there or added with it; 自分で作る is after them.
 
 A person's patterns sync between their devices as whole values, each last-writer-wins, and their order as one more (spec/sync-protocol.md, On the wire; `pochical.v1.Pattern`).
 

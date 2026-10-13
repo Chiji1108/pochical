@@ -146,13 +146,15 @@ struct PatternsPage: View {
   }
 }
 
-/// パターンを追加: the ready-made patterns not in the list yet, added at a
-/// tap, and 自分で作る.
+/// パターンを追加: the ready-made patterns not in the list yet, as chips
+/// under their headings as the setup questions show them, several picked
+/// and added at once; and 自分で作る.
 private struct AddPatternPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Dependency(\.defaultDatabase) private var database
   let patterns: [Pattern]
+  @State private var picked: Set<PatternID> = []
   /// One made with 自分で作る: back to the list, past this page, once the
   /// editor has gone.
   @State private var made = false
@@ -160,51 +162,20 @@ private struct AddPatternPage: View {
   var body: some View {
     let ids = Set(patterns.map(\.id))
     let names = Set(patterns.map(\.name))
-    // One already there, by its id or its name, is left out; a heading
-    // with nothing left goes.
-    let sections = ReadyPatterns.offeredSections.map { section in
-      (
-        title: section.title,
-        patterns: section.ids.compactMap(ReadyPatterns.pattern).filter {
-          !ids.contains($0.id) && !names.contains($0.name)
-        }
-      )
+    // One already there, by its id or its name, is left out.
+    let offered = { (id: PatternID) in
+      !ids.contains(id) && !names.contains(readyByID[id]?.name ?? "")
     }
-    .filter { !$0.patterns.isEmpty }
+    let any = ReadyPatterns.offered.contains(where: offered)
     List {
-      ForEach(sections, id: \.title) { section in
+      if any {
         Section {
-          ForEach(section.patterns, id: \.id) { ready in
-            let pattern = Pattern(ready, keeping: ids)
-            Button {
-              try? database.write { try OwnValues.save(pattern, now: nowMs(), in: $0) }
-              dismiss()
-            } label: {
-              LabeledContent {
-                HStack(spacing: 12) {
-                  Text(patternTimeText(pattern.time))
-                  Image(systemName: "plus").foregroundStyle(colors.accentDefault)
-                }
-              } label: {
-                Label {
-                  Text(pattern.name).foregroundStyle(colors.textPrimary)
-                } icon: {
-                  ShiftMark(pattern: pattern, size: 22)
-                }
-              }
-            }
-            .accessibilityLabel("\(pattern.name)を追加")
-          }
-        } header: {
-          Text(section.title)
+          ReadyPatternChips(picked: $picked, needed: [], offered: offered)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .settingsTextOnPage()
         } footer: {
-          // For whoever pauses at + over a time unlike their own, once,
-          // under the last heading.
-          if section.title == sections.last?.title {
-            Text("名前や時間は、追加したあとで直せます。")
-          }
+          Text("名前や時間は、追加したあとで直せます。")
         }
-        .settingsRows()
       }
       Section {
         NavigationLink {
@@ -218,9 +189,32 @@ private struct AddPatternPage: View {
     .settingsList()
     .navigationTitle("パターンを追加")
     .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      if any {
+        ToolbarItem(placement: .confirmationAction) {
+          Button("追加", role: .confirm) { add(keeping: ids) }
+            .disabled(picked.isEmpty)
+        }
+      }
+    }
     .onAppear {
       if made { dismiss() }
     }
+  }
+
+  /// The picked ones join the list's end, in the chips' order; a 夜勤
+  /// brings its 明け only when that is there too.
+  private func add(keeping ids: Set<PatternID>) {
+    let chosen = chosenPatterns(picked)
+    let there = ids.union(chosen)
+    let added = chosen.compactMap(ReadyPatterns.pattern).map { Pattern($0, keeping: there) }
+    let now = nowMs()
+    try? database.write { db in
+      for pattern in added {
+        try OwnValues.save(pattern, now: now, in: db)
+      }
+    }
+    dismiss()
   }
 
   /// A blank pattern: 9:00 to 18:00, its mark guessed as it is named and

@@ -1,11 +1,7 @@
-import {
-  readyPatternSections,
-  rosterTemplates,
-  rotationTemplates,
-} from "@pochical/design/patterns";
+import { rosterTemplates, rotationTemplates } from "@pochical/design/patterns";
 import type { JobTemplate } from "@pochical/design/patterns";
 import { ChevronRight } from "lucide-react";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { addDays } from "../lib/design-days";
@@ -16,9 +12,9 @@ import {
 } from "../lib/design-patterns";
 import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
-import { Chip, ChipGroup } from "./design-choices";
 import { BackButton, DoneButton, PageHeader } from "./design-header";
 import { List, ListRow, listRow } from "./design-list";
+import { inChipOrder, ReadyPatternChips, toggled } from "./design-ready-chips";
 import {
   OrderTitle,
   RepeatCalendar,
@@ -27,7 +23,6 @@ import {
 import { ConfirmDialog } from "./design-sheet";
 import { KeysPreview } from "./design-shift-input";
 import { Button, OptionCard, optionList } from "./design-ui";
-import { MarkGlyph, ShiftMarkStyleContext } from "./shift-mark";
 
 type Template = JobTemplate;
 
@@ -521,24 +516,11 @@ function PatternsStep({
   onBack: () => void;
   onNext: (patternKeys: PresetShift[]) => void;
 }) {
-  const style = useContext(ShiftMarkStyleContext);
-  const book = usePatterns();
   const [picked, setPicked] = useState<ReadonlySet<PresetShift>>(
     () => new Set(template.patternKeys)
   );
   const needed = new Set(template.custom ? [] : (template.sequence ?? []));
-  const toggle = (id: PresetShift) => {
-    const next = new Set(picked);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setPicked(next);
-  };
-  const chosen = readyPatternSections
-    .flatMap(({ ids }) => ids)
-    .filter((id) => picked.has(id));
+  const chosen = inChipOrder(picked);
   let action = "完了";
   if (ordering) {
     action = "次へ";
@@ -552,35 +534,13 @@ function PatternsStep({
         onBack={onBack}
         title="使うパターンを選んでください"
       />
-      {readyPatternSections.map((section) => (
-        <section className={patternsStep.section} key={section.title}>
-          <h4 className={patternsStep.heading}>{section.title}</h4>
-          <ChipGroup label={section.title}>
-            {section.ids.map((id) => {
-              const pattern = book[id];
-              return (
-                // One the order needs stays picked, drawn as picked, not
-                // greyed out as a choice there is none of.
-                <Chip
-                  aria-disabled={needed.has(id)}
-                  key={id}
-                  onClick={() => {
-                    if (!needed.has(id)) {
-                      toggle(id);
-                    }
-                  }}
-                  selected={picked.has(id)}
-                >
-                  {pattern && (
-                    <MarkGlyph look={pattern} size={16} style={style} />
-                  )}
-                  {pattern?.name}
-                </Chip>
-              );
-            })}
-          </ChipGroup>
-        </section>
-      ))}
+      <ReadyPatternChips
+        needed={needed}
+        onToggle={(id) => {
+          setPicked(toggled(picked, id));
+        }}
+        picked={picked}
+      />
       {needed.size > 0 && (
         <p className={onboarding.description}>
           並びに入っているパターンは外せません。
@@ -600,14 +560,7 @@ function PatternsStep({
 }
 
 const patternsStep = {
-  heading: css({
-    color: "text.tertiary",
-    fontWeight: 600,
-    margin: "0 0 8px",
-    textStyle: "footnote",
-  }),
   next: css({ flexShrink: 0, marginTop: "auto" }),
-  section: css({ display: "flex", flexDirection: "column" }),
 };
 
 // The order on the calendar: a kind of work's own, from its first day
