@@ -26,6 +26,14 @@ extension View {
     listRowBackground(Color.clear)
       .listRowInsets(EdgeInsets())
   }
+
+  /// Words standing on the page, as a question over its answers: kept
+  /// clear of the row's rounded corners, which would cut a first or last
+  /// line's letters at the edge.
+  func settingsTextOnPage() -> some View {
+    padding(.vertical, 12)
+      .settingsOnPage()
+  }
 }
 
 private struct SettingsList: ViewModifier {

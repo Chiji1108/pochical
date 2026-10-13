@@ -153,7 +153,7 @@ struct JobChangePage: View {
     Section {
       ReadyPatternChips(picked: $picked, needed: template.needed)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .settingsOnPage()
+        .settingsTextOnPage()
     }
     Section {
       Button {
@@ -209,7 +209,7 @@ struct JobChangePage: View {
         Text(title).font(.title3.bold()).foregroundStyle(colors.textPrimary)
         Text(description).font(.subheadline).foregroundStyle(colors.textTertiary)
       }
-      .settingsOnPage()
+      .settingsTextOnPage()
     }
   }
 
