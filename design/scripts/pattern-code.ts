@@ -8,6 +8,7 @@ import {
   markEmojis,
   offeredMarkIcons,
   readyPatternOrder,
+  readyPatternSections,
   readyPatterns,
   rosterTemplates,
   rotationTemplates,
@@ -87,6 +88,13 @@ export const swiftReadyPatterns = (): string[] => [
   "",
   "  /// The ready-made patterns パターンを追加 offers, in its order.",
   `  public static let offered: [String] = [${list(readyPatternOrder)}]`,
+  "",
+  "  /// The same under their headings.",
+  "  public static let offeredSections: [(title: String, ids: [String])] = [",
+  ...readyPatternSections.map(
+    ({ title, ids }) => `    (${quoted(title)}, [${list(ids)}]),`
+  ),
+  "  ]",
   "",
   "  /// The ready-made pattern with the id.",
   "  public static func pattern(_ id: String) -> ReadyPattern? {",
@@ -177,6 +185,12 @@ export const kotlinReadyPatterns = (): string[] => [
   "  )",
   "",
   `  val offered: List<String> = listOf(${list(readyPatternOrder)})`,
+  "",
+  "  val offeredSections: List<Pair<String, List<String>>> = listOf(",
+  ...readyPatternSections.map(
+    ({ title, ids }) => `    ${quoted(title)} to listOf(${list(ids)}),`
+  ),
+  "  )",
   "",
   `  val markEmojis: List<String> = listOf(${list(markEmojis)})`,
   "",

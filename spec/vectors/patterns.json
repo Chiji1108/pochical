@@ -327,6 +327,33 @@
       }
     },
     {
+      "name": "a word before the one-letter words in it",
+      "text": "希望休",
+      "expected": {
+        "emoji": "🙋",
+        "icon": "star",
+        "symbol": "希"
+      }
+    },
+    {
+      "name": "half a day off before a day off",
+      "text": "午前休",
+      "expected": {
+        "emoji": "☕️",
+        "icon": "coffee",
+        "symbol": "午"
+      }
+    },
+    {
+      "name": "work in the day",
+      "text": "パート",
+      "expected": {
+        "emoji": "🛒",
+        "icon": "shoppingBag",
+        "symbol": "パ"
+      }
+    },
+    {
       "name": "no hint",
       "text": "ジム",
       "expected": {

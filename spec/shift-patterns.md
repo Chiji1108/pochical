@@ -17,7 +17,7 @@ Each person has their own list of patterns, in their order. ポチポチ入力 s
 
 The ready-made patterns, the marks offered first in each look and the words that suggest a mark from a name are shared data in `design/src/patterns.ts`, which `mise run gen` writes out for the native apps (`ReadyPatterns`).
 
-There is no fixed catalogue of pattern kinds: whether a day is off, and what follows it, come only from these fields. The ready-made patterns (日勤, 夜勤, 明け, …) are templates copied into the person's list.
+There is no fixed catalogue of pattern kinds: whether a day is off, and what follows it, come only from these fields. The ready-made patterns (日勤, 夜勤, 明け, …) are templates copied into the person's list; パターンを追加 offers those not in it yet under the headings the setup questions use (`readyPatternSections`), with 自分で作る after them.
 
 A person's patterns sync between their devices as whole values, each last-writer-wins, and their order as one more (spec/sync-protocol.md, On the wire; `pochical.v1.Pattern`).
 
@@ -95,7 +95,7 @@ A device that holds no pattern starts with はじめの設定 (/design's DesignO
 
 1. A welcome: the app icon's poodle, the app's name and what it is for, with はじめる and アカウントをお持ちの方はログイン.
 2. ログイン is for someone moving to a new phone. Signing in switches to the account's data as any sign-in does, without asking, as the device holds nothing; the account's patterns end the first run. An account with nothing in it yet goes on to the questions.
-3. はじめる asks the questions 新しい仕事にする asks (below), as large cards: whether shifts repeat (繰り返しがある first, as the answer that sets up more), then the kind of work. A roster's work gives its patterns only; a weekly order starts on a Sunday; any other order is typed on the calendar from this month's 1st, covering every day, and 完了 asks nothing, as no day is there yet.
+3. はじめる asks the questions 新しい仕事にする asks (below), as large cards: whether shifts repeat (繰り返しがある first, as the answer that sets up more), the kind of work, then the patterns to use. A roster's work gives its patterns only; a weekly order starts on a Sunday; any other order is typed on the calendar from this month's 1st, covering every day, and 完了 asks nothing, as no day is there yet.
 4. The kind of work's patterns become the person's, and its order repeats from the month before this one, or from its first day when that is earlier, so the days just past show it too.
 
 An invitation opened meanwhile waits until the calendar shows, and is asked about there as at any other time.
@@ -103,6 +103,8 @@ An invitation opened meanwhile waits until the calendar shows, and is asked abou
 ## Changing jobs
 
 The kinds of work はじめの設定 and 新しい仕事にする offer, their ready-made patterns and orders, are shared data in `design/src/patterns.ts` (`rosterTemplates`, `rotationTemplates`). Where an order is shown, its days are small tiles, seven a row; a kind of work without an order shows its patterns as ポチポチ入力's keys will. In 新しい仕事にする the answers are rows of one list, as the settings pages around them are; はじめの設定, with no list around it, shows them as large cards.
+
+After the kind of work, both ask 使うパターンを選んでください: every ready-made pattern as a chip under its heading (`readyPatternSections`: 交代勤務, 日中の仕事, 休み), the kind of work's own already picked, so one tap goes on and the person adds what else their days hold (出張, 希望休…) or drops what they never have. Those in the kind of work's order stay picked, as the order needs them (並びに入っているパターンは外せません。). The chosen ones, in the sections' order, become the new patterns and the keys an order is typed with; the button is 次へ when an order is typed next, else はじめる on a first run and 完了 in settings.
 
 The new job's patterns replace the list, and its repeating order starts on the day of the switch. An old pattern still on a day before the switch, of its own or from an earlier order, stays, archived (Patterns no longer used), so those days keep their marks without its key; one the new job brings again, unchanged, is the new job's and in use.
 

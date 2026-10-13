@@ -1,7 +1,11 @@
-import { rosterTemplates, rotationTemplates } from "@pochical/design/patterns";
+import {
+  readyPatternSections,
+  rosterTemplates,
+  rotationTemplates,
+} from "@pochical/design/patterns";
 import type { JobTemplate } from "@pochical/design/patterns";
 import { ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { addDays } from "../lib/design-days";
@@ -12,6 +16,7 @@ import {
 } from "../lib/design-patterns";
 import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
+import { Chip, ChipGroup } from "./design-choices";
 import { BackButton, DoneButton, PageHeader } from "./design-header";
 import { List, ListRow, listRow } from "./design-list";
 import {
@@ -21,7 +26,8 @@ import {
 } from "./design-repeat-editor";
 import { ConfirmDialog } from "./design-sheet";
 import { KeysPreview } from "./design-shift-input";
-import { OptionCard, optionList } from "./design-ui";
+import { Button, OptionCard, optionList } from "./design-ui";
+import { MarkGlyph, ShiftMarkStyleContext } from "./shift-mark";
 
 type Template = JobTemplate;
 
@@ -29,6 +35,8 @@ export type Step =
   | { name: "kind" }
   | { name: "roster" }
   | { name: "rotation" }
+  // The patterns to use, the kind of work's to start with.
+  | { name: "patterns"; template: Template; kind: "roster" | "rotation" }
   | { name: "order"; template: Template };
 
 // What a page's 完了 asks before days already there change.
@@ -203,17 +211,25 @@ export function WorkSetupSteps({
   };
 
   // The templates' patterns are ready-made ones, drawn as they come even
-  // when the person has their own under the same ids.
-  function chooseRotation(template: Template) {
-    if (template.weekly && template.sequence) {
+  // when the person has their own under the same ids. With the patterns
+  // chosen, a roster's work is done, a week's order starts on a Sunday,
+  // and any other order is typed on the calendar.
+  function goOnWith(
+    template: Template,
+    kind: "roster" | "rotation",
+    patternKeys: PresetShift[]
+  ) {
+    if (kind === "roster") {
+      onFinish({ patternKeys });
+    } else if (template.weekly && template.sequence) {
       // Any Sunday works as the first day of a week-based sequence.
       onFinish({
         anchor: addDays(month, -month.getDay()),
-        patternKeys: template.patternKeys,
+        patternKeys,
         sequence: template.sequence,
       });
     } else {
-      goTo({ name: "order", template });
+      goTo({ name: "order", template: { ...template, patternKeys } });
     }
   }
 
@@ -237,7 +253,7 @@ export function WorkSetupSteps({
             goTo({ name: "kind" });
           }}
           onChoose={(template) => {
-            onFinish({ patternKeys: template.patternKeys });
+            goTo({ kind: "roster", name: "patterns", template });
           }}
           rows={Boolean(onExit)}
           templates={rosterTemplates}
@@ -249,10 +265,29 @@ export function WorkSetupSteps({
           onBack={() => {
             goTo({ name: "kind" });
           }}
-          onChoose={chooseRotation}
+          onChoose={(template) => {
+            goTo({ kind: "rotation", name: "patterns", template });
+          }}
           rows={Boolean(onExit)}
           templates={rotationTemplates}
           title="どんな順番で回りますか？"
+        />
+      )}
+      {step.name === "patterns" && (
+        <PatternsStep
+          first={!onExit}
+          key={step.template.id}
+          onBack={() => {
+            goTo({ name: step.kind });
+          }}
+          onNext={(patternKeys) => {
+            goOnWith(step.template, step.kind, patternKeys);
+          }}
+          ordering={
+            step.kind === "rotation" &&
+            !(step.template.weekly && step.template.sequence)
+          }
+          template={step.template}
         />
       )}
       {step.name === "order" && (
@@ -261,7 +296,11 @@ export function WorkSetupSteps({
           from={from}
           month={month}
           onBack={() => {
-            goTo({ name: "rotation" });
+            goTo({
+              kind: "rotation",
+              name: "patterns",
+              template: step.template,
+            });
           }}
           onStart={(order) => {
             onFinish({ ...order, patternKeys: step.template.patternKeys });
@@ -462,6 +501,114 @@ function TemplateStep({
     </>
   );
 }
+
+// The patterns to use, every ready-made one under its heading as a chip,
+// the kind of work's own already picked: the person adds what else their
+// days hold (出張, 希望休…) or drops what they never have, with no page
+// more than the one tap to go on. Those in the kind of work's order stay,
+// as the order needs them.
+function PatternsStep({
+  template,
+  first,
+  ordering,
+  onBack,
+  onNext,
+}: {
+  template: Template;
+  first: boolean;
+  // An order to type comes next, so the button goes on to it.
+  ordering: boolean;
+  onBack: () => void;
+  onNext: (patternKeys: PresetShift[]) => void;
+}) {
+  const style = useContext(ShiftMarkStyleContext);
+  const book = usePatterns();
+  const [picked, setPicked] = useState<ReadonlySet<PresetShift>>(
+    () => new Set(template.patternKeys)
+  );
+  const needed = new Set(template.custom ? [] : (template.sequence ?? []));
+  const toggle = (id: PresetShift) => {
+    const next = new Set(picked);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setPicked(next);
+  };
+  const chosen = readyPatternSections
+    .flatMap(({ ids }) => ids)
+    .filter((id) => picked.has(id));
+  let action = "完了";
+  if (ordering) {
+    action = "次へ";
+  } else if (first) {
+    action = "はじめる";
+  }
+  return (
+    <>
+      <StepHeader
+        description="選んだものが、ポチポチ入力のボタンになります。名前や時間は、あとから変えられます。"
+        onBack={onBack}
+        title="使うパターンを選んでください"
+      />
+      {readyPatternSections.map((section) => (
+        <section className={patternsStep.section} key={section.title}>
+          <h4 className={patternsStep.heading}>{section.title}</h4>
+          <ChipGroup label={section.title}>
+            {section.ids.map((id) => {
+              const pattern = book[id];
+              return (
+                // One the order needs stays picked, drawn as picked, not
+                // greyed out as a choice there is none of.
+                <Chip
+                  aria-disabled={needed.has(id)}
+                  key={id}
+                  onClick={() => {
+                    if (!needed.has(id)) {
+                      toggle(id);
+                    }
+                  }}
+                  selected={picked.has(id)}
+                >
+                  {pattern && (
+                    <MarkGlyph look={pattern} size={16} style={style} />
+                  )}
+                  {pattern?.name}
+                </Chip>
+              );
+            })}
+          </ChipGroup>
+        </section>
+      ))}
+      {needed.size > 0 && (
+        <p className={onboarding.description}>
+          並びに入っているパターンは外せません。
+        </p>
+      )}
+      <Button
+        className={patternsStep.next}
+        disabled={chosen.length === 0}
+        onClick={() => {
+          onNext(chosen);
+        }}
+      >
+        {action}
+      </Button>
+    </>
+  );
+}
+
+const patternsStep = {
+  heading: css({
+    color: "text.tertiary",
+    fontWeight: 600,
+    margin: "0 0 8px",
+    textStyle: "footnote",
+  }),
+  next: css({ flexShrink: 0, marginTop: "auto" }),
+  section: css({ display: "flex", flexDirection: "column" }),
+};
 
 // The order on the calendar: a kind of work's own, from its first day
 // as it falls, or one typed from nothing. Either is typed over as

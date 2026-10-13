@@ -1,5 +1,5 @@
 import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
-import { readyPatternOrder } from "@pochical/design/patterns";
+import { readyPatternSections } from "@pochical/design/patterns";
 import { Plus } from "lucide-react";
 import { Fragment, useContext, useState } from "react";
 import { css } from "styled-system/css";
@@ -358,9 +358,8 @@ export function PatternsPage({
   );
 }
 
-// Common patterns to add with one tap, leaving out ones already there
-// (design/src/patterns.ts).
-const suggestionKeys = readyPatternOrder;
+// Common patterns to add with one tap, under their headings, leaving out
+// ones already there (design/src/patterns.ts).
 
 function AddPatternPage({
   items,
@@ -375,9 +374,14 @@ function AddPatternPage({
 }) {
   const style = useContext(ShiftMarkStyleContext);
   const taken = new Set(items.flatMap((item) => [item.id, item.name]));
-  const suggestions = presetList(suggestionKeys).filter(
-    (preset) => !(taken.has(preset.id) || taken.has(preset.name))
-  );
+  const sections = readyPatternSections
+    .map(({ title, ids }) => ({
+      presets: presetList(ids).filter(
+        (preset) => !(taken.has(preset.id) || taken.has(preset.name))
+      ),
+      title,
+    }))
+    .filter(({ presets }) => presets.length > 0);
   return (
     <>
       <PageHeader
@@ -385,10 +389,10 @@ function AddPatternPage({
         onBack={onBack}
         title="パターンを追加"
       />
-      {suggestions.length > 0 && (
-        <Section title="よく使うパターン">
+      {sections.map((section) => (
+        <Section key={section.title} title={section.title}>
           <List>
-            {suggestions.map((preset) => (
+            {section.presets.map((preset) => (
               <ListRow
                 key={preset.id}
                 onClick={() => {
@@ -411,10 +415,12 @@ function AddPatternPage({
               />
             ))}
           </List>
-          {/* For whoever pauses at + over a time unlike their own: it
-              belongs to these, not to 自分で作る below. */}
-          <Note>名前や時間は、追加したあとで直せます。</Note>
         </Section>
+      ))}
+      {/* For whoever pauses at + over a time unlike their own: it belongs
+          to these, not to 自分で作る below. */}
+      {sections.length > 0 && (
+        <Note>名前や時間は、追加したあとで直せます。</Note>
       )}
       <List>
         <ListRow onClick={onCustom} label="自分で作る" value="" />
