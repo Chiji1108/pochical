@@ -379,9 +379,9 @@ function AddPatternPage({
   const offered = (id: PresetShift) =>
     !(taken.has(id) || taken.has(presetPatterns[id].name));
   const any = readyPatternOrder.some(offered);
+  // Only ones not there yet: a 明け picked with its 夜勤 may be.
+  const chosen = inChipOrder(picked).filter(offered);
   const add = () => {
-    // Only ones not there yet: a 明け picked with its 夜勤 may be.
-    const chosen = inChipOrder(picked).filter(offered);
     const there = new Set([...items.map((item) => item.id), ...chosen]);
     onAdd(
       presetList(chosen).map((preset) =>
@@ -400,7 +400,11 @@ function AddPatternPage({
         title="パターンを追加"
         trailing={
           any && (
-            <HeaderAction disabled={picked.size === 0} onClick={add} prominent>
+            <HeaderAction
+              disabled={chosen.length === 0}
+              onClick={add}
+              prominent
+            >
               追加
             </HeaderAction>
           )

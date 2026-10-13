@@ -284,7 +284,8 @@ private struct TemplateStep: View {
 }
 
 /// The patterns to use, the kind of work's own already picked, with the
-/// button on at the foot: 次へ when an order is typed next, else はじめる.
+/// button on kept at the foot over the chips, in reach however many: 次へ
+/// when an order is typed next, else はじめる.
 private struct PatternsStep: View {
   let template: JobTemplate
   let onNext: ([PatternID]) -> Void
@@ -304,6 +305,8 @@ private struct PatternsStep: View {
     ) {
       ReadyPatternChips(picked: $picked, needed: template.needed)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .safeAreaInset(edge: .bottom) {
       Button {
         onNext(chosenPatterns(picked))
       } label: {
@@ -311,7 +314,8 @@ private struct PatternsStep: View {
       }
       .mainButton()
       .disabled(picked.isEmpty)
-      .padding(.top, 8)
+      .padding(.horizontal, 20)
+      .padding(.bottom, 12)
     }
   }
 }

@@ -555,7 +555,7 @@ function PatternsStep({
         </p>
       )}
       <Button
-        className={patternsStep.next}
+        className={patternsStep.next({ pinned: first })}
         disabled={chosen.length === 0}
         onClick={() => {
           onNext(chosen);
@@ -567,8 +567,13 @@ function PatternsStep({
   );
 }
 
+// On the first run the button stays at the foot over the chips, in reach
+// however many; in settings it ends the page, over the tab bar.
 const patternsStep = {
-  next: css({ flexShrink: 0, marginTop: "auto" }),
+  next: cva({
+    base: { flexShrink: 0, marginTop: "auto" },
+    variants: { pinned: { true: { bottom: 0, position: "sticky" } } },
+  }),
 };
 
 // The order on the calendar: a kind of work's own, from its first day
