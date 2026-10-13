@@ -380,7 +380,8 @@ function AddPatternPage({
     !(taken.has(id) || taken.has(presetPatterns[id].name));
   const any = readyPatternOrder.some(offered);
   const add = () => {
-    const chosen = inChipOrder(picked);
+    // Only ones not there yet: a 明け picked with its 夜勤 may be.
+    const chosen = inChipOrder(picked).filter(offered);
     const there = new Set([...items.map((item) => item.id), ...chosen]);
     onAdd(
       presetList(chosen).map((preset) =>

@@ -49,12 +49,17 @@ struct ReadyPatternChips: View {
     }
   }
 
+  /// Picking a pattern with a next day picks that too, as 夜勤 brings its
+  /// 明け, which can still be dropped on its own.
   private func toggle(_ id: PatternID) {
     guard !needed.contains(id) else { return }
     if picked.contains(id) {
       picked.remove(id)
     } else {
       picked.insert(id)
+      if let follows = ReadyPatterns.pattern(id)?.nextDay {
+        picked.insert(follows)
+      }
     }
   }
 }

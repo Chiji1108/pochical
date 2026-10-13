@@ -18,7 +18,14 @@ export function inChipOrder(picked: ReadonlySet<PresetShift>): PresetShift[] {
     .filter((id) => picked.has(id));
 }
 
-// The set with the id picked or no longer.
+// Whether the id is one of the ready-made patterns'.
+function isPreset(id: string | undefined): id is PresetShift {
+  return id !== undefined && id in presetPatterns;
+}
+
+// The set with the id picked or no longer. Picking a pattern with a next
+// day picks that too, as 夜勤 brings its 明け, which can still be dropped
+// on its own.
 export function toggled(
   picked: ReadonlySet<PresetShift>,
   id: PresetShift
@@ -26,8 +33,12 @@ export function toggled(
   const next = new Set(picked);
   if (next.has(id)) {
     next.delete(id);
-  } else {
-    next.add(id);
+    return next;
+  }
+  next.add(id);
+  const follows = presetPatterns[id].nextDay;
+  if (isPreset(follows)) {
+    next.add(follows);
   }
   return next;
 }
