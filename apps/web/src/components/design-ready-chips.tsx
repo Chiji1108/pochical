@@ -9,7 +9,7 @@ import { MarkGlyph, ShiftMarkStyleContext } from "./shift-mark";
 
 // The ready-made patterns as chips under their headings (design/src/
 // patterns.ts, readyPatternSections), for picking several at once: the
-// setup questions' 使うパターンを選んでください and パターンを追加.
+// setup questions' 勤務や休みを選んでください and パターンを追加.
 
 // The ids picked, in the order the chips show them.
 export function inChipOrder(picked: ReadonlySet<PresetShift>): PresetShift[] {

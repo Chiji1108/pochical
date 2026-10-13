@@ -299,8 +299,8 @@ private struct PatternsStep: View {
   var body: some View {
     let ordering = (template.custom || template.sequence != nil) && !template.startsWeekly
     StepPage(
-      title: "使うパターンを選んでください",
-      description: "カレンダーに入れる勤務や休みです。あとから足したり、名前や時間を変えたりできます。"
+      title: "勤務や休みを選んでください",
+      description: "カレンダーに入れるものです。あとから足したり、名前や時間を変えたりできます。"
     ) {
       ReadyPatternChips(picked: $picked, needed: template.needed)
         .frame(maxWidth: .infinity, alignment: .leading)

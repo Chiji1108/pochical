@@ -34,7 +34,7 @@ struct JobChangePage: View {
   @State private var sequence: [PatternID] = []
   @State private var anchor = Day.today
   @State private var confirming = false
-  /// The patterns picked on 使うパターンを選んでください.
+  /// The patterns picked on 勤務や休みを選んでください.
   @State private var picked: Set<PatternID> = []
 
   var body: some View {
@@ -148,8 +148,8 @@ struct JobChangePage: View {
   @ViewBuilder private func patternsStep(_ template: JobTemplate) -> some View {
     let ordering = (template.custom || template.sequence != nil) && !template.startsWeekly
     question(
-      "使うパターンを選んでください",
-      "カレンダーに入れる勤務や休みです。あとから足したり、名前や時間を変えたりできます。")
+      "勤務や休みを選んでください",
+      "カレンダーに入れるものです。あとから足したり、名前や時間を変えたりできます。")
     Section {
       ReadyPatternChips(picked: $picked, needed: template.needed)
         .frame(maxWidth: .infinity, alignment: .leading)

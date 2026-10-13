@@ -3,7 +3,7 @@ import PochicalKit
 import SwiftUI
 
 // The ready-made patterns as chips under their headings (/design's
-// ReadyPatternChips), for picking several at once: 使うパターンを選んで
+// ReadyPatternChips), for picking several at once: 勤務や休みを選んで
 // ください, after the kind of work in はじめの設定 and 新しい仕事にする,
 // and パターンを追加 (spec/shift-patterns.md).
 
