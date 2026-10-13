@@ -81,6 +81,9 @@ export const supportReactions = sqliteTable(
     emoji: text().notNull(),
     fromSupport: integer("from_support", { mode: "boolean" }).notNull(),
     messageId: text("message_id").notNull(),
+    // The user's emoji Slack has no name for is told in the thread
+    // instead: that notice's message, deleted as the emoji comes off.
+    slackNoticeTs: text("slack_notice_ts"),
   },
   (table) => [
     primaryKey({ columns: [table.messageId, table.fromSupport, table.emoji] }),

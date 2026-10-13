@@ -8,7 +8,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
 import { supportPhotoKey } from "./photos";
-import { keepSlackTs } from "./support-chat";
+import { keepReactionNotice, keepSlackTs } from "./support-chat";
 import type { SupportLineOf } from "./support-chat";
 
 /**
@@ -464,14 +464,17 @@ export const tellStaffOfAnswer = async (
 };
 
 /**
- * The user's reaction on a line, on its message in Slack; one Slack has
- * no name for here is said in the thread instead.
+ * The user's reaction on a line, on its message in Slack. One Slack has
+ * no name for here is said in the thread instead, and that notice
+ * (`notice`, when taken off) deleted as it comes off, so putting it on and
+ * off again leaves at most one.
  */
 export const tellStaffOfReaction = async (
   env: Env,
   line: SupportLineOf,
   emoji: string,
-  on: boolean
+  on: boolean,
+  notice: string | null = null
 ): Promise<void> => {
   if (line.slackTs === null) {
     return;
@@ -484,12 +487,23 @@ export const tellStaffOfReaction = async (
     });
     return;
   }
+  if (!on) {
+    if (notice !== null) {
+      await slackCall(env, "chat.delete", { ts: notice });
+    }
+    return;
+  }
   const thread = await threadOf(env, line.userId);
-  if (on && thread !== null) {
-    await slackCall(env, "chat.postMessage", {
-      text: `ユーザーが ${emoji} を付けました：「${toSlackText(wordsOf(line).slice(0, QUOTE_LENGTH))}」`,
-      thread_ts: thread,
-    });
+  if (thread === null) {
+    return;
+  }
+  const posted = await slackCall(env, "chat.postMessage", {
+    text: `ユーザーが ${emoji} を付けました：「${toSlackText(wordsOf(line).slice(0, QUOTE_LENGTH))}」`,
+    thread_ts: thread,
+  });
+  const ts = stringOf(posted?.ts);
+  if (ts !== undefined) {
+    await keepReactionNotice(env, line.id, emoji, ts);
   }
 };
 

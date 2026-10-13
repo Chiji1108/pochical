@@ -1,0 +1,1 @@
+ALTER TABLE `support_reactions` ADD `slack_notice_ts` text;

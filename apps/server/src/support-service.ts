@@ -197,8 +197,8 @@ export const registerSupportService = (router: ConnectRouter): void => {
       );
       if (had !== on) {
         await holdBack(user.id);
-        await reactTo(env, id, false, emoji, on);
-        waitUntil(tellStaffOfReaction(env, line, emoji, on));
+        const notice = await reactTo(env, id, false, emoji, on);
+        waitUntil(tellStaffOfReaction(env, line, emoji, on, notice));
       }
       return create(ReactSupportResponseSchema, {
         message: messageOf(await lineInChat(user.id, id)),
