@@ -1,7 +1,7 @@
 // The lines of a user's chat with Pochical's people as the app, the admin
 // site and Slack all read and change them (spec/chat.md, The chat with
 // Pochical's people): each with its reactions, and taken back in place.
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats, supportMessages, supportReactions } from "./db/schema";
@@ -146,24 +146,31 @@ export const reactTo = async (
   return removed?.notice ?? null;
 };
 
-/** Where the Slack thread was told of the user's reaction, for its removal. */
+/**
+ * Where the Slack thread was told of the user's reaction, for its
+ * removal: kept only while the reaction is still there with no notice
+ * yet. False when it is not, as when taken off while the notice was on
+ * its way, or put on again and told by another.
+ */
 export const keepReactionNotice = async (
   env: Env,
   messageId: string,
   emoji: string,
   ts: string
-): Promise<void> => {
-  await drizzle(env.DB)
+): Promise<boolean> => {
+  const kept = await drizzle(env.DB)
     .update(supportReactions)
     .set({ slackNoticeTs: ts })
     .where(
       and(
         eq(supportReactions.messageId, messageId),
         eq(supportReactions.fromSupport, false),
-        eq(supportReactions.emoji, emoji)
+        eq(supportReactions.emoji, emoji),
+        isNull(supportReactions.slackNoticeTs)
       )
     )
     .run();
+  return kept.meta.changes > 0;
 };
 
 /**

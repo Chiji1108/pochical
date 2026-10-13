@@ -466,8 +466,9 @@ export const tellStaffOfAnswer = async (
 /**
  * The user's reaction on a line, on its message in Slack. One Slack has
  * no name for here is said in the thread instead, and that notice
- * (`notice`, when taken off) deleted as it comes off, so putting it on and
- * off again leaves at most one.
+ * (`notice`, when taken off) deleted as it comes off; one posted once it
+ * is off already, or told already, goes again. However quickly it is put
+ * on and off, at most one is left.
  */
 export const tellStaffOfReaction = async (
   env: Env,
@@ -502,8 +503,12 @@ export const tellStaffOfReaction = async (
     thread_ts: thread,
   });
   const ts = stringOf(posted?.ts);
-  if (ts !== undefined) {
-    await keepReactionNotice(env, line.id, emoji, ts);
+  // A notice no longer wanted by the time it is posted goes again.
+  if (
+    ts !== undefined &&
+    !(await keepReactionNotice(env, line.id, emoji, ts))
+  ) {
+    await slackCall(env, "chat.delete", { ts });
   }
 };
 

@@ -1,7 +1,13 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fromSlackText, signedBySlack, toSlackText } from "../src/slack";
+import {
+  fromSlackText,
+  signedBySlack,
+  tellStaffOfReaction,
+  toSlackText,
+} from "../src/slack";
+import { keepReactionNotice, lineWhere, reactTo } from "../src/support-chat";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 
 const SECRET = "slack-signing-secret";
@@ -523,6 +529,40 @@ describe("reactions and lines taken back, in Slack", () => {
         "chat.delete",
         "chat.postMessage",
       ],
+      told,
+    ]);
+  });
+
+  it("delete a notice of an emoji no longer wanted by the time it is posted", async () => {
+    const calls = slackCalls();
+    const { userId } = await startedChat();
+    const sent = await lineOf(userId, "質問です");
+    const line = await lineWhere(env, { id: sent?.id ?? "" });
+    if (line === undefined) {
+      throw new Error("No line");
+    }
+    // Taken off while its notice was on its way.
+    await tellStaffOfReaction(env, line, "🦄", true);
+    // Put on again and told by another notice already.
+    const told = "1700000999.000001";
+    await reactTo(env, line.id, false, "🦄", true);
+    await keepReactionNotice(env, line.id, "🦄", told);
+    await tellStaffOfReaction(env, line, "🦄", true);
+    const kept = await env.DB.prepare(
+      "select slack_notice_ts as ts from support_reactions where message_id = ? and from_support = 0"
+    )
+      .bind(line.id)
+      .first<{ ts: string | null }>();
+    const after = calls.slice(1);
+    expect([
+      after.map(({ method }) => method),
+      after[1]?.args.ts === told,
+      after[3]?.args.ts === told,
+      kept?.ts,
+    ]).toStrictEqual([
+      ["chat.postMessage", "chat.delete", "chat.postMessage", "chat.delete"],
+      false,
+      false,
       told,
     ]);
   });
