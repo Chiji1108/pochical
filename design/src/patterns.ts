@@ -546,12 +546,6 @@ export const rosterTemplates: readonly JobTemplate[] = [
     title: "三交代制",
   },
   {
-    id: "two-shift-early-late",
-    note: "時間の違う日勤が混ざる",
-    patternKeys: ["early", "day", "late", "night", "after", "off"],
-    title: "二交代制 + 早番・遅番",
-  },
-  {
     id: "shop",
     note: "お店や介護などの早番・中番・遅番",
     patternKeys: ["early", "middle", "late", "off"],

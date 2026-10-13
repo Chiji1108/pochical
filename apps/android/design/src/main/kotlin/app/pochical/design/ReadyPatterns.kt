@@ -100,7 +100,6 @@ object ReadyPatterns {
   val rosterTemplates: List<JobTemplate> = listOf(
     JobTemplate(id = "two-shift", title = "二交代制", note = "日勤と夜勤、夜勤の翌日は明け", patternIds = listOf("day", "night", "after", "off"), sequence = null, weekly = false, custom = false),
     JobTemplate(id = "three-shift", title = "三交代制", note = "日勤・準夜・深夜", patternIds = listOf("day", "junya", "midnight", "off"), sequence = null, weekly = false, custom = false),
-    JobTemplate(id = "two-shift-early-late", title = "二交代制 + 早番・遅番", note = "時間の違う日勤が混ざる", patternIds = listOf("early", "day", "late", "night", "after", "off"), sequence = null, weekly = false, custom = false),
     JobTemplate(id = "shop", title = "早番・中番・遅番", note = "お店や介護などの早番・中番・遅番", patternIds = listOf("early", "middle", "late", "off"), sequence = null, weekly = false, custom = false),
     JobTemplate(id = "part", title = "パート・アルバイト", note = "シフト表で、入る日が決まる", patternIds = listOf("part", "off"), sequence = null, weekly = false, custom = false),
     JobTemplate(id = "roster-custom", title = "自分で作る", note = "使う勤務や休みを、ひとつずつ選ぶ", patternIds = listOf("off"), sequence = null, weekly = false, custom = true),
