@@ -530,7 +530,7 @@ function PatternsStep({
   return (
     <>
       <StepHeader
-        description="選んだものが、ポチポチ入力のボタンになります。名前や時間は、あとから変えられます。"
+        description="カレンダーに入れる勤務や休みです。あとから足したり、名前や時間を変えたりできます。"
         onBack={onBack}
         title="使うパターンを選んでください"
       />

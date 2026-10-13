@@ -149,7 +149,7 @@ struct JobChangePage: View {
     let ordering = (template.custom || template.sequence != nil) && !template.startsWeekly
     question(
       "使うパターンを選んでください",
-      "選んだものが、ポチポチ入力のボタンになります。名前や時間は、あとから変えられます。")
+      "カレンダーに入れる勤務や休みです。あとから足したり、名前や時間を変えたりできます。")
     Section {
       ReadyPatternChips(picked: $picked, needed: template.needed)
         .frame(maxWidth: .infinity, alignment: .leading)
