@@ -74,7 +74,10 @@ struct AppRoot: View {
 /// Where はじめの設定 is, past its welcome.
 private enum OnboardingStep: Hashable {
   case login, kind, roster, rotation
-  case order(JobTemplate)
+  /// The patterns to use, the kind of work's to start with.
+  case patterns(JobTemplate)
+  /// The order, typed with the patterns chosen.
+  case order(JobTemplate, [PatternID])
 }
 
 /// はじめの設定: each step pushed as a page, the system's back going a
@@ -107,42 +110,41 @@ struct Onboarding: View {
           KindStep { path.append($0) }
         case .roster:
           TemplateStep(title: "近い働き方を選んでください", templates: ReadyPatterns.rosterTemplates) {
-            choose($0)
+            path.append(.patterns($0))
           }
         case .rotation:
           TemplateStep(title: "どんな順番で回りますか？", templates: ReadyPatterns.rotationTemplates) {
-            choose($0)
+            path.append(.patterns($0))
           }
-        case .order(let template):
-          OrderStep(template: template)
+        case .patterns(let template):
+          PatternsStep(template: template) { choose(template, patterns: $0) }
+        case .order(let template, let patterns):
+          OrderStep(template: template, patternIDs: patterns)
         }
       }
     }
     .tint(colors.accentDefault)
   }
 
-  /// A kind of work picked: a roster's patterns, or a weekly order, end
-  /// the questions; others go on to their order's first day.
-  private func choose(_ template: JobTemplate) {
+  /// The patterns chosen: a roster's work, or a weekly order, end the
+  /// questions; others go on to their order's first day.
+  private func choose(_ template: JobTemplate, patterns: [PatternID]) {
     if let sequence = template.sequence, template.weekly {
       // A week starts on Sunday: its order lines up with the weekdays.
       let month = Day.today.firstOfMonth
-      begin(template, sequence: sequence, anchor: month.adding(days: -month.weekday))
+      begin(patterns, sequence: sequence, anchor: month.adding(days: -month.weekday))
     } else if template.custom || template.sequence != nil {
-      path.append(.order(template))
+      path.append(.order(template, patterns))
     } else {
-      begin(template, sequence: [], anchor: .today)
+      begin(patterns, sequence: [], anchor: .today)
     }
   }
 }
 
-/// The kind of work's patterns become the person's, and its order repeats.
-@MainActor private func begin(_ template: JobTemplate, sequence: [PatternID], anchor: Day) {
+/// The patterns chosen become the person's, and the order repeats.
+@MainActor private func begin(_ patternIDs: [PatternID], sequence: [PatternID], anchor: Day) {
   @Dependency(\.defaultDatabase) var database
-  let ids = Set(template.patternIDs)
-  let incoming = template.patternIDs.compactMap(ReadyPatterns.pattern).map {
-    Pattern($0, keeping: ids)
-  }
+  let incoming = readyPatterns(patternIDs)
   let now = Int64(Date.now.timeIntervalSince1970 * 1000)
   try? database.write {
     try OwnValues.begin(
@@ -281,6 +283,39 @@ private struct TemplateStep: View {
   }
 }
 
+/// The patterns to use, the kind of work's own already picked, with the
+/// button on at the foot: 次へ when an order is typed next, else はじめる.
+private struct PatternsStep: View {
+  let template: JobTemplate
+  let onNext: ([PatternID]) -> Void
+  @State private var picked: Set<PatternID>
+
+  init(template: JobTemplate, onNext: @escaping ([PatternID]) -> Void) {
+    self.template = template
+    self.onNext = onNext
+    _picked = State(initialValue: Set(template.patternIDs))
+  }
+
+  var body: some View {
+    let ordering = (template.custom || template.sequence != nil) && !template.startsWeekly
+    StepPage(
+      title: "使うパターンを選んでください",
+      description: "選んだものが、ポチポチ入力のボタンになります。名前や時間は、あとから変えられます。"
+    ) {
+      ReadyPatternChips(picked: $picked, needed: template.needed)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      Button {
+        onNext(chosenPatterns(picked))
+      } label: {
+        Text(ordering ? "次へ" : "はじめる").frame(maxWidth: .infinity)
+      }
+      .mainButton()
+      .disabled(picked.isEmpty)
+      .padding(.top, 8)
+    }
+  }
+}
+
 /// The order on the calendar, filling the screen: a kind of work's own,
 /// from this month's 1st, or one typed from nothing; either typed over,
 /// and the day pressed moves where it starts. A first run's covers every
@@ -288,11 +323,13 @@ private struct TemplateStep: View {
 private struct OrderStep: View {
   @Environment(\.themeColors) private var colors
   let template: JobTemplate
+  let patternIDs: [PatternID]
   @State private var sequence: [PatternID]
   @State private var anchor = Day.today.firstOfMonth
 
-  init(template: JobTemplate) {
+  init(template: JobTemplate, patternIDs: [PatternID]) {
     self.template = template
+    self.patternIDs = patternIDs
     _sequence = State(initialValue: template.sequence ?? [])
   }
 
@@ -300,7 +337,7 @@ private struct OrderStep: View {
     let first = template.sequence?.first.flatMap { readyByID[$0]?.name }
     RepeatCalendar(
       sequence: $sequence, anchor: $anchor, cover: .always,
-      patterns: template.patternIDs.compactMap { readyByID[$0] },
+      patterns: patternIDs.compactMap { readyByID[$0] },
       holidayCountry: HolidayCountry.current
     )
     .background(colors.backgroundBase)
@@ -309,7 +346,7 @@ private struct OrderStep: View {
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         Button("完了", systemImage: "checkmark", role: .confirm) {
-          begin(template, sequence: sequence, anchor: anchor)
+          begin(patternIDs, sequence: sequence, anchor: anchor)
         }
         .disabled(sequence.isEmpty)
       }

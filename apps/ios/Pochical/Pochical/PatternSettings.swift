@@ -160,14 +160,21 @@ private struct AddPatternPage: View {
   var body: some View {
     let ids = Set(patterns.map(\.id))
     let names = Set(patterns.map(\.name))
-    // One already there, by its id or its name, is left out.
-    let offered = ReadyPatterns.offered.compactMap(ReadyPatterns.pattern).filter {
-      !ids.contains($0.id) && !names.contains($0.name)
+    // One already there, by its id or its name, is left out; a heading
+    // with nothing left goes.
+    let sections = ReadyPatterns.offeredSections.map { section in
+      (
+        title: section.title,
+        patterns: section.ids.compactMap(ReadyPatterns.pattern).filter {
+          !ids.contains($0.id) && !names.contains($0.name)
+        }
+      )
     }
+    .filter { !$0.patterns.isEmpty }
     List {
-      if !offered.isEmpty {
+      ForEach(sections, id: \.title) { section in
         Section {
-          ForEach(offered, id: \.id) { ready in
+          ForEach(section.patterns, id: \.id) { ready in
             let pattern = Pattern(ready, keeping: ids)
             Button {
               try? database.write { try OwnValues.save(pattern, now: nowMs(), in: $0) }
@@ -189,9 +196,13 @@ private struct AddPatternPage: View {
             .accessibilityLabel("\(pattern.name)を追加")
           }
         } header: {
-          Text("よく使うパターン")
+          Text(section.title)
         } footer: {
-          Text("名前や時間は、追加したあとで直せます。")
+          // For whoever pauses at + over a time unlike their own, once,
+          // under the last heading.
+          if section.title == sections.last?.title {
+            Text("名前や時間は、追加したあとで直せます。")
+          }
         }
         .settingsRows()
       }
