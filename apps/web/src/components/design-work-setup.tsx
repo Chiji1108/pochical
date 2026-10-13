@@ -265,7 +265,7 @@ export function WorkSetupSteps({
           }}
           rows={Boolean(onExit)}
           templates={rotationTemplates}
-          title="どんな順番で回りますか？"
+          title="近い働き方を選んでください"
         />
       )}
       {step.name === "patterns" && (
@@ -338,7 +338,7 @@ const kinds = [
   {
     icon: "🔁",
     id: "rotation",
-    note: "当番・非番、工場の交代勤務、曜日で固定など",
+    note: "当番・非番、工場の交代勤務、平日勤務など",
     title: "繰り返しがある",
   },
   {
@@ -405,7 +405,7 @@ function KindStep({
         </List>
       )}
       {first && (
-        <p className={onboarding.footnote}>あとから設定で変えられます</p>
+        <p className={onboarding.footnote}>あとから設定で変えられます。</p>
       )}
     </>
   );
@@ -443,7 +443,7 @@ function TemplateStep({
   return (
     <>
       <StepHeader
-        description="あとから名前や時間を変えられます。"
+        description="近いもので大丈夫です。次の画面で足したり外したりできます。"
         onBack={onBack}
         title={title}
       />
@@ -551,7 +551,7 @@ function PatternsStep({
       />
       {needed.size > 0 && (
         <p className={onboarding.description}>
-          並びに入っているパターンは外せません。
+          繰り返しに入っている勤務や休みは外せません。
         </p>
       )}
       <Button

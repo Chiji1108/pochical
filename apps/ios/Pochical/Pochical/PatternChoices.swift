@@ -42,7 +42,7 @@ struct ReadyPatternChips: View {
         }
       }
       if !needed.isEmpty {
-        Text("並びに入っているパターンは外せません。")
+        Text("繰り返しに入っている勤務や休みは外せません。")
           .font(.footnote)
           .foregroundStyle(colors.textTertiary)
       }

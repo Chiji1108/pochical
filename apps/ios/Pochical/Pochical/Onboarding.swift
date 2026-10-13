@@ -113,7 +113,7 @@ struct Onboarding: View {
             path.append(.patterns($0))
           }
         case .rotation:
-          TemplateStep(title: "どんな順番で回りますか？", templates: ReadyPatterns.rotationTemplates) {
+          TemplateStep(title: "近い働き方を選んでください", templates: ReadyPatterns.rotationTemplates) {
             path.append(.patterns($0))
           }
         case .patterns(let template):
@@ -246,9 +246,9 @@ private struct KindStep: View {
     StepPage(
       title: "シフトに繰り返しはありますか？",
       description: "繰り返しがあっても、違う日だけあとから変えられます。",
-      footnote: "あとから設定で変えられます"
+      footnote: "あとから設定で変えられます。"
     ) {
-      OptionCard(icon: "🔁", title: "繰り返しがある", note: "当番・非番、工場の交代勤務、曜日で固定など") {
+      OptionCard(icon: "🔁", title: "繰り返しがある", note: "当番・非番、工場の交代勤務、平日勤務など") {
         onPick(.rotation)
       }
       OptionCard(icon: "📋", title: "繰り返しはない", note: "勤務表やシフト表で、その都度決まる") {
@@ -264,7 +264,7 @@ private struct TemplateStep: View {
   let onChoose: (JobTemplate) -> Void
 
   var body: some View {
-    StepPage(title: title, description: "あとから名前や時間を変えられます。") {
+    StepPage(title: title, description: "近いもので大丈夫です。次の画面で足したり外したりできます。") {
       ForEach(templates) { template in
         OptionCard(title: template.title, note: template.note) {
           onChoose(template)

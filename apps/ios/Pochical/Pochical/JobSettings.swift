@@ -52,7 +52,7 @@ struct JobChangePage: View {
       case .day: dayStep
       case .kind: kindStep
       case .roster: templates(ReadyPatterns.rosterTemplates, asking: "近い働き方を選んでください")
-      case .rotation: templates(ReadyPatterns.rotationTemplates, asking: "どんな順番で回りますか？")
+      case .rotation: templates(ReadyPatterns.rotationTemplates, asking: "近い働き方を選んでください")
       case .patterns(let template): patternsStep(template)
       case .order: EmptyView()
       }
@@ -96,7 +96,7 @@ struct JobChangePage: View {
   @ViewBuilder private var kindStep: some View {
     question("新しい仕事のシフトに繰り返しはありますか？", "前の仕事のシフトは、そのまま残ります。")
     Section {
-      option("🔁", "繰り返しがある", "当番・非番、工場の交代勤務、曜日で固定など") { go(.rotation) }
+      option("🔁", "繰り返しがある", "当番・非番、工場の交代勤務、平日勤務など") { go(.rotation) }
       option("📋", "繰り返しはない", "勤務表やシフト表で、その都度決まる") { go(.roster) }
     }
     .settingsRows()
@@ -107,7 +107,7 @@ struct JobChangePage: View {
   @ViewBuilder private func templates(_ templates: [JobTemplate], asking title: String)
     -> some View
   {
-    question(title, "あとから名前や時間を変えられます。")
+    question(title, "近いもので大丈夫です。次の画面で足したり外したりできます。")
     // One list, a row each, as the system's settings list choices.
     Section {
       ForEach(templates) { template in
