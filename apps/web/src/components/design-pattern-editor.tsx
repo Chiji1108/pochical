@@ -383,15 +383,10 @@ function AddPatternPage({
   // its 当番, may be.
   const chosen = inChipOrder(picked).filter(offered);
   const add = () => {
-    const there = new Set([...items.map((item) => item.id), ...chosen]);
+    // A next day (夜勤's 明け, 当番's 非番) comes only when that is there
+    // too.
     onAdd(
-      presetList(chosen).map((preset) =>
-        // A next day (夜勤's 明け, 当番's 非番) comes only when that is
-        // there too.
-        preset.nextDay && there.has(preset.nextDay)
-          ? preset
-          : { ...preset, nextDay: undefined }
-      )
+      presetList(chosen, new Set([...items.map((item) => item.id), ...chosen]))
     );
   };
   return (
