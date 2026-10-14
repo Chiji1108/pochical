@@ -5,126 +5,6 @@ import PochicalProto
 import SQLiteData
 import SwiftUI
 
-/// A group's chat and who wrote its lines, read again as either changes.
-struct ChatRequest: FetchKeyRequest, Hashable {
-  let groupID: String
-  let threadID: String
-  /// The reader, whose reactions still on their way show at once.
-  var me: String?
-  /// The first line shown, once the chat has opened; none as it opens
-  /// (Chats.state).
-  var from: Int64?
-
-  struct Value: Hashable, Sendable {
-    var state = ChatState(lines: [], waiting: [], atStart: true, marks: [:])
-    /// Everyone who has been in the group, those who left too.
-    var writers: [GroupMemberRow] = []
-  }
-
-  func fetch(_ db: Database) throws -> Value {
-    Value(
-      state: try Chats.state(of: threadID, in: groupID, me: me, from: from, db: db),
-      writers: try Chats.writers(in: groupID, db: db))
-  }
-}
-
-/// A chat's latest line and unread count for `me`, and everyone's names
-/// for its writer and mentions, read again as they change.
-struct ChatSummaryRequest: FetchKeyRequest, Hashable {
-  let groupID: String
-  let threadID: String
-  let me: String
-
-  struct Value: Hashable, Sendable {
-    var summary = ChatSummary()
-    /// Everyone who has been in the group by id, those who left too.
-    var names: [String: String] = [:]
-    /// Those whose account is deleted, whose lines are gone.
-    var deleted: Set<String> = []
-  }
-
-  func fetch(_ db: Database) throws -> Value {
-    let writers = try Chats.writers(in: groupID, db: db)
-    return Value(
-      summary: try Chats.summary(of: threadID, in: groupID, me: me, db: db),
-      names: Dictionary(
-        writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last }),
-      deleted: Set(writers.filter(\.deleted).map(\.userID)))
-  }
-}
-
-/// How many lines are unread, in the badge's red.
-struct UnreadCount: View {
-  @Environment(\.themeColors) private var colors
-  let count: Int
-
-  var body: some View {
-    Text("\(count)")
-      .font(.system(size: 11, weight: .bold).monospacedDigit())
-      .foregroundStyle(colors.dangerOnFill)
-      .padding(.horizontal, 5)
-      .frame(minWidth: 18, minHeight: 18)
-      .background(colors.dangerFill, in: Capsule())
-      .accessibilityLabel("\(count)件の未読")
-  }
-}
-
-/// The line a line taken back leaves (spec/chat.md, Editing and unsending).
-func unsentLine(_ writer: String?, mine: Bool, deleted: Bool = false) -> String {
-  if deleted { return "削除されたメッセージ" }
-  return mine ? "メッセージの送信を取り消しました" : "\(writer ?? "メンバー")がメッセージの送信を取り消しました"
-}
-
-/// A chat's times as the messaging apps write them.
-enum ChatTime {
-  private static var calendar: Calendar { .current }
-
-  static func date(_ ms: Int64) -> Date {
-    Date(timeIntervalSince1970: TimeInterval(ms) / 1000)
-  }
-
-  /// The time by a line: 9:41.
-  static func clock(_ ms: Int64) -> String {
-    let parts = calendar.dateComponents([.hour, .minute], from: date(ms))
-    return String(format: "%d:%02d", parts.hour ?? 0, parts.minute ?? 0)
-  }
-
-  /// The day over a day's first line: 今日, 昨日, 10月5日(月), with the
-  /// year once it is another year's.
-  static func day(_ day: Day) -> String {
-    let today = Day.today
-    if day == today { return "今日" }
-    if day == today.adding(days: -1) { return "昨日" }
-    return day.year == today.year ? day.fullText : day.yearFullText
-  }
-
-  /// The time in the list of chats: the time today, 昨日, else the date.
-  static func listed(_ ms: Int64) -> String {
-    let day = Day(date(ms), in: calendar)
-    let today = Day.today
-    if day == today { return clock(ms) }
-    if day == today.adding(days: -1) { return "昨日" }
-    return day.year == today.year
-      ? day.slashText : day.yearSlashText
-  }
-}
-
-/// The day over a day's first line in a chat.
-struct DayChip: View {
-  @Environment(\.themeColors) private var colors
-  let day: Day
-
-  var body: some View {
-    Text(ChatTime.day(day))
-      .font(.caption2)
-      .foregroundStyle(colors.textTertiary)
-      .padding(.horizontal, 12)
-      .padding(.vertical, 2)
-      .background(colors.fillTertiary, in: RoundedRectangle(cornerRadius: Radius.sm))
-      .padding(.top, 8)
-  }
-}
-
 /// One of a group's chats (/design's ChatPage), 全体チャット or a
 /// one-to-one chat: others' lines on the left with their face, and in the
 /// group's chat their name, at the start of a run, one's own on the right
@@ -166,8 +46,6 @@ struct ChatScreen: View {
   /// A day brought from みんなのシフト, set over the composer as the chat
   /// opens.
   var sharing: Day?
-  /// Days to go with the next message (共有する日), sent first.
-  @State private var attachedDays: [Day]?
   /// `sharing` has been set over the composer, once.
   @State private var tookSharing = false
   @State private var meID: String?
@@ -202,30 +80,11 @@ struct ChatScreen: View {
   /// The first line laid out, kept from the chat's opening so new lines
   /// add to it rather than move it, and moved back a page at a time.
   @State private var window: Int64?
-  /// The day of the lines at the top, once its title has gone up out of
-  /// sight, floating over them while the chat scrolls (LINE's).
   /// The height the lines are seen in, between the pins and the composer.
   @State private var seen: CGFloat = 0
-  @State private var draft = ""
-  /// The line of one's own being changed in the composer.
-  @State private var editing: ChatLineRow?
-  /// The line being answered (返信), quoted over the composer.
-  @State private var replying: ChatLineRow?
+  /// What is being written, read by the composer alone.
+  @State private var draft = ChatDraft()
   @State private var unsending: ChatLineRow?
-  @State private var field = ComposerBox()
-  /// A word is being converted in the composer.
-  @State private var composing = false
-  /// The composer's field is in use, its tools folded into a › (/design's
-  /// composer, as LINE's).
-  @State private var writing = false
-  /// The tools opened from the › until the next letter.
-  @State private var toolsOpen = false
-  /// The composer's tools folded into a ›: from the field being tapped, and
-  /// while words wait in it, until › opens them.
-  private var toolsFolded: Bool { (writing || !draft.isEmpty) && !toolsOpen }
-  /// Members picked from the list of names while writing, to be sent as
-  /// mentions while their @name stays.
-  @State private var picked: [PickedMember] = []
   /// A link tapped in a line, open in the browser sheet.
   @State private var browsing: OpenedLink?
 
@@ -263,12 +122,6 @@ struct ChatScreen: View {
   @State private var sharingDays = false
   /// The poll whose day is being picked.
   @State private var deciding: ChatLineRow?
-  /// Photos picked for the next send, waiting above the composer.
-  @State private var pickedPhotos: [PickedPhoto] = []
-  /// What the photo picker just handed over, read into `pickedPhotos`.
-  @State private var photoItems: [PhotosPickerItem] = []
-  /// Picked photos are being read and shrunk.
-  @State private var readingPhotos = false
   /// A photo opened large.
   @State private var viewing: LinePhoto?
   /// Long lines opened at 続きを読む, which stay open while the chat is.
@@ -277,12 +130,6 @@ struct ChatScreen: View {
   @State private var unsentPhoto: WaitingLine?
   /// Others writing now, each until their typing lapses.
   @State private var typers: [String: Date] = [:]
-  /// When the member's own typing was last sent.
-  @State private var typingSentAt = Date.distantPast
-  /// The page of the words' first link, while writing.
-  @State private var composerPreview: ComposerPreview?
-  /// A link whose page was taken off with ×, until sent or changed.
-  @State private var previewRemoved: String?
   /// The line whose reactions and menu are open.
   @State private var acting: MessageActionsRequest?
 
@@ -425,7 +272,13 @@ struct ChatScreen: View {
             Rectangle().fill(colors.separator).frame(height: 1)
           }
       } else {
-        composer
+        ChatComposer(
+          draft: draft, groupID: group.id, threadID: threadID,
+          mentionable: otherID != nil
+            ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
+          nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit, onStopEditing: stopEditing,
+          onShareDays: { sharingDays = true },
+          onPhotos: { items in Task { await readPhotos(items) } }, say: say)
       }
     }
     .background(colors.backgroundBase)
@@ -545,20 +398,6 @@ struct ChatScreen: View {
       try? await Task.sleep(for: .seconds(max(next.timeIntervalSinceNow, 0)))
       withAnimation { typers = typers.filter { $0.value > .now } }
     }
-    // The member's own typing: at most every typingSendMs while the field
-    // holds words, and a stop once it empties.
-    .onChange(of: draft.isEmpty) { _, empty in
-      if empty { stopTyping() }
-    }
-    .onChange(of: draft) { _, words in
-      toolsOpen = false
-      guard !words.isEmpty else { return }
-      let now = Date.now
-      if now.timeIntervalSince(typingSentAt) * 1000 >= Double(Chat.typingSendMs) {
-        typingSentAt = now
-        Task { await socket?.sendTyping(in: threadID, on: true) }
-      }
-    }
     // Lines coming in, someone writing, and the keyboard coming up or
     // going keep a following chat at its foot.
     .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count, seen: seen)) {
@@ -604,12 +443,12 @@ struct ChatScreen: View {
       // is sent, with a word if one likes.
       if let sharing, !tookSharing {
         tookSharing = true
-        attachedDays = [sharing]
+        draft.attachedDays = [sharing]
       }
     }
     .onDisappear {
       closeActions()
-      stopTyping()
+      draft.stopTyping(in: threadID, socket: socket)
       if Notifications.shared.openChat?.threadID == threadID {
         Notifications.shared.openChat = nil
       }
@@ -619,7 +458,6 @@ struct ChatScreen: View {
       _ = try? await $dayMembers.load(
         GroupMembersRequest(groupID: group.id, from: span.from, through: span.through))
     }
-    .task(id: previewLink(draft)) { await readPreview(of: previewLink(draft)) }
     .sheet(isPresented: $sharingDays) {
       ShareDaysSheet(
         groupID: group.id, people: otherID.map { Set([$0, meID ?? ""]) }, pollable: otherID == nil,
@@ -865,43 +703,10 @@ struct ChatScreen: View {
 
   // MARK: Composer
 
-  /// 写真を送る: the photo picker, up to Chat.photosPerSend in the tray at
-  /// once; past it the picker does not open.
-  @ViewBuilder private var photoButton: some View {
-    let room = Chat.photosPerSend - pickedPhotos.count
-    // Read here: the picker's label is drawn off the main actor.
-    let iconColor = colors.textSecondary
-    if room > 0 {
-      PhotosPicker(
-        selection: $photoItems, maxSelectionCount: room, matching: .images,
-        preferredItemEncoding: .compatible
-      ) {
-        Image(systemName: "photo")
-          .font(.system(size: 20))
-          .foregroundStyle(iconColor)
-          .frame(width: 38, height: 38)
-      }
-      .accessibilityLabel("写真を送る")
-      .onChange(of: photoItems) { _, items in
-        guard !items.isEmpty else { return }
-        photoItems = []
-        Task { await readPhotos(items) }
-      }
-    } else {
-      Button("写真を送る", systemImage: "photo") {
-        say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
-      }
-      .labelStyle(.iconOnly)
-      .font(.system(size: 20))
-      .foregroundStyle(colors.textQuaternary)
-      .frame(width: 38, height: 38)
-    }
-  }
-
   /// Reads picked photos and shrinks them to send, into the tray.
   private func readPhotos(_ items: [PhotosPickerItem]) async {
-    readingPhotos = true
-    defer { readingPhotos = false }
+    draft.readingPhotos = true
+    defer { draft.readingPhotos = false }
     var unreadable = false
     for item in items {
       guard let data = try? await item.loadTransferable(type: Data.self),
@@ -913,8 +718,8 @@ struct ChatScreen: View {
       let picked = PickedPhoto(
         shrunk: shrunk,
         thumbnail: UIImage(data: shrunk.jpeg)?.preparingThumbnail(of: CGSize(width: 128, height: 128)))
-      if pickedPhotos.count < Chat.photosPerSend {
-        withAnimation { pickedPhotos.append(picked) }
+      if draft.photos.count < Chat.photosPerSend {
+        withAnimation { draft.photos.append(picked) }
       }
     }
     if unreadable {
@@ -925,7 +730,7 @@ struct ChatScreen: View {
   /// Sends the tray's photos, each as its own line, kept on the device to
   /// upload before its line goes.
   private func sendPhotos() {
-    for picked in pickedPhotos {
+    for picked in draft.photos {
       guard (try? ChatPhotos.keep(picked.shrunk.jpeg, as: picked.id, in: group.id)) != nil else {
         continue
       }
@@ -937,7 +742,7 @@ struct ChatScreen: View {
       send.replyTo = takeReply()
       write(.send(send))
     }
-    withAnimation { pickedPhotos = [] }
+    withAnimation { draft.photos = [] }
   }
 
   /// Sends a photo that could not be sent once more, after the rest.
@@ -952,132 +757,6 @@ struct ChatScreen: View {
     try? database.write { try Chats.drop(line.opID, in: $0) }
     if let photo = line.photo {
       ChatPhotos.forget(photo.id, in: group.id)
-    }
-  }
-
-  private var composer: some View {
-    let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-    let unchanged = editing.map { $0.text == withMentions(draft, picked: picked) } ?? false
-    let blocked =
-      editing == nil
-      ? (trimmed.isEmpty && pickedPhotos.isEmpty && attachedDays == nil) || readingPhotos
-      : trimmed.isEmpty || unchanged
-    return VStack(spacing: 0) {
-      mentionList
-      // What the message is, then what goes with it, the photos last
-      // nearest the field, as /design's.
-      if let editing {
-        ComposerBar(
-          title: "メッセージを編集", words: plainText(editing.text, nameOf: nameOf),
-          stop: "編集をやめる", onStop: stopEditing)
-      }
-      if editing == nil, let replying {
-        ReplyBar(quote: quote(of: replying.seq), groupID: group.id) {
-          withAnimation { self.replying = nil }
-        }
-      }
-      if editing == nil, let attachedDays {
-        ComposerBar(
-          title: "共有する日", words: daysSummary(attachedDays), stop: "共有をやめる"
-        ) {
-          withAnimation { self.attachedDays = nil }
-        }
-      }
-      if let composerPreview, !composerPreview.none, composerPreview.url != previewRemoved {
-        ComposerPreviewBar(state: composerPreview) {
-          withAnimation { previewRemoved = composerPreview.url }
-        }
-      }
-      if editing == nil, !pickedPhotos.isEmpty {
-        PhotoTray(photos: $pickedPhotos)
-      }
-      HStack(alignment: .bottom, spacing: 8) {
-        // Folded, the tools give the field their room.
-        if editing == nil, toolsFolded {
-          Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { toolsOpen = true }
-            .labelStyle(.iconOnly)
-            .font(.system(size: 20, weight: .medium))
-            .foregroundStyle(colors.textSecondary)
-            .frame(width: 38, height: 38)
-            .transition(.opacity.combined(with: .scale(scale: 0.6)))
-        } else if editing == nil {
-          HStack(spacing: 8) {
-            photoButton
-            Button("日にちを共有", systemImage: "calendar.badge.plus") { sharingDays = true }
-              .labelStyle(.iconOnly)
-              .font(.system(size: 20))
-              .foregroundStyle(colors.textSecondary)
-              .frame(width: 38, height: 38)
-          }
-          .transition(.opacity.combined(with: .move(edge: .leading)))
-        }
-        ComposerField(
-          placeholder: "メッセージ", text: $draft, limit: TextLimits.chatMessage,
-          composing: $composing, box: field
-        ) { inUse in
-          writing = inUse
-          toolsOpen = false
-        }
-        .overlay(alignment: .leading) {
-          if draft.isEmpty {
-            Text("メッセージ")
-              .foregroundStyle(colors.textQuaternary)
-              .allowsHitTesting(false)
-              .accessibilityHidden(true)
-          }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .frame(minHeight: 38)
-        .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
-        Button {
-          // A word still being converted goes too, confirmed, and is cut
-          // to the limit as confirming it would.
-          let text = String(
-            field.commit().prefix(TextLimits.chatMessage)
-          ).trimmingCharacters(in: .whitespacesAndNewlines)
-          if let editing {
-            if !text.isEmpty { save(editing, text: text) }
-          } else {
-            // The days first, then each photo, then the words.
-            if let attachedDays {
-              shareDays(attachedDays, poll: false)
-              self.attachedDays = nil
-            }
-            sendPhotos()
-            if !text.isEmpty { send(text) }
-          }
-        } label: {
-          Image(systemName: editing == nil ? "arrow.up" : "checkmark")
-            .font(.system(size: 16, weight: .bold))
-            .foregroundStyle(colors.accentOnFill)
-            .frame(width: 38, height: 38)
-            .background(blocked ? colors.fillPrimary : colors.accentFill, in: Circle())
-        }
-        .buttonStyle(.plain)
-        .disabled(blocked)
-        .accessibilityLabel(editing == nil ? "送る" : "編集を保存")
-        .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
-      }
-      .animation(.snappy(duration: 0.25), value: toolsFolded)
-      .padding(.horizontal, 16)
-      .padding(.vertical, 8)
-      if TextLimits.chatMessage - draft.count <= TextFields.countWhenLeft {
-        Text("\(draft.count)/\(TextLimits.chatMessage)")
-          .font(.footnote.monospacedDigit())
-          .foregroundStyle(
-            composing && draft.count > TextLimits.chatMessage
-              ? colors.dangerDefault : colors.textTertiary
-          )
-          .frame(maxWidth: .infinity, alignment: .trailing)
-          .padding(.horizontal, 20)
-          .padding(.bottom, 4)
-          .accessibilityLabel("\(TextLimits.chatMessage)文字中\(draft.count)文字")
-      }
-    }
-    .background(colors.backgroundBase)
-    .overlay(alignment: .top) {
-      Rectangle().fill(colors.separator).frame(height: 1)
     }
   }
 
@@ -1104,56 +783,6 @@ struct ChatScreen: View {
   /// A member's name in the group as it is now, for their mentions.
   private func nameOf(_ id: String) -> String {
     names[id] ?? "メンバー"
-  }
-
-  /// The others to mention, over the composer, while an @ is being
-  /// written at the end of the message: in the group's chat only, those in
-  /// it now whose name has what follows the @.
-  @ViewBuilder private var mentionList: some View {
-    let others =
-      otherID != nil
-      ? []
-      : mentionQuery(draft).map { query in
-        chat.writers.filter {
-          !$0.left && $0.userID != meID && (query.isEmpty || $0.displayName.contains(query))
-        }
-      } ?? []
-    if !others.isEmpty {
-      ScrollView {
-        VStack(spacing: 0) {
-          ForEach(others, id: \.userID) { member in
-            Button {
-              // The ＠ a Japanese keyboard is still converting is
-              // confirmed first, so the field takes the name.
-              draft = pickingMention(field.commit(), name: member.displayName)
-              picked.removeAll { $0.id == member.userID }
-              picked.append(PickedMember(id: member.userID, name: member.displayName))
-            } label: {
-              HStack(spacing: 12) {
-                MemberAvatar(
-                  name: member.displayName, photoID: member.photoID, groupID: group.id, size: 28)
-                Text(member.displayName)
-                  .foregroundStyle(colors.textPrimary)
-                  .lineLimit(1)
-                  .frame(maxWidth: .infinity, alignment: .leading)
-              }
-              .padding(.horizontal, 8)
-              .frame(height: Metrics.touch)
-              .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-          }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-      }
-      // A few in sight, the rest a scroll away.
-      .frame(height: min(CGFloat(others.count) * Metrics.touch + 8, 180))
-      .accessibilityLabel("メンションする人")
-      .overlay(alignment: .top) {
-        Rectangle().fill(colors.separator).frame(height: 1)
-      }
-    }
   }
 
   /// A link tapped in a line: Pochical's invitations on their join
@@ -1295,29 +924,22 @@ struct ChatScreen: View {
     write(.read(read))
   }
 
-  /// Says the member stopped writing, once they said they were.
-  private func stopTyping() {
-    guard typingSentAt != .distantPast else { return }
-    typingSentAt = .distantPast
-    Task { await socket?.sendTyping(in: threadID, on: false) }
-  }
-
   private func send(_ text: String) {
     Notifications.shared.askOnce()
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
-    send.text = withMentions(text, picked: picked)
-    if let preview = attachedPreview(for: text) {
+    send.text = withMentions(text, picked: draft.picked)
+    if let preview = draft.attachedPreview(for: text) {
       send.preview = preview.wire
     }
     // Taken off with ×, so the server does not read it either; a page not
     // come yet the server reads and adds to the line.
-    send.withoutPreview = previewRemoved != nil && previewLink(text) == previewRemoved
+    send.withoutPreview = draft.previewRemoved != nil && previewLink(text) == draft.previewRemoved
     send.replyTo = takeReply()
     write(.send(send))
-    draft = ""
-    picked = []
-    previewRemoved = nil
+    draft.text = ""
+    draft.picked = []
+    draft.previewRemoved = nil
   }
 
   /// The first and last of the days the chat's lines share, for their
@@ -1333,31 +955,6 @@ struct ChatScreen: View {
   private var cardMembers: [GroupMember] {
     guard let otherID else { return dayMembers }
     return dayMembers.filter { $0.userID == otherID || $0.userID == meID }
-  }
-
-  /// The page to send with `text`: its first link's, read and not taken
-  /// off; none while it is still being asked for.
-  private func attachedPreview(for text: String) -> LinePreview? {
-    guard let link = previewLink(text), let state = composerPreview, state.url == link,
-      link != previewRemoved
-    else { return nil }
-    return state.preview
-  }
-
-  /// Asks for the page of the words' first link once it has stayed the
-  /// same a moment, as chatRules.linkPreviewSettleMs.
-  private func readPreview(of link: String?) async {
-    guard let link else {
-      composerPreview = nil
-      return
-    }
-    if composerPreview?.url == link { return }
-    try? await Task.sleep(for: .milliseconds(Chat.linkPreviewSettleMs))
-    guard !Task.isCancelled else { return }
-    withAnimation { composerPreview = ComposerPreview(url: link) }
-    let preview = try? await groupCalls.linkPreview(link)
-    guard !Task.isCancelled, composerPreview?.url == link else { return }
-    withAnimation { composerPreview = ComposerPreview(url: link, preview: preview, none: preview == nil) }
   }
 
   /// Shares days with everyone's shifts, as a line of their own.
@@ -1490,17 +1087,36 @@ struct ChatScreen: View {
     }
   }
 
+  /// The composer's send: a word still being converted goes too,
+  /// confirmed, and is cut to the limit as confirming it would. Saves the
+  /// line being changed; else sends the days first, then each photo, then
+  /// the words.
+  private func submit() {
+    let text = String(draft.field.commit().prefix(TextLimits.chatMessage))
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    if let editing = draft.editing {
+      if !text.isEmpty { save(editing, text: text) }
+      return
+    }
+    if let days = draft.attachedDays {
+      shareDays(days, poll: false)
+      draft.attachedDays = nil
+    }
+    sendPhotos()
+    if !text.isEmpty { send(text) }
+  }
+
   /// Answers a line (返信): quoted over the composer until sent or ×.
   private func reply(to line: ChatLineRow) {
-    if editing != nil { stopEditing() }
-    withAnimation { replying = line }
-    field.focus()
+    if draft.editing != nil { stopEditing() }
+    withAnimation { draft.replying = line }
+    draft.field.focus()
   }
 
   /// The line being answered, for the first line sent: then no more.
   private func takeReply() -> UInt64 {
-    defer { replying = nil }
-    return replying.map { UInt64($0.seq) } ?? 0
+    defer { draft.replying = nil }
+    return draft.replying.map { UInt64($0.seq) } ?? 0
   }
 
   /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):
@@ -1525,33 +1141,33 @@ struct ChatScreen: View {
   }
 
   private func edit(_ line: ChatLineRow) {
-    replying = nil
-    editing = line
+    draft.replying = nil
+    draft.editing = line
     // Its mentions as @name again, still picked.
-    draft = plainText(line.text, nameOf: nameOf)
-    picked = mentions(in: line.text).map { PickedMember(id: $0, name: nameOf($0)) }
-    field.focus()
+    draft.text = plainText(line.text, nameOf: nameOf)
+    draft.picked = mentions(in: line.text).map { PickedMember(id: $0, name: nameOf($0)) }
+    draft.field.focus()
   }
 
   private func stopEditing() {
-    editing = nil
-    draft = ""
-    picked = []
+    draft.editing = nil
+    draft.text = ""
+    draft.picked = []
   }
 
   private func save(_ line: ChatLineRow, text: String) {
     var change = Pochical_V1_ChatChange()
     change.threadID = threadID
     change.seq = UInt64(line.seq)
-    change.text = withMentions(text, picked: picked)
+    change.text = withMentions(text, picked: draft.picked)
     // The page stays while the first link does (spec/vectors/chat.json,
     // edited); else the new link's, if it has come.
     change.keepsPreview = keepsPreview(of: line.text, editedTo: change.text)
-    if !change.keepsPreview, let preview = attachedPreview(for: text) {
+    if !change.keepsPreview, let preview = draft.attachedPreview(for: text) {
       change.preview = preview.wire
     }
     write(.change(change))
-    previewRemoved = nil
+    draft.previewRemoved = nil
     stopEditing()
   }
 
@@ -1712,694 +1328,13 @@ struct ChatScreen: View {
     unsend.threadID = threadID
     unsend.seq = UInt64(line.seq)
     write(.unsend(unsend))
-    if editing?.seq == line.seq { stopEditing() }
+    if draft.editing?.seq == line.seq { stopEditing() }
   }
 
   private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { db in
       try Chats.edit(kind, in: group.id, now: now, db: db)
-    }
-  }
-}
-
-/// One thing in a chat's lines.
-private enum ChatItem: Identifiable {
-  case day(Day)
-  case unread
-  case line(ChatLineRow, startsRun: Bool)
-  case waiting(WaitingLine, startsRun: Bool)
-
-  var id: String {
-    switch self {
-    case .day(let day): "day-\(day.key)"
-    case .unread: "unread"
-    case .line(let line, _): "line-\(line.opID)"
-    // As the group's line will be, so it stays in place once taken.
-    case .waiting(let line, _): "line-\(line.opID)"
-    }
-  }
-
-  /// Whether more room goes before it: a run's first line, a day's title
-  /// and ここから新着.
-  var startsRun: Bool {
-    switch self {
-    case .day, .unread: true
-    case .line(_, let startsRun), .waiting(_, let startsRun): startsRun
-    }
-  }
-}
-
-/// What scrolling changes in a chat, read by the pieces that show it
-/// (the ↓, the floating day) rather than by the screen, whose every line
-/// would be made again at each change.
-@Observable
-private final class ChatScroll {
-  var place = ScrollPlace()
-  /// The day of the lines at the top, once its title has gone up out of
-  /// sight (LINE's), shown while the chat scrolls.
-  var topDay: Day?
-  var dayShown = false
-  var scrolling = false
-  /// Where ここから新着 is among the lines, and their height: the new
-  /// lines under it fit on the screen at the latest when they are few,
-  /// and opening has nowhere to go for it then.
-  var unreadTop: CGFloat?
-  var linesHeight: CGFloat = 0
-}
-
-/// The ↓ to the latest, once away from it or with others' unread lines
-/// below, counted on it as a chat's unread are; reading happens at the
-/// latest, so none while there.
-private struct LatestButton: View {
-  @Environment(\.themeColors) private var colors
-  let scroll: ChatScroll
-  let unread: Int
-  let action: () -> Void
-
-  var body: some View {
-    let unseen = scroll.place.atLatest ? 0 : unread
-    if scroll.place.away || unseen > 0 {
-      Button(action: action) {
-        Image(systemName: "chevron.down")
-          .font(.body.weight(.semibold))
-          .foregroundStyle(colors.textPrimary)
-          .frame(width: Metrics.touch, height: Metrics.touch)
-          .glassEffect(.regular.interactive(), in: .circle)
-          .overlay(alignment: .topTrailing) {
-            if unseen > 0 {
-              UnreadCount(count: unseen).offset(x: 4, y: -4)
-            }
-          }
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel(
-        unseen > 0 ? "最新のメッセージへ、まだ見ていない新着\(unseen)件" : "最新のメッセージへ"
-      )
-      .padding(12)
-      .transition(.opacity)
-    }
-  }
-}
-
-/// The day of the lines at the top, floating over them while the chat
-/// scrolls and a moment after (chatRules.floatingDayMs); not over a notice.
-private struct FloatingDay: View {
-  @Environment(\.themeColors) private var colors
-  let scroll: ChatScroll
-  let covered: Bool
-
-  var body: some View {
-    Group {
-      if let day = scroll.topDay, scroll.dayShown, !covered {
-        Text(ChatTime.day(day))
-          .font(.caption2)
-          .foregroundStyle(colors.textSecondary)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 2)
-          .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Radius.sm))
-          .padding(.top, 8)
-          .allowsHitTesting(false)
-          .accessibilityHidden(true)
-          .transition(.opacity)
-      }
-    }
-    .task(id: scroll.dayShown) {
-      guard scroll.dayShown else { return }
-      while !Task.isCancelled {
-        try? await Task.sleep(for: .milliseconds(Chat.floatingDayMs))
-        if !Task.isCancelled, !scroll.scrolling {
-          withAnimation(.easeOut(duration: 0.2)) { scroll.dayShown = false }
-          return
-        }
-      }
-    }
-  }
-}
-
-/// The top of the lines while earlier ones are to come, which asks for
-/// them once scrolled near (from the scroll's own place: whether a view is
-/// in sight is read once, as the lines are first laid out at the top), and
-/// again after each page while it stays there. Not before the chat has
-/// come in on its place, which would add lines above the latest it opens on.
-private struct EarlierLines: View {
-  let scroll: ChatScroll
-  let first: Int64?
-  let ready: Bool
-  let show: () async -> Void
-
-  var body: some View {
-    let near = scroll.place.nearTop && ready
-    ProgressView()
-      .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-      .task(id: PageAsk(first: first, inSight: near)) {
-        if near { await show() }
-      }
-  }
-}
-
-/// Where the lines are scrolled: at the latest, and more than half a
-/// screen up from it.
-private struct ScrollPlace: Hashable {
-  var atLatest = true
-  var away = false
-  /// The lines are shorter than the screen, held at its foot, with
-  /// nowhere to scroll.
-  var fits = true
-  /// At the top edge, where an earlier page coming in would leave it.
-  var atTop = false
-  /// Near enough the top that its spinner is on the screen.
-  var nearTop = false
-}
-
-/// When earlier lines are asked for: the top in sight, again after each
-/// page.
-private struct PageAsk: Equatable {
-  let first: Int64?
-  let inSight: Bool
-}
-
-/// What moves a following chat to its foot: a line coming in, someone
-/// writing, and the room the lines are seen in.
-private struct FollowKey: Equatable {
-  let latest: Int64?
-  let writers: Int
-  let seen: CGFloat
-}
-
-private struct ReadKey: Hashable {
-  let opened: Bool
-  let active: Bool
-  let latest: Int64
-  let reached: Int
-}
-
-/// A line of words: others' on the left with their face and, at the start
-/// of a run, their name; one's own on the right in the accent, dimmed
-/// while it waits to be sent. The time beside the bubble, 編集済み over it.
-private struct LineView: View {
-  @Environment(\.themeColors) private var colors
-  let text: String
-  /// Its first link's page.
-  var preview: LinePreview?
-  /// The days a line of shared days shares, drawn on a card.
-  var days: [Day] = []
-  /// Whose shifts its card shows.
-  var members: [GroupMember] = []
-  /// A poll's card, for days put to the vote.
-  var poll: PollLine?
-  /// The photo sent as the line, opened large by a tap.
-  var photo: LinePhoto?
-  /// The line it answers, inside its bubble.
-  var quote: LineQuote?
-  /// Its words opened past chatRules.foldLines lines.
-  var unfolded = false
-  var onUnfold: () -> Void = {}
-  var groupID = ""
-  var onOpenPhoto: () -> Void = {}
-  /// Goes to the line it answers.
-  var onOpenQuote: () -> Void = {}
-  /// Opens the writer's profile, from their face.
-  var onOpenProfile: () -> Void = {}
-  /// The shift table on its first day, under its card.
-  var shifts: GroupRoute?
-  let time: Int64
-  /// Left to the next line of the run sent in the same minute.
-  var showsTime = true
-  let edited: Bool
-  let mine: Bool
-  /// The writer's name at the start of a run of others' lines, for their
-  /// face.
-  let writer: String?
-  /// The writer's photo, one of the group's; empty for none.
-  var writerPhoto = ""
-  /// Their name shows over the run too, as in a group chat.
-  let named: Bool
-  /// It starts a run of one writer's lines, its bubble's corner drawn in.
-  let first: Bool
-  let waiting: Bool
-  /// Its photo could not be sent: marked, its choices a tap away.
-  var failed = false
-  var onFailed: () -> Void = {}
-  /// A member's name, for the line's mentions.
-  let nameOf: (String) -> String
-  var reactions: [LineReaction] = []
-  /// A chat of two: its reactions counted, not shown by face.
-  var countedReactions = false
-  /// Pinned for everyone: a small pin by its time.
-  var pinned = false
-  /// Gone to from the pins: ringed for a moment.
-  var ringed = false
-  var meID: String?
-  /// Puts the reader's reaction on, or takes it back.
-  var onReact: (String) -> Void = { _ in }
-  /// Its bubble is lifted over the chat, its place standing empty.
-  var lifted = false
-  /// Opens the line's reactions and menu, from where its bubble is, with
-  /// the finger that opened them while it stays down.
-  let onActions: (CGRect, HeldFinger?, URL?) -> Void
-
-  private static var avatar: CGFloat { 32 }
-
-  var body: some View {
-    HStack(alignment: .top, spacing: 8) {
-      if !mine {
-        Group {
-          if let writer {
-            Button { onOpenProfile() } label: {
-              MemberAvatar(name: writer, photoID: writerPhoto, groupID: groupID, size: Self.avatar)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(writer)のプロフィール")
-          } else {
-            Color.clear
-          }
-        }
-        .frame(width: Self.avatar, height: writer == nil ? 0 : Self.avatar)
-      }
-      VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
-        if let writer, named {
-          Text(writer)
-            .font(.caption2)
-            .foregroundStyle(colors.textTertiary)
-            .padding(.leading, 4)
-        }
-        HStack(alignment: .bottom, spacing: 8) {
-          if mine { meta }
-          LineContent(
-            text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
-            quote: quote, groupID: groupID, mine: mine, first: first,
-            waiting: waiting && !failed, nameOf: nameOf, onOpenQuote: onOpenQuote,
-            unfolded: unfolded, onUnfold: onUnfold
-          )
-          // A photo opens large at a tap; its menu is the long press's.
-          .onTapGesture { if photo != nil, !waiting { onOpenPhoto() } }
-          // Rung for a moment when gone to from the pins, as /design's
-          // flash: a ring just outside the bubble, held, then fading.
-          .background {
-            ringShape
-              .stroke(colors.accentBorder, lineWidth: 6)
-              .opacity(ringed ? 1 : 0)
-          }
-            .heldForActions(lifted: lifted, onActions: onActions)
-          if !mine { meta }
-        }
-        if let shifts {
-          // All the days, with everyone's shifts round them.
-          NavigationLink(value: shifts) {
-            Text("シフト表で見る")
-              .font(.caption)
-              .underline()
-              .foregroundStyle(colors.accentDefault)
-              .padding(.horizontal, 4)
-          }
-          .buttonStyle(.plain)
-        }
-        if failed {
-          Text("送れませんでした")
-            .font(.caption2)
-            .foregroundStyle(colors.dangerDefault)
-            .accessibilityHidden(true)
-        }
-        if !reactions.isEmpty {
-          ReactionRow(
-            reactions: reactions, meID: meID, nameOf: nameOf, counted: countedReactions,
-            onReact: onReact)
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
-      .padding(mine ? .leading : .trailing, 40)
-    }
-    // The line reads as one; its reactions, a poll's 行ける and シフト表で見る
-    // stay buttons of their own.
-    .accessibilityElement(
-      children: reactions.isEmpty && poll == nil && shifts == nil ? .combine : .contain)
-  }
-
-  /// The ring's shape: the bubble's, or the card's.
-  private var ringShape: AnyShape {
-    days.isEmpty && photo == nil && !(quote == nil && preview == nil && largeEmoji(text) > 0)
-      ? AnyShape(BubbleShape(mine: mine, first: first))
-      : AnyShape(RoundedRectangle(cornerRadius: Radius.lg))
-  }
-
-  /// 編集済み over the time, toward the bubble; a clock while it waits.
-  private var meta: some View {
-    VStack(alignment: mine ? .trailing : .leading, spacing: 0) {
-      if edited || pinned {
-        HStack(spacing: 2) {
-          if pinned {
-            Image(systemName: "pin.fill")
-              .imageScale(.small)
-              .accessibilityLabel("ピン留め中")
-          }
-          if edited {
-            Text("編集済み")
-          }
-        }
-      }
-      if failed {
-        Button(action: onFailed) {
-          Image(systemName: "exclamationmark.circle.fill")
-            .font(.title3)
-            .foregroundStyle(colors.dangerDefault)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("送れませんでした")
-        .accessibilityHint("押すと再送か削除")
-      } else if waiting {
-        Image(systemName: "clock")
-          .accessibilityLabel("送信中")
-      } else if showsTime {
-        Text(ChatTime.clock(time))
-      }
-    }
-    .font(.caption2)
-    .foregroundStyle(colors.textQuaternary)
-    .padding(.bottom, 2)
-    .fixedSize()
-  }
-}
-
-/// A line's words in its bubble: others' on the quiet fill, one's own in
-/// the accent, the first of a run with its corner by the writer drawn in,
-/// dimmed while it waits to be sent.
-/// The days from one through another.
-private struct DaySpan: Hashable {
-  let from: Day
-  let through: Day
-}
-
-/// What a line is drawn as: its words in a bubble, or its days on a card.
-struct LineContent: View {
-  let text: String
-  /// Its first link's page.
-  var preview: LinePreview?
-  let days: [Day]
-  let members: [GroupMember]
-  /// Its days are put to the vote, with what the card needs.
-  var poll: PollLine?
-  /// The photo sent as the line, from the group's photos.
-  var photo: LinePhoto?
-  /// The line it answers, over its words or photo; shared days and polls
-  /// show none, as /design's cards.
-  var quote: LineQuote?
-  var groupID = ""
-  let mine: Bool
-  let first: Bool
-  let waiting: Bool
-  let nameOf: (String) -> String
-  var onOpenQuote: () -> Void = {}
-  /// Its words opened past chatRules.foldLines lines.
-  var unfolded = false
-  var onUnfold: () -> Void = {}
-  @Environment(\.themeColors) private var colors
-
-  var body: some View {
-    if let photo, let quote {
-      // A photo answering a line sits in a bubble under its quote.
-      VStack(alignment: .leading, spacing: 8) {
-        BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpenQuote)
-          .padding(.horizontal, 12)
-          .padding(.top, 8)
-          .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-        PhotoLine(photo: photo, groupID: groupID, waiting: waiting)
-          .padding([.horizontal, .bottom], 4)
-      }
-      .fixedSize()
-      .background(
-        mine ? colors.accentFill : colors.fillTertiary, in: BubbleShape(mine: mine, first: first))
-    } else if let photo {
-      PhotoLine(photo: photo, groupID: groupID, waiting: waiting)
-    } else if let poll {
-      PollCard(
-        days: days, votes: poll.votes, decided: poll.decided, members: members,
-        names: poll.names, meID: poll.meID, canDecide: poll.canDecide, waiting: waiting,
-        onVote: poll.onVote, onDecide: poll.onDecide)
-    } else if days.isEmpty {
-      MessageBubble(
-        text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf, preview: preview,
-        quote: quote, groupID: groupID, onOpenQuote: onOpenQuote, unfolded: unfolded,
-        onUnfold: onUnfold)
-    } else {
-      DayCard(days: days, members: members)
-        .opacity(waiting ? 0.6 : 1)
-    }
-  }
-}
-
-struct MessageBubble: View {
-  @Environment(\.themeColors) private var colors
-  /// Where a held bubble notes its links, for a long press on one.
-  @Environment(\.linkSpots) private var linkSpots
-  let text: String
-  let mine: Bool
-  let first: Bool
-  let waiting: Bool
-  /// A member's name, for the line's mentions.
-  let nameOf: (String) -> String
-  /// Its first link's page, under its words.
-  var preview: LinePreview?
-  /// The line it answers, over its words.
-  var quote: LineQuote?
-  var groupID = ""
-  var onOpenQuote: () -> Void = {}
-  /// Its words opened past chatRules.foldLines lines.
-  var unfolded = false
-  var onUnfold: () -> Void = {}
-  /// Its words' height whole, and as shown: taller whole, they are cut.
-  @State private var wholeHeight: CGFloat = 0
-  @State private var shownHeight: CGFloat = 0
-  /// Emoji drawn large grow with the reader's text size, as body does.
-  @ScaledMetric(relativeTo: .body) private var emojiSize = CGFloat(Chat.largeEmojiSize)
-
-  /// The invitation code of its first link, when that is one of
-  /// Pochical's invitations.
-  private var invitation: String? {
-    firstLink(text).flatMap { URL(string: $0) }.flatMap(inviteCode(of:))
-  }
-
-  /// How wide a bubble with a page is, as /design's linked bubble.
-  private static var linkedWidth: CGFloat { 240 }
-
-  var body: some View {
-    // Nothing but a few emoji: large, without a bubble (spec/chat.md,
-    // Large emoji); a reply keeps its bubble, its quote inside it.
-    if quote == nil, preview == nil, invitation == nil, largeEmoji(text) > 0 {
-      Text(text)
-        .font(.system(size: emojiSize))
-        .opacity(waiting ? 0.6 : 1)
-    } else {
-      bubble
-    }
-  }
-
-  private var bubble: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      if let quote {
-        BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpenQuote)
-          .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-      }
-      VStack(alignment: .leading, spacing: 4) {
-        markedWords
-          .font(.body)
-          .lineSpacing(3)
-          .lineLimit(unfolded ? nil : Chat.foldLines)
-          .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-          .tint(mine ? colors.accentOnFill : colors.accentDefault)
-          .modifier(FindsLinks(spots: linkSpots))
-          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { shownHeight = $0 }
-          // The words whole at the same width, measured, not guessed from
-          // their length (spec/chat.md, Long messages).
-          .background(alignment: .top) {
-            Text(words)
-              .font(.body)
-              .lineSpacing(3)
-              .fixedSize(horizontal: false, vertical: true)
-              .hidden()
-              .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-                wholeHeight = $0
-              }
-          }
-        if !unfolded, wholeHeight > shownHeight + 1 {
-          Button("続きを読む", action: onUnfold)
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(mine ? colors.accentOnFill : colors.accentDefault)
-            .buttonStyle(.plain)
-        }
-      }
-      // An invitation's card takes the place of the one page.
-      if let invitation {
-        InviteCard(code: invitation)
-      } else if let preview {
-        LinkPreviewCard(preview: preview, mine: mine)
-      }
-    }
-    .frame(
-      width: preview == nil && invitation == nil ? nil : Self.linkedWidth, alignment: .leading)
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
-      .background(
-        mine ? colors.accentFill : colors.fillTertiary,
-        in: BubbleShape(mine: mine, first: first)
-      )
-      .opacity(waiting ? 0.6 : 1)
-  }
-
-  /// The line's words, its mentions as @ and the name in the name's
-  /// weight and its links underlined, both in the accent in others' lines
-  /// and in the bubble's color in one's own (spec/chat.md, In a message).
-  private var words: AttributedString {
-    pieces.reduce(into: AttributedString()) { $0 += $1.words }
-  }
-
-  /// The words with their links marked, for a long press to find.
-  private var markedWords: Text {
-    pieces.reduce(Text(verbatim: "")) { sofar, piece in
-      let text = Text(piece.words)
-      return Text("\(sofar)\(piece.link.map { text.customAttribute(LinkMark(url: $0)) } ?? text)")
-    }
-  }
-
-  /// Each part of the words as drawn, and the page it links to.
-  private var pieces: [(words: AttributedString, link: URL?)] {
-    textParts(text).map { part in
-      var piece = AttributedString(part.mention.map { "@\(nameOf($0))" } ?? part.text)
-      if let mentioned = part.mention {
-        piece.font = .body.weight(.semibold)
-        piece.foregroundColor = mine ? colors.accentOnFill : colors.accentDefault
-        // Opens their profile, as a link would (spec/chat.md, Mentions).
-        piece.link = mentionLink(mentioned)
-      } else if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
-        piece.link = link
-        piece.underlineStyle = .single
-        return (piece, link)
-      }
-      return (piece, nil)
-    }
-  }
-
-}
-
-/// A mention's link in a message's words, which the chat opens as the
-/// member's profile rather than as a page.
-private func mentionLink(_ userID: String) -> URL? {
-  var parts = URLComponents()
-  parts.scheme = mentionScheme
-  parts.path = userID
-  return parts.url
-}
-
-/// The member a mention's link names.
-private func mentioned(by url: URL) -> String? {
-  url.scheme == mentionScheme ? url.path : nil
-}
-
-private let mentionScheme = "pochical-mention"
-
-/// A bubble's outline: round all over, but the first of a run, as LINE
-/// and WhatsApp draw one: its top corner by the writer's side drawn in, by
-/// the face and name the run starts with, so it says whose words follow.
-struct BubbleShape: Shape {
-  let mine: Bool
-  let first: Bool
-
-  nonisolated func path(in rect: CGRect) -> Path {
-    let drawnIn = first ? Radius.sm : Radius.lg
-    return UnevenRoundedRectangle(
-      topLeadingRadius: mine ? Radius.lg : drawnIn, bottomLeadingRadius: Radius.lg,
-      bottomTrailingRadius: Radius.lg, topTrailingRadius: mine ? drawnIn : Radius.lg,
-      style: .continuous
-    )
-    .path(in: rect)
-  }
-}
-
-/// Someone else whose profile is open.
-struct ProfileOf: Identifiable {
-  let id: String
-  let name: String
-  var photoID = ""
-}
-
-/// Reporting a line or a member, their profile, and blocking them asked
-/// first (spec/chat.md, Reporting and blocking).
-struct ReportAndBlock: ViewModifier {
-  let groupID: String
-  let groupName: String
-  let groupMark: GroupMarkValue
-  let blocked: Set<String>
-  @Binding var reporting: ReportTarget?
-  @Binding var profileOf: ProfileOf?
-  @Binding var blockQuestion: BlockQuestion?
-  /// Opens the one-to-one chat with someone, when it is not the one open.
-  let onMessage: (ProfileOf) -> (() -> Void)?
-  let onReported: (ReportTarget) -> Void
-  let onSetBlocked: (BlockQuestion) -> Void
-  /// Takes them out of the group, where the profile offers it (グループの
-  ///設定's members).
-  var onRemove: ((ProfileOf) -> Void)?
-  /// What follows once a sheet has gone: one cannot come up while another
-  /// is going.
-  @State private var next: (() -> Void)?
-
-  func body(content: Content) -> some View {
-    content
-      .sheet(item: $reporting, onDismiss: runNext) { target in
-        ReportSheet(target: target, groupID: groupID) { next = { onReported(target) } }
-      }
-      .sheet(item: $profileOf, onDismiss: runNext) { person in
-        MemberProfileSheet(
-          name: person.name, photoID: person.photoID, groupName: groupName,
-          groupMark: groupMark, blocked: blocked.contains(person.id),
-          onMessage: onMessage(person).map { open in { next = open } },
-          onReport: { next = { reporting = .member(id: person.id, name: person.name) } },
-          onBlock: {
-            next = {
-              blockQuestion = BlockQuestion(userID: person.id, name: person.name, block: true)
-            }
-          },
-          onUnblock: {
-            next = {
-              blockQuestion = BlockQuestion(userID: person.id, name: person.name, block: false)
-            }
-          },
-          onRemove: onRemove.map { remove in { remove(person) } })
-      }
-      .alert(
-        blockQuestion?.title ?? "", isPresented: Binding(
-          get: { blockQuestion != nil }, set: { if !$0 { blockQuestion = nil } }),
-        presenting: blockQuestion
-      ) { question in
-        Button(question.afterReport ? "しない" : "キャンセル", role: .cancel) {}
-        Button(question.block ? "ブロック" : "解除", role: question.block ? .destructive : nil) {
-          onSetBlocked(question)
-        }
-      } message: { question in
-        Text(question.message)
-      }
-  }
-
-  private func runNext() {
-    let action = next
-    next = nil
-    action?()
-  }
-}
-
-/// A held bubble's words drawn noting where their links are, and where
-/// they are on the screen.
-private struct FindsLinks: ViewModifier {
-  let spots: LinkSpots?
-
-  func body(content: Content) -> some View {
-    if let spots {
-      content
-        .textRenderer(LinkFinder(spots: spots))
-        .modifier(HeldLinksOpenNothing(spots: spots))
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { spots.frame = $0 }
-    } else {
-      content
     }
   }
 }
