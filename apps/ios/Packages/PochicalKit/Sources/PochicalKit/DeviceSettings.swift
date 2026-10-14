@@ -96,7 +96,7 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
 /// start on, and days off are shown, since they could not tell an empty day
 /// from one not entered. Light or dark is the screen's until picked.
 public struct PictureLook: Codable, Equatable, Sendable {
-  public var options = MarkOptions(names: true, highlight: true)
+  public var options = MarkOptions(names: true, off: .highlight)
   /// Dark, light, or none to follow the screen.
   public var dark: Bool?
 
@@ -149,25 +149,48 @@ public enum MarkStyle: String, Codable, CaseIterable, Sendable {
   case badge
 }
 
+/// How a day off shows: on a tint of its color (強調), as a mark alone
+/// (印だけ), or left blank (空白), faint again while entering and in a
+/// day's week.
+public enum OffLook: String, Codable, CaseIterable, Sendable {
+  case highlight
+  case mark
+  case blank
+
+  public var name: String {
+    switch self {
+    case .highlight: "強調"
+    case .mark: "印だけ"
+    case .blank: "空白"
+    }
+  }
+}
+
 /// How the person's own month draws days in one shape (/design's
-/// CalendarOptions): the shift's name under its mark, days off on a tint
-/// of their color, and days off left blank.
+/// CalendarOptions): the shift's name under its mark, and how each pattern
+/// that counts as off shows, so 休み can be left blank while 有休 is
+/// tinted; a pattern not set yet shows as `off`.
 public struct MarkOptions: Codable, Equatable, Sendable {
   public var names = false
-  public var highlight = false
-  public var blankOff = false
+  public var off = OffLook.mark
+  public var offs: [PatternID: OffLook] = [:]
 
-  public init(names: Bool = false, highlight: Bool = false, blankOff: Bool = false) {
+  public init(names: Bool = false, off: OffLook = .mark, offs: [PatternID: OffLook] = [:]) {
     self.names = names
-    self.highlight = highlight
-    self.blankOff = blankOff
+    self.off = off
+    self.offs = offs
   }
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     names = try container.decodeIfPresent(Bool.self, forKey: .names) ?? false
-    highlight = try container.decodeIfPresent(Bool.self, forKey: .highlight) ?? false
-    blankOff = try container.decodeIfPresent(Bool.self, forKey: .blankOff) ?? false
+    off = try container.decodeIfPresent(OffLook.self, forKey: .off) ?? .mark
+    offs = try container.decodeIfPresent([PatternID: OffLook].self, forKey: .offs) ?? [:]
+  }
+
+  /// How the days of the pattern `id` show, when it counts as off.
+  public func offLook(of id: PatternID) -> OffLook {
+    offs[id] ?? off
   }
 }
 
@@ -182,7 +205,7 @@ public struct Look: Codable, Equatable, Sendable {
   /// シフトの色: each shift in its own color (色分け), or all of them in
   /// the テーマ's, the palette's first.
   public var colored = true
-  public var icon = MarkOptions(highlight: true)
+  public var icon = MarkOptions(off: .highlight)
   public var emoji = MarkOptions()
   public var badge = MarkOptions()
 

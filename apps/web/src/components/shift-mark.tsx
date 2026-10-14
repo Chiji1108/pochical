@@ -106,6 +106,8 @@ export type LookSettings = {
   highlight: boolean;
   // Days off left empty on your own month, for a calm, paper-like look.
   blankOff: boolean;
+  // Each pattern's own 休みの見せ方 over the two above, by its id.
+  offs?: Partial<Record<string, OffLookId>>;
 };
 
 // How days off show on your own month. "blank" leaves them empty while
@@ -113,6 +115,38 @@ export type LookSettings = {
 // day not entered yet, so there they come back "faint".
 export type OffDisplay = "show" | "blank" | "faint";
 export const OffDisplayContext = createContext<OffDisplay>("show");
+
+// 休みの見せ方 for one pattern that counts as off: on a tint of its color,
+// as a mark alone, or left blank.
+export type OffLookId = "highlight" | "mark" | "blank";
+
+// 休みの見せ方 the person set for each pattern that counts as off, by its
+// id, over the look's own, so 休み can be left blank while 有休 is tinted.
+export const OffLooksContext = createContext<
+  Partial<Record<string, OffLookId>>
+>({});
+
+// Where days off left blank come back faint: in the week view, to tell a
+// day off from a day not entered yet.
+export const OffFaintContext = createContext(false);
+
+// How each pattern's days off show: its own 休みの見せ方 if set, else the
+// look's.
+export function useOffLooks(): (shift: string | undefined) => OffLookId {
+  const highlight = useOffHighlight(useContext(ShiftMarkStyleContext));
+  const display = useContext(OffDisplayContext);
+  const own = useContext(OffLooksContext);
+  return (shift) => {
+    const set = shift === undefined ? undefined : own[shift];
+    if (set) {
+      return set;
+    }
+    if (display !== "show") {
+      return "blank";
+    }
+    return highlight ? "highlight" : "mark";
+  };
+}
 
 // A look with every switch where it starts, for the sample members.
 export const baseLook: LookSettings = {

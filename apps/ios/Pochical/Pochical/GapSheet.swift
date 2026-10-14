@@ -18,24 +18,25 @@ struct GapSheet: View {
   /// The pattern picked to fill with, shared with the calendar behind,
   /// which shows it faint on the days; none for the first.
   @Binding var picked: PatternID?
-  /// カレンダーでは空白で見せる is offered to whoever was not showing days
-  /// off blank as the sheet opened, and stays while it is open: many
-  /// leave days off blank for the look, which they keep while the days
-  /// are filled.
-  @State private var offerBlank: Bool
+  /// How the person's look showed each pattern as the sheet opened:
+  /// カレンダーでは空白で見せる is offered for the one picked unless it was
+  /// blank already, and stays while the sheet is open, as many leave a
+  /// day off blank for the look, which they keep while the days are
+  /// filled.
+  private let openedLook: MarkOptions
   /// Switched on: the look turns blank as the days are filled, and not
   /// before, so × changes nothing.
   @State private var blank = false
 
   init(
-    days: [Day], offPatterns: [Pattern], picked: Binding<PatternID?>, blankOff: Bool,
+    days: [Day], offPatterns: [Pattern], picked: Binding<PatternID?>, openedLook: MarkOptions,
     onFill: @escaping (Pattern) -> Void
   ) {
     self.days = days
     _picked = picked
     self.offPatterns = offPatterns
     self.onFill = onFill
-    _offerBlank = State(initialValue: !blankOff)
+    self.openedLook = openedLook
   }
 
   private var offPattern: Pattern {
@@ -68,7 +69,7 @@ struct GapSheet: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel("入れるパターン")
           }
-          if offerBlank {
+          if openedLook.offLook(of: offPattern.id) != .blank {
             Toggle(isOn: $blank) {
               Text("カレンダーでは空白で見せる")
               Text("お休みとして入れて、印は出しません")
@@ -86,8 +87,8 @@ struct GapSheet: View {
       // The answer stays at the foot, whatever scrolls above it.
       .safeAreaInset(edge: .bottom) {
         Button {
-          if blank {
-            settings.device.look.options.blankOff = true
+          if blank && openedLook.offLook(of: offPattern.id) != .blank {
+            settings.device.look.options.offs[offPattern.id] = .blank
           }
           onFill(offPattern)
           dismiss()

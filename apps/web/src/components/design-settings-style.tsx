@@ -6,8 +6,13 @@ import { useContext, useState } from "react";
 import { css, cva } from "styled-system/css";
 
 import { useDevice } from "../lib/design-device";
-import { isDayOff, presetPatterns, usePatterns } from "../lib/design-patterns";
-import type { Shift } from "../lib/design-patterns";
+import {
+  isDayOff,
+  OwnPatternsContext,
+  presetPatterns,
+  usePatterns,
+} from "../lib/design-patterns";
+import type { Pattern, Shift } from "../lib/design-patterns";
 import { useLook, useSettings } from "../lib/design-settings-store";
 import { dayName } from "../lib/text-limits";
 import {
@@ -38,9 +43,10 @@ import {
   MonochromeContext,
   ShiftMark,
   ShiftMarkStyleContext,
-  useOffHighlight,
+  useDisplayColor,
+  useOffLooks,
 } from "./shift-mark";
-import type { LookSettings, ShiftMarkStyle } from "./shift-mark";
+import type { LookSettings, OffLookId, ShiftMarkStyle } from "./shift-mark";
 
 // The スタイル page: how shifts are marked (shape, days off, names, the
 // marks' colors) and the テーマ, each choice drawn on the person's own
@@ -154,7 +160,6 @@ const offSample = cva({
     paddingTop: "4px",
     width: "32px",
   },
-  variants: { lit: { true: { bg: "calendar.offTint" } } },
 });
 
 export function MarkPage({
@@ -165,6 +170,7 @@ export function MarkPage({
   onBack: () => void;
 }) {
   const current = useContext(ShiftMarkStyleContext);
+  const offs = useContext(OwnPatternsContext).filter(isDayOff);
   // The テーマ cards show in the light or dark the preview's ☀︎ / ☾ picks,
   // without touching 外観.
   const scheme = useContext(ColorSchemeContext);
@@ -193,12 +199,16 @@ export function MarkPage({
           <ShiftColorsChoices />
         </Section>
       )}
-      <Section title="休みの見せ方">
-        <OffLookChoices current={current} />
-      </Section>
       <Section title="シフト名">
         <NamesChoices current={current} />
       </Section>
+      {/* Last, as it grows with the patterns that count as off, so the
+          rest keep their place. */}
+      {offs.length > 0 && (
+        <Section title="休みの見せ方">
+          <OffLookChoices offs={offs} />
+        </Section>
+      )}
     </>
   );
 }
@@ -242,59 +252,75 @@ function ShapeChoices() {
 
 // How your own calendar shows the marks. Group screens decide these for
 // themselves, so members never see them.
-const offLooks = [
-  { blankOff: false, highlight: true, id: "highlight", name: "強調" },
-  { blankOff: false, highlight: false, id: "mark", name: "印だけ" },
-  { blankOff: true, highlight: false, id: "blank", name: "空白" },
-] as const;
+const offLooks: { id: OffLookId; name: string }[] = [
+  { id: "highlight", name: "強調" },
+  { id: "mark", name: "印だけ" },
+  { id: "blank", name: "空白" },
+];
 
-// How days off show, as the two settings that carry it.
+// How days off show, as the two settings of a look that carry it.
 export type OffLook = { highlight: boolean; blankOff: boolean };
 
-function offLookId(value: OffLook) {
+export function offLookId(value: OffLook): OffLookId {
   if (value.blankOff) {
     return "blank";
   }
   return value.highlight ? "highlight" : "mark";
 }
 
-// Segments each drawing a day off as it would look. 空白 leaves
+export function offLookOf(id: OffLookId): OffLook {
+  return { blankOff: id === "blank", highlight: id === "highlight" };
+}
+
+// Segments each drawing a day off of `shift` as it would look. 空白 leaves
 // days off empty on the month; they come back faint while entering and in
-// the week view. Used by the style page and by the saved image, each with
-// its own values; the image's names them alone (`samples` false), as the
-// app's own look is not what it shows.
+// the week view. Used by the style page, once for each pattern that counts
+// as off, and by the saved image, with its own value for every day off;
+// the image's names them alone (`samples` false), as the app's own look is
+// not what it shows.
 export function OffLookTabs({
   value,
   onChange,
+  shift,
+  label = "休みの見せ方",
   samples = true,
 }: {
-  value: OffLook;
-  onChange: (value: OffLook) => void;
+  value: OffLookId;
+  onChange: (value: OffLookId) => void;
+  shift?: Shift;
+  label?: string;
   samples?: boolean;
 }) {
   const { off } = useOwnSamples();
-  const picked = offLookId(value);
+  const shown = shift ?? off;
+  const pattern = usePatterns()[shown];
+  const { tint } = useDisplayColor(pattern?.color ?? presetPatterns.off.color);
   return (
     <SegmentedControl
-      label="休みの見せ方"
+      label={label}
       onValueChange={(id) => {
         const option = offLooks.find((item) => item.id === id);
         if (option) {
-          onChange({ blankOff: option.blankOff, highlight: option.highlight });
+          onChange(option.id);
         }
       }}
       size={samples ? "tall" : "compact"}
-      value={picked}
+      value={value}
     >
       {offLooks.map((option) => (
         <Segment key={option.id} value={option.id}>
           {samples && (
             <span
               aria-hidden="true"
-              className={offSample({ lit: option.highlight })}
+              className={offSample()}
+              style={
+                option.id === "highlight" ? { background: tint } : undefined
+              }
             >
               <small>5</small>
-              {option.blankOff ? null : <ShiftMark shift={off} size={18} />}
+              {option.id === "blank" ? null : (
+                <ShiftMark shift={shown} size={18} />
+              )}
             </span>
           )}
           {option.name}
@@ -341,17 +367,42 @@ export function NameTabs({
   );
 }
 
-function OffLookChoices({ current }: { current: ShiftMarkStyle }) {
-  const look = useLook();
-  const setCalendarOptions = useSettings((state) => state.setCalendarOptions);
-  const highlight = useOffHighlight(current);
+// One row of tabs for each pattern that counts as off, so 休み can be left
+// blank while 有休 is tinted; named once there is more than one.
+function OffLookChoices({ offs }: { offs: Pattern[] }) {
+  const lookOf = useOffLooks();
+  const setOffLook = useSettings((state) => state.setOffLook);
   return (
-    <OffLookTabs
-      onChange={setCalendarOptions}
-      value={{ blankOff: look.blankOff, highlight }}
-    />
+    <div className={offRows.list}>
+      {offs.map((pattern) => (
+        <div className={offRows.row} key={pattern.id}>
+          {offs.length > 1 && <p className={offRows.name}>{pattern.name}</p>}
+          <OffLookTabs
+            label={offs.length > 1 ? `${pattern.name}の見せ方` : undefined}
+            onChange={(look) => {
+              setOffLook(pattern.id, look);
+            }}
+            shift={pattern.id}
+            value={lookOf(pattern.id)}
+          />
+        </div>
+      ))}
+    </div>
   );
 }
+
+const offRows = {
+  list: css({ display: "flex", flexDirection: "column", gap: "16px" }),
+  // The pattern's name over its tabs, as a group's own heading.
+  name: css({
+    color: "text.primary",
+    fontWeight: 600,
+    margin: 0,
+    paddingInline: "16px",
+    textStyle: "subheadline",
+  }),
+  row: css({ display: "flex", flexDirection: "column", gap: "8px" }),
+};
 
 function NamesChoices({ current }: { current: ShiftMarkStyle }) {
   const { names } = useContext(CellNamesContext);

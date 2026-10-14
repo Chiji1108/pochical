@@ -150,7 +150,7 @@ private struct GridDay: View {
   var inWeek = false
 
   var body: some View {
-    let off = OffLook(day, look: look, inWeek: inWeek)
+    let off = OffDrawing(day, look: look, inWeek: inWeek)
     let tile = off.tile && inMonth
     let isToday = day.date == today
     Link(destination: dayLink(day.date)) {

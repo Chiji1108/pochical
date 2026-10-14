@@ -19,7 +19,7 @@ struct StyleSettings: View {
     @Bindable var settings = settings
     let calendar = OwnCalendar(days: [], patterns: patterns, patternOrder: patternOrder, orders: [])
     let work = calendar.patterns.inUse.first { !$0.countsAsOff }
-    let off = calendar.patterns.inUse.first(where: \.countsAsOff)
+    let offs = calendar.patterns.inUse.filter(\.countsAsOff)
     let samples = styleSamples(of: calendar.patterns).compactMap { calendar.patternsByID[$0] }
     Form {
       Section {
@@ -67,17 +67,6 @@ struct StyleSettings: View {
           .settingsOnPage()
         }
       }
-      Section("休みの見せ方") {
-        Choices(
-          options: OffLook.allCases, picked: OffLook(settings.device.look.options),
-          label: \.name, size: .tall
-        ) { offLook in
-          sample(off) { offLook.apply(to: &$0.options) }
-        } onPick: { offLook in
-          offLook.apply(to: &settings.device.look.options)
-        }
-        .settingsOnPage()
-      }
       Section("シフト名") {
         Choices(
           options: [false, true], picked: settings.device.look.options.names,
@@ -88,6 +77,34 @@ struct StyleSettings: View {
           settings.device.look.options.names = names
         }
         .settingsOnPage()
+      }
+      // Each day off its own, so 休み can be left blank while 有休 is
+      // tinted; named once there is more than one. Last, as it grows with
+      // the patterns that count as off, so the rest keep their place.
+      if !offs.isEmpty {
+        Section("休みの見せ方") {
+          VStack(alignment: .leading, spacing: 16) {
+            ForEach(offs, id: \.id) { off in
+              VStack(alignment: .leading, spacing: 8) {
+                if offs.count > 1 {
+                  Text(off.name)
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.leading, 16)
+                }
+                Choices(
+                  options: OffLook.allCases,
+                  picked: settings.device.look.options.offLook(of: off.id),
+                  label: \.name, size: .tall
+                ) { offLook in
+                  sample(off) { $0.options.offs[off.id] = offLook }
+                } onPick: { offLook in
+                  settings.device.look.options.offs[off.id] = offLook
+                }
+              }
+            }
+          }
+          .settingsOnPage()
+        }
       }
     }
     .settingsList()
@@ -109,7 +126,7 @@ struct StyleSettings: View {
       DayCell(
         day: Day(year: 2026, month: 10, day: 5), entry: DayEntry(shift: pattern.id), note: nil,
         pattern: pattern, outside: false, isToday: false, isHoliday: false,
-        offShown: look.options.blankOff ? .hidden : .shown
+        offShown: .hidden
       )
       .frame(width: 44)
       .environment(\.look, look)
@@ -151,34 +168,6 @@ private enum Shape: CaseIterable, Hashable {
     case .badge: look.style = .badge
     }
     return look
-  }
-}
-
-/// How days off show: on a tint of their color (強調), as a mark alone
-/// (印だけ), or left blank (空白), faint again while entering and in a day's
-/// week.
-enum OffLook: CaseIterable, Hashable {
-  case highlight, mark, blank
-
-  init(_ options: MarkOptions) {
-    if options.blankOff {
-      self = .blank
-    } else {
-      self = options.highlight ? .highlight : .mark
-    }
-  }
-
-  var name: String {
-    switch self {
-    case .highlight: "強調"
-    case .mark: "印だけ"
-    case .blank: "空白"
-    }
-  }
-
-  func apply(to options: inout MarkOptions) {
-    options.highlight = self == .highlight
-    options.blankOff = self == .blank
   }
 }
 

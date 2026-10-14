@@ -11,7 +11,7 @@ import Testing
   #expect(settings.week.saturday)
   #expect(settings.week.holiday)
   // A picture names its shifts and tints days off until set otherwise.
-  #expect(settings.picture.options == MarkOptions(names: true, highlight: true))
+  #expect(settings.picture.options == MarkOptions(names: true, off: .highlight))
   #expect(settings.picture.dark == nil)
 }
 
@@ -28,7 +28,7 @@ import Testing
 
 @Test func eachShapeKeepsItsOwnOptions() throws {
   var look = Look()
-  #expect(look.options == MarkOptions(highlight: true))
+  #expect(look.options == MarkOptions(off: .highlight))
   look.options.names = true
   look.style = .emoji
   #expect(look.options == MarkOptions())
@@ -38,7 +38,20 @@ import Testing
   let settings = try JSONDecoder().decode(DeviceSettings.self, from: kept)
   #expect(settings.look.style == .badge)
   #expect(settings.look.fill)
-  #expect(settings.look.icon.highlight)
+  #expect(settings.look.icon.off == .highlight)
+}
+
+@Test func eachDayOffKeepsItsOwnLook() throws {
+  var options = MarkOptions(off: .highlight)
+  options.offs["off"] = .blank
+  #expect(options.offLook(of: "off") == .blank)
+  // One not set yet shows as the shape's own.
+  #expect(options.offLook(of: "paid") == .highlight)
+  let kept = Data(#"{"look":{"icon":{"off":"mark","offs":{"off":"blank","paid":"highlight"}}}}"#.utf8)
+  let settings = try JSONDecoder().decode(DeviceSettings.self, from: kept)
+  #expect(settings.look.icon.offLook(of: "off") == .blank)
+  #expect(settings.look.icon.offLook(of: "paid") == .highlight)
+  #expect(settings.look.icon.offLook(of: "wish") == .mark)
 }
 
 @Test func aThemeNoLongerKnownIsTheAppsOwn() throws {
