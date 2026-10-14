@@ -198,6 +198,21 @@ struct ChatScreen: View {
   @State private var picked: [PickedMember] = []
   /// A link tapped in a line, open in the browser sheet.
   @State private var browsing: OpenedLink?
+
+  /// The lines read as the screen is made, by the reader last heard of,
+  /// so they are there through the push that brings it in rather than
+  /// arriving, oldest first, as it ends.
+  init(group: GroupRow, threadID: String, otherID: String?, sharing: Day? = nil) {
+    self.group = group
+    self.threadID = threadID
+    self.otherID = otherID
+    self.sharing = sharing
+    let me = GroupCalls.knownUserID
+    _meID = State(initialValue: me)
+    _chat = Fetch(
+      wrappedValue: ChatRequest.Value(),
+      ChatRequest(groupID: group.id, threadID: threadID, me: me))
+  }
   /// All the pins open under the bar.
   @State private var pinsOpen = false
   /// A pinned line being gone to, its earlier lines asked for until held.
@@ -433,13 +448,16 @@ struct ChatScreen: View {
       }
     }
     .task {
-      _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID))
-      meID = await groupCalls.userID()
-      _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: meID))
+      // The reader is asked of the server before the chat opens only when
+      // not yet heard of; else after, in case the account changed.
+      if meID == nil {
+        await hearReader()
+      }
       // Opened from a notification as the app starts, its new lines are
       // still coming: where it opens waits for them, a little.
       await socket?.catchUp(within: .seconds(2))
       await open()
+      await hearReader()
     }
     .task(
       id: ReadKey(
@@ -1063,6 +1081,15 @@ struct ChatScreen: View {
   }
 
   // MARK: Doing
+
+  /// The reader as the server knows them, the lines read again by them
+  /// when that is not who they were taken to be.
+  private func hearReader() async {
+    let heard = await groupCalls.userID()
+    guard heard != meID else { return }
+    meID = heard
+    _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: heard))
+  }
 
   /// Opens on the first unread line under ここから新着, else stays on the
   /// latest; reading counts from then on.
