@@ -8,8 +8,8 @@ import {
 import { useContext, useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { addDays, dateKey, formatMonth } from "../lib/design-days";
-import type { Schedule } from "../lib/design-days";
+import { dateKey, formatMonth } from "../lib/design-days";
+import type { DayEntry, Schedule } from "../lib/design-days";
 import { isDayOff } from "../lib/design-patterns";
 import type { Pattern, PatternBook } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
@@ -81,8 +81,9 @@ export type CalendarAccess = "granted" | "denied" | "fails";
 
 // What a day of the month puts in the device calendar (spec/calendar.md):
 // its shift's event, a day off only of the patterns asked for, none for a
-// day of work without a time that the day before's event runs into, like
-// 明け after 夜勤, and a memo's own event where no shift's event is.
+// day of work without a time that the day before's event in the month
+// runs into, like 明け after 夜勤, and a memo's own event where no shift's
+// event is.
 export type CalendarDay = {
   // The shift's pattern, if any.
   pattern?: Pattern;
@@ -91,7 +92,14 @@ export type CalendarDay = {
   note: boolean;
 };
 
-// Each day of the month as CalendarDay, the day before it read too.
+// The day's own hours, else its pattern's; none without both.
+function hoursOf(entry: DayEntry | undefined, pattern: Pattern | undefined) {
+  const start = entry?.start ?? pattern?.time?.[0];
+  const end = entry?.end ?? pattern?.time?.[1];
+  return start === undefined || end === undefined ? undefined : { end, start };
+}
+
+// The month's days, in order, as CalendarDay.
 export function calendarDays(
   days: Date[],
   schedule: Schedule,
@@ -99,33 +107,30 @@ export function calendarDays(
   notes: ReadonlySet<string>,
   off: readonly string[]
 ): CalendarDay[] {
-  const patternOn = (date: Date) => {
-    const shift = schedule[dateKey(date)]?.shift;
+  const entryOn = (date: Date | undefined) =>
+    date === undefined ? undefined : schedule[dateKey(date)];
+  const patternOn = (date: Date | undefined) => {
+    const shift = entryOn(date)?.shift;
     return shift === undefined ? undefined : book[shift];
   };
-  // The day's event runs past its midnight.
-  const runsOver = (date: Date) => {
-    const entry = schedule[dateKey(date)];
+  // The day's event runs past its midnight: a shift ending at or before
+  // its start ends the next day.
+  const runsOver = (date: Date | undefined) => {
     const pattern = patternOn(date);
-    if (
-      !entry ||
-      !pattern?.time ||
-      (isDayOff(pattern) && !off.includes(pattern.id))
-    ) {
-      return false;
-    }
-    return (entry.end ?? pattern.time[1]) <= (entry.start ?? pattern.time[0]);
+    const hours = hoursOf(entryOn(date), pattern);
+    const shown = !isDayOff(pattern) || off.includes(pattern?.id ?? "");
+    return hours !== undefined && shown && hours.end <= hours.start;
   };
-  return days.map((date) => {
-    const entry = schedule[dateKey(date)];
+  // Never the month's first day, whose day before may never have been
+  // added.
+  return days.map((date, index) => {
     const pattern = patternOn(date);
     const untimed =
-      pattern?.time === undefined &&
-      entry?.start === undefined &&
-      entry?.end === undefined &&
-      !isDayOff(pattern);
+      pattern !== undefined &&
+      !isDayOff(pattern) &&
+      hoursOf(entryOn(date), pattern) === undefined;
     return {
-      carried: pattern !== undefined && untimed && runsOver(addDays(date, -1)),
+      carried: untimed && runsOver(days[index - 1]),
       note: notes.has(dateKey(date)),
       pattern,
     };
@@ -396,8 +401,12 @@ export function SaveSheet({
                       label={pattern.name}
                       leading={<ShiftMark shift={pattern.id} size={18} />}
                       onChange={(checked) => {
+                        // Only the patterns still there, so a deleted
+                        // one's leaves too.
                         const off = putting.off.filter(
-                          (id) => id !== pattern.id
+                          (id) =>
+                            id !== pattern.id &&
+                            offPatterns.some((item) => item.id === id)
                         );
                         setPutting({
                           ...putting,

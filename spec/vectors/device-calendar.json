@@ -1,5 +1,5 @@
 {
-  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name, its time (none is all day) and whether it counts as off. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day, or null for all day. Days off are left out but for the patterns `includeOff` names. A day of work without a time (its own or its pattern's) that the day before's event runs into, like 明け after 夜勤, is left out, as that event shows on it already; `days` may hold the day before the month for it, and `carriedOver`, when given, names the patterns so left out, in the order of the days first left out on (none when not given). Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a day off left out) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer.",
+  "about": "A month's shifts as events in the device's calendar (spec/calendar.md, Adding a month to the device calendar). `days` are the month's days as they show, a pattern id and any hours of the day's own; `patterns` give each pattern's name, its time (none is all day) and whether it counts as off. Each event is the pattern's name, `start` and `end` in minutes from the day's midnight, past 1440 when the shift ends the next day, or null for all day. Days off are left out but for the patterns `includeOff` names. A day of work without a time (its own or its pattern's) that the day before's event runs into, like 明け after 夜勤, is left out, as that event shows on it already; never the month's first day, whose day before is another month's that may never have been added; `carriedOver`, when given, names the patterns so left out, in the order of the days first left out on (none when not given). Optional `notes` (each day's memo) and `people` (each day's names, in order) are given only when the person asks for them; an event's `notes` is the memo, then 一緒に働く人：A、B on its own line, left out without either. A day with a memo and no shift's event (no shift, or a day off left out) gets an all-day event of its own, named by the memo's first line, the whole memo in its notes only when it runs longer.",
   "events": [
     {
       "name": "work at its pattern's time, days off left out",
@@ -181,7 +181,7 @@
       "carriedOver": ["after"]
     },
     {
-      "name": "the month's first day after the last month's night shift",
+      "name": "the month's first day stays after the last month's night shift",
       "month": "2026-11-01",
       "patterns": {
         "night": { "name": "夜勤", "time": ["16:30", "09:00"], "off": false },
@@ -194,9 +194,27 @@
       },
       "includeOff": [],
       "expected": [
+        { "day": "2026-11-01", "title": "明け", "start": null, "end": null },
         { "day": "2026-11-30", "title": "夜勤", "start": 990, "end": 1980 }
       ],
-      "carriedOver": ["after"]
+      "carriedOver": []
+    },
+    {
+      "name": "a day's own hours running past midnight carry over too, and one own time alone is no time",
+      "month": "2026-11-01",
+      "patterns": {
+        "duty": { "name": "当番", "off": false },
+        "offDuty": { "name": "非番", "off": false }
+      },
+      "days": {
+        "2026-11-05": { "shift": "duty", "start": "08:30", "end": "08:30" },
+        "2026-11-06": { "shift": "offDuty", "start": "10:00" }
+      },
+      "includeOff": [],
+      "expected": [
+        { "day": "2026-11-05", "title": "当番", "start": 510, "end": 1950 }
+      ],
+      "carriedOver": ["offDuty"]
     },
     {
       "name": "a day left out keeps its memo as an event of its own",

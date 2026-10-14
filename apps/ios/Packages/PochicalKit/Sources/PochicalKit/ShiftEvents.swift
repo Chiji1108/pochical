@@ -20,17 +20,18 @@ public enum ShiftEvents {
   /// The month's days with a shift as events, days off only those of
   /// `offShown`: each at the day's own time, else its pattern's. A day of
   /// work without a time that the day before's event runs into, like 明け
-  /// after 夜勤, is left out, as that event shows on it already. `notes`
-  /// and `people`, given only when asked for, are each day's memo and the
-  /// names of those on it: they go in a shift's event's notes, and a day
-  /// with a memo and no shift's event gets one of its own, all day, named
-  /// by the memo. `days` hold the day before the month too.
+  /// after 夜勤, is left out, as that event shows on it already; never the
+  /// month's first, whose day before is another month's, perhaps never
+  /// added. `notes` and `people`, given only when asked for, are each
+  /// day's memo and the names of those on it: they go in a shift's event's
+  /// notes, and a day with a memo and no shift's event gets one of its
+  /// own, all day, named by the memo.
   public static func month(
     _ month: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], offShown: Set<PatternID>,
     notes: [Day: String] = [:], people: [Day: [String]] = [:]
   ) -> [ShiftEvent] {
     month.daysOfMonth.compactMap { day in
-      let shift = carriedOver(day, days: days, patterns: patterns, offShown: offShown)
+      let shift = isCarriedOver(day, days: days, patterns: patterns, offShown: offShown)
         ? nil
         : shiftEvent(on: day, days: days, patterns: patterns, offShown: offShown, notes: notes,
           people: people)
@@ -46,7 +47,7 @@ public enum ShiftEvents {
   ) -> [PatternID] {
     var found: [PatternID] = []
     for day in month.daysOfMonth
-    where carriedOver(day, days: days, patterns: patterns, offShown: offShown) {
+    where isCarriedOver(day, days: days, patterns: patterns, offShown: offShown) {
       if let shift = days[day]?.shift, !found.contains(shift) {
         found.append(shift)
       }
@@ -54,12 +55,12 @@ public enum ShiftEvents {
     return found
   }
 
-  /// Whether the day is work without a time that the day before's event
-  /// runs into.
-  private static func carriedOver(
+  /// Whether the day is work without a time that the day before's event,
+  /// in the same month, runs into.
+  private static func isCarriedOver(
     _ day: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], offShown: Set<PatternID>
   ) -> Bool {
-    guard let entry = days[day], let pattern = patterns[entry.shift], !pattern.countsAsOff,
+    guard day != day.firstOfMonth, let entry = days[day], let pattern = patterns[entry.shift], !pattern.countsAsOff,
       hours(of: entry, pattern) == nil,
       let before = shiftEvent(
         on: day.adding(days: -1), days: days, patterns: patterns, offShown: offShown, notes: [:],

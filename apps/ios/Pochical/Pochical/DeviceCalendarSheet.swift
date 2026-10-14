@@ -161,9 +161,7 @@ struct DeviceCalendarSheet: View {
     // asked: each off at first, as a calendar may be shared with family,
     // and kept with the account as last left.
     let putting = settings.device.calendarAdd
-    // From the day before, whose night shift may run into the month.
-    let shown = calendar.shown(
-      from: month.adding(days: -1), through: month.daysOfMonth.last ?? month)
+    let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
     let events = ShiftEvents.month(
       month, days: shown, patterns: calendar.patternsByID, offShown: Set(putting.off),
       notes: putting.notes ? notes : [:], people: putting.people ? people(shown) : [:])
@@ -319,7 +317,10 @@ struct DeviceCalendarSheet: View {
     Binding {
       settings.device.calendarAdd.off.contains(id)
     } set: { on in
-      var off = settings.device.calendarAdd.off.filter { $0 != id }
+      // Only the patterns still there, so a deleted one's leaves too.
+      var off = settings.device.calendarAdd.off.filter {
+        $0 != id && calendar.patternsByID[$0] != nil
+      }
       if on {
         off.append(id)
       }
