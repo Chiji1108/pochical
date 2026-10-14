@@ -166,6 +166,9 @@ const save = {
     height: "10px",
     width: "10px",
   }),
+  // The notes under the switches, a paragraph each, as iOS spaces its
+  // footer's.
+  notes: css({ display: "flex", flexDirection: "column", gap: "8px" }),
   picker: css({ display: "flex", flexDirection: "column", gap: "24px" }),
   // The dot before the picked calendar's name, in the row's value.
   valueDot: css({
@@ -400,13 +403,15 @@ export function SaveSheet({
               }}
             />
           </List>
-          {carried.length > 0 && (
-            <Note>
-              {carried.join("・")}
-              は、前の日の勤務が翌朝まで続いて表示されるので入れません。
-            </Note>
-          )}
-          <Note>前に入れた{monthLabel}の予定は、入れ直します。</Note>
+          <div className={save.notes}>
+            {carried.length > 0 && (
+              <Note>
+                {carried.join("・")}
+                は、前の日の勤務が翌朝まで続いて表示されるので入れません。
+              </Note>
+            )}
+            <Note>前に入れた{monthLabel}の予定は、入れ直します。</Note>
+          </div>
           <Button
             variant="primary"
             className={save.add}
