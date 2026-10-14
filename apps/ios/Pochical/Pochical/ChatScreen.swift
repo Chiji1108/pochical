@@ -302,13 +302,14 @@ struct ChatScreen: View {
       let tall = geometry.contentSize.height + geometry.contentInsets.bottom
       return ScrollPlace(
         atLatest: below < 24, away: below > geometry.containerSize.height / 2,
-        fits: tall <= geometry.containerSize.height, height: geometry.contentSize.height)
+        fits: tall <= geometry.containerSize.height, height: geometry.contentSize.height,
+        seen: geometry.containerSize.height - geometry.contentInsets.bottom)
     } action: { old, now in
-      // A line coming in makes the lines taller before it is told: where
-      // they were scrolled is kept through that, so a chat at its foot
-      // follows the line down to it rather than staying short of it.
+      // A line coming in makes the lines taller, and the keyboard the room
+      // shorter, before either is told: where they were scrolled is kept
+      // through that, so a chat at its foot stays at its foot.
       var next = now
-      if now.height != old.height {
+      if now.height != old.height || now.seen != old.seen {
         next.atLatest = old.atLatest
         next.away = old.away
       }
@@ -485,6 +486,15 @@ struct ChatScreen: View {
       guard opened, place.atLatest else { return }
       // Once the new line is laid out, as opening waits for the lines:
       // scrolled to before then, the chat stays short of it.
+      Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(50))
+        withAnimation { toLatest() }
+      }
+    }
+    // The keyboard coming up or going keeps a chat at its foot there,
+    // rather than where it was last scrolled to by id.
+    .onChange(of: place.seen) {
+      guard opened, place.atLatest else { return }
       Task { @MainActor in
         try? await Task.sleep(for: .milliseconds(50))
         withAnimation { toLatest() }
@@ -1536,6 +1546,8 @@ private struct ScrollPlace: Hashable {
   var fits = true
   /// How tall the lines are, to tell a scroll from lines coming in.
   var height: CGFloat = 0
+  /// How much room they are seen in, over the composer and keyboard.
+  var seen: CGFloat = 0
 }
 
 private struct ReadKey: Hashable {
