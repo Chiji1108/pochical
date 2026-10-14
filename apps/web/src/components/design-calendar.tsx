@@ -40,7 +40,7 @@ import { GapSheet } from "./design-gap-sheet";
 import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
 import { useReminderOffer } from "./design-notifications";
 import { Pager } from "./design-pager";
-import { ImagePreviewPage, SaveSheet } from "./design-save-sheet";
+import { calendarDays, ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import type { CalendarAccess } from "./design-save-sheet";
 import {
   ShiftInputControls,
@@ -112,6 +112,7 @@ export function DesignCalendar({
   const [imagePreview, setImagePreview] = useState(false);
   const offDisplay = useContext(OffDisplayContext);
   const imageOptions = useSettings((state) => state.device.imageOptions);
+  const calendarAdd = useSettings((state) => state.device.calendarAdd);
   const setImageOptions = useSettings((state) => state.setImageOptions);
   const coworkers = useUser((state) => state.coworkers);
   // The person's own days, for the memos of days without a shift.
@@ -143,7 +144,6 @@ export function DesignCalendar({
       const shift = schedule[dateKey(date)]?.shift;
       return shift !== undefined && isDayOff(book[shift]);
     }).length;
-  const daysOff = daysOffIn(monthDays);
   // Someone picked in 今月の内訳, whose days the calendar shows.
   const shown = useShownWith(coworkers, schedule);
   const summaryIn = (days: Date[]) =>
@@ -546,23 +546,24 @@ export function DesignCalendar({
       <SaveSheet
         access={calendarAccess}
         month={month}
-        noteDays={monthDays
-          .filter((date) => own[dateKey(date)]?.note)
-          .map((date) => {
-            const shift = schedule[dateKey(date)]?.shift;
-            return {
-              off: shift !== undefined && isDayOff(book[shift]),
-              shift: shift !== undefined,
-            };
-          })}
-        offCount={daysOff}
+        days={calendarDays(
+          monthDays,
+          schedule,
+          book,
+          new Set(
+            monthDays
+              .map((date) => dateKey(date))
+              .filter((key) => (own[key]?.note ?? "") !== "")
+          ),
+          calendarAdd.off
+        )}
+        offPatterns={ownPatterns.filter((pattern) => isDayOff(pattern))}
         onImage={() => {
           setImagePreview(true);
         }}
         onOpenChange={sheetChange("save")}
         open={openSheet === "save"}
         toCalendar={saveToCalendar}
-        shiftCount={monthDays.length - unfilled}
       />
       <GapSheet
         choices={ownPatterns

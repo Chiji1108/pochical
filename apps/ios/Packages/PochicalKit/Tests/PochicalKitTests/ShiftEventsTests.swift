@@ -27,10 +27,11 @@ struct DeviceCalendarVectors: Decodable {
     let month: String
     let patterns: [String: PatternCase]
     let days: [String: DayCase]
-    let includeOff: Bool
+    let includeOff: [String]
     let notes: [String: String]?
     let people: [String: [String]]?
     let expected: [Event]
+    let carriedOver: [String]?
   }
 
   let events: [Case]
@@ -56,11 +57,15 @@ func shiftsAsEvents(_ vector: DeviceCalendarVectors.Case) throws {
     uniqueKeysWithValues: (vector.notes ?? [:]).compactMap { key, memo in Day(key).map { ($0, memo) } })
   let people = Dictionary(
     uniqueKeysWithValues: (vector.people ?? [:]).compactMap { key, names in Day(key).map { ($0, names) } })
+  let month = try #require(Day(vector.month))
   let events = ShiftEvents.month(
-    try #require(Day(vector.month)), days: days, patterns: patterns, includeOff: vector.includeOff,
-    notes: notes, people: people)
+    month, days: days, patterns: patterns, offShown: Set(vector.includeOff), notes: notes,
+    people: people)
   #expect(
     events.map {
       .init(day: $0.day.key, title: $0.title, start: $0.start, end: $0.end, notes: $0.notes)
     } == vector.expected)
+  #expect(
+    ShiftEvents.carriedOver(month, days: days, patterns: patterns, offShown: Set(vector.includeOff))
+      == vector.carriedOver ?? [])
 }

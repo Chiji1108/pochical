@@ -138,7 +138,7 @@ import UIKit
 
 /// 端末カレンダーに追加 (/design's SaveSheet, its calendar step): the
 /// month's shifts put in the device's calendar a day each, into the one
-/// picked, days off only when asked for.
+/// picked, days off only of the patterns asked for.
 struct DeviceCalendarSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -151,21 +151,25 @@ struct DeviceCalendarSheet: View {
   let coworkers: [String: String]
   @State private var calendars = DeviceCalendars()
   @State private var calendarID: String?
-  @State private var includeOff = false
   /// What was done, once added.
   @State private var done: String?
   @State private var failed = false
   @State private var guide: OpenedLink?
 
   var body: some View {
-    // The days' memos, and who works them, put in too when asked: each off
-    // at first, as a calendar may be shared with family, and kept with the
-    // account as last left.
+    // The days off, the days' memos, and who works them, put in too when
+    // asked: each off at first, as a calendar may be shared with family,
+    // and kept with the account as last left.
     let putting = settings.device.calendarAdd
-    let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
+    // From the day before, whose night shift may run into the month.
+    let shown = calendar.shown(
+      from: month.adding(days: -1), through: month.daysOfMonth.last ?? month)
     let events = ShiftEvents.month(
-      month, days: shown, patterns: calendar.patternsByID, includeOff: includeOff,
+      month, days: shown, patterns: calendar.patternsByID, offShown: Set(putting.off),
       notes: putting.notes ? notes : [:], people: putting.people ? people(shown) : [:])
+    let carried = ShiftEvents.carriedOver(
+      month, days: shown, patterns: calendar.patternsByID, offShown: Set(putting.off)
+    ).compactMap { calendar.patternsByID[$0]?.name }
     NavigationStack {
       Form {
         switch calendars.access {
@@ -197,7 +201,7 @@ struct DeviceCalendarSheet: View {
               wide("閉じる") { dismiss() }
             }
           } else {
-            form
+            form(carried: carried)
             Section {
               wide("\(events.count)件を追加") { add(events) }
                 .disabled(events.isEmpty || calendarID == nil)
@@ -240,7 +244,7 @@ struct DeviceCalendarSheet: View {
     .settingsOnPage()
   }
 
-  @ViewBuilder private var form: some View {
+  @ViewBuilder private func form(carried: [String]) -> some View {
     @Bindable var settings = settings
     Section {
       Picker("追加先", selection: $calendarID) {
@@ -261,7 +265,10 @@ struct DeviceCalendarSheet: View {
       // The line under it from the row's edge, as under the switch, not
       // from where the picked calendar's dot puts its words.
       .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
-      Toggle("休みの日も入れる", isOn: $includeOff)
+      // Each kind of day off on its own, as 有休 may go in without 休み.
+      ForEach(calendar.patterns.filter(\.countsAsOff)) { pattern in
+        Toggle("\(pattern.name)の日も入れる", isOn: putsIn(pattern.id))
+      }
       Toggle(isOn: $settings.device.calendarAdd.notes) {
         Text("メモも入れる")
         Text("予定がない日は、メモだけの予定にします")
@@ -275,6 +282,10 @@ struct DeviceCalendarSheet: View {
         .textCase(nil)
     } footer: {
       VStack(alignment: .leading, spacing: 8) {
+        // A day like 明け shows the night shift running into it already.
+        if !carried.isEmpty {
+          Text("\(carried.joined(separator: "・"))は、前の日の勤務が翌朝まで続いて表示されるので入れません。")
+        }
         Text("前に入れた\(month.monthText)の予定は、入れ直します。")
         // A calendar of a Google account added to the iPhone goes on to
         // Google Calendar, which few find by themselves (spec/calendar.md).
@@ -286,6 +297,20 @@ struct DeviceCalendarSheet: View {
       }
     }
     .settingsRows()
+  }
+
+  /// Whether the days of a pattern counted as off go in, kept with the
+  /// account.
+  private func putsIn(_ id: PatternID) -> Binding<Bool> {
+    Binding {
+      settings.device.calendarAdd.off.contains(id)
+    } set: { on in
+      var off = settings.device.calendarAdd.off.filter { $0 != id }
+      if on {
+        off.append(id)
+      }
+      settings.device.calendarAdd.off = off.sorted()
+    }
   }
 
   /// Each day's memo in the month.
