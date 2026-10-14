@@ -685,7 +685,7 @@ function PatternEditor({
       {confirming && (
         <ConfirmDialog
           action="削除"
-          message={`${days}日の予定に入っている「${initial.name}」も一緒に消えます。元に戻せません。日の記号を残すなら「使わないパターンにする」を選んでください。`}
+          message={`${days}日の予定に入っている「${initial.name}」も一緒に消えます。元に戻せません。日の印を残すなら「使わないパターンにする」を選んでください。`}
           onCancel={() => {
             setConfirming(false);
           }}
