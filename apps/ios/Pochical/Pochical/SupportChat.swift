@@ -200,7 +200,9 @@ struct SupportChatScreen: View {
       EmojiKeyboardSheet(title: "リアクション") { react($0, on: line) }
     }
     .fullScreenCover(item: $viewing) { photo in
-      PhotoViewer(photo: photo, groupID: ChatPhotos.support) { save(photo) }
+      PhotoViewer(photo: photo, groupID: ChatPhotos.support) {
+        await savePhoto(photo, in: ChatPhotos.support, calls: groupCalls)
+      }
     }
     .overlay(alignment: .top) {
       if let notice {
