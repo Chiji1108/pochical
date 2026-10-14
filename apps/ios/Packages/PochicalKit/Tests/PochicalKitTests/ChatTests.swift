@@ -78,6 +78,28 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
   }
 }
 
+@Test func aChatOpensOnItsLatestPageOrItsFirstUnreadLine() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take((1...130).map { line(UInt64($0), "\($0)") }, of: "g", in: db)
+    let firstShown = { (me: String?, from: Int64?) in
+      try Chats.state(of: groupThread, in: "g", me: me, from: from, db: db).lines.first?.seq
+    }
+    #expect(try firstShown(nil, nil) == 81)
+    var mark = Pochical_V1_Change()
+    mark.cursor = 131
+    mark.readMark.threadID = groupThread
+    mark.readMark.userID = "me"
+    mark.readMark.lastReadSeq = 20
+    try GroupSync.take([mark], of: "g", in: db)
+    // Back to the first unread line, within Chat.openMax lines.
+    #expect(try firstShown("me", nil) == 21)
+    // Scrolled back, from wherever the screen asks.
+    #expect(try firstShown(nil, 10) == 10)
+    #expect(try !Chats.state(of: groupThread, in: "g", from: 10, db: db).atStart)
+  }
+}
+
 @Test func theMembersEditsShowWhileTheyWait() throws {
   let database = try appDatabase()
   try database.write { db in

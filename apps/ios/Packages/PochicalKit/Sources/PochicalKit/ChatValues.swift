@@ -618,9 +618,13 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
 extension Chats {
   /// The chat as its screen shows it: the lines on from the latest back to
   /// the first gap, the member's sends still waiting (and their changes
-  /// and taking back already in place), and every read mark.
+  /// and taking back already in place), and every read mark. The lines
+  /// are those from `from` on; with none, as the chat opens: its latest
+  /// page, back to `me`'s first unread line when that is earlier, at most
+  /// `Chat.openMax` lines.
   public static func state(
-    of threadID: String, in groupID: String, me: String? = nil, db: Database
+    of threadID: String, in groupID: String, me: String? = nil, from: Int64? = nil,
+    db: Database
   ) throws -> ChatState {
     let all = try ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
       .order { $0.seq.desc() }.fetchAll(db)
@@ -701,10 +705,20 @@ extension Chats {
     }
     let marks = try ReadMarkRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
       .fetchAll(db)
+    let readMarks = Dictionary(marks.map { ($0.userID, $0.lastReadSeq) }, uniquingKeysWith: max)
+    let start: Int64
+    if let from {
+      start = from
+    } else {
+      let latest = lines.last?.seq ?? 0
+      let read = me.map { max(readMarks[$0] ?? 0, ownRead) } ?? latest
+      start = max(
+        latest - Int64(Chat.openMax) + 1, min(latest - Int64(Chat.pageSize) + 1, read + 1))
+    }
+    lines.removeAll { $0.seq < start }
     var state = ChatState(
       lines: lines, waiting: waiting, atStart: (lines.first?.seq ?? 1) <= 1,
-      marks: Dictionary(marks.map { ($0.userID, $0.lastReadSeq) }, uniquingKeysWith: max),
-      ownRead: ownRead)
+      marks: readMarks, ownRead: ownRead)
     let pinnedSeqs = pinned.compactMap { Int64($0) }
     let heldRows = try ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq.in(pinnedSeqs)

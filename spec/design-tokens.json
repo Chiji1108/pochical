@@ -3,6 +3,7 @@
   "chat": {
     "dayCardColumns": 6,
     "dayCardRows": 7,
+    "floatingDayMs": 1500,
     "foldLines": 10,
     "largeEmojiMax": 3,
     "largeEmojiSize": 48,
@@ -10,6 +11,7 @@
     "linkPreviewAspect": 1.91,
     "linkPreviewSettleMs": 400,
     "maxPins": 5,
+    "openMax": 200,
     "pageSize": 50,
     "photoMaxBytes": 4000000,
     "photoMaxEdge": 2048,

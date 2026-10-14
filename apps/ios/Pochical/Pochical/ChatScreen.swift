@@ -11,6 +11,9 @@ struct ChatRequest: FetchKeyRequest, Hashable {
   let threadID: String
   /// The reader, whose reactions still on their way show at once.
   var me: String?
+  /// The first line shown, once the chat has opened; none as it opens
+  /// (Chats.state).
+  var from: Int64?
 
   struct Value: Hashable, Sendable {
     var state = ChatState(lines: [], waiting: [], atStart: true, marks: [:])
@@ -20,7 +23,7 @@ struct ChatRequest: FetchKeyRequest, Hashable {
 
   func fetch(_ db: Database) throws -> Value {
     Value(
-      state: try Chats.state(of: threadID, in: groupID, me: me, db: db),
+      state: try Chats.state(of: threadID, in: groupID, me: me, from: from, db: db),
       writers: try Chats.writers(in: groupID, db: db))
   }
 }
@@ -185,6 +188,14 @@ struct ChatScreen: View {
   /// The top of the lines, where earlier ones are asked for, is on the
   /// screen.
   @State private var topInSight = false
+  /// The first line laid out, kept from the chat's opening so new lines
+  /// add to it rather than move it, and moved back a page at a time.
+  @State private var window: Int64?
+  /// The day of the lines at the top, once its title has gone up out of
+  /// sight, floating over them while the chat scrolls (LINE's).
+  @State private var topDay: Day?
+  @State private var dayShown = false
+  @State private var scrolling = false
   /// The height the lines are seen in, between the pins and the composer.
   @State private var seen: CGFloat = 0
   @State private var draft = ""
@@ -282,13 +293,7 @@ struct ChatScreen: View {
             // are asked for only once it is on the screen.
             .onScrollVisibilityChange(threshold: 0) { topInSight = $0 }
             .task(id: PageAsk(first: state.lines.first?.seq, inSight: topInSight)) {
-              guard topInSight else { return }
-              // Asked again until the socket is open to ask.
-              let first = state.lines.first?.seq ?? 0
-              while !Task.isCancelled {
-                if await socket?.requestPage(of: threadID, before: first) == true { return }
-                try? await Task.sleep(for: .seconds(1))
-              }
+              if topInSight { await showEarlier() }
             }
         }
         let listed = items(state)
@@ -351,6 +356,24 @@ struct ChatScreen: View {
       case .idle: if !following { following = place.atLatest }
       default: break
       }
+      scrolling = phase.isScrolling
+      if scrolling {
+        withAnimation(.easeOut(duration: 0.2)) { dayShown = true }
+      }
+    }
+    .onScrollTargetVisibilityChange(idType: String.self) { seen in
+      topDay = dayOver(seen.first, in: items(chat.state))
+    }
+    .task(id: dayShown) {
+      // Gone a moment after the scrolling stops.
+      guard dayShown else { return }
+      while !Task.isCancelled {
+        try? await Task.sleep(for: .milliseconds(Chat.floatingDayMs))
+        if !Task.isCancelled, !scrolling {
+          withAnimation(.easeOut(duration: 0.2)) { dayShown = false }
+          return
+        }
+      }
     }
     // The container is already inside the bars and the margins.
     .onScrollGeometryChange(for: CGFloat.self) { geometry in
@@ -387,6 +410,20 @@ struct ChatScreen: View {
       }
     }
     .sensoryFeedback(.success, trigger: done)
+    .overlay(alignment: .top) {
+      if let topDay, dayShown {
+        Text(ChatTime.day(topDay))
+          .font(.caption2)
+          .foregroundStyle(colors.textSecondary)
+          .padding(.horizontal, 12)
+          .padding(.vertical, 2)
+          .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Radius.sm))
+          .padding(.top, 8)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+          .transition(.opacity)
+      }
+    }
     // Under the pins, over the lines.
     .overlay(alignment: .top) {
       if let notice {
@@ -624,6 +661,18 @@ struct ChatScreen: View {
 
   /// What the lines show, in order: each day's title, ここから新着, and
   /// the lines with whether each starts a run of one writer's.
+  /// The day whose lines are at the top, from the first item in sight:
+  /// none while that is the day's own title.
+  private func dayOver(_ top: String?, in items: [ChatItem]) -> Day? {
+    guard let top, let at = items.firstIndex(where: { $0.id == top }) else { return nil }
+    for item in items[...at].reversed() {
+      if case .day(let day) = item {
+        return item.id == top ? nil : day
+      }
+    }
+    return nil
+  }
+
   private func items(_ state: ChatState) -> [ChatItem] {
     var items: [ChatItem] = []
     var lastDay: Day?
@@ -1110,7 +1159,26 @@ struct ChatScreen: View {
     let heard = await groupCalls.userID()
     guard heard != meID else { return }
     meID = heard
-    _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: heard))
+    await reload()
+  }
+
+  /// Reads the chat again for the reader and the lines laid out.
+  private func reload() async {
+    _ = try? await $chat.load(
+      ChatRequest(groupID: group.id, threadID: threadID, me: meID, from: window))
+  }
+
+  /// Lays out a page more of earlier lines: those the device holds, else
+  /// asked for, shown as they come.
+  private func showEarlier() async {
+    guard let first = chat.state.lines.first?.seq else { return }
+    window = max(first - Int64(Chat.pageSize), 1)
+    await reload()
+    guard chat.state.lines.first?.seq == first, !chat.state.atStart else { return }
+    // Asked again until the socket is open to ask.
+    while !Task.isCancelled, await socket?.requestPage(of: threadID, before: first) != true {
+      try? await Task.sleep(for: .seconds(1))
+    }
   }
 
   /// Opens on the first unread line under ここから新着, else stays on the
@@ -1142,6 +1210,8 @@ struct ChatScreen: View {
       withAnimation(.easeOut(duration: 0.15)) { placed = true }
     }
     opened = true
+    window = chat.state.lines.first?.seq
+    await reload()
   }
 
   /// Marks the chat read up to its latest line, once it has come on screen.
@@ -1506,10 +1576,8 @@ struct ChatScreen: View {
       ringed = target
       try? await Task.sleep(for: .milliseconds(500))
       withAnimation(.easeOut(duration: 0.7)) { ringed = nil }
-    } else if !state.atStart, let first = state.lines.first?.seq {
-      while !Task.isCancelled, await socket?.requestPage(of: threadID, before: first) != true {
-        try? await Task.sleep(for: .seconds(1))
-      }
+    } else if !state.atStart {
+      await showEarlier()
     } else {
       jumpTarget = nil
     }
