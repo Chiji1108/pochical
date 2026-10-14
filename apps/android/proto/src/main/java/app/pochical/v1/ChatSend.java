@@ -387,7 +387,8 @@ public  final class ChatSend extends
   /**
    * <pre>
    * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come.
+   * when the sender took it off (×) or it had not come, when the server
+   * reads the page itself once the line is taken and adds it to the line.
    * </pre>
    *
    * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -399,7 +400,8 @@ public  final class ChatSend extends
   /**
    * <pre>
    * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come.
+   * when the sender took it off (×) or it had not come, when the server
+   * reads the page itself once the line is taken and adds it to the line.
    * </pre>
    *
    * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -411,7 +413,8 @@ public  final class ChatSend extends
   /**
    * <pre>
    * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come.
+   * when the sender took it off (×) or it had not come, when the server
+   * reads the page itself once the line is taken and adds it to the line.
    * </pre>
    *
    * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -424,7 +427,8 @@ public  final class ChatSend extends
   /**
    * <pre>
    * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come.
+   * when the sender took it off (×) or it had not come, when the server
+   * reads the page itself once the line is taken and adds it to the line.
    * </pre>
    *
    * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -444,7 +448,8 @@ public  final class ChatSend extends
   /**
    * <pre>
    * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come.
+   * when the sender took it off (×) or it had not come, when the server
+   * reads the page itself once the line is taken and adds it to the line.
    * </pre>
    *
    * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -490,6 +495,44 @@ public  final class ChatSend extends
   private void clearReplyTo() {
 
     replyTo_ = 0L;
+  }
+
+  public static final int WITHOUT_PREVIEW_FIELD_NUMBER = 8;
+  private boolean withoutPreview_;
+  /**
+   * <pre>
+   * The sender took the page off (×): the line goes without one.
+   * </pre>
+   *
+   * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
+   * @return The withoutPreview.
+   */
+  @java.lang.Override
+  public boolean getWithoutPreview() {
+    return withoutPreview_;
+  }
+  /**
+   * <pre>
+   * The sender took the page off (×): the line goes without one.
+   * </pre>
+   *
+   * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
+   * @param value The withoutPreview to set.
+   */
+  private void setWithoutPreview(boolean value) {
+    
+    withoutPreview_ = value;
+  }
+  /**
+   * <pre>
+   * The sender took the page off (×): the line goes without one.
+   * </pre>
+   *
+   * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
+   */
+  private void clearWithoutPreview() {
+
+    withoutPreview_ = false;
   }
 
   public static app.pochical.v1.ChatSend parseFrom(
@@ -963,7 +1006,8 @@ public  final class ChatSend extends
     /**
      * <pre>
      * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come.
+     * when the sender took it off (×) or it had not come, when the server
+     * reads the page itself once the line is taken and adds it to the line.
      * </pre>
      *
      * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -975,7 +1019,8 @@ public  final class ChatSend extends
     /**
      * <pre>
      * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come.
+     * when the sender took it off (×) or it had not come, when the server
+     * reads the page itself once the line is taken and adds it to the line.
      * </pre>
      *
      * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -987,7 +1032,8 @@ public  final class ChatSend extends
     /**
      * <pre>
      * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come.
+     * when the sender took it off (×) or it had not come, when the server
+     * reads the page itself once the line is taken and adds it to the line.
      * </pre>
      *
      * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -1000,7 +1046,8 @@ public  final class ChatSend extends
     /**
      * <pre>
      * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come.
+     * when the sender took it off (×) or it had not come, when the server
+     * reads the page itself once the line is taken and adds it to the line.
      * </pre>
      *
      * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -1014,7 +1061,8 @@ public  final class ChatSend extends
     /**
      * <pre>
      * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come.
+     * when the sender took it off (×) or it had not come, when the server
+     * reads the page itself once the line is taken and adds it to the line.
      * </pre>
      *
      * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -1027,7 +1075,8 @@ public  final class ChatSend extends
     /**
      * <pre>
      * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come.
+     * when the sender took it off (×) or it had not come, when the server
+     * reads the page itself once the line is taken and adds it to the line.
      * </pre>
      *
      * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -1077,6 +1126,46 @@ public  final class ChatSend extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The sender took the page off (×): the line goes without one.
+     * </pre>
+     *
+     * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
+     * @return The withoutPreview.
+     */
+    @java.lang.Override
+    public boolean getWithoutPreview() {
+      return instance.getWithoutPreview();
+    }
+    /**
+     * <pre>
+     * The sender took the page off (×): the line goes without one.
+     * </pre>
+     *
+     * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
+     * @param value The withoutPreview to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWithoutPreview(boolean value) {
+      copyOnWrite();
+      instance.setWithoutPreview(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The sender took the page off (×): the line goes without one.
+     * </pre>
+     *
+     * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWithoutPreview() {
+      copyOnWrite();
+      instance.clearWithoutPreview();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatSend)
   }
   @java.lang.Override
@@ -1101,10 +1190,11 @@ public  final class ChatSend extends
             "photo_",
             "preview_",
             "replyTo_",
+            "withoutPreview_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0001\u0001\u0007\u0007\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u021a\u0004\u0007\u0005\u1009\u0000\u0006\u1009\u0001\u0007\u0003";
+              "\u0000\b\u0000\u0001\u0001\b\b\u0000\u0001\u0000\u0001\u0208\u0002\u0208\u0003\u021a" +
+              "\u0004\u0007\u0005\u1009\u0000\u0006\u1009\u0001\u0007\u0003\b\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

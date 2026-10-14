@@ -690,6 +690,59 @@ describe("a group's chat", () => {
     ]);
   });
 
+  it("reads the page of a line sent before its preview came, unless taken off", async () => {
+    const fetched: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      fetched.push(new Request(input).url);
+      return await Promise.resolve(
+        new Response('<meta property="og:title" content="あとから">', {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        })
+      );
+    });
+    const { groupId, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const send = (opId: string, text: string, withoutPreview = false) => {
+      sendFrame(mine.socket, {
+        case: "chatEdits",
+        value: {
+          edits: [
+            {
+              kind: {
+                case: "send",
+                value: { text, threadId: thread, withoutPreview },
+              },
+              opId,
+            },
+          ],
+        },
+      });
+    };
+    send("off", "これは https://off.example", true);
+    const [off] = changesIn(await mine.frames.next());
+    await mine.frames.next();
+    send("late", "ここ https://late.example/menu");
+    const [sent] = changesIn(await mine.frames.next());
+    await mine.frames.next();
+    const [added] = changesIn(await mine.frames.next());
+    vi.restoreAllMocks();
+    const lineOf = (change: typeof sent) =>
+      change?.kind.case === "chatLine" ? change.kind.value : undefined;
+    expect([
+      lineOf(off)?.preview,
+      lineOf(sent)?.preview,
+      lineOf(added)?.seq,
+      lineOf(added)?.preview?.title,
+      fetched,
+    ]).toStrictEqual([
+      undefined,
+      undefined,
+      lineOf(sent)?.seq,
+      "あとから",
+      ["https://late.example/menu"],
+    ]);
+  });
+
   it("relays typing to the others who may read the chat, never kept", async () => {
     const { aside, direct, mine, theirs } = await trio();
     const typing = (threadId: string) => {

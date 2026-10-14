@@ -1170,6 +1170,9 @@ struct ChatScreen: View {
     if let preview = attachedPreview(for: text) {
       send.preview = preview.wire
     }
+    // Taken off with ×, so the server does not read it either; a page not
+    // come yet the server reads and adds to the line.
+    send.withoutPreview = previewRemoved != nil && previewLink(text) == previewRemoved
     send.replyTo = takeReply()
     write(.send(send))
     draft = ""

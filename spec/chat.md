@@ -40,10 +40,10 @@ A message of nothing but 1 to `chatRules.largeEmojiMax` emoji shows them large a
 
 ## Previews
 
-A message carries at most one preview, for its first link. It is made while the message is written and sent with it, so everyone sees the same preview and receivers never fetch the page.
+A message carries at most one preview, for its first link. It is made while the message is written and sent with it, or by the server just after, so everyone sees the same preview and receivers never fetch the page.
 
 - While writing, once the first link has stayed the same for `chatRules.linkPreviewSettleMs`, the app asks the server for its preview and shows it above the composer: the site's name, the title (読み込み中… until it arrives) and the picture small at the end, with × to send without it. × holds for that link until the message is sent or the link changes.
-- A message sent before its preview arrives goes without one. If the server finds no page, nothing is shown above the composer.
+- A message sent before its preview arrives goes without one, and the server reads the page itself once it has the line, adding it to the line for everyone as if it had been sent with it; unless × took it off (`ChatSend.without_preview`), or the line is taken back or its first link changed meanwhile. If the server finds no page, nothing is shown above the composer, and the line stays without one.
 - In the chat, the preview sits inside the message's bubble, under its words: the picture (cropped to `chatRules.linkPreviewAspect`, width over height), the title (two lines at most) and the site's name. A tap opens the link; a long press opens the message's reactions and menu.
 
 ## Pochical's invitation links

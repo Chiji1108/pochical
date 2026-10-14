@@ -21,6 +21,7 @@ import {
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import type { Alert } from "./apns";
+import { previewLinkOf } from "./chat-links";
 import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
 import { isDate } from "./day-values";
@@ -50,6 +51,7 @@ import {
   readMarks,
 } from "./group-do-schema";
 import { isId } from "./ids";
+import { mayRead as mayReadPage } from "./link-preview";
 import { fitsText, isEmoji } from "./text-limits";
 
 // A group's chats as its Group DO keeps them (spec/sync-protocol.md,
@@ -873,6 +875,55 @@ const takeSend = (
     .returning()
     .get();
   return { change: chatLineChange(db, row) };
+};
+
+/**
+ * The link whose page the server reads for a line just sent: its words'
+ * first, when the sender's app sent none and they did not take it off (×),
+ * as when the line went before its preview came.
+ */
+export const pageToRead = (send: ChatSend): string | undefined => {
+  if (send.preview !== undefined || send.withoutPreview) {
+    return undefined;
+  }
+  const link = previewLinkOf(send.text);
+  const url = link === undefined ? null : URL.parse(link);
+  return url !== null && mayReadPage(url) ? link : undefined;
+};
+
+/**
+ * The page read for `link` added to a line at `cursor`, while the line
+ * still has none and its words' first link is still the one read: not
+ * taken back, nor changed to another link meanwhile.
+ */
+export const addPreview = (
+  db: DrizzleSqliteDODatabase,
+  { threadId, seq, link }: { threadId: string; seq: number; link: string },
+  preview: LinkPreview,
+  cursor: number
+): Change | undefined => {
+  const line = db
+    .select()
+    .from(chatLines)
+    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, seq)))
+    .get();
+  const kept = keptPreview(preview);
+  if (
+    line === undefined ||
+    line.unsent ||
+    line.preview !== null ||
+    kept === null ||
+    previewLinkOf(line.text) !== link
+  ) {
+    return undefined;
+  }
+  const row = db
+    .update(chatLines)
+    .set({ cursor, preview: kept })
+    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, seq)))
+    .returning()
+    .get();
+  return row === undefined ? undefined : chatLineChange(db, row);
 };
 
 /**
