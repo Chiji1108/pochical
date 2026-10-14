@@ -1104,17 +1104,19 @@ struct ChatScreen: View {
     // With nothing new, the bottom anchor has the lines at the latest
     // already. With something, once the lines are laid out, ここから新着
     // goes to the top, shown only once there rather than after a trip.
-    if unreadFrom != nil, !place.fits {
+    if unreadFrom == nil {
+      placed = true
+    } else {
+      // Once the lines are laid out, where they are and what is in sight
+      // known.
       try? await Task.sleep(for: .milliseconds(50))
       // Asked to the top with too few lines under it to get there, the
       // scroll view would go past the foot.
-      if !unreadInSight {
+      if !place.fits, !unreadInSight {
         following = false
         position.scrollTo(id: ChatItem.unread.id, anchor: .top)
       }
       withAnimation(.easeOut(duration: 0.15)) { placed = true }
-    } else {
-      placed = true
     }
     opened = true
   }
