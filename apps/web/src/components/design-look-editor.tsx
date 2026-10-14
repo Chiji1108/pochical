@@ -72,11 +72,7 @@ export function LookEditorPage({
       <div className={markPreview({ alone: true })}>
         <LookGlyph look={look} size={48} style={tab} />
       </div>
-      <SegmentedControl
-        label="どの見た目の印を選ぶか"
-        onValueChange={setTab}
-        value={tab}
-      >
+      <SegmentedControl label="印の種類" onValueChange={setTab} value={tab}>
         {(["icon", "emoji", "badge"] as const).map((option) => (
           <Segment key={option} value={option}>
             <LookGlyph look={look} size={20} style={option} />

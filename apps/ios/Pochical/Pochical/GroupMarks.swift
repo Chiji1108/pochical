@@ -141,7 +141,7 @@ let markPhotoGoneMessage = "選んだ写真がこの端末から消えていた�
 
 /// The kinds of mark the tabs pick from; a photo is picked above them.
 private enum MarkKind: Hashable {
-  case emoji, icon, letter
+  case icon, emoji, letter
 }
 
 /// アイコン (/design's GroupMarkPage): a photo, taken or picked, or a kind,
@@ -179,8 +179,8 @@ struct GroupMarkPage: View {
             await usePhoto(jpeg)
           }
           Picker("アイコンの種類", selection: Binding(get: { shown }, set: { kind = $0 })) {
-            Text("絵文字").tag(MarkKind?.some(.emoji))
             Text("アイコン").tag(MarkKind?.some(.icon))
+            Text("絵文字").tag(MarkKind?.some(.emoji))
             Text("文字").tag(MarkKind?.some(.letter))
           }
           .pickerStyle(.segmented)
@@ -237,7 +237,7 @@ struct GroupMarkPage: View {
 
       Section {
       } footer: {
-        Text("メンバー全員に、このアイコンがそのまま表示されます。シフトの見た目のスタイルには左右されません。")
+        Text("メンバー全員に、このアイコンがそのまま表示されます。スタイルの「シフトの見た目」には左右されません。")
       }
     }
     .settingsList()

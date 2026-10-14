@@ -128,7 +128,7 @@ export function SpokenDay({ day }: { day: WidgetDay }) {
 }
 
 // How a day off shows where each day has its own mark, as the calendar
-// shows it with the person's 休みを塗る and 休みの見せ方: on a tile of its
+// shows it with the person's 休みの見せ方: on a tile of its
 // pattern's tint, its mark faint, or left empty. The two weeks read as
 // the calendar's week, where a day off left empty comes back faint, to
 // tell it from a day with nothing entered.

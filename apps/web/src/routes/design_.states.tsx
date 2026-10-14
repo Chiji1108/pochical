@@ -121,7 +121,7 @@ function StatesPage() {
             </FrameRow>
           </FrameSection>
 
-          <FrameSection title="シフトの見せ方">
+          <FrameSection title="シフトの見た目">
             <FrameRow fan>
               {markStyles.map(({ style, label }) => (
                 <ShiftMarkStyleContext key={style} value={style}>
@@ -133,8 +133,8 @@ function StatesPage() {
 
           <FrameSection title="休みの見せ方">
             <FrameRow fan>
-              <OffLook display="show" label="色をつける" />
-              <OffLook display="show" highlight={false} label="色なし" />
+              <OffLook display="show" label="強調" />
+              <OffLook display="show" highlight={false} label="印だけ" />
               <OffLook display="blank" label="空白" />
               <OffLook
                 display="blank"

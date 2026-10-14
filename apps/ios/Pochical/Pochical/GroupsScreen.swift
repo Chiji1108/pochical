@@ -299,7 +299,7 @@ private struct NoGroups: View {
         .lineSpacing(4)
         .padding(.bottom, 12)
       Button(action: onNew) {
-        Label("グループを作成", systemImage: "plus")
+        Label("グループを作る", systemImage: "plus")
           .font(.headline)
           .frame(maxWidth: .infinity, minHeight: Metrics.control)
       }

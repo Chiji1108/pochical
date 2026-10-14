@@ -386,7 +386,7 @@ struct PatternEditor: View {
       Button("削除", role: .destructive) { delete() }
     } message: { days in
       Text(
-        "\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。日の記号を残すなら「使わないパターンにする」を選んでください。"
+        "\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。日の印を残すなら「使わないパターンにする」を選んでください。"
       )
     }
   }
@@ -540,7 +540,7 @@ private struct LookEditor: View {
           .environment(\.look, sampleLook(shown))
           .frame(maxWidth: .infinity)
           .padding(.vertical, 12)
-        Picker("どの見た目の印を選ぶか", selection: Binding(get: { shown }, set: { tab = $0 })) {
+        Picker("印の種類", selection: Binding(get: { shown }, set: { tab = $0 })) {
           Text("アイコン").tag(MarkStyle.icon)
           Text("絵文字").tag(MarkStyle.emoji)
           Text("文字").tag(MarkStyle.badge)

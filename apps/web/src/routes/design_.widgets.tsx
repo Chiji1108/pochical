@@ -115,7 +115,7 @@ const augustSchedule = {
   ...initialDesignSchedule(4, AUGUST + 1),
 };
 
-// Days off without their tint, as when 休みを塗る is off.
+// Days off without their tint, as with 休みの見せ方 印だけ.
 const noHighlight = {
   highlight: { badge: false, emoji: false, icon: false },
 };
