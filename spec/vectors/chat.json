@@ -1,5 +1,5 @@
 {
-  "about": "What a chat's lines become as people use them (spec/chat.md). pins (Pins, Polls, Editing and unsending): a chat's `lines` by id in order, its `pins` the latest first, then one `step`: pin or unpin a line, unsend one (送信取消), or settle the poll a line carries (日にちを決める). `expected` is the pins after it, the latest first, and the one that made room for the new pin (`dropped`, for the app to say so), if any. The most pinned at once is design/src/chat.ts's chatRules.maxPins, 5. edited (Editing and unsending): a line with words and its link's page is given new words; `expected` says whether it keeps its page (`kept`) or takes the new words' (`new`). firstUnread (Unread lines and typing): who wrote each line, oldest first (`others`, `me`, or `app` for the app's own lines such as someone joining), and how many are unread; `expected` is the index of the line the chat opens on under ここから新着, null with nothing unread. Only others' lines count. directThread (One-to-one chats, spec/sync-protocol.md): two members' ids, given in either order; `expected` is their chat's thread id, the same from both sides: \"direct:\" and the two ids in order (by their UTF-16 code units, as every id is ASCII), joined by \":\".",
+  "about": "What a chat's lines become as people use them (spec/chat.md). pins (Pins, Polls, Editing and unsending): a chat's `lines` by id in order, its `pins` the latest first, then one `step`: pin or unpin a line, unsend one (送信取消), or settle the poll a line carries (日にちを決める). `expected` is the pins after it, the latest first, and the one that made room for the new pin (`dropped`, for the app to say so), if any. The most pinned at once is design/src/chat.ts's chatRules.maxPins, 5. edited (Editing and unsending): a line with words and its link's page is given new words; `expected` says whether it keeps its page (`kept`) or takes the new words' (`new`). firstUnread (Unread lines and typing): who wrote each line, oldest first (`others`, `me`, or `app` for the app's own lines such as someone joining), and how many are unread; `expected` is the index of the line the chat opens on under ここから新着, null with nothing unread. Only others' lines count. directThread (One-to-one chats, spec/sync-protocol.md): two members' ids, given in either order; `expected` is their chat's thread id, the same from both sides: \"direct:\" and the two ids in order (by their UTF-16 code units, as every id is ASCII), joined by \":\". openingFrom (Unread lines and typing): the first line a chat lays out as it opens, from its `latest` line's seq and the reader's `read` mark (null for no reader): its latest page, back to the first unread line when that is earlier, at most chatRules.openMax lines (pageSize 50, openMax 200).",
   "pins": [
     {
       "name": "a pinned line comes first among the pins",
@@ -162,6 +162,44 @@
       "a": "abc1",
       "b": "abc",
       "expected": "direct:abc:abc1"
+    }
+  ],
+  "openingFrom": [
+    {
+      "name": "nothing unread opens on the latest page",
+      "latest": 130,
+      "read": 130,
+      "expected": 81
+    },
+    {
+      "name": "a few unread are within the latest page",
+      "latest": 130,
+      "read": 120,
+      "expected": 81
+    },
+    {
+      "name": "many unread go back to the first of them",
+      "latest": 130,
+      "read": 20,
+      "expected": 21
+    },
+    {
+      "name": "too many unread stop at openMax lines",
+      "latest": 500,
+      "read": 10,
+      "expected": 301
+    },
+    {
+      "name": "a short chat opens on its first line",
+      "latest": 12,
+      "read": 0,
+      "expected": 1
+    },
+    {
+      "name": "no reader known opens on the latest page",
+      "latest": 130,
+      "read": null,
+      "expected": 81
     }
   ]
 }

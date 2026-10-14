@@ -28,9 +28,22 @@ struct ChatVectors: Decodable, Sendable {
     let expected: String
   }
 
+  struct OpeningFrom: VectorCase {
+    let name: String
+    let latest: Int64
+    let read: Int64?
+    let expected: Int64
+  }
+
   let firstUnread: [FirstUnread]
   let directThread: [DirectThread]
   let edited: [Edited]
+  let openingFrom: [OpeningFrom]
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).openingFrom)
+func aChatOpensFrom(_ vector: ChatVectors.OpeningFrom) {
+  #expect(openingFrom(latest: vector.latest, read: vector.read) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).edited)

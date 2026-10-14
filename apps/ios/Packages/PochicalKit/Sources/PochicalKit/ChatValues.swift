@@ -706,15 +706,12 @@ extension Chats {
     let marks = try ReadMarkRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
       .fetchAll(db)
     let readMarks = Dictionary(marks.map { ($0.userID, $0.lastReadSeq) }, uniquingKeysWith: max)
-    let start: Int64
-    if let from {
-      start = from
-    } else {
-      let latest = lines.last?.seq ?? 0
-      let read = me.map { max(readMarks[$0] ?? 0, ownRead) } ?? latest
-      start = max(
-        latest - Int64(Chat.openMax) + 1, min(latest - Int64(Chat.pageSize) + 1, read + 1))
-    }
+    let start =
+      from
+      ?? openingFrom(
+        latest: lines.last?.seq ?? 0, read: me.map { max(readMarks[$0] ?? 0, ownRead) })
+    // Pins find their lines among all of them, with what waits changed.
+    let overlaid = lines
     lines.removeAll { $0.seq < start }
     var state = ChatState(
       lines: lines, waiting: waiting, atStart: (lines.first?.seq ?? 1) <= 1,
@@ -730,7 +727,7 @@ extension Chats {
     }
     state.pins = pinned.compactMap { id in
       // As the screen shows it: changed or taken back while waiting.
-      lines.first { String($0.seq) == id } ?? held[id]
+      overlaid.first { String($0.seq) == id } ?? held[id]
     }
     .filter { !$0.unsent }
     return state
@@ -741,6 +738,16 @@ extension Chats {
   public static func writers(in groupID: String, db: Database) throws -> [GroupMemberRow] {
     try GroupMemberRow.where { $0.groupID.eq(groupID) }.order(by: \.joinedAtMs).fetchAll(db)
   }
+}
+
+/// The first line a chat lays out as it opens, from its latest line and
+/// the reader's read mark (none for no reader): its latest page, back to
+/// the first unread line when that is earlier, at most `Chat.openMax`
+/// lines (spec/vectors/chat.json, openingFrom).
+public func openingFrom(latest: Int64, read: Int64?) -> Int64 {
+  let page = latest - Int64(Chat.pageSize) + 1
+  let unread = (read ?? latest) + 1
+  return max(latest - Int64(Chat.openMax) + 1, min(page, unread), 1)
 }
 
 /// Who wrote a line, as the unread line counts them
