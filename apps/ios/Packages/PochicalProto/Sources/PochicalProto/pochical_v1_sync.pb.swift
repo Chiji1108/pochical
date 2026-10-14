@@ -2169,7 +2169,8 @@ public nonisolated struct Pochical_V1_ChatSend: Sendable {
   public mutating func clearPhoto() {self._photo = nil}
 
   /// The page of the words' first link, as GetLinkPreview gave it; none
-  /// when the sender took it off (×) or it had not come.
+  /// when the sender took it off (×) or it had not come, when the server
+  /// reads the page itself once the line is taken and adds it to the line.
   public var preview: Pochical_V1_LinkPreview {
     get {_preview ?? Pochical_V1_LinkPreview()}
     set {_preview = newValue}
@@ -2181,6 +2182,9 @@ public nonisolated struct Pochical_V1_ChatSend: Sendable {
 
   /// The line it answers (返信), an earlier one of the same chat; 0 for none.
   public var replyTo: UInt64 = 0
+
+  /// The sender took the page off (×): the line goes without one.
+  public var withoutPreview: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5519,7 +5523,7 @@ nonisolated extension Pochical_V1_ChatReact: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatSend"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{1}photo\0\u{1}preview\0\u{3}reply_to\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{1}photo\0\u{1}preview\0\u{3}reply_to\0\u{3}without_preview\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5534,6 +5538,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
       case 5: try { try decoder.decodeSingularMessageField(value: &self._photo) }()
       case 6: try { try decoder.decodeSingularMessageField(value: &self._preview) }()
       case 7: try { try decoder.decodeSingularUInt64Field(value: &self.replyTo) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.withoutPreview) }()
       default: break
       }
     }
@@ -5565,6 +5570,9 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
     if self.replyTo != 0 {
       try visitor.visitSingularUInt64Field(value: self.replyTo, fieldNumber: 7)
     }
+    if self.withoutPreview != false {
+      try visitor.visitSingularBoolField(value: self.withoutPreview, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5576,6 +5584,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
     if lhs._photo != rhs._photo {return false}
     if lhs._preview != rhs._preview {return false}
     if lhs.replyTo != rhs.replyTo {return false}
+    if lhs.withoutPreview != rhs.withoutPreview {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

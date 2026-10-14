@@ -119,7 +119,8 @@ public interface ChatSendOrBuilder extends
   /**
    * <pre>
    * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come.
+   * when the sender took it off (×) or it had not come, when the server
+   * reads the page itself once the line is taken and adds it to the line.
    * </pre>
    *
    * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -129,7 +130,8 @@ public interface ChatSendOrBuilder extends
   /**
    * <pre>
    * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come.
+   * when the sender took it off (×) or it had not come, when the server
+   * reads the page itself once the line is taken and adds it to the line.
    * </pre>
    *
    * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
@@ -146,4 +148,14 @@ public interface ChatSendOrBuilder extends
    * @return The replyTo.
    */
   long getReplyTo();
+
+  /**
+   * <pre>
+   * The sender took the page off (×): the line goes without one.
+   * </pre>
+   *
+   * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
+   * @return The withoutPreview.
+   */
+  boolean getWithoutPreview();
 }

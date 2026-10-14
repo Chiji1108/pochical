@@ -7,6 +7,7 @@ import chat from "../../../spec/vectors/chat.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
 import text from "../../../spec/vectors/text.json";
+import { inviteCodeOf, textParts } from "../src/chat-links";
 import { pinStep } from "../src/chat-pins";
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
 import { directThread, plainText } from "../src/group-chat";
@@ -23,6 +24,17 @@ describe("spec/vectors/chat.json", () => {
       expect(plainText(words, (id) => byId.get(id) ?? id)).toBe(expected);
     }
   );
+
+  test.each(chatText.textParts)(
+    "textParts: $name",
+    ({ text: words, expected }) => {
+      expect(textParts(words)).toStrictEqual(expected);
+    }
+  );
+
+  test.each(chatText.inviteCode)("inviteCode: $url", ({ url, expected }) => {
+    expect(inviteCodeOf(url) ?? null).toBe(expected);
+  });
 
   test.each(chat.directThread)("directThread: $name", ({ a, b, expected }) => {
     expect(directThread(a, b)).toBe(expected);

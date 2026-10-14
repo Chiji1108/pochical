@@ -248,7 +248,8 @@ public object ChatSendKt {
     /**
      * ```
      * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come.
+     * when the sender took it off (×) or it had not come, when the server
+     * reads the page itself once the line is taken and adds it to the line.
      * ```
      *
      * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
@@ -263,7 +264,8 @@ public object ChatSendKt {
     /**
      * ```
      * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come.
+     * when the sender took it off (×) or it had not come, when the server
+     * reads the page itself once the line is taken and adds it to the line.
      * ```
      *
      * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
@@ -274,7 +276,8 @@ public object ChatSendKt {
     /**
      * ```
      * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come.
+     * when the sender took it off (×) or it had not come, when the server
+     * reads the page itself once the line is taken and adds it to the line.
      * ```
      *
      * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
@@ -310,6 +313,31 @@ public object ChatSendKt {
      */
     public fun clearReplyTo() {
       _builder.clearReplyTo()
+    }
+
+    /**
+     * ```
+     * The sender took the page off (×): the line goes without one.
+     * ```
+     *
+     * `bool without_preview = 8 [json_name = "withoutPreview"];`
+     */
+    public var withoutPreview: kotlin.Boolean
+      @kotlin.jvm.JvmName("getWithoutPreview")
+        get() = _builder.withoutPreview
+      @kotlin.jvm.JvmName("setWithoutPreview")
+        set(value) {
+        _builder.withoutPreview = value
+      }
+    /**
+     * ```
+     * The sender took the page off (×): the line goes without one.
+     * ```
+     *
+     * `bool without_preview = 8 [json_name = "withoutPreview"];`
+     */
+    public fun clearWithoutPreview() {
+      _builder.clearWithoutPreview()
     }
   }
 }

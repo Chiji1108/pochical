@@ -20,6 +20,7 @@ import type {
   Profile as UsualProfile,
 } from "./gen/pochical/v1/sync_pb";
 import {
+  addPreview,
   chatChangesAfter,
   chatHead,
   chatPage,
@@ -32,6 +33,7 @@ import {
   mayRead,
   moveReadMark,
   otherIn,
+  pageToRead,
   seenBy,
   takeChatEdit,
   unreadCount,
@@ -59,6 +61,7 @@ import {
   takeMemberPattern,
   takeMemberRepeatOrders,
 } from "./group-shifts";
+import { linkPreview } from "./link-preview";
 import { photoKey } from "./photos";
 import {
   acceptSyncSocket,
@@ -830,6 +833,8 @@ export class GroupDO extends DurableObject<Env> {
     // The other members, read once for every send in the frame.
     let others: string[] | undefined;
     const photosGone: string[] = [];
+    // Lines sent before their page came, whose page the server reads.
+    const pages: { threadId: string; seq: number; link: string }[] = [];
     const { changed, refused } = this.ctx.storage.transactionSync(() => {
       const made: Change[] = [];
       const back: Change[] = [];
@@ -856,6 +861,10 @@ export class GroupDO extends DurableObject<Env> {
             recount(threadId, readers);
             if (taken.change.kind.case === "chatLine") {
               const line = taken.change.kind.value;
+              const link = pageToRead(edit.kind.value);
+              if (link !== undefined) {
+                pages.push({ link, seq: Number(line.seq), threadId });
+              }
               const alert = this.alertOf(line);
               for (const reader of readers) {
                 if (hearsFrom(this.db, reader, userId)) {
@@ -890,6 +899,9 @@ export class GroupDO extends DurableObject<Env> {
       forReader(this.db, change, reader)
     );
     this.tellUnread(counted, alerts);
+    for (const page of pages) {
+      this.ctx.waitUntil(this.addPage(page));
+    }
     if (refused.length > 0) {
       send(ws, { case: "changes", value: { changes: refused } });
     }
@@ -897,6 +909,35 @@ export class GroupDO extends DurableObject<Env> {
       case: "acked",
       value: { opIds: edits.map(({ opId }) => opId) },
     });
+  }
+
+  /**
+   * Reads the page of a line sent before its preview came and adds it to
+   * the line for everyone, as the sender's app would have (spec/chat.md,
+   * Previews). A line taken back or changed meanwhile keeps as it is.
+   */
+  private async addPage(page: {
+    threadId: string;
+    seq: number;
+    link: string;
+  }): Promise<void> {
+    const preview = await linkPreview(this.env.PHOTOS, new URL(page.link));
+    if (preview === null) {
+      return;
+    }
+    const added = this.ctx.storage.transactionSync(() => {
+      const cursor = this.head() + 1;
+      const change = addPreview(this.db, page, preview, cursor);
+      if (change !== undefined) {
+        this.setHead(cursor);
+      }
+      return change;
+    });
+    if (added !== undefined) {
+      broadcastChanges(this.ctx, [added], seenBy, (change, reader) =>
+        forReader(this.db, change, reader)
+      );
+    }
   }
 
   /**
