@@ -29,7 +29,7 @@ import { Pager } from "./design-pager";
 import { monthIndex, TodayCorner } from "./design-rolling";
 import { PatternKeys, patternPagesOf, shiftInput } from "./design-shift-input";
 import { useWeek, weekdayNameOf } from "./design-week";
-import { ShiftMark } from "./shift-mark";
+import { OffFaintContext, ShiftMark } from "./shift-mark";
 
 // A repeating order typed on a month, filling the screen as 1人ずつ's
 // month does: the month's row, the days swiped a month at a time with
@@ -171,40 +171,44 @@ function OrderMonth({
     sequence.length > 0 && coversFrom <= last
       ? repeatSchedule(sequence, anchor, coversFrom, last, holidayShift)
       : {};
+  // An order is typed as days are entered, so days off left blank come
+  // back faint, as in ポチポチ入力.
   return (
-    <section
-      aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月の並び`}
-      className={dayGrid}
-      style={{ alignContent: "start", minHeight: dayGridHeight(MONTH_WEEKS) }}
-    >
-      {dates.map((date) => {
-        const key = dateKey(date);
-        const index = daysFrom(anchor, date);
-        const typed = index >= 0 && index < sequence.length;
-        const inOrder = orderStart === null || date >= orderStart;
-        let entry = before?.[key];
-        if (typed) {
-          entry = { shift: sequence[index] ?? "" };
-        } else if (inOrder) {
-          entry = planned[key];
-        }
-        return (
-          <DayCell
-            active={index === cursor}
-            date={date}
-            dimmed={!inOrder}
-            editing
-            entry={entry}
-            faint={inOrder && !typed}
-            key={key}
-            onPress={() => {
-              onPress(date);
-            }}
-            outside={date.getMonth() !== month.getMonth()}
-          />
-        );
-      })}
-    </section>
+    <OffFaintContext value>
+      <section
+        aria-label={`${month.getFullYear()}年${month.getMonth() + 1}月の並び`}
+        className={dayGrid}
+        style={{ alignContent: "start", minHeight: dayGridHeight(MONTH_WEEKS) }}
+      >
+        {dates.map((date) => {
+          const key = dateKey(date);
+          const index = daysFrom(anchor, date);
+          const typed = index >= 0 && index < sequence.length;
+          const inOrder = orderStart === null || date >= orderStart;
+          let entry = before?.[key];
+          if (typed) {
+            entry = { shift: sequence[index] ?? "" };
+          } else if (inOrder) {
+            entry = planned[key];
+          }
+          return (
+            <DayCell
+              active={index === cursor}
+              date={date}
+              dimmed={!inOrder}
+              editing
+              entry={entry}
+              faint={inOrder && !typed}
+              key={key}
+              onPress={() => {
+                onPress(date);
+              }}
+              outside={date.getMonth() !== month.getMonth()}
+            />
+          );
+        })}
+      </section>
+    </OffFaintContext>
   );
 }
 
