@@ -1,10 +1,14 @@
 pre-commit:
   jobs:
     - name: ultracite fix
+      # What `ultracite fix` runs, but with oxfmt told too that files all
+      # skipped are fine: ultracite passes no flags to oxfmt, which then
+      # fails a commit staging only what lint-ignores.ts skips. Those paths
+      # are skipped there, so they are not listed here again.
       run: |
         # GUI Git clients may not load the shell's mise/proto/Bun PATH settings.
         export PATH="$HOME/.local/share/mise/shims:$PATH:${PROTO_HOME:-$HOME/.proto}/shims:${BUN_INSTALL:-$HOME/.bun}/bin"
-        bun x ultracite fix --no-error-on-unmatched-pattern {staged_files}
+        bun x oxlint --fix --no-error-on-unmatched-pattern {staged_files} && bun x oxfmt --write --no-error-on-unmatched-pattern {staged_files}
       glob:
         - "**/*.js"
         - "**/*.jsx"
@@ -14,16 +18,6 @@ pre-commit:
         - "**/*.jsonc"
         - "**/*.css"
         - "**/*.md"
-      exclude:
-        - "apps/mobile-legacy/**"
-        - "apps/ios/**"
-        - "apps/android/**"
-        - "apps/server/src/gen/**"
-        - "apps/server/migrations/**"
-        - "apps/server/src/group-do-migrations/**"
-        - "apps/server/src/user-do-migrations/**"
-        - "apps/server/src/db/auth-schema.ts"
-        - "apps/web/src/gen/**"
       stage_fixed: true
     - name: buf format and lint
       root: proto/
