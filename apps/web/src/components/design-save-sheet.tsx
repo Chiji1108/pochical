@@ -301,7 +301,7 @@ function ExtraSwitches({
   );
 }
 
-// 〇月の予定を消す: only while some of the month's events Pochical put in
+// ポチカルで入れた〇月の予定を消す: only while some of the month's events Pochical put in
 // are in a calendar, as from one picked by mistake, so none is taken out
 // one by one; asked once, as they do not come back.
 function RemoveMonth({
@@ -324,12 +324,12 @@ function RemoveMonth({
           setAsking(true);
         }}
       >
-        {monthLabel}の予定を消す
+        ポチカルで入れた{monthLabel}の予定を消す
       </DestructiveButton>
       {asking && (
         <ConfirmDialog
           action="消す"
-          message="ポチカルで入れた予定だけを、どのカレンダーからも消します。"
+          message={`${monthLabel}の分を、どのカレンダーからも消します。ほかの予定は消しません。`}
           onCancel={() => {
             setAsking(false);
           }}
@@ -337,7 +337,7 @@ function RemoveMonth({
             setAsking(false);
             onRemoved();
           }}
-          title={`${monthLabel}の予定を${put}件消します`}
+          title={`ポチカルで入れた予定を${put}件消します`}
         />
       )}
     </>
@@ -394,7 +394,7 @@ export function SaveSheet({
   // 設定を開く stands in for the system's settings, coming back from them
   // with the calendars allowed, as the notifications' card does.
   const [allowedThere, setAllowedThere] = useState(false);
-  // How many of the month's events the demo put in, for 〇月の予定を消す.
+  // How many of the month's events the demo put in, for ポチカルで入れた〇月の予定を消す.
   const [put, setPut] = useState(0);
   const refused = access === "denied" && !allowedThere;
   const putting = useSettings((state) => state.device.calendarAdd);
@@ -546,7 +546,7 @@ export function SaveSheet({
             monthLabel={monthLabel}
             onRemoved={() => {
               setStep({
-                done: `${monthLabel}の予定を${put}件消しました。`,
+                done: `ポチカルで入れた${monthLabel}の予定を${put}件消しました。`,
                 title: "消しました",
               });
               setPut(0);

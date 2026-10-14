@@ -92,7 +92,7 @@ import UIKit
 
   /// The events Pochical put in for the month's days as the user's, in
   /// any calendar that takes changes: those adding again replaces, and
-  /// 〇月の予定を消す takes out.
+  /// ポチカルで入れた〇月の予定を消す takes out.
   func marked(_ month: Day, by user: String) -> [EKEvent] {
     let days = Set(month.daysOfMonth.map(\.key))
     // From the month's first day to two past its last: a night's event
@@ -176,7 +176,7 @@ struct DeviceCalendarSheet: View {
   /// line.
   @State private var done: (title: String, text: String)?
   /// How many of the month's events Pochical put in are in a calendar,
-  /// for 〇月の予定を消す.
+  /// for ポチカルで入れた〇月の予定を消す.
   @State private var put = 0
   @State private var asksToRemove = false
   /// The alert's title when adding or taking out failed.
@@ -242,7 +242,7 @@ struct DeviceCalendarSheet: View {
             // mistake, so none is taken out one by one.
             if put > 0 {
               Section {
-                Button("\(month.monthText)の予定を消す", role: .destructive) {
+                Button("ポチカルで入れた\(month.monthText)の予定を消す", role: .destructive) {
                   asksToRemove = true
                 }
                 .frame(maxWidth: .infinity)
@@ -255,12 +255,12 @@ struct DeviceCalendarSheet: View {
       .settingsList()
       .navigationTitle(done?.title ?? "端末カレンダーに追加")
       .confirmationDialog(
-        "\(month.monthText)の予定を\(put)件消します", isPresented: $asksToRemove,
+        "ポチカルで入れた予定を\(put)件消します", isPresented: $asksToRemove,
         titleVisibility: .visible
       ) {
         Button("消す", role: .destructive) { remove() }
       } message: {
-        Text("ポチカルで入れた予定だけを、どのカレンダーからも消します。")
+        Text("\(month.monthText)の分を、どのカレンダーからも消します。ほかの予定は消しません。")
       }
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -444,7 +444,7 @@ struct DeviceCalendarSheet: View {
     do {
       try calendars.remove(month, by: meID)
       withAnimation {
-        done = ("消しました", "\(month.monthText)の予定を\(put)件消しました。")
+        done = ("消しました", "ポチカルで入れた\(month.monthText)の予定を\(put)件消しました。")
       }
     } catch {
       ReviewPrompt.troubled = true
