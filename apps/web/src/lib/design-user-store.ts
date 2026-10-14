@@ -93,6 +93,12 @@ export const sampleCoworkers: Coworker[] = [
 const apply = <T>(next: SetStateAction<T>, previous: T): T =>
   typeof next === "function" ? (next as (value: T) => T)(previous) : next;
 
+// The sample person's usual name and photo.
+export const sampleProfile: Profile = {
+  name: "さくら",
+  photo: samplePhoto(1011),
+};
+
 export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
   return createStore<UserState>()((set) => {
     // Accepts a value or an updater, like React's own setters.
@@ -108,7 +114,7 @@ export function createUserStore(initial: Partial<OwnData & GroupData> = {}) {
       groups: sampleGroups(),
       mentionsWhenMuted: true,
       patterns: presetList(patternSets[4]),
-      profile: { name: "さくら", photo: samplePhoto(1011) },
+      profile: sampleProfile,
       rules: [],
       schedule: {},
       support: supportThreadOf("none"),

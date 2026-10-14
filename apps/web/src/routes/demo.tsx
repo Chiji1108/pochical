@@ -25,6 +25,7 @@ import { presetList } from "../lib/design-patterns";
 import { supportThreadOf } from "../lib/design-support";
 import {
   createUserStore,
+  sampleProfile,
   sampleCoworkers,
   UserStoreContext,
 } from "../lib/design-user-store";
@@ -205,10 +206,7 @@ function DemoPage() {
               }
               if (key === "profileSample") {
                 person.setState({
-                  profile:
-                    value === "none"
-                      ? noProfile
-                      : createUserStore().getState().profile,
+                  profile: value === "none" ? noProfile : sampleProfile,
                 });
               }
               if (key === "repeatSample") {
