@@ -530,7 +530,6 @@ private struct LookEditor: View {
   @State private var tab: MarkStyle?
   @State private var choosingEmoji = false
   @State private var choosingIcon = false
-  @FocusState private var letterFocused: Bool
 
   var body: some View {
     let shown = tab ?? look.style
@@ -572,9 +571,10 @@ private struct LookEditor: View {
           Button("ほかの絵文字を選ぶ", systemImage: "plus") { choosingEmoji = true }
         case .badge:
           LabeledContent("文字") {
-            TextField("", text: letterBinding)
-              .multilineTextAlignment(.trailing)
-              .focused($letterFocused)
+            MarkLetterField(letter: draft.symbol, limit: TextLimits.shiftMark) { letter in
+              draft.symbol = letter
+              picked.insert(.symbol)
+            }
           }
         }
         if let alike = lookalike(in: shown) {
@@ -631,18 +631,6 @@ private struct LookEditor: View {
     sample.colored = true
     return sample
   }
-
-  /// The letter, one character; left empty it keeps the one before.
-  private var letterBinding: Binding<String> {
-    Binding {
-      draft.symbol
-    } set: { text in
-      guard let last = text.last else { return }
-      draft.symbol = String(last)
-      picked.insert(.symbol)
-    }
-  }
-
 
   /// Another pattern drawn the same in this look, said under the choices.
   private func lookalike(in style: MarkStyle) -> String? {

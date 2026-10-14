@@ -165,6 +165,28 @@ public func isEmoji(_ text: String) -> Bool {
   return first.properties.isEmoji
 }
 
+/// A mark's letter after an edit: within `limit`, the text as it is; past
+/// it, what the edit put in, cut to `limit`, so typing or converting into
+/// a full letter replaces it rather than being refused. What was put in is
+/// the text less what it shares with the letter before at its start and
+/// its end (spec/text-limits.md; spec/vectors/text.json, markLetter).
+public func markLetter(before: String, after: String, limit: Int) -> String {
+  let was = Array(before)
+  let now = Array(after)
+  guard now.count > limit else { return after }
+  let shared = min(was.count, now.count)
+  var start = 0
+  while start < shared, was[start] == now[start] {
+    start += 1
+  }
+  var end = 0
+  while end < shared - start, was[was.count - 1 - end] == now[now.count - 1 - end] {
+    end += 1
+  }
+  let typed = now[start..<(now.count - end)]
+  return String((typed.isEmpty ? now[...] : typed).prefix(limit))
+}
+
 /// How many emoji a message of nothing but 1 to `Chat.largeEmojiMax`
 /// emoji has, each one as `isEmoji` has it, shown large without a bubble;
 /// 0 for any other message (spec/chat.md, Large emoji;
