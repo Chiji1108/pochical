@@ -9,17 +9,18 @@ import { useContext, useState } from "react";
 import { css, cva, cx } from "styled-system/css";
 
 import { dateKey, formatMonth } from "../lib/design-days";
-import type { DayEntry, Schedule } from "../lib/design-days";
+import type { Schedule } from "../lib/design-days";
 import { isDayOff } from "../lib/design-patterns";
 import type { Pattern, PatternBook } from "../lib/design-patterns";
 import { useSettings, withOffLook } from "../lib/design-settings-store";
-import type { ImageOptions } from "../lib/design-settings-store";
+import type { CalendarAdd, ImageOptions } from "../lib/design-settings-store";
 import { AppIcon } from "./design-app-icon";
 import { DayCell } from "./design-day-cell";
 import { dayGrid, WeekdayRow } from "./design-day-grid";
 import { PageHeader } from "./design-header";
 import { List, ListRow, SwitchRow } from "./design-list";
 import { monthWithYearOf } from "./design-month-name";
+import { timeText } from "./design-pattern-editor";
 import { NameTabs, OffLookRows } from "./design-settings-style";
 import { Sheet, SheetHeading, sheetBody, sheetLead } from "./design-sheet";
 import {
@@ -66,92 +67,99 @@ const calendarSources = Object.entries(
   Object.groupBy(deviceCalendars, (item) => item.source)
 );
 
-type Step = "choose" | "calendar" | "pick" | { done: string };
+type Step = "choose" | "calendar" | "pick" | "days" | { done: string };
 
 // How 端末カレンダーに追加 goes in the demo: the calendars allowed,
 // refused, or allowed and the adding failing.
 export type CalendarAccess = "granted" | "denied" | "fails";
 
 // What a day of the month puts in the device calendar (spec/calendar.md):
-// its shift's event, a day off only of the patterns asked for, none for a
-// day of work without a time that the day before's event in the month
-// runs into, like 明け after 夜勤, and a memo's own event where no shift's
-// event is.
+// its shift's event when its pattern is picked, and a memo's own event
+// where no shift's event is.
 export type CalendarDay = {
   // The shift's pattern, if any.
   pattern?: Pattern;
-  // Left out, as the day before's event runs into it.
-  carried: boolean;
   note: boolean;
 };
-
-// The day's own hours, else its pattern's; none without both.
-function hoursOf(entry: DayEntry | undefined, pattern: Pattern | undefined) {
-  const start = entry?.start ?? pattern?.time?.[0];
-  const end = entry?.end ?? pattern?.time?.[1];
-  return start === undefined || end === undefined ? undefined : { end, start };
-}
 
 // The month's days, in order, as CalendarDay.
 export function calendarDays(
   days: Date[],
   schedule: Schedule,
   book: PatternBook,
-  notes: ReadonlySet<string>,
-  off: readonly string[]
+  notes: ReadonlySet<string>
 ): CalendarDay[] {
-  const entryOn = (date: Date | undefined) =>
-    date === undefined ? undefined : schedule[dateKey(date)];
-  const patternOn = (date: Date | undefined) => {
-    const shift = entryOn(date)?.shift;
-    return shift === undefined ? undefined : book[shift];
-  };
-  // The day's event runs past its midnight: a shift ending at or before
-  // its start ends the next day.
-  const runsOver = (date: Date | undefined) => {
-    const pattern = patternOn(date);
-    const hours = hoursOf(entryOn(date), pattern);
-    const shown = !isDayOff(pattern) || off.includes(pattern?.id ?? "");
-    return hours !== undefined && shown && hours.end <= hours.start;
-  };
-  // The month's first day is left out only when the month before's last
-  // night is in the device calendar already; the demo has none added, so
-  // it always goes in.
-  return days.map((date, index) => {
-    const pattern = patternOn(date);
-    const untimed =
-      pattern !== undefined &&
-      !isDayOff(pattern) &&
-      hoursOf(entryOn(date), pattern) === undefined;
+  return days.map((date) => {
+    const shift = schedule[dateKey(date)]?.shift;
     return {
-      carried: untimed && runsOver(days[index - 1]),
       note: notes.has(dateKey(date)),
-      pattern,
+      pattern: shift === undefined ? undefined : book[shift],
     };
   });
 }
 
-// The patterns of the days left out as carried over, named under the
-// switches as a day like 明け goes in no more.
-function carriedNames(days: CalendarDay[]) {
-  return [
-    ...new Set(
-      days.flatMap((day) =>
-        day.carried && day.pattern ? [day.pattern.name] : []
+// The patterns put in until the person picks otherwise: those with a
+// time, and of those without, not the days off and not a pattern that
+// follows another as its next day, like 明け after 夜勤, whose night shows
+// on that day already.
+export function shownAtFirst(patterns: readonly Pattern[]) {
+  const following = new Set(patterns.map((pattern) => pattern.nextDay));
+  return new Set(
+    patterns
+      .filter(
+        (pattern) =>
+          pattern.time !== undefined ||
+          !(isDayOff(pattern) || following.has(pattern.id))
       )
-    ),
-  ];
+      .map((pattern) => pattern.id)
+  );
+}
+
+// The patterns put in: the first pick, as the person changed it.
+function shownOf(patterns: readonly Pattern[], chosen: CalendarAdd["chosen"]) {
+  const atFirst = shownAtFirst(patterns);
+  return new Set(
+    patterns
+      .map((pattern) => pattern.id)
+      .filter((id) => chosen[id] ?? atFirst.has(id))
+  );
+}
+
+// What the row under 予定に入れる日 says is left out, every name of it.
+function leftOut(listed: readonly Pattern[], shown: ReadonlySet<string>) {
+  const out = listed.filter((pattern) => !shown.has(pattern.id));
+  if (out.length === 0) {
+    return "すべて入れます";
+  }
+  if (out.length === listed.length) {
+    return "何も入れません";
+  }
+  return `${out.map((pattern) => pattern.name).join("・")}は入れません`;
+}
+
+// A pattern picked in or out, keeping only what differs from the first
+// pick, of patterns still there, so a deleted one's leaves too.
+function chosenWith(
+  patterns: readonly Pattern[],
+  chosen: CalendarAdd["chosen"],
+  id: string,
+  on: boolean
+) {
+  const atFirst = shownAtFirst(patterns);
+  const kept = Object.entries(chosen).filter(
+    ([key]) => key !== id && patterns.some((pattern) => pattern.id === key)
+  );
+  return Object.fromEntries(
+    on === atFirst.has(id) ? kept : [...kept, [id, on]]
+  );
 }
 
 // How many events the days make.
-function eventCount(days: CalendarDay[], off: readonly string[]) {
-  return days.filter(({ pattern, carried, note }) => {
-    const shift =
-      pattern !== undefined &&
-      !carried &&
-      (!isDayOff(pattern) || off.includes(pattern.id));
-    return shift || note;
-  }).length;
+function eventCount(days: CalendarDay[], shown: ReadonlySet<string>) {
+  return days.filter(
+    ({ pattern, note }) =>
+      (pattern !== undefined && shown.has(pattern.id)) || note
+  ).length;
 }
 
 const save = {
@@ -173,11 +181,8 @@ const save = {
     height: "10px",
     width: "10px",
   }),
-  // The calendar, the days off and the rest, a list each.
+  // The calendar, the days to put in and the rest, a list each.
   groups: css({ display: "flex", flexDirection: "column", gap: "24px" }),
-  // The notes under the switches, a paragraph each, as iOS spaces its
-  // footer's.
-  notes: css({ display: "flex", flexDirection: "column", gap: "8px" }),
   picker: css({ display: "flex", flexDirection: "column", gap: "24px" }),
   // The dot before the picked calendar's name, in the row's value.
   valueDot: css({
@@ -236,6 +241,9 @@ function stepTitle(step: Step, monthLabel: string) {
   if (step === "pick") {
     return "追加先";
   }
+  if (step === "days") {
+    return "予定に入れる日";
+  }
   if (typeof step === "object") {
     return "保存しました";
   }
@@ -250,7 +258,7 @@ export function SaveSheet({
   onOpenChange,
   month,
   days,
-  offPatterns,
+  patterns,
   access = "granted",
   toCalendar = false,
   onImage,
@@ -259,11 +267,10 @@ export function SaveSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   month: Date;
-  // Each day of the month as it goes in, with the day before read.
+  // Each day of the month as it goes in.
   days: CalendarDay[];
-  // The person's patterns counted as off, in their order, those of a
-  // job left too, as a past month may show them.
-  offPatterns: Pattern[];
+  // The person's patterns in their order, those of a job left too.
+  patterns: Pattern[];
   // Opened from カレンダーに追加: straight to choosing the calendar.
   toCalendar?: boolean;
   // Opens the picture's preview, where it is saved or shared.
@@ -292,22 +299,30 @@ export function SaveSheet({
     change(false);
   };
   const monthLabel = formatMonth(month);
+  const shown = shownOf(patterns, putting.chosen);
   // The shifts' events, and the memos' own where no shift's event is.
   const count = eventCount(
     putting.notes ? days : days.map((day) => ({ ...day, note: false })),
-    putting.off
+    shown
   );
   const shiftCount = days.filter((day) => day.pattern).length;
-  const carried = carriedNames(days);
+  // Those in use, and a pattern left that still shows in the month.
+  const listed = patterns.filter(
+    (pattern) =>
+      pattern.archived !== true ||
+      days.some((day) => day.pattern?.id === pattern.id)
+  );
   const calendar = deviceCalendars.find((item) => item.id === calendarId);
   const title = stepTitle(step, monthLabel);
   return (
     <Sheet label={title} onOpenChange={change} open={open}>
       <SheetHeading
         onBack={
-          (step === "calendar" && !toCalendar) || step === "pick"
+          (step === "calendar" && !toCalendar) ||
+          step === "pick" ||
+          step === "days"
             ? () => {
-                setStep(step === "pick" ? "calendar" : "choose");
+                setStep(step === "calendar" ? "choose" : "calendar");
               }
             : undefined
         }
@@ -382,36 +397,18 @@ export function SaveSheet({
                 }
               />
             </List>
-            {/* Each kind of day off on its own, as 有休 may go in without
-                休み, by its mark and name, so 休み reads as the pattern
-                rather than any day off. */}
-            {offPatterns.length > 0 && (
-              <Section title="予定に入れる休み">
-                <List>
-                  {offPatterns.map((pattern) => (
-                    <SwitchRow
-                      checked={putting.off.includes(pattern.id)}
-                      key={pattern.id}
-                      label={pattern.name}
-                      leading={<ShiftMark shift={pattern.id} size={18} />}
-                      onChange={(checked) => {
-                        // Only the patterns still there, so a deleted
-                        // one's leaves too.
-                        const off = putting.off.filter(
-                          (id) =>
-                            id !== pattern.id &&
-                            offPatterns.some((item) => item.id === id)
-                        );
-                        setPutting({
-                          ...putting,
-                          off: checked ? [...off, pattern.id].toSorted() : off,
-                        });
-                      }}
-                    />
-                  ))}
-                </List>
-              </Section>
-            )}
+            {/* Which patterns go in, on a page of their own: the first
+                pick leaves out the days off and a night's next day like
+                明け, and the row says what is left out. */}
+            <List>
+              <ListRow
+                label="予定に入れる日"
+                onClick={() => {
+                  setStep("days");
+                }}
+                detail={leftOut(listed, shown)}
+              />
+            </List>
             <List>
               <SwitchRow
                 checked={putting.notes}
@@ -431,15 +428,7 @@ export function SaveSheet({
               />
             </List>
           </div>
-          <div className={save.notes}>
-            {carried.length > 0 && (
-              <Note>
-                {carried.join("・")}
-                は、前の日の勤務が翌朝まで続いて表示されるので入れません。
-              </Note>
-            )}
-            <Note>前に入れた{monthLabel}の予定は、入れ直します。</Note>
-          </div>
+          <Note>前に入れた{monthLabel}の予定は、入れ直します。</Note>
           <Button
             variant="primary"
             className={save.add}
@@ -457,6 +446,43 @@ export function SaveSheet({
             {count}件を追加
           </Button>
         </>
+      )}
+      {step === "days" && (
+        <div className={sheetBody}>
+          <List>
+            {listed.map((pattern) => {
+              const on = shown.has(pattern.id);
+              return (
+                <ListRow
+                  aria-pressed={on}
+                  arrow={
+                    <Check
+                      aria-hidden="true"
+                      className={save.check({ picked: on })}
+                      size={18}
+                    />
+                  }
+                  key={pattern.id}
+                  label={pattern.name}
+                  leading={<ShiftMark shift={pattern.id} size={20} />}
+                  onClick={() => {
+                    setPutting({
+                      ...putting,
+                      chosen: chosenWith(
+                        patterns,
+                        putting.chosen,
+                        pattern.id,
+                        !on
+                      ),
+                    });
+                  }}
+                  value={timeText(pattern)}
+                />
+              );
+            })}
+          </List>
+          <Note>チェックした勤務や休みの日を、予定として入れます。</Note>
+        </div>
       )}
       {step === "pick" && (
         <div className={cx(sheetBody, save.picker)}>

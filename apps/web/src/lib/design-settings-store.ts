@@ -58,8 +58,9 @@ export type MonthTap = "pick" | "surprise";
 
 // 端末カレンダーに追加's メモも入れる and 一緒に働く人も入れる.
 export type CalendarAdd = {
-  // The patterns counted as off whose days go in too, sorted.
-  off: string[];
+  // The patterns picked otherwise than the first pick has them: put in,
+  // or left out (spec/calendar.md).
+  chosen: Record<string, boolean>;
   notes: boolean;
   people: boolean;
 };
@@ -194,7 +195,7 @@ export const useSettings = create<SettingsState>()(
         appIcon: "moss",
         appearance: "system",
         calendar: defaultCalendar,
-        calendarAdd: { notes: false, off: [], people: false },
+        calendarAdd: { chosen: {}, notes: false, people: false },
         imageOptions: defaultImageOptions,
         monthName: "number",
         monthTap: "pick",

@@ -100,21 +100,6 @@ import UIKit
     UserDefaults.standard.set(calendarID, forKey: Self.lastKey)
   }
 
-  /// Whether the user's event Pochical put in for the day before `month`
-  /// is in a calendar and runs into the month, as a night shift's does:
-  /// then the month's first day shows it already (spec/calendar.md).
-  func runsInto(_ month: Day, by user: String) -> Bool {
-    let first = date(of: month.firstOfMonth, at: 0)
-    let before = month.firstOfMonth.adding(days: -1)
-    let range = store.predicateForEvents(
-      withStart: first, end: date(of: month.firstOfMonth, at: 24 * 60), calendars: nil)
-    return store.events(matching: range).contains { event in
-      guard let mark = Self.mark(of: event.url) else { return false }
-      return mark.user == user && mark.day == before.key && !event.isAllDay
-        && event.endDate > first
-    }
-  }
-
   /// The mark Pochical leaves on an event it puts in: the app's own link
   /// to the day it is for (spec/widgets.md's pochical://day), and whose
   /// shift it is, so a calendar shared with family keeps theirs.
@@ -166,29 +151,22 @@ struct DeviceCalendarSheet: View {
   let coworkers: [String: String]
   @State private var calendars = DeviceCalendars()
   @State private var calendarID: String?
-  /// The month before's last night is in the calendar and shows on the
-  /// month's first day.
-  @State private var nightBefore = false
   /// What was done, once added.
   @State private var done: String?
   @State private var failed = false
   @State private var guide: OpenedLink?
 
   var body: some View {
-    // The days off, the days' memos, and who works them, put in too when
-    // asked: each off at first, as a calendar may be shared with family,
-    // and kept with the account as last left.
+    // The patterns picked, the days' memos, and who works them, kept with
+    // the account as last left: the memos and people off at first, as a
+    // calendar may be shared with family.
     let putting = settings.device.calendarAdd
-    // From the day before only when its night is in the calendar already.
-    let shown = calendar.shown(
-      from: nightBefore ? month.adding(days: -1) : month,
-      through: month.daysOfMonth.last ?? month)
+    let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
+    let listed = listed(shown)
     let events = ShiftEvents.month(
-      month, days: shown, patterns: calendar.patternsByID, offShown: Set(putting.off),
+      month, days: shown, patterns: calendar.patternsByID,
+      shown: putting.shown(of: calendar.patterns),
       notes: putting.notes ? notes : [:], people: putting.people ? people(shown) : [:])
-    let carried = ShiftEvents.carriedOver(
-      month, days: shown, patterns: calendar.patternsByID, offShown: Set(putting.off)
-    ).compactMap { calendar.patternsByID[$0]?.name }
     NavigationStack {
       Form {
         switch calendars.access {
@@ -220,7 +198,7 @@ struct DeviceCalendarSheet: View {
               wide("閉じる") { dismiss() }
             }
           } else {
-            form(carried: carried)
+            form(listed: listed)
             Section {
               wide("\(events.count)件を追加") { add(events) }
                 .disabled(events.isEmpty || calendarID == nil)
@@ -248,9 +226,6 @@ struct DeviceCalendarSheet: View {
         await calendars.ask()
       }
       calendarID = calendarID ?? calendars.pickedFirst
-      if calendars.access == .granted, let meID {
-        nightBefore = calendars.runsInto(month, by: meID)
-      }
     }
   }
 
@@ -266,7 +241,7 @@ struct DeviceCalendarSheet: View {
     .settingsOnPage()
   }
 
-  @ViewBuilder private func form(carried: [String]) -> some View {
+  @ViewBuilder private func form(listed: [Pattern]) -> some View {
     @Bindable var settings = settings
     Section {
       Picker("追加先", selection: $calendarID) {
@@ -289,24 +264,23 @@ struct DeviceCalendarSheet: View {
         .textCase(nil)
     }
     .settingsRows()
-    // Each kind of day off on its own, as 有休 may go in without 休み, by
-    // its mark and name, so 休み reads as the pattern rather than any day
-    // off.
-    let off = calendar.patterns.filter(\.countsAsOff)
-    if !off.isEmpty {
-      Section("予定に入れる休み") {
-        ForEach(off) { pattern in
-          Toggle(isOn: putsIn(pattern.id)) {
-            Label {
-              Text(pattern.name)
-            } icon: {
-              ShiftMark(pattern: pattern, size: 18)
-            }
-          }
+    // Which patterns go in, on a page of their own: the first pick leaves
+    // out the days off and a night's next day like 明け.
+    Section {
+      NavigationLink {
+        PatternsPicked(patterns: listed, all: calendar.patterns)
+      } label: {
+        // What is left out under it, as メモも入れる says what it does, so
+        // every name shows rather than one cut off at the row's end.
+        VStack(alignment: .leading) {
+          Text("予定に入れる日")
+          Text(leftOut(listed))
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
         }
       }
-      .settingsRows()
     }
+    .settingsRows()
     Section {
       Toggle(isOn: $settings.device.calendarAdd.notes) {
         Text("メモも入れる")
@@ -318,10 +292,6 @@ struct DeviceCalendarSheet: View {
       }
     } footer: {
       VStack(alignment: .leading, spacing: 8) {
-        // A day like 明け shows the night shift running into it already.
-        if !carried.isEmpty {
-          Text("\(carried.joined(separator: "・"))は、前の日の勤務が翌朝まで続いて表示されるので入れません。")
-        }
         Text("前に入れた\(month.monthText)の予定は、入れ直します。")
         // A calendar of a Google account added to the iPhone goes on to
         // Google Calendar, which few find by themselves (spec/calendar.md).
@@ -335,21 +305,24 @@ struct DeviceCalendarSheet: View {
     .settingsRows()
   }
 
-  /// Whether the days of a pattern counted as off go in, kept with the
-  /// account.
-  private func putsIn(_ id: PatternID) -> Binding<Bool> {
-    Binding {
-      settings.device.calendarAdd.off.contains(id)
-    } set: { on in
-      // Only the patterns still there, so a deleted one's leaves too.
-      var off = settings.device.calendarAdd.off.filter {
-        $0 != id && calendar.patternsByID[$0] != nil
-      }
-      if on {
-        off.append(id)
-      }
-      settings.device.calendarAdd.off = off.sorted()
+  /// The patterns to pick from: those in use, and a pattern left that
+  /// still shows in the month.
+  private func listed(_ shown: [Day: DayEntry]) -> [Pattern] {
+    let inMonth = Set(shown.values.map(\.shift))
+    return calendar.patterns.filter { !$0.archived || inMonth.contains($0.id) }
+  }
+
+  /// What the row under 予定に入れる日 says is left out, every name of it.
+  private func leftOut(_ listed: [Pattern]) -> String {
+    let shown = settings.device.calendarAdd.shown(of: calendar.patterns)
+    let out = listed.filter { !shown.contains($0.id) }
+    if out.isEmpty {
+      return "すべて入れます"
     }
+    if out.count == listed.count {
+      return "何も入れません"
+    }
+    return "\(out.map(\.name).joined(separator: "・"))は入れません"
   }
 
   /// Each day's memo in the month.
@@ -383,5 +356,55 @@ struct DeviceCalendarSheet: View {
       ReviewPrompt.troubled = true
       failed = true
     }
+  }
+}
+
+/// 予定に入れる日: each pattern by its mark and name, checked when its days
+/// go in, kept with the account (spec/calendar.md).
+private struct PatternsPicked: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(Settings.self) private var settings
+  let patterns: [Pattern]
+  /// Every pattern, which the first pick is worked out from.
+  let all: [Pattern]
+
+  var body: some View {
+    let shown = settings.device.calendarAdd.shown(of: all)
+    Form {
+      Section {
+        ForEach(patterns) { pattern in
+          let on = shown.contains(pattern.id)
+          Button {
+            settings.device.calendarAdd.pick(pattern.id, !on, of: all)
+          } label: {
+            // As a day's 勤務 picker lists them, its time beside each.
+            HStack(spacing: 12) {
+              LabeledContent {
+                Text(patternTimeText(pattern.time))
+              } label: {
+                Label {
+                  Text(pattern.name).lineLimit(1).foregroundStyle(colors.textPrimary)
+                } icon: {
+                  ShiftMark(pattern: pattern, size: 20)
+                }
+              }
+              Image(systemName: "checkmark")
+                .fontWeight(.semibold)
+                .foregroundStyle(colors.accentDefault)
+                .opacity(on ? 1 : 0)
+            }
+            .contentShape(.rect)
+          }
+          .buttonStyle(.plain)
+          .accessibilityAddTraits(on ? .isSelected : [])
+        }
+      } footer: {
+        Text("チェックした勤務や休みの日を、予定として入れます。")
+      }
+      .settingsRows()
+    }
+    .settingsList()
+    .navigationTitle("予定に入れる日")
+    .navigationBarTitleDisplayMode(.inline)
   }
 }

@@ -112,7 +112,6 @@ export function DesignCalendar({
   const [imagePreview, setImagePreview] = useState(false);
   const offLookOf = useOffLooks();
   const imageOptions = useSettings((state) => state.device.imageOptions);
-  const calendarAdd = useSettings((state) => state.device.calendarAdd);
   const setImageOptions = useSettings((state) => state.setImageOptions);
   const coworkers = useUser((state) => state.coworkers);
   // The person's own days, for the memos of days without a shift.
@@ -555,10 +554,9 @@ export function DesignCalendar({
             monthDays
               .map((date) => dateKey(date))
               .filter((key) => (own[key]?.note ?? "") !== "")
-          ),
-          calendarAdd.off
+          )
         )}
-        offPatterns={allPatterns.filter((pattern) => isDayOff(pattern))}
+        patterns={allPatterns}
         onImage={() => {
           setImagePreview(true);
         }}
