@@ -4,7 +4,8 @@
 // gradients, which the web's CSS, SwiftUI and Compose draw the same; `mise
 // run gen` writes each sky's lights out for the native apps.
 
-import { oklchToHex } from "./oklch";
+import { neutralRoles } from "./colors";
+import { hexToOklch, oklchToHex } from "./oklch";
 import { presets } from "./themes";
 import type { PresetId } from "./themes";
 
@@ -56,8 +57,10 @@ export const skyTones = {
   light: { chroma: 0.04, lightness: 0.95 },
 } as const;
 
-// The dark gray screen (background-base) in OKLCH lightness.
-export const DARK_GROUND = 0.28;
+// The dark screen (background-base) in OKLCH lightness.
+export const DARK_GROUND = hexToOklch(
+  neutralRoles("dark")["background-base"]
+).lightness;
 
 // The ground a sky stands on in dark mode: a テーマ drawn dark has its
 // own when it colors one; a light テーマ's ground is only its light mode's.
