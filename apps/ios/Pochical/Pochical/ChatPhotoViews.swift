@@ -1,3 +1,4 @@
+import ImageIO
 import Photos
 import PochicalDesign
 import PochicalKit
@@ -25,6 +26,9 @@ private enum PhotoBox {
 }
 
 /// One of the group's photos as it loads: from the device, else fetched.
+/// In the chat it is shrunk to the size it shows and kept so (Thumbnails),
+/// so a line scrolled back into sight draws at once rather than reading and
+/// shrinking its 2048 pixels again.
 struct ChatPhotoImage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.themeColors) private var colors
@@ -38,9 +42,10 @@ struct ChatPhotoImage: View {
   @State private var image: UIImage?
 
   var body: some View {
+    let kept = image ?? pixels.flatMap { Thumbnails.kept(photo.id, pixels: $0) }
     Group {
-      if let image {
-        Image(uiImage: image)
+      if let kept {
+        Image(uiImage: kept)
           .resizable()
           .aspectRatio(contentMode: fit ? .fit : .fill)
       } else {
@@ -48,21 +53,62 @@ struct ChatPhotoImage: View {
       }
     }
     .task(id: photo.id) {
-      guard let data = try? await groupCalls.photo(photo.id, in: groupID),
-        let whole = UIImage(data: data)
-      else { return }
-      // A line's photo decoded at the size it shows, not 2048 pixels.
-      if let shown {
-        let scale = max(
-          shown.width / whole.size.width, shown.height / whole.size.height) * displayScale
-        image =
-          await whole.byPreparingThumbnail(
-            ofSize: CGSize(width: whole.size.width * scale, height: whole.size.height * scale))
-          ?? whole
+      if let pixels, Thumbnails.kept(photo.id, pixels: pixels) != nil { return }
+      guard let data = try? await groupCalls.photo(photo.id, in: groupID) else { return }
+      if let pixels {
+        let id = photo.id
+        image = await Task.detached(priority: .userInitiated) {
+          Thumbnails.make(data, id: id, pixels: pixels)
+        }.value
       } else {
-        image = whole
+        image = UIImage(data: data)
       }
     }
+  }
+
+  /// The longer side, in pixels, the photo is decoded at to fill the size
+  /// it shows; nil opened large.
+  private var pixels: Int? {
+    guard let shown, photo.width > 0, photo.height > 0 else { return nil }
+    let width = CGFloat(photo.width)
+    let height = CGFloat(photo.height)
+    let scale = min(max(shown.width / width, shown.height / height) * displayScale, 1)
+    return Int((max(width, height) * scale).rounded(.up))
+  }
+}
+
+/// The chat's photos shrunk to the size they show, kept while the app runs
+/// (the system lets them go when memory runs short).
+enum Thumbnails {
+  nonisolated(unsafe) private static let cache: NSCache<NSString, UIImage> = {
+    let cache = NSCache<NSString, UIImage>()
+    cache.totalCostLimit = 48 * 1024 * 1024
+    return cache
+  }()
+
+  nonisolated private static func key(_ id: String, _ pixels: Int) -> NSString {
+    "\(id)@\(pixels)" as NSString
+  }
+
+  nonisolated static func kept(_ id: String, pixels: Int) -> UIImage? {
+    cache.object(forKey: key(id, pixels))
+  }
+
+  /// The photo at most `pixels` on its longer side, read straight from its
+  /// bytes at that size rather than decoded whole and shrunk, and kept.
+  nonisolated static func make(_ data: Data, id: String, pixels: Int) -> UIImage? {
+    let options = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceShouldCacheImmediately: true,
+      kCGImageSourceThumbnailMaxPixelSize: pixels,
+    ] as CFDictionary
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+      let shrunk = CGImageSourceCreateThumbnailAtIndex(source, 0, options)
+    else { return nil }
+    let image = UIImage(cgImage: shrunk)
+    cache.setObject(image, forKey: key(id, pixels), cost: shrunk.bytesPerRow * shrunk.height)
+    return image
   }
 }
 
