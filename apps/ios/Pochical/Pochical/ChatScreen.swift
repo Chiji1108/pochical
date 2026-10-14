@@ -171,6 +171,8 @@ struct ChatScreen: View {
   @State private var opened = false
   @State private var position = ScrollPosition(idType: String.self)
   @State private var place = ScrollPlace()
+  /// The height the lines are seen in, between the pins and the composer.
+  @State private var seen: CGFloat = 0
   @State private var draft = ""
   /// The line of one's own being changed in the composer.
   @State private var editing: ChatLineRow?
@@ -269,6 +271,10 @@ struct ChatScreen: View {
         }
       }
       .scrollTargetLayout()
+      // Lines shorter than the screen fill it, at its foot, rather than
+      // left to the scroll view's bottom alignment, which on a device
+      // rests them short of the foot, partly under the composer.
+      .frame(minHeight: seen, alignment: .bottom)
     }
     .contentMargins(.horizontal, 16, for: .scrollContent)
     .contentMargins(.vertical, 12, for: .scrollContent)
@@ -295,6 +301,11 @@ struct ChatScreen: View {
         fits: tall <= geometry.containerSize.height)
     } action: { _, now in
       place = now
+    }
+    .onScrollGeometryChange(for: CGFloat.self) { geometry in
+      max(geometry.containerSize.height - geometry.contentInsets.top - geometry.contentInsets.bottom, 0)
+    } action: { _, now in
+      seen = now
     }
     .overlay(alignment: .bottomTrailing) {
       // Others' lines below not yet read, counted on the ↓ as a chat's
