@@ -54,7 +54,11 @@ import type { LookSettings, OffLookId, ShiftMarkStyle } from "./shift-mark";
 
 // The four shapes members see. Icons come filled (塗り) or as outlines (線);
 // letters always sit on their tile, and emoji have no fill.
-const shapeOptions: { name: string; style: ShiftMarkStyle; fill: boolean }[] = [
+export const shapeOptions: {
+  name: string;
+  style: ShiftMarkStyle;
+  fill: boolean;
+}[] = [
   { fill: true, name: "塗り", style: "icon" },
   { fill: false, name: "線", style: "icon" },
   { fill: true, name: "絵文字", style: "emoji" },

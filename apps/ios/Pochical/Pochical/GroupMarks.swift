@@ -141,7 +141,7 @@ let markPhotoGoneMessage = "選んだ写真がこの端末から消えていた�
 
 /// The kinds of mark the tabs pick from; a photo is picked above them.
 private enum MarkKind: Hashable {
-  case emoji, icon, letter
+  case icon, emoji, letter
 }
 
 /// アイコン (/design's GroupMarkPage): a photo, taken or picked, or a kind,
@@ -160,8 +160,6 @@ struct GroupMarkPage: View {
   @State private var photoFailed = false
   @State private var choosingEmoji = false
   @State private var choosingIcon = false
-  /// The letters while they are being written.
-  @State private var letterDraft: String?
 
   var body: some View {
     let shown = kind ?? kindOf(mark)
@@ -179,8 +177,8 @@ struct GroupMarkPage: View {
             await usePhoto(jpeg)
           }
           Picker("アイコンの種類", selection: Binding(get: { shown }, set: { kind = $0 })) {
-            Text("絵文字").tag(MarkKind?.some(.emoji))
             Text("アイコン").tag(MarkKind?.some(.icon))
+            Text("絵文字").tag(MarkKind?.some(.emoji))
             Text("文字").tag(MarkKind?.some(.letter))
           }
           .pickerStyle(.segmented)
@@ -210,11 +208,10 @@ struct GroupMarkPage: View {
           Button("ほかのアイコンを選ぶ", systemImage: "plus") { choosingIcon = true }
         case .letter:
           LabeledContent("文字") {
-            LimitedTextField(
-              placeholder: firstLetter, text: letterBinding, limit: TextLimits.groupMark,
-              showsCount: false
-            ) {
-              letterDraft = nil
+            MarkLetterField(
+              letter: mark.letter.isEmpty ? firstLetter : mark.letter, limit: TextLimits.groupMark
+            ) { letters in
+              set(GroupMarkValue(letter: letters, color: mark.color))
             }
           }
         }
@@ -237,7 +234,7 @@ struct GroupMarkPage: View {
 
       Section {
       } footer: {
-        Text("メンバー全員に、このアイコンがそのまま表示されます。シフトの見た目のスタイルには左右されません。")
+        Text("メンバー全員に、このアイコンがそのまま表示されます。スタイルの「シフトの見た目」には左右されません。")
       }
     }
     .settingsList()
@@ -289,20 +286,5 @@ struct GroupMarkPage: View {
 
   /// The name's first letter, as letters start.
   private var firstLetter: String { initialLetter(of: name) }
-
-  /// The letters as they are written; a group's mark takes them while they
-  /// are some and fit, and the field shows the mark's again once left
-  /// (spec/text-limits.md).
-  private var letterBinding: Binding<String> {
-    Binding {
-      letterDraft ?? (mark.letter.isEmpty ? firstLetter : mark.letter)
-    } set: { text in
-      letterDraft = text
-      let letters = text.trimmingCharacters(in: .whitespacesAndNewlines)
-      if !letters.isEmpty, letters.count <= TextLimits.groupMark {
-        set(GroupMarkValue(letter: letters, color: mark.color))
-      }
-    }
-  }
 
 }

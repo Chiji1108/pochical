@@ -1,5 +1,5 @@
 {
-  "about": "Text counted as spec/text-limits.md has it: in characters as a reader sees them (grapheme clusters, as Swift's String.count and ICU's character BreakIterator). limitText keeps the first `limit` characters. dayName shows a shift's name in a day: whole up to `length` characters, else its first `length` - 1 and …; the apps use textFields.dayNameLength (design/src/limits.ts). isEmoji: whether a mark's emoji (a group's, a shift pattern's) is one emoji, as the pickers and the system keyboards give one: exactly one character that starts as a pictograph or a flag, or a keycap, which starts with its plain digit or sign. The server refuses any other.",
+  "about": "Text counted as spec/text-limits.md has it: in characters as a reader sees them (grapheme clusters, as Swift's String.count and ICU's character BreakIterator). limitText keeps the first `limit` characters. markLetter is a mark's letter after an edit: within `limit`, the text as it is; past it, what the edit put in (the text less what it shares with the letter before at its start and its end), cut to `limit`, so typing into a full letter replaces it. dayName shows a shift's name in a day: whole up to `length` characters, else its first `length` - 1 and …; the apps use textFields.dayNameLength (design/src/limits.ts). isEmoji: whether a mark's emoji (a group's, a shift pattern's) is one emoji, as the pickers and the system keyboards give one: exactly one character that starts as a pictograph or a flag, or a keycap, which starts with its plain digit or sign. The server refuses any other.",
   "characterCount": [
     {
       "name": "nothing",
@@ -117,6 +117,64 @@
       "text": "",
       "limit": 3,
       "expected": ""
+    }
+  ],
+  "markLetter": [
+    {
+      "name": "within the limit",
+      "before": "",
+      "after": "夜",
+      "limit": 1,
+      "expected": "夜"
+    },
+    {
+      "name": "typed after a full letter",
+      "before": "夜",
+      "after": "夜有",
+      "limit": 1,
+      "expected": "有"
+    },
+    {
+      "name": "typed before a full letter",
+      "before": "夜",
+      "after": "有夜",
+      "limit": 1,
+      "expected": "有"
+    },
+    {
+      "name": "a conversion confirmed into an empty letter",
+      "before": "",
+      "after": "ゆう",
+      "limit": 1,
+      "expected": "ゆ"
+    },
+    {
+      "name": "the same letter typed again",
+      "before": "夜",
+      "after": "夜夜",
+      "limit": 1,
+      "expected": "夜"
+    },
+    {
+      "name": "a second letter added",
+      "before": "家",
+      "after": "家族",
+      "limit": 2,
+      "expected": "家族"
+    },
+    {
+      "name": "typed after two full letters",
+      "before": "家族",
+      "after": "家族会",
+      "limit": 2,
+      "expected": "会"
+    },
+    {
+      "name": "an emoji joined by ZWJ typed after a letter",
+      "before": "夜",
+      "after": "夜👨\u200d👩\u200d👧\u200d👦",
+      "limit": 1,
+      "expected": "👨\u200d👩\u200d👧\u200d👦"
     }
   ],
   "dayName": [

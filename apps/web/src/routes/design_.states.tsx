@@ -19,14 +19,16 @@ import {
   PresetContexts,
   useDesignTheme,
 } from "../components/design-providers";
+import { shapeOptions } from "../components/design-settings-style";
 import { ColorSchemeContext, pageStyle } from "../components/design-theme";
 import type { PresetId } from "../components/design-theme";
 import {
+  IconWeightContext,
   noOffLooks,
   OffLooksContext,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
-import type { OffLookId, ShiftMarkStyle } from "../components/shift-mark";
+import type { OffLookId } from "../components/shift-mark";
 import { initialDesignSchedule, patternSets } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import { pageMeta } from "../lib/site";
@@ -57,11 +59,6 @@ const emptyPerson = { schedule: {} };
 const partialPerson = { schedule: partialSchedule };
 
 const patternCounts = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
-const markStyles: { style: ShiftMarkStyle; label: string }[] = [
-  { label: "アイコン", style: "icon" },
-  { label: "絵文字", style: "emoji" },
-  { label: "文字", style: "badge" },
-];
 const schemes: { scheme: ColorScheme; label: string }[] = [
   { label: "ライト", scheme: "light" },
   { label: "ダーク", scheme: "dark" },
@@ -118,11 +115,13 @@ function StatesPage() {
             </FrameRow>
           </FrameSection>
 
-          <FrameSection title="シフトの見せ方">
+          <FrameSection title="シフトの見た目">
             <FrameRow fan>
-              {markStyles.map(({ style, label }) => (
-                <ShiftMarkStyleContext key={style} value={style}>
-                  <CalendarFrame label={label} />
+              {shapeOptions.map(({ fill, name, style }) => (
+                <ShiftMarkStyleContext key={name} value={style}>
+                  <IconWeightContext value={fill ? "duotone" : "regular"}>
+                    <CalendarFrame label={name} />
+                  </IconWeightContext>
                 </ShiftMarkStyleContext>
               ))}
             </FrameRow>
@@ -130,8 +129,8 @@ function StatesPage() {
 
           <FrameSection title="休みの見せ方">
             <FrameRow fan>
-              <OffLook label="色をつける" off="highlight" />
-              <OffLook label="色なし" off="mark" />
+              <OffLook label="強調" off="highlight" />
+              <OffLook label="印だけ" off="mark" />
               <OffLook label="空白" off="blank" />
               <OffLook
                 off="blank"
