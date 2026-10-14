@@ -448,16 +448,16 @@ struct ChatScreen: View {
       }
     }
     .task {
-      // The reader asked of the server only when not yet heard of, rather
-      // than before the chat may show.
+      // The reader is asked of the server before the chat opens only when
+      // not yet heard of; else after, in case the account changed.
       if meID == nil {
-        meID = await groupCalls.userID()
-        _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: meID))
+        await hearReader()
       }
       // Opened from a notification as the app starts, its new lines are
       // still coming: where it opens waits for them, a little.
       await socket?.catchUp(within: .seconds(2))
       await open()
+      await hearReader()
     }
     .task(
       id: ReadKey(
@@ -1081,6 +1081,15 @@ struct ChatScreen: View {
   }
 
   // MARK: Doing
+
+  /// The reader as the server knows them, the lines read again by them
+  /// when that is not who they were taken to be.
+  private func hearReader() async {
+    let heard = await groupCalls.userID()
+    guard heard != meID else { return }
+    meID = heard
+    _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: heard))
+  }
 
   /// Opens on the first unread line under ここから新着, else stays on the
   /// latest; reading counts from then on.
