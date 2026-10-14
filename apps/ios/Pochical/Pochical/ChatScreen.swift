@@ -168,7 +168,10 @@ struct ChatScreen: View {
   /// `sharing` has been set over the composer, once.
   @State private var tookSharing = false
   @State private var meID: String?
-  /// The line ここから新着 sits over, fixed as the chat opens.
+  /// The line ここから新着 sits over: the first unread as the chat opens,
+  /// or the first of others' lines coming in at once, more than the screen
+  /// shows (spec/chat.md, Unread lines and typing). Once there, it stays
+  /// while the chat is open.
   @State private var unreadFrom: Int64?
   /// The chat has opened on its line, and reading may count.
   @State private var opened = false
@@ -523,9 +526,8 @@ struct ChatScreen: View {
       if meID == nil {
         await hearReader()
       }
-      // Opened from a notification as the app starts, its new lines are
-      // still coming: where it opens waits for them, a little.
-      await socket?.catchUp(within: .seconds(2))
+      // Opens at once on the lines the device holds, as the messaging apps
+      // do; lines the group's catch-up still brings come in under them.
       await open()
       await hearReader()
     }
@@ -534,7 +536,11 @@ struct ChatScreen: View {
         opened: opened, atLatest: place.atLatest, active: scenePhase == .active,
         latest: state.lines.last?.seq ?? 0)
     ) {
-      if opened, place.atLatest, scenePhase == .active {
+      guard opened, place.atLatest, scenePhase == .active else { return }
+      // Lines just come in are not yet laid out, and the place not yet
+      // moved for them: read only once they are on the screen.
+      try? await Task.sleep(for: .milliseconds(100))
+      if !Task.isCancelled, place.atLatest {
         read()
       }
     }
@@ -570,7 +576,13 @@ struct ChatScreen: View {
     // Lines coming in, someone writing, and the keyboard coming up or
     // going keep a following chat at its foot.
     .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count, seen: seen)) {
-      if opened, following {
+      before, now in
+      guard opened, following else { return }
+      // Others' lines the reader has not read stop at ここから新着 rather
+      // than going past it, as the chat's catch-up bringing many at once.
+      if before.latest != now.latest, let first = unreadComing(after: before.latest) {
+        show(from: first)
+      } else {
         toLatest(animated: true)
       }
     }
@@ -1215,20 +1227,55 @@ struct ChatScreen: View {
     if unreadFrom == nil {
       placed = true
     } else {
+      // Not carried to the foot meanwhile by lines coming in or laid out.
+      following = false
       // Once the lines are laid out, where they are and what is in sight
       // known.
       try? await Task.sleep(for: .milliseconds(50))
       // Asked to the top with too few lines under it to get there, the
       // scroll view would go past the foot.
       if !place.fits, !unreadInSight {
-        following = false
         scroller?.scrollTo(ChatItem.unread.id, anchor: .top)
+      } else {
+        following = true
+        toLatest()
       }
       withAnimation(.easeOut(duration: 0.15)) { placed = true }
     }
     opened = true
     window = chat.state.lines.first?.seq
     await reload()
+  }
+
+  /// The first of the lines that just came in after `latest` which is
+  /// others' and unread, the app's notices aside.
+  private func unreadComing(after latest: Int64?) -> ChatLineRow? {
+    guard let me = meID else { return nil }
+    let state = chat.state
+    let from = max(latest ?? 0, state.lastRead(by: me))
+    return state.lines.first {
+      $0.seq > from && $0.authorID != me && $0.notice == nil && !$0.hidden
+    }
+  }
+
+  /// Shows the lines from `first` as far as the screen goes rather than
+  /// the latest: at the foot after all when they fit, following on, else
+  /// stopped there under ここから新着 (unless the chat has one already).
+  private func show(from first: ChatLineRow) {
+    following = false
+    Task { @MainActor in
+      // Asked to the top with too few lines under it to get there, it
+      // stops at the foot.
+      withAnimation { scroller?.scrollTo("line-\(first.opID)", anchor: .top) }
+      try? await Task.sleep(for: .milliseconds(400))
+      if place.atLatest {
+        following = true
+      } else if unreadFrom == nil {
+        unreadFrom = first.seq
+        try? await Task.sleep(for: .milliseconds(50))
+        scroller?.scrollTo(ChatItem.unread.id, anchor: .top)
+      }
+    }
   }
 
   /// Marks the chat read up to its latest line, once it has come on screen.
