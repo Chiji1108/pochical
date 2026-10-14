@@ -12,7 +12,7 @@ import { dateKey, formatMonth } from "../lib/design-days";
 import type { DayEntry, Schedule } from "../lib/design-days";
 import { isDayOff } from "../lib/design-patterns";
 import type { Pattern, PatternBook } from "../lib/design-patterns";
-import { useSettings } from "../lib/design-settings-store";
+import { useSettings, withOffLook } from "../lib/design-settings-store";
 import type { ImageOptions } from "../lib/design-settings-store";
 import { AppIcon } from "./design-app-icon";
 import { DayCell } from "./design-day-cell";
@@ -20,7 +20,7 @@ import { dayGrid, WeekdayRow } from "./design-day-grid";
 import { PageHeader } from "./design-header";
 import { List, ListRow, SwitchRow } from "./design-list";
 import { monthWithYearOf } from "./design-month-name";
-import { NameTabs, OffLookTabs } from "./design-settings-style";
+import { NameTabs, OffLookRows } from "./design-settings-style";
 import { Sheet, SheetHeading, sheetBody, sheetLead } from "./design-sheet";
 import {
   ColorSchemeContext,
@@ -515,12 +515,16 @@ export function SaveSheet({
 export function ImagePreviewPage({
   month,
   schedule,
+  offPatterns,
   options,
   onOptions,
   onClose,
 }: {
   month: Date;
   schedule: Schedule;
+  // The patterns that count as off, those of a job left too, as an older
+  // month holds them and 端末カレンダーに追加 offers them.
+  offPatterns: Pattern[];
   options: ImageOptions;
   onOptions: (options: ImageOptions) => void;
   onClose: () => void;
@@ -551,10 +555,11 @@ export function ImagePreviewPage({
         >
           <div className={previewWrap}>
             <ColorSchemeContext value={shown}>
-              {/* A picture to share shows every day as it is, every day
-                    off alike: the app's own 休みの見せ方 for each pattern
-                    does not reach it. */}
-              <OffLooksContext value={{ off: options.off, offs: noOffLooks }}>
+              {/* A picture to share shows its own 休みの見せ方 for each
+                    day off: the app's own does not reach it. */}
+              <OffLooksContext
+                value={{ off: options.off, offs: options.offs ?? noOffLooks }}
+              >
                 <figure
                   aria-label={`${monthWithYearOf(month)}のシフトの画像`}
                   className={picture.frame}
@@ -607,15 +612,26 @@ export function ImagePreviewPage({
             value={options.names}
           />
         </Section>
-        <Section title="休みの見せ方">
-          <OffLookTabs
-            onChange={(value) => {
-              onOptions({ ...options, off: value });
-            }}
-            samples={false}
-            value={options.off}
-          />
-        </Section>
+        {offPatterns.length > 0 && (
+          <Section title="休みの見せ方">
+            <OffLookRows
+              lookOf={(shift) => options.offs?.[shift] ?? options.off}
+              offs={offPatterns}
+              onChange={(shift, look) => {
+                onOptions({
+                  ...options,
+                  offs: withOffLook(
+                    options.offs,
+                    shift,
+                    look,
+                    offPatterns.map(({ id }) => id)
+                  ),
+                });
+              }}
+              samples={false}
+            />
+          </Section>
+        )}
         <Note>画像にだけ使う見た目です。アプリのスタイルは変わりません。</Note>
       </ScreenScroll>
       <div className={picture.actions} data-toast-above="">

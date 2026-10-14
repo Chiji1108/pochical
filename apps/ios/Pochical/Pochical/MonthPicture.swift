@@ -21,6 +21,11 @@ struct MonthPicturePage: View {
   /// changes.
   @State private var image: UIImage?
 
+  /// Under the last of the picture's choices.
+  private var pictureOnly: some View {
+    Text("画像にだけ使う見た目です。アプリのスタイルは変わりません。")
+  }
+
   var body: some View {
     @Bindable var settings = settings
     let picture = settings.device.picture
@@ -53,7 +58,8 @@ struct MonthPicturePage: View {
         // The style page's choices in its order, with the picture's own
         // values: it goes to people who do not know the marks, so names
         // start on.
-        Section("シフト名") {
+        let offs = calendar.patterns.filter(\.countsAsOff)
+        Section {
           Choices(
             options: [false, true], picked: picture.options.names, label: { $0 ? "あり" : "なし" }
           ) { _ in
@@ -62,21 +68,42 @@ struct MonthPicturePage: View {
             settings.device.picture.options.names = names
           }
           .settingsOnPage()
-        }
-        // One for every day off, as they see them all alike.
-        Section {
-          Choices(
-            options: OffLook.allCases, picked: picture.options.off, label: \.name
-          ) { _ in
-            EmptyView()
-          } onPick: { offLook in
-            settings.device.picture.options.off = offLook
-          }
-          .settingsOnPage()
         } header: {
-          Text("休みの見せ方")
+          Text("シフト名")
         } footer: {
-          Text("画像にだけ使う見た目です。アプリのスタイルは変わりません。")
+          if offs.isEmpty { pictureOnly }
+        }
+        // Each day off its own, as on the style page and as 端末カレンダー
+        // に追加 picks them, those of a job left too, as an older month
+        // holds them: 有休 may be worth showing while 休み is left blank.
+        if !offs.isEmpty {
+          Section {
+            VStack(alignment: .leading, spacing: 16) {
+              ForEach(offs, id: \.id) { off in
+                VStack(alignment: .leading, spacing: 8) {
+                  if offs.count > 1 {
+                    Text(off.name)
+                      .font(.subheadline.weight(.semibold))
+                      .padding(.leading, 16)
+                  }
+                  Choices(
+                    options: OffLook.allCases, picked: picture.options.offLook(of: off.id),
+                    label: \.name
+                  ) { _ in
+                    EmptyView()
+                  } onPick: { offLook in
+                    settings.device.picture.options.setOffLook(
+                      offLook, of: off.id, offPatterns: offs.map(\.id))
+                  }
+                }
+              }
+            }
+            .settingsOnPage()
+          } header: {
+            Text("休みの見せ方")
+          } footer: {
+            pictureOnly
+          }
         }
       }
       .settingsList()

@@ -94,7 +94,8 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
 /// How a month saved as a picture looks (/design's ImageOptions): it goes
 /// to people who do not know the marks, so names and the days off's tint
 /// start on, and days off are shown, since they could not tell an empty day
-/// from one not entered. Light or dark is the screen's until picked.
+/// from one not entered; each day off can be set apart, as on the style
+/// page, so 有休 may show while 休み is left blank. Light or dark is the screen's until picked.
 public struct PictureLook: Codable, Equatable, Sendable {
   public var options = MarkOptions(names: true, off: .highlight)
   /// Dark, light, or none to follow the screen.
@@ -196,6 +197,17 @@ public struct MarkOptions: Codable, Equatable, Sendable {
   public func offLook(of id: PatternID) -> OffLook {
     offs[id] ?? off
   }
+
+  /// Sets how the days of the pattern `id` show, and drops the patterns
+  /// no longer among `offPatterns`, so what is kept with the account does
+  /// not grow with each pattern ever deleted past what one value may hold.
+  public mutating func setOffLook(
+    _ offLook: OffLook, of id: PatternID, offPatterns: some Collection<PatternID>
+  ) {
+    let kept = Set(offPatterns)
+    offs = offs.filter { kept.contains($0.key) }
+    offs[id] = offLook
+  }
 }
 
 /// The marks' look (/design's スタイル): the shape, an icon's fill, and the
@@ -216,17 +228,15 @@ public struct Look: Codable, Equatable, Sendable {
   public init() {}
 
   /// Sets how the days of the pattern `id` show in the shape in use, and
-  /// drops from every shape the patterns no longer among `offPatterns`,
-  /// so the look, kept with the account, does not grow with each pattern
-  /// ever deleted past what one value may hold.
+  /// drops from every shape the patterns no longer among `offPatterns`.
   public mutating func setOffLook(
     _ offLook: OffLook, of id: PatternID, offPatterns: some Collection<PatternID>
   ) {
-    options.offs[id] = offLook
     let kept = Set(offPatterns)
     icon.offs = icon.offs.filter { kept.contains($0.key) }
     emoji.offs = emoji.offs.filter { kept.contains($0.key) }
     badge.offs = badge.offs.filter { kept.contains($0.key) }
+    options.setOffLook(offLook, of: id, offPatterns: kept)
   }
 
   /// The options of the shape in use.

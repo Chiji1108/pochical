@@ -44,7 +44,10 @@ export type ImageOptions = {
   names: boolean;
   // How days off show, as on the style page; never blank at first, since
   // the people it goes to cannot tell an empty day from one not entered.
+  // `offs` sets each pattern apart, as on the style page, so 有休 may show
+  // while 休み is left blank.
   off: OffLookId;
+  offs?: Partial<Record<string, OffLookId>>;
   scheme?: ColorScheme;
 };
 
@@ -135,6 +138,28 @@ const defaultCalendar: Record<ShiftMarkStyle, CalendarOptions> = {
   icon: { names: false, off: "highlight" },
 };
 
+// `offs` with only the patterns among `offPatterns` kept, so what is kept
+// with the account does not grow with each pattern ever deleted.
+function keptOffs(
+  offs: Partial<Record<string, OffLookId>> | undefined,
+  offPatterns: readonly string[]
+): Partial<Record<string, OffLookId>> {
+  return Object.fromEntries(
+    Object.entries(offs ?? {}).filter(([key]) => offPatterns.includes(key))
+  );
+}
+
+// `offs` with the pattern `shift` set to `look`, and those no longer
+// among `offPatterns` dropped.
+export function withOffLook(
+  offs: Partial<Record<string, OffLookId>> | undefined,
+  shift: string,
+  look: OffLookId,
+  offPatterns: readonly string[]
+): Partial<Record<string, OffLookId>> {
+  return { ...keptOffs(offs, offPatterns), [shift]: look };
+}
+
 // The calendar with the options of `style` changed, the other shapes' as
 // they were.
 function withOptions(
@@ -213,20 +238,14 @@ export const useSettings = create<SettingsState>()(
       setOffLook: (shift, look, offPatterns) => {
         set((state) => {
           const { style } = state.groupLook;
-          const kept = (options: CalendarOptions) =>
-            Object.fromEntries(
-              Object.entries(options.offs ?? {}).filter(([key]) =>
-                offPatterns.includes(key)
-              )
-            );
           const { badge, emoji, icon } = state.device.calendar;
           const pruned = {
-            badge: { ...badge, offs: kept(badge) },
-            emoji: { ...emoji, offs: kept(emoji) },
-            icon: { ...icon, offs: kept(icon) },
+            badge: { ...badge, offs: keptOffs(badge.offs, offPatterns) },
+            emoji: { ...emoji, offs: keptOffs(emoji.offs, offPatterns) },
+            icon: { ...icon, offs: keptOffs(icon.offs, offPatterns) },
           };
           const calendar = withOptions(pruned, style, {
-            offs: { ...pruned[style].offs, [shift]: look },
+            offs: withOffLook(pruned[style].offs, shift, look, offPatterns),
           });
           return { device: { ...state.device, calendar } };
         });
