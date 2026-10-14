@@ -182,6 +182,9 @@ struct ChatScreen: View {
   /// ここから新着 is on the screen whole, as at the latest when the new
   /// lines are few: opening has nowhere to go for it then.
   @State private var unreadInSight = false
+  /// The top of the lines, where earlier ones are asked for, is on the
+  /// screen.
+  @State private var topInSight = false
   /// The height the lines are seen in, between the pins and the composer.
   @State private var seen: CGFloat = 0
   @State private var draft = ""
@@ -273,7 +276,11 @@ struct ChatScreen: View {
         if !state.atStart {
           ProgressView()
             .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-            .task(id: state.lines.first?.seq) {
+            // Laid out with the lines whether seen or not, so earlier lines
+            // are asked for only once it is on the screen.
+            .onScrollVisibilityChange(threshold: 0) { topInSight = $0 }
+            .task(id: PageAsk(first: state.lines.first?.seq, inSight: topInSight)) {
+              guard topInSight else { return }
               // Asked again until the socket is open to ask.
               let first = state.lines.first?.seq ?? 0
               while !Task.isCancelled {
@@ -1585,6 +1592,13 @@ private struct ScrollPlace: Hashable {
   var fits = true
   /// At the top edge, where an earlier page coming in would leave it.
   var atTop = false
+}
+
+/// When earlier lines are asked for: the top in sight, again after each
+/// page.
+private struct PageAsk: Equatable {
+  let first: Int64?
+  let inSight: Bool
 }
 
 /// What moves a following chat to its foot: a line coming in, someone

@@ -46,7 +46,10 @@ struct ChatPhotoImage: View {
   @State private var inSight = false
 
   var body: some View {
-    let kept = image ?? pixels.flatMap { Thumbnails.kept(photo.id, pixels: $0) }
+    // Out of sight, nothing is held, not even the kept thumbnail.
+    let kept =
+      whileInSight && !inSight
+      ? nil : image ?? pixels.flatMap { Thumbnails.kept(photo.id, pixels: $0) }
     Group {
       if let kept {
         Image(uiImage: kept)
