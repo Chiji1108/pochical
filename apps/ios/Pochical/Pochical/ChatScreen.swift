@@ -188,6 +188,8 @@ struct ChatScreen: View {
   /// What scrolling changes, kept out of the screen's own state so that
   /// scrolling remakes only what shows it, not every line.
   @State private var scroll = ChatScroll()
+  /// Times the person's scrolling has come to the latest, which reads it.
+  @State private var reachedLatest = 0
   /// The chat keeps to its latest line as lines come and the keyboard
   /// comes and goes: true until the person scrolls up, and again once they
   /// scroll back down to it, send, or tap ↓. Only their own scrolling
@@ -354,7 +356,7 @@ struct ChatScreen: View {
     } action: { before, now in
       scroll.place = now
       if now.atLatest, !before.atLatest {
-        readSoon()
+        reachedLatest += 1
       }
     }
     // Following is the person's to change: off as they scroll, and on
@@ -494,9 +496,17 @@ struct ChatScreen: View {
     // Read at the latest: as it opens, as lines come, as the app comes
     // back, and as the person scrolls down to it (the place's action).
     .task(
-      id: ReadKey(opened: opened, active: scenePhase == .active, latest: state.lines.last?.seq ?? 0)
+      id: ReadKey(
+        opened: opened, active: scenePhase == .active, latest: state.lines.last?.seq ?? 0,
+        reached: reachedLatest)
     ) {
-      readSoon()
+      guard opened, scroll.place.atLatest, scenePhase == .active else { return }
+      // Lines just come in are not yet laid out, and the place not yet
+      // moved for them: read only once they are on the screen.
+      try? await Task.sleep(for: .milliseconds(100))
+      if !Task.isCancelled, scroll.place.atLatest {
+        read()
+      }
     }
     // The socket's status, said once it has not been current for
     // statusShownAfterMs, and gone as soon as it is.
@@ -1260,16 +1270,6 @@ struct ChatScreen: View {
     }
   }
 
-  /// Reads the chat when it is open at its latest on an active screen,
-  /// once lines just come are laid out and the place moved for them.
-  private func readSoon() {
-    guard opened, scroll.place.atLatest, scenePhase == .active else { return }
-    Task { @MainActor in
-      try? await Task.sleep(for: .milliseconds(100))
-      if scroll.place.atLatest { read() }
-    }
-  }
-
   /// Marks the chat read up to its latest line, once it has come on screen.
   private func read() {
     guard let me = meID, let latest = chat.state.lines.last?.seq,
@@ -1872,6 +1872,7 @@ private struct ReadKey: Hashable {
   let opened: Bool
   let active: Bool
   let latest: Int64
+  let reached: Int
 }
 
 /// A line of words: others' on the left with their face and, at the start
