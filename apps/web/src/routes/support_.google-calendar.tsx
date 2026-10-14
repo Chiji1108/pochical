@@ -38,6 +38,9 @@ function GoogleCalendarGuide() {
             <li>「Google」を選んで、Googleアカウントでログインします。</li>
             <li>「カレンダー」をオンにして、保存します。</li>
           </ol>
+          <p className="small-note">
+            すでに追加しているときは、「カレンダーアカウント」でそのアカウントを開き、「カレンダー」がオンになっているか確かめてください。
+          </p>
           <div className="guide-shots">
             <figure>
               <img
@@ -58,9 +61,6 @@ function GoogleCalendarGuide() {
               <figcaption>「アカウントを追加」で「Google」を選ぶ</figcaption>
             </figure>
           </div>
-          <p className="small-note">
-            すでに追加しているときは、「カレンダーアカウント」でそのアカウントを開き、「カレンダー」がオンになっているか確かめてください。
-          </p>
         </section>
         <section>
           <h2>
@@ -96,6 +96,21 @@ function GoogleCalendarGuide() {
             <span className="legal-index">3</span>
             うまくいかないとき
           </h2>
+          <h3>追加先に「Gmail」（Googleアカウント）が出てこない</h3>
+          <p>
+            メールのためにGoogleアカウントを追加していても、カレンダーがオフのままのことがあります。設定アプリの「アプリ」→「カレンダー」→「カレンダーアカウント」でそのアカウントを開き、「カレンダー」をオンにしてください。そこにGoogleのアカウントがないときは、1の手順で追加します。オンにしたら少し待ってから、ポチカルの「端末カレンダーに追加」を開き直してください。
+          </p>
+          <div className="guide-shots">
+            <figure>
+              <img
+                alt="設定アプリのGmailアカウントの画面。メール、連絡先、カレンダー、メモのスイッチが並び、カレンダーがオンになっている。"
+                height={632}
+                src="/support/account-calendar.png"
+                width={600}
+              />
+              <figcaption>「カレンダー」をオンにする</figcaption>
+            </figure>
+          </div>
           <h3>Googleカレンダーに出てこない</h3>
           <p>
             Googleに届くまで、少し時間がかかることがあります。しばらくしても出てこないときは、追加先にGoogleアカウントの下のカレンダーを選んだか確かめてください。
