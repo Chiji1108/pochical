@@ -361,19 +361,47 @@ function OffLookChoices({ offs }: { offs: Pattern[] }) {
   const lookOf = useOffLooks();
   const setOffLook = useSettings((state) => state.setOffLook);
   return (
+    <OffLookRows
+      lookOf={lookOf}
+      offs={offs}
+      onChange={(shift, look) => {
+        setOffLook(
+          shift,
+          look,
+          offs.map(({ id }) => id)
+        );
+      }}
+    />
+  );
+}
+
+// One row of tabs for each pattern that counts as off, named once there
+// is more than one. The style page draws each with its own day; the saved
+// image names them alone (`samples` false), the picture above showing
+// them. Each row's tabs are named by the pattern alone, under the
+// section's 休みの見せ方, so 休み's do not read as the whole section's.
+export function OffLookRows({
+  offs,
+  lookOf,
+  onChange,
+  samples = true,
+}: {
+  offs: Pattern[];
+  lookOf: (shift: Shift) => OffLookId;
+  onChange: (shift: Shift, look: OffLookId) => void;
+  samples?: boolean;
+}) {
+  return (
     <div className={offRows.list}>
       {offs.map((pattern) => (
         <div className={offRows.row} key={pattern.id}>
           {offs.length > 1 && <p className={offRows.name}>{pattern.name}</p>}
           <OffLookTabs
-            label={offs.length > 1 ? `${pattern.name}の見せ方` : undefined}
+            label={offs.length > 1 ? pattern.name : undefined}
             onChange={(look) => {
-              setOffLook(
-                pattern.id,
-                look,
-                offs.map(({ id }) => id)
-              );
+              onChange(pattern.id, look);
             }}
+            samples={samples}
             shift={pattern.id}
             value={lookOf(pattern.id)}
           />

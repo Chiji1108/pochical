@@ -63,6 +63,18 @@ import Testing
   #expect(look.icon.offs.isEmpty)
 }
 
+@Test func aPictureSetsEachDayOffApart() {
+  var picture = PictureLook()
+  picture.options.setOffLook(.blank, of: "gone", offPatterns: ["gone", "off"])
+  picture.options.setOffLook(.blank, of: "off", offPatterns: ["off", "paid"])
+  #expect(picture.options.offs == ["off": .blank])
+  // Those not set yet are tinted, as the picture starts.
+  #expect(picture.options.offLook(of: "paid") == .highlight)
+  // Set back as it starts, a pattern is not kept.
+  picture.options.setOffLook(.highlight, of: "off", offPatterns: ["off", "paid"])
+  #expect(picture.options.offs.isEmpty)
+}
+
 @Test func aThemeNoLongerKnownIsTheAppsOwn() throws {
   let kept = Data(#"{"themeID":"gone"}"#.utf8)
   let settings = try JSONDecoder().decode(DeviceSettings.self, from: kept)

@@ -312,6 +312,7 @@ export function DesignCalendar({
           onClose={() => {
             setImagePreview(false);
           }}
+          offPatterns={allPatterns.filter((pattern) => isDayOff(pattern))}
           onOptions={setImageOptions}
           options={imageOptions}
           schedule={schedule}
