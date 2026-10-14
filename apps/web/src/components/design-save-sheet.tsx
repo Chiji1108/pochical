@@ -37,6 +37,7 @@ import {
   CellNamesContext,
   OffDisplayContext,
   OffHighlightContext,
+  ShiftMark,
 } from "./shift-mark";
 
 // The calendars on the device that take new events, as the system lists
@@ -166,6 +167,8 @@ const save = {
     height: "10px",
     width: "10px",
   }),
+  // The calendar, the days off and the rest, a list each.
+  groups: css({ display: "flex", flexDirection: "column", gap: "24px" }),
   // The notes under the switches, a paragraph each, as iOS spaces its
   // footer's.
   notes: css({ display: "flex", flexDirection: "column", gap: "8px" }),
@@ -354,56 +357,70 @@ export function SaveSheet({
           <p className={sheetLead}>
             {monthLabel}のシフトを、1日ずつ予定として入れます。
           </p>
-          <List>
-            <ListRow
-              label="追加先"
-              onClick={() => {
-                setStep("pick");
-              }}
-              value={
-                <>
-                  <span
-                    aria-hidden="true"
-                    className={save.valueDot}
-                    style={{ background: calendar?.color }}
-                  />
-                  {calendar?.name}
-                </>
-              }
-            />
-            {/* Each kind of day off on its own, as 有休 may go in
-                without 休み. */}
-            {offPatterns.map((pattern) => (
+          <div className={save.groups}>
+            <List>
+              <ListRow
+                label="追加先"
+                onClick={() => {
+                  setStep("pick");
+                }}
+                value={
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className={save.valueDot}
+                      style={{ background: calendar?.color }}
+                    />
+                    {calendar?.name}
+                  </>
+                }
+              />
+            </List>
+            {/* Each kind of day off on its own, as 有休 may go in without
+                休み, by its mark and name, so 休み reads as the pattern
+                rather than any day off. */}
+            {offPatterns.length > 0 && (
+              <Section title="予定に入れる休み">
+                <List>
+                  {offPatterns.map((pattern) => (
+                    <SwitchRow
+                      checked={putting.off.includes(pattern.id)}
+                      key={pattern.id}
+                      label={pattern.name}
+                      leading={<ShiftMark shift={pattern.id} size={18} />}
+                      onChange={(checked) => {
+                        const off = putting.off.filter(
+                          (id) => id !== pattern.id
+                        );
+                        setPutting({
+                          ...putting,
+                          off: checked ? [...off, pattern.id].toSorted() : off,
+                        });
+                      }}
+                    />
+                  ))}
+                </List>
+              </Section>
+            )}
+            <List>
               <SwitchRow
-                checked={putting.off.includes(pattern.id)}
-                key={pattern.id}
-                label={`${pattern.name}の日も入れる`}
-                onChange={(checked) => {
-                  const off = putting.off.filter((id) => id !== pattern.id);
-                  setPutting({
-                    ...putting,
-                    off: checked ? [...off, pattern.id].toSorted() : off,
-                  });
+                checked={putting.notes}
+                detail="予定がない日は、メモだけの予定にします"
+                label="メモも入れる"
+                onChange={(notes) => {
+                  setPutting({ ...putting, notes });
                 }}
               />
-            ))}
-            <SwitchRow
-              checked={putting.notes}
-              detail="予定がない日は、メモだけの予定にします"
-              label="メモも入れる"
-              onChange={(notes) => {
-                setPutting({ ...putting, notes });
-              }}
-            />
-            <SwitchRow
-              checked={putting.people}
-              detail="シフトの予定のメモ欄に入ります"
-              label="一緒に働く人も入れる"
-              onChange={(people) => {
-                setPutting({ ...putting, people });
-              }}
-            />
-          </List>
+              <SwitchRow
+                checked={putting.people}
+                detail="シフトの予定のメモ欄に入ります"
+                label="一緒に働く人も入れる"
+                onChange={(people) => {
+                  setPutting({ ...putting, people });
+                }}
+              />
+            </List>
+          </div>
           <div className={save.notes}>
             {carried.length > 0 && (
               <Note>

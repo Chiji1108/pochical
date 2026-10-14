@@ -262,13 +262,30 @@ struct DeviceCalendarSheet: View {
         }
       }
       .pickerStyle(.navigationLink)
-      // The line under it from the row's edge, as under the switch, not
-      // from where the picked calendar's dot puts its words.
-      .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
-      // Each kind of day off on its own, as 有休 may go in without 休み.
-      ForEach(calendar.patterns.filter(\.countsAsOff)) { pattern in
-        Toggle("\(pattern.name)の日も入れる", isOn: putsIn(pattern.id))
+    } header: {
+      Text("\(month.monthText)のシフトを、1日ずつ予定として入れます。")
+        .textCase(nil)
+    }
+    .settingsRows()
+    // Each kind of day off on its own, as 有休 may go in without 休み, by
+    // its mark and name, so 休み reads as the pattern rather than any day
+    // off.
+    let off = calendar.patterns.filter(\.countsAsOff)
+    if !off.isEmpty {
+      Section("予定に入れる休み") {
+        ForEach(off) { pattern in
+          Toggle(isOn: putsIn(pattern.id)) {
+            Label {
+              Text(pattern.name)
+            } icon: {
+              ShiftMark(pattern: pattern, size: 18)
+            }
+          }
+        }
       }
+      .settingsRows()
+    }
+    Section {
       Toggle(isOn: $settings.device.calendarAdd.notes) {
         Text("メモも入れる")
         Text("予定がない日は、メモだけの予定にします")
@@ -277,9 +294,6 @@ struct DeviceCalendarSheet: View {
         Text("一緒に働く人も入れる")
         Text("シフトの予定のメモ欄に入ります")
       }
-    } header: {
-      Text("\(month.monthText)のシフトを、1日ずつ予定として入れます。")
-        .textCase(nil)
     } footer: {
       VStack(alignment: .leading, spacing: 8) {
         // A day like 明け shows the night shift running into it already.
