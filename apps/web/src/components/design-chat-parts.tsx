@@ -111,7 +111,11 @@ export function ChatItem({
       })}
       id={id}
     >
-      {day !== undefined && <span className={chatStyle.when}>{day}</span>}
+      {day !== undefined && (
+        <span className={chatStyle.when} data-day={day}>
+          {day}
+        </span>
+      )}
       {children}
     </li>
   );

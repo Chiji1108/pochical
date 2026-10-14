@@ -9,6 +9,9 @@ export const chatRules = {
   // A card of shared days in rows shows this many, a week, and ほか{n}日
   // under them.
   dayCardRows: 7,
+  // How long, in milliseconds, the day floating over the lines stays once
+  // the chat stops scrolling, as LINE shows it while scrolling back.
+  floatingDayMs: 1500,
   // A message's words past this many lines end in … and 続きを読む.
   foldLines: 10,
   // A message of nothing but 1 to this many emoji shows them large,
@@ -30,6 +33,10 @@ export const chatRules = {
   // The most lines pinned at once, as LINE keeps five announcements; a
   // new one takes the place of the oldest.
   maxPins: 5,
+  // The most lines a chat lays out as it opens: its latest page, back to
+  // the reader's first unread line when that is earlier, at most this
+  // many. Earlier lines come a page at a time as it scrolls back.
+  openMax: 200,
   // How many lines a page of a chat holds: the latest when it opens, and
   // each earlier page as it scrolls back. A device catching up gets at
   // most this many new lines of each chat; the rest come as pages.

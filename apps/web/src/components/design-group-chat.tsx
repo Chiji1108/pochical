@@ -1,3 +1,4 @@
+import { chatRules } from "@pochical/design/chat";
 import {
   Bell,
   BellOff,
@@ -257,6 +258,8 @@ export function ChatPage({
     keepPlace,
     listRef,
     unseen,
+    floatingDay,
+    dayShown,
   } = useChatScroll({
     failedCount,
     messages: chat.messages,
@@ -483,6 +486,14 @@ export function ChatPage({
             )}
           </ol>
         </ChatContext>
+        {floatingDay !== undefined && (
+          <span
+            aria-hidden="true"
+            className={chatStyle.floatingDay({ shown: dayShown })}
+          >
+            {floatingDay}
+          </span>
+        )}
         {(awayFromLatest || unseen > 0) && (
           <span className={chatStyle.latest}>
             <IconButton
@@ -722,6 +733,9 @@ function useTypingSoon(group: Group, messages: Message[]) {
   return { answerSoon, typingMember };
 }
 
+// How near the foot, in pixels, the lines count as at their latest.
+const footSlack = 24;
+
 // Where the chat's lines are scrolled. As chat apps do, a chat opens on
 // its latest line and follows each new one, like a day just shared from
 // the shift table, and a photo's failure note under the lines just sent;
@@ -844,8 +858,36 @@ function useChatScroll({
       list.scrollTop = list.scrollHeight;
     }
   }, [typingId, awayFromLatest]);
+  // The day of the lines at the top, floating over them while the chat
+  // scrolls once its own title has gone up out of sight, as LINE shows it.
+  const [floatingDay, setFloatingDay] = useState<string>();
+  const [dayShown, setDayShown] = useState(false);
+  const hideDay = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const floatDay = (list: HTMLElement) => {
+    // Not at the foot, where the chat follows its latest line on its own.
+    if (list.scrollHeight - list.scrollTop - list.clientHeight < footSlack) {
+      return;
+    }
+    const { top } = list.getBoundingClientRect();
+    const gone = [...list.querySelectorAll<HTMLElement>("[data-day]")].findLast(
+      (title) => title.getBoundingClientRect().top < top
+    );
+    setFloatingDay(gone?.dataset.day);
+    setDayShown(gone !== undefined);
+    clearTimeout(hideDay.current);
+    hideDay.current = setTimeout(() => {
+      setDayShown(false);
+    }, chatRules.floatingDayMs);
+  };
+  useEffect(
+    () => () => {
+      clearTimeout(hideDay.current);
+    },
+    []
+  );
   const handleScroll = (event: UIEvent<HTMLOListElement>) => {
     const list = event.currentTarget;
+    floatDay(list);
     setAwayFromLatest(
       list.scrollHeight - list.scrollTop - list.clientHeight >
         list.clientHeight / 2
@@ -860,7 +902,9 @@ function useChatScroll({
   };
   return {
     awayFromLatest,
+    dayShown,
     firstUnreadId,
+    floatingDay,
     handleLatest,
     handleScroll,
     keepPlace,

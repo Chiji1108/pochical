@@ -396,6 +396,30 @@ export const chatStyle = {
     minHeight: 0,
     position: "relative",
   }),
+  // The day of the lines at the top, over them while scrolling: the day's
+  // title lifted off the lines, on the chat's own ground and ringed so it
+  // reads over the bubbles (glass on iOS, as the ↓ is).
+  floatingDay: cva({
+    base: {
+      bg: "background.base",
+      borderColor: "border.default",
+      borderRadius: "sm",
+      borderWidth: "1px",
+      boxShadow: "md",
+      color: "text.tertiary",
+      left: "50%",
+      padding: "2px 12px",
+      pointerEvents: "none",
+      position: "absolute",
+      textStyle: "caption2",
+      top: "8px",
+      transform: "translateX(-50%)",
+      transition: "opacity 0.2s",
+    },
+    variants: {
+      shown: { false: { opacity: 0 }, true: { opacity: 1 } },
+    },
+  }),
   latest: css({ bottom: "12px", position: "absolute", right: "4px" }),
   // The count of new lines below, on the ↓'s corner as a chat's unread.
   latestCount: css({ position: "absolute", right: "-4px", top: "-4px" }),

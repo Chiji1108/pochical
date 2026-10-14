@@ -6,6 +6,7 @@ package app.pochical.design
 object Chat {
   const val dayCardColumns = 6
   const val dayCardRows = 7
+  const val floatingDayMs = 1500
   const val foldLines = 10
   const val largeEmojiMax = 3
   const val largeEmojiSize = 48
@@ -13,6 +14,7 @@ object Chat {
   const val linkPreviewAspect = 1.91f
   const val linkPreviewSettleMs = 400
   const val maxPins = 5
+  const val openMax = 200
   const val pageSize = 50
   const val photoMaxBytes = 4000000
   const val photoMaxEdge = 2048
