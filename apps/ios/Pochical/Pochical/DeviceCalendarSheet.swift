@@ -273,7 +273,7 @@ struct DeviceCalendarSheet: View {
         // What is left out under it, as メモも入れる says what it does, so
         // every name shows rather than one cut off at the row's end.
         VStack(alignment: .leading) {
-          Text("予定に入れる日")
+          Text("入れるシフト")
           Text(leftOut(listed))
             .font(.subheadline)
             .foregroundStyle(.secondary)
@@ -312,7 +312,7 @@ struct DeviceCalendarSheet: View {
     return calendar.patterns.filter { !$0.archived || inMonth.contains($0.id) }
   }
 
-  /// What the row under 予定に入れる日 says is left out, every name of it.
+  /// What the row under 入れるシフト says is left out, every name of it.
   private func leftOut(_ listed: [Pattern]) -> String {
     let shown = settings.device.calendarAdd.shown(of: calendar.patterns)
     let out = listed.filter { !shown.contains($0.id) }
@@ -359,7 +359,7 @@ struct DeviceCalendarSheet: View {
   }
 }
 
-/// 予定に入れる日: each pattern by its mark and name, checked when its days
+/// 入れるシフト: each pattern by its mark and name, checked when its days
 /// go in, kept with the account (spec/calendar.md).
 private struct PatternsPicked: View {
   @Environment(\.themeColors) private var colors
@@ -399,12 +399,12 @@ private struct PatternsPicked: View {
           .accessibilityAddTraits(on ? .isSelected : [])
         }
       } footer: {
-        Text("チェックした勤務や休みの日を、予定として入れます。")
+        Text("チェックしたシフトを、1日ずつ予定として入れます。")
       }
       .settingsRows()
     }
     .settingsList()
-    .navigationTitle("予定に入れる日")
+    .navigationTitle("入れるシフト")
     .navigationBarTitleDisplayMode(.inline)
   }
 }

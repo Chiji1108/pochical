@@ -125,7 +125,7 @@ function shownOf(patterns: readonly Pattern[], chosen: CalendarAdd["chosen"]) {
   );
 }
 
-// What the row under 予定に入れる日 says is left out, every name of it.
+// What the row under 入れるシフト says is left out, every name of it.
 function leftOut(listed: readonly Pattern[], shown: ReadonlySet<string>) {
   const out = listed.filter((pattern) => !shown.has(pattern.id));
   if (out.length === 0) {
@@ -242,7 +242,7 @@ function stepTitle(step: Step, monthLabel: string) {
     return "追加先";
   }
   if (step === "days") {
-    return "予定に入れる日";
+    return "入れるシフト";
   }
   if (typeof step === "object") {
     return "保存しました";
@@ -402,7 +402,7 @@ export function SaveSheet({
                 明け, and the row says what is left out. */}
             <List>
               <ListRow
-                label="予定に入れる日"
+                label="入れるシフト"
                 onClick={() => {
                   setStep("days");
                 }}
@@ -481,7 +481,7 @@ export function SaveSheet({
               );
             })}
           </List>
-          <Note>チェックした勤務や休みの日を、予定として入れます。</Note>
+          <Note>チェックしたシフトを、1日ずつ予定として入れます。</Note>
         </div>
       )}
       {step === "pick" && (

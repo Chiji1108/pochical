@@ -112,7 +112,7 @@ public struct PictureLook: Codable, Equatable, Sendable {
 }
 
 /// What 端末カレンダーに追加 puts in (spec/calendar.md): the patterns
-/// picked under 予定に入れる日, the day's memo and those on it, the last
+/// picked under 入れるシフト, the day's memo and those on it, the last
 /// two off until turned on, as a calendar may be shared with family.
 public struct CalendarAdd: Codable, Equatable, Sendable {
   /// The patterns picked otherwise than `ShiftEvents.shownAtFirst` has
