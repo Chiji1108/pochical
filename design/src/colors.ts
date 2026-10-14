@@ -46,13 +46,15 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
         name: "background-elevated",
       },
       {
-        dark: "#1c201b",
+        dark: "#181c17",
         label: "リスト・入力欄",
         light: "#f6f7f3",
         name: "fill-quaternary",
       },
       {
-        dark: "#242722",
+        // A step under a card in the dark, as a segment raises its picked
+        // option in the card's color on it.
+        dark: "#1d201b",
         label: "セグメント・吹き出し",
         light: "#f0f1ec",
         name: "fill-tertiary",
