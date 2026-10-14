@@ -22,4 +22,8 @@ export const socketRules = {
   // devices cut off together do not come back together.
   reconnectFirstMs: 1000,
   reconnectMostMs: 60_000,
+  // How long, in milliseconds, a socket stays not current (connecting, or
+  // its catch-up still coming) before a screen says so (接続中… /
+  // 更新中…), so a moment's sync does not flicker past.
+  statusShownAfterMs: 1000,
 } as const;

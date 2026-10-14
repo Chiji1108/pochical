@@ -72,6 +72,16 @@ public actor SyncClient {
   private var catchUpNonce: UInt32 = 0
   /// Screens waiting for the catch-up, each for a while at most.
   private var catchUpWaiters: [UUID: CheckedContinuation<Void, Never>] = [:]
+  /// Where the socket is, for the screens to say while it is not current.
+  private var status = SyncStatus.connecting {
+    didSet {
+      guard status != oldValue else { return }
+      for watcher in statusWatchers.values {
+        watcher.yield(status)
+      }
+    }
+  }
+  private var statusWatchers: [UUID: AsyncStream<SyncStatus>.Continuation] = [:]
   /// The screens told of others' typing, as it comes; never kept.
   private var typingWatchers: [UUID: AsyncStream<Pochical_V1_Typing>.Continuation] = [:]
 
@@ -136,6 +146,7 @@ public actor SyncClient {
     // What the next socket brings is not taken yet, as when switching to
     // another user.
     caughtUp = false
+    status = .connecting
   }
 
   /// Going to the background: the socket stays until the outbox is sent
@@ -184,6 +195,7 @@ public actor SyncClient {
       tries += 1
       connected = false
       caughtUp = false
+      status = .connecting
       do {
         try await connect()
       } catch let stop as Stop {
@@ -257,6 +269,7 @@ public actor SyncClient {
     case .welcome(let welcome):
       tries = 0
       connected = true
+      status = .catchingUp
       askCaughtUp()
       // A group's socket sends its chat outbox; the user's corrects the
       // time and sends theirs.
@@ -324,6 +337,7 @@ public actor SyncClient {
     case .pong(let pong):
       if pong.nonce == catchUpNonce {
         caughtUp = true
+        status = .current
         for waiter in catchUpWaiters.values {
           waiter.resume()
         }
@@ -383,6 +397,23 @@ public actor SyncClient {
 
   private func stopWaitingForCatchUp(_ id: UUID) {
     catchUpWaiters.removeValue(forKey: id)?.resume()
+  }
+
+  /// Where the socket is, now and as it changes, until the stream is let
+  /// go.
+  public func statuses() -> AsyncStream<SyncStatus> {
+    let (stream, continuation) = AsyncStream<SyncStatus>.makeStream()
+    let id = UUID()
+    statusWatchers[id] = continuation
+    continuation.yield(status)
+    continuation.onTermination = { [weak self] _ in
+      Task { await self?.stopWatchingStatus(id) }
+    }
+    return stream
+  }
+
+  private func stopWatchingStatus(_ id: UUID) {
+    statusWatchers[id] = nil
   }
 
   /// Others' typing in the group's chats as it comes (spec/sync-protocol.md,
@@ -530,4 +561,15 @@ struct ServerRefused: Error {
 
 extension Logger {
   static let sync = Logger(subsystem: "app.pochical", category: "sync")
+}
+
+/// Where a sync socket is (spec/sync-protocol.md, Sockets): what the
+/// screens say while it is not current.
+public enum SyncStatus: Sendable {
+  /// Not open: connecting, waiting to try again, or with no network.
+  case connecting
+  /// Open, what the server had at Welcome still coming.
+  case catchingUp
+  /// Open and caught up.
+  case current
 }

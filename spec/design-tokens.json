@@ -3196,7 +3196,8 @@
     "keepaliveText": "ping",
     "keepaliveWithinMs": 10000,
     "reconnectFirstMs": 1000,
-    "reconnectMostMs": 60000
+    "reconnectMostMs": 60000,
+    "statusShownAfterMs": 1000
   },
   "textStyles": {
     "body": {

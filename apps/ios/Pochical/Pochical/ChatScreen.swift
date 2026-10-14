@@ -138,6 +138,9 @@ struct ChatScreen: View {
   @Environment(\.look) private var look
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.groupSocket) private var socket
+  /// The socket said under the title, once it has stayed not current for
+  /// a moment (spec/chat.md): the lines shown may not be all there is.
+  @State private var syncSaid = SyncStatus.current
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.openGroupRoute) private var openGroupRoute
   @Dependency(\.defaultDatabase) private var database
@@ -488,7 +491,11 @@ struct ChatScreen: View {
                   .accessibilityLabel("通知オフ")
               }
             }
-            if otherID == nil {
+            if let words = syncWords {
+              Text(words)
+                .font(.caption2)
+                .foregroundStyle(colors.textTertiary)
+            } else if otherID == nil {
               Text("\(chat.writers.count { !$0.left })人")
                 .font(.caption2)
                 .foregroundStyle(colors.textTertiary)
@@ -544,8 +551,26 @@ struct ChatScreen: View {
         read()
       }
     }
+    // The socket's status, said once it has not been current for
+    // statusShownAfterMs, and gone as soon as it is.
+    .task(id: socket.map(ObjectIdentifier.init)) {
+      guard let socket else { return }
+      var saying: Task<Void, Never>?
+      for await status in await socket.statuses() {
+        saying?.cancel()
+        if status == .current || syncSaid != .current {
+          syncSaid = status
+          continue
+        }
+        saying = Task {
+          try? await Task.sleep(for: .milliseconds(SyncSocket.statusShownAfterMs))
+          if !Task.isCancelled { syncSaid = status }
+        }
+      }
+      saying?.cancel()
+    }
     // Others' typing, as it comes, each shown until it lapses.
-    .task(id: socket != nil) {
+    .task(id: socket.map(ObjectIdentifier.init)) {
       guard let socket else { return }
       for await typing in await socket.typing() where typing.threadID == threadID {
         withAnimation {
@@ -1207,6 +1232,16 @@ struct ChatScreen: View {
     // Asked again until the socket is open to ask.
     while !Task.isCancelled, await socket?.requestPage(of: threadID, before: first) != true {
       try? await Task.sleep(for: .seconds(1))
+    }
+  }
+
+  /// What the title says of the socket in place of how many are in the
+  /// group, as the messaging apps do; nil while it is current.
+  private var syncWords: String? {
+    switch syncSaid {
+    case .connecting: "接続中…"
+    case .catchingUp: "更新中…"
+    case .current: nil
     }
   }
 
