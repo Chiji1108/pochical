@@ -207,6 +207,12 @@ public struct GroupCalls: Sendable {
     return store.string(forKey: key)
   }
 
+  /// The user's id as last heard, read at once, with no call to the
+  /// server: for a screen that needs it on its first frame.
+  public nonisolated static var knownUserID: String? {
+    (UserDefaults(suiteName: appGroup) ?? .standard).string(forKey: "userID")
+  }
+
   /// Makes a group with the user in it, as `displayName`. `requestID` is
   /// made once for each group the person sets out to make and sent again
   /// with every retry, so a retry after a lost answer makes no second one.

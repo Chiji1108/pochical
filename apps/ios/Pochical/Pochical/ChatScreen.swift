@@ -198,6 +198,21 @@ struct ChatScreen: View {
   @State private var picked: [PickedMember] = []
   /// A link tapped in a line, open in the browser sheet.
   @State private var browsing: OpenedLink?
+
+  /// The lines read as the screen is made, by the reader last heard of,
+  /// so they are there through the push that brings it in rather than
+  /// arriving, oldest first, as it ends.
+  init(group: GroupRow, threadID: String, otherID: String?, sharing: Day? = nil) {
+    self.group = group
+    self.threadID = threadID
+    self.otherID = otherID
+    self.sharing = sharing
+    let me = GroupCalls.knownUserID
+    _meID = State(initialValue: me)
+    _chat = Fetch(
+      wrappedValue: ChatRequest.Value(),
+      ChatRequest(groupID: group.id, threadID: threadID, me: me))
+  }
   /// All the pins open under the bar.
   @State private var pinsOpen = false
   /// A pinned line being gone to, its earlier lines asked for until held.
@@ -433,9 +448,12 @@ struct ChatScreen: View {
       }
     }
     .task {
-      _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID))
-      meID = await groupCalls.userID()
-      _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: meID))
+      // The reader asked of the server only when not yet heard of, rather
+      // than before the chat may show.
+      if meID == nil {
+        meID = await groupCalls.userID()
+        _ = try? await $chat.load(ChatRequest(groupID: group.id, threadID: threadID, me: meID))
+      }
       // Opened from a notification as the app starts, its new lines are
       // still coming: where it opens waits for them, a little.
       await socket?.catchUp(within: .seconds(2))
