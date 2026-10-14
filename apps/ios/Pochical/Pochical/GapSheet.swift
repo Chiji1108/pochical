@@ -18,12 +18,11 @@ struct GapSheet: View {
   /// The pattern picked to fill with, shared with the calendar behind,
   /// which shows it faint on the days; none for the first.
   @Binding var picked: PatternID?
-  /// How the person's look showed each pattern as the sheet opened:
+  /// The patterns the person's look showed blank as the sheet opened:
   /// カレンダーでは空白で見せる is offered for the one picked unless it was
-  /// blank already, and stays while the sheet is open, as many leave a
-  /// day off blank for the look, which they keep while the days are
-  /// filled.
-  private let openedLook: MarkOptions
+  /// one of them, and stays while the sheet is open, as many leave a day
+  /// off blank for the look, which they keep while the days are filled.
+  @State private var blankAtOpen: Set<PatternID>
   /// Switched on: the look turns blank as the days are filled, and not
   /// before, so × changes nothing.
   @State private var blank = false
@@ -36,7 +35,9 @@ struct GapSheet: View {
     _picked = picked
     self.offPatterns = offPatterns
     self.onFill = onFill
-    self.openedLook = openedLook
+    _blankAtOpen = State(
+      initialValue: Set(
+        offPatterns.map(\.id).filter { openedLook.offLook(of: $0) == .blank }))
   }
 
   private var offPattern: Pattern {
@@ -69,7 +70,7 @@ struct GapSheet: View {
             .accessibilityElement(children: .contain)
             .accessibilityLabel("入れるパターン")
           }
-          if openedLook.offLook(of: offPattern.id) != .blank {
+          if !blankAtOpen.contains(offPattern.id) {
             Toggle(isOn: $blank) {
               Text("カレンダーでは空白で見せる")
               Text("お休みとして入れて、印は出しません")
@@ -87,8 +88,9 @@ struct GapSheet: View {
       // The answer stays at the foot, whatever scrolls above it.
       .safeAreaInset(edge: .bottom) {
         Button {
-          if blank && openedLook.offLook(of: offPattern.id) != .blank {
-            settings.device.look.options.offs[offPattern.id] = .blank
+          if blank && !blankAtOpen.contains(offPattern.id) {
+            settings.device.look.setOffLook(
+              .blank, of: offPattern.id, offPatterns: offPatterns.map(\.id))
           }
           onFill(offPattern)
           dismiss()

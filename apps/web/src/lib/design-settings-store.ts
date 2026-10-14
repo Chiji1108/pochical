@@ -113,8 +113,15 @@ type SettingsState = {
   setReminders: (reminders: Reminder[]) => void;
   // Changes the options of the shape in use.
   setCalendarOptions: (change: Partial<CalendarOptions>) => void;
-  // Sets how one pattern's days off show in the shape in use.
-  setOffLook: (shift: string, look: OffLookId) => void;
+  // Sets how one pattern's days off show in the shape in use, and drops
+  // from every shape the patterns no longer among `offPatterns`, so the
+  // look, kept with the account, does not grow with each pattern ever
+  // deleted.
+  setOffLook: (
+    shift: string,
+    look: OffLookId,
+    offPatterns: readonly string[]
+  ) => void;
 };
 
 // Letters already sit on tinted tiles and are the shift's name, so they
@@ -194,22 +201,23 @@ export const useSettings = create<SettingsState>()(
       setMonthTap: (monthTap) => {
         set((state) => ({ device: { ...state.device, monthTap } }));
       },
-      setOffLook: (shift, look) => {
+      setOffLook: (shift, look, offPatterns) => {
         set((state) => {
           const { style } = state.groupLook;
-          const options = state.device.calendar[style];
-          return {
-            device: {
-              ...state.device,
-              calendar: {
-                ...state.device.calendar,
-                [style]: {
-                  ...options,
-                  offs: { ...options.offs, [shift]: look },
-                },
-              },
-            },
+          const kept = (options: CalendarOptions) =>
+            Object.fromEntries(
+              Object.entries(options.offs ?? {}).filter(([key]) =>
+                offPatterns.includes(key)
+              )
+            );
+          const { badge, emoji, icon } = state.device.calendar;
+          const calendar = {
+            badge: { ...badge, offs: kept(badge) },
+            emoji: { ...emoji, offs: kept(emoji) },
+            icon: { ...icon, offs: kept(icon) },
           };
+          calendar[style].offs[shift] = look;
+          return { device: { ...state.device, calendar } };
         });
       },
       setPreset: (preset) => {

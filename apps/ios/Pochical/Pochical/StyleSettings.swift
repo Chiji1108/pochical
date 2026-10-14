@@ -98,7 +98,8 @@ struct StyleSettings: View {
                 ) { offLook in
                   sample(off) { $0.options.offs[off.id] = offLook }
                 } onPick: { offLook in
-                  settings.device.look.options.offs[off.id] = offLook
+                  settings.device.look.setOffLook(
+                    offLook, of: off.id, offPatterns: offs.map(\.id))
                 }
               }
             }

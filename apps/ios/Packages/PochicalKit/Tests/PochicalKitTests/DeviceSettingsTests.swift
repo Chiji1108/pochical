@@ -54,6 +54,15 @@ import Testing
   #expect(settings.look.icon.offLook(of: "wish") == .mark)
 }
 
+@Test func settingADayOffsLookDropsPatternsNoLongerThere() {
+  var look = Look()
+  look.setOffLook(.blank, of: "gone", offPatterns: ["gone", "off"])
+  look.style = .badge
+  look.setOffLook(.highlight, of: "off", offPatterns: ["off"])
+  #expect(look.badge.offs == ["off": .highlight])
+  #expect(look.icon.offs.isEmpty)
+}
+
 @Test func aThemeNoLongerKnownIsTheAppsOwn() throws {
   let kept = Data(#"{"themeID":"gone"}"#.utf8)
   let settings = try JSONDecoder().decode(DeviceSettings.self, from: kept)

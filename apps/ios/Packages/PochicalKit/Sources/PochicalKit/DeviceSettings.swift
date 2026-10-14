@@ -211,6 +211,20 @@ public struct Look: Codable, Equatable, Sendable {
 
   public init() {}
 
+  /// Sets how the days of the pattern `id` show in the shape in use, and
+  /// drops from every shape the patterns no longer among `offPatterns`,
+  /// so the look, kept with the account, does not grow with each pattern
+  /// ever deleted past what one value may hold.
+  public mutating func setOffLook(
+    _ offLook: OffLook, of id: PatternID, offPatterns: some Collection<PatternID>
+  ) {
+    options.offs[id] = offLook
+    let kept = Set(offPatterns)
+    icon.offs = icon.offs.filter { kept.contains($0.key) }
+    emoji.offs = emoji.offs.filter { kept.contains($0.key) }
+    badge.offs = badge.offs.filter { kept.contains($0.key) }
+  }
+
   /// The options of the shape in use.
   public var options: MarkOptions {
     get {

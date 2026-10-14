@@ -576,7 +576,11 @@ export function DesignCalendar({
         onFill={fillGaps}
         onPick={setGapFill}
         onBlankOff={(key) => {
-          setOffLook(key, "blank");
+          setOffLook(
+            key,
+            "blank",
+            ownPatterns.filter(isDayOff).map(({ id }) => id)
+          );
         }}
         onOpenChange={sheetChange("gap")}
         open={openSheet === "gap"}

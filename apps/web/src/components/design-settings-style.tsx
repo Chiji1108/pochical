@@ -3,7 +3,7 @@ import { presets } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
 import { useMotionValue } from "motion/react";
 import { useContext, useState } from "react";
-import { css, cva } from "styled-system/css";
+import { css } from "styled-system/css";
 
 import { useDevice } from "../lib/design-device";
 import {
@@ -138,28 +138,26 @@ const themeCard = {
 
 // 休みの見せ方 and シフト名 drawn as a day in small: its date, and the mark
 // lit or not, with the name under it or not.
-const offSample = cva({
-  base: {
-    "& small": { color: "text.secondary", fontSize: "9px", fontWeight: 600 },
-    // The shift's name under the mark, smaller than the date. Its line is
-    // one em tall, so it fits in what the box has left; at its normal height
-    // the box squeezed it and lineClamp's overflow cut its letters off.
-    "& small[data-part=name]": {
-      fontSize: "7px",
-      lineClamp: 1,
-      lineHeight: "1",
-      maxWidth: "100%",
-      overflowWrap: "anywhere",
-    },
-    alignItems: "center",
-    borderRadius: "sm",
-    display: "flex",
-    flexDirection: "column",
-    gap: "1px",
-    height: "40px",
-    paddingTop: "4px",
-    width: "32px",
+const offSample = css({
+  "& small": { color: "text.secondary", fontSize: "9px", fontWeight: 600 },
+  // The shift's name under the mark, smaller than the date. Its line is
+  // one em tall, so it fits in what the box has left; at its normal height
+  // the box squeezed it and lineClamp's overflow cut its letters off.
+  "& small[data-part=name]": {
+    fontSize: "7px",
+    lineClamp: 1,
+    lineHeight: "1",
+    maxWidth: "100%",
+    overflowWrap: "anywhere",
   },
+  alignItems: "center",
+  borderRadius: "sm",
+  display: "flex",
+  flexDirection: "column",
+  gap: "1px",
+  height: "40px",
+  paddingTop: "4px",
+  width: "32px",
 });
 
 export function MarkPage({
@@ -312,7 +310,7 @@ export function OffLookTabs({
           {samples && (
             <span
               aria-hidden="true"
-              className={offSample()}
+              className={offSample}
               style={
                 option.id === "highlight" ? { background: tint } : undefined
               }
@@ -354,7 +352,7 @@ export function NameTabs({
       {[false, true].map((withName) => (
         <Segment key={String(withName)} value={String(withName)}>
           {samples && (
-            <span aria-hidden="true" className={offSample()}>
+            <span aria-hidden="true" className={offSample}>
               <small>5</small>
               <ShiftMark shift={work.id} size={withName ? 16 : 18} />
               {withName && <small data-part="name">{dayName(work.name)}</small>}
@@ -380,7 +378,11 @@ function OffLookChoices({ offs }: { offs: Pattern[] }) {
           <OffLookTabs
             label={offs.length > 1 ? `${pattern.name}の見せ方` : undefined}
             onChange={(look) => {
-              setOffLook(pattern.id, look);
+              setOffLook(
+                pattern.id,
+                look,
+                offs.map(({ id }) => id)
+              );
             }}
             shift={pattern.id}
             value={lookOf(pattern.id)}
