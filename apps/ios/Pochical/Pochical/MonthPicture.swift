@@ -50,19 +50,10 @@ struct MonthPicturePage: View {
             .padding(.top, 10)
             .settingsOnPage()
         }
-        // The style page's choices, with the picture's own values: it
-        // goes to people who do not know the marks, so names start on.
-        Section("休みの見せ方") {
-          Choices(
-            options: OffLook.allCases, picked: OffLook(picture.options), label: \.name
-          ) { _ in
-            EmptyView()
-          } onPick: { offLook in
-            offLook.apply(to: &settings.device.picture.options)
-          }
-          .settingsOnPage()
-        }
-        Section {
+        // The style page's choices in its order, with the picture's own
+        // values: it goes to people who do not know the marks, so names
+        // start on.
+        Section("シフト名") {
           Choices(
             options: [false, true], picked: picture.options.names, label: { $0 ? "あり" : "なし" }
           ) { _ in
@@ -71,8 +62,19 @@ struct MonthPicturePage: View {
             settings.device.picture.options.names = names
           }
           .settingsOnPage()
+        }
+        // One for every day off, as they see them all alike.
+        Section {
+          Choices(
+            options: OffLook.allCases, picked: picture.options.off, label: \.name
+          ) { _ in
+            EmptyView()
+          } onPick: { offLook in
+            settings.device.picture.options.off = offLook
+          }
+          .settingsOnPage()
         } header: {
-          Text("シフト名")
+          Text("休みの見せ方")
         } footer: {
           Text("画像にだけ使う見た目です。アプリのスタイルは変わりません。")
         }
@@ -233,7 +235,7 @@ struct MonthPicture: View {
                 pattern: entry.flatMap { calendar.patternsByID[$0.shift] },
                 outside: !inMonth, isToday: false, isHoliday: day.holidayName != nil,
                 colorsHoliday: week.holiday,
-                offShown: look.options.blankOff ? .hidden : .shown)
+                offShown: .hidden)
             }
           }
         }

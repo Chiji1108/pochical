@@ -20,7 +20,7 @@ struct DayCell: View {
   /// Whether a holiday's date takes Sunday's red (the person's カレンダー
   /// settings).
   var colorsHoliday = true
-  /// How a day off shows when the person leaves days off blank.
+  /// How a day off the look leaves blank shows here.
   var offShown = OffShown.shown
   /// The day being entered or opened, framed in the accent.
   var isSelected = false
@@ -55,12 +55,12 @@ struct DayCell: View {
     VStack(spacing: 2) {
       date
       // A preview shows whatever the look: it is what would be filled.
-      if let pattern, preview || !(pattern.countsAsOff && offShown == .hidden) {
+      if let pattern, preview || !(blank && offShown == .hidden) {
         ShiftMark(
           pattern: pattern, size: markSize,
           change: timeChange(start: entry?.start, end: entry?.end, standard: pattern.time)
         )
-        .opacity(faint || preview || (pattern.countsAsOff && offShown == .faint) ? 0.35 : 1)
+        .opacity(faint || preview || (blank && offShown == .faint) ? 0.35 : 1)
         .frame(maxHeight: look.options.names ? nil : .infinity)
         if look.options.names {
           Text(dayName(pattern.name))
@@ -95,11 +95,18 @@ struct DayCell: View {
     .accessibilityLabel(accessibilityText)
   }
 
-  /// A day off's tile, when the look draws days off on a tint.
+  /// How the look shows this day off; none for a working day.
+  private var offLook: OffLook? {
+    guard let pattern, pattern.countsAsOff else { return nil }
+    return look.options.offLook(of: pattern.id)
+  }
+
+  /// A day off the look leaves blank (休みの見せ方 空白).
+  private var blank: Bool { offLook == .blank }
+
+  /// A day off's tile, when the look draws its pattern on a tint.
   private var tile: MarkColor? {
-    guard look.options.highlight, offShown == .shown, !faint, !preview, let pattern,
-      pattern.countsAsOff
-    else { return nil }
+    guard offLook == .highlight, !faint, !preview, let pattern else { return nil }
     return colors.mark(look.colored ? pattern.color : 0)
   }
 
@@ -174,9 +181,9 @@ struct PressedScale: ButtonStyle {
   }
 }
 
-/// How days off show on the person's month while they leave them blank
-/// (休みの見せ方 空白): left out, or faint while entering and in a day's
-/// week; shown as they are otherwise.
+/// How the days off the look leaves blank (休みの見せ方 空白) show where
+/// they are drawn: left out on the month, or faint while entering and in
+/// a day's week; shown as they are where nothing is left blank.
 enum OffShown {
   case shown
   case faint

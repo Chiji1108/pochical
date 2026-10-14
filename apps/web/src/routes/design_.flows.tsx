@@ -151,9 +151,11 @@ function FlowsPage() {
             <FrameRow branch="人によって変わるところ" fan>
               <OffDisplayContext value="blank">
                 <GapFrame
+                  choices={[
+                    { blank: true, key: "off", label: presetPatterns.off.name },
+                  ]}
                   label="休みを空白で見せている人"
                   note="空白のスイッチがない"
-                  offerBlank={false}
                 />
               </OffDisplayContext>
               <GapFrame
@@ -323,7 +325,6 @@ function GapFrame({
         <GapSheetPreview
           choices={[{ key: "off", label: presetPatterns.off.name }]}
           days={days}
-          offerBlank
           onBlankOff={() => undefined}
           onFill={() => undefined}
           {...sheet}

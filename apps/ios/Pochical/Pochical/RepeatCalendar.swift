@@ -201,8 +201,8 @@ struct RepeatCalendar: View {
               pattern: shift.flatMap { byID[$0] ?? before?.patternsByID[$0] },
               outside: day.month != month.month || !inOrder, isToday: day == .today,
               isHoliday: day.holidayName != nil,
-              colorsHoliday: settings.device.week.holiday, isSelected: index == cursor,
-              isEntering: true, faint: inOrder && !typed,
+              colorsHoliday: settings.device.week.holiday, offShown: .faint,
+              isSelected: index == cursor, isEntering: true, faint: inOrder && !typed,
               onSelect: press)
           }
         }

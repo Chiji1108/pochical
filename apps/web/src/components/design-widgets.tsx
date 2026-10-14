@@ -12,7 +12,7 @@ import {
   OffDisplayContext,
   ShiftMark,
   ShiftMarkStyleContext,
-  useOffHighlight,
+  useOffLooks,
 } from "./shift-mark";
 
 // The widgets themselves: views of one WidgetEntry, as the native apps'
@@ -128,27 +128,26 @@ export function SpokenDay({ day }: { day: WidgetDay }) {
 }
 
 // How a day off shows where each day has its own mark, as the calendar
-// shows it with the person's 休みの見せ方: on a tile of its pattern's
-// tint, its mark faint, or left empty. The two weeks read as the
-// calendar's week, where a day off left empty comes back faint, to tell
-// it from a day with nothing entered.
+// shows it with the person's 休みの見せ方 for its pattern: on a tile of its
+// pattern's tint, its mark faint, or left empty. The two weeks read as
+// the calendar's week, where a day off left empty comes back faint, to
+// tell it from a day with nothing entered.
 type OffLook = { tile: boolean; mark: "show" | "faint" | "none" };
 const shownOff: OffLook = { mark: "show", tile: false };
 
 export function useOffLook(day: WidgetDay, week: boolean): OffLook {
-  const highlight = useOffHighlight(useContext(ShiftMarkStyleContext));
+  const look = useOffLooks()(day.shift);
   const display = useContext(OffDisplayContext);
   if (!day.off) {
     return shownOff;
   }
-  const shown = week && display === "blank" ? "faint" : display;
-  if (shown === "blank") {
-    return { mark: "none", tile: false };
+  if (look === "blank") {
+    return {
+      mark: week || display === "faint" ? "faint" : "none",
+      tile: false,
+    };
   }
-  if (shown === "faint") {
-    return { mark: "faint", tile: false };
-  }
-  return { mark: "show", tile: highlight };
+  return { mark: "show", tile: look === "highlight" };
 }
 
 export const dayMark = css({

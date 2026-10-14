@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, useMotionValue } from "motion/react";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { css, cva } from "styled-system/css";
 
 import {
@@ -53,7 +53,7 @@ import type { Tab } from "./design-tab-bar";
 import { IconButton, Screen, srOnly } from "./design-ui";
 import { useWeek, weekdayNames } from "./design-week";
 import { FoldingGrid, useWeekFold } from "./design-week-fold";
-import { OffDisplayContext } from "./shift-mark";
+import { OffFaintContext, useOffLooks } from "./shift-mark";
 
 // The calendar tab: the month, or a week folded out of it with a day's
 // details, its summary, and entering the shifts day by day. It stays put
@@ -102,15 +102,15 @@ export function DesignCalendar({
   const [gapDays, setGapDays] = useState<Date[]>([]);
   // The pattern picked in the gap sheet, shown faint on its days.
   const [gapFill, setGapFill] = useState<Shift>();
-  // Whether the sheet offers showing days off blank: decided as it opens,
-  // so switching it on there does not take the switch away.
-  const [offerBlank, setOfferBlank] = useState(false);
-  const setCalendarOptions = useSettings((state) => state.setCalendarOptions);
+  // The patterns the look left blank as the gap sheet opened, which it
+  // does not offer to leave blank.
+  const [blankAtOpen, setBlankAtOpen] = useState<readonly Shift[]>([]);
+  const setOffLook = useSettings((state) => state.setOffLook);
   // Whether the save sheet opened because the month was just filled in.
   // Whether it opened straight on adding to the device calendar.
   const [saveToCalendar, setSaveToCalendar] = useState(false);
   const [imagePreview, setImagePreview] = useState(false);
-  const offDisplay = useContext(OffDisplayContext);
+  const offLookOf = useOffLooks();
   const imageOptions = useSettings((state) => state.device.imageOptions);
   const setImageOptions = useSettings((state) => state.setImageOptions);
   const coworkers = useUser((state) => state.coworkers);
@@ -267,7 +267,11 @@ export function DesignCalendar({
     if (gaps.length > 0) {
       setGapDays(gaps);
       setGapFill(undefined);
-      setOfferBlank(offDisplay === "show");
+      setBlankAtOpen(
+        ownPatterns
+          .filter((pattern) => offLookOf(pattern.id) === "blank")
+          .map(({ id }) => id)
+      );
       setOpenSheet("gap");
     } else if (Object.values(schedule).some((entry) => entry !== undefined)) {
       reminderOffer.offer();
@@ -364,11 +368,7 @@ export function DesignCalendar({
         <div className={calendarPage.pull} ref={pullRef}>
           <div className={calendarPage.scroll({ weekDetail })}>
             <WeekdayRow />
-            <OffDisplayContext
-              value={
-                weekDetail && offDisplay === "blank" ? "faint" : offDisplay
-              }
-            >
+            <OffFaintContext value={weekDetail}>
               <Pager
                 onStep={(direction) => {
                   step(direction);
@@ -440,7 +440,7 @@ export function DesignCalendar({
                   );
                 }}
               />
-            </OffDisplayContext>
+            </OffFaintContext>
           </div>
           {weekDetail && (
             <motion.section
@@ -567,13 +567,20 @@ export function DesignCalendar({
       <GapSheet
         choices={ownPatterns
           .filter((pattern) => isDayOff(pattern))
-          .map((pattern) => ({ key: pattern.id, label: pattern.name }))}
+          .map((pattern) => ({
+            blank: blankAtOpen.includes(pattern.id),
+            key: pattern.id,
+            label: pattern.name,
+          }))}
         days={gapDays}
         onFill={fillGaps}
         onPick={setGapFill}
-        offerBlank={offerBlank}
-        onBlankOff={() => {
-          setCalendarOptions({ blankOff: true });
+        onBlankOff={(key) => {
+          setOffLook(
+            key,
+            "blank",
+            ownPatterns.filter(isDayOff).map(({ id }) => id)
+          );
         }}
         onOpenChange={sheetChange("gap")}
         open={openSheet === "gap"}

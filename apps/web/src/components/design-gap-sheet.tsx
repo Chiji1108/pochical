@@ -8,7 +8,10 @@ import { Sheet, SheetHeading, SheetPicture, sheetBody } from "./design-sheet";
 import { Button } from "./design-ui";
 import { weekdayNames } from "./design-week";
 
-export type OffChoice = { key: Shift; label: string };
+// A pattern that counts as off, and whether the person's look left it
+// blank as the sheet opened: decided then, so switching it on there does
+// not take the switch away.
+export type OffChoice = { key: Shift; label: string; blank?: boolean };
 
 // A group of chips with room under it before what follows.
 const spaced = css({ marginBottom: "16px" });
@@ -30,17 +33,17 @@ export type GapSheetProps = {
   // The person's patterns that count as a day off, in their order; it is
   // asked only with one.
   choices: OffChoice[];
-  // Offered to people not showing days off blank yet: many leave them
-  // blank for the look, which they keep while the days are filled. The
-  // same setting as on the style page, said as what it does here.
-  offerBlank: boolean;
   onFill: (key: Shift | undefined) => void;
   // Told of the pattern picked, which the calendar behind shows faint on
   // the days.
   onPick?: (key: Shift) => void;
-  // Told as the days are filled with the switch on, and not before, so
-  // closing the sheet changes nothing.
-  onBlankOff: () => void;
+  // Told of the pattern filled with the switch on, as the days are filled
+  // and not before, so closing the sheet changes nothing. The switch is
+  // offered for a pattern the look does not leave blank yet: many leave
+  // days off blank for the look, which they keep while the days are
+  // filled. The same setting as on the style page, said as what it does
+  // here.
+  onBlankOff: (key: Shift) => void;
 };
 
 // Asked, not explained: a blank day is most often a day off not entered,
@@ -85,7 +88,6 @@ export function GapSheetPreview(props: GapSheetProps) {
 function GapSheetBody({
   days,
   choices,
-  offerBlank,
   onFill,
   onBlankOff,
   onPick,
@@ -94,6 +96,7 @@ function GapSheetBody({
   const [picked, setPicked] = useState<Shift>();
   const [blank, setBlank] = useState(false);
   const current = choices.find(({ key }) => key === picked) ?? choices[0];
+  const offerBlank = current !== undefined && current.blank !== true;
   return (
     <>
       <SheetHeading onClose={close} title={titleOf(days)} />
@@ -136,8 +139,8 @@ function GapSheetBody({
             variant="primary"
             onClick={() => {
               close();
-              if (blank) {
-                onBlankOff();
+              if (blank && offerBlank) {
+                onBlankOff(current.key);
               }
               onFill(current?.key);
             }}
