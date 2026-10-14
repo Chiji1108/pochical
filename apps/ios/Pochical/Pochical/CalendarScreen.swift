@@ -475,8 +475,7 @@ struct CalendarScreen: View {
   /// in a day's week, where they are what is being looked at (休みの見せ方
   /// 空白).
   private var offShown: OffShown {
-    guard settings.device.look.options.blankOff else { return .shown }
-    return entering != nil || opened != nil ? .faint : .hidden
+    entering != nil || opened != nil ? .faint : .hidden
   }
 
   /// While the gap sheet asks, its days drawn faint as the pattern picked
@@ -589,7 +588,7 @@ struct CalendarScreen: View {
     guard !offPatterns.isEmpty, !gaps.isEmpty else { return nil }
     return GapSheet(
       days: gaps, offPatterns: offPatterns, picked: $gapFill,
-      blankOff: settings.device.look.options.blankOff
+      openedLook: settings.device.look.options
     ) { off in
       write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
     }

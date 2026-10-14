@@ -159,7 +159,7 @@ private struct ColumnDay: View {
   var body: some View {
     // A day off left empty stays empty: a day with nothing entered has its
     // dash here, so the two still read apart.
-    let off = OffLook(day, look: look, inWeek: false)
+    let off = OffDrawing(day, look: look, inWeek: false)
     VStack(spacing: 0) {
       ColumnHead(day: day, first: first, onTile: off.tile)
       // The mark in the middle of the room under the date, and what
@@ -382,7 +382,7 @@ private struct LockDays: View {
       ForEach(days, id: \.date) { day in
         // A day off as in the calendar's week: faint where 休みの見せ方
         // leaves it empty.
-        let off = OffLook(day, look: look, inWeek: true)
+        let off = OffDrawing(day, look: look, inWeek: true)
         VStack(spacing: 4) {
           // One size for every weekday, small enough for MON and WED in
           // a cramped column, so no one of them shrinks alone.

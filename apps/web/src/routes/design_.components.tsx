@@ -107,7 +107,7 @@ import {
   ShiftMark,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
-import type { ShiftMarkStyle } from "../components/shift-mark";
+import type { OffLookId, ShiftMarkStyle } from "../components/shift-mark";
 import { sampleRosterPhoto } from "../lib/design-sample-photos";
 import { supportThreadOf } from "../lib/design-support";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
@@ -633,7 +633,7 @@ function Rows() {
 }
 
 function Switches() {
-  const [off, setOff] = useState({ blankOff: false, highlight: true });
+  const [off, setOff] = useState<OffLookId>("highlight");
   const [names, setNames] = useState(false);
   const [day, setDay] = useState(0);
   return (

@@ -18,10 +18,11 @@ import { holidayName, useWeek } from "./design-week";
 import {
   CellNamesContext,
   OffDisplayContext,
+  OffFaintContext,
   ShiftMark,
   ShiftMarkStyleContext,
   useDisplayColor,
-  useOffHighlight,
+  useOffLooks,
 } from "./shift-mark";
 
 // A day of a month: its date, and its shift's mark with the name under
@@ -242,7 +243,6 @@ export function DayCell({
   preview?: boolean;
   className?: string;
 }) {
-  const markStyle = useContext(ShiftMarkStyleContext);
   const faint = fainted || preview;
   // A picture of the month keeps to the month; on screen the days around it
   // show what they hold, faded, and open like any other day.
@@ -250,18 +250,22 @@ export function DayCell({
   const shift = blank ? undefined : entry?.shift;
   const book = usePatterns();
   const pattern = shift === undefined ? undefined : book[shift];
-  const highlight = useOffHighlight(markStyle);
+  const offLook = useOffLooks()(shift);
   const { tint } = useDisplayColor(pattern?.color ?? presetPatterns.off.color);
+  // Days off left blank come back faint while entering and in the week
+  // view, where they are what is being looked at.
   const offDisplay = useContext(OffDisplayContext);
+  const faintWeek = useContext(OffFaintContext);
+  const faintHere = offDisplay === "faint" || faintWeek || editing;
   const dayOff = isDayOff(pattern);
+  const blankOff = dayOff && offLook === "blank";
   // A preview shows whatever the look: it is what would be filled.
-  const hideOff = dayOff && offDisplay === "blank" && !editing && !preview;
-  const faintOff =
-    dayOff && (offDisplay === "faint" || (offDisplay === "blank" && editing));
+  const hideOff = blankOff && !faintHere && !preview;
+  const faintOff = blankOff && faintHere;
   const offStyle =
     hideOff || faintOff || faint
       ? undefined
-      : dayOffStyle(dayOff, highlight, tint);
+      : dayOffStyle(dayOff, offLook === "highlight", tint);
   const today = dateKey(date) === dateKey(designToday);
   const holiday = useWeek().isColoredHoliday(date);
   const change = blank ? undefined : timeChangeOf(entry, pattern);

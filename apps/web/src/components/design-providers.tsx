@@ -18,6 +18,8 @@ import {
   MonochromeContext,
   OffDisplayContext,
   OffHighlightContext,
+  noOffLooks,
+  OffLooksContext,
   ShiftMarkStyleContext,
 } from "./shift-mark";
 
@@ -110,7 +112,9 @@ export function DesignProviders({
                 >
                   <MonochromeContext value={{ monochrome: !shiftColors }}>
                     <OffDisplayContext value={look.blankOff ? "blank" : "show"}>
-                      {children}
+                      <OffLooksContext value={look.offs ?? noOffLooks}>
+                        {children}
+                      </OffLooksContext>
                     </OffDisplayContext>
                   </MonochromeContext>
                 </OffHighlightContext>

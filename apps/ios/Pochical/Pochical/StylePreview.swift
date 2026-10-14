@@ -46,7 +46,7 @@ struct StylePreview: View {
     let shown = stylePreviewDays(days, patterns: calendar.patterns.inUse)
     let pageDays = PageDays(
       today: today, calendar: calendar, colorsHolidays: week.holiday,
-      offShown: settings.device.look.options.blankOff ? .hidden : .shown, selected: nil,
+      offShown: .hidden, selected: nil,
       isEntering: false, onSelect: nil)
     return VStack(alignment: .leading, spacing: 4) {
       if heading {
