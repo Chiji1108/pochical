@@ -72,8 +72,16 @@ import {
   withShiftEntered,
 } from "../src/lib/design-days";
 import type { OwnDays, Schedule } from "../src/lib/design-days";
-import { patternsForJob } from "../src/lib/design-patterns";
-import type { Pattern, PatternBook } from "../src/lib/design-patterns";
+import {
+  patternsForJob,
+  presetList,
+  presetPatterns,
+} from "../src/lib/design-patterns";
+import type {
+  Pattern,
+  PatternBook,
+  PresetShift,
+} from "../src/lib/design-patterns";
 import {
   columnHours,
   widgetEntry,
@@ -403,6 +411,8 @@ describe("spec/vectors/together.json", () => {
   }
 });
 
+const isPreset = (id: string): id is PresetShift => id in presetPatterns;
+
 describe("spec/vectors/patterns.json", () => {
   const idsOf = (patterns: readonly Pattern[]) =>
     plain(
@@ -447,6 +457,17 @@ describe("spec/vectors/patterns.json", () => {
       });
       expect(idsOf(changed.patterns)).toEqual(job.expected.patterns);
       expect(changed.sequence).toEqual(job.expected.sequence);
+    });
+  }
+  for (const { name, ids, keeping, expected } of patternChanges.readyCopies) {
+    test(`readyCopies: ${name}`, () => {
+      const presets = ids.filter(isPreset);
+      expect(presets).toEqual(ids);
+      const copies = presetList(
+        presets,
+        keeping === undefined ? undefined : new Set(keeping)
+      );
+      expect(idsOf(copies)).toEqual(expected);
     });
   }
 });
