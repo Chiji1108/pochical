@@ -44,8 +44,32 @@ struct DeviceCalendarVectors: Decodable {
     let expected: [String]
   }
 
+  struct PickCase: VectorCase {
+    let name: String
+    let patterns: [String: FirstPattern]
+    let chosen: [String: Bool]
+    let pick: Pick?
+    let expectedChosen: [String: Bool]
+    let expectedShown: [String]
+  }
+
+  struct Pick: Decodable, Sendable {
+    let id: String
+    let on: Bool
+  }
+
   let events: [Case]
   let shownAtFirst: [FirstCase]
+  let picks: [PickCase]
+}
+
+private func patterns(_ cases: [String: DeviceCalendarVectors.FirstPattern]) -> [Pattern] {
+  cases.map { id, pattern in
+    Pattern(
+      id: id, name: id, emoji: "", symbol: "", icon: "", color: 0,
+      time: pattern.time.map { ShiftTime(start: $0[0], end: $0[1]) },
+      countsAsOff: pattern.off ?? false, nextDay: pattern.nextDay)
+  }
 }
 
 @Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).events)
@@ -78,11 +102,17 @@ func shiftsAsEvents(_ vector: DeviceCalendarVectors.Case) throws {
 
 @Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).shownAtFirst)
 func patternsShownAtFirst(_ vector: DeviceCalendarVectors.FirstCase) {
-  let patterns = vector.patterns.map { id, pattern in
-    Pattern(
-      id: id, name: id, emoji: "", symbol: "", icon: "", color: 0,
-      time: pattern.time.map { ShiftTime(start: $0[0], end: $0[1]) },
-      countsAsOff: pattern.off ?? false, nextDay: pattern.nextDay)
+  #expect(ShiftEvents.shownAtFirst(patterns(vector.patterns)) == Set(vector.expected))
+}
+
+@Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).picks)
+func patternsPicked(_ vector: DeviceCalendarVectors.PickCase) {
+  let all = patterns(vector.patterns)
+  var putting = CalendarAdd()
+  putting.chosen = vector.chosen
+  if let pick = vector.pick {
+    putting.pick(pick.id, pick.on, of: all)
   }
-  #expect(ShiftEvents.shownAtFirst(patterns) == Set(vector.expected))
+  #expect(putting.chosen == vector.expectedChosen)
+  #expect(putting.shown(of: all) == Set(vector.expectedShown))
 }

@@ -2,7 +2,8 @@ import Foundation
 
 /// A day's shift as an event in the device's calendar (spec/calendar.md,
 /// Adding a month to the device calendar): its name, at its time on that
-/// day, or all day when it has none. Its memo and people stay in Pochical.
+/// day, or all day when it has none, the day's memo and people in its notes
+/// when asked for.
 public struct ShiftEvent: Hashable, Sendable {
   public let day: Day
   public let title: String

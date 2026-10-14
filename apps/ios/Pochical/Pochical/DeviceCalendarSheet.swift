@@ -108,17 +108,19 @@ import UIKit
   }
 
   /// Takes out the events Pochical put in for the month as the user's,
-  /// all at once or none.
-  func remove(_ month: Day, by user: String) throws {
+  /// all at once or none, and says how many went.
+  func remove(_ month: Day, by user: String) throws -> Int {
+    let old = marked(month, by: user)
     do {
-      for old in marked(month, by: user) {
-        try store.remove(old, span: .thisEvent, commit: false)
+      for event in old {
+        try store.remove(event, span: .thisEvent, commit: false)
       }
       try store.commit()
     } catch {
       store.reset()
       throw error
     }
+    return old.count
   }
 
   /// The mark Pochical leaves on an event it puts in: the app's own link
@@ -233,7 +235,7 @@ struct DeviceCalendarSheet: View {
               wide("閉じる") { dismiss() }
             }
           } else {
-            form(listed: listed, offers: offers)
+            form(listed: listed, picked: picked, offers: offers)
             Section {
               wide("\(events.count)件を追加") { add(events) }
                 .disabled(events.isEmpty || calendarID == nil)
@@ -300,9 +302,9 @@ struct DeviceCalendarSheet: View {
     .settingsOnPage()
   }
 
-  @ViewBuilder private func form(listed: [Pattern], offers: (notes: Bool, people: Bool))
-    -> some View
-  {
+  @ViewBuilder private func form(
+    listed: [Pattern], picked: Set<PatternID>, offers: (notes: Bool, people: Bool)
+  ) -> some View {
     @Bindable var settings = settings
     Section {
       Picker("追加先", selection: $calendarID) {
@@ -336,7 +338,7 @@ struct DeviceCalendarSheet: View {
         // every name shows rather than one cut off at the row's end.
         VStack(alignment: .leading) {
           Text("入れるシフト")
-          Text(leftOut(listed))
+          Text(leftOut(listed, picked: picked))
             .font(.subheadline)
             .foregroundStyle(.secondary)
         }
@@ -391,9 +393,8 @@ struct DeviceCalendarSheet: View {
   }
 
   /// What the row under 入れるシフト says is left out, every name of it.
-  private func leftOut(_ listed: [Pattern]) -> String {
-    let shown = settings.device.calendarAdd.shown(of: calendar.patterns)
-    let out = listed.filter { !shown.contains($0.id) }
+  private func leftOut(_ listed: [Pattern], picked: Set<PatternID>) -> String {
+    let out = listed.filter { !picked.contains($0.id) }
     if out.isEmpty {
       return "すべて入れます"
     }
@@ -442,9 +443,9 @@ struct DeviceCalendarSheet: View {
       return
     }
     do {
-      try calendars.remove(month, by: meID)
+      let removed = try calendars.remove(month, by: meID)
       withAnimation {
-        done = ("消しました", "ポチカルで入れた\(month.monthText)の予定を\(put)件消しました。")
+        done = ("消しました", "ポチカルで入れた\(month.monthText)の予定を\(removed)件消しました。")
       }
     } catch {
       ReviewPrompt.troubled = true

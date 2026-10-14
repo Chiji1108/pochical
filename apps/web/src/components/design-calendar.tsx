@@ -554,7 +554,8 @@ export function DesignCalendar({
             monthDays
               .map((date) => dateKey(date))
               .filter((key) => (own[key]?.note ?? "") !== "")
-          )
+          ),
+          new Set(coworkers.map((coworker) => coworker.id))
         )}
         patterns={allPatterns}
         onImage={() => {

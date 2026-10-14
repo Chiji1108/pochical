@@ -98,7 +98,8 @@ export type CalendarDay = {
   // The shift's pattern, if any.
   pattern?: Pattern;
   note: boolean;
-  // Someone works it with the person.
+  // Someone still among the coworkers works it with the person, as only
+  // their names go in.
   people: boolean;
 };
 
@@ -107,14 +108,15 @@ export function calendarDays(
   days: Date[],
   schedule: Schedule,
   book: PatternBook,
-  notes: ReadonlySet<string>
+  notes: ReadonlySet<string>,
+  coworkers: ReadonlySet<string>
 ): CalendarDay[] {
   return days.map((date) => {
     const entry = schedule[dateKey(date)];
     return {
       note: notes.has(dateKey(date)),
       pattern: entry === undefined ? undefined : book[entry.shift],
-      people: (entry?.people?.length ?? 0) > 0,
+      people: entry?.people?.some((id) => coworkers.has(id)) ?? false,
     };
   });
 }
@@ -344,6 +346,11 @@ function RemoveMonth({
   );
 }
 
+// How many events the demo put in for `month`.
+function putFor(putIn: { count: number; month: string }, month: Date) {
+  return putIn.month === dateKey(month) ? putIn.count : 0;
+}
+
 function stepTitle(step: Step, monthLabel: string) {
   if (step === "calendar") {
     return "端末カレンダーに追加";
@@ -394,8 +401,10 @@ export function SaveSheet({
   // 設定を開く stands in for the system's settings, coming back from them
   // with the calendars allowed, as the notifications' card does.
   const [allowedThere, setAllowedThere] = useState(false);
-  // How many of the month's events the demo put in, for ポチカルで入れた〇月の予定を消す.
-  const [put, setPut] = useState(0);
+  // How many of a month's events the demo put in, for
+  // ポチカルで入れた〇月の予定を消す: none for any other month.
+  const [putIn, setPutIn] = useState({ count: 0, month: "" });
+  const put = putFor(putIn, month);
   const refused = access === "denied" && !allowedThere;
   const putting = useSettings((state) => state.device.calendarAdd);
   const setPutting = useSettings((state) => state.setCalendarAdd);
@@ -533,7 +542,7 @@ export function SaveSheet({
                 toast("追加できませんでした", "problem");
                 return;
               }
-              setPut(count);
+              setPutIn({ count, month: dateKey(month) });
               setStep({
                 done: `「${calendar?.name}」に${monthLabel}の予定を${count}件追加しました。`,
                 title: "保存しました",
@@ -549,7 +558,7 @@ export function SaveSheet({
                 done: `ポチカルで入れた${monthLabel}の予定を${put}件消しました。`,
                 title: "消しました",
               });
-              setPut(0);
+              setPutIn({ count: 0, month: "" });
             }}
             put={put}
           />
