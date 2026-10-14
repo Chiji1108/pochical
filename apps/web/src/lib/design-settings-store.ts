@@ -61,7 +61,12 @@ export type MonthName = "number" | "english";
 export type MonthTap = "pick" | "surprise";
 
 // 端末カレンダーに追加's メモも入れる and 一緒に働く人も入れる.
-export type CalendarAdd = { notes: boolean; people: boolean };
+export type CalendarAdd = {
+  // The patterns counted as off whose days go in too, sorted.
+  off: string[];
+  notes: boolean;
+  people: boolean;
+};
 
 // The rest of the person's own screen. Device only.
 export type DeviceSettings = {
@@ -162,7 +167,7 @@ export const useSettings = create<SettingsState>()(
         appIcon: "moss",
         appearance: "system",
         calendar: defaultCalendar,
-        calendarAdd: { notes: false, people: false },
+        calendarAdd: { notes: false, off: [], people: false },
         imageOptions: defaultImageOptions,
         monthName: "number",
         monthTap: "pick",
@@ -253,10 +258,15 @@ export const useSettings = create<SettingsState>()(
     }),
     {
       // Settings added later keep their defaults when an older save loads.
-      merge: (persisted, current) => ({
-        ...current,
-        device: { ...current.device, ...savedDevice(persisted) },
-      }),
+      merge: (persisted, current) => {
+        const device = { ...current.device, ...savedDevice(persisted) };
+        // What 端末カレンダーに追加 puts in, filled to its newest shape.
+        const calendarAdd = {
+          ...current.device.calendarAdd,
+          ...device.calendarAdd,
+        };
+        return { ...current, device: { ...device, calendarAdd } };
+      },
       name: deviceSettingsKey,
       partialize: (state) => ({ device: state.device }),
       // The page renders on the server first; the saved settings load after

@@ -110,9 +110,12 @@ public struct PictureLook: Codable, Equatable, Sendable {
 }
 
 /// What 端末カレンダーに追加 puts in besides the shifts (spec/calendar.md):
-/// the day's memo and those on it, each off until turned on, as a calendar
-/// may be shared with family.
+/// the days off of the patterns picked, the day's memo and those on it,
+/// each off until turned on, as a calendar may be shared with family.
 public struct CalendarAdd: Codable, Equatable, Sendable {
+  /// The patterns counted as off whose days go in too, like 有休 without
+  /// 休み, sorted so the account keeps one JSON for them.
+  public var off: [PatternID] = []
   public var notes = false
   public var people = false
 
@@ -120,6 +123,7 @@ public struct CalendarAdd: Codable, Equatable, Sendable {
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
+    off = try container.decodeIfPresent([PatternID].self, forKey: .off) ?? []
     notes = try container.decodeIfPresent(Bool.self, forKey: .notes) ?? false
     people = try container.decodeIfPresent(Bool.self, forKey: .people) ?? false
   }
