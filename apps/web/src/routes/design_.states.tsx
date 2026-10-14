@@ -19,14 +19,16 @@ import {
   PresetContexts,
   useDesignTheme,
 } from "../components/design-providers";
+import { shapeOptions } from "../components/design-settings-style";
 import { ColorSchemeContext, pageStyle } from "../components/design-theme";
 import type { PresetId } from "../components/design-theme";
 import {
-  OffDisplayContext,
-  OffHighlightContext,
+  IconWeightContext,
+  noOffLooks,
+  OffLooksContext,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
-import type { OffDisplay, ShiftMarkStyle } from "../components/shift-mark";
+import type { OffLookId } from "../components/shift-mark";
 import { initialDesignSchedule, patternSets } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import { pageMeta } from "../lib/site";
@@ -55,16 +57,8 @@ const partialSchedule = Object.fromEntries(
 );
 const emptyPerson = { schedule: {} };
 const partialPerson = { schedule: partialSchedule };
-const noHighlight = {
-  highlight: { badge: false, emoji: false, icon: false },
-};
 
 const patternCounts = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
-const markStyles: { style: ShiftMarkStyle; label: string }[] = [
-  { label: "アイコン", style: "icon" },
-  { label: "絵文字", style: "emoji" },
-  { label: "文字", style: "badge" },
-];
 const schemes: { scheme: ColorScheme; label: string }[] = [
   { label: "ライト", scheme: "light" },
   { label: "ダーク", scheme: "dark" },
@@ -121,11 +115,13 @@ function StatesPage() {
             </FrameRow>
           </FrameSection>
 
-          <FrameSection title="シフトの見せ方">
+          <FrameSection title="シフトの見た目">
             <FrameRow fan>
-              {markStyles.map(({ style, label }) => (
-                <ShiftMarkStyleContext key={style} value={style}>
-                  <CalendarFrame label={label} />
+              {shapeOptions.map(({ fill, name, style }) => (
+                <ShiftMarkStyleContext key={name} value={style}>
+                  <IconWeightContext value={fill ? "duotone" : "regular"}>
+                    <CalendarFrame label={name} />
+                  </IconWeightContext>
                 </ShiftMarkStyleContext>
               ))}
             </FrameRow>
@@ -133,11 +129,11 @@ function StatesPage() {
 
           <FrameSection title="休みの見せ方">
             <FrameRow fan>
-              <OffLook display="show" label="色をつける" />
-              <OffLook display="show" highlight={false} label="色なし" />
-              <OffLook display="blank" label="空白" />
+              <OffLook label="強調" off="highlight" />
+              <OffLook label="印だけ" off="mark" />
+              <OffLook label="空白" off="blank" />
               <OffLook
-                display="blank"
+                off="blank"
                 editing
                 label="空白で入力中"
                 note="入力中は薄く出る"
@@ -163,27 +159,21 @@ function StatesPage() {
 }
 
 function OffLook({
-  display,
-  highlight = true,
+  off,
   editing = false,
   label,
   note,
 }: {
-  display: OffDisplay;
-  highlight?: boolean;
+  off: OffLookId;
   editing?: boolean;
   label: string;
   note?: string;
 }) {
-  const frame = (
-    <OffDisplayContext value={display}>
+  return (
+    <OffLooksContext value={{ off, offs: noOffLooks }}>
       <CalendarFrame editing={editing} label={label} note={note} />
-    </OffDisplayContext>
+    </OffLooksContext>
   );
-  if (highlight) {
-    return frame;
-  }
-  return <OffHighlightContext value={noHighlight}>{frame}</OffHighlightContext>;
 }
 
 function Scheme({

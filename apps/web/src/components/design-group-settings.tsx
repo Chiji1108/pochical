@@ -486,8 +486,8 @@ const groupEmojis = groupMarkEmojis;
 type DrawnMarkKind = Exclude<GroupMarkKind, "photo">;
 
 const markKinds: { kind: DrawnMarkKind; label: string }[] = [
-  { kind: "emoji", label: "絵文字" },
   { kind: "icon", label: "アイコン" },
+  { kind: "emoji", label: "絵文字" },
   { kind: "letter", label: "文字" },
 ];
 
@@ -659,7 +659,7 @@ function GroupMarkPage({
         </>
       )}
       <Note>
-        メンバー全員に、このアイコンがそのまま表示されます。シフトの見た目のスタイルには左右されません。
+        メンバー全員に、このアイコンがそのまま表示されます。スタイルの「シフトの見た目」には左右されません。
       </Note>
     </>
   );

@@ -20,12 +20,7 @@ import { dayGrid, WeekdayRow } from "./design-day-grid";
 import { PageHeader } from "./design-header";
 import { List, ListRow, SwitchRow } from "./design-list";
 import { monthWithYearOf } from "./design-month-name";
-import {
-  NameTabs,
-  offLookId,
-  offLookOf,
-  OffLookTabs,
-} from "./design-settings-style";
+import { NameTabs, OffLookTabs } from "./design-settings-style";
 import { Sheet, SheetHeading, sheetBody, sheetLead } from "./design-sheet";
 import {
   ColorSchemeContext,
@@ -40,8 +35,6 @@ import { Button, Note, Screen, ScreenScroll, Section } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
   CellNamesContext,
-  OffDisplayContext,
-  OffHighlightContext,
   noOffLooks,
   OffLooksContext,
   ShiftMark,
@@ -555,64 +548,50 @@ export function ImagePreviewPage({
             },
           }}
         >
-          <OffHighlightContext
-            value={{
-              highlight: {
-                badge: options.highlight,
-                emoji: options.highlight,
-                icon: options.highlight,
-              },
-            }}
-          >
-            <div className={previewWrap}>
-              <ColorSchemeContext value={shown}>
-                {/* A picture to share shows every day as it is, every day
+          <div className={previewWrap}>
+            <ColorSchemeContext value={shown}>
+              {/* A picture to share shows every day as it is, every day
                     off alike: the app's own 休みの見せ方 for each pattern
                     does not reach it. */}
-                <OffLooksContext value={noOffLooks}>
-                  <OffDisplayContext
-                    value={options.blankOff ? "blank" : "show"}
-                  >
-                    <figure
-                      aria-label={`${monthWithYearOf(month)}のシフトの画像`}
-                      className={picture.frame}
-                      inert
-                      style={themeStyle(theme, shown)}
-                    >
-                      <figcaption className={picture.title}>{title}</figcaption>
-                      <WeekdayRow compact />
-                      <div className={dayGrid}>
-                        {dates.map((date) => (
-                          <DayCell
-                            active={false}
-                            date={date}
-                            editing={false}
-                            entry={schedule[dateKey(date)]}
-                            key={dateKey(date)}
-                            onPress={() => undefined}
-                            outside={date.getMonth() !== month.getMonth()}
-                            plain
-                          />
-                        ))}
-                      </div>
-                      <p className={picture.credit}>
-                        <AppIcon size={16} src={STORE_ICON} />
-                        ポチカル
-                      </p>
-                    </figure>
-                  </OffDisplayContext>
-                </OffLooksContext>
-              </ColorSchemeContext>
-              {/* An always-dark テーマ saves its dark: its ☾ stays on. */}
-              <PreviewSchemeSwitch
-                disabled={alwaysDark}
-                onPick={(picked) => {
-                  onOptions({ ...options, scheme: picked });
-                }}
-                shown={alwaysDark ? "dark" : shown}
-              />
-            </div>
-          </OffHighlightContext>
+              <OffLooksContext value={{ off: options.off, offs: noOffLooks }}>
+                <figure
+                  aria-label={`${monthWithYearOf(month)}のシフトの画像`}
+                  className={picture.frame}
+                  inert
+                  style={themeStyle(theme, shown)}
+                >
+                  <figcaption className={picture.title}>{title}</figcaption>
+                  <WeekdayRow compact />
+                  <div className={dayGrid}>
+                    {dates.map((date) => (
+                      <DayCell
+                        active={false}
+                        date={date}
+                        editing={false}
+                        entry={schedule[dateKey(date)]}
+                        key={dateKey(date)}
+                        onPress={() => undefined}
+                        outside={date.getMonth() !== month.getMonth()}
+                        plain
+                      />
+                    ))}
+                  </div>
+                  <p className={picture.credit}>
+                    <AppIcon size={16} src={STORE_ICON} />
+                    ポチカル
+                  </p>
+                </figure>
+              </OffLooksContext>
+            </ColorSchemeContext>
+            {/* An always-dark テーマ saves its dark: its ☾ stays on. */}
+            <PreviewSchemeSwitch
+              disabled={alwaysDark}
+              onPick={(picked) => {
+                onOptions({ ...options, scheme: picked });
+              }}
+              shown={alwaysDark ? "dark" : shown}
+            />
+          </div>
         </CellNamesContext>
         {/* The same tabs as the style page and in its order, with the
             picture's own values
@@ -630,10 +609,10 @@ export function ImagePreviewPage({
         <Section title="休みの見せ方">
           <OffLookTabs
             onChange={(value) => {
-              onOptions({ ...options, ...offLookOf(value) });
+              onOptions({ ...options, off: value });
             }}
             samples={false}
-            value={offLookId(options)}
+            value={options.off}
           />
         </Section>
         <Note>画像にだけ使う見た目です。アプリのスタイルは変わりません。</Note>

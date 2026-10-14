@@ -9,7 +9,6 @@ import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 import {
   CellNamesContext,
-  OffDisplayContext,
   ShiftMark,
   ShiftMarkStyleContext,
   useOffLooks,
@@ -137,13 +136,12 @@ const shownOff: OffLook = { mark: "show", tile: false };
 
 export function useOffLook(day: WidgetDay, week: boolean): OffLook {
   const look = useOffLooks()(day.shift);
-  const display = useContext(OffDisplayContext);
   if (!day.off) {
     return shownOff;
   }
   if (look === "blank") {
     return {
-      mark: week || display === "faint" ? "faint" : "none",
+      mark: week ? "faint" : "none",
       tile: false,
     };
   }

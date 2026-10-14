@@ -103,7 +103,8 @@ import {
 } from "../components/design-ui";
 import { useWeek } from "../components/design-week";
 import {
-  OffDisplayContext,
+  blankOffs,
+  OffLooksContext,
   ShiftMark,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
@@ -1439,9 +1440,9 @@ function Pochical() {
           android="独自の Composable"
           where="休み(空白)"
         >
-          <OffDisplayContext value="blank">
+          <OffLooksContext value={blankOffs}>
             <Cell entry={{ shift: "off" }} />
-          </OffDisplayContext>
+          </OffLooksContext>
         </Item>
         <Item
           name="DayCell"

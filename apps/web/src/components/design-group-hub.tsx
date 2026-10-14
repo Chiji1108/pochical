@@ -134,7 +134,7 @@ export function NoGroups({
         <div className={noGroups.actions}>
           <Button onClick={onNew}>
             <Plus aria-hidden="true" size={18} />
-            グループを作成
+            グループを作る
           </Button>
           <Button onClick={onScan} variant="quiet">
             <ScanLine aria-hidden="true" size={17} />
