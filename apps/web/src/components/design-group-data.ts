@@ -27,7 +27,7 @@ export type Member = {
   me?: boolean;
   // The style they picked for their own calendar: its shape shows to
   // everyone as they chose it, in the viewer's テーマ.
-  style?: { look: GroupLook };
+  style?: GroupLook;
   // A profile picture; without one the avatar shows the first letter.
   photo?: string;
   // Yours, as the others see you in this group: your avatar's letter

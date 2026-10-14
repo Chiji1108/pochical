@@ -142,7 +142,6 @@ export function useOffLooks(): (shift: string | undefined) => OffLookId {
 
 // The shapes the sample members draw their marks in, by name.
 export const sampleLooks = {
-  friendly: { fill: true, style: "badge" },
   minimal: { fill: false, style: "icon" },
   natural: { fill: true, style: "icon" },
   pop: { fill: true, style: "emoji" },

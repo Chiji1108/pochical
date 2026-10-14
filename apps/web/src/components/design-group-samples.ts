@@ -88,7 +88,7 @@ export const partner: Member = {
     }
     return date.getDay() === 3 ? "home" : "office";
   },
-  style: { look: presetLook("pop") },
+  style: sampleLooks.pop,
 };
 
 export const mother: Member = {
@@ -111,7 +111,7 @@ export const mother: Member = {
     date.getDay() === 5 && !holidayName(date)
       ? { early: false, late: true, time: "10:00 – 17:00" }
       : undefined,
-  style: { look: presetLook("roster") },
+  style: sampleLooks.roster,
 };
 
 const nurseOrder = ["day", "day", "night", "after", "off", "off"] as const;
@@ -137,7 +137,7 @@ export const misaki = (): Member => ({
       return { early: true, late: false, time: "8:00 – 18:00" };
     }
   },
-  style: { look: presetLook("minimal") },
+  style: sampleLooks.minimal,
 });
 
 // あや made レッスン herself and never picked a look, so it has what the
@@ -165,25 +165,27 @@ export const aya = (): Member => ({
     const order = ["early", "early", "late", "late", "off", "lesson", "off"];
     return order[(dayNumber(date) + 3) % order.length];
   },
-  style: { look: presetLook("friendly") },
+  style: sampleLooks.roster,
 });
 
 // Nurses from the same year, each on the same order at a different point.
 export const classmates = (): Member[] =>
-  [
-    ["haruka", "はるか", 0, 1025, "natural"],
-    ["ren", "れん", 1, 237, "pop"],
-    ["mei", "めい", 2, 0, "roster"],
-    ["sota", "そうた", 4, 669, "minimal"],
-    ["yui", "ゆい", 5, 1062, "friendly"],
-  ].map(([id, name, offset, photo, preset]) => ({
+  (
+    [
+      ["haruka", "はるか", 0, 1025, "natural"],
+      ["ren", "れん", 1, 237, "pop"],
+      ["mei", "めい", 2, 0, "roster"],
+      ["sota", "そうた", 4, 669, "minimal"],
+      ["yui", "ゆい", 5, 1062, "roster"],
+    ] as const
+  ).map(([id, name, offset, photo, preset]) => ({
     ...misaki(),
-    id: String(id),
-    name: String(name),
-    photo: photo ? samplePhoto(Number(photo)) : undefined,
+    id,
+    name,
+    photo: photo ? samplePhoto(photo) : undefined,
     shiftOn: (date: Date) =>
-      nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
-    style: { look: presetLook(String(preset)) },
+      nurseOrder[(dayNumber(date) + offset) % nurseOrder.length],
+    style: sampleLooks[preset],
   }));
 
 // The cousins' group the sample invitation is for; ゆうき, who sent it,
@@ -198,53 +200,59 @@ export const cousins = (): Member[] => [
     photo: undefined,
     shiftOn: (date: Date) =>
       nurseOrder[(dayNumber(date) + 1) % nurseOrder.length],
-    style: { look: presetLook("pop") },
+    style: sampleLooks.pop,
   },
   {
     ...mother,
     id: "cousin-riku",
     name: "りく",
     photo: undefined,
-    style: { look: presetLook("minimal") },
+    style: sampleLooks.minimal,
   },
-  ...[
-    ["cousin-sota", "そうた", 2, 1012, "pop"],
-    ["cousin-yui", "ゆい", 5, 0, "natural"],
-  ].map(([id, name, offset, photo, preset]) => ({
+  ...(
+    [
+      ["cousin-sota", "そうた", 2, 1012, "pop"],
+      ["cousin-yui", "ゆい", 5, 0, "natural"],
+    ] as const
+  ).map(([id, name, offset, photo, preset]) => ({
     ...misaki(),
-    id: String(id),
-    name: String(name),
-    photo: photo ? samplePhoto(Number(photo)) : undefined,
+    id,
+    name,
+    photo: photo ? samplePhoto(photo) : undefined,
     shiftOn: (date: Date) =>
-      nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
-    style: { look: presetLook(String(preset)) },
+      nurseOrder[(dayNumber(date) + offset) % nurseOrder.length],
+    style: sampleLooks[preset],
   })),
 ];
 
 // Old school friends in all kinds of work: a group too wide for 一覧.
 export const schoolFriends = (): Member[] => [
-  ...[
-    ["kana", "かな", 0, 1027, "natural"],
-    ["riku", "りく", 2, 1074, "minimal"],
-  ].map(([id, name, offset, photo, preset]) => ({
+  ...(
+    [
+      ["kana", "かな", 0, 1027, "natural"],
+      ["riku", "りく", 2, 1074, "minimal"],
+    ] as const
+  ).map(([id, name, offset, photo, preset]) => ({
     ...misaki(),
-    id: String(id),
-    name: String(name),
-    photo: samplePhoto(Number(photo)),
+    id,
+    name,
+    photo: samplePhoto(photo),
     shiftOn: (date: Date) =>
-      nurseOrder[(dayNumber(date) + Number(offset)) % nurseOrder.length],
-    style: { look: presetLook(String(preset)) },
+      nurseOrder[(dayNumber(date) + offset) % nurseOrder.length],
+    style: sampleLooks[preset],
   })),
-  ...[
-    ["shun", "しゅん", 1012, "pop"],
-    ["nana", "なな", 0, "minimal"],
-    ["taichi", "たいち", 1084, "roster"],
-  ].map(([id, name, photo, preset]) => ({
+  ...(
+    [
+      ["shun", "しゅん", 1012, "pop"],
+      ["nana", "なな", 0, "minimal"],
+      ["taichi", "たいち", 1084, "roster"],
+    ] as const
+  ).map(([id, name, photo, preset]) => ({
     ...partner,
-    id: String(id),
-    name: String(name),
-    photo: photo ? samplePhoto(Number(photo)) : undefined,
-    style: { look: presetLook(String(preset)) },
+    id,
+    name,
+    photo: photo ? samplePhoto(photo) : undefined,
+    style: sampleLooks[preset],
   })),
   ...[
     ["mio", "みお", 1, 64],
@@ -264,7 +272,7 @@ export const schoolFriends = (): Member[] => [
     id: "sakiko",
     name: "さきこ",
     photo: samplePhoto(1080),
-    style: { look: presetLook("friendly") },
+    style: sampleLooks.roster,
   },
 ];
 
@@ -730,14 +738,4 @@ export function sampleGroups(): GroupSummary[] {
       name: "高校の同級生",
     },
   ];
-}
-
-// A declaration, not a const: the samples above call it as the module
-// loads.
-function isSampleLook(id: string): id is keyof typeof sampleLooks {
-  return Object.hasOwn(sampleLooks, id);
-}
-
-function presetLook(id: string) {
-  return isSampleLook(id) ? sampleLooks[id] : sampleLooks.natural;
 }
