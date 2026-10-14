@@ -266,7 +266,10 @@ struct ChatScreen: View {
     let state = chat.state
     let names = self.names
     ScrollView {
-      LazyVStack(spacing: CGFloat(Chat.lineGap)) {
+      // Not lazy: a lazy stack guesses the heights of lines not yet drawn
+      // and corrects them as they come into sight, jolting the lines while
+      // scrolling up. A chat holds its pages, not its whole history.
+      VStack(spacing: CGFloat(Chat.lineGap)) {
         if !state.atStart {
           ProgressView()
             .frame(maxWidth: .infinity, minHeight: Metrics.touch)
@@ -300,9 +303,7 @@ struct ChatScreen: View {
       // In from the sides as padding, not content margins, so scrolling
       // to the foot's edge never moves the lines sideways.
       .padding(.horizontal, 16)
-      // Lines shorter than the screen fill it, at its foot, rather than
-      // left to the scroll view's bottom alignment, which on a device
-      // rests them short of the foot, partly under the composer.
+      // Lines shorter than the screen fill it, at its foot.
       .frame(minHeight: seen, alignment: .bottom)
     }
     .contentMargins(.vertical, 12, for: .scrollContent)
@@ -317,7 +318,10 @@ struct ChatScreen: View {
     // Opens at the foot (spec/chat.md, Unread lines and typing); where it
     // goes from there is the person's, or follows the latest.
     .scrollPosition($position)
-    .defaultScrollAnchor(.bottom)
+    // Not for alignment: the lines fill the screen themselves (below), and
+    // the inset it adds over short lines left room to scroll.
+    .defaultScrollAnchor(.bottom, for: .initialOffset)
+    .defaultScrollAnchor(.bottom, for: .sizeChanges)
     .scrollDismissesKeyboard(.interactively)
     .onScrollGeometryChange(for: ScrollPlace.self) { geometry in
       let below =
@@ -325,7 +329,8 @@ struct ChatScreen: View {
         - geometry.visibleRect.maxY
       return ScrollPlace(
         atLatest: below < 24, away: below > geometry.containerSize.height / 2,
-        fits: geometry.contentSize.height <= seen + 1)
+        fits: geometry.contentSize.height <= seen + 1,
+        atTop: geometry.contentOffset.y <= -geometry.contentInsets.top + 1)
     } action: { _, now in
       place = now
     }
@@ -338,8 +343,9 @@ struct ChatScreen: View {
       default: break
       }
     }
+    // The container is already inside the bars and the margins.
     .onScrollGeometryChange(for: CGFloat.self) { geometry in
-      max(geometry.containerSize.height - geometry.contentInsets.top - geometry.contentInsets.bottom, 0)
+      geometry.containerSize.height
     } action: { _, now in
       seen = now
     }
@@ -477,7 +483,6 @@ struct ChatScreen: View {
         read()
       }
     }
-    // One's own line just sent shows at the foot, wherever the lines were.
     // Others' typing, as it comes, each shown until it lapses.
     .task(id: socket != nil) {
       guard let socket else { return }
@@ -513,6 +518,14 @@ struct ChatScreen: View {
       if opened, following {
         withAnimation { toLatest() }
       }
+    }
+    // An earlier page coming in above, the lines seen stay: held at the
+    // top edge, the view would stay there, on the page's first lines.
+    .onChange(of: state.lines.first?.seq) { before, now in
+      guard let before, let now, now < before, place.atTop,
+        let first = state.lines.first(where: { $0.seq == before })
+      else { return }
+      position.scrollTo(id: "line-\(first.opID)", anchor: .top)
     }
     // One's own line just sent shows at the foot, wherever the lines were.
     .onChange(of: state.waiting.last?.opID) { _, sent in
@@ -1570,6 +1583,8 @@ private struct ScrollPlace: Hashable {
   /// The lines are shorter than the screen, held at its foot, with
   /// nowhere to scroll.
   var fits = true
+  /// At the top edge, where an earlier page coming in would leave it.
+  var atTop = false
 }
 
 /// What moves a following chat to its foot: a line coming in, someone

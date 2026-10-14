@@ -39,7 +39,11 @@ struct ChatPhotoImage: View {
   /// The size it is drawn at in the chat, decoded no larger; nil to draw
   /// it whole, opened large.
   var shown: CGSize?
+  /// Read only while on the screen, and let go once out of it: a line's
+  /// photo, as the chat lays out all its lines at once.
+  var whileInSight = false
   @State private var image: UIImage?
+  @State private var inSight = false
 
   var body: some View {
     let kept = image ?? pixels.flatMap { Thumbnails.kept(photo.id, pixels: $0) }
@@ -52,7 +56,12 @@ struct ChatPhotoImage: View {
         colors.fillTertiary
       }
     }
-    .task(id: photo.id) {
+    .onScrollVisibilityChange(threshold: 0) { inSight = $0 }
+    .task(id: PhotoLoad(id: photo.id, wanted: !whileInSight || inSight)) {
+      guard !whileInSight || inSight else {
+        image = nil
+        return
+      }
       // Held here too, so a thumbnail the system lets go while the line
       // shows is not lost from it.
       if let pixels, let kept = Thumbnails.kept(photo.id, pixels: pixels) {
@@ -117,6 +126,11 @@ enum Thumbnails {
   }
 }
 
+private struct PhotoLoad: Equatable {
+  let id: String
+  let wanted: Bool
+}
+
 /// A photo sent as a line: no bubble, rounded, the size it was sent at
 /// within the box; dimmed with 送信中 while it uploads.
 struct PhotoLine: View {
@@ -127,7 +141,7 @@ struct PhotoLine: View {
 
   var body: some View {
     let size = PhotoBox.size(of: photo)
-    ChatPhotoImage(photo: photo, groupID: groupID, shown: size)
+    ChatPhotoImage(photo: photo, groupID: groupID, shown: size, whileInSight: true)
       .frame(width: size.width, height: size.height)
       .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
       .overlay(
