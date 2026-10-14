@@ -105,31 +105,32 @@ export type LookSettings = {
 
 // How days off show: `off` for every pattern that counts as off, unless
 // `offs` gives the pattern its own, by its id, so 休み can be left blank
-// while 有休 is tinted. Without `off`, days off are tinted, except under
-// emoji, which bring their own colors.
+// while 有休 is tinted.
 export type OffLooks = {
-  off?: OffLookId;
+  off: OffLookId;
   offs: Partial<Record<string, OffLookId>>;
 };
-export const OffLooksContext = createContext<OffLooks>({ offs: {} });
 
 // No pattern with a 休みの見せ方 of its own.
 export const noOffLooks: OffLooks["offs"] = {};
 
+export const OffLooksContext = createContext<OffLooks>({
+  off: "highlight",
+  offs: noOffLooks,
+});
+
 // Every day off left blank, for the samples of a person who shows them so.
 export const blankOffs: OffLooks = { off: "blank", offs: noOffLooks };
 
-// Where days off left blank come back faint: while entering and in the
-// week view, to tell a day off from a day not entered yet.
+// Where days off left blank come back faint, as they do while entering:
+// in the week view, to tell a day off from a day not entered yet.
 export const OffFaintContext = createContext(false);
 
 // How each pattern's days off show: its own 休みの見せ方 if set, else the
 // look's.
 export function useOffLooks(): (shift: string | undefined) => OffLookId {
-  const style = useContext(ShiftMarkStyleContext);
   const { off, offs } = useContext(OffLooksContext);
-  const fallback = off ?? (style === "emoji" ? "mark" : "highlight");
-  return (shift) => (shift === undefined ? undefined : offs[shift]) ?? fallback;
+  return (shift) => (shift === undefined ? undefined : offs[shift]) ?? off;
 }
 
 // A look with every switch where it starts, for the sample members.

@@ -368,7 +368,7 @@ export function DesignCalendar({
         <div className={calendarPage.pull} ref={pullRef}>
           <div className={calendarPage.scroll({ weekDetail })}>
             <WeekdayRow />
-            <OffFaintContext value={weekDetail || editing}>
+            <OffFaintContext value={weekDetail}>
               <Pager
                 onStep={(direction) => {
                   step(direction);

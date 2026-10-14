@@ -253,7 +253,7 @@ export function DayCell({
   const { tint } = useDisplayColor(pattern?.color ?? presetPatterns.off.color);
   // Days off left blank come back faint while entering and in the week
   // view, where they are what is being looked at.
-  const faintHere = useContext(OffFaintContext);
+  const faintHere = useContext(OffFaintContext) || editing;
   const dayOff = isDayOff(pattern);
   const blankOff = dayOff && offLook === "blank";
   // A preview shows whatever the look: it is what would be filled.
