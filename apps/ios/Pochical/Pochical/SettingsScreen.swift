@@ -219,34 +219,131 @@ struct SettingsScreen: View {
   }
 }
 
-/// 外観 (/design's AppearancePage): following the phone, or keeping light
-/// or dark. It stays open under a テーマ drawn dark whatever it says, which
+/// 外観 (/design's AppearancePage), as iOS's 画面表示と明るさ: ライト and
+/// ダーク side by side, each a small screen in the テーマ, and 自動 under
+/// them to follow the phone. With 自動 on, the one the screen is in now is
+/// checked; picking one turns 自動 off, and turning it off keeps the one in
+/// use. It stays open under a テーマ drawn dark whatever it says, which
 /// says so, as it takes effect again once the テーマ changes.
 private struct AppearanceSettings: View {
   @Environment(Settings.self) private var settings
+  @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
-    @Bindable var settings = settings
     let theme = settings.device.theme
     Form {
       Section {
-        Picker("外観", selection: $settings.device.appearance) {
-          ForEach(Appearance.allCases, id: \.self) { appearance in
-            Text(appearance.name).tag(appearance)
+        HStack(spacing: 0) {
+          ForEach([ColorScheme.light, .dark], id: \.self) { scheme in
+            SchemeChoice(
+              scheme: scheme,
+              // An always-dark テーマ has no light to show: ポチカル's stands
+              // in for ライト, and ダーク shows the テーマ itself.
+              theme: theme.isAlwaysDark && scheme == .light ? .pochical : theme,
+              picked: shown == scheme
+            ) {
+              settings.device.appearance = scheme == .dark ? .dark : .light
+            }
           }
         }
-        .pickerStyle(.inline)
-        .labelsHidden()
+        .padding(.vertical, 8)
+        // The line under it starts where 自動's words do, not at its
+        // choices.
+        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+        Toggle(
+          "自動",
+          isOn: Binding(
+            get: { settings.device.appearance == .system },
+            set: { isOn in
+              settings.device.appearance =
+                isOn ? .system : (colorScheme == .dark ? .dark : .light)
+            }
+          ))
       } footer: {
         Text(
           theme.isAlwaysDark
             ? "テーマの「\(theme.name)」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。"
-            : "端末に合わせると、スマホの設定に合わせてライトとダークが切り替わります。")
+            : "自動にすると、スマホの設定に合わせてライトとダークが切り替わります。")
       }
       .settingsRows()
     }
     .settingsList()
     .navigationTitle("外観")
+  }
+
+  /// The one checked: what 外観 keeps, or with 自動 the screen's own.
+  private var shown: ColorScheme {
+    switch settings.device.appearance {
+    case .system: colorScheme
+    case .light: .light
+    case .dark: .dark
+    }
+  }
+}
+
+/// ライト or ダーク in 外観: a small screen in the テーマ, its name, and a
+/// circle checked when picked, as iOS's own.
+private struct SchemeChoice: View {
+  @Environment(\.themeColors) private var colors
+  let scheme: ColorScheme
+  let theme: Theme
+  let picked: Bool
+  let action: () -> Void
+
+  private var name: String { scheme == .dark ? "ダーク" : "ライト" }
+
+  var body: some View {
+    Button(action: action) {
+      VStack(spacing: 8) {
+        screen
+        Text(name)
+          .foregroundStyle(colors.textPrimary)
+        Image(systemName: picked ? "checkmark.circle.fill" : "circle")
+          .font(.title2)
+          .foregroundStyle(picked ? colors.accentDefault : colors.textQuaternary)
+      }
+      .frame(maxWidth: .infinity)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(name)
+    .accessibilityAddTraits(picked ? [.isButton, .isSelected] : .isButton)
+  }
+
+  /// The テーマ's ground with a heading and a month on a card, some of its
+  /// days in the accent.
+  private var screen: some View {
+    let own = theme.colors(scheme)
+    let shape = RoundedRectangle(cornerRadius: Radius.lg)
+    return VStack(alignment: .leading, spacing: 8) {
+      Capsule().fill(own.textPrimary).frame(width: 24, height: 4)
+      Grid(horizontalSpacing: 2, verticalSpacing: 2) {
+        ForEach(0..<5, id: \.self) { row in
+          GridRow {
+            ForEach(0..<5, id: \.self) { column in
+              RoundedRectangle(cornerRadius: Radius.xxs)
+                .fill(Self.lit(row, column) ? own.accentFill : own.fillTertiary)
+                .frame(width: 6, height: 6)
+            }
+          }
+        }
+      }
+      .padding(4)
+      .background(own.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
+      .overlay(RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(own.separator))
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, 8)
+    .padding(.top, 12)
+    .frame(width: 66, height: 128)
+    .background(own.backgroundBase, in: shape)
+    .overlay(shape.strokeBorder(own.separator))
+  }
+
+  /// A few days scattered over the month, as shifts would be.
+  private static func lit(_ row: Int, _ column: Int) -> Bool {
+    (row * 5 + column) % 4 == 1
   }
 }
 
