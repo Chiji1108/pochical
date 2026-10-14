@@ -315,26 +315,26 @@ private struct SchemeChoice: View {
   private var screen: some View {
     let own = theme.colors(scheme)
     let shape = RoundedRectangle(cornerRadius: Radius.lg)
-    return VStack(alignment: .leading, spacing: 6) {
+    return VStack(alignment: .leading, spacing: 8) {
       Capsule().fill(own.textPrimary).frame(width: 24, height: 4)
-      Grid(horizontalSpacing: 3, verticalSpacing: 3) {
+      Grid(horizontalSpacing: 2, verticalSpacing: 2) {
         ForEach(0..<5, id: \.self) { row in
           GridRow {
             ForEach(0..<5, id: \.self) { column in
-              RoundedRectangle(cornerRadius: 1.5)
+              RoundedRectangle(cornerRadius: Radius.xxs)
                 .fill(Self.lit(row, column) ? own.accentFill : own.fillTertiary)
                 .frame(width: 6, height: 6)
             }
           }
         }
       }
-      .padding(5)
+      .padding(4)
       .background(own.backgroundCard, in: RoundedRectangle(cornerRadius: Radius.sm))
       .overlay(RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(own.separator))
       Spacer(minLength: 0)
     }
     .padding(.horizontal, 8)
-    .padding(.top, 14)
+    .padding(.top, 12)
     .frame(width: 66, height: 128)
     .background(own.backgroundBase, in: shape)
     .overlay(shape.strokeBorder(own.separator))
