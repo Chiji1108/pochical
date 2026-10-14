@@ -185,7 +185,11 @@ struct ChatScreen: View {
   /// position bound to the screen, which as the person scrolls would make
   /// the screen, and every line, again at each line passing the top.
   @State private var scroller: ScrollViewProxy?
-  @State private var place = ScrollPlace()
+  /// What scrolling changes, kept out of the screen's own state so that
+  /// scrolling remakes only what shows it, not every line.
+  @State private var scroll = ChatScroll()
+  /// Times the person's scrolling has come to the latest, which reads it.
+  @State private var reachedLatest = 0
   /// The chat keeps to its latest line as lines come and the keyboard
   /// comes and goes: true until the person scrolls up, and again once they
   /// scroll back down to it, send, or tap ↓. Only their own scrolling
@@ -193,18 +197,13 @@ struct ChatScreen: View {
   @State private var following = true
   /// ここから新着 is on the screen whole, as at the latest when the new
   /// lines are few: opening has nowhere to go for it then.
-  @State private var unreadInSight = false
   /// The top of the lines, where earlier ones are asked for, is on the
   /// screen.
-  @State private var topInSight = false
   /// The first line laid out, kept from the chat's opening so new lines
   /// add to it rather than move it, and moved back a page at a time.
   @State private var window: Int64?
   /// The day of the lines at the top, once its title has gone up out of
   /// sight, floating over them while the chat scrolls (LINE's).
-  @State private var topDay: Day?
-  @State private var dayShown = false
-  @State private var scrolling = false
   /// The height the lines are seen in, between the pins and the composer.
   @State private var seen: CGFloat = 0
   @State private var draft = ""
@@ -297,14 +296,9 @@ struct ChatScreen: View {
         // scrolling up. A chat holds its pages, not its whole history.
         VStack(spacing: CGFloat(Chat.lineGap)) {
           if !state.atStart {
-            ProgressView()
-              .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-              // Laid out with the lines whether seen or not, so earlier lines
-              // are asked for only once it is on the screen.
-              .onScrollVisibilityChange(threshold: 0) { topInSight = $0 }
-              .task(id: PageAsk(first: state.lines.first?.seq, inSight: topInSight)) {
-                if topInSight { await showEarlier() }
-              }
+            EarlierLines(scroll: scroll, first: state.lines.first?.seq, ready: opened) {
+              await showEarlier()
+            }
           }
           let listed = items(state)
           let timeless = linesWithoutTime(listed)
@@ -357,37 +351,31 @@ struct ChatScreen: View {
       return ScrollPlace(
         atLatest: below < 24, away: below > geometry.containerSize.height / 2,
         fits: geometry.contentSize.height <= seen + 1,
-        atTop: geometry.contentOffset.y <= -geometry.contentInsets.top + 1)
-    } action: { _, now in
-      place = now
+        atTop: geometry.contentOffset.y <= -geometry.contentInsets.top + 1,
+        nearTop: geometry.contentOffset.y <= -geometry.contentInsets.top + Metrics.touch)
+    } action: { before, now in
+      scroll.place = now
+      if now.atLatest, !before.atLatest {
+        reachedLatest += 1
+      }
     }
     // Following is the person's to change: off as they scroll, and on
     // again where their scroll comes to rest at the foot.
     .onScrollPhaseChange { _, phase in
       switch phase {
       case .interacting: following = false
-      case .idle: if !following { following = place.atLatest }
+      case .idle: if !following { following = scroll.place.atLatest }
       default: break
       }
-      scrolling = phase.isScrolling
+      scroll.scrolling = phase.isScrolling
       // The person's own scrolling, not the chat following its latest.
-      if phase == .interacting || phase == .decelerating {
-        withAnimation(.easeOut(duration: 0.2)) { dayShown = true }
+      if phase == .interacting || phase == .decelerating, !scroll.dayShown {
+        withAnimation(.easeOut(duration: 0.2)) { scroll.dayShown = true }
       }
     }
     .onScrollTargetVisibilityChange(idType: String.self) { seen in
-      topDay = dayOver(seen.first, in: items(chat.state))
-    }
-    .task(id: dayShown) {
-      // Gone a moment after the scrolling stops.
-      guard dayShown else { return }
-      while !Task.isCancelled {
-        try? await Task.sleep(for: .milliseconds(Chat.floatingDayMs))
-        if !Task.isCancelled, !scrolling {
-          withAnimation(.easeOut(duration: 0.2)) { dayShown = false }
-          return
-        }
-      }
+      let day = dayOver(seen.first, in: items(chat.state))
+      if day != scroll.topDay { scroll.topDay = day }
     }
     // The container is already inside the bars and the margins.
     .onScrollGeometryChange(for: CGFloat.self) { geometry in
@@ -396,47 +384,14 @@ struct ChatScreen: View {
       seen = now
     }
     .overlay(alignment: .bottomTrailing) {
-      // Others' lines below not yet read, counted on the ↓ as a chat's
-      // unread are; reading happens at the latest, so none while there.
-      let unseen = place.atLatest ? 0 : meID.map { state.unread(by: $0) } ?? 0
-      if place.away || unseen > 0 {
-        Button {
-          following = true
-          toLatest(animated: true)
-        } label: {
-          Image(systemName: "chevron.down")
-            .font(.body.weight(.semibold))
-            .foregroundStyle(colors.textPrimary)
-            .frame(width: Metrics.touch, height: Metrics.touch)
-            .glassEffect(.regular.interactive(), in: .circle)
-            .overlay(alignment: .topTrailing) {
-              if unseen > 0 {
-                UnreadCount(count: unseen).offset(x: 4, y: -4)
-              }
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(
-          unseen > 0 ? "最新のメッセージへ、まだ見ていない新着\(unseen)件" : "最新のメッセージへ"
-        )
-        .padding(12)
-        .transition(.opacity)
+      LatestButton(scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0) {
+        following = true
+        toLatest(animated: true)
       }
     }
     .sensoryFeedback(.success, trigger: done)
     .overlay(alignment: .top) {
-      if let topDay, dayShown, notice == nil {
-        Text(ChatTime.day(topDay))
-          .font(.caption2)
-          .foregroundStyle(colors.textSecondary)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 2)
-          .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Radius.sm))
-          .padding(.top, 8)
-          .allowsHitTesting(false)
-          .accessibilityHidden(true)
-          .transition(.opacity)
-      }
+      FloatingDay(scroll: scroll, covered: notice != nil)
     }
     // Under the pins, over the lines.
     .overlay(alignment: .top) {
@@ -538,16 +493,18 @@ struct ChatScreen: View {
       await open()
       await hearReader()
     }
+    // Read at the latest: as it opens, as lines come, as the app comes
+    // back, and as the person scrolls down to it (the place's action).
     .task(
       id: ReadKey(
-        opened: opened, atLatest: place.atLatest, active: scenePhase == .active,
-        latest: state.lines.last?.seq ?? 0)
+        opened: opened, active: scenePhase == .active, latest: state.lines.last?.seq ?? 0,
+        reached: reachedLatest)
     ) {
-      guard opened, place.atLatest, scenePhase == .active else { return }
+      guard opened, scroll.place.atLatest, scenePhase == .active else { return }
       // Lines just come in are not yet laid out, and the place not yet
       // moved for them: read only once they are on the screen.
       try? await Task.sleep(for: .milliseconds(100))
-      if !Task.isCancelled, place.atLatest {
+      if !Task.isCancelled, scroll.place.atLatest {
         read()
       }
     }
@@ -614,7 +571,7 @@ struct ChatScreen: View {
     // Whatever else changes the lines' height while following, a photo or
     // a link's page drawn, a long line folded, from the first layout on:
     // the scroll view keeps its offset, not its foot, so it is put back.
-    .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, _ in
+    .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { before, now in
       if following {
         toLatest()
       }
@@ -622,7 +579,7 @@ struct ChatScreen: View {
     // An earlier page coming in above, the lines seen stay: held at the
     // top edge, the view would stay there, on the page's first lines.
     .onChange(of: state.lines.first?.seq) { before, now in
-      guard let before, let now, now < before, place.atTop,
+      guard let before, let now, now < before, scroll.place.atTop,
         let first = state.lines.first(where: { $0.seq == before })
       else { return }
       // Once the page is laid out above it.
@@ -789,7 +746,7 @@ struct ChatScreen: View {
         Rectangle().fill(colors.accentBorder).frame(height: 1)
       }
       .padding(.vertical, 4)
-      .onScrollVisibilityChange(threshold: 1) { unreadInSight = $0 }
+      .onScrollVisibilityChange(threshold: 1) { scroll.unreadInSight = $0 }
     case .line(let line, _) where line.hidden:
       // Never delivered to the reader: nothing shows.
       EmptyView()
@@ -1269,7 +1226,7 @@ struct ChatScreen: View {
       try? await Task.sleep(for: .milliseconds(50))
       // Asked to the top with too few lines under it to get there, the
       // scroll view would go past the foot.
-      if !place.fits, !unreadInSight {
+      if !scroll.place.fits, !scroll.unreadInSight {
         scroller?.scrollTo(ChatItem.unread.id, anchor: .top)
       } else {
         following = true
@@ -1303,7 +1260,7 @@ struct ChatScreen: View {
       // stops at the foot.
       withAnimation { scroller?.scrollTo("line-\(first.opID)", anchor: .top) }
       try? await Task.sleep(for: .milliseconds(400))
-      if place.atLatest {
+      if scroll.place.atLatest {
         following = true
       } else if unreadFrom == nil {
         unreadFrom = first.seq
@@ -1776,6 +1733,112 @@ private enum ChatItem: Identifiable {
   }
 }
 
+/// What scrolling changes in a chat, read by the pieces that show it
+/// (the ↓, the floating day) rather than by the screen, whose every line
+/// would be made again at each change.
+@Observable
+private final class ChatScroll {
+  var place = ScrollPlace()
+  /// The day of the lines at the top, once its title has gone up out of
+  /// sight (LINE's), shown while the chat scrolls.
+  var topDay: Day?
+  var dayShown = false
+  var scrolling = false
+  /// ここから新着 is on the screen whole, as at the latest when the new
+  /// lines are few: opening has nowhere to go for it then.
+  var unreadInSight = false
+}
+
+/// The ↓ to the latest, once away from it or with others' unread lines
+/// below, counted on it as a chat's unread are; reading happens at the
+/// latest, so none while there.
+private struct LatestButton: View {
+  @Environment(\.themeColors) private var colors
+  let scroll: ChatScroll
+  let unread: Int
+  let action: () -> Void
+
+  var body: some View {
+    let unseen = scroll.place.atLatest ? 0 : unread
+    if scroll.place.away || unseen > 0 {
+      Button(action: action) {
+        Image(systemName: "chevron.down")
+          .font(.body.weight(.semibold))
+          .foregroundStyle(colors.textPrimary)
+          .frame(width: Metrics.touch, height: Metrics.touch)
+          .glassEffect(.regular.interactive(), in: .circle)
+          .overlay(alignment: .topTrailing) {
+            if unseen > 0 {
+              UnreadCount(count: unseen).offset(x: 4, y: -4)
+            }
+          }
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(
+        unseen > 0 ? "最新のメッセージへ、まだ見ていない新着\(unseen)件" : "最新のメッセージへ"
+      )
+      .padding(12)
+      .transition(.opacity)
+    }
+  }
+}
+
+/// The day of the lines at the top, floating over them while the chat
+/// scrolls and a moment after (chatRules.floatingDayMs); not over a notice.
+private struct FloatingDay: View {
+  @Environment(\.themeColors) private var colors
+  let scroll: ChatScroll
+  let covered: Bool
+
+  var body: some View {
+    Group {
+      if let day = scroll.topDay, scroll.dayShown, !covered {
+        Text(ChatTime.day(day))
+          .font(.caption2)
+          .foregroundStyle(colors.textSecondary)
+          .padding(.horizontal, 12)
+          .padding(.vertical, 2)
+          .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Radius.sm))
+          .padding(.top, 8)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+          .transition(.opacity)
+      }
+    }
+    .task(id: scroll.dayShown) {
+      guard scroll.dayShown else { return }
+      while !Task.isCancelled {
+        try? await Task.sleep(for: .milliseconds(Chat.floatingDayMs))
+        if !Task.isCancelled, !scroll.scrolling {
+          withAnimation(.easeOut(duration: 0.2)) { scroll.dayShown = false }
+          return
+        }
+      }
+    }
+  }
+}
+
+/// The top of the lines while earlier ones are to come, which asks for
+/// them once scrolled near (from the scroll's own place: whether a view is
+/// in sight is read once, as the lines are first laid out at the top), and
+/// again after each page while it stays there. Not before the chat has
+/// come in on its place, which would add lines above the latest it opens on.
+private struct EarlierLines: View {
+  let scroll: ChatScroll
+  let first: Int64?
+  let ready: Bool
+  let show: () async -> Void
+
+  var body: some View {
+    let near = scroll.place.nearTop && ready
+    ProgressView()
+      .frame(maxWidth: .infinity, minHeight: Metrics.touch)
+      .task(id: PageAsk(first: first, inSight: near)) {
+        if near { await show() }
+      }
+  }
+}
+
 /// Where the lines are scrolled: at the latest, and more than half a
 /// screen up from it.
 private struct ScrollPlace: Hashable {
@@ -1786,6 +1849,8 @@ private struct ScrollPlace: Hashable {
   var fits = true
   /// At the top edge, where an earlier page coming in would leave it.
   var atTop = false
+  /// Near enough the top that its spinner is on the screen.
+  var nearTop = false
 }
 
 /// When earlier lines are asked for: the top in sight, again after each
@@ -1805,9 +1870,9 @@ private struct FollowKey: Equatable {
 
 private struct ReadKey: Hashable {
   let opened: Bool
-  let atLatest: Bool
   let active: Bool
   let latest: Int64
+  let reached: Int
 }
 
 /// A line of words: others' on the left with their face and, at the start
