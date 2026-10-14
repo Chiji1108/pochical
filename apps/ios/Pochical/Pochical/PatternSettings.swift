@@ -530,7 +530,7 @@ private struct LookEditor: View {
   @State private var tab: MarkStyle?
   @State private var choosingEmoji = false
   @State private var choosingIcon = false
-  @FocusState private var letterFocused: Bool
+  @State private var letterDraft: String?
 
   var body: some View {
     let shown = tab ?? look.style
@@ -572,9 +572,12 @@ private struct LookEditor: View {
           Button("ほかの絵文字を選ぶ", systemImage: "plus") { choosingEmoji = true }
         case .badge:
           LabeledContent("文字") {
-            TextField("", text: letterBinding)
-              .multilineTextAlignment(.trailing)
-              .focused($letterFocused)
+            LimitedTextField(
+              placeholder: draft.symbol, text: letterBinding, limit: TextLimits.shiftMark,
+              showsCount: false, selectsOnFocus: true
+            ) {
+              letterDraft = nil
+            }
           }
         }
         if let alike = lookalike(in: shown) {
@@ -632,14 +635,18 @@ private struct LookEditor: View {
     return sample
   }
 
-  /// The letter, one character; left empty it keeps the one before.
+  /// The letter, its first character once a conversion is confirmed (the
+  /// field cuts it then); left empty it keeps the one before.
   private var letterBinding: Binding<String> {
     Binding {
-      draft.symbol
+      letterDraft ?? draft.symbol
     } set: { text in
-      guard let last = text.last else { return }
-      draft.symbol = String(last)
-      picked.insert(.symbol)
+      letterDraft = text
+      let letter = text.trimmingCharacters(in: .whitespacesAndNewlines)
+      if !letter.isEmpty, letter.count <= TextLimits.shiftMark {
+        draft.symbol = letter
+        picked.insert(.symbol)
+      }
     }
   }
 

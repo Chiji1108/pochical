@@ -212,7 +212,7 @@ struct GroupMarkPage: View {
           LabeledContent("文字") {
             LimitedTextField(
               placeholder: firstLetter, text: letterBinding, limit: TextLimits.groupMark,
-              showsCount: false
+              showsCount: false, selectsOnFocus: true
             ) {
               letterDraft = nil
             }

@@ -18,6 +18,10 @@ struct LimitedTextField: View {
   /// Off where what the field makes shows what fits already, as a mark's
   /// letters do (spec/text-limits.md).
   var showsCount = true
+  /// Selects the text as the field is focused, so typing replaces it, as a
+  /// mark's letter does: a full field would refuse the first key of a
+  /// conversion before it is marked text.
+  var selectsOnFocus = false
   /// Told as the field is left.
   var onEndEditing: () -> Void = {}
   @State private var composing = false
@@ -27,7 +31,7 @@ struct LimitedTextField: View {
     HStack(spacing: 8) {
       Field(
         placeholder: placeholder, text: $text, limit: limit, composing: $composing,
-        onEndEditing: onEndEditing)
+        selectsOnFocus: selectsOnFocus, onEndEditing: onEndEditing)
       if showsCount,
         limit <= TextFields.countAlwaysUpTo || limit - used <= TextFields.countWhenLeft
       {
@@ -45,6 +49,7 @@ private struct Field: UIViewRepresentable {
   @Binding var text: String
   let limit: Int
   @Binding var composing: Bool
+  let selectsOnFocus: Bool
   let onEndEditing: () -> Void
 
   func makeUIView(context: Context) -> UITextField {
@@ -103,6 +108,12 @@ private struct Field: UIViewRepresentable {
 
     func textFieldShouldReturn(_ field: UITextField) -> Bool {
       field.resignFirstResponder()
+    }
+
+    func textFieldDidBeginEditing(_ field: UITextField) {
+      guard parent.selectsOnFocus else { return }
+      // After the tap that focused it has placed the caret.
+      DispatchQueue.main.async { field.selectAll(nil) }
     }
 
     func textFieldDidEndEditing(_ field: UITextField) {
