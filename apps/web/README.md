@@ -12,7 +12,7 @@
 - `bun run test`: モバイル・Webのテスト
 - `bun run check` / `bun run fix`: 共通のUltracite設定でチェック・整形
 
-ルートの `bun.lock` を使います。`routeTree.gen.ts` はTanStack Router、 `worker-configuration.d.ts` は `bun run --cwd apps/web cf-typegen` で生成します。Workers設定を変更したら型を再生成してください。
+ルートの `bun.lock` を使います。`routeTree.gen.ts` はTanStack Startのプラグインが `bun run dev` と `bun run build` のたびに書き出します。型チェックはコミットされたものを使うので、ページを足したり消したりしたら、devかbuildを一度動かしてからコミットしてください。`worker-configuration.d.ts` は `bun run --cwd apps/web cf-typegen` で生成します。Workers設定を変更したら型を再生成してください。
 
 ## ページ
 
