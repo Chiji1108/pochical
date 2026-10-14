@@ -118,14 +118,17 @@ struct JoinScreen: View {
         // changes it later (/design's GroupProfileRow on the join screen).
         // /design's GroupProfileRow, as グループの設定 has it: the name and
         // face the group will show, and whether they are the usual ones.
-        Section("このグループでのあなた") {
+        Section(profileTitle) {
           NavigationLink {
             joinProfilePage(groupName: details.name)
           } label: {
             LabeledContent {
               // The usual name typed again is still the usual one, as the
               // group takes it.
-              Text(myName == usualName && face == .usual ? "いつもと同じ" : "このグループだけ")
+              // With no usual name yet, these become the usual ones.
+              Text(
+                usualName.isEmpty || (myName == usualName && face == .usual)
+                  ? "いつもと同じ" : "このグループだけ")
             } label: {
               Label {
                 Text(myName.isEmpty ? "名前を入れてください" : myName)
@@ -263,13 +266,13 @@ struct JoinScreen: View {
       } footer: {
         Text(
           usualName.isEmpty
-            ? "参加すると、\(groupName)の人にだけ、この名前と写真で表示されます。"
+            ? "参加すると、この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定 › プロフィールで変えられます。"
             : "参加すると、\(groupName)の人にだけ、この名前と写真で表示されます。名前が空欄なら「\(usualName)」、写真を入れなければいつもの写真のままです。")
       }
       .settingsRows()
     }
     .settingsList()
-    .navigationTitle("このグループでのあなた")
+    .navigationTitle(profileTitle)
     .navigationBarTitleDisplayMode(.inline)
   }
 
@@ -288,13 +291,25 @@ struct JoinScreen: View {
     }
   }
 
+  /// With no usual name yet, the name and face are asked as the usual
+  /// ones, not this group's alone.
+  private var profileTitle: String {
+    usualName.isEmpty ? "あなたの名前と写真" : "このグループでのあなた"
+  }
+
   private func join() {
     joining = true
     Task {
       defer { joining = false }
+      // Someone with no usual name yet keeps these as theirs everywhere,
+      // which the group then shows as it shows anyone's usual ones; kept
+      // or not, they still join with them.
+      let keptAsUsual = usualName.isEmpty ? await keepAsUsual() : false
       do throws(InviteError) {
         let groupID = try await groupCalls.join(code: invite.code, displayName: myName)
-        await setFace(in: groupID)
+        if !keptAsUsual {
+          await setFace(in: groupID)
+        }
         onJoined(groupID)
       } catch {
         ReviewPrompt.troubled = true
@@ -305,6 +320,21 @@ struct JoinScreen: View {
 }
 
 extension JoinScreen {
+  /// The name and face as the usual ones (設定 › プロフィール), for someone
+  /// who has none yet; false when they could not be kept.
+  fileprivate func keepAsUsual() async -> Bool {
+    do {
+      var photoID = ""
+      if case .picked(let jpeg) = face {
+        photoID = try await groupCalls.sendPhoto(jpeg, to: ChatPhotos.mine)
+      }
+      try await groupCalls.setProfile(UsualProfile(name: myName, photoID: photoID))
+      return true
+    } catch {
+      return false
+    }
+  }
+
   /// The face picked here, set now the person is in the group; the usual
   /// one needs nothing. Not set, the group opens anyway and says so.
   fileprivate func setFace(in groupID: String) async {

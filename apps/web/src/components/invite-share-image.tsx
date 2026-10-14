@@ -1,6 +1,7 @@
-import { themeSkyId } from "@pochical/design/skies";
 /* @jsxImportSource react */
-// satori breaks its own lines and draws no <wbr> (src/jsx).
+// satori breaks its own lines and draws no <wbr> (src/jsx). The pragma
+// works only as the file's first line, above the imports.
+import { themeSkyId } from "@pochical/design/skies";
 import type { CSSProperties } from "react";
 
 import { SHARE_IMAGE } from "../lib/site";

@@ -70,10 +70,14 @@ function sampleRules(sample: DesignVariants["repeatSample"]): RepeatRule[] {
   ];
 }
 
+// Someone with no usual name or photo yet.
+const noProfile = { name: "" };
+
 // A sample person, starting over with the sample or with nothing entered.
 function makePerson(
   {
     memberSample,
+    profileSample,
     groupSample,
     patternSample,
     repeatSample,
@@ -85,6 +89,7 @@ function makePerson(
     coworkers: memberSample === "some" ? sampleCoworkers : [],
     groups: groupSample === "some" ? sampleGroups() : [],
     patterns: samplePatterns(patternSample),
+    ...(profileSample === "none" ? { profile: noProfile } : {}),
     rules: sampleRules(repeatSample),
     schedule: sample === "empty" ? {} : initialDesignSchedule(),
     support: supportThreadOf(supportSample),
@@ -196,6 +201,14 @@ function DemoPage() {
               if (key === "memberSample") {
                 person.setState({
                   coworkers: value === "some" ? sampleCoworkers : [],
+                });
+              }
+              if (key === "profileSample") {
+                person.setState({
+                  profile:
+                    value === "none"
+                      ? noProfile
+                      : createUserStore().getState().profile,
                 });
               }
               if (key === "repeatSample") {

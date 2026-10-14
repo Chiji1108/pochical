@@ -29,6 +29,7 @@ import {
   GroupProfilePage,
   GroupProfileRow,
   profileIn,
+  profileTitle,
 } from "./design-group-settings";
 import { PageHeader } from "./design-header";
 import { List, ListRow } from "./design-list";
@@ -385,6 +386,7 @@ export function JoinScreen({
 }) {
   const invite = sampleInvite();
   const setChats = useUser((state) => state.setChats);
+  const setProfile = useUser((state) => state.setProfile);
   const [mine, setMine] = useState<GroupProfile>();
   const [editing, setEditing] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
@@ -465,7 +467,7 @@ export function JoinScreen({
             {members}
           </button>
         </div>
-        <Section title="このグループでのあなた">
+        <Section title={profileTitle(profile)}>
           <List>
             <GroupProfileRow
               group={group}
@@ -482,6 +484,7 @@ export function JoinScreen({
           参加すると、あなたのシフトもメンバーに見えるようになります。
         </p>
         <Button
+          disabled={profileIn(group, profile).name === ""}
           onClick={() => {
             // Told here, so that joining from the hub's QR and from a
             // link opened on the calendar both say so in the chat.
@@ -489,6 +492,13 @@ export function JoinScreen({
             setChats((chats) =>
               withNotice(chats, group.id, `${name}がグループに参加しました`)
             );
+            // With no usual name yet, the name and face become the usual
+            // ones, which the group then shows as anyone's.
+            if (profile.name === "") {
+              setProfile({ name, photo: mine?.photo });
+              onJoin({ ...group, mine: undefined });
+              return;
+            }
             onJoin(group);
           }}
           variant="primary"

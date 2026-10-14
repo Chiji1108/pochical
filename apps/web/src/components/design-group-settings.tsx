@@ -328,9 +328,12 @@ export function GroupProfileRow({
   return (
     <ListRow
       onClick={onOpen}
-      label={shown.name}
+      label={shown.name || "名前を入れてください"}
       truncate
-      value={group.mine ? "このグループだけ" : "いつもと同じ"}
+      // With no usual name yet, these become the usual ones.
+      value={
+        group.mine && profile.name !== "" ? "このグループだけ" : "いつもと同じ"
+      }
       leading={
         <>
           <PhotoAvatar name={shown.name} photo={shown.photo} size={28} />
@@ -371,7 +374,7 @@ export function GroupProfilePage({
   const usualPhoto = mine.photo === undefined && !mine.noPhoto;
   return (
     <>
-      <PageHeader back={back} onBack={onBack} title="このグループでのあなた" />
+      <PageHeader back={back} onBack={onBack} title={profileTitle(profile)} />
       <PhotoEditor
         name={shown.name}
         onRemove={
@@ -406,21 +409,35 @@ export function GroupProfilePage({
                 onValueChange={(name) => {
                   update({ name: name || undefined });
                 }}
-                placeholder={profile.name}
+                placeholder={profile.name || "例：さくら"}
                 value={mine.name ?? ""}
               />
             </>
           }
         />
       </List>
-      <Note>
-        {joining && "参加すると、"}
-        {group.name}
-        の人にだけ、この名前と写真で表示されます。名前が空欄なら「{profile.name}
-        」、写真を入れなければいつもの写真のままです。
-      </Note>
+      {profile.name === "" ? (
+        <Note>
+          参加すると、この名前と写真がいつもの名前と写真になり、ほかのグループでも使われます。設定
+          › プロフィールで変えられます。
+        </Note>
+      ) : (
+        <Note>
+          {joining && "参加すると、"}
+          {group.name}
+          の人にだけ、この名前と写真で表示されます。名前が空欄なら「
+          {profile.name}
+          」、写真を入れなければいつもの写真のままです。
+        </Note>
+      )}
     </>
   );
+}
+
+// What the name and face are asked as: this group's, or, with no usual
+// name yet, the usual ones joining keeps.
+export function profileTitle(profile: Profile): string {
+  return profile.name === "" ? "あなたの名前と写真" : "このグループでのあなた";
 }
 
 // Your name and picture in a group: its own, or the usual ones.
