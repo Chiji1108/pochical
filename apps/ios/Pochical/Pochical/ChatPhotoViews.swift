@@ -53,7 +53,12 @@ struct ChatPhotoImage: View {
       }
     }
     .task(id: photo.id) {
-      if let pixels, Thumbnails.kept(photo.id, pixels: pixels) != nil { return }
+      // Held here too, so a thumbnail the system lets go while the line
+      // shows is not lost from it.
+      if let pixels, let kept = Thumbnails.kept(photo.id, pixels: pixels) {
+        image = kept
+        return
+      }
       guard let data = try? await groupCalls.photo(photo.id, in: groupID) else { return }
       if let pixels {
         let id = photo.id
