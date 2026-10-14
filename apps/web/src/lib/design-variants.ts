@@ -102,6 +102,15 @@ export const designVariantOptions = {
     ],
     label: "読み取るQR",
   },
+  // いつもの名前と写真: set, or none yet, as someone who joins a group
+  // before setting them has.
+  profileSample: {
+    choices: [
+      { label: "あり", value: "some" },
+      { label: "なし", value: "none" },
+    ],
+    label: "プロフィール",
+  },
   scheduleSample: {
     choices: [
       { label: "入力済み", value: "filled" },
