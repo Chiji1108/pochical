@@ -174,6 +174,14 @@ struct ChatScreen: View {
   @State private var placed = false
   @State private var position = ScrollPosition(idType: String.self)
   @State private var place = ScrollPlace()
+  /// The chat keeps to its latest line as lines come and the keyboard
+  /// comes and goes: true until the person scrolls up, and again once they
+  /// scroll back down to it, send, or tap ↓. Only their own scrolling
+  /// changes it, not lines or the keyboard moving the view.
+  @State private var following = true
+  /// ここから新着 is on the screen whole, as at the latest when the new
+  /// lines are few: opening has nowhere to go for it then.
+  @State private var unreadInSight = false
   /// The height the lines are seen in, between the pins and the composer.
   @State private var seen: CGFloat = 0
   @State private var draft = ""
@@ -289,12 +297,14 @@ struct ChatScreen: View {
         }
       }
       .scrollTargetLayout()
+      // In from the sides as padding, not content margins, so scrolling
+      // to the foot's edge never moves the lines sideways.
+      .padding(.horizontal, 16)
       // Lines shorter than the screen fill it, at its foot, rather than
       // left to the scroll view's bottom alignment, which on a device
       // rests them short of the foot, partly under the composer.
       .frame(minHeight: seen, alignment: .bottom)
     }
-    .contentMargins(.horizontal, 16, for: .scrollContent)
     .contentMargins(.vertical, 12, for: .scrollContent)
     .opacity(placed ? 1 : 0)
     .overlay {
@@ -304,31 +314,29 @@ struct ChatScreen: View {
           .foregroundStyle(colors.textQuaternary)
       }
     }
+    // Opens at the foot (spec/chat.md, Unread lines and typing); where it
+    // goes from there is the person's, or follows the latest.
     .scrollPosition($position)
     .defaultScrollAnchor(.bottom)
-    .defaultScrollAnchor(.bottom, for: .sizeChanges)
     .scrollDismissesKeyboard(.interactively)
     .onScrollGeometryChange(for: ScrollPlace.self) { geometry in
       let below =
         geometry.contentSize.height + geometry.contentInsets.bottom
         - geometry.visibleRect.maxY
-      // Not the top inset: the bottom anchor itself pads short lines
-      // down to the foot with it.
-      let tall = geometry.contentSize.height + geometry.contentInsets.bottom
       return ScrollPlace(
         atLatest: below < 24, away: below > geometry.containerSize.height / 2,
-        fits: tall <= geometry.containerSize.height, height: geometry.contentSize.height,
-        seen: geometry.containerSize.height - geometry.contentInsets.bottom)
-    } action: { old, now in
-      // A line coming in makes the lines taller, and the keyboard the room
-      // shorter, before either is told: where they were scrolled is kept
-      // through that, so a chat at its foot stays at its foot.
-      var next = now
-      if now.height != old.height || now.seen != old.seen {
-        next.atLatest = old.atLatest
-        next.away = old.away
+        fits: geometry.contentSize.height <= seen + 1)
+    } action: { _, now in
+      place = now
+    }
+    // Following is the person's to change: off as they scroll, and on
+    // again where their scroll comes to rest at the foot.
+    .onScrollPhaseChange { _, phase in
+      switch phase {
+      case .interacting: following = false
+      case .idle: if !following { following = place.atLatest }
+      default: break
       }
-      place = next
     }
     .onScrollGeometryChange(for: CGFloat.self) { geometry in
       max(geometry.containerSize.height - geometry.contentInsets.top - geometry.contentInsets.bottom, 0)
@@ -341,6 +349,7 @@ struct ChatScreen: View {
       let unseen = place.atLatest ? 0 : meID.map { state.unread(by: $0) } ?? 0
       if place.away || unseen > 0 {
         Button {
+          following = true
           withAnimation { toLatest() }
         } label: {
           Image(systemName: "chevron.down")
@@ -498,28 +507,17 @@ struct ChatScreen: View {
         Task { await socket?.sendTyping(in: threadID, on: true) }
       }
     }
-    // Others' lines as they come keep the chat at its foot when it was
-    // there, as the bottom anchor alone stops short of them.
-    .onChange(of: state.lines.last?.seq) {
-      guard opened, place.atLatest else { return }
-      // Once the new line is laid out, as opening waits for the lines:
-      // scrolled to before then, the chat stays short of it.
-      Task { @MainActor in
-        try? await Task.sleep(for: .milliseconds(50))
+    // Lines coming in, someone writing, and the keyboard coming up or
+    // going keep a following chat at its foot.
+    .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count, seen: seen)) {
+      if opened, following {
         withAnimation { toLatest() }
       }
     }
-    // The keyboard coming up or going keeps a chat at its foot there,
-    // rather than where it was last scrolled to by id.
-    .onChange(of: place.seen) {
-      guard opened, place.atLatest else { return }
-      Task { @MainActor in
-        try? await Task.sleep(for: .milliseconds(50))
-        withAnimation { toLatest() }
-      }
-    }
+    // One's own line just sent shows at the foot, wherever the lines were.
     .onChange(of: state.waiting.last?.opID) { _, sent in
       if sent != nil {
+        following = true
         withAnimation { toLatest() }
       }
     }
@@ -665,6 +663,7 @@ struct ChatScreen: View {
         Rectangle().fill(colors.accentBorder).frame(height: 1)
       }
       .padding(.vertical, 4)
+      .onScrollVisibilityChange(threshold: 1) { unreadInSight = $0 }
     case .line(let line, _) where line.hidden:
       // Never delivered to the reader: nothing shows.
       EmptyView()
@@ -1102,21 +1101,23 @@ struct ChatScreen: View {
         unreadFrom = lines[index].seq
       }
     }
-    // With nothing new, the latest is where the lines already are.
-    if unreadFrom == nil { placed = true }
-    // Once the lines are laid out, to the foot by the latest line's id:
-    // the bottom anchor alone stops short of it once the rows have been
-    // measured, and ここから新着 near the foot can then go only so far.
-    try? await Task.sleep(for: .milliseconds(50))
-    toLatest()
-    if unreadFrom != nil, !place.fits {
+    // With nothing new, the bottom anchor has the lines at the latest
+    // already. With something, once the lines are laid out, ここから新着
+    // goes to the top, shown only once there rather than after a trip.
+    if unreadFrom == nil {
+      placed = true
+    } else {
+      // Once the lines are laid out, where they are and what is in sight
+      // known.
       try? await Task.sleep(for: .milliseconds(50))
-      position.scrollTo(id: ChatItem.unread.id, anchor: .top)
+      // Asked to the top with too few lines under it to get there, the
+      // scroll view would go past the foot.
+      if !place.fits, !unreadInSight {
+        following = false
+        position.scrollTo(id: ChatItem.unread.id, anchor: .top)
+      }
+      withAnimation(.easeOut(duration: 0.15)) { placed = true }
     }
-    // Shown once there, ここから新着 from the first look rather than
-    // after a trip from the foot.
-    withAnimation(.easeOut(duration: 0.15)) { placed = true }
-    try? await Task.sleep(for: .milliseconds(300))
     opened = true
   }
 
@@ -1299,14 +1300,11 @@ struct ChatScreen: View {
     say("\(day.fullText)に決めました")
   }
 
-  /// To the latest line, by its id: scrolling to the edge would also
-  /// move the lines sideways. Lines shorter than the screen are at its
-  /// foot already: scrolling to one there carried them out of sight.
+  /// To the foot, by its edge rather than the latest line's id: an id
+  /// kept as the place is held to as the room changes, which carried the
+  /// chat back up as the keyboard came.
   private func toLatest() {
-    guard !place.fits else { return }
-    if let latest = items(chat.state).last {
-      position.scrollTo(id: latest.id, anchor: .bottom)
-    }
+    position.scrollTo(edge: .bottom)
   }
 
   /// Answers a line (返信): quoted over the composer until sent or ×.
@@ -1466,6 +1464,7 @@ struct ChatScreen: View {
     let state = chat.state
     if let line = state.lines.first(where: { $0.seq == target }) {
       jumpTarget = nil
+      following = false
       withAnimation { position.scrollTo(id: "line-\(line.opID)", anchor: .center) }
       ringed = target
       try? await Task.sleep(for: .milliseconds(500))
@@ -1571,10 +1570,14 @@ private struct ScrollPlace: Hashable {
   /// The lines are shorter than the screen, held at its foot, with
   /// nowhere to scroll.
   var fits = true
-  /// How tall the lines are, to tell a scroll from lines coming in.
-  var height: CGFloat = 0
-  /// How much room they are seen in, over the composer and keyboard.
-  var seen: CGFloat = 0
+}
+
+/// What moves a following chat to its foot: a line coming in, someone
+/// writing, and the room the lines are seen in.
+private struct FollowKey: Equatable {
+  let latest: Int64?
+  let writers: Int
+  let seen: CGFloat
 }
 
 private struct ReadKey: Hashable {
