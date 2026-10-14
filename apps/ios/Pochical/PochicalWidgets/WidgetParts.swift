@@ -10,9 +10,9 @@ import WidgetKit
 /// How much smaller a mark draws with its name under it.
 let nameRoom: CGFloat = 6
 
-/// How a day off shows, following 休みの見せ方 as the
-/// calendar does: on its tile, or with 空白 left empty, coming back faint
-/// in a week of days as the calendar's week has it.
+/// How a day off shows, following 休みの見せ方 as the calendar does: on
+/// its tile, or with 空白 left empty, coming back faint in a week of days
+/// as the calendar's week has it.
 struct OffLook {
   enum Mark { case shown, faint, none }
   var mark = Mark.shown

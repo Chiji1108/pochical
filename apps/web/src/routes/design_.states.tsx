@@ -19,14 +19,16 @@ import {
   PresetContexts,
   useDesignTheme,
 } from "../components/design-providers";
+import { shapeOptions } from "../components/design-settings-style";
 import { ColorSchemeContext, pageStyle } from "../components/design-theme";
 import type { PresetId } from "../components/design-theme";
 import {
+  IconWeightContext,
   OffDisplayContext,
   OffHighlightContext,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
-import type { OffDisplay, ShiftMarkStyle } from "../components/shift-mark";
+import type { OffDisplay } from "../components/shift-mark";
 import { initialDesignSchedule, patternSets } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import { pageMeta } from "../lib/site";
@@ -60,11 +62,6 @@ const noHighlight = {
 };
 
 const patternCounts = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
-const markStyles: { style: ShiftMarkStyle; label: string }[] = [
-  { label: "アイコン", style: "icon" },
-  { label: "絵文字", style: "emoji" },
-  { label: "文字", style: "badge" },
-];
 const schemes: { scheme: ColorScheme; label: string }[] = [
   { label: "ライト", scheme: "light" },
   { label: "ダーク", scheme: "dark" },
@@ -123,9 +120,11 @@ function StatesPage() {
 
           <FrameSection title="シフトの見た目">
             <FrameRow fan>
-              {markStyles.map(({ style, label }) => (
-                <ShiftMarkStyleContext key={style} value={style}>
-                  <CalendarFrame label={label} />
+              {shapeOptions.map(({ fill, name, style }) => (
+                <ShiftMarkStyleContext key={name} value={style}>
+                  <IconWeightContext value={fill ? "duotone" : "regular"}>
+                    <CalendarFrame label={name} />
+                  </IconWeightContext>
                 </ShiftMarkStyleContext>
               ))}
             </FrameRow>
