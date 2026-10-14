@@ -16,8 +16,6 @@ import {
   CellNamesContext,
   IconWeightContext,
   MonochromeContext,
-  OffDisplayContext,
-  OffHighlightContext,
   noOffLooks,
   OffLooksContext,
   ShiftMarkStyleContext,
@@ -101,23 +99,13 @@ export function DesignProviders({
                   },
                 }}
               >
-                <OffHighlightContext
-                  value={{
-                    highlight: {
-                      badge: look.highlight,
-                      emoji: look.highlight,
-                      icon: look.highlight,
-                    },
-                  }}
-                >
-                  <MonochromeContext value={{ monochrome: !shiftColors }}>
-                    <OffDisplayContext value={look.blankOff ? "blank" : "show"}>
-                      <OffLooksContext value={look.offs ?? noOffLooks}>
-                        {children}
-                      </OffLooksContext>
-                    </OffDisplayContext>
-                  </MonochromeContext>
-                </OffHighlightContext>
+                <MonochromeContext value={{ monochrome: !shiftColors }}>
+                  <OffLooksContext
+                    value={{ off: look.off, offs: look.offs ?? noOffLooks }}
+                  >
+                    {children}
+                  </OffLooksContext>
+                </MonochromeContext>
               </CellNamesContext>
             </ShiftMarkStyleContext>
           </IconWeightContext>

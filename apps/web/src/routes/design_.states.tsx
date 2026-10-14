@@ -22,11 +22,11 @@ import {
 import { ColorSchemeContext, pageStyle } from "../components/design-theme";
 import type { PresetId } from "../components/design-theme";
 import {
-  OffDisplayContext,
-  OffHighlightContext,
+  noOffLooks,
+  OffLooksContext,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
-import type { OffDisplay, ShiftMarkStyle } from "../components/shift-mark";
+import type { OffLookId, ShiftMarkStyle } from "../components/shift-mark";
 import { initialDesignSchedule, patternSets } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import { pageMeta } from "../lib/site";
@@ -55,9 +55,6 @@ const partialSchedule = Object.fromEntries(
 );
 const emptyPerson = { schedule: {} };
 const partialPerson = { schedule: partialSchedule };
-const noHighlight = {
-  highlight: { badge: false, emoji: false, icon: false },
-};
 
 const patternCounts = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
 const markStyles: { style: ShiftMarkStyle; label: string }[] = [
@@ -133,11 +130,11 @@ function StatesPage() {
 
           <FrameSection title="休みの見せ方">
             <FrameRow fan>
-              <OffLook display="show" label="色をつける" />
-              <OffLook display="show" highlight={false} label="色なし" />
-              <OffLook display="blank" label="空白" />
+              <OffLook label="色をつける" off="highlight" />
+              <OffLook label="色なし" off="mark" />
+              <OffLook label="空白" off="blank" />
               <OffLook
-                display="blank"
+                off="blank"
                 editing
                 label="空白で入力中"
                 note="入力中は薄く出る"
@@ -163,27 +160,21 @@ function StatesPage() {
 }
 
 function OffLook({
-  display,
-  highlight = true,
+  off,
   editing = false,
   label,
   note,
 }: {
-  display: OffDisplay;
-  highlight?: boolean;
+  off: OffLookId;
   editing?: boolean;
   label: string;
   note?: string;
 }) {
-  const frame = (
-    <OffDisplayContext value={display}>
+  return (
+    <OffLooksContext value={{ off, offs: noOffLooks }}>
       <CalendarFrame editing={editing} label={label} note={note} />
-    </OffDisplayContext>
+    </OffLooksContext>
   );
-  if (highlight) {
-    return frame;
-  }
-  return <OffHighlightContext value={noHighlight}>{frame}</OffHighlightContext>;
 }
 
 function Scheme({

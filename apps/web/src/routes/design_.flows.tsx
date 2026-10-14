@@ -25,7 +25,7 @@ import {
   useDesignTheme,
 } from "../components/design-providers";
 import { pageStyle } from "../components/design-theme";
-import { OffDisplayContext } from "../components/shift-mark";
+import { blankOffs, OffLooksContext } from "../components/shift-mark";
 import {
   addDays,
   gapDaysIn,
@@ -149,7 +149,7 @@ function FlowsPage() {
               />
             </FrameRow>
             <FrameRow branch="人によって変わるところ" fan>
-              <OffDisplayContext value="blank">
+              <OffLooksContext value={blankOffs}>
                 <GapFrame
                   choices={[
                     { blank: true, key: "off", label: presetPatterns.off.name },
@@ -157,7 +157,7 @@ function FlowsPage() {
                   label="休みを空白で見せている人"
                   note="空白のスイッチがない"
                 />
-              </OffDisplayContext>
+              </OffLooksContext>
               <GapFrame
                 choices={[
                   { key: "off", label: presetPatterns.off.name },
