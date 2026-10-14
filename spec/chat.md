@@ -6,7 +6,7 @@ The numbers named `chatRules.*` here are in `design/src/chat.ts`, the one place 
 
 ## The chat's page
 
-- The title is the group's name for 全体チャット, with how many are in it under it, or the other member's name for a one-to-one chat. A tap on it opens what the chat is of: the group's settings, or the member's profile.
+- The title is the group's name for 全体チャット, with how many are in it under it, or the other member's name for a one-to-one chat. A tap on it opens what the chat is of: the group's settings, or the member's profile. While the group's socket is not open (接続中…) or its catch-up is still coming (更新中…, spec/sync-protocol.md, Keepalive) for longer than `socketRules.statusShownAfterMs`, that is said under the title instead, as LINE, Telegram and WhatsApp say it, so lines shown are not taken for all there are; it goes as soon as the socket is current.
 - A member's profile, from their face, their mention or a one-to-one chat's title, is a sheet: their face, which opens large when it is a photo, their name, ブロック中 while blocked, 〇〇でのプロフィール with the group's mark, and メッセージを送る for the one-to-one chat with them, but in that chat itself and while they are blocked. ブロック and 通報 are in its ⋯ (Reporting and blocking).
 - A one-to-one chat with someone who left the group, or was taken out of it, stays in the hub's chats to be read, but takes no more lines: 〇〇はグループを抜けました stands where the composer was (相手のアカウントは削除されました once their account is deleted, spec/sync-protocol.md).
 - ⋯ beside the title holds みんなのシフト for 全体チャット, then the chat's notifications (Mentions).

@@ -10,4 +10,5 @@ object SyncSocket {
   const val keepaliveWithinMs = 10000
   const val reconnectFirstMs = 1000
   const val reconnectMostMs = 60000
+  const val statusShownAfterMs = 1000
 }

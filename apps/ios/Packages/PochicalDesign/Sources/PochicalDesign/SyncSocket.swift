@@ -8,4 +8,5 @@ public enum SyncSocket {
   public static let keepaliveWithinMs = 10000
   public static let reconnectFirstMs = 1000
   public static let reconnectMostMs = 60000
+  public static let statusShownAfterMs = 1000
 }
