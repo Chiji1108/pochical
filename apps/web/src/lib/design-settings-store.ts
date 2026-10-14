@@ -6,7 +6,11 @@ import type { Account } from "../components/design-account";
 import type { Appearance, PresetId } from "../components/design-theme";
 import { defaultWeekSettings } from "../components/design-week";
 import type { WeekSettings } from "../components/design-week";
-import type { LookSettings, ShiftMarkStyle } from "../components/shift-mark";
+import type {
+  LookSettings,
+  OffLookId,
+  ShiftMarkStyle,
+} from "../components/shift-mark";
 import { defaultReminders } from "./design-reminders";
 import type { Reminder } from "./design-reminders";
 import { deviceSettingsKey } from "./design-settings-key";
@@ -25,11 +29,14 @@ export type GroupLook = {
 };
 
 // How the person's own month draws days, kept per shape so each finds its
-// switches as they were left. Device only.
+// switches as they were left: `highlight` and `blankOff` are how days off
+// show, and `offs` each pattern's own 休みの見せ方 over them, by its id,
+// once set. Device only.
 export type CalendarOptions = {
   names: boolean;
   highlight: boolean;
   blankOff: boolean;
+  offs?: Partial<Record<string, OffLookId>>;
 };
 
 // How 画像で保存 draws the month. Names start on for the people it goes to,
@@ -111,6 +118,15 @@ type SettingsState = {
   setReminders: (reminders: Reminder[]) => void;
   // Changes the options of the shape in use.
   setCalendarOptions: (change: Partial<CalendarOptions>) => void;
+  // Sets how one pattern's days off show in the shape in use, and drops
+  // from every shape the patterns no longer among `offPatterns`, so the
+  // look, kept with the account, does not grow with each pattern ever
+  // deleted.
+  setOffLook: (
+    shift: string,
+    look: OffLookId,
+    offPatterns: readonly string[]
+  ) => void;
 };
 
 // Letters already sit on tinted tiles and are the shift's name, so they
@@ -189,6 +205,25 @@ export const useSettings = create<SettingsState>()(
       },
       setMonthTap: (monthTap) => {
         set((state) => ({ device: { ...state.device, monthTap } }));
+      },
+      setOffLook: (shift, look, offPatterns) => {
+        set((state) => {
+          const { style } = state.groupLook;
+          const kept = (options: CalendarOptions) =>
+            Object.fromEntries(
+              Object.entries(options.offs ?? {}).filter(([key]) =>
+                offPatterns.includes(key)
+              )
+            );
+          const { badge, emoji, icon } = state.device.calendar;
+          const calendar = {
+            badge: { ...badge, offs: kept(badge) },
+            emoji: { ...emoji, offs: kept(emoji) },
+            icon: { ...icon, offs: kept(icon) },
+          };
+          calendar[style].offs[shift] = look;
+          return { device: { ...state.device, calendar } };
+        });
       },
       setPreset: (preset) => {
         set((state) => ({ device: { ...state.device, preset } }));

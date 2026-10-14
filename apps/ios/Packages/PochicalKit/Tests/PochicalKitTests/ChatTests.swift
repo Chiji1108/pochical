@@ -388,6 +388,23 @@ func oneEmoji(_ vector: EmojiVectors.Case) {
   #expect(isEmoji(vector.text) == vector.expected)
 }
 
+struct MarkLetterVectors: Decodable, Sendable {
+  struct Case: VectorCase {
+    let name: String
+    let before: String
+    let after: String
+    let limit: Int
+    let expected: String
+  }
+
+  let markLetter: [Case]
+}
+
+@Test(arguments: try vectors("text", as: MarkLetterVectors.self).markLetter)
+func aFullMarkLetterTakesWhatIsTyped(_ vector: MarkLetterVectors.Case) {
+  #expect(markLetter(before: vector.before, after: vector.after, limit: vector.limit) == vector.expected)
+}
+
 @Test func aLinesReactionsComeWithItAndTheMembersShowAtOnce() throws {
   let database = try appDatabase()
   try database.write { db in

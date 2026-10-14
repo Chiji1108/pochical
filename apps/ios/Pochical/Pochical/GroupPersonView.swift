@@ -127,8 +127,8 @@ struct GroupPersonView: View {
     // Their marks in their own shape, with names and days off shown.
     var theirLook = look.drawing(person.markLook)
     theirLook.options.names = true
-    theirLook.options.highlight = true
-    theirLook.options.blankOff = false
+    theirLook.options.off = .highlight
+    theirLook.options.offs = [:]
     return VStack(spacing: 4) {
       ForEach(weeks, id: \.self) { week in
         HStack(spacing: 4) {

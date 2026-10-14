@@ -14,6 +14,30 @@ export function limitText(text: string, limit: number) {
   return kept.map(({ segment }) => segment).join("");
 }
 
+// A mark's letter after an edit: within the limit, the text as it is;
+// past it, what the edit put in, cut to the limit, so typing or converting
+// into a full letter replaces it rather than being refused. What was put
+// in is the text less what it shares with the letter before at its start
+// and its end (spec/vectors/text.json, markLetter).
+export function markLetter(before: string, after: string, limit: number) {
+  const was = [...graphemes.segment(before)].map(({ segment }) => segment);
+  const now = [...graphemes.segment(after)].map(({ segment }) => segment);
+  if (now.length <= limit) {
+    return after;
+  }
+  const shared = Math.min(was.length, now.length);
+  let start = 0;
+  while (start < shared && was[start] === now[start]) {
+    start += 1;
+  }
+  let end = 0;
+  while (end < shared - start && was.at(-1 - end) === now.at(-1 - end)) {
+    end += 1;
+  }
+  const typed = now.slice(start, now.length - end);
+  return (typed.length > 0 ? typed : now).slice(0, limit).join("");
+}
+
 // One emoji, as the pickers and the system keyboards give one: a single
 // character that starts as a pictograph or a flag, or a keycap (1️⃣, #️⃣),
 // which starts with the plain digit or sign under its combining keycap.
