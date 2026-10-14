@@ -46,9 +46,19 @@ export const presetPatterns = Object.fromEntries(
   ])
 ) as Record<PresetShift, Pattern>;
 
-// The ready-made patterns, in the order given.
-export function presetList(ids: readonly PresetShift[]): Pattern[] {
-  return ids.map((id) => presetPatterns[id]);
+// The ready-made patterns, in the order given, as the person's copies: a
+// next day is kept only when that pattern is among `keeping` (the ones
+// given, unless said), as a 当番 picked without its 非番 fills nothing.
+export function presetList(
+  ids: readonly PresetShift[],
+  keeping: ReadonlySet<string> = new Set(ids)
+): Pattern[] {
+  return ids.map((id) => {
+    const preset = presetPatterns[id];
+    return preset.nextDay === undefined || keeping.has(preset.nextDay)
+      ? preset
+      : { ...preset, nextDay: undefined };
+  });
 }
 
 export function bookOf(list: readonly Pattern[]): PatternBook {

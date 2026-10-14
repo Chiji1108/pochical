@@ -1,5 +1,5 @@
 {
-  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them, archived (`archived`, written only when true): kept for its days, offered nowhere a pattern is picked. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day. guessLook: a new pattern's mark from its name (design/src/patterns.ts, lookHints): the first hint with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon; the letter is the name's first character, trimmed. A mark picked by hand is never guessed again. nextColor: a new pattern's color, the first palette slot no pattern uses, else the count of patterns modulo the palette's 12 slots.",
+  "about": "Changing the list of patterns (spec/shift-patterns.md). deleted: deleting pattern `id` takes it from `patterns` and changes nothing that names it: other patterns keep it as their `nextDay`, and days and orders keep it, each read as naming a pattern that is gone (spec/sync-protocol.md, Deleted values). newJob: changing jobs; the new job's `incoming` patterns take over from the person's `own`, and an old one still on a day before the switch (`usedBefore`) stays after them, archived (`archived`, written only when true): kept for its days, offered nowhere a pattern is picked. A ready-made pattern sharing an id with one of the person's that differs (name, mark, time, off, next day) and is still used before the switch keeps the person's id; the new job's takes a fresh one, which `sequence` (the new order) and next days use. Fresh ids are \"new-1\", \"new-2\"… in the order of `incoming`. `expected` lists the patterns by id, in order, with their next day. guessLook: a new pattern's mark from its name (design/src/patterns.ts, lookHints): the first hint with a word anywhere in the name gives its emoji and icon, else ⭐️ and the letter icon; the letter is the name's first character, trimmed. A mark picked by hand is never guessed again. nextColor: a new pattern's color, the first palette slot no pattern uses, else the count of patterns modulo the palette's 12 slots. readyCopies: the ready-made patterns `ids` (design/src/patterns.ts, readyPatterns) as the person's copies, in that order: each keeps its next day only when that pattern is among `keeping` (`ids` when not given), so a 当番 picked without its 非番, or a 夜勤 without its 明け, fills nothing on the next day. `keeping` is what パターンを追加 counts: the person's patterns and those added with them.",
   "deleted": [
     {
       "name": "it goes from the list, and patterns that name it keep it",
@@ -396,6 +396,62 @@
       "name": "every slot used",
       "used": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 4],
       "expected": 1
+    }
+  ],
+  "readyCopies": [
+    {
+      "name": "a 当番 with its 非番 keeps it as its next day",
+      "ids": ["duty", "offDuty", "off"],
+      "expected": [
+        {
+          "id": "duty",
+          "nextDay": "offDuty"
+        },
+        {
+          "id": "offDuty"
+        },
+        {
+          "id": "off"
+        }
+      ]
+    },
+    {
+      "name": "a 当番 picked without its 非番 names no next day",
+      "ids": ["duty", "off"],
+      "expected": [
+        {
+          "id": "duty"
+        },
+        {
+          "id": "off"
+        }
+      ]
+    },
+    {
+      "name": "a 夜勤 picked without its 明け names no next day",
+      "ids": ["day", "night", "off"],
+      "expected": [
+        {
+          "id": "day"
+        },
+        {
+          "id": "night"
+        },
+        {
+          "id": "off"
+        }
+      ]
+    },
+    {
+      "name": "a 夜勤 added to a list that has its 明け keeps it",
+      "ids": ["night"],
+      "keeping": ["day", "after", "off", "night"],
+      "expected": [
+        {
+          "id": "night",
+          "nextDay": "after"
+        }
+      ]
     }
   ]
 }

@@ -23,7 +23,7 @@ object ReadyPatterns {
     ReadyPattern(id = "amOff", name = "午前休", emoji = "☕️", symbol = "前", icon = "coffee", color = 7, time = "13:00" to "18:00", countsAsOff = false, nextDay = null),
     ReadyPattern(id = "compOff", name = "代休", emoji = "🌱", symbol = "代", icon = "pottedPlant", color = 10, time = null, countsAsOff = true, nextDay = null),
     ReadyPattern(id = "day", name = "日勤", emoji = "☀️", symbol = "日", icon = "sun", color = 1, time = "09:00" to "18:00", countsAsOff = false, nextDay = null),
-    ReadyPattern(id = "duty", name = "当番", emoji = "🚒", symbol = "当", icon = "siren", color = 4, time = "08:30" to "08:30", countsAsOff = false, nextDay = null),
+    ReadyPattern(id = "duty", name = "当番", emoji = "🚒", symbol = "当", icon = "siren", color = 4, time = "08:30" to "08:30", countsAsOff = false, nextDay = "offDuty"),
     ReadyPattern(id = "early", name = "早番", emoji = "🌤️", symbol = "早", icon = "cloudSun", color = 2, time = "07:00" to "16:00", countsAsOff = false, nextDay = null),
     ReadyPattern(id = "evening", name = "夕勤", emoji = "🌆", symbol = "夕", icon = "sunHorizon", color = 2, time = "15:00" to "23:00", countsAsOff = false, nextDay = null),
     ReadyPattern(id = "junya", name = "準夜", emoji = "🌜", symbol = "準", icon = "cloudMoon", color = 7, time = "16:30" to "01:00", countsAsOff = false, nextDay = null),

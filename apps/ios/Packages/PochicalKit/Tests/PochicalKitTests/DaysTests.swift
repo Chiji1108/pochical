@@ -1,3 +1,4 @@
+import PochicalDesign
 import PochicalKit
 import Testing
 
@@ -295,8 +296,16 @@ struct PatternsVectors: Decodable, Sendable {
     let expected: Expected
   }
 
+  struct ReadyCopy: VectorCase {
+    let name: String
+    let ids: [String]
+    let keeping: [String]?
+    let expected: [PatternLink]
+  }
+
   let deleted: [Deleted]
   let newJob: [NewJob]
+  let readyCopies: [ReadyCopy]
 }
 
 func links(_ patterns: [Pattern]) -> [PatternLink] {
@@ -321,6 +330,14 @@ func newJob(_ vector: PatternsVectors.NewJob) {
   }
   #expect(links(changed.patterns) == vector.expected.patterns)
   #expect(changed.sequence == vector.expected.sequence)
+}
+
+@Test(arguments: try vectors("patterns", as: PatternsVectors.self).readyCopies)
+func readyCopies(_ vector: PatternsVectors.ReadyCopy) {
+  let ready = vector.ids.compactMap(ReadyPatterns.pattern)
+  #expect(ready.map(\.id) == vector.ids)
+  let keeping = Set(vector.keeping ?? vector.ids)
+  #expect(links(ready.map { Pattern($0, keeping: keeping) }) == vector.expected)
 }
 
 struct TimeChangeVectors: Decodable, Sendable {

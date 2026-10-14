@@ -24,8 +24,8 @@ function isPreset(id: string | undefined): id is PresetShift {
 }
 
 // The set with the id picked or no longer. Picking a pattern with a next
-// day picks that too, as 夜勤 brings its 明け, which can still be dropped
-// on its own.
+// day picks that too, as 夜勤 brings its 明け and 当番 its 非番, which can
+// still be dropped on its own.
 export function toggled(
   picked: ReadonlySet<PresetShift>,
   id: PresetShift
