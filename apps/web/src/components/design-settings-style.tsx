@@ -46,7 +46,7 @@ import {
   useDisplayColor,
   useOffLooks,
 } from "./shift-mark";
-import type { LookSettings, OffLookId, ShiftMarkStyle } from "./shift-mark";
+import type { GroupLook, OffLookId, ShiftMarkStyle } from "./shift-mark";
 
 // The スタイル page: how shifts are marked (shape, days off, names, the
 // marks' colors) and the テーマ, each choice drawn on the person's own
@@ -65,7 +65,7 @@ export const shapeOptions: {
   { fill: true, name: "文字", style: "badge" },
 ];
 
-function shapeOf(look: LookSettings) {
+function shapeOf(look: GroupLook) {
   return (
     shapeOptions.find(
       (option) =>

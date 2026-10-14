@@ -7,6 +7,7 @@ import type { Appearance, PresetId } from "../components/design-theme";
 import { defaultWeekSettings } from "../components/design-week";
 import type { WeekSettings } from "../components/design-week";
 import type {
+  GroupLook,
   LookSettings,
   OffLookId,
   ShiftMarkStyle,
@@ -19,14 +20,6 @@ import { deviceSettingsKey } from "./design-settings-key";
 // app. The slices are the schema: what goes with the account and reaches
 // the group, what the account alone keeps, and what stays on the device.
 // Only the device slice is saved here, as the app would keep it locally.
-
-// Seen by everyone in the person's groups: their marks' shape. Synced
-// with the account. Colors are not: each viewer's テーマ draws them.
-export type GroupLook = {
-  style: ShiftMarkStyle;
-  // Filled or outline; only icons have the choice.
-  fill: boolean;
-};
 
 // How the person's own month draws days, kept per shape so each finds its
 // switches as they were left: `off` is how days off show, and `offs` each
@@ -95,6 +88,7 @@ export type DeviceSettings = {
 };
 
 type SettingsState = {
+  // Seen by everyone in the person's groups; synced with the account.
   groupLook: GroupLook;
   // Signed in with Apple or Google, if at all.
   account?: Account;

@@ -608,7 +608,7 @@ function TheirMark({
     );
   }
   return (
-    <MemberLook member={{ style: style && { look: style } }}>
+    <MemberLook member={{ style }}>
       <ViewerGlyph day={day} size={size} />
     </MemberLook>
   );

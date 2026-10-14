@@ -90,11 +90,18 @@ export const CellNamesContext = createContext<{
 // as a mark alone, or left blank.
 export type OffLookId = "highlight" | "mark" | "blank";
 
-// Every look setting at once: the style and its switches. `fill` only
-// matters for icons; letters always sit on their tile and emoji have none.
-export type LookSettings = {
+// What everyone in the person's groups sees of their look: their marks'
+// shape. `fill` only matters for icons; letters always sit on their tile
+// and emoji have none. Colors are not part of it: each viewer's テーマ draws
+// them.
+export type GroupLook = {
   style: ShiftMarkStyle;
   fill: boolean;
+};
+
+// Every look setting of the person's own: the shape, and the switches only
+// their own screen uses.
+export type LookSettings = GroupLook & {
   names: boolean;
   // How days off show; "blank" leaves them empty on your own month, for a
   // calm, paper-like look.
@@ -133,22 +140,13 @@ export function useOffLooks(): (shift: string | undefined) => OffLookId {
   return (shift) => (shift === undefined ? undefined : offs[shift]) ?? off;
 }
 
-// A look with every switch where it starts, for the sample members.
-export const baseLook: LookSettings = {
-  fill: true,
-  names: false,
-  off: "highlight",
-  style: "icon",
-};
-
-// Looks the sample members use, by name.
+// The shapes the sample members draw their marks in, by name.
 export const sampleLooks = {
-  friendly: { ...baseLook, names: true, style: "badge" },
-  minimal: { ...baseLook, fill: false, off: "mark" },
-  natural: baseLook,
-  pop: { ...baseLook, off: "mark", style: "emoji" },
-  roster: { ...baseLook, off: "mark", style: "badge" },
-} satisfies Record<string, LookSettings>;
+  minimal: { fill: false, style: "icon" },
+  natural: { fill: true, style: "icon" },
+  pop: { fill: true, style: "emoji" },
+  roster: { fill: true, style: "badge" },
+} satisfies Record<string, GroupLook>;
 
 // An icon a pattern can name, drawn from Phosphor's paths for its glyph
 // (design's mark-icons.ts) as Phosphor's own component would draw it.

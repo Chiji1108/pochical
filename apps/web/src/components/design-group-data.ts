@@ -4,7 +4,7 @@ import type { Schedule } from "../lib/design-days";
 import type { Pattern } from "../lib/design-patterns";
 import type { Photo } from "../lib/design-sample-photos";
 import { allOff, mayAllBeOff } from "../lib/together";
-import type { Look, LookSettings, MarkIcon } from "./shift-mark";
+import type { GroupLook, Look, MarkIcon } from "./shift-mark";
 
 // The group screens' data: members, groups and chats as the prototype
 // keeps them, and what is worked out from them (who is off when, days
@@ -27,7 +27,7 @@ export type Member = {
   me?: boolean;
   // The style they picked for their own calendar: its shape shows to
   // everyone as they chose it, in the viewer's テーマ.
-  style?: { look: LookSettings };
+  style?: GroupLook;
   // A profile picture; without one the avatar shows the first letter.
   photo?: string;
   // Yours, as the others see you in this group: your avatar's letter

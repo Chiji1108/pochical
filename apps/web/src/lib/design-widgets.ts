@@ -11,7 +11,7 @@ import {
   weekdaysFrom,
 } from "../components/design-week";
 import type { DayTone, WeekSettings } from "../components/design-week";
-import type { Look, LookSettings, MarkColor } from "../components/shift-mark";
+import type { GroupLook, Look, MarkColor } from "../components/shift-mark";
 import { addDays, dateKey, timeChangeOf, timeRange } from "./design-days";
 import type { Schedule } from "./design-days";
 import { isDayOff } from "./design-patterns";
@@ -78,7 +78,7 @@ export type WidgetPersonDay = {
 export type WidgetPerson = {
   name: string;
   photo?: string;
-  style?: LookSettings;
+  style?: GroupLook;
   dayOn: (date: Date) => WidgetPersonDay | undefined;
 };
 
@@ -103,7 +103,7 @@ export type WidgetNoOff =
 // whether both are off.
 export type WidgetPair = {
   me: { name: string; photo?: string };
-  with: { name: string; photo?: string; style?: LookSettings };
+  with: { name: string; photo?: string; style?: GroupLook };
   days: { theirs?: WidgetPersonDay; together: boolean }[];
 };
 

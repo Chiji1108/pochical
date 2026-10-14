@@ -143,7 +143,7 @@ function personOf(member: Member): WidgetPerson {
     },
     name: member.name,
     photo: member.photo,
-    style: member.style?.look,
+    style: member.style,
   };
 }
 
