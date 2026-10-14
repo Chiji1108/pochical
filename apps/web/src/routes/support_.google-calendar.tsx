@@ -80,7 +80,7 @@ function GoogleCalendarGuide() {
             <figure>
               <img
                 alt="ポチカルの追加先の画面。iCloudの下と、Gmailの下にカレンダーが並ぶ。"
-                height={698}
+                height={619}
                 src="/support/calendar-picker.png"
                 width={600}
               />
