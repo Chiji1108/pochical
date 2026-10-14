@@ -72,10 +72,21 @@ function GoogleCalendarGuide() {
               カレンダーの右上の保存ボタンから「端末カレンダーに追加」を選びます。
             </li>
             <li>
-              「追加先」で、Googleアカウント（「Gmail」やメールアドレスの名前）の下にあるカレンダーを選びます。
+              「追加先」で、Googleアカウントの下（最初は「Gmail」という名前）にあるカレンダーを選びます。メールアドレスの名前のものが、Googleカレンダーのいつものカレンダーです。
             </li>
             <li>「追加」を押すと、表示している月のシフトが入ります。</li>
           </ol>
+          <div className="guide-shots">
+            <figure>
+              <img
+                alt="ポチカルの追加先の画面。iCloudの下と、Gmailの下にカレンダーが並ぶ。"
+                height={698}
+                src="/support/calendar-picker.png"
+                width={600}
+              />
+              <figcaption>「Gmail」の下のカレンダーを選ぶ</figcaption>
+            </figure>
+          </div>
           <p className="small-note">
             「iCloud」や「このiPhone」の下のカレンダーを選ぶと、Googleカレンダーには入りません。次からは、前に追加したカレンダーが最初に選ばれています。
           </p>
