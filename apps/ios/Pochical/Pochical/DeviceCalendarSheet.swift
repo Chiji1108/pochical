@@ -155,6 +155,7 @@ struct DeviceCalendarSheet: View {
   /// What was done, once added.
   @State private var done: String?
   @State private var failed = false
+  @State private var guide: OpenedLink?
 
   var body: some View {
     // The days' memos, and who works them, put in too when asked: each off
@@ -215,6 +216,9 @@ struct DeviceCalendarSheet: View {
       .alert("追加できませんでした", isPresented: $failed) {
         Button("OK", role: .cancel) {}
       }
+      .sheet(item: $guide) { page in
+        SafariView(url: page.url).ignoresSafeArea()
+      }
     }
     .task {
       if calendars.access == .notAsked {
@@ -270,7 +274,16 @@ struct DeviceCalendarSheet: View {
       Text("\(month.monthText)のシフトを、1日ずつ予定として入れます。")
         .textCase(nil)
     } footer: {
-      Text("前に入れた\(month.monthText)の予定は、入れ直します。")
+      VStack(alignment: .leading, spacing: 8) {
+        Text("前に入れた\(month.monthText)の予定は、入れ直します。")
+        // A calendar of a Google account added to the iPhone goes on to
+        // Google Calendar, which few find by themselves (spec/calendar.md).
+        Button("Googleカレンダーに入れるには") {
+          guide = OpenedLink(url: Site.page("support/google-calendar"))
+        }
+        .font(.footnote)
+        .accessibilityHint("ブラウザで開きます")
+      }
     }
     .settingsRows()
   }

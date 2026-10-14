@@ -337,8 +337,9 @@ private struct CalendarSettings: View {
   }
 }
 
-/// Pochical's site, whose pages ポチカルについて opens.
-private enum Site {
+/// Pochical's site, whose pages ポチカルについて opens, and the guides
+/// other screens point to.
+enum Site {
   static let root = URL(string: "https://pochical.app")!
 
   static func page(_ path: String) -> URL {

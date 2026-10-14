@@ -25,6 +25,7 @@ import { Route as DesignShareImageRouteImport } from './routes/design_.share-ima
 import { Route as DesignStatesRouteImport } from './routes/design_.states'
 import { Route as DesignWidgetsRouteImport } from './routes/design_.widgets'
 import { Route as InviteInviteCodeRouteImport } from './routes/invite.$inviteCode'
+import { Route as SupportGoogleCalendarRouteImport } from './routes/support_.google-calendar'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -106,6 +107,11 @@ const InviteInviteCodeRoute = InviteInviteCodeRouteImport.update({
   path: '/invite/$inviteCode',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SupportGoogleCalendarRoute = SupportGoogleCalendarRouteImport.update({
+  id: '/support_/google-calendar',
+  path: '/support/google-calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/design/states': typeof DesignStatesRoute
   '/design/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
+  '/support/google-calendar': typeof SupportGoogleCalendarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/design/states': typeof DesignStatesRoute
   '/design/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
+  '/support/google-calendar': typeof SupportGoogleCalendarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/design_/states': typeof DesignStatesRoute
   '/design_/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
+  '/support_/google-calendar': typeof SupportGoogleCalendarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/design/states'
     | '/design/widgets'
     | '/invite/$inviteCode'
+    | '/support/google-calendar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/design/states'
     | '/design/widgets'
     | '/invite/$inviteCode'
+    | '/support/google-calendar'
   id:
     | '__root__'
     | '/'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/design_/states'
     | '/design_/widgets'
     | '/invite/$inviteCode'
+    | '/support_/google-calendar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   DesignStatesRoute: typeof DesignStatesRoute
   DesignWidgetsRoute: typeof DesignWidgetsRoute
   InviteInviteCodeRoute: typeof InviteInviteCodeRoute
+  SupportGoogleCalendarRoute: typeof SupportGoogleCalendarRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -352,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteInviteCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/support_/google-calendar': {
+      id: '/support_/google-calendar'
+      path: '/support/google-calendar'
+      fullPath: '/support/google-calendar'
+      preLoaderRoute: typeof SupportGoogleCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -372,6 +392,7 @@ const rootRouteChildren: RootRouteChildren = {
   DesignStatesRoute: DesignStatesRoute,
   DesignWidgetsRoute: DesignWidgetsRoute,
   InviteInviteCodeRoute: InviteInviteCodeRoute,
+  SupportGoogleCalendarRoute: SupportGoogleCalendarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

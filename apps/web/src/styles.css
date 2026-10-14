@@ -283,6 +283,17 @@
     text-decoration: underline;
     text-underline-offset: 4px;
   }
+  .guide-content ol {
+    padding-left: 1.4em;
+    margin-bottom: 10px;
+    list-style: decimal;
+  }
+  .guide-content h3 {
+    margin: 18px 0 4px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
   .document-links {
     display: flex;
     flex-wrap: wrap;
@@ -320,6 +331,9 @@
     font-size: 13px;
     line-height: 2.1;
     color: var(--muted);
+  }
+  .faq .faq-guide {
+    margin: -10px 0 25px;
   }
   .contact-box {
     padding: 35px;
