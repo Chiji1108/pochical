@@ -11,7 +11,12 @@ import type {
 } from "react";
 import { css, cva, cx } from "styled-system/css";
 
-import { characterCount, countShown, limitText } from "../lib/text-limits";
+import {
+  characterCount,
+  countShown,
+  limitText,
+  markLetter,
+} from "../lib/text-limits";
 
 // Fields: times, text held to its limit (spec/text-limits.md) and a
 // mark's letter, with the bits shown beside them.
@@ -179,6 +184,11 @@ type LimitedTextProps = {
   onValueChange?: (value: string) => void;
   // False where the field is too small to show it, like a chip.
   counter?: boolean;
+  // A mark's letter: typing or converting into it once full replaces it
+  // (markLetter) rather than being refused.
+  replacesWhenFull?: boolean;
+  // Told the text once it is no longer being converted.
+  onConfirm?: (value: string) => void;
 };
 
 // What LimitedInput and LimitedTextArea share: the text held to its
@@ -188,6 +198,8 @@ function useLimitedText<Field extends HTMLInputElement | HTMLTextAreaElement>({
   value,
   onValueChange,
   counter = true,
+  replacesWhenFull = false,
+  onConfirm,
   onFocus,
   onBlur,
 }: LimitedTextProps & {
@@ -198,10 +210,20 @@ function useLimitedText<Field extends HTMLInputElement | HTMLTextAreaElement>({
   const [own, setOwn] = useState("");
   const [focused, setFocused] = useState(false);
   const composing = useRef(false);
+  // The text as a conversion started, which a full mark's letter gives up
+  // for what the conversion puts in.
+  const before = useRef("");
   const text = value ?? own;
   const change = (next: string) => {
     setOwn(next);
     onValueChange?.(next);
+  };
+  const confirm = (was: string, next: string) => {
+    const held = replacesWhenFull
+      ? markLetter(was, next, limit)
+      : limitText(next, limit);
+    change(held);
+    onConfirm?.(held);
   };
   const count = characterCount(text);
   const handlers = {
@@ -211,14 +233,19 @@ function useLimitedText<Field extends HTMLInputElement | HTMLTextAreaElement>({
     },
     onChange: (event: ChangeEvent<Field>) => {
       const next = event.target.value;
-      change(composing.current ? next : limitText(next, limit));
+      if (composing.current) {
+        change(next);
+      } else {
+        confirm(text, next);
+      }
     },
     onCompositionEnd: (event: CompositionEvent<Field>) => {
       composing.current = false;
-      change(limitText(event.currentTarget.value, limit));
+      confirm(before.current, event.currentTarget.value);
     },
     onCompositionStart: () => {
       composing.current = true;
+      before.current = text;
     },
     onFocus: (event: FocusEvent<Field>) => {
       setFocused(true);
@@ -242,6 +269,8 @@ export function LimitedInput({
   value,
   onValueChange,
   counter,
+  replacesWhenFull,
+  onConfirm,
   onFocus,
   onBlur,
   look,
@@ -257,8 +286,10 @@ export function LimitedInput({
     counter,
     kind,
     onBlur,
+    onConfirm,
     onFocus,
     onValueChange,
+    replacesWhenFull,
     value,
   });
   return (
@@ -274,10 +305,10 @@ export function LimitedInput({
 }
 
 // A mark's letter, a shift's or a group's: its first characters, up to the
-// limit, with no count, since the mark beside it shows what fits. It may
-// be empty while written, and left empty it shows the letter it had; a
-// mark is never without one. Focusing selects the letter, so typing
-// replaces it.
+// limit, with no count, since the mark beside it shows what fits. Typing
+// or converting into it once full replaces it, and the mark changes only
+// once a conversion is confirmed. It may be empty while written, and left
+// empty it shows the letter it had; a mark is never without one.
 export function MarkLetterInput({
   kind,
   value,
@@ -298,16 +329,13 @@ export function MarkLetterInput({
       onBlur={() => {
         setDraft(undefined);
       }}
-      onFocus={(event) => {
-        event.currentTarget.select();
-      }}
-      onValueChange={(next) => {
-        setDraft(next);
-        const count = characterCount(next);
-        if (count > 0 && count <= textLimits[kind]) {
-          onLetter(next);
+      onConfirm={(letter) => {
+        if (characterCount(letter.trim()) > 0) {
+          onLetter(letter.trim());
         }
       }}
+      onValueChange={setDraft}
+      replacesWhenFull
       value={draft ?? value}
     />
   );
@@ -359,6 +387,8 @@ export function LimitedTextArea({
   value,
   onValueChange,
   counter,
+  replacesWhenFull,
+  onConfirm,
   onFocus,
   onBlur,
   className,
@@ -369,8 +399,10 @@ export function LimitedTextArea({
     counter,
     kind,
     onBlur,
+    onConfirm,
     onFocus,
     onValueChange,
+    replacesWhenFull,
     value,
   });
   return (

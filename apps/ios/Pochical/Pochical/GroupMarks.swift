@@ -160,8 +160,6 @@ struct GroupMarkPage: View {
   @State private var photoFailed = false
   @State private var choosingEmoji = false
   @State private var choosingIcon = false
-  /// The letters while they are being written.
-  @State private var letterDraft: String?
 
   var body: some View {
     let shown = kind ?? kindOf(mark)
@@ -210,11 +208,10 @@ struct GroupMarkPage: View {
           Button("ほかのアイコンを選ぶ", systemImage: "plus") { choosingIcon = true }
         case .letter:
           LabeledContent("文字") {
-            LimitedTextField(
-              placeholder: firstLetter, text: letterBinding, limit: TextLimits.groupMark,
-              showsCount: false, selectsOnFocus: true
-            ) {
-              letterDraft = nil
+            MarkLetterField(
+              letter: mark.letter.isEmpty ? firstLetter : mark.letter, limit: TextLimits.groupMark
+            ) { letters in
+              set(GroupMarkValue(letter: letters, color: mark.color))
             }
           }
         }
@@ -289,20 +286,5 @@ struct GroupMarkPage: View {
 
   /// The name's first letter, as letters start.
   private var firstLetter: String { initialLetter(of: name) }
-
-  /// The letters as they are written; a group's mark takes them while they
-  /// are some and fit, and the field shows the mark's again once left
-  /// (spec/text-limits.md).
-  private var letterBinding: Binding<String> {
-    Binding {
-      letterDraft ?? (mark.letter.isEmpty ? firstLetter : mark.letter)
-    } set: { text in
-      letterDraft = text
-      let letters = text.trimmingCharacters(in: .whitespacesAndNewlines)
-      if !letters.isEmpty, letters.count <= TextLimits.groupMark {
-        set(GroupMarkValue(letter: letters, color: mark.color))
-      }
-    }
-  }
 
 }

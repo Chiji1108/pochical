@@ -95,6 +95,7 @@ import {
   dayName,
   isEmoji,
   limitText,
+  markLetter,
 } from "../src/lib/text-limits";
 
 const dayOf = (key: string) => {
@@ -219,6 +220,11 @@ describe("spec/vectors/text.json", () => {
       expect(limitText(written, limit)).toBe(expected);
     }
   });
+  for (const { name, before, after, limit, expected } of text.markLetter) {
+    test(`markLetter: ${name}`, () => {
+      expect(markLetter(before, after, limit)).toBe(expected);
+    });
+  }
   test("dayName", () => {
     for (const { name, length, expected } of text.dayName) {
       expect(dayName(name, length)).toBe(expected);
