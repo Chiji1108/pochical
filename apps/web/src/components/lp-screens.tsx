@@ -29,10 +29,11 @@ import {
   CellNamesContext,
   IconWeightContext,
   MonochromeContext,
-  OffHighlightContext,
+  noOffLooks,
+  OffLooksContext,
   ShiftMarkStyleContext,
 } from "./shift-mark";
-import type { ShiftMarkStyle } from "./shift-mark";
+import type { OffLooks, ShiftMarkStyle } from "./shift-mark";
 import { WhenNear } from "./when-near";
 
 // The top page's pieces drawn by the app's own code: its sky, the hero's
@@ -324,9 +325,7 @@ const galleryLooks: GalleryLook[] = [
   },
 ];
 
-const plainDaysOff = {
-  highlight: { badge: false, emoji: false, icon: false },
-};
+const plainDaysOff: OffLooks = { off: "mark", offs: noOffLooks };
 
 function LookContexts({
   look,
@@ -344,11 +343,11 @@ function LookContexts({
               names: { badge: look.names, emoji: look.names, icon: look.names },
             }}
           >
-            <OffHighlightContext value={plainDaysOff}>
+            <OffLooksContext value={plainDaysOff}>
               <MonochromeContext value={{ monochrome: look.monochrome }}>
                 {children}
               </MonochromeContext>
-            </OffHighlightContext>
+            </OffLooksContext>
           </CellNamesContext>
         </ShiftMarkStyleContext>
       </IconWeightContext>

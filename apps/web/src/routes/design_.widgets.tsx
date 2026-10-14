@@ -57,10 +57,11 @@ import {
   CellNamesContext,
   IconWeightContext,
   MonochromeContext,
-  OffDisplayContext,
-  OffHighlightContext,
+  noOffLooks,
+  OffLooksContext,
   ShiftMarkStyleContext,
 } from "../components/shift-mark";
+import type { OffLooks } from "../components/shift-mark";
 import { addDays, dateKey, initialDesignSchedule } from "../lib/design-days";
 import type { DayEntry, Schedule } from "../lib/design-days";
 import { presetPatterns } from "../lib/design-patterns";
@@ -113,11 +114,6 @@ const augustDay = new Date(2026, AUGUST, 24);
 const augustSchedule = {
   ...initialDesignSchedule(4, AUGUST),
   ...initialDesignSchedule(4, AUGUST + 1),
-};
-
-// Days off without their tint, as with 休みの見せ方 印だけ.
-const noHighlight = {
-  highlight: { badge: false, emoji: false, icon: false },
 };
 
 // Names under the marks, as when the person shows them in the calendar.
@@ -324,7 +320,12 @@ const page = {
 const monochromeOn = { monochrome: true };
 const monochromeOff = { monochrome: false };
 const namesHidden = { names: { badge: false, emoji: false, icon: false } };
-const highlightOn = { highlight: { badge: true, emoji: true, icon: true } };
+// 休みの見せ方 as each choice names it.
+const offLooks = {
+  blank: { off: "blank", offs: noOffLooks },
+  plain: { off: "mark", offs: noOffLooks },
+  tint: { off: "highlight", offs: noOffLooks },
+} satisfies Record<WidgetVariants["offLook"], OffLooks>;
 
 // The person's settings as the choices set them, around the widgets.
 function SettingsAround({
@@ -351,17 +352,9 @@ function SettingsAround({
               <CellNamesContext
                 value={variants.names === "shown" ? namesShown : namesHidden}
               >
-                <OffHighlightContext
-                  value={
-                    variants.offLook === "plain" ? noHighlight : highlightOn
-                  }
-                >
-                  <OffDisplayContext
-                    value={variants.offLook === "blank" ? "blank" : "show"}
-                  >
-                    {children}
-                  </OffDisplayContext>
-                </OffHighlightContext>
+                <OffLooksContext value={offLooks[variants.offLook]}>
+                  {children}
+                </OffLooksContext>
               </CellNamesContext>
             </IconWeightContext>
           </ShiftMarkStyleContext>

@@ -29,13 +29,11 @@ export type GroupLook = {
 };
 
 // How the person's own month draws days, kept per shape so each finds its
-// switches as they were left: `highlight` and `blankOff` are how days off
-// show, and `offs` each pattern's own 休みの見せ方 over them, by its id,
-// once set. Device only.
+// switches as they were left: `off` is how days off show, and `offs` each
+// pattern's own 休みの見せ方 over it, by its id, once set. Device only.
 export type CalendarOptions = {
   names: boolean;
-  highlight: boolean;
-  blankOff: boolean;
+  off: OffLookId;
   offs?: Partial<Record<string, OffLookId>>;
 };
 
@@ -44,17 +42,15 @@ export type CalendarOptions = {
 // light or dark; until picked, it follows the screen. Device only.
 export type ImageOptions = {
   names: boolean;
-  highlight: boolean;
-  // Days off left empty, as on the style page; off by default, since the
-  // people it goes to cannot tell an empty day from one not entered.
-  blankOff: boolean;
+  // How days off show, as on the style page; never blank at first, since
+  // the people it goes to cannot tell an empty day from one not entered.
+  off: OffLookId;
   scheme?: ColorScheme;
 };
 
 const defaultImageOptions: ImageOptions = {
-  blankOff: false,
-  highlight: true,
   names: true,
+  off: "highlight",
 };
 
 export type MonthName = "number" | "english";
@@ -129,10 +125,20 @@ type SettingsState = {
 // Emoji bring their own colors, which a tint behind them fights with, so
 // they start without the highlight too.
 const defaultCalendar: Record<ShiftMarkStyle, CalendarOptions> = {
-  badge: { blankOff: false, highlight: false, names: false },
-  emoji: { blankOff: false, highlight: false, names: false },
-  icon: { blankOff: false, highlight: true, names: false },
+  badge: { names: false, off: "mark" },
+  emoji: { names: false, off: "mark" },
+  icon: { names: false, off: "highlight" },
 };
+
+// The calendar with the options of `style` changed, the other shapes' as
+// they were.
+function withOptions(
+  calendar: Record<ShiftMarkStyle, CalendarOptions>,
+  style: ShiftMarkStyle,
+  change: Partial<CalendarOptions>
+): Record<ShiftMarkStyle, CalendarOptions> {
+  return { ...calendar, [style]: { ...calendar[style], ...change } };
+}
 
 // The device settings a save holds, whatever was saved: what is not an
 // object is none.
@@ -179,18 +185,16 @@ export const useSettings = create<SettingsState>()(
         set((state) => ({ device: { ...state.device, calendarAdd } }));
       },
       setCalendarOptions: (change) => {
-        set((state) => {
-          const { style } = state.groupLook;
-          return {
-            device: {
-              ...state.device,
-              calendar: {
-                ...state.device.calendar,
-                [style]: { ...state.device.calendar[style], ...change },
-              },
-            },
-          };
-        });
+        set((state) => ({
+          device: {
+            ...state.device,
+            calendar: withOptions(
+              state.device.calendar,
+              state.groupLook.style,
+              change
+            ),
+          },
+        }));
       },
       setImageOptions: (imageOptions) => {
         set((state) => ({ device: { ...state.device, imageOptions } }));
@@ -211,12 +215,14 @@ export const useSettings = create<SettingsState>()(
               )
             );
           const { badge, emoji, icon } = state.device.calendar;
-          const calendar = {
+          const pruned = {
             badge: { ...badge, offs: kept(badge) },
             emoji: { ...emoji, offs: kept(emoji) },
             icon: { ...icon, offs: kept(icon) },
           };
-          calendar[style].offs[shift] = look;
+          const calendar = withOptions(pruned, style, {
+            offs: { ...pruned[style].offs, [shift]: look },
+          });
           return { device: { ...state.device, calendar } };
         });
       },

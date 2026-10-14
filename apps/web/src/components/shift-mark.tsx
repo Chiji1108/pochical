@@ -86,16 +86,9 @@ export const CellNamesContext = createContext<{
   names: CellNames;
 }>({ names: defaultCellNames });
 
-// Whether days off get a tint of their pattern color, per look. Unset means
-// on, except for emoji, which bring their own colors; each look's own
-// starting value is in the settings store.
-export type OffHighlight = Partial<Record<ShiftMarkStyle, boolean>>;
-export const defaultOffHighlight: OffHighlight = {};
-
-export function useOffHighlight(style: ShiftMarkStyle) {
-  const { highlight } = useContext(OffHighlightContext);
-  return highlight[style] ?? style !== "emoji";
-}
+// 休みの見せ方 for one pattern that counts as off: on a tint of its color,
+// as a mark alone, or left blank.
+export type OffLookId = "highlight" | "mark" | "blank";
 
 // Every look setting at once: the style and its switches. `fill` only
 // matters for icons; letters always sit on their tile and emoji have none.
@@ -103,75 +96,59 @@ export type LookSettings = {
   style: ShiftMarkStyle;
   fill: boolean;
   names: boolean;
-  highlight: boolean;
-  // Days off left empty on your own month, for a calm, paper-like look.
-  blankOff: boolean;
-  // Each pattern's own 休みの見せ方 over the two above, by its id.
+  // How days off show; "blank" leaves them empty on your own month, for a
+  // calm, paper-like look.
+  off: OffLookId;
+  // Each pattern's own 休みの見せ方 over `off`, by its id.
   offs?: Partial<Record<string, OffLookId>>;
 };
 
-// How days off show on your own month. "blank" leaves them empty while
-// viewing; entering shifts and the week view need to tell a day off from a
-// day not entered yet, so there they come back "faint".
-export type OffDisplay = "show" | "blank" | "faint";
-export const OffDisplayContext = createContext<OffDisplay>("show");
-
-// 休みの見せ方 for one pattern that counts as off: on a tint of its color,
-// as a mark alone, or left blank.
-export type OffLookId = "highlight" | "mark" | "blank";
-
-// 休みの見せ方 the person set for each pattern that counts as off, by its
-// id, over the look's own, so 休み can be left blank while 有休 is tinted.
-export const OffLooksContext = createContext<
-  Partial<Record<string, OffLookId>>
->({});
+// How days off show: `off` for every pattern that counts as off, unless
+// `offs` gives the pattern its own, by its id, so 休み can be left blank
+// while 有休 is tinted.
+export type OffLooks = {
+  off: OffLookId;
+  offs: Partial<Record<string, OffLookId>>;
+};
 
 // No pattern with a 休みの見せ方 of its own.
-export const noOffLooks: Partial<Record<string, OffLookId>> = {};
+export const noOffLooks: OffLooks["offs"] = {};
 
-// Where days off left blank come back faint: in the week view, to tell a
-// day off from a day not entered yet.
+export const OffLooksContext = createContext<OffLooks>({
+  off: "highlight",
+  offs: noOffLooks,
+});
+
+// Every day off left blank, for the samples of a person who shows them so.
+export const blankOffs: OffLooks = { off: "blank", offs: noOffLooks };
+
+// Where days off left blank come back faint, as they do while entering:
+// in the week view, to tell a day off from a day not entered yet.
 export const OffFaintContext = createContext(false);
 
 // How each pattern's days off show: its own 休みの見せ方 if set, else the
 // look's.
 export function useOffLooks(): (shift: string | undefined) => OffLookId {
-  const highlight = useOffHighlight(useContext(ShiftMarkStyleContext));
-  const display = useContext(OffDisplayContext);
-  const own = useContext(OffLooksContext);
-  return (shift) => {
-    const set = shift === undefined ? undefined : own[shift];
-    if (set) {
-      return set;
-    }
-    if (display !== "show") {
-      return "blank";
-    }
-    return highlight ? "highlight" : "mark";
-  };
+  const { off, offs } = useContext(OffLooksContext);
+  return (shift) => (shift === undefined ? undefined : offs[shift]) ?? off;
 }
 
 // A look with every switch where it starts, for the sample members.
 export const baseLook: LookSettings = {
-  blankOff: false,
   fill: true,
-  highlight: true,
   names: false,
+  off: "highlight",
   style: "icon",
 };
 
 // Looks the sample members use, by name.
 export const sampleLooks = {
   friendly: { ...baseLook, names: true, style: "badge" },
-  minimal: { ...baseLook, fill: false, highlight: false },
+  minimal: { ...baseLook, fill: false, off: "mark" },
   natural: baseLook,
-  pop: { ...baseLook, highlight: false, style: "emoji" },
-  roster: { ...baseLook, highlight: false, style: "badge" },
+  pop: { ...baseLook, off: "mark", style: "emoji" },
+  roster: { ...baseLook, off: "mark", style: "badge" },
 } satisfies Record<string, LookSettings>;
-
-export const OffHighlightContext = createContext<{
-  highlight: OffHighlight;
-}>({ highlight: defaultOffHighlight });
 
 // An icon a pattern can name, drawn from Phosphor's paths for its glyph
 // (design's mark-icons.ts) as Phosphor's own component would draw it.

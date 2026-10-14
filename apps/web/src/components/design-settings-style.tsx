@@ -260,20 +260,6 @@ const offLooks: { id: OffLookId; name: string }[] = [
   { id: "blank", name: "空白" },
 ];
 
-// How days off show, as the two settings of a look that carry it.
-export type OffLook = { highlight: boolean; blankOff: boolean };
-
-export function offLookId(value: OffLook): OffLookId {
-  if (value.blankOff) {
-    return "blank";
-  }
-  return value.highlight ? "highlight" : "mark";
-}
-
-export function offLookOf(id: OffLookId): OffLook {
-  return { blankOff: id === "blank", highlight: id === "highlight" };
-}
-
 // Segments each drawing a day off of `shift` as it would look. 空白 leaves
 // days off empty on the month; they come back faint while entering and in
 // the week view. Used by the style page, once for each pattern that counts
