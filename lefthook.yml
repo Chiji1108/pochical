@@ -14,6 +14,8 @@ pre-commit:
         - "**/*.jsonc"
         - "**/*.css"
         - "**/*.md"
+      # As lint-ignores.ts has them: with only such files staged, ultracite
+      # finds nothing to check and fails the commit.
       exclude:
         - "apps/mobile-legacy/**"
         - "apps/ios/**"
@@ -24,6 +26,13 @@ pre-commit:
         - "apps/server/src/user-do-migrations/**"
         - "apps/server/src/db/auth-schema.ts"
         - "apps/web/src/gen/**"
+        - "apps/web/src/lib/holiday-names.ts"
+        - "spec/design-tokens.json"
+        - "**/routeTree.gen.ts"
+        - "**/worker-configuration.d.ts"
+        - "**/.tanstack/**"
+        - "**/styled-system/**"
+        - "patches/**"
       stage_fixed: true
     - name: buf format and lint
       root: proto/
