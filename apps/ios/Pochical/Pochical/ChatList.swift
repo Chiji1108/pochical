@@ -38,8 +38,18 @@ struct ChatList: View {
   let members: [GroupMember]
   /// Opens a chat: its thread, and the other member of a one-to-one chat.
   let onOpen: (String, String?) -> Void
-  @State private var meID: String?
+  /// The reader last heard of at first, so the rows are there on the
+  /// first frame rather than after the server answers.
+  @State private var meID = GroupCalls.knownUserID
   @State private var starting = false
+
+  init(group: GroupRow, members: [GroupMember], onOpen: @escaping (String, String?) -> Void) {
+    self.group = group
+    self.members = members
+    self.onOpen = onOpen
+    _chats = Fetch(
+      wrappedValue: ChatThreadsRequest.Value(), ChatThreadsRequest(groupID: group.id))
+  }
 
   var body: some View {
     let talking =
@@ -150,6 +160,24 @@ private struct ChatRow<Icon: View>: View {
   var blocked: Set<String> = []
   @ViewBuilder let icon: () -> Icon
   let onOpen: () -> Void
+
+  /// The chat read as the row is made, so its latest line is there on the
+  /// first frame rather than まだメッセージはありません for a moment.
+  init(
+    group: GroupRow, threadID: String, me: String, label: String, blocked: Set<String> = [],
+    @ViewBuilder icon: @escaping () -> Icon, onOpen: @escaping () -> Void
+  ) {
+    self.group = group
+    self.threadID = threadID
+    self.me = me
+    self.label = label
+    self.blocked = blocked
+    self.icon = icon
+    self.onOpen = onOpen
+    _chat = Fetch(
+      wrappedValue: ChatSummaryRequest.Value(),
+      ChatSummaryRequest(groupID: group.id, threadID: threadID, me: me))
+  }
 
   var body: some View {
     let summary = chat.summary

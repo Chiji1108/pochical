@@ -516,9 +516,8 @@ struct ChatScreen: View {
       if meID == nil {
         await hearReader()
       }
-      // Opened from a notification as the app starts, its new lines are
-      // still coming: where it opens waits for them, a little.
-      await socket?.catchUp(within: .seconds(2))
+      // Opens at once on the lines the device holds, as the messaging apps
+      // do; lines the group's catch-up still brings come in under them.
       await open()
       await hearReader()
     }
