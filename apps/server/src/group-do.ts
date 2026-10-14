@@ -63,6 +63,7 @@ import {
 } from "./group-shifts";
 import { linkPreview } from "./link-preview";
 import { photoKey } from "./photos";
+import { overLimit } from "./rate-limits";
 import {
   acceptSyncSocket,
   answerKeepalive,
@@ -834,7 +835,12 @@ export class GroupDO extends DurableObject<Env> {
     let others: string[] | undefined;
     const photosGone: string[] = [];
     // Lines sent before their page came, whose page the server reads.
-    const pages: { threadId: string; seq: number; link: string }[] = [];
+    const pages: {
+      threadId: string;
+      seq: number;
+      link: string;
+      userId: string;
+    }[] = [];
     const { changed, refused } = this.ctx.storage.transactionSync(() => {
       const made: Change[] = [];
       const back: Change[] = [];
@@ -863,7 +869,7 @@ export class GroupDO extends DurableObject<Env> {
               const line = taken.change.kind.value;
               const link = pageToRead(edit.kind.value);
               if (link !== undefined) {
-                pages.push({ link, seq: Number(line.seq), threadId });
+                pages.push({ link, seq: Number(line.seq), threadId, userId });
               }
               const alert = this.alertOf(line);
               for (const reader of readers) {
@@ -914,13 +920,19 @@ export class GroupDO extends DurableObject<Env> {
   /**
    * Reads the page of a line sent before its preview came and adds it to
    * the line for everyone, as the sender's app would have (spec/chat.md,
-   * Previews). A line taken back or changed meanwhile keeps as it is.
+   * Previews). A line taken back or changed meanwhile keeps as it is. The
+   * sender's reads count as GetLinkPreview's do, so sending is no way
+   * round its limit.
    */
   private async addPage(page: {
     threadId: string;
     seq: number;
     link: string;
+    userId: string;
   }): Promise<void> {
+    if (await overLimit(this.env.LINK_PREVIEW_LIMIT, page.userId)) {
+      return;
+    }
     const preview = await linkPreview(this.env.PHOTOS, new URL(page.link));
     if (preview === null) {
       return;
