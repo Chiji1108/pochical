@@ -31,7 +31,11 @@ const questions = [
   },
   {
     answer:
-      "はい。カレンダー右上の保存ボタンから、端末のカレンダーへの追加や、画像での保存ができます。必要なアクセス権限を許可してご利用ください。",
+      "はい。カレンダー右上の保存ボタンから、端末のカレンダーへの追加や、画像での保存ができます。必要なアクセス権限を許可してご利用ください。iPhoneにGoogleアカウントを追加すると、Googleカレンダーにも入れられます。",
+    guide: {
+      label: "Googleカレンダーに入れる手順",
+      to: "/support/google-calendar",
+    } as const,
     question: "シフトを端末のカレンダーに書き出せますか？",
   },
   {
@@ -56,6 +60,11 @@ function Support() {
               <Plus aria-hidden="true" size={18} />
             </summary>
             <p>{item.answer}</p>
+            {item.guide && (
+              <Link className="text-link faq-guide" to={item.guide.to}>
+                {item.guide.label} →
+              </Link>
+            )}
           </details>
         ))}
       </section>
