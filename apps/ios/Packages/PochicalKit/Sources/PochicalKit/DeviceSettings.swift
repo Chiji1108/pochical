@@ -201,13 +201,14 @@ public struct MarkOptions: Codable, Equatable, Sendable {
 
   /// Sets how the days of the pattern `id` show, and drops the patterns
   /// no longer among `offPatterns`, so what is kept with the account does
-  /// not grow with each pattern ever deleted past what one value may hold.
+  /// not grow with each pattern ever deleted past what one value may hold;
+  /// a look the same as `off` is not kept either, as it says nothing.
   public mutating func setOffLook(
     _ offLook: OffLook, of id: PatternID, offPatterns: some Collection<PatternID>
   ) {
     let kept = Set(offPatterns)
     offs = offs.filter { kept.contains($0.key) }
-    offs[id] = offLook
+    offs[id] = offLook == off ? nil : offLook
   }
 }
 

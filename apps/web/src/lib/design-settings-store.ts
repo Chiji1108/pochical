@@ -150,14 +150,22 @@ function keptOffs(
 }
 
 // `offs` with the pattern `shift` set to `look`, and those no longer
-// among `offPatterns` dropped.
+// among `offPatterns` dropped; a look the same as `off`, the default,
+// is not kept, as it says nothing.
 export function withOffLook(
   offs: Partial<Record<string, OffLookId>> | undefined,
   shift: string,
   look: OffLookId,
+  off: OffLookId,
   offPatterns: readonly string[]
 ): Partial<Record<string, OffLookId>> {
-  return { ...keptOffs(offs, offPatterns), [shift]: look };
+  const kept = keptOffs(offs, offPatterns);
+  if (look === off) {
+    return Object.fromEntries(
+      Object.entries(kept).filter(([key]) => key !== shift)
+    );
+  }
+  return { ...kept, [shift]: look };
 }
 
 // The calendar with the options of `style` changed, the other shapes' as
@@ -245,7 +253,13 @@ export const useSettings = create<SettingsState>()(
             icon: { ...icon, offs: keptOffs(icon.offs, offPatterns) },
           };
           const calendar = withOptions(pruned, style, {
-            offs: withOffLook(pruned[style].offs, shift, look, offPatterns),
+            offs: withOffLook(
+              pruned[style].offs,
+              shift,
+              look,
+              pruned[style].off,
+              offPatterns
+            ),
           });
           return { device: { ...state.device, calendar } };
         });

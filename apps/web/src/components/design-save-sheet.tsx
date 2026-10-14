@@ -624,6 +624,7 @@ export function ImagePreviewPage({
                     options.offs,
                     shift,
                     look,
+                    options.off,
                     offPatterns.map(({ id }) => id)
                   ),
                 });
