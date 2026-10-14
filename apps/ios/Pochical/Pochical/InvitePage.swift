@@ -19,6 +19,8 @@ struct InvitePage: View {
   @State private var copied = false
   /// Whether the QR code was saved to Photos, for a moment.
   @State private var notice: String?
+  /// Saves and copies done, each felt as it is (spec/haptics.md).
+  @State private var done = 0
 
   var body: some View {
     ScrollView {
@@ -74,6 +76,7 @@ struct InvitePage: View {
           Button {
             UIPasteboard.general.url = link
             copied = true
+            done += 1
           } label: {
             Label(copied ? "コピーしました" : "リンクをコピー", systemImage: copied ? "checkmark" : "doc.on.doc")
               .frame(maxWidth: .infinity, minHeight: Metrics.control)
@@ -96,6 +99,7 @@ struct InvitePage: View {
       .padding(16)
     }
     .background(colors.backgroundBase)
+    .sensoryFeedback(.success, trigger: done)
     .overlay(alignment: .top) {
       if let notice {
         NoticeCapsule(words: notice)
@@ -129,10 +133,17 @@ struct InvitePage: View {
       try await PHPhotoLibrary.shared().performChanges { @Sendable in
         PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
       }
-      say("写真に保存しました")
+      sayDone("写真に保存しました")
     } catch {
       say("保存できませんでした")
     }
+  }
+
+  /// Says a save or a copy is done, felt as well as said: what it made
+  /// happens out of sight, in Photos or on the clipboard.
+  private func sayDone(_ words: String) {
+    done += 1
+    say(words)
   }
 
   private func say(_ words: String) {

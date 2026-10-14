@@ -15,6 +15,8 @@ struct MonthPicturePage: View {
   let month: Day
   let calendar: OwnCalendar
   @State private var notice: String?
+  /// Saves and copies done, each felt as it is (spec/haptics.md).
+  @State private var done = 0
   /// The picture made as it now looks, made again only when its look
   /// changes.
   @State private var image: UIImage?
@@ -89,6 +91,7 @@ struct MonthPicturePage: View {
       .task(id: PictureKey(dark: dark, look: picture)) {
         image = rendered(dark: dark)
       }
+      .sensoryFeedback(.success, trigger: done)
       .overlay(alignment: .top) {
         if let notice {
           NoticeCapsule(words: notice)
@@ -163,11 +166,18 @@ struct MonthPicturePage: View {
       try await PHPhotoLibrary.shared().performChanges { @Sendable in
         PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
       }
-      say("写真に保存しました")
+      sayDone("写真に保存しました")
     } catch {
       ReviewPrompt.troubled = true
       say("保存できませんでした")
     }
+  }
+
+  /// Says a save or a copy is done, felt as well as said: what it made
+  /// happens out of sight, in Photos or on the clipboard.
+  private func sayDone(_ words: String) {
+    done += 1
+    say(words)
   }
 
   private func say(_ words: String) {

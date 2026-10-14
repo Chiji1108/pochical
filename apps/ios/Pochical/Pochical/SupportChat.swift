@@ -104,6 +104,8 @@ struct SupportChatScreen: View {
   @State private var viewing: LinePhoto?
   /// Said over the lines for a moment, as a toast.
   @State private var notice: String?
+  /// Saves and copies done, each felt as it is (spec/haptics.md).
+  @State private var done = 0
   @State private var notices = 0
   /// The sends so far, one after another, so the lines keep their order.
   @State private var sending: Task<Void, Never>?
@@ -204,6 +206,7 @@ struct SupportChatScreen: View {
         await savePhoto(photo, in: ChatPhotos.support, calls: groupCalls)
       }
     }
+    .sensoryFeedback(.success, trigger: done)
     .overlay(alignment: .top) {
       if let notice {
         NoticeCapsule(words: notice)
@@ -272,7 +275,7 @@ struct SupportChatScreen: View {
                   MessageActionsRequest(
                     lineID: line.id, frame: frame, mine: mine,
                     bubble: AnyView(bubble(line, first: first)), finger: finger,
-                    actions: linkActions(link, open: { openURL(link) }, say: say)))
+                    actions: linkActions(link, open: { openURL(link) }, copied: { sayDone("コピーしました") })))
               } else {
                 openActions(
                   MessageActionsRequest(
@@ -358,6 +361,7 @@ struct SupportChatScreen: View {
   private func copy(_ text: String) -> MessageAction {
     MessageAction(title: "コピー", systemImage: "doc.on.doc") {
       UIPasteboard.general.string = text
+      sayDone("コピーしました")
     }
   }
 
@@ -391,11 +395,22 @@ struct SupportChatScreen: View {
   private func save(_ photo: LinePhoto) {
     Task {
       let saved = await savePhoto(photo, in: ChatPhotos.support, calls: groupCalls)
-      say(saved ? "写真を保存しました" : "保存できませんでした")
+      if saved {
+        sayDone("写真を保存しました")
+      } else {
+        say("保存できませんでした")
+      }
     }
   }
 
   /// Says `words` over the lines for a moment, as a toast does.
+  /// Says a save or a copy is done, felt as well as said: what it made
+  /// happens out of sight, in Photos or on the clipboard.
+  private func sayDone(_ words: String) {
+    done += 1
+    say(words)
+  }
+
   private func say(_ words: String) {
     notices += 1
     let said = notices

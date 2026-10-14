@@ -229,6 +229,8 @@ struct ChatScreen: View {
   @State private var ringed: Int64?
   /// What a pin did, said for a moment over the lines.
   @State private var notice: String?
+  /// Saves and copies done, each felt as it is (spec/haptics.md).
+  @State private var done = 0
   /// How many notices have been said, so only the latest one's time
   /// takes it away.
   @State private var notices = 0
@@ -371,6 +373,7 @@ struct ChatScreen: View {
         .transition(.opacity)
       }
     }
+    .sensoryFeedback(.success, trigger: done)
     // Under the pins, over the lines.
     .overlay(alignment: .top) {
       if let notice {
@@ -733,7 +736,7 @@ struct ChatScreen: View {
             openActions(
               MessageActionsRequest(
                 lineID: line.opID, frame: frame, mine: mine, bubble: bubble, finger: finger,
-                actions: linkActions(link, open: { _ = open(link) }, say: say)))
+                actions: linkActions(link, open: { _ = open(link) }, copied: { sayDone("コピーしました") })))
           } else {
             openActions(
               MessageActionsRequest(
@@ -1207,7 +1210,11 @@ struct ChatScreen: View {
   /// Saves a photo to the person's library, and says so.
   private func save(_ photo: LinePhoto) {
     Task {
-      say(await savePhoto(photo, in: group.id, calls: groupCalls) ? "写真を保存しました" : "保存できませんでした")
+      if await savePhoto(photo, in: group.id, calls: groupCalls) {
+        sayDone("写真を保存しました")
+      } else {
+        say("保存できませんでした")
+      }
     }
   }
 
@@ -1437,6 +1444,13 @@ struct ChatScreen: View {
   }
 
   /// Says `words` over the lines for a moment, as a toast does.
+  /// Says a save or a copy is done, felt as well as said: what it made
+  /// happens out of sight, in Photos or on the clipboard.
+  private func sayDone(_ words: String) {
+    done += 1
+    say(words)
+  }
+
   private func say(_ words: String) {
     notices += 1
     let said = notices
@@ -1481,7 +1495,7 @@ struct ChatScreen: View {
   private func copy(_ text: String) -> MessageAction {
     MessageAction(title: "コピー", systemImage: "doc.on.doc") {
       UIPasteboard.general.string = plainText(text, nameOf: nameOf)
-      say("コピーしました")
+      sayDone("コピーしました")
     }
   }
 
