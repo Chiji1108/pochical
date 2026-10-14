@@ -69,15 +69,15 @@ extension EnvironmentValues {
   @Entry var linkSpots: LinkSpots?
 }
 
-/// A long-pressed link's menu.
-func linkActions(_ url: URL, open: @escaping () -> Void, say: @escaping (String) -> Void)
+/// A long-pressed link's menu, `copied` told once its link is copied.
+func linkActions(_ url: URL, open: @escaping () -> Void, copied: @escaping () -> Void)
   -> [MessageAction]
 {
   [
     MessageAction(title: "リンクを開く", systemImage: "safari", run: open),
     MessageAction(title: "リンクをコピー", systemImage: "link") {
       UIPasteboard.general.url = url
-      say("コピーしました")
+      copied()
     },
   ]
 }

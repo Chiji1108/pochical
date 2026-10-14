@@ -179,6 +179,8 @@ struct PhotoViewer: View {
   var onSave: (() async -> Bool)?
   @State private var pull: CGFloat = 0
   @State private var notice: String?
+  /// Saves and copies done, each felt as it is (spec/haptics.md).
+  @State private var done = 0
 
   /// How far a pull down closes it.
   private static var closeAt: CGFloat { 120 }
@@ -204,7 +206,13 @@ struct PhotoViewer: View {
     .overlay(alignment: .bottomTrailing) {
       if let onSave {
         Button("保存", systemImage: "square.and.arrow.down") {
-          Task { say(await onSave() ? "写真を保存しました" : "保存できませんでした") }
+          Task {
+            if await onSave() {
+              sayDone("写真を保存しました")
+            } else {
+              say("保存できませんでした")
+            }
+          }
         }
           .labelStyle(.iconOnly)
           .font(.title3.weight(.semibold))
@@ -214,6 +222,7 @@ struct PhotoViewer: View {
           .padding(16)
       }
     }
+    .sensoryFeedback(.success, trigger: done)
     .overlay(alignment: .top) {
       if let notice {
         NoticeCapsule(words: notice)
@@ -232,6 +241,13 @@ struct PhotoViewer: View {
         }
     )
     .preferredColorScheme(.dark)
+  }
+
+  /// Says a save or a copy is done, felt as well as said: what it made
+  /// happens out of sight, in Photos or on the clipboard.
+  private func sayDone(_ words: String) {
+    done += 1
+    say(words)
   }
 
   private func say(_ words: String) {
