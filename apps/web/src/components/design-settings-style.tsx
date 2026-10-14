@@ -378,7 +378,8 @@ function OffLookChoices({ offs }: { offs: Pattern[] }) {
 // One row of tabs for each pattern that counts as off, named once there
 // is more than one. The style page draws each with its own day; the saved
 // image names them alone (`samples` false), the picture above showing
-// them.
+// them. Each row's tabs are named by the pattern alone, under the
+// section's 休みの見せ方, so 休み's do not read as the whole section's.
 export function OffLookRows({
   offs,
   lookOf,
@@ -396,7 +397,7 @@ export function OffLookRows({
         <div className={offRows.row} key={pattern.id}>
           {offs.length > 1 && <p className={offRows.name}>{pattern.name}</p>}
           <OffLookTabs
-            label={offs.length > 1 ? `${pattern.name}の見せ方` : undefined}
+            label={offs.length > 1 ? pattern.name : undefined}
             onChange={(look) => {
               onChange(pattern.id, look);
             }}

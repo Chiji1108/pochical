@@ -95,7 +95,8 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
 /// to people who do not know the marks, so names and the days off's tint
 /// start on, and days off are shown, since they could not tell an empty day
 /// from one not entered; each day off can be set apart, as on the style
-/// page, so 有休 may show while 休み is left blank. Light or dark is the screen's until picked.
+/// page, so 有休 may show while 休み is left blank. Light or dark is the
+/// screen's until picked.
 public struct PictureLook: Codable, Equatable, Sendable {
   public var options = MarkOptions(names: true, off: .highlight)
   /// Dark, light, or none to follow the screen.
