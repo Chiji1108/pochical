@@ -294,6 +294,28 @@
     font-weight: 600;
     color: var(--ink);
   }
+  .guide-shots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: flex-start;
+    margin: 20px 0 14px;
+  }
+  .guide-shots figure {
+    width: min(260px, 100%);
+    margin: 0;
+  }
+  .guide-shots img {
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+  }
+  .guide-shots figcaption {
+    margin-top: 6px;
+    font-size: 11px;
+    line-height: 1.8;
+  }
   .document-links {
     display: flex;
     flex-wrap: wrap;

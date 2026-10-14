@@ -38,6 +38,26 @@ function GoogleCalendarGuide() {
             <li>「Google」を選んで、Googleアカウントでログインします。</li>
             <li>「カレンダー」をオンにして、保存します。</li>
           </ol>
+          <div className="guide-shots">
+            <figure>
+              <img
+                alt="設定アプリのカレンダーの画面。「カレンダーアカウント」の行がある。"
+                height={515}
+                src="/support/calendar-settings.png"
+                width={600}
+              />
+              <figcaption>「カレンダーアカウント」を開く</figcaption>
+            </figure>
+            <figure>
+              <img
+                alt="アカウントを追加の画面。iCloud、Microsoft Exchange、Google、yahoo!、Aol.、Outlook.comが並ぶ。"
+                height={1030}
+                src="/support/add-account.png"
+                width={600}
+              />
+              <figcaption>「アカウントを追加」で「Google」を選ぶ</figcaption>
+            </figure>
+          </div>
           <p className="small-note">
             すでに追加しているときは、「カレンダーアカウント」でそのアカウントを開き、「カレンダー」がオンになっているか確かめてください。
           </p>
