@@ -274,8 +274,10 @@ export function AppearancePage({ onBack }: { onBack: () => void }) {
             >
               <SchemeScreen
                 // An always-dark テーマ has no light to show: ポチカル's
-                // stands in.
-                preset={alwaysDark ? "pochical" : preset}
+                // stands in for ライト, and ダーク shows the テーマ itself.
+                preset={
+                  alwaysDark && option.scheme === "light" ? "pochical" : preset
+                }
                 scheme={option.scheme}
               />
               {option.name}

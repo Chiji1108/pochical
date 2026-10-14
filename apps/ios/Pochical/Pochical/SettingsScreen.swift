@@ -237,8 +237,9 @@ private struct AppearanceSettings: View {
           ForEach([ColorScheme.light, .dark], id: \.self) { scheme in
             SchemeChoice(
               scheme: scheme,
-              // An always-dark テーマ has no light to show: ポチカル's stands in.
-              theme: theme.isAlwaysDark ? .pochical : theme,
+              // An always-dark テーマ has no light to show: ポチカル's stands
+              // in for ライト, and ダーク shows the テーマ itself.
+              theme: theme.isAlwaysDark && scheme == .light ? .pochical : theme,
               picked: shown == scheme
             ) {
               settings.device.appearance = scheme == .dark ? .dark : .light
