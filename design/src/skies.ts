@@ -57,7 +57,7 @@ export const skyTones = {
 } as const;
 
 // The dark gray screen (background-base) in OKLCH lightness.
-export const DARK_GROUND = 0.28;
+export const DARK_GROUND = 0.195;
 
 // The ground a sky stands on in dark mode: a テーマ drawn dark has its
 // own when it colors one; a light テーマ's ground is only its light mode's.

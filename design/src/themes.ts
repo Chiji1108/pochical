@@ -134,7 +134,7 @@ export const presets = [
   {
     accent: { chroma: 0.11, hue: 95, lightness: 0.87 },
     grays: { hue: 265, strength: 3 },
-    ground: { chroma: 0.035, hue: 268, lightness: 0.21 },
+    ground: { chroma: 0.035, hue: 268, lightness: 0.2 },
     id: "tsukiyo",
     name: "月夜",
     scheme: "dark",
@@ -146,7 +146,7 @@ export const presets = [
   {
     accent: { chroma: 0.012, hue: 165, lightness: 0.94 },
     grays: { hue: 165, strength: 3 },
-    ground: { chroma: 0.04, hue: 168, lightness: 0.3 },
+    ground: { chroma: 0.03, hue: 168, lightness: 0.225 },
     id: "kokuban",
     name: "黒板",
     scheme: "dark",
@@ -173,9 +173,9 @@ export const roleSteps = {
   dark: {
     accent: { chroma: 0.95, lightness: 0.78 },
     line: { chroma: 0.8, lightness: 0.7 },
-    markTint: { chroma: 0.44, lightness: 0.39 },
+    markTint: { chroma: 0.44, lightness: 0.315 },
     muted: { chroma: 0.6, lightness: 0.56 },
-    soft: { chroma: 0.27, lightness: 0.345 },
+    soft: { chroma: 0.27, lightness: 0.305 },
   },
   light: {
     line: { chroma: 0.9, lightness: 0.11 },
@@ -310,7 +310,7 @@ function neutralsFor(preset: Preset, scheme: ColorScheme) {
 export const noteMarkerSteps = {
   dark: {
     onTile: { chroma: 1.25, lightness: 0.1 },
-    pale: { chroma: 1, lightness: 0.43 },
+    pale: { chroma: 1, lightness: 0.365 },
   },
   light: {
     onTile: { chroma: 1.9, lightness: -0.09 },

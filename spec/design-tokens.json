@@ -215,90 +215,90 @@
             "marks": [
               {
                 "color": "#a4c19f",
-                "noteOnTile": "#566653",
-                "tint": "#3d493b"
+                "noteOnTile": "#42503f",
+                "tint": "#2a3528"
               },
               {
                 "color": "#d6bb77",
-                "noteOnTile": "#6b5e3d",
-                "tint": "#4d432a"
+                "noteOnTile": "#574b2a",
+                "tint": "#3a3118"
               },
               {
                 "color": "#e6b285",
-                "noteOnTile": "#735941",
-                "tint": "#533f2d"
+                "noteOnTile": "#5f462f",
+                "tint": "#402d1c"
               },
               {
                 "color": "#efab95",
-                "noteOnTile": "#79554a",
-                "tint": "#573c34"
+                "noteOnTile": "#654238",
+                "tint": "#442a23"
               },
               {
                 "color": "#fea194",
-                "noteOnTile": "#79554e",
-                "tint": "#573c37"
+                "noteOnTile": "#63423c",
+                "tint": "#432a26"
               },
               {
                 "color": "#eda8b6",
-                "noteOnTile": "#77545a",
-                "tint": "#563b40"
+                "noteOnTile": "#634047",
+                "tint": "#43292e"
               },
               {
                 "color": "#d8acdd",
-                "noteOnTile": "#6d566f",
-                "tint": "#4e3d50"
+                "noteOnTile": "#58435b",
+                "tint": "#3b2b3d"
               },
               {
                 "color": "#c2b4ec",
-                "noteOnTile": "#615979",
-                "tint": "#453f57"
+                "noteOnTile": "#4e4764",
+                "tint": "#332e44"
               },
               {
                 "color": "#afbaf1",
-                "noteOnTile": "#565d7b",
-                "tint": "#3d4259"
+                "noteOnTile": "#444a67",
+                "tint": "#2c3046"
               },
               {
                 "color": "#c0d0fc",
-                "noteOnTile": "#565e76",
-                "tint": "#3d4355"
+                "noteOnTile": "#444b62",
+                "tint": "#2c3142"
               },
               {
                 "color": "#95cac5",
-                "noteOnTile": "#496663",
-                "tint": "#334947"
+                "noteOnTile": "#365250",
+                "tint": "#213635"
               },
               {
                 "color": "#b3c0ca",
-                "noteOnTile": "#596066",
-                "tint": "#3f4449"
+                "noteOnTile": "#474c53",
+                "tint": "#2e3237"
               }
             ],
             "roles": {
-              "background-base": "#2a2c29",
-              "background-card": "#414541",
-              "background-elevated": "#333633",
-              "fill-quaternary": "#323531",
-              "fill-tertiary": "#393d39",
-              "fill-secondary": "#4f544f",
-              "fill-primary": "#575c57",
-              "text-primary": "#dcdfdb",
-              "text-secondary": "#bdc3bc",
-              "text-tertiary": "#a7ada5",
-              "text-quaternary": "#949a93",
-              "text-disabled": "#666a65",
-              "border-default": "#4d514c",
-              "separator": "#3e423e",
-              "border-strong": "#686e67",
+              "background-base": "#131513",
+              "background-card": "#242824",
+              "background-elevated": "#1d201d",
+              "fill-quaternary": "#1c201b",
+              "fill-tertiary": "#232723",
+              "fill-secondary": "#363b36",
+              "fill-primary": "#3e423e",
+              "text-primary": "#f1f4f0",
+              "text-secondary": "#c9cfc8",
+              "text-tertiary": "#adb3ab",
+              "text-quaternary": "#979d96",
+              "text-disabled": "#555954",
+              "border-default": "#343833",
+              "separator": "#292d29",
+              "border-strong": "#525851",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#dcdfdb",
-              "inverse-text": "#2a2c29",
+              "inverse-background": "#f1f4f0",
+              "inverse-text": "#131513",
               "control-knob": "#ffffff",
-              "home-indicator": "#cfd2ce",
+              "home-indicator": "#e2e6e1",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -316,9 +316,9 @@
               "accent-on-fill": "#20291f",
               "accent-focus": "#8fa68a",
               "accent-border": "#697a66",
-              "accent-container": "#353b34",
-              "calendar-off-tint": "#3d493b",
-              "calendar-note-marker": "#485446"
+              "accent-container": "#2b312a",
+              "calendar-off-tint": "#2a3528",
+              "calendar-note-marker": "#374235"
             }
           }
         }
@@ -461,90 +461,90 @@
             "marks": [
               {
                 "color": "#aebda4",
-                "noteOnTile": "#5c6356",
-                "tint": "#42473d"
+                "noteOnTile": "#474f42",
+                "tint": "#2e342a"
               },
               {
                 "color": "#d0bc8b",
-                "noteOnTile": "#695e46",
-                "tint": "#4b4331"
+                "noteOnTile": "#544b33",
+                "tint": "#38311f"
               },
               {
                 "color": "#dcb594",
-                "noteOnTile": "#6e5a49",
-                "tint": "#4f4033"
+                "noteOnTile": "#5b4737",
+                "tint": "#3d2e22"
               },
               {
                 "color": "#e4b0a0",
-                "noteOnTile": "#725850",
-                "tint": "#523e38"
+                "noteOnTile": "#5f443e",
+                "tint": "#402c27"
               },
               {
                 "color": "#efa99f",
-                "noteOnTile": "#735752",
-                "tint": "#533e3a"
+                "noteOnTile": "#5e4440",
+                "tint": "#3f2c29"
               },
               {
                 "color": "#e2aeb8",
-                "noteOnTile": "#72565c",
-                "tint": "#523d41"
+                "noteOnTile": "#5e4348",
+                "tint": "#3f2b2f"
               },
               {
                 "color": "#d2b1d5",
-                "noteOnTile": "#6a596b",
-                "tint": "#4c3f4d"
+                "noteOnTile": "#564657",
+                "tint": "#392d3a"
               },
               {
                 "color": "#c1b7e1",
-                "noteOnTile": "#605a72",
-                "tint": "#444052"
+                "noteOnTile": "#4e485f",
+                "tint": "#332f40"
               },
               {
                 "color": "#b2bbe4",
-                "noteOnTile": "#595d75",
-                "tint": "#3f4254"
+                "noteOnTile": "#464b60",
+                "tint": "#2d3141"
               },
               {
                 "color": "#c4d0f1",
-                "noteOnTile": "#595e71",
-                "tint": "#3f4351"
+                "noteOnTile": "#464b5c",
+                "tint": "#2d313e"
               },
               {
                 "color": "#a0c7c3",
-                "noteOnTile": "#4f6562",
-                "tint": "#384846"
+                "noteOnTile": "#3c504f",
+                "tint": "#263534"
               },
               {
                 "color": "#b6bfc7",
-                "noteOnTile": "#5a5f65",
-                "tint": "#404448"
+                "noteOnTile": "#484c52",
+                "tint": "#2f3236"
               }
             ],
             "roles": {
-              "background-base": "#2d2b28",
-              "background-card": "#46443e",
-              "background-elevated": "#373531",
-              "fill-quaternary": "#36342f",
-              "fill-tertiary": "#3e3c36",
-              "fill-secondary": "#55524b",
-              "fill-primary": "#5d5a53",
-              "text-primary": "#e0ded9",
-              "text-secondary": "#c4c1b9",
-              "text-tertiary": "#aeaba1",
-              "text-quaternary": "#9b988f",
-              "text-disabled": "#6b6962",
-              "border-default": "#525049",
-              "separator": "#43413b",
-              "border-strong": "#6f6c63",
+              "background-base": "#151412",
+              "background-card": "#292721",
+              "background-elevated": "#211f1b",
+              "fill-quaternary": "#211e18",
+              "fill-tertiary": "#282620",
+              "fill-secondary": "#3c3932",
+              "fill-primary": "#43413b",
+              "text-primary": "#f5f3ee",
+              "text-secondary": "#d0cdc5",
+              "text-tertiary": "#b4b1a7",
+              "text-quaternary": "#9e9b92",
+              "text-disabled": "#5a5851",
+              "border-default": "#393630",
+              "separator": "#2e2c26",
+              "border-strong": "#59564e",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#e0ded9",
-              "inverse-text": "#2d2b28",
+              "inverse-background": "#f5f3ee",
+              "inverse-text": "#151412",
               "control-knob": "#ffffff",
-              "home-indicator": "#d3d1cc",
+              "home-indicator": "#e7e5de",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -562,9 +562,9 @@
               "accent-on-fill": "#242820",
               "accent-focus": "#97a38f",
               "accent-border": "#6f7869",
-              "accent-container": "#373a35",
-              "calendar-off-tint": "#42473d",
-              "calendar-note-marker": "#4d5248"
+              "accent-container": "#2d302b",
+              "calendar-off-tint": "#2e342a",
+              "calendar-note-marker": "#3b4136"
             }
           }
         }
@@ -701,90 +701,90 @@
             "marks": [
               {
                 "color": "#b5b9b4",
-                "noteOnTile": "#5f605f",
-                "tint": "#444544"
+                "noteOnTile": "#4b4c4a",
+                "tint": "#313230"
               },
               {
                 "color": "#d6bb77",
-                "noteOnTile": "#6b5e3d",
-                "tint": "#4d432a"
+                "noteOnTile": "#574b2a",
+                "tint": "#3a3118"
               },
               {
                 "color": "#e6b285",
-                "noteOnTile": "#735941",
-                "tint": "#533f2d"
+                "noteOnTile": "#5f462f",
+                "tint": "#402d1c"
               },
               {
                 "color": "#efab95",
-                "noteOnTile": "#79554a",
-                "tint": "#573c34"
+                "noteOnTile": "#654238",
+                "tint": "#442a23"
               },
               {
                 "color": "#fea194",
-                "noteOnTile": "#79554e",
-                "tint": "#573c37"
+                "noteOnTile": "#63423c",
+                "tint": "#432a26"
               },
               {
                 "color": "#eda8b6",
-                "noteOnTile": "#77545a",
-                "tint": "#563b40"
+                "noteOnTile": "#634047",
+                "tint": "#43292e"
               },
               {
                 "color": "#d8acdd",
-                "noteOnTile": "#6d566f",
-                "tint": "#4e3d50"
+                "noteOnTile": "#58435b",
+                "tint": "#3b2b3d"
               },
               {
                 "color": "#c2b4ec",
-                "noteOnTile": "#615979",
-                "tint": "#453f57"
+                "noteOnTile": "#4e4764",
+                "tint": "#332e44"
               },
               {
                 "color": "#afbaf1",
-                "noteOnTile": "#565d7b",
-                "tint": "#3d4259"
+                "noteOnTile": "#444a67",
+                "tint": "#2c3046"
               },
               {
                 "color": "#c0d0fc",
-                "noteOnTile": "#565e76",
-                "tint": "#3d4355"
+                "noteOnTile": "#444b62",
+                "tint": "#2c3142"
               },
               {
                 "color": "#95cac5",
-                "noteOnTile": "#496663",
-                "tint": "#334947"
+                "noteOnTile": "#365250",
+                "tint": "#213635"
               },
               {
                 "color": "#b3c0ca",
-                "noteOnTile": "#596066",
-                "tint": "#3f4449"
+                "noteOnTile": "#474c53",
+                "tint": "#2e3237"
               }
             ],
             "roles": {
-              "background-base": "#2b2b2b",
-              "background-card": "#434443",
-              "background-elevated": "#353534",
-              "fill-quaternary": "#333433",
-              "fill-tertiary": "#3b3c3b",
-              "fill-secondary": "#525351",
-              "fill-primary": "#5a5b59",
-              "text-primary": "#dddedd",
-              "text-secondary": "#c0c2c0",
-              "text-tertiary": "#aaaba9",
-              "text-quaternary": "#979996",
-              "text-disabled": "#686967",
-              "border-default": "#4f504e",
-              "separator": "#404140",
-              "border-strong": "#6b6d6a",
+              "background-base": "#141514",
+              "background-card": "#262726",
+              "background-elevated": "#1f1f1e",
+              "fill-quaternary": "#1e1f1d",
+              "fill-tertiary": "#252625",
+              "fill-secondary": "#393a38",
+              "fill-primary": "#404140",
+              "text-primary": "#f2f3f2",
+              "text-secondary": "#cccecc",
+              "text-tertiary": "#b0b1af",
+              "text-quaternary": "#9a9c99",
+              "text-disabled": "#575856",
+              "border-default": "#363735",
+              "separator": "#2b2c2b",
+              "border-strong": "#555755",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#dddedd",
-              "inverse-text": "#2b2b2b",
+              "inverse-background": "#f2f3f2",
+              "inverse-text": "#141514",
               "control-knob": "#ffffff",
-              "home-indicator": "#d0d1d0",
+              "home-indicator": "#e4e5e3",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -802,9 +802,9 @@
               "accent-on-fill": "#262725",
               "accent-focus": "#9c9f9b",
               "accent-border": "#737572",
-              "accent-container": "#393938",
-              "calendar-off-tint": "#444544",
-              "calendar-note-marker": "#4f504f"
+              "accent-container": "#2e2f2e",
+              "calendar-off-tint": "#313230",
+              "calendar-note-marker": "#3e3f3d"
             }
           }
         }
@@ -947,90 +947,90 @@
             "marks": [
               {
                 "color": "#ccb395",
-                "noteOnTile": "#6b5e4f",
-                "tint": "#4d4338"
+                "noteOnTile": "#564a3b",
+                "tint": "#393025"
               },
               {
                 "color": "#d0bc8b",
-                "noteOnTile": "#695e46",
-                "tint": "#4b4331"
+                "noteOnTile": "#544b33",
+                "tint": "#38311f"
               },
               {
                 "color": "#dcb594",
-                "noteOnTile": "#6e5a49",
-                "tint": "#4f4033"
+                "noteOnTile": "#5b4737",
+                "tint": "#3d2e22"
               },
               {
                 "color": "#e4b0a0",
-                "noteOnTile": "#725850",
-                "tint": "#523e38"
+                "noteOnTile": "#5f443e",
+                "tint": "#402c27"
               },
               {
                 "color": "#efa99f",
-                "noteOnTile": "#735752",
-                "tint": "#533e3a"
+                "noteOnTile": "#5e4440",
+                "tint": "#3f2c29"
               },
               {
                 "color": "#e2aeb8",
-                "noteOnTile": "#72565c",
-                "tint": "#523d41"
+                "noteOnTile": "#5e4348",
+                "tint": "#3f2b2f"
               },
               {
                 "color": "#d2b1d5",
-                "noteOnTile": "#6a596b",
-                "tint": "#4c3f4d"
+                "noteOnTile": "#564657",
+                "tint": "#392d3a"
               },
               {
                 "color": "#c1b7e1",
-                "noteOnTile": "#605a72",
-                "tint": "#444052"
+                "noteOnTile": "#4e485f",
+                "tint": "#332f40"
               },
               {
                 "color": "#b2bbe4",
-                "noteOnTile": "#595d75",
-                "tint": "#3f4254"
+                "noteOnTile": "#464b60",
+                "tint": "#2d3141"
               },
               {
                 "color": "#c4d0f1",
-                "noteOnTile": "#595e71",
-                "tint": "#3f4351"
+                "noteOnTile": "#464b5c",
+                "tint": "#2d313e"
               },
               {
                 "color": "#a0c7c3",
-                "noteOnTile": "#4f6562",
-                "tint": "#384846"
+                "noteOnTile": "#3c504f",
+                "tint": "#263534"
               },
               {
                 "color": "#b6bfc7",
-                "noteOnTile": "#5a5f65",
-                "tint": "#404448"
+                "noteOnTile": "#484c52",
+                "tint": "#2f3236"
               }
             ],
             "roles": {
-              "background-base": "#2e2b27",
-              "background-card": "#48433d",
-              "background-elevated": "#393430",
-              "fill-quaternary": "#38332e",
-              "fill-tertiary": "#403b35",
-              "fill-secondary": "#58514a",
-              "fill-primary": "#605952",
-              "text-primary": "#e2ddd8",
-              "text-secondary": "#c8c0b8",
-              "text-tertiary": "#b2a9a0",
-              "text-quaternary": "#9f968d",
-              "text-disabled": "#6d6862",
-              "border-default": "#544f49",
-              "separator": "#45403a",
-              "border-strong": "#736a61",
+              "background-base": "#161411",
+              "background-card": "#2b2620",
+              "background-elevated": "#231e1a",
+              "fill-quaternary": "#231d17",
+              "fill-tertiary": "#2a251f",
+              "fill-secondary": "#3f3831",
+              "fill-primary": "#45403a",
+              "text-primary": "#f7f2ed",
+              "text-secondary": "#d4ccc4",
+              "text-tertiary": "#b8afa6",
+              "text-quaternary": "#a29990",
+              "text-disabled": "#5c5751",
+              "border-default": "#3b362f",
+              "separator": "#302b25",
+              "border-strong": "#5d554d",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#e2ddd8",
-              "inverse-text": "#2e2b27",
+              "inverse-background": "#f7f2ed",
+              "inverse-text": "#161411",
               "control-knob": "#ffffff",
-              "home-indicator": "#d5d0cb",
+              "home-indicator": "#e9e4de",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -1048,9 +1048,9 @@
               "accent-on-fill": "#2d251c",
               "accent-focus": "#af9b83",
               "accent-border": "#807261",
-              "accent-container": "#3e3831",
-              "calendar-off-tint": "#4d4338",
-              "calendar-note-marker": "#584e43"
+              "accent-container": "#342e27",
+              "calendar-off-tint": "#393025",
+              "calendar-note-marker": "#463d31"
             }
           }
         }
@@ -1188,90 +1188,90 @@
             "marks": [
               {
                 "color": "#b4bf7b",
-                "noteOnTile": "#5f6442",
-                "tint": "#44482e"
+                "noteOnTile": "#4a4f2e",
+                "tint": "#30341b"
               },
               {
                 "color": "#d0bc8b",
-                "noteOnTile": "#695e46",
-                "tint": "#4b4331"
+                "noteOnTile": "#544b33",
+                "tint": "#38311f"
               },
               {
                 "color": "#dcb594",
-                "noteOnTile": "#6e5a49",
-                "tint": "#4f4033"
+                "noteOnTile": "#5b4737",
+                "tint": "#3d2e22"
               },
               {
                 "color": "#e4b0a0",
-                "noteOnTile": "#725850",
-                "tint": "#523e38"
+                "noteOnTile": "#5f443e",
+                "tint": "#402c27"
               },
               {
                 "color": "#efa99f",
-                "noteOnTile": "#735752",
-                "tint": "#533e3a"
+                "noteOnTile": "#5e4440",
+                "tint": "#3f2c29"
               },
               {
                 "color": "#e2aeb8",
-                "noteOnTile": "#72565c",
-                "tint": "#523d41"
+                "noteOnTile": "#5e4348",
+                "tint": "#3f2b2f"
               },
               {
                 "color": "#d2b1d5",
-                "noteOnTile": "#6a596b",
-                "tint": "#4c3f4d"
+                "noteOnTile": "#564657",
+                "tint": "#392d3a"
               },
               {
                 "color": "#c1b7e1",
-                "noteOnTile": "#605a72",
-                "tint": "#444052"
+                "noteOnTile": "#4e485f",
+                "tint": "#332f40"
               },
               {
                 "color": "#b2bbe4",
-                "noteOnTile": "#595d75",
-                "tint": "#3f4254"
+                "noteOnTile": "#464b60",
+                "tint": "#2d3141"
               },
               {
                 "color": "#c4d0f1",
-                "noteOnTile": "#595e71",
-                "tint": "#3f4351"
+                "noteOnTile": "#464b5c",
+                "tint": "#2d313e"
               },
               {
                 "color": "#a0c7c3",
-                "noteOnTile": "#4f6562",
-                "tint": "#384846"
+                "noteOnTile": "#3c504f",
+                "tint": "#263534"
               },
               {
                 "color": "#b6bfc7",
-                "noteOnTile": "#5a5f65",
-                "tint": "#404448"
+                "noteOnTile": "#484c52",
+                "tint": "#2f3236"
               }
             ],
             "roles": {
-              "background-base": "#2b2c28",
-              "background-card": "#44443f",
-              "background-elevated": "#353631",
-              "fill-quaternary": "#343430",
-              "fill-tertiary": "#3c3c37",
-              "fill-secondary": "#53534c",
-              "fill-primary": "#5b5b54",
-              "text-primary": "#dededa",
-              "text-secondary": "#c1c2ba",
-              "text-tertiary": "#abaca2",
-              "text-quaternary": "#989990",
-              "text-disabled": "#696963",
-              "border-default": "#50504a",
-              "separator": "#41413c",
-              "border-strong": "#6c6d64",
+              "background-base": "#141512",
+              "background-card": "#272722",
+              "background-elevated": "#1f201b",
+              "fill-quaternary": "#1f1f19",
+              "fill-tertiary": "#262621",
+              "fill-secondary": "#3a3a33",
+              "fill-primary": "#41413c",
+              "text-primary": "#f3f3ef",
+              "text-secondary": "#cdcec6",
+              "text-tertiary": "#b1b2a8",
+              "text-quaternary": "#9b9c93",
+              "text-disabled": "#585852",
+              "border-default": "#373731",
+              "separator": "#2c2c27",
+              "border-strong": "#56574f",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#dededa",
-              "inverse-text": "#2b2c28",
+              "inverse-background": "#f3f3ef",
+              "inverse-text": "#141512",
               "control-knob": "#ffffff",
-              "home-indicator": "#d1d1cd",
+              "home-indicator": "#e5e5df",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -1289,9 +1289,9 @@
               "accent-on-fill": "#252913",
               "accent-focus": "#9ca56e",
               "accent-border": "#727952",
-              "accent-container": "#383b2c",
-              "calendar-off-tint": "#44482e",
-              "calendar-note-marker": "#4f5338"
+              "accent-container": "#2e3122",
+              "calendar-off-tint": "#30341b",
+              "calendar-note-marker": "#3d4128"
             }
           }
         }
@@ -1429,90 +1429,90 @@
             "marks": [
               {
                 "color": "#d1afa3",
-                "noteOnTile": "#6e5c56",
-                "tint": "#4f423d"
+                "noteOnTile": "#584742",
+                "tint": "#3b2e2a"
               },
               {
                 "color": "#d0bc8b",
-                "noteOnTile": "#695e46",
-                "tint": "#4b4331"
+                "noteOnTile": "#544b33",
+                "tint": "#38311f"
               },
               {
                 "color": "#dcb594",
-                "noteOnTile": "#6e5a49",
-                "tint": "#4f4033"
+                "noteOnTile": "#5b4737",
+                "tint": "#3d2e22"
               },
               {
                 "color": "#e4b0a0",
-                "noteOnTile": "#725850",
-                "tint": "#523e38"
+                "noteOnTile": "#5f443e",
+                "tint": "#402c27"
               },
               {
                 "color": "#efa99f",
-                "noteOnTile": "#735752",
-                "tint": "#533e3a"
+                "noteOnTile": "#5e4440",
+                "tint": "#3f2c29"
               },
               {
                 "color": "#e2aeb8",
-                "noteOnTile": "#72565c",
-                "tint": "#523d41"
+                "noteOnTile": "#5e4348",
+                "tint": "#3f2b2f"
               },
               {
                 "color": "#d2b1d5",
-                "noteOnTile": "#6a596b",
-                "tint": "#4c3f4d"
+                "noteOnTile": "#564657",
+                "tint": "#392d3a"
               },
               {
                 "color": "#c1b7e1",
-                "noteOnTile": "#605a72",
-                "tint": "#444052"
+                "noteOnTile": "#4e485f",
+                "tint": "#332f40"
               },
               {
                 "color": "#b2bbe4",
-                "noteOnTile": "#595d75",
-                "tint": "#3f4254"
+                "noteOnTile": "#464b60",
+                "tint": "#2d3141"
               },
               {
                 "color": "#c4d0f1",
-                "noteOnTile": "#595e71",
-                "tint": "#3f4351"
+                "noteOnTile": "#464b5c",
+                "tint": "#2d313e"
               },
               {
                 "color": "#a0c7c3",
-                "noteOnTile": "#4f6562",
-                "tint": "#384846"
+                "noteOnTile": "#3c504f",
+                "tint": "#263534"
               },
               {
                 "color": "#b6bfc7",
-                "noteOnTile": "#5a5f65",
-                "tint": "#404448"
+                "noteOnTile": "#484c52",
+                "tint": "#2f3236"
               }
             ],
             "roles": {
-              "background-base": "#2e2a29",
-              "background-card": "#484240",
-              "background-elevated": "#393432",
-              "fill-quaternary": "#383331",
-              "fill-tertiary": "#403a38",
-              "fill-secondary": "#58514e",
-              "fill-primary": "#605956",
-              "text-primary": "#e2dddb",
-              "text-secondary": "#c8bfbb",
-              "text-tertiary": "#b3a9a4",
-              "text-quaternary": "#9f9692",
-              "text-disabled": "#6d6764",
-              "border-default": "#544e4b",
-              "separator": "#453f3d",
-              "border-strong": "#736a66",
+              "background-base": "#161413",
+              "background-card": "#2b2523",
+              "background-elevated": "#231e1c",
+              "fill-quaternary": "#231d1a",
+              "fill-tertiary": "#2a2422",
+              "fill-secondary": "#3f3835",
+              "fill-primary": "#453f3d",
+              "text-primary": "#f7f2f0",
+              "text-secondary": "#d4cbc7",
+              "text-tertiary": "#b9afaa",
+              "text-quaternary": "#a29995",
+              "text-disabled": "#5c5653",
+              "border-default": "#3b3532",
+              "separator": "#302a28",
+              "border-strong": "#5d5450",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#e2dddb",
-              "inverse-text": "#2e2a29",
+              "inverse-background": "#f7f2f0",
+              "inverse-text": "#161413",
               "control-knob": "#ffffff",
-              "home-indicator": "#d5d0ce",
+              "home-indicator": "#eae3e0",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -1530,9 +1530,9 @@
               "accent-on-fill": "#2e2420",
               "accent-focus": "#b3978e",
               "accent-border": "#836f69",
-              "accent-container": "#3f3735",
-              "calendar-off-tint": "#4f423d",
-              "calendar-note-marker": "#5a4c47"
+              "accent-container": "#352d2a",
+              "calendar-off-tint": "#3b2e2a",
+              "calendar-note-marker": "#483b37"
             }
           }
         }
@@ -1669,90 +1669,90 @@
             "marks": [
               {
                 "color": "#82c5cc",
-                "noteOnTile": "#45676b",
-                "tint": "#304a4d"
+                "noteOnTile": "#315256",
+                "tint": "#1d3639"
               },
               {
                 "color": "#d6bb77",
-                "noteOnTile": "#6b5e3d",
-                "tint": "#4d432a"
+                "noteOnTile": "#574b2a",
+                "tint": "#3a3118"
               },
               {
                 "color": "#e6b285",
-                "noteOnTile": "#735941",
-                "tint": "#533f2d"
+                "noteOnTile": "#5f462f",
+                "tint": "#402d1c"
               },
               {
                 "color": "#efab95",
-                "noteOnTile": "#79554a",
-                "tint": "#573c34"
+                "noteOnTile": "#654238",
+                "tint": "#442a23"
               },
               {
                 "color": "#fea194",
-                "noteOnTile": "#79554e",
-                "tint": "#573c37"
+                "noteOnTile": "#63423c",
+                "tint": "#432a26"
               },
               {
                 "color": "#eda8b6",
-                "noteOnTile": "#77545a",
-                "tint": "#563b40"
+                "noteOnTile": "#634047",
+                "tint": "#43292e"
               },
               {
                 "color": "#d8acdd",
-                "noteOnTile": "#6d566f",
-                "tint": "#4e3d50"
+                "noteOnTile": "#58435b",
+                "tint": "#3b2b3d"
               },
               {
                 "color": "#c2b4ec",
-                "noteOnTile": "#615979",
-                "tint": "#453f57"
+                "noteOnTile": "#4e4764",
+                "tint": "#332e44"
               },
               {
                 "color": "#afbaf1",
-                "noteOnTile": "#565d7b",
-                "tint": "#3d4259"
+                "noteOnTile": "#444a67",
+                "tint": "#2c3046"
               },
               {
                 "color": "#c0d0fc",
-                "noteOnTile": "#565e76",
-                "tint": "#3d4355"
+                "noteOnTile": "#444b62",
+                "tint": "#2c3142"
               },
               {
                 "color": "#95cac5",
-                "noteOnTile": "#496663",
-                "tint": "#334947"
+                "noteOnTile": "#365250",
+                "tint": "#213635"
               },
               {
                 "color": "#b3c0ca",
-                "noteOnTile": "#596066",
-                "tint": "#3f4449"
+                "noteOnTile": "#474c53",
+                "tint": "#2e3237"
               }
             ],
             "roles": {
-              "background-base": "#292c2c",
-              "background-card": "#404546",
-              "background-elevated": "#323637",
-              "fill-quaternary": "#303536",
-              "fill-tertiary": "#383d3e",
-              "fill-secondary": "#4d5455",
-              "fill-primary": "#555c5d",
-              "text-primary": "#dadfdf",
-              "text-secondary": "#bbc3c4",
-              "text-tertiary": "#a4adae",
-              "text-quaternary": "#919a9b",
-              "text-disabled": "#646a6b",
-              "border-default": "#4b5152",
-              "separator": "#3d4243",
-              "border-strong": "#656e6f",
+              "background-base": "#121515",
+              "background-card": "#232829",
+              "background-elevated": "#1c2021",
+              "fill-quaternary": "#1a2021",
+              "fill-tertiary": "#222728",
+              "fill-secondary": "#343b3c",
+              "fill-primary": "#3d4243",
+              "text-primary": "#eff4f4",
+              "text-secondary": "#c7cfd0",
+              "text-tertiary": "#aab3b4",
+              "text-quaternary": "#949d9e",
+              "text-disabled": "#53595a",
+              "border-default": "#323839",
+              "separator": "#282d2e",
+              "border-strong": "#505859",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#dadfdf",
-              "inverse-text": "#292c2c",
+              "inverse-background": "#eff4f4",
+              "inverse-text": "#121515",
               "control-knob": "#ffffff",
-              "home-indicator": "#cdd2d2",
+              "home-indicator": "#e0e6e7",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -1770,9 +1770,9 @@
               "accent-on-fill": "#152a2d",
               "accent-focus": "#73a9af",
               "accent-border": "#567c81",
-              "accent-container": "#2e3c3e",
-              "calendar-off-tint": "#304a4d",
-              "calendar-note-marker": "#3b5558"
+              "accent-container": "#243234",
+              "calendar-off-tint": "#1d3639",
+              "calendar-note-marker": "#2a4346"
             }
           }
         }
@@ -1910,90 +1910,90 @@
             "marks": [
               {
                 "color": "#e0a5b0",
-                "noteOnTile": "#76575c",
-                "tint": "#553e42"
+                "noteOnTile": "#5f4348",
+                "tint": "#402b2f"
               },
               {
                 "color": "#d0bc8b",
-                "noteOnTile": "#695e46",
-                "tint": "#4b4331"
+                "noteOnTile": "#544b33",
+                "tint": "#38311f"
               },
               {
                 "color": "#dcb594",
-                "noteOnTile": "#6e5a49",
-                "tint": "#4f4033"
+                "noteOnTile": "#5b4737",
+                "tint": "#3d2e22"
               },
               {
                 "color": "#e4b0a0",
-                "noteOnTile": "#725850",
-                "tint": "#523e38"
+                "noteOnTile": "#5f443e",
+                "tint": "#402c27"
               },
               {
                 "color": "#efa99f",
-                "noteOnTile": "#735752",
-                "tint": "#533e3a"
+                "noteOnTile": "#5e4440",
+                "tint": "#3f2c29"
               },
               {
                 "color": "#e2aeb8",
-                "noteOnTile": "#72565c",
-                "tint": "#523d41"
+                "noteOnTile": "#5e4348",
+                "tint": "#3f2b2f"
               },
               {
                 "color": "#d2b1d5",
-                "noteOnTile": "#6a596b",
-                "tint": "#4c3f4d"
+                "noteOnTile": "#564657",
+                "tint": "#392d3a"
               },
               {
                 "color": "#c1b7e1",
-                "noteOnTile": "#605a72",
-                "tint": "#444052"
+                "noteOnTile": "#4e485f",
+                "tint": "#332f40"
               },
               {
                 "color": "#b2bbe4",
-                "noteOnTile": "#595d75",
-                "tint": "#3f4254"
+                "noteOnTile": "#464b60",
+                "tint": "#2d3141"
               },
               {
                 "color": "#c4d0f1",
-                "noteOnTile": "#595e71",
-                "tint": "#3f4351"
+                "noteOnTile": "#464b5c",
+                "tint": "#2d313e"
               },
               {
                 "color": "#a0c7c3",
-                "noteOnTile": "#4f6562",
-                "tint": "#384846"
+                "noteOnTile": "#3c504f",
+                "tint": "#263534"
               },
               {
                 "color": "#b6bfc7",
-                "noteOnTile": "#5a5f65",
-                "tint": "#404448"
+                "noteOnTile": "#484c52",
+                "tint": "#2f3236"
               }
             ],
             "roles": {
-              "background-base": "#2e2a2b",
-              "background-card": "#484243",
-              "background-elevated": "#393434",
-              "fill-quaternary": "#383233",
-              "fill-tertiary": "#403a3b",
-              "fill-secondary": "#585051",
-              "fill-primary": "#605859",
-              "text-primary": "#e2dddd",
-              "text-secondary": "#c8bfc0",
-              "text-tertiary": "#b2a8a9",
-              "text-quaternary": "#9f9596",
-              "text-disabled": "#6d6767",
-              "border-default": "#544e4e",
-              "separator": "#453f40",
-              "border-strong": "#73696a",
+              "background-base": "#161414",
+              "background-card": "#2b2526",
+              "background-elevated": "#221e1e",
+              "fill-quaternary": "#231d1e",
+              "fill-tertiary": "#2a2425",
+              "fill-secondary": "#3f3738",
+              "fill-primary": "#453f40",
+              "text-primary": "#f7f2f2",
+              "text-secondary": "#d4cbcc",
+              "text-tertiary": "#b8aeaf",
+              "text-quaternary": "#a29899",
+              "text-disabled": "#5c5656",
+              "border-default": "#3b3535",
+              "separator": "#302a2b",
+              "border-strong": "#5c5455",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#e2dddd",
-              "inverse-text": "#2e2a2b",
+              "inverse-background": "#f7f2f2",
+              "inverse-text": "#161414",
               "control-knob": "#ffffff",
-              "home-indicator": "#d5d0d0",
+              "home-indicator": "#e9e3e3",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -2011,9 +2011,9 @@
               "accent-on-fill": "#332124",
               "accent-focus": "#c08f99",
               "accent-border": "#8c6a70",
-              "accent-container": "#433538",
-              "calendar-off-tint": "#553e42",
-              "calendar-note-marker": "#60494d"
+              "accent-container": "#382b2d",
+              "calendar-off-tint": "#402b2f",
+              "calendar-note-marker": "#4d383c"
             }
           }
         }
@@ -2150,90 +2150,90 @@
             "marks": [
               {
                 "color": "#baaee6",
-                "noteOnTile": "#625b78",
-                "tint": "#464157"
+                "noteOnTile": "#4c4763",
+                "tint": "#322e43"
               },
               {
                 "color": "#d6bb77",
-                "noteOnTile": "#6b5e3d",
-                "tint": "#4d432a"
+                "noteOnTile": "#574b2a",
+                "tint": "#3a3118"
               },
               {
                 "color": "#e6b285",
-                "noteOnTile": "#735941",
-                "tint": "#533f2d"
+                "noteOnTile": "#5f462f",
+                "tint": "#402d1c"
               },
               {
                 "color": "#efab95",
-                "noteOnTile": "#79554a",
-                "tint": "#573c34"
+                "noteOnTile": "#654238",
+                "tint": "#442a23"
               },
               {
                 "color": "#fea194",
-                "noteOnTile": "#79554e",
-                "tint": "#573c37"
+                "noteOnTile": "#63423c",
+                "tint": "#432a26"
               },
               {
                 "color": "#eda8b6",
-                "noteOnTile": "#77545a",
-                "tint": "#563b40"
+                "noteOnTile": "#634047",
+                "tint": "#43292e"
               },
               {
                 "color": "#d8acdd",
-                "noteOnTile": "#6d566f",
-                "tint": "#4e3d50"
+                "noteOnTile": "#58435b",
+                "tint": "#3b2b3d"
               },
               {
                 "color": "#c2b4ec",
-                "noteOnTile": "#615979",
-                "tint": "#453f57"
+                "noteOnTile": "#4e4764",
+                "tint": "#332e44"
               },
               {
                 "color": "#afbaf1",
-                "noteOnTile": "#565d7b",
-                "tint": "#3d4259"
+                "noteOnTile": "#444a67",
+                "tint": "#2c3046"
               },
               {
                 "color": "#c0d0fc",
-                "noteOnTile": "#565e76",
-                "tint": "#3d4355"
+                "noteOnTile": "#444b62",
+                "tint": "#2c3142"
               },
               {
                 "color": "#95cac5",
-                "noteOnTile": "#496663",
-                "tint": "#334947"
+                "noteOnTile": "#365250",
+                "tint": "#213635"
               },
               {
                 "color": "#b3c0ca",
-                "noteOnTile": "#596066",
-                "tint": "#3f4449"
+                "noteOnTile": "#474c53",
+                "tint": "#2e3237"
               }
             ],
             "roles": {
-              "background-base": "#2b2b2e",
-              "background-card": "#444348",
-              "background-elevated": "#353538",
-              "fill-quaternary": "#343337",
-              "fill-tertiary": "#3c3b40",
-              "fill-secondary": "#535257",
-              "fill-primary": "#5b5a5f",
-              "text-primary": "#dedde1",
-              "text-secondary": "#c1c0c7",
-              "text-tertiary": "#abaab1",
-              "text-quaternary": "#98979e",
-              "text-disabled": "#69686d",
-              "border-default": "#504f54",
-              "separator": "#414045",
-              "border-strong": "#6c6b72",
+              "background-base": "#141416",
+              "background-card": "#27262b",
+              "background-elevated": "#1f1f22",
+              "fill-quaternary": "#1f1e23",
+              "fill-tertiary": "#26252a",
+              "fill-secondary": "#3a393e",
+              "fill-primary": "#414045",
+              "text-primary": "#f3f2f6",
+              "text-secondary": "#cdccd3",
+              "text-tertiary": "#b1b0b7",
+              "text-quaternary": "#9b9aa1",
+              "text-disabled": "#58575c",
+              "border-default": "#37363b",
+              "separator": "#2c2b30",
+              "border-strong": "#56555c",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#dedde1",
-              "inverse-text": "#2b2b2e",
+              "inverse-background": "#f3f2f6",
+              "inverse-text": "#141416",
               "control-knob": "#ffffff",
-              "home-indicator": "#d1d0d4",
+              "home-indicator": "#e5e4e9",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -2251,9 +2251,9 @@
               "accent-on-fill": "#272335",
               "accent-focus": "#a097c4",
               "accent-border": "#766f8f",
-              "accent-container": "#3a3744",
-              "calendar-off-tint": "#464157",
-              "calendar-note-marker": "#514c62"
+              "accent-container": "#2f2d39",
+              "calendar-off-tint": "#322e43",
+              "calendar-note-marker": "#3f3b51"
             }
           }
         }
@@ -2290,90 +2290,90 @@
             "marks": [
               {
                 "color": "#efaf69",
-                "noteOnTile": "#765a47",
-                "tint": "#554032"
+                "noteOnTile": "#604633",
+                "tint": "#412d1f"
               },
               {
                 "color": "#d0bc8b",
-                "noteOnTile": "#695e46",
-                "tint": "#4b4331"
+                "noteOnTile": "#544b33",
+                "tint": "#38311f"
               },
               {
                 "color": "#dcb594",
-                "noteOnTile": "#6e5a49",
-                "tint": "#4f4033"
+                "noteOnTile": "#5b4737",
+                "tint": "#3d2e22"
               },
               {
                 "color": "#e4b0a0",
-                "noteOnTile": "#725850",
-                "tint": "#523e38"
+                "noteOnTile": "#5f443e",
+                "tint": "#402c27"
               },
               {
                 "color": "#efa99f",
-                "noteOnTile": "#735752",
-                "tint": "#533e3a"
+                "noteOnTile": "#5e4440",
+                "tint": "#3f2c29"
               },
               {
                 "color": "#e2aeb8",
-                "noteOnTile": "#72565c",
-                "tint": "#523d41"
+                "noteOnTile": "#5e4348",
+                "tint": "#3f2b2f"
               },
               {
                 "color": "#d2b1d5",
-                "noteOnTile": "#6a596b",
-                "tint": "#4c3f4d"
+                "noteOnTile": "#564657",
+                "tint": "#392d3a"
               },
               {
                 "color": "#c1b7e1",
-                "noteOnTile": "#605a72",
-                "tint": "#444052"
+                "noteOnTile": "#4e485f",
+                "tint": "#332f40"
               },
               {
                 "color": "#b2bbe4",
-                "noteOnTile": "#595d75",
-                "tint": "#3f4254"
+                "noteOnTile": "#464b60",
+                "tint": "#2d3141"
               },
               {
                 "color": "#c4d0f1",
-                "noteOnTile": "#595e71",
-                "tint": "#3f4351"
+                "noteOnTile": "#464b5c",
+                "tint": "#2d313e"
               },
               {
                 "color": "#a0c7c3",
-                "noteOnTile": "#4f6562",
-                "tint": "#384846"
+                "noteOnTile": "#3c504f",
+                "tint": "#263534"
               },
               {
                 "color": "#b6bfc7",
-                "noteOnTile": "#5a5f65",
-                "tint": "#404448"
+                "noteOnTile": "#484c52",
+                "tint": "#2f3236"
               }
             ],
             "roles": {
-              "background-base": "#2f2a26",
-              "background-card": "#4a423b",
-              "background-elevated": "#3a342e",
-              "fill-quaternary": "#39332c",
-              "fill-tertiary": "#423a33",
-              "fill-secondary": "#5a5147",
-              "fill-primary": "#62594f",
-              "text-primary": "#eadad2",
-              "text-secondary": "#cbbeb7",
-              "text-tertiary": "#b3a8a3",
-              "text-quaternary": "#9f9691",
-              "text-disabled": "#6d6764",
-              "border-default": "#574e46",
-              "separator": "#473f38",
-              "border-strong": "#776a5e",
+              "background-base": "#171410",
+              "background-card": "#2d251e",
+              "background-elevated": "#241e18",
+              "fill-quaternary": "#251d15",
+              "fill-tertiary": "#2c241d",
+              "fill-secondary": "#41382e",
+              "fill-primary": "#473f38",
+              "text-primary": "#fef0e8",
+              "text-secondary": "#d8cac3",
+              "text-tertiary": "#b9aea9",
+              "text-quaternary": "#a29994",
+              "text-disabled": "#5c5653",
+              "border-default": "#3e352d",
+              "separator": "#322a23",
+              "border-strong": "#605449",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#eadad2",
-              "inverse-text": "#2f2a26",
+              "inverse-background": "#fef0e8",
+              "inverse-text": "#171410",
               "control-knob": "#ffffff",
-              "home-indicator": "#ddcdc5",
+              "home-indicator": "#f1e1d9",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -2391,9 +2391,9 @@
               "accent-on-fill": "#35220b",
               "accent-focus": "#c4945e",
               "accent-border": "#906d47",
-              "accent-container": "#43362e",
-              "calendar-off-tint": "#554032",
-              "calendar-note-marker": "#604b3c"
+              "accent-container": "#382c24",
+              "calendar-off-tint": "#412d1f",
+              "calendar-note-marker": "#4e392b"
             }
           }
         }
@@ -2414,7 +2414,7 @@
           "ground": {
             "chroma": 0.035,
             "hue": 268,
-            "lightness": 0.21
+            "lightness": 0.2
           },
           "id": "tsukiyo",
           "name": "月夜",
@@ -2427,90 +2427,90 @@
             "marks": [
               {
                 "color": "#ebd47d",
-                "noteOnTile": "#6b6037",
-                "tint": "#4d4526"
+                "noteOnTile": "#564b22",
+                "tint": "#393112"
               },
               {
                 "color": "#d2bc83",
-                "noteOnTile": "#6a5e42",
-                "tint": "#4c432e"
+                "noteOnTile": "#564b30",
+                "tint": "#39311d"
               },
               {
                 "color": "#e0b48e",
-                "noteOnTile": "#715a46",
-                "tint": "#514031"
+                "noteOnTile": "#5c4734",
+                "tint": "#3e2e20"
               },
               {
                 "color": "#e8ae9b",
-                "noteOnTile": "#75564d",
-                "tint": "#543d36"
+                "noteOnTile": "#61433b",
+                "tint": "#412b25"
               },
               {
                 "color": "#f5a69a",
-                "noteOnTile": "#755651",
-                "tint": "#543d39"
+                "noteOnTile": "#61433f",
+                "tint": "#412b28"
               },
               {
                 "color": "#e7acb7",
-                "noteOnTile": "#73555c",
-                "tint": "#533c41"
+                "noteOnTile": "#614248",
+                "tint": "#412a2f"
               },
               {
                 "color": "#d4afd8",
-                "noteOnTile": "#6b576d",
-                "tint": "#4d3e4e"
+                "noteOnTile": "#574458",
+                "tint": "#3a2c3b"
               },
               {
                 "color": "#c1b6e5",
-                "noteOnTile": "#615a75",
-                "tint": "#454054"
+                "noteOnTile": "#4d4860",
+                "tint": "#332f41"
               },
               {
                 "color": "#b1bbe9",
-                "noteOnTile": "#585d77",
-                "tint": "#3e4256"
+                "noteOnTile": "#464a63",
+                "tint": "#2d3043"
               },
               {
                 "color": "#c3d0f6",
-                "noteOnTile": "#585e72",
-                "tint": "#3e4352"
+                "noteOnTile": "#464b5f",
+                "tint": "#2d3140"
               },
               {
                 "color": "#9cc8c4",
-                "noteOnTile": "#4d6563",
-                "tint": "#364847"
+                "noteOnTile": "#3a504f",
+                "tint": "#243534"
               },
               {
                 "color": "#b5c0c8",
-                "noteOnTile": "#5a5f65",
-                "tint": "#404448"
+                "noteOnTile": "#484c52",
+                "tint": "#2f3236"
               }
             ],
             "roles": {
-              "background-base": "#111828",
-              "background-card": "#3d4453",
-              "background-elevated": "#303541",
-              "fill-quaternary": "#2e3441",
-              "fill-tertiary": "#353c4b",
-              "fill-secondary": "#4a5365",
-              "fill-primary": "#525b6d",
-              "text-primary": "#d8deeb",
-              "text-secondary": "#b7c2d8",
-              "text-tertiary": "#9fabc5",
-              "text-quaternary": "#8d98b1",
-              "text-disabled": "#616979",
-              "border-default": "#485060",
-              "separator": "#3a4150",
-              "border-strong": "#616c85",
+              "background-base": "#0f1526",
+              "background-card": "#202736",
+              "background-elevated": "#1a1f2b",
+              "fill-quaternary": "#171e2f",
+              "fill-tertiary": "#1f2635",
+              "fill-secondary": "#31394c",
+              "fill-primary": "#3a4150",
+              "text-primary": "#eef3ff",
+              "text-secondary": "#c3cee4",
+              "text-tertiary": "#a5b1cb",
+              "text-quaternary": "#909bb4",
+              "text-disabled": "#505868",
+              "border-default": "#2f3747",
+              "separator": "#252c3b",
+              "border-strong": "#4c566c",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#d8deeb",
-              "inverse-text": "#272b35",
+              "inverse-background": "#eef3ff",
+              "inverse-text": "#11141b",
               "control-knob": "#ffffff",
-              "home-indicator": "#cbd1de",
+              "home-indicator": "#dde5f5",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -2528,9 +2528,9 @@
               "accent-on-fill": "#2d260a",
               "accent-focus": "#af9e5d",
               "accent-border": "#807446",
-              "accent-container": "#3e3928",
-              "calendar-off-tint": "#4d4526",
-              "calendar-note-marker": "#585030"
+              "accent-container": "#342f1e",
+              "calendar-off-tint": "#393112",
+              "calendar-note-marker": "#463e1f"
             }
           }
         }
@@ -2549,9 +2549,9 @@
             "strength": 3
           },
           "ground": {
-            "chroma": 0.04,
+            "chroma": 0.03,
             "hue": 168,
-            "lightness": 0.3
+            "lightness": 0.225
           },
           "id": "kokuban",
           "name": "黒板",
@@ -2568,90 +2568,90 @@
             "marks": [
               {
                 "color": "#e4eee9",
-                "noteOnTile": "#436b57",
-                "tint": "#2f4d3e"
+                "noteOnTile": "#2e5643",
+                "tint": "#1b392b"
               },
               {
                 "color": "#d1bc87",
-                "noteOnTile": "#695e45",
-                "tint": "#4b4330"
+                "noteOnTile": "#544b32",
+                "tint": "#38311e"
               },
               {
                 "color": "#deb591",
-                "noteOnTile": "#6f5a48",
-                "tint": "#504032"
+                "noteOnTile": "#5b4736",
+                "tint": "#3d2e21"
               },
               {
                 "color": "#e6af9d",
-                "noteOnTile": "#73584e",
-                "tint": "#533e37"
+                "noteOnTile": "#60443c",
+                "tint": "#412c26"
               },
               {
                 "color": "#f2a89d",
-                "noteOnTile": "#735752",
-                "tint": "#533e3a"
+                "noteOnTile": "#5f443f",
+                "tint": "#402c28"
               },
               {
                 "color": "#e4adb8",
-                "noteOnTile": "#73565b",
-                "tint": "#533d41"
+                "noteOnTile": "#5f4348",
+                "tint": "#402b2f"
               },
               {
                 "color": "#d3b0d7",
-                "noteOnTile": "#6a586d",
-                "tint": "#4c3e4e"
+                "noteOnTile": "#564458",
+                "tint": "#392c3b"
               },
               {
                 "color": "#c1b6e3",
-                "noteOnTile": "#615a73",
-                "tint": "#454053"
+                "noteOnTile": "#4e485f",
+                "tint": "#332f40"
               },
               {
                 "color": "#b2bbe7",
-                "noteOnTile": "#585d76",
-                "tint": "#3e4255"
+                "noteOnTile": "#464a62",
+                "tint": "#2d3042"
               },
               {
                 "color": "#c3d0f4",
-                "noteOnTile": "#585e72",
-                "tint": "#3e4352"
+                "noteOnTile": "#464b5e",
+                "tint": "#2d313f"
               },
               {
                 "color": "#9ec8c4",
-                "noteOnTile": "#4e6562",
-                "tint": "#374846"
+                "noteOnTile": "#3b504f",
+                "tint": "#253534"
               },
               {
                 "color": "#b5c0c8",
-                "noteOnTile": "#5a5f65",
-                "tint": "#404448"
+                "noteOnTile": "#484c52",
+                "tint": "#2f3236"
               }
             ],
             "roles": {
-              "background-base": "#18342a",
-              "background-card": "#364940",
-              "background-elevated": "#2b3932",
-              "fill-quaternary": "#283831",
-              "fill-tertiary": "#2e4138",
-              "fill-secondary": "#42594e",
-              "fill-primary": "#4a6156",
-              "text-primary": "#d3e2db",
-              "text-secondary": "#aec9bc",
-              "text-tertiary": "#95b3a5",
-              "text-quaternary": "#83a092",
-              "text-disabled": "#5a6e65",
-              "border-default": "#41554c",
-              "separator": "#33463d",
-              "border-strong": "#567466",
+              "background-base": "#0c2019",
+              "background-card": "#182c23",
+              "background-elevated": "#14231c",
+              "fill-quaternary": "#0e241b",
+              "fill-tertiary": "#172b22",
+              "fill-secondary": "#283f35",
+              "fill-primary": "#33463d",
+              "text-primary": "#e8f7f0",
+              "text-secondary": "#bad5c8",
+              "text-tertiary": "#9bb9ab",
+              "text-quaternary": "#86a395",
+              "text-disabled": "#495d54",
+              "border-default": "#283c33",
+              "separator": "#1d3128",
+              "border-strong": "#425d51",
               "calendar-holiday": "#dd9f9a",
               "calendar-saturday": "#98b4d4",
               "danger-default": "#e58c83",
               "danger-fill": "#c4675f",
               "danger-on-fill": "#ffffff",
-              "inverse-background": "#d3e2db",
-              "inverse-text": "#232e29",
+              "inverse-background": "#e8f7f0",
+              "inverse-text": "#0e1713",
               "control-knob": "#ffffff",
-              "home-indicator": "#c6d5ce",
+              "home-indicator": "#d7eae1",
               "scrim": "#0000008c",
               "shadow-small": "#00000040",
               "shadow-medium": "#00000059",
@@ -2669,9 +2669,9 @@
               "accent-on-fill": "#242726",
               "accent-focus": "#99a09d",
               "accent-border": "#717673",
-              "accent-container": "#2d3e35",
-              "calendar-off-tint": "#2f4d3e",
-              "calendar-note-marker": "#395848"
+              "accent-container": "#23332b",
+              "calendar-off-tint": "#1b392b",
+              "calendar-note-marker": "#284637"
             }
           }
         }
@@ -2696,7 +2696,7 @@
       {
         "dark": {
           "color": "#abc7a7",
-          "tint": "#3c483a"
+          "tint": "#2a3528"
         },
         "light": {
           "color": "#486444",
@@ -2706,7 +2706,7 @@
       {
         "dark": {
           "color": "#d6bb77",
-          "tint": "#4d432a"
+          "tint": "#3a3118"
         },
         "light": {
           "color": "#8a6d1a",
@@ -2716,7 +2716,7 @@
       {
         "dark": {
           "color": "#e6b285",
-          "tint": "#533f2d"
+          "tint": "#402d1c"
         },
         "light": {
           "color": "#95602e",
@@ -2726,7 +2726,7 @@
       {
         "dark": {
           "color": "#efab95",
-          "tint": "#573c34"
+          "tint": "#442a23"
         },
         "light": {
           "color": "#93503a",
@@ -2736,7 +2736,7 @@
       {
         "dark": {
           "color": "#fea194",
-          "tint": "#573c37"
+          "tint": "#432a26"
         },
         "light": {
           "color": "#9b3f35",
@@ -2746,7 +2746,7 @@
       {
         "dark": {
           "color": "#eda8b6",
-          "tint": "#563b40"
+          "tint": "#43292e"
         },
         "light": {
           "color": "#8d4a5a",
@@ -2756,7 +2756,7 @@
       {
         "dark": {
           "color": "#d8acdd",
-          "tint": "#4e3d50"
+          "tint": "#3b2b3d"
         },
         "light": {
           "color": "#75497a",
@@ -2766,7 +2766,7 @@
       {
         "dark": {
           "color": "#c2b4ec",
-          "tint": "#453f57"
+          "tint": "#332e44"
         },
         "light": {
           "color": "#5f4f86",
@@ -2776,7 +2776,7 @@
       {
         "dark": {
           "color": "#afbaf1",
-          "tint": "#3d4259"
+          "tint": "#2c3046"
         },
         "light": {
           "color": "#4a5388",
@@ -2786,7 +2786,7 @@
       {
         "dark": {
           "color": "#c0d0fc",
-          "tint": "#3d4355"
+          "tint": "#2c3142"
         },
         "light": {
           "color": "#3d4a73",
@@ -2796,7 +2796,7 @@
       {
         "dark": {
           "color": "#95cac5",
-          "tint": "#334947"
+          "tint": "#213635"
         },
         "light": {
           "color": "#36706c",
@@ -2806,7 +2806,7 @@
       {
         "dark": {
           "color": "#b3c0ca",
-          "tint": "#3f4449"
+          "tint": "#2e3237"
         },
         "light": {
           "color": "#56636d",
@@ -2816,91 +2816,91 @@
     ],
     "neutrals": [
       {
-        "dark": "#2a2c29",
+        "dark": "#131513",
         "light": "#ffffff",
         "name": "background-base",
         "tinted": true
       },
       {
-        "dark": "#424540",
+        "dark": "#252823",
         "light": "#ffffff",
         "name": "background-card",
         "tinted": true
       },
       {
-        "dark": "#343632",
+        "dark": "#1e201c",
         "light": "#ffffff",
         "name": "background-elevated",
         "tinted": true
       },
       {
-        "dark": "#323531",
+        "dark": "#1c201b",
         "light": "#f6f7f3",
         "name": "fill-quaternary",
         "tinted": true
       },
       {
-        "dark": "#3a3d38",
+        "dark": "#242722",
         "light": "#f0f1ec",
         "name": "fill-tertiary",
         "tinted": true
       },
       {
-        "dark": "#50544e",
+        "dark": "#373b35",
         "light": "#e6e8e1",
         "name": "fill-secondary",
         "tinted": true
       },
       {
-        "dark": "#585c56",
+        "dark": "#3f423d",
         "light": "#d5d9cf",
         "name": "fill-primary",
         "tinted": true
       },
       {
-        "dark": "#dcdfdb",
+        "dark": "#f1f4f0",
         "light": "#30332f",
         "name": "text-primary",
         "tinted": true
       },
       {
-        "dark": "#bec3bc",
+        "dark": "#cacfc8",
         "light": "#565e52",
         "name": "text-secondary",
         "tinted": true
       },
       {
-        "dark": "#a7ada5",
+        "dark": "#adb3ab",
         "light": "#72796e",
         "name": "text-tertiary",
         "tinted": true
       },
       {
-        "dark": "#959a92",
+        "dark": "#989d95",
         "light": "#8a9086",
         "name": "text-quaternary",
         "tinted": true
       },
       {
-        "dark": "#666a65",
+        "dark": "#555954",
         "light": "#b9beb4",
         "name": "text-disabled",
         "tinted": true
       },
       {
-        "dark": "#4d514c",
+        "dark": "#343833",
         "light": "#e0e3db",
         "name": "border-default",
         "tinted": true
       },
       {
-        "dark": "#3f423d",
+        "dark": "#2a2d28",
         "light": "#eceee8",
         "name": "separator",
         "tinted": true
       },
       {
-        "dark": "#696e66",
+        "dark": "#535851",
         "light": "#b9c2b1",
         "name": "border-strong",
         "tinted": true
@@ -2936,13 +2936,13 @@
         "tinted": false
       },
       {
-        "dark": "#dcdfdb",
+        "dark": "#f1f4f0",
         "light": "#30332f",
         "name": "inverse-background",
         "tinted": true
       },
       {
-        "dark": "#2a2c29",
+        "dark": "#131513",
         "light": "#ffffff",
         "name": "inverse-text",
         "tinted": true
@@ -2954,7 +2954,7 @@
         "tinted": false
       },
       {
-        "dark": "#cfd2ce",
+        "dark": "#e2e6e1",
         "light": "#363a33",
         "name": "home-indicator",
         "tinted": true
@@ -3040,7 +3040,7 @@
         },
         "pale": {
           "chroma": 1,
-          "lightness": 0.43
+          "lightness": 0.365
         }
       },
       "light": {
@@ -3066,7 +3066,7 @@
         },
         "markTint": {
           "chroma": 0.44,
-          "lightness": 0.39
+          "lightness": 0.315
         },
         "muted": {
           "chroma": 0.6,
@@ -3074,7 +3074,7 @@
         },
         "soft": {
           "chroma": 0.27,
-          "lightness": 0.345
+          "lightness": 0.305
         }
       },
       "light": {
