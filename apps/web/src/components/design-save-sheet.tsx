@@ -80,6 +80,8 @@ export type CalendarDay = {
   // The shift's pattern, if any.
   pattern?: Pattern;
   note: boolean;
+  // Someone works it with the person.
+  people: boolean;
 };
 
 // The month's days, in order, as CalendarDay.
@@ -90,10 +92,11 @@ export function calendarDays(
   notes: ReadonlySet<string>
 ): CalendarDay[] {
   return days.map((date) => {
-    const shift = schedule[dateKey(date)]?.shift;
+    const entry = schedule[dateKey(date)];
     return {
       note: notes.has(dateKey(date)),
-      pattern: shift === undefined ? undefined : book[shift],
+      pattern: entry === undefined ? undefined : book[entry.shift],
+      people: (entry?.people?.length ?? 0) > 0,
     };
   });
 }
@@ -233,6 +236,52 @@ const picture = {
   }),
   title: css({ fontSize: "15px", fontWeight: 600, margin: "0 4px 12px" }),
 };
+
+// メモも入れる and 一緒に働く人も入れる, each only when it would put
+// something in: a memo goes in any day, those on a day only in its
+// shift's event.
+function ExtraSwitches({
+  days,
+  shown,
+}: {
+  days: CalendarDay[];
+  shown: ReadonlySet<string>;
+}) {
+  const putting = useSettings((state) => state.device.calendarAdd);
+  const setPutting = useSettings((state) => state.setCalendarAdd);
+  const notes = days.some((day) => day.note);
+  const people = days.some(
+    (day) =>
+      day.people && day.pattern !== undefined && shown.has(day.pattern.id)
+  );
+  if (!(notes || people)) {
+    return null;
+  }
+  return (
+    <List>
+      {notes && (
+        <SwitchRow
+          checked={putting.notes}
+          detail="予定がない日は、メモだけの予定にします"
+          label="メモも入れる"
+          onChange={(checked) => {
+            setPutting({ ...putting, notes: checked });
+          }}
+        />
+      )}
+      {people && (
+        <SwitchRow
+          checked={putting.people}
+          detail="シフトの予定のメモ欄に入ります"
+          label="一緒に働く人も入れる"
+          onChange={(checked) => {
+            setPutting({ ...putting, people: checked });
+          }}
+        />
+      )}
+    </List>
+  );
+}
 
 function stepTitle(step: Step, monthLabel: string) {
   if (step === "calendar") {
@@ -409,24 +458,7 @@ export function SaveSheet({
                 detail={leftOut(listed, shown)}
               />
             </List>
-            <List>
-              <SwitchRow
-                checked={putting.notes}
-                detail="予定がない日は、メモだけの予定にします"
-                label="メモも入れる"
-                onChange={(notes) => {
-                  setPutting({ ...putting, notes });
-                }}
-              />
-              <SwitchRow
-                checked={putting.people}
-                detail="シフトの予定のメモ欄に入ります"
-                label="一緒に働く人も入れる"
-                onChange={(people) => {
-                  setPutting({ ...putting, people });
-                }}
-              />
-            </List>
+            <ExtraSwitches days={days} shown={shown} />
           </div>
           <Note>前に入れた{monthLabel}の予定は、入れ直します。</Note>
           <Button

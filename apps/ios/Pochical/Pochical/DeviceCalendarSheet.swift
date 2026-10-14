@@ -163,10 +163,18 @@ struct DeviceCalendarSheet: View {
     let putting = settings.device.calendarAdd
     let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
     let listed = listed(shown)
+    let picked = putting.shown(of: calendar.patterns)
+    let memos = notes
+    let names = people(shown)
     let events = ShiftEvents.month(
-      month, days: shown, patterns: calendar.patternsByID,
-      shown: putting.shown(of: calendar.patterns),
-      notes: putting.notes ? notes : [:], people: putting.people ? people(shown) : [:])
+      month, days: shown, patterns: calendar.patternsByID, shown: picked,
+      notes: putting.notes ? memos : [:], people: putting.people ? names : [:])
+    // A switch only when it would put something in: a memo goes in any
+    // day, those on a day only in its shift's event.
+    let offers = (
+      notes: !memos.isEmpty,
+      people: names.keys.contains { shown[$0].map { picked.contains($0.shift) } ?? false }
+    )
     NavigationStack {
       Form {
         switch calendars.access {
@@ -198,7 +206,7 @@ struct DeviceCalendarSheet: View {
               wide("閉じる") { dismiss() }
             }
           } else {
-            form(listed: listed)
+            form(listed: listed, offers: offers)
             Section {
               wide("\(events.count)件を追加") { add(events) }
                 .disabled(events.isEmpty || calendarID == nil)
@@ -241,7 +249,9 @@ struct DeviceCalendarSheet: View {
     .settingsOnPage()
   }
 
-  @ViewBuilder private func form(listed: [Pattern]) -> some View {
+  @ViewBuilder private func form(listed: [Pattern], offers: (notes: Bool, people: Bool))
+    -> some View
+  {
     @Bindable var settings = settings
     Section {
       Picker("追加先", selection: $calendarID) {
@@ -266,6 +276,7 @@ struct DeviceCalendarSheet: View {
     .settingsRows()
     // Which patterns go in, on a page of their own: the first pick leaves
     // out the days off and a night's next day like 明け.
+    let switches = offers.notes || offers.people
     Section {
       NavigationLink {
         PatternsPicked(patterns: listed, all: calendar.patterns)
@@ -279,30 +290,46 @@ struct DeviceCalendarSheet: View {
             .foregroundStyle(.secondary)
         }
       }
-    }
-    .settingsRows()
-    Section {
-      Toggle(isOn: $settings.device.calendarAdd.notes) {
-        Text("メモも入れる")
-        Text("予定がない日は、メモだけの予定にします")
-      }
-      Toggle(isOn: $settings.device.calendarAdd.people) {
-        Text("一緒に働く人も入れる")
-        Text("シフトの予定のメモ欄に入ります")
-      }
     } footer: {
-      VStack(alignment: .leading, spacing: 8) {
-        Text("前に入れた\(month.monthText)の予定は、入れ直します。")
-        // A calendar of a Google account added to the iPhone goes on to
-        // Google Calendar, which few find by themselves (spec/calendar.md).
-        Button("Googleカレンダーに入れるには") {
-          guide = OpenedLink(url: Site.page("support/google-calendar"))
-        }
-        .font(.footnote)
-        .accessibilityHint("ブラウザで開きます")
+      if !switches {
+        footer
       }
     }
     .settingsRows()
+    if switches {
+      Section {
+        if offers.notes {
+          Toggle(isOn: $settings.device.calendarAdd.notes) {
+            Text("メモも入れる")
+            Text("予定がない日は、メモだけの予定にします")
+          }
+        }
+        if offers.people {
+          Toggle(isOn: $settings.device.calendarAdd.people) {
+            Text("一緒に働く人も入れる")
+            Text("シフトの予定のメモ欄に入ります")
+          }
+        }
+      } footer: {
+        footer
+      }
+      .settingsRows()
+    }
+  }
+
+  /// Under the sheet's last rows: that adding again replaces the month,
+  /// and the way to Google Calendar.
+  private var footer: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("前に入れた\(month.monthText)の予定は、入れ直します。")
+      // A calendar of a Google account added to the iPhone goes on to
+      // Google Calendar, which few find by themselves (spec/calendar.md).
+      Button("Googleカレンダーに入れるには") {
+        guide = OpenedLink(url: Site.page("support/google-calendar"))
+      }
+      .font(.footnote)
+      .accessibilityHint("ブラウザで開きます")
+    }
   }
 
   /// The patterns to pick from: those in use, and a pattern left that
