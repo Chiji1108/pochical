@@ -297,7 +297,9 @@ struct ChatScreen: View {
         // scrolling up. A chat holds its pages, not its whole history.
         VStack(spacing: CGFloat(Chat.lineGap)) {
           if !state.atStart {
-            EarlierLines(first: state.lines.first?.seq) { await showEarlier() }
+            EarlierLines(scroll: scroll, first: state.lines.first?.seq, ready: settled) {
+              await showEarlier()
+            }
           }
           let listed = items(state)
           let timeless = linesWithoutTime(listed)
@@ -350,7 +352,8 @@ struct ChatScreen: View {
       return ScrollPlace(
         atLatest: below < 24, away: below > geometry.containerSize.height / 2,
         fits: geometry.contentSize.height <= seen + 1,
-        atTop: geometry.contentOffset.y <= -geometry.contentInsets.top + 1)
+        atTop: geometry.contentOffset.y <= -geometry.contentInsets.top + 1,
+        nearTop: geometry.contentOffset.y <= -geometry.contentInsets.top + Metrics.touch)
     } action: { before, now in
       scroll.place = now
       if now.atLatest, !before.atLatest {
@@ -561,7 +564,7 @@ struct ChatScreen: View {
     // Whatever else changes the lines' height while following, a photo or
     // a link's page drawn, a long line folded, from the first layout on:
     // the scroll view keeps its offset, not its foot, so it is put back.
-    .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, _ in
+    .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { before, now in
       if following {
         toLatest()
       }
@@ -1824,20 +1827,23 @@ private struct FloatingDay: View {
   }
 }
 
-/// The top of the lines while earlier ones are to come: laid out with the
-/// lines whether seen or not, so they are asked for only once it is on
-/// the screen, and again after each page while it stays there.
+/// The top of the lines while earlier ones are to come, which asks for
+/// them once scrolled near (from the scroll's own place: whether a view is
+/// in sight is read once, as the lines are first laid out at the top), and
+/// again after each page while it stays there. Not before the chat has
+/// come in on its place, which would add lines above the latest it opens on.
 private struct EarlierLines: View {
+  let scroll: ChatScroll
   let first: Int64?
+  let ready: Bool
   let show: () async -> Void
-  @State private var inSight = false
 
   var body: some View {
+    let near = scroll.place.nearTop && ready
     ProgressView()
       .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-      .onScrollVisibilityChange(threshold: 0) { inSight = $0 }
-      .task(id: PageAsk(first: first, inSight: inSight)) {
-        if inSight { await show() }
+      .task(id: PageAsk(first: first, inSight: near)) {
+        if near { await show() }
       }
   }
 }
@@ -1852,6 +1858,8 @@ private struct ScrollPlace: Hashable {
   var fits = true
   /// At the top edge, where an earlier page coming in would leave it.
   var atTop = false
+  /// Near enough the top that its spinner is on the screen.
+  var nearTop = false
 }
 
 /// When earlier lines are asked for: the top in sight, again after each
