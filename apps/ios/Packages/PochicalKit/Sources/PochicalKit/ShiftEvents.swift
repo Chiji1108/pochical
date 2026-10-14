@@ -20,12 +20,13 @@ public enum ShiftEvents {
   /// The month's days with a shift as events, days off only those of
   /// `offShown`: each at the day's own time, else its pattern's. A day of
   /// work without a time that the day before's event runs into, like 明け
-  /// after 夜勤, is left out, as that event shows on it already; never the
-  /// month's first, whose day before is another month's, perhaps never
-  /// added. `notes` and `people`, given only when asked for, are each
-  /// day's memo and the names of those on it: they go in a shift's event's
-  /// notes, and a day with a memo and no shift's event gets one of its
-  /// own, all day, named by the memo.
+  /// after 夜勤, is left out, as that event shows on it already. `days`
+  /// hold the day before the month only when its event is in the calendar
+  /// already, so the month's first day goes in when the month before was
+  /// never added. `notes` and `people`, given only when asked for, are
+  /// each day's memo and the names of those on it: they go in a shift's
+  /// event's notes, and a day with a memo and no shift's event gets one of
+  /// its own, all day, named by the memo.
   public static func month(
     _ month: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], offShown: Set<PatternID>,
     notes: [Day: String] = [:], people: [Day: [String]] = [:]
@@ -55,12 +56,12 @@ public enum ShiftEvents {
     return found
   }
 
-  /// Whether the day is work without a time that the day before's event,
-  /// in the same month, runs into.
+  /// Whether the day is work without a time that the day before's event
+  /// runs into.
   private static func isCarriedOver(
     _ day: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], offShown: Set<PatternID>
   ) -> Bool {
-    guard day != day.firstOfMonth, let entry = days[day], let pattern = patterns[entry.shift], !pattern.countsAsOff,
+    guard let entry = days[day], let pattern = patterns[entry.shift], !pattern.countsAsOff,
       hours(of: entry, pattern) == nil,
       let before = shiftEvent(
         on: day.adding(days: -1), days: days, patterns: patterns, offShown: offShown, notes: [:],

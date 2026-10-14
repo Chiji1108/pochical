@@ -100,6 +100,21 @@ import UIKit
     UserDefaults.standard.set(calendarID, forKey: Self.lastKey)
   }
 
+  /// Whether the user's event Pochical put in for the day before `month`
+  /// is in a calendar and runs into the month, as a night shift's does:
+  /// then the month's first day shows it already (spec/calendar.md).
+  func runsInto(_ month: Day, by user: String) -> Bool {
+    let first = date(of: month.firstOfMonth, at: 0)
+    let before = month.firstOfMonth.adding(days: -1)
+    let range = store.predicateForEvents(
+      withStart: first, end: date(of: month.firstOfMonth, at: 24 * 60), calendars: nil)
+    return store.events(matching: range).contains { event in
+      guard let mark = Self.mark(of: event.url) else { return false }
+      return mark.user == user && mark.day == before.key && !event.isAllDay
+        && event.endDate > first
+    }
+  }
+
   /// The mark Pochical leaves on an event it puts in: the app's own link
   /// to the day it is for (spec/widgets.md's pochical://day), and whose
   /// shift it is, so a calendar shared with family keeps theirs.
@@ -151,6 +166,9 @@ struct DeviceCalendarSheet: View {
   let coworkers: [String: String]
   @State private var calendars = DeviceCalendars()
   @State private var calendarID: String?
+  /// The month before's last night is in the calendar and shows on the
+  /// month's first day.
+  @State private var nightBefore = false
   /// What was done, once added.
   @State private var done: String?
   @State private var failed = false
@@ -161,7 +179,10 @@ struct DeviceCalendarSheet: View {
     // asked: each off at first, as a calendar may be shared with family,
     // and kept with the account as last left.
     let putting = settings.device.calendarAdd
-    let shown = calendar.shown(from: month, through: month.daysOfMonth.last ?? month)
+    // From the day before only when its night is in the calendar already.
+    let shown = calendar.shown(
+      from: nightBefore ? month.adding(days: -1) : month,
+      through: month.daysOfMonth.last ?? month)
     let events = ShiftEvents.month(
       month, days: shown, patterns: calendar.patternsByID, offShown: Set(putting.off),
       notes: putting.notes ? notes : [:], people: putting.people ? people(shown) : [:])
@@ -227,6 +248,9 @@ struct DeviceCalendarSheet: View {
         await calendars.ask()
       }
       calendarID = calendarID ?? calendars.pickedFirst
+      if calendars.access == .granted, let meID {
+        nightBefore = calendars.runsInto(month, by: meID)
+      }
     }
   }
 

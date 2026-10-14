@@ -114,8 +114,9 @@ export function calendarDays(
     const shown = !isDayOff(pattern) || off.includes(pattern?.id ?? "");
     return hours !== undefined && shown && hours.end <= hours.start;
   };
-  // Never the month's first day, whose day before may never have been
-  // added.
+  // The month's first day is left out only when the month before's last
+  // night is in the device calendar already; the demo has none added, so
+  // it always goes in.
   return days.map((date, index) => {
     const pattern = patternOn(date);
     const untimed =
