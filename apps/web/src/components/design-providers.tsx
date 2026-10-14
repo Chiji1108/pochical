@@ -18,12 +18,10 @@ import {
   MonochromeContext,
   OffDisplayContext,
   OffHighlightContext,
+  noOffLooks,
   OffLooksContext,
   ShiftMarkStyleContext,
 } from "./shift-mark";
-
-// No pattern with a 休みの見せ方 of its own.
-const noOffLooks = {};
 
 // The person's テーマ, for pages that color themselves with it.
 export function useDesignTheme() {

@@ -126,6 +126,9 @@ export const OffLooksContext = createContext<
   Partial<Record<string, OffLookId>>
 >({});
 
+// No pattern with a 休みの見せ方 of its own.
+export const noOffLooks: Partial<Record<string, OffLookId>> = {};
+
 // Where days off left blank come back faint: in the week view, to tell a
 // day off from a day not entered yet.
 export const OffFaintContext = createContext(false);

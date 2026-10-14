@@ -40,6 +40,8 @@ import {
   CellNamesContext,
   OffDisplayContext,
   OffHighlightContext,
+  noOffLooks,
+  OffLooksContext,
 } from "./shift-mark";
 
 // The calendars on the device that take new events, as the system lists
@@ -445,36 +447,42 @@ export function ImagePreviewPage({
           >
             <div className={previewWrap}>
               <ColorSchemeContext value={shown}>
-                {/* A picture to share shows every day as it is. */}
-                <OffDisplayContext value={options.blankOff ? "blank" : "show"}>
-                  <figure
-                    aria-label={`${monthWithYearOf(month)}のシフトの画像`}
-                    className={picture.frame}
-                    inert
-                    style={themeStyle(theme, shown)}
+                {/* A picture to share shows every day as it is, every day
+                    off alike: the app's own 休みの見せ方 for each pattern
+                    does not reach it. */}
+                <OffLooksContext value={noOffLooks}>
+                  <OffDisplayContext
+                    value={options.blankOff ? "blank" : "show"}
                   >
-                    <figcaption className={picture.title}>{title}</figcaption>
-                    <WeekdayRow compact />
-                    <div className={dayGrid}>
-                      {dates.map((date) => (
-                        <DayCell
-                          active={false}
-                          date={date}
-                          editing={false}
-                          entry={schedule[dateKey(date)]}
-                          key={dateKey(date)}
-                          onPress={() => undefined}
-                          outside={date.getMonth() !== month.getMonth()}
-                          plain
-                        />
-                      ))}
-                    </div>
-                    <p className={picture.credit}>
-                      <AppIcon size={16} src={STORE_ICON} />
-                      ポチカル
-                    </p>
-                  </figure>
-                </OffDisplayContext>
+                    <figure
+                      aria-label={`${monthWithYearOf(month)}のシフトの画像`}
+                      className={picture.frame}
+                      inert
+                      style={themeStyle(theme, shown)}
+                    >
+                      <figcaption className={picture.title}>{title}</figcaption>
+                      <WeekdayRow compact />
+                      <div className={dayGrid}>
+                        {dates.map((date) => (
+                          <DayCell
+                            active={false}
+                            date={date}
+                            editing={false}
+                            entry={schedule[dateKey(date)]}
+                            key={dateKey(date)}
+                            onPress={() => undefined}
+                            outside={date.getMonth() !== month.getMonth()}
+                            plain
+                          />
+                        ))}
+                      </div>
+                      <p className={picture.credit}>
+                        <AppIcon size={16} src={STORE_ICON} />
+                        ポチカル
+                      </p>
+                    </figure>
+                  </OffDisplayContext>
+                </OffLooksContext>
               </ColorSchemeContext>
               {/* An always-dark テーマ saves its dark: its ☾ stays on. */}
               <PreviewSchemeSwitch
