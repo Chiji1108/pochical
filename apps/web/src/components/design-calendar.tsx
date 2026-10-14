@@ -557,7 +557,7 @@ export function DesignCalendar({
           ),
           calendarAdd.off
         )}
-        offPatterns={ownPatterns.filter((pattern) => isDayOff(pattern))}
+        offPatterns={allPatterns.filter((pattern) => isDayOff(pattern))}
         onImage={() => {
           setImagePreview(true);
         }}

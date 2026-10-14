@@ -252,7 +252,8 @@ export function SaveSheet({
   month: Date;
   // Each day of the month as it goes in, with the day before read.
   days: CalendarDay[];
-  // The person's patterns counted as off, in their order.
+  // The person's patterns counted as off, in their order, those of a
+  // job left too, as a past month may show them.
   offPatterns: Pattern[];
   // Opened from カレンダーに追加: straight to choosing the calendar.
   toCalendar?: boolean;
