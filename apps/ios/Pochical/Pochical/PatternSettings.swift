@@ -193,7 +193,7 @@ private struct AddPatternPage: View {
       if any {
         ToolbarItem(placement: .confirmationAction) {
           Button("追加", role: .confirm) { add(keeping: ids, offered: offered) }
-            // Only ones not there yet: a 明け picked with its 夜勤 may be.
+            // Only ones not there yet: a 明け or 非番 picked with its 夜勤 or 当番 may be.
             .disabled(!picked.contains(where: offered))
         }
       }
@@ -203,8 +203,8 @@ private struct AddPatternPage: View {
     }
   }
 
-  /// The picked ones join the list's end, in the chips' order; a 夜勤
-  /// brings its 明け only when that is there too.
+  /// The picked ones join the list's end, in the chips' order; a next day
+  /// (夜勤's 明け, 当番's 非番) comes only when that is there too.
   private func add(keeping ids: Set<PatternID>, offered: (PatternID) -> Bool) {
     let chosen = chosenPatterns(picked).filter(offered)
     let there = ids.union(chosen)

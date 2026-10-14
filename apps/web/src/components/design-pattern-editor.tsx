@@ -379,13 +379,15 @@ function AddPatternPage({
   const offered = (id: PresetShift) =>
     !(taken.has(id) || taken.has(presetPatterns[id].name));
   const any = readyPatternOrder.some(offered);
-  // Only ones not there yet: a 明け picked with its 夜勤 may be.
+  // Only ones not there yet: a 明け picked with its 夜勤, or a 非番 with
+  // its 当番, may be.
   const chosen = inChipOrder(picked).filter(offered);
   const add = () => {
     const there = new Set([...items.map((item) => item.id), ...chosen]);
     onAdd(
       presetList(chosen).map((preset) =>
-        // A 夜勤 brings its 明け only when that is there too.
+        // A next day (夜勤's 明け, 当番's 非番) comes only when that is
+        // there too.
         preset.nextDay && there.has(preset.nextDay)
           ? preset
           : { ...preset, nextDay: undefined }

@@ -60,6 +60,7 @@ export const readyPatterns = {
     emoji: "🚒",
     icon: "siren",
     name: "当番",
+    nextDay: "offDuty",
     symbol: "当",
     time: ["08:30", "08:30"],
   },
