@@ -357,7 +357,8 @@ struct ChatScreen: View {
       default: break
       }
       scrolling = phase.isScrolling
-      if scrolling {
+      // The person's own scrolling, not the chat following its latest.
+      if phase == .interacting || phase == .decelerating {
         withAnimation(.easeOut(duration: 0.2)) { dayShown = true }
       }
     }
@@ -411,7 +412,7 @@ struct ChatScreen: View {
     }
     .sensoryFeedback(.success, trigger: done)
     .overlay(alignment: .top) {
-      if let topDay, dayShown {
+      if let topDay, dayShown, notice == nil {
         Text(ChatTime.day(topDay))
           .font(.caption2)
           .foregroundStyle(colors.textSecondary)

@@ -733,6 +733,9 @@ function useTypingSoon(group: Group, messages: Message[]) {
   return { answerSoon, typingMember };
 }
 
+// How near the foot, in pixels, the lines count as at their latest.
+const footSlack = 24;
+
 // Where the chat's lines are scrolled. As chat apps do, a chat opens on
 // its latest line and follows each new one, like a day just shared from
 // the shift table, and a photo's failure note under the lines just sent;
@@ -861,6 +864,10 @@ function useChatScroll({
   const [dayShown, setDayShown] = useState(false);
   const hideDay = useRef<ReturnType<typeof setTimeout>>(undefined);
   const floatDay = (list: HTMLElement) => {
+    // Not at the foot, where the chat follows its latest line on its own.
+    if (list.scrollHeight - list.scrollTop - list.clientHeight < footSlack) {
+      return;
+    }
     const { top } = list.getBoundingClientRect();
     const gone = [...list.querySelectorAll<HTMLElement>("[data-day]")].findLast(
       (title) => title.getBoundingClientRect().top < top
