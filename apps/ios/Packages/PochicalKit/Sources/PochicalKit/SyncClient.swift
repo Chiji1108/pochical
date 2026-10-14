@@ -118,8 +118,12 @@ public actor SyncClient {
     tries = 0
     running = Task { await run() }
     paths.pathUpdateHandler = { [weak self] path in
-      guard path.status == .satisfied, let self else { return }
-      Task { await self.networkCameBack() }
+      guard let self else { return }
+      if path.status == .satisfied {
+        Task { await self.networkCameBack() }
+      } else {
+        Task { await self.networkWentAway() }
+      }
     }
     if paths.queue == nil {
       paths.start(queue: DispatchQueue(label: "app.pochical.sync.paths"))
@@ -176,6 +180,14 @@ public actor SyncClient {
     if finishing == emptied {
       stop()
     }
+  }
+
+  /// With no network the socket is gone, though the keepalive would take
+  /// a while to find it so: closed at once, so the screens say 接続中…,
+  /// and opened again as the network comes back.
+  private func networkWentAway() {
+    guard connected else { return }
+    socket?.cancel(with: .goingAway, reason: nil)
   }
 
   private func networkCameBack() {
