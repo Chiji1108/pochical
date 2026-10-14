@@ -22,7 +22,13 @@ import { List, ListRow, SwitchRow } from "./design-list";
 import { monthWithYearOf } from "./design-month-name";
 import { timeText } from "./design-pattern-editor";
 import { NameTabs, OffLookRows } from "./design-settings-style";
-import { Sheet, SheetHeading, sheetBody, sheetLead } from "./design-sheet";
+import {
+  ConfirmDialog,
+  Sheet,
+  SheetHeading,
+  sheetBody,
+  sheetLead,
+} from "./design-sheet";
 import {
   ColorSchemeContext,
   PreviewSchemeSwitch,
@@ -32,7 +38,14 @@ import {
   previewWrap,
 } from "./design-theme";
 import { ToastContext } from "./design-toast";
-import { Button, Note, Screen, ScreenScroll, Section } from "./design-ui";
+import {
+  Button,
+  DestructiveButton,
+  Note,
+  Screen,
+  ScreenScroll,
+  Section,
+} from "./design-ui";
 import { useWeek } from "./design-week";
 import {
   CellNamesContext,
@@ -67,7 +80,12 @@ const calendarSources = Object.entries(
   Object.groupBy(deviceCalendars, (item) => item.source)
 );
 
-type Step = "choose" | "calendar" | "pick" | "days" | { done: string };
+type Step =
+  | "choose"
+  | "calendar"
+  | "pick"
+  | "days"
+  | { done: string; title: string };
 
 // How 端末カレンダーに追加 goes in the demo: the calendars allowed,
 // refused, or allowed and the adding failing.
@@ -283,6 +301,49 @@ function ExtraSwitches({
   );
 }
 
+// 〇月の予定を消す: only while some of the month's events Pochical put in
+// are in a calendar, as from one picked by mistake, so none is taken out
+// one by one; asked once, as they do not come back.
+function RemoveMonth({
+  monthLabel,
+  put,
+  onRemoved,
+}: {
+  monthLabel: string;
+  put: number;
+  onRemoved: () => void;
+}) {
+  const [asking, setAsking] = useState(false);
+  if (put === 0) {
+    return null;
+  }
+  return (
+    <>
+      <DestructiveButton
+        onClick={() => {
+          setAsking(true);
+        }}
+      >
+        {monthLabel}の予定を消す
+      </DestructiveButton>
+      {asking && (
+        <ConfirmDialog
+          action="消す"
+          message="ポチカルで入れた予定だけを、どのカレンダーからも消します。"
+          onCancel={() => {
+            setAsking(false);
+          }}
+          onConfirm={() => {
+            setAsking(false);
+            onRemoved();
+          }}
+          title={`${monthLabel}の予定を${put}件消します`}
+        />
+      )}
+    </>
+  );
+}
+
 function stepTitle(step: Step, monthLabel: string) {
   if (step === "calendar") {
     return "端末カレンダーに追加";
@@ -294,7 +355,7 @@ function stepTitle(step: Step, monthLabel: string) {
     return "入れるシフト";
   }
   if (typeof step === "object") {
-    return "保存しました";
+    return step.title;
   }
   return `${monthLabel}のシフトを保存`;
 }
@@ -333,6 +394,8 @@ export function SaveSheet({
   // 設定を開く stands in for the system's settings, coming back from them
   // with the calendars allowed, as the notifications' card does.
   const [allowedThere, setAllowedThere] = useState(false);
+  // How many of the month's events the demo put in, for 〇月の予定を消す.
+  const [put, setPut] = useState(0);
   const refused = access === "denied" && !allowedThere;
   const putting = useSettings((state) => state.device.calendarAdd);
   const setPutting = useSettings((state) => state.setCalendarAdd);
@@ -470,13 +533,26 @@ export function SaveSheet({
                 toast("追加できませんでした", "problem");
                 return;
               }
+              setPut(count);
               setStep({
                 done: `「${calendar?.name}」に${monthLabel}の予定を${count}件追加しました。`,
+                title: "保存しました",
               });
             }}
           >
             {count}件を追加
           </Button>
+          <RemoveMonth
+            monthLabel={monthLabel}
+            onRemoved={() => {
+              setStep({
+                done: `${monthLabel}の予定を${put}件消しました。`,
+                title: "消しました",
+              });
+              setPut(0);
+            }}
+            put={put}
+          />
         </>
       )}
       {step === "days" && (

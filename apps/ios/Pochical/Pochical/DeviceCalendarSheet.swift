@@ -61,20 +61,10 @@ import UIKit
   /// rather than twice, whatever was reinstalled or synced since.
   func add(_ events: [ShiftEvent], of month: Day, by user: String, to calendarID: String) throws {
     guard let target = store.calendar(withIdentifier: calendarID) else { return }
-    let days = Set(month.daysOfMonth.map(\.key))
-    // From the month's first day to two past its last: a night's event
-    // ends the day after it.
-    let range = store.predicateForEvents(
-      withStart: date(of: month.firstOfMonth, at: 0),
-      end: date(of: month.daysOfMonth.last!, at: 2 * 24 * 60), calendars: nil)
-    for old in store.events(matching: range) {
-      if let mark = Self.mark(of: old.url), mark.user == user, days.contains(mark.day),
-        old.calendar.allowsContentModifications
-      {
+    do {
+      for old in marked(month, by: user) {
         try store.remove(old, span: .thisEvent, commit: false)
       }
-    }
-    do {
       for shift in events {
         let event = EKEvent(eventStore: store)
         event.calendar = target
@@ -98,6 +88,37 @@ import UIKit
       throw error
     }
     UserDefaults.standard.set(calendarID, forKey: Self.lastKey)
+  }
+
+  /// The events Pochical put in for the month's days as the user's, in
+  /// any calendar that takes changes: those adding again replaces, and
+  /// 〇月の予定を消す takes out.
+  func marked(_ month: Day, by user: String) -> [EKEvent] {
+    let days = Set(month.daysOfMonth.map(\.key))
+    // From the month's first day to two past its last: a night's event
+    // ends the day after it.
+    let range = store.predicateForEvents(
+      withStart: date(of: month.firstOfMonth, at: 0),
+      end: date(of: month.daysOfMonth.last!, at: 2 * 24 * 60), calendars: nil)
+    return store.events(matching: range).filter { event in
+      guard let mark = Self.mark(of: event.url) else { return false }
+      return mark.user == user && days.contains(mark.day)
+        && event.calendar.allowsContentModifications
+    }
+  }
+
+  /// Takes out the events Pochical put in for the month as the user's,
+  /// all at once or none.
+  func remove(_ month: Day, by user: String) throws {
+    do {
+      for old in marked(month, by: user) {
+        try store.remove(old, span: .thisEvent, commit: false)
+      }
+      try store.commit()
+    } catch {
+      store.reset()
+      throw error
+    }
   }
 
   /// The mark Pochical leaves on an event it puts in: the app's own link
@@ -151,9 +172,15 @@ struct DeviceCalendarSheet: View {
   let coworkers: [String: String]
   @State private var calendars = DeviceCalendars()
   @State private var calendarID: String?
-  /// What was done, once added.
-  @State private var done: String?
-  @State private var failed = false
+  /// What was done, once added or taken out: the page's title and its
+  /// line.
+  @State private var done: (title: String, text: String)?
+  /// How many of the month's events Pochical put in are in a calendar,
+  /// for 〇月の予定を消す.
+  @State private var put = 0
+  @State private var asksToRemove = false
+  /// The alert's title when adding or taking out failed.
+  @State private var failure: String?
   @State private var guide: OpenedLink?
 
   var body: some View {
@@ -196,7 +223,7 @@ struct DeviceCalendarSheet: View {
           if let done {
             Section {
               Label {
-                Text(done).foregroundStyle(colors.textPrimary)
+                Text(done.text).foregroundStyle(colors.textPrimary)
               } icon: {
                 Image(systemName: "checkmark").foregroundStyle(colors.accentDefault)
               }
@@ -211,18 +238,39 @@ struct DeviceCalendarSheet: View {
               wide("\(events.count)件を追加") { add(events) }
                 .disabled(events.isEmpty || calendarID == nil)
             }
+            // Only while some are in, as from a calendar picked by
+            // mistake, so none is taken out one by one.
+            if put > 0 {
+              Section {
+                Button("\(month.monthText)の予定を消す", role: .destructive) {
+                  asksToRemove = true
+                }
+                .frame(maxWidth: .infinity)
+              }
+              .settingsRows()
+            }
           }
         }
       }
       .settingsList()
-      .navigationTitle(done == nil ? "端末カレンダーに追加" : "保存しました")
+      .navigationTitle(done?.title ?? "端末カレンダーに追加")
+      .confirmationDialog(
+        "\(month.monthText)の予定を\(put)件消します", isPresented: $asksToRemove,
+        titleVisibility: .visible
+      ) {
+        Button("消す", role: .destructive) { remove() }
+      } message: {
+        Text("ポチカルで入れた予定だけを、どのカレンダーからも消します。")
+      }
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
         }
       }
-      .alert("追加できませんでした", isPresented: $failed) {
+      .alert(
+        failure ?? "", isPresented: Binding { failure != nil } set: { if !$0 { failure = nil } }
+      ) {
         Button("OK", role: .cancel) {}
       }
       .sheet(item: $guide) { page in
@@ -234,6 +282,9 @@ struct DeviceCalendarSheet: View {
         await calendars.ask()
       }
       calendarID = calendarID ?? calendars.pickedFirst
+      if calendars.access == .granted, let meID {
+        put = calendars.marked(month, by: meID).count
+      }
     }
   }
 
@@ -370,18 +421,34 @@ struct DeviceCalendarSheet: View {
 
   private func add(_ events: [ShiftEvent]) {
     guard let calendarID, let meID else {
-      failed = true
+      failure = "追加できませんでした"
       return
     }
     do {
       try calendars.add(events, of: month, by: meID, to: calendarID)
       let name = calendars.calendar(calendarID)?.title ?? ""
       withAnimation {
-        done = "「\(name)」に\(month.monthText)の予定を\(events.count)件追加しました。"
+        done = ("保存しました", "「\(name)」に\(month.monthText)の予定を\(events.count)件追加しました。")
       }
     } catch {
       ReviewPrompt.troubled = true
-      failed = true
+      failure = "追加できませんでした"
+    }
+  }
+
+  private func remove() {
+    guard let meID else {
+      failure = "消せませんでした"
+      return
+    }
+    do {
+      try calendars.remove(month, by: meID)
+      withAnimation {
+        done = ("消しました", "\(month.monthText)の予定を\(put)件消しました。")
+      }
+    } catch {
+      ReviewPrompt.troubled = true
+      failure = "消せませんでした"
     }
   }
 }
