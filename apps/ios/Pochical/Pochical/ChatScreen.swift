@@ -188,9 +188,6 @@ struct ChatScreen: View {
   /// What scrolling changes, kept out of the screen's own state so that
   /// scrolling remakes only what shows it, not every line.
   @State private var scroll = ChatScroll()
-  /// The chat has been on screen a moment: its moves are animated from
-  /// then, not while it comes in.
-  @State private var settled = false
   /// The chat keeps to its latest line as lines come and the keyboard
   /// comes and goes: true until the person scrolls up, and again once they
   /// scroll back down to it, send, or tap ↓. Only their own scrolling
@@ -297,7 +294,7 @@ struct ChatScreen: View {
         // scrolling up. A chat holds its pages, not its whole history.
         VStack(spacing: CGFloat(Chat.lineGap)) {
           if !state.atStart {
-            EarlierLines(scroll: scroll, first: state.lines.first?.seq, ready: settled) {
+            EarlierLines(scroll: scroll, first: state.lines.first?.seq, ready: opened) {
               await showEarlier()
             }
           }
@@ -1230,10 +1227,6 @@ struct ChatScreen: View {
     opened = true
     window = chat.state.lines.first?.seq
     await reload()
-    // Through the push that brings the chat in, it moves without showing
-    // the way: on the latest from the first frame, not a trip down to it.
-    try? await Task.sleep(for: .milliseconds(600))
-    settled = true
   }
 
   /// The first of the lines that just came in after `latest` which is
@@ -1255,9 +1248,7 @@ struct ChatScreen: View {
     Task { @MainActor in
       // Asked to the top with too few lines under it to get there, it
       // stops at the foot.
-      withAnimation(settled ? .default : nil) {
-        scroller?.scrollTo("line-\(first.opID)", anchor: .top)
-      }
+      withAnimation { scroller?.scrollTo("line-\(first.opID)", anchor: .top) }
       try? await Task.sleep(for: .milliseconds(400))
       if scroll.place.atLatest {
         following = true
@@ -1474,7 +1465,7 @@ struct ChatScreen: View {
   /// which would otherwise have the last word.
   private func toLatest(animated: Bool = false) {
     Task { @MainActor in
-      if animated, settled {
+      if animated {
         withAnimation { scroller?.scrollTo(Self.foot, anchor: .bottom) }
       } else {
         scroller?.scrollTo(Self.foot, anchor: .bottom)
