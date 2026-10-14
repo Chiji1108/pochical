@@ -175,7 +175,10 @@ struct ChatScreen: View {
   /// The lines are where the chat opens on (the latest, or ここから新着),
   /// hidden until then so the way there is not seen.
   @State private var placed = false
-  @State private var position = ScrollPosition(idType: String.self)
+  /// Moves the lines, at the moments the chat does: not a scroll
+  /// position bound to the screen, which as the person scrolls would make
+  /// the screen, and every line, again at each line passing the top.
+  @State private var scroller: ScrollViewProxy?
   @State private var place = ScrollPlace()
   /// The chat keeps to its latest line as lines come and the keyboard
   /// comes and goes: true until the person scrolls up, and again once they
@@ -282,43 +285,48 @@ struct ChatScreen: View {
     let state = chat.state
     let names = self.names
     ScrollView {
-      // Not lazy: a lazy stack guesses the heights of lines not yet drawn
-      // and corrects them as they come into sight, jolting the lines while
-      // scrolling up. A chat holds its pages, not its whole history.
-      VStack(spacing: CGFloat(Chat.lineGap)) {
-        if !state.atStart {
-          ProgressView()
-            .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-            // Laid out with the lines whether seen or not, so earlier lines
-            // are asked for only once it is on the screen.
-            .onScrollVisibilityChange(threshold: 0) { topInSight = $0 }
-            .task(id: PageAsk(first: state.lines.first?.seq, inSight: topInSight)) {
-              if topInSight { await showEarlier() }
-            }
+      ScrollViewReader { proxy in
+        // Not lazy: a lazy stack guesses the heights of lines not yet drawn
+        // and corrects them as they come into sight, jolting the lines while
+        // scrolling up. A chat holds its pages, not its whole history.
+        VStack(spacing: CGFloat(Chat.lineGap)) {
+          if !state.atStart {
+            ProgressView()
+              .frame(maxWidth: .infinity, minHeight: Metrics.touch)
+              // Laid out with the lines whether seen or not, so earlier lines
+              // are asked for only once it is on the screen.
+              .onScrollVisibilityChange(threshold: 0) { topInSight = $0 }
+              .task(id: PageAsk(first: state.lines.first?.seq, inSight: topInSight)) {
+                if topInSight { await showEarlier() }
+              }
+          }
+          let listed = items(state)
+          let timeless = linesWithoutTime(listed)
+          ForEach(listed) { item in
+            // Lines close within a run, parted where the writer changes; the
+            // first has the list's own margin over it.
+            let parted = item.startsRun && item.id != listed.first?.id
+            row(item, names: names, showsTime: !timeless.contains(item.id))
+              .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
+          }
+          // Who is writing now, under the latest line; not someone blocked.
+          ForEach(typers.keys.filter { !blocked.contains($0) }.sorted(), id: \.self) { userID in
+            TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")
+              .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
+              .id("typing-\(userID)")
+              .transition(.opacity)
+          }
+          // The foot, which the chat goes to for its latest.
+          Color.clear.frame(height: 0).id(Self.foot)
         }
-        let listed = items(state)
-        let timeless = linesWithoutTime(listed)
-        ForEach(listed) { item in
-          // Lines close within a run, parted where the writer changes; the
-          // first has the list's own margin over it.
-          let parted = item.startsRun && item.id != listed.first?.id
-          row(item, names: names, showsTime: !timeless.contains(item.id))
-            .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
-        }
-        // Who is writing now, under the latest line; not someone blocked.
-        ForEach(typers.keys.filter { !blocked.contains($0) }.sorted(), id: \.self) { userID in
-          TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")
-            .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
-            .id("typing-\(userID)")
-            .transition(.opacity)
-        }
+        .scrollTargetLayout()
+        // In from the sides as padding, not content margins, so scrolling
+        // to the foot's edge never moves the lines sideways.
+        .padding(.horizontal, 16)
+        // Lines shorter than the screen fill it, at its foot.
+        .frame(minHeight: seen, alignment: .bottom)
+        .onAppear { scroller = proxy }
       }
-      .scrollTargetLayout()
-      // In from the sides as padding, not content margins, so scrolling
-      // to the foot's edge never moves the lines sideways.
-      .padding(.horizontal, 16)
-      // Lines shorter than the screen fill it, at its foot.
-      .frame(minHeight: seen, alignment: .bottom)
     }
     .contentMargins(.vertical, 12, for: .scrollContent)
     .opacity(placed ? 1 : 0)
@@ -331,7 +339,6 @@ struct ChatScreen: View {
     }
     // Opens at the foot (spec/chat.md, Unread lines and typing); where it
     // goes from there is the person's, or follows the latest.
-    .scrollPosition($position)
     // Not for alignment: the lines fill the screen themselves (below), and
     // the inset it adds over short lines left room to scroll.
     .defaultScrollAnchor(.bottom, for: .initialOffset)
@@ -389,7 +396,7 @@ struct ChatScreen: View {
       if place.away || unseen > 0 {
         Button {
           following = true
-          withAnimation { toLatest() }
+          toLatest(animated: true)
         } label: {
           Image(systemName: "chevron.down")
             .font(.body.weight(.semibold))
@@ -563,7 +570,15 @@ struct ChatScreen: View {
     // going keep a following chat at its foot.
     .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count, seen: seen)) {
       if opened, following {
-        withAnimation { toLatest() }
+        toLatest(animated: true)
+      }
+    }
+    // Whatever else changes the lines' height while following, a photo or
+    // a link's page drawn, a long line folded, from the first layout on:
+    // the scroll view keeps its offset, not its foot, so it is put back.
+    .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, _ in
+      if following {
+        toLatest()
       }
     }
     // An earlier page coming in above, the lines seen stay: held at the
@@ -572,13 +587,14 @@ struct ChatScreen: View {
       guard let before, let now, now < before, place.atTop,
         let first = state.lines.first(where: { $0.seq == before })
       else { return }
-      position.scrollTo(id: "line-\(first.opID)", anchor: .top)
+      // Once the page is laid out above it.
+      Task { @MainActor in scroller?.scrollTo("line-\(first.opID)", anchor: .top) }
     }
     // One's own line just sent shows at the foot, wherever the lines were.
     .onChange(of: state.waiting.last?.opID) { _, sent in
       if sent != nil {
         following = true
-        withAnimation { toLatest() }
+        toLatest(animated: true)
       }
     }
     .environment(\.openURL, OpenURLAction { open($0) })
@@ -1205,7 +1221,7 @@ struct ChatScreen: View {
       // scroll view would go past the foot.
       if !place.fits, !unreadInSight {
         following = false
-        position.scrollTo(id: ChatItem.unread.id, anchor: .top)
+        scroller?.scrollTo(ChatItem.unread.id, anchor: .top)
       }
       withAnimation(.easeOut(duration: 0.15)) { placed = true }
     }
@@ -1400,11 +1416,21 @@ struct ChatScreen: View {
     say("\(day.fullText)に決めました")
   }
 
-  /// To the foot, by its edge rather than the latest line's id: an id
-  /// kept as the place is held to as the room changes, which carried the
-  /// chat back up as the keyboard came.
-  private func toLatest() {
-    position.scrollTo(edge: .bottom)
+  /// The foot's id, under the latest line and anyone writing.
+  private static let foot = "foot"
+
+  /// To the foot, every time it is asked: a scroll position set to the
+  /// foot it already says does nothing, though the lines have moved. Once
+  /// what asked has been laid out, after the scroll view's own adjusting,
+  /// which would otherwise have the last word.
+  private func toLatest(animated: Bool = false) {
+    Task { @MainActor in
+      if animated {
+        withAnimation { scroller?.scrollTo(Self.foot, anchor: .bottom) }
+      } else {
+        scroller?.scrollTo(Self.foot, anchor: .bottom)
+      }
+    }
   }
 
   /// Answers a line (返信): quoted over the composer until sent or ×.
@@ -1572,7 +1598,7 @@ struct ChatScreen: View {
     if let line = state.lines.first(where: { $0.seq == target }) {
       jumpTarget = nil
       following = false
-      withAnimation { position.scrollTo(id: "line-\(line.opID)", anchor: .center) }
+      withAnimation { scroller?.scrollTo("line-\(line.opID)", anchor: .center) }
       ringed = target
       try? await Task.sleep(for: .milliseconds(500))
       withAnimation(.easeOut(duration: 0.7)) { ringed = nil }
