@@ -169,6 +169,9 @@ struct ChatScreen: View {
   @State private var unreadFrom: Int64?
   /// The chat has opened on its line, and reading may count.
   @State private var opened = false
+  /// The lines are where the chat opens on (the latest, or ここから新着),
+  /// hidden until then so the way there is not seen.
+  @State private var placed = false
   @State private var position = ScrollPosition(idType: String.self)
   @State private var place = ScrollPlace()
   /// The height the lines are seen in, between the pins and the composer.
@@ -278,6 +281,7 @@ struct ChatScreen: View {
     }
     .contentMargins(.horizontal, 16, for: .scrollContent)
     .contentMargins(.vertical, 12, for: .scrollContent)
+    .opacity(placed ? 1 : 0)
     .overlay {
       if state.lines.isEmpty, state.waiting.isEmpty {
         Text("まだメッセージはありません")
@@ -298,9 +302,17 @@ struct ChatScreen: View {
       let tall = geometry.contentSize.height + geometry.contentInsets.bottom
       return ScrollPlace(
         atLatest: below < 24, away: below > geometry.containerSize.height / 2,
-        fits: tall <= geometry.containerSize.height)
-    } action: { _, now in
-      place = now
+        fits: tall <= geometry.containerSize.height, height: geometry.contentSize.height)
+    } action: { old, now in
+      // A line coming in makes the lines taller before it is told: where
+      // they were scrolled is kept through that, so a chat at its foot
+      // follows the line down to it rather than staying short of it.
+      var next = now
+      if now.height != old.height {
+        next.atLatest = old.atLatest
+        next.away = old.away
+      }
+      place = next
     }
     .onScrollGeometryChange(for: CGFloat.self) { geometry in
       max(geometry.containerSize.height - geometry.contentInsets.top - geometry.contentInsets.bottom, 0)
@@ -470,7 +482,11 @@ struct ChatScreen: View {
     // Others' lines as they come keep the chat at its foot when it was
     // there, as the bottom anchor alone stops short of them.
     .onChange(of: state.lines.last?.seq) {
-      if opened, place.atLatest {
+      guard opened, place.atLatest else { return }
+      // Once the new line is laid out, as opening waits for the lines:
+      // scrolled to before then, the chat stays short of it.
+      Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(50))
         withAnimation { toLatest() }
       }
     }
@@ -518,7 +534,9 @@ struct ChatScreen: View {
       Button("キャンセル", role: .cancel) {}
     }
     .fullScreenCover(item: $viewing) { photo in
-      PhotoViewer(photo: photo, groupID: group.id) { save(photo) }
+      PhotoViewer(photo: photo, groupID: group.id) {
+        await savePhoto(photo, in: group.id, calls: groupCalls)
+      }
     }
     .modifier(
       ReportAndBlock(
@@ -1047,6 +1065,8 @@ struct ChatScreen: View {
         unreadFrom = lines[index].seq
       }
     }
+    // With nothing new, the latest is where the lines already are.
+    if unreadFrom == nil { placed = true }
     // Once the lines are laid out, to the foot by the latest line's id:
     // the bottom anchor alone stops short of it once the rows have been
     // measured, and ここから新着 near the foot can then go only so far.
@@ -1056,6 +1076,9 @@ struct ChatScreen: View {
       try? await Task.sleep(for: .milliseconds(50))
       position.scrollTo(id: ChatItem.unread.id, anchor: .top)
     }
+    // Shown once there, ここから新着 from the first look rather than
+    // after a trip from the foot.
+    withAnimation(.easeOut(duration: 0.15)) { placed = true }
     try? await Task.sleep(for: .milliseconds(300))
     opened = true
   }
@@ -1508,9 +1531,11 @@ private enum ChatItem: Identifiable {
 private struct ScrollPlace: Hashable {
   var atLatest = true
   var away = false
-  /// The lines are shorter than the screen, held at its foot by the
-  /// bottom anchor, with nowhere to scroll.
+  /// The lines are shorter than the screen, held at its foot, with
+  /// nowhere to scroll.
   var fits = true
+  /// How tall the lines are, to tell a scroll from lines coming in.
+  var height: CGFloat = 0
 }
 
 private struct ReadKey: Hashable {

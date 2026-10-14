@@ -100,14 +100,17 @@ struct PhotoLine: View {
 }
 
 /// A photo opened large (/design's PhotoViewer): whole on black, × to
-/// close, pulled down to close too, and 保存 for a chat's.
+/// close, pulled down to close too, and 保存 for a chat's, which says here
+/// whether it was saved, as the screen under it is covered.
 struct PhotoViewer: View {
   @Environment(\.dismiss) private var dismiss
   let photo: LinePhoto
   let groupID: String
-  /// None for someone's face, which is theirs to keep.
-  var onSave: (() -> Void)?
+  /// Saves it, true once saved; none for someone's face, which is theirs
+  /// to keep.
+  var onSave: (() async -> Bool)?
   @State private var pull: CGFloat = 0
+  @State private var notice: String?
 
   /// How far a pull down closes it.
   private static var closeAt: CGFloat { 120 }
@@ -132,13 +135,21 @@ struct PhotoViewer: View {
     }
     .overlay(alignment: .bottomTrailing) {
       if let onSave {
-        Button("保存", systemImage: "square.and.arrow.down", action: onSave)
+        Button("保存", systemImage: "square.and.arrow.down") {
+          Task { say(await onSave() ? "写真を保存しました" : "保存できませんでした") }
+        }
           .labelStyle(.iconOnly)
           .font(.title3.weight(.semibold))
           .foregroundStyle(.white)
           .frame(width: Metrics.touch, height: Metrics.touch)
           .glassEffect(.regular.interactive(), in: .circle)
           .padding(16)
+      }
+    }
+    .overlay(alignment: .top) {
+      if let notice {
+        NoticeCapsule(words: notice)
+          .transition(.opacity.combined(with: .move(edge: .top)))
       }
     }
     .gesture(
@@ -153,6 +164,16 @@ struct PhotoViewer: View {
         }
     )
     .preferredColorScheme(.dark)
+  }
+
+  private func say(_ words: String) {
+    withAnimation { notice = words }
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(2.5))
+      if notice == words {
+        withAnimation { notice = nil }
+      }
+    }
   }
 }
 

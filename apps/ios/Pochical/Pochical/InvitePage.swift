@@ -1,4 +1,5 @@
 import CoreImage.CIFilterBuiltins
+import Photos
 import PochicalDesign
 import PochicalKit
 import SwiftUI
@@ -16,6 +17,8 @@ struct InvitePage: View {
   @State private var confirmingRemake = false
   @State private var remakeFailed = false
   @State private var copied = false
+  /// Whether the QR code was saved to Photos, for a moment.
+  @State private var notice: String?
 
   var body: some View {
     ScrollView {
@@ -36,7 +39,7 @@ struct InvitePage: View {
                     Label("共有", systemImage: "square.and.arrow.up")
                   }
                   Button("写真に保存", systemImage: "square.and.arrow.down") {
-                    UIImageWriteToSavedPhotosAlbum(qr, nil, nil, nil)
+                    Task { await save(qr) }
                   }
                 }
             } else if failed {
@@ -93,6 +96,12 @@ struct InvitePage: View {
       .padding(16)
     }
     .background(colors.backgroundBase)
+    .overlay(alignment: .top) {
+      if let notice {
+        NoticeCapsule(words: notice)
+          .transition(.opacity.combined(with: .move(edge: .top)))
+      }
+    }
     .navigationTitle("メンバーを招待")
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.visible, for: .navigationBar)
@@ -109,6 +118,30 @@ struct InvitePage: View {
       Button("OK", role: .cancel) {}
     } message: {
       Text("今のリンクはそのまま使えます。通信できる場所で、もう一度お試しください。")
+    }
+  }
+
+  /// Saves the QR code to Photos, and says whether it was.
+  private func save(_ qr: UIImage) async {
+    guard let data = qr.pngData() else { return }
+    do {
+      // Photos runs the change on its own queue, not the main actor's.
+      try await PHPhotoLibrary.shared().performChanges { @Sendable in
+        PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: nil)
+      }
+      say("写真に保存しました")
+    } catch {
+      say("保存できませんでした")
+    }
+  }
+
+  private func say(_ words: String) {
+    withAnimation { notice = words }
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(2.5))
+      if notice == words {
+        withAnimation { notice = nil }
+      }
     }
   }
 
