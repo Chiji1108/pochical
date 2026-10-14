@@ -319,6 +319,10 @@ struct ChatScreen: View {
           // The foot, which the chat goes to for its latest.
           Color.clear.frame(height: 0).id(Self.foot)
         }
+        .coordinateSpace(.named(Self.lines))
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+          scroll.linesHeight = $0
+        }
         .scrollTargetLayout()
         // In from the sides as padding, not content margins, so scrolling
         // to the foot's edge never moves the lines sideways.
@@ -746,7 +750,9 @@ struct ChatScreen: View {
         Rectangle().fill(colors.accentBorder).frame(height: 1)
       }
       .padding(.vertical, 4)
-      .onScrollVisibilityChange(threshold: 1) { scroll.unreadInSight = $0 }
+      .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.lines)).minY } action: {
+        scroll.unreadTop = $0
+      }
     case .line(let line, _) where line.hidden:
       // Never delivered to the reader: nothing shows.
       EmptyView()
@@ -788,7 +794,12 @@ struct ChatScreen: View {
           text: line.text, preview: line.preview, days: line.days, members: cardMembers,
           poll: poll, photo: line.photo, quote: line.replyTo.map(quote(of:)),
           unfolded: unfolded.contains(line.opID),
-          onUnfold: { withAnimation { _ = unfolded.insert(line.opID) } },
+          // Opened where it is, its words going on down from there, as
+          // the messaging apps open a long one: not carried to the foot.
+          onUnfold: {
+            following = false
+            withAnimation { _ = unfolded.insert(line.opID) }
+          },
           groupID: group.id, onOpenPhoto: { viewing = line.photo },
           onOpenQuote: { line.replyTo.map(jump(to:)) },
           onOpenProfile: {
@@ -1224,9 +1235,12 @@ struct ChatScreen: View {
       // Once the lines are laid out, where they are and what is in sight
       // known.
       try? await Task.sleep(for: .milliseconds(50))
-      // Asked to the top with too few lines under it to get there, the
-      // scroll view would go past the foot.
-      if !scroll.place.fits, !scroll.unreadInSight {
+      // With few new lines, ここから新着 is on the screen at the latest
+      // already; asked to the top with too few lines under it to get
+      // there, the scroll view would go past the foot. Known from where it
+      // is among the lines, not from its being in sight, which is read as
+      // the lines are first laid out at the top.
+      if let top = scroll.unreadTop, scroll.linesHeight - top > seen {
         scroller?.scrollTo(ChatItem.unread.id, anchor: .top)
       } else {
         following = true
@@ -1455,6 +1469,9 @@ struct ChatScreen: View {
     write(.decide(decide))
     say("\(day.fullText)に決めました")
   }
+
+  /// The lines' own coordinates, where ここから新着 is measured.
+  private static let lines = "lines"
 
   /// The foot's id, under the latest line and anyone writing.
   private static let foot = "foot"
@@ -1744,9 +1761,11 @@ private final class ChatScroll {
   var topDay: Day?
   var dayShown = false
   var scrolling = false
-  /// ここから新着 is on the screen whole, as at the latest when the new
-  /// lines are few: opening has nowhere to go for it then.
-  var unreadInSight = false
+  /// Where ここから新着 is among the lines, and their height: the new
+  /// lines under it fit on the screen at the latest when they are few,
+  /// and opening has nowhere to go for it then.
+  var unreadTop: CGFloat?
+  var linesHeight: CGFloat = 0
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
