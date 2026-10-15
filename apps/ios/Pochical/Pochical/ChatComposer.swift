@@ -12,8 +12,9 @@ final class ChatDraft {
   var text = ""
   /// The line of one's own being changed in the composer.
   var editing: ChatLineRow?
-  /// The line being answered (返信), quoted over the composer.
-  var replying: ChatLineRow?
+  /// The line being answered (返信), by its id in its chat, quoted over
+  /// the composer as the chat has it now.
+  var replyTo: String?
   /// Days to go with the next message (共有する日), sent first.
   var attachedDays: [Day]?
   /// Members picked from the list of names while writing, to be sent as
@@ -68,26 +69,33 @@ final class ChatDraft {
   }
 }
 
-/// A chat's composer (/design's): what the message answers or changes and
-/// what goes with it over the field, the photo and day tools folded into a
-/// › while writing, the send button, and the names to mention as an @ is
-/// written.
+/// A chat's composer (/design's), a group's and the support chat's: what
+/// the message answers or changes and what goes with it over the field,
+/// the tools folded into a › while writing, the send button, and in a
+/// group's chat the names to mention as an @ is written.
 struct ChatComposer: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.groupSocket) private var socket
   @Bindable var draft: ChatDraft
+  /// Where the chat's photos are kept: the group's, or the support chat's.
   let groupID: String
-  let threadID: String
+  /// The chat others are told the member is writing in; none for the
+  /// support chat, which has no one watching.
+  var threadID: String?
   /// Who may be mentioned: those in the group's chat now but the writer;
-  /// none in a one-to-one chat.
-  let mentionable: [GroupMemberRow]
-  let nameOf: (String) -> String
-  let quoteOf: (Int64) -> LineQuote
+  /// none in a one-to-one chat or the support chat.
+  var mentionable: [GroupMemberRow] = []
+  var nameOf: (String) -> String = { _ in "" }
+  /// The line being answered as its quote shows it, read each time from
+  /// the chat as it is: taken back or its writer blocked, it says so.
+  let quoteOf: (String) -> LineQuote
+  /// The page of the words' first link goes with them, in a group's chat.
+  var previews = true
   let onSubmit: () -> Void
-  let onStopEditing: () -> Void
-  let onShareDays: () -> Void
-  let onPhotos: ([PhotosPickerItem]) -> Void
+  var onStopEditing: () -> Void = {}
+  /// 日にちを共有, in a group's chat.
+  var onShareDays: (() -> Void)?
   let say: (String) -> Void
   /// What the photo picker just handed over, read into the tray.
   @State private var photoItems: [PhotosPickerItem] = []
@@ -96,6 +104,9 @@ struct ChatComposer: View {
     let trimmed = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
     let editing = draft.editing
     let unchanged = editing.map { $0.text == withMentions(draft.text, picked: draft.picked) } ?? false
+    // With the photo tool alone, as the support chat has, it stays in
+    // sight: only a group's two tools fold into the › (spec/chat.md).
+    let folded = onShareDays != nil && draft.toolsFolded
     let blocked =
       editing == nil
       ? (trimmed.isEmpty && draft.photos.isEmpty && draft.attachedDays == nil) || draft.readingPhotos
@@ -109,9 +120,9 @@ struct ChatComposer: View {
           title: "メッセージを編集", words: plainText(editing.text, nameOf: nameOf),
           stop: "編集をやめる", onStop: onStopEditing)
       }
-      if editing == nil, let replying = draft.replying {
-        ReplyBar(quote: quoteOf(replying.seq), groupID: groupID) {
-          withAnimation { draft.replying = nil }
+      if editing == nil, let replyTo = draft.replyTo {
+        ReplyBar(quote: quoteOf(replyTo), groupID: groupID) {
+          withAnimation { draft.replyTo = nil }
         }
       }
       if editing == nil, let attachedDays = draft.attachedDays {
@@ -131,7 +142,7 @@ struct ChatComposer: View {
       }
       HStack(alignment: .bottom, spacing: 8) {
         // Folded, the tools give the field their room.
-        if editing == nil, draft.toolsFolded {
+        if editing == nil, folded {
           Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
             .labelStyle(.iconOnly)
             .font(.system(size: 20, weight: .medium))
@@ -141,11 +152,13 @@ struct ChatComposer: View {
         } else if editing == nil {
           HStack(spacing: 8) {
             photoButton
-            Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
-              .labelStyle(.iconOnly)
-              .font(.system(size: 20))
-              .foregroundStyle(colors.textSecondary)
-              .frame(width: 38, height: 38)
+            if let onShareDays {
+              Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
+                .labelStyle(.iconOnly)
+                .font(.system(size: 20))
+                .foregroundStyle(colors.textSecondary)
+                .frame(width: 38, height: 38)
+            }
           }
           .transition(.opacity.combined(with: .move(edge: .leading)))
         }
@@ -180,7 +193,7 @@ struct ChatComposer: View {
         .accessibilityLabel(editing == nil ? "送る" : "編集を保存")
         .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
       }
-      .animation(.snappy(duration: 0.25), value: draft.toolsFolded)
+      .animation(.snappy(duration: 0.25), value: folded)
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
       if TextLimits.chatMessage - draft.text.count <= TextFields.countWhenLeft {
@@ -204,13 +217,16 @@ struct ChatComposer: View {
     // holds words, and a stop once it empties.
     .onChange(of: draft.text) { _, words in
       draft.toolsOpen = false
+      guard let threadID else { return }
       if words.isEmpty {
         draft.stopTyping(in: threadID, socket: socket)
       } else {
         draft.typed(in: threadID, socket: socket)
       }
     }
-    .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }
+    .task(id: previews ? previewLink(draft.text) : nil) {
+      if previews { await readPreview(of: previewLink(draft.text)) }
+    }
   }
 
   /// 写真を送る: the photo picker, up to Chat.photosPerSend in the tray at
@@ -233,7 +249,7 @@ struct ChatComposer: View {
       .onChange(of: photoItems) { _, items in
         guard !items.isEmpty else { return }
         photoItems = []
-        onPhotos(items)
+        Task { await readPhotos(items) }
       }
     } else {
       Button("写真を送る", systemImage: "photo") {
@@ -289,6 +305,31 @@ struct ChatComposer: View {
       .overlay(alignment: .top) {
         Rectangle().fill(colors.separator).frame(height: 1)
       }
+    }
+  }
+
+  /// Reads picked photos and shrinks them to send, into the tray.
+  private func readPhotos(_ items: [PhotosPickerItem]) async {
+    draft.readingPhotos = true
+    defer { draft.readingPhotos = false }
+    var unreadable = false
+    for item in items {
+      guard let data = try? await item.loadTransferable(type: Data.self),
+        let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
+      else {
+        unreadable = true
+        continue
+      }
+      // Decoded and shrunk off the main thread, as the photo is: at 2048
+      // pixels, on it, each would hold the screen still a moment.
+      let thumbnail = await UIImage(data: shrunk.jpeg)?.byPreparingThumbnail(
+        ofSize: CGSize(width: 128, height: 128))
+      if draft.photos.count < Chat.photosPerSend {
+        withAnimation { draft.photos.append(PickedPhoto(shrunk: shrunk, thumbnail: thumbnail)) }
+      }
+    }
+    if unreadable {
+      say("開けない写真がありました")
     }
   }
 

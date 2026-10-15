@@ -277,9 +277,9 @@ struct ChatScreen: View {
           draft: draft, groupID: group.id, threadID: threadID,
           mentionable: otherID != nil
             ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
-          nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit, onStopEditing: stopEditing,
-          onShareDays: { sharingDays = true },
-          onPhotos: { items in Task { await readPhotos(items) } }, say: say)
+          nameOf: nameOf, quoteOf: { quote(of: Int64($0) ?? 0) }, onSubmit: submit,
+          onStopEditing: stopEditing,
+          onShareDays: { sharingDays = true }, say: say)
       }
     }
     .background(colors.backgroundBase)
@@ -706,32 +706,6 @@ struct ChatScreen: View {
 
   // MARK: Composer
 
-  /// Reads picked photos and shrinks them to send, into the tray.
-  private func readPhotos(_ items: [PhotosPickerItem]) async {
-    draft.readingPhotos = true
-    defer { draft.readingPhotos = false }
-    var unreadable = false
-    for item in items {
-      guard let data = try? await item.loadTransferable(type: Data.self),
-        let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
-      else {
-        unreadable = true
-        continue
-      }
-      // Decoded and shrunk off the main thread, as the photo is: at 2048
-      // pixels, on it, each would hold the screen still a moment.
-      let thumbnail = await UIImage(data: shrunk.jpeg)?.byPreparingThumbnail(
-        ofSize: CGSize(width: 128, height: 128))
-      let picked = PickedPhoto(shrunk: shrunk, thumbnail: thumbnail)
-      if draft.photos.count < Chat.photosPerSend {
-        withAnimation { draft.photos.append(picked) }
-      }
-    }
-    if unreadable {
-      say("開けない写真がありました")
-    }
-  }
-
   /// Sends the tray's photos, each as its own line, kept on the device to
   /// upload before its line goes.
   private func sendPhotos() {
@@ -1117,14 +1091,14 @@ struct ChatScreen: View {
   /// Answers a line (返信): quoted over the composer until sent or ×.
   private func reply(to line: ChatLineRow) {
     if draft.editing != nil { stopEditing() }
-    withAnimation { draft.replying = line }
+    withAnimation { draft.replyTo = String(line.seq) }
     draft.field.focus()
   }
 
   /// The line being answered, for the first line sent: then no more.
   private func takeReply() -> UInt64 {
-    defer { draft.replying = nil }
-    return draft.replying.map { UInt64($0.seq) } ?? 0
+    defer { draft.replyTo = nil }
+    return draft.replyTo.flatMap(UInt64.init) ?? 0
   }
 
   /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):
@@ -1149,7 +1123,7 @@ struct ChatScreen: View {
   }
 
   private func edit(_ line: ChatLineRow) {
-    draft.replying = nil
+    draft.replyTo = nil
     draft.editing = line
     // Its mentions as @name again, still picked.
     draft.text = plainText(line.text, nameOf: nameOf)

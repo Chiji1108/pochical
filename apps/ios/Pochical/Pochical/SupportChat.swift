@@ -81,10 +81,8 @@ struct SupportChatScreen: View {
   /// Lines being sent, shown faint until the server keeps them; one that
   /// could not go waits to be tried again.
   @State private var waiting: [Waiting] = []
-  @State private var draft = ""
-  @State private var composing = false
-  /// The line being answered (返信), quoted over the composer.
-  @State private var replying: SupportLine?
+  /// What is being written, read by the composer alone (ChatScreen's).
+  @State private var draft = ChatDraft()
   /// The line whose 送信取消 waits to be confirmed.
   @State private var unsending: SupportLine?
   /// The line given an emoji from the keyboard (+).
@@ -95,11 +93,6 @@ struct SupportChatScreen: View {
   @State private var unfolded: Set<String> = []
   /// The line a tapped quote goes to.
   @State private var going: String?
-  /// Photos picked to send, waiting over the composer.
-  @State private var pickedPhotos: [PickedPhoto] = []
-  /// What the photo picker just handed over, read into `pickedPhotos`.
-  @State private var photoItems: [PhotosPickerItem] = []
-  @State private var readingPhotos = false
   /// The photo open large.
   @State private var viewing: LinePhoto?
   /// Said over the lines for a moment, as a toast.
@@ -109,7 +102,6 @@ struct SupportChatScreen: View {
   @State private var notices = 0
   /// The sends so far, one after another, so the lines keep their order.
   @State private var sending: Task<Void, Never>?
-  private let field = ComposerBox()
 
   struct Waiting: Identifiable, Hashable {
     let id: String
@@ -185,7 +177,13 @@ struct SupportChatScreen: View {
       }
     }
     .background(colors.backgroundBase)
-    .safeAreaInset(edge: .bottom, spacing: 0) { composer }
+    // The group chats' composer, without what only a group has: days to
+    // share, names to mention, a link's page, and who is writing.
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      ChatComposer(
+        draft: draft, groupID: ChatPhotos.support, quoteOf: quote(of:), previews: false,
+        onSubmit: sendAll, say: say)
+    }
     .navigationTitle(Self.supportName)
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.hidden, for: .tabBar)
@@ -338,8 +336,8 @@ struct SupportChatScreen: View {
   private func actions(for line: SupportLine) -> [MessageAction] {
     var actions = [
       MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") {
-        withAnimation { replying = line }
-        field.focus()
+        withAnimation { draft.replyTo = line.id }
+        draft.field.focus()
       }
     ]
     if let photo = line.photo {
@@ -449,7 +447,7 @@ struct SupportChatScreen: View {
   }
 
   private func unsend(_ line: SupportLine) {
-    if replying?.id == line.id { replying = nil }
+    if draft.replyTo == line.id { draft.replyTo = nil }
     Task {
       guard let kept = try? await groupCalls.unsendSupport(line.id) else { return }
       if let photo = line.photo { ChatPhotos.forget(photo.id, in: ChatPhotos.support) }
@@ -463,57 +461,6 @@ struct SupportChatScreen: View {
     }
   }
 
-  private var composer: some View {
-    let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-    // A word still being converted counts, as it goes once confirmed.
-    let blocked = (trimmed.isEmpty && pickedPhotos.isEmpty && !composing) || readingPhotos
-    return VStack(spacing: 0) {
-      if let replying {
-        ReplyBar(quote: quote(of: replying.id), groupID: ChatPhotos.support) {
-          withAnimation { self.replying = nil }
-        }
-      }
-      if !pickedPhotos.isEmpty {
-        PhotoTray(photos: $pickedPhotos)
-      }
-      HStack(alignment: .bottom, spacing: 8) {
-        photoButton
-        ComposerField(
-          placeholder: "メッセージ", text: $draft, limit: TextLimits.chatMessage,
-          composing: $composing, box: field
-        )
-        .overlay(alignment: .leading) {
-          if draft.isEmpty {
-            Text("メッセージ")
-              .foregroundStyle(colors.textQuaternary)
-              .allowsHitTesting(false)
-              .accessibilityHidden(true)
-          }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .frame(minHeight: 38)
-        .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
-        Button {
-          sendAll()
-        } label: {
-          Image(systemName: "arrow.up")
-            .font(.system(size: 16, weight: .bold))
-            .foregroundStyle(colors.accentOnFill)
-            .frame(width: 38, height: 38)
-            .background(blocked ? colors.fillPrimary : colors.accentFill, in: Circle())
-        }
-        .buttonStyle(.plain)
-        .disabled(blocked)
-        .accessibilityLabel("送る")
-        .animation(.easeOut(duration: 0.15), value: blocked)
-      }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 8)
-    }
-    .background(colors.backgroundBase)
-  }
-
   private func load() async {
     guard let chat = try? await groupCalls.supportChat() else { return }
     lines = chat.lines
@@ -522,72 +469,15 @@ struct SupportChatScreen: View {
     }
   }
 
-  /// The photo tool: the system's picker, chatRules.photosPerSend photos
-  /// at most (ChatScreen's).
-  @ViewBuilder private var photoButton: some View {
-    let room = Chat.photosPerSend - pickedPhotos.count
-    // Read here: the picker's label is drawn off the main actor.
-    let iconColor = colors.textSecondary
-    if room > 0 {
-      PhotosPicker(
-        selection: $photoItems, maxSelectionCount: room, matching: .images,
-        preferredItemEncoding: .compatible
-      ) {
-        Image(systemName: "photo")
-          .font(.system(size: 20))
-          .foregroundStyle(iconColor)
-          .frame(width: 38, height: 38)
-      }
-      .accessibilityLabel("写真を送る")
-      .onChange(of: photoItems) { _, items in
-        guard !items.isEmpty else { return }
-        photoItems = []
-        Task { await readPhotos(items) }
-      }
-    } else {
-      Button("写真を送る", systemImage: "photo") {
-        say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
-      }
-      .labelStyle(.iconOnly)
-      .font(.system(size: 20))
-      .foregroundStyle(colors.textQuaternary)
-      .frame(width: 38, height: 38)
-    }
-  }
-
-  /// Reads picked photos and shrinks them to send, into the tray.
-  private func readPhotos(_ items: [PhotosPickerItem]) async {
-    readingPhotos = true
-    defer { readingPhotos = false }
-    var unreadable = false
-    for item in items {
-      guard let data = try? await item.loadTransferable(type: Data.self),
-        let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
-      else {
-        unreadable = true
-        continue
-      }
-      let picked = PickedPhoto(
-        shrunk: shrunk,
-        thumbnail: UIImage(data: shrunk.jpeg)?.preparingThumbnail(of: CGSize(width: 128, height: 128)))
-      if pickedPhotos.count < Chat.photosPerSend {
-        withAnimation { pickedPhotos.append(picked) }
-      }
-    }
-    if unreadable {
-      say("開けない写真がありました")
-    }
-  }
-
   /// Sends the tray's photos, each its own line, then the words; the reply
   /// goes with the first.
   private func sendAll() {
-    guard !readingPhotos else { return }
-    let text = String(field.commit().prefix(TextLimits.chatMessage))
+    guard !draft.readingPhotos else { return }
+    let text = String(draft.field.commit().prefix(TextLimits.chatMessage))
       .trimmingCharacters(in: .whitespacesAndNewlines)
-    var replyTo = replying?.id
+    var replyTo = draft.replyTo
     var lines: [Waiting] = []
-    for picked in pickedPhotos {
+    for picked in draft.photos {
       guard (try? ChatPhotos.keep(picked.shrunk.jpeg, as: picked.id, in: ChatPhotos.support)) != nil
       else { continue }
       let photo = LinePhoto(id: picked.id, width: picked.shrunk.width, height: picked.shrunk.height)
@@ -598,9 +488,9 @@ struct SupportChatScreen: View {
       lines.append(Waiting(id: UUID().uuidString.lowercased(), text: text, replyTo: replyTo))
     }
     guard !lines.isEmpty else { return }
-    draft = ""
-    replying = nil
-    withAnimation { pickedPhotos = [] }
+    draft.text = ""
+    draft.replyTo = nil
+    withAnimation { draft.photos = [] }
     for line in lines { send(line) }
   }
 
