@@ -552,7 +552,7 @@ struct CalendarScreen: View {
           let month = shownMonth ?? thisMonth
           let first = firstBlankDay(in: month, days: monthDays(month, calendar))
           // With the tabs giving way, so the tray and the tab bar move as one.
-          withAnimation(Springs.standard) { entering = first }
+          withAnimation(entryChange) { entering = first }
         } label: {
           Label("ポチポチ入力", systemImage: "pencil")
             .font(.headline)
@@ -574,7 +574,7 @@ struct CalendarScreen: View {
     }
     // With the tabs coming back, so the month's foot and the tab bar move
     // as one rather than the tab bar a frame after.
-    withAnimation(Springs.standard) { entering = nil }
+    withAnimation(entryChange) { entering = nil }
     let calendar = currentCalendar
     // With no pattern that counts as off there is nothing to offer.
     guard holidayShift(of: calendar.patterns.inUse) != nil else {
@@ -642,6 +642,14 @@ struct CalendarScreen: View {
   /// Motion on, as /design's fold.
   private var folding: Animation? {
     reduceMotion ? nil : Springs.standard
+  }
+
+  /// Starting and finishing ポチポチ入力: the tray and ポチポチ入力 trade
+  /// places in a fade, the tab bar with them. Not none with Reduce Motion,
+  /// which fades rather than moves: at once, the tab bar would come a frame
+  /// after the month's foot was laid out without it.
+  private var entryChange: Animation {
+    reduceMotion ? .easeInOut(duration: 0.2) : Springs.standard
   }
 
   /// The heading's buttons, on the month's line: 今月 away from this
