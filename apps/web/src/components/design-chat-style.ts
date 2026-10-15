@@ -553,6 +553,12 @@ export const chatStyle = {
     outline: "1px solid token(colors.border.default)",
     outlineOffset: "-1px",
   }),
+  // A photo still coming, its grey breathing so it reads as on its way,
+  // not as a photo that is grey.
+  photoLoading: css({
+    _motionReduce: { animation: "none" },
+    animation: "photoLoading 1.6s ease-in-out infinite",
+  }),
   // In a reply's bubble, under the quote, a little in from its edge, as
   // WhatsApp sets one.
   photoInBubble: css({ margin: "8px 4px 4px" }),

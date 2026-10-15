@@ -44,6 +44,8 @@ struct ChatPhotoImage: View {
   var whileInSight = false
   @State private var image: UIImage?
   @State private var inSight = false
+  /// It could not be fetched, so nothing is said to be on its way.
+  @State private var missing = false
 
   var body: some View {
     // Out of sight, nothing is held, not even the kept thumbnail.
@@ -55,8 +57,13 @@ struct ChatPhotoImage: View {
         Image(uiImage: kept)
           .resizable()
           .aspectRatio(contentMode: fit ? .fit : .fill)
+      } else if fit {
+        // Opened large, on black: the system's spinner, as Photos waits.
+        if !missing {
+          ProgressView().tint(.white).controlSize(.large)
+        }
       } else {
-        colors.fillTertiary
+        PhotoComing(breathing: !missing)
       }
     }
     .onScrollVisibilityChange(threshold: 0) { inSight = $0 }
@@ -71,7 +78,11 @@ struct ChatPhotoImage: View {
         image = kept
         return
       }
-      guard let data = try? await groupCalls.photo(photo.id, in: groupID) else { return }
+      guard let data = try? await groupCalls.photo(photo.id, in: groupID) else {
+        missing = !Task.isCancelled
+        return
+      }
+      missing = false
       if let pixels {
         let id = photo.id
         image = await Task.detached(priority: .userInitiated) {
@@ -91,6 +102,31 @@ struct ChatPhotoImage: View {
     let height = CGFloat(photo.height)
     let scale = min(max(shown.width / width, shown.height / height) * displayScale, 1)
     return Int((max(width, height) * scale).rounded(.up))
+  }
+}
+
+/// Where a photo will be while it comes: its grey breathing, as a
+/// skeleton does (/design's photoLoading), so it reads as on its way rather
+/// than as a photo that is grey; still when motion is reduced or it cannot
+/// come.
+private struct PhotoComing: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  let breathing: Bool
+  @State private var faded = false
+
+  var body: some View {
+    colors.fillTertiary
+      .opacity(faded ? 0.4 : 1)
+      .onAppear {
+        guard breathing, !reduceMotion else { return }
+        withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+          faded = true
+        }
+      }
+      .onChange(of: breathing) {
+        if !breathing { withAnimation(.default) { faded = false } }
+      }
   }
 }
 

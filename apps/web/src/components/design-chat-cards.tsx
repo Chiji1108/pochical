@@ -268,6 +268,8 @@ export function PhotoLine({
   onSave?: () => void;
 }) {
   const [viewing, setViewing] = useState(false);
+  // Still coming over the network; one that cannot come stops breathing.
+  const [coming, setComing] = useState(true);
   const size = photoSize(photo);
   const quoted = quote !== undefined;
   const open = (
@@ -281,9 +283,22 @@ export function PhotoLine({
     >
       <img
         alt=""
-        className={chatStyle.photoImage}
+        className={cx(chatStyle.photoImage, coming && chatStyle.photoLoading)}
         draggable={false}
         height={size.height}
+        onError={() => {
+          setComing(false);
+        }}
+        onLoad={() => {
+          setComing(false);
+        }}
+        // Already there when drawn, as a photo read before, it never
+        // breathes.
+        ref={(image) => {
+          if (image?.complete === true) {
+            setComing(false);
+          }
+        }}
         src={photo.src}
         width={size.width}
       />
