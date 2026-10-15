@@ -79,6 +79,7 @@
       "accent-focus",
       "accent-border",
       "accent-container",
+      "accent-switch",
       "calendar-off-tint",
       "calendar-note-marker"
     ],
@@ -207,6 +208,7 @@
               "accent-focus": "#6a8365",
               "accent-border": "#a2b49e",
               "accent-container": "#eef3ed",
+              "accent-switch": "#496444",
               "calendar-off-tint": "#e1e9df",
               "calendar-note-marker": "#d1ddce"
             }
@@ -317,6 +319,7 @@
               "accent-focus": "#8fa68a",
               "accent-border": "#697a66",
               "accent-container": "#2b312a",
+              "accent-switch": "#a4c19f",
               "calendar-off-tint": "#2a3528",
               "calendar-note-marker": "#374235"
             }
@@ -453,6 +456,7 @@
               "accent-focus": "#7b8872",
               "accent-border": "#a8b2a1",
               "accent-container": "#f0f2ee",
+              "accent-switch": "#5b6851",
               "calendar-off-tint": "#e3e8e0",
               "calendar-note-marker": "#d4dccf"
             }
@@ -563,6 +567,7 @@
               "accent-focus": "#97a38f",
               "accent-border": "#6f7869",
               "accent-container": "#2d302b",
+              "accent-switch": "#aebda4",
               "calendar-off-tint": "#2e342a",
               "calendar-note-marker": "#3b4136"
             }
@@ -578,7 +583,7 @@
             "hue": 138,
             "lightness": 0.363
           },
-          "darkLightness": 0.86,
+          "darkLightness": 0.96,
           "grays": {
             "hue": 138,
             "strength": 0.3
@@ -694,6 +699,7 @@
               "accent-focus": "#5a5d59",
               "accent-border": "#acafac",
               "accent-container": "#f1f1f0",
+              "accent-switch": "#3c3f3b",
               "calendar-off-tint": "#e5e6e5",
               "calendar-note-marker": "#d8d9d8"
             }
@@ -701,7 +707,7 @@
           "dark": {
             "marks": [
               {
-                "color": "#cfd2cd",
+                "color": "#eff3ee",
                 "noteOnTile": "#4b4c4a",
                 "tint": "#313230"
               },
@@ -798,12 +804,13 @@
               "media-dim": "#00000052",
               "media-shade": "#00000099",
               "media-warning": "#ffd60a",
-              "accent-default": "#cfd2cd",
-              "accent-fill": "#cfd2cd",
+              "accent-default": "#eff3ee",
+              "accent-fill": "#eff3ee",
               "accent-on-fill": "#262725",
               "accent-focus": "#9c9f9b",
               "accent-border": "#737572",
               "accent-container": "#2e2f2e",
+              "accent-switch": "#ced2cd",
               "calendar-off-tint": "#313230",
               "calendar-note-marker": "#3e3f3d"
             }
@@ -940,6 +947,7 @@
               "accent-focus": "#9b856a",
               "accent-border": "#bbab98",
               "accent-container": "#f4f0ec",
+              "accent-switch": "#7c6447",
               "calendar-off-tint": "#ece5dc",
               "calendar-note-marker": "#e2d7c9"
             }
@@ -1050,6 +1058,7 @@
               "accent-focus": "#af9b83",
               "accent-border": "#807261",
               "accent-container": "#342e27",
+              "accent-switch": "#ccb395",
               "calendar-off-tint": "#393025",
               "calendar-note-marker": "#463d31"
             }
@@ -1181,6 +1190,7 @@
               "accent-focus": "#808a4c",
               "accent-border": "#acb389",
               "accent-container": "#f0f2e8",
+              "accent-switch": "#616a22",
               "calendar-off-tint": "#e5e9d6",
               "calendar-note-marker": "#d7ddbf"
             }
@@ -1291,6 +1301,7 @@
               "accent-focus": "#9ca56e",
               "accent-border": "#727952",
               "accent-container": "#2e3122",
+              "accent-switch": "#b4bf7b",
               "calendar-off-tint": "#30341b",
               "calendar-note-marker": "#3d4128"
             }
@@ -1422,6 +1433,7 @@
               "accent-focus": "#75594f",
               "accent-border": "#bea8a1",
               "accent-container": "#f5f0ee",
+              "accent-switch": "#573a30",
               "calendar-off-tint": "#eee4e0",
               "calendar-note-marker": "#e5d5cf"
             }
@@ -1532,6 +1544,7 @@
               "accent-focus": "#b3978e",
               "accent-border": "#836f69",
               "accent-container": "#352d2a",
+              "accent-switch": "#d1afa3",
               "calendar-off-tint": "#3b2e2a",
               "calendar-note-marker": "#483b37"
             }
@@ -1662,6 +1675,7 @@
               "accent-focus": "#4b8990",
               "accent-border": "#8db7bb",
               "accent-container": "#eaf3f4",
+              "accent-switch": "#1d6971",
               "calendar-off-tint": "#d8eaec",
               "calendar-note-marker": "#c3dfe3"
             }
@@ -1772,6 +1786,7 @@
               "accent-focus": "#73a9af",
               "accent-border": "#567c81",
               "accent-container": "#243234",
+              "accent-switch": "#82c5cc",
               "calendar-off-tint": "#1d3639",
               "calendar-note-marker": "#2a4346"
             }
@@ -1903,6 +1918,7 @@
               "accent-focus": "#a7727d",
               "accent-border": "#c9a2a9",
               "accent-container": "#f8eef0",
+              "accent-switch": "#88515d",
               "calendar-off-tint": "#f3e1e4",
               "calendar-note-marker": "#edd1d6"
             }
@@ -2013,6 +2029,7 @@
               "accent-focus": "#c08f99",
               "accent-border": "#8c6a70",
               "accent-container": "#382b2d",
+              "accent-switch": "#e0a5b0",
               "calendar-off-tint": "#402b2f",
               "calendar-note-marker": "#4d383c"
             }
@@ -2143,6 +2160,7 @@
               "accent-focus": "#7e73a4",
               "accent-border": "#afa8cc",
               "accent-container": "#f1f0f8",
+              "accent-switch": "#5f5286",
               "calendar-off-tint": "#e7e4f4",
               "calendar-note-marker": "#dad5ee"
             }
@@ -2253,6 +2271,7 @@
               "accent-focus": "#a097c4",
               "accent-border": "#766f8f",
               "accent-container": "#2f2d39",
+              "accent-switch": "#baaee6",
               "calendar-off-tint": "#322e43",
               "calendar-note-marker": "#3f3b51"
             }
@@ -2393,6 +2412,7 @@
               "accent-focus": "#c4945e",
               "accent-border": "#906d47",
               "accent-container": "#382c24",
+              "accent-switch": "#efaf69",
               "calendar-off-tint": "#412d1f",
               "calendar-note-marker": "#4e392b"
             }
@@ -2530,6 +2550,7 @@
               "accent-focus": "#af9e5d",
               "accent-border": "#807446",
               "accent-container": "#342f1e",
+              "accent-switch": "#e8d17a",
               "calendar-off-tint": "#393112",
               "calendar-note-marker": "#463e1f"
             }
@@ -2671,6 +2692,7 @@
               "accent-focus": "#99a09d",
               "accent-border": "#717673",
               "accent-container": "#23332b",
+              "accent-switch": "#cad4cf",
               "calendar-off-tint": "#1b392b",
               "calendar-note-marker": "#284637"
             }

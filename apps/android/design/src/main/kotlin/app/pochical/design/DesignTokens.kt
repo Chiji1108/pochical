@@ -92,6 +92,7 @@ data class ThemeColors(
   val accentFocus: Color,
   val accentBorder: Color,
   val accentContainer: Color,
+  val accentSwitch: Color,
   val calendarOffTint: Color,
   val calendarNoteMarker: Color,
   /** The shift colors in picker order; the first is the テーマ's own. */
@@ -142,6 +143,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF6A8365),
       accentBorder = Color(0xFFA2B49E),
       accentContainer = Color(0xFFEEF3ED),
+      accentSwitch = Color(0xFF496444),
       calendarOffTint = Color(0xFFE1E9DF),
       calendarNoteMarker = Color(0xFFD1DDCE),
         marks =
@@ -205,6 +207,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF8FA68A),
       accentBorder = Color(0xFF697A66),
       accentContainer = Color(0xFF2B312A),
+      accentSwitch = Color(0xFFA4C19F),
       calendarOffTint = Color(0xFF2A3528),
       calendarNoteMarker = Color(0xFF374235),
         marks =
@@ -268,6 +271,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF7B8872),
       accentBorder = Color(0xFFA8B2A1),
       accentContainer = Color(0xFFF0F2EE),
+      accentSwitch = Color(0xFF5B6851),
       calendarOffTint = Color(0xFFE3E8E0),
       calendarNoteMarker = Color(0xFFD4DCCF),
         marks =
@@ -331,6 +335,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF97A38F),
       accentBorder = Color(0xFF6F7869),
       accentContainer = Color(0xFF2D302B),
+      accentSwitch = Color(0xFFAEBDA4),
       calendarOffTint = Color(0xFF2E342A),
       calendarNoteMarker = Color(0xFF3B4136),
         marks =
@@ -394,6 +399,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF5A5D59),
       accentBorder = Color(0xFFACAFAC),
       accentContainer = Color(0xFFF1F1F0),
+      accentSwitch = Color(0xFF3C3F3B),
       calendarOffTint = Color(0xFFE5E6E5),
       calendarNoteMarker = Color(0xFFD8D9D8),
         marks =
@@ -451,17 +457,18 @@ data class ThemeColors(
       mediaDim = Color(0x52000000),
       mediaShade = Color(0x99000000),
       mediaWarning = Color(0xFFFFD60A),
-      accentDefault = Color(0xFFCFD2CD),
-      accentFill = Color(0xFFCFD2CD),
+      accentDefault = Color(0xFFEFF3EE),
+      accentFill = Color(0xFFEFF3EE),
       accentOnFill = Color(0xFF262725),
       accentFocus = Color(0xFF9C9F9B),
       accentBorder = Color(0xFF737572),
       accentContainer = Color(0xFF2E2F2E),
+      accentSwitch = Color(0xFFCED2CD),
       calendarOffTint = Color(0xFF313230),
       calendarNoteMarker = Color(0xFF3E3F3D),
         marks =
           listOf(
-          MarkColor("テーマカラー", Color(0xFFCFD2CD), Color(0xFF313230), Color(0xFF4B4C4A)),
+          MarkColor("テーマカラー", Color(0xFFEFF3EE), Color(0xFF313230), Color(0xFF4B4C4A)),
           MarkColor("からし", Color(0xFFD6BB77), Color(0xFF3A3118), Color(0xFF574B2A)),
           MarkColor("オレンジ", Color(0xFFE6B285), Color(0xFF402D1C), Color(0xFF5F462F)),
           MarkColor("テラコッタ", Color(0xFFEFAB95), Color(0xFF442A23), Color(0xFF654238)),
@@ -520,6 +527,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF9B856A),
       accentBorder = Color(0xFFBBAB98),
       accentContainer = Color(0xFFF4F0EC),
+      accentSwitch = Color(0xFF7C6447),
       calendarOffTint = Color(0xFFECE5DC),
       calendarNoteMarker = Color(0xFFE2D7C9),
         marks =
@@ -583,6 +591,7 @@ data class ThemeColors(
       accentFocus = Color(0xFFAF9B83),
       accentBorder = Color(0xFF807261),
       accentContainer = Color(0xFF342E27),
+      accentSwitch = Color(0xFFCCB395),
       calendarOffTint = Color(0xFF393025),
       calendarNoteMarker = Color(0xFF463D31),
         marks =
@@ -646,6 +655,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF808A4C),
       accentBorder = Color(0xFFACB389),
       accentContainer = Color(0xFFF0F2E8),
+      accentSwitch = Color(0xFF616A22),
       calendarOffTint = Color(0xFFE5E9D6),
       calendarNoteMarker = Color(0xFFD7DDBF),
         marks =
@@ -709,6 +719,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF9CA56E),
       accentBorder = Color(0xFF727952),
       accentContainer = Color(0xFF2E3122),
+      accentSwitch = Color(0xFFB4BF7B),
       calendarOffTint = Color(0xFF30341B),
       calendarNoteMarker = Color(0xFF3D4128),
         marks =
@@ -772,6 +783,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF75594F),
       accentBorder = Color(0xFFBEA8A1),
       accentContainer = Color(0xFFF5F0EE),
+      accentSwitch = Color(0xFF573A30),
       calendarOffTint = Color(0xFFEEE4E0),
       calendarNoteMarker = Color(0xFFE5D5CF),
         marks =
@@ -835,6 +847,7 @@ data class ThemeColors(
       accentFocus = Color(0xFFB3978E),
       accentBorder = Color(0xFF836F69),
       accentContainer = Color(0xFF352D2A),
+      accentSwitch = Color(0xFFD1AFA3),
       calendarOffTint = Color(0xFF3B2E2A),
       calendarNoteMarker = Color(0xFF483B37),
         marks =
@@ -898,6 +911,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF4B8990),
       accentBorder = Color(0xFF8DB7BB),
       accentContainer = Color(0xFFEAF3F4),
+      accentSwitch = Color(0xFF1D6971),
       calendarOffTint = Color(0xFFD8EAEC),
       calendarNoteMarker = Color(0xFFC3DFE3),
         marks =
@@ -961,6 +975,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF73A9AF),
       accentBorder = Color(0xFF567C81),
       accentContainer = Color(0xFF243234),
+      accentSwitch = Color(0xFF82C5CC),
       calendarOffTint = Color(0xFF1D3639),
       calendarNoteMarker = Color(0xFF2A4346),
         marks =
@@ -1024,6 +1039,7 @@ data class ThemeColors(
       accentFocus = Color(0xFFA7727D),
       accentBorder = Color(0xFFC9A2A9),
       accentContainer = Color(0xFFF8EEF0),
+      accentSwitch = Color(0xFF88515D),
       calendarOffTint = Color(0xFFF3E1E4),
       calendarNoteMarker = Color(0xFFEDD1D6),
         marks =
@@ -1087,6 +1103,7 @@ data class ThemeColors(
       accentFocus = Color(0xFFC08F99),
       accentBorder = Color(0xFF8C6A70),
       accentContainer = Color(0xFF382B2D),
+      accentSwitch = Color(0xFFE0A5B0),
       calendarOffTint = Color(0xFF402B2F),
       calendarNoteMarker = Color(0xFF4D383C),
         marks =
@@ -1150,6 +1167,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF7E73A4),
       accentBorder = Color(0xFFAFA8CC),
       accentContainer = Color(0xFFF1F0F8),
+      accentSwitch = Color(0xFF5F5286),
       calendarOffTint = Color(0xFFE7E4F4),
       calendarNoteMarker = Color(0xFFDAD5EE),
         marks =
@@ -1213,6 +1231,7 @@ data class ThemeColors(
       accentFocus = Color(0xFFA097C4),
       accentBorder = Color(0xFF766F8F),
       accentContainer = Color(0xFF2F2D39),
+      accentSwitch = Color(0xFFBAAEE6),
       calendarOffTint = Color(0xFF322E43),
       calendarNoteMarker = Color(0xFF3F3B51),
         marks =
@@ -1276,6 +1295,7 @@ data class ThemeColors(
       accentFocus = Color(0xFFC4945E),
       accentBorder = Color(0xFF906D47),
       accentContainer = Color(0xFF382C24),
+      accentSwitch = Color(0xFFEFAF69),
       calendarOffTint = Color(0xFF412D1F),
       calendarNoteMarker = Color(0xFF4E392B),
         marks =
@@ -1339,6 +1359,7 @@ data class ThemeColors(
       accentFocus = Color(0xFFAF9E5D),
       accentBorder = Color(0xFF807446),
       accentContainer = Color(0xFF342F1E),
+      accentSwitch = Color(0xFFE8D17A),
       calendarOffTint = Color(0xFF393112),
       calendarNoteMarker = Color(0xFF463E1F),
         marks =
@@ -1402,6 +1423,7 @@ data class ThemeColors(
       accentFocus = Color(0xFF99A09D),
       accentBorder = Color(0xFF717673),
       accentContainer = Color(0xFF23332B),
+      accentSwitch = Color(0xFFCAD4CF),
       calendarOffTint = Color(0xFF1B392B),
       calendarNoteMarker = Color(0xFF284637),
         marks =
