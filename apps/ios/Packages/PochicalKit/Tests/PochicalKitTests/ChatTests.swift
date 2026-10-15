@@ -1,5 +1,6 @@
 import Foundation
 import ImageIO
+import PochicalDesign
 import PochicalProto
 import SQLiteData
 import Testing
@@ -614,6 +615,24 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   let source = CGImageSourceCreateWithData(shrunk.jpeg as CFData, nil)!
   let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
   #expect(properties?[kCGImagePropertyGPSDictionary] == nil)
+}
+
+@Test func aPhotoGoesWithASmallVersionOnlyWhenLarger() throws {
+  let jpeg = { (width: Int, height: Int) -> Data in
+    let context = CGContext(
+      data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+    let out = NSMutableData()
+    let destination = CGImageDestinationCreateWithData(out, "public.jpeg" as CFString, 1, nil)!
+    CGImageDestinationAddImage(destination, context.makeImage()!, nil)
+    CGImageDestinationFinalize(destination)
+    return out as Data
+  }
+  let small = try #require(ChatPhotos.small(jpeg(1000, 2048)))
+  let source = CGImageSourceCreateWithData(small as CFData, nil)!
+  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+  #expect(properties?[kCGImagePropertyPixelHeight] as? Int == Chat.photoSmallEdge)
+  #expect(ChatPhotos.small(jpeg(640, 640)) == nil)
 }
 
 @Test func aLinksPageIsAskedForButNotAnInvitations() {

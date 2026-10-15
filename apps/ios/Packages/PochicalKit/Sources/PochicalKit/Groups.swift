@@ -187,9 +187,12 @@ public struct GroupCalls: Sendable {
     try await ChatPhotos.fetchPreviewImage(imageID, account: account)
   }
 
-  /// One of the group's chat photos, from the device or else the server.
-  public func photo(_ photoID: String, in groupID: String) async throws -> Data {
-    try await ChatPhotos.fetch(photoID, in: groupID, account: account)
+  /// One of the group's chat photos, from the device or else the server;
+  /// `small` for its small version, as a line or a quote shows it.
+  public func photo(_ photoID: String, in groupID: String, small: Bool = false) async throws
+    -> Data
+  {
+    try await ChatPhotos.fetch(photoID, in: groupID, small: small, account: account)
   }
 
   /// The signed-in user's id, as groups know them among their members:

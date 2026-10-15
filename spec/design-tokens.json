@@ -15,6 +15,7 @@
     "pageSize": 50,
     "photoMaxBytes": 4000000,
     "photoMaxEdge": 2048,
+    "photoSmallEdge": 960,
     "photosPerSend": 4,
     "pictureMaxEdge": 640,
     "runGap": 12,
