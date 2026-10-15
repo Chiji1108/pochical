@@ -131,6 +131,16 @@ describe("the chat with Pochical's people", () => {
         },
         text: "これ https://help.example/b",
       }),
+      // One made up for another address is not kept: the line's own is
+      // read instead.
+      await send({
+        preview: {
+          site: "evil.example",
+          title: "偽物",
+          url: "https://evil.example/",
+        },
+        text: "これ https://help.example/e",
+      }),
       // Taken off with ×.
       await send({ text: "これ https://help.example/c", withoutPreview: true }),
     ];
@@ -149,6 +159,7 @@ describe("the chat with Pochical's people", () => {
     expect([...titles, row?.preview?.includes("ヘルプ")]).toStrictEqual([
       "ヘルプ",
       "アプリの",
+      "ヘルプ",
       undefined,
       true,
     ]);

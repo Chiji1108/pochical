@@ -400,3 +400,19 @@ export const pageOfWords = async (
   }
   return keptPreview((await linkPreview(bucket, url)) ?? undefined);
 };
+
+/**
+ * A page an app sent with a line, kept only when it is of the line's own
+ * first link, so a line cannot carry a made-up page for another address.
+ */
+export const sentPreview = (
+  preview: LinkPreview | undefined,
+  text: string
+): KeptPreview | null => {
+  const link = previewLinkOf(text);
+  const own = link === undefined ? null : URL.parse(link);
+  const page = preview === undefined ? null : URL.parse(preview.url);
+  return own !== null && page !== null && own.href === page.href
+    ? keptPreview(preview)
+    : null;
+};

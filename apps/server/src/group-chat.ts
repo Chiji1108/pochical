@@ -51,7 +51,11 @@ import {
   readMarks,
 } from "./group-do-schema";
 import { isId } from "./ids";
-import { keptPreview, mayRead as mayReadPage } from "./link-preview";
+import {
+  keptPreview,
+  mayRead as mayReadPage,
+  sentPreview,
+} from "./link-preview";
 import { fitsText, isEmoji } from "./text-limits";
 
 // A group's chats as its Group DO keeps them (spec/sync-protocol.md,
@@ -623,8 +627,9 @@ const takeWords = (
             preview:
               kind.case === "change" && kind.value.keepsPreview
                 ? line.preview
-                : keptPreview(
-                    kind.case === "change" ? kind.value.preview : undefined
+                : sentPreview(
+                    kind.case === "change" ? kind.value.preview : undefined,
+                    text
                   ),
             text,
           }
@@ -836,7 +841,7 @@ const takeSend = (
           : { height: photo.height, id: photo.id, width: photo.width },
       poll: send.poll,
       // A page goes with words alone.
-      preview: send.text === "" ? null : keptPreview(send.preview),
+      preview: send.text === "" ? null : sentPreview(send.preview, send.text),
       // A line it cannot answer, as one taken back meanwhile, goes without
       // its quote rather than not at all.
       replyTo: answers(db, userId, send.threadId, replyTo)

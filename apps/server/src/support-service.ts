@@ -20,7 +20,7 @@ import {
   UnsendSupportMessageResponseSchema,
 } from "./gen/pochical/v1/support_pb";
 import type { ChatPhoto } from "./gen/pochical/v1/sync_pb";
-import { keptPreview, pageOfWords } from "./link-preview";
+import { pageOfWords, sentPreview } from "./link-preview";
 import type { KeptPreview } from "./link-preview";
 import { supportPhotoKey } from "./photos";
 import { overLimit } from "./rate-limits";
@@ -94,8 +94,10 @@ const userPreview = async (
   if (text === "" || withoutPreview) {
     return null;
   }
-  if (sent !== undefined) {
-    return keptPreview(sent);
+  // The app's, when it is of these words' own link; else read here.
+  const own = sentPreview(sent, text);
+  if (own !== null) {
+    return own;
   }
   if (await overLimit(env.LINK_PREVIEW_LIMIT, userId)) {
     return null;
