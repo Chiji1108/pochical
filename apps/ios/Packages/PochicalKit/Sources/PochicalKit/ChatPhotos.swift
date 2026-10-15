@@ -61,12 +61,31 @@ public enum ChatPhotos {
     return nil
   }
 
+  /// The photo's small version to send beside it, its longer side at
+  /// `Chat.photoSmallEdge`, for the chat's lines and quotes to fetch in its
+  /// place; nil when the photo is no larger than that already.
+  public static func small(_ jpeg: Data) -> Data? {
+    guard let source = CGImageSourceCreateWithData(jpeg as CFData, nil),
+      let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+      let width = properties[kCGImagePropertyPixelWidth] as? Int,
+      let height = properties[kCGImagePropertyPixelHeight] as? Int,
+      max(width, height) > Chat.photoSmallEdge
+    else { return nil }
+    return shrink(jpeg, maxEdge: Chat.photoSmallEdge)?.jpeg
+  }
+
   // MARK: Files
 
   /// Where a group's photo is kept on the device once seen or sent: among
   /// the App Group's caches, so the widgets show the faces too.
   public static func cached(_ photoID: String, in groupID: String) -> URL {
     caches("ChatPhotos/\(groupID)").appending(path: "\(photoID).jpg")
+  }
+
+  /// Where a chat photo's small version is kept on the device once
+  /// fetched, beside the photo.
+  static func cachedSmall(_ photoID: String, in groupID: String) -> URL {
+    caches("ChatPhotos/\(groupID)").appending(path: "\(photoID)-small.jpg")
   }
 
   /// Where the member's own photo waits until uploaded, out of the caches
@@ -91,6 +110,7 @@ public enum ChatPhotos {
   /// Takes a photo off the device, as when its line is taken back.
   public static func forget(_ photoID: String, in groupID: String) {
     try? FileManager.default.removeItem(at: cached(photoID, in: groupID))
+    try? FileManager.default.removeItem(at: cachedSmall(photoID, in: groupID))
     try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
   }
 
@@ -134,7 +154,9 @@ public enum ChatPhotos {
   }
 
   /// Uploads the member's own photo to the group's photos, once; a retry
-  /// stores it again.
+  /// stores it again. A chat's photo goes with its small version, first,
+  /// so the lines find it as soon as they are sent; the user's own photos
+  /// (`mine`) are small already.
   static func upload(
     _ photoID: String, in groupID: String, account: Account, server: URL = Server.url,
     send: Account.Send = { try await URLSession.shared.data(for: $0) }
@@ -145,6 +167,10 @@ public enum ChatPhotos {
         return
       }
       throw UploadError.gone
+    }
+    if groupID != mine, let small = small(jpeg) {
+      try await put(
+        small, as: photoID, in: groupID, small: true, account: account, server: server, send: send)
     }
     try await put(jpeg, as: photoID, in: groupID, account: account, server: server, send: send)
     try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
@@ -162,10 +188,10 @@ public enum ChatPhotos {
   }
 
   private static func put(
-    _ jpeg: Data, as photoID: String, in groupID: String, account: Account, server: URL,
-    send: Account.Send
+    _ jpeg: Data, as photoID: String, in groupID: String, small: Bool = false, account: Account,
+    server: URL, send: Account.Send
   ) async throws {
-    var request = URLRequest(url: photoURL(photoID, in: groupID, server: server))
+    var request = URLRequest(url: photoURL(photoID, in: groupID, small: small, server: server))
     request.httpMethod = "PUT"
     request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
     request.setValue("Bearer \(try await account.token())", forHTTPHeaderField: "Authorization")
@@ -176,19 +202,26 @@ public enum ChatPhotos {
   }
 
   /// The group's photo, from the device or else the server, kept once
-  /// fetched.
+  /// fetched. `small` asks for its small version, as the chat's lines and
+  /// quotes show it: the photo itself when the device holds it, and when
+  /// it has none.
   public static func fetch(
-    _ photoID: String, in groupID: String, account: Account, server: URL = Server.url
+    _ photoID: String, in groupID: String, small: Bool = false, account: Account,
+    server: URL = Server.url
   ) async throws -> Data {
     if let held = held(photoID, in: groupID) {
       return held
     }
-    var request = URLRequest(url: photoURL(photoID, in: groupID, server: server))
+    let kept = small ? cachedSmall(photoID, in: groupID) : cached(photoID, in: groupID)
+    if small, let held = try? Data(contentsOf: kept) {
+      return held
+    }
+    var request = URLRequest(url: photoURL(photoID, in: groupID, small: small, server: server))
     request.setValue("Bearer \(try await account.token())", forHTTPHeaderField: "Authorization")
     let (data, response) = try await URLSession.shared.data(for: request)
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
     guard status == 200 else { throw UploadError.refused(status) }
-    try? data.write(to: cached(photoID, in: groupID), options: .atomic)
+    try? data.write(to: kept, options: .atomic)
     return data
   }
 
@@ -233,6 +266,13 @@ public enum ChatPhotos {
   ) async throws {
     try keep(jpeg, as: photoID, in: groupID)
     try await upload(photoID, in: groupID, account: account)
+  }
+
+  private static func photoURL(
+    _ photoID: String, in groupID: String, small: Bool = false, server: URL
+  ) -> URL {
+    let url = photoURL(photoID, in: groupID, server: server)
+    return small ? url.appending(queryItems: [URLQueryItem(name: "size", value: "small")]) : url
   }
 
   private static func photoURL(_ photoID: String, in groupID: String, server: URL) -> URL {

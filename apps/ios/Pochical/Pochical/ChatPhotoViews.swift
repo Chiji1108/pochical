@@ -26,9 +26,10 @@ private enum PhotoBox {
 }
 
 /// One of the group's photos as it loads: from the device, else fetched.
-/// In the chat it is shrunk to the size it shows and kept so (Thumbnails),
-/// so a line scrolled back into sight draws at once rather than reading and
-/// shrinking its 2048 pixels again.
+/// In the chat it is fetched small (`Chat.photoSmallEdge`), shrunk to the
+/// size it shows and kept so (Thumbnails), so a line scrolled back into
+/// sight draws at once rather than reading and shrinking it again; opened
+/// large, the photo itself.
 struct ChatPhotoImage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.themeColors) private var colors
@@ -81,7 +82,8 @@ struct ChatPhotoImage: View {
       }
       // Fetched again, it is on its way again.
       missing = false
-      guard let data = try? await groupCalls.photo(photo.id, in: groupID) else {
+      guard let data = try? await groupCalls.photo(photo.id, in: groupID, small: pixels != nil)
+      else {
         missing = !Task.isCancelled
         return
       }

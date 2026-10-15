@@ -12,6 +12,23 @@ import { previewImageKey } from "./link-preview";
 export const photoKey = (groupId: string, photoId: string): string =>
   `groups/${groupId}/photos/${photoId}`;
 
+/**
+ * Where a chat photo's small version is kept, beside the photo: shrunk by
+ * the sender's phone to chatRules.photoSmallEdge for the chat's lines and
+ * quotes, and gone with it.
+ */
+export const smallKey = (key: string): string => `${key}/small`;
+
+/** A chat photo's keys, the photo's and its small version's, to delete both. */
+export const withSmall = (key: string): string[] => [key, smallKey(key)];
+
+/**
+ * Whether a request is for a photo's small version (`?size=small`): an
+ * upload of it, or a read that falls back on the photo while it has none.
+ */
+const wantsSmall = (request: Request): boolean =>
+  new URL(request.url).searchParams.get("size") === "small";
+
 /** A group's photo by its path: /v1/groups/{groupId}/photos/{photoId}. */
 export const PHOTO_PATH =
   /^\/v1\/groups\/(?<groupId>[^/]+)\/photos\/(?<photoId>[^/]+)$/u;
@@ -66,7 +83,8 @@ export const putPhoto = async (
   if (!(await env.GROUPS.getByName(groupId).notePhoto(photoId, userId))) {
     return new Response("Not your photo", { status: 409 });
   }
-  await env.PHOTOS.put(photoKey(groupId, photoId), bytes, {
+  const key = photoKey(groupId, photoId);
+  await env.PHOTOS.put(wantsSmall(request) ? smallKey(key) : key, bytes, {
     customMetadata: { userId },
     httpMetadata: { contentType: "image/jpeg" },
   });
@@ -91,12 +109,32 @@ const servePhoto = async (env: Env, key: string): Promise<Response> => {
   });
 };
 
+/**
+ * A chat photo, or its small version when asked for one and it has one
+ * (the photo itself otherwise, as for a face, which is sent small already).
+ */
+const serveChatPhoto = async (
+  request: Request,
+  env: Env,
+  key: string
+): Promise<Response> => {
+  if (wantsSmall(request)) {
+    const small = await servePhoto(env, smallKey(key));
+    if (small.ok) {
+      return small;
+    }
+  }
+  return await servePhoto(env, key);
+};
+
 /** A group's photo for one of its members. */
 export const getPhoto = async (
+  request: Request,
   env: Env,
   groupId: string,
   photoId: string
-): Promise<Response> => await servePhoto(env, photoKey(groupId, photoId));
+): Promise<Response> =>
+  await serveChatPhoto(request, env, photoKey(groupId, photoId));
 
 /**
  * Where a photo in a user's chat with Pochical's people is kept: under the
@@ -122,13 +160,18 @@ export const supportPhoto = async (
       if (bytes instanceof Response) {
         return bytes;
       }
-      await env.PHOTOS.put(supportPhotoKey(userId, photoId), bytes, {
+      const key = supportPhotoKey(userId, photoId);
+      await env.PHOTOS.put(wantsSmall(request) ? smallKey(key) : key, bytes, {
         httpMetadata: { contentType: "image/jpeg" },
       });
       return new Response(null, { status: 204 });
     }
     case "GET": {
-      return await servePhoto(env, supportPhotoKey(userId, photoId));
+      return await serveChatPhoto(
+        request,
+        env,
+        supportPhotoKey(userId, photoId)
+      );
     }
     default: {
       return new Response("Method not allowed", { status: 405 });

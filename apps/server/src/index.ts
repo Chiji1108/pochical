@@ -87,7 +87,7 @@ const photoRequest = async (
       return await putPhoto(request, env, groupId, photoId, user.id);
     }
     case "GET": {
-      return await getPhoto(env, groupId, photoId);
+      return await getPhoto(request, env, groupId, photoId);
     }
     default: {
       return new Response("Method not allowed", { status: 405 });

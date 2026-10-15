@@ -62,7 +62,7 @@ import {
   takeMemberRepeatOrders,
 } from "./group-shifts";
 import { linkPreview } from "./link-preview";
-import { photoKey } from "./photos";
+import { photoKey, withSmall } from "./photos";
 import { overLimit } from "./rate-limits";
 import {
   acceptSyncSocket,
@@ -442,7 +442,7 @@ export class GroupDO extends DurableObject<Env> {
       const groupId = this.ctx.id.name;
       if (groupId !== undefined && taken.photosGone.length > 0) {
         await this.env.PHOTOS.delete(
-          taken.photosGone.map((id) => photoKey(groupId, id))
+          taken.photosGone.flatMap((id) => withSmall(photoKey(groupId, id)))
         );
       }
       closeUserSockets(this.ctx, userId);
@@ -599,7 +599,9 @@ export class GroupDO extends DurableObject<Env> {
     if (groupId === undefined || photoId === kept) {
       return;
     }
-    this.ctx.waitUntil(this.env.PHOTOS.delete(photoKey(groupId, photoId)));
+    this.ctx.waitUntil(
+      this.env.PHOTOS.delete(withSmall(photoKey(groupId, photoId)))
+    );
   }
 
   /** A new member at the next cursor, or one who left coming back, as a change. */
@@ -898,7 +900,9 @@ export class GroupDO extends DurableObject<Env> {
     const groupId = this.ctx.id.name;
     if (groupId !== undefined && photosGone.length > 0) {
       this.ctx.waitUntil(
-        this.env.PHOTOS.delete(photosGone.map((id) => photoKey(groupId, id)))
+        this.env.PHOTOS.delete(
+          photosGone.flatMap((id) => withSmall(photoKey(groupId, id)))
+        )
       );
     }
     broadcastChanges(this.ctx, changed, seenBy, (change, reader) =>

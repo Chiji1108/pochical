@@ -5,7 +5,7 @@ import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats, supportMessages, supportReactions } from "./db/schema";
-import { supportPhotoKey } from "./photos";
+import { supportPhotoKey, withSmall } from "./photos";
 
 export type SupportRow = typeof supportMessages.$inferSelect;
 
@@ -195,7 +195,9 @@ export const unsendLine = async (env: Env, line: SupportRow): Promise<void> => {
     db.delete(supportReactions).where(eq(supportReactions.messageId, line.id)),
   ]);
   if (line.photoId !== null) {
-    await env.PHOTOS.delete(supportPhotoKey(line.userId, line.photoId));
+    await env.PHOTOS.delete(
+      withSmall(supportPhotoKey(line.userId, line.photoId))
+    );
   }
 };
 
