@@ -98,9 +98,12 @@ struct ChatComposer: View {
   let say: (String) -> Void
   /// What the photo picker just handed over, read into the tray.
   @State private var photoItems: [PhotosPickerItem] = []
-  /// The row's height: each of its buttons, the field at least as tall;
-  /// folded, the tools narrow to one.
+  /// The row's height: each of its buttons, the field at least as tall.
   private static let buttonSize: CGFloat = 38
+  /// Each tool's width (写真を送る, 日にちを共有, the ›), side by side with
+  /// no gap, as LINE's row of icons and /design's, leaving the room to the
+  /// field; folded, the tools narrow to one.
+  private static let toolWidth: CGFloat = 32
 
   var body: some View {
     let trimmed = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -148,31 +151,31 @@ struct ChatComposer: View {
         // field does: one put in as it rises would start where it ends.
         if editing == nil {
           ZStack(alignment: .leading) {
-            HStack(spacing: 8) {
+            HStack(spacing: 0) {
               photoButton
               if let onShareDays {
                 Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
                   .labelStyle(.iconOnly)
                   .font(.system(size: 20))
                   .foregroundStyle(colors.textSecondary)
-                  .frame(width: Self.buttonSize, height: Self.buttonSize)
+                  .frame(width: Self.toolWidth, height: Self.buttonSize)
               }
             }
             .opacity(folded ? 0 : 1)
-            .offset(x: folded ? -Self.buttonSize : 0)
+            .offset(x: folded ? -Self.toolWidth : 0)
             .disabled(folded)
             .accessibilityHidden(folded)
             Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
               .labelStyle(.iconOnly)
               .font(.system(size: 20, weight: .medium))
               .foregroundStyle(colors.textSecondary)
-              .frame(width: Self.buttonSize, height: Self.buttonSize)
+              .frame(width: Self.toolWidth, height: Self.buttonSize)
               .opacity(folded ? 1 : 0)
               .scaleEffect(folded ? 1 : 0.6)
               .disabled(!folded)
               .accessibilityHidden(!folded)
           }
-          .frame(width: folded ? Self.buttonSize : nil, alignment: .leading)
+          .frame(width: folded ? Self.toolWidth : nil, alignment: .leading)
           .clipped()
         }
         ComposerField(
@@ -254,7 +257,7 @@ struct ChatComposer: View {
         Image(systemName: "photo")
           .font(.system(size: 20))
           .foregroundStyle(iconColor)
-          .frame(width: Self.buttonSize, height: Self.buttonSize)
+          .frame(width: Self.toolWidth, height: Self.buttonSize)
       }
       .accessibilityLabel("写真を送る")
       .onChange(of: photoItems) { _, items in
@@ -269,7 +272,7 @@ struct ChatComposer: View {
       .labelStyle(.iconOnly)
       .font(.system(size: 20))
       .foregroundStyle(colors.textQuaternary)
-      .frame(width: Self.buttonSize, height: Self.buttonSize)
+      .frame(width: Self.toolWidth, height: Self.buttonSize)
     }
   }
 
