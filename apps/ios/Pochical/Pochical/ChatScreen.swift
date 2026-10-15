@@ -230,13 +230,21 @@ struct ChatScreen: View {
     // The container is already inside the bars and the margins. Kept in
     // `scroll`, not the screen's state: the keyboard pulled down changes it
     // at every frame, which would remake every line at each.
-    .onScrollGeometryChange(for: CGFloat.self) { geometry in
-      geometry.containerSize.height
-    } action: { _, now in
-      scroll.seen = now
-      // The keyboard coming up or going keeps a following chat at its foot.
-      if opened, following {
-        toLatest(animated: true)
+    .onScrollGeometryChange(for: Room.self) { geometry in
+      Room(
+        seen: geometry.containerSize.height,
+        below: geometry.contentSize.height + geometry.contentInsets.bottom
+          - geometry.visibleRect.maxY)
+    } action: { before, now in
+      guard now.seen != before.seen else { return }
+      scroll.seen = now.seen
+      // The bottom anchor holds a following chat at its foot as the room
+      // changes, but not as the chat is pushed in: the scroll view puts
+      // back the place it first had at the screen's whole height, short
+      // of the foot by the composer. Put back at once, rather than with a
+      // scroll at each frame of the room's own animation.
+      if following, now.below > 1 {
+        toLatest()
       }
     }
     .overlay(alignment: .bottomTrailing) {
@@ -404,7 +412,13 @@ struct ChatScreen: View {
       withAnimation { typers = typers.filter { $0.value > .now } }
     }
     // Lines coming in and someone writing keep a following chat at its
-    // foot.
+    // foot, scrolled there so the line comes in smoothly: the bottom
+    // anchor alone holds the foot only once the line is laid out, drifting
+    // as it animates in. Anything else changing the lines' height or the
+    // room they are seen in (a link's page drawn, the composer growing,
+    // the keyboard) the bottom anchor holds at the foot each frame by itself;
+    // a scroll asked for at each of those frames held the screen to a
+    // third of its frames.
     .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count)) {
       before, now in
       guard opened, following else { return }
@@ -412,22 +426,8 @@ struct ChatScreen: View {
       // than going past it, as the chat's catch-up bringing many at once.
       if before.latest != now.latest, let first = unreadComing(after: before.latest) {
         show(from: first)
-      } else if before.latest == now.latest, before.writers == now.writers {
-        // The room changing alone, as the composer grows or the keyboard
-        // comes up: held at the foot each frame of the room's own
-        // animation, not with one of the scroll's own started every frame,
-        // which held the screen to a third of its frames.
-        toLatest()
       } else {
         toLatest(animated: true)
-      }
-    }
-    // Whatever else changes the lines' height while following, a photo or
-    // a link's page drawn, a long line folded, from the first layout on:
-    // the scroll view keeps its offset, not its foot, so it is put back.
-    .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { before, now in
-      if following {
-        toLatest()
       }
     }
     // An earlier page coming in above, the lines seen stay: held at the
