@@ -30,6 +30,10 @@ export const chatRules = {
   // the same before its preview is asked for, so one typed by hand is not
   // read at every letter.
   linkPreviewSettleMs: 400,
+  // How long, in milliseconds, a press on a line is held before it opens
+  // the line's reactions and menu, with its haptic: quick, as iMessage's
+  // haptic comes, yet past a slow tap on a photo.
+  longPressMs: 250,
   // The most lines pinned at once, as LINE keeps five announcements; a
   // new one takes the place of the oldest.
   maxPins: 5,
