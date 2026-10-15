@@ -277,7 +277,8 @@ struct ChatScreen: View {
           draft: draft, groupID: group.id, threadID: threadID,
           mentionable: otherID != nil
             ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
-          nameOf: nameOf, onSubmit: submit, onStopEditing: stopEditing,
+          nameOf: nameOf, quoteOf: { quote(of: Int64($0) ?? 0) }, onSubmit: submit,
+          onStopEditing: stopEditing,
           onShareDays: { sharingDays = true }, say: say)
       }
     }
@@ -1090,14 +1091,14 @@ struct ChatScreen: View {
   /// Answers a line (返信): quoted over the composer until sent or ×.
   private func reply(to line: ChatLineRow) {
     if draft.editing != nil { stopEditing() }
-    withAnimation { draft.reply = DraftReply(id: String(line.seq), quote: quote(of: line.seq)) }
+    withAnimation { draft.replyTo = String(line.seq) }
     draft.field.focus()
   }
 
   /// The line being answered, for the first line sent: then no more.
   private func takeReply() -> UInt64 {
-    defer { draft.reply = nil }
-    return draft.reply.flatMap { UInt64($0.id) } ?? 0
+    defer { draft.replyTo = nil }
+    return draft.replyTo.flatMap(UInt64.init) ?? 0
   }
 
   /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):
@@ -1122,7 +1123,7 @@ struct ChatScreen: View {
   }
 
   private func edit(_ line: ChatLineRow) {
-    draft.reply = nil
+    draft.replyTo = nil
     draft.editing = line
     // Its mentions as @name again, still picked.
     draft.text = plainText(line.text, nameOf: nameOf)

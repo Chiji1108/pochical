@@ -181,7 +181,8 @@ struct SupportChatScreen: View {
     // share, names to mention, a link's page, and who is writing.
     .safeAreaInset(edge: .bottom, spacing: 0) {
       ChatComposer(
-        draft: draft, groupID: ChatPhotos.support, previews: false, onSubmit: sendAll, say: say)
+        draft: draft, groupID: ChatPhotos.support, quoteOf: quote(of:), previews: false,
+        onSubmit: sendAll, say: say)
     }
     .navigationTitle(Self.supportName)
     .navigationBarTitleDisplayMode(.inline)
@@ -335,7 +336,7 @@ struct SupportChatScreen: View {
   private func actions(for line: SupportLine) -> [MessageAction] {
     var actions = [
       MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") {
-        withAnimation { draft.reply = DraftReply(id: line.id, quote: quote(of: line.id)) }
+        withAnimation { draft.replyTo = line.id }
         draft.field.focus()
       }
     ]
@@ -446,7 +447,7 @@ struct SupportChatScreen: View {
   }
 
   private func unsend(_ line: SupportLine) {
-    if draft.reply?.id == line.id { draft.reply = nil }
+    if draft.replyTo == line.id { draft.replyTo = nil }
     Task {
       guard let kept = try? await groupCalls.unsendSupport(line.id) else { return }
       if let photo = line.photo { ChatPhotos.forget(photo.id, in: ChatPhotos.support) }
@@ -474,7 +475,7 @@ struct SupportChatScreen: View {
     guard !draft.readingPhotos else { return }
     let text = String(draft.field.commit().prefix(TextLimits.chatMessage))
       .trimmingCharacters(in: .whitespacesAndNewlines)
-    var replyTo = draft.reply?.id
+    var replyTo = draft.replyTo
     var lines: [Waiting] = []
     for picked in draft.photos {
       guard (try? ChatPhotos.keep(picked.shrunk.jpeg, as: picked.id, in: ChatPhotos.support)) != nil
@@ -488,7 +489,7 @@ struct SupportChatScreen: View {
     }
     guard !lines.isEmpty else { return }
     draft.text = ""
-    draft.reply = nil
+    draft.replyTo = nil
     withAnimation { draft.photos = [] }
     for line in lines { send(line) }
   }

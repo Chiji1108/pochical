@@ -12,8 +12,9 @@ final class ChatDraft {
   var text = ""
   /// The line of one's own being changed in the composer.
   var editing: ChatLineRow?
-  /// The line being answered (返信), quoted over the composer.
-  var reply: DraftReply?
+  /// The line being answered (返信), by its id in its chat, quoted over
+  /// the composer as the chat has it now.
+  var replyTo: String?
   /// Days to go with the next message (共有する日), sent first.
   var attachedDays: [Day]?
   /// Members picked from the list of names while writing, to be sent as
@@ -68,13 +69,6 @@ final class ChatDraft {
   }
 }
 
-/// The line a message answers (返信): its id in its chat, and its quote
-/// as the bar over the composer shows it.
-struct DraftReply: Equatable {
-  let id: String
-  let quote: LineQuote
-}
-
 /// A chat's composer (/design's), a group's and the support chat's: what
 /// the message answers or changes and what goes with it over the field,
 /// the tools folded into a › while writing, the send button, and in a
@@ -93,6 +87,9 @@ struct ChatComposer: View {
   /// none in a one-to-one chat or the support chat.
   var mentionable: [GroupMemberRow] = []
   var nameOf: (String) -> String = { _ in "" }
+  /// The line being answered as its quote shows it, read each time from
+  /// the chat as it is: taken back or its writer blocked, it says so.
+  let quoteOf: (String) -> LineQuote
   /// The page of the words' first link goes with them, in a group's chat.
   var previews = true
   let onSubmit: () -> Void
@@ -123,9 +120,9 @@ struct ChatComposer: View {
           title: "メッセージを編集", words: plainText(editing.text, nameOf: nameOf),
           stop: "編集をやめる", onStop: onStopEditing)
       }
-      if editing == nil, let reply = draft.reply {
-        ReplyBar(quote: reply.quote, groupID: groupID) {
-          withAnimation { draft.reply = nil }
+      if editing == nil, let replyTo = draft.replyTo {
+        ReplyBar(quote: quoteOf(replyTo), groupID: groupID) {
+          withAnimation { draft.replyTo = nil }
         }
       }
       if editing == nil, let attachedDays = draft.attachedDays {
