@@ -24,6 +24,18 @@ final class ChatScroll {
   var linesHeight: CGFloat = 0
   /// The height the lines are seen in, between the pins and the composer.
   var seen: CGFloat = 0
+  /// How far the lines are scrolled from their top, set at every frame
+  /// and read only to move them, so remaking nothing.
+  var offset: CGFloat = 0
+  /// Where the lines are scrolled to by code by an offset.
+  var position = ScrollPosition()
+  /// The line first as earlier pages were asked for, held where it is on
+  /// the screen as they come in above it, until the chat follows its
+  /// latest again. Not once a line is opened at 続きを読む, which goes on
+  /// down from where it is.
+  var edge: String?
+  /// How far the lines seen have been moved down since, to move them back.
+  var moveBack: CGFloat = 0
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
@@ -127,8 +139,6 @@ struct ScrollPlace: Hashable {
   /// The lines are shorter than the screen, held at its foot, with
   /// nowhere to scroll.
   var fits = true
-  /// At the top edge, where an earlier page coming in would leave it.
-  var atTop = false
   /// Near enough the top that its spinner is on the screen.
   var nearTop = false
 }
@@ -151,6 +161,61 @@ struct FollowKey: Equatable {
 struct Room: Equatable {
   let seen: CGFloat
   let below: CGFloat
+}
+
+/// The lines' scroll position, read here, not in the screen, so the
+/// person's scrolling setting it remakes only this.
+struct ScrollsBy: ViewModifier {
+  @Bindable var scroll: ChatScroll
+
+  func body(content: Content) -> some View {
+    content.scrollPosition($scroll.position)
+  }
+}
+
+/// An earlier page coming in above the lines, they stay where they were on
+/// the screen, as the messaging apps keep them. The bottom anchor holds
+/// them only at times (not at the top edge, nor for a page coming in just
+/// after the one before was put back, as two do in a fast fling), and the
+/// page's long lines grow a frame later as their 続きを読む is measured.
+/// So the line that was first is watched: whatever comes in or grows above
+/// it, the lines are moved back by as much as it moved on the screen.
+struct KeepsSeenLines: View {
+  let id: String
+  let scroll: ChatScroll
+
+  var body: some View {
+    if scroll.edge == id {
+      Color.clear.onGeometryChange(for: EdgeSpot.self) { geometry in
+        // Its foot: its own top changes as lines come in over it, its
+        // writer's name going when the run now starts above it.
+        EdgeSpot(
+          inLines: geometry.frame(in: .named(ChatScreen.lines)).maxY,
+          onScreen: geometry.frame(in: .scrollView).maxY)
+      } action: { before, now in
+        // Scrolling moves it on the screen only; lines above it change
+        // where it is among them.
+        guard abs(now.inLines - before.inLines) > 0.5 else { return }
+        let moved = now.onScreen - before.onScreen
+        guard abs(moved) > 0.5 else { return }
+        // After this layout: asked for during it, the scroll view drops it.
+        // Moved again before then, as the page's long lines grow, it goes
+        // back by both at once.
+        let asked = scroll.moveBack != 0
+        scroll.moveBack += moved
+        guard !asked else { return }
+        Task { @MainActor in
+          scroll.position.scrollTo(y: scroll.offset + scroll.moveBack)
+          scroll.moveBack = 0
+        }
+      }
+    }
+  }
+}
+
+nonisolated private struct EdgeSpot: Equatable {
+  let inLines: CGFloat
+  let onScreen: CGFloat
 }
 
 /// The lines, shorter than the room they are seen in, fill it at its foot.
