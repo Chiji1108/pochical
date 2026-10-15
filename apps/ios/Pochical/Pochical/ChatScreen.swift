@@ -155,6 +155,7 @@ struct ChatScreen: View {
             let parted = item.startsRun && item.id != listed.first?.id
             row(item, names: names, showsTime: !timeless.contains(item.id))
               .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
+              .background { KeepsSeenLines(id: item.id, scroll: scroll) }
           }
           // Who is writing now, under the latest line; not someone blocked.
           ForEach(typers.keys.filter { !blocked.contains($0) }.sorted(), id: \.self) { userID in
@@ -194,6 +195,7 @@ struct ChatScreen: View {
     // the inset it adds over short lines left room to scroll.
     .defaultScrollAnchor(.bottom, for: .initialOffset)
     .defaultScrollAnchor(.bottom, for: .sizeChanges)
+    .modifier(ScrollsBy(scroll: scroll))
     .scrollDismissesKeyboard(.interactively)
     .onScrollGeometryChange(for: ScrollPlace.self) { geometry in
       let below =
@@ -202,7 +204,6 @@ struct ChatScreen: View {
       return ScrollPlace(
         atLatest: below < 24, away: below > geometry.containerSize.height / 2,
         fits: geometry.contentSize.height <= geometry.containerSize.height + 1,
-        atTop: geometry.contentOffset.y <= -geometry.contentInsets.top + 1,
         nearTop: geometry.contentOffset.y <= -geometry.contentInsets.top + Metrics.touch)
     } action: { before, now in
       scroll.place = now
@@ -227,6 +228,13 @@ struct ChatScreen: View {
     .onScrollTargetVisibilityChange(idType: String.self) { seen in
       let day = dayOver(seen.first, in: items(chat.state))
       if day != scroll.topDay { scroll.topDay = day }
+    }
+    // Where the lines are scrolled, from their top as the scroll position
+    // counts it, to move them back as earlier ones come in (KeepsSeenLines).
+    .onScrollGeometryChange(for: CGFloat.self) { geometry in
+      geometry.contentOffset.y + geometry.contentInsets.top
+    } action: { _, offset in
+      scroll.scrolled(to: offset)
     }
     // The container is already inside the bars and the margins. Kept in
     // `scroll`, not the screen's state: the keyboard pulled down changes it
@@ -431,14 +439,9 @@ struct ChatScreen: View {
         toLatest(animated: true)
       }
     }
-    // An earlier page coming in above, the lines seen stay: held at the
-    // top edge, the view would stay there, on the page's first lines.
-    .onChange(of: state.lines.first?.seq) { before, now in
-      guard let before, let now, now < before, scroll.place.atTop,
-        let first = state.lines.first(where: { $0.seq == before })
-      else { return }
-      // Once the page is laid out above it.
-      Task { @MainActor in scroller?.scrollTo("line-\(first.opID)", anchor: .top) }
+    // Back at the latest, the line held as earlier pages came in is let go.
+    .onChange(of: following) {
+      if following { scroll.letGo() }
     }
     // One's own line just sent shows at the foot, wherever the lines were.
     .onChange(of: state.waiting.last?.opID) { _, sent in
@@ -685,6 +688,7 @@ struct ChatScreen: View {
       // Opened where it is, its words going on down from there, as the
       // messaging apps open a long one: not carried to the foot.
       following = false
+      scroll.letGo()
       withAnimation { _ = unfolded.insert(line.opID) }
     case .openPhoto:
       viewing = line.photo
@@ -849,7 +853,12 @@ struct ChatScreen: View {
   /// Lays out a page more of earlier lines: those the device holds, else
   /// asked for, shown as they come.
   private func showEarlier() async {
-    guard let first = chat.state.lines.first?.seq else { return }
+    guard let line = chat.state.lines.first else { return }
+    let first = line.seq
+    // Pages asked for one after another keep the line first before them:
+    // the next is asked for as one comes in at the top, before the long
+    // lines on it have grown.
+    if scroll.edge == nil { scroll.edge = "line-\(line.opID)" }
     window = max(first - Int64(Chat.pageSize), 1)
     await reload()
     guard chat.state.lines.first?.seq == first, !chat.state.atStart else { return }
@@ -1088,8 +1097,9 @@ struct ChatScreen: View {
     say("\(day.fullText)に決めました")
   }
 
-  /// The lines' own coordinates, where ここから新着 is measured.
-  private static let lines = "lines"
+  /// The lines' own coordinates, where ここから新着 and the line kept as
+  /// earlier ones come in are measured.
+  static let lines = "lines"
 
   /// The foot's id, under the latest line and anyone writing.
   private static let foot = "foot"
