@@ -252,8 +252,12 @@ struct SupportChatScreen: View {
   /// menu; its emoji under it.
   private func row(_ line: SupportLine, first: Bool, showsTime: Bool) -> some View {
     let mine = !line.fromSupport
-    // Beside the bubble toward the middle, as the group chats' time.
-    let time = Text(showsTime ? Self.clock(line) : "")
+    // Beside the bubble toward the middle, as the group chats' time; left
+    // to the next line, its room is kept, so the bubble is as wide either
+    // way.
+    let time = Text(Self.clock(line))
+      .opacity(showsTime ? 1 : 0)
+      .accessibilityHidden(!showsTime)
       .font(.caption2)
       .foregroundStyle(colors.textQuaternary)
       .padding(.bottom, 2)

@@ -235,10 +235,19 @@ struct LineView: View {
         .accessibilityLabel("送れませんでした")
         .accessibilityHint("押すと再送か削除")
       } else if waiting {
-        Image(systemName: "clock")
-          .accessibilityLabel("送信中")
+        // In the time's room, so the bubble stays as wide once sent.
+        Text(ChatTime.clock(time))
+          .hidden()
+          .overlay(alignment: mine ? .trailing : .leading) {
+            Image(systemName: "clock")
+              .accessibilityLabel("送信中")
+          }
       } else if showsTime {
         Text(ChatTime.clock(time))
+      } else {
+        // Left to the next line, its room is kept, so the bubble is as
+        // wide either way.
+        Text(ChatTime.clock(time)).hidden()
       }
     }
     .font(.caption2)

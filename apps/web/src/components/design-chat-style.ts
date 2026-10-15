@@ -695,6 +695,7 @@ export const chatStyle = {
     paddingBottom: "2px",
     textStyle: "caption2",
   }),
+  timeKept: css({ visibility: "hidden" }),
   // A blocked member's message folded to one line, in the app's own lines'
   // voice, opening on a tap.
   blocked: css({

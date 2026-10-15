@@ -429,7 +429,13 @@ export function MessageLine({
                 {message.edited && "編集済み"}
               </span>
             )}
-            {showsTime(message, next) && message.time}
+            {/* Left to the next line, its room is kept, so the bubble
+                is as wide either way (spec/chat.md, In a message). */}
+            {showsTime(message, next) ? (
+              message.time
+            ) : (
+              <span className={chatStyle.timeKept}>{message.time}</span>
+            )}
           </small>
         )}
       </span>
