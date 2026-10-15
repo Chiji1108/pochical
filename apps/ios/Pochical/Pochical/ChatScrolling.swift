@@ -22,6 +22,8 @@ final class ChatScroll {
   /// and opening has nowhere to go for it then.
   var unreadTop: CGFloat?
   var linesHeight: CGFloat = 0
+  /// The height the lines are seen in, between the pins and the composer.
+  var seen: CGFloat = 0
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
@@ -135,12 +137,21 @@ private struct PageAsk: Equatable {
   let inSight: Bool
 }
 
-/// What moves a following chat to its foot: a line coming in, someone
-/// writing, and the room the lines are seen in.
+/// What moves a following chat to its foot: a line coming in and someone
+/// writing. The room the lines are seen in moves it too, from `scroll`.
 struct FollowKey: Equatable {
   let latest: Int64?
   let writers: Int
-  let seen: CGFloat
+}
+
+/// The lines, shorter than the room they are seen in, fill it at its foot.
+/// Read here, not in the screen, so the room changing remakes only this.
+struct FillsSeen: ViewModifier {
+  let scroll: ChatScroll
+
+  func body(content: Content) -> some View {
+    content.frame(minHeight: scroll.seen, alignment: .bottom)
+  }
 }
 
 struct ReadKey: Hashable {

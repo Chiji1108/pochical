@@ -80,8 +80,6 @@ struct ChatScreen: View {
   /// The first line laid out, kept from the chat's opening so new lines
   /// add to it rather than move it, and moved back a page at a time.
   @State private var window: Int64?
-  /// The height the lines are seen in, between the pins and the composer.
-  @State private var seen: CGFloat = 0
   /// What is being written, read by the composer alone.
   @State private var draft = ChatDraft()
   @State private var unsending: ChatLineRow?
@@ -176,7 +174,7 @@ struct ChatScreen: View {
         // to the foot's edge never moves the lines sideways.
         .padding(.horizontal, 16)
         // Lines shorter than the screen fill it, at its foot.
-        .frame(minHeight: seen, alignment: .bottom)
+        .modifier(FillsSeen(scroll: scroll))
         .onAppear { scroller = proxy }
       }
     }
@@ -202,7 +200,7 @@ struct ChatScreen: View {
         - geometry.visibleRect.maxY
       return ScrollPlace(
         atLatest: below < 24, away: below > geometry.containerSize.height / 2,
-        fits: geometry.contentSize.height <= seen + 1,
+        fits: geometry.contentSize.height <= geometry.containerSize.height + 1,
         atTop: geometry.contentOffset.y <= -geometry.contentInsets.top + 1,
         nearTop: geometry.contentOffset.y <= -geometry.contentInsets.top + Metrics.touch)
     } action: { before, now in
@@ -229,11 +227,17 @@ struct ChatScreen: View {
       let day = dayOver(seen.first, in: items(chat.state))
       if day != scroll.topDay { scroll.topDay = day }
     }
-    // The container is already inside the bars and the margins.
+    // The container is already inside the bars and the margins. Kept in
+    // `scroll`, not the screen's state: the keyboard pulled down changes it
+    // at every frame, which would remake every line at each.
     .onScrollGeometryChange(for: CGFloat.self) { geometry in
       geometry.containerSize.height
     } action: { _, now in
-      seen = now
+      scroll.seen = now
+      // The keyboard coming up or going keeps a following chat at its foot.
+      if opened, following {
+        toLatest(animated: true)
+      }
     }
     .overlay(alignment: .bottomTrailing) {
       LatestButton(scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0) {
@@ -399,9 +403,9 @@ struct ChatScreen: View {
       try? await Task.sleep(for: .seconds(max(next.timeIntervalSinceNow, 0)))
       withAnimation { typers = typers.filter { $0.value > .now } }
     }
-    // Lines coming in, someone writing, and the keyboard coming up or
-    // going keep a following chat at its foot.
-    .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count, seen: seen)) {
+    // Lines coming in and someone writing keep a following chat at its
+    // foot.
+    .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count)) {
       before, now in
       guard opened, following else { return }
       // Others' lines the reader has not read stop at ここから新着 rather
@@ -848,7 +852,7 @@ struct ChatScreen: View {
       // there, the scroll view would go past the foot. Known from where it
       // is among the lines, not from its being in sight, which is read as
       // the lines are first laid out at the top.
-      if let top = scroll.unreadTop, scroll.linesHeight - top > seen {
+      if let top = scroll.unreadTop, scroll.linesHeight - top > scroll.seen {
         scroller?.scrollTo(ChatItem.unread.id, anchor: .top)
       } else {
         following = true
