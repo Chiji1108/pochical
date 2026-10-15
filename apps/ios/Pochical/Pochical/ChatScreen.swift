@@ -149,11 +149,12 @@ struct ChatScreen: View {
           }
           let listed = items(state)
           let timeless = linesWithoutTime(listed)
+          let namesKey = names.hashValue
           ForEach(listed) { item in
             // Lines close within a run, parted where the writer changes; the
             // first has the list's own margin over it.
             let parted = item.startsRun && item.id != listed.first?.id
-            row(item, names: names, showsTime: !timeless.contains(item.id))
+            row(item, names: names, namesKey: namesKey, showsTime: !timeless.contains(item.id))
               .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
           }
           // Who is writing now, under the latest line; not someone blocked.
@@ -576,7 +577,7 @@ struct ChatScreen: View {
   }
 
   @ViewBuilder private func row(
-    _ item: ChatItem, names: [String: String], showsTime: Bool = true
+    _ item: ChatItem, names: [String: String], namesKey: Int, showsTime: Bool = true
   ) -> some View {
     switch item {
     case .day(let day):
@@ -650,7 +651,7 @@ struct ChatScreen: View {
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           writerPhoto: faces[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
-          reactions: line.reactions, countedReactions: otherID != nil,
+          namesKey: namesKey, reactions: line.reactions, countedReactions: otherID != nil,
           pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
           meID: meID, onReact: onReact, lifted: acting?.lineID == line.opID
         ) { frame, finger, link in
@@ -674,6 +675,7 @@ struct ChatScreen: View {
                 onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
           }
         }
+        .equatable()
       }
     case .waiting(let line, let startsRun):
       LineView(
@@ -684,7 +686,7 @@ struct ChatScreen: View {
         time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
         failed: line.failed, onFailed: { unsentPhoto = line },
-        nameOf: nameOf, lifted: acting?.lineID == line.opID
+        nameOf: nameOf, namesKey: namesKey, lifted: acting?.lineID == line.opID
       ) { frame, finger, _ in
         // Still on its way: nothing but コピー yet, and days have nothing
         // to copy.
@@ -698,6 +700,7 @@ struct ChatScreen: View {
                 quote: line.replyTo.map(quote(of:)), groupID: group.id)),
             finger: finger, actions: [copy(line.text)]))
       }
+      .equatable()
     }
   }
 
@@ -715,9 +718,11 @@ struct ChatScreen: View {
         unreadable = true
         continue
       }
-      let picked = PickedPhoto(
-        shrunk: shrunk,
-        thumbnail: UIImage(data: shrunk.jpeg)?.preparingThumbnail(of: CGSize(width: 128, height: 128)))
+      // Decoded and shrunk off the main thread, as the photo is: at 2048
+      // pixels, on it, each would hold the screen still a moment.
+      let thumbnail = await UIImage(data: shrunk.jpeg)?.byPreparingThumbnail(
+        ofSize: CGSize(width: 128, height: 128))
+      let picked = PickedPhoto(shrunk: shrunk, thumbnail: thumbnail)
       if draft.photos.count < Chat.photosPerSend {
         withAnimation { draft.photos.append(picked) }
       }

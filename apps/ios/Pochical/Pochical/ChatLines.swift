@@ -36,7 +36,7 @@ enum ChatItem: Identifiable {
 /// A line of words: others' on the left with their face and, at the start
 /// of a run, their name; one's own on the right in the accent, dimmed
 /// while it waits to be sent. The time beside the bubble, 編集済み over it.
-struct LineView: View {
+struct LineView: View, @MainActor Equatable {
   @Environment(\.themeColors) private var colors
   let text: String
   /// Its first link's page.
@@ -82,6 +82,9 @@ struct LineView: View {
   var onFailed: () -> Void = {}
   /// A member's name, for the line's mentions.
   let nameOf: (String) -> String
+  /// Stands for the names `nameOf` gives, so a line is made again when
+  /// they change (Equatable, below).
+  var namesKey = 0
   var reactions: [LineReaction] = []
   /// A chat of two: its reactions counted, not shown by face.
   var countedReactions = false
@@ -99,6 +102,22 @@ struct LineView: View {
   let onActions: (CGRect, HeldFinger?, URL?) -> Void
 
   private static var avatar: CGFloat { 32 }
+
+  /// What the line shows, its actions aside, which act on the chat as it
+  /// is when used: a line the same as before is not made again as the chat
+  /// changes around it, a line coming or the keyboard moving (ChatScreen
+  /// lays out all its lines, not those in sight alone).
+  static func == (a: LineView, b: LineView) -> Bool {
+    a.text == b.text && a.preview == b.preview && a.days == b.days && a.members == b.members
+      && a.poll?.shows == b.poll?.shows && a.photo == b.photo && a.quote == b.quote
+      && a.unfolded == b.unfolded && a.groupID == b.groupID && a.shifts == b.shifts
+      && a.time == b.time && a.showsTime == b.showsTime && a.edited == b.edited
+      && a.mine == b.mine && a.writer == b.writer && a.writerPhoto == b.writerPhoto
+      && a.named == b.named && a.first == b.first && a.waiting == b.waiting
+      && a.failed == b.failed && a.namesKey == b.namesKey && a.reactions == b.reactions
+      && a.countedReactions == b.countedReactions && a.pinned == b.pinned
+      && a.ringed == b.ringed && a.meID == b.meID && a.lifted == b.lifted
+  }
 
   var body: some View {
     HStack(alignment: .top, spacing: 8) {
