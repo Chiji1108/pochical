@@ -83,9 +83,10 @@ public enum ChatPhotos {
   }
 
   /// Where a chat photo's small version is kept on the device once
-  /// fetched, beside the photo.
+  /// fetched: in a folder of their own beside the group's photos, so no
+  /// photo's id names another's small version.
   static func cachedSmall(_ photoID: String, in groupID: String) -> URL {
-    caches("ChatPhotos/\(groupID)").appending(path: "\(photoID)-small.jpg")
+    caches("ChatPhotos/\(groupID)/small").appending(path: "\(photoID).jpg")
   }
 
   /// Where the member's own photo waits until uploaded, out of the caches

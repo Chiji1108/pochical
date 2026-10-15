@@ -22,6 +22,27 @@ export const smallKey = (key: string): string => `${key}/small`;
 /** A chat photo's keys, the photo's and its small version's, to delete both. */
 export const withSmall = (key: string): string[] => [key, smallKey(key)];
 
+// The most keys R2 deletes in one call.
+const DELETE_BATCH = 1000;
+
+/** A group's photos deleted, each with its small version, in R2's batches. */
+export const deleteGroupPhotos = async (
+  env: Env,
+  groupId: string,
+  photoIds: string[]
+): Promise<void> => {
+  const keys = photoIds.flatMap((id) => withSmall(photoKey(groupId, id)));
+  const batches = Array.from(
+    { length: Math.ceil(keys.length / DELETE_BATCH) },
+    (_, at) => keys.slice(at * DELETE_BATCH, (at + 1) * DELETE_BATCH)
+  );
+  await Promise.all(
+    batches.map(async (batch) => {
+      await env.PHOTOS.delete(batch);
+    })
+  );
+};
+
 /**
  * Whether a request is for a photo's small version (`?size=small`): an
  * upload of it, or a read that falls back on the photo while it has none.
