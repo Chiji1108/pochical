@@ -150,6 +150,7 @@ struct RepeatCalendar: View {
       origin = origin ?? anchor.firstOfMonth
       month = month ?? anchor.firstOfMonth
     }
+    .handles(pressDay, by: press)
   }
 
   /// The months side by side, a swipe turning one.
@@ -205,7 +206,7 @@ struct RepeatCalendar: View {
               isHoliday: day.holidayName != nil,
               colorsHoliday: settings.device.week.holiday, offShown: .faint,
               isSelected: index == cursor, isEntering: true, faint: inOrder && !typed,
-              onSelect: pressDay.handling(press))
+              onSelect: pressDay)
           }
         }
       }

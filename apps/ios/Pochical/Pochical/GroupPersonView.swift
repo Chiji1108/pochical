@@ -75,6 +75,7 @@ struct GroupPersonView: View {
       together(in: shown)
         .padding(.horizontal, 16)
     }
+    .handles(pickDay) { picked = picked == $0 ? nil : $0 }
   }
 
   /// The row of people, scrolled sideways once they outgrow it.
@@ -146,7 +147,7 @@ struct GroupPersonView: View {
               isToday: day == Day.today,
               isHoliday: day.holidayName != nil,
               colorsHoliday: settings.device.week.holiday, isSelected: day == picked,
-              onSelect: outside ? nil : pickDay.handling { picked = picked == $0 ? nil : $0 }
+              onSelect: outside ? nil : pickDay
             )
             .overlay {
               if bothOff, day != picked {

@@ -347,6 +347,7 @@ struct CalendarScreen: View {
         today = .today
       }
     }
+    .handles(selectDay, by: select)
   }
 
   private var thisMonth: Day {
@@ -495,16 +496,19 @@ struct CalendarScreen: View {
       today: today, calendar: calendar, colorsHolidays: settings.device.week.holiday,
       offShown: offShown, selected: entering ?? opened, isEntering: entering != nil,
       preview: gapPreview(calendar),
-      onSelect: selectDay.handling { day in
-        // Not after a pull, nor while the pages slide to another week,
-        // which opens its own day as they settle.
-        if pulled || swipedWeek != nil { return }
-        if entering != nil {
-          entering = day
-        } else {
-          withAnimation(folding) { opened = day }
-        }
-      })
+      onSelect: selectDay)
+  }
+
+  /// A day tapped: to enter while entering, else to open.
+  private func select(_ day: Day) {
+    // Not after a pull, nor while the pages slide to another week, which
+    // opens its own day as they settle.
+    if pulled || swipedWeek != nil { return }
+    if entering != nil {
+      entering = day
+    } else {
+      withAnimation(folding) { opened = day }
+    }
   }
 
   /// ポチポチ入力 to start entering, or its tray while entering.

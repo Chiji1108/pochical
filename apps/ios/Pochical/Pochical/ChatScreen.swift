@@ -510,6 +510,7 @@ struct ChatScreen: View {
     } message: {
       Text("メンバー全員のチャットから消えます。")
     }
+    .handles(lineActions) { act($0.action, on: $0.lineID) }
   }
 
   // MARK: Lines
@@ -641,7 +642,7 @@ struct ChatScreen: View {
           reactions: line.reactions, countedReactions: otherID != nil,
           pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
           meID: meID, lifted: acting?.lineID == line.opID,
-          actions: lineActions.handling { act($0.action, on: $0.lineID) })
+          actions: lineActions)
       }
     case .waiting(let line, let startsRun):
       LineView(
@@ -650,7 +651,7 @@ struct ChatScreen: View {
         quote: line.replyTo.map(quote(of:)), groupID: group.id, time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
         failed: line.failed, names: names, lifted: acting?.lineID == line.opID,
-        actions: lineActions.handling { act($0.action, on: $0.lineID) })
+        actions: lineActions)
     }
   }
 

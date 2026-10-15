@@ -222,6 +222,7 @@ struct GroupShiftsPage: View {
       }
       .presentationDetents([.medium, .large])
     }
+    .handles(pickDay, by: pick)
   }
 
   /// A month's heading, over the row of its みんな休み when it has any,
@@ -286,7 +287,7 @@ struct GroupShiftsPage: View {
               ForEach(month.daysOfMonth, id: \.self) { day in
                 GroupDayRow(
                   day: day, members: tableMembers, picked: day == picked,
-                  onPick: pickDay.handling(pick),
+                  onPick: pickDay,
                   pinX: sideways ? scrollX : nil, drawing: drawing
                 )
                 .equatable()
@@ -299,7 +300,7 @@ struct GroupShiftsPage: View {
                 GroupWeek(
                   days: week, members: members, month: month,
                   picked: picked.flatMap { week.contains($0) ? $0 : nil },
-                  onPick: pickDay.handling(pick), drawing: drawing
+                  onPick: pickDay, drawing: drawing
                 )
                 .equatable()
                 // Clear of the rounded corners, a band in the last column too.
