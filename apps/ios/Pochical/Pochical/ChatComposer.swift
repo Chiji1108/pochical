@@ -98,6 +98,12 @@ struct ChatComposer: View {
   let say: (String) -> Void
   /// What the photo picker just handed over, read into the tray.
   @State private var photoItems: [PhotosPickerItem] = []
+  /// The row's height, as the field's one line: each of its buttons is
+  /// drawn as tall, the field at least as tall.
+  nonisolated private static let buttonSize: CGFloat = 38
+  /// How far past that each button is tapped, above and below, to make a
+  /// touch target: into the row's padding and the gaps beside it.
+  nonisolated fileprivate static let overhang = (Metrics.touch - buttonSize) / 2
 
   var body: some View {
     let trimmed = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -140,28 +146,39 @@ struct ChatComposer: View {
         PhotoTray(photos: $draft.photos)
       }
       HStack(alignment: .bottom, spacing: 8) {
-        // Folded, the tools give the field their room.
-        if editing == nil, folded {
-          Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
-            .labelStyle(.iconOnly)
-            .font(.system(size: 20, weight: .medium))
-            .foregroundStyle(colors.textSecondary)
-            .composerTool()
-            .transition(.opacity.combined(with: .scale(scale: 0.6)))
-        } else if editing == nil {
-          // Side by side with no gap, as LINE's row of icons, each a
-          // touch target wide.
-          HStack(spacing: 0) {
-            photoButton
-            if let onShareDays {
-              Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
-                .labelStyle(.iconOnly)
-                .font(.system(size: 20))
-                .foregroundStyle(colors.textSecondary)
-                .composerTool()
+        // Folded, the tools give the field their room. Both stay in place,
+        // only faded and narrowed, so they ride up with the keyboard as the
+        // field does: one put in as it rises would start where it ends.
+        if editing == nil {
+          ZStack(alignment: .leading) {
+            // Side by side with no gap, as LINE's row of icons, each a
+            // touch target wide; folded, they narrow to one.
+            HStack(spacing: 0) {
+              photoButton
+              if let onShareDays {
+                Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
+                  .labelStyle(.iconOnly)
+                  .font(.system(size: 20))
+                  .foregroundStyle(colors.textSecondary)
+                  .composerTool()
+              }
             }
+            .opacity(folded ? 0 : 1)
+            .offset(x: folded ? -Metrics.touch : 0)
+            .disabled(folded)
+            .accessibilityHidden(folded)
+            Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
+              .labelStyle(.iconOnly)
+              .font(.system(size: 20, weight: .medium))
+              .foregroundStyle(colors.textSecondary)
+              .composerTool()
+              .opacity(folded ? 1 : 0)
+              .scaleEffect(folded ? 1 : 0.6)
+              .disabled(!folded)
+              .accessibilityHidden(!folded)
           }
-          .transition(.opacity.combined(with: .move(edge: .leading)))
+          .frame(width: folded ? Metrics.touch : nil, alignment: .leading)
+          .clipped()
         }
         ComposerField(
           placeholder: "メッセージ", text: $draft.text, limit: TextLimits.chatMessage,
@@ -180,19 +197,17 @@ struct ChatComposer: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .frame(minHeight: composerRowHeight)
+        .frame(minHeight: Self.buttonSize)
         .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
         Button(action: onSubmit) {
           Image(systemName: editing == nil ? "arrow.up" : "checkmark")
             .font(.system(size: 16, weight: .bold))
             .foregroundStyle(colors.accentOnFill)
-            .frame(width: composerRowHeight, height: composerRowHeight)
+            .frame(width: Self.buttonSize, height: Self.buttonSize)
             .background(blocked ? colors.fillPrimary : colors.accentFill, in: Circle())
-            // Tapped over a touch target, into the gap and the row's
-            // padding around it.
-            .padding(composerOverhang)
+            .padding(Self.overhang)
             .contentShape(.rect)
-            .padding(-composerOverhang)
+            .padding(-Self.overhang)
         }
         .buttonStyle(.plain)
         .disabled(blocked)
@@ -356,19 +371,13 @@ struct ChatComposer: View {
   }
 }
 
-/// The composer's row as tall as its field's one line, the buttons beside
-/// it too, so the row stays low; each button is still tapped over a touch
-/// target, reaching into the row's padding.
-nonisolated private let composerRowHeight: CGFloat = 38
-nonisolated private let composerOverhang = (Metrics.touch - composerRowHeight) / 2
-
 extension View {
   /// A composer tool (写真を送る, 日にちを共有, the ›): a touch target wide
-  /// and tapped over one, laid out as tall as the row.
-  /// Nonisolated, as the photo picker draws its label off the main actor.
+  /// and tapped over one, laid out as tall as the row. Nonisolated, as the
+  /// photo picker draws its label off the main actor.
   nonisolated fileprivate func composerTool() -> some View {
     frame(width: Metrics.touch, height: Metrics.touch)
       .contentShape(.rect)
-      .padding(.vertical, -composerOverhang)
+      .padding(.vertical, -ChatComposer.overhang)
   }
 }

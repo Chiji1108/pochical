@@ -195,12 +195,14 @@ struct PhotoViewer: View {
         .accessibilityLabel("写真")
     }
     .overlay(alignment: .topTrailing) {
+      // The system's glass buttons, which take a tap as buttons do.
       Button("閉じる", systemImage: "xmark") { dismiss() }
         .labelStyle(.iconOnly)
         .font(.title3.weight(.semibold))
         .foregroundStyle(.white)
-        .frame(width: Metrics.touch, height: Metrics.touch)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .buttonStyle(.glass)
+        .controlSize(.large)
+        .buttonBorderShape(.circle)
         .padding(16)
     }
     .overlay(alignment: .bottomTrailing) {
@@ -217,8 +219,9 @@ struct PhotoViewer: View {
           .labelStyle(.iconOnly)
           .font(.title3.weight(.semibold))
           .foregroundStyle(.white)
-          .frame(width: Metrics.touch, height: Metrics.touch)
-          .glassEffect(.regular.interactive(), in: .circle)
+          .buttonStyle(.glass)
+          .controlSize(.large)
+          .buttonBorderShape(.circle)
           .padding(16)
       }
     }

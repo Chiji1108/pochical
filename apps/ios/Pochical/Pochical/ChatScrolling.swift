@@ -22,6 +22,8 @@ final class ChatScroll {
   /// and opening has nowhere to go for it then.
   var unreadTop: CGFloat?
   var linesHeight: CGFloat = 0
+  /// The height the lines are seen in, between the pins and the composer.
+  var seen: CGFloat = 0
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
@@ -36,19 +38,22 @@ struct LatestButton: View {
   var body: some View {
     let unseen = scroll.place.atLatest ? 0 : unread
     if scroll.place.away || unseen > 0 {
+      // The system's glass button, which takes the tap as a button: glass
+      // made to respond to a finger on a plain button's label took it on a
+      // device, over the scrolling lines, and the button did nothing.
       Button(action: action) {
         Image(systemName: "chevron.down")
           .font(.body.weight(.semibold))
           .foregroundStyle(colors.textPrimary)
-          .frame(width: Metrics.touch, height: Metrics.touch)
-          .glassEffect(.regular.interactive(), in: .circle)
-          .overlay(alignment: .topTrailing) {
-            if unseen > 0 {
-              UnreadCount(count: unseen).offset(x: 4, y: -4)
-            }
-          }
+          .frame(width: Metrics.touch - 12, height: Metrics.touch - 12)
       }
-      .buttonStyle(.plain)
+      .buttonStyle(.glass)
+      .buttonBorderShape(.circle)
+      .overlay(alignment: .topTrailing) {
+        if unseen > 0 {
+          UnreadCount(count: unseen).offset(x: 4, y: -4).allowsHitTesting(false)
+        }
+      }
       .accessibilityLabel(
         unseen > 0 ? "最新のメッセージへ、まだ見ていない新着\(unseen)件" : "最新のメッセージへ"
       )
@@ -135,12 +140,21 @@ private struct PageAsk: Equatable {
   let inSight: Bool
 }
 
-/// What moves a following chat to its foot: a line coming in, someone
-/// writing, and the room the lines are seen in.
+/// What moves a following chat to its foot: a line coming in and someone
+/// writing. The room the lines are seen in moves it too, from `scroll`.
 struct FollowKey: Equatable {
   let latest: Int64?
   let writers: Int
-  let seen: CGFloat
+}
+
+/// The lines, shorter than the room they are seen in, fill it at its foot.
+/// Read here, not in the screen, so the room changing remakes only this.
+struct FillsSeen: ViewModifier {
+  let scroll: ChatScroll
+
+  func body(content: Content) -> some View {
+    content.frame(minHeight: scroll.seen, alignment: .bottom)
+  }
 }
 
 struct ReadKey: Hashable {
