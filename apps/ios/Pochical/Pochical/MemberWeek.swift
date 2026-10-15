@@ -62,7 +62,7 @@ struct GroupWeekdays: View {
 /// its tile, a day everyone is off (みんな休み) one band down its column,
 /// date and all, and the picked day framed the same way. Each member's
 /// marks are in their own shape, in the viewer's colors.
-struct GroupWeek: View {
+struct GroupWeek: View, @MainActor Equatable {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
   let days: [Day]
@@ -76,6 +76,15 @@ struct GroupWeek: View {
   var compact = false
   /// Today in the accent; not where it is always the first column.
   var marksToday = true
+
+  /// What the week shows, and whether its days can be picked: a week the
+  /// same as before is not made again as the list around it changes.
+  /// `onPick` acts on the page as it is when used.
+  static func == (a: GroupWeek, b: GroupWeek) -> Bool {
+    a.days == b.days && a.members == b.members && a.month == b.month && a.picked == b.picked
+      && (a.onPick == nil) == (b.onPick == nil) && a.compact == b.compact
+      && a.marksToday == b.marksToday
+  }
 
   var body: some View {
     let today = Day.today
@@ -206,6 +215,7 @@ struct MemberWeek: View {
         VStack(spacing: 4) {
           GroupWeekdays(compact: true, days: days)
           GroupWeek(days: days, members: members, compact: true, marksToday: false)
+            .equatable()
         }
         .contentShape(.rect)
       }

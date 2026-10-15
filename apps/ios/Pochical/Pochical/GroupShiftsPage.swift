@@ -283,14 +283,20 @@ struct GroupShiftsPage: View {
               ForEach(month.daysOfMonth, id: \.self) { day in
                 GroupDayRow(
                   day: day, members: tableMembers, picked: day == picked, onPick: pick,
-                  pinX: sideways ? scrollX : nil)
-                  .id(day)
+                  pinX: sideways ? scrollX : nil
+                )
+                .equatable()
+                .id(day)
               }
             } else {
               ForEach(weeks(endingIn: month), id: \.self) { week in
+                // The picked day only to its own week, so the others stay
+                // as they are.
                 GroupWeek(
-                  days: week, members: members, month: month, picked: picked, onPick: pick
+                  days: week, members: members, month: month,
+                  picked: picked.flatMap { week.contains($0) ? $0 : nil }, onPick: pick
                 )
+                .equatable()
                 // Clear of the rounded corners, a band in the last column too.
                 .padding(.vertical, 4)
                 .padding(.trailing, 4)

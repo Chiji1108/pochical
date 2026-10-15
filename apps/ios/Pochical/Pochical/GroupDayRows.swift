@@ -134,7 +134,7 @@ struct GroupDayHeader: View {
 /// while few. A day off is on its tile; a day everyone is off one band
 /// along the row, date and all, and the picked day framed the same way.
 /// The whole row picks the day.
-struct GroupDayRow: View {
+struct GroupDayRow: View, @MainActor Equatable {
   @Environment(\.english) private var english
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
@@ -146,6 +146,13 @@ struct GroupDayRow: View {
   /// first member's column (the viewer's own) stay at the left, over the
   /// others. Nil while everyone fits.
   var pinX: CGFloat?
+
+  /// What the row shows: a day the same as before is not made again as
+  /// the list around it changes. `onPick` acts on the page as it is when
+  /// used.
+  static func == (a: GroupDayRow, b: GroupDayRow) -> Bool {
+    a.day == b.day && a.members == b.members && a.picked == b.picked && a.pinX == b.pinX
+  }
 
   var body: some View {
     let density = DayRowsDensity(members: members.count)

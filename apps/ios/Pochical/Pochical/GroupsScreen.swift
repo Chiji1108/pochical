@@ -273,6 +273,7 @@ private struct NoGroups: View {
           GroupDayHeader(members: members, groupID: "sample")
           ForEach(days, id: \.self) { day in
             GroupDayRow(day: day, members: members, picked: false, onPick: { _ in })
+              .equatable()
           }
         }
         .fixedSize(horizontal: false, vertical: true)

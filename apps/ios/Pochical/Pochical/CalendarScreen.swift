@@ -822,8 +822,12 @@ struct PageDays {
           outside: month.map { day.month != $0.month } ?? false, isToday: day == today,
           isHoliday: day.holidayName != nil,
           colorsHoliday: colorsHolidays, offShown: offShown, isSelected: day == selected,
-          isEntering: isEntering, preview: previewed != nil,
-          onSelect: onSelect)
+          // Only today's frame gives way to entering: the rest stay as they
+          // were, not made again.
+          isEntering: isEntering && day == today, preview: previewed != nil,
+          onSelect: onSelect
+        )
+        .equatable()
       }
     }
   }
