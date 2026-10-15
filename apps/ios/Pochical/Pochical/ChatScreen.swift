@@ -132,6 +132,8 @@ struct ChatScreen: View {
   @State private var typers: [String: Date] = [:]
   /// The line whose reactions and menu are open.
   @State private var acting: MessageActionsRequest?
+  /// What is done on a line, for every line of the chat.
+  @State private var lineActions = Handler<(lineID: String, action: LineAction)>()
 
   var body: some View {
     let state = chat.state
@@ -149,12 +151,11 @@ struct ChatScreen: View {
           }
           let listed = items(state)
           let timeless = linesWithoutTime(listed)
-          let namesKey = names.hashValue
           ForEach(listed) { item in
             // Lines close within a run, parted where the writer changes; the
             // first has the list's own margin over it.
             let parted = item.startsRun && item.id != listed.first?.id
-            row(item, names: names, namesKey: namesKey, showsTime: !timeless.contains(item.id))
+            row(item, names: names, showsTime: !timeless.contains(item.id))
               .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
           }
           // Who is writing now, under the latest line; not someone blocked.
@@ -577,7 +578,7 @@ struct ChatScreen: View {
   }
 
   @ViewBuilder private func row(
-    _ item: ChatItem, names: [String: String], namesKey: Int, showsTime: Bool = true
+    _ item: ChatItem, names: [String: String], showsTime: Bool = true
   ) -> some View {
     switch item {
     case .day(let day):
@@ -627,80 +628,116 @@ struct ChatScreen: View {
           .padding(.vertical, 8)
       } else {
         let mine = line.authorID == meID
-        let onReact = { (emoji: String) in react(emoji, on: line) }
-        let poll = pollLine(for: line)
         LineView(
-          text: line.text, preview: line.preview, days: line.days, members: cardMembers,
-          poll: poll, photo: line.photo, quote: line.replyTo.map(quote(of:)),
-          unfolded: unfolded.contains(line.opID),
-          // Opened where it is, its words going on down from there, as
-          // the messaging apps open a long one: not carried to the foot.
-          onUnfold: {
-            following = false
-            withAnimation { _ = unfolded.insert(line.opID) }
-          },
-          groupID: group.id, onOpenPhoto: { viewing = line.photo },
-          onOpenQuote: { line.replyTo.map(jump(to:)) },
-          onOpenProfile: {
-            profileOf = ProfileOf(
-              id: line.authorID, name: names[line.authorID] ?? "メンバー",
-              photoID: faces[line.authorID] ?? "")
-          },
+          lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
+          members: cardMembers, poll: pollLine(for: line), photo: line.photo,
+          quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
+          groupID: group.id,
           shifts: line.poll ? nil : line.days.first.map { GroupRoute.shifts(group, day: $0) },
           time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           writerPhoto: faces[line.authorID] ?? "",
-          named: otherID == nil, first: startsRun, waiting: false, nameOf: nameOf,
-          namesKey: namesKey, reactions: line.reactions, countedReactions: otherID != nil,
+          named: otherID == nil, first: startsRun, waiting: false, names: names,
+          reactions: line.reactions, countedReactions: otherID != nil,
           pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
-          meID: meID, onReact: onReact, lifted: acting?.lineID == line.opID
-        ) { frame, finger, link in
-          let bubble = AnyView(
-            LineContent(
-              text: line.text, preview: line.preview, days: line.days, members: cardMembers,
-              poll: poll,
-              photo: line.photo, quote: line.replyTo.map(quote(of:)), groupID: group.id,
-              mine: mine, first: startsRun, waiting: false, nameOf: nameOf))
-          // A link held has its own menu, without the reactions.
-          if let link {
-            openActions(
-              MessageActionsRequest(
-                lineID: line.opID, frame: frame, mine: mine, bubble: bubble, finger: finger,
-                actions: linkActions(link, open: { _ = open(link) }, copied: { sayDone("コピーしました") })))
-          } else {
-            openActions(
-              MessageActionsRequest(
-                lineID: line.opID, frame: frame, mine: mine, bubble: bubble,
-                finger: finger, reactions: line.reactions, meID: meID, onReact: onReact,
-                onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
-          }
-        }
-        .equatable()
+          meID: meID, lifted: acting?.lineID == line.opID,
+          actions: lineActions.handling { act($0.action, on: $0.lineID) })
       }
     case .waiting(let line, let startsRun):
       LineView(
-        text: line.text, preview: line.preview, days: line.days, members: cardMembers,
-        poll: line.poll
-          ? PollLine(votes: [], decided: nil, names: names, meID: meID, canDecide: true) : nil,
-        photo: line.photo, quote: line.replyTo.map(quote(of:)), groupID: group.id,
-        time: line.madeAtMs,
+        lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
+        members: cardMembers, poll: waitingPoll(line), photo: line.photo,
+        quote: line.replyTo.map(quote(of:)), groupID: group.id, time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
-        failed: line.failed, onFailed: { unsentPhoto = line },
-        nameOf: nameOf, namesKey: namesKey, lifted: acting?.lineID == line.opID
-      ) { frame, finger, _ in
-        // Still on its way: nothing but コピー yet, and days have nothing
-        // to copy.
-        guard line.days.isEmpty, line.photo == nil else { return }
+        failed: line.failed, names: names, lifted: acting?.lineID == line.opID,
+        actions: lineActions.handling { act($0.action, on: $0.lineID) })
+    }
+  }
+
+  /// A poll on its way: nothing voted yet.
+  private func waitingPoll(_ line: WaitingLine) -> PollLine? {
+    line.poll ? PollLine(votes: [], decided: nil, names: names, meID: meID, canDecide: true) : nil
+  }
+
+  /// Acts on the line `lineID` as the chat is now.
+  private func act(_ action: LineAction, on lineID: String) {
+    switch items(chat.state).first(where: { $0.id == "line-\(lineID)" }) {
+    case .line(let line, let startsRun): act(action, on: line, startsRun: startsRun)
+    case .waiting(let line, let startsRun): act(action, onWaiting: line, startsRun: startsRun)
+    default: break
+    }
+  }
+
+  private func act(_ action: LineAction, on line: ChatLineRow, startsRun: Bool) {
+    switch action {
+    case .unfold:
+      // Opened where it is, its words going on down from there, as the
+      // messaging apps open a long one: not carried to the foot.
+      following = false
+      withAnimation { _ = unfolded.insert(line.opID) }
+    case .openPhoto:
+      viewing = line.photo
+    case .openQuote:
+      line.replyTo.map(jump(to:))
+    case .openProfile:
+      profileOf = ProfileOf(
+        id: line.authorID, name: names[line.authorID] ?? "メンバー",
+        photoID: faces[line.authorID] ?? "")
+    case .retry:
+      break
+    case .react(let emoji):
+      react(emoji, on: line)
+    case .vote(let day, let on):
+      var vote = Pochical_V1_ChatVote()
+      vote.threadID = threadID
+      vote.seq = UInt64(line.seq)
+      vote.day = day.key
+      vote.on = on
+      write(.vote(vote))
+    case .decide:
+      deciding = line
+    case .hold(let frame, let finger, let link):
+      let mine = line.authorID == meID
+      let bubble = AnyView(
+        LineContent(
+          text: line.text, preview: line.preview, days: line.days, members: cardMembers,
+          poll: pollLine(for: line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
+          groupID: group.id, mine: mine, first: startsRun, waiting: false, nameOf: nameOf))
+      // A link held has its own menu, without the reactions.
+      if let link {
         openActions(
           MessageActionsRequest(
-            lineID: line.opID, frame: frame, mine: true,
-            bubble: AnyView(
-              MessageBubble(
-                text: line.text, mine: true, first: startsRun, waiting: true, nameOf: nameOf,
-                quote: line.replyTo.map(quote(of:)), groupID: group.id)),
-            finger: finger, actions: [copy(line.text)]))
+            lineID: line.opID, frame: frame, mine: mine, bubble: bubble, finger: finger,
+            actions: linkActions(link, open: { _ = open(link) }, copied: { sayDone("コピーしました") })))
+      } else {
+        openActions(
+          MessageActionsRequest(
+            lineID: line.opID, frame: frame, mine: mine, bubble: bubble,
+            finger: finger, reactions: line.reactions, meID: meID,
+            onReact: { react($0, on: line) },
+            onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
       }
-      .equatable()
+    }
+  }
+
+  private func act(_ action: LineAction, onWaiting line: WaitingLine, startsRun: Bool) {
+    switch action {
+    case .retry:
+      unsentPhoto = line
+    case .hold(let frame, let finger, _):
+      // Still on its way: nothing but コピー yet, and days have nothing
+      // to copy.
+      guard line.days.isEmpty, line.photo == nil else { return }
+      openActions(
+        MessageActionsRequest(
+          lineID: line.opID, frame: frame, mine: true,
+          bubble: AnyView(
+            MessageBubble(
+              text: line.text, mine: true, first: startsRun, waiting: true, nameOf: nameOf,
+              quote: line.replyTo.map(quote(of:)), groupID: group.id)),
+          finger: finger, actions: [copy(line.text)]))
+    default:
+      break
     }
   }
 
@@ -1027,16 +1064,7 @@ struct ChatScreen: View {
     guard line.poll else { return nil }
     return PollLine(
       votes: line.votes, decided: line.decided, names: names, meID: meID,
-      canDecide: canDecide(line),
-      onVote: { day, on in
-        var vote = Pochical_V1_ChatVote()
-        vote.threadID = threadID
-        vote.seq = UInt64(line.seq)
-        vote.day = day.key
-        vote.on = on
-        write(.vote(vote))
-      },
-      onDecide: { deciding = line })
+      canDecide: canDecide(line))
   }
 
   /// Settles a poll on `day`, and says so to whoever settled it.

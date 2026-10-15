@@ -33,11 +33,36 @@ enum ChatItem: Identifiable {
 }
 
 
+/// What is done on a line of words, which the chat acts on.
+enum LineAction {
+  /// 続きを読む.
+  case unfold
+  /// Its photo opened large.
+  case openPhoto
+  /// Gone to the line it answers.
+  case openQuote
+  /// The writer's profile, from their face.
+  case openProfile
+  /// Its photo that could not be sent: its choices.
+  case retry
+  /// The reader's reaction put on, or taken back.
+  case react(String)
+  /// A poll's 行ける, on or off.
+  case vote(Day, Bool)
+  /// 日にちを決める.
+  case decide
+  /// Held: its reactions and menu, from where its bubble is, with the
+  /// finger that opened them while it stays down, and the link held.
+  case hold(frame: CGRect, finger: HeldFinger?, link: URL?)
+}
+
 /// A line of words: others' on the left with their face and, at the start
 /// of a run, their name; one's own on the right in the accent, dimmed
 /// while it waits to be sent. The time beside the bubble, 編集済み over it.
-struct LineView: View, @MainActor Equatable {
+struct LineView: View {
   @Environment(\.themeColors) private var colors
+  /// The line's opID, which its actions name it by.
+  let lineID: String
   let text: String
   /// Its first link's page.
   var preview: LinePreview?
@@ -53,13 +78,7 @@ struct LineView: View, @MainActor Equatable {
   var quote: LineQuote?
   /// Its words opened past chatRules.foldLines lines.
   var unfolded = false
-  var onUnfold: () -> Void = {}
   var groupID = ""
-  var onOpenPhoto: () -> Void = {}
-  /// Goes to the line it answers.
-  var onOpenQuote: () -> Void = {}
-  /// Opens the writer's profile, from their face.
-  var onOpenProfile: () -> Void = {}
   /// The shift table on its first day, under its card.
   var shifts: GroupRoute?
   let time: Int64
@@ -79,12 +98,8 @@ struct LineView: View, @MainActor Equatable {
   let waiting: Bool
   /// Its photo could not be sent: marked, its choices a tap away.
   var failed = false
-  var onFailed: () -> Void = {}
-  /// A member's name, for the line's mentions.
-  let nameOf: (String) -> String
-  /// Stands for the names `nameOf` gives, so a line is made again when
-  /// they change (Equatable, below).
-  var namesKey = 0
+  /// The group's names as it shows them now, for the line's mentions.
+  let names: [String: String]
   var reactions: [LineReaction] = []
   /// A chat of two: its reactions counted, not shown by face.
   var countedReactions = false
@@ -93,30 +108,23 @@ struct LineView: View, @MainActor Equatable {
   /// Gone to from the pins: ringed for a moment.
   var ringed = false
   var meID: String?
-  /// Puts the reader's reaction on, or takes it back.
-  var onReact: (String) -> Void = { _ in }
   /// Its bubble is lifted over the chat, its place standing empty.
   var lifted = false
-  /// Opens the line's reactions and menu, from where its bubble is, with
-  /// the finger that opened them while it stays down.
-  let onActions: (CGRect, HeldFinger?, URL?) -> Void
+  /// What is done on the line, for the chat to act on as it is when used:
+  /// the line, a chat's lines held all at once, is made again only as
+  /// what it shows changes, not as the chat changes around it (a line
+  /// coming, the keyboard moving).
+  let actions: Handler<(lineID: String, action: LineAction)>
 
   private static var avatar: CGFloat { 32 }
 
-  /// What the line shows, its actions aside, which act on the chat as it
-  /// is when used: a line the same as before is not made again as the chat
-  /// changes around it, a line coming or the keyboard moving (ChatScreen
-  /// lays out all its lines, not those in sight alone).
-  static func == (a: LineView, b: LineView) -> Bool {
-    a.text == b.text && a.preview == b.preview && a.days == b.days && a.members == b.members
-      && a.poll?.shows == b.poll?.shows && a.photo == b.photo && a.quote == b.quote
-      && a.unfolded == b.unfolded && a.groupID == b.groupID && a.shifts == b.shifts
-      && a.time == b.time && a.showsTime == b.showsTime && a.edited == b.edited
-      && a.mine == b.mine && a.writer == b.writer && a.writerPhoto == b.writerPhoto
-      && a.named == b.named && a.first == b.first && a.waiting == b.waiting
-      && a.failed == b.failed && a.namesKey == b.namesKey && a.reactions == b.reactions
-      && a.countedReactions == b.countedReactions && a.pinned == b.pinned
-      && a.ringed == b.ringed && a.meID == b.meID && a.lifted == b.lifted
+  /// A member's name in the group as it is now, for their mentions.
+  private func nameOf(_ id: String) -> String {
+    names[id] ?? "メンバー"
+  }
+
+  private func act(_ action: LineAction) {
+    actions((lineID, action))
   }
 
   var body: some View {
@@ -124,7 +132,7 @@ struct LineView: View, @MainActor Equatable {
       if !mine {
         Group {
           if let writer {
-            Button { onOpenProfile() } label: {
+            Button { act(.openProfile) } label: {
               MemberAvatar(name: writer, photoID: writerPhoto, groupID: groupID, size: Self.avatar)
             }
             .buttonStyle(.plain)
@@ -147,11 +155,12 @@ struct LineView: View, @MainActor Equatable {
           LineContent(
             text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
             quote: quote, groupID: groupID, mine: mine, first: first,
-            waiting: waiting && !failed, nameOf: nameOf, onOpenQuote: onOpenQuote,
-            unfolded: unfolded, onUnfold: onUnfold
+            waiting: waiting && !failed, nameOf: nameOf, onOpenQuote: { act(.openQuote) },
+            unfolded: unfolded, onUnfold: { act(.unfold) },
+            onVote: { act(.vote($0, $1)) }, onDecide: { act(.decide) }
           )
           // A photo opens large at a tap; its menu is the long press's.
-          .onTapGesture { if photo != nil, !waiting { onOpenPhoto() } }
+          .onTapGesture { if photo != nil, !waiting { act(.openPhoto) } }
           // Rung for a moment when gone to from the pins, as /design's
           // flash: a ring just outside the bubble, held, then fading.
           .background {
@@ -159,7 +168,7 @@ struct LineView: View, @MainActor Equatable {
               .stroke(colors.accentBorder, lineWidth: 6)
               .opacity(ringed ? 1 : 0)
           }
-            .heldForActions(lifted: lifted, onActions: onActions)
+            .heldForActions(lifted: lifted) { act(.hold(frame: $0, finger: $1, link: $2)) }
           if !mine { meta }
         }
         if let shifts {
@@ -182,7 +191,7 @@ struct LineView: View, @MainActor Equatable {
         if !reactions.isEmpty {
           ReactionRow(
             reactions: reactions, meID: meID, nameOf: nameOf, counted: countedReactions,
-            onReact: onReact)
+            onReact: { act(.react($0)) })
         }
       }
       .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
@@ -217,7 +226,7 @@ struct LineView: View, @MainActor Equatable {
         }
       }
       if failed {
-        Button(action: onFailed) {
+        Button { act(.retry) } label: {
           Image(systemName: "exclamationmark.circle.fill")
             .font(.title3)
             .foregroundStyle(colors.dangerDefault)
@@ -271,6 +280,8 @@ struct LineContent: View {
   /// Its words opened past chatRules.foldLines lines.
   var unfolded = false
   var onUnfold: () -> Void = {}
+  var onVote: (Day, Bool) -> Void = { _, _ in }
+  var onDecide: () -> Void = {}
   @Environment(\.themeColors) private var colors
 
   var body: some View {
@@ -293,7 +304,7 @@ struct LineContent: View {
       PollCard(
         days: days, votes: poll.votes, decided: poll.decided, members: members,
         names: poll.names, meID: poll.meID, canDecide: poll.canDecide, waiting: waiting,
-        onVote: poll.onVote, onDecide: poll.onDecide)
+        onVote: onVote, onDecide: onDecide)
     } else if days.isEmpty {
       MessageBubble(
         text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf, preview: preview,

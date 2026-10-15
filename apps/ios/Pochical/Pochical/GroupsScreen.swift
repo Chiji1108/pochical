@@ -245,7 +245,12 @@ enum GroupRoute: Hashable {
 /// the buttons, 作成 and QR参加, at the foot (/design's NoGroups). Text
 /// too large to leave the sample room scrolls the words alone.
 private struct NoGroups: View {
+  @Environment(\.english) private var english
+  @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
+  @Environment(\.look) private var look
+  /// The sample's rows pick nothing.
+  @State private var pickNothing = Handler<Day>()
   let onNew: () -> Void
   let onScan: () -> Void
 
@@ -261,6 +266,11 @@ private struct NoGroups: View {
     }
   }
 
+  /// What the days are drawn with, for the rows and weeks to compare.
+  private var drawing: DayDrawing {
+    DayDrawing(colors: colors, look: look, english: english, week: settings.device.week)
+  }
+
   /// As much of the table as there is room for, at least a few rows, its
   /// lower part fading into the ground; a picture only.
   private var sample: some View {
@@ -272,8 +282,10 @@ private struct NoGroups: View {
         VStack(spacing: 0) {
           GroupDayHeader(members: members, groupID: "sample")
           ForEach(days, id: \.self) { day in
-            GroupDayRow(day: day, members: members, picked: false, onPick: { _ in })
-              .equatable()
+            GroupDayRow(
+              day: day, members: members, picked: false, onPick: pickNothing, drawing: drawing
+            )
+            .equatable()
           }
         }
         .fixedSize(horizontal: false, vertical: true)

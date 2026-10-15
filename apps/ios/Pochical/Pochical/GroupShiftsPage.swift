@@ -34,6 +34,7 @@ struct GroupShiftsPage: View {
   @Environment(\.english) private var english
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
+  @Environment(\.look) private var look
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.openGroupRoute) private var openGroupRoute
   @Fetch private var members: [GroupMember] = []
@@ -45,6 +46,8 @@ struct GroupShiftsPage: View {
   @State private var meID: String?
   let group: GroupRow
   @State private var picked: Day?
+  /// What a tap on a day does, for every row and week of the table.
+  @State private var pickDay = Handler<Day>()
   @State private var togetherSheet: TogetherList?
   /// A day picked in the みんな休み sheet, shown once that sheet has gone:
   /// one sheet cannot come up while another is going.
@@ -282,8 +285,9 @@ struct GroupShiftsPage: View {
             if layout == .days {
               ForEach(month.daysOfMonth, id: \.self) { day in
                 GroupDayRow(
-                  day: day, members: tableMembers, picked: day == picked, onPick: pick,
-                  pinX: sideways ? scrollX : nil
+                  day: day, members: tableMembers, picked: day == picked,
+                  onPick: pickDay.handling(pick),
+                  pinX: sideways ? scrollX : nil, drawing: drawing
                 )
                 .equatable()
                 .id(day)
@@ -294,7 +298,8 @@ struct GroupShiftsPage: View {
                 // as they are.
                 GroupWeek(
                   days: week, members: members, month: month,
-                  picked: picked.flatMap { week.contains($0) ? $0 : nil }, onPick: pick
+                  picked: picked.flatMap { week.contains($0) ? $0 : nil },
+                  onPick: pickDay.handling(pick), drawing: drawing
                 )
                 .equatable()
                 // Clear of the rounded corners, a band in the last column too.
@@ -364,6 +369,11 @@ struct GroupShiftsPage: View {
   /// The day's sheet: its bar and a row a member.
   private var daySheetHeight: CGFloat {
     CGFloat(120 + members.count * 52)
+  }
+
+  /// What the days are drawn with, for the rows and weeks to compare.
+  private var drawing: DayDrawing {
+    DayDrawing(colors: colors, look: look, english: english, week: settings.device.week)
   }
 
   private func pick(_ day: Day) {

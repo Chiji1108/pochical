@@ -74,7 +74,7 @@ public enum Theme: String, CaseIterable, Sendable {
 /// A shift color as a テーマ draws it: `color` for the mark and its
 /// words, `tint` for the ground behind it, and `noteOnTint` for a
 /// memo's stroke on that ground, a step deeper so it stays in sight.
-public struct MarkColor: Sendable {
+public struct MarkColor: Equatable, Sendable {
   public let name: String
   public let color: Color
   public let tint: Color
@@ -82,7 +82,7 @@ public struct MarkColor: Sendable {
 }
 
 /// Every color role a screen reads, for one テーマ in light or dark.
-public struct ThemeColors: Sendable {
+public struct ThemeColors: Equatable, Sendable {
   public let backgroundBase: Color
   public let backgroundCard: Color
   public let backgroundElevated: Color
