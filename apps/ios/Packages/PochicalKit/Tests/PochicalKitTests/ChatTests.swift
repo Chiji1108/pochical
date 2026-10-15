@@ -38,7 +38,26 @@ struct ChatVectors: Decodable, Sendable {
   let firstUnread: [FirstUnread]
   let directThread: [DirectThread]
   let edited: [Edited]
+  struct FirstComing: VectorCase {
+    struct Line: Decodable, Sendable {
+      let seq: Int64
+      let writer: LineWriter
+    }
+    let name: String
+    let lines: [Line]
+    let latest: Int64
+    let read: Int64
+    let expected: Int64?
+  }
+
   let openingFrom: [OpeningFrom]
+  let firstComing: [FirstComing]
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).firstComing)
+func comingLinesStopAt(_ vector: ChatVectors.FirstComing) {
+  let lines = vector.lines.map { (seq: $0.seq, writer: $0.writer) }
+  #expect(firstComing(lines, after: vector.latest, read: vector.read) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).openingFrom)
