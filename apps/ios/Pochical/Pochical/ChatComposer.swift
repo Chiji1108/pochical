@@ -207,9 +207,6 @@ struct ChatComposer: View {
         .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
       }
       .animation(.snappy(duration: 0.25), value: folded)
-      // The row rises with the keyboard as one: a fold landing while it
-      // rises would otherwise draw its pieces where the row ends up.
-      .geometryGroup()
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
       if TextLimits.chatMessage - draft.text.count <= TextFields.countWhenLeft {
@@ -228,6 +225,10 @@ struct ChatComposer: View {
     // What comes in over the field (photos, a reply, a link's page) drawn
     // only under the line as it rises, not over the chat ahead of it.
     .clipped()
+    // The composer rises with the keyboard as one: whatever comes or
+    // changes in it as the keyboard rises, a quote being answered or the
+    // tools folding, would otherwise be drawn where the composer ends up.
+    .geometryGroup()
     .background(colors.backgroundBase)
     .overlay(alignment: .top) {
       Rectangle().fill(colors.separator).frame(height: 1)
