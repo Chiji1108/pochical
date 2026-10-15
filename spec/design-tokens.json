@@ -578,6 +578,7 @@
             "hue": 138,
             "lightness": 0.363
           },
+          "darkLightness": 0.86,
           "grays": {
             "hue": 138,
             "strength": 0.3
@@ -700,7 +701,7 @@
           "dark": {
             "marks": [
               {
-                "color": "#b5b9b4",
+                "color": "#cfd2cd",
                 "noteOnTile": "#4b4c4a",
                 "tint": "#313230"
               },
@@ -797,8 +798,8 @@
               "media-dim": "#00000052",
               "media-shade": "#00000099",
               "media-warning": "#ffd60a",
-              "accent-default": "#b5b9b4",
-              "accent-fill": "#b5b9b4",
+              "accent-default": "#cfd2cd",
+              "accent-fill": "#cfd2cd",
               "accent-on-fill": "#262725",
               "accent-focus": "#9c9f9b",
               "accent-border": "#737572",

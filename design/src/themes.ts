@@ -39,6 +39,10 @@ export type Preset = {
   // The share of each shift color's chroma kept when shifts are colored,
   // 1 as tuned; the soft テーマ lower theirs to sit with them.
   vividness?: number;
+  // The accent's lightness in dark mode, instead of the one every テーマ
+  // shares there (roleSteps), for an ink with no color to show at that
+  // lightness: 墨's black turns white rather than gray.
+  darkLightness?: number;
 };
 
 export const presets = [
@@ -60,9 +64,10 @@ export const presets = [
     name: "禅",
     vividness: 0.75,
   },
-  // Ink alone, in black.
+  // Ink alone: black, and white in dark mode.
   {
     accent: { chroma: 0.008, hue: 138, lightness: 0.363 },
+    darkLightness: 0.86,
     grays: { hue: 138, strength: 0.3 },
     id: "sumi",
     name: "墨",
@@ -208,7 +213,12 @@ export function themeColors(preset: Preset, scheme: ColorScheme) {
   // An always-dark テーマ gives its colors as drawn on its dark screen;
   // a light one's dark mode follows from its light colors.
   const own = scheme === "light" || preset.scheme === "dark";
-  const accent = own ? oklchToHex(preset.accent) : paint(dark.accent);
+  const accent = own
+    ? oklchToHex(preset.accent)
+    : paint({
+        ...dark.accent,
+        lightness: preset.darkLightness ?? dark.accent.lightness,
+      });
   // Tinted grounds take `tint` when the テーマ has one.
   const tint = preset.tint ?? { chroma, hue };
   const paintTint = (step: { chroma: number; lightness: number }) =>
