@@ -106,6 +106,19 @@ struct GroupsScreen: View {
             }
             .padding(.horizontal, 16)
           }
+          // The group's heading in the bar's band, beside its buttons, not
+          // an item of the bar: an item there would turn into the next
+          // page's back button as it is pushed. The bar itself stays, and
+          // with it the blur at the top of the pages pushed from here.
+          .overlay(alignment: .topLeading) {
+            GroupHeading(group: open)
+              // Level with the bar's buttons, at its top.
+              .frame(maxWidth: .infinity, minHeight: Metrics.touch, alignment: .leading)
+              .padding(.leading, GroupRail.width + 16)
+              .padding(.trailing, GroupHub.actionsWidth)
+              .padding(.top, screenTop)
+              .ignoresSafeArea(.container, edges: .top)
+          }
         } else {
           NoGroups(onNew: { path.append(.newGroup) }, onScan: onScan)
             .padding(.horizontal, 20)
@@ -525,8 +538,6 @@ private struct GroupHub: View {
   let onShifts: (Day?) -> Void
   /// Opens a chat: its thread, and the other member of a one-to-one chat.
   let onChat: (String, String?) -> Void
-  /// The page's width, which the bar's heading shares with its buttons.
-  @State private var width: CGFloat = 0
 
   var body: some View {
     ScrollView {
@@ -566,20 +577,7 @@ private struct GroupHub: View {
     }
     .scrollIndicators(.hidden)
     .contentMargins(.top, 8, for: .scrollContent)
-    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-    // The group's heading in the navigation bar, not over the page: the
-    // bar then stays as its pages are pushed and popped, and with it the
-    // blur at their top, which went with a bar hidden here.
     .toolbar {
-      ToolbarItem(placement: .topBarLeading) {
-        heading
-          // As wide as the page leaves beside the bar's buttons, a bar item
-          // being only as wide as asked; a long name ends in …
-          .frame(width: max(0, width - Self.actionsWidth), alignment: .leading)
-          // Over the page, beside the rail.
-          .padding(.leading, GroupRail.width)
-      }
-      .sharedBackgroundVisibility(.hidden)
       ToolbarItemGroup(placement: .topBarTrailing) {
         Button("メンバーを招待", systemImage: "person.badge.plus", action: onInvite)
         Button("グループの設定", systemImage: "slider.horizontal.3", action: onSettings)
@@ -598,9 +596,15 @@ private struct GroupHub: View {
   }
 
   /// Room for the bar's two buttons on their glass, and a gap before them.
-  private static var actionsWidth: CGFloat { Metrics.touch * 2 + 48 }
+  static var actionsWidth: CGFloat { Metrics.touch * 2 + 48 }
+}
 
-  private var heading: some View {
+/// The open group's mark and name, over its page.
+private struct GroupHeading: View {
+  @Environment(\.themeColors) private var colors
+  let group: GroupRow
+
+  var body: some View {
     HStack(spacing: 8) {
       GroupMarkView(mark: group.mark, size: 26, shelf: group.id)
         .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.sm))
