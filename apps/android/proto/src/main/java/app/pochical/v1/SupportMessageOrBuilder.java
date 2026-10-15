@@ -136,4 +136,25 @@ public interface SupportMessageOrBuilder extends
    * @return The photo.
    */
   app.pochical.v1.ChatPhoto getPhoto();
+
+  /**
+   * <pre>
+   * The page of its words' first link, as a group chat's line has it
+   * (spec/chat.md, Previews); none once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+   * @return Whether the preview field is set.
+   */
+  boolean hasPreview();
+  /**
+   * <pre>
+   * The page of its words' first link, as a group chat's line has it
+   * (spec/chat.md, Previews); none once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+   * @return The preview.
+   */
+  app.pochical.v1.LinkPreview getPreview();
 }

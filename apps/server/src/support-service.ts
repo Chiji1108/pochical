@@ -8,6 +8,8 @@ import { and, count, eq, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats, supportMessages } from "./db/schema";
+import { LinkPreviewSchema } from "./gen/pochical/v1/chat_pb";
+import type { LinkPreview } from "./gen/pochical/v1/chat_pb";
 import {
   GetSupportChatResponseSchema,
   MarkSupportReadResponseSchema,
@@ -18,6 +20,8 @@ import {
   UnsendSupportMessageResponseSchema,
 } from "./gen/pochical/v1/support_pb";
 import type { ChatPhoto } from "./gen/pochical/v1/sync_pb";
+import { pageOfWords, sentPreview } from "./link-preview";
+import type { KeptPreview } from "./link-preview";
 import { supportPhotoKey } from "./photos";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
@@ -47,6 +51,10 @@ const messageOf = (line: SupportLineOf) =>
             id: line.photoId,
             width: line.photoWidth ?? 0,
           },
+    preview:
+      line.preview === null
+        ? undefined
+        : create(LinkPreviewSchema, line.preview),
     reactions: line.reactions,
     replyTo: line.replyTo ?? "",
     sentAtMs: BigInt(line.createdAt.getTime()),
@@ -70,6 +78,31 @@ const holdBack = async (userId: string): Promise<void> => {
   if (await overLimit(env.SUPPORT_LIMIT, userId)) {
     throw new ConnectError("Try again in a minute", Code.ResourceExhausted);
   }
+};
+
+/**
+ * The page a user's new line of words keeps: the one the app read while
+ * it was written, else read now, unless they took it off (×); counted as
+ * GetLinkPreview's are.
+ */
+const userPreview = async (
+  userId: string,
+  text: string,
+  sent: LinkPreview | undefined,
+  withoutPreview: boolean
+): Promise<KeptPreview | null> => {
+  if (text === "" || withoutPreview) {
+    return null;
+  }
+  // The app's, when it is of these words' own link; else read here.
+  const own = sentPreview(sent, text);
+  if (own !== null) {
+    return own;
+  }
+  if (await overLimit(env.LINK_PREVIEW_LIMIT, userId)) {
+    return null;
+  }
+  return await pageOfWords(env.PHOTOS, text);
 };
 
 /** A photo's side as the app sends it: within chatRules.photoMaxEdge. */
@@ -205,7 +238,7 @@ export const registerSupportService = (router: ConnectRouter): void => {
       });
     },
     sendSupportMessage: async (
-      { device, id, photo, replyTo, text },
+      { device, id, photo, preview, replyTo, text, withoutPreview },
       context
     ) => {
       const user = await requireUser(context);
@@ -229,6 +262,12 @@ export const registerSupportService = (router: ConnectRouter): void => {
       const content = await contentOf(user.id, text, photo);
       await holdBack(user.id);
       const repliedTo = await replyToIn(user.id, replyTo);
+      const page = await userPreview(
+        user.id,
+        content.text,
+        preview,
+        withoutPreview
+      );
       const row: SupportRow = {
         ...content,
         createdAt: new Date(),
@@ -236,6 +275,7 @@ export const registerSupportService = (router: ConnectRouter): void => {
         device: device === "" ? null : device.slice(0, DEVICE_MAX),
         fromSupport: false,
         id,
+        preview: page,
         replyTo: repliedTo?.id ?? null,
         slackTs: null,
         unsent: false,

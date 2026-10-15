@@ -186,6 +186,7 @@ export const unsendLine = async (env: Env, line: SupportRow): Promise<void> => {
         photoHeight: null,
         photoId: null,
         photoWidth: null,
+        preview: null,
         replyTo: null,
         text: "",
         unsent: true,

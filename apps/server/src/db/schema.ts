@@ -8,6 +8,8 @@ import {
   text,
 } from "drizzle-orm/sqlite-core";
 
+import type { KeptPreview } from "../link-preview";
+
 // Which group each live invite code opens. The Group DO owns the group
 // itself; this index exists because a link carries only the code. A group
 // has one live code: remaking the link replaces its row, so the old code
@@ -57,6 +59,9 @@ export const supportMessages = sqliteTable(
     photoHeight: integer("photo_height"),
     photoId: text("photo_id"),
     photoWidth: integer("photo_width"),
+    // The page of its words' first link, as LinkPreview's fields; none
+    // without one, and once taken back.
+    preview: text({ mode: "json" }).$type<KeptPreview>(),
     // The line it is a reply to, by id.
     replyTo: text("reply_to"),
     // Its message in the chat's Slack thread.

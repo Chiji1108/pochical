@@ -22,10 +22,13 @@ public struct SupportLine: Hashable, Sendable, Identifiable {
   public let reactions: [LineReaction]
   /// A photo, as the line instead of words, kept in `ChatPhotos.support`.
   public let photo: LinePhoto?
+  /// The page of its words' first link, as a group chat's line has it.
+  public let preview: LinePreview?
 
   public init(
     id: String, fromSupport: Bool, text: String, sentAt: Date, replyTo: String? = nil,
-    unsent: Bool = false, reactions: [LineReaction] = [], photo: LinePhoto? = nil
+    unsent: Bool = false, reactions: [LineReaction] = [], photo: LinePhoto? = nil,
+    preview: LinePreview? = nil
   ) {
     self.id = id
     self.fromSupport = fromSupport
@@ -35,6 +38,7 @@ public struct SupportLine: Hashable, Sendable, Identifiable {
     self.unsent = unsent
     self.reactions = reactions
     self.photo = photo
+    self.preview = preview
   }
 
   /// Posted as Pochical's people answer, react or take a line back, told
@@ -53,7 +57,8 @@ public struct SupportLine: Hashable, Sendable, Identifiable {
       },
       photo: wire.hasPhoto
         ? LinePhoto(id: wire.photo.id, width: Int(wire.photo.width), height: Int(wire.photo.height))
-        : nil)
+        : nil,
+      preview: wire.hasPreview ? LinePreview(wire.preview) : nil)
   }
 }
 
@@ -72,13 +77,18 @@ extension GroupCalls {
   /// and the line it is a reply to: words, or a photo uploaded first
   /// (`uploadSupportPhoto`) and no words.
   public func sendSupport(
-    _ text: String, id: String, device: String, replyTo: String? = nil, photo: LinePhoto? = nil
+    _ text: String, id: String, device: String, replyTo: String? = nil, photo: LinePhoto? = nil,
+    preview: LinePreview? = nil, withoutPreview: Bool = false
   ) async throws -> SupportLine {
     var request = Pochical_V1_SendSupportMessageRequest()
     request.id = id
     request.text = text
     request.device = device
     request.replyTo = replyTo ?? ""
+    if let preview {
+      request.preview = preview.wire
+    }
+    request.withoutPreview = withoutPreview
     if let photo {
       request.photo.id = photo.id
       request.photo.width = UInt32(photo.width)

@@ -78,6 +78,13 @@ function SupportChat() {
             </a>
           )}
           {line.text}
+          {line.preview !== null && (
+            <div className="meta">
+              <a href={line.preview.url} rel="noopener" target="_blank">
+                {line.preview.title}（{line.preview.site}）
+              </a>
+            </div>
+          )}
           {line.reactions.length > 0 && (
             <div className="meta">
               {line.reactions

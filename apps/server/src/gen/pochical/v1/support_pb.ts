@@ -4,6 +4,8 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { LinkPreview } from "./chat_pb";
+import { file_pochical_v1_chat } from "./chat_pb";
 import type { ChatPhoto } from "./sync_pb";
 import { file_pochical_v1_sync } from "./sync_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/support.proto.
  */
 export const file_pochical_v1_support: GenFile = /*@__PURE__*/
-  fileDesc("Chlwb2NoaWNhbC92MS9zdXBwb3J0LnByb3RvEgtwb2NoaWNhbC52MSLOAQoOU3VwcG9ydE1lc3NhZ2USCgoCaWQYASABKAkSFAoMZnJvbV9zdXBwb3J0GAIgASgIEgwKBHRleHQYAyABKAkSEgoKc2VudF9hdF9tcxgEIAEoAxIQCghyZXBseV90bxgFIAEoCRIOCgZ1bnNlbnQYBiABKAgSLwoJcmVhY3Rpb25zGAcgAygLMhwucG9jaGljYWwudjEuU3VwcG9ydFJlYWN0aW9uEiUKBXBob3RvGAggASgLMhYucG9jaGljYWwudjEuQ2hhdFBob3RvIj8KD1N1cHBvcnRSZWFjdGlvbhINCgVlbW9qaRgBIAEoCRIMCgRtaW5lGAIgASgIEg8KB3N1cHBvcnQYAyABKAgiFwoVR2V0U3VwcG9ydENoYXRSZXF1ZXN0IlcKFkdldFN1cHBvcnRDaGF0UmVzcG9uc2USLQoIbWVzc2FnZXMYASADKAsyGy5wb2NoaWNhbC52MS5TdXBwb3J0TWVzc2FnZRIOCgZ1bnJlYWQYAiABKAUifgoZU2VuZFN1cHBvcnRNZXNzYWdlUmVxdWVzdBIKCgJpZBgBIAEoCRIMCgR0ZXh0GAIgASgJEg4KBmRldmljZRgDIAEoCRIQCghyZXBseV90bxgEIAEoCRIlCgVwaG90bxgFIAEoCzIWLnBvY2hpY2FsLnYxLkNoYXRQaG90byJKChpTZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZRIsCgdtZXNzYWdlGAEgASgLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2UiGAoWTWFya1N1cHBvcnRSZWFkUmVxdWVzdCIZChdNYXJrU3VwcG9ydFJlYWRSZXNwb25zZSI8ChNSZWFjdFN1cHBvcnRSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBWVtb2ppGAIgASgJEgoKAm9uGAMgASgIIkQKFFJlYWN0U3VwcG9ydFJlc3BvbnNlEiwKB21lc3NhZ2UYASABKAsyGy5wb2NoaWNhbC52MS5TdXBwb3J0TWVzc2FnZSIpChtVbnNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QSCgoCaWQYASABKAkiTAocVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZRIsCgdtZXNzYWdlGAEgASgLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2UyiwQKDlN1cHBvcnRTZXJ2aWNlEl4KDkdldFN1cHBvcnRDaGF0EiIucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXF1ZXN0GiMucG9jaGljYWwudjEuR2V0U3VwcG9ydENoYXRSZXNwb25zZSIDkAIBEmoKElNlbmRTdXBwb3J0TWVzc2FnZRImLnBvY2hpY2FsLnYxLlNlbmRTdXBwb3J0TWVzc2FnZVJlcXVlc3QaJy5wb2NoaWNhbC52MS5TZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZSIDkAICEmEKD01hcmtTdXBwb3J0UmVhZBIjLnBvY2hpY2FsLnYxLk1hcmtTdXBwb3J0UmVhZFJlcXVlc3QaJC5wb2NoaWNhbC52MS5NYXJrU3VwcG9ydFJlYWRSZXNwb25zZSIDkAICElgKDFJlYWN0U3VwcG9ydBIgLnBvY2hpY2FsLnYxLlJlYWN0U3VwcG9ydFJlcXVlc3QaIS5wb2NoaWNhbC52MS5SZWFjdFN1cHBvcnRSZXNwb25zZSIDkAICEnAKFFVuc2VuZFN1cHBvcnRNZXNzYWdlEigucG9jaGljYWwudjEuVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXF1ZXN0GikucG9jaGljYWwudjEuVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXNwb25zZSIDkAICQmwKD2FwcC5wb2NoaWNhbC52MUIMU3VwcG9ydFByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw", [file_pochical_v1_sync]);
+  fileDesc("Chlwb2NoaWNhbC92MS9zdXBwb3J0LnByb3RvEgtwb2NoaWNhbC52MSL5AQoOU3VwcG9ydE1lc3NhZ2USCgoCaWQYASABKAkSFAoMZnJvbV9zdXBwb3J0GAIgASgIEgwKBHRleHQYAyABKAkSEgoKc2VudF9hdF9tcxgEIAEoAxIQCghyZXBseV90bxgFIAEoCRIOCgZ1bnNlbnQYBiABKAgSLwoJcmVhY3Rpb25zGAcgAygLMhwucG9jaGljYWwudjEuU3VwcG9ydFJlYWN0aW9uEiUKBXBob3RvGAggASgLMhYucG9jaGljYWwudjEuQ2hhdFBob3RvEikKB3ByZXZpZXcYCSABKAsyGC5wb2NoaWNhbC52MS5MaW5rUHJldmlldyI/Cg9TdXBwb3J0UmVhY3Rpb24SDQoFZW1vamkYASABKAkSDAoEbWluZRgCIAEoCBIPCgdzdXBwb3J0GAMgASgIIhcKFUdldFN1cHBvcnRDaGF0UmVxdWVzdCJXChZHZXRTdXBwb3J0Q2hhdFJlc3BvbnNlEi0KCG1lc3NhZ2VzGAEgAygLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2USDgoGdW5yZWFkGAIgASgFIsIBChlTZW5kU3VwcG9ydE1lc3NhZ2VSZXF1ZXN0EgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSDgoGZGV2aWNlGAMgASgJEhAKCHJlcGx5X3RvGAQgASgJEiUKBXBob3RvGAUgASgLMhYucG9jaGljYWwudjEuQ2hhdFBob3RvEikKB3ByZXZpZXcYBiABKAsyGC5wb2NoaWNhbC52MS5MaW5rUHJldmlldxIXCg93aXRob3V0X3ByZXZpZXcYByABKAgiSgoaU2VuZFN1cHBvcnRNZXNzYWdlUmVzcG9uc2USLAoHbWVzc2FnZRgBIAEoCzIbLnBvY2hpY2FsLnYxLlN1cHBvcnRNZXNzYWdlIhgKFk1hcmtTdXBwb3J0UmVhZFJlcXVlc3QiGQoXTWFya1N1cHBvcnRSZWFkUmVzcG9uc2UiPAoTUmVhY3RTdXBwb3J0UmVxdWVzdBIKCgJpZBgBIAEoCRINCgVlbW9qaRgCIAEoCRIKCgJvbhgDIAEoCCJEChRSZWFjdFN1cHBvcnRSZXNwb25zZRIsCgdtZXNzYWdlGAEgASgLMhsucG9jaGljYWwudjEuU3VwcG9ydE1lc3NhZ2UiKQobVW5zZW5kU3VwcG9ydE1lc3NhZ2VSZXF1ZXN0EgoKAmlkGAEgASgJIkwKHFVuc2VuZFN1cHBvcnRNZXNzYWdlUmVzcG9uc2USLAoHbWVzc2FnZRgBIAEoCzIbLnBvY2hpY2FsLnYxLlN1cHBvcnRNZXNzYWdlMosECg5TdXBwb3J0U2VydmljZRJeCg5HZXRTdXBwb3J0Q2hhdBIiLnBvY2hpY2FsLnYxLkdldFN1cHBvcnRDaGF0UmVxdWVzdBojLnBvY2hpY2FsLnYxLkdldFN1cHBvcnRDaGF0UmVzcG9uc2UiA5ACARJqChJTZW5kU3VwcG9ydE1lc3NhZ2USJi5wb2NoaWNhbC52MS5TZW5kU3VwcG9ydE1lc3NhZ2VSZXF1ZXN0GicucG9jaGljYWwudjEuU2VuZFN1cHBvcnRNZXNzYWdlUmVzcG9uc2UiA5ACAhJhCg9NYXJrU3VwcG9ydFJlYWQSIy5wb2NoaWNhbC52MS5NYXJrU3VwcG9ydFJlYWRSZXF1ZXN0GiQucG9jaGljYWwudjEuTWFya1N1cHBvcnRSZWFkUmVzcG9uc2UiA5ACAhJYCgxSZWFjdFN1cHBvcnQSIC5wb2NoaWNhbC52MS5SZWFjdFN1cHBvcnRSZXF1ZXN0GiEucG9jaGljYWwudjEuUmVhY3RTdXBwb3J0UmVzcG9uc2UiA5ACAhJwChRVbnNlbmRTdXBwb3J0TWVzc2FnZRIoLnBvY2hpY2FsLnYxLlVuc2VuZFN1cHBvcnRNZXNzYWdlUmVxdWVzdBopLnBvY2hpY2FsLnYxLlVuc2VuZFN1cHBvcnRNZXNzYWdlUmVzcG9uc2UiA5ACAkJsCg9hcHAucG9jaGljYWwudjFCDFN1cHBvcnRQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM", [file_pochical_v1_chat, file_pochical_v1_sync]);
 
 /**
  * A line of the chat.
@@ -73,6 +75,14 @@ export type SupportMessage = Message<"pochical.v1.SupportMessage"> & {
    * @generated from field: pochical.v1.ChatPhoto photo = 8;
    */
   photo?: ChatPhoto | undefined;
+
+  /**
+   * The page of its words' first link, as a group chat's line has it
+   * (spec/chat.md, Previews); none once taken back.
+   *
+   * @generated from field: pochical.v1.LinkPreview preview = 9;
+   */
+  preview?: LinkPreview | undefined;
 };
 
 /**
@@ -188,6 +198,21 @@ export type SendSupportMessageRequest = Message<"pochical.v1.SendSupportMessageR
    * @generated from field: pochical.v1.ChatPhoto photo = 5;
    */
   photo?: ChatPhoto | undefined;
+
+  /**
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when it had not come, when the server reads it before keeping the line.
+   *
+   * @generated from field: pochical.v1.LinkPreview preview = 6;
+   */
+  preview?: LinkPreview | undefined;
+
+  /**
+   * The user took the page off (×): the line goes without one.
+   *
+   * @generated from field: bool without_preview = 7;
+   */
+  withoutPreview: boolean;
 };
 
 /**
