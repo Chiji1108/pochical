@@ -28,13 +28,18 @@ struct Themed: ViewModifier {
   }
 
   private var scheme: ColorScheme? {
-    if theme.isAlwaysDark {
-      return .dark
-    }
-    switch appearance {
-    case .system: return nil
-    case .light: return .light
-    case .dark: return .dark
+    theme.isAlwaysDark ? .dark : appearance.scheme
+  }
+}
+
+extension Appearance {
+  /// The light or dark 外観 asks for, none to follow the system: the app's
+  /// screens and the widgets alike (spec/widgets.md, Colors).
+  var scheme: ColorScheme? {
+    switch self {
+    case .system: nil
+    case .light: .light
+    case .dark: .dark
     }
   }
 }
