@@ -207,6 +207,9 @@ struct ChatComposer: View {
         .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
       }
       .animation(.snappy(duration: 0.25), value: folded)
+      // The row rises with the keyboard as one: a fold landing while it
+      // rises would otherwise draw its pieces where the row ends up.
+      .geometryGroup()
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
       if TextLimits.chatMessage - draft.text.count <= TextFields.countWhenLeft {
