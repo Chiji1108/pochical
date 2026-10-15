@@ -5,7 +5,6 @@ struct DeviceCalendarVectors: Decodable {
   struct PatternCase: Decodable, Sendable {
     let name: String
     let time: [String]?
-    let off: Bool
   }
 
   struct DayCase: Decodable, Sendable {
@@ -27,14 +26,50 @@ struct DeviceCalendarVectors: Decodable {
     let month: String
     let patterns: [String: PatternCase]
     let days: [String: DayCase]
-    let includeOff: [String]
     let notes: [String: String]?
     let people: [String: [String]]?
+    let shown: [String]
     let expected: [Event]
-    let carriedOver: [String]?
+  }
+
+  struct FirstPattern: Decodable, Sendable {
+    let time: [String]?
+    let off: Bool?
+    let nextDay: String?
+  }
+
+  struct FirstCase: VectorCase {
+    let name: String
+    let patterns: [String: FirstPattern]
+    let expected: [String]
+  }
+
+  struct PickCase: VectorCase {
+    let name: String
+    let patterns: [String: FirstPattern]
+    let chosen: [String: Bool]
+    let pick: Pick?
+    let expectedChosen: [String: Bool]
+    let expectedShown: [String]
+  }
+
+  struct Pick: Decodable, Sendable {
+    let id: String
+    let on: Bool
   }
 
   let events: [Case]
+  let shownAtFirst: [FirstCase]
+  let picks: [PickCase]
+}
+
+private func patterns(_ cases: [String: DeviceCalendarVectors.FirstPattern]) -> [Pattern] {
+  cases.map { id, pattern in
+    Pattern(
+      id: id, name: id, emoji: "", symbol: "", icon: "", color: 0,
+      time: pattern.time.map { ShiftTime(start: $0[0], end: $0[1]) },
+      countsAsOff: pattern.off ?? false, nextDay: pattern.nextDay)
+  }
 }
 
 @Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).events)
@@ -45,8 +80,7 @@ func shiftsAsEvents(_ vector: DeviceCalendarVectors.Case) throws {
         id,
         Pattern(
           id: id, name: pattern.name, emoji: "", symbol: "", icon: "", color: 0,
-          time: pattern.time.map { ShiftTime(start: $0[0], end: $0[1]) },
-          countsAsOff: pattern.off)
+          time: pattern.time.map { ShiftTime(start: $0[0], end: $0[1]) })
       )
     })
   var days: [Day: DayEntry] = [:]
@@ -57,15 +91,28 @@ func shiftsAsEvents(_ vector: DeviceCalendarVectors.Case) throws {
     uniqueKeysWithValues: (vector.notes ?? [:]).compactMap { key, memo in Day(key).map { ($0, memo) } })
   let people = Dictionary(
     uniqueKeysWithValues: (vector.people ?? [:]).compactMap { key, names in Day(key).map { ($0, names) } })
-  let month = try #require(Day(vector.month))
   let events = ShiftEvents.month(
-    month, days: days, patterns: patterns, offShown: Set(vector.includeOff), notes: notes,
-    people: people)
+    try #require(Day(vector.month)), days: days, patterns: patterns, shown: Set(vector.shown),
+    notes: notes, people: people)
   #expect(
     events.map {
       .init(day: $0.day.key, title: $0.title, start: $0.start, end: $0.end, notes: $0.notes)
     } == vector.expected)
-  #expect(
-    ShiftEvents.carriedOver(month, days: days, patterns: patterns, offShown: Set(vector.includeOff))
-      == vector.carriedOver ?? [])
+}
+
+@Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).shownAtFirst)
+func patternsShownAtFirst(_ vector: DeviceCalendarVectors.FirstCase) {
+  #expect(ShiftEvents.shownAtFirst(patterns(vector.patterns)) == Set(vector.expected))
+}
+
+@Test(arguments: try vectors("device-calendar", as: DeviceCalendarVectors.self).picks)
+func patternsPicked(_ vector: DeviceCalendarVectors.PickCase) {
+  let all = patterns(vector.patterns)
+  var putting = CalendarAdd()
+  putting.chosen = vector.chosen
+  if let pick = vector.pick {
+    putting.pick(pick.id, pick.on, of: all)
+  }
+  #expect(putting.chosen == vector.expectedChosen)
+  #expect(putting.shown(of: all) == Set(vector.expectedShown))
 }

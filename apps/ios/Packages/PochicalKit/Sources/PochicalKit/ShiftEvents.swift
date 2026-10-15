@@ -2,7 +2,8 @@ import Foundation
 
 /// A day's shift as an event in the device's calendar (spec/calendar.md,
 /// Adding a month to the device calendar): its name, at its time on that
-/// day, or all day when it has none. Its memo and people stay in Pochical.
+/// day, or all day when it has none, the day's memo and people in its notes
+/// when asked for.
 public struct ShiftEvent: Hashable, Sendable {
   public let day: Day
   public let title: String
@@ -17,66 +18,41 @@ public struct ShiftEvent: Hashable, Sendable {
 }
 
 public enum ShiftEvents {
-  /// The month's days with a shift as events, days off only those of
-  /// `offShown`: each at the day's own time, else its pattern's. A day of
-  /// work without a time that the day before's event runs into, like 明け
-  /// after 夜勤, is left out, as that event shows on it already. `days`
-  /// hold the day before the month only when its event is in the calendar
-  /// already, so the month's first day goes in when the month before was
-  /// never added. `notes` and `people`, given only when asked for, are
-  /// each day's memo and the names of those on it: they go in a shift's
-  /// event's notes, and a day with a memo and no shift's event gets one of
-  /// its own, all day, named by the memo.
+  /// The month's days with a shift of `shown` as events, each at the day's
+  /// own time, else its pattern's. `notes` and `people`, given only when
+  /// asked for, are each day's memo and the names of those on it: they go
+  /// in a shift's event's notes, and a day with a memo and no shift's
+  /// event gets one of its own, all day, named by the memo.
   public static func month(
-    _ month: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], offShown: Set<PatternID>,
+    _ month: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], shown: Set<PatternID>,
     notes: [Day: String] = [:], people: [Day: [String]] = [:]
   ) -> [ShiftEvent] {
     month.daysOfMonth.compactMap { day in
-      let shift = isCarriedOver(day, days: days, patterns: patterns, offShown: offShown)
-        ? nil
-        : shiftEvent(on: day, days: days, patterns: patterns, offShown: offShown, notes: notes,
-          people: people)
-      return shift ?? notes[day].flatMap { memo in memoEvent(memo, on: day) }
+      shiftEvent(on: day, days: days, patterns: patterns, shown: shown, notes: notes,
+        people: people)
+        ?? notes[day].flatMap { memo in memoEvent(memo, on: day) }
     }
   }
 
-  /// The patterns `month` leaves out as carried over from the day before,
-  /// in the order of the days they are first left out on, for the sheet
-  /// to name.
-  public static func carriedOver(
-    _ month: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], offShown: Set<PatternID>
-  ) -> [PatternID] {
-    var found: [PatternID] = []
-    for day in month.daysOfMonth
-    where isCarriedOver(day, days: days, patterns: patterns, offShown: offShown) {
-      if let shift = days[day]?.shift, !found.contains(shift) {
-        found.append(shift)
+  /// The patterns put in until the person picks otherwise: those with a
+  /// time, and of those without, not the days off and not a pattern that
+  /// follows another as its next day, like 明け after 夜勤, whose night
+  /// shows on that day already.
+  public static func shownAtFirst(_ patterns: [Pattern]) -> Set<PatternID> {
+    let following = Set(patterns.compactMap(\.nextDay))
+    return Set(
+      patterns.filter { pattern in
+        pattern.time != nil || !(pattern.countsAsOff || following.contains(pattern.id))
       }
-    }
-    return found
-  }
-
-  /// Whether the day is work without a time that the day before's event
-  /// runs into.
-  private static func isCarriedOver(
-    _ day: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], offShown: Set<PatternID>
-  ) -> Bool {
-    guard let entry = days[day], let pattern = patterns[entry.shift], !pattern.countsAsOff,
-      hours(of: entry, pattern) == nil,
-      let before = shiftEvent(
-        on: day.adding(days: -1), days: days, patterns: patterns, offShown: offShown, notes: [:],
-        people: [:]),
-      let end = before.end
-    else { return false }
-    return end > 24 * 60
+      .map(\.id))
   }
 
   private static func shiftEvent(
-    on day: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], offShown: Set<PatternID>,
+    on day: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], shown: Set<PatternID>,
     notes: [Day: String], people: [Day: [String]]
   ) -> ShiftEvent? {
-    guard let entry = days[day], let pattern = patterns[entry.shift] else { return nil }
-    guard !pattern.countsAsOff || offShown.contains(entry.shift) else { return nil }
+    guard let entry = days[day], let pattern = patterns[entry.shift], shown.contains(entry.shift)
+    else { return nil }
     let said = notesOf(memo: notes[day], people: people[day] ?? [])
     guard let (start, end) = hours(of: entry, pattern) else {
       return ShiftEvent(day: day, title: pattern.name, start: nil, end: nil, notes: said)

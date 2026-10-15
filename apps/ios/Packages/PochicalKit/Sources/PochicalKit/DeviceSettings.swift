@@ -111,13 +111,13 @@ public struct PictureLook: Codable, Equatable, Sendable {
   }
 }
 
-/// What 端末カレンダーに追加 puts in besides the shifts (spec/calendar.md):
-/// the days off of the patterns picked, the day's memo and those on it,
-/// each off until turned on, as a calendar may be shared with family.
+/// What 端末カレンダーに追加 puts in (spec/calendar.md): the patterns
+/// picked under 入れるシフト, the day's memo and those on it, the last
+/// two off until turned on, as a calendar may be shared with family.
 public struct CalendarAdd: Codable, Equatable, Sendable {
-  /// The patterns counted as off whose days go in too, like 有休 without
-  /// 休み, sorted so the account keeps one JSON for them.
-  public var off: [PatternID] = []
+  /// The patterns picked otherwise than `ShiftEvents.shownAtFirst` has
+  /// them: put in, or left out.
+  public var chosen: [PatternID: Bool] = [:]
   public var notes = false
   public var people = false
 
@@ -125,9 +125,26 @@ public struct CalendarAdd: Codable, Equatable, Sendable {
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    off = try container.decodeIfPresent([PatternID].self, forKey: .off) ?? []
+    chosen = try container.decodeIfPresent([PatternID: Bool].self, forKey: .chosen) ?? [:]
     notes = try container.decodeIfPresent(Bool.self, forKey: .notes) ?? false
     people = try container.decodeIfPresent(Bool.self, forKey: .people) ?? false
+  }
+
+  /// The patterns put in, of `patterns`.
+  public func shown(of patterns: [Pattern]) -> Set<PatternID> {
+    let atFirst = ShiftEvents.shownAtFirst(patterns)
+    return Set(patterns.map(\.id).filter { chosen[$0] ?? atFirst.contains($0) })
+  }
+
+  /// Picks a pattern in or out, keeping only what differs from the first
+  /// pick, of patterns still there, so a deleted one's leaves too.
+  public mutating func pick(_ id: PatternID, _ on: Bool, of patterns: [Pattern]) {
+    let atFirst = ShiftEvents.shownAtFirst(patterns)
+    let ids = Set(patterns.map(\.id))
+    chosen = chosen.filter { ids.contains($0.key) && $0.key != id }
+    if on != atFirst.contains(id) {
+      chosen[id] = on
+    }
   }
 }
 
