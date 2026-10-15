@@ -1,4 +1,5 @@
 import { chatRules } from "@pochical/design/chat";
+import { sizes } from "@pochical/design/metrics";
 import {
   ArrowUp,
   CalendarPlus,
@@ -435,9 +436,10 @@ export function Composer({
   );
 }
 
-// The composer's tools: each one's width, how many, and how they fold
-// into a › and back, as quick as the calendar's own fold.
-const toolWidth = 32;
+// The composer's tools: each one's width (a touch target's), how many,
+// and how they fold into a › and back, as quick as the calendar's own
+// fold.
+const toolWidth = sizes.touch;
 
 const toolCount = 2;
 

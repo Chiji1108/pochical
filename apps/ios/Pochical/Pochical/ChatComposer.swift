@@ -146,17 +146,19 @@ struct ChatComposer: View {
             .labelStyle(.iconOnly)
             .font(.system(size: 20, weight: .medium))
             .foregroundStyle(colors.textSecondary)
-            .frame(width: 38, height: 38)
+            .composerTool()
             .transition(.opacity.combined(with: .scale(scale: 0.6)))
         } else if editing == nil {
-          HStack(spacing: 8) {
+          // Side by side with no gap, as LINE's row of icons, each a
+          // touch target wide.
+          HStack(spacing: 0) {
             photoButton
             if let onShareDays {
               Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
                 .labelStyle(.iconOnly)
                 .font(.system(size: 20))
                 .foregroundStyle(colors.textSecondary)
-                .frame(width: 38, height: 38)
+                .composerTool()
             }
           }
           .transition(.opacity.combined(with: .move(edge: .leading)))
@@ -178,14 +180,19 @@ struct ChatComposer: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .frame(minHeight: 38)
+        .frame(minHeight: composerRowHeight)
         .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
         Button(action: onSubmit) {
           Image(systemName: editing == nil ? "arrow.up" : "checkmark")
             .font(.system(size: 16, weight: .bold))
             .foregroundStyle(colors.accentOnFill)
-            .frame(width: 38, height: 38)
+            .frame(width: composerRowHeight, height: composerRowHeight)
             .background(blocked ? colors.fillPrimary : colors.accentFill, in: Circle())
+            // Tapped over a touch target, into the gap and the row's
+            // padding around it.
+            .padding(composerOverhang)
+            .contentShape(.rect)
+            .padding(-composerOverhang)
         }
         .buttonStyle(.plain)
         .disabled(blocked)
@@ -240,7 +247,7 @@ struct ChatComposer: View {
         Image(systemName: "photo")
           .font(.system(size: 20))
           .foregroundStyle(iconColor)
-          .frame(width: 38, height: 38)
+          .composerTool()
       }
       .accessibilityLabel("写真を送る")
       .onChange(of: photoItems) { _, items in
@@ -255,7 +262,7 @@ struct ChatComposer: View {
       .labelStyle(.iconOnly)
       .font(.system(size: 20))
       .foregroundStyle(colors.textQuaternary)
-      .frame(width: 38, height: 38)
+      .composerTool()
     }
   }
 
@@ -346,5 +353,22 @@ struct ChatComposer: View {
     withAnimation {
       draft.preview = ComposerPreview(url: link, preview: preview, none: preview == nil)
     }
+  }
+}
+
+/// The composer's row as tall as its field's one line, the buttons beside
+/// it too, so the row stays low; each button is still tapped over a touch
+/// target, reaching into the row's padding.
+nonisolated private let composerRowHeight: CGFloat = 38
+nonisolated private let composerOverhang = (Metrics.touch - composerRowHeight) / 2
+
+extension View {
+  /// A composer tool (写真を送る, 日にちを共有, the ›): a touch target wide
+  /// and tapped over one, laid out as tall as the row.
+  /// Nonisolated, as the photo picker draws its label off the main actor.
+  nonisolated fileprivate func composerTool() -> some View {
+    frame(width: Metrics.touch, height: Metrics.touch)
+      .contentShape(.rect)
+      .padding(.vertical, -composerOverhang)
   }
 }

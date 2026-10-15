@@ -153,7 +153,7 @@ A group chat can put days to the vote, as LINE's 日程調整 does, for the step
 
 ## Photos
 
-- While the composer's field is in use, from the moment it is tapped and while words wait in it, its tools (写真を送る, 日にちを共有) fold into a › (写真と日にちのボタンを表示), as LINE's do, giving the field their room; › opens them again until the next letter. The support chat, with the photo tool alone, keeps it in sight.
+- While the composer's field is in use, from the moment it is tapped and while words wait in it, its tools (写真を送る, 日にちを共有) fold into a › (写真と日にちのボタンを表示), as LINE's do, giving the field their room; › opens them again until the next letter. The support chat, with the photo tool alone, keeps it in sight. The row's buttons are drawn as tall as the field's one line, so the row stays low, yet each is tapped over `sizes.touch` (into the row's padding and the gaps); the tools, and the ›, sit side by side with no gap, each `sizes.touch` wide.
 - The send button is each platform's own, as its messaging apps draw it: the arrow up on iOS (Messages), Material's send on Android; grey and not pressable while there is nothing to send.
 - The composer's photo tool opens the system's photo picker, `chatRules.photosPerSend` photos at most; past them it says 写真は一度に{n}枚まで送れます, and a photo the phone cannot read is left out with 開けない写真がありました. Picked photos wait above the composer, 64pt squares each with × ({n}枚目の写真を外す), until sent; words written with them go after them as a line of their own.
 - Each photo is its own line, with no words. The phone shrinks it first, as chat apps send them: its longer side to `chatRules.photoMaxEdge` pixels, as JPEG within `chatRules.photoMaxBytes`, turned upright and written again from its pixels, so its location and other metadata never leave the phone.

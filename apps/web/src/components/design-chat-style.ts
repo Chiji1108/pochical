@@ -271,8 +271,16 @@ export const chatStyle = {
     paddingBottom: "4px",
     textStyle: "footnote",
   }),
+  // As tall as the field's one line, so the row stays low, yet tapped
+  // over a touch target's height: the room beyond it is the row's own
+  // padding and the gap beside it.
   composerButton: cva({
     base: {
+      _after: {
+        content: '""',
+        inset: "calc((38px - token(sizes.touch)) / 2)",
+        position: "absolute",
+      },
       bg: "transparent",
       border: 0,
       borderRadius: "circle",
@@ -281,6 +289,7 @@ export const chatStyle = {
       flexShrink: 0,
       height: "38px",
       placeItems: "center",
+      position: "relative",
       width: "38px",
     },
     variants: {
@@ -294,9 +303,15 @@ export const chatStyle = {
           transition: "background-color 0.15s ease-out, color 0.15s ease-out",
         },
       },
-      // The tools at the start sit close together, as LINE's row of
-      // icons does, leaving the room to the field.
-      tool: { true: { borderRadius: "sm", width: "32px" } },
+      // The tools at the start sit side by side with no gap, as LINE's
+      // row of icons does, each a touch target wide.
+      tool: {
+        true: {
+          _after: { insetInline: 0 },
+          borderRadius: "sm",
+          width: "touch",
+        },
+      },
     },
   }),
   composerToolRow: css({ display: "flex" }),
@@ -305,8 +320,9 @@ export const chatStyle = {
   composerTools: css({
     display: "flex",
     flexShrink: 0,
-    // The folding tools stay inside while they narrow.
-    overflow: "hidden",
+    // The folding tools stay inside while they narrow; their taps still
+    // reach over and under it.
+    overflowX: "clip",
     position: "relative",
   }),
   // One line to start with, nearly as round-ended as the buttons beside
