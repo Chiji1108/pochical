@@ -771,6 +771,17 @@ public func firstUnread(_ writers: [LineWriter], unread: Int) -> Int? {
   return writers.firstIndex(of: .others)
 }
 
+/// The first of the lines come in while the chat is open that it stops at
+/// under ここから新着 rather than going past: after both the `latest`
+/// line it held and the reader's `read` mark, the first others wrote; its
+/// seq, nil for none (spec/vectors/chat.json, firstComing).
+public func firstComing(
+  _ lines: [(seq: Int64, writer: LineWriter)], after latest: Int64, read: Int64
+) -> Int64? {
+  let from = max(latest, read)
+  return lines.first { $0.seq > from && $0.writer == .others }?.seq
+}
+
 /// How many of a chat's unread lines count, as what notifies: all of them
 /// in a chat that is on; in one turned off only those mentioning `me`,
 /// and those only while mentions always notify (spec/chat.md, Unread

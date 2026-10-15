@@ -887,10 +887,13 @@ struct ChatScreen: View {
   private func unreadComing(after latest: Int64?) -> ChatLineRow? {
     guard let me = meID else { return nil }
     let state = chat.state
-    let from = max(latest ?? 0, state.lastRead(by: me))
-    return state.lines.first {
-      $0.seq > from && $0.authorID != me && $0.notice == nil && !$0.hidden
+    // A line never delivered to the reader counts as the app's, passed over.
+    let writers = state.lines.map { line in
+      (seq: line.seq, writer: line.authorID == me ? LineWriter.me
+        : line.notice != nil || line.hidden ? .app : .others)
     }
+    let seq = firstComing(writers, after: latest ?? 0, read: state.lastRead(by: me))
+    return seq.flatMap { seq in state.lines.first { $0.seq == seq } }
   }
 
   /// Shows the lines from `first` as far as the screen goes rather than
