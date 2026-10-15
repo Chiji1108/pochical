@@ -129,10 +129,10 @@ enum DayMoments {
   }
 }
 
-/// A widget's view in the person's テーマ, in the light or dark the system
-/// draws it, their marks' shape and 月と曜日, which the system's relative
-/// times (3時間12分, 3 hr, 12 min) follow too. On the lock screen the
-/// system draws the ground.
+/// A widget's view in the person's テーマ, in the light or dark 外観 picks
+/// (the system's on 自動), their marks' shape and 月と曜日, which the
+/// system's relative times (3時間12分, 3 hr, 12 min) follow too. On the
+/// lock screen the system draws the ground.
 struct WidgetLook<Content: View>: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.widgetFamily) private var family
@@ -141,9 +141,11 @@ struct WidgetLook<Content: View>: View {
 
   var body: some View {
     let theme = settings.theme
-    let colors = theme.colors(theme.isAlwaysDark ? .dark : colorScheme)
+    let scheme = theme.isAlwaysDark ? .dark : settings.appearance.scheme ?? colorScheme
+    let colors = theme.colors(scheme)
     let english = settings.heading.english
     content
+      .environment(\.colorScheme, scheme)
       .environment(\.themeColors, colors)
       .environment(\.look, settings.look)
       .environment(\.english, english)
