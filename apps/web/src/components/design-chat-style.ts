@@ -294,12 +294,12 @@ export const chatStyle = {
           transition: "background-color 0.15s ease-out, color 0.15s ease-out",
         },
       },
-      // The tools at the start sit close together, as LINE's row of
-      // icons does, leaving the room to the field.
-      tool: { true: { borderRadius: "sm", width: "32px" } },
+      // The tools at the start, as wide as the send button, a gap apart
+      // as the row's other pieces are.
+      tool: { true: { borderRadius: "sm" } },
     },
   }),
-  composerToolRow: css({ display: "flex" }),
+  composerToolRow: css({ display: "flex", gap: "8px" }),
   // A lone tool, as the support chat's photo button, which never folds.
   composerToolsStill: css({ display: "flex", flexShrink: 0 }),
   composerTools: css({

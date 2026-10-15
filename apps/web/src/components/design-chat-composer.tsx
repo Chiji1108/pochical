@@ -168,7 +168,9 @@ export function Composer({
   const [writing, setWriting] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolsFolded = (writing || draft !== "") && !toolsOpen;
-  let toolsWidth = toolsFolded ? toolWidth : toolWidth * toolCount;
+  let toolsWidth = toolsFolded
+    ? toolWidth
+    : toolWidth * toolCount + toolGap * (toolCount - 1);
   // A message being changed keeps what it carries; only its words change.
   if (editing !== undefined) {
     toolsWidth = 0;
@@ -435,9 +437,12 @@ export function Composer({
   );
 }
 
-// The composer's tools: each one's width, how many, and how they fold
-// into a › and back, as quick as the calendar's own fold.
-const toolWidth = 32;
+// The composer's tools: each one's width, the gap between them, how
+// many, and how they fold into a › and back, as quick as the calendar's
+// own fold.
+const toolWidth = 38;
+
+const toolGap = 8;
 
 const toolCount = 2;
 
