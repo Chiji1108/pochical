@@ -1,4 +1,6 @@
+import CoreGraphics
 import Foundation
+import ImageIO
 import PochicalDesign
 import PochicalKit
 import Testing
@@ -47,4 +49,29 @@ func aThumbHashDrawsItsBlur(_ vector: ThumbHashVectors.Decode) throws {
 @Test func bytesThatAreNoThumbHashDrawNothing() {
   #expect(ThumbHash.decode(Data([1, 2])) == nil)
   #expect(ThumbHash.image(Data()) == nil)
+}
+
+@Test func aPhotosBlurIsTheRightWayUp() throws {
+  // Red over blue, as a JPEG the phone sends.
+  let context = try #require(
+    CGContext(
+      data: nil, width: 60, height: 80, bitsPerComponent: 8, bytesPerRow: 0,
+      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+  context.setFillColor(red: 0, green: 0, blue: 1, alpha: 1)
+  context.fill(CGRect(x: 0, y: 0, width: 60, height: 40))
+  context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
+  context.fill(CGRect(x: 0, y: 40, width: 60, height: 40))
+  let out = NSMutableData()
+  let destination = try #require(
+    CGImageDestinationCreateWithData(out, "public.jpeg" as CFString, 1, nil))
+  let image = try #require(context.makeImage())
+  CGImageDestinationAddImage(destination, image, nil)
+  CGImageDestinationFinalize(destination)
+
+  let hash = try #require(ThumbHash.of(out as Data))
+  let blur = try #require(ThumbHash.decode(hash))
+  let top = 0
+  let bottom = (blur.height - 1) * blur.width * 4
+  #expect(blur.rgba[top] > blur.rgba[top + 2])
+  #expect(blur.rgba[bottom + 2] > blur.rgba[bottom])
 }
