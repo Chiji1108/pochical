@@ -375,7 +375,7 @@ const toggle = {
     width: "22px",
   }),
   track: css({
-    _checked: { bg: "accent.fill" },
+    _checked: { bg: "accent.switch" },
     _focusVisible: {
       outline: "2px solid token(colors.accent.default)",
       outlineOffset: "2px",

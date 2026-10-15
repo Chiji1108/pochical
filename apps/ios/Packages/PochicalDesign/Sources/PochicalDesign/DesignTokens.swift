@@ -125,6 +125,7 @@ public struct ThemeColors: Sendable {
   public let accentFocus: Color
   public let accentBorder: Color
   public let accentContainer: Color
+  public let accentSwitch: Color
   public let calendarOffTint: Color
   public let calendarNoteMarker: Color
   /// The shift colors in picker order; the first is the テーマ's own.
@@ -175,6 +176,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x6A8365),
     accentBorder: Color(hex: 0xA2B49E),
     accentContainer: Color(hex: 0xEEF3ED),
+    accentSwitch: Color(hex: 0x496444),
     calendarOffTint: Color(hex: 0xE1E9DF),
     calendarNoteMarker: Color(hex: 0xD1DDCE),
     marks: [
@@ -236,6 +238,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x8FA68A),
     accentBorder: Color(hex: 0x697A66),
     accentContainer: Color(hex: 0x2B312A),
+    accentSwitch: Color(hex: 0xA4C19F),
     calendarOffTint: Color(hex: 0x2A3528),
     calendarNoteMarker: Color(hex: 0x374235),
     marks: [
@@ -297,6 +300,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x7B8872),
     accentBorder: Color(hex: 0xA8B2A1),
     accentContainer: Color(hex: 0xF0F2EE),
+    accentSwitch: Color(hex: 0x5B6851),
     calendarOffTint: Color(hex: 0xE3E8E0),
     calendarNoteMarker: Color(hex: 0xD4DCCF),
     marks: [
@@ -358,6 +362,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x97A38F),
     accentBorder: Color(hex: 0x6F7869),
     accentContainer: Color(hex: 0x2D302B),
+    accentSwitch: Color(hex: 0xAEBDA4),
     calendarOffTint: Color(hex: 0x2E342A),
     calendarNoteMarker: Color(hex: 0x3B4136),
     marks: [
@@ -419,6 +424,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x5A5D59),
     accentBorder: Color(hex: 0xACAFAC),
     accentContainer: Color(hex: 0xF1F1F0),
+    accentSwitch: Color(hex: 0x3C3F3B),
     calendarOffTint: Color(hex: 0xE5E6E5),
     calendarNoteMarker: Color(hex: 0xD8D9D8),
     marks: [
@@ -474,16 +480,17 @@ extension ThemeColors {
     mediaDim: Color(hex: 0x000000, alpha: 0x52),
     mediaShade: Color(hex: 0x000000, alpha: 0x99),
     mediaWarning: Color(hex: 0xFFD60A),
-    accentDefault: Color(hex: 0xCFD2CD),
-    accentFill: Color(hex: 0xCFD2CD),
+    accentDefault: Color(hex: 0xEFF3EE),
+    accentFill: Color(hex: 0xEFF3EE),
     accentOnFill: Color(hex: 0x262725),
     accentFocus: Color(hex: 0x9C9F9B),
     accentBorder: Color(hex: 0x737572),
     accentContainer: Color(hex: 0x2E2F2E),
+    accentSwitch: Color(hex: 0xCED2CD),
     calendarOffTint: Color(hex: 0x313230),
     calendarNoteMarker: Color(hex: 0x3E3F3D),
     marks: [
-      MarkColor(name: "テーマカラー", color: Color(hex: 0xCFD2CD), tint: Color(hex: 0x313230), noteOnTint: Color(hex: 0x4B4C4A)),
+      MarkColor(name: "テーマカラー", color: Color(hex: 0xEFF3EE), tint: Color(hex: 0x313230), noteOnTint: Color(hex: 0x4B4C4A)),
       MarkColor(name: "からし", color: Color(hex: 0xD6BB77), tint: Color(hex: 0x3A3118), noteOnTint: Color(hex: 0x574B2A)),
       MarkColor(name: "オレンジ", color: Color(hex: 0xE6B285), tint: Color(hex: 0x402D1C), noteOnTint: Color(hex: 0x5F462F)),
       MarkColor(name: "テラコッタ", color: Color(hex: 0xEFAB95), tint: Color(hex: 0x442A23), noteOnTint: Color(hex: 0x654238)),
@@ -541,6 +548,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x9B856A),
     accentBorder: Color(hex: 0xBBAB98),
     accentContainer: Color(hex: 0xF4F0EC),
+    accentSwitch: Color(hex: 0x7C6447),
     calendarOffTint: Color(hex: 0xECE5DC),
     calendarNoteMarker: Color(hex: 0xE2D7C9),
     marks: [
@@ -602,6 +610,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0xAF9B83),
     accentBorder: Color(hex: 0x807261),
     accentContainer: Color(hex: 0x342E27),
+    accentSwitch: Color(hex: 0xCCB395),
     calendarOffTint: Color(hex: 0x393025),
     calendarNoteMarker: Color(hex: 0x463D31),
     marks: [
@@ -663,6 +672,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x808A4C),
     accentBorder: Color(hex: 0xACB389),
     accentContainer: Color(hex: 0xF0F2E8),
+    accentSwitch: Color(hex: 0x616A22),
     calendarOffTint: Color(hex: 0xE5E9D6),
     calendarNoteMarker: Color(hex: 0xD7DDBF),
     marks: [
@@ -724,6 +734,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x9CA56E),
     accentBorder: Color(hex: 0x727952),
     accentContainer: Color(hex: 0x2E3122),
+    accentSwitch: Color(hex: 0xB4BF7B),
     calendarOffTint: Color(hex: 0x30341B),
     calendarNoteMarker: Color(hex: 0x3D4128),
     marks: [
@@ -785,6 +796,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x75594F),
     accentBorder: Color(hex: 0xBEA8A1),
     accentContainer: Color(hex: 0xF5F0EE),
+    accentSwitch: Color(hex: 0x573A30),
     calendarOffTint: Color(hex: 0xEEE4E0),
     calendarNoteMarker: Color(hex: 0xE5D5CF),
     marks: [
@@ -846,6 +858,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0xB3978E),
     accentBorder: Color(hex: 0x836F69),
     accentContainer: Color(hex: 0x352D2A),
+    accentSwitch: Color(hex: 0xD1AFA3),
     calendarOffTint: Color(hex: 0x3B2E2A),
     calendarNoteMarker: Color(hex: 0x483B37),
     marks: [
@@ -907,6 +920,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x4B8990),
     accentBorder: Color(hex: 0x8DB7BB),
     accentContainer: Color(hex: 0xEAF3F4),
+    accentSwitch: Color(hex: 0x1D6971),
     calendarOffTint: Color(hex: 0xD8EAEC),
     calendarNoteMarker: Color(hex: 0xC3DFE3),
     marks: [
@@ -968,6 +982,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x73A9AF),
     accentBorder: Color(hex: 0x567C81),
     accentContainer: Color(hex: 0x243234),
+    accentSwitch: Color(hex: 0x82C5CC),
     calendarOffTint: Color(hex: 0x1D3639),
     calendarNoteMarker: Color(hex: 0x2A4346),
     marks: [
@@ -1029,6 +1044,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0xA7727D),
     accentBorder: Color(hex: 0xC9A2A9),
     accentContainer: Color(hex: 0xF8EEF0),
+    accentSwitch: Color(hex: 0x88515D),
     calendarOffTint: Color(hex: 0xF3E1E4),
     calendarNoteMarker: Color(hex: 0xEDD1D6),
     marks: [
@@ -1090,6 +1106,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0xC08F99),
     accentBorder: Color(hex: 0x8C6A70),
     accentContainer: Color(hex: 0x382B2D),
+    accentSwitch: Color(hex: 0xE0A5B0),
     calendarOffTint: Color(hex: 0x402B2F),
     calendarNoteMarker: Color(hex: 0x4D383C),
     marks: [
@@ -1151,6 +1168,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x7E73A4),
     accentBorder: Color(hex: 0xAFA8CC),
     accentContainer: Color(hex: 0xF1F0F8),
+    accentSwitch: Color(hex: 0x5F5286),
     calendarOffTint: Color(hex: 0xE7E4F4),
     calendarNoteMarker: Color(hex: 0xDAD5EE),
     marks: [
@@ -1212,6 +1230,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0xA097C4),
     accentBorder: Color(hex: 0x766F8F),
     accentContainer: Color(hex: 0x2F2D39),
+    accentSwitch: Color(hex: 0xBAAEE6),
     calendarOffTint: Color(hex: 0x322E43),
     calendarNoteMarker: Color(hex: 0x3F3B51),
     marks: [
@@ -1273,6 +1292,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0xC4945E),
     accentBorder: Color(hex: 0x906D47),
     accentContainer: Color(hex: 0x382C24),
+    accentSwitch: Color(hex: 0xEFAF69),
     calendarOffTint: Color(hex: 0x412D1F),
     calendarNoteMarker: Color(hex: 0x4E392B),
     marks: [
@@ -1334,6 +1354,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0xAF9E5D),
     accentBorder: Color(hex: 0x807446),
     accentContainer: Color(hex: 0x342F1E),
+    accentSwitch: Color(hex: 0xE8D17A),
     calendarOffTint: Color(hex: 0x393112),
     calendarNoteMarker: Color(hex: 0x463E1F),
     marks: [
@@ -1395,6 +1416,7 @@ extension ThemeColors {
     accentFocus: Color(hex: 0x99A09D),
     accentBorder: Color(hex: 0x717673),
     accentContainer: Color(hex: 0x23332B),
+    accentSwitch: Color(hex: 0xCAD4CF),
     calendarOffTint: Color(hex: 0x1B392B),
     calendarNoteMarker: Color(hex: 0x284637),
     marks: [

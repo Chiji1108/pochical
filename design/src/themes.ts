@@ -67,7 +67,7 @@ export const presets = [
   // Ink alone: black, and white in dark mode.
   {
     accent: { chroma: 0.008, hue: 138, lightness: 0.363 },
-    darkLightness: 0.86,
+    darkLightness: 0.96,
     grays: { hue: 138, strength: 0.3 },
     id: "sumi",
     name: "墨",
@@ -200,6 +200,17 @@ function onFillOf(fill: string) {
     : "#ffffff";
 }
 
+// A switch's track when on: the fill, held at most this light, so the
+// knob, white on every platform, still shows on it under a near-white
+// ink (墨's in dark mode, 黒板's chalk).
+export const SWITCH_MAX = 0.86;
+function switchOf(fill: string) {
+  const oklch = hexToOklch(fill);
+  return oklch.lightness > SWITCH_MAX
+    ? oklchToHex({ ...oklch, lightness: SWITCH_MAX })
+    : fill;
+}
+
 export function themeColors(preset: Preset, scheme: ColorScheme) {
   const { chroma, hue, lightness } = preset.accent;
   const paint = (step: { chroma: number; lightness: number }) =>
@@ -241,6 +252,7 @@ export function themeColors(preset: Preset, scheme: ColorScheme) {
     muted: paint(roleSteps[scheme].muted),
     onFill: onFillOf(accent),
     soft: paintTint(roleSteps[scheme].soft),
+    switch: switchOf(accent),
   };
 }
 
@@ -253,6 +265,7 @@ export const themeRoleTokens = [
   { key: "line", label: "フォーカス・見出し", name: "accent-focus" },
   { key: "muted", label: "選択中の枠", name: "accent-border" },
   { key: "soft", label: "薄い背景", name: "accent-container" },
+  { key: "switch", label: "スイッチのオン", name: "accent-switch" },
   { key: "markTint", label: "休みの地", name: "calendar-off-tint" },
 ] as const;
 

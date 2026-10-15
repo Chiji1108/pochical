@@ -45,6 +45,7 @@ struct RootView: View {
       }
     }
     .tint(colors.accentDefault)
+    .toggleStyle(ThemedSwitch())
     .environment(\.look, settings.device.look)
     .environment(\.english, settings.device.heading.english)
     .environment(\.meID, meID)
@@ -201,4 +202,24 @@ struct UnreadRequest: FetchKeyRequest, Hashable {
 
 enum RootTab: Hashable {
   case calendar, groups, settings
+}
+
+/// The system's switch, its track on in the テーマ's switch color rather
+/// than the accent, which a near-white ink would leave the white knob lost
+/// on.
+struct ThemedSwitch: ToggleStyle {
+  func makeBody(configuration: ToggleStyleConfiguration) -> some View {
+    ThemedSwitchBody(configuration: configuration)
+  }
+}
+
+private struct ThemedSwitchBody: View {
+  @Environment(\.themeColors) private var colors
+  let configuration: ToggleStyleConfiguration
+
+  var body: some View {
+    Toggle(configuration)
+      .toggleStyle(.switch)
+      .tint(colors.accentSwitch)
+  }
 }
