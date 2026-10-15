@@ -25,6 +25,17 @@ struct PollLine {
   let canDecide: Bool
   var onVote: (Day, Bool) -> Void = { _, _ in }
   var onDecide: () -> Void = {}
+
+  /// What the card shows, its actions aside.
+  var shows: Shown { Shown(votes: votes, decided: decided, names: names, meID: meID, canDecide: canDecide) }
+
+  struct Shown: Equatable {
+    let votes: [DayVotes]
+    let decided: Day?
+    let names: [String: String]
+    let meID: String?
+    let canDecide: Bool
+  }
 }
 
 /// Days put to the vote, as LINE's 日程調整 in a card (/design's PollCard):
