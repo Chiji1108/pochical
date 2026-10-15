@@ -141,10 +141,16 @@ private struct PageAsk: Equatable {
 }
 
 /// What moves a following chat to its foot: a line coming in and someone
-/// writing. The room the lines are seen in moves it too, from `scroll`.
+/// writing.
 struct FollowKey: Equatable {
   let latest: Int64?
   let writers: Int
+}
+
+/// The height the lines are seen in, and how far their foot is below it.
+struct Room: Equatable {
+  let seen: CGFloat
+  let below: CGFloat
 }
 
 /// The lines, shorter than the room they are seen in, fill it at its foot.
