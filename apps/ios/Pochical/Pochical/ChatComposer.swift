@@ -140,26 +140,37 @@ struct ChatComposer: View {
         PhotoTray(photos: $draft.photos)
       }
       HStack(alignment: .bottom, spacing: 8) {
-        // Folded, the tools give the field their room.
-        if editing == nil, folded {
-          Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
-            .labelStyle(.iconOnly)
-            .font(.system(size: 20, weight: .medium))
-            .foregroundStyle(colors.textSecondary)
-            .frame(width: 38, height: 38)
-            .transition(.opacity.combined(with: .scale(scale: 0.6)))
-        } else if editing == nil {
-          HStack(spacing: 8) {
-            photoButton
-            if let onShareDays {
-              Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
-                .labelStyle(.iconOnly)
-                .font(.system(size: 20))
-                .foregroundStyle(colors.textSecondary)
-                .frame(width: 38, height: 38)
+        // Folded, the tools give the field their room. Both stay in place,
+        // only faded and narrowed, so they ride up with the keyboard as the
+        // field does: one put in as it rises would start where it ends.
+        if editing == nil {
+          ZStack(alignment: .leading) {
+            HStack(spacing: 8) {
+              photoButton
+              if let onShareDays {
+                Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
+                  .labelStyle(.iconOnly)
+                  .font(.system(size: 20))
+                  .foregroundStyle(colors.textSecondary)
+                  .frame(width: 38, height: 38)
+              }
             }
+            .opacity(folded ? 0 : 1)
+            .offset(x: folded ? -38 : 0)
+            .allowsHitTesting(!folded)
+            .accessibilityHidden(folded)
+            Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
+              .labelStyle(.iconOnly)
+              .font(.system(size: 20, weight: .medium))
+              .foregroundStyle(colors.textSecondary)
+              .frame(width: 38, height: 38)
+              .opacity(folded ? 1 : 0)
+              .scaleEffect(folded ? 1 : 0.6)
+              .allowsHitTesting(folded)
+              .accessibilityHidden(!folded)
           }
-          .transition(.opacity.combined(with: .move(edge: .leading)))
+          .frame(width: folded ? 38 : nil, alignment: .leading)
+          .clipped()
         }
         ComposerField(
           placeholder: "メッセージ", text: $draft.text, limit: TextLimits.chatMessage,
