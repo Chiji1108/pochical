@@ -79,11 +79,12 @@ struct ChatPhotoImage: View {
         image = kept
         return
       }
+      // Fetched again, it is on its way again.
+      missing = false
       guard let data = try? await groupCalls.photo(photo.id, in: groupID) else {
         missing = !Task.isCancelled
         return
       }
-      missing = false
       if let pixels {
         let id = photo.id
         image = await Task.detached(priority: .userInitiated) {
