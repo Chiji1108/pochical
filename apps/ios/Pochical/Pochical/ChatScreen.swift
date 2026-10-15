@@ -408,6 +408,12 @@ struct ChatScreen: View {
       // than going past it, as the chat's catch-up bringing many at once.
       if before.latest != now.latest, let first = unreadComing(after: before.latest) {
         show(from: first)
+      } else if before.latest == now.latest, before.writers == now.writers {
+        // The room changing alone, as the composer grows or the keyboard
+        // comes up: held at the foot each frame of the room's own
+        // animation, not with one of the scroll's own started every frame,
+        // which held the screen to a third of its frames.
+        toLatest()
       } else {
         toLatest(animated: true)
       }

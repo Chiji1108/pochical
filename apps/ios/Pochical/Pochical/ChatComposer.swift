@@ -208,6 +208,9 @@ struct ChatComposer: View {
           .accessibilityLabel("\(TextLimits.chatMessage)文字中\(draft.text.count)文字")
       }
     }
+    // What comes in over the field (photos, a reply, a link's page) drawn
+    // only under the line as it rises, not over the chat ahead of it.
+    .clipped()
     .background(colors.backgroundBase)
     .overlay(alignment: .top) {
       Rectangle().fill(colors.separator).frame(height: 1)
