@@ -623,6 +623,24 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   #expect(properties?[kCGImagePropertyGPSDictionary] == nil)
 }
 
+@Test func aPhotoGoesWithASmallVersionOnlyWhenLarger() throws {
+  let jpeg = { (width: Int, height: Int) -> Data in
+    let context = CGContext(
+      data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+    let out = NSMutableData()
+    let destination = CGImageDestinationCreateWithData(out, "public.jpeg" as CFString, 1, nil)!
+    CGImageDestinationAddImage(destination, context.makeImage()!, nil)
+    CGImageDestinationFinalize(destination)
+    return out as Data
+  }
+  let small = try #require(ChatPhotos.small(jpeg(1000, 2048)))
+  let source = CGImageSourceCreateWithData(small as CFData, nil)!
+  let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+  #expect(properties?[kCGImagePropertyPixelHeight] as? Int == Chat.photoSmallEdge)
+  #expect(ChatPhotos.small(jpeg(640, 640)) == nil)
+}
+
 @Test func aLinksPageIsAskedForButNotAnInvitations() {
   #expect(previewLink("ここ https://cafe.example/menu どう？") == "https://cafe.example/menu")
   #expect(previewLink("https://pochical.app/invite/ABCDEFGH") == nil)

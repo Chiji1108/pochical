@@ -62,7 +62,7 @@ import {
   takeMemberRepeatOrders,
 } from "./group-shifts";
 import { linkPreview } from "./link-preview";
-import { photoKey } from "./photos";
+import { deleteGroupPhotos } from "./photos";
 import { overLimit } from "./rate-limits";
 import {
   acceptSyncSocket,
@@ -441,9 +441,7 @@ export class GroupDO extends DurableObject<Env> {
     if (taken !== undefined) {
       const groupId = this.ctx.id.name;
       if (groupId !== undefined && taken.photosGone.length > 0) {
-        await this.env.PHOTOS.delete(
-          taken.photosGone.map((id) => photoKey(groupId, id))
-        );
+        await deleteGroupPhotos(this.env, groupId, taken.photosGone);
       }
       closeUserSockets(this.ctx, userId);
       broadcastChanges(this.ctx, taken.changes, seenBy, (change, reader) =>
@@ -599,7 +597,7 @@ export class GroupDO extends DurableObject<Env> {
     if (groupId === undefined || photoId === kept) {
       return;
     }
-    this.ctx.waitUntil(this.env.PHOTOS.delete(photoKey(groupId, photoId)));
+    this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, [photoId]));
   }
 
   /** A new member at the next cursor, or one who left coming back, as a change. */
@@ -897,9 +895,7 @@ export class GroupDO extends DurableObject<Env> {
     // A photo taken back goes from the group's photos for everyone.
     const groupId = this.ctx.id.name;
     if (groupId !== undefined && photosGone.length > 0) {
-      this.ctx.waitUntil(
-        this.env.PHOTOS.delete(photosGone.map((id) => photoKey(groupId, id)))
-      );
+      this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, photosGone));
     }
     broadcastChanges(this.ctx, changed, seenBy, (change, reader) =>
       forReader(this.db, change, reader)

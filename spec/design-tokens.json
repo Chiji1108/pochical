@@ -16,6 +16,7 @@
     "photoFadeMs": 200,
     "photoMaxBytes": 4000000,
     "photoMaxEdge": 2048,
+    "photoSmallEdge": 960,
     "photoThumbHashMaxBytes": 25,
     "photosPerSend": 4,
     "pictureMaxEdge": 640,

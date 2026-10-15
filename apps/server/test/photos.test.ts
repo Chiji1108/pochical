@@ -1,7 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-import { photoKey } from "../src/photos";
+import { photoKey, smallKey } from "../src/photos";
 import { ORIGIN, signInAnonymously } from "./helpers";
 import {
   changesBesidesNotices,
@@ -19,10 +19,11 @@ const photo = async (
   groupId: string,
   photoId: string,
   token: string,
-  body?: Uint8Array
+  body?: Uint8Array,
+  size = ""
 ): Promise<Response> =>
   await exports.default.fetch(
-    `${ORIGIN}/v1/groups/${groupId}/photos/${photoId}`,
+    `${ORIGIN}/v1/groups/${groupId}/photos/${photoId}${size === "" ? "" : `?size=${size}`}`,
     {
       body,
       headers: { Authorization: `Bearer ${token}` },
@@ -84,8 +85,26 @@ describe("a group's photos", () => {
     expect(outside.status).toBe(403);
   });
 
+  it("keep a small version beside the photo, read in its place when there", async () => {
+    const { groupId, guest, maker } = await pair();
+    const small = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9]);
+    const bytesOf = async (photoId: string, size: string) => {
+      const read = await photo("GET", groupId, photoId, guest, undefined, size);
+      return new Uint8Array(await read.arrayBuffer());
+    };
+    await photo("PUT", groupId, "p1", maker, JPEG);
+    // None yet: the photo itself.
+    await expect(bytesOf("p1", "small")).resolves.toStrictEqual(JPEG);
+    const theirs = await photo("PUT", groupId, "p1", guest, small, "small");
+    expect(theirs.status).toBe(409);
+    await photo("PUT", groupId, "p1", maker, small, "small");
+    await expect(bytesOf("p1", "small")).resolves.toStrictEqual(small);
+    await expect(bytesOf("p1", "")).resolves.toStrictEqual(JPEG);
+  });
+
   it("sends the uploader's own photo once, and deletes it when taken back", async () => {
     const { groupId, guest, maker } = await pair();
+    await photo("PUT", groupId, "mine", maker, JPEG, "small");
     await photo("PUT", groupId, "mine", maker, JPEG);
     await photo("PUT", groupId, "theirs", guest, JPEG);
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
@@ -144,6 +163,11 @@ describe("a group's photos", () => {
     ]);
     await expect
       .poll(async () => await env.PHOTOS.head(photoKey(groupId, "mine")))
+      .toBeNull();
+    await expect
+      .poll(
+        async () => await env.PHOTOS.head(smallKey(photoKey(groupId, "mine")))
+      )
       .toBeNull();
   });
 });

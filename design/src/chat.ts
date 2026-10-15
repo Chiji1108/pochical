@@ -50,6 +50,10 @@ export const chatRules = {
   // pixels, as chat apps send them; shrinking it again as JPEG also leaves
   // its location behind.
   photoMaxEdge: 2048,
+  // A photo is also sent shrunk until its longer side is at most this many
+  // pixels, for the chat's lines and quotes to fetch instead of the whole
+  // photo: enough for its 220×260pt box at 3x, a panorama cropped too.
+  photoSmallEdge: 960,
   // The most bytes a photo's ThumbHash takes, as the format makes one at
   // most (an opaque photo's take 24 at most); the server refuses a longer
   // one.
