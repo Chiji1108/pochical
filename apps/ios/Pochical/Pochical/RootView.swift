@@ -218,7 +218,7 @@ private struct ThemedSwitchBody: View {
   let configuration: ToggleStyleConfiguration
 
   var body: some View {
-    Toggle(isOn: configuration.$isOn) { configuration.label }
+    Toggle(configuration)
       .toggleStyle(.switch)
       .tint(colors.accentSwitch)
   }
