@@ -246,8 +246,9 @@ struct LineView: View {
         Text(ChatTime.clock(time))
       } else {
         // Left to the next line, its room is kept, so the bubble is as
-        // wide either way.
-        Text(ChatTime.clock(time)).hidden()
+        // wide either way; its width only, so 編集済み stays by the
+        // bubble's foot.
+        Text(ChatTime.clock(time)).hidden().frame(height: 0)
       }
     }
     .font(.caption2)

@@ -695,7 +695,13 @@ export const chatStyle = {
     paddingBottom: "2px",
     textStyle: "caption2",
   }),
-  timeKept: css({ visibility: "hidden" }),
+  // Its width without its height, so 編集済み stays by the bubble's foot.
+  timeKept: css({
+    display: "block",
+    height: 0,
+    overflow: "hidden",
+    visibility: "hidden",
+  }),
   // A blocked member's message folded to one line, in the app's own lines'
   // voice, opening on a tap.
   blocked: css({

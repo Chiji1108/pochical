@@ -419,7 +419,7 @@ export function MessageLine({
             <CircleAlert aria-hidden="true" size={22} />
           </button>
         )}
-        {upload === undefined && (
+        {upload !== "failed" && (
           <small className={chatStyle.time}>
             {(message.pinned !== undefined || message.edited) && (
               <span className={chatStyle.timeNote({ mine })}>
@@ -429,9 +429,10 @@ export function MessageLine({
                 {message.edited && "編集済み"}
               </span>
             )}
-            {/* Left to the next line, its room is kept, so the bubble
-                is as wide either way (spec/chat.md, In a message). */}
-            {showsTime(message, next) ? (
+            {/* Left to the next line, or while its photo goes up, its
+                room is kept, so the bubble is as wide either way
+                (spec/chat.md, In a message). */}
+            {upload === undefined && showsTime(message, next) ? (
               message.time
             ) : (
               <span className={chatStyle.timeKept}>{message.time}</span>
