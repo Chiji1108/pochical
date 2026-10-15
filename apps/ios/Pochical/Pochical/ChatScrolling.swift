@@ -34,8 +34,52 @@ final class ChatScroll {
   /// latest again. Not once a line is opened at 続きを読む, which goes on
   /// down from where it is.
   var edge: String?
-  /// How far the lines seen have been pushed down since, to move them back.
+  /// How far the lines seen have been pushed down and not yet moved back.
   var moveBack: CGFloat = 0
+  /// The move back last asked for: where to, and by how much.
+  var moving: (to: CGFloat, by: CGFloat)?
+
+  /// The lines seen pushed down by lines coming in or growing above them,
+  /// moved back after this layout: asked for during it, the scroll view
+  /// drops it. Pushed again before then, as a page's long lines grow, they
+  /// go back by both at once.
+  func pushedDown(by grew: CGFloat) {
+    let asked = moveBack != 0
+    moveBack += grew
+    if !asked { Task { @MainActor in moveLinesBack() } }
+  }
+
+  /// Moves the lines back. At once while still, not through the page that
+  /// came in; while the lines scroll (bouncing at the top), the scroll view
+  /// takes it only so.
+  func moveLinesBack() {
+    guard moveBack != 0 else { return }
+    moving = (offset + moveBack, moveBack)
+    var transaction = Transaction()
+    transaction.disablesAnimations = !scrolling
+    withTransaction(transaction) { position.scrollTo(y: offset + moveBack) }
+  }
+
+  /// The lines scrolled to an offset: once moved back there, what was
+  /// pushed since is moved back next; else asked again, as the scroll view
+  /// drops it at times (a touch as it goes).
+  func scrolled(to offset: CGFloat) {
+    self.offset = offset
+    guard let moving else { return }
+    if abs(offset - moving.to) < abs(moving.by) / 2 {
+      moveBack -= moving.by
+      self.moving = nil
+    }
+    if moveBack != 0 { Task { @MainActor in moveLinesBack() } }
+  }
+
+  /// The line held as earlier pages come in let go, and any move back
+  /// still to come with it.
+  func letGo() {
+    edge = nil
+    moveBack = 0
+    moving = nil
+  }
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
@@ -179,7 +223,7 @@ struct ScrollsBy: ViewModifier {
 /// after the one before was put back, as two do in a fast fling), and the
 /// page's long lines grow a frame later as their 続きを読む is measured.
 /// So the line that was first is watched: whatever comes in or grows above
-/// it, the lines are moved back by as much as it moved on the screen.
+/// it and pushes it down the screen, the lines are moved back by as much.
 struct KeepsSeenLines: View {
   let id: String
   let scroll: ChatScroll
@@ -203,16 +247,7 @@ struct KeepsSeenLines: View {
         // in that frame is part of and would be undone.
         let moved = now.onScreen - before.onScreen
         guard abs(moved) > abs(grew) / 2 else { return }
-        // After this layout: asked for during it, the scroll view drops it.
-        // Grown again before then, as the page's long lines grow, it goes
-        // back by both at once.
-        let asked = scroll.moveBack != 0
-        scroll.moveBack += grew
-        guard !asked else { return }
-        Task { @MainActor in
-          scroll.position.scrollTo(y: scroll.offset + scroll.moveBack)
-          scroll.moveBack = 0
-        }
+        scroll.pushedDown(by: grew)
       }
     }
   }

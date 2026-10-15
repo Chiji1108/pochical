@@ -234,7 +234,7 @@ struct ChatScreen: View {
     .onScrollGeometryChange(for: CGFloat.self) { geometry in
       geometry.contentOffset.y + geometry.contentInsets.top
     } action: { _, offset in
-      scroll.offset = offset
+      scroll.scrolled(to: offset)
     }
     // The container is already inside the bars and the margins. Kept in
     // `scroll`, not the screen's state: the keyboard pulled down changes it
@@ -441,7 +441,7 @@ struct ChatScreen: View {
     }
     // Back at the latest, the line held as earlier pages came in is let go.
     .onChange(of: following) {
-      if following { scroll.edge = nil }
+      if following { scroll.letGo() }
     }
     // One's own line just sent shows at the foot, wherever the lines were.
     .onChange(of: state.waiting.last?.opID) { _, sent in
@@ -688,7 +688,7 @@ struct ChatScreen: View {
       // Opened where it is, its words going on down from there, as the
       // messaging apps open a long one: not carried to the foot.
       following = false
-      scroll.edge = nil
+      scroll.letGo()
       withAnimation { _ = unfolded.insert(line.opID) }
     case .openPhoto:
       viewing = line.photo
