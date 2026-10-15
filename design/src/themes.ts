@@ -67,7 +67,7 @@ export const presets = [
   // Ink alone: black, and white in dark mode.
   {
     accent: { chroma: 0.008, hue: 138, lightness: 0.363 },
-    darkLightness: 0.92,
+    darkLightness: 0.86,
     grays: { hue: 138, strength: 0.3 },
     id: "sumi",
     name: "墨",

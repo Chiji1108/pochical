@@ -451,8 +451,8 @@ data class ThemeColors(
       mediaDim = Color(0x52000000),
       mediaShade = Color(0x99000000),
       mediaWarning = Color(0xFFFFD60A),
-      accentDefault = Color(0xFFE2E6E1),
-      accentFill = Color(0xFFE2E6E1),
+      accentDefault = Color(0xFFCFD2CD),
+      accentFill = Color(0xFFCFD2CD),
       accentOnFill = Color(0xFF262725),
       accentFocus = Color(0xFF9C9F9B),
       accentBorder = Color(0xFF737572),
@@ -461,7 +461,7 @@ data class ThemeColors(
       calendarNoteMarker = Color(0xFF3E3F3D),
         marks =
           listOf(
-          MarkColor("テーマカラー", Color(0xFFE2E6E1), Color(0xFF313230), Color(0xFF4B4C4A)),
+          MarkColor("テーマカラー", Color(0xFFCFD2CD), Color(0xFF313230), Color(0xFF4B4C4A)),
           MarkColor("からし", Color(0xFFD6BB77), Color(0xFF3A3118), Color(0xFF574B2A)),
           MarkColor("オレンジ", Color(0xFFE6B285), Color(0xFF402D1C), Color(0xFF5F462F)),
           MarkColor("テラコッタ", Color(0xFFEFAB95), Color(0xFF442A23), Color(0xFF654238)),
