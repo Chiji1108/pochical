@@ -77,6 +77,8 @@ struct GroupsScreen: View {
   /// A group just made, whose メンバーを招待 opens over its hub once the
   /// group has come, as /design goes on to it.
   @State private var inviting: String?
+  /// How far down the screen's own top is, over the navigation bar's.
+  @State private var screenTop: CGFloat = 0
 
   var body: some View {
     NavigationStack(path: $path) {
@@ -90,6 +92,9 @@ struct GroupsScreen: View {
                 inviting = nil
               },
               onNew: { path.append(.newGroup) }, onScan: onScan)
+            // Up beside the bar's heading, as it stood beside the page's.
+            .padding(.top, screenTop)
+            .ignoresSafeArea(.container, edges: .top)
             GroupHub(group: open) {
               path.append(.invite(open))
             } onSettings: {
@@ -104,12 +109,12 @@ struct GroupsScreen: View {
         } else {
           NoGroups(onNew: { path.append(.newGroup) }, onScan: onScan)
             .padding(.horizontal, 20)
+            .toolbarVisibility(.hidden, for: .navigationBar)
         }
       }
       // The app's ground, as the calendar's, which dark mode lifts off black.
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .background(colors.backgroundBase)
-      .toolbarVisibility(.hidden, for: .navigationBar)
       .navigationDestination(for: GroupRoute.self) { route in
         // Pages show the group as it is now, renamed meanwhile or not.
         let live = { (group: GroupRow) in groups.first { $0.id == group.id } ?? group }
@@ -137,6 +142,7 @@ struct GroupsScreen: View {
         }
       }
     }
+    .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { screenTop = $0 }
     .environment(\.openGroupRoute, OpenGroupRouteAction { open($0) })
     .onChange(of: groups.map(\.id)) { inviteMade() }
     // Gone somewhere else meanwhile, the person is left there.
@@ -398,6 +404,8 @@ private struct GroupRail: View {
   /// The height the rail fades out over, gone at the tab bar's top, as
   /// /design's rail does over its 56 points' tab bar 20 over the foot.
   private static var fade: CGFloat { 72 }
+  /// The rail's width, which the page beside it starts after.
+  static var width: CGFloat { 60 }
 
   var body: some View {
     ScrollView {
@@ -455,9 +463,11 @@ private struct GroupRail: View {
       .animation(.easeOut(duration: 0.15), value: openID)
     }
     .scrollIndicators(.hidden)
+    // Under the bar only where its heading is, which leaves the marks clear.
+    .scrollEdgeEffectHidden(true, for: .top)
     // The last of many groups can rise clear of the fade.
     .contentMargins(.bottom, barTop + Self.fade, for: .scrollContent)
-    .frame(width: 60)
+    .frame(width: Self.width)
     .background(
       colors.fillQuaternary,
       in: UnevenRoundedRectangle(topTrailingRadius: Radius.xl)
@@ -515,11 +525,12 @@ private struct GroupHub: View {
   let onShifts: (Day?) -> Void
   /// Opens a chat: its thread, and the other member of a one-to-one chat.
   let onChat: (String, String?) -> Void
+  /// The page's width, which the bar's heading shares with its buttons.
+  @State private var width: CGFloat = 0
 
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
-        heading
         VStack(alignment: .leading, spacing: 8) {
           HStack {
             Text("シフト")
@@ -554,6 +565,26 @@ private struct GroupHub: View {
       .padding(.bottom, 24)
     }
     .scrollIndicators(.hidden)
+    .contentMargins(.top, 8, for: .scrollContent)
+    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    // The group's heading in the navigation bar, not over the page: the
+    // bar then stays as its pages are pushed and popped, and with it the
+    // blur at their top, which went with a bar hidden here.
+    .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        heading
+          // As wide as the page leaves beside the bar's buttons, a bar item
+          // being only as wide as asked; a long name ends in …
+          .frame(width: max(0, width - Self.actionsWidth), alignment: .leading)
+          // Over the page, beside the rail.
+          .padding(.leading, GroupRail.width)
+      }
+      .sharedBackgroundVisibility(.hidden)
+      ToolbarItemGroup(placement: .topBarTrailing) {
+        Button("メンバーを招待", systemImage: "person.badge.plus", action: onInvite)
+        Button("グループの設定", systemImage: "slider.horizontal.3", action: onSettings)
+      }
+    }
     .task(id: request) {
       _ = try? await $members.load(request)
     }
@@ -566,6 +597,9 @@ private struct GroupHub: View {
     return GroupMembersRequest(groupID: group.id, from: Day.today, through: ahead)
   }
 
+  /// Room for the bar's two buttons on their glass, and a gap before them.
+  private static var actionsWidth: CGFloat { Metrics.touch * 2 + 48 }
+
   private var heading: some View {
     HStack(spacing: 8) {
       GroupMarkView(mark: group.mark, size: 26, shelf: group.id)
@@ -575,25 +609,8 @@ private struct GroupHub: View {
       Text(group.name)
         .font(.title2.bold())
         .lineLimit(1)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityAddTraits(.isHeader)
-      // Both on one piece of glass, as a bar's buttons together.
-      HStack(spacing: 0) {
-        Button(action: onInvite) {
-          Image(systemName: "person.badge.plus").frame(width: 44, height: 44)
-        }
-        .accessibilityLabel("メンバーを招待")
-        Button(action: onSettings) {
-          Image(systemName: "slider.horizontal.3").frame(width: 44, height: 44)
-        }
-        .accessibilityLabel("グループの設定")
-      }
-      .buttonStyle(.plain)
-      .foregroundStyle(colors.textPrimary)
-      .padding(.horizontal, 4)
-      .glassEffect(.regular.interactive(), in: .capsule)
     }
-    .padding(.top, 4)
   }
 }
 
