@@ -70,7 +70,8 @@ final class ChatDraft {
 }
 
 /// A chat's composer (/design's), a group's and the support chat's: what
-/// the message answers or changes and what goes with it over the field,
+/// the message answers or changes and what goes with it (a link's page,
+/// photos) over the field,
 /// the tools folded into a › while writing, the send button, and in a
 /// group's chat the names to mention as an @ is written.
 struct ChatComposer: View {
@@ -90,8 +91,6 @@ struct ChatComposer: View {
   /// The line being answered as its quote shows it, read each time from
   /// the chat as it is: taken back or its writer blocked, it says so.
   let quoteOf: (String) -> LineQuote
-  /// The page of the words' first link goes with them, in a group's chat.
-  var previews = true
   let onSubmit: () -> Void
   var onStopEditing: () -> Void = {}
   /// 日にちを共有, in a group's chat.
@@ -224,9 +223,7 @@ struct ChatComposer: View {
         draft.typed(in: threadID, socket: socket)
       }
     }
-    .task(id: previews ? previewLink(draft.text) : nil) {
-      if previews { await readPreview(of: previewLink(draft.text)) }
-    }
+    .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }
   }
 
   /// 写真を送る: the photo picker, up to Chat.photosPerSend in the tray at

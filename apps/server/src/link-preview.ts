@@ -1,7 +1,9 @@
 import { create } from "@bufbuild/protobuf";
 
+import { previewLinkOf } from "./chat-links";
 import { LinkPreviewSchema } from "./gen/pochical/v1/chat_pb";
 import type { LinkPreview } from "./gen/pochical/v1/chat_pb";
+import { isId } from "./ids";
 
 // A link's page read for its preview (spec/chat.md, Reading a page): the
 // server reads it, so people's addresses are not sent to the sites, and
@@ -340,4 +342,61 @@ export const linkPreview = async (
   } catch {
     return null;
   }
+};
+
+/** A link's page as a line keeps it, LinkPreview's fields. */
+export type KeptPreview = {
+  imageHeight: number;
+  imageId: string;
+  imageWidth: number;
+  site: string;
+  title: string;
+  url: string;
+};
+
+/** The most characters of a preview's title or site name. */
+const PREVIEW_TEXT_MAX = 300;
+
+/**
+ * A link's page as a line keeps it, a group chat's or the support chat's,
+ * if it is one the server could make.
+ */
+export const keptPreview = (
+  preview: LinkPreview | undefined
+): KeptPreview | null => {
+  const link = preview === undefined ? null : URL.parse(preview.url);
+  const fits =
+    preview !== undefined &&
+    (link?.protocol === "https:" || link?.protocol === "http:") &&
+    preview.title.length <= PREVIEW_TEXT_MAX &&
+    preview.site.length <= PREVIEW_TEXT_MAX &&
+    (preview.imageId === "" || isId(preview.imageId));
+  if (!fits) {
+    return null;
+  }
+  return {
+    imageHeight: preview.imageHeight,
+    imageId: preview.imageId,
+    imageWidth: preview.imageWidth,
+    site: preview.site,
+    title: preview.title,
+    url: preview.url,
+  };
+};
+
+/**
+ * The page of the first link in `text`, as a line keeps it, read now (or
+ * from the cache); null for words without a link to read, an invitation
+ * of Pochical's, or no page.
+ */
+export const pageOfWords = async (
+  bucket: R2Bucket,
+  text: string
+): Promise<KeptPreview | null> => {
+  const link = previewLinkOf(text);
+  const url = link === undefined ? null : URL.parse(link);
+  if (url === null || !mayRead(url)) {
+    return null;
+  }
+  return keptPreview((await linkPreview(bucket, url)) ?? undefined);
 };

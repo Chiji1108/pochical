@@ -2,6 +2,7 @@
 // the admin site or in its Slack thread (spec/admin.md).
 import { textLimits } from "@pochical/design/limits";
 
+import { pageOfWords } from "./link-preview";
 import { characterCount } from "./text-limits";
 
 /** A photo in the chat: its id under the user's support photos, and size. */
@@ -36,10 +37,12 @@ export const keepSupportAnswer = async (
   ) {
     return null;
   }
+  // The page of a link in the answer, as a group chat's line has it.
+  const preview = words === "" ? null : await pageOfWords(env.PHOTOS, words);
   const now = Date.now();
   const [inserted] = await env.DB.batch([
     env.DB.prepare(
-      "insert into support_messages (id, user_id, from_support, text, created_at, slack_ts, photo_id, photo_width, photo_height) values (?, ?, 1, ?, ?, ?, ?, ?, ?) on conflict (id) do nothing"
+      "insert into support_messages (id, user_id, from_support, text, created_at, slack_ts, photo_id, photo_width, photo_height, preview) values (?, ?, 1, ?, ?, ?, ?, ?, ?, ?) on conflict (id) do nothing"
     ).bind(
       id,
       userId,
@@ -48,7 +51,8 @@ export const keepSupportAnswer = async (
       slackTs,
       photo?.id ?? null,
       photo?.width ?? null,
-      photo?.height ?? null
+      photo?.height ?? null,
+      preview === null ? null : JSON.stringify(preview)
     ),
     env.DB.prepare(
       "insert into support_chats (user_id, last_at) values (?, ?) on conflict (user_id) do update set last_at = excluded.last_at"

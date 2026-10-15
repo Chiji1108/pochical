@@ -108,6 +108,10 @@ struct SupportChatScreen: View {
     var text = ""
     var photo: LinePhoto?
     var replyTo: String?
+    /// The page of its words' first link, as read while writing.
+    var preview: LinePreview?
+    /// Taken off with ×, so the server does not read it either.
+    var withoutPreview = false
     var failed = false
   }
 
@@ -178,11 +182,11 @@ struct SupportChatScreen: View {
     }
     .background(colors.backgroundBase)
     // The group chats' composer, without what only a group has: days to
-    // share, names to mention, a link's page, and who is writing.
+    // share, names to mention, and who is writing.
     .safeAreaInset(edge: .bottom, spacing: 0) {
       ChatComposer(
-        draft: draft, groupID: ChatPhotos.support, quoteOf: quote(of:), previews: false,
-        onSubmit: sendAll, say: say)
+        draft: draft, groupID: ChatPhotos.support, quoteOf: quote(of:), onSubmit: sendAll,
+        say: say)
     }
     .navigationTitle(Self.supportName)
     .navigationBarTitleDisplayMode(.inline)
@@ -303,7 +307,7 @@ struct SupportChatScreen: View {
   /// photo opens large at a tap.
   private func bubble(_ line: SupportLine, first: Bool) -> some View {
     LineContent(
-      text: line.text, days: [], members: [], photo: line.photo,
+      text: line.text, preview: line.preview, days: [], members: [], photo: line.photo,
       quote: line.replyTo.map(quote(of:)), groupID: ChatPhotos.support,
       mine: !line.fromSupport, first: first, waiting: false, nameOf: { _ in "" },
       onOpenQuote: { going = line.replyTo }, unfolded: unfolded.contains(line.id),
@@ -315,7 +319,7 @@ struct SupportChatScreen: View {
   /// A line on its way, faint; held, only コピー yet for words.
   private func waitingRow(_ line: Waiting) -> some View {
     let content = LineContent(
-      text: line.text, days: [], members: [], photo: line.photo,
+      text: line.text, preview: line.preview, days: [], members: [], photo: line.photo,
       quote: line.replyTo.map(quote(of:)), groupID: ChatPhotos.support, mine: true,
       first: false, waiting: !line.failed, nameOf: { _ in "" })
     return HStack(alignment: .top, spacing: 8) {
@@ -485,11 +489,17 @@ struct SupportChatScreen: View {
       replyTo = nil
     }
     if !text.isEmpty {
-      lines.append(Waiting(id: UUID().uuidString.lowercased(), text: text, replyTo: replyTo))
+      let removed = draft.previewRemoved
+      lines.append(
+        Waiting(
+          id: UUID().uuidString.lowercased(), text: text, replyTo: replyTo,
+          preview: draft.attachedPreview(for: text),
+          withoutPreview: removed != nil && previewLink(text) == removed))
     }
     guard !lines.isEmpty else { return }
     draft.text = ""
     draft.replyTo = nil
+    draft.previewRemoved = nil
     withAnimation { draft.photos = [] }
     for line in lines { send(line) }
   }
@@ -511,7 +521,8 @@ struct SupportChatScreen: View {
           try await groupCalls.uploadSupportPhoto(photo.id)
         }
         let kept = try await groupCalls.sendSupport(
-          line.text, id: line.id, device: Self.device, replyTo: line.replyTo, photo: line.photo)
+          line.text, id: line.id, device: Self.device, replyTo: line.replyTo, photo: line.photo,
+          preview: line.preview, withoutPreview: line.withoutPreview)
         waiting.removeAll { $0.id == line.id }
         lines.append(kept)
       } catch {

@@ -33,6 +33,8 @@ export type SupportChatLine = {
   reactions: SupportReactionOf[];
   /** Its photo, read through supportPhoto. */
   photo: SupportPhotoOf | null;
+  /** The page of its words' first link, as the user's app shows it. */
+  preview: { site: string; title: string; url: string } | null;
 };
 
 /** What a member reported, with what they saw. */
@@ -90,6 +92,14 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
               height: line.photoHeight ?? 0,
               id: line.photoId,
               width: line.photoWidth ?? 0,
+            },
+      preview:
+        line.preview === null
+          ? null
+          : {
+              site: line.preview.site,
+              title: line.preview.title,
+              url: line.preview.url,
             },
       reactions: line.reactions,
       replyTo: line.replyTo,

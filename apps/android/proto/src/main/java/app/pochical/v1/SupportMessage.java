@@ -523,6 +523,78 @@ public  final class SupportMessage extends
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
+  public static final int PREVIEW_FIELD_NUMBER = 9;
+  private app.pochical.v1.LinkPreview preview_;
+  /**
+   * <pre>
+   * The page of its words' first link, as a group chat's line has it
+   * (spec/chat.md, Previews); none once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPreview() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * The page of its words' first link, as a group chat's line has it
+   * (spec/chat.md, Previews); none once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.LinkPreview getPreview() {
+    return preview_ == null ? app.pochical.v1.LinkPreview.getDefaultInstance() : preview_;
+  }
+  /**
+   * <pre>
+   * The page of its words' first link, as a group chat's line has it
+   * (spec/chat.md, Previews); none once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+   */
+  private void setPreview(app.pochical.v1.LinkPreview value) {
+    java.util.Objects.requireNonNull(value);
+    preview_ = value;
+    bitField0_ |= 0x00000002;
+  }
+  /**
+   * <pre>
+   * The page of its words' first link, as a group chat's line has it
+   * (spec/chat.md, Previews); none once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergePreview(app.pochical.v1.LinkPreview value) {
+    java.util.Objects.requireNonNull(value);
+    if (preview_ != null &&
+        preview_ != app.pochical.v1.LinkPreview.getDefaultInstance()) {
+      preview_ =
+        app.pochical.v1.LinkPreview.newBuilder(preview_).mergeFrom(value).buildPartial();
+    } else {
+      preview_ = value;
+    }
+    bitField0_ |= 0x00000002;
+  }
+  /**
+   * <pre>
+   * The page of its words' first link, as a group chat's line has it
+   * (spec/chat.md, Previews); none once taken back.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+   */
+  private void clearPreview() {
+    preview_ = null;
+    bitField0_ = (bitField0_ & ~0x00000002);
+  }
+
   public static app.pochical.v1.SupportMessage parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1152,6 +1224,83 @@ public  final class SupportMessage extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The page of its words' first link, as a group chat's line has it
+     * (spec/chat.md, Previews); none once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPreview() {
+      return instance.hasPreview();
+    }
+    /**
+     * <pre>
+     * The page of its words' first link, as a group chat's line has it
+     * (spec/chat.md, Previews); none once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.LinkPreview getPreview() {
+      return instance.getPreview();
+    }
+    /**
+     * <pre>
+     * The page of its words' first link, as a group chat's line has it
+     * (spec/chat.md, Previews); none once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+     */
+    public Builder setPreview(app.pochical.v1.LinkPreview value) {
+      copyOnWrite();
+      instance.setPreview(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * The page of its words' first link, as a group chat's line has it
+     * (spec/chat.md, Previews); none once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+     */
+    public Builder setPreview(
+        app.pochical.v1.LinkPreview.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPreview(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The page of its words' first link, as a group chat's line has it
+     * (spec/chat.md, Previews); none once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+     */
+    public Builder mergePreview(app.pochical.v1.LinkPreview value) {
+      copyOnWrite();
+      instance.mergePreview(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The page of its words' first link, as a group chat's line has it
+     * (spec/chat.md, Previews); none once taken back.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];</code>
+     */
+    public Builder clearPreview() {  copyOnWrite();
+      instance.clearPreview();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.SupportMessage)
   }
   @java.lang.Override
@@ -1178,10 +1327,11 @@ public  final class SupportMessage extends
             "reactions_",
             app.pochical.v1.SupportReaction.class,
             "photo_",
+            "preview_",
           };
           java.lang.String info =
-              "\u0000\b\u0000\u0001\u0001\b\b\u0000\u0001\u0000\u0001\u0208\u0002\u0007\u0003\u0208" +
-              "\u0004\u0002\u0005\u0208\u0006\u0007\u0007\u001b\b\u1009\u0000";
+              "\u0000\t\u0000\u0001\u0001\t\t\u0000\u0001\u0000\u0001\u0208\u0002\u0007\u0003\u0208" +
+              "\u0004\u0002\u0005\u0208\u0006\u0007\u0007\u001b\b\u1009\u0000\t\u1009\u0001";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

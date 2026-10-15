@@ -51,7 +51,7 @@ import {
   readMarks,
 } from "./group-do-schema";
 import { isId } from "./ids";
-import { mayRead as mayReadPage } from "./link-preview";
+import { keptPreview, mayRead as mayReadPage } from "./link-preview";
 import { fitsText, isEmoji } from "./text-limits";
 
 // A group's chats as its Group DO keeps them (spec/sync-protocol.md,
@@ -335,31 +335,6 @@ const fitsDays = (days: readonly string[]): boolean =>
 
 /** The fewest days a poll puts to the vote. */
 const POLL_MIN_DAYS = 2;
-
-/** The most characters of a preview's title or site name. */
-const PREVIEW_TEXT_MAX = 300;
-
-/** A link's page as a line keeps it, if it is one the server could make. */
-const keptPreview = (preview: LinkPreview | undefined): LineRow["preview"] => {
-  const link = preview === undefined ? null : URL.parse(preview.url);
-  const fits =
-    preview !== undefined &&
-    (link?.protocol === "https:" || link?.protocol === "http:") &&
-    preview.title.length <= PREVIEW_TEXT_MAX &&
-    preview.site.length <= PREVIEW_TEXT_MAX &&
-    (preview.imageId === "" || isId(preview.imageId));
-  if (!fits) {
-    return null;
-  }
-  return {
-    imageHeight: preview.imageHeight,
-    imageId: preview.imageId,
-    imageWidth: preview.imageWidth,
-    site: preview.site,
-    title: preview.title,
-    url: preview.url,
-  };
-};
 
 /** A photo's size, as the sender read it while shrinking it to send. */
 const fitsPhotoSize = (side: number): boolean =>

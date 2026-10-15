@@ -166,6 +166,73 @@ public object SendSupportMessageRequestKt {
 
     public val SendSupportMessageRequestKt.Dsl.photoOrNull: app.pochical.v1.ChatPhoto?
       get() = _builder.photoOrNull
+
+    /**
+     * ```
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when it had not come, when the server reads it before keeping the line.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
+     */
+    public var preview: app.pochical.v1.LinkPreview
+      @kotlin.jvm.JvmName("getPreview")
+        get() = _builder.preview
+      @kotlin.jvm.JvmName("setPreview")
+        set(value) {
+        _builder.preview = value
+      }
+    /**
+     * ```
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when it had not come, when the server reads it before keeping the line.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
+     */
+    public fun clearPreview() {
+      _builder.clearPreview()
+    }
+    /**
+     * ```
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when it had not come, when the server reads it before keeping the line.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
+     * @return Whether the preview field is set.
+     */
+    public fun hasPreview(): kotlin.Boolean {
+      return _builder.hasPreview()
+    }
+
+    public val SendSupportMessageRequestKt.Dsl.previewOrNull: app.pochical.v1.LinkPreview?
+      get() = _builder.previewOrNull
+
+    /**
+     * ```
+     * The user took the page off (×): the line goes without one.
+     * ```
+     *
+     * `bool without_preview = 7 [json_name = "withoutPreview"];`
+     */
+    public var withoutPreview: kotlin.Boolean
+      @kotlin.jvm.JvmName("getWithoutPreview")
+        get() = _builder.withoutPreview
+      @kotlin.jvm.JvmName("setWithoutPreview")
+        set(value) {
+        _builder.withoutPreview = value
+      }
+    /**
+     * ```
+     * The user took the page off (×): the line goes without one.
+     * ```
+     *
+     * `bool without_preview = 7 [json_name = "withoutPreview"];`
+     */
+    public fun clearWithoutPreview() {
+      _builder.clearWithoutPreview()
+    }
   }
 }
 public inline fun app.pochical.v1.SendSupportMessageRequest.copy(block: `app.pochical.v1`.SendSupportMessageRequestKt.Dsl.() -> kotlin.Unit): app.pochical.v1.SendSupportMessageRequest =
@@ -173,4 +240,7 @@ public inline fun app.pochical.v1.SendSupportMessageRequest.copy(block: `app.poc
 
 public val app.pochical.v1.SendSupportMessageRequestOrBuilder.photoOrNull: app.pochical.v1.ChatPhoto?
   get() = if (hasPhoto()) getPhoto() else null
+
+public val app.pochical.v1.SendSupportMessageRequestOrBuilder.previewOrNull: app.pochical.v1.LinkPreview?
+  get() = if (hasPreview()) getPreview() else null
 

@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package pochical.v1;
 
+import "pochical/v1/chat.proto";
 import "pochical/v1/sync.proto";
 
 // The chat with the people who make Pochical (/design's SupportChatPage):
@@ -59,6 +60,9 @@ message SupportMessage {
   // photos (PUT /v1/support/photos/{id}) before the line is sent, read
   // from there (GET). None once taken back.
   ChatPhoto photo = 8;
+  // The page of its words' first link, as a group chat's line has it
+  // (spec/chat.md, Previews); none once taken back.
+  LinkPreview preview = 9;
 }
 
 // An emoji on a line, put there by the user, by Pochical's people, or by
@@ -90,6 +94,11 @@ message SendSupportMessageRequest {
   // A photo already uploaded, sent with no words. FAILED_PRECONDITION
   // while it is not uploaded.
   ChatPhoto photo = 5;
+  // The page of the words' first link, as GetLinkPreview gave it; none
+  // when it had not come, when the server reads it before keeping the line.
+  LinkPreview preview = 6;
+  // The user took the page off (×): the line goes without one.
+  bool without_preview = 7;
 }
 
 message SendSupportMessageResponse {

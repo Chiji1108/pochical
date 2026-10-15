@@ -310,6 +310,48 @@ public object SupportMessageKt {
 
     public val SupportMessageKt.Dsl.photoOrNull: app.pochical.v1.ChatPhoto?
       get() = _builder.photoOrNull
+
+    /**
+     * ```
+     * The page of its words' first link, as a group chat's line has it
+     * (spec/chat.md, Previews); none once taken back.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];`
+     */
+    public var preview: app.pochical.v1.LinkPreview
+      @kotlin.jvm.JvmName("getPreview")
+        get() = _builder.preview
+      @kotlin.jvm.JvmName("setPreview")
+        set(value) {
+        _builder.preview = value
+      }
+    /**
+     * ```
+     * The page of its words' first link, as a group chat's line has it
+     * (spec/chat.md, Previews); none once taken back.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];`
+     */
+    public fun clearPreview() {
+      _builder.clearPreview()
+    }
+    /**
+     * ```
+     * The page of its words' first link, as a group chat's line has it
+     * (spec/chat.md, Previews); none once taken back.
+     * ```
+     *
+     * `.pochical.v1.LinkPreview preview = 9 [json_name = "preview"];`
+     * @return Whether the preview field is set.
+     */
+    public fun hasPreview(): kotlin.Boolean {
+      return _builder.hasPreview()
+    }
+
+    public val SupportMessageKt.Dsl.previewOrNull: app.pochical.v1.LinkPreview?
+      get() = _builder.previewOrNull
   }
 }
 public inline fun app.pochical.v1.SupportMessage.copy(block: `app.pochical.v1`.SupportMessageKt.Dsl.() -> kotlin.Unit): app.pochical.v1.SupportMessage =
@@ -317,4 +359,7 @@ public inline fun app.pochical.v1.SupportMessage.copy(block: `app.pochical.v1`.S
 
 public val app.pochical.v1.SupportMessageOrBuilder.photoOrNull: app.pochical.v1.ChatPhoto?
   get() = if (hasPhoto()) getPhoto() else null
+
+public val app.pochical.v1.SupportMessageOrBuilder.previewOrNull: app.pochical.v1.LinkPreview?
+  get() = if (hasPreview()) getPreview() else null
 

@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { keepSupportAnswer } from "../src/support-answers";
 import { call, signInAnonymously, userIdOf } from "./helpers";
 
 type Message = { fromSupport: boolean; text: string };
@@ -94,6 +95,63 @@ describe("the chat with Pochical's people", () => {
     await call("SupportService/MarkSupportRead", {}, token);
     const after = await chatOf(token);
     expect(after.unread).toBe(0);
+  });
+
+  it("keeps a link's page with a line, the app's or read by the server, unless taken off", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        await Promise.resolve(
+          new Response('<meta property="og:title" content="ヘルプ">', {
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          })
+        )
+    );
+    const token = await signInAnonymously();
+    const userId = await userIdOf(token);
+    const send = async (body: Record<string, unknown>) => {
+      const response = await call(
+        "SupportService/SendSupportMessage",
+        { id: crypto.randomUUID(), ...body },
+        token
+      );
+      const json: unknown = await response.json();
+      const message =
+        isRecord(json) && isRecord(json.message) ? json.message : {};
+      return isRecord(message.preview) ? message.preview.title : undefined;
+    };
+    const titles = [
+      // Read by the server, as the app had not got it yet.
+      await send({ text: "これ https://help.example/a" }),
+      // The app's, as it read it while writing.
+      await send({
+        preview: {
+          site: "help.example",
+          title: "アプリの",
+          url: "https://help.example/b",
+        },
+        text: "これ https://help.example/b",
+      }),
+      // Taken off with ×.
+      await send({ text: "これ https://help.example/c", withoutPreview: true }),
+    ];
+    // An answer of Pochical's people's gets its page too.
+    const answer = await keepSupportAnswer(
+      env,
+      userId,
+      "こちらです https://help.example/d"
+    );
+    const row = await env.DB.prepare(
+      "select preview from support_messages where id = ?"
+    )
+      .bind(answer?.id ?? "")
+      .first<{ preview: string | null }>();
+    vi.restoreAllMocks();
+    expect([...titles, row?.preview?.includes("ヘルプ")]).toStrictEqual([
+      "ヘルプ",
+      "アプリの",
+      undefined,
+      true,
+    ]);
   });
 
   it("keeps one line when the same send comes in twice at once", async () => {

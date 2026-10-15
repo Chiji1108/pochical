@@ -351,6 +351,116 @@ public  final class SendSupportMessageRequest extends
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
+  public static final int PREVIEW_FIELD_NUMBER = 6;
+  private app.pochical.v1.LinkPreview preview_;
+  /**
+   * <pre>
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when it had not come, when the server reads it before keeping the line.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   */
+  @java.lang.Override
+  public boolean hasPreview() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when it had not come, when the server reads it before keeping the line.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.LinkPreview getPreview() {
+    return preview_ == null ? app.pochical.v1.LinkPreview.getDefaultInstance() : preview_;
+  }
+  /**
+   * <pre>
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when it had not come, when the server reads it before keeping the line.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   */
+  private void setPreview(app.pochical.v1.LinkPreview value) {
+    java.util.Objects.requireNonNull(value);
+    preview_ = value;
+    bitField0_ |= 0x00000002;
+  }
+  /**
+   * <pre>
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when it had not come, when the server reads it before keeping the line.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergePreview(app.pochical.v1.LinkPreview value) {
+    java.util.Objects.requireNonNull(value);
+    if (preview_ != null &&
+        preview_ != app.pochical.v1.LinkPreview.getDefaultInstance()) {
+      preview_ =
+        app.pochical.v1.LinkPreview.newBuilder(preview_).mergeFrom(value).buildPartial();
+    } else {
+      preview_ = value;
+    }
+    bitField0_ |= 0x00000002;
+  }
+  /**
+   * <pre>
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when it had not come, when the server reads it before keeping the line.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   */
+  private void clearPreview() {
+    preview_ = null;
+    bitField0_ = (bitField0_ & ~0x00000002);
+  }
+
+  public static final int WITHOUT_PREVIEW_FIELD_NUMBER = 7;
+  private boolean withoutPreview_;
+  /**
+   * <pre>
+   * The user took the page off (×): the line goes without one.
+   * </pre>
+   *
+   * <code>bool without_preview = 7 [json_name = "withoutPreview"];</code>
+   * @return The withoutPreview.
+   */
+  @java.lang.Override
+  public boolean getWithoutPreview() {
+    return withoutPreview_;
+  }
+  /**
+   * <pre>
+   * The user took the page off (×): the line goes without one.
+   * </pre>
+   *
+   * <code>bool without_preview = 7 [json_name = "withoutPreview"];</code>
+   * @param value The withoutPreview to set.
+   */
+  private void setWithoutPreview(boolean value) {
+    
+    withoutPreview_ = value;
+  }
+  /**
+   * <pre>
+   * The user took the page off (×): the line goes without one.
+   * </pre>
+   *
+   * <code>bool without_preview = 7 [json_name = "withoutPreview"];</code>
+   */
+  private void clearWithoutPreview() {
+
+    withoutPreview_ = false;
+  }
+
   public static app.pochical.v1.SendSupportMessageRequest parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -791,6 +901,123 @@ public  final class SendSupportMessageRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when it had not come, when the server reads it before keeping the line.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+     */
+    @java.lang.Override
+    public boolean hasPreview() {
+      return instance.hasPreview();
+    }
+    /**
+     * <pre>
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when it had not come, when the server reads it before keeping the line.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.LinkPreview getPreview() {
+      return instance.getPreview();
+    }
+    /**
+     * <pre>
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when it had not come, when the server reads it before keeping the line.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+     */
+    public Builder setPreview(app.pochical.v1.LinkPreview value) {
+      copyOnWrite();
+      instance.setPreview(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when it had not come, when the server reads it before keeping the line.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+     */
+    public Builder setPreview(
+        app.pochical.v1.LinkPreview.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPreview(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when it had not come, when the server reads it before keeping the line.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+     */
+    public Builder mergePreview(app.pochical.v1.LinkPreview value) {
+      copyOnWrite();
+      instance.mergePreview(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The page of the words' first link, as GetLinkPreview gave it; none
+     * when it had not come, when the server reads it before keeping the line.
+     * </pre>
+     *
+     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+     */
+    public Builder clearPreview() {  copyOnWrite();
+      instance.clearPreview();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The user took the page off (×): the line goes without one.
+     * </pre>
+     *
+     * <code>bool without_preview = 7 [json_name = "withoutPreview"];</code>
+     * @return The withoutPreview.
+     */
+    @java.lang.Override
+    public boolean getWithoutPreview() {
+      return instance.getWithoutPreview();
+    }
+    /**
+     * <pre>
+     * The user took the page off (×): the line goes without one.
+     * </pre>
+     *
+     * <code>bool without_preview = 7 [json_name = "withoutPreview"];</code>
+     * @param value The withoutPreview to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWithoutPreview(boolean value) {
+      copyOnWrite();
+      instance.setWithoutPreview(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The user took the page off (×): the line goes without one.
+     * </pre>
+     *
+     * <code>bool without_preview = 7 [json_name = "withoutPreview"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWithoutPreview() {
+      copyOnWrite();
+      instance.clearWithoutPreview();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.SendSupportMessageRequest)
   }
   @java.lang.Override
@@ -813,10 +1040,12 @@ public  final class SendSupportMessageRequest extends
             "device_",
             "replyTo_",
             "photo_",
+            "preview_",
+            "withoutPreview_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208\u0004\u0208\u0005\u1009\u0000";
+              "\u0000\u0007\u0000\u0001\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0004\u0208\u0005\u1009\u0000\u0006\u1009\u0001\u0007\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -106,4 +106,35 @@ public interface SendSupportMessageRequestOrBuilder extends
    * @return The photo.
    */
   app.pochical.v1.ChatPhoto getPhoto();
+
+  /**
+   * <pre>
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when it had not come, when the server reads it before keeping the line.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   * @return Whether the preview field is set.
+   */
+  boolean hasPreview();
+  /**
+   * <pre>
+   * The page of the words' first link, as GetLinkPreview gave it; none
+   * when it had not come, when the server reads it before keeping the line.
+   * </pre>
+   *
+   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   * @return The preview.
+   */
+  app.pochical.v1.LinkPreview getPreview();
+
+  /**
+   * <pre>
+   * The user took the page off (×): the line goes without one.
+   * </pre>
+   *
+   * <code>bool without_preview = 7 [json_name = "withoutPreview"];</code>
+   * @return The withoutPreview.
+   */
+  boolean getWithoutPreview();
 }
