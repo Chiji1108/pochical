@@ -34,7 +34,7 @@ final class ChatScroll {
   /// latest again. Not once a line is opened at 続きを読む, which goes on
   /// down from where it is.
   var edge: String?
-  /// How far the lines seen have been moved down since, to move them back.
+  /// How far the lines seen have been pushed down since, to move them back.
   var moveBack: CGFloat = 0
 }
 
@@ -195,14 +195,19 @@ struct KeepsSeenLines: View {
       } action: { before, now in
         // Scrolling moves it on the screen only; lines above it change
         // where it is among them.
-        guard abs(now.inLines - before.inLines) > 0.5 else { return }
+        let grew = now.inLines - before.inLines
+        guard abs(grew) > 0.5 else { return }
+        // Held by the bottom anchor, it moved on the screen by no more than
+        // the person's own scrolling in the frame. Else it goes back by as
+        // much as grew above it, not by how far it moved, which a fling
+        // in that frame is part of and would be undone.
         let moved = now.onScreen - before.onScreen
-        guard abs(moved) > 0.5 else { return }
+        guard abs(moved) > abs(grew) / 2 else { return }
         // After this layout: asked for during it, the scroll view drops it.
-        // Moved again before then, as the page's long lines grow, it goes
+        // Grown again before then, as the page's long lines grow, it goes
         // back by both at once.
         let asked = scroll.moveBack != 0
-        scroll.moveBack += moved
+        scroll.moveBack += grew
         guard !asked else { return }
         Task { @MainActor in
           scroll.position.scrollTo(y: scroll.offset + scroll.moveBack)
