@@ -15,7 +15,8 @@ public inline fun chatPhoto(block: app.pochical.v1.ChatPhotoKt.Dsl.() -> kotlin.
  * A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
  * group's photos (PUT /v1/groups/{group_id}/photos/{id}) before the line
  * is sent, and read from there by the group's members. Its size is sent
- * with it, so the line keeps its place before the photo arrives.
+ * with it, so the line keeps its place before the photo arrives, and its
+ * ThumbHash, so a blur of it shows there meanwhile.
  * ```
  *
  * Protobuf type `pochical.v1.ChatPhoto`
@@ -85,6 +86,35 @@ public object ChatPhotoKt {
      */
     public fun clearHeight() {
       _builder.clearHeight()
+    }
+
+    /**
+     * ```
+     * The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+     * its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+     * photo without one, which shows its grey while it comes.
+     * ```
+     *
+     * `bytes thumb_hash = 4 [json_name = "thumbHash"];`
+     */
+    public var thumbHash: com.google.protobuf.ByteString
+      @kotlin.jvm.JvmName("getThumbHash")
+        get() = _builder.thumbHash
+      @kotlin.jvm.JvmName("setThumbHash")
+        set(value) {
+        _builder.thumbHash = value
+      }
+    /**
+     * ```
+     * The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+     * its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+     * photo without one, which shows its grey while it comes.
+     * ```
+     *
+     * `bytes thumb_hash = 4 [json_name = "thumbHash"];`
+     */
+    public fun clearThumbHash() {
+      _builder.clearThumbHash()
     }
   }
 }

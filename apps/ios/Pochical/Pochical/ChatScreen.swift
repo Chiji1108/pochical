@@ -763,9 +763,7 @@ struct ChatScreen: View {
       }
       var send = Pochical_V1_ChatSend()
       send.threadID = threadID
-      send.photo.id = picked.id
-      send.photo.width = UInt32(picked.shrunk.width)
-      send.photo.height = UInt32(picked.shrunk.height)
+      send.photo = picked.shrunk.line(picked.id).wire
       send.replyTo = takeReply()
       write(.send(send))
     }

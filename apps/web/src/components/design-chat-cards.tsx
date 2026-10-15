@@ -1,6 +1,6 @@
 import { chatRules } from "@pochical/design/chat";
 import { Link2Off } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
 
@@ -8,7 +8,7 @@ import { dateKey, formatDay } from "../lib/design-days";
 import type { Photo } from "../lib/design-sample-photos";
 import { MessageActions, useLongPress } from "./design-chat-actions";
 import type { LineActions } from "./design-chat-actions";
-import { photoSize } from "./design-chat-photos";
+import { blurOf, photoSize } from "./design-chat-photos";
 import { PeopleList, PhonePopover } from "./design-chat-popover";
 import { chatStyle } from "./design-chat-style";
 import { Tag } from "./design-choices";
@@ -49,6 +49,11 @@ export type Upload = "sending" | "failed";
 
 // How long a photo takes to go up in the prototype.
 export const uploadMilliseconds = 1600;
+
+// How long someone else's photo takes to come in the prototype, the first
+// time it shows; after that it is on the device, as the apps keep it.
+const comingMilliseconds = 1200;
+const arrivedPhotos = new Set<string>();
 
 const linkCard = {
   // Inset in the bubble, on the card's own ground and edge in either
@@ -268,8 +273,30 @@ export function PhotoLine({
   onSave?: () => void;
 }) {
   const [viewing, setViewing] = useState(false);
-  // Still coming over the network; one that cannot come stops breathing.
-  const [coming, setComing] = useState(true);
+  // Someone else's photo comes over the network the first time it shows;
+  // your own is already on the device.
+  const [here, setHere] = useState(() => mine || arrivedPhotos.has(photo.src));
+  // Already on the device as it is drawn, it shows at once; one that
+  // comes later comes in over its blur.
+  const [heldBefore] = useState(here);
+  // Drawn, over its blur or grey; one that cannot come stops breathing.
+  const [drawn, setDrawn] = useState(false);
+  const [missing, setMissing] = useState(false);
+  const blur = useMemo(
+    () => (photo.thumbHash === undefined ? undefined : blurOf(photo.thumbHash)),
+    [photo.thumbHash]
+  );
+  useEffect(() => {
+    const timer = here
+      ? undefined
+      : setTimeout(() => {
+          arrivedPhotos.add(photo.src);
+          setHere(true);
+        }, comingMilliseconds);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [here, photo.src]);
   const size = photoSize(photo);
   const quoted = quote !== undefined;
   const open = (
@@ -281,27 +308,48 @@ export function PhotoLine({
       }}
       type="button"
     >
-      <img
-        alt=""
-        className={cx(chatStyle.photoImage, coming && chatStyle.photoLoading)}
-        draggable={false}
-        height={size.height}
-        onError={() => {
-          setComing(false);
+      <span
+        // Its blur while it comes, else its grey breathing.
+        className={cx(
+          chatStyle.photoPlace,
+          !drawn && !missing && blur === undefined && chatStyle.photoLoading
+        )}
+        style={{
+          aspectRatio: `${size.width} / ${size.height}`,
+          backgroundImage: blur === undefined ? undefined : `url(${blur})`,
         }}
-        onLoad={() => {
-          setComing(false);
-        }}
-        // Already there when drawn, as a photo read before, it never
-        // breathes.
-        ref={(image) => {
-          if (image?.complete === true) {
-            setComing(false);
-          }
-        }}
-        src={photo.src}
-        width={size.width}
-      />
+      >
+        {here && (
+          <img
+            alt=""
+            className={chatStyle.photoImage}
+            draggable={false}
+            height={size.height}
+            onError={() => {
+              setMissing(true);
+            }}
+            onLoad={() => {
+              setDrawn(true);
+            }}
+            ref={(image) => {
+              if (heldBefore && image?.complete === true) {
+                setDrawn(true);
+              }
+            }}
+            src={photo.src}
+            style={{
+              // Over its blur it comes in, as the chat apps fade a photo
+              // in over its placeholder.
+              animation:
+                drawn && blur !== undefined && !heldBefore
+                  ? `fadeIn ${chatRules.photoFadeMs}ms ease-out`
+                  : undefined,
+              visibility: drawn ? "visible" : "hidden",
+            }}
+            width={size.width}
+          />
+        )}
+      </span>
       {upload === "sending" && (
         <span className={chatStyle.uploading} role="status">
           <svg
@@ -344,11 +392,16 @@ export function PhotoLine({
         </MessageActions>
       </span>
       <PhotoViewer
+        blur={
+          blur === undefined
+            ? undefined
+            : { aspect: photo.width / photo.height, src: blur }
+        }
         label={label}
         onOpenChange={setViewing}
         onSave={onSave}
         open={viewing}
-        photo={photo.src}
+        photo={here ? photo.src : undefined}
         whole
       />
     </>

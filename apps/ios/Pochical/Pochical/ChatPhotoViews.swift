@@ -25,7 +25,8 @@ private enum PhotoBox {
   }
 }
 
-/// One of the group's photos as it loads: from the device, else fetched.
+/// One of the group's photos as it loads: from the device, else fetched,
+/// over the blur its ThumbHash draws, or else its grey, while it comes.
 /// In the chat it is shrunk to the size it shows and kept so (Thumbnails),
 /// so a line scrolled back into sight draws at once rather than reading and
 /// shrinking its 2048 pixels again.
@@ -52,19 +53,30 @@ struct ChatPhotoImage: View {
     let kept =
       whileInSight && !inSight
       ? nil : image ?? pixels.flatMap { Thumbnails.kept(photo.id, pixels: $0) }
-    Group {
+    let blur = Blurs.of(photo)
+    ZStack {
+      if let blur {
+        // Under the photo, in the photo's own shape, so the photo comes in
+        // over it.
+        Image(uiImage: blur)
+          .resizable()
+          .aspectRatio(aspect, contentMode: fit ? .fit : .fill)
+      } else if kept == nil {
+        if fit {
+          // Opened large, on black: the system's spinner, as Photos waits.
+          if !missing {
+            ProgressView().tint(.white).controlSize(.large)
+          }
+        } else {
+          // Only in sight: the chat lays out all its lines at once.
+          PhotoComing(breathing: !missing && (!whileInSight || inSight))
+        }
+      }
       if let kept {
         Image(uiImage: kept)
           .resizable()
           .aspectRatio(contentMode: fit ? .fit : .fill)
-      } else if fit {
-        // Opened large, on black: the system's spinner, as Photos waits.
-        if !missing {
-          ProgressView().tint(.white).controlSize(.large)
-        }
-      } else {
-        // Only in sight: the chat lays out all its lines at once.
-        PhotoComing(breathing: !missing && (!whileInSight || inSight))
+          .transition(.opacity)
       }
     }
     .onScrollVisibilityChange(threshold: 0) { inSight = $0 }
@@ -85,15 +97,29 @@ struct ChatPhotoImage: View {
         missing = !Task.isCancelled
         return
       }
+      let fetched: UIImage?
       if let pixels {
         let id = photo.id
-        image = await Task.detached(priority: .userInitiated) {
+        fetched = await Task.detached(priority: .userInitiated) {
           Thumbnails.make(data, id: id, pixels: pixels)
         }.value
       } else {
-        image = UIImage(data: data)
+        fetched = UIImage(data: data)
+      }
+      // Over its blur it comes in, as the chat apps fade a photo in over
+      // its placeholder; over grey it shows at once.
+      withAnimation(
+        photo.thumbHash == nil ? nil : .easeOut(duration: Double(Chat.photoFadeMs) / 1000)
+      ) {
+        image = fetched
       }
     }
+  }
+
+  /// The photo's width over its height, as it was sent.
+  private var aspect: CGFloat? {
+    guard photo.width > 0, photo.height > 0 else { return nil }
+    return CGFloat(photo.width) / CGFloat(photo.height)
   }
 
   /// The longer side, in pixels, the photo is decoded at to fill the size
@@ -166,6 +192,23 @@ enum Thumbnails {
     else { return nil }
     let image = UIImage(cgImage: shrunk)
     cache.setObject(image, forKey: key(id, pixels), cost: shrunk.bytesPerRow * shrunk.height)
+    return image
+  }
+}
+
+/// The blurs the chat's photos' ThumbHashes draw, kept while the app runs.
+private enum Blurs {
+  nonisolated(unsafe) private static let cache = NSCache<NSString, UIImage>()
+
+  static func of(_ photo: LinePhoto) -> UIImage? {
+    guard let hash = photo.thumbHash else { return nil }
+    let key = photo.id as NSString
+    if let kept = cache.object(forKey: key) {
+      return kept
+    }
+    guard let drawn = ThumbHash.image(hash) else { return nil }
+    let image = UIImage(cgImage: drawn)
+    cache.setObject(image, forKey: key)
     return image
   }
 }

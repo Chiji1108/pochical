@@ -166,11 +166,13 @@ export const chatLines = sqliteTable(
     }>(),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),
-    // The photo sent as the line, as pochical.v1.ChatPhoto's fields;
-    // none for words or days, and once unsent.
+    // The photo sent as the line, as pochical.v1.ChatPhoto's fields, its
+    // ThumbHash as base64 when it came with one; none for words or days,
+    // and once unsent.
     photo: text({ mode: "json" }).$type<{
       id: string;
       height: number;
+      thumbHash?: string;
       width: number;
     }>(),
     // The cursor it was last pinned at, while pinned for everyone.

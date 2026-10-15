@@ -484,7 +484,7 @@ struct SupportChatScreen: View {
     for picked in draft.photos {
       guard (try? ChatPhotos.keep(picked.shrunk.jpeg, as: picked.id, in: ChatPhotos.support)) != nil
       else { continue }
-      let photo = LinePhoto(id: picked.id, width: picked.shrunk.width, height: picked.shrunk.height)
+      let photo = picked.shrunk.line(picked.id)
       lines.append(Waiting(id: UUID().uuidString.lowercased(), photo: photo, replyTo: replyTo))
       replyTo = nil
     }

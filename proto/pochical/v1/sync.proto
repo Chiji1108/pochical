@@ -584,11 +584,16 @@ message ChatNotice {
 // A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
 // group's photos (PUT /v1/groups/{group_id}/photos/{id}) before the line
 // is sent, and read from there by the group's members. Its size is sent
-// with it, so the line keeps its place before the photo arrives.
+// with it, so the line keeps its place before the photo arrives, and its
+// ThumbHash, so a blur of it shows there meanwhile.
 message ChatPhoto {
   string id = 1;
   uint32 width = 2;
   uint32 height = 3;
+  // The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+  // its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+  // photo without one, which shows its grey while it comes.
+  bytes thumb_hash = 4;
 }
 
 // Who can come on one of a poll's days.

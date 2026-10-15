@@ -30,11 +30,15 @@ const photo = async (
     }
   );
 
+// A ThumbHash's first bytes, as the app makes one.
+const THUMB_HASH = new Uint8Array([0x9d, 0xe7, 0x0d, 0x2c, 0x98]);
+
 const sendPhoto = (
   socket: WebSocket,
   opId: string,
   id: string,
-  size = 100
+  size = 100,
+  thumbHash = THUMB_HASH
 ): void => {
   sendFrame(socket, {
     case: "chatEdits",
@@ -44,7 +48,7 @@ const sendPhoto = (
           kind: {
             case: "send",
             value: {
-              photo: { height: size, id, width: size },
+              photo: { height: size, id, thumbHash, width: size },
               threadId: "group",
             },
           },
@@ -88,11 +92,18 @@ describe("a group's photos", () => {
     sendPhoto(mine.socket, "not-uploaded", "nothing");
     sendPhoto(mine.socket, "not-mine", "theirs");
     sendPhoto(mine.socket, "too-large", "mine", 4096);
+    sendPhoto(
+      mine.socket,
+      "too-long-a-thumb-hash",
+      "mine",
+      100,
+      new Uint8Array(26)
+    );
     sendPhoto(mine.socket, "a", "mine");
     sendPhoto(mine.socket, "again", "mine");
     const sent = [];
-    // The catch-up, the photo line, and five acknowledgements.
-    for (let frame = 0; frame < 7; frame += 1) {
+    // The catch-up, the photo line, and six acknowledgements.
+    for (let frame = 0; frame < 8; frame += 1) {
       sent.push(
         // oxlint-disable-next-line no-await-in-loop -- frames come in order
         ...changesBesidesNotices(await mine.frames.next()).filter(
@@ -104,7 +115,15 @@ describe("a group's photos", () => {
     expect(sent).toMatchObject([
       {
         kind: {
-          value: { photo: { height: 100, id: "mine", width: 100 }, seq: 2n },
+          value: {
+            photo: {
+              height: 100,
+              id: "mine",
+              thumbHash: THUMB_HASH,
+              width: 100,
+            },
+            seq: 2n,
+          },
         },
       },
     ]);

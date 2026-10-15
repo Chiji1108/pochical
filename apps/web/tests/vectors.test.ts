@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { widgetRules } from "@pochical/design/widgets";
+import { rgbaToThumbHash, thumbHashToRGBA } from "thumbhash";
 
 // The cases every platform checks its own code against (spec/vectors);
 // the native apps' tests read the same files.
@@ -15,6 +16,7 @@ import reconnect from "../../../spec/vectors/reconnect.json";
 import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
 import text from "../../../spec/vectors/text.json";
+import thumbHashes from "../../../spec/vectors/thumbhash.json";
 import timeChange from "../../../spec/vectors/time-change.json";
 import together from "../../../spec/vectors/together.json";
 import unread from "../../../spec/vectors/unread.json";
@@ -804,6 +806,31 @@ describe("spec/vectors/reconnect.json", () => {
   for (const { name, tries, firstMs, mostMs, expected } of reconnect.waitMost) {
     test(name, () => {
       expect(reconnectWaitMost(tries, firstMs, mostMs)).toBe(expected);
+    });
+  }
+});
+
+const bytesOf = (base64: string) =>
+  Uint8Array.from(atob(base64), (char) => char.codePointAt(0) ?? 0);
+
+describe("spec/vectors/thumbhash.json", () => {
+  for (const { name, width, height, rgba, thumbHash } of thumbHashes.encode) {
+    test(name, () => {
+      expect(rgbaToThumbHash(width, height, bytesOf(rgba))).toEqual(
+        bytesOf(thumbHash)
+      );
+    });
+  }
+  for (const { name, thumbHash, width, height, rgba } of thumbHashes.decode) {
+    test(`${name}, drawn`, () => {
+      const drawn = thumbHashToRGBA(bytesOf(thumbHash));
+      expect([drawn.w, drawn.h]).toEqual([width, height]);
+      const expected = bytesOf(rgba);
+      expect(
+        drawn.rgba.every(
+          (value, index) => Math.abs(value - (expected[index] ?? 0)) <= 1
+        )
+      ).toBe(true);
     });
   }
 });

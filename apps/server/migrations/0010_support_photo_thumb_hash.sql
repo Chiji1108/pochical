@@ -1,0 +1,1 @@
+ALTER TABLE `support_messages` ADD `photo_thumb_hash` text;

@@ -33,4 +33,16 @@ public interface ChatPhotoOrBuilder extends
    * @return The height.
    */
   int getHeight();
+
+  /**
+   * <pre>
+   * The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+   * its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+   * photo without one, which shows its grey while it comes.
+   * </pre>
+   *
+   * <code>bytes thumb_hash = 4 [json_name = "thumbHash"];</code>
+   * @return The thumbHash.
+   */
+  com.google.protobuf.ByteString getThumbHash();
 }

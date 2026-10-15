@@ -1,4 +1,5 @@
 import { Dialog, Drawer, Portal } from "@ark-ui/react";
+import { chatRules } from "@pochical/design/chat";
 import { Check, ChevronLeft, Download, X } from "lucide-react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
@@ -581,6 +582,14 @@ const viewer = {
     },
   }),
   positioner: css({ inset: 0, position: "absolute", zIndex: 31 }),
+  // The photo over its blur, one on the other.
+  stack: css({
+    "& > *": { gridArea: "1 / 1" },
+    display: "grid",
+    height: "100%",
+    placeItems: "center",
+    width: "100%",
+  }),
 };
 
 // A photo on its own over black, as the platforms show a profile picture
@@ -588,13 +597,17 @@ const viewer = {
 // and the ground fades as the photo is pulled.
 export function PhotoViewer({
   photo,
+  blur,
   label,
   whole = false,
   open,
   onOpenChange,
   onSave,
 }: {
-  photo: string;
+  // None while it is still coming.
+  photo?: string;
+  // Its blur and shape, shown until it comes, as a chat's photo has one.
+  blur?: { src: string; aspect: number };
   // Its name for a screen reader, like whose picture it is.
   label: string;
   // Shows the whole photo in its own shape, not cut to a square.
@@ -606,6 +619,9 @@ export function PhotoViewer({
 }) {
   const phone = useContext(PhoneContext);
   const [pull, setPull] = useState<{ from: number; by: number }>();
+  // The photo has come and is fading in over its blur, or is shown,
+  // with its blur gone: at once for one already read.
+  const [drawn, setDrawn] = useState<"came" | "shown">();
   const by = Math.max(pull?.by ?? 0, 0);
   return (
     <Dialog.Root
@@ -664,16 +680,51 @@ export function PhotoViewer({
                 <Download aria-hidden="true" size={20} />
               </button>
             )}
-            <img
-              alt=""
-              className={viewer.photo({ whole })}
-              draggable={false}
-              src={photo}
+            <div
+              className={viewer.stack}
               style={{
                 transform: `translateY(${by}px)`,
                 transition: pull ? "none" : "transform 0.2s ease-out",
               }}
-            />
+            >
+              {blur && drawn !== "shown" && (
+                <img
+                  alt=""
+                  className={viewer.photo({ whole })}
+                  draggable={false}
+                  src={blur.src}
+                  style={{ aspectRatio: blur.aspect, objectFit: "fill" }}
+                />
+              )}
+              {photo !== undefined && (
+                <img
+                  alt=""
+                  className={viewer.photo({ whole })}
+                  draggable={false}
+                  onAnimationEnd={() => {
+                    setDrawn("shown");
+                  }}
+                  onLoad={() => {
+                    setDrawn((before) => before ?? "came");
+                  }}
+                  ref={(image) => {
+                    if (image?.complete === true) {
+                      setDrawn((before) => before ?? "shown");
+                    }
+                  }}
+                  src={photo}
+                  style={
+                    blur && {
+                      animation:
+                        drawn === "came"
+                          ? `fadeIn ${chatRules.photoFadeMs}ms ease-out`
+                          : undefined,
+                      visibility: drawn === undefined ? "hidden" : "visible",
+                    }
+                  }
+                />
+              )}
+            </div>
           </Dialog.Content>
         </Dialog.Positioner>
       </Portal>

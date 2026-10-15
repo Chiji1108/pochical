@@ -55,9 +55,11 @@ export const supportMessages = sqliteTable(
     // once.
     id: text().primaryKey(),
     // Its photo, in the photos bucket under the user's support photos,
-    // and its size; none for words.
+    // and its size and ThumbHash (base64, when it came with one); none for
+    // words.
     photoHeight: integer("photo_height"),
     photoId: text("photo_id"),
+    photoThumbHash: text("photo_thumb_hash"),
     photoWidth: integer("photo_width"),
     // The page of its words' first link, as LinkPreview's fields; none
     // without one, and once taken back.

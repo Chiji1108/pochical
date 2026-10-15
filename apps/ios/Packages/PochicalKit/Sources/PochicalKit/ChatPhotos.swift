@@ -1,30 +1,57 @@
 import Foundation
 import ImageIO
 import PochicalDesign
+import PochicalProto
 import UniformTypeIdentifiers
 
 /// A photo sent as a chat line (spec/chat.md, Photos): its id in the
-/// group's photos, and its size, so the line keeps its place before the
-/// photo arrives.
+/// group's photos, and its size and ThumbHash, so the line keeps its place
+/// before the photo arrives, a blur of it there meanwhile.
 public struct LinePhoto: Hashable, Sendable, Codable, Identifiable {
   public let id: String
   public let width: Int
   public let height: Int
+  /// None for a photo sent without one, which shows its grey instead.
+  public let thumbHash: Data?
 
-  public init(id: String, width: Int, height: Int) {
+  public init(id: String, width: Int, height: Int, thumbHash: Data? = nil) {
     self.id = id
     self.width = width
     self.height = height
+    self.thumbHash = thumbHash
+  }
+
+  /// The photo as the wire carries it.
+  init(_ wire: Pochical_V1_ChatPhoto) {
+    self.init(
+      id: wire.id, width: Int(wire.width), height: Int(wire.height),
+      thumbHash: wire.thumbHash.isEmpty ? nil : wire.thumbHash)
+  }
+
+  /// The photo to send.
+  public var wire: Pochical_V1_ChatPhoto {
+    var wire = Pochical_V1_ChatPhoto()
+    wire.id = id
+    wire.width = UInt32(width)
+    wire.height = UInt32(height)
+    wire.thumbHash = thumbHash ?? Data()
+    return wire
   }
 }
 
 /// A photo shrunk to send: a JPEG no larger than `Chat.photoMaxEdge` on
 /// its longer side, without the original's metadata (its location among
-/// them).
+/// them), and the ThumbHash of that JPEG.
 public struct ShrunkPhoto: Hashable, Sendable {
   public let jpeg: Data
   public let width: Int
   public let height: Int
+  public let thumbHash: Data?
+
+  /// The photo as its line sends it, by the id it is kept under.
+  public func line(_ id: String) -> LinePhoto {
+    LinePhoto(id: id, width: width, height: height, thumbHash: thumbHash)
+  }
 }
 
 /// The chats' photos on the device: shrinking one to send, keeping the
@@ -55,7 +82,9 @@ public enum ChatPhotos {
         destination, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
       guard CGImageDestinationFinalize(destination) else { return nil }
       if out.length <= Chat.photoMaxBytes {
-        return ShrunkPhoto(jpeg: out as Data, width: image.width, height: image.height)
+        return ShrunkPhoto(
+          jpeg: out as Data, width: image.width, height: image.height,
+          thumbHash: ThumbHash.of(out as Data))
       }
     }
     return nil
