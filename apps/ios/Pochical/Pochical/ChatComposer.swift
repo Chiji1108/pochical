@@ -98,6 +98,9 @@ struct ChatComposer: View {
   let say: (String) -> Void
   /// What the photo picker just handed over, read into the tray.
   @State private var photoItems: [PhotosPickerItem] = []
+  /// Each of the row's buttons, the field at least as tall; folded, the
+  /// tools narrow to one.
+  private static let buttonSize: CGFloat = 38
 
   var body: some View {
     let trimmed = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -152,24 +155,24 @@ struct ChatComposer: View {
                   .labelStyle(.iconOnly)
                   .font(.system(size: 20))
                   .foregroundStyle(colors.textSecondary)
-                  .frame(width: 38, height: 38)
+                  .frame(width: Self.buttonSize, height: Self.buttonSize)
               }
             }
             .opacity(folded ? 0 : 1)
-            .offset(x: folded ? -38 : 0)
+            .offset(x: folded ? -Self.buttonSize : 0)
             .allowsHitTesting(!folded)
             .accessibilityHidden(folded)
             Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
               .labelStyle(.iconOnly)
               .font(.system(size: 20, weight: .medium))
               .foregroundStyle(colors.textSecondary)
-              .frame(width: 38, height: 38)
+              .frame(width: Self.buttonSize, height: Self.buttonSize)
               .opacity(folded ? 1 : 0)
               .scaleEffect(folded ? 1 : 0.6)
               .allowsHitTesting(folded)
               .accessibilityHidden(!folded)
           }
-          .frame(width: folded ? 38 : nil, alignment: .leading)
+          .frame(width: folded ? Self.buttonSize : nil, alignment: .leading)
           .clipped()
         }
         ComposerField(
@@ -189,13 +192,13 @@ struct ChatComposer: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .frame(minHeight: 38)
+        .frame(minHeight: Self.buttonSize)
         .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
         Button(action: onSubmit) {
           Image(systemName: editing == nil ? "arrow.up" : "checkmark")
             .font(.system(size: 16, weight: .bold))
             .foregroundStyle(colors.accentOnFill)
-            .frame(width: 38, height: 38)
+            .frame(width: Self.buttonSize, height: Self.buttonSize)
             .background(blocked ? colors.fillPrimary : colors.accentFill, in: Circle())
         }
         .buttonStyle(.plain)
@@ -251,7 +254,7 @@ struct ChatComposer: View {
         Image(systemName: "photo")
           .font(.system(size: 20))
           .foregroundStyle(iconColor)
-          .frame(width: 38, height: 38)
+          .frame(width: Self.buttonSize, height: Self.buttonSize)
       }
       .accessibilityLabel("写真を送る")
       .onChange(of: photoItems) { _, items in
@@ -266,7 +269,7 @@ struct ChatComposer: View {
       .labelStyle(.iconOnly)
       .font(.system(size: 20))
       .foregroundStyle(colors.textQuaternary)
-      .frame(width: 38, height: 38)
+      .frame(width: Self.buttonSize, height: Self.buttonSize)
     }
   }
 
