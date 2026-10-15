@@ -98,8 +98,8 @@ struct ChatComposer: View {
   let say: (String) -> Void
   /// What the photo picker just handed over, read into the tray.
   @State private var photoItems: [PhotosPickerItem] = []
-  /// Each of the row's buttons, the field at least as tall; folded, the
-  /// tools narrow to one.
+  /// The row's height: each of its buttons, the field at least as tall;
+  /// folded, the tools narrow to one.
   private static let buttonSize: CGFloat = 38
 
   var body: some View {
@@ -160,7 +160,7 @@ struct ChatComposer: View {
             }
             .opacity(folded ? 0 : 1)
             .offset(x: folded ? -Self.buttonSize : 0)
-            .allowsHitTesting(!folded)
+            .disabled(folded)
             .accessibilityHidden(folded)
             Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
               .labelStyle(.iconOnly)
@@ -169,7 +169,7 @@ struct ChatComposer: View {
               .frame(width: Self.buttonSize, height: Self.buttonSize)
               .opacity(folded ? 1 : 0)
               .scaleEffect(folded ? 1 : 0.6)
-              .allowsHitTesting(folded)
+              .disabled(!folded)
               .accessibilityHidden(!folded)
           }
           .frame(width: folded ? Self.buttonSize : nil, alignment: .leading)
