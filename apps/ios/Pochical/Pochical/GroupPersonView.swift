@@ -23,6 +23,8 @@ struct GroupPersonView: View {
   @State private var personID: String?
   /// The month shown, from the swiped pages.
   @State private var month: Day? = Day.today.firstOfMonth
+  /// What a tap on a day does, for every day of the pages.
+  @State private var pickDay = Handler<Day>()
   /// Where the pages are as a finger moves them, for the month's name.
   @State private var position = PagerPosition(pages: span)
 
@@ -73,6 +75,7 @@ struct GroupPersonView: View {
       together(in: shown)
         .padding(.horizontal, 16)
     }
+    .handles(pickDay) { picked = picked == $0 ? nil : $0 }
   }
 
   /// The row of people, scrolled sideways once they outgrow it.
@@ -144,7 +147,7 @@ struct GroupPersonView: View {
               isToday: day == Day.today,
               isHoliday: day.holidayName != nil,
               colorsHoliday: settings.device.week.holiday, isSelected: day == picked,
-              onSelect: outside ? nil : { picked = picked == $0 ? nil : $0 }
+              onSelect: outside ? nil : pickDay
             )
             .overlay {
               if bothOff, day != picked {

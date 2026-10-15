@@ -15,27 +15,14 @@ func pollSummary(_ days: [Day], decided: Day?) -> String {
   return "📅 日にちの投票：\(daysSummary(days).replacingOccurrences(of: "📅 ", with: ""))"
 }
 
-/// What a poll's card needs beyond its days: its votes, who may settle
-/// it, and what voting and settling do.
-struct PollLine {
+/// What a poll's card needs beyond its days: its votes and who may
+/// settle it. Voting and settling are the line's actions (LineAction).
+struct PollLine: Equatable {
   let votes: [DayVotes]
   let decided: Day?
   let names: [String: String]
   let meID: String?
   let canDecide: Bool
-  var onVote: (Day, Bool) -> Void = { _, _ in }
-  var onDecide: () -> Void = {}
-
-  /// What the card shows, its actions aside.
-  var shows: Shown { Shown(votes: votes, decided: decided, names: names, meID: meID, canDecide: canDecide) }
-
-  struct Shown: Equatable {
-    let votes: [DayVotes]
-    let decided: Day?
-    let names: [String: String]
-    let meID: String?
-    let canDecide: Bool
-  }
 }
 
 /// Days put to the vote, as LINE's 日程調整 in a card (/design's PollCard):

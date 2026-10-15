@@ -63,15 +63,13 @@ struct GroupWeekdays: View {
 /// date and all, and the picked day framed the same way. Each member's
 /// marks are in their own shape, in the viewer's colors.
 struct GroupWeek: View, @MainActor Equatable {
-  @Environment(Settings.self) private var settings
-  @Environment(\.themeColors) private var colors
   let days: [Day]
   let members: [GroupMember]
   /// The month the week is shown under; its other days are faded.
   var month: Day?
   var picked: Day?
   /// Picks a day, to show everyone's that day; nil leaves days alone.
-  var onPick: ((Day) -> Void)?
+  var onPick: Handler<Day>?
   /// The hub's card draws its rows tighter.
   var compact = false
   /// Today in the accent; not where it is always the first column.
@@ -79,15 +77,18 @@ struct GroupWeek: View, @MainActor Equatable {
   /// Today as the week is made, so a week left as it was still moves
   /// today's mark once a new day has come and the list is made again.
   var today = Day.today
+  let drawing: DayDrawing
 
-  /// What the week shows, and whether its days can be picked: a week the
-  /// same as before is not made again as the list around it changes.
-  /// `onPick` acts on the page as it is when used.
+  /// What the week shows, and how: a week the same as before is not made
+  /// again as the list around it changes, the members' days read anew
+  /// each time. `onPick` is the page's own, the same throughout.
   static func == (a: GroupWeek, b: GroupWeek) -> Bool {
     a.days == b.days && a.members == b.members && a.month == b.month && a.picked == b.picked
-      && (a.onPick == nil) == (b.onPick == nil) && a.compact == b.compact
-      && a.marksToday == b.marksToday && a.today == b.today
+      && a.onPick === b.onPick && a.compact == b.compact && a.marksToday == b.marksToday
+      && a.today == b.today && a.drawing == b.drawing
   }
+
+  private var colors: ThemeColors { drawing.colors }
 
   var body: some View {
     let shown = members.map { $0.calendar.shown(from: days[0], through: days[6]) }
@@ -165,7 +166,7 @@ struct GroupWeek: View, @MainActor Equatable {
     if marksToday, day == today {
       return colors.accentDefault
     }
-    let week = settings.device.week
+    let week = drawing.week
     if week.holiday, day.holidayName != nil {
       return colors.calendarHoliday
     }
@@ -202,7 +203,10 @@ struct GroupWeek: View, @MainActor Equatable {
 /// The next seven days for everyone in the group on the hub's card
 /// (/design's MemberTable, compact), then the next day everyone is off.
 struct MemberWeek: View {
+  @Environment(\.english) private var english
+  @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
+  @Environment(\.look) private var look
   let members: [GroupMember]
   /// Opens the group's month, on a day when one is given.
   let onOpen: (Day?) -> Void
@@ -216,8 +220,10 @@ struct MemberWeek: View {
       } label: {
         VStack(spacing: 4) {
           GroupWeekdays(compact: true, days: days)
-          GroupWeek(days: days, members: members, compact: true, marksToday: false)
-            .equatable()
+          GroupWeek(
+            days: days, members: members, compact: true, marksToday: false, drawing: drawing
+          )
+          .equatable()
         }
         .contentShape(.rect)
       }
@@ -230,6 +236,11 @@ struct MemberWeek: View {
     .padding(EdgeInsets(top: 8, leading: 4, bottom: 12, trailing: 8))
     .background(colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl))
     .overlay(RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
+  }
+
+  /// What the days are drawn with, for the rows and weeks to compare.
+  private var drawing: DayDrawing {
+    DayDrawing(colors: colors, look: look, english: english, week: settings.device.week)
   }
 
   /// 次のみんな休み: the first day from today, within `nextTogetherDays`,
