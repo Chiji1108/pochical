@@ -550,7 +550,9 @@ struct CalendarScreen: View {
         }
         Button {
           let month = shownMonth ?? thisMonth
-          entering = firstBlankDay(in: month, days: monthDays(month, calendar))
+          let first = firstBlankDay(in: month, days: monthDays(month, calendar))
+          // With the tabs giving way, so the tray and the tab bar move as one.
+          withAnimation(Springs.standard) { entering = first }
         } label: {
           Label("ポチポチ入力", systemImage: "pencil")
             .font(.headline)
@@ -570,7 +572,9 @@ struct CalendarScreen: View {
     guard let day = entering else {
       return
     }
-    entering = nil
+    // With the tabs coming back, so the month's foot and the tab bar move
+    // as one rather than the tab bar a frame after.
+    withAnimation(Springs.standard) { entering = nil }
     let calendar = currentCalendar
     // With no pattern that counts as off there is nothing to offer.
     guard holidayShift(of: calendar.patterns.inUse) != nil else {
