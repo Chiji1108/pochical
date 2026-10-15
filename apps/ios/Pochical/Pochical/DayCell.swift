@@ -3,7 +3,7 @@ import PochicalKit
 import SwiftUI
 
 /// A day of a month's page: its date, and its shift's mark.
-struct DayCell: View, @MainActor Equatable {
+struct DayCell: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
   @Environment(\.dayCellHeight) private var height
@@ -32,22 +32,10 @@ struct DayCell: View, @MainActor Equatable {
   /// blank it still is.
   var preview = false
   /// Picks the day: to enter while entering, else to open.
-  var onSelect: ((Day) -> Void)?
+  var onSelect: Handler<Day>?
 
   /// Its height where the screen has room, as /design's.
   static let fullHeight: CGFloat = 64
-
-  /// What the day shows, and whether it can be picked: a day the same as
-  /// before is not made again as the screen changes around it (a day
-  /// entered, a month swiped), the pages around holding some 200 days.
-  /// `onSelect` acts on the screen as it is when used.
-  static func == (a: DayCell, b: DayCell) -> Bool {
-    a.day == b.day && a.entry == b.entry && a.note == b.note && a.pattern == b.pattern
-      && a.outside == b.outside && a.isToday == b.isToday && a.isHoliday == b.isHoliday
-      && a.colorsHoliday == b.colorsHoliday && a.offShown == b.offShown
-      && a.isSelected == b.isSelected && a.isEntering == b.isEntering && a.faint == b.faint
-      && a.preview == b.preview && (a.onSelect == nil) == (b.onSelect == nil)
-  }
 
   var body: some View {
     if let onSelect {

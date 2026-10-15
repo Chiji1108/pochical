@@ -47,6 +47,8 @@ struct RepeatCalendar: View {
   @State private var position = PagerPosition(pages: span)
   /// The framed day, among those typed; none frames the day after them.
   @State private var framed: Int?
+  /// What a tap on a day does, for every day of the pages.
+  @State private var pressDay = Handler<Day>()
   @State private var keyPage = 0
   /// Every key pressed, to tick alike as ポチポチ入力's.
   @State private var keys = 0
@@ -148,6 +150,7 @@ struct RepeatCalendar: View {
       origin = origin ?? anchor.firstOfMonth
       month = month ?? anchor.firstOfMonth
     }
+    .handles(pressDay, by: press)
   }
 
   /// The months side by side, a swipe turning one.
@@ -203,7 +206,7 @@ struct RepeatCalendar: View {
               isHoliday: day.holidayName != nil,
               colorsHoliday: settings.device.week.holiday, offShown: .faint,
               isSelected: index == cursor, isEntering: true, faint: inOrder && !typed,
-              onSelect: press)
+              onSelect: pressDay)
           }
         }
       }

@@ -23,6 +23,8 @@ struct CalendarScreen: View {
   @State private var gaps: [Day] = []
   /// The pattern picked in the gap sheet to fill them with.
   @State private var gapFill: PatternID?
+  /// What a tap on a day does, for every day of the pages.
+  @State private var selectDay = Handler<Day>()
   /// The month being saved as a picture.
   /// The month whose 今月の内訳 is open.
   @State private var breakingDown: Day?
@@ -345,6 +347,7 @@ struct CalendarScreen: View {
         today = .today
       }
     }
+    .handles(selectDay, by: select)
   }
 
   private var thisMonth: Day {
@@ -493,16 +496,19 @@ struct CalendarScreen: View {
       today: today, calendar: calendar, colorsHolidays: settings.device.week.holiday,
       offShown: offShown, selected: entering ?? opened, isEntering: entering != nil,
       preview: gapPreview(calendar),
-      onSelect: { day in
-        // Not after a pull, nor while the pages slide to another week,
-        // which opens its own day as they settle.
-        if pulled || swipedWeek != nil { return }
-        if entering != nil {
-          entering = day
-        } else {
-          withAnimation(folding) { opened = day }
-        }
-      })
+      onSelect: selectDay)
+  }
+
+  /// A day tapped: to enter while entering, else to open.
+  private func select(_ day: Day) {
+    // Not after a pull, nor while the pages slide to another week, which
+    // opens its own day as they settle.
+    if pulled || swipedWeek != nil { return }
+    if entering != nil {
+      entering = day
+    } else {
+      withAnimation(folding) { opened = day }
+    }
   }
 
   /// ポチポチ入力 to start entering, or its tray while entering.
@@ -808,7 +814,7 @@ struct PageDays {
   /// asks about them.
   var preview: [Day: Pattern] = [:]
   /// Picks a day: to enter while entering, else to open.
-  let onSelect: ((Day) -> Void)?
+  let onSelect: Handler<Day>?
 
   /// A week's row, its days of other months faded when `month` is given.
   func row(_ week: [Day], shown: [Day: DayEntry], fadingOutside month: Day?) -> some View {
@@ -827,7 +833,6 @@ struct PageDays {
           isEntering: isEntering && day == today, preview: previewed != nil,
           onSelect: onSelect
         )
-        .equatable()
       }
     }
   }
