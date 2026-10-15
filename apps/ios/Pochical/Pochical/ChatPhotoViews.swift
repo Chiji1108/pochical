@@ -63,7 +63,8 @@ struct ChatPhotoImage: View {
           ProgressView().tint(.white).controlSize(.large)
         }
       } else {
-        PhotoComing(breathing: !missing)
+        // Only in sight: the chat lays out all its lines at once.
+        PhotoComing(breathing: !missing && (!whileInSight || inSight))
       }
     }
     .onScrollVisibilityChange(threshold: 0) { inSight = $0 }
@@ -118,15 +119,18 @@ private struct PhotoComing: View {
   var body: some View {
     colors.fillTertiary
       .opacity(faded ? 0.4 : 1)
-      .onAppear {
-        guard breathing, !reduceMotion else { return }
-        withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-          faded = true
-        }
-      }
-      .onChange(of: breathing) {
-        if !breathing { withAnimation(.default) { faded = false } }
-      }
+      .onAppear(perform: breathe)
+      .onChange(of: breathing, breathe)
+  }
+
+  private func breathe() {
+    guard breathing, !reduceMotion else {
+      withAnimation(.default) { faded = false }
+      return
+    }
+    withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+      faded = true
+    }
   }
 }
 
