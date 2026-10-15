@@ -146,12 +146,16 @@ struct GroupDayRow: View, @MainActor Equatable {
   /// first member's column (the viewer's own) stay at the left, over the
   /// others. Nil while everyone fits.
   var pinX: CGFloat?
+  /// Today as the row is made, so a row left as it was still moves today's
+  /// mark once a new day has come and the list is made again.
+  var today = Day.today
 
   /// What the row shows: a day the same as before is not made again as
   /// the list around it changes. `onPick` acts on the page as it is when
   /// used.
   static func == (a: GroupDayRow, b: GroupDayRow) -> Bool {
     a.day == b.day && a.members == b.members && a.picked == b.picked && a.pinX == b.pinX
+      && a.today == b.today
   }
 
   var body: some View {
@@ -162,7 +166,7 @@ struct GroupDayRow: View, @MainActor Equatable {
     }
     let offs: [Bool?] = patterns.map { $0?.countsAsOff }
     let together = members.count > 1 && Together.allOff(offs)
-    let isToday = day == Day.today
+    let isToday = day == today
     Button {
       onPick(day)
     } label: {
@@ -269,14 +273,14 @@ struct GroupDayRow: View, @MainActor Equatable {
     let holiday = week.holiday && day.holidayName != nil
     let tone: Color =
       switch day.weekday {
-      case _ where day == Day.today: colors.accentDefault
+      case _ where day == today: colors.accentDefault
       case 0 where week.sunday: colors.calendarHoliday
       case 6 where week.saturday: colors.calendarSaturday
       default: holiday ? colors.calendarHoliday : colors.textPrimary
       }
     return HStack(alignment: .firstTextBaseline, spacing: 3) {
       Text("\(day.day)")
-        .font(.system(size: 12, weight: day == Day.today ? .heavy : .semibold))
+        .font(.system(size: 12, weight: day == today ? .heavy : .semibold))
       Text(day.weekdayName(english: english))
         .font(.system(size: 9))
     }

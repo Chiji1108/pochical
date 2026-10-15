@@ -76,6 +76,9 @@ struct GroupWeek: View, @MainActor Equatable {
   var compact = false
   /// Today in the accent; not where it is always the first column.
   var marksToday = true
+  /// Today as the week is made, so a week left as it was still moves
+  /// today's mark once a new day has come and the list is made again.
+  var today = Day.today
 
   /// What the week shows, and whether its days can be picked: a week the
   /// same as before is not made again as the list around it changes.
@@ -83,11 +86,10 @@ struct GroupWeek: View, @MainActor Equatable {
   static func == (a: GroupWeek, b: GroupWeek) -> Bool {
     a.days == b.days && a.members == b.members && a.month == b.month && a.picked == b.picked
       && (a.onPick == nil) == (b.onPick == nil) && a.compact == b.compact
-      && a.marksToday == b.marksToday
+      && a.marksToday == b.marksToday && a.today == b.today
   }
 
   var body: some View {
-    let today = Day.today
     let shown = members.map { $0.calendar.shown(from: days[0], through: days[6]) }
     let offs = members.indices.map { index in
       shown[index].compactMapValues { members[index].calendar.patternsByID[$0.shift]?.countsAsOff }
