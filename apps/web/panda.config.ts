@@ -106,6 +106,8 @@ export default defineConfig({
         sheetOut: { to: { transform: "translateY(100%)" } },
         // The dimming under it, from however far a swipe has faded it.
         scrimOut: { to: { opacity: 0 } },
+        // A photo still coming: its grey breathing, as a skeleton does.
+        photoLoading: { "50%": { opacity: 0.4 } },
         // A photo's upload ring filling as the photo goes up.
         uploadRing: { to: { strokeDashoffset: 0 } },
         // A dot of someone typing: rising and brightening in turn, as
