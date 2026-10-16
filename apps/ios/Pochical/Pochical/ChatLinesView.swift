@@ -272,6 +272,13 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       view.addSubview(host.view)
       host.didMove(toParent: self)
     }
+    // The keyboard's guide without the safe area, which the chat's hosting
+    // changes as the app goes to the background and back: the guide taking
+    // it was left with no frame on coming back from another app, the
+    // composer at the top. Over the home indicator by its own constraint.
+    view.keyboardLayoutGuide.usesBottomSafeArea = false
+    let foot = composer.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+    foot.priority = .defaultLow
     NSLayoutConstraint.activate([
       lines.topAnchor.constraint(equalTo: view.topAnchor),
       // Ending over the composer, which is opaque: the lines are never
@@ -282,7 +289,10 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       // The composer on the keyboard, following it as it is pulled down.
       composer.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       composer.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      composer.view.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor),
+      composer.view.bottomAnchor.constraint(lessThanOrEqualTo: view.keyboardLayoutGuide.topAnchor),
+      composer.view.bottomAnchor.constraint(
+        lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor),
+      foot,
       ground.topAnchor.constraint(equalTo: composer.view.bottomAnchor),
       ground.bottomAnchor.constraint(equalTo: view.bottomAnchor),
       ground.leadingAnchor.constraint(equalTo: view.leadingAnchor),
