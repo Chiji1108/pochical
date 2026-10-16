@@ -58,21 +58,28 @@ let samplePhoto = "sample:"
 
 /// A picture to change (/design's PhotoPicker): tapping it, or the label
 /// under it, offers taking a photo or picking one, and going back to the
-/// usual one or deleting it when that applies.
+/// usual one or deleting it when that applies. A photo taken or picked is
+/// moved and zoomed in its frame (`PhotoCrop`) before it is used.
 struct PhotoEditor<Picture: View>: View {
   @Environment(\.themeColors) private var colors
   /// Said under the picture, as what tapping it does.
   let label: String
   /// Whether there is a photo to delete.
   var hasPhoto = false
+  /// The frame a photo is cut to before it is used.
+  var shape: PhotoCropShape = .round
   @ViewBuilder let picture: () -> Picture
-  /// Told of a picked photo, shrunk for how small it shows.
+  /// Told of a picked photo, cut and shrunk for how small it shows.
   let onPhoto: (Data) async -> Void
   var onUsual: (() async -> Void)?
   var onRemove: (() async -> Void)?
   @State private var picking = false
   @State private var taking = false
   @State private var item: PhotosPickerItem?
+  /// A photo taken, kept until the camera has closed.
+  @State private var taken: UIImage?
+  /// A photo taken or picked, being cut.
+  @State private var cropping: CroppingPhoto?
   @State private var busy = false
 
   var body: some View {
@@ -98,13 +105,27 @@ struct PhotoEditor<Picture: View>: View {
     .disabled(busy)
     .frame(maxWidth: .infinity)
     .photosPicker(isPresented: $picking, selection: $item, matching: .images)
-    .fullScreenCover(isPresented: $taking) {
+    .fullScreenCover(
+      isPresented: $taking,
+      // Cut once the camera has gone, as one cover cannot open while
+      // another is still closing.
+      onDismiss: {
+        cropping = taken.map { CroppingPhoto(image: $0) }
+        taken = nil
+      }
+    ) {
       CameraPicker { image in
+        taken = image
         taking = false
-        guard let image else { return }
-        take(image)
       }
       .ignoresSafeArea()
+    }
+    .fullScreenCover(item: $cropping) { picked in
+      PhotoCrop(image: picked.image, shape: shape) { cut in
+        cropping = nil
+        guard let cut else { return }
+        take(cut)
+      }
     }
     .onChange(of: item) { _, picked in
       guard let picked else { return }
@@ -112,14 +133,17 @@ struct PhotoEditor<Picture: View>: View {
       busy = true
       Task {
         defer { busy = false }
-        guard let data = try? await picked.loadTransferable(type: Data.self) else { return }
-        await send(data)
+        guard let data = try? await picked.loadTransferable(type: Data.self),
+          let image = await Task.detached(operation: {
+            ChatPhotos.upright(data, maxEdge: Chat.photoMaxEdge)
+          }).value
+        else { return }
+        cropping = CroppingPhoto(image: UIImage(cgImage: image))
       }
     }
   }
 
-  /// A photo just taken, sent as a picked one is, encoded off the main
-  /// thread.
+  /// A photo just cut, encoded off the main thread and sent.
   private func take(_ image: UIImage) {
     busy = true
     Task {
@@ -177,8 +201,8 @@ extension PhotoEditor where Picture == MemberAvatar {
   }
 }
 
-/// The system's camera, for a photo to use as a face, squared as the system
-/// squares one for a profile; nil when cancelled.
+/// The system's camera, for a photo to use as a face or a group's mark,
+/// cut afterwards as a picked one is; nil when cancelled.
 private struct CameraPicker: UIViewControllerRepresentable {
   let onDone: (UIImage?) -> Void
 
@@ -186,7 +210,6 @@ private struct CameraPicker: UIViewControllerRepresentable {
     let picker = UIImagePickerController()
     picker.sourceType = .camera
     picker.cameraDevice = .front
-    picker.allowsEditing = true
     picker.delegate = context.coordinator
     return picker
   }
@@ -210,7 +233,7 @@ private struct CameraPicker: UIViewControllerRepresentable {
       _ picker: UIImagePickerController,
       didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
     ) {
-      onDone((info[.editedImage] ?? info[.originalImage]) as? UIImage)
+      onDone(info[.originalImage] as? UIImage)
     }
 
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {

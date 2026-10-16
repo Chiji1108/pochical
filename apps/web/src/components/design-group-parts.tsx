@@ -8,6 +8,7 @@ import { firstCharacter } from "../lib/text-limits";
 import { changeOn, patternOn } from "./design-group-data";
 import type { GroupMark, Member } from "./design-group-data";
 import { List, ListRow } from "./design-list";
+import { PhotoCrop } from "./design-photo-crop";
 import { Sheet } from "./design-sheet";
 import { srOnly } from "./design-ui";
 import type { DayTone } from "./design-week";
@@ -501,16 +502,20 @@ export function Mark({
 // A picture with one way in, as in other apps: tapping it or the link
 // under it opens a sheet to take or pick a photo, and to go back to the
 // usual one or delete it when that applies. Its rows act rather than go
-// on, so none has an arrow.
+// on, so none has an arrow. A photo taken or picked is moved and zoomed
+// inside its frame before it is used.
 export function PhotoPicker({
   picture,
   label,
+  shape,
   onPhoto,
   onUsual,
   onRemove,
 }: {
   picture: ReactNode;
   label: string;
+  // The frame a picked photo is cut to; a face's circle unless told.
+  shape?: "round" | "square";
   onPhoto: (photo: string) => void;
   // A group's own picture can go back to the usual one.
   onUsual?: () => void;
@@ -518,6 +523,7 @@ export function PhotoPicker({
   onRemove?: () => void;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [picked, setPicked] = useState<string>();
   const cameraId = useId();
   const libraryId = useId();
   const open = () => {
@@ -529,7 +535,7 @@ export function PhotoPicker({
   const choose = (files: FileList | null) => {
     const file = files?.[0];
     if (file) {
-      onPhoto(URL.createObjectURL(file));
+      setPicked(URL.createObjectURL(file));
     }
     close();
   };
@@ -542,6 +548,8 @@ export function PhotoPicker({
         id={cameraId}
         onChange={(event) => {
           choose(event.target.files);
+          // So the same photo picked again, after a キャンセル, is told too.
+          event.target.value = "";
         }}
         type="file"
       />
@@ -551,6 +559,8 @@ export function PhotoPicker({
         id={libraryId}
         onChange={(event) => {
           choose(event.target.files);
+          // So the same photo picked again, after a キャンセル, is told too.
+          event.target.value = "";
         }}
         type="file"
       />
@@ -624,6 +634,19 @@ export function PhotoPicker({
           キャンセル
         </button>
       </Sheet>
+      <PhotoCrop
+        onDone={(cut) => {
+          if (picked !== undefined) {
+            URL.revokeObjectURL(picked);
+          }
+          setPicked(undefined);
+          if (cut !== undefined) {
+            onPhoto(cut);
+          }
+        }}
+        photo={picked}
+        shape={shape}
+      />
     </div>
   );
 }

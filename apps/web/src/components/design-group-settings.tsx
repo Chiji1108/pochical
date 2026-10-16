@@ -525,6 +525,7 @@ function GroupMarkPage({
           onChange({ kind: "photo", photo });
           setKind(undefined);
         }}
+        shape="square"
         picture={
           <span className={markFrame({ size: "large" })}>
             <GroupIcon mark={mark} size={40} />
