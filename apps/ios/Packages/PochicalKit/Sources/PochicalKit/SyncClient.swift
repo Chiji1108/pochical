@@ -12,10 +12,10 @@ import SQLiteData
 /// the catch-up and every change after it into the database, and sends the
 /// outbox's edits as they come, which the server's Acked then ends
 /// (Outbox). A group's, open while the group is on screen, takes the
-/// group's values the same way and sends the group's chat outbox. Each keeps its socket
-/// alive and reconnects after a random wait that doubles with each failed
-/// try, at once when the network comes back; never after a 401 or an
-/// update the server asks for.
+/// group's values the same way and sends the group's chat outbox. Each
+/// keeps its socket alive and reconnects after a random wait that doubles
+/// with each failed try, at once when the network comes back; never after
+/// a 401 or an update the server asks for.
 public actor SyncClient {
   /// Whose DO the socket reaches.
   public enum Peer: Sendable, Equatable {
@@ -167,7 +167,8 @@ public actor SyncClient {
   /// made just before reaches the user's other devices and groups without
   /// waiting for the app to be opened again (Sockets).
   public func finishSending() async {
-    let waiting = (try? await database.read { [peer] in try Self.lastToSend(to: peer, in: $0) }) ?? nil
+    let waiting =
+      (try? await database.read { [peer] in try Self.lastToSend(to: peer, in: $0) }) ?? nil
     guard waiting != nil, stopped == nil else {
       stop()
       return
