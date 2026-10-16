@@ -1391,8 +1391,12 @@ struct ChatScreen: View {
       scroll.lifting = true
     }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    try? database.write { db in
+    let wrote: Void? = try? database.write { db in
       try Chats.edit(kind, in: group.id, now: now, db: db)
+    }
+    // Not written, no line comes: the lines held for it go back.
+    if wrote == nil, scroll.lifting {
+      scroll.settle()
     }
   }
 }
