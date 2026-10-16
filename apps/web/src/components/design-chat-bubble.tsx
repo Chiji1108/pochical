@@ -11,10 +11,10 @@ const round = (value: number) => Math.round(value * 100) / 100;
 // over at lg, but the first of a run, as LINE draws one: from a notch in
 // its top corner by the writer's side a horn rises to a tip level with
 // the top edge, 0.6 of the radius past the box (the room chatStyle.body
-// keeps by the face; by the screen's edge it reaches into the margin), and curves back in to the
-// side. One outline, never a tail laid on a corner (spec/chat.md, In a
-// message). Drawn as one's own, its tail at the top right; others' are
-// mirrored.
+// keeps by the face; by the screen's edge it reaches into the margin),
+// and curves back in to the side. One outline, never a tail laid on a
+// corner (spec/chat.md, In a message). Drawn as one's own, its tail at
+// the top right; others' are mirrored.
 export function bubblePath(
   width: number,
   height: number,

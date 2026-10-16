@@ -210,9 +210,11 @@ struct LineView: View {
       children: reactions.isEmpty && poll == nil && shifts == nil ? .combine : .contain)
   }
 
-  /// The ring's shape: the bubble's, or the card's.
+  /// The ring's shape: the bubble's (a photo answering a line sits in
+  /// one), or the card's.
   private var ringShape: AnyShape {
-    days.isEmpty && photo == nil && !(quote == nil && preview == nil && largeEmoji(text) > 0)
+    days.isEmpty && (photo == nil || quote != nil)
+      && !(photo == nil && quote == nil && preview == nil && largeEmoji(text) > 0)
       ? AnyShape(BubbleShape(mine: mine, first: first))
       : AnyShape(RoundedRectangle(cornerRadius: Radius.lg))
   }
