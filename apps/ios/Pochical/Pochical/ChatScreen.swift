@@ -261,6 +261,9 @@ struct ChatScreen: View {
     } action: { before, now in
       guard now.seen != before.seen else { return }
       scroll.seen = now.seen
+      if scroll.lifting {
+        scroll.hold(roomFrom: before.seen, to: now.seen)
+      }
       // The bottom anchor holds a following chat at its foot as the room
       // changes, but not as the chat is pushed in: the scroll view puts
       // back the place it first had at the screen's whole height, short
@@ -462,7 +465,7 @@ struct ChatScreen: View {
     .onChange(of: state.waiting.last?.opID) { _, sent in
       guard sent != nil else { return }
       let slid = following && scroll.place.atLatest && !reduceMotion
-      scroll.lifting = false
+      if scroll.lifting { scroll.settle() }
       following = true
       // Slid, the foot is held already; put back without a scroll of its
       // own should anything have moved it meanwhile.
@@ -1388,8 +1391,12 @@ struct ChatScreen: View {
       scroll.lifting = true
     }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    try? database.write { db in
+    let wrote: Void? = try? database.write { db in
       try Chats.edit(kind, in: group.id, now: now, db: db)
+    }
+    // Not written, no line comes: the lines held for it go back.
+    if wrote == nil, scroll.lifting {
+      scroll.settle()
     }
   }
 }
