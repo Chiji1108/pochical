@@ -186,14 +186,14 @@ struct GroupsScreen: View {
     }
     .task(id: SocketKey(groupID: openGroupID ?? "", active: scenePhase == .active)) {
       guard scenePhase == .active, let groupID = openGroupID else { return }
-      let client = await groupSockets.open(groupID, account: account, database: database)
+      let (client, hold) = await groupSockets.open(groupID, account: account, database: database)
       socket = client
       while !Task.isCancelled {
         try? await Task.sleep(for: .seconds(3600))
       }
       // Lines just sent still go, the app gone to the background or
       // another group opened (spec/sync-protocol.md, Sockets).
-      await groupSockets.close(client)
+      await groupSockets.close(hold, of: groupID)
     }
   }
 
@@ -634,87 +634,96 @@ private struct GroupHeading: View {
   }
 }
 
-/// The groups' sockets: those open, and those left as the app went to the
-/// background or another group was opened, each closing once its chat
-/// outbox is sent and acknowledged (spec/sync-protocol.md, Sockets). The
-/// app waits for them in the background as for its own socket, those still
-/// open too, so a socket its screen has not let go of yet is not missed.
-/// A group opened again meanwhile takes its socket back rather than opening
-/// a second, which would send the same outbox beside it, a reaction's on
-/// then perhaps arriving after its off.
+/// The groups' sockets, one for each group at most: open while a screen
+/// holds it, then closing once its chat outbox is sent and acknowledged
+/// (spec/sync-protocol.md, Sockets). The app waits for them in the
+/// background as for its own socket, those still held too, so a socket its
+/// screen has not let go of yet is not missed. A group opened again takes
+/// back the socket it has, closing or not yet let go of, rather than
+/// opening a second, which would send the same outbox beside it, a
+/// reaction's on then perhaps arriving after its off.
 actor GroupSockets {
-  private struct Closing {
-    let groupID: String
+  private struct Socket {
     let client: SyncClient
-    /// Which closing this is, the socket perhaps taken back and closed
-    /// again meanwhile.
-    let id = UUID()
+    /// The screens' holds on it, each let go of once.
+    var holds: Set<UUID> = []
+    /// Which closing is under way, the socket perhaps taken back and
+    /// closed again meanwhile.
+    var closing: UUID?
     var closed: Task<Void, Never>?
   }
 
-  private var open: [ObjectIdentifier: (groupID: String, client: SyncClient)] = [:]
-  private var closing: [ObjectIdentifier: Closing] = [:]
+  private var sockets: [String: Socket] = [:]
 
-  /// The group's socket, kept until it is closed: the one still closing,
-  /// taken back, else a new one, started before anything here can close
-  /// it.
+  /// The group's socket and a hold on it, kept open until `close` lets go
+  /// of the hold: the one there is, taken back if it was closing, else a
+  /// new one.
   func open(_ groupID: String, account: Account, database: any DatabaseWriter) async
-    -> SyncClient
+    -> (client: SyncClient, hold: UUID)
   {
-    let client =
-      takeBack(groupID)
-      ?? SyncClient(account: account, database: database, peer: .group(groupID))
-    open[ObjectIdentifier(client)] = (groupID, client)
-    await client.start()
-    return client
-  }
-
-  private func takeBack(_ groupID: String) -> SyncClient? {
-    guard let (key, kept) = closing.first(where: { $0.value.groupID == groupID }) else {
-      return nil
+    let hold = UUID()
+    var socket =
+      sockets[groupID]
+      ?? Socket(client: SyncClient(account: account, database: database, peer: .group(groupID)))
+    let starting = socket.holds.isEmpty
+    socket.holds.insert(hold)
+    socket.closing = nil
+    sockets[groupID] = socket
+    if starting {
+      await socket.client.start()
     }
-    closing[key] = nil
-    return kept.client
+    return (socket.client, hold)
   }
 
-  /// Closes `client` once what it has to send is sent; once only.
-  func close(_ client: SyncClient) {
-    let key = ObjectIdentifier(client)
-    guard let (groupID, _) = open.removeValue(forKey: key) else { return }
-    var left = Closing(groupID: groupID, client: client)
-    let id = left.id
-    left.closed = Task {
+  /// Lets go of a hold; the last one let go of closes the socket once what
+  /// it has to send is sent. A hold the background let go of already is
+  /// nothing.
+  func close(_ hold: UUID, of groupID: String) {
+    guard var socket = sockets[groupID], socket.holds.remove(hold) != nil else { return }
+    sockets[groupID] = socket
+    if socket.holds.isEmpty {
+      beginClosing(groupID)
+    }
+  }
+
+  private func beginClosing(_ groupID: String) {
+    guard var socket = sockets[groupID] else { return }
+    let id = UUID()
+    let client = socket.client
+    socket.holds = []
+    socket.closing = id
+    socket.closed = Task {
       let sent = await client.closeOnceSent()
-      guard self.closing[key]?.id == id else {
+      guard self.sockets[groupID]?.closing == id else {
         // Taken back before it began closing: open as it was.
-        if self.open[key] != nil {
+        if self.sockets[groupID]?.holds.isEmpty == false {
           await client.start()
         }
         return
       }
       await sent.value
-      if self.closing[key]?.id == id {
-        self.closing[key] = nil
+      if self.sockets[groupID]?.closing == id {
+        self.sockets[groupID] = nil
       }
     }
-    closing[key] = left
+    sockets[groupID] = socket
   }
 
-  /// Closes every one once sent, and waits until they all have, those
-  /// left meanwhile too.
+  /// Closes every one once sent, those held too, and waits until they all
+  /// have, those left meanwhile too.
   func finishSending() async {
-    for (_, client) in open.values {
-      close(client)
+    for (groupID, socket) in sockets where socket.closing == nil {
+      beginClosing(groupID)
     }
-    while let next = closing.values.first?.closed {
+    while let next = sockets.values.first(where: { $0.closing != nil })?.closed {
       await next.value
     }
   }
 
   /// Closes those closing at once: the time the OS gave runs out.
   func stop() async {
-    for left in closing.values {
-      await left.client.stop()
+    for socket in sockets.values where socket.closing != nil {
+      await socket.client.stop()
     }
   }
 }
