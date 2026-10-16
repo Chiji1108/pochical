@@ -326,14 +326,31 @@ struct SupportChatScreen: View {
       text: line.text, preview: line.preview, days: [], members: [], photo: line.photo,
       quote: line.replyTo.map(quote(of:)), groupID: ChatPhotos.support, mine: true,
       first: false, waiting: !line.failed, nameOf: { _ in "" })
+    // A clock in the time's room, as the group chats', so the bubble stays
+    // as wide once sent.
+    let time = Text(ChatTime.clock(Int64(Date.now.timeIntervalSince1970 * 1000)))
+      .hidden()
+      .overlay(alignment: .trailing) {
+        if !line.failed {
+          Image(systemName: "clock")
+            .accessibilityLabel("送信中")
+        }
+      }
+      .font(.caption2)
+      .foregroundStyle(colors.textQuaternary)
+      .padding(.bottom, 2)
+      .fixedSize()
     return HStack(alignment: .top, spacing: 8) {
       Spacer(minLength: 48)
-      content.heldForActions(lifted: acting == line.id) { frame, finger, _ in
-        guard line.photo == nil else { return }
-        openActions(
-          MessageActionsRequest(
-            lineID: line.id, frame: frame, mine: true, bubble: AnyView(content), finger: finger,
-            actions: [copy(line.text)]))
+      HStack(alignment: .bottom, spacing: 8) {
+        time
+        content.heldForActions(lifted: acting == line.id) { frame, finger, _ in
+          guard line.photo == nil else { return }
+          openActions(
+            MessageActionsRequest(
+              lineID: line.id, frame: frame, mine: true, bubble: AnyView(content), finger: finger,
+              actions: [copy(line.text)]))
+        }
       }
     }
     .padding(.horizontal, 16)
