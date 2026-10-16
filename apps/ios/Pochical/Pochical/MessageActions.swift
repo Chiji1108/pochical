@@ -2,6 +2,7 @@ import PochicalDesign
 import PochicalKit
 import SwiftUI
 import UIKit
+import UIKit.UIGestureRecognizerSubclass
 
 /// One item of a line's menu.
 struct MessageAction: Identifiable {
@@ -37,34 +38,39 @@ struct MessageAction: Identifiable {
   }
 }
 
-/// The long press that opens a line's menu, followed past its opening
-/// as UIKit's long press is: where the finger moves, and where it lifts.
-/// It sees the same press as the line's own, alongside it, but never
-/// alongside the chat's scrolling, which would carry the lines away under
-/// the open menu.
+/// The long press that opens a line's menu, UIKit's: it counts from the
+/// finger going down and says where it is, which SwiftUI's long press in
+/// the chat's scroll view, beside the bubble's taps, does neither of (it
+/// was seen to open past 0.6s for 0.15). It goes on past the opening:
+/// where the finger moves, and where it lifts. It sees the press alongside
+/// the bubble's taps, but never alongside the chat's scrolling, which
+/// would carry the lines away under the open menu.
 struct HeldPress: UIGestureRecognizerRepresentable {
   /// How long a line is held before its menu opens (chatRules.longPressMs).
   static let duration = Double(Chat.longPressMs) / 1000
-  /// How much sooner this press begins than the line's own.
-  static let lead = 0.05
-  /// Where the finger is as the press is held, a moment before the line's
-  /// own press opens its menu.
-  var onHold: (CGPoint) -> Void = { _ in }
+  /// The finger is down and not yet held, for the press's give.
+  let onPressing: (Bool) -> Void
+  /// Where the finger is as the press is held.
+  let onHold: (CGPoint) -> Void
   let onMove: (CGPoint) -> Void
   let onLift: (CGPoint) -> Void
 
   func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
 
-  func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
-    let press = UILongPressGestureRecognizer()
-    press.minimumPressDuration = Self.duration - Self.lead
+  func makeUIGestureRecognizer(context: Context) -> TouchedPress {
+    let press = TouchedPress()
+    press.minimumPressDuration = Self.duration
     press.delegate = context.coordinator
+    let coordinator = context.coordinator
+    press.onTouched = { coordinator.onPressing($0) }
     return press
   }
 
-  func handleUIGestureRecognizerAction(
-    _ recognizer: UILongPressGestureRecognizer, context: Context
-  ) {
+  func updateUIGestureRecognizer(_ recognizer: TouchedPress, context: Context) {
+    context.coordinator.onPressing = onPressing
+  }
+
+  func handleUIGestureRecognizerAction(_ recognizer: TouchedPress, context: Context) {
     let point = context.converter.location(in: .global)
     switch recognizer.state {
     case .began: onHold(point)
@@ -75,10 +81,29 @@ struct HeldPress: UIGestureRecognizerRepresentable {
   }
 
   final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    var onPressing: (Bool) -> Void = { _ in }
+
     func gestureRecognizer(
       _ gestureRecognizer: UIGestureRecognizer,
       shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
     ) -> Bool { !(other is UIPanGestureRecognizer) }
+  }
+}
+
+/// A long press that also tells when a finger goes down on it and when
+/// the press is over, held or not: what UIKit's long press keeps to
+/// itself until it is held.
+final class TouchedPress: UILongPressGestureRecognizer {
+  var onTouched: (Bool) -> Void = { _ in }
+
+  override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    super.touchesBegan(touches, with: event)
+    if state == .possible { onTouched(true) }
+  }
+
+  override func reset() {
+    super.reset()
+    onTouched(false)
   }
 }
 
@@ -483,17 +508,14 @@ private struct HeldBubble: ViewModifier {
   /// finger that opened them while it stays down, and the link held, for
   /// its own menu instead.
   let onActions: (LineSpot, HeldFinger?, URL?) -> Void
+  /// A tap on it, not on a part with its own.
+  let onTap: () -> Void
   /// Where the bubble is on the screen, for its menu.
   @State private var frame = CGRect.zero
   /// Where it is told to its open menu, kept while it is open.
   @State private var spot: LineSpot?
   /// Where its words' links are drawn.
   @State private var links = LinkSpots()
-  /// A link's menu is open from this press: the line's own press, which
-  /// waits on the link's own gesture and comes later, opens nothing.
-  @State private var linkHeld = false
-  /// The finger is still down from this press.
-  @State private var holding = false
   @State private var pressing = false
   /// The finger that opened the menu, followed until it lifts.
   @State private var held: HeldFinger?
@@ -515,32 +537,17 @@ private struct HeldBubble: ViewModifier {
       .scaleEffect(pressing ? 0.96 : 1)
       .opacity(lifted ? 0 : 1)
       .animation(.easeOut(duration: 0.2), value: pressing)
-      .onLongPressGesture(minimumDuration: HeldPress.duration) {
-        pressing = false
-        guard !linkHeld else { return }
-        open(link: nil)
-      } onPressingChanged: {
-        pressing = $0
-      }
+      // A tap is the bubble's own (a photo opens large), but for the
+      // finger lifting from the press that opened its menu.
+      .onTapGesture { if !links.held { onTap() } }
       .gesture(
-        HeldPress {
-          // A link held opens its own menu, as long held as the line's.
-          // This press begins a moment before the line's, so the line's
-          // knows to open nothing.
-          holding = true
-          if let link = links.link(at: $0) {
-            linkHeld = true
-            Task {
-              try? await Task.sleep(for: .seconds(HeldPress.lead))
-              guard holding else { return }
-              pressing = false
-              open(link: link)
-            }
-          }
+        HeldPress { pressing = $0 } onHold: {
+          pressing = false
+          // A link held opens its own menu instead.
+          open(link: links.link(at: $0))
         } onMove: {
           held?.point = $0
         } onLift: {
-          holding = false
           held?.point = $0
           held?.lifted = true
           held = nil
@@ -548,7 +555,6 @@ private struct HeldBubble: ViewModifier {
           Task {
             try? await Task.sleep(for: .milliseconds(300))
             links.held = false
-            linkHeld = false
           }
         })
       .accessibilityAction(named: "リアクションとメニュー") { onActions(newSpot(), nil, nil) }
@@ -578,10 +584,12 @@ private struct HeldBubble: ViewModifier {
 }
 
 extension View {
-  /// Held, opens the bubble's reactions and menu (HeldBubble).
-  func heldForActions(lifted: Bool, onActions: @escaping (LineSpot, HeldFinger?, URL?) -> Void)
-    -> some View
-  {
-    modifier(HeldBubble(lifted: lifted, onActions: onActions))
+  /// Held, opens the bubble's reactions and menu (HeldBubble); a tap on
+  /// it does `onTap`.
+  func heldForActions(
+    lifted: Bool, onTap: @escaping () -> Void = {},
+    onActions: @escaping (LineSpot, HeldFinger?, URL?) -> Void
+  ) -> some View {
+    modifier(HeldBubble(lifted: lifted, onActions: onActions, onTap: onTap))
   }
 }

@@ -274,7 +274,10 @@ struct SupportChatScreen: View {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { time }
           bubble(line, first: first)
-            .heldForActions(lifted: acting == line.id) { spot, finger, link in
+            // A photo opens large at a tap.
+            .heldForActions(lifted: acting == line.id) {
+              if let photo = line.photo { viewing = photo }
+            } onActions: { spot, finger, link in
               // A link held has its own menu, without the reactions.
               if let link {
                 openActions(
@@ -307,8 +310,7 @@ struct SupportChatScreen: View {
     .padding(.horizontal, 16)
   }
 
-  /// Its words in a bubble, or its photo, under the line it answers; a
-  /// photo opens large at a tap.
+  /// Its words in a bubble, or its photo, under the line it answers.
   private func bubble(_ line: SupportLine, first: Bool) -> some View {
     LineContent(
       text: line.text, preview: line.preview, days: [], members: [], photo: line.photo,
@@ -317,7 +319,6 @@ struct SupportChatScreen: View {
       onOpenQuote: { going = line.replyTo }, unfolded: unfolded.contains(line.id),
       onUnfold: { withAnimation { _ = unfolded.insert(line.id) } }
     )
-    .onTapGesture { if let photo = line.photo { viewing = photo } }
   }
 
   /// A line on its way, faint; held, only コピー yet for words.

@@ -67,7 +67,7 @@ struct LinkPreviewCard: View {
     .clipShape(RoundedRectangle(cornerRadius: Radius.md))
     .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.borderDefault))
     .contentShape(.rect)
-    .onTapGesture {
+    .onTapUnlessHeld {
       if let url = URL(string: preview.url) {
         openURL(url)
       }
@@ -164,7 +164,7 @@ struct InviteCard: View {
     .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(colors.borderDefault))
     .contentShape(.rect)
     // A tap, not a button, so the long press stays the line's.
-    .onTapGesture {
+    .onTapUnlessHeld {
       if !unusable { openInvite(code) }
     }
     .accessibilityElement(children: .combine)

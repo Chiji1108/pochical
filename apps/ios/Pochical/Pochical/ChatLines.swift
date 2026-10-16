@@ -159,8 +159,6 @@ struct LineView: View {
             unfolded: unfolded, onUnfold: { act(.unfold) },
             onVote: { act(.vote($0, $1)) }, onDecide: { act(.decide) }
           )
-          // A photo opens large at a tap; its menu is the long press's.
-          .onTapGesture { if photo != nil, !waiting { act(.openPhoto) } }
           // Rung for a moment when gone to from the pins, as /design's
           // flash: a ring just outside the bubble, held, then fading.
           .background {
@@ -168,7 +166,12 @@ struct LineView: View {
               .stroke(colors.accentBorder, lineWidth: 6)
               .opacity(ringed ? 1 : 0)
           }
-            .heldForActions(lifted: lifted) { act(.hold(spot: $0, finger: $1, link: $2)) }
+          // A photo opens large at a tap; its menu is the long press's.
+          .heldForActions(lifted: lifted) {
+            if photo != nil, !waiting { act(.openPhoto) }
+          } onActions: {
+            act(.hold(spot: $0, finger: $1, link: $2))
+          }
           if !mine { meta }
         }
         if let shifts {
