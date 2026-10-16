@@ -252,14 +252,10 @@ struct MessageActionsOverlay: View {
       // A keyboard up stays, as LINE keeps it, when all three fit over it
       // where the bubble is; else it goes for the room it took, and they
       // go along with the chat as it comes down (a small screen, a tall
-      // line).
-      .onAppear {
-        let (top, bottom) = room(in: proxy.size)
-        if KeyboardTop.shared.y != nil, !fitsInPlace(top: top, bottom: bottom) {
-          UIApplication.shared.sendAction(
-            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        }
-      }
+      // line). Asked again as the keyboard changes (another keyboard
+      // picked, taller) while the menu is open.
+      .onAppear { makeRoom(in: proxy.size) }
+      .onChange(of: KeyboardTop.shared.y) { makeRoom(in: proxy.size) }
       // Going along with the chat as it moves under it.
       .animation(.smooth(duration: 0.3), value: request.frame)
     }
@@ -415,6 +411,15 @@ struct MessageActionsOverlay: View {
     let insets = Self.safeInsets
     let bottom = min(size.height - insets.bottom, KeyboardTop.shared.y ?? .infinity)
     return (insets.top + Self.margin, bottom - Self.margin)
+  }
+
+  /// Puts the keyboard down when the three do not fit over it in place.
+  private func makeRoom(in size: CGSize) {
+    let (top, bottom) = room(in: size)
+    if KeyboardTop.shared.y != nil, !fitsInPlace(top: top, bottom: bottom) {
+      UIApplication.shared.sendAction(
+        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
   }
 
   /// The bubble stays where it is, with the bar over it and the menu under
