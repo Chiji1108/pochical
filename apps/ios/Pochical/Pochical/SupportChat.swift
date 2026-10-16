@@ -451,10 +451,9 @@ struct SupportChatScreen: View {
   private func openActions(_ request: MessageActionsRequest) {
     acting = request.lineID
     OverlayWindow.shared.show(
-      MessageActionsOverlay(request: request) { action in
+      MessageActionsOverlay(request: request) {
         acting = nil
         OverlayWindow.shared.hide(after: .milliseconds(50))
-        action?()
       }
       .environment(\.themeColors, colors)
       .environment(settings)

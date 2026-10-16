@@ -138,12 +138,13 @@ struct MessageActionsRequest: Identifiable {
 /// first reactions in a bar over it with + for any other, and the menu
 /// under it or, with no room there, over the bar (placement(in:)). A tap
 /// elsewhere closes it; a pick, by a tap or by the finger that opened it
-/// lifting over one, closes it, then acts.
+/// lifting over one, acts as it closes, as the system's menu does: what
+/// it opens, like the keyboard for 返信, comes in as the menu goes.
 struct MessageActionsOverlay: View {
   @Environment(\.themeColors) private var colors
   let request: MessageActionsRequest
-  /// Closes the overlay, then runs the picked action, if any.
-  let onClose: ((() -> Void)?) -> Void
+  /// Takes the overlay away, once it has gone.
+  let onClose: () -> Void
   @State private var shown = false
   /// Where each choice is on the screen, for the held finger.
   @State private var targets: [Target: CGRect] = [:]
@@ -384,13 +385,15 @@ struct MessageActionsOverlay: View {
     }
   }
 
-  /// Fades out, then closes and acts.
+  /// Goes, quick at first and settling, and acts meanwhile.
   private func close(_ action: (() -> Void)?) {
-    withAnimation(.easeIn(duration: 0.15)) {
+    guard shown else { return }
+    withAnimation(.smooth(duration: 0.25)) {
       shown = false
     } completion: {
-      onClose(action)
+      onClose()
     }
+    action?()
   }
 }
 
@@ -459,6 +462,13 @@ private struct MenuRowStyle: ButtonStyle {
   }
 }
 
+/// A window never made the key one, though tapped: the chat's window
+/// keeps the keyboard's field, so a pick that opens the keyboard (返信)
+/// brings it up as the menu goes rather than once its window is away.
+private final class KeylessWindow: UIWindow {
+  override var canBecomeKey: Bool { false }
+}
+
 /// A window over the app's own, for what must cover everything at once,
 /// bars included, with no presentation of its own: a line's reactions
 /// and menu draw their coming in themselves, where a full-screen cover
@@ -479,7 +489,7 @@ private struct MenuRowStyle: ButtonStyle {
       #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     let host = UIHostingController(rootView: AnyView(view))
     host.view.backgroundColor = .clear
-    let window = UIWindow(windowScene: scene)
+    let window = KeylessWindow(windowScene: scene)
     window.windowLevel = .alert
     window.backgroundColor = .clear
     window.rootViewController = host
