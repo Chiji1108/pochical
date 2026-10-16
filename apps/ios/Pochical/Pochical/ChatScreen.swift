@@ -1335,10 +1335,7 @@ struct ChatScreen: View {
   private func openActions(_ request: MessageActionsRequest) {
     acting = request
     OverlayWindow.shared.show(
-      MessageActionsOverlay(request: request) { action in
-        closeActions()
-        action?()
-      }
+      MessageActionsOverlay(request: request) { closeActions() }
       .environment(\.themeColors, colors)
       .environment(settings)
       .environment(\.look, look))
