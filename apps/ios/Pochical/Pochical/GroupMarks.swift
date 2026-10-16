@@ -168,7 +168,7 @@ struct GroupMarkPage: View {
         VStack(spacing: 16) {
           // Drawn marks are picked with the tabs below, so this only
           // brings in a photo.
-          PhotoEditor(label: mark.photoID.isEmpty ? "写真を使う" : "写真を変更") {
+          PhotoEditor(label: mark.photoID.isEmpty ? "写真を使う" : "写真を変更", shape: .square) {
             // On its frame, an emoji's too, as large as the join screen's.
             GroupMarkView(mark: mark, size: 76, shelf: shelf)
               .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
