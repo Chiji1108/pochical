@@ -102,7 +102,7 @@ struct LinesRow: Equatable {
   /// Where items are measured, apart from the cells: a cell given another
   /// item draws the one it had for a moment, and measured then says that
   /// one's height.
-  private let sizer = UIHostingController(rootView: AnyView(EmptyView()))
+  private let sizer = LineCell.host()
 
   /// The item `id`'s height at `width`, measured once for its look.
   func height(of id: String, width: CGFloat) -> CGFloat {
@@ -235,10 +235,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       let environment = model.environment
       let space = cell.space
       cell.measure = { [weak model] width in model?.height(of: id, width: width) ?? 0 }
-      cell.contentConfiguration = UIHostingConfiguration {
-        LineCellContent(id: id, content: content, environment: environment, space: space)
-      }
-      .margins(.all, 0)
+      cell.show(
+        LineCellContent(id: id, content: content, environment: environment, space: space))
     }
     source = ChatLayoutDiffableDataSource(collectionView: lines) { lines, path, id in
       lines.dequeueConfiguredReusableCell(using: registration, for: path, item: id)
@@ -569,12 +567,29 @@ private final class LineCell: UICollectionViewCell {
   let space = LineSpace()
   /// The height of the item it draws, at a width.
   var measure: ((CGFloat) -> CGFloat)?
+  private let host = LineCell.host()
+
+  /// Where a line's SwiftUI is drawn: with no safe area, which a line
+  /// passing the screen's foot would otherwise be in, the home indicator's,
+  /// and push itself in by as it went, out of the height measured for it
+  /// (a content configuration's hosting takes the safe area always).
+  static func host() -> UIHostingController<AnyView> {
+    let host = UIHostingController(rootView: AnyView(EmptyView()))
+    host.safeAreaRegions = []
+    host.view.backgroundColor = .clear
+    return host
+  }
 
   override init(frame: CGRect) {
     super.init(frame: frame)
-    // The cell itself: a content configuration puts in a content view of
-    // its own, filling the cell.
-    space.view = self
+    space.view = contentView
+    host.view.frame = contentView.bounds
+    host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    contentView.addSubview(host.view)
+  }
+
+  func show(_ line: some View) {
+    host.rootView = AnyView(line)
   }
 
   @available(*, unavailable)
@@ -609,10 +624,6 @@ private struct LineCellContent: View {
     content
       .id(id)
       .frame(maxWidth: .infinity)
-      // A line passing the screen's foot is under the home indicator's
-      // safe area, which would push it in as it goes, out of the height
-      // measured for it.
-      .ignoresSafeArea()
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
       .environment(\.self, environment)
