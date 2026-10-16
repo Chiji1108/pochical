@@ -6,7 +6,7 @@ import SwiftUI
 // each line's bubble, its words, links and mentions.
 
 /// One thing in a chat's lines.
-enum ChatItem: Identifiable {
+enum ChatItem: Identifiable, Hashable {
   case day(Day)
   case unread
   case line(ChatLineRow, startsRun: Bool)
@@ -32,6 +32,14 @@ enum ChatItem: Identifiable {
   }
 }
 
+
+/// What a chat's lines show for a moment, beyond what they are: the line
+/// ringed as it is gone to, and the line whose bubble is lifted over the
+/// chat while its menu is open.
+@MainActor @Observable final class LineMarks {
+  var ringed: Int64?
+  var lifted: String?
+}
 
 /// What is done on a line of words, which the chat acts on.
 enum LineAction {
@@ -61,6 +69,7 @@ enum LineAction {
 /// while it waits to be sent. The time beside the bubble, 編集済み over it.
 struct LineView: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.openGroupRoute) private var openGroupRoute
   /// The line's opID, which its actions name it by.
   let lineID: String
   let text: String
@@ -105,11 +114,13 @@ struct LineView: View {
   var countedReactions = false
   /// Pinned for everyone: a small pin by its time.
   var pinned = false
-  /// Gone to from the pins: ringed for a moment.
-  var ringed = false
+  /// What it shows for a moment: ringed when gone to from the pins, its
+  /// bubble lifted over the chat while its menu is open, its place standing
+  /// empty. Read by the line itself, which is drawn apart from the chat.
+  var marks: LineMarks?
+  /// Its place in the chat, by which it is ringed; none while on its way.
+  var seq: Int64?
   var meID: String?
-  /// Its bubble is lifted over the chat, its place standing empty.
-  var lifted = false
   /// What is done on the line, for the chat to act on as it is when used:
   /// the line, a chat's lines held all at once, is made again only as
   /// what it shows changes, not as the chat changes around it (a line
@@ -164,10 +175,10 @@ struct LineView: View {
           .background {
             ringShape
               .stroke(colors.accentBorder, lineWidth: 6)
-              .opacity(ringed ? 1 : 0)
+              .opacity(seq != nil && marks?.ringed == seq ? 1 : 0)
           }
           // A photo opens large at a tap; its menu is the long press's.
-          .heldForActions(lifted: lifted) {
+          .heldForActions(lifted: marks?.lifted == lineID) {
             if photo != nil, !waiting { act(.openPhoto) }
           } onActions: {
             act(.hold(spot: $0, finger: $1, link: $2))
@@ -175,8 +186,9 @@ struct LineView: View {
           if !mine { meta }
         }
         if let shifts {
-          // All the days, with everyone's shifts round them.
-          NavigationLink(value: shifts) {
+          // All the days, with everyone's shifts round them; pushed by the
+          // groups' own stack, which a line's cell is hosted apart from.
+          Button { openGroupRoute(shifts) } label: {
             Text("シフト表で見る")
               .font(.caption)
               .underline()
@@ -575,14 +587,21 @@ struct BubbleShape: Shape {
 /// A held bubble's words drawn noting where their links are, and where
 /// they are on the screen.
 private struct FindsLinks: ViewModifier {
+  /// Measured where the held finger is told: in a chat line's cell.
+  @Environment(\.lineSpace) private var lineSpace
   let spots: LinkSpots?
 
   func body(content: Content) -> some View {
     if let spots {
+      let inLine = lineSpace != nil
       content
         .textRenderer(LinkFinder(spots: spots))
         .modifier(HeldLinksOpenNothing(spots: spots))
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { spots.frame = $0 }
+        .onGeometryChange(for: CGRect.self) {
+          inLine ? $0.frame(in: .named(LineSpace.name)) : $0.frame(in: .global)
+        } action: {
+          spots.frame = $0
+        }
     } else {
       content
     }

@@ -63,7 +63,7 @@ struct ChatScreen: View {
   /// Moves the lines, at the moments the chat does: not a scroll
   /// position bound to the screen, which as the person scrolls would make
   /// the screen, and every line, again at each line passing the top.
-  @State private var scroller: ScrollViewProxy?
+  @State private var scroller = ChatLinesProxy()
   /// What scrolling changes, kept out of the screen's own state so that
   /// scrolling remakes only what shows it, not every line.
   @State private var scroll = ChatScroll()
@@ -105,8 +105,9 @@ struct ChatScreen: View {
   @State private var pinsOpen = false
   /// A pinned line being gone to, its earlier lines asked for until held.
   @State private var jumpTarget: Int64?
-  /// The line gone to, ringed for a moment.
-  @State private var ringed: Int64?
+  /// The line gone to, ringed for a moment, and the line lifted while its
+  /// menu is open.
+  @State private var marks = LineMarks()
   /// What a pin did, said for a moment over the lines.
   @State private var notice: String?
   /// Saves and copies done, each felt as it is (spec/haptics.md).
@@ -137,146 +138,37 @@ struct ChatScreen: View {
   var body: some View {
     let state = chat.state
     let names = self.names
-    ScrollView {
-      ScrollViewReader { proxy in
-        // Not lazy: a lazy stack guesses the heights of lines not yet drawn
-        // and corrects them as they come into sight, jolting the lines while
-        // scrolling up. A chat holds its pages, not its whole history.
-        VStack(spacing: CGFloat(Chat.lineGap)) {
-          if !state.atStart {
-            EarlierLines(scroll: scroll, first: state.lines.first?.seq, ready: opened) {
-              await showEarlier()
-            }
-          }
-          let listed = items(state)
-          let timeless = linesWithoutTime(listed)
-          ForEach(listed) { item in
-            // Lines close within a run, parted where the writer changes; the
-            // first has the list's own margin over it.
-            let parted = item.startsRun && item.id != listed.first?.id
-            row(item, names: names, showsTime: !timeless.contains(item.id))
-              .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
-              .background { KeepsSeenLines(id: item.id, scroll: scroll) }
-          }
-          // Who is writing now, under the latest line; not someone blocked.
-          ForEach(typers.keys.filter { !blocked.contains($0) }.sorted(), id: \.self) { userID in
-            TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")
-              .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
-              .id("typing-\(userID)")
-              .transition(.opacity)
-          }
-          // The foot, which the chat goes to for its latest.
-          Color.clear.frame(height: 0).id(Self.foot)
-        }
-        .coordinateSpace(.named(Self.lines))
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { before, now in
-          scroll.linesHeight = now
-          if scroll.lifting, now > before {
-            scroll.lift(by: now - before)
-          }
-        }
-        .scrollTargetLayout()
-        // In from the sides as padding, not content margins, so scrolling
-        // to the foot's edge never moves the lines sideways.
-        .padding(.horizontal, 16)
-        // Lines shorter than the screen fill it, at its foot.
-        .modifier(FillsSeen(scroll: scroll))
-        // A tap off the lines puts the keyboard away, as LINE does; a
-        // tap on a line stays the line's own.
-        .background {
-          Color.clear.contentShape(.rect).onTapGesture {
-            UIApplication.shared.sendAction(
-              #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-          }
-          .accessibilityHidden(true)
-        }
-        .modifier(Lifts(scroll: scroll))
-        .onAppear { scroller = proxy }
-      }
-    }
-    .contentMargins(.vertical, 12, for: .scrollContent)
-    .opacity(placed ? 1 : 0)
+    let listed = items(state)
+    let timeless = linesWithoutTime(listed)
+    let byID = Dictionary(listed.map { ($0.id, $0) }) { first, _ in first }
+    // Who is writing now, under the latest line; not someone blocked.
+    let writers = typers.keys.filter { !blocked.contains($0) }.sorted()
+    ChatLinesView(
+      rows: rows(listed, writers: writers, timeless: timeless, names: names),
+      row: { id in
+        AnyView(
+          lineRow(
+            id, item: byID[id], first: listed.first?.id, names: names,
+            showsTime: !timeless.contains(id)))
+      },
+      composer: AnyView(composer),
+      latest: AnyView(
+        LatestButton(scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0) {
+          following = true
+          toLatest(animated: true)
+        }),
+      ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
+      shown: placed, holds: acting != nil, dayOver: { dayOver($0, in: listed) },
+      onReachLatest: { reachedLatest += 1 }
+    )
+    // The composer rides the keyboard on its own guide, under the lines.
+    .ignoresSafeArea(.container, edges: .bottom)
+    .ignoresSafeArea(.keyboard)
     .overlay {
       if state.lines.isEmpty, state.waiting.isEmpty {
         Text("まだメッセージはありません")
           .font(.footnote)
           .foregroundStyle(colors.textQuaternary)
-      }
-    }
-    // Opens at the foot (spec/chat.md, Unread lines and typing); where it
-    // goes from there is the person's, or follows the latest.
-    // Not for alignment: the lines fill the screen themselves (below), and
-    // the inset it adds over short lines left room to scroll.
-    .defaultScrollAnchor(.bottom, for: .initialOffset)
-    .defaultScrollAnchor(.bottom, for: .sizeChanges)
-    .modifier(ScrollsBy(scroll: scroll))
-    .scrollDismissesKeyboard(.interactively)
-    .onScrollGeometryChange(for: ScrollPlace.self) { geometry in
-      let below =
-        geometry.contentSize.height + geometry.contentInsets.bottom
-        - geometry.visibleRect.maxY
-      return ScrollPlace(
-        atLatest: below < 24, away: below > geometry.containerSize.height / 2,
-        fits: geometry.contentSize.height <= geometry.containerSize.height + 1,
-        nearTop: geometry.contentOffset.y <= -geometry.contentInsets.top + Metrics.touch)
-    } action: { before, now in
-      scroll.place = now
-      if now.atLatest, !before.atLatest {
-        reachedLatest += 1
-      }
-    }
-    // Following is the person's to change: off as they scroll, and on
-    // again where their scroll comes to rest at the foot.
-    .onScrollPhaseChange { _, phase in
-      switch phase {
-      case .interacting: following = false
-      case .idle: if !following { following = scroll.place.atLatest }
-      default: break
-      }
-      scroll.scrolling = phase.isScrolling
-      // The person's own scrolling, not the chat following its latest.
-      if phase == .interacting || phase == .decelerating, !scroll.dayShown {
-        withAnimation(.easeOut(duration: 0.2)) { scroll.dayShown = true }
-      }
-    }
-    .onScrollTargetVisibilityChange(idType: String.self) { seen in
-      let day = dayOver(seen.first, in: items(chat.state))
-      if day != scroll.topDay { scroll.topDay = day }
-    }
-    // Where the lines are scrolled, from their top as the scroll position
-    // counts it, to move them back as earlier ones come in (KeepsSeenLines).
-    .onScrollGeometryChange(for: CGFloat.self) { geometry in
-      geometry.contentOffset.y + geometry.contentInsets.top
-    } action: { _, offset in
-      scroll.scrolled(to: offset)
-    }
-    // The container is already inside the bars and the margins. Kept in
-    // `scroll`, not the screen's state: the keyboard pulled down changes it
-    // at every frame, which would remake every line at each.
-    .onScrollGeometryChange(for: Room.self) { geometry in
-      Room(
-        seen: geometry.containerSize.height,
-        below: geometry.contentSize.height + geometry.contentInsets.bottom
-          - geometry.visibleRect.maxY)
-    } action: { before, now in
-      guard now.seen != before.seen else { return }
-      scroll.seen = now.seen
-      if scroll.lifting {
-        scroll.hold(roomFrom: before.seen, to: now.seen)
-      }
-      // The bottom anchor holds a following chat at its foot as the room
-      // changes, but not as the chat is pushed in: the scroll view puts
-      // back the place it first had at the screen's whole height, short
-      // of the foot by the composer. Put back at once, rather than with a
-      // scroll at each frame of the room's own animation.
-      if following, now.below > 1 {
-        toLatest()
-      }
-    }
-    .overlay(alignment: .bottomTrailing) {
-      LatestButton(scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0) {
-        following = true
-        toLatest(animated: true)
       }
     }
     .sensoryFeedback(.success, trigger: done)
@@ -297,28 +189,6 @@ struct ChatScreen: View {
     }
     .task(id: JumpKey(target: jumpTarget, first: chat.state.lines.first?.seq)) {
       await goToTarget()
-    }
-    .safeAreaInset(edge: .bottom, spacing: 0) {
-      // A one-to-one chat with someone who left stays to be read, but
-      // takes no more lines.
-      if let otherID, let gone = chat.writers.first(where: { $0.userID == otherID && $0.left }) {
-        Text(gone.deleted ? "相手のアカウントは削除されました" : "\(gone.displayName)はグループを抜けました")
-          .font(.footnote)
-          .foregroundStyle(colors.textTertiary)
-          .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-          .background(colors.backgroundBase)
-          .overlay(alignment: .top) {
-            Rectangle().fill(colors.separator).frame(height: 1)
-          }
-      } else {
-        ChatComposer(
-          draft: draft, groupID: group.id, threadID: threadID,
-          mentionable: otherID != nil
-            ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
-          nameOf: nameOf, quoteOf: { quote(of: Int64($0) ?? 0) }, onSubmit: submit,
-          onStopEditing: stopEditing,
-          onShareDays: { sharingDays = true }, say: say)
-      }
     }
     .background(colors.backgroundBase)
     .environment(\.memberFaces, faces)
@@ -450,26 +320,18 @@ struct ChatScreen: View {
       guard opened, following else { return }
       // Others' lines the reader has not read stop at ここから新着 rather
       // than going past it, as the chat's catch-up bringing many at once.
+      // Else the lines keep to their foot as they come in (ChatLinesView).
       if before.latest != now.latest, let first = unreadComing(after: before.latest) {
         show(from: first)
-      } else {
-        toLatest(animated: true)
       }
-    }
-    // Back at the latest, the line held as earlier pages came in is let go.
-    .onChange(of: following) {
-      if following { scroll.letGo() }
     }
     // One's own line just sent shows at the foot, wherever the lines were;
     // already there, the lines slid up to it as it was written (`write`).
     .onChange(of: state.waiting.last?.opID) { _, sent in
       guard sent != nil else { return }
-      let slid = following && scroll.place.atLatest && !reduceMotion
-      if scroll.lifting { scroll.settle() }
       following = true
-      // Slid, the foot is held already; put back without a scroll of its
-      // own should anything have moved it meanwhile.
-      toLatest(animated: !slid)
+      // At the foot already, the lines slid up to it as it came in.
+      toLatest(animated: !reduceMotion)
     }
     .environment(\.openURL, OpenURLAction { open($0) })
     // Leaving the chat takes its open menu with it.
@@ -545,6 +407,117 @@ struct ChatScreen: View {
       Text("メンバー全員のチャットから消えます。")
     }
     .handles(lineActions) { act($0.action, on: $0.lineID) }
+  }
+
+  /// Under the lines: the composer, or what a one-to-one chat with
+  /// someone who left says in its place.
+  @ViewBuilder private var composer: some View {
+    // A one-to-one chat with someone who left stays to be read, but
+    // takes no more lines.
+    if let otherID, let gone = chat.writers.first(where: { $0.userID == otherID && $0.left }) {
+      Text(gone.deleted ? "相手のアカウントは削除されました" : "\(gone.displayName)はグループを抜けました")
+        .font(.footnote)
+        .foregroundStyle(colors.textTertiary)
+        .frame(maxWidth: .infinity, minHeight: Metrics.touch)
+        .background(colors.backgroundBase)
+        .overlay(alignment: .top) {
+          Rectangle().fill(colors.separator).frame(height: 1)
+        }
+    } else {
+      ChatComposer(
+        draft: draft, groupID: group.id, threadID: threadID,
+        mentionable: otherID != nil
+          ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
+        nameOf: nameOf, quoteOf: { quote(of: Int64($0) ?? 0) }, onSubmit: submit,
+        onStopEditing: stopEditing,
+        onShareDays: { sharingDays = true }, say: say)
+    }
+  }
+
+  /// Someone writing now's item, by their id.
+  private static let typing = "typing-"
+
+  /// The lines' items, each with all its row draws, so a line is drawn
+  /// again, and measured, only as that changes.
+  private func rows(
+    _ listed: [ChatItem], writers: [String], timeless: Set<String>, names: [String: String]
+  ) -> [LinesRow] {
+    let state = chat.state
+    // What every line draws by: when it changes, every line is drawn again.
+    let common = RowsLook(
+      names: names, faces: faces, meID: meID, deleted: deletedIDs, members: cardMembers,
+      left: Set(chat.writers.filter(\.left).map(\.userID))
+    ).hashValue
+    let pins = Set(state.pins.map(\.seq))
+    var rows: [LinesRow] = []
+    if !state.atStart {
+      rows.append(
+        LinesRow(
+          id: ChatLinesView.earlier,
+          look: AnyHashable(EarlierLook(first: state.lines.first?.seq, opened: opened))))
+    }
+    for item in listed {
+      var quote: LineQuote?
+      var pinned = false
+      if case .line(let line, _) = item {
+        quote = line.replyTo.map(self.quote(of:))
+        pinned = pins.contains(line.seq)
+      } else if case .waiting(let line, _) = item {
+        quote = line.replyTo.map(self.quote(of:))
+      }
+      // What the line shows of the person's own choices: its writer
+      // blocked, shown anyway, or opened at 続きを読む.
+      var blockedWriter = false
+      var shownAnyway = false
+      var unfoldedLine = false
+      if case .line(let line, _) = item {
+        blockedWriter = blocked.contains(line.authorID)
+        shownAnyway = shownBlocked.contains(line.seq)
+        unfoldedLine = unfolded.contains(line.opID)
+      }
+      let look = RowLook(
+        item: item, parted: item.startsRun && item.id != listed.first?.id,
+        showsTime: !timeless.contains(item.id), pinned: pinned, quote: quote,
+        blockedWriter: blockedWriter, shownAnyway: shownAnyway, unfolded: unfoldedLine,
+        common: common)
+      rows.append(LinesRow(id: item.id, look: AnyHashable(look)))
+    }
+    for userID in writers {
+      rows.append(LinesRow(id: "\(Self.typing)\(userID)", look: AnyHashable(common)))
+    }
+    return rows
+  }
+
+  /// The item `id` as the chat's lines draw it.
+  @ViewBuilder private func lineRow(
+    _ id: String, item: ChatItem?, first: String?, names: [String: String], showsTime: Bool
+  ) -> some View {
+    Group {
+      if id == ChatLinesView.earlier {
+        EarlierLines(scroll: scroll, first: chat.state.lines.first?.seq, ready: opened) {
+          await showEarlier()
+        }
+      } else if id.hasPrefix(Self.typing) {
+        let userID = String(id.dropFirst(Self.typing.count))
+        TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")
+          .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
+      } else if let item {
+        // Lines close within a run, parted where the writer changes; the
+        // first has the list's own margin over it.
+        let parted = item.startsRun && item.id != first
+        row(item, names: names, showsTime: showsTime)
+          .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
+      }
+    }
+    .frame(maxWidth: .infinity)
+    // A tap off a line's own parts puts the keyboard away, as LINE does.
+    .background {
+      Color.clear.contentShape(.rect).onTapGesture {
+        UIApplication.shared.sendAction(
+          #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+      }
+      .accessibilityHidden(true)
+    }
   }
 
   // MARK: Lines
@@ -625,9 +598,6 @@ struct ChatScreen: View {
         Rectangle().fill(colors.accentBorder).frame(height: 1)
       }
       .padding(.vertical, 4)
-      .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named(Self.lines)).minY } action: {
-        scroll.unreadTop = $0
-      }
     case .line(let line, _) where line.hidden:
       // Never delivered to the reader: nothing shows.
       EmptyView()
@@ -674,8 +644,8 @@ struct ChatScreen: View {
           writerPhoto: faces[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, names: names,
           reactions: line.reactions, countedReactions: otherID != nil,
-          pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
-          meID: meID, lifted: acting?.lineID == line.opID,
+          pinned: chat.state.pins.contains { $0.seq == line.seq }, marks: marks, seq: line.seq,
+          meID: meID,
           actions: lineActions)
       }
     case .waiting(let line, let startsRun):
@@ -684,7 +654,7 @@ struct ChatScreen: View {
         members: cardMembers, poll: waitingPoll(line), photo: line.photo,
         quote: line.replyTo.map(quote(of:)), groupID: group.id, time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
-        failed: line.failed, names: names, lifted: acting?.lineID == line.opID,
+        failed: line.failed, names: names, marks: marks,
         actions: lineActions)
     }
   }
@@ -709,7 +679,7 @@ struct ChatScreen: View {
       // Opened where it is, its words going on down from there, as the
       // messaging apps open a long one: not carried to the foot.
       following = false
-      scroll.letGo()
+      scroller.growDown("line-\(line.opID)")
       withAnimation { _ = unfolded.insert(line.opID) }
     case .openPhoto:
       viewing = line.photo
@@ -874,10 +844,6 @@ struct ChatScreen: View {
   private func showEarlier() async {
     guard let line = chat.state.lines.first else { return }
     let first = line.seq
-    // Pages asked for one after another keep the line first before them:
-    // the next is asked for as one comes in at the top, before the long
-    // lines on it have grown.
-    if scroll.edge == nil { scroll.edge = "line-\(line.opID)" }
     window = max(first - Int64(Chat.pageSize), 1)
     await reload()
     guard chat.state.lines.first?.seq == first, !chat.state.atStart else { return }
@@ -916,20 +882,12 @@ struct ChatScreen: View {
     } else {
       // Not carried to the foot meanwhile by lines coming in or laid out.
       following = false
-      // Once the lines are laid out, where they are and what is in sight
-      // known.
+      // Once the lines are laid out.
       try? await Task.sleep(for: .milliseconds(50))
       // With few new lines, ここから新着 is on the screen at the latest
-      // already; asked to the top with too few lines under it to get
-      // there, the scroll view would go past the foot. Known from where it
-      // is among the lines, not from its being in sight, which is read as
-      // the lines are first laid out at the top.
-      if let top = scroll.unreadTop, scroll.linesHeight - top > scroll.seen {
-        scroller?.scrollTo(ChatItem.unread.id, anchor: .top)
-      } else {
-        following = true
-        toLatest()
-      }
+      // already, and the lines stop at their foot short of it.
+      scroller.show(ChatItem.unread.id, at: .top)
+      following = scroll.place.atLatest
       withAnimation(.easeOut(duration: 0.15)) { placed = true }
     }
     opened = true
@@ -959,14 +917,14 @@ struct ChatScreen: View {
     Task { @MainActor in
       // Asked to the top with too few lines under it to get there, it
       // stops at the foot.
-      withAnimation { scroller?.scrollTo("line-\(first.opID)", anchor: .top) }
+      scroller.show("line-\(first.opID)", at: .top, animated: true)
       try? await Task.sleep(for: .milliseconds(400))
       if scroll.place.atLatest {
         following = true
       } else if unreadFrom == nil {
         unreadFrom = first.seq
         try? await Task.sleep(for: .milliseconds(50))
-        scroller?.scrollTo(ChatItem.unread.id, anchor: .top)
+        scroller.show(ChatItem.unread.id, at: .top)
       }
     }
   }
@@ -1116,25 +1074,9 @@ struct ChatScreen: View {
     say("\(day.fullText)に決めました")
   }
 
-  /// The lines' own coordinates, where ここから新着 and the line kept as
-  /// earlier ones come in are measured.
-  static let lines = "lines"
-
-  /// The foot's id, under the latest line and anyone writing.
-  private static let foot = "foot"
-
-  /// To the foot, every time it is asked: a scroll position set to the
-  /// foot it already says does nothing, though the lines have moved. Once
-  /// what asked has been laid out, after the scroll view's own adjusting,
-  /// which would otherwise have the last word.
+  /// To the foot, once what asked has been laid out.
   private func toLatest(animated: Bool = false) {
-    Task { @MainActor in
-      if animated {
-        withAnimation { scroller?.scrollTo(Self.foot, anchor: .bottom) }
-      } else {
-        scroller?.scrollTo(Self.foot, anchor: .bottom)
-      }
-    }
+    Task { @MainActor in scroller.toLatest(animated: animated) }
   }
 
   /// The composer's send: a word still being converted goes too,
@@ -1324,10 +1266,10 @@ struct ChatScreen: View {
     if let line = state.lines.first(where: { $0.seq == target }) {
       jumpTarget = nil
       following = false
-      withAnimation { scroller?.scrollTo("line-\(line.opID)", anchor: .center) }
-      ringed = target
+      scroller.show("line-\(line.opID)", at: .center, animated: true)
+      marks.ringed = target
       try? await Task.sleep(for: .milliseconds(500))
-      withAnimation(.easeOut(duration: 0.7)) { ringed = nil }
+      withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
     } else if !state.atStart {
       await showEarlier()
     } else {
@@ -1346,6 +1288,7 @@ struct ChatScreen: View {
   /// overlay draws its own coming in.
   private func openActions(_ request: MessageActionsRequest) {
     acting = request
+    marks.lifted = request.lineID
     OverlayWindow.shared.show(
       MessageActionsOverlay(request: request) { closeActions() }
       .environment(\.themeColors, colors)
@@ -1358,6 +1301,7 @@ struct ChatScreen: View {
   /// between the two.
   private func closeActions() {
     acting = nil
+    marks.lifted = nil
     OverlayWindow.shared.hide(after: .milliseconds(50))
   }
 
@@ -1382,21 +1326,39 @@ struct ChatScreen: View {
   }
 
   private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
-    // One's own line about to come at the foot: the bottom anchor would
-    // show it at once, the lines jumping up a line. They slide up to it
-    // instead, as the messaging apps send, unless motion is reduced. Asked
-    // for before it is written, as the lines grow before the screen hears
-    // of it.
-    if case .send = kind, following, scroll.place.atLatest, !reduceMotion {
-      scroll.lifting = true
-    }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    let wrote: Void? = try? database.write { db in
+    try? database.write { db in
       try Chats.edit(kind, in: group.id, now: now, db: db)
     }
-    // Not written, no line comes: the lines held for it go back.
-    if wrote == nil, scroll.lifting {
-      scroll.settle()
-    }
   }
+}
+
+/// What every line of a chat is drawn by, beyond the line itself.
+private struct RowsLook: Hashable {
+  let names: [String: String]
+  let faces: [String: String]
+  let meID: String?
+  let deleted: Set<String>
+  let members: [GroupMember]
+  let left: Set<String>
+}
+
+/// All a line's row draws.
+private struct RowLook: Hashable {
+  let item: ChatItem
+  let parted: Bool
+  let showsTime: Bool
+  let pinned: Bool
+  let quote: LineQuote?
+  let blockedWriter: Bool
+  let shownAnyway: Bool
+  let unfolded: Bool
+  let common: Int
+}
+
+/// The top of the lines while earlier ones are to come: asks again as the
+/// first line changes, and only once the chat has opened.
+private struct EarlierLook: Hashable {
+  let first: Int64?
+  let opened: Bool
 }
