@@ -25,10 +25,11 @@ import UIKit
     controller?.show(id, at: place, animated: animated)
   }
 
-  /// The lines seen grow down from where they are for a moment, as a long
-  /// line opened at 続きを読む does, rather than up from the foot.
-  func growDown() {
-    controller?.growDown()
+  /// The item `id` keeps its top where it is as it is next drawn again,
+  /// growing down, as a long line opened at 続きを読む does, rather than up
+  /// from the foot.
+  func growDown(_ id: String) {
+    controller?.growDown(id)
   }
 }
 
@@ -123,6 +124,12 @@ struct LinesRow: Equatable {
   func forgetHeights() {
     heights.removeAll()
   }
+
+  /// Only the items laid out are kept measured.
+  func keepHeights(of ids: [String]) {
+    let kept = Set(ids)
+    heights = heights.filter { kept.contains($0.key) }
+  }
 }
 
 /// What of the chat screen's environment changes how every line is drawn.
@@ -130,12 +137,16 @@ private struct LinesLook: Equatable {
   let colors: ThemeColors
   let scheme: ColorScheme
   let type: DynamicTypeSize
+  let weight: LegibilityWeight?
+  let english: Bool
   let look: Look
 
   init(_ environment: EnvironmentValues) {
     colors = environment.themeColors
     scheme = environment.colorScheme
     type = environment.dynamicTypeSize
+    weight = environment.legibilityWeight
+    english = environment.english
     look = environment.look
   }
 }
@@ -352,7 +363,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let old = ids
     ids = new
     model.looks = Dictionary(rows.map { ($0.id, $0.look) }) { first, _ in first }
-    if restyled { model.forgetHeights() }
+    if restyled { model.forgetHeights() } else { model.keepHeights(of: new) }
     guard !old.isEmpty, source.snapshot != nil else {
       UIView.performWithoutAnimation {
         source.applySnapshotUsingReloadData(snapshot, commitAlongsideUpdates: {})
@@ -366,9 +377,17 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     // reduced.
     let earlier = cameAbove(old, in: new)
     let animated = new != old && !earlier && !reduceMotion && !userScrolling
+    let held = heldTop.flatMap { redrawn.contains($0.id) ? $0 : nil }
+    if held != nil { heldTop = nil }
     source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
       [weak self] in
-      self?.landed()
+      guard let self else { return }
+      if let held, let index = ids.firstIndex(of: held.id) {
+        layout.restoreContentOffset(
+          with: ChatLayoutPositionSnapshot(
+            indexPath: IndexPath(item: index, section: 0), edge: .top, offset: held.offset))
+      }
+      landed()
     }
   }
 
@@ -488,12 +507,19 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     seePlace()
   }
 
-  func growDown() {
-    layout.keepContentOffsetAtBottomOnBatchUpdates = false
-    Task { @MainActor [weak self] in
-      try? await Task.sleep(for: .milliseconds(600))
-      self?.layout.keepContentOffsetAtBottomOnBatchUpdates = true
-    }
+  /// The item whose top is put back where it was, below the top of the
+  /// lines seen, once it is drawn again.
+  private var heldTop: (id: String, offset: CGFloat)?
+
+  func growDown(_ id: String) {
+    guard let index = ids.firstIndex(of: id),
+      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
+    else { return }
+    heldTop = (
+      id,
+      frame.minY - lines.contentOffset.y - lines.adjustedContentInset.top
+        - layout.settings.additionalInsets.top
+    )
   }
 
   /// Where the lines are scrolled, told to what shows it.

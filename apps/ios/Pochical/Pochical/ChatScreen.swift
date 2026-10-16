@@ -668,7 +668,7 @@ struct ChatScreen: View {
       // Opened where it is, its words going on down from there, as the
       // messaging apps open a long one: not carried to the foot.
       following = false
-      scroller.growDown()
+      scroller.growDown("line-\(line.opID)")
       withAnimation { _ = unfolded.insert(line.opID) }
     case .openPhoto:
       viewing = line.photo
