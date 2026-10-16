@@ -41,7 +41,7 @@ public struct LinePhoto: Hashable, Sendable, Codable, Identifiable {
 
 /// A photo shrunk to send: a JPEG no larger than `Chat.photoMaxEdge` on
 /// its longer side, without the original's metadata (its location among
-/// them), and the ThumbHash of that JPEG.
+/// them), and its ThumbHash.
 public struct ShrunkPhoto: Hashable, Sendable {
   public let jpeg: Data
   public let width: Int
@@ -62,32 +62,11 @@ public enum ChatPhotos {
   /// most `maxEdge`, as JPEG at a quality that keeps it within
   /// `Chat.photoMaxBytes`; nil for what is not a photo the device can read.
   public static func shrink(_ data: Data, maxEdge: Int = Chat.photoMaxEdge) -> ShrunkPhoto? {
-    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-      let image = CGImageSourceCreateThumbnailAtIndex(
-        source, 0,
-        [
-          kCGImageSourceCreateThumbnailFromImageAlways: true,
-          kCGImageSourceCreateThumbnailWithTransform: true,
-          kCGImageSourceThumbnailMaxPixelSize: maxEdge,
-        ] as CFDictionary)
-    else { return nil }
-    for quality in [0.8, 0.6, 0.4] {
-      let out = NSMutableData()
-      guard
-        let destination = CGImageDestinationCreateWithData(
-          out, UTType.jpeg.identifier as CFString, 1, nil)
-      else { return nil }
-      // Only the pixels: no EXIF, GPS or other metadata goes along.
-      CGImageDestinationAddImage(
-        destination, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
-      guard CGImageDestinationFinalize(destination) else { return nil }
-      if out.length <= Chat.photoMaxBytes {
-        return ShrunkPhoto(
-          jpeg: out as Data, width: image.width, height: image.height,
-          thumbHash: ThumbHash.of(out as Data))
-      }
+    guard let image = upright(data, maxEdge: maxEdge), let jpeg = jpeg(of: image) else {
+      return nil
     }
-    return nil
+    return ShrunkPhoto(
+      jpeg: jpeg, width: image.width, height: image.height, thumbHash: ThumbHash.of(image))
   }
 
   /// The photo's small version to send beside it, its longer side at
@@ -100,7 +79,44 @@ public enum ChatPhotos {
       let height = properties[kCGImagePropertyPixelHeight] as? Int,
       max(width, height) > Chat.photoSmallEdge
     else { return nil }
-    return shrink(jpeg, maxEdge: Chat.photoSmallEdge)?.jpeg
+    return upright(jpeg, maxEdge: Chat.photoSmallEdge).flatMap { Self.jpeg(of: $0) }
+  }
+
+  /// A photo's bytes read turned upright, its longer side at most
+  /// `maxEdge`, straight at that size rather than decoded whole and
+  /// shrunk; nil for what is not a photo the device can read. Every photo
+  /// shrunk on the device is read so: to send, its small version, and the
+  /// chat's thumbnails.
+  public static func upright(_ data: Data, maxEdge: Int) -> CGImage? {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+    return CGImageSourceCreateThumbnailAtIndex(
+      source, 0,
+      [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceShouldCacheImmediately: true,
+        kCGImageSourceThumbnailMaxPixelSize: maxEdge,
+      ] as CFDictionary)
+  }
+
+  /// An image as JPEG at a quality that keeps it within
+  /// `Chat.photoMaxBytes`, with only its pixels: no EXIF, GPS or other
+  /// metadata goes along.
+  private static func jpeg(of image: CGImage) -> Data? {
+    for quality in [0.8, 0.6, 0.4] {
+      let out = NSMutableData()
+      guard
+        let destination = CGImageDestinationCreateWithData(
+          out, UTType.jpeg.identifier as CFString, 1, nil)
+      else { return nil }
+      CGImageDestinationAddImage(
+        destination, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
+      guard CGImageDestinationFinalize(destination) else { return nil }
+      if out.length <= Chat.photoMaxBytes {
+        return out as Data
+      }
+    }
+    return nil
   }
 
   // MARK: Files

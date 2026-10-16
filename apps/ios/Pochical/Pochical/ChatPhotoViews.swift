@@ -1,4 +1,3 @@
-import ImageIO
 import Photos
 import PochicalDesign
 import PochicalKit
@@ -183,15 +182,7 @@ enum Thumbnails {
   /// The photo at most `pixels` on its longer side, read straight from its
   /// bytes at that size rather than decoded whole and shrunk, and kept.
   nonisolated static func make(_ data: Data, id: String, pixels: Int) -> UIImage? {
-    let options = [
-      kCGImageSourceCreateThumbnailFromImageAlways: true,
-      kCGImageSourceCreateThumbnailWithTransform: true,
-      kCGImageSourceShouldCacheImmediately: true,
-      kCGImageSourceThumbnailMaxPixelSize: pixels,
-    ] as CFDictionary
-    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-      let shrunk = CGImageSourceCreateThumbnailAtIndex(source, 0, options)
-    else { return nil }
+    guard let shrunk = ChatPhotos.upright(data, maxEdge: pixels) else { return nil }
     let image = UIImage(cgImage: shrunk)
     cache.setObject(image, forKey: key(id, pixels), cost: shrunk.bytesPerRow * shrunk.height)
     return image

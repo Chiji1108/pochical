@@ -68,7 +68,7 @@ func aThumbHashDrawsItsBlur(_ vector: ThumbHashVectors.Decode) throws {
   CGImageDestinationAddImage(destination, image, nil)
   CGImageDestinationFinalize(destination)
 
-  let hash = try #require(ThumbHash.of(out as Data))
+  let hash = try #require(ChatPhotos.shrink(out as Data)?.thumbHash)
   let blur = try #require(ThumbHash.decode(hash))
   let top = 0
   let bottom = (blur.height - 1) * blur.width * 4

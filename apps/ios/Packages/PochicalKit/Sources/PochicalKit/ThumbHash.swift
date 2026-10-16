@@ -1,6 +1,5 @@
 import CoreGraphics
 import Foundation
-import ImageIO
 
 /// A photo's ThumbHash (https://evanw.github.io/thumbhash/, spec/chat.md,
 /// Photos): a few bytes its sender makes, from which a blur of the photo
@@ -11,22 +10,15 @@ public enum ThumbHash {
   /// the format reads.
   static let maxEdge = 100
 
-  /// The ThumbHash of a photo's bytes, drawn at most `maxEdge` on its
-  /// longer side; nil for what cannot be read.
-  public static func of(_ data: Data) -> Data? {
-    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-      let small = CGImageSourceCreateThumbnailAtIndex(
-        source, 0,
-        [
-          kCGImageSourceCreateThumbnailFromImageAlways: true,
-          kCGImageSourceCreateThumbnailWithTransform: true,
-          kCGImageSourceThumbnailMaxPixelSize: maxEdge,
-        ] as CFDictionary)
-    else { return nil }
-    let width = small.width
-    let height = small.height
+  /// The ThumbHash of a photo as it is sent, drawn at most `maxEdge` on
+  /// its longer side; nil when it cannot be drawn.
+  public static func of(_ image: CGImage) -> Data? {
+    let scale = min(Double(maxEdge) / Double(max(image.width, image.height)), 1)
+    let width = max(1, Int((Double(image.width) * scale).rounded()))
+    let height = max(1, Int((Double(image.height) * scale).rounded()))
     var rgba = [UInt8](repeating: 0, count: width * height * 4)
-    // Opaque, as the JPEG it is read from.
+    // Opaque, as the JPEG it goes as. The buffer holds the top row first,
+    // as encode reads it.
     let drawn = rgba.withUnsafeMutableBytes { pixels -> Bool in
       guard
         let context = CGContext(
@@ -34,7 +26,8 @@ public enum ThumbHash {
           bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
           bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
       else { return false }
-      context.draw(small, in: CGRect(x: 0, y: 0, width: width, height: height))
+      context.interpolationQuality = .high
+      context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
       return true
     }
     guard drawn else { return nil }
