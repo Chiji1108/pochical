@@ -35,6 +35,7 @@ struct PochicalApp: App {
     sync = SyncClient(account: account, database: database)
     groupCalls = GroupCalls(account: account)
     Notifications.shared.groupCalls = groupCalls
+    KeyboardTop.shared.watch()
   }
 
   var body: some Scene {
