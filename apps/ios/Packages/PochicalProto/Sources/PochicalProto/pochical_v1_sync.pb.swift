@@ -2309,6 +2309,10 @@ public nonisolated struct Pochical_V1_ChatPage: Sendable {
   /// The page reaches the chat's first line.
   public var atStart: Bool = false
 
+  /// The lines its replies answer from before it, however far back, so
+  /// their quotes read as the lines do (spec/chat.md, Replies).
+  public var quoted: [Pochical_V1_ChatLine] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5813,7 +5817,7 @@ nonisolated extension Pochical_V1_ChatPageRequest: SwiftProtobuf.Message, SwiftP
 
 nonisolated extension Pochical_V1_ChatPage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatPage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}before_seq\0\u{1}lines\0\u{3}at_start\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}before_seq\0\u{1}lines\0\u{3}at_start\0\u{1}quoted\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5825,6 +5829,7 @@ nonisolated extension Pochical_V1_ChatPage: SwiftProtobuf.Message, SwiftProtobuf
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.beforeSeq) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.lines) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.atStart) }()
+      case 5: try { try decoder.decodeRepeatedMessageField(value: &self.quoted) }()
       default: break
       }
     }
@@ -5843,6 +5848,9 @@ nonisolated extension Pochical_V1_ChatPage: SwiftProtobuf.Message, SwiftProtobuf
     if self.atStart != false {
       try visitor.visitSingularBoolField(value: self.atStart, fieldNumber: 4)
     }
+    if !self.quoted.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.quoted, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5851,6 +5859,7 @@ nonisolated extension Pochical_V1_ChatPage: SwiftProtobuf.Message, SwiftProtobuf
     if lhs.beforeSeq != rhs.beforeSeq {return false}
     if lhs.lines != rhs.lines {return false}
     if lhs.atStart != rhs.atStart {return false}
+    if lhs.quoted != rhs.quoted {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

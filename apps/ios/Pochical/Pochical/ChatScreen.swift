@@ -1158,9 +1158,12 @@ struct ChatScreen: View {
   }
 
   /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):
-  /// as the device holds it, else said to be earlier, gone to at a tap.
+  /// as the device holds it, however far back, else said to be earlier
+  /// until it comes; gone to at a tap.
   private func quote(of seq: Int64) -> LineQuote {
-    guard let line = chat.state.lines.first(where: { $0.seq == seq }) else {
+    guard
+      let line = chat.state.lines.first(where: { $0.seq == seq }) ?? chat.state.quoted[seq]
+    else {
       return LineQuote(seq: seq, words: "以前のメッセージ")
     }
     let writer = names[line.authorID] ?? "メンバー"
