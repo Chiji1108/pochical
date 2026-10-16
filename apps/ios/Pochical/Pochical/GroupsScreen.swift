@@ -38,6 +38,8 @@ extension EnvironmentValues {
   /// The user's own socket, connected again as someone else once the
   /// account is deleted.
   @Entry var userSocket: SyncClient?
+  /// The groups' sockets closing once their chat outbox is sent.
+  @Entry var closingGroupSockets = ClosingGroupSockets()
   /// Opens one of Pochical's invitations on its join screen, as reading
   /// its link does.
   @Entry var openInvite = OpenInviteAction { _ in }
@@ -60,6 +62,7 @@ struct GroupsScreen: View {
   @Environment(\.account) private var account
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.closingGroupSockets) private var closingSockets
   @Dependency(\.defaultDatabase) private var database
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// The open group's socket, open while the group's screens are and the
@@ -189,7 +192,9 @@ struct GroupsScreen: View {
       while !Task.isCancelled {
         try? await Task.sleep(for: .seconds(3600))
       }
-      await client.stop()
+      // Lines just sent still go, the app gone to the background or
+      // another group opened (spec/sync-protocol.md, Sockets).
+      await closingSockets.close(client)
     }
   }
 
@@ -626,6 +631,43 @@ private struct GroupHeading: View {
         .font(.title2.bold())
         .lineLimit(1)
         .accessibilityAddTraits(.isHeader)
+    }
+  }
+}
+
+/// The groups' sockets left as the app went to the background or another
+/// group was opened, each closing once its chat outbox is sent and
+/// acknowledged (spec/sync-protocol.md, Sockets); the app waits for them
+/// in the background as for its own socket. One opened again for the same
+/// group is a new socket, the server taking an edit sent on both once.
+actor ClosingGroupSockets {
+  private var closing: [UUID: (client: SyncClient, closed: Task<Void, Never>)] = [:]
+
+  /// Closes `client` once what it has to send is sent.
+  func close(_ client: SyncClient) {
+    let id = UUID()
+    let closed = Task {
+      await client.finishSending()
+      self.closed(id)
+    }
+    closing[id] = (client, closed)
+  }
+
+  private func closed(_ id: UUID) {
+    closing[id] = nil
+  }
+
+  /// Waits until every one has closed, those left meanwhile too.
+  func finishSending() async {
+    while let next = closing.values.first {
+      await next.closed.value
+    }
+  }
+
+  /// Closes them all at once: the time the OS gave runs out.
+  func stop() async {
+    for (client, _) in closing.values {
+      await client.stop()
     }
   }
 }
