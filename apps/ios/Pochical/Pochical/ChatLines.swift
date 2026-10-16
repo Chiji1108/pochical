@@ -93,7 +93,7 @@ struct LineView: View {
   var writerPhoto = ""
   /// Their name shows over the run too, as in a group chat.
   let named: Bool
-  /// It starts a run of one writer's lines, its bubble's corner drawn in.
+  /// It starts a run of one writer's lines, its bubble's tail by the writer.
   let first: Bool
   let waiting: Bool
   /// Its photo could not be sent: marked, its choices a tap away.
@@ -197,6 +197,9 @@ struct LineView: View {
             onReact: { act(.react($0)) })
         }
       }
+      // Room for the tail of a run's first bubble, by the face or the
+      // screen's edge; every line of the run keeps it, so they line up.
+      .padding(mine ? .trailing : .leading, BubbleShape.tailReach)
       .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
       .padding(mine ? .leading : .trailing, 40)
     }
@@ -262,8 +265,8 @@ struct LineView: View {
 }
 
 /// A line's words in its bubble: others' on the quiet fill, one's own in
-/// the accent, the first of a run with its corner by the writer drawn in,
-/// dimmed while it waits to be sent.
+/// the accent, the first of a run with its tail by the writer, dimmed
+/// while it waits to be sent.
 /// The days from one through another.
 struct DaySpan: Hashable {
   let from: Day
@@ -510,24 +513,61 @@ func mentioned(by url: URL) -> String? {
 
 private let mentionScheme = "pochical-mention"
 
-/// A bubble's outline: round all over, but the first of a run, as LINE
-/// and WhatsApp draw one: its top corner by the writer's side drawn in, by
-/// the face and name the run starts with, so it says whose words follow.
+/// A bubble's outline: round all over at `Radius.lg`, but the first of a
+/// run, as LINE draws one: from a notch in its top corner by the writer's
+/// side a horn rises to a tip level with the top edge, past the bubble's
+/// frame by `tailReach`, and curves back in to the side, by the face and
+/// name the run starts with, so it says whose words follow. One outline,
+/// as /design's bubblePath draws it (spec/chat.md, In a message).
 struct BubbleShape: Shape {
   let mine: Bool
   let first: Bool
 
+  /// How far past the bubble's frame its tail reaches, which the lines
+  /// keep room for by the face and the screen's edge.
+  static var tailReach: CGFloat { 10 }
+
   nonisolated func path(in rect: CGRect) -> Path {
-    let drawnIn = first ? Radius.sm : Radius.lg
-    return UnevenRoundedRectangle(
-      topLeadingRadius: mine ? Radius.lg : drawnIn, bottomLeadingRadius: Radius.lg,
-      bottomTrailingRadius: Radius.lg, topTrailingRadius: mine ? drawnIn : Radius.lg,
-      style: .continuous
-    )
-    .path(in: rect)
+    let w = rect.width
+    let h = rect.height
+    let r = min(Radius.lg, w / 2, h / 2)
+    var path = Path()
+    // Drawn as one's own, its tail at the top trailing corner; others'
+    // are mirrored.
+    path.move(to: CGPoint(x: r, y: 0))
+    path.addLine(to: CGPoint(x: w - r, y: 0))
+    if first {
+      // Down the corner's arc to the notch, three quarters of the way in.
+      let notch = CGPoint(x: w - 0.25 * r, y: r - (r * r - 0.5625 * r * r).squareRoot())
+      path.addRelativeArc(
+        center: CGPoint(x: w - r, y: r), radius: r, startAngle: .degrees(-90),
+        delta: .radians(atan2(notch.y - r, 0.75 * r)) + .degrees(90))
+      let tip = CGPoint(x: w + 0.6 * r, y: 0)
+      path.addCurve(
+        to: tip, control1: CGPoint(x: notch.x + 0.2 * r, y: notch.y - 0.25 * r),
+        control2: CGPoint(x: tip.x - 0.35 * r, y: 0.04 * r))
+      path.addCurve(
+        to: CGPoint(x: w, y: min(1.5 * r, h - r)),
+        control1: CGPoint(x: tip.x - 0.3 * r, y: 0.12 * r), control2: CGPoint(x: w, y: 0.55 * r))
+    } else {
+      path.addArc(
+        center: CGPoint(x: w - r, y: r), radius: r, startAngle: .degrees(-90),
+        endAngle: .degrees(0), clockwise: false)
+    }
+    path.addArc(
+      center: CGPoint(x: w - r, y: h - r), radius: r, startAngle: .degrees(0),
+      endAngle: .degrees(90), clockwise: false)
+    path.addArc(
+      center: CGPoint(x: r, y: h - r), radius: r, startAngle: .degrees(90),
+      endAngle: .degrees(180), clockwise: false)
+    path.addArc(
+      center: CGPoint(x: r, y: r), radius: r, startAngle: .degrees(180),
+      endAngle: .degrees(270), clockwise: false)
+    path.closeSubpath()
+    let mirror = mine ? .identity : CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: w, ty: 0)
+    return path.applying(mirror.concatenating(.init(translationX: rect.minX, y: rect.minY)))
   }
 }
-
 
 /// A held bubble's words drawn noting where their links are, and where
 /// they are on the screen.
