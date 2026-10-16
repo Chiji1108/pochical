@@ -61,6 +61,7 @@ enum LineAction {
 /// while it waits to be sent. The time beside the bubble, 編集済み over it.
 struct LineView: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.openGroupRoute) private var openGroupRoute
   /// The line's opID, which its actions name it by.
   let lineID: String
   let text: String
@@ -175,8 +176,9 @@ struct LineView: View {
           if !mine { meta }
         }
         if let shifts {
-          // All the days, with everyone's shifts round them.
-          NavigationLink(value: shifts) {
+          // All the days, with everyone's shifts round them; pushed by the
+          // groups' own stack, which a line's cell is hosted apart from.
+          Button { openGroupRoute(shifts) } label: {
             Text("シフト表で見る")
               .font(.caption)
               .underline()
@@ -575,14 +577,21 @@ struct BubbleShape: Shape {
 /// A held bubble's words drawn noting where their links are, and where
 /// they are on the screen.
 private struct FindsLinks: ViewModifier {
+  /// Measured where the held finger is told: in a chat line's cell.
+  @Environment(\.lineSpace) private var lineSpace
   let spots: LinkSpots?
 
   func body(content: Content) -> some View {
     if let spots {
+      let inLine = lineSpace != nil
       content
         .textRenderer(LinkFinder(spots: spots))
         .modifier(HeldLinksOpenNothing(spots: spots))
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { spots.frame = $0 }
+        .onGeometryChange(for: CGRect.self) {
+          inLine ? $0.frame(in: .named(LineSpace.name)) : $0.frame(in: .global)
+        } action: {
+          spots.frame = $0
+        }
     } else {
       content
     }

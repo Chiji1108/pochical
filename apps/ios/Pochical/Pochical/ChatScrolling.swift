@@ -17,100 +17,6 @@ final class ChatScroll {
   var topDay: Day?
   var dayShown = false
   var scrolling = false
-  /// Where ここから新着 is among the lines, and their height: the new
-  /// lines under it fit on the screen at the latest when they are few,
-  /// and opening has nowhere to go for it then.
-  var unreadTop: CGFloat?
-  var linesHeight: CGFloat = 0
-  /// The height the lines are seen in, between the pins and the composer.
-  var seen: CGFloat = 0
-  /// One's own line just sent, at the foot: the lines, grown by it, are
-  /// drawn where they were and slide up to it (`lift`).
-  var lifting = false
-  /// How far below their place the lines are drawn, sliding up to it with
-  /// the curve someone writing comes in on.
-  var lifted: CGFloat = 0
-
-  /// The room changing while one's own line is on its way, as the composer
-  /// empties or the keyboard's candidates go: the bottom anchor would move
-  /// the lines with it, down and then up again to the line. They are drawn
-  /// where they were instead, to slide once.
-  func hold(roomFrom before: CGFloat, to now: CGFloat) {
-    lifted += before - now
-  }
-
-  /// Draws the lines `height` lower, where they were before a line that
-  /// tall came under them, then slides them up to their place.
-  func lift(by height: CGFloat) {
-    lifting = false
-    lifted += height
-    Task { @MainActor in
-      withAnimation { self.lifted = 0 }
-    }
-  }
-
-  /// No line came after all: the lines go back to their place.
-  func settle() {
-    lifting = false
-    guard lifted != 0 else { return }
-    withAnimation { lifted = 0 }
-  }
-
-  /// How far the lines are scrolled from their top, set at every frame
-  /// and read only to move them, so remaking nothing.
-  var offset: CGFloat = 0
-  /// Where the lines are scrolled to by code by an offset.
-  var position = ScrollPosition()
-  /// The line first as earlier pages were asked for, held where it is on
-  /// the screen as they come in above it, until the chat follows its
-  /// latest again. Not once a line is opened at 続きを読む, which goes on
-  /// down from where it is.
-  var edge: String?
-  /// How far the lines seen have been pushed down and not yet moved back.
-  var moveBack: CGFloat = 0
-  /// The move back last asked for: where to, and by how much.
-  var moving: (to: CGFloat, by: CGFloat)?
-
-  /// The lines seen pushed down by lines coming in or growing above them,
-  /// moved back after this layout: asked for during it, the scroll view
-  /// drops it. Pushed again before then, they go back by both at once.
-  func pushedDown(by grew: CGFloat) {
-    let asked = moveBack != 0
-    moveBack += grew
-    if !asked { Task { @MainActor in moveLinesBack() } }
-  }
-
-  /// Moves the lines back. At once while still, not through the page that
-  /// came in; while the lines scroll (bouncing at the top), the scroll view
-  /// takes it only so.
-  func moveLinesBack() {
-    guard moveBack != 0 else { return }
-    moving = (offset + moveBack, moveBack)
-    var transaction = Transaction()
-    transaction.disablesAnimations = !scrolling
-    withTransaction(transaction) { position.scrollTo(y: offset + moveBack) }
-  }
-
-  /// The lines scrolled to an offset: once moved back there, what was
-  /// pushed since is moved back next; else asked again, as the scroll view
-  /// drops it at times (a touch as it goes).
-  func scrolled(to offset: CGFloat) {
-    self.offset = offset
-    guard let moving else { return }
-    if abs(offset - moving.to) < abs(moving.by) / 2 {
-      moveBack -= moving.by
-      self.moving = nil
-    }
-    if moveBack != 0 { Task { @MainActor in moveLinesBack() } }
-  }
-
-  /// The line held as earlier pages come in let go, and any move back
-  /// still to come with it.
-  func letGo() {
-    edge = nil
-    moveBack = 0
-    moving = nil
-  }
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
@@ -124,8 +30,7 @@ struct LatestButton: View {
 
   var body: some View {
     let unseen = scroll.place.atLatest ? 0 : unread
-    // In a group that rises with the keyboard as the lines' room does:
-    // shown as the keyboard rises, it would be drawn where the room ends.
+    // Over the composer's right, rising with it on the keyboard.
     ZStack {
       if scroll.place.away || unseen > 0 {
         // The system's glass button, which takes the tap as a button: glass
@@ -151,8 +56,6 @@ struct LatestButton: View {
         .transition(.opacity)
       }
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-    .geometryGroup()
   }
 }
 
@@ -236,82 +139,6 @@ private struct PageAsk: Equatable {
 struct FollowKey: Equatable {
   let latest: Int64?
   let writers: Int
-}
-
-/// The height the lines are seen in, and how far their foot is below it.
-struct Room: Equatable {
-  let seen: CGFloat
-  let below: CGFloat
-}
-
-/// The lines' scroll position, read here, not in the screen, so the
-/// person's scrolling setting it remakes only this.
-struct ScrollsBy: ViewModifier {
-  @Bindable var scroll: ChatScroll
-
-  func body(content: Content) -> some View {
-    content.scrollPosition($scroll.position)
-  }
-}
-
-/// An earlier page coming in above the lines, they stay where they were on
-/// the screen, as the messaging apps keep them. The bottom anchor holds
-/// them only at times (not at the top edge, nor for a page coming in just
-/// after the one before was put back, as two do in a fast fling). So the
-/// line that was first is watched: whatever comes in or grows above
-/// it and pushes it down the screen, the lines are moved back by as much.
-struct KeepsSeenLines: View {
-  let id: String
-  let scroll: ChatScroll
-
-  var body: some View {
-    if scroll.edge == id {
-      Color.clear.onGeometryChange(for: EdgeSpot.self) { geometry in
-        // Its foot: its own top changes as lines come in over it, its
-        // writer's name going when the run now starts above it.
-        EdgeSpot(
-          inLines: geometry.frame(in: .named(ChatScreen.lines)).maxY,
-          onScreen: geometry.frame(in: .scrollView).maxY)
-      } action: { before, now in
-        // Scrolling moves it on the screen only; lines above it change
-        // where it is among them.
-        let grew = now.inLines - before.inLines
-        guard abs(grew) > 0.5 else { return }
-        // Held by the bottom anchor, it moved on the screen by no more than
-        // the person's own scrolling in the frame. Else it goes back by as
-        // much as grew above it, not by how far it moved, which a fling
-        // in that frame is part of and would be undone.
-        let moved = now.onScreen - before.onScreen
-        guard abs(moved) > abs(grew) / 2 else { return }
-        scroll.pushedDown(by: grew)
-      }
-    }
-  }
-}
-
-nonisolated private struct EdgeSpot: Equatable {
-  let inLines: CGFloat
-  let onScreen: CGFloat
-}
-
-/// The lines drawn below their place while they slide up to one's own line
-/// just sent. Read here, not in the screen, so sliding remakes no line.
-struct Lifts: ViewModifier {
-  let scroll: ChatScroll
-
-  func body(content: Content) -> some View {
-    content.offset(y: scroll.lifted)
-  }
-}
-
-/// The lines, shorter than the room they are seen in, fill it at its foot.
-/// Read here, not in the screen, so the room changing remakes only this.
-struct FillsSeen: ViewModifier {
-  let scroll: ChatScroll
-
-  func body(content: Content) -> some View {
-    content.frame(minHeight: scroll.seen, alignment: .bottom)
-  }
 }
 
 struct ReadKey: Hashable {
