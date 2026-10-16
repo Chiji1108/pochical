@@ -167,11 +167,18 @@ public actor SyncClient {
   /// made just before reaches the user's other devices and groups without
   /// waiting for the app to be opened again (Sockets).
   public func finishSending() async {
-    let waiting =
-      (try? await database.read { [peer] in try Self.lastToSend(to: peer, in: $0) }) ?? nil
+    await closeOnceSent().value
+  }
+
+  /// Closes the socket once its outbox is sent, as `finishSending` does,
+  /// without waiting for it: the task ends as the socket closes, or as
+  /// `start` takes it back, the socket then staying open.
+  @discardableResult
+  public func closeOnceSent() -> Task<Void, Never> {
+    let waiting = (try? database.read { [peer] in try Self.lastToSend(to: peer, in: $0) }) ?? nil
     guard waiting != nil, stopped == nil else {
       stop()
-      return
+      return Task {}
     }
     if running == nil {
       start()
@@ -185,10 +192,12 @@ public actor SyncClient {
       } catch {}
     }
     finishing = emptied
-    await emptied.value
-    // Not stopped or brought back meanwhile.
-    if finishing == emptied {
-      stop()
+    return Task {
+      await emptied.value
+      // Not stopped or brought back meanwhile.
+      if finishing == emptied {
+        stop()
+      }
     }
   }
 

@@ -186,9 +186,8 @@ struct GroupsScreen: View {
     }
     .task(id: SocketKey(groupID: openGroupID ?? "", active: scenePhase == .active)) {
       guard scenePhase == .active, let groupID = openGroupID else { return }
-      let client = SyncClient(account: account, database: database, peer: .group(groupID))
+      let client = await groupSockets.open(groupID, account: account, database: database)
       socket = client
-      await groupSockets.open(client)
       while !Task.isCancelled {
         try? await Task.sleep(for: .seconds(3600))
       }
@@ -640,49 +639,82 @@ private struct GroupHeading: View {
 /// outbox is sent and acknowledged (spec/sync-protocol.md, Sockets). The
 /// app waits for them in the background as for its own socket, those still
 /// open too, so a socket its screen has not let go of yet is not missed.
-/// One opened again for the same group is a new socket, the server taking
-/// an edit sent on both once.
+/// A group opened again meanwhile takes its socket back rather than opening
+/// a second, which would send the same outbox beside it, a reaction's on
+/// then perhaps arriving after its off.
 actor GroupSockets {
-  private var open: [ObjectIdentifier: SyncClient] = [:]
-  private var closing: [UUID: (client: SyncClient, closed: Task<Void, Never>)] = [:]
+  private struct Closing {
+    let groupID: String
+    let client: SyncClient
+    /// Which closing this is, the socket perhaps taken back and closed
+    /// again meanwhile.
+    let id = UUID()
+    var closed: Task<Void, Never>?
+  }
 
-  /// Opens `client`, kept until it is closed: started before anything
-  /// here can close it, so it is not opened again after.
-  func open(_ client: SyncClient) async {
-    open[ObjectIdentifier(client)] = client
+  private var open: [ObjectIdentifier: (groupID: String, client: SyncClient)] = [:]
+  private var closing: [ObjectIdentifier: Closing] = [:]
+
+  /// The group's socket, kept until it is closed: the one still closing,
+  /// taken back, else a new one, started before anything here can close
+  /// it.
+  func open(_ groupID: String, account: Account, database: any DatabaseWriter) async
+    -> SyncClient
+  {
+    let client =
+      takeBack(groupID)
+      ?? SyncClient(account: account, database: database, peer: .group(groupID))
+    open[ObjectIdentifier(client)] = (groupID, client)
     await client.start()
+    return client
+  }
+
+  private func takeBack(_ groupID: String) -> SyncClient? {
+    guard let (key, kept) = closing.first(where: { $0.value.groupID == groupID }) else {
+      return nil
+    }
+    closing[key] = nil
+    return kept.client
   }
 
   /// Closes `client` once what it has to send is sent; once only.
   func close(_ client: SyncClient) {
-    guard open.removeValue(forKey: ObjectIdentifier(client)) != nil else { return }
-    let id = UUID()
-    let closed = Task {
-      await client.finishSending()
-      self.closed(id)
+    let key = ObjectIdentifier(client)
+    guard let (groupID, _) = open.removeValue(forKey: key) else { return }
+    var left = Closing(groupID: groupID, client: client)
+    let id = left.id
+    left.closed = Task {
+      let sent = await client.closeOnceSent()
+      guard self.closing[key]?.id == id else {
+        // Taken back before it began closing: open as it was.
+        if self.open[key] != nil {
+          await client.start()
+        }
+        return
+      }
+      await sent.value
+      if self.closing[key]?.id == id {
+        self.closing[key] = nil
+      }
     }
-    closing[id] = (client, closed)
-  }
-
-  private func closed(_ id: UUID) {
-    closing[id] = nil
+    closing[key] = left
   }
 
   /// Closes every one once sent, and waits until they all have, those
   /// left meanwhile too.
   func finishSending() async {
-    for client in open.values {
+    for (_, client) in open.values {
       close(client)
     }
-    while let next = closing.values.first {
-      await next.closed.value
+    while let next = closing.values.first?.closed {
+      await next.value
     }
   }
 
   /// Closes those closing at once: the time the OS gave runs out.
   func stop() async {
-    for (client, _) in closing.values {
-      await client.stop()
+    for left in closing.values {
+      await left.client.stop()
     }
   }
 }
