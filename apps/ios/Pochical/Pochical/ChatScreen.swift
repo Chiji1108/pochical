@@ -188,6 +188,7 @@ struct ChatScreen: View {
             UIApplication.shared.sendAction(
               #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
           }
+          .accessibilityHidden(true)
         }
         .modifier(Lifts(scroll: scroll))
         .onAppear { scroller = proxy }
