@@ -26,6 +26,17 @@ struct MessageAction: Identifiable {
   var lifted = false
 }
 
+/// Where a held line's bubble is on the screen, kept while its menu is
+/// open: the chat can move under the overlay, as when the keyboard goes
+/// down for it, and the bubble and menu go along.
+@MainActor @Observable final class LineSpot {
+  var frame: CGRect
+
+  init(frame: CGRect) {
+    self.frame = frame
+  }
+}
+
 /// The long press that opens a line's menu, followed past its opening
 /// as UIKit's long press is: where the finger moves, and where it lifts.
 /// It sees the same press as the line's own, alongside it, but never
@@ -77,8 +88,8 @@ struct MessageActionsRequest: Identifiable {
   let id = UUID()
   /// The line's op_id, so its bubble in the chat stands empty meanwhile.
   let lineID: String
-  /// The bubble's frame on the screen, where it was pressed.
-  let frame: CGRect
+  /// Where the bubble is on the screen.
+  let spot: LineSpot
   let mine: Bool
   /// The bubble itself, drawn again over the dimming.
   let bubble: AnyView
@@ -92,6 +103,8 @@ struct MessageActionsRequest: Identifiable {
   var onReact: (String) -> Void = { _ in }
   var onMoreReactions: () -> Void = {}
   let actions: [MessageAction]
+
+  var frame: CGRect { spot.frame }
 }
 
 /// A line's long press (/design's MessageActions), as Messages and LINE
@@ -155,6 +168,8 @@ struct MessageActionsOverlay: View {
           .opacity(shown ? 1 : 0)
       }
       .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+      // Going along with the chat as it moves under it.
+      .animation(.smooth(duration: 0.3), value: request.frame)
     }
     .ignoresSafeArea()
     .accessibilityAddTraits(.isModal)
@@ -467,9 +482,11 @@ private struct HeldBubble: ViewModifier {
   /// Opens the reactions and menu, from where the bubble is, with the
   /// finger that opened them while it stays down, and the link held, for
   /// its own menu instead.
-  let onActions: (CGRect, HeldFinger?, URL?) -> Void
+  let onActions: (LineSpot, HeldFinger?, URL?) -> Void
   /// Where the bubble is on the screen, for its menu.
   @State private var frame = CGRect.zero
+  /// Where it is told to its open menu, kept while it is open.
+  @State private var spot: LineSpot?
   /// Where its words' links are drawn.
   @State private var links = LinkSpots()
   /// A link's menu is open from this press: the line's own press, which
@@ -493,6 +510,7 @@ private struct HeldBubble: ViewModifier {
           width: proxy.size.width, height: proxy.size.height)
       } action: {
         frame = $0
+        spot?.frame = $0
       }
       .scaleEffect(pressing ? 0.96 : 1)
       .opacity(lifted ? 0 : 1)
@@ -533,7 +551,17 @@ private struct HeldBubble: ViewModifier {
             linkHeld = false
           }
         })
-      .accessibilityAction(named: "リアクションとメニュー") { onActions(frame, nil, nil) }
+      .accessibilityAction(named: "リアクションとメニュー") { onActions(newSpot(), nil, nil) }
+      .onChange(of: lifted) { _, lifted in
+        if !lifted { spot = nil }
+      }
+  }
+
+  /// Where the bubble is now, kept from here on for the menu opening.
+  private func newSpot() -> LineSpot {
+    let spot = LineSpot(frame: frame)
+    self.spot = spot
+    return spot
   }
 
   /// Opens the menu, the link's when one is held, with the finger that
@@ -545,13 +573,13 @@ private struct HeldBubble: ViewModifier {
     UIImpactFeedbackGenerator(style: .light).impactOccurred()
     let finger = HeldFinger()
     held = finger
-    onActions(frame, finger, link)
+    onActions(newSpot(), finger, link)
   }
 }
 
 extension View {
   /// Held, opens the bubble's reactions and menu (HeldBubble).
-  func heldForActions(lifted: Bool, onActions: @escaping (CGRect, HeldFinger?, URL?) -> Void)
+  func heldForActions(lifted: Bool, onActions: @escaping (LineSpot, HeldFinger?, URL?) -> Void)
     -> some View
   {
     modifier(HeldBubble(lifted: lifted, onActions: onActions))
