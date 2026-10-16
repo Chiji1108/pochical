@@ -632,11 +632,11 @@ export function PhotoPicker({
       </Sheet>
       <PhotoCrop
         onDone={(cut) => {
-          if (picked) {
+          if (picked !== undefined) {
             URL.revokeObjectURL(picked);
           }
           setPicked(undefined);
-          if (cut) {
+          if (cut !== undefined) {
             onPhoto(cut);
           }
         }}
