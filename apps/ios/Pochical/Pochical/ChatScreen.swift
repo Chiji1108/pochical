@@ -105,8 +105,9 @@ struct ChatScreen: View {
   @State private var pinsOpen = false
   /// A pinned line being gone to, its earlier lines asked for until held.
   @State private var jumpTarget: Int64?
-  /// The line gone to, ringed for a moment.
-  @State private var ringed: Int64?
+  /// The line gone to, ringed for a moment, and the line lifted while its
+  /// menu is open.
+  @State private var marks = LineMarks()
   /// What a pin did, said for a moment over the lines.
   @State private var notice: String?
   /// Saves and copies done, each felt as it is (spec/haptics.md).
@@ -143,8 +144,7 @@ struct ChatScreen: View {
     // Who is writing now, under the latest line; not someone blocked.
     let writers = typers.keys.filter { !blocked.contains($0) }.sorted()
     ChatLinesView(
-      ids: (state.atStart ? [] : [ChatLinesView.earlier]) + listed.map(\.id)
-        + writers.map { "\(Self.typing)\($0)" },
+      rows: rows(listed, writers: writers, timeless: timeless, names: names),
       row: { id in
         AnyView(
           lineRow(
@@ -437,6 +437,46 @@ struct ChatScreen: View {
   /// Someone writing now's item, by their id.
   private static let typing = "typing-"
 
+  /// The lines' items, each with all its row draws, so a line is drawn
+  /// again, and measured, only as that changes.
+  private func rows(
+    _ listed: [ChatItem], writers: [String], timeless: Set<String>, names: [String: String]
+  ) -> [LinesRow] {
+    let state = chat.state
+    // What every line draws by: when it changes, every line is drawn again.
+    let common = RowsLook(
+      names: names, faces: faces, meID: meID, blocked: blocked, shownBlocked: shownBlocked,
+      unfolded: unfolded, deleted: deletedIDs, members: cardMembers,
+      left: Set(chat.writers.filter(\.left).map(\.userID))
+    ).hashValue
+    let pins = Set(state.pins.map(\.seq))
+    var rows: [LinesRow] = []
+    if !state.atStart {
+      rows.append(
+        LinesRow(
+          id: ChatLinesView.earlier,
+          look: AnyHashable(EarlierLook(first: state.lines.first?.seq, opened: opened))))
+    }
+    for item in listed {
+      var quote: LineQuote?
+      var pinned = false
+      if case .line(let line, _) = item {
+        quote = line.replyTo.map(self.quote(of:))
+        pinned = pins.contains(line.seq)
+      } else if case .waiting(let line, _) = item {
+        quote = line.replyTo.map(self.quote(of:))
+      }
+      let look = RowLook(
+        item: item, parted: item.startsRun && item.id != listed.first?.id,
+        showsTime: !timeless.contains(item.id), pinned: pinned, quote: quote, common: common)
+      rows.append(LinesRow(id: item.id, look: AnyHashable(look)))
+    }
+    for userID in writers {
+      rows.append(LinesRow(id: "\(Self.typing)\(userID)", look: AnyHashable(common)))
+    }
+    return rows
+  }
+
   /// The item `id` as the chat's lines draw it.
   @ViewBuilder private func lineRow(
     _ id: String, item: ChatItem?, first: String?, names: [String: String], showsTime: Bool
@@ -593,8 +633,8 @@ struct ChatScreen: View {
           writerPhoto: faces[line.authorID] ?? "",
           named: otherID == nil, first: startsRun, waiting: false, names: names,
           reactions: line.reactions, countedReactions: otherID != nil,
-          pinned: chat.state.pins.contains { $0.seq == line.seq }, ringed: ringed == line.seq,
-          meID: meID, lifted: acting?.lineID == line.opID,
+          pinned: chat.state.pins.contains { $0.seq == line.seq }, marks: marks, seq: line.seq,
+          meID: meID,
           actions: lineActions)
       }
     case .waiting(let line, let startsRun):
@@ -603,7 +643,7 @@ struct ChatScreen: View {
         members: cardMembers, poll: waitingPoll(line), photo: line.photo,
         quote: line.replyTo.map(quote(of:)), groupID: group.id, time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
-        failed: line.failed, names: names, lifted: acting?.lineID == line.opID,
+        failed: line.failed, names: names, marks: marks,
         actions: lineActions)
     }
   }
@@ -1216,9 +1256,9 @@ struct ChatScreen: View {
       jumpTarget = nil
       following = false
       scroller.show("line-\(line.opID)", at: .center, animated: true)
-      ringed = target
+      marks.ringed = target
       try? await Task.sleep(for: .milliseconds(500))
-      withAnimation(.easeOut(duration: 0.7)) { ringed = nil }
+      withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
     } else if !state.atStart {
       await showEarlier()
     } else {
@@ -1237,6 +1277,7 @@ struct ChatScreen: View {
   /// overlay draws its own coming in.
   private func openActions(_ request: MessageActionsRequest) {
     acting = request
+    marks.lifted = request.lineID
     OverlayWindow.shared.show(
       MessageActionsOverlay(request: request) { closeActions() }
       .environment(\.themeColors, colors)
@@ -1249,6 +1290,7 @@ struct ChatScreen: View {
   /// between the two.
   private func closeActions() {
     acting = nil
+    marks.lifted = nil
     OverlayWindow.shared.hide(after: .milliseconds(50))
   }
 
@@ -1278,4 +1320,34 @@ struct ChatScreen: View {
       try Chats.edit(kind, in: group.id, now: now, db: db)
     }
   }
+}
+
+/// What every line of a chat is drawn by, beyond the line itself.
+private struct RowsLook: Hashable {
+  let names: [String: String]
+  let faces: [String: String]
+  let meID: String?
+  let blocked: Set<String>
+  let shownBlocked: Set<Int64>
+  let unfolded: Set<String>
+  let deleted: Set<String>
+  let members: [GroupMember]
+  let left: Set<String>
+}
+
+/// All a line's row draws.
+private struct RowLook: Hashable {
+  let item: ChatItem
+  let parted: Bool
+  let showsTime: Bool
+  let pinned: Bool
+  let quote: LineQuote?
+  let common: Int
+}
+
+/// The top of the lines while earlier ones are to come: asks again as the
+/// first line changes, and only once the chat has opened.
+private struct EarlierLook: Hashable {
+  let first: Int64?
+  let opened: Bool
 }

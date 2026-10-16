@@ -80,11 +80,36 @@ extension EnvironmentValues {
   @Entry var lineSpace: LineSpace?
 }
 
-/// What the cells draw, made again with the chat screen.
-@MainActor @Observable private final class ChatLinesModel {
+/// An item of the lines: its id, and all its row draws, compared to tell
+/// when it is to be drawn again.
+struct LinesRow: Equatable {
+  let id: String
+  let look: AnyHashable
+}
+
+/// What the cells draw. A cell is drawn as it is configured and again only
+/// as its row's look changes, when the layout measures it again: drawn
+/// anew by itself, a line growing would be known to the layout too late
+/// (ChatLayout's own advice).
+@MainActor private final class ChatLinesModel {
   var row: (String) -> AnyView = { _ in AnyView(EmptyView()) }
   /// The chat screen's, which the cells, hosted apart, do not inherit.
   var environment = EnvironmentValues()
+}
+
+/// What of the chat screen's environment changes how every line is drawn.
+private struct LinesLook: Equatable {
+  let colors: ThemeColors
+  let scheme: ColorScheme
+  let type: DynamicTypeSize
+  let look: Look
+
+  init(_ environment: EnvironmentValues) {
+    colors = environment.themeColors
+    scheme = environment.colorScheme
+    type = environment.dynamicTypeSize
+    look = environment.look
+  }
 }
 
 /// The chat's lines, and the composer under them, rising with the keyboard.
@@ -92,8 +117,8 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// The top item while earlier lines are to come, which asks for them.
   static let earlier = "earlier"
 
-  /// Every item's id, oldest first.
-  let ids: [String]
+  /// Every item, oldest first.
+  let rows: [LinesRow]
   let row: (String) -> AnyView
   let composer: AnyView
   /// The ↓ to the latest, over the composer's right.
@@ -106,7 +131,7 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// The lines are shown, once where the chat opens.
   let shown: Bool
   /// A line's menu is open: lines coming in wait until it closes, so the
-  /// line held stays under its menu.
+  /// line held stays under its menu; lines changing are drawn meanwhile.
   let holds: Bool
   /// The day of the lines from the item `id` at the top.
   let dayOver: (String) -> Day?
@@ -139,6 +164,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private let ground = UIView()
   private var settings: ChatLinesView?
   private var ids: [String] = []
+  private var looks: [String: AnyHashable] = [:]
+  private var linesLook: LinesLook?
   /// The lines have been put where the chat opens, or moved since.
   private var placed = false
   /// Gliding to the latest, put back on its foot once there.
@@ -163,9 +190,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     layout.keepContentOffsetAtBottomOnBatchUpdates = true
     layout.keepContentAtBottomOfVisibleArea = true
     layout.processOnlyVisibleItemsOnAnimatedBatchUpdates = false
-    // The lines' SwiftUI grows by itself (a photo or a link's page drawn,
-    // a line's reactions), which the layout hears of only so.
-    layout.supportSelfSizingInvalidation = true
 
     lines.translatesAutoresizingMaskIntoConstraints = false
     lines.backgroundColor = .clear
@@ -173,15 +197,18 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     lines.keyboardDismissMode = .interactive
     lines.alwaysBounceVertical = true
     lines.showsHorizontalScrollIndicator = false
-    lines.selfSizingInvalidation = .enabled
+    // A cell changes size only as it is configured again, measured then.
+    lines.selfSizingInvalidation = .disabled
     // ChatLayout's: prefetched cells are laid out at sizes not yet theirs.
     lines.isPrefetchingEnabled = false
     lines.delegate = self
     let model = model
     let registration = UICollectionView.CellRegistration<LineCell, String> { cell, _, id in
+      let content = model.row(id)
+      let environment = model.environment
       let space = cell.space
       cell.contentConfiguration = UIHostingConfiguration {
-        LineCellContent(id: id, model: model, space: space)
+        LineCellContent(content: content, environment: environment, space: space)
       }
       .margins(.all, 0)
     }
@@ -245,9 +272,19 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
         self.lines.alpha = alpha
       }
     }
-    if !settings.holds {
-      setLines(settings.ids, reduceMotion: environment.accessibilityReduceMotion)
-    }
+    let look = LinesLook(environment)
+    let restyled = linesLook.map { $0 != look } ?? false
+    linesLook = look
+    setLines(
+      settings.holds ? keeping(settings.rows) : settings.rows, restyled: restyled,
+      reduceMotion: environment.accessibilityReduceMotion)
+  }
+
+  /// `rows` without the lines coming or going, which wait while a line's
+  /// menu is open: only those there now, as they are drawn now.
+  private func keeping(_ rows: [LinesRow]) -> [LinesRow] {
+    let byID = Dictionary(rows.map { ($0.id, $0) }) { first, _ in first }
+    return ids.compactMap { id in byID[id] ?? looks[id].map { LinesRow(id: id, look: $0) } }
   }
 
   // MARK: Lines
@@ -259,13 +296,22 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   private var userScrolling: Bool { lines.isDragging || lines.isDecelerating }
 
-  private func setLines(_ new: [String], reduceMotion: Bool) {
-    guard new != ids, let source else { return }
+  private func setLines(_ rows: [LinesRow], restyled: Bool, reduceMotion: Bool) {
+    guard let source else { return }
+    let new = rows.map(\.id)
+    // Lines there before whose look has changed are drawn and measured
+    // again, in the same update.
+    let redrawn = rows.filter { row in
+      looks[row.id].map { restyled || $0 != row.look } ?? false
+    }.map(\.id)
+    guard new != ids || !redrawn.isEmpty else { return }
     var snapshot = NSDiffableDataSourceSnapshot<Int, String>()
     snapshot.appendSections([0])
     snapshot.appendItems(new, toSection: 0)
+    snapshot.reconfigureItems(redrawn)
     let old = ids
     ids = new
+    looks = Dictionary(rows.map { ($0.id, $0.look) }) { first, _ in first }
     guard !old.isEmpty, source.snapshot != nil else {
       UIView.performWithoutAnimation {
         source.applySnapshotUsingReloadData(snapshot, commitAlongsideUpdates: {})
@@ -278,7 +324,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     // they are; lines coming at the foot come in moving, unless motion is
     // reduced.
     let earlier = cameAbove(old, in: new)
-    let animated = !earlier && !reduceMotion && !userScrolling
+    let animated = new != old && !earlier && !reduceMotion && !userScrolling
     source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
       [weak self] in
       self?.landed()
@@ -502,19 +548,36 @@ private final class LineCell: UICollectionViewCell {
 
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+  /// Its height at the width the layout gives it: left to itself, the
+  /// cell's SwiftUI is measured at any width, a long line on one line.
+  override func preferredLayoutAttributesFitting(_ attributes: UICollectionViewLayoutAttributes)
+    -> UICollectionViewLayoutAttributes
+  {
+    // A copy keeps the layout's own kind of attributes.
+    guard let fitted = attributes.copy() as? UICollectionViewLayoutAttributes else {
+      return super.preferredLayoutAttributesFitting(attributes)
+    }
+    let width = attributes.size.width
+    let size = contentView.systemLayoutSizeFitting(
+      CGSize(width: width, height: UIView.layoutFittingCompressedSize.height),
+      withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel)
+    fitted.size = CGSize(width: width, height: ceil(size.height))
+    return fitted
+  }
 }
 
-/// What a cell draws: the chat's item `id`, with the chat's environment.
+/// What a cell draws: the chat's item, with the chat's environment.
 private struct LineCellContent: View {
-  let id: String
-  let model: ChatLinesModel
+  let content: AnyView
+  let environment: EnvironmentValues
   let space: LineSpace
 
   var body: some View {
-    model.row(id)
+    content
       .frame(maxWidth: .infinity)
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
-      .environment(\.self, model.environment)
+      .environment(\.self, environment)
   }
 }
