@@ -176,8 +176,9 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// has opened on its place, which they would push away.
   let canAskEarlier: Bool
   /// The lines are scrolled near their top, Chat.prefetchScreens away:
-  /// the next earlier page is to be laid out.
-  let onNearTop: () -> Void
+  /// the next earlier page is to be laid out. Told the first line laid out,
+  /// as the chat's own lines may be ahead of those in place.
+  let onNearTop: (String?) -> Void
   /// The day of the lines from the item `id` at the top.
   let dayOver: (String) -> Day?
   /// The person's scrolling has come to the latest.
@@ -342,21 +343,26 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let look = LinesLook(environment)
     let restyled = linesLook.map { $0 != look } ?? false
     linesLook = look
-    setLines(
+    let changed = setLines(
       settings.holds ? keeping(settings.rows) : settings.rows, restyled: restyled,
       reduceMotion: environment.accessibilityReduceMotion)
-    // A page come from the server is laid out at once if the top is near
-    // still; asked after this update, not in it.
-    Task { @MainActor [weak self] in self?.askEarlierIfNear() }
+    // A page come from the server, changing no line laid out, is laid out
+    // at once if the top is near still; asked after this update, not in it.
+    // Lines changed are asked after once in place (`landed`).
+    if !changed {
+      Task { @MainActor [weak self] in self?.askEarlierIfNear() }
+    }
   }
 
   /// Asks for the next earlier page once the top is Chat.prefetchScreens
   /// away, so the reader scrolling back finds it laid out already.
   private func askEarlierIfNear() {
-    guard let settings, settings.canAskEarlier, placed, lines.bounds.height > 0 else { return }
+    guard let settings, settings.canAskEarlier, placed, !applying, lines.bounds.height > 0 else {
+      return
+    }
     let fromTop = lines.contentOffset.y - lowest
     if fromTop < seenHeight * CGFloat(Chat.prefetchScreens) {
-      settings.onNearTop()
+      settings.onNearTop(ids.first { $0.hasPrefix("line-") })
     }
   }
 
@@ -376,15 +382,27 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   private var userScrolling: Bool { lines.isDragging || lines.isDecelerating }
 
-  private func setLines(_ rows: [LinesRow], restyled: Bool, reduceMotion: Bool) {
-    guard let source else { return }
+  /// Lines being put in, whose place is not yet where it will be.
+  private var applying = false
+  /// The latest lines come while others were being put in, put in once
+  /// those are in place, as ChatLayout's Example holds an update back.
+  private var waiting: (rows: [LinesRow], restyled: Bool, reduceMotion: Bool)?
+
+  /// Puts in `rows`, saying whether any changed.
+  @discardableResult
+  private func setLines(_ rows: [LinesRow], restyled: Bool, reduceMotion: Bool) -> Bool {
+    guard let source else { return false }
+    if applying {
+      waiting = (rows, restyled || (waiting?.restyled ?? false), reduceMotion)
+      return true
+    }
     let new = rows.map(\.id)
     // Lines there before whose look has changed are drawn and measured
     // again, in the same update.
     let redrawn = rows.filter { row in
       model.looks[row.id].map { restyled || $0 != row.look } ?? false
     }.map(\.id)
-    guard new != ids || !redrawn.isEmpty else { return }
+    guard new != ids || !redrawn.isEmpty else { return false }
     var snapshot = NSDiffableDataSourceSnapshot<Int, String>()
     snapshot.appendSections([0])
     snapshot.appendItems(new, toSection: 0)
@@ -399,7 +417,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
         lines.layoutIfNeeded()
       }
       if lines.bounds.height > 0 { toLatest() }
-      return
+      return true
     }
     // A page coming in above goes in at once, the lines seen held where
     // they are; lines coming at the foot come in moving, unless motion is
@@ -408,16 +426,24 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let animated = new != old && !earlier && !reduceMotion && !userScrolling
     let held = heldTop.flatMap { redrawn.contains($0.id) ? $0 : nil }
     if held != nil { heldTop = nil }
+    applying = true
     source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
       [weak self] in
       guard let self else { return }
+      applying = false
       if let held, let index = ids.firstIndex(of: held.id) {
         layout.restoreContentOffset(
           with: ChatLayoutPositionSnapshot(
             indexPath: IndexPath(item: index, section: 0), edge: .top, offset: held.offset))
       }
-      landed()
+      if let waiting {
+        self.waiting = nil
+        setLines(waiting.rows, restyled: waiting.restyled, reduceMotion: waiting.reduceMotion)
+      } else {
+        landed()
+      }
     }
+    return true
   }
 
   /// Lines new to `new` stand above the first line it keeps from `old`,

@@ -158,7 +158,7 @@ struct ChatScreen: View {
         }),
       ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
       shown: placed, holds: acting != nil, canAskEarlier: opened && !state.atStart,
-      onNearTop: showEarlier, dayOver: { dayOver($0, in: listed) },
+      onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
       onReachLatest: { reachedLatest += 1 }
     )
     // The composer rides the keyboard on its own guide, under the lines.
@@ -850,11 +850,14 @@ struct ChatScreen: View {
   /// Lays out a page more of the earlier lines the device holds, at once,
   /// as the reader scrolls near the top. With none held, the page the
   /// server was asked for ahead (`askAhead`) is laid out as it arrives.
-  private func showEarlier() {
+  /// Only once the lines read are those laid out (`laidOut`, the first in
+  /// place), not while the page before them is still going in.
+  private func showEarlier(laidOut: String?) {
     let state = chat.state
-    guard opened, state.heldBefore > 0, let first = state.lines.first?.seq,
-      first != earlierFrom
+    guard opened, state.heldBefore > 0, let line = state.lines.first, line.seq != earlierFrom,
+      laidOut == "line-\(line.opID)"
     else { return }
+    let first = line.seq
     earlierFrom = first
     window = max(first - Int64(Chat.pageSize), state.heldFrom ?? 1)
     Task { await reload() }
@@ -1292,7 +1295,8 @@ struct ChatScreen: View {
       try? await Task.sleep(for: .milliseconds(500))
       withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
     } else if !state.atStart {
-      showEarlier()
+      // Gone to a line before those laid out: on back a page at a time.
+      showEarlier(laidOut: state.lines.first.map { "line-\($0.opID)" })
     } else {
       jumpTarget = nil
     }
