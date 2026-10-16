@@ -437,6 +437,39 @@ const answers = (
   return line !== undefined && !line.unsent && line.hiddenFrom !== userId;
 };
 
+const lineKey = (threadId: string, seq: bigint): string =>
+  `${threadId}\n${seq}`;
+
+/** The lines among `changes`. */
+const linesOf = (changes: Change[]): ChatLine[] =>
+  changes.flatMap(({ kind }) => (kind.case === "chatLine" ? [kind.value] : []));
+
+/**
+ * The lines the replies among `lines` answer that are not among them,
+ * each at its own cursor: sent along with the replies, so each quote
+ * reads as its line however far back it is (spec/sync-protocol.md, Chat).
+ */
+export const answeredChanges = (
+  db: DrizzleSqliteDODatabase,
+  lines: ChatLine[]
+): Change[] => {
+  const sent = new Set(
+    lines.map(({ threadId, seq }) => lineKey(threadId, seq))
+  );
+  const answered = new Map<string, LineRow>();
+  for (const { threadId, replyTo } of lines) {
+    const key = lineKey(threadId, replyTo);
+    if (replyTo === 0n || sent.has(key) || answered.has(key)) {
+      continue;
+    }
+    const row = lineAt(db, threadId, replyTo);
+    if (row !== undefined) {
+      answered.set(key, row);
+    }
+  }
+  return [...answered.values()].map((row) => chatLineChange(db, row));
+};
+
 /**
  * Moves the member's mark in the chat forward to `seq` at `cursor`; none
  * when it is there already.
@@ -1056,9 +1089,9 @@ export const chatPage = (
   userId: string,
   threadId: string,
   beforeSeq: bigint
-): { lines: ChatLine[]; atStart: boolean } => {
+): { lines: ChatLine[]; atStart: boolean; quoted: ChatLine[] } => {
   if (!mayRead(threadId, userId)) {
-    return { atStart: true, lines: [] };
+    return { atStart: true, lines: [], quoted: [] };
   }
   const rows = db
     .select()
@@ -1073,12 +1106,13 @@ export const chatPage = (
     .limit(chatRules.pageSize)
     .all()
     .toReversed();
+  const asRead = (changes: Change[]): ChatLine[] =>
+    linesOf(changes.map((change) => forReader(db, change, userId)));
+  const lines = asRead(rows.map((row) => chatLineChange(db, row)));
   return {
     atStart: (rows[0]?.seq ?? 1) <= 1,
-    lines: rows.flatMap((row) => {
-      const change = forReader(db, chatLineChange(db, row), userId);
-      return change.kind.case === "chatLine" ? [change.kind.value] : [];
-    }),
+    lines,
+    quoted: asRead(answeredChanges(db, lines)),
   };
 };
 
@@ -1086,7 +1120,8 @@ export const chatPage = (
  * The chats' lines and read marks changed after `cursor`, for a member's
  * device catching up, of the chats they may read: every read mark, every change to a line it may hold (one
  * written by then), and of the lines written since only each chat's
- * latest page, the rest coming as pages as it scrolls back.
+ * latest page, the rest coming as pages as it scrolls back; and the lines
+ * the replies among them answer, at their own cursors.
  */
 export const chatChangesAfter = (
   db: DrizzleSqliteDODatabase,
@@ -1126,7 +1161,10 @@ export const chatChangesAfter = (
     .all()
     .filter(({ threadId }) => mayRead(threadId, userId))
     .map(readMarkChange);
-  return [...lines, ...marks];
+  const answered = answeredChanges(db, linesOf(lines)).map((change) =>
+    forReader(db, change, userId)
+  );
+  return [...lines, ...answered, ...marks];
 };
 
 /**

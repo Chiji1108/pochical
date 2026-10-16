@@ -739,4 +739,7 @@ message ChatPage {
   repeated ChatLine lines = 3;
   // The page reaches the chat's first line.
   bool at_start = 4;
+  // The lines its replies answer from before it, however far back, so
+  // their quotes read as the lines do (spec/chat.md, Replies).
+  repeated ChatLine quoted = 5;
 }

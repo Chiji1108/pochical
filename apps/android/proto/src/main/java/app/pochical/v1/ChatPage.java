@@ -22,6 +22,7 @@ public  final class ChatPage extends
   private ChatPage() {
     threadId_ = "";
     lines_ = emptyProtobufList();
+    quoted_ = emptyProtobufList();
   }
   public static final int THREAD_ID_FIELD_NUMBER = 1;
   private java.lang.String threadId_;
@@ -226,6 +227,155 @@ public  final class ChatPage extends
   private void clearAtStart() {
 
     atStart_ = false;
+  }
+
+  public static final int QUOTED_FIELD_NUMBER = 5;
+  private com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatLine> quoted_;
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<app.pochical.v1.ChatLine> getQuotedList() {
+    return quoted_;
+  }
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  public java.util.List<? extends app.pochical.v1.ChatLineOrBuilder> 
+      getQuotedOrBuilderList() {
+    return quoted_;
+  }
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  @java.lang.Override
+  public int getQuotedCount() {
+    return quoted_.size();
+  }
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatLine getQuoted(int index) {
+    return quoted_.get(index);
+  }
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  public app.pochical.v1.ChatLineOrBuilder getQuotedOrBuilder(
+      int index) {
+    return quoted_.get(index);
+  }
+  private void ensureQuotedIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatLine> tmp = quoted_;
+    if (!tmp.isModifiable()) {
+      quoted_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  private void setQuoted(
+      int index, app.pochical.v1.ChatLine value) {
+    java.util.Objects.requireNonNull(value);
+    ensureQuotedIsMutable();
+    quoted_.set(index, value);
+  }
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  private void addQuoted(app.pochical.v1.ChatLine value) {
+    java.util.Objects.requireNonNull(value);
+    ensureQuotedIsMutable();
+    quoted_.add(value);
+  }
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  private void addQuoted(
+      int index, app.pochical.v1.ChatLine value) {
+    java.util.Objects.requireNonNull(value);
+    ensureQuotedIsMutable();
+    quoted_.add(index, value);
+  }
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  private void addAllQuoted(
+      java.lang.Iterable<? extends app.pochical.v1.ChatLine> values) {
+    ensureQuotedIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, quoted_);
+  }
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  private void clearQuoted() {
+    quoted_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  private void removeQuoted(int index) {
+    ensureQuotedIsMutable();
+    quoted_.remove(index);
   }
 
   public static app.pochical.v1.ChatPage parseFrom(
@@ -549,6 +699,168 @@ public  final class ChatPage extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    @java.lang.Override
+    public java.util.List<app.pochical.v1.ChatLine> getQuotedList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getQuotedList());
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    @java.lang.Override
+    public int getQuotedCount() {
+      return instance.getQuotedCount();
+    }/**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatLine getQuoted(int index) {
+      return instance.getQuoted(index);
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    public Builder setQuoted(
+        int index, app.pochical.v1.ChatLine value) {
+      copyOnWrite();
+      instance.setQuoted(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    public Builder setQuoted(
+        int index, app.pochical.v1.ChatLine.Builder builderForValue) {
+      copyOnWrite();
+      instance.setQuoted(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    public Builder addQuoted(app.pochical.v1.ChatLine value) {
+      copyOnWrite();
+      instance.addQuoted(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    public Builder addQuoted(
+        int index, app.pochical.v1.ChatLine value) {
+      copyOnWrite();
+      instance.addQuoted(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    public Builder addQuoted(
+        app.pochical.v1.ChatLine.Builder builderForValue) {
+      copyOnWrite();
+      instance.addQuoted(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    public Builder addQuoted(
+        int index, app.pochical.v1.ChatLine.Builder builderForValue) {
+      copyOnWrite();
+      instance.addQuoted(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    public Builder addAllQuoted(
+        java.lang.Iterable<? extends app.pochical.v1.ChatLine> values) {
+      copyOnWrite();
+      instance.addAllQuoted(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    public Builder clearQuoted() {
+      copyOnWrite();
+      instance.clearQuoted();
+      return this;
+    }
+    /**
+     * <pre>
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+     */
+    public Builder removeQuoted(int index) {
+      copyOnWrite();
+      instance.removeQuoted(index);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatPage)
   }
   @java.lang.Override
@@ -570,10 +882,12 @@ public  final class ChatPage extends
             "lines_",
             app.pochical.v1.ChatLine.class,
             "atStart_",
+            "quoted_",
+            app.pochical.v1.ChatLine.class,
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0001\u0000\u0001\u0208\u0002\u0003" +
-              "\u0003\u001b\u0004\u0007";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0002\u0000\u0001\u0208\u0002\u0003" +
+              "\u0003\u001b\u0004\u0007\u0005\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

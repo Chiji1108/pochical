@@ -51,4 +51,33 @@ public interface ChatPageOrBuilder extends
    * @return The atStart.
    */
   boolean getAtStart();
+
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  java.util.List<app.pochical.v1.ChatLine> 
+      getQuotedList();
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  app.pochical.v1.ChatLine getQuoted(int index);
+  /**
+   * <pre>
+   * The lines its replies answer from before it, however far back, so
+   * their quotes read as the lines do (spec/chat.md, Replies).
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];</code>
+   */
+  int getQuotedCount();
 }

@@ -163,6 +163,112 @@ public object ChatPageKt {
     public fun clearAtStart() {
       _builder.clearAtStart()
     }
+
+    /**
+     * An uninstantiable, behaviorless type to represent the field in
+     * generics.
+     */
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+    public class QuotedProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
+    /**
+     * ```
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * ```
+     *
+     * `repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];`
+     */
+     public val quoted: com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatLine, QuotedProxy>
+      @kotlin.jvm.JvmSynthetic
+  get() = com.google.protobuf.kotlin.DslList(
+        _builder.quotedList
+      )
+    /**
+     * ```
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * ```
+     *
+     * `repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];`
+     * @param value The quoted to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addQuoted")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatLine, QuotedProxy>.add(value: app.pochical.v1.ChatLine) {
+      _builder.addQuoted(value)
+    }
+    /**
+     * ```
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * ```
+     *
+     * `repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];`
+     * @param value The quoted to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignQuoted")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatLine, QuotedProxy>.plusAssign(value: app.pochical.v1.ChatLine) {
+      add(value)
+    }
+    /**
+     * ```
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * ```
+     *
+     * `repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];`
+     * @param values The quoted to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addAllQuoted")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatLine, QuotedProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.ChatLine>) {
+      _builder.addAllQuoted(values)
+    }
+    /**
+     * ```
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * ```
+     *
+     * `repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];`
+     * @param values The quoted to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignAllQuoted")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatLine, QuotedProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.ChatLine>) {
+      addAll(values)
+    }
+    /**
+     * ```
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * ```
+     *
+     * `repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];`
+     * @param index The index to set the value at.
+     * @param value The quoted to set.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setQuoted")
+    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatLine, QuotedProxy>.set(index: kotlin.Int, value: app.pochical.v1.ChatLine) {
+      _builder.setQuoted(index, value)
+    }
+    /**
+     * ```
+     * The lines its replies answer from before it, however far back, so
+     * their quotes read as the lines do (spec/chat.md, Replies).
+     * ```
+     *
+     * `repeated .pochical.v1.ChatLine quoted = 5 [json_name = "quoted"];`
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("clearQuoted")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatLine, QuotedProxy>.clear() {
+      _builder.clearQuoted()
+    }
   }
 }
 public inline fun app.pochical.v1.ChatPage.copy(block: `app.pochical.v1`.ChatPageKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatPage =
