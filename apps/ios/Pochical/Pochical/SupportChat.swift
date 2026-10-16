@@ -274,18 +274,18 @@ struct SupportChatScreen: View {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { time }
           bubble(line, first: first)
-            .heldForActions(lifted: acting == line.id) { frame, finger, link in
+            .heldForActions(lifted: acting == line.id) { spot, finger, link in
               // A link held has its own menu, without the reactions.
               if let link {
                 openActions(
                   MessageActionsRequest(
-                    lineID: line.id, frame: frame, mine: mine,
+                    lineID: line.id, spot: spot, mine: mine,
                     bubble: AnyView(bubble(line, first: first)), finger: finger,
                     actions: linkActions(link, open: { openURL(link) }, copied: { sayDone("コピーしました") })))
               } else {
                 openActions(
                   MessageActionsRequest(
-                    lineID: line.id, frame: frame, mine: mine,
+                    lineID: line.id, spot: spot, mine: mine,
                     bubble: AnyView(bubble(line, first: first)), finger: finger,
                     reactions: line.reactions, meID: SupportLine.me,
                     onReact: { react($0, on: line) }, onMoreReactions: { reactingTo = line },
@@ -344,11 +344,11 @@ struct SupportChatScreen: View {
       Spacer(minLength: 48)
       HStack(alignment: .bottom, spacing: 8) {
         time
-        content.heldForActions(lifted: acting == line.id) { frame, finger, _ in
+        content.heldForActions(lifted: acting == line.id) { spot, finger, _ in
           guard line.photo == nil else { return }
           openActions(
             MessageActionsRequest(
-              lineID: line.id, frame: frame, mine: true, bubble: AnyView(content), finger: finger,
+              lineID: line.id, spot: spot, mine: true, bubble: AnyView(content), finger: finger,
               actions: [copy(line.text)]))
         }
       }

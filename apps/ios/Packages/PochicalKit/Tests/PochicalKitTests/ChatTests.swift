@@ -746,6 +746,31 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   }
 }
 
+@Test func aReplysLineFarBackIsHeldForItsQuoteApartFromTheLines() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    // The latest 5–6, 6 answering 1, which the group sends along.
+    var reply = line(6, "これ")
+    reply.chatLine.replyTo = 1
+    try GroupSync.take([line(1, "ずっと前"), line(5, "e"), reply], of: "g", in: db)
+    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines.map(\.seq) == [5, 6])
+    #expect(state.quoted[1]?.text == "ずっと前")
+
+    // A page's replies bring theirs in its quoted.
+    var earlier = line(4, "それ")
+    earlier.chatLine.replyTo = 2
+    var page = Pochical_V1_ChatPage()
+    page.threadID = groupThread
+    page.lines = [earlier.chatLine]
+    page.quoted = [line(2, "b").chatLine]
+    try Chats.take(page, of: "g", in: db)
+    state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines.map(\.seq) == [4, 5, 6])
+    #expect(state.quoted.mapValues(\.text) == [1: "ずっと前", 2: "b"])
+  }
+}
+
 struct LargeEmojiVectors: Decodable, Sendable {
   struct Case: VectorCase {
     let name: String

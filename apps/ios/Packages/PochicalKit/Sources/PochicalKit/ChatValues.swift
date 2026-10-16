@@ -438,11 +438,12 @@ public enum Chats {
     try ChatLineRow.insert { row }.execute(db)
   }
 
-  /// A page of earlier lines, answering the device's request.
+  /// A page of earlier lines, answering the device's request, and the
+  /// lines its replies answer from before it.
   public static func take(_ page: Pochical_V1_ChatPage, of groupID: String, in db: Database)
     throws
   {
-    for line in page.lines {
+    for line in page.quoted + page.lines {
       try take(line, of: groupID, in: db)
     }
   }
@@ -570,6 +571,9 @@ public struct ChatState: Hashable, Sendable {
   /// The pinned lines, the latest first, the member's own pins and
   /// unpins on their way already in place; held however far back.
   public var pins: [ChatLineRow] = []
+  /// The lines replies answer from before `lines`, by seq, for their
+  /// quotes; held however far back, as the group sends them along.
+  public var quoted: [Int64: ChatLineRow] = [:]
 
   public init(
     lines: [ChatLineRow], waiting: [WaitingLine], atStart: Bool, marks: [String: Int64],
@@ -717,8 +721,14 @@ extension Chats {
       lines: lines, waiting: waiting, atStart: (lines.first?.seq ?? 1) <= 1,
       marks: readMarks, ownRead: ownRead)
     let pinnedSeqs = pinned.compactMap { Int64($0) }
+    let shown = Set(lines.map(\.seq))
+    let answered = Set(
+      (lines.compactMap(\.replyTo) + waiting.compactMap(\.replyTo)).filter {
+        !shown.contains($0)
+      })
     let heldRows = try ChatLineRow.where {
-      $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq.in(pinnedSeqs)
+      $0.groupID.eq(groupID) && $0.threadID.eq(threadID)
+        && $0.seq.in(pinnedSeqs + Array(answered))
     }
     .fetchAll(db)
     var held: [String: ChatLineRow] = [:]
@@ -730,6 +740,11 @@ extension Chats {
       overlaid.first { String($0.seq) == id } ?? held[id]
     }
     .filter { !$0.unsent }
+    for seq in answered {
+      if let row = overlaid.first(where: { $0.seq == seq }) ?? held[String(seq)] {
+        state.quoted[seq] = row
+      }
+    }
     return state
   }
 

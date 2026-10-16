@@ -132,6 +132,13 @@ const groupSocket = async (
   cursor = PAIR_ROSTER
 ) => await syncSocket(`/v1/groups/${groupId}/socket`, token, cursor);
 
+// A page of numbered lines from `from`, as one member's outbox sends them.
+const pageOfLines = (from: number) =>
+  Array.from({ length: chatRules.pageSize }, (_, at) => ({
+    kind: { send: `${from + at}` },
+    opId: `m${from + at}`,
+  }));
+
 // A group of three, its maker's and the guest's one-to-one chat, and
 // each member's group socket past the third joining: their member, the
 // notice of it and their read mark.
@@ -942,5 +949,67 @@ describe("a group's chat", () => {
     expect(first).toMatchObject({
       kind: { value: { text: "1" } },
     });
+  });
+
+  it("sends the line a reply answers with it, however far back", async () => {
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+    chat(
+      mine.socket,
+      Array.from({ length: chatRules.pageSize + 5 }, (_, at) => ({
+        kind: { send: `${at + 1}` },
+        opId: `m${at}`,
+      }))
+    );
+    await mine.frames.next();
+    await mine.frames.next();
+    await theirs.frames.next();
+
+    // Live: the answered line, then the reply.
+    chat(mine.socket, [{ kind: { reply: [2, "これ"] }, opId: "r" }]);
+    expect(changesIn(await theirs.frames.next())).toMatchObject([
+      { kind: { value: { seq: 2n, text: "1" } } },
+      { kind: { value: { replyTo: 2n, text: "これ" } } },
+    ]);
+    await mine.frames.next();
+    await mine.frames.next();
+
+    // Catching up: the latest page, and the line its reply answers.
+    const later = await groupSocket(groupId, guest);
+    const lines = changesIn(await later.frames.next()).filter(
+      ({ kind }) => kind.case === "chatLine"
+    );
+    expect(lines).toHaveLength(chatRules.pageSize + 1);
+    expect(lines[0]).toMatchObject({ kind: { value: { seq: 2n, text: "1" } } });
+  });
+
+  it("gives a page the lines its replies answer from before it", async () => {
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    // "1" at seq 2, a page of lines, a reply to "1", then a page more.
+    chat(mine.socket, [
+      { kind: { send: "1" }, opId: "first" },
+      ...pageOfLines(2),
+      { kind: { reply: [2, "これ"] }, opId: "r" },
+      ...pageOfLines(100),
+    ]);
+    await mine.frames.next();
+    await mine.frames.next();
+
+    const later = await groupSocket(groupId, guest);
+    await later.frames.next();
+    const replySeq = BigInt(chatRules.pageSize + 3);
+    sendFrame(later.socket, {
+      case: "chatPageRequest",
+      value: { beforeSeq: replySeq + 1n, threadId: thread },
+    });
+    const frame = await later.frames.next();
+    expect(frame).toMatchObject({
+      kind: { case: "chatPage", value: { quoted: [{ seq: 2n, text: "1" }] } },
+    });
+    expect(
+      frame.kind.case === "chatPage" ? frame.kind.value.lines.at(-1) : undefined
+    ).toMatchObject({ replyTo: 2n, seq: replySeq });
   });
 });
