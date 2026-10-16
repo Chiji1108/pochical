@@ -11,7 +11,7 @@ public enum Chat {
   public static let lineGap = 4
   public static let linkPreviewAspect = 1.91
   public static let linkPreviewSettleMs = 400
-  public static let longPressMs = 200
+  public static let longPressMs = 150
   public static let maxPins = 5
   public static let openMax = 200
   public static let pageSize = 50

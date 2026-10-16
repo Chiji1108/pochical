@@ -34,6 +34,8 @@ struct MessageAction: Identifiable {
 struct HeldPress: UIGestureRecognizerRepresentable {
   /// How long a line is held before its menu opens (chatRules.longPressMs).
   static let duration = Double(Chat.longPressMs) / 1000
+  /// How much sooner this press begins than the line's own.
+  static let lead = 0.05
   /// Where the finger is as the press is held, a moment before the line's
   /// own press opens its menu.
   var onHold: (CGPoint) -> Void = { _ in }
@@ -44,7 +46,7 @@ struct HeldPress: UIGestureRecognizerRepresentable {
 
   func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
     let press = UILongPressGestureRecognizer()
-    press.minimumPressDuration = Self.duration - 0.05
+    press.minimumPressDuration = Self.duration - Self.lead
     press.delegate = context.coordinator
     return press
   }
@@ -473,6 +475,8 @@ private struct HeldBubble: ViewModifier {
   /// A link's menu is open from this press: the line's own press, which
   /// waits on the link's own gesture and comes later, opens nothing.
   @State private var linkHeld = false
+  /// The finger is still down from this press.
+  @State private var holding = false
   @State private var pressing = false
   /// The finger that opened the menu, followed until it lifts.
   @State private var held: HeldFinger?
@@ -502,15 +506,23 @@ private struct HeldBubble: ViewModifier {
       }
       .gesture(
         HeldPress {
-          // A link held opens its own menu at once.
+          // A link held opens its own menu, as long held as the line's.
+          // This press begins a moment before the line's, so the line's
+          // knows to open nothing.
+          holding = true
           if let link = links.link(at: $0) {
             linkHeld = true
-            pressing = false
-            open(link: link)
+            Task {
+              try? await Task.sleep(for: .seconds(HeldPress.lead))
+              guard holding else { return }
+              pressing = false
+              open(link: link)
+            }
           }
         } onMove: {
           held?.point = $0
         } onLift: {
+          holding = false
           held?.point = $0
           held?.lifted = true
           held = nil
