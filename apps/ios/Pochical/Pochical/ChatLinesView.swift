@@ -95,6 +95,34 @@ struct LinesRow: Equatable {
   var row: (String) -> AnyView = { _ in AnyView(EmptyView()) }
   /// The chat screen's, which the cells, hosted apart, do not inherit.
   var environment = EnvironmentValues()
+  /// Each item's look, as last laid out.
+  var looks: [String: AnyHashable] = [:]
+  /// Each item's height as measured, at its look and the width it had.
+  private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:]
+  /// Where items are measured, apart from the cells: a cell given another
+  /// item draws the one it had for a moment, and measured then says that
+  /// one's height.
+  private let sizer = UIHostingController(rootView: AnyView(EmptyView()))
+
+  /// The item `id`'s height at `width`, measured once for its look.
+  func height(of id: String, width: CGFloat) -> CGFloat {
+    let look = looks[id] ?? AnyHashable(id)
+    if let known = heights[id], known.look == look, known.width == width {
+      return known.height
+    }
+    sizer.rootView = AnyView(
+      LineCellContent(content: row(id), environment: environment, space: LineSpace()))
+    let height = ceil(
+      sizer.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
+    heights[id] = (look, width, height)
+    return height
+  }
+
+  /// Every item is measured again, the chat's environment having changed
+  /// how they are drawn.
+  func forgetHeights() {
+    heights.removeAll()
+  }
 }
 
 /// What of the chat screen's environment changes how every line is drawn.
@@ -164,7 +192,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private let ground = UIView()
   private var settings: ChatLinesView?
   private var ids: [String] = []
-  private var looks: [String: AnyHashable] = [:]
   private var linesLook: LinesLook?
   /// The lines have been put where the chat opens, or moved since.
   private var placed = false
@@ -207,6 +234,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       let content = model.row(id)
       let environment = model.environment
       let space = cell.space
+      cell.measure = { [weak model] width in model?.height(of: id, width: width) ?? 0 }
       cell.contentConfiguration = UIHostingConfiguration {
         LineCellContent(content: content, environment: environment, space: space)
       }
@@ -284,7 +312,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// menu is open: only those there now, as they are drawn now.
   private func keeping(_ rows: [LinesRow]) -> [LinesRow] {
     let byID = Dictionary(rows.map { ($0.id, $0) }) { first, _ in first }
-    return ids.compactMap { id in byID[id] ?? looks[id].map { LinesRow(id: id, look: $0) } }
+    return ids.compactMap { id in byID[id] ?? model.looks[id].map { LinesRow(id: id, look: $0) } }
   }
 
   // MARK: Lines
@@ -302,7 +330,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     // Lines there before whose look has changed are drawn and measured
     // again, in the same update.
     let redrawn = rows.filter { row in
-      looks[row.id].map { restyled || $0 != row.look } ?? false
+      model.looks[row.id].map { restyled || $0 != row.look } ?? false
     }.map(\.id)
     guard new != ids || !redrawn.isEmpty else { return }
     var snapshot = NSDiffableDataSourceSnapshot<Int, String>()
@@ -311,7 +339,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     snapshot.reconfigureItems(redrawn)
     let old = ids
     ids = new
-    looks = Dictionary(rows.map { ($0.id, $0.look) }) { first, _ in first }
+    model.looks = Dictionary(rows.map { ($0.id, $0.look) }) { first, _ in first }
+    if restyled { model.forgetHeights() }
     guard !old.isEmpty, source.snapshot != nil else {
       UIView.performWithoutAnimation {
         source.applySnapshotUsingReloadData(snapshot, commitAlongsideUpdates: {})
@@ -538,6 +567,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 /// draws.
 private final class LineCell: UICollectionViewCell {
   let space = LineSpace()
+  /// The height of the item it draws, at a width.
+  var measure: ((CGFloat) -> CGFloat)?
 
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -549,20 +580,17 @@ private final class LineCell: UICollectionViewCell {
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
-  /// Its height at the width the layout gives it: left to itself, the
-  /// cell's SwiftUI is measured at any width, a long line on one line.
+  /// Its item's height at the width the layout gives it, measured apart
+  /// from the cell (ChatLinesModel.height).
   override func preferredLayoutAttributesFitting(_ attributes: UICollectionViewLayoutAttributes)
     -> UICollectionViewLayoutAttributes
   {
     // A copy keeps the layout's own kind of attributes.
-    guard let fitted = attributes.copy() as? UICollectionViewLayoutAttributes else {
+    guard let measure, let fitted = attributes.copy() as? UICollectionViewLayoutAttributes else {
       return super.preferredLayoutAttributesFitting(attributes)
     }
     let width = attributes.size.width
-    let size = contentView.systemLayoutSizeFitting(
-      CGSize(width: width, height: UIView.layoutFittingCompressedSize.height),
-      withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel)
-    fitted.size = CGSize(width: width, height: ceil(size.height))
+    fitted.size = CGSize(width: width, height: measure(width))
     return fitted
   }
 }
