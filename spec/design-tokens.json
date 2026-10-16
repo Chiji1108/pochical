@@ -21,6 +21,7 @@
     "photoThumbHashMaxBytes": 25,
     "photosPerSend": 4,
     "pictureMaxEdge": 640,
+    "prefetchScreens": 2,
     "runGap": 12,
     "typingSendMs": 3000,
     "typingShowMs": 5000

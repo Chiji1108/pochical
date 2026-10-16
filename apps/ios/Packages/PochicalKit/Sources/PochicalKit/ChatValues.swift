@@ -571,6 +571,12 @@ public struct ChatState: Hashable, Sendable {
   public var waiting: [WaitingLine]
   /// The lines reach the chat's first.
   public var atStart: Bool
+  /// How many lines the device holds before `lines`, on from them without
+  /// a gap: laid out at once as the chat scrolls back, without asking.
+  public var heldBefore = 0
+  /// The first of the lines the device holds on from the latest without a
+  /// gap, before which the server is asked for a page; none with no lines.
+  public var heldFrom: Int64?
   /// Each member's read mark.
   public var marks: [String: Int64]
   /// How far the member's own read waiting in the outbox goes, 0 with none.
@@ -723,10 +729,14 @@ extension Chats {
         latest: lines.last?.seq ?? 0, read: me.map { max(readMarks[$0] ?? 0, ownRead) })
     // Pins find their lines among all of them, with what waits changed.
     let overlaid = lines
+    let heldFrom = lines.first?.seq
+    let heldBefore = lines.prefix { $0.seq < start }.count
     lines.removeAll { $0.seq < start }
     var state = ChatState(
       lines: lines, waiting: waiting, atStart: (lines.first?.seq ?? 1) <= 1,
       marks: readMarks, ownRead: ownRead)
+    state.heldBefore = heldBefore
+    state.heldFrom = heldFrom
     let pinnedSeqs = pinned.compactMap { Int64($0) }
     let shown = Set(lines.map(\.seq))
     let answered = Set(

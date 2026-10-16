@@ -172,6 +172,12 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// A line's menu is open: lines coming in wait until it closes, so the
   /// line held stays under its menu; lines changing are drawn meanwhile.
   let holds: Bool
+  /// Earlier lines are to come, and may be asked for: not before the chat
+  /// has opened on its place, which they would push away.
+  let canAskEarlier: Bool
+  /// The lines are scrolled near their top, Chat.prefetchScreens away:
+  /// the next earlier page is to be laid out.
+  let onNearTop: () -> Void
   /// The day of the lines from the item `id` at the top.
   let dayOver: (String) -> Day?
   /// The person's scrolling has come to the latest.
@@ -339,6 +345,19 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     setLines(
       settings.holds ? keeping(settings.rows) : settings.rows, restyled: restyled,
       reduceMotion: environment.accessibilityReduceMotion)
+    // A page come from the server is laid out at once if the top is near
+    // still; asked after this update, not in it.
+    Task { @MainActor [weak self] in self?.askEarlierIfNear() }
+  }
+
+  /// Asks for the next earlier page once the top is Chat.prefetchScreens
+  /// away, so the reader scrolling back finds it laid out already.
+  private func askEarlierIfNear() {
+    guard let settings, settings.canAskEarlier, placed, lines.bounds.height > 0 else { return }
+    let fromTop = lines.contentOffset.y - lowest
+    if fromTop < seenHeight * CGFloat(Chat.prefetchScreens) {
+      settings.onNearTop()
+    }
   }
 
   /// `rows` without the lines coming or going, which wait while a line's
@@ -414,6 +433,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// Lines have come in: still following, the foot is kept.
   private func landed() {
     seePlace()
+    askEarlierIfNear()
     if following, !scroll.place.atLatest, !userScrolling, !goingDown {
       toLatest(animated: true)
     }
@@ -539,8 +559,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let content = layout.collectionViewContentSize.height
     let below = content + inset.bottom - (lines.contentOffset.y + lines.bounds.height)
     let place = ScrollPlace(
-      atLatest: below < 24, away: below > seenHeight / 2, fits: content <= seenHeight + 1,
-      nearTop: lines.contentOffset.y <= lowest + Metrics.touch)
+      atLatest: below < 24, away: below > seenHeight / 2, fits: content <= seenHeight + 1)
     let before = scroll.place
     if place != before {
       scroll.place = place
@@ -572,6 +591,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
     seePlace()
+    askEarlierIfNear()
   }
 
   func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {

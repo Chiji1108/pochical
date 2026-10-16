@@ -94,24 +94,13 @@ struct FloatingDay: View {
   }
 }
 
-/// The top of the lines while earlier ones are to come, which asks for
-/// them once scrolled near (from the scroll's own place: whether a view is
-/// in sight is read once, as the lines are first laid out at the top), and
-/// again after each page while it stays there. Not before the chat has
-/// come in on its place, which would add lines above the latest it opens on.
+/// The top of the lines while the next earlier page is on its way from
+/// the server: pages the device holds come in before the top is reached
+/// (ChatLinesView asks Chat.prefetchScreens ahead).
 struct EarlierLines: View {
-  let scroll: ChatScroll
-  let first: Int64?
-  let ready: Bool
-  let show: () async -> Void
-
   var body: some View {
-    let near = scroll.place.nearTop && ready
     ProgressView()
       .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-      .task(id: PageAsk(first: first, inSight: near)) {
-        if near { await show() }
-      }
   }
 }
 
@@ -123,15 +112,6 @@ struct ScrollPlace: Hashable {
   /// The lines are shorter than the screen, held at its foot, with
   /// nowhere to scroll.
   var fits = true
-  /// Near enough the top that its spinner is on the screen.
-  var nearTop = false
-}
-
-/// When earlier lines are asked for: the top in sight, again after each
-/// page.
-private struct PageAsk: Equatable {
-  let first: Int64?
-  let inSight: Bool
 }
 
 /// What moves a following chat to its foot: a line coming in and someone

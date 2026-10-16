@@ -110,4 +110,6 @@ struct PinBar: View {
 struct JumpKey: Hashable {
   let target: Int64?
   let first: Int64?
+  /// The first line held, which changes as a page comes from the server.
+  let held: Int64?
 }

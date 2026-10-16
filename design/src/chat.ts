@@ -68,6 +68,10 @@ export const chatRules = {
   // A face or a group's photo mark is shrunk further, as it only ever
   // shows small: past three times its largest place on screen (88pt).
   pictureMaxEdge: 640,
+  // How many screens' height before the top of a chat's lines its next
+  // earlier page is laid out, so the reader scrolling back never comes to
+  // the top waiting: Signal asks three screens ahead, Telegram five lines.
+  prefetchScreens: 2,
   // The room before a run's first line, a day's title and ここから新着,
   // in points: where the writer changes, the lines part more.
   runGap: 12,
