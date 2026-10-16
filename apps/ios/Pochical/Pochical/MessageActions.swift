@@ -236,7 +236,8 @@ struct MessageActionsOverlay: View {
             width: request.frame.width, height: shown ? place.bubbleHeight : request.frame.height,
             alignment: .top
           )
-          .clipped()
+          // Cut at its foot only, so a run's first bubble keeps its tail.
+          .clipShape(CutsHeight())
           // Grown about its own middle, before it is put in place; it
           // rises from where it was and goes back there.
           .scaleEffect(shown ? 1.02 : 1)
@@ -688,5 +689,13 @@ extension View {
     onActions: @escaping (LineSpot, HeldFinger?, URL?) -> Void
   ) -> some View {
     modifier(HeldBubble(lifted: lifted, onActions: onActions, onTap: onTap))
+  }
+}
+
+/// Its frame cut at the top and the foot only, the sides left open as far
+/// as a bubble's tail reaches.
+private struct CutsHeight: Shape {
+  nonisolated func path(in rect: CGRect) -> Path {
+    Path(rect.insetBy(dx: -BubbleShape.tailReach, dy: 0))
   }
 }

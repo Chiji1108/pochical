@@ -63,40 +63,54 @@ export const chatStyle = {
       gap: "4px",
       maxWidth: "84%",
       minWidth: 0,
+      // Room for the tail of a run's first bubble by the face; every line
+      // keeps it, so a run's lines line up (bubblePath). By the screen's
+      // edge the tail reaches into the margin, as LINE's and Messages' do.
+      paddingLeft: "10px",
     },
-    variants: { mine: { true: { alignItems: "flex-end" } } },
+    variants: {
+      mine: { true: { alignItems: "flex-end", paddingLeft: 0 } },
+    },
   }),
-  // Round all over, but the first of a run, as LINE and WhatsApp draw
-  // one: its top corner by the writer's side drawn in, by the face and
-  // name the run starts with, so it says whose words follow.
+  // What a bubble holds, clipped to its outline (BubbleOutline), which is
+  // filled behind it: round all over, but the first of a run with a tail
+  // at its top corner by the writer, as LINE draws one.
   bubble: cva({
     base: {
-      bg: "fill.tertiary",
-      borderRadius: "lg",
       color: "text.primary",
       display: "flex",
+      flex: 1,
       flexDirection: "column",
       minWidth: 0,
-      overflow: "hidden",
+      position: "relative",
     },
-    compoundVariants: [
-      {
-        css: { borderTopLeftRadius: "sm" },
-        first: true,
-        mine: false,
-      },
-      {
-        css: { borderTopRightRadius: "sm" },
-        first: true,
-        mine: true,
-      },
-    ],
     variants: {
-      first: { true: {} },
-      mine: {
-        true: { bg: "accent.fill", color: "accent.onFill" },
-      },
+      mine: { true: { color: "accent.onFill" } },
     },
+  }),
+  // The bubble's place in the line, its tail reaching out of it.
+  bubbleFrame: css({ display: "flex", minWidth: 0, position: "relative" }),
+  bubbleFill: cva({
+    base: {
+      fill: "fill.tertiary",
+      inset: 0,
+      overflow: "visible",
+      pointerEvents: "none",
+      position: "absolute",
+    },
+    variants: { mine: { true: { fill: "accent.fill" } } },
+  }),
+  // A bubble jumped to rings along its outline for a moment (flash).
+  bubbleRing: css({
+    fill: "none",
+    inset: 0,
+    opacity: 0,
+    overflow: "visible",
+    pointerEvents: "none",
+    position: "absolute",
+    stroke: "accent.border",
+    // Half of it outside the outline, as a 3px ring.
+    strokeWidth: 6,
   }),
   // A reply's quote inside the bubble (BubbleQuote).
   bubbleQuote: css({
@@ -376,9 +390,14 @@ export const chatStyle = {
       },
       flash: {
         true: {
-          "& :is([data-part=bubble], [data-part=day-card])": {
+          "& :is([data-part=bubble], [data-part=day-card]):not(:has(> [data-part=bubble-ring]))":
+            {
+              _motionReduce: { animation: "none" },
+              animation: "flash 1.2s ease-out",
+            },
+          "& [data-part=bubble-ring]": {
             _motionReduce: { animation: "none" },
-            animation: "flash 1.2s ease-out",
+            animation: "ringFlash 1.2s ease-out",
           },
         },
       },
@@ -440,7 +459,8 @@ export const chatStyle = {
     margin: "calc(var(--run-gap) - var(--line-gap)) 0",
     textStyle: "caption",
   }),
-  // Three dots in a bubble of the others' kind, rising in turn.
+  // Three dots in a bubble of the others' kind (a run's first, by their
+  // face), rising in turn.
   typing: css({
     "& > span": {
       _motionReduce: { animation: "none" },
@@ -453,10 +473,6 @@ export const chatStyle = {
     "& > span:nth-child(2)": { animationDelay: "0.15s" },
     "& > span:nth-child(3)": { animationDelay: "0.3s" },
     alignItems: "center",
-    bg: "fill.tertiary",
-    // A bubble at the start of the writer's run, by their face.
-    borderRadius:
-      "token(radii.sm) token(radii.lg) token(radii.lg) token(radii.lg)",
     display: "flex",
     gap: "4px",
     height: "36px",

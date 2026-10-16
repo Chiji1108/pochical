@@ -24,6 +24,7 @@ import { inviteCodeOf, mentionsOf } from "../lib/chat-text";
 import { useUser } from "../lib/design-user-store";
 import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
+import { BubbleOutline } from "./design-chat-bubble";
 import { uploadMilliseconds } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
 import { Composer, useComposer } from "./design-chat-composer";
@@ -473,15 +474,17 @@ export function ChatPage({
                 avatar={<Avatar member={typingMember} size={chatAvatarSize} />}
                 mine={false}
               >
-                <span
-                  aria-label={`${typingMember.name}が入力中`}
-                  className={chatStyle.typing}
-                  role="status"
-                >
-                  <span />
-                  <span />
-                  <span />
-                </span>
+                <BubbleOutline first mine={false}>
+                  <span
+                    aria-label={`${typingMember.name}が入力中`}
+                    className={chatStyle.typing}
+                    role="status"
+                  >
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                </BubbleOutline>
               </LineFrame>
             )}
           </ol>

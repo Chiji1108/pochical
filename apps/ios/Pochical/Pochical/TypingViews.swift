@@ -28,6 +28,8 @@ struct TypingLine: View {
       .padding(.horizontal, 16)
       .frame(height: 36)
       .background(colors.fillTertiary, in: BubbleShape(mine: false, first: true))
+      // Room for its tail by the face, as the lines keep.
+      .padding(.leading, BubbleShape.tailReach)
       Spacer(minLength: 0)
     }
     .accessibilityElement(children: .ignore)
