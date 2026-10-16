@@ -38,8 +38,8 @@ extension EnvironmentValues {
   /// The user's own socket, connected again as someone else once the
   /// account is deleted.
   @Entry var userSocket: SyncClient?
-  /// The groups' sockets closing once their chat outbox is sent.
-  @Entry var closingGroupSockets = ClosingGroupSockets()
+  /// The groups' sockets, closed once their chat outbox is sent.
+  @Entry var groupSockets = GroupSockets()
   /// Opens one of Pochical's invitations on its join screen, as reading
   /// its link does.
   @Entry var openInvite = OpenInviteAction { _ in }
@@ -62,7 +62,7 @@ struct GroupsScreen: View {
   @Environment(\.account) private var account
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.scenePhase) private var scenePhase
-  @Environment(\.closingGroupSockets) private var closingSockets
+  @Environment(\.groupSockets) private var groupSockets
   @Dependency(\.defaultDatabase) private var database
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// The open group's socket, open while the group's screens are and the
@@ -188,13 +188,13 @@ struct GroupsScreen: View {
       guard scenePhase == .active, let groupID = openGroupID else { return }
       let client = SyncClient(account: account, database: database, peer: .group(groupID))
       socket = client
-      await client.start()
+      await groupSockets.open(client)
       while !Task.isCancelled {
         try? await Task.sleep(for: .seconds(3600))
       }
       // Lines just sent still go, the app gone to the background or
       // another group opened (spec/sync-protocol.md, Sockets).
-      await closingSockets.close(client)
+      await groupSockets.close(client)
     }
   }
 
@@ -635,16 +635,27 @@ private struct GroupHeading: View {
   }
 }
 
-/// The groups' sockets left as the app went to the background or another
-/// group was opened, each closing once its chat outbox is sent and
-/// acknowledged (spec/sync-protocol.md, Sockets); the app waits for them
-/// in the background as for its own socket. One opened again for the same
-/// group is a new socket, the server taking an edit sent on both once.
-actor ClosingGroupSockets {
+/// The groups' sockets: those open, and those left as the app went to the
+/// background or another group was opened, each closing once its chat
+/// outbox is sent and acknowledged (spec/sync-protocol.md, Sockets). The
+/// app waits for them in the background as for its own socket, those still
+/// open too, so a socket its screen has not let go of yet is not missed.
+/// One opened again for the same group is a new socket, the server taking
+/// an edit sent on both once.
+actor GroupSockets {
+  private var open: [ObjectIdentifier: SyncClient] = [:]
   private var closing: [UUID: (client: SyncClient, closed: Task<Void, Never>)] = [:]
 
-  /// Closes `client` once what it has to send is sent.
+  /// Opens `client`, kept until it is closed: started before anything
+  /// here can close it, so it is not opened again after.
+  func open(_ client: SyncClient) async {
+    open[ObjectIdentifier(client)] = client
+    await client.start()
+  }
+
+  /// Closes `client` once what it has to send is sent; once only.
   func close(_ client: SyncClient) {
+    guard open.removeValue(forKey: ObjectIdentifier(client)) != nil else { return }
     let id = UUID()
     let closed = Task {
       await client.finishSending()
@@ -657,14 +668,18 @@ actor ClosingGroupSockets {
     closing[id] = nil
   }
 
-  /// Waits until every one has closed, those left meanwhile too.
+  /// Closes every one once sent, and waits until they all have, those
+  /// left meanwhile too.
   func finishSending() async {
+    for client in open.values {
+      close(client)
+    }
     while let next = closing.values.first {
       await next.closed.value
     }
   }
 
-  /// Closes them all at once: the time the OS gave runs out.
+  /// Closes those closing at once: the time the OS gave runs out.
   func stop() async {
     for (client, _) in closing.values {
       await client.stop()

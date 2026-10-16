@@ -16,8 +16,8 @@ struct PochicalApp: App {
   private let account: Account
   /// The calls that make and join groups, as the same user.
   private let groupCalls: GroupCalls
-  /// The groups' sockets closing once their chat outbox is sent.
-  private let closingGroupSockets = ClosingGroupSockets()
+  /// The groups' sockets, closed once their chat outbox is sent.
+  private let groupSockets = GroupSockets()
   @State private var settings = Settings()
   private let database: any DatabaseWriter
 
@@ -45,7 +45,7 @@ struct PochicalApp: App {
         .environment(\.groupCalls, groupCalls)
         .environment(\.account, account)
         .environment(\.userSocket, sync)
-        .environment(\.closingGroupSockets, closingGroupSockets)
+        .environment(\.groupSockets, groupSockets)
         // The person's preferences, kept with the account from launch.
         .task { settings.sync(with: database) }
     }
@@ -62,11 +62,11 @@ struct PochicalApp: App {
         time.begin {
           time.end()
           Task { await sync.stop() }
-          Task { await closingGroupSockets.stop() }
+          Task { await groupSockets.stop() }
         }
         Task {
           await sync.finishSending()
-          await closingGroupSockets.finishSending()
+          await groupSockets.finishSending()
           time.end()
         }
       case .active:
