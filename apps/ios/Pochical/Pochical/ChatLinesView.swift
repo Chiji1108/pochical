@@ -609,6 +609,10 @@ private struct LineCellContent: View {
     content
       .id(id)
       .frame(maxWidth: .infinity)
+      // A line passing the screen's foot is under the home indicator's
+      // safe area, which would push it in as it goes, out of the height
+      // measured for it.
+      .ignoresSafeArea()
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
       .environment(\.self, environment)
