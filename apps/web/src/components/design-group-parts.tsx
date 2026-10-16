@@ -548,6 +548,8 @@ export function PhotoPicker({
         id={cameraId}
         onChange={(event) => {
           choose(event.target.files);
+          // So the same photo picked again, after a キャンセル, is told too.
+          event.target.value = "";
         }}
         type="file"
       />
@@ -557,6 +559,8 @@ export function PhotoPicker({
         id={libraryId}
         onChange={(event) => {
           choose(event.target.files);
+          // So the same photo picked again, after a キャンセル, is told too.
+          event.target.value = "";
         }}
         type="file"
       />

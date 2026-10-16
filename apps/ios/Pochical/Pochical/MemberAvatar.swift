@@ -76,6 +76,8 @@ struct PhotoEditor<Picture: View>: View {
   @State private var picking = false
   @State private var taking = false
   @State private var item: PhotosPickerItem?
+  /// A photo taken, kept until the camera has closed.
+  @State private var taken: UIImage?
   /// A photo taken or picked, being cut.
   @State private var cropping: CroppingPhoto?
   @State private var busy = false
@@ -103,11 +105,18 @@ struct PhotoEditor<Picture: View>: View {
     .disabled(busy)
     .frame(maxWidth: .infinity)
     .photosPicker(isPresented: $picking, selection: $item, matching: .images)
-    .fullScreenCover(isPresented: $taking) {
+    .fullScreenCover(
+      isPresented: $taking,
+      // Cut once the camera has gone, as one cover cannot open while
+      // another is still closing.
+      onDismiss: {
+        cropping = taken.map { CroppingPhoto(image: $0) }
+        taken = nil
+      }
+    ) {
       CameraPicker { image in
+        taken = image
         taking = false
-        guard let image else { return }
-        cropping = CroppingPhoto(image: image)
       }
       .ignoresSafeArea()
     }

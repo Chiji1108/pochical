@@ -29,6 +29,8 @@ struct PhotoCrop: View {
   private static let maxZoom: CGFloat = 4
   /// The frame's room on either side.
   private static let inset: CGFloat = 16
+  /// The room the title and the buttons take, above and below.
+  private static let bars: CGFloat = 56
 
   @State private var offset = CGSize.zero
   @State private var zoom: CGFloat = 1
@@ -37,7 +39,9 @@ struct PhotoCrop: View {
 
   var body: some View {
     GeometryReader { geometry in
-      let side = geometry.size.width - Self.inset * 2
+      // Square within the screen, leaving the title and the buttons their
+      // room when the phone lies on its side.
+      let side = min(geometry.size.width, geometry.size.height - Self.bars * 2) - Self.inset * 2
       let scale = side / min(image.size.width, image.size.height) * zoom
       ZStack {
         colors.mediaBackground

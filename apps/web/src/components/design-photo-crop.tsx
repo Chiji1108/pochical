@@ -8,6 +8,19 @@ import { PhoneContext } from "./design-sheet";
 
 // How far in a photo can be brought, past filling the circle.
 const maxZoom = 4;
+// How far an arrow key moves the photo, and how much + or − zooms it.
+const keyStep = 16;
+const keyZoom = 1.1;
+// What each key does: across, down and how much to zoom.
+const keySteps = new Map<string, [number, number, number]>([
+  ["+", [0, 0, keyZoom]],
+  ["=", [0, 0, keyZoom]],
+  ["-", [0, 0, 1 / keyZoom]],
+  ["ArrowDown", [0, keyStep, 1]],
+  ["ArrowLeft", [-keyStep, 0, 1]],
+  ["ArrowRight", [keyStep, 0, 1]],
+  ["ArrowUp", [0, -keyStep, 1]],
+]);
 // How much one notch of a mouse wheel zooms.
 const wheelZoom = 0.0015;
 // The circle's room on either side.
@@ -242,6 +255,15 @@ export function PhotoCrop({
               });
             }}
             onPointerMove={onPointerMove}
+            // Arrows move the photo and + or − zoom it, for whoever has
+            // no pointer.
+            onKeyDown={(event) => {
+              const step = keySteps.get(event.key);
+              if (step !== undefined) {
+                event.preventDefault();
+                move(...step);
+              }
+            }}
             onPointerUp={onPointerEnd}
             onWheel={(event: WheelEvent) => {
               move(0, 0, 1 - event.deltaY * wheelZoom);
