@@ -328,7 +328,6 @@ export function MessageLine({
             linked={inviteCode !== undefined || message.link !== undefined}
             mine={mine}
           >
-            {quote}
             <MessageActions
               {...actions}
               onPressAt={(target) => {
@@ -339,50 +338,55 @@ export function MessageLine({
                 return link !== undefined;
               }}
             >
-              <button
-                aria-label={`${member?.name ?? ""}のメッセージ：${plainText(message.text ?? "", mentionName)}。長押しでリアクションと返信`}
-                className={chatStyle.bubbleText}
-                // A tap on a link opens it rather than the
-                // actions, as in the chat apps.
-                onClickCapture={(event) => {
-                  const url = linkAt(event.target);
-                  if (url) {
-                    event.preventDefault();
-                    const code = inviteCodeOf(url);
-                    if (code !== undefined && onInvite) {
-                      onInvite(code);
-                    } else {
-                      openLink(url);
+              {/* The quote is held with the words, a tap on it its own. */}
+              <>
+                {quote}
+                <button
+                  aria-label={`${member?.name ?? ""}のメッセージ：${plainText(message.text ?? "", mentionName)}。長押しでリアクションと返信`}
+                  className={chatStyle.bubbleText}
+                  // A tap on a link opens it rather than the
+                  // actions, as in the chat apps.
+                  onClickCapture={(event) => {
+                    const url = linkAt(event.target);
+                    if (url) {
+                      event.preventDefault();
+                      const code = inviteCodeOf(url);
+                      if (code !== undefined && onInvite) {
+                        onInvite(code);
+                      } else {
+                        openLink(url);
+                      }
+                      return;
                     }
-                    return;
-                  }
-                  // A mention opens that member's profile, as
-                  // their picture does.
-                  const mentioned = members.find(
-                    (other) => !other.me && other.id === mentionAt(event.target)
-                  );
-                  if (mentioned && onMember) {
-                    event.preventDefault();
-                    onMember(mentioned);
-                  }
-                }}
-                type="button"
-              >
-                <FoldedText
-                  // A new function each time, so the words are measured
-                  // again as they change, as when edited.
-                  onFolds={(folds) => {
-                    setFolded(folds);
+                    // A mention opens that member's profile, as
+                    // their picture does.
+                    const mentioned = members.find(
+                      (other) =>
+                        !other.me && other.id === mentionAt(event.target)
+                    );
+                    if (mentioned && onMember) {
+                      event.preventDefault();
+                      onMember(mentioned);
+                    }
                   }}
-                  open={unfolded}
+                  type="button"
                 >
-                  <MessageText
-                    mine={mine}
-                    nameOf={mentionName}
-                    text={message.text}
-                  />
-                </FoldedText>
-              </button>
+                  <FoldedText
+                    // A new function each time, so the words are measured
+                    // again as they change, as when edited.
+                    onFolds={(folds) => {
+                      setFolded(folds);
+                    }}
+                    open={unfolded}
+                  >
+                    <MessageText
+                      mine={mine}
+                      nameOf={mentionName}
+                      text={message.text}
+                    />
+                  </FoldedText>
+                </button>
+              </>
             </MessageActions>
             {folded && !unfolded && (
               <button
@@ -490,6 +494,8 @@ function BubbleQuote({
     <button
       aria-label={`${name}「${summaryOf(quoted, nameOf)}」への返信。返信元を表示`}
       className={chatStyle.bubbleQuote}
+      // Its own click, even from a keyboard (MessageActions).
+      data-part="quote"
       onClick={onJump}
       type="button"
     >

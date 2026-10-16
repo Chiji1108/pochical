@@ -18,43 +18,52 @@ struct LineQuote: Hashable {
 }
 
 /// The quote over a reply's words, in the bubble's own color, over a thin
-/// rule across the bubble.
+/// rule across the bubble. A tap goes to the line; a long press is the
+/// bubble's, as on its words, so it is no Button, which would keep the
+/// press from the bubble.
 struct BubbleQuote: View {
+  /// The bubble's, which knows when it is held.
+  @Environment(\.linkSpots) private var spots
   let quote: LineQuote
   let groupID: String
   let onOpen: () -> Void
 
   var body: some View {
-    Button(action: onOpen) {
-      VStack(alignment: .leading, spacing: 8) {
-        HStack(spacing: 8) {
-          VStack(alignment: .leading, spacing: 2) {
-            if let writer = quote.writer {
-              Text(writer)
-                .font(.caption.weight(.semibold))
-                .opacity(0.85)
-            }
-            Text(quote.words)
-              .font(.footnote)
-              .opacity(0.8)
-              .lineLimit(1)
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 2) {
+          if let writer = quote.writer {
+            Text(writer)
+              .font(.caption.weight(.semibold))
+              .opacity(0.85)
           }
-          if let photo = quote.photo {
-            QuoteThumbnail(photo: photo, groupID: groupID)
-          }
+          Text(quote.words)
+            .font(.footnote)
+            .opacity(0.8)
+            .lineLimit(1)
         }
-        Rectangle()
-          .frame(height: 1)
-          .opacity(0.25)
-          // Across the bubble, past its padding.
-          .padding(.horizontal, -12)
+        if let photo = quote.photo {
+          QuoteThumbnail(photo: photo, groupID: groupID)
+        }
       }
-      .multilineTextAlignment(.leading)
-      .contentShape(.rect)
+      Rectangle()
+        .frame(height: 1)
+        .opacity(0.25)
+        // Across the bubble, past its padding.
+        .padding(.horizontal, -12)
     }
-    .buttonStyle(.plain)
+    .multilineTextAlignment(.leading)
+    .contentShape(.rect)
+    .onTapGesture {
+      // The finger lifting from the press that opened the menu goes
+      // nowhere, as a link's does.
+      if spots?.held != true { onOpen() }
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityAddTraits(.isButton)
     .accessibilityLabel("\(quote.writer ?? "")「\(quote.words)」への返信")
     .accessibilityHint("返信元を表示")
+    .accessibilityAction { onOpen() }
   }
 }
 

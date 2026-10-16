@@ -333,14 +333,17 @@ export function PhotoLine({
         data-part="bubble"
         style={{ width: quoted ? size.width + photoInset * 2 : size.width }}
       >
-        {quote}
         <MessageActions
           {...actions}
           disabled={upload !== undefined}
           keyboardOpens={false}
           onSave={onSave}
         >
-          {open}
+          {/* The quote is held with the photo, a tap on it its own. */}
+          <>
+            {quote}
+            {open}
+          </>
         </MessageActions>
       </span>
       <PhotoViewer
