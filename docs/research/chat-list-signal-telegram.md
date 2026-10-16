@@ -17,7 +17,7 @@ Pochical の iOS チャットは、リンクのプレビュー、ThumbHash、メ
 
 **P1（体験の穴・壊れ方が見える）**
 
-1. **スクロールの根の修正**（領域0）。描画後の補正をやめ、レイアウトの更新の中でアンカー行を保つ。先読みで端末の窓の端に着く前に頼む。すでに別セッションで UICollectionView 化を計画中。
+1. **スクロールの根の修正**（領域0）。描画後の補正をやめ、レイアウトの更新の中でアンカー行を保つ。先読みで端末の窓の端に着く前に頼む。**UICollectionView ＋ ChatLayout（MIT）で作ると決まった**（領域0b）。レイアウトの位置保持、自己サイズの補正、挿入のアニメーション、固定する行（日付）はライブラリが持つ。**ライブラリが持たない**もの（キーボード、入力欄、先読みと読み込みの調停、スクロール先の指定、「ここから新着」、↓ボタン、浮かぶ日付、長押しメニューの位置、VoiceOver のフォーカス移動）は自前で作る。P1 の中で最も大きい作業で、他の項目（下書き、再送の UI など）とは独立に進められる。
 2. **テキスト送信の失敗と再送**（領域2）。写真だけが「失敗→もう一度送る/削除」を持つ。テキストは失敗せずアウトボックスで待つだけで、待機中の行はコピー以外のメニューが無く、取り消しも捨てることもできない。両者とも失敗した行をタップで「再送/削除」にする。待ちが長いときに何も言わない点も詰める。
 3. **下書きの保存**（領域6）。両者とも、チャットごとに本文・返信先・編集中を画面を離れる時とアプリが非アクティブになる時に保存する。Pochical は `@State` のみで、閉じると消える（grep で永続先が見つからず）。小さく作れて効果が大きい。
 4. **フォトビューア**（領域1）。両者とも、ピンチ/ダブルタップのズーム、前後の写真へのスワイプ、元のサムネイルから広がる開閉の動き、下に引いて閉じる、を持つ。Pochical は下に引いて閉じる（背景が薄くなる）までで、ズーム・複数枚・元位置からの遷移が無い。
@@ -309,6 +309,72 @@ Pochical の iOS チャットは、リンクのプレビュー、ThumbHash、メ
 - Signal: `ConversationViewController+Scroll.swift` の `setScrollActionForSizeTransition`（回転時の位置保持）、選択モードの切替アニメーション。`CVComponent` の `measure`（高さの測り方、キャッシュの粒度）。
 - Telegram: `ChatHistoryNavigationButtons`（↓ボタンと未読数）、`ChatMessageTransitionNode`（送信のモーフ）、`docs/chat/corelist-chat-history-backend.md` の「Pin to bottom edge」「Trailing item space」（追従の細部）、`CoreList/docs/plans/2026-07-20-additive-viewport-scroll-design.md`（offset をアニメーションなしで動かさない手口）。
 - どちらも、Pochical のような「SwiftUI のビューをセルに載せる」構成ではないので、**セルの自己サイズ起因のずれ**は参考にならない。ekazaev/ChatLayout（MIT）が最も近い先行例。
+
+---
+
+## 領域0b: ChatLayout（ekazaev/ChatLayout, MIT）との比較
+
+見た版: 2.5.2（2026-09-21）。`ChatLayout/Classes/Core/CollectionViewChatLayout.swift`（約 1,000 行）が本体で、`Model/StateController.swift`（約 1,300 行）が行の大きさと位置を持つ。Example は `Example/ChatLayout/Chat/`。対応は iOS 15〜27、Swift ツールは 6.2 以上（Xcode 26 系が要る）。MIT なので使える。ここでは仕組みを自分の言葉で書く。
+
+### どういう作りか
+
+- **反転しない `UICollectionView` ＋ 自前の `UICollectionViewLayout`**（Signal と同じ選択）。README が「回転しない、`adjustedContentInset` などの標準の動きをそのまま使える」と明言。1 本のレイアウトで、セクション（日付などの区切り）と行を扱う。
+- **自己サイズが前提**（Signal と違う点）。デリゲートの `sizeForItem` で**推定の大きさ**か**確定した大きさ**を返し、確定していない行はセルの `preferredLayoutAttributesFitting` の結果で後から確定する。Signal のような「事前計算して渡す」ことも、確定した大きさを返せばできる。
+- 付属の汎用ビュー（`ContainerCollectionViewCell` など、中身の View を包んで寄せ・幅を整える）は任意。使わなくてよい。
+- 更新は標準の `performBatchUpdates` か diffable データソースのまま。`ChatLayoutDiffableDataSource` は `reconfigureItems` をレイアウトに伝えるための薄い代用品。
+
+### 位置を保つ手口と、それが働く段階
+
+Signal の「`contentOffsetAdjustment` を無効化のコンテキストに入れる」と同じ UIKit の口を、**4 つの段階**で使い分ける。
+
+1. **バッチ更新の最中**（`prepare(forCollectionViewUpdates:)` → `finalizeCollectionViewUpdates`）。挿入・削除・更新を処理して、各行が動いた高さの合計を覚え、更新の終わりに**1 回の補正**（`contentOffsetAdjustment`）を入れる。この補正は `keepContentOffsetAtBottomOnBatchUpdates` が真のときだけ働き、**基準は下端**（画面の下の行を動かさない）。画面より上に行を足す（前のページ）と、見えている行はそのまま留まる。Example の前ページの読み込みも、特別な処理はなくこの経路に乗っている。
+2. **自己サイズが確定したとき**（`invalidationContext(forPreferredLayoutAttributes:withOriginalAttributes:)`）。行の高さが推定から変わったら、**その行が画面の下端より上にある場合だけ**、高さの差ぶん `contentOffsetAdjustment` を入れる。だから、上の行の画像が後から読めて高くなっても、下の見えている行は動かない（下基準）。下の行が育つ分には何もしない。高さの差が丸めて 0 なら無効化しない（往復を止める）。
+3. **位置のスナップショットで復元**（`getContentOffsetSnapshot(from:)` と `restoreContentOffset(with:)`）。「上端（または下端）に一番近い行と、その行の端からの距離」を更新の**前に**取り、更新の**後に**復元する。復元は内部で `layoutIfNeeded` を挟みながら無効化のコンテキストに補正を入れる。Example では**回転と `contentInset`（キーボード）の変化、初期の最下端への配置**で使い、基準は通常は下端（日付の固定行を使う特別な場合だけ上端）。
+4. **アニメーション付きの `bounds` 変化**（`prepare(forAnimatedBoundsChange:)` と `targetContentOffset(forProposedContentOffset:)`）。キーボードや回転で見える高さが変わるとき、高さの差から補正を計算して提案のオフセットに足す。
+
+つまり、**描いたあとに `scrollTo` で戻す手口はどの段階にもない**。Signal と同じく「レイアウトの更新の中」で補正する。
+
+**ただし基準が下端であること**に注意。Pochical の spec には「続きを読む」は行の**上端を留めて下へ伸ばす**とある（`spec/chat.md` の Unread lines and typing）。ライブラリの自己サイズ補正は下基準で、上の行の成長は下の行を固定する（上端が動く）。作者自身も issue #69 で「再読み込みで内容が育つと上が押し上げられるのは正しい挙動。特別な場合は `keepContentOffsetAtBottomOnBatchUpdates` を一時的に切って自分で扱う」と答えている。したがって、前のページを足すことは標準の経路で足りるが、**「続きを読む」（上端を留める）と「ここから新着から開く」は、フラグを切るか、上端のスナップショットを取って復元する**経路を自分で書くことになる。
+
+### 前のページ・フリング
+
+- Example の前ページの読み込み: 上端から見える高さ 1 つ分以内で呼ぶ。**読み込み中は再呼び出しを止める**（読み込みの最中に offset が変わるため、また呼ばれてしまうので）。**ユーザーがスクロール中ならアニメーションなしで入れる**。`scrollViewShouldScrollToTop` で、ステータスバーのタップによる「上端へ」を、上端に着いてから読み込む形にする（Signal の同じ罠への対処と同じ）。
+- 更新のアニメーション中にユーザーが指で触れたら、その更新のアニメーションを打ち切る（空白が見えるのを避ける）。Example の `scrollViewDidScroll`。
+- 減速中に補正が効くか（`contentOffsetAdjustment` が減速を止めないか）の専用の説明は見つからず。**実機で確かめる項目**（共有ノートの計画のリスクと同じ）。
+
+### ライブラリが「持つ」もの
+
+- 位置の保持（上の 1〜4）、挿入・削除のアニメーション（`initialLayoutAttributesForInsertedItem` などのデリゲートで出入りの見た目を決める）、**内容が画面より短いとき下に寄せる**（`keepContentAtBottomOfVisibleArea`）、**固定する行**（`pinningTypeForItem` で `.top` / `.bottom`。Example は**日付の区切りの行を `.top` で固定**している）、行の寄せ（左右）と行間・セクション間の間隔、タイピング表示用の行。
+- 固定する行は、**日付の「行」そのものが画面の上に張り付く**方式（Signal の本物のセルを張り付かせる方式に近い）。Pochical の「浮かぶ日付」は、スクロール中だけ出て止まると消える別の overlay（`floatingDayMs`）なので、**これはそのまま使わず、今の overlay を残す**ほうが仕様に合う。日付の区切りの行を本文に入れるかは別の判断。
+
+### ライブラリが「持たない」もの（自前で作る）
+
+README が明言している: **キーボード**（`contentInset` を自分で更新する）、**入力欄**（Example は第三者の InputBarAccessoryView）。ほかにコードを見て持たないと分かったもの:
+
+- **キーボード**: Example はキーボードの frame 変化を購読して `contentInset.bottom` を更新し、更新の前後に位置のスナップショットを取って復元する。`keyboardDismissMode = .interactive` は普通に使える。Pochical は入力欄が SwiftUI なので、**入力欄の高さ ＝ `contentInset.bottom` の更新**を自前で橋渡しする（Signal の `updateContentInsets`、領域6 の知見：デバウンス、ドラッグ中は何もしない）。
+- **入力欄の高さが変わったとき**: Example の issue #94（入力欄が高くなると一番下へ飛ぶ）は、Example 側の `scrollToBottom` の呼び出しが原因で、削除すると解消した。**自前で下端へ動かす処理を、入力欄の高さ変化に結び付けない**。
+- **吹き出しの形**: Example に Bezier の吹き出し（`BezierMaskedView`）、画像のマスクがあるが、ライブラリ本体にはない。Pochical の既存の SwiftUI の吹き出しをそのまま `UIHostingConfiguration` の中に置く想定なので、影響なし。
+- **長押しメニュー**: ライブラリは何も持たない。Pochical は自前の `MessageActions`（行の位置を `.global` で受ける）を持つ。セルが UICollectionView の中に入ると、外側のスクロールで SwiftUI の `.global` の更新が来ない恐れがある（共有ノートの計画のリスク）。行の位置はセル → ウィンドウの座標変換で与える。
+- **先読みの判断、読み込みの調停（キーボードや長押しメニュー中は待つ）、スクロール先の指定、「ここから新着」の置き方、↓ボタンと未読数、既読の判定**: すべて自前。Example にあるのは最小の版で、Signal のような「着地を待つ」は無い。
+- **ジェスチャ**: Example に `SwipeNotifier`（スワイプ）、`EditNotifier`（編集）があり、スワイプ返信の参考になる（領域4）。ただしライブラリ本体にはない。
+
+### 既知の issue（GitHub、2026-10 時点で open は 0 件）
+
+- **`UIHostingConfiguration` / SwiftUI セル**: 検索で該当する issue は見つからず（SwiftUI 関連は「SwiftUI から使うには」の質問 #65 のみ）。Example の行はすべて UIKit のビューで、**SwiftUI のホスティングセルでの実績は確認できない**。ここは共有ノートの計画のとおり、PR の最初に実機で確かめる項目。自己サイズの往復（2 回に分けて高さが決まる）に対して、ライブラリは「高さの差が丸めて 0 なら無効化しない」を持つので、往復が収束する前提には沿う。
+- **iOS 26 / 27**: #95「対話的なキーボードの引き下げでメインスレッドが固まる」（2026-04、実機の iOS 26.2〜26.4）。作者の調査では、原因は ChatLayout ではなく、Example が使う入力欄 InputBarAccessoryView の**下端を safe area の下端に張る制約**（iOS 26 のバグとの組み合わせ）で、入力欄が「無限のレイアウトのループ」を起こす。safe area の下端への張り方を変えると直る。入力欄側に報告されて close。**教訓**: Pochical の入力欄（SwiftUI）がキーボードの safe area と `contentInset` を行き来して再レイアウトを繰り返さないか、**実機で指を離さず引き下げて確かめる**（シミュレータでは再現しなかった）。README の対応は iOS 15〜27 と書かれている。
+- **#97**（iOS 15〜17 で、下端にいないときの `apply(snapshot)` で最下部へ飛ぶ。iOS 18/26 では起きない）: 再現できないまま close。Pochical の最低 OS は確認が要る（iOS 17 以前を支えるなら、要注意）。
+- **#52, #69**（`keepContentOffsetAtBottomOnBatchUpdates` と `restoreContentOffset` の使い方）: 作者の結論は、`restoreContentOffset` は**アニメーションのループの中では使わない**（コレクションビューを直接いじるため）、キーボードの高さ更新はアニメなしで offset を入れる（WhatsApp も同じ見え方）、**Telegram は UICollectionView ではなく UIScrollView の自前実装で、`CADisplayLink` を使っているだろう**、「Best is the enemy of Good Enough」。この文書の領域0の調査（Telegram の CoreList）と一致する。
+- **#54**: 最初のレイアウトのとき幅が小さい（`viewDidLayoutSubviews` の前にレイアウトが走る）。**最初の表示は `viewDidLayoutSubviews` の後から**。Signal が「幅や safe area が揃うまでリストを隠す」のと同じ理由。
+- **#50**: キーボード表示中に長押しのプレビューを閉じると、キーボードの frame が一瞬間違って届き、リストが揺れる。**長押しメニューの出入りの間は、キーボードの frame 通知を無視する／遅らせる**（Signal が「メニュー表示中は読み込みもインセット更新もしない」のと同じ）。
+- クラッシュ系（#100, #89, #82, #77, #71）はいずれも close。#100 は行の id の取り違え（作者はセクションを使う場合の問題と見て修正リリースを予告）。ほかは詳しく読んでいない。**行の id を一意に保ち、diffable データソースの差分を素直に渡す**こと。更新の種類を「再読み込み」と「挿入/削除」で取り違えるとアニメーションがおかしくなる（README の注意）。
+
+### 判定（Signal・Telegram との比較を踏まえて）
+
+- **採り入れる（ChatLayout を使う）**: 反転しない UICollectionView ＋ 自前レイアウト＋自己サイズ ＋ `contentOffsetAdjustment` による位置の保持という骨組み。Signal と同じ考えを、自己サイズに対応した形で用意してくれる。自前でレイアウトを書くよりも、上の 4 つの段階を一通り扱ってくれる点が大きい（Signal の `ConversationViewLayout` は約 1,150 行、`CollectionViewChatLayout` は約 1,000 行＋`StateController` 1,300 行で、規模は近い）。
+- **自前で足す（ライブラリが持たない）**: 上の「持たない」の全て。特に **(1) 先読みの調停と、キーボード/メニュー中に読み込みの着地を待つ規則（Signal）**、**(2) 上基準の復元（続きを読む・ここから新着から開く）**、**(3) 入力欄の高さ ＝ `contentInset.bottom` とその橋渡し**、**(4) 「ここから新着」とスクロール先の指定（Telegram/Signal の上揃え）**。
+- **変える**: 共有ノートの計画の「アンカーを `.foot` か `.item(id, top)` で持つ」は、ChatLayout では**スナップショット（行と距離）** ＋ **`keepContentOffsetAtBottomOnBatchUpdates`（追従中は真）** の二つに対応する。追従中と前ページの追加は下基準のフラグを真のまま使い、続きを読む・ここから新着から開く、のときは偽にして上基準の復元で扱う、と**モードを切り替える**設計になる。
+- **捨てる**: 自前のレイアウト（約 300 行）を書く案。自己サイズの往復、挿入のアニメーション、回転、固定する行の分まで自前で書くことになるため。
+- **注意**: 対応 OS と Swift のツールのバージョン（Swift 6.2 以上）を Pochical の Xcode と合わせる。`UIHostingConfiguration` の実績は無いので、**最初の PR で、(a) 高さが後から変わる行、(b) 続けて来るページ、(c) 指を離さずキーボードを引き下げる、の 3 つを実機で録画して確かめる**。うまくいかなければ、ライブラリを雛形にして一部を自前で書き換える道がある（MIT）。
 
 ---
 
