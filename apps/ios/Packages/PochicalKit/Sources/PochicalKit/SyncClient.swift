@@ -12,10 +12,10 @@ import SQLiteData
 /// the catch-up and every change after it into the database, and sends the
 /// outbox's edits as they come, which the server's Acked then ends
 /// (Outbox). A group's, open while the group is on screen, takes the
-/// group's values the same way and sends nothing. Each keeps its socket
-/// alive and reconnects after a random wait that doubles with each failed
-/// try, at once when the network comes back; never after a 401 or an
-/// update the server asks for.
+/// group's values the same way and sends the group's chat outbox. Each
+/// keeps its socket alive and reconnects after a random wait that doubles
+/// with each failed try, at once when the network comes back; never after
+/// a 401 or an update the server asks for.
 public actor SyncClient {
   /// Whose DO the socket reaches.
   public enum Peer: Sendable, Equatable {
@@ -161,12 +161,14 @@ public actor SyncClient {
     status = .connecting
   }
 
-  /// Going to the background: the socket stays until the outbox is sent
-  /// and acknowledged, or `stop` (the time the OS gave runs out), so an
-  /// edit made just before reaches the user's other devices and groups
-  /// without waiting for the app to be opened again (Sockets).
+  /// Going to the background, or away from the group: the socket stays
+  /// until its outbox (the user's, or the group's chat outbox) is sent and
+  /// acknowledged, or `stop` (the time the OS gave runs out), so an edit
+  /// made just before reaches the user's other devices and groups without
+  /// waiting for the app to be opened again (Sockets).
   public func finishSending() async {
-    let waiting = (try? await database.read { try Sync.lastWaiting(in: $0) }) ?? nil
+    let waiting =
+      (try? await database.read { [peer] in try Self.lastToSend(to: peer, in: $0) }) ?? nil
     guard waiting != nil, stopped == nil else {
       stop()
       return
@@ -174,8 +176,8 @@ public actor SyncClient {
     if running == nil {
       start()
     }
-    let emptied = Task { [database] in
-      let outbox = ValueObservation.tracking { try Sync.lastWaiting(in: $0) }
+    let emptied = Task { [database, peer] in
+      let outbox = ValueObservation.tracking { try Self.lastToSend(to: peer, in: $0) }
       do {
         for try await last in outbox.values(in: database) where last == nil {
           return
@@ -187,6 +189,14 @@ public actor SyncClient {
     // Not stopped or brought back meanwhile.
     if finishing == emptied {
       stop()
+    }
+  }
+
+  /// The newest edit still to go to `peer`, nil when none is.
+  private static func lastToSend(to peer: Peer, in db: Database) throws -> Int? {
+    switch peer {
+    case .user: try Sync.lastWaiting(in: db)
+    case .group(let groupID): try Chats.lastToSend(of: groupID, in: db)
     }
   }
 

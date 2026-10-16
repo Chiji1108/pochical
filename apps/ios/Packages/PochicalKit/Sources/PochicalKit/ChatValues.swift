@@ -537,6 +537,13 @@ public enum Chats {
     try ChatOutboxRow.where { $0.groupID.eq(groupID) }.order { $0.id.desc() }.fetchOne(db)?.id
   }
 
+  /// The group's newest edit still to be sent, nil when none is; one
+  /// whose photo could not go waits for the member instead.
+  static func lastToSend(of groupID: String, in db: Database) throws -> Int? {
+    try ChatOutboxRow.where { $0.groupID.eq(groupID) && !$0.failed }.order { $0.id.desc() }
+      .fetchOne(db)?.id
+  }
+
   /// The group's waiting edits after `id`, as frames of up to
   /// `editsPerFrame`, and the last one's id.
   static func frames(of groupID: String, after id: Int, in db: Database) throws -> (

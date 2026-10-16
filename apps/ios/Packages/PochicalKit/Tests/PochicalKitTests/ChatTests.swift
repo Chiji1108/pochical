@@ -813,6 +813,23 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   }
 }
 
+@Test func aPhotoThatCouldNotBeSentLeavesNothingToSend() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var photo = Pochical_V1_ChatSend()
+    photo.threadID = groupThread
+    photo.photo.id = "p1"
+    try Chats.edit(.send(photo), in: "g", now: 1, db: db)
+    let waiting = try Chats.lastWaiting(of: "g", in: db)
+    #expect(try Chats.lastToSend(of: "g", in: db) == waiting)
+
+    // It waits for the member, so the socket closes without it.
+    try Chats.fail(try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID, in: db)
+    #expect(try Chats.lastWaiting(of: "g", in: db) == waiting)
+    #expect(try Chats.lastToSend(of: "g", in: db) == nil)
+  }
+}
+
 struct LookVectors: Decodable, Sendable {
   struct Look: Decodable, Sendable {
     let emoji: String
