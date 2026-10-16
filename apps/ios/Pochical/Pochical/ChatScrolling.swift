@@ -41,8 +41,7 @@ final class ChatScroll {
 
   /// The lines seen pushed down by lines coming in or growing above them,
   /// moved back after this layout: asked for during it, the scroll view
-  /// drops it. Pushed again before then (a link's page drawn above), they
-  /// go back by both at once.
+  /// drops it. Pushed again before then, they go back by both at once.
   func pushedDown(by grew: CGFloat) {
     let asked = moveBack != 0
     moveBack += grew

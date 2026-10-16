@@ -485,8 +485,9 @@ private struct FoldsWords: Layout {
 
   /// What the words are offered: the height the cut words take, or any.
   private func offer(_ width: CGFloat?, _ subviews: Subviews) -> ProposedViewSize {
+    guard !open else { return ProposedViewSize(width: width, height: nil) }
     let cut = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil)).height
-    return ProposedViewSize(width: width, height: open ? nil : cut)
+    return ProposedViewSize(width: width, height: cut)
   }
 }
 
