@@ -53,7 +53,7 @@ enum LineAction {
   case decide
   /// Held: its reactions and menu, from where its bubble is, with the
   /// finger that opened them while it stays down, and the link held.
-  case hold(frame: CGRect, finger: HeldFinger?, link: URL?)
+  case hold(spot: LineSpot, finger: HeldFinger?, link: URL?)
 }
 
 /// A line of words: others' on the left with their face and, at the start
@@ -168,7 +168,7 @@ struct LineView: View {
               .stroke(colors.accentBorder, lineWidth: 6)
               .opacity(ringed ? 1 : 0)
           }
-            .heldForActions(lifted: lifted) { act(.hold(frame: $0, finger: $1, link: $2)) }
+            .heldForActions(lifted: lifted) { act(.hold(spot: $0, finger: $1, link: $2)) }
           if !mine { meta }
         }
         if let shifts {

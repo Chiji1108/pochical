@@ -60,8 +60,9 @@ public actor SyncClient {
   /// The server refused a frame's clocks: the outbox takes new ones once
   /// the next Welcome has corrected the device's time.
   private var clockWasAhead = false
-  /// Sending the outbox on the socket open, from its Welcome.
-  private var sending: Task<Void, Never>?
+  /// Sending the outbox on the socket open, from its Welcome, with that
+  /// socket: only its own closing ends it.
+  private var sending: (socket: URLSessionWebSocketTask, task: Task<Void, Never>)?
   /// Waiting for the outbox to empty before closing, in the background.
   private var finishing: Task<Void, Never>?
   public private(set) var stopped: Stop?
@@ -114,7 +115,12 @@ public actor SyncClient {
     finishing?.cancel()
     finishing = nil
     guard stopped == nil, !(running != nil && connected) else { return }
+    // A socket still opening is closed too: cancelling its task does not
+    // end a send or receive waiting on it, and it would stay open beside
+    // the new one.
     running?.cancel()
+    socket?.cancel(with: .goingAway, reason: nil)
+    socket = nil
     tries = 0
     running = Task { await run() }
     paths.pathUpdateHandler = { [weak self] path in
@@ -146,6 +152,8 @@ public actor SyncClient {
     running = nil
     socket?.cancel(with: .goingAway, reason: nil)
     socket = nil
+    sending?.task.cancel()
+    sending = nil
     connected = false
     // What the next socket brings is not taken yet, as when switching to
     // another user.
@@ -240,6 +248,8 @@ public actor SyncClient {
     for (name, values) in try await account.headers() {
       request.setValue(values.joined(separator: ","), forHTTPHeaderField: name)
     }
+    // Started again meanwhile: the new try opens its own.
+    try Task.checkCancellation()
     let socket = session.webSocketTask(with: request)
     self.socket = socket
     socket.resume()
@@ -264,8 +274,10 @@ public actor SyncClient {
     let keepalive = Task { await keepAlive(socket) }
     defer {
       keepalive.cancel()
-      sending?.cancel()
-      sending = nil
+      if sending?.socket === socket {
+        sending?.task.cancel()
+        sending = nil
+      }
     }
     while true {
       let message: URLSessionWebSocketTask.Message
@@ -274,18 +286,22 @@ public actor SyncClient {
       } catch {
         throw Self.refusal(of: socket) ?? error
       }
+      // A socket replaced meanwhile takes nothing more.
+      guard socket === self.socket else { throw CancellationError() }
       switch message {
       case .string(SyncSocket.keepaliveReply):
         lastReplyMs = Self.nowMs()
       case .data(let data):
-        try await take(Pochical_V1_ServerFrame(serializedBytes: data), sentMs: sentMs)
+        try await take(Pochical_V1_ServerFrame(serializedBytes: data), on: socket, sentMs: sentMs)
       default:
         break
       }
     }
   }
 
-  private func take(_ frame: Pochical_V1_ServerFrame, sentMs: Int64) async throws {
+  private func take(
+    _ frame: Pochical_V1_ServerFrame, on socket: URLSessionWebSocketTask, sentMs: Int64
+  ) async throws {
     switch frame.kind {
     case .welcome(let welcome):
       tries = 0
@@ -295,9 +311,9 @@ public actor SyncClient {
       // A group's socket sends its chat outbox; the user's corrects the
       // time and sends theirs.
       guard peer == .user else {
-        sending?.cancel()
-        if let socket, case .group(let groupID) = peer {
-          sending = Task { await sendChatOutbox(of: groupID, on: socket) }
+        sending?.task.cancel()
+        if case .group(let groupID) = peer {
+          sending = (socket, Task { await sendChatOutbox(of: groupID, on: socket) })
         }
         return
       }
@@ -312,10 +328,8 @@ public actor SyncClient {
         try await database.write { db in try Sync.restamp(now: now, in: db) }
         clockWasAhead = false
       }
-      sending?.cancel()
-      if let socket {
-        sending = Task { await sendOutbox(socket) }
-      }
+      sending?.task.cancel()
+      sending = (socket, Task { await sendOutbox(socket) })
     case .changes(let changes):
       try await database.write { [peer] db in
         switch peer {

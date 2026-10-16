@@ -1,4 +1,5 @@
 import { create, fromBinary } from "@bufbuild/protobuf";
+import { chatRules } from "@pochical/design/chat";
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
 import { and, asc, count, eq, gt, isNull } from "drizzle-orm";
@@ -21,6 +22,7 @@ import type {
 } from "./gen/pochical/v1/sync_pb";
 import {
   addPreview,
+  answeredChanges,
   chatChangesAfter,
   chatHead,
   chatPage,
@@ -832,6 +834,8 @@ export class GroupDO extends DurableObject<Env> {
     // The other members, read once for every send in the frame.
     let others: string[] | undefined;
     const photosGone: string[] = [];
+    // The new lines, whose answered lines go out with them.
+    const sent: ChatLine[] = [];
     // Lines sent before their page came, whose page the server reads.
     const pages: {
       threadId: string;
@@ -865,6 +869,7 @@ export class GroupDO extends DurableObject<Env> {
             recount(threadId, readers);
             if (taken.change.kind.case === "chatLine") {
               const line = taken.change.kind.value;
+              sent.push(line);
               const link = pageToRead(edit.kind.value);
               if (link !== undefined) {
                 pages.push({ link, seq: Number(line.seq), threadId, userId });
@@ -897,8 +902,18 @@ export class GroupDO extends DurableObject<Env> {
     if (groupId !== undefined && photosGone.length > 0) {
       this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, photosGone));
     }
-    broadcastChanges(this.ctx, changed, seenBy, (change, reader) =>
-      forReader(this.db, change, reader)
+    // A reply to a line before the chat's latest page, which every device
+    // with the group open holds, goes after that line, so its quote reads
+    // as the line (spec/sync-protocol.md, Chat).
+    const farBack = sent.filter(
+      ({ threadId, replyTo }) =>
+        Number(replyTo) <= chatHead(this.db, threadId) - chatRules.pageSize
+    );
+    broadcastChanges(
+      this.ctx,
+      [...answeredChanges(this.db, farBack), ...changed],
+      seenBy,
+      (change, reader) => forReader(this.db, change, reader)
     );
     this.tellUnread(counted, alerts);
     for (const page of pages) {
