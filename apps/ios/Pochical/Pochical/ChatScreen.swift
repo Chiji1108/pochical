@@ -143,7 +143,7 @@ struct ChatScreen: View {
     // Who is writing now, under the latest line; not someone blocked.
     let writers = typers.keys.filter { !blocked.contains($0) }.sorted()
     ChatLinesView(
-      ids: (state.atStart ? [] : [Self.earlier]) + listed.map(\.id)
+      ids: (state.atStart ? [] : [ChatLinesView.earlier]) + listed.map(\.id)
         + writers.map { "\(Self.typing)\($0)" },
       row: { id in
         AnyView(
@@ -434,8 +434,6 @@ struct ChatScreen: View {
     }
   }
 
-  /// The top of the lines while earlier ones are to come.
-  private static let earlier = "earlier"
   /// Someone writing now's item, by their id.
   private static let typing = "typing-"
 
@@ -444,7 +442,7 @@ struct ChatScreen: View {
     _ id: String, item: ChatItem?, first: String?, names: [String: String], showsTime: Bool
   ) -> some View {
     Group {
-      if id == Self.earlier {
+      if id == ChatLinesView.earlier {
         EarlierLines(scroll: scroll, first: chat.state.lines.first?.seq, ready: opened) {
           await showEarlier()
         }

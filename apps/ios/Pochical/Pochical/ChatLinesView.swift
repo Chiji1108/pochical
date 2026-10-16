@@ -89,6 +89,9 @@ extension EnvironmentValues {
 
 /// The chat's lines, and the composer under them, rising with the keyboard.
 struct ChatLinesView: UIViewControllerRepresentable {
+  /// The top item while earlier lines are to come, which asks for them.
+  static let earlier = "earlier"
+
   /// Every item's id, oldest first.
   let ids: [String]
   let row: (String) -> AnyView
@@ -274,12 +277,22 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     // A page coming in above goes in at once, the lines seen held where
     // they are; lines coming at the foot come in moving, unless motion is
     // reduced.
-    let earlier = old.first.map { new.first != $0 && new.contains($0) } ?? false
+    let earlier = cameAbove(old, in: new)
     let animated = !earlier && !reduceMotion && !userScrolling
     source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
       [weak self] in
       self?.landed()
     }
+  }
+
+  /// Lines new to `new` stand above the first line it keeps from `old`,
+  /// the spinner over the earlier lines aside.
+  private func cameAbove(_ old: [String], in new: [String]) -> Bool {
+    let lines = old.filter { $0 != ChatLinesView.earlier }
+    guard let kept = lines.first(where: new.contains), let at = new.firstIndex(of: kept) else {
+      return false
+    }
+    return new[..<at].contains { $0 != ChatLinesView.earlier && !old.contains($0) }
   }
 
   /// Lines have come in: still following, the foot is kept.
