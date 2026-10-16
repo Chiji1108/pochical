@@ -111,7 +111,7 @@ struct LinesRow: Equatable {
       return known.height
     }
     sizer.rootView = AnyView(
-      LineCellContent(content: row(id), environment: environment, space: LineSpace()))
+      LineCellContent(id: id, content: row(id), environment: environment, space: LineSpace()))
     let height = ceil(
       sizer.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
     heights[id] = (look, width, height)
@@ -236,7 +236,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       let space = cell.space
       cell.measure = { [weak model] width in model?.height(of: id, width: width) ?? 0 }
       cell.contentConfiguration = UIHostingConfiguration {
-        LineCellContent(content: content, environment: environment, space: space)
+        LineCellContent(id: id, content: content, environment: environment, space: space)
       }
       .margins(.all, 0)
     }
@@ -597,12 +597,17 @@ private final class LineCell: UICollectionViewCell {
 
 /// What a cell draws: the chat's item, with the chat's environment.
 private struct LineCellContent: View {
+  /// The item's id: a cell given another item draws it anew, rather than
+  /// changing the one it had into it, which would move the old one's
+  /// parts to the new one's places in animation, out of the cell's height.
+  let id: String
   let content: AnyView
   let environment: EnvironmentValues
   let space: LineSpace
 
   var body: some View {
     content
+      .id(id)
       .frame(maxWidth: .infinity)
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
