@@ -181,6 +181,14 @@ struct ChatScreen: View {
         .padding(.horizontal, 16)
         // Lines shorter than the screen fill it, at its foot.
         .modifier(FillsSeen(scroll: scroll))
+        // A tap off the lines puts the keyboard away, as LINE does; a
+        // tap on a line stays the line's own.
+        .background {
+          Color.clear.contentShape(.rect).onTapGesture {
+            UIApplication.shared.sendAction(
+              #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+          }
+        }
         .modifier(Lifts(scroll: scroll))
         .onAppear { scroller = proxy }
       }
