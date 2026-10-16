@@ -115,13 +115,13 @@ struct PhotoCrop: View {
           CGSize(
             width: base.offset.width * grown + drag.width,
             height: base.offset.height * grown + drag.height),
-          side: side)
+          side: side, zoom: next)
       }
       .onEnded { _ in start = nil }
   }
 
   /// Kept from moving so far an edge of the photo shows inside the frame.
-  private func clamped(_ offset: CGSize, side: CGFloat) -> CGSize {
+  private func clamped(_ offset: CGSize, side: CGFloat, zoom: CGFloat) -> CGSize {
     let scale = side / min(image.size.width, image.size.height) * zoom
     let spareX = (image.size.width * scale - side) / 2
     let spareY = (image.size.height * scale - side) / 2
@@ -138,7 +138,7 @@ struct PhotoCrop: View {
     let origin = CGPoint(
       x: image.size.width / 2 - offset.width / scale - length / 2,
       y: image.size.height / 2 - offset.height / scale - length / 2)
-    let edge = min(length * image.scale, CGFloat(Chat.pictureMaxEdge))
+    let edge = min(length * image.scale, CGFloat(Chat.pictureMaxEdge)).rounded()
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1
     format.opaque = true

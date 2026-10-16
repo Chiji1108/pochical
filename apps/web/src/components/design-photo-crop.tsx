@@ -148,8 +148,8 @@ async function cutPhoto(
 }
 
 // A picked photo to move and zoom inside its frame before it becomes a
-// face or a group's mark, as the platforms' contacts and LINE ask: drag to move, pinch or
-// the wheel to zoom, キャンセル or 選択 at the foot.
+// face or a group's mark, as the platforms' contacts and LINE ask: drag
+// to move, pinch or the wheel to zoom, キャンセル or 選択 at the foot.
 export function PhotoCrop({
   photo,
   shape = "round",
