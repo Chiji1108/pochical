@@ -22,6 +22,7 @@ struct ChatScreen: View {
   /// a moment (spec/chat.md): the lines shown may not be all there is.
   @State private var syncSaid = SyncStatus.current
   @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.openGroupRoute) private var openGroupRoute
   @Dependency(\.defaultDatabase) private var database
   @Fetch private var chat = ChatRequest.Value()
@@ -168,8 +169,11 @@ struct ChatScreen: View {
           Color.clear.frame(height: 0).id(Self.foot)
         }
         .coordinateSpace(.named(Self.lines))
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-          scroll.linesHeight = $0
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { before, now in
+          scroll.linesHeight = now
+          if scroll.lifting, now > before {
+            scroll.lift(by: now - before)
+          }
         }
         .scrollTargetLayout()
         // In from the sides as padding, not content margins, so scrolling
@@ -177,6 +181,7 @@ struct ChatScreen: View {
         .padding(.horizontal, 16)
         // Lines shorter than the screen fill it, at its foot.
         .modifier(FillsSeen(scroll: scroll))
+        .modifier(Lifts(scroll: scroll))
         .onAppear { scroller = proxy }
       }
     }
@@ -443,12 +448,16 @@ struct ChatScreen: View {
     .onChange(of: following) {
       if following { scroll.letGo() }
     }
-    // One's own line just sent shows at the foot, wherever the lines were.
+    // One's own line just sent shows at the foot, wherever the lines were;
+    // already there, the lines slid up to it as it was written (`write`).
     .onChange(of: state.waiting.last?.opID) { _, sent in
-      if sent != nil {
-        following = true
-        toLatest(animated: true)
-      }
+      guard sent != nil else { return }
+      let slid = following && scroll.place.atLatest && !reduceMotion
+      scroll.lifting = false
+      following = true
+      // Slid, the foot is held already; put back without a scroll of its
+      // own should anything have moved it meanwhile.
+      toLatest(animated: !slid)
     }
     .environment(\.openURL, OpenURLAction { open($0) })
     // Leaving the chat takes its open menu with it.
@@ -1361,6 +1370,14 @@ struct ChatScreen: View {
   }
 
   private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
+    // One's own line about to come at the foot: the bottom anchor would
+    // show it at once, the lines jumping up a line. They slide up to it
+    // instead, as the messaging apps send, unless motion is reduced. Asked
+    // for before it is written, as the lines grow before the screen hears
+    // of it.
+    if case .send = kind, following, scroll.place.atLatest, !reduceMotion {
+      scroll.lifting = true
+    }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { db in
       try Chats.edit(kind, in: group.id, now: now, db: db)

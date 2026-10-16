@@ -24,6 +24,23 @@ final class ChatScroll {
   var linesHeight: CGFloat = 0
   /// The height the lines are seen in, between the pins and the composer.
   var seen: CGFloat = 0
+  /// One's own line just sent, at the foot: the lines, grown by it, are
+  /// drawn where they were and slide up to it (`lift`).
+  var lifting = false
+  /// How far below their place the lines are drawn, sliding up to it with
+  /// the curve someone writing comes in on.
+  var lifted: CGFloat = 0
+
+  /// Draws the lines `height` lower, where they were before a line that
+  /// tall came under them, then slides them up to their place.
+  func lift(by height: CGFloat) {
+    lifting = false
+    lifted = height
+    Task { @MainActor in
+      withAnimation { self.lifted = 0 }
+    }
+  }
+
   /// How far the lines are scrolled from their top, set at every frame
   /// and read only to move them, so remaking nothing.
   var offset: CGFloat = 0
@@ -260,6 +277,16 @@ struct KeepsSeenLines: View {
 nonisolated private struct EdgeSpot: Equatable {
   let inLines: CGFloat
   let onScreen: CGFloat
+}
+
+/// The lines drawn below their place while they slide up to one's own line
+/// just sent. Read here, not in the screen, so sliding remakes no line.
+struct Lifts: ViewModifier {
+  let scroll: ChatScroll
+
+  func body(content: Content) -> some View {
+    content.offset(y: scroll.lifted)
+  }
 }
 
 /// The lines, shorter than the room they are seen in, fill it at its foot.
