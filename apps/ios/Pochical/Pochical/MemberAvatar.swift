@@ -75,9 +75,12 @@ struct PhotoEditor<Picture: View>: View {
   var onRemove: (() async -> Void)?
   @State private var picking = false
   @State private var taking = false
-  @State private var item: PhotosPickerItem?
-  /// A photo taken, kept until the camera has closed.
-  @State private var taken: UIImage?
+  /// A photo taken or picked, kept until the camera or the photos have
+  /// gone: a cover opened while another is still closing shows outside
+  /// the safe area, or not at all.
+  @State private var pending: UIImage?
+  /// The camera or the photos are on screen, or still closing.
+  @State private var covered = false
   /// A photo taken or picked, being cut.
   @State private var cropping: CroppingPhoto?
   @State private var busy = false
@@ -88,9 +91,15 @@ struct PhotoEditor<Picture: View>: View {
       // Taking one first, as /design's sheet has it; not on a device
       // without a camera.
       if UIImagePickerController.isSourceTypeAvailable(.camera) {
-        Button("写真を撮る", systemImage: "camera") { taking = true }
+        Button("写真を撮る", systemImage: "camera") {
+          covered = true
+          taking = true
+        }
       }
-      Button("写真を選ぶ", systemImage: "photo.on.rectangle") { picking = true }
+      Button("写真を選ぶ", systemImage: "photo.on.rectangle") {
+        covered = true
+        picking = true
+      }
       if let onUsual {
         Button("いつもの写真に戻す", systemImage: "arrow.uturn.backward") {
           run(onUsual)
@@ -104,18 +113,18 @@ struct PhotoEditor<Picture: View>: View {
     }
     .disabled(busy)
     .frame(maxWidth: .infinity)
-    .photosPicker(isPresented: $picking, selection: $item, matching: .images)
-    .fullScreenCover(
-      isPresented: $taking,
-      // Cut once the camera has gone, as one cover cannot open while
-      // another is still closing.
-      onDismiss: {
-        cropping = taken.map { CroppingPhoto(image: $0) }
-        taken = nil
+    // The system's photos in a sheet of the app's own, as the camera is
+    // in a cover of its own, for onDismiss to say when they have gone.
+    .sheet(isPresented: $picking, onDismiss: uncover) {
+      LibraryPicker { provider in
+        picking = false
+        if let provider { load(provider) }
       }
-    ) {
+      .ignoresSafeArea()
+    }
+    .fullScreenCover(isPresented: $taking, onDismiss: uncover) {
       CameraPicker { image in
-        taken = image
+        pending = image
         taking = false
       }
       .ignoresSafeArea()
@@ -127,20 +136,38 @@ struct PhotoEditor<Picture: View>: View {
         take(cut)
       }
     }
-    .onChange(of: item) { _, picked in
-      guard let picked else { return }
-      item = nil
-      busy = true
-      Task {
+  }
+
+  /// A photo picked, read and turned upright off the main thread, to be
+  /// cut once the photos have gone.
+  private func load(_ provider: NSItemProvider) {
+    busy = true
+    _ = provider.loadDataRepresentation(for: .image) { data, _ in
+      Task { @MainActor in
         defer { busy = false }
-        guard let data = try? await picked.loadTransferable(type: Data.self),
+        guard let data,
           let image = await Task.detached(operation: {
             ChatPhotos.upright(data, maxEdge: Chat.photoMaxEdge)
           }).value
         else { return }
-        cropping = CroppingPhoto(image: UIImage(cgImage: image))
+        pending = UIImage(cgImage: image)
+        cutPending()
       }
     }
+  }
+
+  /// The camera or the photos have gone: a photo already there is cut.
+  private func uncover() {
+    covered = false
+    cutPending()
+  }
+
+  /// Opens the cut for a photo taken or picked, once nothing covers the
+  /// screen.
+  private func cutPending() {
+    guard !covered, let pending else { return }
+    cropping = CroppingPhoto(image: pending)
+    self.pending = nil
   }
 
   /// A photo just cut, encoded off the main thread and sent.
@@ -238,6 +265,39 @@ private struct CameraPicker: UIViewControllerRepresentable {
 
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
       onDone(nil)
+    }
+  }
+}
+
+/// The system's photos, one image to use as a face or a group's mark;
+/// nil when closed without one.
+private struct LibraryPicker: UIViewControllerRepresentable {
+  let onDone: (NSItemProvider?) -> Void
+
+  func makeUIViewController(context: Context) -> PHPickerViewController {
+    var configuration = PHPickerConfiguration()
+    configuration.filter = .images
+    configuration.selectionLimit = 1
+    let picker = PHPickerViewController(configuration: configuration)
+    picker.delegate = context.coordinator
+    return picker
+  }
+
+  func updateUIViewController(_ picker: PHPickerViewController, context: Context) {}
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(onDone: onDone)
+  }
+
+  final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+    let onDone: (NSItemProvider?) -> Void
+
+    init(onDone: @escaping (NSItemProvider?) -> Void) {
+      self.onDone = onDone
+    }
+
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+      onDone(results.first?.itemProvider)
     }
   }
 }
