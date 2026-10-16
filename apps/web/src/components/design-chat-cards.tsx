@@ -401,7 +401,8 @@ export function PhotoLine({
         onOpenChange={setViewing}
         onSave={onSave}
         open={viewing}
-        photo={here ? photo.src : undefined}
+        // Without a blur to wait on, it shows as it comes.
+        photo={here || blur === undefined ? photo.src : undefined}
         whole
       />
     </>

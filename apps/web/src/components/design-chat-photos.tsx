@@ -23,7 +23,7 @@ const thumbHashEdge = 100;
 
 const base64Of = (bytes: Uint8Array) => btoa(String.fromCodePoint(...bytes));
 
-const bytesOf = (base64: string) =>
+export const bytesOf = (base64: string) =>
   Uint8Array.from(atob(base64), (char) => char.codePointAt(0) ?? 0);
 
 // A photo's ThumbHash, as base64: the photo drawn small, at most

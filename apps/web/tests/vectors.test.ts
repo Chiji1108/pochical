@@ -21,6 +21,7 @@ import timeChange from "../../../spec/vectors/time-change.json";
 import together from "../../../spec/vectors/together.json";
 import unread from "../../../spec/vectors/unread.json";
 import widgets from "../../../spec/vectors/widgets.json";
+import { bytesOf } from "../src/components/design-chat-photos";
 import {
   chatKey,
   groupsUnread,
@@ -809,9 +810,6 @@ describe("spec/vectors/reconnect.json", () => {
     });
   }
 });
-
-const bytesOf = (base64: string) =>
-  Uint8Array.from(atob(base64), (char) => char.codePointAt(0) ?? 0);
 
 describe("spec/vectors/thumbhash.json", () => {
   for (const { name, width, height, rgba, thumbHash } of thumbHashes.encode) {
