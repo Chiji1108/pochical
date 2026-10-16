@@ -445,8 +445,7 @@ struct ChatScreen: View {
     let state = chat.state
     // What every line draws by: when it changes, every line is drawn again.
     let common = RowsLook(
-      names: names, faces: faces, meID: meID, blocked: blocked, shownBlocked: shownBlocked,
-      unfolded: unfolded, deleted: deletedIDs, members: cardMembers,
+      names: names, faces: faces, meID: meID, deleted: deletedIDs, members: cardMembers,
       left: Set(chat.writers.filter(\.left).map(\.userID))
     ).hashValue
     let pins = Set(state.pins.map(\.seq))
@@ -466,9 +465,21 @@ struct ChatScreen: View {
       } else if case .waiting(let line, _) = item {
         quote = line.replyTo.map(self.quote(of:))
       }
+      // What the line shows of the person's own choices: its writer
+      // blocked, shown anyway, or opened at 続きを読む.
+      var blockedWriter = false
+      var shownAnyway = false
+      var unfoldedLine = false
+      if case .line(let line, _) = item {
+        blockedWriter = blocked.contains(line.authorID)
+        shownAnyway = shownBlocked.contains(line.seq)
+        unfoldedLine = unfolded.contains(line.opID)
+      }
       let look = RowLook(
         item: item, parted: item.startsRun && item.id != listed.first?.id,
-        showsTime: !timeless.contains(item.id), pinned: pinned, quote: quote, common: common)
+        showsTime: !timeless.contains(item.id), pinned: pinned, quote: quote,
+        blockedWriter: blockedWriter, shownAnyway: shownAnyway, unfolded: unfoldedLine,
+        common: common)
       rows.append(LinesRow(id: item.id, look: AnyHashable(look)))
     }
     for userID in writers {
@@ -1327,9 +1338,6 @@ private struct RowsLook: Hashable {
   let names: [String: String]
   let faces: [String: String]
   let meID: String?
-  let blocked: Set<String>
-  let shownBlocked: Set<Int64>
-  let unfolded: Set<String>
   let deleted: Set<String>
   let members: [GroupMember]
   let left: Set<String>
@@ -1342,6 +1350,9 @@ private struct RowLook: Hashable {
   let showsTime: Bool
   let pinned: Bool
   let quote: LineQuote?
+  let blockedWriter: Bool
+  let shownAnyway: Bool
+  let unfolded: Bool
   let common: Int
 }
 
