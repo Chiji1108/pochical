@@ -319,8 +319,12 @@ export function MessageActions({
               event.stopPropagation();
               return;
             }
-            // A click with no pointer is Enter or Space.
-            if (keyboardOpens && event.detail === 0 && !disabled) {
+            // A click with no pointer is Enter or Space; on a reply's
+            // quote it goes to the line instead.
+            const onQuote =
+              event.target instanceof Element &&
+              event.target.closest("[data-part=quote]") !== null;
+            if (keyboardOpens && event.detail === 0 && !disabled && !onQuote) {
               event.preventDefault();
               event.stopPropagation();
               onOpenChange(true);
