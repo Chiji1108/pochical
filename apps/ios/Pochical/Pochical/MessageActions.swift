@@ -502,7 +502,6 @@ private struct HeldBubble: ViewModifier {
       }
       .gesture(
         HeldPress {
-          links.held = true
           // A link held opens its own menu at once.
           if let link = links.link(at: $0) {
             linkHeld = true
@@ -528,6 +527,9 @@ private struct HeldBubble: ViewModifier {
   /// Opens the menu, the link's when one is held, with the finger that
   /// opened it.
   private func open(link: URL?) {
+    // Only once a menu opens: a tap lifted before it, on a link or a
+    // reply's quote, is still that tap's.
+    links.held = true
     UIImpactFeedbackGenerator(style: .light).impactOccurred()
     let finger = HeldFinger()
     held = finger
