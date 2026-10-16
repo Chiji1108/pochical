@@ -13,7 +13,7 @@ object Chat {
   const val lineGap = 4
   const val linkPreviewAspect = 1.91f
   const val linkPreviewSettleMs = 400
-  const val longPressMs = 250
+  const val longPressMs = 200
   const val maxPins = 5
   const val openMax = 200
   const val pageSize = 50
