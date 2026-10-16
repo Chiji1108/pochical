@@ -711,7 +711,7 @@ struct ChatScreen: View {
       write(.vote(vote))
     case .decide:
       deciding = line
-    case .hold(let frame, let finger, let link):
+    case .hold(let spot, let finger, let link):
       let mine = line.authorID == meID
       let bubble = AnyView(
         LineContent(
@@ -722,12 +722,12 @@ struct ChatScreen: View {
       if let link {
         openActions(
           MessageActionsRequest(
-            lineID: line.opID, frame: frame, mine: mine, bubble: bubble, finger: finger,
+            lineID: line.opID, spot: spot, mine: mine, bubble: bubble, finger: finger,
             actions: linkActions(link, open: { _ = open(link) }, copied: { sayDone("コピーしました") })))
       } else {
         openActions(
           MessageActionsRequest(
-            lineID: line.opID, frame: frame, mine: mine, bubble: bubble,
+            lineID: line.opID, spot: spot, mine: mine, bubble: bubble,
             finger: finger, reactions: line.reactions, meID: meID,
             onReact: { react($0, on: line) },
             onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
@@ -739,13 +739,13 @@ struct ChatScreen: View {
     switch action {
     case .retry:
       unsentPhoto = line
-    case .hold(let frame, let finger, _):
+    case .hold(let spot, let finger, _):
       // Still on its way: nothing but コピー yet, and days have nothing
       // to copy.
       guard line.days.isEmpty, line.photo == nil else { return }
       openActions(
         MessageActionsRequest(
-          lineID: line.opID, frame: frame, mine: true,
+          lineID: line.opID, spot: spot, mine: true,
           bubble: AnyView(
             MessageBubble(
               text: line.text, mine: true, first: startsRun, waiting: true, nameOf: nameOf,
