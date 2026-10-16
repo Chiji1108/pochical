@@ -31,14 +31,29 @@ final class ChatScroll {
   /// the curve someone writing comes in on.
   var lifted: CGFloat = 0
 
+  /// The room changing while one's own line is on its way, as the composer
+  /// empties or the keyboard's candidates go: the bottom anchor would move
+  /// the lines with it, down and then up again to the line. They are drawn
+  /// where they were instead, to slide once.
+  func hold(roomFrom before: CGFloat, to now: CGFloat) {
+    lifted += before - now
+  }
+
   /// Draws the lines `height` lower, where they were before a line that
   /// tall came under them, then slides them up to their place.
   func lift(by height: CGFloat) {
     lifting = false
-    lifted = height
+    lifted += height
     Task { @MainActor in
       withAnimation { self.lifted = 0 }
     }
+  }
+
+  /// No line came after all: the lines go back to their place.
+  func settle() {
+    lifting = false
+    guard lifted != 0 else { return }
+    withAnimation { lifted = 0 }
   }
 
   /// How far the lines are scrolled from their top, set at every frame
