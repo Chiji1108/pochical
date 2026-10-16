@@ -21,15 +21,68 @@ struct MessageAction: Identifiable {
 /// when it lifts. It belongs to the chat's window, where the press began,
 /// so the line follows it there and tells the overlay.
 @MainActor @Observable final class HeldFinger {
+  /// How far it slides before it picks what it is over, as far as UIKit's
+  /// long press lets a finger wander: the menu can come to it rather than
+  /// it to the menu, as the lines move under a still finger.
+  static let slop: CGFloat = 10
+
+  /// Where it was as the menu opened.
+  private let start: CGPoint
   /// Where it is on the screen, once it has moved.
-  var point: CGPoint?
+  var point: CGPoint? {
+    didSet {
+      if let point, hypot(point.x - start.x, point.y - start.y) >= Self.slop { slid = true }
+    }
+  }
+  /// Slid since the menu opened, and so picks what it is over.
+  private(set) var slid = false
   /// Lifted from the screen.
   var lifted = false
+
+  init(at start: CGPoint) {
+    self.start = start
+  }
+}
+
+/// Where the keyboard's top is on the screen while it is up, for a line's
+/// menu to stay over it: the keyboard stays as the menu opens, as LINE
+/// keeps it, and its window stands over the menu's. Watched from the
+/// app's start, as the keyboard may be up before any menu opens.
+@MainActor @Observable final class KeyboardTop {
+  static let shared = KeyboardTop()
+  private(set) var y: CGFloat?
+  private var watching = false
+
+  func watch() {
+    guard !watching else { return }
+    watching = true
+    let center = NotificationCenter.default
+    center.addObserver(
+      forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main
+    ) { note in
+      let end = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+      MainActor.assumeIsolated { self.take(end) }
+    }
+    center.addObserver(
+      forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main
+    ) { _ in
+      MainActor.assumeIsolated { self.y = nil }
+    }
+  }
+
+  private func take(_ end: CGRect?) {
+    guard let end, end.height > 0, end.minY < UIScreen.main.bounds.height else {
+      y = nil
+      return
+    }
+    y = end.minY
+  }
 }
 
 /// Where a held line's bubble is on the screen, kept while its menu is
 /// open: the chat can move under the overlay, as when the keyboard goes
-/// down for it, and the bubble and menu go along.
+/// down for a menu that has no room over it, or lines come in, and the
+/// bubble and menu go along.
 @MainActor @Observable final class LineSpot {
   var frame: CGRect
 
@@ -136,10 +189,12 @@ struct MessageActionsRequest: Identifiable {
 /// A line's long press (/design's MessageActions), as Messages and LINE
 /// draw one: the rest of the screen dims while the line stays bright, the
 /// first reactions in a bar over it with + for any other, and the menu
-/// under it or, with no room there, over the bar (placement(in:)). A tap
+/// under it or, with no room there, over the bar (placement(in:)), all
+/// over the keyboard when it is up and they fit there, as LINE keeps it.
+/// A tap
 /// elsewhere closes it; a pick, by a tap or by the finger that opened it
-/// lifting over one, acts as it closes, as the system's menu does: what
-/// it opens, like the keyboard for 返信, comes in as the menu goes.
+/// sliding onto one and lifting there, acts as it closes, as the system's
+/// menu does: what it opens comes in as the menu goes.
 struct MessageActionsOverlay: View {
   @Environment(\.themeColors) private var colors
   let request: MessageActionsRequest
@@ -195,6 +250,17 @@ struct MessageActionsOverlay: View {
           .opacity(shown ? 1 : 0)
       }
       .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
+      // A keyboard up stays, as LINE keeps it, when all three fit over it
+      // where the bubble is; else it goes for the room it took, and they
+      // go along with the chat as it comes down (a small screen, a tall
+      // line).
+      .onAppear {
+        let (top, bottom) = room(in: proxy.size)
+        if KeyboardTop.shared.y != nil, !fitsInPlace(top: top, bottom: bottom) {
+          UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+      }
       // Going along with the chat as it moves under it.
       .animation(.smooth(duration: 0.3), value: request.frame)
     }
@@ -202,8 +268,13 @@ struct MessageActionsOverlay: View {
     .accessibilityAddTraits(.isModal)
     .accessibilityAction(.escape) { close(nil) }
     .sensoryFeedback(.selection, trigger: underFinger) { _, now in now != nil }
+    // The keyboard stays up over it: typing there goes back to the chat.
+    .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidChangeNotification)) {
+      _ in close(nil)
+    }
     .onChange(of: request.finger?.lifted) { _, lifted in
-      // Lifted over nothing, it stays open for a tap, as a system menu does.
+      // Lifted over nothing, or held still where the menu came to it, it
+      // stays open for a tap, as a system menu does.
       if lifted == true, let target = underFinger {
         pick(target)
       }
@@ -304,14 +375,9 @@ struct MessageActionsOverlay: View {
   /// drawn smaller when they cannot fit, and cut short at its end past
   /// that.
   private func placement(in size: CGSize) -> Placement {
-    let insets = Self.safeInsets
-    let top = insets.top + Self.margin
-    let bottom = size.height - insets.bottom - Self.margin
-    let barSpace = request.reactions == nil ? 0 : Self.barHeight + Self.gap
-    let menuSpace = Self.gap + menuHeight
+    let (top, bottom) = room(in: size)
     let frame = request.frame
-    let stays = frame.minY - barSpace >= top && frame.maxY <= bottom
-    if stays, frame.maxY + menuSpace <= bottom || frame.minY - barSpace - menuSpace >= top {
+    if fitsInPlace(top: top, bottom: bottom) {
       let under = frame.maxY + menuSpace <= bottom
       return Placement(
         edge: request.mine ? .trailing : .leading,
@@ -323,9 +389,9 @@ struct MessageActionsOverlay: View {
         menuY: under ? frame.maxY + Self.gap : frame.minY - barSpace - menuSpace,
         menuUnder: under)
     }
-    let room = max(bottom - top - barSpace - menuSpace, 60)
-    let scale = min(1, max(room / frame.height, Self.leastScale))
-    let bubbleHeight = min(frame.height * scale, room)
+    let space = max(bottom - top - barSpace - menuSpace, 60)
+    let scale = min(1, max(space / frame.height, Self.leastScale))
+    let bubbleHeight = min(frame.height * scale, space)
     var bubbleY = frame.minY
     if bubbleY - barSpace < top {
       bubbleY = top + barSpace
@@ -343,6 +409,25 @@ struct MessageActionsOverlay: View {
       menuY: bubbleY + bubbleHeight + Self.gap,
       menuUnder: true)
   }
+
+  /// What the three may take of the screen: within its safe edges, and
+  /// over the keyboard while it is up.
+  private func room(in size: CGSize) -> (top: CGFloat, bottom: CGFloat) {
+    let insets = Self.safeInsets
+    let bottom = min(size.height - insets.bottom, KeyboardTop.shared.y ?? .infinity)
+    return (insets.top + Self.margin, bottom - Self.margin)
+  }
+
+  /// The bubble stays where it is, with the bar over it and the menu under
+  /// it or over the bar, between `top` and `bottom`.
+  private func fitsInPlace(top: CGFloat, bottom: CGFloat) -> Bool {
+    let frame = request.frame
+    let stays = frame.minY - barSpace >= top && frame.maxY <= bottom
+    return stays && (frame.maxY + menuSpace <= bottom || frame.minY - barSpace - menuSpace >= top)
+  }
+
+  private var barSpace: CGFloat { request.reactions == nil ? 0 : Self.barHeight + Self.gap }
+  private var menuSpace: CGFloat { Self.gap + menuHeight }
 
   /// Where the menu grows from: its corner by the bubble.
   private func menuAnchor(under: Bool) -> UnitPoint {
@@ -369,7 +454,7 @@ struct MessageActionsOverlay: View {
 
   /// The choice under the held finger, if any.
   private var underFinger: Target? {
-    guard let point = request.finger?.point else { return nil }
+    guard let finger = request.finger, finger.slid, let point = finger.point else { return nil }
     return targets.first { $0.value.contains(point) }?.key
   }
 
@@ -463,8 +548,9 @@ private struct MenuRowStyle: ButtonStyle {
 }
 
 /// A window never made the key one, though tapped: the chat's window
-/// keeps the keyboard's field, so a pick that opens the keyboard (返信)
-/// brings it up as the menu goes rather than once its window is away.
+/// keeps the keyboard's field, so the keyboard stays up under a tap on
+/// the menu, and a pick that opens it (返信) brings it up as the menu
+/// goes rather than once its window is away.
 private final class KeylessWindow: UIWindow {
   override var canBecomeKey: Bool { false }
 }
@@ -483,10 +569,6 @@ private final class KeylessWindow: UIWindow {
         .compactMap({ $0 as? UIWindowScene })
         .first(where: { $0.activationState == .foregroundActive })
     else { return }
-    // The keyboard's own window stands over any of the app's, so it goes
-    // first, as a menu over the chat is not typed into.
-    UIApplication.shared.sendAction(
-      #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     let host = UIHostingController(rootView: AnyView(view))
     host.view.backgroundColor = .clear
     let window = KeylessWindow(windowScene: scene)
@@ -555,7 +637,7 @@ private struct HeldBubble: ViewModifier {
         HeldPress { pressing = $0 } onHold: {
           pressing = false
           // A link held opens its own menu instead.
-          open(link: links.link(at: $0))
+          open(link: links.link(at: $0), at: $0)
         } onMove: {
           held?.point = $0
         } onLift: {
@@ -582,13 +664,13 @@ private struct HeldBubble: ViewModifier {
   }
 
   /// Opens the menu, the link's when one is held, with the finger that
-  /// opened it.
-  private func open(link: URL?) {
+  /// opened it, at `point`.
+  private func open(link: URL?, at point: CGPoint) {
     // Only once a menu opens: a tap lifted before it, on a link or a
     // reply's quote, is still that tap's.
     links.held = true
     UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    let finger = HeldFinger()
+    let finger = HeldFinger(at: point)
     held = finger
     onActions(newSpot(), finger, link)
   }
