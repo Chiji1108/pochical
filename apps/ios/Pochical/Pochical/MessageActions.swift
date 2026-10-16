@@ -71,7 +71,7 @@ struct MessageAction: Identifiable {
   }
 
   private func take(_ end: CGRect?) {
-    guard let end, end.height > 0, end.minY < UIScreen.main.bounds.height else {
+    guard let end, end.height > 0 else {
       y = nil
       return
     }
@@ -191,10 +191,9 @@ struct MessageActionsRequest: Identifiable {
 /// first reactions in a bar over it with + for any other, and the menu
 /// under it or, with no room there, over the bar (placement(in:)), all
 /// over the keyboard when it is up and they fit there, as LINE keeps it.
-/// A tap
-/// elsewhere closes it; a pick, by a tap or by the finger that opened it
-/// sliding onto one and lifting there, acts as it closes, as the system's
-/// menu does: what it opens comes in as the menu goes.
+/// A tap elsewhere closes it; a pick, by a tap or by the finger that
+/// opened it sliding onto one and lifting there, acts as it closes, as
+/// the system's menu does: what it opens comes in as the menu goes.
 struct MessageActionsOverlay: View {
   @Environment(\.themeColors) private var colors
   let request: MessageActionsRequest
