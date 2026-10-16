@@ -62,6 +62,7 @@ struct HeldPress: UIGestureRecognizerRepresentable {
     press.minimumPressDuration = Self.duration
     press.delegate = context.coordinator
     let coordinator = context.coordinator
+    coordinator.onPressing = onPressing
     press.onTouched = { coordinator.onPressing($0) }
     return press
   }
