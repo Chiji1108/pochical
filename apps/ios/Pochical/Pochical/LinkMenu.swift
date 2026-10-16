@@ -64,6 +64,24 @@ struct HeldLinksOpenNothing: ViewModifier {
   }
 }
 
+/// A tap on a part of a bubble with its own (a reply's quote, a link's
+/// page), but for the finger lifting from the press that opened the
+/// bubble's menu, as a link's.
+struct TapUnlessHeld: ViewModifier {
+  @Environment(\.linkSpots) private var spots
+  let action: () -> Void
+
+  func body(content: Content) -> some View {
+    content.onTapGesture { if spots?.held != true { action() } }
+  }
+}
+
+extension View {
+  func onTapUnlessHeld(perform action: @escaping () -> Void) -> some View {
+    modifier(TapUnlessHeld(action: action))
+  }
+}
+
 extension EnvironmentValues {
   /// The held bubble's links, which its words note as they are drawn.
   @Entry var linkSpots: LinkSpots?

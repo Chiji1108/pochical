@@ -22,8 +22,6 @@ struct LineQuote: Hashable {
 /// bubble's, as on its words, so it is no Button, which would keep the
 /// press from the bubble.
 struct BubbleQuote: View {
-  /// The bubble's, which knows when it is held.
-  @Environment(\.linkSpots) private var spots
   let quote: LineQuote
   let groupID: String
   let onOpen: () -> Void
@@ -54,11 +52,7 @@ struct BubbleQuote: View {
     }
     .multilineTextAlignment(.leading)
     .contentShape(.rect)
-    .onTapGesture {
-      // The finger lifting from the press that opened the menu goes
-      // nowhere, as a link's does.
-      if spots?.held != true { onOpen() }
-    }
+    .onTapUnlessHeld(perform: onOpen)
     .accessibilityElement(children: .ignore)
     .accessibilityAddTraits(.isButton)
     .accessibilityLabel("\(quote.writer ?? "")「\(quote.words)」への返信")
