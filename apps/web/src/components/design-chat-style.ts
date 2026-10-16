@@ -541,17 +541,24 @@ export const chatStyle = {
     userSelect: "none",
     WebkitTouchCallout: "none",
   }),
-  // A pale photo, like a paper roster, keeps its edge on the ground, and
+  // Where a photo is: its blur (ThumbHash) or grey while it comes. A
+  // pale photo, like a paper roster, keeps its edge on the ground, and
   // inside a reply's bubble the same, so it reads as the photo it is.
-  photoImage: css({
-    bg: "fill.tertiary",
+  photoPlace: css({
+    backgroundSize: "cover",
+    bgColor: "fill.tertiary",
     borderRadius: "lg",
     display: "block",
-    height: "auto",
     maxWidth: "100%",
-    objectFit: "cover",
     outline: "1px solid token(colors.border.default)",
     outlineOffset: "-1px",
+    overflow: "hidden",
+  }),
+  photoImage: css({
+    display: "block",
+    height: "100%",
+    objectFit: "cover",
+    width: "100%",
   }),
   // A photo still coming, its grey breathing so it reads as on its way,
   // not as a photo that is grey.

@@ -8,6 +8,11 @@
 // For information on using the generated types, please see the documentation:
 //   https://github.com/apple/swift-protobuf/
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 import SwiftProtobuf
 
 // If the compiler emits an error on this type, it is because this file
@@ -1888,7 +1893,8 @@ public nonisolated struct Pochical_V1_ChatNotice: Sendable {
 /// A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
 /// group's photos (PUT /v1/groups/{group_id}/photos/{id}) before the line
 /// is sent, and read from there by the group's members. Its size is sent
-/// with it, so the line keeps its place before the photo arrives.
+/// with it, so the line keeps its place before the photo arrives, and its
+/// ThumbHash, so a blur of it shows there meanwhile.
 public nonisolated struct Pochical_V1_ChatPhoto: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1899,6 +1905,11 @@ public nonisolated struct Pochical_V1_ChatPhoto: Sendable {
   public var width: UInt32 = 0
 
   public var height: UInt32 = 0
+
+  /// The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+  /// its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+  /// photo without one, which shows its grey while it comes.
+  public var thumbHash: Data = Data()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1968,78 +1979,84 @@ public nonisolated struct Pochical_V1_ChatEdits: Sendable {
 /// One of a member's edits of a chat, which the group takes in the order it
 /// arrives; lines and their changes need no clock, as the group alone
 /// orders them.
-public nonisolated struct Pochical_V1_ChatEdit: Sendable {
+public nonisolated struct Pochical_V1_ChatEdit: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   /// Unique per edit, as a DayEdit's: a send taken twice is one line.
-  public var opID: String = String()
+  public var opID: String {
+    get {_storage._opID}
+    set {_uniqueStorage()._opID = newValue}
+  }
 
-  public var kind: Pochical_V1_ChatEdit.OneOf_Kind? = nil
+  public var kind: OneOf_Kind? {
+    get {return _storage._kind}
+    set {_uniqueStorage()._kind = newValue}
+  }
 
   public var send: Pochical_V1_ChatSend {
     get {
-      if case .send(let v)? = kind {return v}
+      if case .send(let v)? = _storage._kind {return v}
       return Pochical_V1_ChatSend()
     }
-    set {kind = .send(newValue)}
+    set {_uniqueStorage()._kind = .send(newValue)}
   }
 
   public var change: Pochical_V1_ChatChange {
     get {
-      if case .change(let v)? = kind {return v}
+      if case .change(let v)? = _storage._kind {return v}
       return Pochical_V1_ChatChange()
     }
-    set {kind = .change(newValue)}
+    set {_uniqueStorage()._kind = .change(newValue)}
   }
 
   public var unsend: Pochical_V1_ChatUnsend {
     get {
-      if case .unsend(let v)? = kind {return v}
+      if case .unsend(let v)? = _storage._kind {return v}
       return Pochical_V1_ChatUnsend()
     }
-    set {kind = .unsend(newValue)}
+    set {_uniqueStorage()._kind = .unsend(newValue)}
   }
 
   public var read: Pochical_V1_ChatRead {
     get {
-      if case .read(let v)? = kind {return v}
+      if case .read(let v)? = _storage._kind {return v}
       return Pochical_V1_ChatRead()
     }
-    set {kind = .read(newValue)}
+    set {_uniqueStorage()._kind = .read(newValue)}
   }
 
   public var react: Pochical_V1_ChatReact {
     get {
-      if case .react(let v)? = kind {return v}
+      if case .react(let v)? = _storage._kind {return v}
       return Pochical_V1_ChatReact()
     }
-    set {kind = .react(newValue)}
+    set {_uniqueStorage()._kind = .react(newValue)}
   }
 
   public var pin: Pochical_V1_ChatPin {
     get {
-      if case .pin(let v)? = kind {return v}
+      if case .pin(let v)? = _storage._kind {return v}
       return Pochical_V1_ChatPin()
     }
-    set {kind = .pin(newValue)}
+    set {_uniqueStorage()._kind = .pin(newValue)}
   }
 
   public var vote: Pochical_V1_ChatVote {
     get {
-      if case .vote(let v)? = kind {return v}
+      if case .vote(let v)? = _storage._kind {return v}
       return Pochical_V1_ChatVote()
     }
-    set {kind = .vote(newValue)}
+    set {_uniqueStorage()._kind = .vote(newValue)}
   }
 
   public var decide: Pochical_V1_ChatDecide {
     get {
-      if case .decide(let v)? = kind {return v}
+      if case .decide(let v)? = _storage._kind {return v}
       return Pochical_V1_ChatDecide()
     }
-    set {kind = .decide(newValue)}
+    set {_uniqueStorage()._kind = .decide(newValue)}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -2057,6 +2074,8 @@ public nonisolated struct Pochical_V1_ChatEdit: Sendable {
   }
 
   public init() {}
+
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 /// The member can come on one of a poll's days (行ける), or takes it
@@ -4999,7 +5018,7 @@ nonisolated extension Pochical_V1_ChatNotice.Kind: SwiftProtobuf._ProtoNameProvi
 
 nonisolated extension Pochical_V1_ChatPhoto: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatPhoto"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}width\0\u{1}height\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}width\0\u{1}height\0\u{3}thumb_hash\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5010,6 +5029,7 @@ nonisolated extension Pochical_V1_ChatPhoto: SwiftProtobuf.Message, SwiftProtobu
       case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.width) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.height) }()
+      case 4: try { try decoder.decodeSingularBytesField(value: &self.thumbHash) }()
       default: break
       }
     }
@@ -5025,6 +5045,9 @@ nonisolated extension Pochical_V1_ChatPhoto: SwiftProtobuf.Message, SwiftProtobu
     if self.height != 0 {
       try visitor.visitSingularUInt32Field(value: self.height, fieldNumber: 3)
     }
+    if !self.thumbHash.isEmpty {
+      try visitor.visitSingularBytesField(value: self.thumbHash, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5032,6 +5055,7 @@ nonisolated extension Pochical_V1_ChatPhoto: SwiftProtobuf.Message, SwiftProtobu
     if lhs.id != rhs.id {return false}
     if lhs.width != rhs.width {return false}
     if lhs.height != rhs.height {return false}
+    if lhs.thumbHash != rhs.thumbHash {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5181,171 +5205,209 @@ nonisolated extension Pochical_V1_ChatEdit: SwiftProtobuf.Message, SwiftProtobuf
   public static let protoMessageName: String = _protobuf_package + ".ChatEdit"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_id\0\u{1}send\0\u{1}change\0\u{1}unsend\0\u{1}read\0\u{1}react\0\u{1}pin\0\u{1}vote\0\u{1}decide\0")
 
+  fileprivate class _StorageClass {
+    var _opID: String = String()
+    var _kind: Pochical_V1_ChatEdit.OneOf_Kind?
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _opID = source._opID
+      _kind = source._kind
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.opID) }()
-      case 2: try {
-        var v: Pochical_V1_ChatSend?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .send(let m) = current {v = m}
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._opID) }()
+        case 2: try {
+          var v: Pochical_V1_ChatSend?
+          var hadOneofValue = false
+          if let current = _storage._kind {
+            hadOneofValue = true
+            if case .send(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._kind = .send(v)
+          }
+        }()
+        case 3: try {
+          var v: Pochical_V1_ChatChange?
+          var hadOneofValue = false
+          if let current = _storage._kind {
+            hadOneofValue = true
+            if case .change(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._kind = .change(v)
+          }
+        }()
+        case 4: try {
+          var v: Pochical_V1_ChatUnsend?
+          var hadOneofValue = false
+          if let current = _storage._kind {
+            hadOneofValue = true
+            if case .unsend(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._kind = .unsend(v)
+          }
+        }()
+        case 5: try {
+          var v: Pochical_V1_ChatRead?
+          var hadOneofValue = false
+          if let current = _storage._kind {
+            hadOneofValue = true
+            if case .read(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._kind = .read(v)
+          }
+        }()
+        case 6: try {
+          var v: Pochical_V1_ChatReact?
+          var hadOneofValue = false
+          if let current = _storage._kind {
+            hadOneofValue = true
+            if case .react(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._kind = .react(v)
+          }
+        }()
+        case 7: try {
+          var v: Pochical_V1_ChatPin?
+          var hadOneofValue = false
+          if let current = _storage._kind {
+            hadOneofValue = true
+            if case .pin(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._kind = .pin(v)
+          }
+        }()
+        case 8: try {
+          var v: Pochical_V1_ChatVote?
+          var hadOneofValue = false
+          if let current = _storage._kind {
+            hadOneofValue = true
+            if case .vote(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._kind = .vote(v)
+          }
+        }()
+        case 9: try {
+          var v: Pochical_V1_ChatDecide?
+          var hadOneofValue = false
+          if let current = _storage._kind {
+            hadOneofValue = true
+            if case .decide(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._kind = .decide(v)
+          }
+        }()
+        default: break
         }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .send(v)
-        }
-      }()
-      case 3: try {
-        var v: Pochical_V1_ChatChange?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .change(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .change(v)
-        }
-      }()
-      case 4: try {
-        var v: Pochical_V1_ChatUnsend?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .unsend(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .unsend(v)
-        }
-      }()
-      case 5: try {
-        var v: Pochical_V1_ChatRead?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .read(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .read(v)
-        }
-      }()
-      case 6: try {
-        var v: Pochical_V1_ChatReact?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .react(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .react(v)
-        }
-      }()
-      case 7: try {
-        var v: Pochical_V1_ChatPin?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .pin(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .pin(v)
-        }
-      }()
-      case 8: try {
-        var v: Pochical_V1_ChatVote?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .vote(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .vote(v)
-        }
-      }()
-      case 9: try {
-        var v: Pochical_V1_ChatDecide?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .decide(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .decide(v)
-        }
-      }()
-      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.opID.isEmpty {
-      try visitor.visitSingularStringField(value: self.opID, fieldNumber: 1)
-    }
-    switch self.kind {
-    case .send?: try {
-      guard case .send(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    }()
-    case .change?: try {
-      guard case .change(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case .unsend?: try {
-      guard case .unsend(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-    }()
-    case .read?: try {
-      guard case .read(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-    }()
-    case .react?: try {
-      guard case .react(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-    }()
-    case .pin?: try {
-      guard case .pin(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
-    }()
-    case .vote?: try {
-      guard case .vote(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
-    }()
-    case .decide?: try {
-      guard case .decide(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
-    }()
-    case nil: break
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._opID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._opID, fieldNumber: 1)
+      }
+      switch _storage._kind {
+      case .send?: try {
+        guard case .send(let v)? = _storage._kind else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      }()
+      case .change?: try {
+        guard case .change(let v)? = _storage._kind else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      }()
+      case .unsend?: try {
+        guard case .unsend(let v)? = _storage._kind else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+      }()
+      case .read?: try {
+        guard case .read(let v)? = _storage._kind else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      }()
+      case .react?: try {
+        guard case .react(let v)? = _storage._kind else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+      }()
+      case .pin?: try {
+        guard case .pin(let v)? = _storage._kind else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+      }()
+      case .vote?: try {
+        guard case .vote(let v)? = _storage._kind else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+      }()
+      case .decide?: try {
+        guard case .decide(let v)? = _storage._kind else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+      }()
+      case nil: break
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_ChatEdit, rhs: Pochical_V1_ChatEdit) -> Bool {
-    if lhs.opID != rhs.opID {return false}
-    if lhs.kind != rhs.kind {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._opID != rhs_storage._opID {return false}
+        if _storage._kind != rhs_storage._kind {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

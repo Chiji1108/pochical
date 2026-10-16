@@ -33,6 +33,7 @@ import {
 import { lineWhere, linesOf, reactTo, unsendLine } from "./support-chat";
 import type { SupportLineOf, SupportRow } from "./support-chat";
 import { isEmoji, requireText } from "./text-limits";
+import { fitsThumbHash, keptThumbHash, sentThumbHash } from "./thumb-hash";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
@@ -49,6 +50,7 @@ const messageOf = (line: SupportLineOf) =>
         : {
             height: line.photoHeight ?? 0,
             id: line.photoId,
+            thumbHash: sentThumbHash(line.photoThumbHash),
             width: line.photoWidth ?? 0,
           },
     preview:
@@ -118,17 +120,26 @@ const contentOf = async (
   text: string,
   photo: ChatPhoto | undefined
 ): Promise<
-  Pick<SupportRow, "photoHeight" | "photoId" | "photoWidth" | "text">
+  Pick<
+    SupportRow,
+    "photoHeight" | "photoId" | "photoThumbHash" | "photoWidth" | "text"
+  >
 > => {
   if (photo === undefined) {
     return {
       photoHeight: null,
       photoId: null,
+      photoThumbHash: null,
       photoWidth: null,
       text: requireText(text, textLimits.chatMessage, "text"),
     };
   }
-  if (text !== "" || !isPhotoSide(photo.width) || !isPhotoSide(photo.height)) {
+  if (
+    text !== "" ||
+    !isPhotoSide(photo.width) ||
+    !isPhotoSide(photo.height) ||
+    !fitsThumbHash(photo.thumbHash)
+  ) {
     throw new ConnectError(
       "A photo goes alone, at its size",
       Code.InvalidArgument
@@ -153,6 +164,7 @@ const contentOf = async (
   return {
     photoHeight: photo.height,
     photoId: photo.id,
+    photoThumbHash: keptThumbHash(photo.thumbHash) ?? null,
     photoWidth: photo.width,
     text: "",
   };

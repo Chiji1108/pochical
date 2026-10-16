@@ -57,6 +57,7 @@ import {
   sentPreview,
 } from "./link-preview";
 import { fitsText, isEmoji } from "./text-limits";
+import { fitsThumbHash, keptThumbHash, sentThumbHash } from "./thumb-hash";
 
 // A group's chats as its Group DO keeps them (spec/sync-protocol.md,
 // Chat): lines at their place in each chat (seq) and on the group's change
@@ -203,7 +204,10 @@ const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
             subjectId: row.notice.subjectId ?? "",
           },
     opId: row.opId,
-    photo: row.photo ?? undefined,
+    photo:
+      row.photo === null
+        ? undefined
+        : { ...row.photo, thumbHash: sentThumbHash(row.photo.thumbHash) },
     pinnedOrder: BigInt(row.pinnedAt ?? 0),
     poll: row.poll,
     preview: row.preview ?? undefined,
@@ -365,7 +369,8 @@ const fitsPhoto = (
     uploaded?.userId === userId &&
     !uploaded.sent &&
     fitsPhotoSize(photo.width) &&
-    fitsPhotoSize(photo.height)
+    fitsPhotoSize(photo.height) &&
+    fitsThumbHash(photo.thumbHash)
   );
 };
 
@@ -838,7 +843,12 @@ const takeSend = (
       photo:
         photo === undefined
           ? null
-          : { height: photo.height, id: photo.id, width: photo.width },
+          : {
+              height: photo.height,
+              id: photo.id,
+              thumbHash: keptThumbHash(photo.thumbHash),
+              width: photo.width,
+            },
       poll: send.poll,
       // A page goes with words alone.
       preview: send.text === "" ? null : sentPreview(send.preview, send.text),

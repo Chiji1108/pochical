@@ -612,6 +612,12 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   let shrunk = try #require(ChatPhotos.shrink(out as Data))
   #expect(shrunk.width == 2048)
   #expect(shrunk.height == 683)
+  // Its ThumbHash, landscape and the green it is.
+  let hash = try #require(shrunk.thumbHash)
+  #expect(hash.count <= Chat.photoThumbHashMaxBytes)
+  let blur = try #require(ThumbHash.decode(hash))
+  #expect(blur.width == 32 && blur.height < 32)
+  #expect(abs(Int(blur.rgba[1]) - 128) < 8)
   let source = CGImageSourceCreateWithData(shrunk.jpeg as CFData, nil)!
   let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
   #expect(properties?[kCGImagePropertyGPSDictionary] == nil)

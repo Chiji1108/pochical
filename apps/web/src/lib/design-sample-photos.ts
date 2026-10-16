@@ -1,8 +1,14 @@
 import { weekdayNames } from "../components/design-week";
 
 // A picture sent in a chat, with its size so a line keeps its place
-// before the picture loads; the apps get the size with the upload.
-export type Photo = { src: string; width: number; height: number };
+// before the picture loads, and its ThumbHash (base64), a blur of it to
+// show there meanwhile; the apps make both as they shrink it to send.
+export type Photo = {
+  src: string;
+  width: number;
+  height: number;
+  thumbHash?: string;
+};
 
 const rosterWidth = 800;
 const rosterHeight = 600;
@@ -69,6 +75,8 @@ export function sampleRosterPhoto(): Photo {
   return {
     height: rosterHeight,
     src: `data:image/svg+xml,${encodeURIComponent(svg)}`,
+    // Made from the drawing as photoOf makes a chosen photo's.
+    thumbHash: "eggCBYBniVdjl4lflEdmZYiKcL9X",
     width: rosterWidth,
   };
 }

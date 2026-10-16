@@ -17,9 +17,11 @@ object Chat {
   const val maxPins = 5
   const val openMax = 200
   const val pageSize = 50
+  const val photoFadeMs = 200
   const val photoMaxBytes = 4000000
   const val photoMaxEdge = 2048
   const val photoSmallEdge = 960
+  const val photoThumbHashMaxBytes = 25
   const val photosPerSend = 4
   const val pictureMaxEdge = 640
   const val runGap = 12

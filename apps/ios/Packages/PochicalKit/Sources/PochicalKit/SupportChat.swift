@@ -56,7 +56,7 @@ public struct SupportLine: Hashable, Sendable, Identifiable {
           userIDs: (reaction.mine ? [Self.me] : []) + (reaction.support ? [Self.support] : []))
       },
       photo: wire.hasPhoto
-        ? LinePhoto(id: wire.photo.id, width: Int(wire.photo.width), height: Int(wire.photo.height))
+        ? LinePhoto(wire.photo)
         : nil,
       preview: wire.hasPreview ? LinePreview(wire.preview) : nil)
   }
@@ -90,9 +90,7 @@ extension GroupCalls {
     }
     request.withoutPreview = withoutPreview
     if let photo {
-      request.photo.id = photo.id
-      request.photo.width = UInt32(photo.width)
-      request.photo.height = UInt32(photo.height)
+      request.photo = photo.wire
     }
     let answer = try await support.sendSupportMessage(request: request, headers: account.headers())
       .result.get()

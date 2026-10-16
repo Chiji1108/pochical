@@ -45,6 +45,8 @@ export const chatRules = {
   // each earlier page as it scrolls back. A device catching up gets at
   // most this many new lines of each chat; the rest come as pages.
   pageSize: 50,
+  // How long, in milliseconds, a photo takes to come in over its blur.
+  photoFadeMs: 200,
   // The most bytes one photo may be once shrunk to send; the server
   // refuses a larger one.
   photoMaxBytes: 4_000_000,
@@ -56,6 +58,10 @@ export const chatRules = {
   // pixels, for the chat's lines and quotes to fetch instead of the whole
   // photo: enough for its 220×260pt box at 3x, a panorama cropped too.
   photoSmallEdge: 960,
+  // The most bytes a photo's ThumbHash takes, as the format makes one at
+  // most (an opaque photo's take 24 at most); the server refuses a longer
+  // one.
+  photoThumbHashMaxBytes: 25,
   // The most photos sent at once, each as its own line.
   photosPerSend: 4,
   // A face or a group's photo mark is shrunk further, as it only ever

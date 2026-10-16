@@ -71,6 +71,13 @@
       "when": 1792046943525,
       "tag": "0009_support_previews",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1792075914840,
+      "tag": "0010_support_photo_thumb_hash",
+      "breakpoints": true
     }
   ]
 }

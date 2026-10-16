@@ -430,7 +430,7 @@ public enum Chats {
       Day(votes.day).map { DayVotes(day: $0, userIDs: votes.userIds) }
     }
     row.decidedKey = line.decided
-    row.photo = line.hasPhoto ? linePhoto(line.photo) : nil
+    row.photo = line.hasPhoto ? LinePhoto(line.photo) : nil
     row.preview = line.hasPreview ? LinePreview(line.preview) : nil
     row.hidden = line.hidden
     row.replyTo = line.replyTo == 0 ? nil : Int64(line.replyTo)
@@ -655,7 +655,7 @@ extension Chats {
           WaitingLine(
             opID: edit.opID, text: send.text, madeAtMs: row.madeAtMs,
             days: send.days.compactMap(Day.init), poll: send.poll,
-            photo: send.hasPhoto ? linePhoto(send.photo) : nil,
+            photo: send.hasPhoto ? LinePhoto(send.photo) : nil,
             preview: send.hasPreview ? LinePreview(send.preview) : nil,
             replyTo: send.replyTo == 0 ? nil : Int64(send.replyTo), failed: row.failed))
       case .change(let change) where change.threadID == threadID:
@@ -833,7 +833,7 @@ extension Chats {
       case .send(let send) where send.threadID == threadID:
         waiting = WaitingLine(
           opID: edit.opID, text: send.text, madeAtMs: madeAtMs, days: send.days.compactMap(Day.init),
-          poll: send.poll, photo: send.hasPhoto ? linePhoto(send.photo) : nil,
+          poll: send.poll, photo: send.hasPhoto ? LinePhoto(send.photo) : nil,
           preview: send.hasPreview ? LinePreview(send.preview) : nil,
           replyTo: send.replyTo == 0 ? nil : Int64(send.replyTo))
       default: break
@@ -941,11 +941,6 @@ extension Chats {
       (try Pochical_V1_ChatEdit(serializedBytes: $0.edit), $0.madeAtMs)
     }
   }
-}
-
-/// A photo as the wire carries it.
-func linePhoto(_ photo: Pochical_V1_ChatPhoto) -> LinePhoto {
-  LinePhoto(id: photo.id, width: Int(photo.width), height: Int(photo.height))
 }
 
 /// A line from the app in 全体チャット (spec/chat.md, Notices): what changed

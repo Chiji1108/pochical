@@ -2,6 +2,7 @@ import { chatRules } from "@pochical/design/chat";
 import { X } from "lucide-react";
 import { useContext, useState } from "react";
 import type { Ref } from "react";
+import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash";
 
 import type { Photo } from "../lib/design-sample-photos";
 import { chatStyle } from "./design-chat-style";
@@ -16,14 +17,55 @@ import { srOnly } from "./design-ui";
 // would flood a small group's chat.
 export const maxPhotos = chatRules.photosPerSend;
 
-// A chosen photo with its size, read before it is shown so its line
-// keeps its place; the apps read it while shrinking the photo to send.
+// The longest side a photo is drawn at to make its ThumbHash, the most
+// the format reads.
+const thumbHashEdge = 100;
+
+const base64Of = (bytes: Uint8Array) => btoa(String.fromCodePoint(...bytes));
+
+export const bytesOf = (base64: string) =>
+  Uint8Array.from(atob(base64), (char) => char.codePointAt(0) ?? 0);
+
+// A photo's ThumbHash, as base64: the photo drawn small, at most
+// thumbHashEdge on its longer side; none when it cannot be drawn.
+function thumbHashOf(image: HTMLImageElement): string | undefined {
+  const scale = Math.min(
+    thumbHashEdge / Math.max(image.naturalWidth, image.naturalHeight),
+    1
+  );
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (context === null) {
+    return undefined;
+  }
+  context.drawImage(image, 0, 0, width, height);
+  const { data } = context.getImageData(0, 0, width, height);
+  return base64Of(rgbaToThumbHash(width, height, data));
+}
+
+// The blur a ThumbHash draws, as an image to show where its photo will
+// be while the photo comes.
+export const blurOf = (thumbHash: string) =>
+  thumbHashToDataURL(bytesOf(thumbHash));
+
+// A chosen photo with its size and ThumbHash, read before it is shown so
+// its line keeps its place; the apps make them while shrinking the photo
+// to send.
 export async function photoOf(file: File): Promise<Photo> {
   const src = URL.createObjectURL(file);
   const image = new Image();
   image.src = src;
   await image.decode();
-  return { height: image.naturalHeight, src, width: image.naturalWidth };
+  return {
+    height: image.naturalHeight,
+    src,
+    thumbHash: thumbHashOf(image),
+    width: image.naturalWidth,
+  };
 }
 
 // The box a photo fits in, and how far from square it may be before its

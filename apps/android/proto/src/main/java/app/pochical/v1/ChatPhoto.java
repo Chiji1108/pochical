@@ -10,7 +10,8 @@ package app.pochical.v1;
  * A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
  * group's photos (PUT /v1/groups/{group_id}/photos/{id}) before the line
  * is sent, and read from there by the group's members. Its size is sent
- * with it, so the line keeps its place before the photo arrives.
+ * with it, so the line keeps its place before the photo arrives, and its
+ * ThumbHash, so a blur of it shows there meanwhile.
  * </pre>
  *
  * Protobuf type {@code pochical.v1.ChatPhoto}
@@ -23,6 +24,7 @@ public  final class ChatPhoto extends
     ChatPhotoOrBuilder {
   private ChatPhoto() {
     id_ = "";
+    thumbHash_ = com.google.protobuf.ByteString.EMPTY;
   }
   public static final int ID_FIELD_NUMBER = 1;
   private java.lang.String id_;
@@ -123,6 +125,51 @@ public  final class ChatPhoto extends
     height_ = 0;
   }
 
+  public static final int THUMB_HASH_FIELD_NUMBER = 4;
+  private com.google.protobuf.ByteString thumbHash_;
+  /**
+   * <pre>
+   * The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+   * its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+   * photo without one, which shows its grey while it comes.
+   * </pre>
+   *
+   * <code>bytes thumb_hash = 4 [json_name = "thumbHash"];</code>
+   * @return The thumbHash.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString getThumbHash() {
+    return thumbHash_;
+  }
+  /**
+   * <pre>
+   * The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+   * its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+   * photo without one, which shows its grey while it comes.
+   * </pre>
+   *
+   * <code>bytes thumb_hash = 4 [json_name = "thumbHash"];</code>
+   * @param value The thumbHash to set.
+   */
+  private void setThumbHash(com.google.protobuf.ByteString value) {
+    java.util.Objects.requireNonNull(value);
+  
+    thumbHash_ = value;
+  }
+  /**
+   * <pre>
+   * The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+   * its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+   * photo without one, which shows its grey while it comes.
+   * </pre>
+   *
+   * <code>bytes thumb_hash = 4 [json_name = "thumbHash"];</code>
+   */
+  private void clearThumbHash() {
+
+    thumbHash_ = getDefaultInstance().getThumbHash();
+  }
+
   public static app.pochical.v1.ChatPhoto parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -211,7 +258,8 @@ public  final class ChatPhoto extends
    * A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
    * group's photos (PUT /v1/groups/{group_id}/photos/{id}) before the line
    * is sent, and read from there by the group's members. Its size is sent
-   * with it, so the line keeps its place before the photo arrives.
+   * with it, so the line keeps its place before the photo arrives, and its
+   * ThumbHash, so a blur of it shows there meanwhile.
    * </pre>
    *
    * Protobuf type {@code pochical.v1.ChatPhoto}
@@ -332,6 +380,52 @@ public  final class ChatPhoto extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+     * its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+     * photo without one, which shows its grey while it comes.
+     * </pre>
+     *
+     * <code>bytes thumb_hash = 4 [json_name = "thumbHash"];</code>
+     * @return The thumbHash.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString getThumbHash() {
+      return instance.getThumbHash();
+    }
+    /**
+     * <pre>
+     * The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+     * its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+     * photo without one, which shows its grey while it comes.
+     * </pre>
+     *
+     * <code>bytes thumb_hash = 4 [json_name = "thumbHash"];</code>
+     * @param value The thumbHash to set.
+     * @return This builder for chaining.
+     */
+    public Builder setThumbHash(com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setThumbHash(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The photo's ThumbHash (https://evanw.github.io/thumbhash/), made by
+     * its sender, at most chatRules.photoThumbHashMaxBytes; empty for a
+     * photo without one, which shows its grey while it comes.
+     * </pre>
+     *
+     * <code>bytes thumb_hash = 4 [json_name = "thumbHash"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearThumbHash() {
+      copyOnWrite();
+      instance.clearThumbHash();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatPhoto)
   }
   @java.lang.Override
@@ -351,10 +445,11 @@ public  final class ChatPhoto extends
             "id_",
             "width_",
             "height_",
+            "thumbHash_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
-              "\u0003\u000b";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
+              "\u0003\u000b\u0004\n";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
