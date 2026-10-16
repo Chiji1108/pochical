@@ -102,7 +102,7 @@ struct LinesRow: Equatable {
   /// Where items are measured, apart from the cells: a cell given another
   /// item draws the one it had for a moment, and measured then says that
   /// one's height.
-  private let sizer = LineCell.host()
+  private let sizer = UIHostingController(rootView: AnyView(EmptyView()))
 
   /// The item `id`'s height at `width`, measured once for its look.
   func height(of id: String, width: CGFloat) -> CGFloat {
@@ -235,8 +235,10 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       let environment = model.environment
       let space = cell.space
       cell.measure = { [weak model] width in model?.height(of: id, width: width) ?? 0 }
-      cell.show(
-        LineCellContent(id: id, content: content, environment: environment, space: space))
+      cell.contentConfiguration = UIHostingConfiguration {
+        LineCellContent(id: id, content: content, environment: environment, space: space)
+      }
+      .margins(.all, 0)
     }
     source = ChatLayoutDiffableDataSource(collectionView: lines) { lines, path, id in
       lines.dequeueConfiguredReusableCell(using: registration, for: path, item: id)
@@ -261,7 +263,9 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
     NSLayoutConstraint.activate([
       lines.topAnchor.constraint(equalTo: view.topAnchor),
-      lines.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+      // Ending over the composer, which is opaque: the lines are never
+      // under the home indicator's safe area, which would push a line in.
+      lines.bottomAnchor.constraint(equalTo: composer.view.topAnchor),
       lines.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       lines.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       // The composer on the keyboard, following it as it is pulled down.
@@ -277,9 +281,19 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     ])
   }
 
+  /// The lines seen as the room they are seen in last was, and its height.
+  private var room: (height: CGFloat, kept: ChatLayoutPositionSnapshot?)?
+
+  override func viewWillLayoutSubviews() {
+    super.viewWillLayoutSubviews()
+    // Taken before the room changes (the keyboard, the composer growing).
+    let kept = following ? footSnapshot() : layout.getContentOffsetSnapshot(from: .bottom)
+    room = (lines.bounds.height, kept)
+  }
+
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    fitInsets()
+    fitRoom()
     if !placed, !ids.isEmpty, lines.bounds.height > 0 {
       toLatest()
     }
@@ -376,18 +390,17 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
   }
 
-  /// The composer's room under the lines, and the lines seen kept where
-  /// they are as it changes (the keyboard, the composer growing), but
-  /// under the finger pulling the keyboard down.
-  private func fitInsets() {
-    let bottom = max(0, view.bounds.maxY - composer.view.frame.minY)
+  /// The lines seen kept at the foot of the room they are seen in as it
+  /// changes (the keyboard, the composer growing), as ChatLayout's Example
+  /// keeps them; not under the finger pulling the keyboard down.
+  private func fitRoom() {
     let top = view.safeAreaInsets.top
-    guard lines.contentInset.bottom != bottom || lines.contentInset.top != top else { return }
-    let kept = following ? footSnapshot() : layout.getContentOffsetSnapshot(from: .bottom)
-    let insets = UIEdgeInsets(top: top, left: 0, bottom: bottom, right: 0)
-    lines.contentInset = insets
-    lines.verticalScrollIndicatorInsets = insets
-    if let kept, !userScrolling {
+    if lines.contentInset.top != top {
+      lines.contentInset.top = top
+      lines.verticalScrollIndicatorInsets.top = top
+    }
+    guard let room, room.height != lines.bounds.height else { return }
+    if let kept = room.kept, !userScrolling {
       layout.restoreContentOffset(with: kept)
     }
     seePlace()
@@ -567,29 +580,12 @@ private final class LineCell: UICollectionViewCell {
   let space = LineSpace()
   /// The height of the item it draws, at a width.
   var measure: ((CGFloat) -> CGFloat)?
-  private let host = LineCell.host()
-
-  /// Where a line's SwiftUI is drawn: with no safe area, which a line
-  /// passing the screen's foot would otherwise be in, the home indicator's,
-  /// and push itself in by as it went, out of the height measured for it
-  /// (a content configuration's hosting takes the safe area always).
-  static func host() -> UIHostingController<AnyView> {
-    let host = UIHostingController(rootView: AnyView(EmptyView()))
-    host.safeAreaRegions = []
-    host.view.backgroundColor = .clear
-    return host
-  }
 
   override init(frame: CGRect) {
     super.init(frame: frame)
-    space.view = contentView
-    host.view.frame = contentView.bounds
-    host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    contentView.addSubview(host.view)
-  }
-
-  func show(_ line: some View) {
-    host.rootView = AnyView(line)
+    // The cell itself: a content configuration puts in a content view of
+    // its own, filling the cell.
+    space.view = self
   }
 
   @available(*, unavailable)
