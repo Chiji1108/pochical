@@ -197,9 +197,10 @@ struct LineView: View {
             onReact: { act(.react($0)) })
         }
       }
-      // Room for the tail of a run's first bubble, by the face or the
-      // screen's edge; every line of the run keeps it, so they line up.
-      .padding(mine ? .trailing : .leading, BubbleShape.tailReach)
+      // Room for the tail of a run's first bubble by the face; every line
+      // keeps it, so a run's lines line up. By the screen's edge the tail
+      // reaches into the margin, as LINE's and Messages' do.
+      .padding(.leading, mine ? 0 : BubbleShape.tailReach)
       .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
       .padding(mine ? .leading : .trailing, 40)
     }
@@ -524,7 +525,7 @@ struct BubbleShape: Shape {
   let first: Bool
 
   /// How far past the bubble's frame its tail reaches, which the lines
-  /// keep room for by the face and the screen's edge.
+  /// keep room for by the face.
   static var tailReach: CGFloat { 10 }
 
   nonisolated func path(in rect: CGRect) -> Path {

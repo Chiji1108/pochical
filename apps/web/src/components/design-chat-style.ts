@@ -64,13 +64,12 @@ export const chatStyle = {
       maxWidth: "84%",
       minWidth: 0,
       // Room for the tail of a run's first bubble by the face; every line
-      // keeps it, so a run's lines line up (bubblePath).
+      // keeps it, so a run's lines line up (bubblePath). By the screen's
+      // edge the tail reaches into the margin, as LINE's and Messages' do.
       paddingLeft: "10px",
     },
     variants: {
-      mine: {
-        true: { alignItems: "flex-end", paddingLeft: 0, paddingRight: "10px" },
-      },
+      mine: { true: { alignItems: "flex-end", paddingLeft: 0 } },
     },
   }),
   // What a bubble holds, clipped to its outline (BubbleOutline), which is
