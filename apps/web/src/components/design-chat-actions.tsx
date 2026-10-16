@@ -1,4 +1,5 @@
 import { Popover, Portal } from "@ark-ui/react";
+import { chatRules } from "@pochical/design/chat";
 import {
   CalendarCheck,
   Copy,
@@ -472,9 +473,6 @@ export function MessageActions({
   );
 }
 
-// Held this long, a press counts as a long press.
-const longPressMs = 500;
-
 // A long press on the web, which has no event for one: a timer from the
 // finger going down, dropped when it lifts, leaves or turns into a
 // scroll; a right click (and Android's own long press) opens it too. The
@@ -505,7 +503,7 @@ export function useLongPress(onLongPress: () => void) {
       onPointerDown: () => {
         fired.current = false;
         cancel();
-        timer.current = window.setTimeout(fire, longPressMs);
+        timer.current = window.setTimeout(fire, chatRules.longPressMs);
       },
       onPointerLeave: cancel,
       onPointerUp: cancel,

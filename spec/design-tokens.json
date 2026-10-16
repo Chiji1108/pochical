@@ -10,6 +10,7 @@
     "lineGap": 4,
     "linkPreviewAspect": 1.91,
     "linkPreviewSettleMs": 400,
+    "longPressMs": 250,
     "maxPins": 5,
     "openMax": 200,
     "pageSize": 50,

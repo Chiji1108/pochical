@@ -32,7 +32,8 @@ struct MessageAction: Identifiable {
 /// alongside the chat's scrolling, which would carry the lines away under
 /// the open menu.
 struct HeldPress: UIGestureRecognizerRepresentable {
-  static let duration = 0.35
+  /// How long a line is held before its menu opens (chatRules.longPressMs).
+  static let duration = Double(Chat.longPressMs) / 1000
   /// Where the finger is as the press is held, a moment before the line's
   /// own press opens its menu.
   var onHold: (CGPoint) -> Void = { _ in }
@@ -527,7 +528,7 @@ private struct HeldBubble: ViewModifier {
   /// Opens the menu, the link's when one is held, with the finger that
   /// opened it.
   private func open(link: URL?) {
-    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    UIImpactFeedbackGenerator(style: .light).impactOccurred()
     let finger = HeldFinger()
     held = finger
     onActions(frame, finger, link)
