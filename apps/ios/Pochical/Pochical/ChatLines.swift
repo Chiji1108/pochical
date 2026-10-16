@@ -346,9 +346,6 @@ struct MessageBubble: View {
   /// Its words opened past chatRules.foldLines lines.
   var unfolded = false
   var onUnfold: () -> Void = {}
-  /// Its words' height whole, and as shown: taller whole, they are cut.
-  @State private var wholeHeight: CGFloat = 0
-  @State private var shownHeight: CGFloat = 0
   /// Emoji drawn large grow with the reader's text size, as body does.
   @ScaledMetric(relativeTo: .body) private var emojiSize = CGFloat(Chat.largeEmojiSize)
 
@@ -379,32 +376,21 @@ struct MessageBubble: View {
         BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpenQuote)
           .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
       }
-      VStack(alignment: .leading, spacing: 4) {
-        markedWords
-          .font(.body)
-          .lineSpacing(3)
-          .lineLimit(unfolded ? nil : Chat.foldLines)
-          .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-          .tint(mine ? colors.accentOnFill : colors.accentDefault)
-          .modifier(FindsLinks(spots: linkSpots))
-          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { shownHeight = $0 }
-          // The words whole at the same width, measured, not guessed from
-          // their length (spec/chat.md, Long messages).
-          .background(alignment: .top) {
-            Text(words)
-              .font(.body)
-              .lineSpacing(3)
-              .fixedSize(horizontal: false, vertical: true)
-              .hidden()
-              .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-                wholeHeight = $0
-              }
+      // Whether the words run past chatRules.foldLines is measured in the
+      // same layout that draws them, so a long line has its final height
+      // the first time it is laid out (spec/chat.md, Long messages).
+      FoldsWords(open: unfolded) {
+        Text(words).styledAsWords.lineLimit(Chat.foldLines).hidden()
+        ViewThatFits(in: .vertical) {
+          shownWords
+          VStack(alignment: .leading, spacing: 4) {
+            shownWords.lineLimit(Chat.foldLines)
+            Button("続きを読む", action: onUnfold)
+              .font(.footnote.weight(.semibold))
+              .foregroundStyle(mine ? colors.accentOnFill : colors.accentDefault)
+              .buttonStyle(.plain)
           }
-        if !unfolded, wholeHeight > shownHeight + 1 {
-          Button("続きを読む", action: onUnfold)
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(mine ? colors.accentOnFill : colors.accentDefault)
-            .buttonStyle(.plain)
+          .fixedSize(horizontal: false, vertical: true)
         }
       }
       // An invitation's card takes the place of the one page.
@@ -423,6 +409,15 @@ struct MessageBubble: View {
         in: BubbleShape(mine: mine, first: first)
       )
       .opacity(waiting ? 0.6 : 1)
+  }
+
+  /// The words as drawn in the bubble, their links marked.
+  private var shownWords: some View {
+    markedWords
+      .styledAsWords
+      .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
+      .tint(mine ? colors.accentOnFill : colors.accentDefault)
+      .modifier(FindsLinks(spots: linkSpots))
   }
 
   /// The line's words, its mentions as @ and the name in the name's
@@ -458,6 +453,42 @@ struct MessageBubble: View {
     }
   }
 
+}
+
+extension Text {
+  /// A message's words' type, the same for those drawn and those measured.
+  fileprivate var styledAsWords: some View {
+    font(.body).lineSpacing(3)
+  }
+}
+
+/// A message's words cut at chatRules.foldLines lines with 続きを読む, or
+/// whole, decided while they are laid out: its first view is the words cut
+/// (hidden, measured only), its second a ViewThatFits of the words whole
+/// and the words cut with 続きを読む, offered the height of the cut words,
+/// so the whole words fit there only when nothing is cut. Opened, it is
+/// offered any height. Measuring in a later update instead grew each long
+/// line by 続きを読む a frame after it first showed, moving the lines.
+private struct FoldsWords: Layout {
+  let open: Bool
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    subviews[1].sizeThatFits(offer(proposal.width, subviews))
+  }
+
+  func placeSubviews(
+    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+  ) {
+    subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(width: bounds.width, height: nil))
+    subviews[1].place(at: bounds.origin, proposal: offer(bounds.width, subviews))
+  }
+
+  /// What the words are offered: the height the cut words take, or any.
+  private func offer(_ width: CGFloat?, _ subviews: Subviews) -> ProposedViewSize {
+    guard !open else { return ProposedViewSize(width: width, height: nil) }
+    let cut = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil)).height
+    return ProposedViewSize(width: width, height: cut)
+  }
 }
 
 /// A mention's link in a message's words, which the chat opens as the

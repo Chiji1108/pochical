@@ -41,8 +41,7 @@ final class ChatScroll {
 
   /// The lines seen pushed down by lines coming in or growing above them,
   /// moved back after this layout: asked for during it, the scroll view
-  /// drops it. Pushed again before then, as a page's long lines grow, they
-  /// go back by both at once.
+  /// drops it. Pushed again before then, they go back by both at once.
   func pushedDown(by grew: CGFloat) {
     let asked = moveBack != 0
     moveBack += grew
@@ -226,9 +225,8 @@ struct ScrollsBy: ViewModifier {
 /// An earlier page coming in above the lines, they stay where they were on
 /// the screen, as the messaging apps keep them. The bottom anchor holds
 /// them only at times (not at the top edge, nor for a page coming in just
-/// after the one before was put back, as two do in a fast fling), and the
-/// page's long lines grow a frame later as their 続きを読む is measured.
-/// So the line that was first is watched: whatever comes in or grows above
+/// after the one before was put back, as two do in a fast fling). So the
+/// line that was first is watched: whatever comes in or grows above
 /// it and pushes it down the screen, the lines are moved back by as much.
 struct KeepsSeenLines: View {
   let id: String
