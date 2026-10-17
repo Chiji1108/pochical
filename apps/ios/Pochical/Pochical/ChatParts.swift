@@ -76,3 +76,13 @@ struct DayChip: View {
       .padding(.top, 8)
   }
 }
+
+/// The app's version and the device, as they reach Pochical's people with
+/// each line of the chat with them: ポチカル 1.0・iPhone・iOS 26.0.
+enum AppDevice {
+  static var words: String {
+    let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    let system = UIDevice.current
+    return "ポチカル \(version)・\(system.model)・\(system.systemName) \(system.systemVersion)"
+  }
+}

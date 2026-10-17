@@ -673,8 +673,9 @@ struct ChatScreen: View {
           time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           writerPhoto: faces[line.authorID] ?? "",
-          named: otherID == nil, first: startsRun, waiting: false, names: names,
-          reactions: line.reactions, countedReactions: otherID != nil,
+          appFace: line.authorID == Chat.pochicalMember,
+          named: !ofTwo, first: startsRun, waiting: false, names: names,
+          reactions: line.reactions, countedReactions: ofTwo,
           pinned: chat.state.pins.contains { $0.seq == line.seq }, marks: marks, seq: line.seq,
           meID: meID,
           actions: lineActions)
@@ -1187,6 +1188,12 @@ struct ChatScreen: View {
     notifications.isMuted(threadID, in: place.id)
   }
 
+  /// A chat of two, a one-to-one chat or the chat with Pochical's people:
+  /// no names over the lines, and a reaction's count without faces.
+  private var ofTwo: Bool {
+    otherID != nil || place.group == nil
+  }
+
   /// The other member's name, or the group's (/design's ChatTitle).
   private var title: String {
     otherID.flatMap { names[$0] } ?? place.name
@@ -1528,6 +1535,13 @@ struct ChatScreen: View {
   }
 
   private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
+    var kind = kind
+    // Each line goes with the app's version and the device where the
+    // place keeps them (the support chat's head says so).
+    if place.rules.sendsDevice, case .send(var send) = kind {
+      send.device = AppDevice.words
+      kind = .send(send)
+    }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { db in
       try Chats.edit(kind, in: place.id, now: now, db: db)

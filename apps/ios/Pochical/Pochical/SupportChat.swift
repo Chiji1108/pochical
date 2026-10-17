@@ -383,7 +383,7 @@ struct SupportChatScreen: View {
       Text("使いにくいところ、ほしい機能、不具合のこと。ちょっとしたことでも、気軽に書いてください。返事は数日のうちに、ここに届きます。")
         .font(.subheadline)
         .foregroundStyle(colors.textSecondary)
-      Text("書いたことと一緒に、アプリと端末の情報が届きます。\n\(Self.device)")
+      Text("書いたことと一緒に、アプリと端末の情報が届きます。\n\(AppDevice.words)")
         .font(.caption)
         .foregroundStyle(colors.textTertiary)
     }
@@ -711,7 +711,7 @@ struct SupportChatScreen: View {
           guard going else { return }
         }
         let kept = try await groupCalls.sendSupport(
-          line.text, id: line.id, device: Self.device, replyTo: line.replyTo, photo: line.photo,
+          line.text, id: line.id, device: AppDevice.words, replyTo: line.replyTo, photo: line.photo,
           preview: line.preview, withoutPreview: line.withoutPreview)
         waiting.removeAll { $0.id == line.id }
         lines.append(kept)
@@ -772,13 +772,6 @@ struct SupportChatScreen: View {
     guard let before else { return false }
     return before.fromSupport == line.fromSupport && !before.unsent && !line.unsent
       && line.replyTo == nil
-  }
-
-  /// The app's version and the device, as they reach Pochical's people.
-  private static var device: String {
-    let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-    let system = UIDevice.current
-    return "ポチカル \(version)・\(system.model)・\(system.systemName) \(system.systemVersion)"
   }
 }
 
