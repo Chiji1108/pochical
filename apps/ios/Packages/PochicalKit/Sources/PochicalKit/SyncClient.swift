@@ -21,6 +21,18 @@ public actor SyncClient {
   public enum Peer: Sendable, Equatable {
     case user
     case group(String)
+    /// The user's chat with Pochical's people, kept as a group's chats are.
+    case support
+
+    /// The chats' place the socket reaches, by the id the device keeps its
+    /// chats by; nil for the user's own DO.
+    var placeID: String? {
+      switch self {
+      case .user: nil
+      case .group(let groupID): groupID
+      case .support: ChatPlace.supportID
+      }
+    }
   }
 
   /// Why it stopped trying, for good until the app is signed in again or
@@ -98,6 +110,7 @@ public actor SyncClient {
     switch peer {
     case .user: socket.path = "/v1/me/socket"
     case .group(let groupID): socket.path = "/v1/groups/\(groupID)/socket"
+    case .support: socket.path = "/v1/me/support/socket"
     }
     socketURL = socket.url!
   }
@@ -203,10 +216,8 @@ public actor SyncClient {
 
   /// The newest edit still to go to `peer`, nil when none is.
   private static func lastToSend(to peer: Peer, in db: Database) throws -> Int? {
-    switch peer {
-    case .user: try Sync.lastWaiting(in: db)
-    case .group(let groupID): try Chats.lastToSend(of: groupID, in: db)
-    }
+    guard let placeID = peer.placeID else { return try Sync.lastWaiting(in: db) }
+    return try Chats.lastToSend(of: placeID, in: db)
   }
 
   /// With no network the socket is gone, though the keepalive would take
@@ -267,10 +278,8 @@ public actor SyncClient {
     var hello = Pochical_V1_Hello()
     hello.protocolVersion = Self.protocolVersion
     hello.cursor = try await database.read { [peer] db in
-      switch peer {
-      case .user: try Sync.cursor(in: db)
-      case .group(let groupID): try GroupSync.cursor(of: groupID, in: db)
-      }
+      guard let placeID = peer.placeID else { return try Sync.cursor(in: db) }
+      return try GroupSync.cursor(of: placeID, in: db)
     }
     var frame = Pochical_V1_ClientFrame()
     frame.hello = hello
@@ -322,8 +331,8 @@ public actor SyncClient {
       // time and sends theirs.
       guard peer == .user else {
         sending?.task.cancel()
-        if case .group(let groupID) = peer {
-          sending = (socket, Task { await sendChatOutbox(of: groupID, on: socket) })
+        if let placeID = peer.placeID {
+          sending = (socket, Task { await sendChatOutbox(of: placeID, on: socket) })
         }
         return
       }
@@ -342,24 +351,21 @@ public actor SyncClient {
       sending = (socket, Task { await sendOutbox(socket) })
     case .changes(let changes):
       try await database.write { [peer] db in
-        switch peer {
-        case .user: try Sync.take(changes.changes, in: db)
-        case .group(let groupID): try GroupSync.take(changes.changes, of: groupID, in: db)
-        }
+        guard let placeID = peer.placeID else { return try Sync.take(changes.changes, in: db) }
+        try GroupSync.take(changes.changes, of: placeID, in: db)
       }
       Logger.sync.info("Took \(changes.changes.count) changes")
     case .reset:
       try await database.write { [peer] db in
-        switch peer {
-        case .user: try Sync.reset(in: db)
-        case .group(let groupID): try GroupSync.reset(groupID, in: db)
-        }
+        guard let placeID = peer.placeID else { return try Sync.reset(in: db) }
+        try GroupSync.reset(placeID, in: db)
       }
     case .acked(let acked):
       try await database.write { [peer] db in
-        switch peer {
-        case .user: try OwnValues.acknowledge(acked.opIds, in: db)
-        case .group: try Chats.acknowledge(acked.opIds, in: db)
+        if peer.placeID == nil {
+          try OwnValues.acknowledge(acked.opIds, in: db)
+        } else {
+          try Chats.acknowledge(acked.opIds, in: db)
         }
       }
       Logger.sync.info("\(acked.opIds.count) edits acknowledged")
@@ -370,8 +376,8 @@ public actor SyncClient {
       default: throw ServerRefused(code: error.code, message: error.message)
       }
     case .chatPage(let page):
-      if case .group(let groupID) = peer {
-        try await database.write { db in try Chats.take(page, of: groupID, in: db) }
+      if let placeID = peer.placeID {
+        try await database.write { db in try Chats.take(page, of: placeID, in: db) }
       }
     case .typing(let typing):
       for watcher in typingWatchers.values {
