@@ -197,7 +197,7 @@ struct ChatLinesView: UIViewControllerRepresentable {
 }
 
 final class ChatLinesController: UIViewController, UICollectionViewDelegate,
-  UIGestureRecognizerDelegate
+  UIGestureRecognizerDelegate, ChatLayoutDelegate
 {
   private let scroll: ChatScroll
   private let layout = CollectionViewChatLayout()
@@ -211,12 +211,17 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private var settings: ChatLinesView?
   private var ids: [String] = []
   private var linesLook: LinesLook?
+  /// Motion is reduced: the lines are put where they go, never glided.
+  private var reduceMotion = false
   /// The lines have been put where the chat opens, or moved since.
   private var placed = false
   /// Gliding to the latest, put back on its foot once there.
   private var goingDown = false
   /// Gliding to an item, put back on it exactly once there.
   private var going: (id: String, place: LinePlace)?
+  /// The items coming in at the foot in the update being put in, which
+  /// rise into place from under the lines' foot as the lines slide up.
+  private var risingIn: Set<String> = []
 
   init(scroll: ChatScroll) {
     self.scroll = scroll
@@ -235,6 +240,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     layout.keepContentOffsetAtBottomOnBatchUpdates = true
     layout.keepContentAtBottomOfVisibleArea = true
     layout.processOnlyVisibleItemsOnAnimatedBatchUpdates = false
+    layout.delegate = self
 
     lines.translatesAutoresizingMaskIntoConstraints = false
     lines.backgroundColor = .clear
@@ -343,6 +349,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let look = LinesLook(environment)
     let restyled = linesLook.map { $0 != look } ?? false
     linesLook = look
+    reduceMotion = environment.accessibilityReduceMotion
     let changed = setLines(
       settings.holds ? keeping(settings.rows) : settings.rows, restyled: restyled,
       reduceMotion: environment.accessibilityReduceMotion)
@@ -426,11 +433,13 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let animated = new != old && !earlier && !reduceMotion && !userScrolling
     let held = heldTop.flatMap { redrawn.contains($0.id) ? $0 : nil }
     if held != nil { heldTop = nil }
+    risingIn = animated ? cameBelow(old, in: new) : []
     applying = true
     source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
       [weak self] in
       guard let self else { return }
       applying = false
+      risingIn = []
       if let held, let index = ids.firstIndex(of: held.id) {
         layout.restoreContentOffset(
           with: ChatLayoutPositionSnapshot(
@@ -456,6 +465,36 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       return false
     }
     return new[..<at].contains { $0 != ChatLinesView.earlier && !old.contains($0) }
+  }
+
+  /// The items new to `new` below the last line it keeps from `old`:
+  /// someone writing, kept under them, is passed over, so a line sent
+  /// while they write rises too.
+  private func cameBelow(_ old: [String], in new: [String]) -> Set<String> {
+    let kept = Set(old)
+    var below: Set<String> = []
+    for id in new.reversed() {
+      if !kept.contains(id) {
+        below.insert(id)
+      } else if id.hasPrefix("line-") {
+        break
+      }
+    }
+    return below
+  }
+
+  /// An item coming in at the foot starts a line's height lower, unseen,
+  /// rising into place with the lines as they slide up to it, as a line
+  /// sent comes in in the messaging apps; others fade in, ChatLayout's
+  /// own. The same as it is first asked and as its height is measured.
+  func initialLayoutAttributesForInsertedItem(
+    _ chatLayout: CollectionViewChatLayout, at indexPath: IndexPath,
+    modifying originalAttributes: ChatLayoutAttributes, on state: InitialAttributesRequestType
+  ) {
+    originalAttributes.alpha = 0
+    if indexPath.item < ids.count, risingIn.contains(ids[indexPath.item]) {
+      originalAttributes.center.y += originalAttributes.frame.height
+    }
   }
 
   /// Lines have come in: still following, the foot is kept.
@@ -508,7 +547,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     going = nil
     lines.layoutIfNeeded()
     let target = highest
-    guard animated, abs(target - lines.contentOffset.y) > 1 else {
+    guard animated, !reduceMotion, abs(target - lines.contentOffset.y) > 1 else {
       goingDown = false
       layout.restoreContentOffset(with: foot)
       seePlace()
@@ -531,12 +570,15 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     guard let frame = layout.layoutAttributesForItem(at: path)?.frame else { return }
     let target = min(highest, max(lowest, frame.minY - spot(of: frame, at: place)
       - lines.adjustedContentInset.top - layout.settings.additionalInsets.top))
-    // Far off, it goes at once rather than through all between.
-    guard animated, abs(target - lines.contentOffset.y) > 1,
-      abs(target - lines.contentOffset.y) < seenHeight * 2
-    else {
+    guard animated, !reduceMotion, abs(target - lines.contentOffset.y) > 1 else {
       settle(on: id, at: place)
       return
+    }
+    // From far off, glides the last screen only, as to the latest, rather
+    // than through all between.
+    let away = target - lines.contentOffset.y
+    if abs(away) > seenHeight {
+      lines.contentOffset.y = target - (away > 0 ? seenHeight : -seenHeight)
     }
     going = (id, place)
     lines.setContentOffset(CGPoint(x: lines.contentOffset.x, y: target), animated: true)
@@ -563,6 +605,13 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
           indexPath: path, edge: .top, offset: spot(of: frame, at: place)))
     }
     seePlace()
+    // VoiceOver reads on from the item gone to.
+    if UIAccessibility.isVoiceOverRunning, let index = ids.firstIndex(of: id) {
+      lines.layoutIfNeeded()
+      UIAccessibility.post(
+        notification: .layoutChanged,
+        argument: lines.cellForItem(at: IndexPath(item: index, section: 0)))
+    }
   }
 
   /// The item whose top is put back where it was, below the top of the
@@ -587,7 +636,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let content = layout.collectionViewContentSize.height
     let below = content + inset.bottom - (lines.contentOffset.y + lines.bounds.height)
     let place = ScrollPlace(
-      atLatest: below < 24, away: below > seenHeight / 2, fits: content <= seenHeight + 1)
+      atLatest: below < 24, away: below > seenHeight / 2, fits: content <= seenHeight + 1,
+      unreadBelow: isBelowTop(ChatItem.unread.id))
     let before = scroll.place
     if place != before {
       scroll.place = place
@@ -602,6 +652,16 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     for case let cell as LineCell in lines.visibleCells {
       cell.space.moved()
     }
+  }
+
+  /// The item `id` is laid out, its top below the top of the lines seen.
+  private func isBelowTop(_ id: String) -> Bool {
+    guard let index = ids.firstIndex(of: id),
+      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
+    else { return false }
+    let top = lines.contentOffset.y + lines.adjustedContentInset.top
+      + layout.settings.additionalInsets.top
+    return frame.minY > top + 1
   }
 
   @objc private func tappedOff() {

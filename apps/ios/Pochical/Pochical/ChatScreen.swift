@@ -153,8 +153,7 @@ struct ChatScreen: View {
       composer: AnyView(composer),
       latest: AnyView(
         LatestButton(scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0) {
-          following = true
-          toLatest(animated: true)
+          toLatestOrUnread()
         }),
       ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
       shown: placed, holds: acting != nil, canAskEarlier: opened && !state.atStart,
@@ -950,6 +949,23 @@ struct ChatScreen: View {
         try? await Task.sleep(for: .milliseconds(50))
         scroller.show(ChatItem.unread.id, at: .top)
       }
+    }
+  }
+
+  /// ↓: to ここから新着 first while it is below the top of the screen with
+  /// lines under it still unread, as Signal goes, following again only if
+  /// that is the foot; else to the latest, following it.
+  private func toLatestOrUnread() {
+    let unread = meID.map { chat.state.unread(by: $0) } ?? 0
+    guard scroll.place.unreadBelow, unread > 0 else {
+      following = true
+      toLatest(animated: true)
+      return
+    }
+    Task { @MainActor in
+      scroller.show(ChatItem.unread.id, at: .top, animated: true)
+      try? await Task.sleep(for: .milliseconds(400))
+      if scroll.place.atLatest { following = true }
     }
   }
 
