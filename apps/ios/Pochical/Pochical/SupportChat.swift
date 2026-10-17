@@ -444,17 +444,17 @@ struct SupportChatScreen: View {
             onReact: { react($0, on: line) }, onMoreReactions: { reactingTo = line },
             actions: actions(for: line)))
       }
-    case .openProfile, .retry, .stopSending, .vote, .decide:
+    case .openProfile, .sendAgain, .deleteUnsent, .stopSending, .vote, .decide:
       break
     }
   }
 
   private func act(_ action: LineAction, onWaiting line: Waiting, first: Bool) {
     switch action {
-    case .retry(let source):
-      source?.askNotSent(
-        photo: line.photo != nil, sendAgain: { send(line) }, delete: { delete(line) },
-        closed: {})
+    case .sendAgain:
+      send(line)
+    case .deleteUnsent:
+      delete(line)
     case .stopSending:
       stopSending(line)
     case .hold(let spot, let finger, _):

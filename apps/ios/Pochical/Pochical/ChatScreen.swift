@@ -134,8 +134,9 @@ struct ChatScreen: View {
   @State private var viewing: PhotoViewing?
   /// Long lines opened at 続きを読む, which stay open while the chat is.
   @State private var unfolded: Set<String> = []
-  /// A line not sent, its choices open by its !.
-  @State private var notSent: NotSentChoices?
+  /// Lines not sent being sent again, shown waiting from the tap until the
+  /// outbox read again says so.
+  @State private var sendingAgain: Set<String> = []
   /// Others writing now, each until their typing lapses.
   @State private var typers: [String: Date] = [:]
   /// The line whose reactions and menu are open.
@@ -393,12 +394,9 @@ struct ChatScreen: View {
     .onChange(of: scenePhase) { _, phase in
       if phase != .active { keepDraft() }
     }
-    // A line not sent that is gone, sent after all or deleted elsewhere,
-    // takes its choices with it.
+    // Lines sent again are left to the outbox once it has them waiting.
     .onChange(of: state.waiting.filter(\.failed).map(\.opID)) { _, failed in
-      guard let notSent, !failed.contains(notSent.opID) else { return }
-      notSent.sheet.dismiss(animated: true)
-      self.notSent = nil
+      sendingAgain.formIntersection(failed)
     }
     .photoViewer($viewing, groupID: group.id) { photo in
       await savePhoto(photo, in: group.id, calls: groupCalls)
@@ -588,7 +586,9 @@ struct ChatScreen: View {
       items.append(
         .line(line, startsRun: starts || line.seq == unreadFrom || line.replyTo != nil))
     }
-    for line in state.waiting {
+    for var line in state.waiting {
+      // Sent again: waiting from the tap, before the outbox is read again.
+      if sendingAgain.contains(line.opID) { line.failed = false }
       let starts = startsRun(at: line.madeAtMs, writer: meID)
       items.append(.waiting(line, startsRun: starts || line.replyTo != nil))
     }
@@ -714,7 +714,7 @@ struct ChatScreen: View {
       profileOf = ProfileOf(
         id: line.authorID, name: names[line.authorID] ?? "メンバー",
         photoID: faces[line.authorID] ?? "")
-    case .retry, .stopSending:
+    case .sendAgain, .deleteUnsent, .stopSending:
       break
     case .react(let emoji):
       react(emoji, on: line)
@@ -754,8 +754,10 @@ struct ChatScreen: View {
 
   private func act(_ action: LineAction, onWaiting line: WaitingLine, startsRun: Bool) {
     switch action {
-    case .retry(let source):
-      askNotSent(line, from: source)
+    case .sendAgain:
+      sendAgain(line)
+    case .deleteUnsent:
+      deleteUnsent(line)
     case .stopSending:
       stopSending(line)
     case .hold(let spot, let finger, _):
@@ -801,15 +803,6 @@ struct ChatScreen: View {
     withAnimation { draft.photos = [] }
   }
 
-  /// もう一度送る or 削除 for a line not sent, pointing at its !.
-  private func askNotSent(_ line: WaitingLine, from source: LineSource?) {
-    guard let source else { return }
-    let sheet = source.askNotSent(
-      photo: line.photo != nil, sendAgain: { sendAgain(line) }, delete: { deleteUnsent(line) },
-      closed: { notSent = nil })
-    notSent = NotSentChoices(opID: line.opID, sheet: sheet)
-  }
-
   /// Stops a line's photo going up: the line is not sent, its ! offering
   /// もう一度送る and 削除 (spec/chat.md, Photos).
   private func stopSending(_ line: WaitingLine) {
@@ -822,7 +815,12 @@ struct ChatScreen: View {
   /// Sends a line not sent once more, after the rest, as if written now.
   private func sendAgain(_ line: WaitingLine) {
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    try? database.write { try Chats.sendAgain(line.opID, now: now, in: $0) }
+    sendingAgain.insert(line.opID)
+    do {
+      try database.write { try Chats.sendAgain(line.opID, now: now, in: $0) }
+    } catch {
+      sendingAgain.remove(line.opID)
+    }
   }
 
   /// Deletes a line not sent, and the photo kept on the device for it.
@@ -1578,8 +1576,3 @@ private struct ReadsSeen: View {
   }
 }
 
-/// A line not sent and its choices, open by its !.
-private struct NotSentChoices {
-  let opID: String
-  let sheet: UIAlertController
-}
