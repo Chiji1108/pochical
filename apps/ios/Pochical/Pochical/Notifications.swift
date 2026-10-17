@@ -262,6 +262,8 @@ struct Replies {
   let account: Account
   let database: any DatabaseWriter
   let sockets: GroupSockets
+  /// The user's socket, for the counts after the read.
+  let userSocket: SyncClient
 
   /// Sends what waits in the group's outbox on the group's socket, held
   /// open until it is sent or the task is cancelled (the time iOS gives
@@ -271,8 +273,25 @@ struct Replies {
     let (_, hold) = await sockets.open(groupID, account: account, database: database)
     await Chats.untilSent(of: groupID, in: database)
     await sockets.close(hold, of: groupID)
-    if UIApplication.shared.applicationState == .background {
-      await sockets.finishSending()
-    }
+    guard UIApplication.shared.applicationState == .background else { return }
+    await sockets.finishSending()
+    await badgeAfterRead()
   }
+
+  /// The app icon's badge as the read leaves it: the user's socket, closed
+  /// in the background, brings the counts the read changed, as the app
+  /// in front shows them (RootView).
+  private func badgeAfterRead() async {
+    await userSocket.start()
+    await userSocket.catchUp(within: .seconds(Self.catchUpMost))
+    await userSocket.finishSending()
+    guard let me = widgetMeID(),
+      let counts = try? await database.read({ db in try Chats.unreadByGroup(me: me, db: db) })
+    else { return }
+    try? await UNUserNotificationCenter.current().setBadgeCount(counts.values.reduce(0, +))
+  }
+
+  /// How long the counts may take to come, in seconds, before the badge
+  /// is set from those the device has.
+  private static let catchUpMost = 5
 }

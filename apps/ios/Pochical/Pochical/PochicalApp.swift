@@ -36,7 +36,7 @@ struct PochicalApp: App {
     groupCalls = GroupCalls(account: account)
     Notifications.shared.groupCalls = groupCalls
     Notifications.shared.replies = Replies(
-      account: account, database: database, sockets: groupSockets)
+      account: account, database: database, sockets: groupSockets, userSocket: sync)
     KeyboardTop.shared.watch()
   }
 
