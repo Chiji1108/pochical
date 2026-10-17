@@ -209,30 +209,6 @@ struct LinesRow: Equatable {
   }
 }
 
-/// The composer as the chat hosts it: as tall as it needs, standing on its
-/// foot whatever height its view has for a moment, so the field stays on
-/// the keyboard as a bar over it grows in or shrinks away; telling the chat
-/// each time its height changes, with the animation it changes by.
-private struct HostedComposer: View {
-  let composer: AnyView
-  let resized: (Animation?) -> Void
-  @State private var last = LastAnimation()
-
-  var body: some View {
-    composer
-      .transaction { last.animation = $0.animation }
-      .fixedSize(horizontal: false, vertical: true)
-      .onGeometryChange(for: CGFloat.self, of: \.size.height) { _ in resized(last.animation) }
-      .frame(minHeight: 0, maxHeight: .infinity, alignment: .bottom)
-  }
-}
-
-/// The animation of the composer's last change, read as its height
-/// changes; not state, which drawing it again would follow.
-private final class LastAnimation {
-  var animation: Animation?
-}
-
 /// What of the chat screen's environment changes how every line is drawn.
 private struct LinesLook: Equatable {
   let colors: ThemeColors
@@ -262,6 +238,9 @@ struct ChatLinesView: UIViewControllerRepresentable {
   let rows: [LinesRow]
   let row: (String) -> AnyView
   let composer: AnyView
+  /// What is over the composer's field: as it changes, the lines and the ↓
+  /// make room by the change's own animation.
+  var composerBars = ComposerBars()
   /// The ↓ to the latest, over the composer's right.
   let latest: AnyView
   /// The composer's ground, carried down under the home indicator.
@@ -305,7 +284,11 @@ struct ChatLinesView: UIViewControllerRepresentable {
 
   func updateUIViewController(_ controller: ChatLinesController, context: Context) {
     proxy.controller = controller
+    let barsChanged = controller.settings.map { $0.composerBars != composerBars } ?? false
     controller.update(self, environment: context.environment)
+    if barsChanged {
+      controller.composerChanged { context.animate(changes: $0) }
+    }
   }
 
   /// The chat has gone: whatever waits to be told the lines are in place
@@ -327,7 +310,10 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private let latest = UIHostingController(rootView: AnyView(EmptyView()))
   /// Under the composer to the screen's foot.
   private let ground = UIView()
-  private var settings: ChatLinesView?
+  /// The ↓ on the lines' room, over the composer: moved with the lines'
+  /// inset rather than tied to the composer, which takes its height at once.
+  private lazy var latestFoot = latest.view.bottomAnchor.constraint(equalTo: lines.bottomAnchor)
+  private(set) var settings: ChatLinesView?
   private var ids: [String] = []
   private var linesLook: LinesLook?
   /// Motion is reduced: the lines are put where they go, never glided.
@@ -457,15 +443,15 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       ground.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       ground.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       latest.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      latest.view.bottomAnchor.constraint(equalTo: composer.view.topAnchor),
+      latestFoot,
     ])
   }
 
   /// The lines seen as the room they are seen in last was, and its height.
   private var room: (height: CGFloat, kept: ChatLayoutPositionSnapshot?)?
-  /// What changed the composer's height animates by, while the room
-  /// changes for it.
-  private var composerAnimation: Animation?
+  /// The composer is taking its new height, the room for the lines made
+  /// after it (composerChanged).
+  private var composerResizing = false
 
   /// The lines' room: over the composer.
   private var roomHeight: CGFloat { lines.bounds.height - lines.contentInset.bottom }
@@ -490,10 +476,13 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     self.settings = settings
     model.environment = environment
     model.row = settings.row
+    // As tall as it needs, standing on its foot whatever height its view
+    // has for a moment, so the field stays on the keyboard as a bar over it
+    // grows in or shrinks away.
     composer.rootView = AnyView(
-      HostedComposer(composer: AnyView(settings.composer.environment(\.self, environment))) {
-        [weak self] animation in self?.composerResized(by: animation)
-      })
+      settings.composer.environment(\.self, environment)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(minHeight: 0, maxHeight: .infinity, alignment: .bottom))
     latest.rootView = AnyView(settings.latest.environment(\.self, environment))
     ground.backgroundColor = UIColor(settings.ground)
     layout.keepContentAtBottomOfVisibleArea = !settings.fewAtTop
@@ -669,25 +658,24 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
   }
 
-  /// The composer's height changed, a bar over the field coming or going:
-  /// its view is fitted to it at once, the composer standing on its foot
-  /// as the bar grows in or shrinks away in it, and the lines move by the
-  /// same animation behind it, as in Messages. Its view moving with the
-  /// lines instead, by UIKit's animation, would carry the field along
-  /// whenever SwiftUI's own started a frame apart.
-  private func composerResized(by animation: Animation?) {
-    composer.view.invalidateIntrinsicContentSize()
+  /// The bars over the composer's field changed, by `animate` (the
+  /// change's own animation): the composer takes its height at once, its
+  /// field staying put as the bar grows in or shrinks away in it, and the
+  /// lines and the ↓ make room by the same animation, as in Messages.
+  func composerChanged(animate: (() -> Void) -> Void) {
     guard view.window != nil else { return }
-    composerAnimation = animation
-    let latestWas = latest.view.frame.minY
-    view.setNeedsLayout()
-    view.layoutIfNeeded()
-    composerAnimation = nil
-    // The ↓ over the composer moves with the lines, from where it was.
-    let moved = latestWas - latest.view.frame.minY
-    if let animation, moved != 0 {
-      latest.view.transform = CGAffineTransform(translationX: 0, y: moved)
-      UIView.animate(animation) { self.latest.view.transform = .identity }
+    composer.view.invalidateIntrinsicContentSize()
+    composerResizing = true
+    UIView.performWithoutAnimation { view.layoutIfNeeded() }
+    composerResizing = false
+    let makeRoom = {
+      self.fitRoom()
+      self.view.layoutIfNeeded()
+    }
+    if reduceMotion {
+      makeRoom()
+    } else {
+      animate(makeRoom)
     }
   }
 
@@ -700,23 +688,18 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       lines.contentInset.top = top
       lines.verticalScrollIndicatorInsets.top = top
     }
+    guard !composerResizing else { return }
     let bottom = composer.view.frame.height
     if lines.contentInset.bottom != bottom {
       lines.contentInset.bottom = bottom
       lines.verticalScrollIndicatorInsets.bottom = bottom
+      latestFoot.constant = -bottom
     }
     guard let room, room.height != roomHeight else { return }
-    let keep = {
-      if let shownOn = self.shownOn, self.settings?.shown == false, !self.userScrolling {
-        self.put(on: shownOn.id, at: shownOn.place)
-      } else if let kept = room.kept, !self.userScrolling {
-        self.layout.restoreContentOffset(with: kept)
-      }
-    }
-    if let composerAnimation, settings?.shown == true {
-      UIView.animate(composerAnimation, changes: keep)
-    } else {
-      keep()
+    if let shownOn, settings?.shown == false, !userScrolling {
+      put(on: shownOn.id, at: shownOn.place)
+    } else if let kept = room.kept, !userScrolling {
+      layout.restoreContentOffset(with: kept)
     }
     seePlace()
   }

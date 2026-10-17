@@ -161,7 +161,7 @@ struct ChatScreen: View {
             id, item: byID[id], first: listed.first?.id, names: names,
             showsTime: !timeless.contains(id)))
       },
-      composer: AnyView(composer),
+      composer: AnyView(composer), composerBars: draft.bars,
       latest: AnyView(
         LatestButton(scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0) {
           toLatestOrUnread()

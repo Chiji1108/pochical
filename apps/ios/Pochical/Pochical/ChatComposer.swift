@@ -42,6 +42,16 @@ final class ChatDraft {
   /// When the member's own typing was last sent.
   @ObservationIgnored var typingSentAt = Date.distantPast
 
+  /// What is over the field, the bars the composer grows by as they come
+  /// and go, by which the chat moves its lines in the same motion.
+  var bars: ComposerBars {
+    let shownPreview = preview.flatMap { $0.none || $0.url == previewRemoved ? nil : $0 }
+    return ComposerBars(
+      editing: editing?.seq, replyTo: replyTo, days: attachedDays?.count,
+      preview: shownPreview?.url, previewRead: shownPreview?.preview != nil,
+      photos: photos.count + comingPhotos)
+  }
+
   /// The composer's tools folded into a ›: from the field being tapped, and
   /// while words wait in it, until › opens them.
   var toolsFolded: Bool { (writing || !text.isEmpty) && !toolsOpen }
@@ -70,6 +80,16 @@ final class ChatDraft {
     typingSentAt = .distantPast
     Task { await socket?.sendTyping(in: threadID, on: false) }
   }
+}
+
+/// The bars over a composer's field (ChatDraft.bars).
+struct ComposerBars: Equatable {
+  var editing: Int64?
+  var replyTo: String?
+  var days: Int?
+  var preview: String?
+  var previewRead = false
+  var photos = 0
 }
 
 /// A chat's composer (/design's), a group's and the support chat's: what
@@ -212,6 +232,10 @@ struct ChatComposer: View {
         .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
       }
       .animation(.snappy(duration: 0.25), value: folded)
+      // The row's own place is not folded with them: a bar over it going
+      // as the tools unfold (a message sent, editing stopped) would carry
+      // the field down and back.
+      .geometryGroup()
       .padding(.horizontal, 16)
       .padding(.vertical, 8)
       if TextLimits.chatMessage - draft.text.count <= TextFields.countWhenLeft {
