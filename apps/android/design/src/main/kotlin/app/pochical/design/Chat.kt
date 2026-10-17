@@ -28,6 +28,8 @@ object Chat {
   const val photosPerSend = 4
   const val pictureMaxEdge = 640
   const val prefetchScreens = 2
+  const val replySwipe = 56
+  const val replySwipeRubber = 0.3f
   const val runGap = 12
   const val typingSendMs = 3000
   const val typingShowMs = 5000

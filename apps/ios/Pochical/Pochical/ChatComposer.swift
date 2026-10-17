@@ -22,8 +22,11 @@ final class ChatDraft {
   var picked: [PickedMember] = []
   /// Photos picked for the next send, waiting above the composer.
   var photos: [PickedPhoto] = []
-  /// Picked photos are being read and shrunk.
-  var readingPhotos = false
+  /// How many photos picked or pasted are still being read and shrunk,
+  /// each taking its room in the tray until it is in.
+  var comingPhotos = 0
+  /// Picked photos are being read and shrunk: nothing is sent meanwhile.
+  var readingPhotos: Bool { comingPhotos > 0 }
   /// The page of the words' first link, while writing.
   var preview: ComposerPreview?
   /// A link whose page was taken off with ×, until sent or changed.
@@ -177,11 +180,13 @@ struct ChatComposer: View {
         }
         ComposerField(
           placeholder: "メッセージ", text: $draft.text, limit: TextLimits.chatMessage,
-          composing: $draft.composing, box: draft.field
-        ) { inUse in
-          draft.writing = inUse
-          draft.toolsOpen = false
-        }
+          composing: $draft.composing, box: draft.field,
+          onWriting: { inUse in
+            draft.writing = inUse
+            draft.toolsOpen = false
+          },
+          // A message being changed keeps what it carries, as the tools go.
+          onPasteImages: editing == nil ? { pastePhotos($0) } : nil)
         .overlay(alignment: .leading) {
           if draft.text.isEmpty {
             Text("メッセージ")
@@ -250,7 +255,7 @@ struct ChatComposer: View {
   /// 写真を送る: the photo picker, up to Chat.photosPerSend in the tray at
   /// once; past it the picker does not open.
   @ViewBuilder private var photoButton: some View {
-    let room = Chat.photosPerSend - draft.photos.count
+    let room = Chat.photosPerSend - draft.photos.count - draft.comingPhotos
     // Read here: the picker's label is drawn off the main actor.
     let iconColor = colors.textSecondary
     if room > 0 {
@@ -267,7 +272,7 @@ struct ChatComposer: View {
       .onChange(of: photoItems) { _, items in
         guard !items.isEmpty else { return }
         photoItems = []
-        Task { await readPhotos(items) }
+        read(items.map(PhotoSource.picked))
       }
     } else {
       Button("写真を送る", systemImage: "photo") {
@@ -326,13 +331,31 @@ struct ChatComposer: View {
     }
   }
 
-  /// Reads picked photos and shrinks them to send, into the tray.
-  private func readPhotos(_ items: [PhotosPickerItem]) async {
-    draft.readingPhotos = true
-    defer { draft.readingPhotos = false }
+
+  /// Images pasted into the field go in the tray as picked photos do, as
+  /// many as it has room for, saying so past it as the picker's button does.
+  private func pastePhotos(_ images: [NSItemProvider]) {
+    let room = Chat.photosPerSend - draft.photos.count - draft.comingPhotos
+    if images.count > room {
+      say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
+    }
+    guard room > 0 else { return }
+    read(images.prefix(room).map(PhotoSource.pasted))
+  }
+
+  /// Reads photos, picked or pasted, into the tray. Counted at once: until
+  /// the last is in, nothing is sent and the tray has no room for them.
+  private func read(_ sources: [PhotoSource]) {
+    draft.comingPhotos += sources.count
+    Task { await readPhotos(sources) }
+  }
+
+  /// Reads photos counted coming, and shrinks them to send, into the tray.
+  private func readPhotos(_ sources: [PhotoSource]) async {
     var unreadable = false
-    for item in items {
-      guard let data = try? await item.loadTransferable(type: Data.self),
+    for source in sources {
+      defer { draft.comingPhotos -= 1 }
+      guard let data = await source.data(),
         let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
       else {
         unreadable = true
@@ -366,6 +389,27 @@ struct ChatComposer: View {
     guard !Task.isCancelled, draft.preview?.url == link else { return }
     withAnimation {
       draft.preview = ComposerPreview(url: link, preview: preview, none: preview == nil)
+    }
+  }
+}
+
+/// Where a photo for the tray comes from: the photo picker, or pasted.
+private enum PhotoSource {
+  case picked(PhotosPickerItem)
+  case pasted(NSItemProvider)
+
+  /// The photo's data as it was picked or copied (PNG, JPEG, HEIC…), for
+  /// ChatPhotos.shrink to read.
+  func data() async -> Data? {
+    switch self {
+    case .picked(let item):
+      return try? await item.loadTransferable(type: Data.self)
+    case .pasted(let image):
+      guard let type = image.registeredContentTypes.first(where: { $0.conforms(to: .image) })
+      else { return nil }
+      return await withCheckedContinuation { done in
+        _ = image.loadDataRepresentation(for: type) { data, _ in done.resume(returning: data) }
+      }
     }
   }
 }

@@ -1,6 +1,6 @@
 import { chatRules } from "@pochical/design/chat";
 import { X } from "lucide-react";
-import { useContext, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import type { Ref } from "react";
 import { rgbaToThumbHash, thumbHashToDataURL } from "thumbhash";
 
@@ -90,15 +90,20 @@ export function useChosenPhotos() {
   const toast = useContext(ToastContext);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [readingCount, setReadingCount] = useState(0);
+  // Photos still being read, known at once to a choice right after (two
+  // pastes in a row), which the state would tell only once drawn again.
+  const coming = useRef(0);
   const handleChoose = async (files: File[]) => {
-    const room = maxPhotos - photos.length;
+    const room = Math.max(0, maxPhotos - photos.length - coming.current);
     if (files.length > room) {
       toast(`写真は一度に${maxPhotos}枚まで送れます`, "problem");
     }
     const taken = files.slice(0, room);
+    coming.current += taken.length;
     setReadingCount((count) => count + taken.length);
     // One photo that cannot be opened leaves the others chosen.
     const results = await Promise.allSettled(taken.map(photoOf));
+    coming.current -= taken.length;
     setReadingCount((count) => count - taken.length);
     const chosen = results.flatMap((result) =>
       result.status === "fulfilled" ? [result.value] : []

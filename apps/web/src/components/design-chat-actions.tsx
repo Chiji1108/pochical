@@ -15,7 +15,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { useContext, useRef } from "react";
-import type { MouseEvent, ReactElement } from "react";
+import type { MouseEvent, PointerEvent, ReactElement } from "react";
 import { css, cx } from "styled-system/css";
 
 import { PhonePopover, PopoverMenuItem } from "./design-chat-popover";
@@ -481,9 +481,15 @@ export function MessageActions({
 // finger going down, dropped when it lifts, leaves or turns into a
 // scroll; a right click (and Android's own long press) opens it too. The
 // click that follows a long press is swallowed by `consumeLongPress`.
+// How far a pressed finger may wander, as the system's long press lets it.
+const pressSlop = 10;
+
 export function useLongPress(onLongPress: () => void) {
   const timer = useRef<number>(undefined);
   const fired = useRef(false);
+  // Where the finger went down: moved away, it drags (a line swiped to
+  // reply), and no longer presses.
+  const down = useRef({ x: 0, y: 0 });
   const cancel = () => {
     window.clearTimeout(timer.current);
   };
@@ -504,12 +510,22 @@ export function useLongPress(onLongPress: () => void) {
         fire();
       },
       onPointerCancel: cancel,
-      onPointerDown: () => {
+      onPointerDown: (event: PointerEvent) => {
+        down.current = { x: event.clientX, y: event.clientY };
         fired.current = false;
         cancel();
         timer.current = window.setTimeout(fire, chatRules.longPressMs);
       },
       onPointerLeave: cancel,
+      onPointerMove: (event: PointerEvent) => {
+        const moved = Math.hypot(
+          event.clientX - down.current.x,
+          event.clientY - down.current.y
+        );
+        if (moved > pressSlop) {
+          cancel();
+        }
+      },
       onPointerUp: cancel,
     },
   };

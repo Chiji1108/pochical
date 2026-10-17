@@ -40,6 +40,7 @@ import { Bubble, ChatItem, LargeEmoji, LineFrame } from "./design-chat-parts";
 import { PollCard } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
+import { SwipeToReply } from "./design-chat-swipe";
 import type { Member, Message } from "./design-group-data";
 import { Avatar, memberButton } from "./design-group-parts";
 import { ToastContext } from "./design-toast";
@@ -289,11 +290,17 @@ export function MessageLine({
       name={isGroup && firstOfRun ? (member?.name ?? "") : undefined}
       runStart={firstOfRun}
     >
-      <span
+      <SwipeToReply
         className={cx(
           chatStyle.bubbleRow({ mine }),
           lifted && messageActions.lifted
         )}
+        // Not while it goes up, nor once it could not.
+        disabled={upload !== undefined}
+        mine={mine}
+        onReply={() => {
+          actions.onReply();
+        }}
       >
         {message.photo && (
           <PhotoLine
@@ -481,7 +488,7 @@ export function MessageLine({
             )}
           </small>
         )}
-      </span>
+      </SwipeToReply>
       {upload === "failed" && (
         <small className={chatStyle.failedNote}>送れませんでした</small>
       )}

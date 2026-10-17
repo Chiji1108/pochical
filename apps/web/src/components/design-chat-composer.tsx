@@ -414,6 +414,18 @@ export function Composer({
             setWriting(true);
             setToolsOpen(false);
           }}
+          // Images pasted go with the next send, as photos picked do;
+          // words paste as ever. A message being changed takes none.
+          onPaste={(event) => {
+            const images = [...event.clipboardData.files].filter((file) =>
+              file.type.startsWith("image/")
+            );
+            if (images.length === 0 || editing !== undefined) {
+              return;
+            }
+            event.preventDefault();
+            composer.handleChoosePhotos(images).catch(() => undefined);
+          }}
           placeholder="メッセージ"
           value={draft}
         />
