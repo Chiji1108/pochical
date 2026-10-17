@@ -169,7 +169,7 @@ A group chat can put days to the vote, as LINE's 日程調整 does, for the step
 
 ## Lines on their way
 
-A line shows the moment it is sent, dimmed, with a clock in its time's room, while it waits in the device's outbox for the group to take it (spec/sync-protocol.md, Chat); it goes by itself whenever the group's socket is open, in the order written, as Signal and Telegram keep sending what waits.
+A line shows the moment it is sent, dimmed (as it would be on the chat's ground, so it looks the same lifted over the dimmed screen for its menu, and as the menu comes and goes), with a clock in its time's room, while it waits in the device's outbox for the group to take it (spec/sync-protocol.md, Chat); it goes by itself whenever the group's socket is open, in the order written, as Signal and Telegram keep sending what waits.
 
 - A line that has waited `chatRules.unsentAfterMs` since it was written without the group taking it (the phone offline all that time, as on a plane), or whose photo cannot be uploaded (Photos), stops going by itself and is marked as not sent: a red ! beside it in its time's room and 送れませんでした under it, as Signal and Messages mark one. Words sent long after they were written may no longer be meant, so the person chooses, as Signal gives up on a message rather than sending it a day late. The lines after it go on. A tap on the ! opens 送れなかったメッセージ (送れなかった写真 for a photo): もう一度送る sends it again, after the rest, as if written then; 削除 takes it away.
 - Failing is the device's alone. The group tells the sender of no refusal: what the apps send fits (a send that does not is dropped, spec/sync-protocol.md), and a line to someone who blocked the sender is taken as any other (Reporting and blocking), so nothing tells a block.

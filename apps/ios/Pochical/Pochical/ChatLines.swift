@@ -279,6 +279,40 @@ struct LineView: View {
   }
 }
 
+/// A line still on its way, dimmed as laid on the chat's ground: in its
+/// own outline the ground goes under it, so it shows the same over its
+/// menu's dimming, and its copy lifted there, drawn over it for a moment
+/// as the menu comes and goes, shows no brighter than one.
+private struct DimmedWhileWaiting<Outline: View>: ViewModifier {
+  @Environment(\.themeColors) private var colors
+  let waiting: Bool
+  @ViewBuilder let outline: Outline
+
+  func body(content: Content) -> some View {
+    content
+      .opacity(waiting ? 0.6 : 1)
+      .background {
+        if waiting {
+          colors.backgroundBase.mask { outline }
+        }
+      }
+  }
+}
+
+extension View {
+  /// Dimmed while it waits to be sent, the chat's ground in `shape` under
+  /// it (DimmedWhileWaiting).
+  func dimmedWhileWaiting(_ waiting: Bool, in shape: some Shape) -> some View {
+    modifier(DimmedWhileWaiting(waiting: waiting) { shape })
+  }
+
+  /// Dimmed while it waits to be sent, the chat's ground under it in the
+  /// outline of `outline`, for what has no shape of its own, like emoji.
+  func dimmedWhileWaiting(_ waiting: Bool, outline: () -> some View) -> some View {
+    modifier(DimmedWhileWaiting(waiting: waiting, outline: outline))
+  }
+}
+
 /// A line's words in its bubble: others' on the quiet fill, one's own in
 /// the accent, the first of a run with its tail by the writer, dimmed
 /// while it waits to be sent.
@@ -343,7 +377,7 @@ struct LineContent: View {
         onUnfold: onUnfold)
     } else {
       DayCard(days: days, members: members)
-        .opacity(waiting ? 0.6 : 1)
+        .dimmedWhileWaiting(waiting, in: RoundedRectangle(cornerRadius: Radius.lg))
     }
   }
 }
@@ -385,7 +419,7 @@ struct MessageBubble: View {
     if quote == nil, preview == nil, invitation == nil, largeEmoji(text) > 0 {
       Text(text)
         .font(.system(size: emojiSize))
-        .opacity(waiting ? 0.6 : 1)
+        .dimmedWhileWaiting(waiting) { Text(text).font(.system(size: emojiSize)) }
     } else {
       bubble
     }
@@ -429,7 +463,7 @@ struct MessageBubble: View {
         mine ? colors.accentFill : colors.fillTertiary,
         in: BubbleShape(mine: mine, first: first)
       )
-      .opacity(waiting ? 0.6 : 1)
+      .dimmedWhileWaiting(waiting, in: BubbleShape(mine: mine, first: first))
   }
 
   /// The words as drawn in the bubble, their links marked.
