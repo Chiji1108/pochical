@@ -819,7 +819,9 @@ struct ChatScreen: View {
   }
 
   /// Sends a line not sent once more, after the rest, as if written now.
+  /// A photo up before goes again from waiting its turn, × stopping it.
   private func sendAgain(_ line: WaitingLine) {
+    if let photo = line.photo { PhotoUploads.shared.forget(photo.id) }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { try Chats.sendAgain(line.opID, now: now, in: $0) }
   }

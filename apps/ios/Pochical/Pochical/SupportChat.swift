@@ -691,6 +691,8 @@ struct SupportChatScreen: View {
     var line = line
     line.failed = false
     line.madeAt = .now
+    // A photo up before goes again from waiting its turn, × stopping it.
+    if let photo = line.photo { PhotoUploads.shared.forget(photo.id) }
     waiting.removeAll { $0.id == line.id }
     waiting.append(line)
     let before = sending
