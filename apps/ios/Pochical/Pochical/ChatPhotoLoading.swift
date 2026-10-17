@@ -146,9 +146,22 @@ enum PhotoBox {
   private let prefetcher = ImagePrefetcher(pipeline: ChatPhotoLoading.pipeline)
   private var near: [String: ImageRequest] = [:]
 
-  /// The photos near those in sight are now `requests`, by their photo's
-  /// id.
-  func near(_ requests: [String: ImageRequest]) {
+  /// The photos near those in sight, in `groupID`'s chat, are now
+  /// `photos`: each fetched as its line draws it.
+  func near(_ photos: [LinePhoto], in groupID: String, scale: CGFloat, calls: GroupCalls) {
+    var requests: [String: ImageRequest] = [:]
+    for photo in photos {
+      if let request = ChatPhotoLoading.lineRequest(
+        photo, in: groupID, scale: scale, calls: calls,
+        held: ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+      {
+        requests[photo.id] = request
+      }
+    }
+    near(requests)
+  }
+
+  private func near(_ requests: [String: ImageRequest]) {
     let gone = near.filter { requests[$0.key] == nil }.map(\.value)
     let new = requests.filter { near[$0.key] == nil }.map(\.value)
     near = requests
