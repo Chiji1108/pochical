@@ -399,6 +399,19 @@ export const sampleChats: Record<string, Chat> = {
         when: "今日",
       },
       {
+        // A second photo in the chat, so the one opened large swipes to
+        // the next (spec/chat.md, Photos).
+        from: "mother",
+        id: "f7p",
+        photo: {
+          height: 480,
+          src: "https://picsum.photos/id/292/640/480",
+          width: 640,
+        },
+        time: "10:04",
+        when: "今日",
+      },
+      {
         from: "yuki",
         id: "f8",
         photo: sampleRosterPhoto(),

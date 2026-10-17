@@ -35,7 +35,7 @@ import {
   PhotoLine,
   ReactionPill,
 } from "./design-chat-cards";
-import type { InviteLook, Upload } from "./design-chat-cards";
+import type { ChatPhoto, InviteLook, Upload } from "./design-chat-cards";
 import { Bubble, ChatItem, LargeEmoji, LineFrame } from "./design-chat-parts";
 import { PollCard } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
@@ -71,7 +71,29 @@ export type ChatScope = {
   onJump: (id: string) => void;
   onLinkMenu: (at: LinkMenuAt) => void;
   onOpenDay: (date: Date) => void;
+  // The chat's photos in the order of its lines, swiped through opened
+  // large (photosOf).
+  photos: ChatPhoto[];
 };
+
+// The photos a chat's lines show, in their order: sent, not taken back,
+// and not a blocked member's folded away.
+export const photosOf = (
+  messages: Message[],
+  writerOf: (id?: string) => Member | undefined,
+  shown: (message: Message) => boolean
+): ChatPhoto[] =>
+  messages.flatMap((message) =>
+    message.photo && !message.unsent && shown(message)
+      ? [
+          {
+            label: `${writerOf(message.from)?.name ?? ""}が送った写真`,
+            mine: message.from === "me",
+            photo: message.photo,
+          },
+        ]
+      : []
+  );
 
 export const ChatContext = createContext<ChatScope | undefined>(undefined);
 
@@ -120,6 +142,7 @@ export function MessageLine({
   onVote = nothing,
   onFailed = nothing,
   onFolded = nothing,
+  onReveal = nothing,
 }: {
   message: Message;
   // The line above, after which a new day or a new run starts.
@@ -146,6 +169,9 @@ export function MessageLine({
   // Its words were measured to fold, and 続きを読む has come in under
   // them, after the chat was scrolled to its place.
   onFolded?: () => void;
+  // A blocked member's line shown at a tap, its photo among the chat's
+  // swiped through from then on.
+  onReveal?: () => void;
 }) {
   const {
     members,
@@ -160,6 +186,7 @@ export function MessageLine({
     onJump,
     onLinkMenu,
     onOpenDay,
+    photos,
   } = useChatScope();
   // Words past chatRules.foldLines, and whether they were opened in full.
   const [folded, setFolded] = useState(false);
@@ -215,6 +242,7 @@ export function MessageLine({
           className={chatStyle.blocked}
           onClick={() => {
             setRevealed(true);
+            onReveal();
           }}
           type="button"
         >
@@ -263,6 +291,7 @@ export function MessageLine({
         {message.photo && (
           <PhotoLine
             actions={actions}
+            among={photos}
             upload={upload}
             label={`${member?.name ?? ""}が送った写真`}
             mine={actions.mine}

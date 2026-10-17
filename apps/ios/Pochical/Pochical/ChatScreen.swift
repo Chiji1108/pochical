@@ -127,8 +127,8 @@ struct ChatScreen: View {
   @State private var sharingDays = false
   /// The poll whose day is being picked.
   @State private var deciding: ChatLineRow?
-  /// A photo opened large.
-  @State private var viewing: LinePhoto?
+  /// The photos opened large.
+  @State private var viewing: PhotoViewing?
   /// Long lines opened at 続きを読む, which stay open while the chat is.
   @State private var unfolded: Set<String> = []
   /// A line not sent, its choices open.
@@ -391,10 +391,8 @@ struct ChatScreen: View {
       Button("削除", role: .destructive) { deleteUnsent(line) }
       Button("キャンセル", role: .cancel) {}
     }
-    .fullScreenCover(item: $viewing) { photo in
-      PhotoViewer(photo: photo, groupID: group.id) {
-        await savePhoto(photo, in: group.id, calls: groupCalls)
-      }
+    .photoViewer($viewing, groupID: group.id) { photo in
+      await savePhoto(photo, in: group.id, calls: groupCalls)
     }
     .modifier(
       ReportAndBlock(
@@ -709,7 +707,7 @@ struct ChatScreen: View {
       scroller.growDown("line-\(line.opID)")
       withAnimation { _ = unfolded.insert(line.opID) }
     case .openPhoto:
-      viewing = line.photo
+      viewing = line.photo.map { PhotoViewing($0, among: photosShown()) }
     case .openQuote:
       line.replyTo.map(jump(to:))
     case .openProfile:
@@ -1101,6 +1099,17 @@ struct ChatScreen: View {
     send.poll = poll
     send.replyTo = takeReply()
     write(.send(send))
+  }
+
+  /// The photos the chat's lines show, in their order, swiped through
+  /// opened large: not a blocked member's folded away.
+  private func photosShown() -> [LinePhoto] {
+    chat.state.lines.compactMap { line in
+      let folded =
+        otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
+      guard !line.hidden, !line.unsent, !folded else { return nil }
+      return line.photo
+    }
   }
 
   /// Saves a photo to the person's library, and says so.

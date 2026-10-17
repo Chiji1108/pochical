@@ -154,7 +154,7 @@ struct MemberProfileSheet: View {
   let onUnblock: () -> Void
   /// Takes them out of the group, asked first; where the sheet offers it.
   var onRemove: (() -> Void)?
-  @State private var viewingPhoto = false
+  @State private var viewingPhoto: PhotoViewing?
   @State private var confirmingRemove = false
 
   var body: some View {
@@ -164,9 +164,11 @@ struct MemberProfileSheet: View {
           MemberAvatar(name: name, photoID: photoID, size: 72)
         } else {
           Button {
-            viewingPhoto = true
+            viewingPhoto = PhotoViewing(LinePhoto(id: photoID, width: 1, height: 1))
           } label: {
             MemberAvatar(name: name, photoID: photoID, size: 72)
+              // Opened from the face and closed back to it.
+              .background(PhotoSpot(id: photoID))
           }
           .buttonStyle(.plain)
           .accessibilityLabel("\(name)の写真を大きく見る")
@@ -253,9 +255,7 @@ struct MemberProfileSheet: View {
       }
     }
     .presentationDetents([.medium])
-    .fullScreenCover(isPresented: $viewingPhoto) {
-      PhotoViewer(photo: LinePhoto(id: photoID, width: 1, height: 1), groupID: groupID)
-    }
+    .photoViewer($viewingPhoto, groupID: groupID)
   }
 }
 
