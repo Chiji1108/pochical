@@ -177,6 +177,7 @@ struct SupportChatScreen: View {
         ChatComposer(
           draft: draft, groupID: ChatPhotos.support, quoteOf: quote(of:), onSubmit: sendAll,
           say: say)),
+      composerBars: draft.bars,
       latest: AnyView(
         LatestButton(scroll: scroll, unread: 0) {
           following = true
