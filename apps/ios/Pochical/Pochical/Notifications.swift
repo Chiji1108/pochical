@@ -275,6 +275,8 @@ struct Replies {
     await sockets.close(hold, of: groupID)
     guard UIApplication.shared.applicationState == .background else { return }
     await sockets.finishSending()
+    // Not once the time iOS gives has run out, the database let go of.
+    guard !Task.isCancelled else { return }
     await badgeAfterRead()
   }
 
@@ -284,7 +286,10 @@ struct Replies {
   private func badgeAfterRead() async {
     await userSocket.start()
     await userSocket.catchUp(within: .seconds(Self.catchUpMost))
-    await userSocket.finishSending()
+    // Come to the front meanwhile, the socket stays open as the app's is.
+    if UIApplication.shared.applicationState == .background {
+      await userSocket.finishSending()
+    }
     guard let me = widgetMeID(),
       let counts = try? await database.read({ db in try Chats.unreadByGroup(me: me, db: db) })
     else { return }
