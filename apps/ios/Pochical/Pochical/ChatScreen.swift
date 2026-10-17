@@ -880,8 +880,9 @@ struct ChatScreen: View {
         unreadFrom = lines[index].seq
       }
     }
-    // With nothing new, the lines are laid out at the latest already. With something, once the lines are laid out, ここから新着
-    // goes to the top, shown only once there rather than after a trip.
+    // With nothing new, the lines are laid out at the latest already. With
+    // something, once the lines are laid out, ここから新着 goes to the top,
+    // shown only once there rather than after a trip.
     if unreadFrom == nil {
       placed = true
     } else {

@@ -208,6 +208,12 @@ struct ChatLinesView: UIViewControllerRepresentable {
     proxy.controller = controller
     controller.update(self, environment: context.environment)
   }
+
+  /// The chat has gone: whatever waits to be told the lines are in place
+  /// is told now, rather than never.
+  static func dismantleUIViewController(_ controller: ChatLinesController, coordinator: ()) {
+    controller.letGo()
+  }
 }
 
 final class ChatLinesController: UIViewController, UICollectionViewDelegate,
@@ -633,6 +639,12 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     else { return }
     waitingToShow = nil
     show(waiting.id, at: waiting.place, animated: waiting.animated, then: waiting.then)
+  }
+
+  /// Nothing more to go to, the lines gone: told so.
+  func letGo() {
+    stopGoing()
+    dropWaiting()
   }
 
   /// No longer waiting to show an item: told so.
