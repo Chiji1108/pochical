@@ -54,6 +54,15 @@ enum LinePlace {
   case center
 }
 
+/// Which way a line is dragged to reply to it: toward the middle from its
+/// writer's side, as Signal, Telegram and LINE drag one.
+enum ReplySwipe {
+  /// Others' lines, from the left.
+  case rightward
+  /// One's own, from the right.
+  case leftward
+}
+
 /// A line's cell: where what it draws is measured, and how that is put on
 /// the screen, which the line's own SwiftUI cannot tell as the lines
 /// scroll under it. A held line's menu follows its bubble by it.
@@ -215,6 +224,11 @@ struct ChatLinesView: UIViewControllerRepresentable {
   let onNearTop: (String?) -> Void
   /// The day of the lines from the item `id` at the top.
   let dayOver: (String) -> Day?
+  /// How the item `id` is dragged to reply to it; none for an item the
+  /// menu has no 返信 on.
+  let replySwipe: (String) -> ReplySwipe?
+  /// The item `id` was dragged far enough to reply to it.
+  let onReply: (String) -> Void
 
   func makeUIViewController(context: Context) -> ChatLinesController {
     let controller = ChatLinesController(scroll: scroll)
@@ -266,6 +280,18 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// The items coming in at the foot in the update being put in, which
   /// rise into place from under the lines' foot as the lines slide up.
   private var risingIn: Set<String> = []
+  /// Drags a line sideways to reply to it.
+  private lazy var swipe = SwipePan(target: self, action: #selector(swiped))
+  /// The line being dragged, which way, and whether it is far enough.
+  private var swiping: (id: String, way: ReplySwipe, far: Bool)?
+  /// The cell moved, put back as the line is let go or drawn in another.
+  private weak var swipedCell: UICollectionViewCell?
+  /// Beside the line dragged, showing as it goes.
+  private let replyArrow = UIImageView(
+    image: UIImage(
+      systemName: "arrowshape.turn.up.left.circle.fill",
+      withConfiguration: UIImage.SymbolConfiguration(pointSize: 28)))
+  private let replyFeel = UIImpactFeedbackGenerator(style: .light)
 
   init(scroll: ChatScroll) {
     self.scroll = scroll
@@ -317,6 +343,14 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     tap.cancelsTouchesInView = false
     tap.delegate = self
     lines.addGestureRecognizer(tap)
+    // A line dragged sideways replies to it: only a drag mostly across
+    // (gestureRecognizerShouldBegin), the lines scrolling otherwise.
+    swipe.delegate = self
+    swipe.onReset = { [weak self] in self?.holdBack(false) }
+    lines.addGestureRecognizer(swipe)
+    lines.panGestureRecognizer.require(toFail: swipe)
+    replyArrow.alpha = 0
+    lines.addSubview(replyArrow)
     view.addSubview(lines)
 
     ground.translatesAutoresizingMaskIntoConstraints = false
@@ -385,6 +419,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     composer.rootView = AnyView(settings.composer.environment(\.self, environment))
     latest.rootView = AnyView(settings.latest.environment(\.self, environment))
     ground.backgroundColor = UIColor(settings.ground)
+    replyArrow.tintColor = UIColor(environment.themeColors.textTertiary)
     let alpha: CGFloat = settings.shown ? 1 : 0
     if lines.alpha != alpha {
       UIView.animate(withDuration: alpha == 1 ? 0.15 : 0, delay: 0, options: .curveEaseOut) {
@@ -779,7 +814,137 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch)
     -> Bool
   {
-    touch.view === lines
+    if gestureRecognizer === swipe {
+      swipeStart = touch.location(in: view)
+      // On a line dragged rightward to reply, going back by a drag
+      // anywhere on the screen would take the drag first, whatever it
+      // is told to wait for: it waits out this touch, as in Messages.
+      // From the screen's edge going back is still the system's.
+      let at = touch.location(in: lines)
+      if swipeStart.x > Self.backEdge, let path = lines.indexPathForItem(at: at),
+        path.item < ids.count, settings?.replySwipe(ids[path.item]) == .rightward
+      {
+        holdBack(true)
+      }
+      return true
+    }
+    return touch.view === lines
+  }
+
+  // MARK: Swiping to reply
+
+  /// Going back by a drag on the screen is held off while the finger is
+  /// down, or given back.
+  private func holdBack(_ held: Bool) {
+    navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = !held
+  }
+
+  /// Where the finger dragging a line went down.
+  private var swipeStart: CGPoint = .zero
+  /// Room kept at the screen's left edge for the system's own drag back.
+  private static let backEdge: CGFloat = 24
+  /// How far a line follows the finger past chatRules.replySwipe, of the
+  /// way the finger goes on.
+  private static let rubber: CGFloat = 0.3
+
+  func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    guard gestureRecognizer === swipe else { return true }
+    // Which way the finger goes as it starts: the translation is not yet
+    // counted. Mostly across, so a scroll a little aslant stays a scroll.
+    let moved = swipe.velocity(in: lines)
+    guard abs(moved.x) > abs(moved.y) * 2, let settings, !settings.holds else { return false }
+    let at = view.convert(swipeStart, to: lines)
+    guard let path = lines.indexPathForItem(at: at), path.item < ids.count,
+      let way = settings.replySwipe(ids[path.item])
+    else { return false }
+    switch way {
+    case .rightward:
+      // Not from the screen's edge, which is the system's.
+      guard moved.x > 0, swipeStart.x > Self.backEdge else { return false }
+    case .leftward:
+      guard moved.x < 0 else { return false }
+    }
+    swiping = (ids[path.item], way, false)
+    return true
+  }
+
+  @objc private func swiped() {
+    guard let swiping else { return }
+    let moved = swipe.translation(in: lines).x
+    let along = swiping.way == .rightward ? max(0, moved) : max(0, -moved)
+    let far = along >= CGFloat(Chat.replySwipe)
+    switch swipe.state {
+    case .began:
+      replyFeel.prepare()
+      drag(swiping.id, way: swiping.way, by: along)
+    case .changed:
+      if far, !swiping.far {
+        replyFeel.impactOccurred()
+        replyFeel.prepare()
+      }
+      self.swiping?.far = far
+      drag(swiping.id, way: swiping.way, by: along)
+    case .ended:
+      // Where it is let go, as the last move may not have been told.
+      letGoOfSwipe()
+      if far { settings?.onReply(swiping.id) }
+    default:
+      letGoOfSwipe()
+    }
+  }
+
+
+  /// Draws the line `id` dragged `along` toward the middle, past
+  /// chatRules.replySwipe less and less, the arrow beside it.
+  private func drag(_ id: String, way: ReplySwipe, by along: CGFloat) {
+    guard let index = ids.firstIndex(of: id),
+      let cell = lines.cellForItem(at: IndexPath(item: index, section: 0))
+    else {
+      letGoOfSwipe()
+      return
+    }
+    // The line drawn in another cell as the lines change meanwhile.
+    if swipedCell !== cell {
+      swipedCell?.transform = .identity
+      swipedCell = cell
+    }
+    let full = CGFloat(Chat.replySwipe)
+    let shift = along <= full ? along : full + (along - full) * Self.rubber
+    let sign: CGFloat = way == .rightward ? 1 : -1
+    // The cell itself: its hosted content keeps a transform of its own.
+    cell.transform = CGAffineTransform(translationX: sign * shift, y: 0)
+    // Where the cell stands, unmoved.
+    let size = replyArrow.intrinsicContentSize
+    let frame = CGRect(
+      x: cell.center.x - cell.bounds.width / 2, y: cell.center.y - cell.bounds.height / 2,
+      width: cell.bounds.width, height: cell.bounds.height)
+    let shown = min(1, along / full)
+    replyArrow.bounds.size = size
+    // In the room the line leaves, at its middle.
+    let x = way == .rightward
+      ? frame.minX + max(size.width / 2, shift / 2)
+      : frame.maxX - max(size.width / 2, shift / 2)
+    replyArrow.center = CGPoint(x: x, y: frame.midY)
+    replyArrow.alpha = shown
+    let scale = 0.5 + 0.5 * shown
+    replyArrow.transform = CGAffineTransform(scaleX: scale, y: scale)
+  }
+
+  /// The line let go goes back where it was, springing unless motion is
+  /// reduced, and the arrow goes.
+  private func letGoOfSwipe() {
+    swiping = nil
+    let cell = swipedCell
+    swipedCell = nil
+    let back = {
+      cell?.transform = .identity
+      self.replyArrow.alpha = 0
+    }
+    if reduceMotion {
+      back()
+    } else {
+      UIView.animate(springDuration: 0.3, bounce: 0.2, options: .allowUserInteraction, animations: back)
+    }
   }
 
   // MARK: Scrolling
@@ -834,6 +999,17 @@ private struct Going {
   let place: LinePlace
   let animated: Bool
   let then: (() -> Void)?
+}
+
+/// The pan dragging a line to reply to it, telling when a touch is over,
+/// whether it dragged or not.
+private final class SwipePan: UIPanGestureRecognizer {
+  var onReset: () -> Void = {}
+
+  override func reset() {
+    super.reset()
+    onReset()
+  }
 }
 
 /// A cell of the lines, knowing where it is on the screen for the line it

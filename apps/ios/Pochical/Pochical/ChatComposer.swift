@@ -177,11 +177,13 @@ struct ChatComposer: View {
         }
         ComposerField(
           placeholder: "メッセージ", text: $draft.text, limit: TextLimits.chatMessage,
-          composing: $draft.composing, box: draft.field
-        ) { inUse in
-          draft.writing = inUse
-          draft.toolsOpen = false
-        }
+          composing: $draft.composing, box: draft.field,
+          onWriting: { inUse in
+            draft.writing = inUse
+            draft.toolsOpen = false
+          },
+          // A message being changed keeps what it carries, as the tools go.
+          onPasteImages: editing == nil ? { pastePhotos($0) } : nil)
         .overlay(alignment: .leading) {
           if draft.text.isEmpty {
             Text("メッセージ")
@@ -328,11 +330,29 @@ struct ChatComposer: View {
 
   /// Reads picked photos and shrinks them to send, into the tray.
   private func readPhotos(_ items: [PhotosPickerItem]) async {
+    await readPhotos(items.map(PhotoSource.picked))
+  }
+
+  /// Images pasted into the field go in the tray as picked photos do, as
+  /// many as it has room for, saying so past it as the picker's button does.
+  private func pastePhotos(_ images: [NSItemProvider]) {
+    let room = Chat.photosPerSend - draft.photos.count
+    if images.count > room {
+      say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
+    }
+    guard room > 0 else { return }
+    let pasted = images.prefix(room).map(PhotoSource.pasted)
+    Task { await readPhotos(pasted) }
+  }
+
+  /// Reads photos, picked or pasted, and shrinks them to send, into the
+  /// tray.
+  private func readPhotos(_ sources: [PhotoSource]) async {
     draft.readingPhotos = true
     defer { draft.readingPhotos = false }
     var unreadable = false
-    for item in items {
-      guard let data = try? await item.loadTransferable(type: Data.self),
+    for source in sources {
+      guard let data = await source.data(),
         let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
       else {
         unreadable = true
@@ -366,6 +386,27 @@ struct ChatComposer: View {
     guard !Task.isCancelled, draft.preview?.url == link else { return }
     withAnimation {
       draft.preview = ComposerPreview(url: link, preview: preview, none: preview == nil)
+    }
+  }
+}
+
+/// Where a photo for the tray comes from: the photo picker, or pasted.
+private enum PhotoSource {
+  case picked(PhotosPickerItem)
+  case pasted(NSItemProvider)
+
+  /// The photo's data as it was picked or copied (PNG, JPEG, HEIC…), for
+  /// ChatPhotos.shrink to read.
+  func data() async -> Data? {
+    switch self {
+    case .picked(let item):
+      return try? await item.loadTransferable(type: Data.self)
+    case .pasted(let image):
+      guard let type = image.registeredContentTypes.first(where: { $0.conforms(to: .image) })
+      else { return nil }
+      return await withCheckedContinuation { done in
+        _ = image.loadDataRepresentation(for: type) { data, _ in done.resume(returning: data) }
+      }
     }
   }
 }

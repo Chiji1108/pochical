@@ -22,6 +22,7 @@
     "photosPerSend": 4,
     "pictureMaxEdge": 640,
     "prefetchScreens": 2,
+    "replySwipe": 56,
     "runGap": 12,
     "typingSendMs": 3000,
     "typingShowMs": 5000,

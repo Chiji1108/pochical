@@ -72,6 +72,11 @@ export const chatRules = {
   // earlier page is laid out, so the reader scrolling back never comes to
   // the top waiting: Signal asks three screens ahead, Telegram five lines.
   prefetchScreens: 2,
+  // How far, in points (dp on Android), a line is dragged sideways toward
+  // the middle before letting go starts a reply to it, the reply arrow then
+  // full and a haptic marking it: Signal's 55, between Telegram's 45 and
+  // 60. Past it the line follows the finger less, as a rubber band.
+  replySwipe: 56,
   // The room before a run's first line, a day's title and ここから新着,
   // in points: where the writer changes, the lines part more.
   runGap: 12,
