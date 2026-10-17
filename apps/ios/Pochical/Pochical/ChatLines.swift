@@ -51,9 +51,10 @@ enum LineAction {
   case openQuote
   /// The writer's profile, from their face.
   case openProfile
-  /// A line that could not be sent: its choices, pointing at its ! in the
-  /// line's cell; none outside the chat's lines.
-  case retry(LineSource?)
+  /// A line not sent, もう一度送る from its !.
+  case sendAgain
+  /// A line not sent, 削除 from its !.
+  case deleteUnsent
   /// Its photo stopped going up, with × on it: the line is not sent.
   case stopSending
   /// The reader's reaction put on, or taken back.
@@ -73,9 +74,6 @@ enum LineAction {
 struct LineView: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.openGroupRoute) private var openGroupRoute
-  @Environment(\.lineSpace) private var lineSpace
-  /// Where its ! is in the line's cell, for its choices to point at.
-  @State private var notSentMark: CGRect = .zero
   /// The line's opID, which its actions name it by.
   let lineID: String
   let text: String
@@ -260,19 +258,20 @@ struct LineView: View {
         }
       }
       if failed {
-        Button {
-          act(.retry(lineSpace.map { LineSource(space: $0, frame: notSentMark) }))
+        // A menu rather than an action sheet, whose choice acts only once
+        // it has gone: the ! and 送れませんでした go as it closes.
+        Menu {
+          Section(photo == nil ? "送れなかったメッセージ" : "送れなかった写真") {
+            Button("もう一度送る", systemImage: "arrow.clockwise") { act(.sendAgain) }
+            Button("削除", systemImage: "trash", role: .destructive) { act(.deleteUnsent) }
+          }
         } label: {
           Image(systemName: "exclamationmark.circle.fill")
             .font(.title3)
             .foregroundStyle(colors.dangerDefault)
         }
+        .menuStyle(.button)
         .buttonStyle(.plain)
-        .onGeometryChange(for: CGRect.self) {
-          $0.frame(in: .named(LineSpace.name))
-        } action: {
-          notSentMark = $0
-        }
         .accessibilityLabel("送れませんでした")
         .accessibilityHint("押すと再送か削除")
       } else if waiting {
