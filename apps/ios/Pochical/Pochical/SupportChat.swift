@@ -102,7 +102,7 @@ struct SupportChatScreen: View {
   @State private var lines: [SupportLine] = []
   /// The lines have come from the server once.
   @State private var loaded = false
-  /// The lines have been asked for once, come or not: laid out from then.
+  /// The lines have been asked for once, come or not.
   @State private var opened = false
   /// The draft the chat opened with was put back in the composer; its
   /// quote waits for the lines to come.
@@ -165,8 +165,11 @@ struct SupportChatScreen: View {
   var body: some View {
     let listed = items
     let byID = Dictionary(listed.map { ($0.id, $0) }) { first, _ in first }
+    // Laid out once the lines have come, all at once at the latest; before
+    // that only the lines sent meanwhile, should one be.
+    let laidOut = loaded || !waiting.isEmpty || !lines.isEmpty
     ChatLinesView(
-      rows: opened ? rows(listed) : [],
+      rows: laidOut ? rows(listed) : [],
       row: { id in AnyView(row(byID[id], parted: id != listed.first?.id)) },
       composer: AnyView(
         // The group chats' composer, without what only a group has: days
@@ -180,7 +183,7 @@ struct SupportChatScreen: View {
           scroller.toLatest(animated: true)
         }),
       ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
-      shown: opened, holds: acting != nil, dayOver: { dayOver($0, in: listed) },
+      shown: laidOut, holds: acting != nil, dayOver: { dayOver($0, in: listed) },
       replySwipe: { replySwipe(byID[$0]) },
       onReply: { id in
         if case .line(let line, _, _) = byID[id] { reply(to: line) }
@@ -193,6 +196,12 @@ struct SupportChatScreen: View {
     .ignoresSafeArea(.container, edges: .bottom)
     .ignoresSafeArea(.keyboard)
     .background(colors.backgroundBase)
+    // The head alone while the lines have not come (offline).
+    .overlay(alignment: .top) {
+      if opened, !laidOut {
+        intro.padding(.top, 12)
+      }
+    }
     .overlay(alignment: .top) {
       FloatingDay(scroll: scroll, covered: notice != nil)
     }
@@ -387,14 +396,14 @@ struct SupportChatScreen: View {
 
   /// Acts on the line `id` as the chat is now.
   private func act(_ action: LineAction, on id: String) {
-    if let line = lines.first(where: { $0.id == id }) {
-      act(action, on: line)
-    } else if let line = waiting.first(where: { $0.id == id }) {
-      act(action, onWaiting: line)
+    switch items.first(where: { $0.id == "line-\(id)" }) {
+    case .line(let line, let first, _): act(action, on: line, first: first)
+    case .waiting(let line, let first): act(action, onWaiting: line, first: first)
+    default: break
     }
   }
 
-  private func act(_ action: LineAction, on line: SupportLine) {
+  private func act(_ action: LineAction, on line: SupportLine, first: Bool) {
     switch action {
     case .unfold:
       // Opened where it is, its words going on down from there.
@@ -414,9 +423,6 @@ struct SupportChatScreen: View {
       react(emoji, on: line)
     case .hold(let spot, let finger, let link):
       let mine = !line.fromSupport
-      let first = items.contains {
-        if case .line(let kept, let first, _) = $0 { kept.id == line.id && first } else { false }
-      }
       let bubble = AnyView(
         LineContent(
           text: line.text, preview: line.preview, days: [], members: [], photo: line.photo,
@@ -443,7 +449,7 @@ struct SupportChatScreen: View {
     }
   }
 
-  private func act(_ action: LineAction, onWaiting line: Waiting) {
+  private func act(_ action: LineAction, onWaiting line: Waiting, first: Bool) {
     switch action {
     case .retry(let source):
       source?.askNotSent(
@@ -461,7 +467,7 @@ struct SupportChatScreen: View {
             LineContent(
               text: line.text, preview: line.preview, days: [], members: [],
               quote: line.replyTo.map(quote(of:)), groupID: ChatPhotos.support, mine: true,
-              first: false, waiting: !line.failed, nameOf: { _ in "" })),
+              first: first, waiting: !line.failed, nameOf: { _ in "" })),
           finger: finger, actions: [copy(line.text)]))
     default:
       break
