@@ -567,12 +567,15 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     guard let frame = layout.layoutAttributesForItem(at: path)?.frame else { return }
     let target = min(highest, max(lowest, frame.minY - spot(of: frame, at: place)
       - lines.adjustedContentInset.top - layout.settings.additionalInsets.top))
-    // Far off, it goes at once rather than through all between.
-    guard animated, abs(target - lines.contentOffset.y) > 1,
-      abs(target - lines.contentOffset.y) < seenHeight * 2
-    else {
+    guard animated, abs(target - lines.contentOffset.y) > 1 else {
       settle(on: id, at: place)
       return
+    }
+    // From far off, glides the last screen only, as to the latest, rather
+    // than through all between.
+    let away = target - lines.contentOffset.y
+    if abs(away) > seenHeight {
+      lines.contentOffset.y = target - (away > 0 ? seenHeight : -seenHeight)
     }
     going = (id, place)
     lines.setContentOffset(CGPoint(x: lines.contentOffset.x, y: target), animated: true)
