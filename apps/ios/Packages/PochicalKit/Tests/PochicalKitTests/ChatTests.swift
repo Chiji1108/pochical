@@ -985,7 +985,7 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
       NotifiedLine(id: "b", groupID: "g", threadID: groupThread, seq: 6),
       NotifiedLine(id: "c", groupID: "g", threadID: "direct:me:u1", seq: 3),
     ]
-    #expect(try readNotified(shown, me: "me", in: db).isEmpty)
+    #expect(try readNotified(shown, ReadState(me: "me", in: db)).isEmpty)
     // Read here up to 5: the group's first.
     var mark = Pochical_V1_Change()
     mark.cursor = 1
@@ -993,13 +993,13 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
     mark.readMark.userID = "me"
     mark.readMark.lastReadSeq = 5
     try GroupSync.take([mark], of: "g", in: db)
-    #expect(try readNotified(shown, me: "me", in: db) == ["a"])
+    #expect(try readNotified(shown, ReadState(me: "me", in: db)) == ["a"])
     // Read elsewhere: the one-to-one chat has nothing unread left.
     var count = Pochical_V1_UnreadCount()
     count.groupID = "g"
     count.threadID = "direct:me:u1"
     count.count = 0
     try Chats.take(count, in: db)
-    #expect(try readNotified(shown, me: "me", in: db).sorted() == ["a", "c"])
+    #expect(try readNotified(shown, ReadState(me: "me", in: db)).sorted() == ["a", "c"])
   }
 }

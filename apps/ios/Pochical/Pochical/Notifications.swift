@@ -179,18 +179,13 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     }
   }
 
-  /// Takes back the notifications shown of lines the device knows are
-  /// read, here or, as the counts it hears say, on another device.
-  func withdrawRead() async {
-    guard let replies, let me = widgetMeID() else { return }
-    let shown = await Self.shownLines()
-    guard !shown.isEmpty,
-      let ids = try? await replies.database.read({ db in
-        try readNotified(shown, me: me, in: db)
-      }),
-      !ids.isEmpty
-    else { return }
-    UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ids)
+  /// Takes back the notifications shown of lines `read` says are read,
+  /// here or, as the counts it hears say, on another device.
+  func withdrawRead(_ read: ReadState) async {
+    let ids = readNotified(await Self.shownLines(), read)
+    if !ids.isEmpty {
+      UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ids)
+    }
   }
 
   /// A withdrawal the server sent in the background, for a read on

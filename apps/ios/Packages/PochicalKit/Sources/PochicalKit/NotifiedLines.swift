@@ -68,24 +68,54 @@ public func withdrawn(
   .map(\.id)
 }
 
-/// The ids of the notifications shown whose lines the device knows are
-/// read: the user's own read mark in the chat is at or past them, or the
-/// chat has nothing unread left, as another device's read says.
-public func readNotified(_ shown: [NotifiedLine], me: String, in db: Database) throws -> [String] {
-  let marks = try ReadMarkRow.where { $0.userID.eq(me) }.fetchAll(db)
-  let counts = try UnreadCountRow.fetchAll(db)
+/// What the device knows is read in each chat, for taking back the
+/// notifications of lines read elsewhere: the chats with nothing unread
+/// left, and how far the user read each.
+public struct ReadState: Hashable, Sendable {
+  /// Each chat, as its group and thread, with nothing unread left.
+  public var cleared: Set<[String]> = []
+  /// The user's own read mark in each chat, by its group and thread.
+  public var marks: [[String]: Int64] = [:]
+
+  public init() {}
+
+  /// As the database holds it for the user `me`.
+  public init(me: String, in db: Database) throws {
+    for count in try UnreadCountRow.where({ $0.count.eq(0) }).fetchAll(db) {
+      cleared.insert([count.groupID, count.threadID])
+    }
+    for mark in try ReadMarkRow.where({ $0.userID.eq(me) }).fetchAll(db) {
+      let chat = [mark.groupID, mark.threadID]
+      marks[chat] = max(marks[chat] ?? 0, mark.lastReadSeq)
+    }
+  }
+}
+
+/// The ids of the notifications shown whose lines `read` says are read:
+/// the user's own read mark in the chat is at or past them, or the chat
+/// has nothing unread left, as another device's read says.
+public func readNotified(_ shown: [NotifiedLine], _ read: ReadState) -> [String] {
   var ids: [String] = []
   for chat in Set(shown.map { [$0.groupID, $0.threadID] }) {
-    let (groupID, threadID) = (chat[0], chat[1])
-    let cleared = counts.contains {
-      $0.groupID == groupID && $0.threadID == threadID && $0.count == 0
-    }
-    let mark = marks.filter { $0.groupID == groupID && $0.threadID == threadID }
-      .map(\.lastReadSeq).max()
-    guard cleared || mark != nil else { continue }
-    ids += withdrawn(shown, groupID: groupID, threadID: threadID, readTo: cleared ? nil : mark)
+    let cleared = read.cleared.contains(chat)
+    guard cleared || read.marks[chat] != nil else { continue }
+    ids += withdrawn(
+      shown, groupID: chat[0], threadID: chat[1], readTo: cleared ? nil : read.marks[chat])
   }
   return ids
+}
+
+/// The user's ReadState, read again as the counts and marks change.
+public struct ReadStateRequest: FetchKeyRequest, Hashable {
+  let me: String
+
+  public init(me: String) {
+    self.me = me
+  }
+
+  public func fetch(_ db: Database) throws -> ReadState {
+    try ReadState(me: me, in: db)
+  }
 }
 
 /// Who a chat line's notification is from and where, as the extension
