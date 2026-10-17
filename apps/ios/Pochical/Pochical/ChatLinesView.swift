@@ -679,9 +679,16 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     composer.view.invalidateIntrinsicContentSize()
     guard view.window != nil else { return }
     composerAnimation = animation
+    let latestWas = latest.view.frame.minY
     view.setNeedsLayout()
     view.layoutIfNeeded()
     composerAnimation = nil
+    // The ↓ over the composer moves with the lines, from where it was.
+    let moved = latestWas - latest.view.frame.minY
+    if let animation, moved != 0 {
+      latest.view.transform = CGAffineTransform(translationX: 0, y: moved)
+      UIView.animate(animation) { self.latest.view.transform = .identity }
+    }
   }
 
   /// The lines seen kept at the foot of the room they are seen in as it
