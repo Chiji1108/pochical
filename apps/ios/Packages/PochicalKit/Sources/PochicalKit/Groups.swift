@@ -130,6 +130,7 @@ enum Groups {
       try GroupRow.find(membership.groupID).delete().execute(db)
       try GroupSync.reset(membership.groupID, in: db)
       try Chats.dropWaiting(of: membership.groupID, in: db)
+      try Chats.dropDrafts(of: membership.groupID, in: db)
       try Chats.dropUnread(of: membership.groupID, in: db)
       return
     }

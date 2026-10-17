@@ -81,4 +81,10 @@ export const chatRules = {
   // How long, in milliseconds, receivers show someone typing unless it is
   // refreshed, so a lost stop frame cannot leave it stuck.
   typingShowMs: 5000,
+  // How long, in milliseconds, a line may wait on the device for the
+  // group to take it before it is marked 送れませんでした and stops going
+  // by itself, for the person to send again or delete: past brief gaps
+  // (a tunnel, a lift), yet before words written offline go out long
+  // after they were meant, as Signal gives up rather than send a day late.
+  unsentAfterMs: 600_000,
 } as const;

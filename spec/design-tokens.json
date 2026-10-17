@@ -24,7 +24,8 @@
     "prefetchScreens": 2,
     "runGap": 12,
     "typingSendMs": 3000,
-    "typingShowMs": 5000
+    "typingShowMs": 5000,
+    "unsentAfterMs": 600000
   },
   "colors": {
     "marks": [

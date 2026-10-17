@@ -1,0 +1,244 @@
+import Foundation
+import PochicalDesign
+import PochicalProto
+import SQLiteData
+
+// What is being written in a chat, kept on the device as the chat is left
+// (spec/chat.md, Drafts), and the member's lines that could not be sent
+// or were taken back while they waited (Lines on their way).
+
+/// What was being written in a chat: its words as they would be sent (its
+/// mentions as <@id>), and the line it answers or changes, by seq.
+public struct KeptDraft: Hashable, Sendable {
+  public var text: String
+  public var replyTo: Int64?
+  public var editing: Int64?
+
+  public init(text: String, replyTo: Int64? = nil, editing: Int64? = nil) {
+    self.text = text
+    self.replyTo = replyTo
+    self.editing = editing
+  }
+}
+
+/// A line a draft answers or changes, as the device holds it.
+public struct DraftLine: Hashable, Sendable {
+  public var text: String
+  public var unsent: Bool
+
+  public init(text: String, unsent: Bool) {
+    self.text = text
+    self.unsent = unsent
+  }
+}
+
+/// The draft to keep, or to open again, with the chat's lines as the
+/// device holds them (`lineOf`, nil for one it does not hold); nil for
+/// none: words make a draft, an edit whose words are still the line's own
+/// is none, an edit of a line taken back or not held goes with its words,
+/// and a reply to a line taken back keeps its words without the quote
+/// (spec/vectors/chat.json, draft).
+public func keptDraft(_ draft: KeptDraft, lineOf: (Int64) -> DraftLine?) -> KeptDraft? {
+  guard !draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+  if let editing = draft.editing {
+    guard let line = lineOf(editing), !line.unsent, line.text != draft.text else { return nil }
+    return KeptDraft(text: draft.text, editing: editing)
+  }
+  var kept = draft
+  if let replyTo = draft.replyTo, lineOf(replyTo)?.unsent == true {
+    kept.replyTo = nil
+  }
+  return kept
+}
+
+/// A chat's draft on the device.
+@Table("chatDrafts")
+struct ChatDraftRow: Hashable, Sendable {
+  var groupID: String
+  var threadID: String
+  var text: String
+  var replyTo: Int64?
+  var editing: Int64?
+  var savedAtMs: Int64
+}
+
+/// A line of the member's taken back while it waited, by its op_id: should
+/// the group have taken it meanwhile, it is taken back from the group as
+/// it comes.
+@Table("chatTakenBack")
+struct ChatTakenBackRow: Hashable, Sendable {
+  var opID: String
+  var groupID: String
+}
+
+/// A draft as a chat opens with it: the line being changed whole, for the
+/// composer to change.
+public struct OpenedDraft: Hashable, Sendable {
+  public var text: String
+  public var replyTo: Int64?
+  public var editing: ChatLineRow?
+}
+
+extension DatabaseMigrator {
+  mutating func registerChatDrafts() {
+    registerMigration("Keep the chats' drafts and lines taken back while waiting") { db in
+      try #sql(
+        """
+        CREATE TABLE "chatDrafts" (
+          "groupID" TEXT NOT NULL,
+          "threadID" TEXT NOT NULL,
+          "text" TEXT NOT NULL,
+          "replyTo" INTEGER,
+          "editing" INTEGER,
+          "savedAtMs" INTEGER NOT NULL,
+          PRIMARY KEY ("groupID", "threadID")
+        ) STRICT
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        CREATE TABLE "chatTakenBack" (
+          "opID" TEXT PRIMARY KEY NOT NULL,
+          "groupID" TEXT NOT NULL
+        ) STRICT
+        """
+      )
+      .execute(db)
+    }
+  }
+}
+
+extension Chats {
+  // MARK: Drafts
+
+  /// Keeps what is being written in a chat, or forgets it when it makes
+  /// no draft (`keptDraft`).
+  public static func keepDraft(
+    _ draft: KeptDraft, of threadID: String, in groupID: String, now: Int64, db: Database
+  ) throws {
+    let held = ChatDraftRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
+    try held.delete().execute(db)
+    guard
+      let kept = try keptDraft(
+        draft, of: threadID, in: groupID, db: db)
+    else { return }
+    try ChatDraftRow.insert {
+      ChatDraftRow(
+        groupID: groupID, threadID: threadID, text: kept.text, replyTo: kept.replyTo,
+        editing: kept.editing, savedAtMs: now)
+    }
+    .execute(db)
+  }
+
+  /// The chat's draft as it opens, with its lines as they are now.
+  public static func draft(of threadID: String, in groupID: String, db: Database) throws
+    -> OpenedDraft?
+  {
+    guard let kept = try keptDraft(of: threadID, in: groupID, db: db) else { return nil }
+    let editing = try kept.editing.flatMap { try line(kept: $0, of: threadID, in: groupID, db: db) }
+    return OpenedDraft(text: kept.text, replyTo: kept.replyTo, editing: editing)
+  }
+
+  /// The chat's draft as kept, with its lines as they are now.
+  static func keptDraft(of threadID: String, in groupID: String, db: Database) throws
+    -> KeptDraft?
+  {
+    guard
+      let row = try ChatDraftRow.where({ $0.groupID.eq(groupID) && $0.threadID.eq(threadID) })
+        .fetchOne(db)
+    else { return nil }
+    return try keptDraft(
+      KeptDraft(text: row.text, replyTo: row.replyTo, editing: row.editing), of: threadID,
+      in: groupID, db: db)
+  }
+
+  /// The group's chats with a draft.
+  static func draftThreads(in groupID: String, db: Database) throws -> [String] {
+    try ChatDraftRow.where { $0.groupID.eq(groupID) }.select(\.threadID).fetchAll(db)
+  }
+
+  /// A group left takes its drafts and the lines taken back with it.
+  static func dropDrafts(of groupID: String, in db: Database) throws {
+    try ChatDraftRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
+    try ChatTakenBackRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
+  }
+
+  private static func keptDraft(
+    _ draft: KeptDraft, of threadID: String, in groupID: String, db: Database
+  ) throws -> KeptDraft? {
+    var lines: [Int64: DraftLine] = [:]
+    for seq in [draft.replyTo, draft.editing].compactMap(\.self) {
+      if let line = try line(kept: seq, of: threadID, in: groupID, db: db) {
+        lines[seq] = DraftLine(text: line.text, unsent: line.unsent)
+      }
+    }
+    return PochicalKit.keptDraft(draft) { lines[$0] }
+  }
+
+  private static func line(kept seq: Int64, of threadID: String, in groupID: String, db: Database)
+    throws -> ChatLineRow?
+  {
+    try ChatLineRow.where {
+      $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq.eq(seq)
+    }
+    .fetchOne(db)
+  }
+
+  // MARK: Lines not sent
+
+  /// Marks the group's lines that have waited `Chat.unsentAfterMs` without
+  /// the group taking them as not sent, so they stop going by themselves;
+  /// gives when the next of those still waiting will be, nil with none.
+  @discardableResult
+  public static func failOverdue(of groupID: String, now: Int64, in db: Database) throws
+    -> Int64?
+  {
+    let rows = try ChatOutboxRow.where { $0.groupID.eq(groupID) && !$0.failed }.fetchAll(db)
+    var next: Int64?
+    for row in rows {
+      guard case .send = try Pochical_V1_ChatEdit(serializedBytes: row.edit).kind else {
+        continue
+      }
+      let due = row.madeAtMs + Int64(Chat.unsentAfterMs)
+      if due <= now {
+        try fail(row.opID, in: db)
+      } else {
+        next = min(next ?? due, due)
+      }
+    }
+    return next
+  }
+
+  /// A line of the member's taken out of the outbox while it waited
+  /// (送信取消, or 削除 once not sent); should the group have taken it
+  /// meanwhile, it is taken back from the group as it comes (`tookBack`).
+  public static func takeBack(_ opID: String, in db: Database) throws {
+    guard let row = try ChatOutboxRow.where({ $0.opID.eq(opID) }).fetchOne(db) else { return }
+    try ChatOutboxRow.where { $0.opID.eq(opID) }.delete().execute(db)
+    try ChatTakenBackRow.where { $0.opID.eq(opID) }.delete().execute(db)
+    try ChatTakenBackRow.insert { ChatTakenBackRow(opID: opID, groupID: row.groupID) }.execute(db)
+  }
+
+  /// A line come from the group: one taken back while it waited is taken
+  /// back from the group now, and one marked not sent that the group took
+  /// after all (its answer lost) stops waiting.
+  static func tookBack(_ line: Pochical_V1_ChatLine, of groupID: String, in db: Database) throws {
+    try ChatOutboxRow.where { $0.opID.eq(line.opID) && $0.failed }.delete().execute(db)
+    let taken = ChatTakenBackRow.where { $0.opID.eq(line.opID) }
+    guard try taken.fetchCount(db) > 0 else { return }
+    try taken.delete().execute(db)
+    guard !line.unsent else { return }
+    var unsend = Pochical_V1_ChatUnsend()
+    unsend.threadID = line.threadID
+    unsend.seq = line.seq
+    try edit(
+      .unsend(unsend), in: groupID, now: Int64(Date.now.timeIntervalSince1970 * 1000), db: db)
+  }
+
+  /// The edits an Acked names: those taken back while they waited are
+  /// done with, the group having taken them (and they came) or not.
+  static func forgetTakenBack(_ opIDs: [String], in db: Database) throws {
+    try ChatTakenBackRow.where { $0.opID.in(opIDs) }.delete().execute(db)
+  }
+}

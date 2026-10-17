@@ -91,5 +91,6 @@ var migrator: DatabaseMigrator {
   migrator.registerChatReplies()
   migrator.registerProfile()
   migrator.registerPreferences()
+  migrator.registerChatDrafts()
   return migrator
 }
