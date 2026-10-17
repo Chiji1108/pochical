@@ -42,11 +42,34 @@ final class NotificationService: UNNotificationServiceExtension {
       let authorID = payload["authorId"] as? String,
       let from = from(line, authorID: authorID)
     else { return content }
-    let intent = intent(for: line, from: from, authorID: authorID, content: content)
+    // The system shows a group's conversation with its writer's name
+    // already, so its words go alone, as a one-to-one chat's.
+    guard let worded = content.mutableCopy() as? UNMutableNotificationContent else {
+      return content
+    }
+    if from.group != nil, let words = wordsAlone(content) {
+      worded.body = words
+    }
+    let intent = intent(for: line, from: from, authorID: authorID, content: worded)
     let interaction = INInteraction(intent: intent, response: nil)
     interaction.direction = .incoming
     try? await interaction.donate()
-    return (try? content.updating(from: intent)) ?? content
+    return (try? worded.updating(from: intent)) ?? worded
+  }
+
+  /// A group chat's line as the app words a one-to-one chat's, without who
+  /// wrote it: `CHAT_GROUP_{…}` as `CHAT_{…}`, its arguments after the
+  /// writer's name (spec/sync-protocol.md, Push).
+  private static func wordsAlone(_ content: UNNotificationContent) -> String? {
+    let group = "CHAT_GROUP_"
+    guard let aps = content.userInfo["aps"] as? [String: Any],
+      let alert = aps["alert"] as? [String: Any],
+      let key = alert["loc-key"] as? String, key.hasPrefix(group),
+      let args = alert["loc-args"] as? [String]
+    else { return nil }
+    let format = Bundle.main.localizedString(
+      forKey: "CHAT_\(key.dropFirst(group.count))", value: nil, table: nil)
+    return String(format: format, arguments: Array(args.dropFirst()))
   }
 
   /// Who the line is from, as the app keeps them in the App Group.

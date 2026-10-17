@@ -1150,3 +1150,25 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
     #expect(try SupportDraft.held(db: db) == nil)
   }
 }
+
+@Test func untilSentReturnsOnceTheOutboxHasNothingLeftToSend() async throws {
+  let database = try appDatabase()
+  var send = Pochical_V1_ChatSend()
+  send.threadID = groupThread
+  send.text = "行けそう"
+  let edit = Pochical_V1_ChatEdit.OneOf_Kind.send(send)
+  try await database.write { db in
+    try Chats.edit(edit, in: "g", now: 1, db: db)
+    try Chats.edit(edit, in: "g", now: 2, db: db)
+  }
+  let waiting = Task { await Chats.untilSent(of: "g", in: database) }
+  let opIDs = try await database.read { db in
+    try ChatOutboxRow.where { $0.groupID.eq("g") }.order(by: \.id).fetchAll(db).map(\.opID)
+  }
+  // The first acknowledged, the second failed: nothing is left to send.
+  try await database.write { db in
+    try Chats.acknowledge([opIDs[0]], in: db)
+    try Chats.fail(opIDs[1], in: db)
+  }
+  await waiting.value
+}
