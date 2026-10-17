@@ -74,6 +74,9 @@ export type ChatScope = {
   // The chat's photos in the order of its lines, swiped through opened
   // large (photosOf).
   photos: ChatPhoto[];
+  // Others' photos cannot be fetched the first time they come, as
+  // 比べる案 sets it.
+  fetchFails?: boolean;
 };
 
 // The photos a chat's lines show, in their order: sent, not taken back,
@@ -141,6 +144,7 @@ export function MessageLine({
   onDecide = nothing,
   onVote = nothing,
   onFailed = nothing,
+  onStopUpload = nothing,
   onFolded = nothing,
   onReveal = nothing,
 }: {
@@ -166,6 +170,8 @@ export function MessageLine({
   onVote?: (key: string) => void;
   // A tap on a photo that could not be sent.
   onFailed?: () => void;
+  // × on a photo going up, stopping it.
+  onStopUpload?: () => void;
   // Its words were measured to fold, and 続きを読む has come in under
   // them, after the chat was scrolled to its place.
   onFolded?: () => void;
@@ -187,6 +193,7 @@ export function MessageLine({
     onLinkMenu,
     onOpenDay,
     photos,
+    fetchFails,
   } = useChatScope();
   // Words past chatRules.foldLines, and whether they were opened in full.
   const [folded, setFolded] = useState(false);
@@ -292,6 +299,8 @@ export function MessageLine({
           <PhotoLine
             actions={actions}
             among={photos}
+            fetchFails={fetchFails}
+            onStop={onStopUpload}
             upload={upload}
             label={`${member?.name ?? ""}が送った写真`}
             mine={actions.mine}

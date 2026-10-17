@@ -76,6 +76,15 @@ export const designVariantOptions = {
     ],
     label: "写真の送信",
   },
+  // Whether someone else's photo, the first time it comes, comes or
+  // cannot be fetched, showing ↻ to fetch it again (which then comes).
+  photoFetch: {
+    choices: [
+      { label: "届く", value: "ok" },
+      { label: "一度失敗する", value: "fails" },
+    ],
+    label: "写真の読み込み",
+  },
   platform: {
     choices: [
       { label: "iPhone", value: "ios" },

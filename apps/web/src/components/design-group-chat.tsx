@@ -73,6 +73,7 @@ import { IconButton, Screen } from "./design-ui";
 // up, and shared days shown in a message.
 
 export type PhotoSend = "ok" | "fails";
+export type PhotoFetch = "ok" | "fails";
 
 const noMembers: Member[] = [];
 
@@ -210,6 +211,7 @@ export function ChatPage({
   gone,
   attach,
   photoSend = "ok",
+  photoFetch = "ok",
   sharedFirst = false,
   unreadAtOpen = 0,
   muted = false,
@@ -241,6 +243,8 @@ export function ChatPage({
   group: Group;
   // Whether photos' uploads go through or fail.
   photoSend?: PhotoSend;
+  // Whether others' photos come the first time, or show ↻ to fetch again.
+  photoFetch?: PhotoFetch;
   // Opens on the last days shared or put to the vote rather than the
   // latest line, as the top page shows it.
   sharedFirst?: boolean;
@@ -275,7 +279,7 @@ export function ChatPage({
   const [failedOpen, setFailedOpen] = useState<string>();
   // Blocked members' lines shown at a tap.
   const [revealed, setRevealed] = useState<string[]>([]);
-  const { failedCount, upload, uploads } = usePhotoUploads(photoSend);
+  const { failedCount, stop, upload, uploads } = usePhotoUploads(photoSend);
   const [sharing, setSharing] = useState(false);
   const { answerSoon, typingMember } = useTypingSoon(group, chat.messages);
   const {
@@ -379,6 +383,7 @@ export function ChatPage({
   const replying = byId(replyTo);
   // What every line shares, given once rather than to each.
   const scope: ChatScope = {
+    fetchFails: photoFetch === "fails",
     inviteOf,
     isGroup,
     members: group.members,
@@ -515,6 +520,9 @@ export function ChatPage({
                   }}
                   onFailed={() => {
                     setFailedOpen(message.id);
+                  }}
+                  onStopUpload={() => {
+                    stop(message.id);
                   }}
                   onFolded={keepPlace}
                   onReveal={() => {
@@ -731,36 +739,44 @@ export function ChatPage({
 // group sees a photo once it is up.
 function usePhotoUploads(photoSend: PhotoSend) {
   const [uploads, setUploads] = useState<Record<string, Upload>>({});
-  const timers = useRef<number[]>([]);
-  useEffect(
-    () => () => {
-      for (const timer of timers.current) {
+  // Each photo's upload, by its line, which × stops.
+  const timers = useRef(new Map<string, number>());
+  useEffect(() => {
+    const going = timers.current;
+    return () => {
+      for (const timer of going.values()) {
         window.clearTimeout(timer);
       }
-    },
-    []
-  );
-  const upload = (ids: string[]) => {
-    const set = (status?: Upload) => {
-      setUploads((before) => {
-        const others = Object.entries(before).filter(
-          ([id]) => !ids.includes(id)
-        );
-        const these = status ? ids.map((id) => [id, status] as const) : [];
-        return Object.fromEntries([...others, ...these]);
-      });
     };
-    set("sending");
-    timers.current.push(
-      window.setTimeout(() => {
-        set(photoSend === "fails" ? "failed" : undefined);
-      }, uploadMilliseconds)
-    );
+  }, []);
+  const set = (id: string, status?: Upload) => {
+    setUploads((before) => {
+      const others = Object.entries(before).filter(([other]) => other !== id);
+      return Object.fromEntries(status ? [...others, [id, status]] : others);
+    });
+  };
+  const upload = (ids: string[]) => {
+    for (const id of ids) {
+      set(id, "sending");
+      timers.current.set(
+        id,
+        window.setTimeout(() => {
+          timers.current.delete(id);
+          set(id, photoSend === "fails" ? "failed" : undefined);
+        }, uploadMilliseconds)
+      );
+    }
+  };
+  // Stopped with ×: not sent, its ! offering もう一度送る and 削除.
+  const stop = (id: string) => {
+    window.clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    set(id, "failed");
   };
   const failedCount = Object.values(uploads).filter(
     (status) => status === "failed"
   ).length;
-  return { failedCount, upload, uploads };
+  return { failedCount, stop, upload, uploads };
 }
 
 // Someone writing back, shown under the latest line: in the prototype,

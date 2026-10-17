@@ -515,6 +515,18 @@ public enum Chats {
     try ChatOutboxRow.where { $0.opID.eq(opID) }.update { $0.failed = true }.execute(db)
   }
 
+  /// The member stopped their photo going up (spec/chat.md, Photos): its
+  /// line is not sent, as one whose photo failed, to send again or delete.
+  public static func stopSending(_ opID: String, in db: Database) throws {
+    try fail(opID, in: db)
+  }
+
+  /// The line still waits to go: not sent yet, nor marked not sent, nor
+  /// taken back.
+  static func stillGoing(_ opID: String, in db: Database) throws -> Bool {
+    try ChatOutboxRow.where { $0.opID.eq(opID) && !$0.failed }.fetchCount(db) > 0
+  }
+
   /// Sends a line that could not be sent again, as the newest waiting
   /// edit, so the outbox takes it up after what it has sent.
   public static func sendAgain(_ opID: String, now: Int64, in db: Database) throws {

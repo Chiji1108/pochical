@@ -1,3 +1,4 @@
+import Nuke
 import PochicalDesign
 import PochicalKit
 import PhotosUI
@@ -18,6 +19,7 @@ struct ChatScreen: View {
   @Environment(Settings.self) private var settings
   @Environment(\.look) private var look
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.displayScale) private var displayScale
   @Environment(\.groupSocket) private var socket
   /// The socket said under the title, once it has stayed not current for
   /// a moment (spec/chat.md): the lines shown may not be all there is.
@@ -138,6 +140,8 @@ struct ChatScreen: View {
   @State private var typers: [String: Date] = [:]
   /// The line whose reactions and menu are open.
   @State private var acting: MessageActionsRequest?
+  /// The photos of the lines near those in sight, fetched ahead.
+  @State private var photoPrefetch = PhotoPrefetch()
   /// What is done on a line, for every line of the chat.
   @State private var lineActions = Handler<(lineID: String, action: LineAction)>()
 
@@ -164,7 +168,8 @@ struct ChatScreen: View {
         }),
       ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
       shown: placed, holds: acting != nil, canAskEarlier: opened && !state.atStart,
-      onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) }
+      onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
+      onNear: { prefetchPhotos(of: $0.compactMap { byID[$0] }) }
     )
     .background {
       ReadsSeen(
@@ -363,6 +368,7 @@ struct ChatScreen: View {
     .onDisappear {
       closeActions()
       keepDraft()
+      photoPrefetch.stop()
       draft.stopTyping(in: threadID, socket: socket)
       if Notifications.shared.openChat?.threadID == threadID {
         Notifications.shared.openChat = nil
@@ -713,7 +719,7 @@ struct ChatScreen: View {
       profileOf = ProfileOf(
         id: line.authorID, name: names[line.authorID] ?? "メンバー",
         photoID: faces[line.authorID] ?? "")
-    case .retry:
+    case .retry, .stopSending:
       break
     case .react(let emoji):
       react(emoji, on: line)
@@ -754,6 +760,8 @@ struct ChatScreen: View {
     switch action {
     case .retry(let source):
       askNotSent(line, from: source)
+    case .stopSending:
+      stopSending(line)
     case .hold(let spot, let finger, _):
       // Still on its way: コピー for words, and 送信取消, which takes it
       // back before it goes (spec/chat.md, Lines on their way).
@@ -821,6 +829,15 @@ struct ChatScreen: View {
     source.space.present(sheet, from: source.frame)
   }
 
+  /// Stops a line's photo going up: the line is not sent, its ! offering
+  /// もう一度送る and 削除 (spec/chat.md, Photos).
+  private func stopSending(_ line: WaitingLine) {
+    try? database.write { try Chats.stopSending(line.opID, in: $0) }
+    if let photo = line.photo {
+      PhotoUploads.shared.stop(photo.id)
+    }
+  }
+
   /// Sends a line not sent once more, after the rest, as if written now.
   private func sendAgain(_ line: WaitingLine) {
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
@@ -838,6 +855,7 @@ struct ChatScreen: View {
   private func takeBack(_ line: WaitingLine) {
     try? database.write { try Chats.takeBack(line.opID, in: $0) }
     if let photo = line.photo {
+      PhotoUploads.shared.stop(photo.id)
       ChatPhotos.forget(photo.id, in: group.id)
     }
   }
@@ -1122,6 +1140,31 @@ struct ChatScreen: View {
     send.poll = poll
     send.replyTo = takeReply()
     write(.send(send))
+  }
+
+  /// Fetches ahead the photos of the lines near those in sight, as their
+  /// lines draw them, and lets go of the rest: not a blocked member's
+  /// folded away.
+  private func prefetchPhotos(of near: [ChatItem]) {
+    var requests: [String: ImageRequest] = [:]
+    for item in near {
+      let photo: LinePhoto?
+      switch item {
+      case .line(let line, _):
+        let folded =
+          otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
+        photo = line.hidden || line.unsent || folded ? nil : line.photo
+      case .waiting(let line, _): photo = line.photo
+      default: photo = nil
+      }
+      if let photo,
+        let request = ChatPhotoLoading.lineRequest(
+          photo, in: group.id, scale: displayScale, calls: groupCalls)
+      {
+        requests[photo.id] = request
+      }
+    }
+    photoPrefetch.near(requests)
   }
 
   /// The photos the chat's lines show, in their order, swiped through

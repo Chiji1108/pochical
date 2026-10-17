@@ -127,13 +127,6 @@ public enum ChatPhotos {
     caches("ChatPhotos/\(groupID)").appending(path: "\(photoID).jpg")
   }
 
-  /// Where a chat photo's small version is kept on the device once
-  /// fetched: in a folder of their own beside the group's photos, so no
-  /// photo's id names another's small version.
-  static func cachedSmall(_ photoID: String, in groupID: String) -> URL {
-    caches("ChatPhotos/\(groupID)/small").appending(path: "\(photoID).jpg")
-  }
-
   /// Where the member's own photo waits until uploaded, out of the caches
   /// the system may empty.
   static func pending(_ photoID: String, in groupID: String) -> URL {
@@ -156,7 +149,6 @@ public enum ChatPhotos {
   /// Takes a photo off the device, as when its line is taken back.
   public static func forget(_ photoID: String, in groupID: String) {
     try? FileManager.default.removeItem(at: cached(photoID, in: groupID))
-    try? FileManager.default.removeItem(at: cachedSmall(photoID, in: groupID))
     try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
   }
 
@@ -170,8 +162,15 @@ public enum ChatPhotos {
 
   /// The photo's bytes held on the device, if any.
   public static func held(_ photoID: String, in groupID: String) -> Data? {
-    (try? Data(contentsOf: cached(photoID, in: groupID)))
-      ?? (try? Data(contentsOf: pending(photoID, in: groupID)))
+    heldFile(photoID, in: groupID).flatMap { try? Data(contentsOf: $0) }
+  }
+
+  /// Where the photo is held on the device, if it is: the member's own,
+  /// sent or waiting to go, and the faces kept for the widgets.
+  public static func heldFile(_ photoID: String, in groupID: String) -> URL? {
+    [cached(photoID, in: groupID), pending(photoID, in: groupID)].first {
+      FileManager.default.fileExists(atPath: $0.path())
+    }
   }
 
   /// A folder among the App Group's caches, the app's own without one.
@@ -202,10 +201,12 @@ public enum ChatPhotos {
   /// Uploads the member's own photo to the group's photos, once; a retry
   /// stores it again. A chat's photo goes with its small version, first,
   /// so the lines find it as soon as they are sent; the user's own photos
-  /// (`mine`) are small already.
+  /// (`mine`) are small already. How far it has gone is told in
+  /// `PhotoUploads`, where it may be stopped: then it throws as cancelled.
+  /// `send` stands in for the network, telling nothing of how far.
   static func upload(
     _ photoID: String, in groupID: String, account: Account, server: URL = Server.url,
-    send: Account.Send = { try await URLSession.shared.data(for: $0) }
+    send: Account.Send? = nil
   ) async throws {
     guard let jpeg = try? Data(contentsOf: pending(photoID, in: groupID)) else {
       // Sent before, from another socket, or never kept.
@@ -214,11 +215,38 @@ public enum ChatPhotos {
       }
       throw UploadError.gone
     }
-    if groupID != mine, let small = small(jpeg) {
-      try await put(
-        small, as: photoID, in: groupID, small: true, account: account, server: server, send: send)
+    let small = groupID == mine ? nil : small(jpeg)
+    // Told as one, the small version's bytes first.
+    let total = Double((small?.count ?? 0) + jpeg.count)
+    let going = Task {
+      if let small {
+        try await put(
+          small, as: photoID, in: groupID, small: true, account: account, server: server,
+          send: send
+        ) { sent in
+          Task { @MainActor in PhotoUploads.shared.moved(photoID, to: Double(sent) / total) }
+        }
+      }
+      let before = small?.count ?? 0
+      try await put(jpeg, as: photoID, in: groupID, account: account, server: server, send: send) {
+        sent in
+        Task { @MainActor in
+          PhotoUploads.shared.moved(photoID, to: Double(before + Int(sent)) / total)
+        }
+      }
     }
-    try await put(jpeg, as: photoID, in: groupID, account: account, server: server, send: send)
+    await PhotoUploads.shared.began(photoID) { going.cancel() }
+    do {
+      try await withTaskCancellationHandler {
+        try await going.value
+      } onCancel: {
+        going.cancel()
+      }
+      await PhotoUploads.shared.ended(photoID)
+    } catch {
+      await PhotoUploads.shared.ended(photoID)
+      throw error
+    }
     try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
   }
 
@@ -228,48 +256,62 @@ public enum ChatPhotos {
     guard let jpeg = try? Data(contentsOf: cached(photoID, in: groupID)) else {
       throw UploadError.gone
     }
-    try await put(jpeg, as: photoID, in: groupID, account: account, server: Server.url) {
-      try await URLSession.shared.data(for: $0)
-    }
+    try await put(jpeg, as: photoID, in: groupID, account: account, server: Server.url, send: nil)
   }
 
+  /// Puts a photo's bytes on the server, through `send` when given, else
+  /// telling `onSent` how many bytes have gone.
   private static func put(
     _ jpeg: Data, as photoID: String, in groupID: String, small: Bool = false, account: Account,
-    server: URL, send: Account.Send
+    server: URL, send: Account.Send?, onSent: @escaping @Sendable (Int64) -> Void = { _ in }
   ) async throws {
     var request = URLRequest(url: photoURL(photoID, in: groupID, small: small, server: server))
     request.httpMethod = "PUT"
     request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
     request.setValue("Bearer \(try await account.token())", forHTTPHeaderField: "Authorization")
-    request.httpBody = jpeg
-    let (_, response) = try await send(request)
+    let response: URLResponse
+    if let send {
+      request.httpBody = jpeg
+      (_, response) = try await send(request)
+    } else {
+      (_, response) = try await URLSession.shared.upload(
+        for: request, from: jpeg, delegate: UploadProgress(onSent: onSent))
+    }
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
     guard status == 204 else { throw UploadError.refused(status) }
   }
 
-  /// The group's photo, from the device or else the server, kept once
-  /// fetched. `small` asks for its small version, as the chat's lines and
-  /// quotes show it: the photo itself when the device holds it, and when
-  /// it has none.
+  /// The group's photo, from the device or else the server. `small` asks
+  /// for its small version, as the chat's lines and quotes show it: the
+  /// photo itself when the device holds it, and when it has none. Kept
+  /// once fetched (`keep`) for the faces the widgets show; the chat's
+  /// photos are kept by the app's image cache instead, within its limit.
   public static func fetch(
-    _ photoID: String, in groupID: String, small: Bool = false, account: Account,
-    server: URL = Server.url
+    _ photoID: String, in groupID: String, small: Bool = false, keep: Bool = true,
+    account: Account, server: URL = Server.url
   ) async throws -> Data {
     if let held = held(photoID, in: groupID) {
       return held
     }
-    let kept = small ? cachedSmall(photoID, in: groupID) : cached(photoID, in: groupID)
-    if small, let held = try? Data(contentsOf: kept) {
-      return held
-    }
     var request = URLRequest(url: photoURL(photoID, in: groupID, small: small, server: server))
     request.setValue("Bearer \(try await account.token())", forHTTPHeaderField: "Authorization")
-    let (data, response) = try await URLSession.shared.data(for: request)
+    let (data, response) = try await (keep ? URLSession.shared : uncached).data(for: request)
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
     guard status == 200 else { throw UploadError.refused(status) }
-    try? data.write(to: kept, options: .atomic)
+    if keep, !small {
+      try? data.write(to: cached(photoID, in: groupID), options: .atomic)
+    }
     return data
   }
+
+  /// Fetches what the app's image cache keeps instead, so the system's
+  /// URL cache, which has no limit of the chat's, holds no second copy.
+  private static let uncached: URLSession = {
+    let configuration = URLSessionConfiguration.default
+    configuration.urlCache = nil
+    configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+    return URLSession(configuration: configuration)
+  }()
 
   /// A link preview's picture, from the device or else the server, kept
   /// once fetched.

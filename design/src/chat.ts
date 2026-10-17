@@ -46,6 +46,11 @@ export const chatRules = {
   // each earlier page as it scrolls back. A device catching up gets at
   // most this many new lines of each chat; the rest come as pages.
   pageSize: 50,
+  // The most bytes of photos fetched for the chat a phone keeps on its
+  // disk, the least lately read let go first past it, as an image cache
+  // keeps a ceiling: a few thousand photos' small versions. The member's
+  // own photos and faces are kept apart, outside it.
+  photoDiskBytes: 200_000_000,
   // How long, in milliseconds, a photo takes to come in over its blur.
   photoFadeMs: 200,
   // The most bytes one photo may be once shrunk to send; the server
@@ -55,6 +60,15 @@ export const chatRules = {
   // pixels, as chat apps send them; shrinking it again as JPEG also leaves
   // its location behind.
   photoMaxEdge: 2048,
+  // The most bytes of photos drawn at their size a phone holds in memory
+  // while the app runs, so a line scrolled back into sight draws at once;
+  // the system lets them go sooner when memory runs short.
+  photoMemoryBytes: 48_000_000,
+  // How many screens' height above and below the lines in sight their
+  // photos are fetched ahead, so a reader scrolling finds them there, and
+  // let go of again past it: a screen, as Signal and Telegram fetch the
+  // lines about to come into sight.
+  photoPrefetchScreens: 1,
   // A photo is also sent shrunk until its longer side is at most this many
   // pixels, for the chat's lines and quotes to fetch instead of the whole
   // photo: enough for its 220×260pt box at 3x, a panorama cropped too.
