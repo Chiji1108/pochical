@@ -134,9 +134,10 @@ struct ChatScreen: View {
   @State private var viewing: PhotoViewing?
   /// Long lines opened at 続きを読む, which stay open while the chat is.
   @State private var unfolded: Set<String> = []
-  /// Lines not sent being sent again, shown waiting from the tap until the
-  /// outbox read again says so.
-  @State private var sendingAgain: Set<String> = []
+  /// Lines not sent being sent again, by the time each was written then:
+  /// shown waiting from the tap while the outbox read still has them as
+  /// they were, which sending again writes anew.
+  @State private var sendingAgain: [String: Int64] = [:]
   /// Others writing now, each until their typing lapses.
   @State private var typers: [String: Date] = [:]
   /// The line whose reactions and menu are open.
@@ -394,10 +395,6 @@ struct ChatScreen: View {
     .onChange(of: scenePhase) { _, phase in
       if phase != .active { keepDraft() }
     }
-    // Lines sent again are left to the outbox once it has them waiting.
-    .onChange(of: state.waiting.filter(\.failed).map(\.opID)) { _, failed in
-      sendingAgain.formIntersection(failed)
-    }
     .photoViewer($viewing, groupID: group.id) { photo in
       await savePhoto(photo, in: group.id, calls: groupCalls)
     }
@@ -588,7 +585,7 @@ struct ChatScreen: View {
     }
     for var line in state.waiting {
       // Sent again: waiting from the tap, before the outbox is read again.
-      if sendingAgain.contains(line.opID) { line.failed = false }
+      if sendingAgain[line.opID] == line.madeAtMs { line.failed = false }
       let starts = startsRun(at: line.madeAtMs, writer: meID)
       items.append(.waiting(line, startsRun: starts || line.replyTo != nil))
     }
@@ -816,11 +813,11 @@ struct ChatScreen: View {
   private func sendAgain(_ line: WaitingLine) {
     if let photo = line.photo { PhotoUploads.shared.forget(photo.id) }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    sendingAgain.insert(line.opID)
+    sendingAgain[line.opID] = line.madeAtMs
     do {
       try database.write { try Chats.sendAgain(line.opID, now: now, in: $0) }
     } catch {
-      sendingAgain.remove(line.opID)
+      sendingAgain[line.opID] = nil
     }
   }
 
