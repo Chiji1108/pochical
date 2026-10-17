@@ -553,7 +553,11 @@ public actor SyncClient {
           try await ChatPhotos.upload(
             send.photo.id, in: groupID, account: account, server: server)
           // Stopped as its last bytes went: left as the member left it.
-          if try await stillGoing(edit.opID) { kept.append(edit) }
+          // Past here × does nothing, so the line is sent as it shows.
+          let going = await PhotoUploads.shared.sending(send.photo.id) { [database] in
+            (try? database.read { try Chats.stillGoing(edit.opID, in: $0) }) ?? false
+          }
+          if going { kept.append(edit) }
           break
         } catch {
           try Task.checkCancellation()

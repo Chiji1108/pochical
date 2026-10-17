@@ -213,6 +213,8 @@ public enum ChatPhotos {
   /// so the lines find it as soon as they are sent; the user's own photos
   /// (`mine`) are small already. How far it has gone is told in
   /// `PhotoUploads`, where it may be stopped: then it throws as cancelled.
+  /// Once it returns, the caller asks `PhotoUploads.sending` whether its
+  /// line still goes.
   /// `send` stands in for the network, telling nothing of how far.
   static func upload(
     _ photoID: String, in groupID: String, account: Account, server: URL = Server.url,
@@ -256,7 +258,7 @@ public enum ChatPhotos {
       } onCancel: {
         going.cancel()
       }
-      await PhotoUploads.shared.ended(photoID)
+      await PhotoUploads.shared.finished(photoID)
     } catch {
       await PhotoUploads.shared.ended(photoID)
       throw error
