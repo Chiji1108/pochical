@@ -701,14 +701,19 @@ struct SupportChatScreen: View {
       do {
         if let photo = line.photo {
           try await groupCalls.uploadSupportPhoto(photo.id)
-          // Stopped with × as its upload ended.
-          guard waiting.first(where: { $0.id == line.id })?.failed == false else { return }
+          // Stopped with × as its upload ended; past here × does nothing,
+          // so the line is sent as it shows.
+          let going = PhotoUploads.shared.sending(photo.id) {
+            waiting.first(where: { $0.id == line.id })?.failed == false
+          }
+          guard going else { return }
         }
         let kept = try await groupCalls.sendSupport(
           line.text, id: line.id, device: Self.device, replyTo: line.replyTo, photo: line.photo,
           preview: line.preview, withoutPreview: line.withoutPreview)
         waiting.removeAll { $0.id == line.id }
         lines.append(kept)
+        if let photo = line.photo { PhotoUploads.shared.forget(photo.id) }
       } catch {
         // Not when stopped with ×, which marked it already.
         if let index = waiting.firstIndex(where: { $0.id == line.id }), !waiting[index].failed {
@@ -721,11 +726,12 @@ struct SupportChatScreen: View {
 
   /// Stops a line's photo going up, as the group chats' × does: the line
   /// is not sent, to send again or delete.
+  /// Nothing once its photo is up and the line is being sent.
   private func stopSending(_ line: Waiting) {
+    if let photo = line.photo, !PhotoUploads.shared.stop(photo.id) { return }
     if let index = waiting.firstIndex(where: { $0.id == line.id }) {
       waiting[index].failed = true
     }
-    if let photo = line.photo { PhotoUploads.shared.stop(photo.id) }
   }
 
   /// Fetches ahead the photos of the items near those in sight, as the
@@ -744,7 +750,10 @@ struct SupportChatScreen: View {
   /// Deletes a line not sent, and the photo kept on the device for it.
   private func delete(_ line: Waiting) {
     waiting.removeAll { $0.id == line.id }
-    if let photo = line.photo { ChatPhotos.forget(photo.id, in: ChatPhotos.support) }
+    if let photo = line.photo {
+      PhotoUploads.shared.forget(photo.id)
+      ChatPhotos.forget(photo.id, in: ChatPhotos.support)
+    }
   }
 
   private static func ms(_ date: Date) -> Int64 {
