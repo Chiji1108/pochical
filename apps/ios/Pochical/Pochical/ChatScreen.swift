@@ -251,7 +251,7 @@ struct ChatScreen: View {
               Text(words)
                 .font(.caption2)
                 .foregroundStyle(colors.textTertiary)
-            } else if otherID == nil {
+            } else if otherID == nil, place.group != nil {
               Text("\(chat.writers.count { !$0.left })人")
                 .font(.caption2)
                 .foregroundStyle(colors.textTertiary)
@@ -263,7 +263,7 @@ struct ChatScreen: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
-        .accessibilityHint(otherID == nil ? "押すとグループの設定" : "押すとプロフィール")
+        .accessibilityHint(titleHint)
       }
       ToolbarItem(placement: .primaryAction) {
         Menu("チャットのメニュー", systemImage: "ellipsis") {
@@ -390,8 +390,8 @@ struct ChatScreen: View {
     }
     .sheet(isPresented: $sharingDays) {
       ShareDaysSheet(
-        groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) }, pollable: otherID == nil && place.rules.polls,
-        onSend: shareDays)
+        groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) },
+        pollable: otherID == nil && place.rules.polls, onSend: shareDays)
     }
     // As the app leaves the screen, what is written is kept, as Signal
     // and Telegram keep it then.
@@ -1186,6 +1186,13 @@ struct ChatScreen: View {
 
   private var isMuted: Bool {
     notifications.isMuted(threadID, in: place.id)
+  }
+
+  /// What a tap on the title opens, as VoiceOver says it: nothing for the
+  /// chat with Pochical's people.
+  private var titleHint: String {
+    if otherID != nil { return "押すとプロフィール" }
+    return place.group == nil ? "" : "押すとグループの設定"
   }
 
   /// A chat of two, a one-to-one chat or the chat with Pochical's people:
