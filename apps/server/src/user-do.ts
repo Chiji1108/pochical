@@ -11,12 +11,13 @@ import {
   isNull,
   max,
   ne,
+  sql,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
-import { sendAlert } from "./apns";
+import { sendAlert, sendWithdrawal } from "./apns";
 import type { Alert, Sent } from "./apns";
 import { hasKey, SHARED_DAY_FIELDS } from "./day-values";
 import {
@@ -73,6 +74,7 @@ import {
   repeatOrders,
   blocks,
   chatMutes,
+  chatNotified,
   chatSettings,
   profile,
   pushTokens,
@@ -446,6 +448,10 @@ export class UserDO extends DurableObject<Env> {
         .delete(unreadCounts)
         .where(eq(unreadCounts.groupId, groupId))
         .run();
+      this.db
+        .delete(chatNotified)
+        .where(eq(chatNotified.groupId, groupId))
+        .run();
       return this.db
         .update(memberships)
         .set({ cursor, leftAt: new Date() })
@@ -471,7 +477,9 @@ export class UserDO extends DurableObject<Env> {
     groupCursor: number,
     // A new line to tell the user's devices of, with the count, and
     // whether it mentions the user.
-    line?: { alert: Alert; mentioned: boolean }
+    line?: { alert: Alert; mentioned: boolean },
+    // Where the user's read mark in the chat is, when they read.
+    read?: number
   ): void {
     this.storeUnread(groupId, threadId, unread, groupCursor);
     if (
@@ -480,6 +488,61 @@ export class UserDO extends DurableObject<Env> {
     ) {
       this.ctx.waitUntil(this.notify(line.alert));
     }
+    if (read !== undefined) {
+      this.ctx.waitUntil(this.withdraw(groupId, threadId, read));
+    }
+  }
+
+  /**
+   * Keeps that the user's devices were told of a chat's line `seq`, for a
+   * read reaching it to take the notification back.
+   */
+  private keepNotified(groupId: string, threadId: string, seq: number): void {
+    this.db
+      .insert(chatNotified)
+      .values({ firstSeq: seq, groupId, lastSeq: seq, threadId })
+      .onConflictDoUpdate({
+        set: {
+          firstSeq: sql`min(${chatNotified.firstSeq}, ${seq})`,
+          lastSeq: sql`max(${chatNotified.lastSeq}, ${seq})`,
+        },
+        target: [chatNotified.groupId, chatNotified.threadId],
+      })
+      .run();
+  }
+
+  /**
+   * The user read a chat up to `readTo`: when that reaches lines their
+   * devices were notified of, each device is told to take those back
+   * (spec/chat.md, Notifications), once; lines notified after it wait for
+   * a later read.
+   */
+  private async withdraw(
+    groupId: string,
+    threadId: string,
+    readTo: number
+  ): Promise<void> {
+    const chat = and(
+      eq(chatNotified.groupId, groupId),
+      eq(chatNotified.threadId, threadId)
+    );
+    const notified = this.db.select().from(chatNotified).where(chat).get();
+    if (notified === undefined || readTo < notified.firstSeq) {
+      return;
+    }
+    if (readTo >= notified.lastSeq) {
+      this.db.delete(chatNotified).where(chat).run();
+    } else {
+      this.db
+        .update(chatNotified)
+        .set({ firstSeq: readTo + 1 })
+        .where(chat)
+        .run();
+    }
+    await this.toDevices(
+      async (device) =>
+        await sendWithdrawal(this.env, device, { groupId, readTo, threadId })
+    );
   }
 
   /**
@@ -669,21 +732,28 @@ export class UserDO extends DurableObject<Env> {
 
   /**
    * Tells each of the user's devices of `alert`, the app icon's badge at
-   * the user's unread lines in every group; a token APNs says is gone is
-   * dropped.
+   * the user's unread lines in every group, keeping a chat's line as
+   * notified for a read to take back.
    */
   private async notify(alert: Alert): Promise<void> {
-    const devices = this.db.select().from(pushTokens).all();
-    if (devices.length === 0) {
-      return;
+    if (alert.line !== undefined) {
+      this.keepNotified(alert.groupId, alert.threadId, alert.line.seq);
     }
     const badge = this.badge();
+    await this.toDevices(
+      async (device) => await sendAlert(this.env, device, alert, badge)
+    );
+  }
+
+  /** Sends to each of the user's devices; a token APNs says is gone is dropped. */
+  private async toDevices(
+    push: (device: { token: string; sandbox: boolean }) => Promise<Sent>
+  ): Promise<void> {
+    const devices = this.db.select().from(pushTokens).all();
     const sent = await Promise.all(
       devices.map(async (device) => ({
         device,
-        sent: await sendAlert(this.env, device, alert, badge).catch(
-          (): Sent => "failed"
-        ),
+        sent: await push(device).catch((): Sent => "failed"),
       }))
     );
     const gone = sent.filter((each) => each.sent === "gone");

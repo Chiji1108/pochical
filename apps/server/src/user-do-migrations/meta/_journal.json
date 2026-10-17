@@ -134,6 +134,13 @@
       "when": 1791682743493,
       "tag": "0018_mark_look",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1792214704869,
+      "tag": "0019_chat_notified",
+      "breakpoints": true
     }
   ]
 }

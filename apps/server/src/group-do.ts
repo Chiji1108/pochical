@@ -38,6 +38,7 @@ import {
   pageToRead,
   seenBy,
   takeChatEdit,
+  readMarkOf,
   unreadCount,
   notePhoto,
   reportContext,
@@ -821,6 +822,8 @@ export class GroupDO extends DurableObject<Env> {
     // Whose unread lines changed, by chat: everyone else's with a new
     // line, the reader's with a read.
     const counted = new Map<string, Set<string>>();
+    // Who read, by chat, for their read mark to go with the count.
+    const reads = new Set<string>();
     // Each reader's notification of a new line, the latest of a chat's,
     // and whether it mentions them.
     const alerts = new Map<string, { alert: Alert; mentioned: boolean }>();
@@ -886,6 +889,7 @@ export class GroupDO extends DurableObject<Env> {
             }
           } else if (edit.kind.case === "read") {
             recount(edit.kind.value.threadId, [userId]);
+            reads.add(`${edit.kind.value.threadId}\n${userId}`);
           }
         }
         if (taken.refused) {
@@ -915,7 +919,7 @@ export class GroupDO extends DurableObject<Env> {
       seenBy,
       (change, reader) => forReader(this.db, change, reader)
     );
-    this.tellUnread(counted, alerts);
+    this.tellUnread(counted, alerts, reads);
     for (const page of pages) {
       this.ctx.waitUntil(this.addPage(page));
     }
@@ -971,7 +975,10 @@ export class GroupDO extends DurableObject<Env> {
    */
   private tellUnread(
     counted: Map<string, Set<string>>,
-    alerts = new Map<string, { alert: Alert; mentioned: boolean }>()
+    alerts = new Map<string, { alert: Alert; mentioned: boolean }>(),
+    // Who read in which chat, `threadId\nuserId`: their read mark goes
+    // too, for their devices to take back what was notified.
+    reads = new Set<string>()
   ): void {
     const groupId = this.ctx.id.name;
     if (groupId === undefined || counted.size === 0) {
@@ -985,7 +992,10 @@ export class GroupDO extends DurableObject<Env> {
           threadId,
           unreadCount(this.db, userId, threadId),
           cursor,
-          alerts.get(`${threadId}\n${userId}`)
+          alerts.get(`${threadId}\n${userId}`),
+          reads.has(`${threadId}\n${userId}`)
+            ? readMarkOf(this.db, userId, threadId)
+            : undefined
         );
       })
     );

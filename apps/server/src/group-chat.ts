@@ -501,6 +501,18 @@ export const moveReadMark = (
   return readMarkChange(row);
 };
 
+/** How far `userId` has read the chat: 0 for none. */
+export const readMarkOf = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  threadId: string
+): number =>
+  db
+    .select({ lastReadSeq: readMarks.lastReadSeq })
+    .from(readMarks)
+    .where(and(eq(readMarks.userId, userId), eq(readMarks.threadId, threadId)))
+    .get()?.lastReadSeq ?? 0;
+
 /** How a message's words keep a mention of `userId`. */
 export const mentionOf = (userId: string): string => `<@${userId}>`;
 
@@ -515,14 +527,7 @@ export const unreadCount = (
   userId: string,
   threadId: string
 ): { count: number; mentions: number } => {
-  const read =
-    db
-      .select({ lastReadSeq: readMarks.lastReadSeq })
-      .from(readMarks)
-      .where(
-        and(eq(readMarks.userId, userId), eq(readMarks.threadId, threadId))
-      )
-      .get()?.lastReadSeq ?? 0;
+  const read = readMarkOf(db, userId, threadId);
   const counted = db
     .select({
       mentions: sql<number>`coalesce(sum(instr(${chatLines.text}, ${mentionOf(userId)}) > 0), 0)`,
@@ -1301,6 +1306,7 @@ export const alertOf = (
       ? { args: said, key: `CHAT_${kind}` }
       : { args: [writer, ...said], key: `CHAT_GROUP_${kind}` },
     groupId: group.id,
+    line: { authorId: line.authorId, seq: Number(line.seq) },
     threadId: line.threadId,
     title: { args: [direct ? writer : group.name], key: "CHAT_TITLE" },
   };
