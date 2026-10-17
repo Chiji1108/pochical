@@ -133,6 +133,29 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
   }
 }
 
+@Test func aChatSaysWhatItHoldsBeforeTheLinesLaidOut() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    // 1–2 held from before, then 11–130 on to the latest without a gap.
+    try GroupSync.take(
+      [line(1, "a"), line(2, "b")] + (11...130).map { line(UInt64($0), "\($0)") }, of: "g",
+      in: db)
+    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    // The latest page, 81–130, the rest from 11 held before it.
+    #expect(state.lines.first?.seq == 81)
+    #expect(state.heldBefore == 70)
+    #expect(state.heldFrom == 11)
+    // Scrolled back to 31: 20 held before, as far as the gap.
+    state = try Chats.state(of: groupThread, in: "g", from: 31, db: db)
+    #expect(state.heldBefore == 20)
+    // All laid out: nothing held before, the server asked before 11.
+    state = try Chats.state(of: groupThread, in: "g", from: 11, db: db)
+    #expect(state.heldBefore == 0)
+    #expect(state.heldFrom == 11)
+    #expect(!state.atStart)
+  }
+}
+
 @Test func theMembersEditsShowWhileTheyWait() throws {
   let database = try appDatabase()
   try database.write { db in

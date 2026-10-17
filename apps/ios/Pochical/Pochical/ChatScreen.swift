@@ -74,13 +74,12 @@ struct ChatScreen: View {
   /// scroll back down to it, send, or tap ↓. Only their own scrolling
   /// changes it, not lines or the keyboard moving the view.
   @State private var following = true
-  /// ここから新着 is on the screen whole, as at the latest when the new
-  /// lines are few: opening has nowhere to go for it then.
-  /// The top of the lines, where earlier ones are asked for, is on the
-  /// screen.
   /// The first line laid out, kept from the chat's opening so new lines
   /// add to it rather than move it, and moved back a page at a time.
   @State private var window: Int64?
+  /// The first line laid out as the page before it was last laid out, so a
+  /// page is laid out once as the top nears, not at each scroll.
+  @State private var earlierFrom: Int64?
   /// What is being written, read by the composer alone.
   @State private var draft = ChatDraft()
   @State private var unsending: ChatLineRow?
@@ -158,7 +157,8 @@ struct ChatScreen: View {
           toLatest(animated: true)
         }),
       ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
-      shown: placed, holds: acting != nil, dayOver: { dayOver($0, in: listed) },
+      shown: placed, holds: acting != nil, canAskEarlier: opened && !state.atStart,
+      onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
       onReachLatest: { reachedLatest += 1 }
     )
     // The composer rides the keyboard on its own guide, under the lines.
@@ -187,8 +187,19 @@ struct ChatScreen: View {
         pins: chat.state.pins, open: $pinsOpen, nameOf: nameOf,
         onJump: jump(to:), onUnpin: { pin($0, on: false) })
     }
-    .task(id: JumpKey(target: jumpTarget, first: chat.state.lines.first?.seq)) {
+    .task(
+      id: JumpKey(
+        target: jumpTarget, first: chat.state.lines.first?.seq, held: chat.state.heldFrom)
+    ) {
       await goToTarget()
+    }
+    // The server asked a page ahead of the lines laid out.
+    .task(
+      id: PageAhead(
+        from: opened ? chat.state.heldFrom : nil,
+        short: chat.state.heldBefore < Chat.pageSize)
+    ) {
+      await askAhead()
     }
     .background(colors.backgroundBase)
     .environment(\.memberFaces, faces)
@@ -450,11 +461,10 @@ struct ChatScreen: View {
     ).hashValue
     let pins = Set(state.pins.map(\.seq))
     var rows: [LinesRow] = []
-    if !state.atStart {
-      rows.append(
-        LinesRow(
-          id: ChatLinesView.earlier,
-          look: AnyHashable(EarlierLook(first: state.lines.first?.seq, opened: opened))))
+    // Only while the next earlier page is on its way from the server:
+    // those the device holds are laid out before the top is reached.
+    if !state.atStart, state.heldBefore == 0 {
+      rows.append(LinesRow(id: ChatLinesView.earlier, look: AnyHashable(ChatLinesView.earlier)))
     }
     for item in listed {
       var quote: LineQuote?
@@ -494,9 +504,7 @@ struct ChatScreen: View {
   ) -> some View {
     Group {
       if id == ChatLinesView.earlier {
-        EarlierLines(scroll: scroll, first: chat.state.lines.first?.seq, ready: opened) {
-          await showEarlier()
-        }
+        EarlierLines()
       } else if id.hasPrefix(Self.typing) {
         let userID = String(id.dropFirst(Self.typing.count))
         TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")
@@ -839,16 +847,32 @@ struct ChatScreen: View {
       ChatRequest(groupID: group.id, threadID: threadID, me: meID, from: window))
   }
 
-  /// Lays out a page more of earlier lines: those the device holds, else
-  /// asked for, shown as they come.
-  private func showEarlier() async {
-    guard let line = chat.state.lines.first else { return }
+  /// Lays out a page more of the earlier lines the device holds, at once,
+  /// as the reader scrolls near the top. With none held, the page the
+  /// server was asked for ahead (`askAhead`) is laid out as it arrives.
+  /// Only once the lines read are those laid out (`laidOut`, the first in
+  /// place), not while the page before them is still going in.
+  private func showEarlier(laidOut: String?) {
+    let state = chat.state
+    guard opened, state.heldBefore > 0, let line = state.lines.first, line.seq != earlierFrom,
+      laidOut == "line-\(line.opID)"
+    else { return }
     let first = line.seq
-    window = max(first - Int64(Chat.pageSize), 1)
-    await reload()
-    guard chat.state.lines.first?.seq == first, !chat.state.atStart else { return }
-    // Asked again until the socket is open to ask.
-    while !Task.isCancelled, await socket?.requestPage(of: threadID, before: first) != true {
+    earlierFrom = first
+    window = max(first - Int64(Chat.pageSize), state.heldFrom ?? 1)
+    Task { await reload() }
+  }
+
+  /// Asks the server for the page before the lines held while fewer than
+  /// a page are held before those laid out, so the next page is on the
+  /// device before it is scrolled to; again until the socket is open to
+  /// ask.
+  private func askAhead() async {
+    let state = chat.state
+    guard opened, state.heldBefore < Chat.pageSize, let from = state.heldFrom, from > 1 else {
+      return
+    }
+    while !Task.isCancelled, await socket?.requestPage(of: threadID, before: from) != true {
       try? await Task.sleep(for: .seconds(1))
     }
   }
@@ -1257,9 +1281,9 @@ struct ChatScreen: View {
     jumpTarget = seq
   }
 
-  /// Scrolls to the line gone to once held and rings it; else asks for the
-  /// page before the lines held, again until the socket is open to ask,
-  /// and comes back as it arrives.
+  /// Scrolls to the line gone to once laid out and rings it; else lays out
+  /// the page before, coming back as each comes, from the device or, as
+  /// it arrives, the server.
   private func goToTarget() async {
     guard let target = jumpTarget else { return }
     let state = chat.state
@@ -1271,7 +1295,8 @@ struct ChatScreen: View {
       try? await Task.sleep(for: .milliseconds(500))
       withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
     } else if !state.atStart {
-      await showEarlier()
+      // Gone to a line before those laid out: on back a page at a time.
+      showEarlier(laidOut: state.lines.first.map { "line-\($0.opID)" })
     } else {
       jumpTarget = nil
     }
@@ -1356,9 +1381,10 @@ private struct RowLook: Hashable {
   let common: Int
 }
 
-/// The top of the lines while earlier ones are to come: asks again as the
-/// first line changes, and only once the chat has opened.
-private struct EarlierLook: Hashable {
-  let first: Int64?
-  let opened: Bool
+/// When the server is asked for the page before the lines held: as the
+/// first held changes, while fewer than a page are held before the lines
+/// laid out.
+private struct PageAhead: Hashable {
+  let from: Int64?
+  let short: Bool
 }

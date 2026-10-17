@@ -215,13 +215,18 @@ private struct PhotoLoad: Equatable {
 /// within the box; dimmed with 送信中 while it uploads.
 struct PhotoLine: View {
   @Environment(\.themeColors) private var colors
+  /// The chat line's cell it is drawn in, there only while near the
+  /// screen: no more held than that, where a scroll view's sight told of
+  /// in a cell came and went over and over, the photo with it.
+  @Environment(\.lineSpace) private var lineSpace
   let photo: LinePhoto
   let groupID: String
   let waiting: Bool
 
   var body: some View {
     let size = PhotoBox.size(of: photo)
-    ChatPhotoImage(photo: photo, groupID: groupID, shown: size, whileInSight: true)
+    ChatPhotoImage(
+      photo: photo, groupID: groupID, shown: size, whileInSight: lineSpace == nil)
       .frame(width: size.width, height: size.height)
       .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
       .overlay(
