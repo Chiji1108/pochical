@@ -799,7 +799,6 @@ struct ChatScreen: View {
     withAnimation { draft.photos = [] }
   }
 
-  /// Sends a line not sent once more, after the rest, as if written now.
   /// もう一度送る or 削除 for a line not sent, pointing at its !, as a
   /// dialog attached to the button is. A dialog attached to the screen
   /// pointed at the screen's top; one attached in the line's cell, which
@@ -824,6 +823,7 @@ struct ChatScreen: View {
     source.space.present(sheet, from: source.frame)
   }
 
+  /// Sends a line not sent once more, after the rest, as if written now.
   private func sendAgain(_ line: WaitingLine) {
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { try Chats.sendAgain(line.opID, now: now, in: $0) }
