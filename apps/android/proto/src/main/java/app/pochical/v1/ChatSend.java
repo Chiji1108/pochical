@@ -23,6 +23,7 @@ public  final class ChatSend extends
     threadId_ = "";
     text_ = "";
     days_ = emptyProtobufList();
+    device_ = "";
   }
   private int bitField0_;
   public static final int THREAD_ID_FIELD_NUMBER = 1;
@@ -533,6 +534,88 @@ public  final class ChatSend extends
   private void clearWithoutPreview() {
 
     withoutPreview_ = false;
+  }
+
+  public static final int DEVICE_FIELD_NUMBER = 9;
+  private java.lang.String device_;
+  /**
+   * <pre>
+   * The app's version and the device, as the chat's head says reach its
+   * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+   * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+   * only there, cut short as an app's word on itself.
+   * </pre>
+   *
+   * <code>string device = 9 [json_name = "device"];</code>
+   * @return The device.
+   */
+  @java.lang.Override
+  public java.lang.String getDevice() {
+    return device_;
+  }
+  /**
+   * <pre>
+   * The app's version and the device, as the chat's head says reach its
+   * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+   * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+   * only there, cut short as an app's word on itself.
+   * </pre>
+   *
+   * <code>string device = 9 [json_name = "device"];</code>
+   * @return The bytes for device.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDeviceBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(device_);
+  }
+  /**
+   * <pre>
+   * The app's version and the device, as the chat's head says reach its
+   * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+   * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+   * only there, cut short as an app's word on itself.
+   * </pre>
+   *
+   * <code>string device = 9 [json_name = "device"];</code>
+   * @param value The device to set.
+   */
+  private void setDevice(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    device_ = value;
+  }
+  /**
+   * <pre>
+   * The app's version and the device, as the chat's head says reach its
+   * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+   * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+   * only there, cut short as an app's word on itself.
+   * </pre>
+   *
+   * <code>string device = 9 [json_name = "device"];</code>
+   */
+  private void clearDevice() {
+
+    device_ = getDefaultInstance().getDevice();
+  }
+  /**
+   * <pre>
+   * The app's version and the device, as the chat's head says reach its
+   * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+   * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+   * only there, cut short as an app's word on itself.
+   * </pre>
+   *
+   * <code>string device = 9 [json_name = "device"];</code>
+   * @param value The bytes for device to set.
+   */
+  private void setDeviceBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    device_ = value.toStringUtf8();
+
   }
 
   public static app.pochical.v1.ChatSend parseFrom(
@@ -1166,6 +1249,90 @@ public  final class ChatSend extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The app's version and the device, as the chat's head says reach its
+     * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+     * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+     * only there, cut short as an app's word on itself.
+     * </pre>
+     *
+     * <code>string device = 9 [json_name = "device"];</code>
+     * @return The device.
+     */
+    @java.lang.Override
+    public java.lang.String getDevice() {
+      return instance.getDevice();
+    }
+    /**
+     * <pre>
+     * The app's version and the device, as the chat's head says reach its
+     * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+     * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+     * only there, cut short as an app's word on itself.
+     * </pre>
+     *
+     * <code>string device = 9 [json_name = "device"];</code>
+     * @return The bytes for device.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDeviceBytes() {
+      return instance.getDeviceBytes();
+    }
+    /**
+     * <pre>
+     * The app's version and the device, as the chat's head says reach its
+     * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+     * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+     * only there, cut short as an app's word on itself.
+     * </pre>
+     *
+     * <code>string device = 9 [json_name = "device"];</code>
+     * @param value The device to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDevice(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setDevice(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The app's version and the device, as the chat's head says reach its
+     * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+     * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+     * only there, cut short as an app's word on itself.
+     * </pre>
+     *
+     * <code>string device = 9 [json_name = "device"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDevice() {
+      copyOnWrite();
+      instance.clearDevice();
+      return this;
+    }
+    /**
+     * <pre>
+     * The app's version and the device, as the chat's head says reach its
+     * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+     * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+     * only there, cut short as an app's word on itself.
+     * </pre>
+     *
+     * <code>string device = 9 [json_name = "device"];</code>
+     * @param value The bytes for device to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDeviceBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setDeviceBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatSend)
   }
   @java.lang.Override
@@ -1191,10 +1358,11 @@ public  final class ChatSend extends
             "preview_",
             "replyTo_",
             "withoutPreview_",
+            "device_",
           };
           java.lang.String info =
-              "\u0000\b\u0000\u0001\u0001\b\b\u0000\u0001\u0000\u0001\u0208\u0002\u0208\u0003\u021a" +
-              "\u0004\u0007\u0005\u1009\u0000\u0006\u1009\u0001\u0007\u0003\b\u0007";
+              "\u0000\t\u0000\u0001\u0001\t\t\u0000\u0001\u0000\u0001\u0208\u0002\u0208\u0003\u021a" +
+              "\u0004\u0007\u0005\u1009\u0000\u0006\u1009\u0001\u0007\u0003\b\u0007\t\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

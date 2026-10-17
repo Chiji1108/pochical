@@ -9,6 +9,7 @@ How clients and Durable Objects keep shifts, groups and chat in sync. `apps/serv
 | A user's own shifts, patterns, repeating orders and coworkers | That user's User DO | `my_shifts`: writable, changes go through the outbox |
 | Members' shifts shown in a group | Projection held by the Group DO, fed by each member's User DO | `member_shifts`: read-only cache |
 | Groups, members, chat, read states | Group DO | Read-only cache |
+| A user's chat with Pochical's people | Its own Group DO, `support:{userId}` (Chat) | Read-only cache, as a group's chat |
 
 Clients never write to another user's data. A Group DO never edits shifts; it only stores what User DOs push to it.
 
@@ -83,7 +84,7 @@ The user's usual name (いつもの名前, 設定 › プロフィール) is kep
 
 ## Sockets
 
-Clients open one WebSocket to their User DO, at `/v1/me/socket`, and one per group they are viewing, at `/v1/groups/{groupId}/socket`. The Worker checks the session before either reaches a Durable Object, and lets a group socket through only when the user's own DO lists the group, so an id that is not theirs is refused (403) without waking or creating a Group DO. A socket remembers the session it was opened with: when that session ends (the user signs out, or their account is deleted), the server closes the sockets it opened, on the user's DO and in their groups, and the device's next try gets 401 (Reconnecting). Every message is binary: clients send `pochical.v1.ClientFrame`, the server sends `pochical.v1.ServerFrame` (see `proto/pochical/v1/sync.proto`). Text messages are protocol errors, but for the keepalive text (Keepalive).
+Clients open one WebSocket to their User DO, at `/v1/me/socket`, one per group they are viewing, at `/v1/groups/{groupId}/socket`, and one to their chat with Pochical's people while it is on screen, at `/v1/me/support/socket` (Chat). The Worker checks the session before either reaches a Durable Object, and lets a group socket through only when the user's own DO lists the group, so an id that is not theirs is refused (403) without waking or creating a Group DO. A socket remembers the session it was opened with: when that session ends (the user signs out, or their account is deleted), the server closes the sockets it opened, on the user's DO and in their groups, and the device's next try gets 401 (Reconnecting). Every message is binary: clients send `pochical.v1.ClientFrame`, the server sends `pochical.v1.ServerFrame` (see `proto/pochical/v1/sync.proto`). Text messages are protocol errors, but for the keepalive text (Keepalive).
 
 A device keeps its User DO socket open while the app is in the foreground, and a group's socket while that group is on screen. It closes them as the app goes to the background, where the OS would soon stop them anyway, and a group's as another group is opened, and opens them again when it comes back. If its outbox still holds edits then, it first asks the OS for a little time in the background (a background task on iOS, WorkManager on Android) to connect if need be and send them until they are acknowledged, so a shift changed just before leaving reaches the user's other devices and groups without waiting for the app to be opened again; it does the same for edits made outside the app, such as from a widget. A group's socket likewise stays until the group's chat outbox (Chat) is sent and acknowledged, in that same time when the app has gone to the background, so a line sent just before leaving, or before opening another group, reaches the others at once; a line not sent (its photo could not go, or it waited too long) waits for the member instead (spec/chat.md, Lines on their way). The group opened again meanwhile takes back the socket still closing rather than opening a second: two would send the same outbox side by side, and only a send is taken once by its `op_id`, so a reaction's, vote's or pin's on sent late on one could land after its off on the other.
 
@@ -235,6 +236,8 @@ Chat has two orders that must not be mixed:
 - `cursor`: the Group DO's change log, used for sync. New messages, edits, deletions and read states all arrive in cursor order.
 
 The Group DO keeps the lines (`ChatLine`) and read marks (`ReadMark`) of its chats as values on its change log, beside its members' shifts. A group has its own chat (`thread_id` "group", 全体チャット) and a one-to-one chat for any two of its members.
+
+A user's chat with Pochical's people is kept the same way, in a Group DO of its own named `support:{userId}` (spec/chat.md, Where a chat is kept): its `profile.kind` is `support`, its members the user and Pochical's people (`chatRules.pochicalMember`), and its one chat `thread_id` "group". The Worker reaches it at `/v1/me/support/socket` with the session's user, setting it up first (`setUpSupport`, which changes nothing once done and never makes a group one), so no one reaches another's. Nobody's joining is said in it, and neither member's profile is pushed to it. It takes what `chatPlaces.support` lets it, and gives no `setUnread` to Pochical's people, who have no User DO.
 
 ### One-to-one chats
 

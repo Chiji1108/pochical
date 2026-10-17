@@ -169,6 +169,13 @@
       "when": 1791707767438,
       "tag": "0023_chat_notices",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1792247570577,
+      "tag": "0024_chat_places",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
+import type { ChatPlaceRules } from "@pochical/design/chat";
 import { SHARED_DAYS_MAX, textLimits } from "@pochical/design/limits";
 import {
   and,
@@ -66,6 +67,12 @@ import { fitsThumbHash, keptThumbHash, sentThumbHash } from "./thumb-hash";
 
 /** The group's own chat, 全体チャット. */
 export const GROUP_THREAD = "group";
+
+/**
+ * The Group DO a user's chat with Pochical's people is kept in, its one
+ * chat being GROUP_THREAD. Group ids are random, so none is named so.
+ */
+export const supportPlace = (userId: string): string => `support:${userId}`;
 
 const DIRECT = "direct:";
 
@@ -566,6 +573,42 @@ const mayWrite = (
 };
 
 /**
+ * Whether the chat's place takes the edit at all (design/src/chat.ts,
+ * chatPlaces): a line of days or a poll, 編集, a pin, a vote or settling
+ * a poll only where the place has them. The apps never send one it does
+ * not take, so it is dropped rather than answered.
+ */
+const placeTakes = (rules: ChatPlaceRules, kind: ChatEdit["kind"]): boolean => {
+  switch (kind.case) {
+    case "send": {
+      return (
+        (rules.days || kind.value.days.length === 0) &&
+        (rules.polls || !kind.value.poll)
+      );
+    }
+    case "change": {
+      return rules.edit;
+    }
+    case "pin": {
+      return rules.pins;
+    }
+    case "vote":
+    case "decide": {
+      return rules.polls;
+    }
+    case "react":
+    case "unsend":
+    case "read":
+    case undefined: {
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+};
+
+/**
  * The member's reaction on a line put on or taken off, the line moving to
  * `cursor` with it; nothing for a line taken back, gone, or an emoji that
  * is not one, nor when it changes nothing.
@@ -832,6 +875,19 @@ const takeDecide = (
 };
 
 /** What taking an edit did: its change, and the line to send back when it was refused. */
+/** How much of the app's word on itself a line keeps. */
+const DEVICE_MAX = 100;
+
+/**
+ * The app's version and device a line keeps, where its place's rules ask
+ * for them: only what the app says of itself, kept short.
+ */
+const deviceOf = (
+  { device }: ChatSend,
+  rules: ChatPlaceRules
+): string | null =>
+  rules.sendsDevice && device !== "" ? device.slice(0, DEVICE_MAX) : null;
+
 type Taken = {
   change?: Change;
   // A second line it changed, at the cursor after: the pin a new pin
@@ -848,7 +904,8 @@ const takeSend = (
   userId: string,
   opId: string,
   send: ChatSend,
-  cursor: number
+  cursor: number,
+  rules: ChatPlaceRules
 ): Taken => {
   const taken = db
     .select({ opId: chatLines.opId })
@@ -874,6 +931,7 @@ const takeSend = (
       createdCursor: cursor,
       cursor,
       days: send.days.length === 0 ? null : send.days,
+      device: deviceOf(send, rules),
       // Not delivered to the other of a one-to-one chat who blocked
       // its writer.
       hiddenFrom: blockedBy(db, send.threadId, userId),
@@ -960,24 +1018,26 @@ export const addPreview = (
  * their own lines, or their read mark moved forward. A send taken before
  * (the same op_id) changes nothing. A change or unsend that is not theirs,
  * or does not fit, gives back the line as the group holds it, so the
- * device puts it right.
+ * device puts it right. What the chat's place does not take
+ * (`placeTakes`) is dropped.
  */
 export const takeChatEdit = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   { opId, kind }: ChatEdit,
   cursor: number,
-  isMember: (userId: string) => boolean
+  isMember: (userId: string) => boolean,
+  rules: ChatPlaceRules
 ): Taken => {
   if (
     kind.case === undefined ||
-    !(isId(opId) && mayWrite(userId, kind, isMember))
+    !(isId(opId) && mayWrite(userId, kind, isMember) && placeTakes(rules, kind))
   ) {
     return {};
   }
   switch (kind.case) {
     case "send": {
-      return takeSend(db, userId, opId, kind.value, cursor);
+      return takeSend(db, userId, opId, kind.value, cursor, rules);
     }
     case "change":
     case "unsend": {

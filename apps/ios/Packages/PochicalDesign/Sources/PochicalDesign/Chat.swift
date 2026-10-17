@@ -25,6 +25,7 @@ public enum Chat {
   public static let photoThumbHashMaxBytes = 25
   public static let photosPerSend = 4
   public static let pictureMaxEdge = 640
+  public static let pochicalMember = "pochical"
   public static let prefetchScreens = 2
   public static let replySwipe = 56
   public static let replySwipeRubber = 0.3
@@ -32,4 +33,17 @@ public enum Chat {
   public static let typingSendMs = 3000
   public static let typingShowMs = 5000
   public static let unsentAfterMs = 600000
+}
+
+/// What a chat can do by where it is kept (spec/chat.md, Where a chat is kept).
+public struct ChatPlaceRules: Hashable, Sendable {
+  public let days: Bool
+  public let edit: Bool
+  public let mentions: Bool
+  public let pins: Bool
+  public let polls: Bool
+  public let reports: Bool
+  public let sendsDevice: Bool
+  public static let group = ChatPlaceRules(days: true, edit: true, mentions: true, pins: true, polls: true, reports: true, sendsDevice: false)
+  public static let support = ChatPlaceRules(days: false, edit: false, mentions: false, pins: false, polls: false, reports: false, sendsDevice: true)
 }

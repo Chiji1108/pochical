@@ -4,6 +4,15 @@ How chat messages behave beyond sync (spec/sync-protocol.md): which words are li
 
 The numbers named `chatRules.*` here are in `design/src/chat.ts`, the one place they are written; `mise run gen` gives the apps the same values.
 
+## Where a chat is kept
+
+A chat is kept in a place: a group, whose chats are 全体チャット and its one-to-one chats, or a user's chat with Pochical's people. Every place keeps its chats alike, in a Group DO (spec/sync-protocol.md, Chat), so a chat's lines, pages, outbox, read marks, notifications and photos work the same in each; what a place's chats can do differs only by its rules, `chatPlaces` in `design/src/chat.ts`, which the server and both apps read:
+
+- `days`: lines share days (日にちを共有), `polls`: days are put to the vote, `pins`: lines are pinned, `edit`: words are changed after sending (編集), `mentions`: words mention a member, `reports`: lines and members are reported and blocked.
+- `sendsDevice`: each line goes with the app's version and the device (`ChatSend.device`), kept for whoever reads the chat, as its head says.
+
+The server drops an edit its place does not take (a line of days or a poll, 編集, a pin, a vote or settling a poll) and refuses a report; the apps leave each out of their menus and tools. Within a group, what a one-to-one chat lacks (polls, mentions) is the thread's, not the place's.
+
 ## The chat's page
 
 - The title is the group's name for 全体チャット, with how many are in it under it, or the other member's name for a one-to-one chat. A tap on it opens what the chat is of: the group's settings, or the member's profile. While the group's socket is not open (接続中…) or its catch-up is still coming (更新中…, spec/sync-protocol.md, Keepalive) for longer than `socketRules.statusShownAfterMs`, that is said under the title instead, as LINE, Telegram and WhatsApp say it, so lines shown are not taken for all there are; it goes as soon as the socket is current.
@@ -200,6 +209,7 @@ A message may be as long as `textLimits.chatMessage` and share up to `SHARED_DAY
 設定 has a chat with the people who make Pochical (作っている人とチャット), over ポチカルについて: a small wish or trouble is easier written in a chat than a mail, and the answer comes back in the same place. Its row is drawn as a chat in the chats' list: the app's icon, the latest line (or 下書き： and the draft left in it) and the answers not read yet. Its head says who it reaches and everything that does: what is written there, and the app's version and the device, sent with each line.
 
 - Each user's chat is their own, kept by the server (`proto/pochical/v1/support.proto`, D1's `support_messages` and `support_chats`), so Pochical's people can read every user's in one place. Pochical's people answer under the app's name and icon.
+- It is moving into a place of its own (Where a chat is kept): the Group DO `support:{userId}`, a chat of two, the user and Pochical's people (member `chatRules.pochicalMember`, ポチカル), with `chatPlaces.support`'s rules, reached at `/v1/me/support/socket`. The server holds it already; the apps, the admin pages and Slack move onto it next, and what is said above and below of `SupportService` goes with that move.
 - A line is the user's words, up to `textLimits.chatMessage`, sent with an id of the app's so a send tried again is kept once; past `SUPPORT_LIMIT` (wrangler.jsonc) it waits. A line that could not be sent is marked as a group chat's is (Lines on their way), at once rather than after a wait: the red ! and 送れませんでした, the ! opening もう一度送る, which sends it again after the rest, and 削除.
 - Opening the chat reads its answers; until then they are counted on its row.
 - What is being written stays with the chat as a group chat's does (Drafts): its words and the line being answered, kept on the device (the device's own, not sent to the server) as the chat is left and as the app leaves the screen, and in the composer again as it opens. Its lines are the server's, so the rule for a reply is taken once they come: a reply to a line taken back since, by the user or by Pochical's people, keeps its words without the quote, as a group chat's does; until they come (offline), it keeps its quote. 設定's row says 下書き： in the danger color and the draft's words in place of the latest line, its time and count staying the latest line's. A line not sent is not kept.
