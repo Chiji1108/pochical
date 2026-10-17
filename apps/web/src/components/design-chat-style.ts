@@ -548,7 +548,6 @@ export const chatStyle = {
   // card.
   photo: css({ display: "flex", maxWidth: "100%" }),
   photoButton: css({
-    "&:has([role=status])": { cursor: "progress" },
     bg: "transparent",
     border: 0,
     position: "relative",
@@ -588,6 +587,54 @@ export const chatStyle = {
   // In a reply's bubble, under the quote, a little in from its edge, as
   // WhatsApp sets one.
   photoInBubble: css({ margin: "8px 4px 4px" }),
+  // A photo with what lies over it: ↻, or the ring of one going up.
+  photoFrame: css({
+    borderRadius: "lg",
+    display: "block",
+    position: "relative",
+  }),
+  // A photo that could not be fetched: the whole of it a button fetching
+  // it again, ↻ in its middle, as Signal and Telegram mark one.
+  photoRetry: css({
+    _focusVisible: { outline: "2px solid", outlineColor: "accent.default" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "lg",
+    cursor: "pointer",
+    display: "flex",
+    inset: 0,
+    justifyContent: "center",
+    padding: 0,
+    position: "absolute",
+  }),
+  // ↻, or the ring going up with × in it, on the photo's shade.
+  photoMark: css({
+    alignItems: "center",
+    bg: "media.shade",
+    borderRadius: "full",
+    color: "media.text",
+    display: "flex",
+    height: "48px",
+    justifyContent: "center",
+    position: "relative",
+    width: "48px",
+  }),
+  // × in the ring, stopping the photo going up: its line is not sent.
+  uploadStop: css({
+    _focusVisible: { outline: "2px solid", outlineColor: "media.text" },
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "full",
+    color: "media.text",
+    cursor: "pointer",
+    display: "flex",
+    inset: 0,
+    justifyContent: "center",
+    padding: 0,
+    position: "absolute",
+  }),
   // A photo going up: dimmed, with a ring filling as it goes, as LINE
   // draws one.
   uploading: css({
@@ -612,9 +659,9 @@ export const chatStyle = {
       strokeDashoffset: 100,
       strokeLinecap: "round",
     },
-    height: "36px",
+    height: "40px",
     transform: "rotate(-90deg)",
-    width: "36px",
+    width: "40px",
   }),
   // A photo that could not be sent: a red ! where its time would be, and
   // a note under it, as Messages marks one.

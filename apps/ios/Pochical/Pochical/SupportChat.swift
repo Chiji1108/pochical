@@ -1,3 +1,4 @@
+import Nuke
 import PhotosUI
 import PochicalDesign
 import PochicalKit
@@ -96,6 +97,7 @@ struct SupportChatScreen: View {
   @Environment(\.look) private var look
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.displayScale) private var displayScale
   @Dependency(\.defaultDatabase) private var database
   @State private var lines: [SupportLine] = []
   /// The lines have come from the server once.
@@ -139,6 +141,8 @@ struct SupportChatScreen: View {
   @State private var following = true
   /// What is done on a line, for every line of the chat.
   @State private var lineActions = Handler<(lineID: String, action: LineAction)>()
+  /// Fetches ahead the photos of the lines near those in sight.
+  @State private var photoPrefetch = PhotoPrefetch()
 
   struct Waiting: Identifiable, Hashable {
     let id: String
@@ -180,7 +184,8 @@ struct SupportChatScreen: View {
         if case .line(let line, _, _) = byID[id] { reply(to: line) }
       },
       // Short, it starts at the top under its head, as /design's.
-      fewAtTop: true
+      fewAtTop: true,
+      onNear: { prefetchPhotos(of: $0.compactMap { byID[$0] }) }
     )
     // The composer rides the keyboard on its own guide, under the lines.
     .ignoresSafeArea(.container, edges: .bottom)
@@ -219,6 +224,7 @@ struct SupportChatScreen: View {
     }
     .onDisappear {
       Notifications.shared.supportOpen = false
+      photoPrefetch.stop()
       closeActions()
       keepDraft()
     }
@@ -428,7 +434,7 @@ struct SupportChatScreen: View {
             onReact: { react($0, on: line) }, onMoreReactions: { reactingTo = line },
             actions: actions(for: line)))
       }
-    case .openProfile, .retry, .vote, .decide:
+    case .openProfile, .retry, .stopSending, .vote, .decide:
       break
     }
   }
@@ -439,6 +445,8 @@ struct SupportChatScreen: View {
       source?.askNotSent(
         photo: line.photo != nil, sendAgain: { send(line) }, delete: { delete(line) },
         closed: {})
+    case .stopSending:
+      stopSending(line)
     case .hold(let spot, let finger, _):
       // On its way, only コピー yet for words.
       guard line.photo == nil else { return }
@@ -678,6 +686,8 @@ struct SupportChatScreen: View {
     let before = sending
     sending = Task {
       await before?.value
+      // Stopped with × while it waited its turn.
+      guard waiting.first(where: { $0.id == line.id })?.failed == false else { return }
       do {
         if let photo = line.photo {
           try await groupCalls.uploadSupportPhoto(photo.id)
@@ -688,12 +698,44 @@ struct SupportChatScreen: View {
         waiting.removeAll { $0.id == line.id }
         lines.append(kept)
       } catch {
-        ReviewPrompt.troubled = true
-        if let index = waiting.firstIndex(where: { $0.id == line.id }) {
+        // Not when stopped with ×, which marked it already.
+        if let index = waiting.firstIndex(where: { $0.id == line.id }), !waiting[index].failed {
+          ReviewPrompt.troubled = true
           waiting[index].failed = true
         }
       }
     }
+  }
+
+  /// Stops a line's photo going up, as the group chats' × does: the line
+  /// is not sent, to send again or delete.
+  private func stopSending(_ line: Waiting) {
+    if let index = waiting.firstIndex(where: { $0.id == line.id }) {
+      waiting[index].failed = true
+    }
+    if let photo = line.photo { PhotoUploads.shared.stop(photo.id) }
+  }
+
+  /// Fetches ahead the photos of the items near those in sight, as the
+  /// group chats do.
+  private func prefetchPhotos(of near: [SupportItem]) {
+    var requests: [String: ImageRequest] = [:]
+    for item in near {
+      let photo: LinePhoto?
+      switch item {
+      case .line(let line, _, _): photo = line.unsent ? nil : line.photo
+      case .waiting(let line, _): photo = line.photo
+      case .intro, .day: photo = nil
+      }
+      if let photo,
+        let request = ChatPhotoLoading.lineRequest(
+          photo, in: ChatPhotos.support, scale: displayScale, calls: groupCalls,
+          held: ChatPhotos.heldFile(photo.id, in: ChatPhotos.support) != nil)
+      {
+        requests[photo.id] = request
+      }
+    }
+    photoPrefetch.near(requests)
   }
 
   /// Deletes a line not sent, and the photo kept on the device for it.

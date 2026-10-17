@@ -5,7 +5,7 @@ import type { Pattern } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import type { InviteLook } from "./design-chat-cards";
 import { ChatPage } from "./design-group-chat";
-import type { PhotoSend } from "./design-group-chat";
+import type { PhotoFetch, PhotoSend } from "./design-group-chat";
 import {
   chatKey,
   chatTitle,
@@ -89,6 +89,7 @@ export function DesignGroup({
   initialPage = "hub",
   scanResult = "invite",
   photoSend = "ok",
+  photoFetch = "ok",
 }: {
   schedule: Schedule;
   patterns: Pattern[];
@@ -103,6 +104,8 @@ export function DesignGroup({
   scanResult?: ScanResult;
   // Whether a photo's upload goes through, as 比べる案 sets it.
   photoSend?: PhotoSend;
+  // Whether others' photos come the first time, as 比べる案 sets it.
+  photoFetch?: PhotoFetch;
 
   onTab: (tab: Tab) => void;
 }) {
@@ -370,6 +373,7 @@ export function DesignGroup({
           inviteOf={inviteOf}
           onInvite={openInvite}
           attach={page.attach}
+          photoFetch={photoFetch}
           photoSend={photoSend}
           sharedFirst={page.sharedFirst}
           unreadAtOpen={page.unread}
