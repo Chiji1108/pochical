@@ -23,9 +23,10 @@ final class ChatScroll {
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
-/// below, counted on it as a chat's unread are: lines are read as they come
-/// on screen, so none while at the latest. While ここから新着 is below the top of the
-/// screen with lines under it still unread, it goes there first.
+/// below, counted on it as a chat's unread are: lines are read as they
+/// come on screen, so none while at the latest. While ここから新着 is below
+/// the top of the screen with lines under it still unread, it goes there
+/// first.
 struct LatestButton: View {
   @Environment(\.themeColors) private var colors
   let scroll: ChatScroll
