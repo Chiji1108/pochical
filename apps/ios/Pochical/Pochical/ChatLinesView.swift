@@ -464,11 +464,20 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     return new[..<at].contains { $0 != ChatLinesView.earlier && !old.contains($0) }
   }
 
-  /// The items new to `new` after the last it keeps from `old`.
+  /// The items new to `new` below the last line it keeps from `old`:
+  /// someone writing, kept under them, is passed over, so a line sent
+  /// while they write rises too.
   private func cameBelow(_ old: [String], in new: [String]) -> Set<String> {
     let kept = Set(old)
-    guard let last = new.lastIndex(where: kept.contains) else { return [] }
-    return Set(new[(last + 1)...])
+    var below: Set<String> = []
+    for id in new.reversed() {
+      if !kept.contains(id) {
+        below.insert(id)
+      } else if id.hasPrefix("line-") {
+        break
+      }
+    }
+    return below
   }
 
   /// An item coming in at the foot starts a line's height lower, unseen,
