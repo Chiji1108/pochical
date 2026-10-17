@@ -22,8 +22,11 @@ final class ChatDraft {
   var picked: [PickedMember] = []
   /// Photos picked for the next send, waiting above the composer.
   var photos: [PickedPhoto] = []
-  /// Picked photos are being read and shrunk.
-  var readingPhotos = false
+  /// How many photos picked or pasted are still being read and shrunk,
+  /// each taking its room in the tray until it is in.
+  var comingPhotos = 0
+  /// Picked photos are being read and shrunk: nothing is sent meanwhile.
+  var readingPhotos: Bool { comingPhotos > 0 }
   /// The page of the words' first link, while writing.
   var preview: ComposerPreview?
   /// A link whose page was taken off with ×, until sent or changed.
@@ -252,7 +255,7 @@ struct ChatComposer: View {
   /// 写真を送る: the photo picker, up to Chat.photosPerSend in the tray at
   /// once; past it the picker does not open.
   @ViewBuilder private var photoButton: some View {
-    let room = Chat.photosPerSend - draft.photos.count
+    let room = Chat.photosPerSend - draft.photos.count - draft.comingPhotos
     // Read here: the picker's label is drawn off the main actor.
     let iconColor = colors.textSecondary
     if room > 0 {
@@ -336,7 +339,7 @@ struct ChatComposer: View {
   /// Images pasted into the field go in the tray as picked photos do, as
   /// many as it has room for, saying so past it as the picker's button does.
   private func pastePhotos(_ images: [NSItemProvider]) {
-    let room = Chat.photosPerSend - draft.photos.count
+    let room = Chat.photosPerSend - draft.photos.count - draft.comingPhotos
     if images.count > room {
       say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
     }
@@ -348,10 +351,12 @@ struct ChatComposer: View {
   /// Reads photos, picked or pasted, and shrinks them to send, into the
   /// tray.
   private func readPhotos(_ sources: [PhotoSource]) async {
-    draft.readingPhotos = true
-    defer { draft.readingPhotos = false }
+    // Read one after another, each paste or pick reading its own: until
+    // the last is in, nothing is sent and the tray has no room for them.
+    draft.comingPhotos += sources.count
     var unreadable = false
     for source in sources {
+      defer { draft.comingPhotos -= 1 }
       guard let data = await source.data(),
         let shrunk = await Task.detached(operation: { ChatPhotos.shrink(data) }).value
       else {
