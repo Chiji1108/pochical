@@ -146,10 +146,19 @@ public enum ChatPhotos {
     try jpeg.write(to: cached(photoID, in: groupID), options: .atomic)
   }
 
+  /// Told as a photo is taken off the device, with its `photoID` and
+  /// `groupID` in the user info, for the app's image cache to let go of it
+  /// too.
+  public static let forgotten = Notification.Name("ChatPhotos.forgotten")
+  /// Told as every photo is taken off the device.
+  public static let erased = Notification.Name("ChatPhotos.erased")
+
   /// Takes a photo off the device, as when its line is taken back.
   public static func forget(_ photoID: String, in groupID: String) {
     try? FileManager.default.removeItem(at: cached(photoID, in: groupID))
     try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
+    NotificationCenter.default.post(
+      name: forgotten, object: nil, userInfo: ["photoID": photoID, "groupID": groupID])
   }
 
   /// Every photo kept on the device, to send or to show, gone.
@@ -158,6 +167,7 @@ public enum ChatPhotos {
       at: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appending(path: "PendingPhotos"))
     try? FileManager.default.removeItem(at: caches("ChatPhotos"))
+    NotificationCenter.default.post(name: erased, object: nil)
   }
 
   /// The photo's bytes held on the device, if any.
@@ -218,24 +228,28 @@ public enum ChatPhotos {
     let small = groupID == mine ? nil : small(jpeg)
     // Told as one, the small version's bytes first.
     let total = Double((small?.count ?? 0) + jpeg.count)
+    let attempt = UUID()
     let going = Task {
       if let small {
         try await put(
           small, as: photoID, in: groupID, small: true, account: account, server: server,
           send: send
         ) { sent in
-          Task { @MainActor in PhotoUploads.shared.moved(photoID, to: Double(sent) / total) }
+          Task { @MainActor in
+            PhotoUploads.shared.moved(photoID, try: attempt, to: Double(sent) / total)
+          }
         }
       }
       let before = small?.count ?? 0
       try await put(jpeg, as: photoID, in: groupID, account: account, server: server, send: send) {
         sent in
         Task { @MainActor in
-          PhotoUploads.shared.moved(photoID, to: Double(before + Int(sent)) / total)
+          PhotoUploads.shared.moved(
+            photoID, try: attempt, to: Double(before + Int(sent)) / total)
         }
       }
     }
-    await PhotoUploads.shared.began(photoID) { going.cancel() }
+    await PhotoUploads.shared.began(photoID, try: attempt) { going.cancel() }
     do {
       try await withTaskCancellationHandler {
         try await going.value

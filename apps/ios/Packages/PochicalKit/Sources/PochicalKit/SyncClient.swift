@@ -552,7 +552,8 @@ public actor SyncClient {
         do {
           try await ChatPhotos.upload(
             send.photo.id, in: groupID, account: account, server: server)
-          kept.append(edit)
+          // Stopped as its last bytes went: left as the member left it.
+          if try await stillGoing(edit.opID) { kept.append(edit) }
           break
         } catch {
           try Task.checkCancellation()

@@ -619,7 +619,8 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   /// blur as it does in the chat; ↻ in its place could it not come.
   private func load() async {
     let request = ChatPhotoLoading.request(
-      photo, in: groupID, pixels: nil, calls: calls, priority: .high)
+      photo, in: groupID, pixels: nil, calls: calls, priority: .high,
+      held: ChatPhotos.heldFile(photo.id, in: groupID) != nil)
     guard let came = try? await ChatPhotoLoading.pipeline.image(for: request) else {
       spinner.stopAnimating()
       retry.isHidden = Task.isCancelled

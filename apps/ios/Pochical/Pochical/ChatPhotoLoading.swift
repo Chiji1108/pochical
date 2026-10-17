@@ -27,15 +27,14 @@ enum ChatPhotoLoading {
   /// `photo` as a line or a quote shows it: its small version, read at
   /// most `pixels` on its longer side; the photo itself, whole, with none.
   /// The member's own photos, held on the device, are read from there and
-  /// not kept twice.
+  /// not kept twice (`whole` held: as it is sent).
   static func request(
     _ photo: LinePhoto, in groupID: String, pixels: Int?, calls: GroupCalls,
-    priority: ImageRequest.Priority = .normal
+    priority: ImageRequest.Priority = .normal, held: Bool = false
   ) -> ImageRequest {
     let small = pixels != nil
-    let held = ChatPhotos.heldFile(photo.id, in: groupID) != nil
     var request = ImageRequest(
-      id: "\(groupID)/\(photo.id)\(small ? "?size=small" : "")",
+      id: key(photo.id, in: groupID, small: small),
       data: { try await calls.photo(photo.id, in: groupID, small: small, keep: false) },
       priority: priority,
       options: held ? [.disableDiskCache] : [])
@@ -45,12 +44,37 @@ enum ChatPhotoLoading {
     return request
   }
 
+  /// What a photo is kept under, small or whole.
+  private static func key(_ photoID: String, in groupID: String, small: Bool) -> String {
+    "\(groupID)/\(photoID)\(small ? "?size=small" : "")"
+  }
+
   /// `photo` as a line shows it in its box at `scale`.
-  static func lineRequest(_ photo: LinePhoto, in groupID: String, scale: CGFloat, calls: GroupCalls)
-    -> ImageRequest?
-  {
+  static func lineRequest(
+    _ photo: LinePhoto, in groupID: String, scale: CGFloat, calls: GroupCalls, held: Bool = false
+  ) -> ImageRequest? {
     pixels(of: photo, shown: PhotoBox.size(of: photo), scale: scale).map {
-      request(photo, in: groupID, pixels: $0, calls: calls)
+      request(photo, in: groupID, pixels: $0, calls: calls, held: held)
+    }
+  }
+
+  /// Lets go of the photos the device lets go of (`ChatPhotos.forget`,
+  /// `ChatPhotos.eraseAll`): a line taken back, every photo with the
+  /// account. What memory holds of one taken back goes as it is let go,
+  /// its line no longer drawn.
+  static func followErasing() {
+    let center = NotificationCenter.default
+    center.addObserver(forName: ChatPhotos.forgotten, object: nil, queue: nil) { note in
+      guard let photoID = note.userInfo?["photoID"] as? String,
+        let groupID = note.userInfo?["groupID"] as? String
+      else { return }
+      for small in [true, false] {
+        pipeline.configuration.dataCache?.removeData(
+          for: key(photoID, in: groupID, small: small))
+      }
+    }
+    center.addObserver(forName: ChatPhotos.erased, object: nil, queue: nil) { _ in
+      pipeline.cache.removeAll()
     }
   }
 
@@ -89,7 +113,10 @@ enum ChatPhotoLoading {
 
   /// The photo itself, as fetched: to save or share.
   static func whole(_ photo: LinePhoto, in groupID: String, calls: GroupCalls) async -> Data? {
-    try? await pipeline.data(for: request(photo, in: groupID, pixels: nil, calls: calls)).0
+    let held = ChatPhotos.heldFile(photo.id, in: groupID) != nil
+    return try? await pipeline.data(
+      for: request(photo, in: groupID, pixels: nil, calls: calls, held: held)
+    ).0
   }
 }
 

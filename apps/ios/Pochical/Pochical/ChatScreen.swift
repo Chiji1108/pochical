@@ -1159,7 +1159,8 @@ struct ChatScreen: View {
       }
       if let photo,
         let request = ChatPhotoLoading.lineRequest(
-          photo, in: group.id, scale: displayScale, calls: groupCalls)
+          photo, in: group.id, scale: displayScale, calls: groupCalls,
+          held: ChatPhotos.heldFile(photo.id, in: group.id) != nil)
       {
         requests[photo.id] = request
       }

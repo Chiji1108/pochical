@@ -22,6 +22,7 @@ struct PochicalApp: App {
   private let database: any DatabaseWriter
 
   init() {
+    ChatPhotoLoading.followErasing()
     prepareDependencies {
       // Without its database the app has nowhere to keep anything.
       $0.defaultDatabase = try! appDatabase()

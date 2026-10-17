@@ -32,10 +32,12 @@ struct ChatPhotoImage: View {
   @State private var failed = false
   /// Fetched again at a tap.
   @State private var tries = 0
+  /// The member's own, held on the device as sent: looked for once.
+  @State private var held: Bool?
 
   var body: some View {
     let request = ChatPhotoLoading.request(
-      photo, in: groupID, pixels: pixels, calls: groupCalls)
+      photo, in: groupID, pixels: pixels, calls: groupCalls, held: held ?? false)
     let wanted = !measuring && (!whileInSight || inSight)
     // Out of sight, nothing is held, not even what memory keeps.
     let kept = wanted ? image ?? ChatPhotoLoading.pipeline.cache[request]?.image : nil
@@ -66,6 +68,10 @@ struct ChatPhotoImage: View {
         image = nil
         return
       }
+      let held = held ?? (ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+      self.held = held
+      let request = ChatPhotoLoading.request(
+        photo, in: groupID, pixels: pixels, calls: groupCalls, held: held)
       // Held here too, so a photo the memory lets go while the line shows
       // is not lost from it.
       if let kept = ChatPhotoLoading.pipeline.cache[request]?.image {
