@@ -164,7 +164,11 @@ struct ChatScreen: View {
         }),
       ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
       shown: placed, holds: acting != nil, canAskEarlier: opened && !state.atStart,
-      onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) }
+      onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
+      replySwipe: { replySwipe(byID[$0]) },
+      onReply: { id in
+        if case .line(let line, _) = byID[id] { reply(to: line) }
+      }
     )
     .background {
       ReadsSeen(
@@ -1224,6 +1228,17 @@ struct ChatScreen: View {
     }
     sendPhotos()
     if !text.isEmpty { send(text) }
+  }
+
+  /// How a line is dragged to reply to it (spec/chat.md, Replies): any
+  /// line the menu has 返信 on, from its writer's side; not the app's
+  /// notices, a line taken back or folded for a blocked writer, nor one
+  /// still on its way.
+  private func replySwipe(_ item: ChatItem?) -> ReplySwipe? {
+    guard case .line(let line, _) = item, !line.hidden, !line.unsent, line.notice == nil,
+      otherID != nil || !blocked.contains(line.authorID) || shownBlocked.contains(line.seq)
+    else { return nil }
+    return line.authorID == meID ? .leftward : .rightward
   }
 
   /// Answers a line (返信): quoted over the composer until sent or ×.

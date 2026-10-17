@@ -1,6 +1,7 @@
 import PochicalDesign
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// What the chat's composer asks of its field: to take the words written,
 /// a word still being converted (marked text) included, as Messages and
@@ -34,11 +35,16 @@ struct ComposerField: UIViewRepresentable {
   let box: ComposerBox
   /// The field taken up to write in, or left.
   var onWriting: (Bool) -> Void = { _ in }
+  /// Images pasted (the edit menu's ペースト, ⌘V), each a provider to read
+  /// as the photo picker's are; none where photos cannot go, where an
+  /// image pastes nothing, as before.
+  var onPasteImages: (([NSItemProvider]) -> Void)?
 
   static let maxLines = 5
 
   func makeUIView(context: Context) -> UITextView {
-    let view = UITextView()
+    let view = PastingTextView()
+    view.onPasteImages = onPasteImages
     view.font = .preferredFont(forTextStyle: .body)
     view.adjustsFontForContentSizeCategory = true
     view.backgroundColor = .clear
@@ -55,6 +61,7 @@ struct ComposerField: UIViewRepresentable {
   func updateUIView(_ view: UITextView, context: Context) {
     context.coordinator.parent = self
     box.view = view
+    (view as? PastingTextView)?.onPasteImages = onPasteImages
     if view.markedTextRange == nil, view.text != text {
       view.text = text
     }
@@ -127,5 +134,34 @@ struct ComposerField: UIViewRepresentable {
       parent.text = text
       view.invalidateIntrinsicContentSize()
     }
+  }
+}
+
+/// A text view that takes images pasted, as Messages' and Signal's fields
+/// do: the system's own paste, so ペースト shows in the edit menu for an
+/// image and pasting asks nothing more. Words paste as any text view's.
+private final class PastingTextView: UITextView {
+  var onPasteImages: (([NSItemProvider]) -> Void)?
+
+  override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+    if action == #selector(paste(_:)), onPasteImages != nil, UIPasteboard.general.hasImages {
+      return true
+    }
+    return super.canPerformAction(action, withSender: sender)
+  }
+
+  override func paste(_ sender: Any?) {
+    let board = UIPasteboard.general
+    guard let onPasteImages, board.hasImages else {
+      super.paste(sender)
+      return
+    }
+    // The items that are images; any words copied with them are left.
+    let images = board.itemProviders.filter { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }
+    guard !images.isEmpty else {
+      super.paste(sender)
+      return
+    }
+    onPasteImages(images)
   }
 }

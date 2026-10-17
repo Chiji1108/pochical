@@ -175,6 +175,10 @@ struct SupportChatScreen: View {
         }),
       ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
       shown: opened, holds: acting != nil, dayOver: { dayOver($0, in: listed) },
+      replySwipe: { replySwipe(byID[$0]) },
+      onReply: { id in
+        if case .line(let line, _, _) = byID[id] { reply(to: line) }
+      },
       // Short, it starts at the top under its head, as /design's.
       fewAtTop: true
     )
@@ -452,14 +456,24 @@ struct SupportChatScreen: View {
     }
   }
 
+  /// How a line is dragged to reply to it, as its menu's 返信: any line
+  /// kept and not taken back.
+  private func replySwipe(_ item: SupportItem?) -> ReplySwipe? {
+    guard case .line(let line, _, _) = item, !line.unsent else { return nil }
+    return line.fromSupport ? .rightward : .leftward
+  }
+
+  /// Answers a line (返信): quoted over the composer until sent or ×.
+  private func reply(to line: SupportLine) {
+    withAnimation { draft.replyTo = line.id }
+    draft.field.focus()
+  }
+
   /// A line's menu (/design's): 返信, then コピー for words or 保存 for a
   /// photo, and for one's own, 送信取消 apart in the danger color.
   private func actions(for line: SupportLine) -> [MessageAction] {
     var actions = [
-      MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") {
-        withAnimation { draft.replyTo = line.id }
-        draft.field.focus()
-      }
+      MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") { reply(to: line) }
     ]
     if let photo = line.photo {
       actions.append(
