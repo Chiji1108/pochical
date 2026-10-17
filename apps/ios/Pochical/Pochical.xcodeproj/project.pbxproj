@@ -16,6 +16,9 @@
 		C6C3CA0330740000000C5B81 /* ChatLayout in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3CA0230740000000C5B81 /* ChatLayout */; };
 		C6C383423073460000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C383413073460000C0C5B8 /* PochicalKit */; };
 		C6C38351307347A000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C38350307347A000C0C5B8 /* PochicalKit */; };
+		C6C3AE0330750000000C5B81 /* PochicalNotificationsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C6C3AE0130750000000C5B81 /* PochicalNotificationsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		C6C3AE0430750000000C5B81 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3AE0630750000000C5B81 /* PochicalKit */; };
+		C6C3AE0530750000000C5B81 /* PochicalDesign in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3AE0730750000000C5B81 /* PochicalDesign */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,6 +43,13 @@
 			remoteGlobalIDString = C6C3830D307344A900C0C5B8;
 			remoteInfo = PochicalWidgetsExtension;
 		};
+		C6C3AE0830750000000C5B81 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C6C382DA307343AF00C0C5B8 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C6C3AE0E30750000000C5B81;
+			remoteInfo = PochicalNotificationsExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -49,6 +59,7 @@
 			dstSubfolder = PlugIns;
 			files = (
 				C6C38320307344AB00C0C5B8 /* PochicalWidgetsExtension.appex in Embed Foundation Extensions */,
+				C6C3AE0330750000000C5B81 /* PochicalNotificationsExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 		};
@@ -62,6 +73,8 @@
 		C6C38310307344A900C0C5B8 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		C6C38312307344A900C0C5B8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		C6C383273073450F00C0C5B8 /* PochicalWidgetsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PochicalWidgetsExtension.entitlements; sourceTree = "<group>"; };
+		C6C3AE0130750000000C5B81 /* PochicalNotificationsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PochicalNotificationsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C6C3AE0230750000000C5B81 /* PochicalNotificationsExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PochicalNotificationsExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -87,6 +100,27 @@
 			);
 			target = C6C382E1307343AF00C0C5B8 /* Pochical */;
 		};
+		C6C3AE0B30750000000C5B81 /* Exceptions for "PochicalNotifications" folder in "PochicalNotificationsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C6C3AE0E30750000000C5B81 /* PochicalNotificationsExtension */;
+		};
+		C6C3AE0C30750000000C5B81 /* Exceptions for "Pochical" folder in "PochicalNotificationsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				ThemeEnvironment.swift,
+			);
+			target = C6C3AE0E30750000000C5B81 /* PochicalNotificationsExtension */;
+		};
+		C6C3AE0D30750000000C5B81 /* Exceptions for "PochicalWidgets" folder in "PochicalNotificationsExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Faces.swift,
+			);
+			target = C6C3AE0E30750000000C5B81 /* PochicalNotificationsExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -95,6 +129,7 @@
 			exceptions = (
 				C6C3A0013073A00100C0C5B8 /* Exceptions for "Pochical" folder in "Pochical" target */,
 				C685E523307A71F900914608 /* Exceptions for "Pochical" folder in "PochicalWidgetsExtension" target */,
+				C6C3AE0C30750000000C5B81 /* Exceptions for "Pochical" folder in "PochicalNotificationsExtension" target */,
 			);
 			path = Pochical;
 			sourceTree = "<group>";
@@ -113,8 +148,17 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				C6C38321307344AB00C0C5B8 /* Exceptions for "PochicalWidgets" folder in "PochicalWidgetsExtension" target */,
+				C6C3AE0D30750000000C5B81 /* Exceptions for "PochicalWidgets" folder in "PochicalNotificationsExtension" target */,
 			);
 			path = PochicalWidgets;
+			sourceTree = "<group>";
+		};
+		C6C3AE0A30750000000C5B81 /* PochicalNotifications */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C6C3AE0B30750000000C5B81 /* Exceptions for "PochicalNotifications" folder in "PochicalNotificationsExtension" target */,
+			);
+			path = PochicalNotifications;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -148,6 +192,13 @@
 				C6C38311307344A900C0C5B8 /* WidgetKit.framework in Frameworks */,
 			);
 		};
+		C6C3AE1030750000000C5B81 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				C6C3AE0530750000000C5B81 /* PochicalDesign in Frameworks */,
+				C6C3AE0430750000000C5B81 /* PochicalKit in Frameworks */,
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -155,10 +206,12 @@
 			isa = PBXGroup;
 			children = (
 				C6C383273073450F00C0C5B8 /* PochicalWidgetsExtension.entitlements */,
+				C6C3AE0230750000000C5B81 /* PochicalNotificationsExtension.entitlements */,
 				C6C382E4307343AF00C0C5B8 /* Pochical */,
 				C6C382F2307343B000C0C5B8 /* PochicalTests */,
 				C6C382FC307343B000C0C5B8 /* PochicalUITests */,
 				C6C38314307344A900C0C5B8 /* PochicalWidgets */,
+				C6C3AE0A30750000000C5B81 /* PochicalNotifications */,
 				C6C3830F307344A900C0C5B8 /* Frameworks */,
 				C6C382E3307343AF00C0C5B8 /* Products */,
 			);
@@ -171,6 +224,7 @@
 				C6C382EF307343B000C0C5B8 /* PochicalTests.xctest */,
 				C6C382F9307343B000C0C5B8 /* PochicalUITests.xctest */,
 				C6C3830E307344A900C0C5B8 /* PochicalWidgetsExtension.appex */,
+				C6C3AE0130750000000C5B81 /* PochicalNotificationsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -200,6 +254,7 @@
 			);
 			dependencies = (
 				C6C3831F307344AB00C0C5B8 /* PBXTargetDependency */,
+				C6C3AE0930750000000C5B81 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C6C382E4307343AF00C0C5B8 /* Pochical */,
@@ -279,6 +334,28 @@
 			productReference = C6C3830E307344A900C0C5B8 /* PochicalWidgetsExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		C6C3AE0E30750000000C5B81 /* PochicalNotificationsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C6C3AE1430750000000C5B81 /* Build configuration list for PBXNativeTarget "PochicalNotificationsExtension" */;
+			buildPhases = (
+				C6C3AE0F30750000000C5B81 /* Sources */,
+				C6C3AE1030750000000C5B81 /* Frameworks */,
+				C6C3AE1130750000000C5B81 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				C6C3AE0A30750000000C5B81 /* PochicalNotifications */,
+			);
+			name = PochicalNotificationsExtension;
+			packageProductDependencies = (
+				C6C3AE0730750000000C5B81 /* PochicalDesign */,
+				C6C3AE0630750000000C5B81 /* PochicalKit */,
+			);
+			productName = PochicalNotificationsExtension;
+			productReference = C6C3AE0130750000000C5B81 /* PochicalNotificationsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -301,6 +378,9 @@
 						TestTargetID = C6C382E1307343AF00C0C5B8;
 					};
 					C6C3830D307344A900C0C5B8 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					C6C3AE0E30750000000C5B81 = {
 						CreatedOnToolsVersion = 27.0;
 					};
 				};
@@ -329,6 +409,7 @@
 				C6C382EE307343B000C0C5B8 /* PochicalTests */,
 				C6C382F8307343B000C0C5B8 /* PochicalUITests */,
 				C6C3830D307344A900C0C5B8 /* PochicalWidgetsExtension */,
+				C6C3AE0E30750000000C5B81 /* PochicalNotificationsExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -350,6 +431,11 @@
 			);
 		};
 		C6C3830C307344A900C0C5B8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		C6C3AE1130750000000C5B81 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
 			);
@@ -377,6 +463,11 @@
 			files = (
 			);
 		};
+		C6C3AE0F30750000000C5B81 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -394,6 +485,11 @@
 			isa = PBXTargetDependency;
 			target = C6C3830D307344A900C0C5B8 /* PochicalWidgetsExtension */;
 			targetProxy = C6C3831E307344AB00C0C5B8 /* PBXContainerItemProxy */;
+		};
+		C6C3AE0930750000000C5B81 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C6C3AE0E30750000000C5B81 /* PochicalNotificationsExtension */;
+			targetProxy = C6C3AE0830750000000C5B81 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -747,6 +843,66 @@
 			};
 			name = Release;
 		};
+		C6C3AE1230750000000C5B81 /* Debug configuration for PBXNativeTarget "PochicalNotificationsExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PochicalNotificationsExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6KC44WPYLJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PochicalNotifications/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PochicalNotifications;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.pochical.PochicalNotifications;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		C6C3AE1330750000000C5B81 /* Release configuration for PBXNativeTarget "PochicalNotificationsExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PochicalNotificationsExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6KC44WPYLJ;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PochicalNotifications/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PochicalNotifications;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.pochical.PochicalNotifications;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -787,6 +943,14 @@
 			buildConfigurations = (
 				C6C38323307344AB00C0C5B8 /* Debug configuration for PBXNativeTarget "PochicalWidgetsExtension" */,
 				C6C38324307344AB00C0C5B8 /* Release configuration for PBXNativeTarget "PochicalWidgetsExtension" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		C6C3AE1430750000000C5B81 /* Build configuration list for PBXNativeTarget "PochicalNotificationsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C6C3AE1230750000000C5B81 /* Debug configuration for PBXNativeTarget "PochicalNotificationsExtension" */,
+				C6C3AE1330750000000C5B81 /* Release configuration for PBXNativeTarget "PochicalNotificationsExtension" */,
 			);
 			defaultConfigurationName = Release;
 		};
@@ -843,6 +1007,16 @@
 			productName = PochicalKit;
 		};
 		C6C38350307347A000C0C5B8 /* PochicalKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6C383403073460000C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalKit" */;
+			productName = PochicalKit;
+		};
+		C6C3AE0730750000000C5B81 /* PochicalDesign */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6C38328307345A800C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalDesign" */;
+			productName = PochicalDesign;
+		};
+		C6C3AE0630750000000C5B81 /* PochicalKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C6C383403073460000C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalKit" */;
 			productName = PochicalKit;

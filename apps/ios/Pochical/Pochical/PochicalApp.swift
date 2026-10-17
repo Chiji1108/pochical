@@ -35,6 +35,8 @@ struct PochicalApp: App {
     sync = SyncClient(account: account, database: database)
     groupCalls = GroupCalls(account: account)
     Notifications.shared.groupCalls = groupCalls
+    Notifications.shared.replies = Replies(
+      account: account, database: database, sockets: groupSockets)
     KeyboardTop.shared.watch()
   }
 
@@ -90,7 +92,7 @@ struct PochicalApp: App {
 /// The time iOS gives the app in the background to send what waits. As it
 /// ends, the shared database lets go of its locks, unless the app came
 /// back meanwhile.
-@MainActor private final class BackgroundTime {
+@MainActor final class BackgroundTime {
   private var id = UIBackgroundTaskIdentifier.invalid
   private var ended = false
 

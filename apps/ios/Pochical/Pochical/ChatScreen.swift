@@ -965,6 +965,10 @@ struct ChatScreen: View {
     read.threadID = threadID
     read.lastReadSeq = UInt64(mark)
     write(.read(read))
+    // The notifications of the lines read go too, as on the user's other
+    // devices when the server tells them.
+    let groupID = group.id
+    Task { await Notifications.shared.withdraw(in: groupID, threadID, readTo: mark) }
   }
 
   private func send(_ text: String) {

@@ -70,6 +70,9 @@ struct RootView: View {
     // notifications set it from the server.
     .onChange(of: unread.values.reduce(0, +), initial: true) { _, total in
       UNUserNotificationCenter.current().setBadgeCount(total)
+      // And the notifications of lines read go, those read on another
+      // device too, should its withdrawal not have reached this one.
+      Task { await Notifications.shared.withdrawRead() }
     }
     // A tapped notification opens its chat, the one that launched the
     // app too.
