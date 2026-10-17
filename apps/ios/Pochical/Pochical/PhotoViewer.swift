@@ -294,11 +294,27 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
 
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
+    if isBeingDismissed { leaving() }
     guard zooms, let coordinator = transitionCoordinator else { return }
     UIView.animate(withDuration: 0.15) { self.showChrome(false) }
     coordinator.animate(alongsideTransition: nil) { context in
       // The pull let go of: open again.
       if context.isCancelled { UIView.animate(withDuration: 0.15) { self.showChrome(true) } }
+    }
+  }
+
+  /// Its place shown again as soon as it is sure to close, not once it is
+  /// gone: the zoom fades into the photo there as it lands, then settles
+  /// for a second more before it is gone, the place left empty all that
+  /// while. Pulled down, only once let go of to close, not while it
+  /// follows the finger away from its place.
+  private func leaving() {
+    guard let coordinator = transitionCoordinator, coordinator.isInteractive else {
+      PhotoSpots.shared.open = nil
+      return
+    }
+    coordinator.notifyWhenInteractionChanges { context in
+      if !context.isCancelled { PhotoSpots.shared.open = nil }
     }
   }
 

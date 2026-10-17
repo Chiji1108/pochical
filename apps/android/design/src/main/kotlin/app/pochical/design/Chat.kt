@@ -27,6 +27,7 @@ object Chat {
   const val photoThumbHashMaxBytes = 25
   const val photosPerSend = 4
   const val pictureMaxEdge = 640
+  const val pochicalMember = "pochical"
   const val prefetchScreens = 2
   const val replySwipe = 56
   const val replySwipeRubber = 0.3f
@@ -34,4 +35,21 @@ object Chat {
   const val typingSendMs = 3000
   const val typingShowMs = 5000
   const val unsentAfterMs = 600000
+}
+
+/** What a chat can do by where it is kept (spec/chat.md, Where a chat is kept). */
+data class ChatPlaceRules(
+  val days: Boolean,
+  val directChats: Boolean,
+  val edit: Boolean,
+  val mentions: Boolean,
+  val pins: Boolean,
+  val polls: Boolean,
+  val reports: Boolean,
+  val sendsDevice: Boolean,
+) {
+  companion object {
+    val group = ChatPlaceRules(days = true, directChats = true, edit = true, mentions = true, pins = true, polls = true, reports = true, sendsDevice = false)
+    val support = ChatPlaceRules(days = false, directChats = false, edit = false, mentions = false, pins = false, polls = false, reports = false, sendsDevice = true)
+  }
 }

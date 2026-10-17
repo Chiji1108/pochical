@@ -1,6 +1,7 @@
 // The tables in each Group DO's own SQLite. Change them here and run
 // `mise run group-do:generate`; never edit src/group-do-migrations by
 // hand. Every Group DO applies the migrations as it starts.
+import type { ChatPlaceKind } from "@pochical/design/chat";
 import { sql } from "drizzle-orm";
 import {
   check,
@@ -24,6 +25,9 @@ export const profile = sqliteTable(
     // Set when the group's mark is a mark icon, by its name.
     icon: text(),
     id: integer().primaryKey(),
+    // What the place is (design/src/chat.ts, chatPlaces): a group, or a
+    // user's chat with Pochical's people, kept the same way.
+    kind: text().$type<ChatPlaceKind>().notNull().default("group"),
     // Set when the group's mark is letters.
     letter: text(),
     name: text().notNull(),
@@ -152,6 +156,9 @@ export const chatLines = sqliteTable(
     days: text({ mode: "json" }).$type<string[]>(),
     // The day a poll was settled on, while settled.
     decided: text(),
+    // The app's version and the device it was sent from, kept where the
+    // place's rules ask for it (chatPlaces' sendsDevice).
+    device: text(),
     edited: integer({ mode: "boolean" }).notNull().default(false),
     // In a one-to-one chat, the member who had blocked its writer when it
     // was sent: never delivered to them.
