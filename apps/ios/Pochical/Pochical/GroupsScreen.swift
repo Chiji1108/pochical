@@ -147,7 +147,7 @@ struct GroupsScreen: View {
         case .shifts(let group, let day):
           GroupShiftsPage(group: live(group), day: day)
         case .chat(let group, let thread, let other, let sharing):
-          ChatScreen(group: live(group), threadID: thread, otherID: other, sharing: sharing)
+          ChatScreen(place: .group(live(group)), threadID: thread, otherID: other, sharing: sharing)
         case .settings(let group):
           GroupSettingsPage(group: live(group)) {
             path.append(.invite(group))

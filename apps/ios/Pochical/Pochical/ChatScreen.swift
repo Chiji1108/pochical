@@ -7,8 +7,10 @@ import SQLiteData
 import SwiftUI
 import UIKit
 
-/// One of a group's chats (/design's ChatPage), 全体チャット or a
-/// one-to-one chat: others' lines on the left with their face, and in the
+/// A chat of a place (/design's ChatPage): a group's 全体チャット or a
+/// one-to-one chat, or the chat with Pochical's people, each doing what
+/// its place's rules let it (spec/chat.md, Where a chat is kept). Others'
+/// lines on the left with their face, and in the
 /// group's chat their name, at the start of a run, one's own on the right
 /// in the accent, the day over each day's first line. It opens
 /// on the first unread line under ここから新着, else on the latest, and
@@ -43,7 +45,8 @@ struct ChatScreen: View {
   @State private var profileOf: ProfileOf?
   /// Blocked members' lines shown this once at a tap.
   @State private var shownBlocked: Set<Int64> = []
-  let group: GroupRow
+  /// Where the chat is kept: a group, or the chat with Pochical's people.
+  let place: ChatPlace
   let threadID: String
   /// The other member of a one-to-one chat; none for 全体チャット.
   let otherID: String?
@@ -98,8 +101,8 @@ struct ChatScreen: View {
   /// The lines read as the screen is made, by the reader last heard of,
   /// so they are there through the push that brings it in rather than
   /// arriving, oldest first, as it ends.
-  init(group: GroupRow, threadID: String, otherID: String?, sharing: Day? = nil) {
-    self.group = group
+  init(place: ChatPlace, threadID: String, otherID: String?, sharing: Day? = nil) {
+    self.place = place
     self.threadID = threadID
     self.otherID = otherID
     self.sharing = sharing
@@ -107,7 +110,7 @@ struct ChatScreen: View {
     _meID = State(initialValue: me)
     _chat = Fetch(
       wrappedValue: ChatRequest.Value(),
-      ChatRequest(groupID: group.id, threadID: threadID, me: me))
+      ChatRequest(groupID: place.id, threadID: threadID, me: me))
   }
   /// All the pins open under the bar.
   @State private var pinsOpen = false
@@ -204,9 +207,11 @@ struct ChatScreen: View {
       }
     }
     .safeAreaInset(edge: .top, spacing: 0) {
-      PinBar(
-        pins: chat.state.pins, open: $pinsOpen, nameOf: nameOf,
-        onJump: jump(to:), onUnpin: { pin($0, on: false) })
+      if place.rules.pins {
+        PinBar(
+          pins: chat.state.pins, open: $pinsOpen, nameOf: nameOf,
+          onJump: jump(to:), onUnpin: { pin($0, on: false) })
+      }
     }
     .task(
       id: JumpKey(
@@ -248,7 +253,7 @@ struct ChatScreen: View {
               Text(words)
                 .font(.caption2)
                 .foregroundStyle(colors.textTertiary)
-            } else if otherID == nil {
+            } else if otherID == nil, place.group != nil {
               Text("\(chat.writers.count { !$0.left })人")
                 .font(.caption2)
                 .foregroundStyle(colors.textTertiary)
@@ -260,11 +265,11 @@ struct ChatScreen: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
-        .accessibilityHint(otherID == nil ? "押すとグループの設定" : "押すとプロフィール")
+        .accessibilityHint(titleHint)
       }
       ToolbarItem(placement: .primaryAction) {
         Menu("チャットのメニュー", systemImage: "ellipsis") {
-          if otherID == nil {
+          if otherID == nil, let group = place.group {
             Button("みんなのシフト", systemImage: "calendar") {
               openGroupRoute(.shifts(group, day: nil))
             }
@@ -324,7 +329,7 @@ struct ChatScreen: View {
     .task(id: state.waiting.filter { !$0.failed }.map(\.opID)) {
       while !Task.isCancelled {
         let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-        let next = try? await database.write { try Chats.failOverdue(of: group.id, now: now, in: $0) }
+        let next = try? await database.write { try Chats.failOverdue(of: place.id, now: now, in: $0) }
         guard let next = next ?? nil else { return }
         try? await Task.sleep(for: .milliseconds(max(next - now, 0)))
       }
@@ -359,7 +364,7 @@ struct ChatScreen: View {
     .environment(\.openURL, OpenURLAction { open($0) })
     // Leaving the chat takes its open menu with it.
     .onAppear {
-      Notifications.shared.openChat = OpenedChat(groupID: group.id, threadID: threadID)
+      Notifications.shared.openChat = OpenedChat(groupID: place.id, threadID: threadID)
       if !tookDraft {
         tookDraft = true
         takeDraft()
@@ -383,24 +388,25 @@ struct ChatScreen: View {
     .task(id: sharedSpan) {
       guard let span = sharedSpan else { return }
       _ = try? await $dayMembers.load(
-        GroupMembersRequest(groupID: group.id, from: span.from, through: span.through))
+        GroupMembersRequest(groupID: place.id, from: span.from, through: span.through))
     }
     .sheet(isPresented: $sharingDays) {
       ShareDaysSheet(
-        groupID: group.id, people: otherID.map { Set([$0, meID ?? ""]) }, pollable: otherID == nil,
-        onSend: shareDays)
+        groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) },
+        pollable: otherID == nil && place.rules.polls, onSend: shareDays)
     }
     // As the app leaves the screen, what is written is kept, as Signal
     // and Telegram keep it then.
     .onChange(of: scenePhase) { _, phase in
       if phase != .active { keepDraft() }
     }
-    .photoViewer($viewing, groupID: group.id) { photo in
-      await savePhoto(photo, in: group.id, calls: groupCalls)
+    .photoViewer($viewing, groupID: place.id) { photo in
+      await savePhoto(photo, in: place.id, calls: groupCalls)
     }
     .modifier(
       ReportAndBlock(
-        groupID: group.id, groupName: group.name, groupMark: group.mark, blocked: blocked,
+        groupID: place.id, groupName: place.name, groupMark: place.group?.mark ?? GroupMarkValue(),
+        blocked: blocked,
         reporting: $reporting, profileOf: $profileOf, blockQuestion: $blockQuestion,
         onMessage: message(_:), onReported: reported, onSetBlocked: setBlocked))
     .sheet(item: $deciding) { line in
@@ -457,12 +463,12 @@ struct ChatScreen: View {
         }
     } else {
       ChatComposer(
-        draft: draft, groupID: group.id, threadID: threadID,
-        mentionable: otherID != nil
+        draft: draft, groupID: place.id, threadID: threadID,
+        mentionable: otherID != nil || !place.rules.mentions
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
         nameOf: nameOf, quoteOf: { quote(of: Int64($0) ?? 0) }, onSubmit: submit,
         onStopEditing: stopEditing,
-        onShareDays: { sharingDays = true }, say: say)
+        onShareDays: place.rules.days ? { sharingDays = true } : nil, say: say)
     }
   }
 
@@ -659,13 +665,14 @@ struct ChatScreen: View {
           lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
           members: cardMembers, poll: pollLine(for: line), photo: line.photo,
           quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
-          groupID: group.id,
-          shifts: line.poll ? nil : line.days.first.map { GroupRoute.shifts(group, day: $0) },
+          groupID: place.id,
+          shifts: line.poll ? nil : shifts(on: line.days.first),
           time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
           writerPhoto: faces[line.authorID] ?? "",
-          named: otherID == nil, first: startsRun, waiting: false, names: names,
-          reactions: line.reactions, countedReactions: otherID != nil,
+          appFace: line.authorID == Chat.pochicalMember,
+          named: !ofTwo, first: startsRun, waiting: false, names: names,
+          reactions: line.reactions, countedReactions: ofTwo,
           pinned: chat.state.pins.contains { $0.seq == line.seq }, marks: marks, seq: line.seq,
           meID: meID,
           actions: lineActions)
@@ -674,7 +681,7 @@ struct ChatScreen: View {
       LineView(
         lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
         members: cardMembers, poll: waitingPoll(line), photo: line.photo,
-        quote: line.replyTo.map(quote(of:)), groupID: group.id, time: line.madeAtMs,
+        quote: line.replyTo.map(quote(of:)), groupID: place.id, time: line.madeAtMs,
         edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
         failed: line.failed, names: names, marks: marks,
         actions: lineActions)
@@ -730,7 +737,7 @@ struct ChatScreen: View {
         LineContent(
           text: line.text, preview: line.preview, days: line.days, members: cardMembers,
           poll: pollLine(for: line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
-          groupID: group.id, mine: mine, first: startsRun, waiting: false, nameOf: nameOf,
+          groupID: place.id, mine: mine, first: startsRun, waiting: false, nameOf: nameOf,
           unfolded: unfolded.contains(line.opID)))
       // A link held has its own menu, without the reactions.
       if let link {
@@ -774,7 +781,7 @@ struct ChatScreen: View {
             LineContent(
               text: line.text, preview: line.preview, days: line.days, members: cardMembers,
               poll: waitingPoll(line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
-              groupID: group.id, mine: true, first: startsRun, waiting: !line.failed,
+              groupID: place.id, mine: true, first: startsRun, waiting: !line.failed,
               nameOf: nameOf)),
           finger: finger, actions: actions))
     default:
@@ -788,7 +795,7 @@ struct ChatScreen: View {
   /// upload before its line goes.
   private func sendPhotos() {
     for picked in draft.photos {
-      guard (try? ChatPhotos.keep(picked.shrunk.jpeg, as: picked.id, in: group.id)) != nil else {
+      guard (try? ChatPhotos.keep(picked.shrunk.jpeg, as: picked.id, in: place.id)) != nil else {
         continue
       }
       var send = Pochical_V1_ChatSend()
@@ -833,7 +840,7 @@ struct ChatScreen: View {
     try? database.write { try Chats.takeBack(line.opID, in: $0) }
     if let photo = line.photo {
       PhotoUploads.shared.forget(photo.id)
-      ChatPhotos.forget(photo.id, in: group.id)
+      ChatPhotos.forget(photo.id, in: place.id)
     }
   }
 
@@ -844,8 +851,8 @@ struct ChatScreen: View {
   private func takeDraft() {
     let read = try? database.read { db in
       (
-        draft: try Chats.draft(of: threadID, in: group.id, db: db),
-        writers: try Chats.writers(in: group.id, db: db)
+        draft: try Chats.draft(of: threadID, in: place.id, db: db),
+        writers: try Chats.writers(in: place.id, db: db)
       )
     }
     guard let read, let kept = read.draft else { return }
@@ -871,7 +878,7 @@ struct ChatScreen: View {
     keptDraft = kept
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { db in
-      try Chats.keepDraft(kept, of: threadID, in: group.id, now: now, db: db)
+      try Chats.keepDraft(kept, of: threadID, in: place.id, now: now, db: db)
     }
   }
 
@@ -931,7 +938,7 @@ struct ChatScreen: View {
   /// Reads the chat again for the reader and the lines laid out.
   private func reload() async {
     _ = try? await $chat.load(
-      ChatRequest(groupID: group.id, threadID: threadID, me: meID, from: window))
+      ChatRequest(groupID: place.id, threadID: threadID, me: meID, from: window))
   }
 
   /// Lays out a page more of the earlier lines the device holds, at once,
@@ -1072,7 +1079,7 @@ struct ChatScreen: View {
     write(.read(read))
     // The notifications of the lines read go too, as on the user's other
     // devices when the server tells them.
-    let groupID = group.id
+    let groupID = place.id
     Task { await Notifications.shared.withdraw(in: groupID, threadID, readTo: mark) }
   }
 
@@ -1133,7 +1140,7 @@ struct ChatScreen: View {
       default: return nil
       }
     }
-    photoPrefetch.near(photos, in: group.id, scale: displayScale, calls: groupCalls)
+    photoPrefetch.near(photos, in: place.id, scale: displayScale, calls: groupCalls)
   }
 
   /// The photos the chat's lines show, in their order, swiped through
@@ -1150,7 +1157,7 @@ struct ChatScreen: View {
   /// Saves a photo to the person's library, and says so.
   private func save(_ photo: LinePhoto) {
     Task {
-      if await savePhoto(photo, in: group.id, calls: groupCalls) {
+      if await savePhoto(photo, in: place.id, calls: groupCalls) {
         sayDone("写真を保存しました")
       } else {
         say("保存できませんでした")
@@ -1173,19 +1180,40 @@ struct ChatScreen: View {
   }
 
   private var isMuted: Bool {
-    notifications.isMuted(threadID, in: group.id)
+    notifications.isMuted(threadID, in: place.id)
+  }
+
+  /// What a tap on the title opens, as VoiceOver says it: nothing for the
+  /// chat with Pochical's people.
+  private var titleHint: String {
+    if otherID != nil { return "押すとプロフィール" }
+    return place.group == nil ? "" : "押すとグループの設定"
+  }
+
+  /// A chat of two, a one-to-one chat or the chat with Pochical's people:
+  /// no names over the lines, and a reaction's count without faces.
+  private var ofTwo: Bool {
+    otherID != nil || place.group == nil
   }
 
   /// The other member's name, or the group's (/design's ChatTitle).
   private var title: String {
-    otherID.flatMap { names[$0] } ?? group.name
+    otherID.flatMap { names[$0] } ?? place.name
+  }
+
+  /// みんなのシフト on a shared day, in a group.
+  private func shifts(on day: Day?) -> GroupRoute? {
+    guard let group = place.group, let day else { return nil }
+    return .shifts(group, day: day)
   }
 
   /// The group's settings from 全体チャット's title, the other member's
   /// profile from a one-to-one chat's.
   private func openTitle() {
     guard let otherID else {
-      openGroupRoute(.settings(group))
+      if let group = place.group {
+        openGroupRoute(.settings(group))
+      }
       return
     }
     profileOf = ProfileOf(
@@ -1195,7 +1223,7 @@ struct ChatScreen: View {
   /// The one-to-one chat with someone, from their profile; none for the
   /// one open already.
   private func message(_ person: ProfileOf) -> (() -> Void)? {
-    guard person.id != otherID, let meID else { return nil }
+    guard person.id != otherID, let meID, let group = place.group else { return nil }
     return {
       openGroupRoute(.chat(group, thread: directThread(meID, person.id), with: person.id))
     }
@@ -1205,7 +1233,7 @@ struct ChatScreen: View {
   private func setMuted(_ muted: Bool) {
     Task {
       do {
-        try await groupCalls.setChatMuted(threadID, in: group.id, muted: muted)
+        try await groupCalls.setChatMuted(threadID, in: place.id, muted: muted)
         say(muted ? "通知をオフにしました" : "通知をオンにしました")
       } catch {
         say("できませんでした。通信できるところでもう一度どうぞ")
@@ -1359,11 +1387,13 @@ struct ChatScreen: View {
         MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(photo) })
     }
     // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
-    actions.append(
-      MessageAction(
-        title: pinned ? "ピン留めを外す" : "ピン留め", systemImage: pinned ? "pin.slash" : "pin"
-      ) { pin(line.seq, on: !pinned) })
-    if mine, words {
+    if place.rules.pins {
+      actions.append(
+        MessageAction(
+          title: pinned ? "ピン留めを外す" : "ピン留め", systemImage: pinned ? "pin.slash" : "pin"
+        ) { pin(line.seq, on: !pinned) })
+    }
+    if mine, words, place.rules.edit {
       actions.append(MessageAction(title: "編集", systemImage: "pencil") { edit(line) })
     }
     if line.poll, line.decided != nil, canDecide(line) {
@@ -1378,7 +1408,7 @@ struct ChatScreen: View {
           title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
           startsGroup: true
         ) { unsending = .line(line) })
-    } else {
+    } else if place.rules.reports {
       // Last, apart and in the danger color (spec/chat.md).
       actions.append(
         MessageAction(
@@ -1507,9 +1537,16 @@ struct ChatScreen: View {
   }
 
   private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
+    var kind = kind
+    // Each line goes with the app's version and the device where the
+    // place keeps them (the support chat's head says so).
+    if place.rules.sendsDevice, case .send(var send) = kind {
+      send.device = AppDevice.words
+      kind = .send(send)
+    }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { db in
-      try Chats.edit(kind, in: group.id, now: now, db: db)
+      try Chats.edit(kind, in: place.id, now: now, db: db)
     }
   }
 }
