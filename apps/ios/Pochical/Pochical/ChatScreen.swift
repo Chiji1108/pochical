@@ -1127,26 +1127,17 @@ struct ChatScreen: View {
   /// lines draw them, and lets go of the rest: not a blocked member's
   /// folded away.
   private func prefetchPhotos(of near: [ChatItem]) {
-    var requests: [String: ImageRequest] = [:]
-    for item in near {
-      let photo: LinePhoto?
+    let photos = near.compactMap { item -> LinePhoto? in
       switch item {
       case .line(let line, _):
         let folded =
           otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
-        photo = line.hidden || line.unsent || folded ? nil : line.photo
-      case .waiting(let line, _): photo = line.photo
-      default: photo = nil
-      }
-      if let photo,
-        let request = ChatPhotoLoading.lineRequest(
-          photo, in: group.id, scale: displayScale, calls: groupCalls,
-          held: ChatPhotos.heldFile(photo.id, in: group.id) != nil)
-      {
-        requests[photo.id] = request
+        return line.hidden || line.unsent || folded ? nil : line.photo
+      case .waiting(let line, _): return line.photo
+      default: return nil
       }
     }
-    photoPrefetch.near(requests)
+    photoPrefetch.near(photos, in: group.id, scale: displayScale, calls: groupCalls)
   }
 
   /// The photos the chat's lines show, in their order, swiped through

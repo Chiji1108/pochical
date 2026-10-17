@@ -701,6 +701,8 @@ struct SupportChatScreen: View {
       do {
         if let photo = line.photo {
           try await groupCalls.uploadSupportPhoto(photo.id)
+          // Stopped with × as its upload ended.
+          guard waiting.first(where: { $0.id == line.id })?.failed == false else { return }
         }
         let kept = try await groupCalls.sendSupport(
           line.text, id: line.id, device: Self.device, replyTo: line.replyTo, photo: line.photo,
@@ -729,23 +731,14 @@ struct SupportChatScreen: View {
   /// Fetches ahead the photos of the items near those in sight, as the
   /// group chats do.
   private func prefetchPhotos(of near: [SupportItem]) {
-    var requests: [String: ImageRequest] = [:]
-    for item in near {
-      let photo: LinePhoto?
+    let photos = near.compactMap { item -> LinePhoto? in
       switch item {
-      case .line(let line, _, _): photo = line.unsent ? nil : line.photo
-      case .waiting(let line, _): photo = line.photo
-      case .intro, .day: photo = nil
-      }
-      if let photo,
-        let request = ChatPhotoLoading.lineRequest(
-          photo, in: ChatPhotos.support, scale: displayScale, calls: groupCalls,
-          held: ChatPhotos.heldFile(photo.id, in: ChatPhotos.support) != nil)
-      {
-        requests[photo.id] = request
+      case .line(let line, _, _): line.unsent ? nil : line.photo
+      case .waiting(let line, _): line.photo
+      case .intro, .day: nil
       }
     }
-    photoPrefetch.near(requests)
+    photoPrefetch.near(photos, in: ChatPhotos.support, scale: displayScale, calls: groupCalls)
   }
 
   /// Deletes a line not sent, and the photo kept on the device for it.
