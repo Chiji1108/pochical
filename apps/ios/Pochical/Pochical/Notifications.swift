@@ -1,3 +1,4 @@
+import PochicalDesign
 import PochicalKit
 import PochicalProto
 import SQLiteData
@@ -145,7 +146,9 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   /// composer would, the line and those before it read, and waits until it
   /// is sent while iOS gives the time (spec/chat.md, Notifications).
   private func reply(_ text: String, to line: NotifiedLine) async {
-    let words = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    // Cut to the limit, as pasted text is (spec/text-limits.md).
+    let words = String(
+      text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(TextLimits.chatMessage))
     guard !words.isEmpty, let replies else { return }
     var read = Pochical_V1_ChatRead()
     read.threadID = line.threadID
@@ -171,20 +174,28 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   /// Takes back the notifications shown of a chat's lines read up to
   /// `readTo`, all of the chat's for nil (spec/vectors/chat.json, withdrawn).
   func withdraw(in groupID: String, _ threadID: String, readTo: Int64?) async {
-    let center = UNUserNotificationCenter.current()
-    let shown = await Self.shownLines()
-    let ids = withdrawn(shown, groupID: groupID, threadID: threadID, readTo: readTo)
-    if !ids.isEmpty {
-      center.removeDeliveredNotifications(withIdentifiers: ids)
-    }
+    await takeBack { withdrawn($0, groupID: groupID, threadID: threadID, readTo: readTo) }
   }
 
-  /// Takes back the notifications shown of lines `read` says are read,
-  /// here or, as the counts it hears say, on another device.
-  func withdrawRead(_ read: ReadState) async {
-    let ids = readNotified(await Self.shownLines(), read)
-    if !ids.isEmpty {
-      UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ids)
+  /// Takes back the notifications shown of lines read, as `read` says, and
+  /// of chats `before` did not yet know had nothing unread left. A chat
+  /// with nothing unread is known only as the counts come: the first known
+  /// may be from before lines notified since, while a read mark of the
+  /// user's own always holds.
+  func withdrawRead(_ read: ReadState, before: ReadState?) async {
+    var known = read
+    known.cleared = before.map { read.cleared.subtracting($0.cleared) } ?? []
+    await takeBack { readNotified($0, known) }
+  }
+
+  /// Removes the notifications shown that `ids` picks out of them.
+  private func takeBack(_ ids: ([NotifiedLine]) -> [String]) async {
+    let shown = await UNUserNotificationCenter.current().deliveredNotifications().compactMap {
+      NotifiedLine(id: $0.request.identifier, payload: $0.request.content.userInfo)
+    }
+    let gone = ids(shown)
+    if !gone.isEmpty {
+      UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: gone)
     }
   }
 
@@ -194,12 +205,6 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     guard let read = ChatWithdrawal(payload: payload) else { return .noData }
     await withdraw(in: read.groupID, read.threadID, readTo: read.readTo)
     return .newData
-  }
-
-  private static func shownLines() async -> [NotifiedLine] {
-    await UNUserNotificationCenter.current().deliveredNotifications().compactMap {
-      NotifiedLine(id: $0.request.identifier, payload: $0.request.content.userInfo)
-    }
   }
 
   /// An answer from Pochical's people: no group, their chat's thread.

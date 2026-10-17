@@ -76,9 +76,12 @@ struct RootView: View {
     }
     // The notifications of lines read go, those read on another device
     // too, should its withdrawal not have reached this one: whatever the
-    // badge, as a chat turned off counts nothing there.
-    .onChange(of: read, initial: true) { _, read in
-      Task { await Notifications.shared.withdrawRead(read) }
+    // badge, as a chat turned off counts nothing there. What the device
+    // first loads may be from before the notifications since, so only a
+    // chat cleared after it counts.
+    .onChange(of: read, initial: true) { before, read in
+      let known = before == ReadState() ? nil : before
+      Task { await Notifications.shared.withdrawRead(read, before: known) }
     }
     // A tapped notification opens its chat, the one that launched the
     // app too.

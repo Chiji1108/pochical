@@ -65,8 +65,11 @@ final class NotificationService: UNNotificationServiceExtension {
   ) -> INSendMessageIntent {
     let writer = person(from.writer, id: authorID)
     let group = from.group
-    // A group's conversation is one with more than the two of them.
-    let recipients = group.flatMap { _ in from.me.map { [person($0, id: "me", isMe: true)] } }
+    // A group's conversation is one of more than two: the user and the
+    // writer among them, as the system counts the people in it.
+    let recipients = group.flatMap { _ in
+      from.me.map { [person($0, id: "me", isMe: true), writer] }
+    }
     let intent = INSendMessageIntent(
       recipients: recipients,
       outgoingMessageType: .outgoingMessageText,
