@@ -189,7 +189,8 @@ extension Chats {
 
   /// Marks the group's lines that have waited `Chat.unsentAfterMs` without
   /// the group taking them as not sent, so they stop going by themselves;
-  /// gives when the next of those still waiting will be, nil with none.
+  /// gives when the next of those still waiting will be, nil with none. A
+  /// line that came while its Acked was lost stops waiting instead.
   @discardableResult
   public static func failOverdue(of groupID: String, now: Int64, in db: Database) throws
     -> Int64?
@@ -198,6 +199,12 @@ extension Chats {
     var next: Int64?
     for row in rows {
       guard case .send = try Pochical_V1_ChatEdit(serializedBytes: row.edit).kind else {
+        continue
+      }
+      if try ChatLineRow.where({ $0.groupID.eq(groupID) && $0.opID.eq(row.opID) }).fetchCount(db)
+        > 0
+      {
+        try ChatOutboxRow.where { $0.opID.eq(row.opID) }.delete().execute(db)
         continue
       }
       let due = row.madeAtMs + Int64(Chat.unsentAfterMs)

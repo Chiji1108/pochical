@@ -959,6 +959,22 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   }
 }
 
+@Test func aLineTheGroupTookWhoseAnswerWasLostStopsWaitingRatherThanFailing() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "届いた"
+    try Chats.edit(.send(words), in: "g", now: 1000, db: db)
+    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    // Its line came, but not the Acked.
+    try GroupSync.take([line(3, "届いた", op: opID)], of: "g", in: db)
+
+    #expect(try Chats.failOverdue(of: "g", now: 1000 + Int64(Chat.unsentAfterMs), in: db) == nil)
+    #expect(try Chats.lastWaiting(of: "g", in: db) == nil)
+  }
+}
+
 @Test func aLineTakenBackWhileItWaitedIsTakenBackFromTheGroupShouldItCome() throws {
   let database = try appDatabase()
   try database.write { db in

@@ -53,6 +53,10 @@ struct ChatScreen: View {
   @State private var tookDraft = false
   /// The draft last kept, so it is written only as it changes.
   @State private var keptDraft: KeptDraft?
+  /// The draft as it opened, its words as the composer showed them: kept
+  /// as it was while they stay so, so mentions of two members of one name
+  /// keep who each is.
+  @State private var openedDraft: (shown: String, sent: String)?
   @State private var meID: String?
   /// The line ここから新着 sits over: the first unread as the chat opens,
   /// or the first of others' lines coming in at once, more than the screen
@@ -832,13 +836,15 @@ struct ChatScreen: View {
     draft.editing = kept.editing
     draft.replyTo = kept.editing == nil ? kept.replyTo.map(String.init) : nil
     keptDraft = KeptDraft(text: kept.text, replyTo: kept.replyTo, editing: kept.editing?.seq)
+    openedDraft = (shown: draft.text, sent: kept.text)
   }
 
   /// Keeps what is being written with the chat, as it is left and as the
   /// app leaves the screen; written only as it changed.
   private func keepDraft() {
+    let unchanged = openedDraft.flatMap { $0.shown == draft.text ? $0.sent : nil }
     let kept = KeptDraft(
-      text: withMentions(draft.text, picked: draft.picked),
+      text: unchanged ?? withMentions(draft.text, picked: draft.picked),
       replyTo: draft.replyTo.flatMap(Int64.init), editing: draft.editing?.seq)
     guard kept != keptDraft else { return }
     keptDraft = kept
