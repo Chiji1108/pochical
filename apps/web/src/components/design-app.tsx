@@ -101,6 +101,7 @@ export function DesignApp({
                 <DesignGroup
                   initialGroupId={openGroup}
                   initialPage={initialGroupPage}
+                  photoFetch={variants.photoFetch}
                   photoSend={variants.photoSend}
                   scanResult={variants.scanResult}
                   onTab={setTab}

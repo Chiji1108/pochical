@@ -918,6 +918,31 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   }
 }
 
+@Test func aPhotoStoppedGoingUpIsNotSentUntilSentAgain() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var photo = Pochical_V1_ChatSend()
+    photo.threadID = groupThread
+    photo.photo.id = "p1"
+    try Chats.edit(.send(photo), in: "g", now: 1, db: db)
+    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    #expect(try Chats.stillGoing(opID, in: db))
+
+    // Stopped with ×: not sent, as one whose photo failed.
+    try Chats.stopSending(opID, in: db)
+    #expect(try !Chats.stillGoing(opID, in: db))
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true])
+
+    // Sent again, it goes once more.
+    try Chats.sendAgain(opID, now: 2, in: db)
+    #expect(try Chats.stillGoing(opID, in: db))
+
+    // Taken back, nothing is left to go.
+    try Chats.takeBack(opID, in: db)
+    #expect(try !Chats.stillGoing(opID, in: db))
+  }
+}
+
 @Test func aPhotoThatCouldNotBeSentLeavesNothingToSend() throws {
   let database = try appDatabase()
   try database.write { db in

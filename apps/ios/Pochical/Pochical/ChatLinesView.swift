@@ -122,6 +122,9 @@ struct LineSource {
 extension EnvironmentValues {
   /// The cell a chat's line is drawn in; none outside the chat's lines.
   @Entry var lineSpace: LineSpace?
+  /// The line is drawn only to be measured, apart from the screen: its
+  /// photos are not fetched for it.
+  @Entry var measuringLine = false
 }
 
 /// An item of the lines: its id, and all its row draws, compared to tell
@@ -155,7 +158,8 @@ struct LinesRow: Equatable {
       return known.height
     }
     sizer.rootView = AnyView(
-      LineCellContent(id: id, content: row(id), environment: environment, space: LineSpace()))
+      LineCellContent(
+        id: id, content: row(id), environment: environment, space: LineSpace(), measuring: true))
     let height = ceil(
       sizer.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
     heights[id] = (look, width, height)
@@ -229,6 +233,10 @@ struct ChatLinesView: UIViewControllerRepresentable {
   let replySwipe: (String) -> ReplySwipe?
   /// The item `id` was dragged far enough to reply to it.
   let onReply: (String) -> Void
+  /// The items within Chat.photoPrefetchScreens of those in sight, told
+  /// as they change while the lines scroll, for their photos to be fetched
+  /// ahead. UICollectionView's own prefetching stays off (ChatLayout's).
+  var onNear: ([String]) -> Void = { _ in }
 
   func makeUIViewController(context: Context) -> ChatLinesController {
     let controller = ChatLinesController(scroll: scroll)
@@ -764,7 +772,25 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   }
 
   /// Where the lines are scrolled, told to what shows it.
+  /// The items last told near those in sight.
+  private var near: [String] = []
+
+  /// Tells the items within Chat.photoPrefetchScreens above and below the
+  /// lines in sight, as they change.
+  private func seeNear() {
+    guard let settings, placed, lines.bounds.height > 0 else { return }
+    let reach = lines.bounds.height * CGFloat(Chat.photoPrefetchScreens)
+    let around = lines.bounds.insetBy(dx: 0, dy: -reach)
+    let ids = (layout.layoutAttributesForElements(in: around) ?? [])
+      .filter { $0.representedElementCategory == .cell }
+      .compactMap { $0.indexPath.item < ids.count ? ids[$0.indexPath.item] : nil }
+    guard ids != near else { return }
+    near = ids
+    settings.onNear(ids)
+  }
+
   private func seePlace() {
+    seeNear()
     guard lines.bounds.height > 0 else { return }
     let inset = lines.adjustedContentInset
     let content = layout.collectionViewContentSize.height
@@ -1047,6 +1073,7 @@ private struct LineCellContent: View {
   let content: AnyView
   let environment: EnvironmentValues
   let space: LineSpace
+  var measuring = false
 
   var body: some View {
     content
@@ -1054,6 +1081,7 @@ private struct LineCellContent: View {
       .frame(maxWidth: .infinity)
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
+      .environment(\.measuringLine, measuring)
       .environment(\.self, environment)
   }
 }

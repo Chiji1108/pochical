@@ -1,5 +1,5 @@
 import { chatRules } from "@pochical/design/chat";
-import { Link2Off } from "lucide-react";
+import { Link2Off, RotateCw, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
@@ -307,7 +307,9 @@ export function PhotoLine({
   quote,
   actions,
   onSave,
+  onStop,
   upload,
+  fetchFails = false,
 }: {
   photo: Photo;
   // The chat's photos in the order of its lines, this one among them.
@@ -315,6 +317,11 @@ export function PhotoLine({
   mine: boolean;
   // Still going up, or not sent; neither takes reactions yet.
   upload?: Upload;
+  // × on it while it goes up, stopping it.
+  onStop?: () => void;
+  // Someone else's photo cannot be fetched the first time it comes,
+  // showing ↻ to fetch it again, which brings it.
+  fetchFails?: boolean;
   // Whose photo it is, for a screen reader and the large view.
   label: string;
   quote?: ReactNode;
@@ -332,6 +339,8 @@ export function PhotoLine({
   // Drawn, over its blur or grey; one that cannot come stops breathing.
   const [drawn, setDrawn] = useState(false);
   const [missing, setMissing] = useState(false);
+  // Fetched again with ↻.
+  const [tries, setTries] = useState(0);
   const blur = useMemo(
     () => (photo.thumbHash === undefined ? undefined : blurOf(photo.thumbHash)),
     [photo.thumbHash]
@@ -340,13 +349,17 @@ export function PhotoLine({
     const timer = here
       ? undefined
       : setTimeout(() => {
+          if (fetchFails && tries === 0) {
+            setMissing(true);
+            return;
+          }
           arrivedPhotos.add(photo.src);
           setHere(true);
         }, comingMilliseconds);
     return () => {
       clearTimeout(timer);
     };
-  }, [here, photo.src]);
+  }, [here, photo.src, fetchFails, tries]);
   const size = photoSize(photo);
   const quoted = quote !== undefined;
   const listed = among.some((entry) => entry.photo.src === photo.src)
@@ -355,7 +368,7 @@ export function PhotoLine({
   const open = (
     <button
       aria-label={`${label}。押すと大きく表示、長押しでリアクションと返信`}
-      className={cx(chatStyle.photoButton, quoted && chatStyle.photoInBubble)}
+      className={chatStyle.photoButton}
       onClick={() => {
         setViewing(true);
       }}
@@ -367,9 +380,11 @@ export function PhotoLine({
           chatStyle.photoPlace,
           !drawn && !missing && blur === undefined && chatStyle.photoLoading
         )}
+        // Its own width, so its place is kept before the photo is drawn.
         style={{
           aspectRatio: `${size.width} / ${size.height}`,
           backgroundImage: blur === undefined ? undefined : `url(${blur})`,
+          width: size.width,
         }}
       >
         {here && (
@@ -403,26 +418,63 @@ export function PhotoLine({
           />
         )}
       </span>
+    </button>
+  );
+  // Over the photo, apart from its button: ↻ for one that could not be
+  // fetched, and the ring of one going up with × to stop it.
+  const framed = (
+    <span
+      className={cx(chatStyle.photoFrame, quoted && chatStyle.photoInBubble)}
+    >
+      {open}
+      {missing && !drawn && (
+        <button
+          aria-label="写真をもう一度読み込む"
+          className={chatStyle.photoRetry}
+          onClick={() => {
+            setMissing(false);
+            setHere(false);
+            setTries((before) => before + 1);
+          }}
+          type="button"
+        >
+          <span className={chatStyle.photoMark}>
+            <RotateCw aria-hidden="true" size={20} strokeWidth={2.5} />
+          </span>
+        </button>
+      )}
       {upload === "sending" && (
-        <span className={chatStyle.uploading} role="status">
-          <svg
-            aria-hidden="true"
-            className={chatStyle.uploadRing}
-            viewBox="0 0 36 36"
-          >
-            <circle cx="18" cy="18" r="15" />
-            <circle
-              cx="18"
-              cy="18"
-              pathLength="100"
-              r="15"
-              style={{ animationDuration: `${uploadMilliseconds}ms` }}
-            />
-          </svg>
-          <span className={srOnly}>送信中</span>
+        <span className={chatStyle.uploading}>
+          <span className={chatStyle.photoMark} role="status">
+            <svg
+              aria-hidden="true"
+              className={chatStyle.uploadRing}
+              viewBox="0 0 36 36"
+            >
+              <circle cx="18" cy="18" r="15" />
+              <circle
+                cx="18"
+                cy="18"
+                pathLength="100"
+                r="15"
+                style={{ animationDuration: `${uploadMilliseconds}ms` }}
+              />
+            </svg>
+            <span className={srOnly}>送信中</span>
+            {onStop && (
+              <button
+                aria-label="送信をやめる"
+                className={chatStyle.uploadStop}
+                onClick={onStop}
+                type="button"
+              >
+                <X aria-hidden="true" size={16} strokeWidth={3} />
+              </button>
+            )}
+          </span>
         </span>
       )}
-    </button>
+    </span>
   );
   const held = (
     <MessageActions
@@ -434,7 +486,7 @@ export function PhotoLine({
       {/* The quote is held with the photo, a tap on it its own. */}
       <>
         {quote}
-        {open}
+        {framed}
       </>
     </MessageActions>
   );

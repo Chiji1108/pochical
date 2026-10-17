@@ -1,3 +1,4 @@
+import Nuke
 import Photos
 import PochicalDesign
 import PochicalKit
@@ -6,113 +7,90 @@ import SwiftUI
 // Photos in a chat (spec/chat.md, Photos): a photo's line, the photo
 // opened large, and the photos waiting above the composer.
 
-/// The box a photo fits in, and how far from square it may be before its
-/// ends are cut, as LINE crops a panorama in the chat (/design's
-/// photoSize).
-private enum PhotoBox {
-  static let width: CGFloat = 220
-  static let height: CGFloat = 260
-  static let widest: CGFloat = 2
-  static let tallest: CGFloat = 0.5
-
-  /// The size a photo takes in the chat.
-  static func size(of photo: LinePhoto) -> CGSize {
-    let aspect = min(
-      max(CGFloat(photo.width) / CGFloat(max(photo.height, 1)), tallest), widest)
-    let width = min(Self.width, Self.height * aspect)
-    return CGSize(width: width, height: width / aspect)
-  }
-}
-
-/// One of the group's photos as it loads: from the device, else fetched,
-/// over the blur its ThumbHash draws, or else its grey, while it comes.
-/// In the chat it is fetched small (`Chat.photoSmallEdge`), shrunk to the
-/// size it shows and kept so (Thumbnails), so a line scrolled back into
-/// sight draws at once rather than reading and shrinking it again; opened
-/// large, the photo itself.
+/// One of the group's photos as it loads (ChatPhotoLoading), shrunk to
+/// the size it shows (`shown`), over the blur its ThumbHash draws, or else
+/// its grey, while it comes; drawn at once when held drawn already, as a
+/// line scrolled back into sight is. One that could not be fetched keeps
+/// its blur and, with `retries`, is fetched again at a tap.
 struct ChatPhotoImage: View {
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.themeColors) private var colors
   @Environment(\.displayScale) private var displayScale
+  @Environment(\.measuringLine) private var measuring
   let photo: LinePhoto
   let groupID: String
-  var fit = false
-  /// The size it is drawn at in the chat, decoded no larger; nil to draw
-  /// it whole, opened large.
-  var shown: CGSize?
+  /// The size it is drawn at, read no larger.
+  let shown: CGSize
   /// Read only while on the screen, and let go once out of it: a line's
   /// photo, as the chat lays out all its lines at once.
   var whileInSight = false
+  /// A tap on it, could it not be fetched, fetches it again: a line's
+  /// photo, not a quote's.
+  var retries = false
   @State private var image: UIImage?
   @State private var inSight = false
   /// It could not be fetched, so nothing is said to be on its way.
-  @State private var missing = false
+  @State private var failed = false
+  /// Fetched again at a tap.
+  @State private var tries = 0
+  /// The member's own, held on the device as sent: looked for once.
+  @State private var held: Bool?
 
   var body: some View {
-    // Out of sight, nothing is held, not even the kept thumbnail.
-    let kept =
-      whileInSight && !inSight
-      ? nil : image ?? pixels.flatMap { Thumbnails.kept(photo.id, pixels: $0) }
-    let blur = Blurs.of(photo)
+    let request = ChatPhotoLoading.request(
+      photo, in: groupID, pixels: pixels, calls: groupCalls, held: held ?? false)
+    let wanted = !measuring && (!whileInSight || inSight)
+    // Out of sight, nothing is held, not even what memory keeps.
+    let kept = wanted ? image ?? ChatPhotoLoading.pipeline.cache[request]?.image : nil
+    let blur = ChatPhotoLoading.blur(of: photo)
     ZStack {
       if let blur {
         // Under the photo, in the photo's own shape, so the photo comes in
         // over it.
         Image(uiImage: blur)
           .resizable()
-          .aspectRatio(aspect, contentMode: fit ? .fit : .fill)
+          .aspectRatio(aspect, contentMode: .fill)
       } else if kept == nil {
-        if fit {
-          // Opened large, on black: the system's spinner, as Photos waits.
-          if !missing {
-            ProgressView().tint(.white).controlSize(.large)
-          }
-        } else {
-          // Only in sight: the chat lays out all its lines at once.
-          PhotoComing(breathing: !missing && (!whileInSight || inSight))
-        }
+        // Only in sight: the chat lays out all its lines at once.
+        PhotoComing(breathing: !failed && wanted)
       }
       if let kept {
         Image(uiImage: kept)
           .resizable()
-          .aspectRatio(contentMode: fit ? .fit : .fill)
+          .aspectRatio(contentMode: .fill)
           .transition(.opacity)
+      } else if failed, retries {
+        PhotoRetry { tries += 1 }
       }
     }
     .onScrollVisibilityChange(threshold: 0) { inSight = $0 }
-    .task(id: PhotoLoad(id: photo.id, wanted: !whileInSight || inSight)) {
-      guard !whileInSight || inSight else {
+    .task(id: PhotoLoad(id: photo.id, pixels: pixels, wanted: wanted, tries: tries)) {
+      guard wanted else {
         image = nil
         return
       }
-      // Held here too, so a thumbnail the system lets go while the line
-      // shows is not lost from it.
-      if let pixels, let kept = Thumbnails.kept(photo.id, pixels: pixels) {
+      let held = held ?? (ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+      self.held = held
+      let request = ChatPhotoLoading.request(
+        photo, in: groupID, pixels: pixels, calls: groupCalls, held: held)
+      // Held here too, so a photo the memory lets go while the line shows
+      // is not lost from it.
+      if let kept = ChatPhotoLoading.pipeline.cache[request]?.image {
         image = kept
         return
       }
       // Fetched again, it is on its way again.
-      missing = false
-      guard let data = try? await groupCalls.photo(photo.id, in: groupID, small: pixels != nil)
-      else {
-        missing = !Task.isCancelled
-        return
-      }
-      let fetched: UIImage?
-      if let pixels {
-        let id = photo.id
-        fetched = await Task.detached(priority: .userInitiated) {
-          Thumbnails.make(data, id: id, pixels: pixels)
-        }.value
-      } else {
-        fetched = UIImage(data: data)
-      }
-      // Over its blur it comes in, as the chat apps fade a photo in over
-      // its placeholder; over grey it shows at once.
-      withAnimation(
-        photo.thumbHash == nil ? nil : .easeOut(duration: Double(Chat.photoFadeMs) / 1000)
-      ) {
-        image = fetched
+      failed = false
+      do {
+        let fetched = try await ChatPhotoLoading.pipeline.image(for: request)
+        // Over its blur it comes in, as the chat apps fade a photo in over
+        // its placeholder; over grey it shows at once.
+        withAnimation(
+          photo.thumbHash == nil ? nil : .easeOut(duration: Double(Chat.photoFadeMs) / 1000)
+        ) {
+          image = fetched
+        }
+      } catch {
+        failed = !Task.isCancelled
       }
     }
   }
@@ -123,29 +101,32 @@ struct ChatPhotoImage: View {
     return CGFloat(photo.width) / CGFloat(photo.height)
   }
 
-  /// The longer side, in pixels, the photo is decoded at to fill the size
-  /// it shows; nil opened large.
+  /// The longer side, in pixels, the photo is read at to fill the size it
+  /// shows; nil for a photo sent without its size, fetched whole.
   private var pixels: Int? {
-    shown.flatMap { Self.pixels(of: photo, shown: $0, scale: displayScale) }
+    ChatPhotoLoading.pixels(of: photo, shown: shown, scale: displayScale)
   }
+}
 
-  /// The longer side, in pixels, `photo` is decoded at to fill `shown`.
-  static func pixels(of photo: LinePhoto, shown: CGSize, scale: CGFloat) -> Int? {
-    guard photo.width > 0, photo.height > 0 else { return nil }
-    let width = CGFloat(photo.width)
-    let height = CGFloat(photo.height)
-    let scale = min(max(shown.width / width, shown.height / height) * scale, 1)
-    return Int((max(width, height) * scale).rounded(.up))
-  }
+/// A photo that could not be fetched: ↻ on its blur, as Signal and
+/// Telegram mark one, the whole photo a button fetching it again
+/// (/design's photoRetry).
+private struct PhotoRetry: View {
+  @Environment(\.themeColors) private var colors
+  let retry: () -> Void
 
-  /// What the chat drew of `photo` and holds still, shown at once as it
-  /// opens large while the photo itself comes: the thumbnail, else its
-  /// blur.
-  static func held(_ photo: LinePhoto, scale: CGFloat) -> UIImage? {
-    let thumbnail = pixels(of: photo, shown: PhotoBox.size(of: photo), scale: scale).flatMap {
-      Thumbnails.kept(photo.id, pixels: $0)
+  var body: some View {
+    Button(action: retry) {
+      Image(systemName: "arrow.clockwise")
+        .font(.system(size: 20, weight: .semibold))
+        .foregroundStyle(colors.mediaText)
+        .frame(width: 48, height: 48)
+        .background(colors.mediaShade, in: Circle())
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
     }
-    return thumbnail ?? Blurs.of(photo)
+    .buttonStyle(.plain)
+    .accessibilityLabel("写真をもう一度読み込む")
   }
 }
 
@@ -177,57 +158,16 @@ private struct PhotoComing: View {
   }
 }
 
-/// The chat's photos shrunk to the size they show, kept while the app runs
-/// (the system lets them go when memory runs short).
-enum Thumbnails {
-  nonisolated(unsafe) private static let cache: NSCache<NSString, UIImage> = {
-    let cache = NSCache<NSString, UIImage>()
-    cache.totalCostLimit = 48 * 1024 * 1024
-    return cache
-  }()
-
-  nonisolated private static func key(_ id: String, _ pixels: Int) -> NSString {
-    "\(id)@\(pixels)" as NSString
-  }
-
-  nonisolated static func kept(_ id: String, pixels: Int) -> UIImage? {
-    cache.object(forKey: key(id, pixels))
-  }
-
-  /// The photo at most `pixels` on its longer side, read straight from its
-  /// bytes at that size rather than decoded whole and shrunk, and kept.
-  nonisolated static func make(_ data: Data, id: String, pixels: Int) -> UIImage? {
-    guard let shrunk = ChatPhotos.upright(data, maxEdge: pixels) else { return nil }
-    let image = UIImage(cgImage: shrunk)
-    cache.setObject(image, forKey: key(id, pixels), cost: shrunk.bytesPerRow * shrunk.height)
-    return image
-  }
-}
-
-/// The blurs the chat's photos' ThumbHashes draw, kept while the app runs.
-private enum Blurs {
-  nonisolated(unsafe) private static let cache = NSCache<NSString, UIImage>()
-
-  static func of(_ photo: LinePhoto) -> UIImage? {
-    guard let hash = photo.thumbHash else { return nil }
-    let key = photo.id as NSString
-    if let kept = cache.object(forKey: key) {
-      return kept
-    }
-    guard let drawn = ThumbHash.image(hash) else { return nil }
-    let image = UIImage(cgImage: drawn)
-    cache.setObject(image, forKey: key)
-    return image
-  }
-}
-
 private struct PhotoLoad: Equatable {
   let id: String
+  let pixels: Int?
   let wanted: Bool
+  let tries: Int
 }
 
 /// A photo sent as a line: no bubble, rounded, the size it was sent at
-/// within the box; dimmed with 送信中 while it uploads.
+/// within the box; dimmed while it uploads, ringed with how far it has
+/// gone, × in the ring stopping it.
 struct PhotoLine: View {
   @Environment(\.themeColors) private var colors
   /// The chat line's cell it is drawn in, there only while near the
@@ -237,13 +177,17 @@ struct PhotoLine: View {
   let photo: LinePhoto
   let groupID: String
   let waiting: Bool
+  /// Stops it going up, leaving its line not sent; none where it cannot
+  /// be stopped.
+  var onStop: (() -> Void)?
   /// It is open large from here.
   @State private var open = false
 
   var body: some View {
     let size = PhotoBox.size(of: photo)
     ChatPhotoImage(
-      photo: photo, groupID: groupID, shown: size, whileInSight: lineSpace == nil)
+      photo: photo, groupID: groupID, shown: size, whileInSight: lineSpace == nil,
+      retries: !waiting)
       .frame(width: size.width, height: size.height)
       .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
       .overlay(
@@ -251,13 +195,8 @@ struct PhotoLine: View {
       )
       .overlay {
         if waiting {
-          // Dimmed as a photo's controls are, 送信中 said to screen
-          // readers in the label below.
-          ZStack {
-            colors.mediaDim
-            ProgressView().tint(colors.mediaText).controlSize(.large)
-          }
-          .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
+          PhotoGoingUp(photoID: photo.id, onStop: onStop)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
         }
       }
       // Its place left empty while it is open large from here, as Photos
@@ -268,16 +207,94 @@ struct PhotoLine: View {
       .onReceive(NotificationCenter.default.publisher(for: PhotoSpots.opened)) { _ in
         open = PhotoSpots.shared.open == photo.id
       }
-      .accessibilityElement()
+      .accessibilityElement(children: waiting ? .contain : .ignore)
       .accessibilityLabel(waiting ? "送信中の写真" : "写真")
       .accessibilityAddTraits(.isImage)
+  }
+}
+
+/// A photo going up, dimmed as a photo's controls are: how far it has
+/// gone as a ring filling, turning while it waits its turn or for the
+/// network, × in it stopping it, as Signal and Telegram ring one
+/// (/design's uploading).
+private struct PhotoGoingUp: View {
+  @Environment(\.themeColors) private var colors
+  let photoID: String
+  let onStop: (() -> Void)?
+
+  var body: some View {
+    let sent = PhotoUploads.shared.sent[photoID]
+    ZStack {
+      colors.mediaDim
+      ZStack {
+        Circle().fill(colors.mediaShade)
+        UploadRing(sent: sent)
+          .padding(4)
+        if let onStop {
+          Button("送信をやめる", systemImage: "xmark", action: onStop)
+            .labelStyle(.iconOnly)
+            .font(.system(size: 16, weight: .bold))
+            .foregroundStyle(colors.mediaText)
+            .frame(width: 48, height: 48)
+            .contentShape(Circle())
+            .buttonStyle(.plain)
+        }
+      }
+      .frame(width: 48, height: 48)
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityValue(sent.map { "\(Int($0 * 100))%" } ?? "")
+  }
+}
+
+/// How far a photo has gone up, as a ring filling from the top; a quarter
+/// of it turning while it has not begun to go.
+private struct UploadRing: View {
+  @Environment(\.themeColors) private var colors
+  let sent: Double?
+
+  var body: some View {
+    ZStack {
+      Circle().stroke(colors.mediaText.opacity(0.3), style: Self.line)
+      if let sent {
+        Circle()
+          .trim(from: 0, to: max(sent, 0.02))
+          .stroke(colors.mediaText, style: Self.line)
+          .rotationEffect(.degrees(-90))
+          .animation(.easeOut(duration: 0.2), value: sent)
+      } else {
+        TurningArc()
+      }
+    }
+  }
+
+  fileprivate static let line = StrokeStyle(lineWidth: 3, lineCap: .round)
+}
+
+/// A quarter of the ring turning, still when motion is reduced.
+private struct TurningArc: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var turned = false
+
+  var body: some View {
+    Circle()
+      .trim(from: 0, to: 0.25)
+      .stroke(colors.mediaText, style: UploadRing.line)
+      .rotationEffect(.degrees(turned ? 270 : -90))
+      .onAppear {
+        guard !reduceMotion else { return }
+        withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) { turned = true }
+      }
   }
 }
 
 /// Saves one of the group's photos to the person's photo library; true
 /// once saved.
 func savePhoto(_ photo: LinePhoto, in groupID: String, calls: GroupCalls) async -> Bool {
-  guard let data = try? await calls.photo(photo.id, in: groupID) else { return false }
+  guard let data = await ChatPhotoLoading.whole(photo, in: groupID, calls: calls) else {
+    return false
+  }
   do {
     // Photos runs the change on its own queue, not the main actor's.
     try await PHPhotoLibrary.shared().performChanges { @Sendable in

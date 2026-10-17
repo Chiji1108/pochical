@@ -1,3 +1,4 @@
+import Nuke
 import PochicalDesign
 import PochicalKit
 import SwiftUI
@@ -457,8 +458,12 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   private let scroll = UIScrollView()
   private let picture = UIImageView()
   private let spinner = UIActivityIndicatorView(style: .large)
+  /// ↻, fetching it again, once it could not be fetched, as in the chat.
+  private let retry = UIButton(type: .system)
   /// The photo itself, once it has come.
   private var image: UIImage?
+  /// Fetching it, let go of as the page is.
+  private var loading: Task<Void, Never>?
   private var laidOutFor: CGSize = .zero
 
   /// How far it zooms in: as far as Signal's, and a double tap half way.
@@ -475,6 +480,8 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
 
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+  deinit { loading?.cancel() }
 
   var zoomedIn: Bool { scroll.zoomScale > scroll.minimumZoomScale + 0.01 }
 
@@ -494,7 +501,8 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
 
     picture.contentMode = .scaleAspectFit
     // What the chat holds of it shows at once, sharp or blurred.
-    picture.image = ChatPhotoImage.held(photo, scale: traitCollection.displayScale)
+    picture.image = ChatPhotoLoading.held(
+      photo, in: groupID, scale: traitCollection.displayScale, calls: calls)
     picture.isAccessibilityElement = true
     picture.accessibilityLabel = "写真"
     picture.accessibilityTraits = .image
@@ -510,6 +518,25 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
     ])
     if picture.image == nil { spinner.startAnimating() }
 
+    var look = UIButton.Configuration.filled()
+    look.image = UIImage(
+      systemName: "arrow.clockwise", withConfiguration: UIImage.SymbolConfiguration(weight: .semibold))
+    look.cornerStyle = .capsule
+    look.baseBackgroundColor = UIColor.black.withAlphaComponent(0.5)
+    look.baseForegroundColor = .white
+    retry.configuration = look
+    retry.accessibilityLabel = "写真をもう一度読み込む"
+    retry.isHidden = true
+    retry.translatesAutoresizingMaskIntoConstraints = false
+    retry.addAction(UIAction { [weak self] _ in self?.startLoading() }, for: .primaryActionTriggered)
+    view.addSubview(retry)
+    NSLayoutConstraint.activate([
+      retry.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+      retry.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+      retry.widthAnchor.constraint(equalToConstant: 48),
+      retry.heightAnchor.constraint(equalToConstant: 48),
+    ])
+
     let twice = UITapGestureRecognizer(target: self, action: #selector(tappedTwice(_:)))
     twice.numberOfTapsRequired = 2
     scroll.addGestureRecognizer(twice)
@@ -517,7 +544,7 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
     once.require(toFail: twice)
     scroll.addGestureRecognizer(once)
 
-    Task { await load() }
+    startLoading()
   }
 
   override func viewDidLayoutSubviews() {
@@ -581,13 +608,22 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
         height: size.height), animated: true)
   }
 
+  private func startLoading() {
+    retry.isHidden = true
+    if picture.image == nil { spinner.startAnimating() }
+    loading?.cancel()
+    loading = Task { await load() }
+  }
+
   /// The photo itself, over what showed while it came, fading in over its
-  /// blur as it does in the chat.
+  /// blur as it does in the chat; ↻ in its place could it not come.
   private func load() async {
-    guard let data = try? await calls.photo(photo.id, in: groupID),
-      let came = await UIImage(data: data)?.byPreparingForDisplay()
-    else {
+    let request = ChatPhotoLoading.request(
+      photo, in: groupID, pixels: nil, calls: calls, priority: .high,
+      held: ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+    guard let came = try? await ChatPhotoLoading.pipeline.image(for: request) else {
       spinner.stopAnimating()
+      retry.isHidden = Task.isCancelled
       return
     }
     let reshaped =
@@ -610,8 +646,7 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   /// The photo itself, for sharing: once it has come, else fetched now.
   func wholeImage() async -> UIImage? {
     if let image { return image }
-    guard let data = try? await calls.photo(photo.id, in: groupID) else { return nil }
-    return UIImage(data: data)
+    return await ChatPhotoLoading.whole(photo, in: groupID, calls: calls).flatMap { UIImage(data: $0) }
   }
 }
 

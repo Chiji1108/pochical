@@ -54,6 +54,8 @@ enum LineAction {
   /// A line that could not be sent: its choices, pointing at its ! in the
   /// line's cell; none outside the chat's lines.
   case retry(LineSource?)
+  /// Its photo stopped going up, with × on it: the line is not sent.
+  case stopSending
   /// The reader's reaction put on, or taken back.
   case react(String)
   /// A poll's 行ける, on or off.
@@ -171,6 +173,7 @@ struct LineView: View {
             text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
             quote: quote, groupID: groupID, mine: mine, first: first,
             waiting: waiting && !failed, nameOf: nameOf, onOpenQuote: { act(.openQuote) },
+            onStopSending: { act(.stopSending) },
             unfolded: unfolded, onUnfold: { act(.unfold) },
             onVote: { act(.vote($0, $1)) }, onDecide: { act(.decide) }
           )
@@ -353,6 +356,8 @@ struct LineContent: View {
   let waiting: Bool
   let nameOf: (String) -> String
   var onOpenQuote: () -> Void = {}
+  /// Stops its photo going up while it waits; none where it cannot be.
+  var onStopSending: (() -> Void)?
   /// Its words opened past chatRules.foldLines lines.
   var unfolded = false
   var onUnfold: () -> Void = {}
@@ -368,14 +373,14 @@ struct LineContent: View {
           .padding(.horizontal, 12)
           .padding(.top, 8)
           .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
-        PhotoLine(photo: photo, groupID: groupID, waiting: waiting)
+        PhotoLine(photo: photo, groupID: groupID, waiting: waiting, onStop: onStopSending)
           .padding([.horizontal, .bottom], 4)
       }
       .fixedSize()
       .background(
         mine ? colors.accentFill : colors.fillTertiary, in: BubbleShape(mine: mine, first: first))
     } else if let photo {
-      PhotoLine(photo: photo, groupID: groupID, waiting: waiting)
+      PhotoLine(photo: photo, groupID: groupID, waiting: waiting, onStop: onStopSending)
     } else if let poll {
       PollCard(
         days: days, votes: poll.votes, decided: poll.decided, members: members,

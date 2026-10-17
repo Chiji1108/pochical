@@ -534,7 +534,8 @@ public actor SyncClient {
   /// that doubles, `photoTries` times in all; a photo that cannot go
   /// (gone from the device, refused, or failing every try) leaves its line
   /// waiting, marked, for the member to send again or delete, and the
-  /// edits after it go on.
+  /// edits after it go on. One the member stopped, or took back, while it
+  /// went up or waited to is left, its line as they left it.
   private func uploadingPhotos(of edits: [Pochical_V1_ChatEdit], in groupID: String)
     async throws -> [Pochical_V1_ChatEdit]
   {
@@ -547,29 +548,44 @@ public actor SyncClient {
       var waitMs = 1000
       for tried in 1...Self.photoTries {
         try Task.checkCancellation()
+        guard try await stillGoing(edit.opID) else { break }
         do {
           try await ChatPhotos.upload(
             send.photo.id, in: groupID, account: account, server: server)
-          kept.append(edit)
-          break
-        } catch ChatPhotos.UploadError.gone {
-          try await database.write { try Chats.fail(edit.opID, in: $0) }
-          break
-        } catch ChatPhotos.UploadError.refused(let status) where (400..<500).contains(status) {
-          Logger.sync.error("A photo was refused: \(status)")
-          try await database.write { try Chats.fail(edit.opID, in: $0) }
+          // Stopped as its last bytes went: left as the member left it.
+          if try await stillGoing(edit.opID) { kept.append(edit) }
           break
         } catch {
-          guard tried < Self.photoTries else {
-            try await database.write { try Chats.fail(edit.opID, in: $0) }
-            break
-          }
+          try Task.checkCancellation()
+          guard try await stillGoing(edit.opID) else { break }
+          guard try await uploadFailed(edit, with: error, tried: tried) else { break }
           try await Task.sleep(for: .milliseconds(waitMs))
           waitMs *= 2
         }
       }
     }
     return kept
+  }
+
+  /// Marks the edit's line not sent when its photo cannot go, now or after
+  /// `tried` tries; true for one to try again.
+  private func uploadFailed(_ edit: Pochical_V1_ChatEdit, with error: Error, tried: Int)
+    async throws -> Bool
+  {
+    switch error {
+    case ChatPhotos.UploadError.refused(let status) where (400..<500).contains(status):
+      Logger.sync.error("A photo was refused: \(status)")
+    case ChatPhotos.UploadError.gone:
+      break
+    default:
+      guard tried >= Self.photoTries else { return true }
+    }
+    try await database.write { try Chats.fail(edit.opID, in: $0) }
+    return false
+  }
+
+  private func stillGoing(_ opID: String) async throws -> Bool {
+    try await database.read { try Chats.stillGoing(opID, in: $0) }
   }
 
   /// Sends the keepalive text every so often, and takes the socket for
