@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import PochicalDesign
 import PochicalProto
 import SQLiteData
@@ -541,6 +542,17 @@ public enum Chats {
   static func lastToSend(of groupID: String, in db: Database) throws -> Int? {
     try ChatOutboxRow.where { $0.groupID.eq(groupID) && !$0.failed }.order { $0.id.desc() }
       .fetchOne(db)?.id
+  }
+
+  /// Returns once the group's chat outbox has nothing left to send, or as
+  /// the task waiting is cancelled.
+  public static func untilSent(of groupID: String, in database: any DatabaseReader) async {
+    let outbox = ValueObservation.tracking { try lastToSend(of: groupID, in: $0) }
+    do {
+      for try await last in outbox.values(in: database) where last == nil {
+        return
+      }
+    } catch {}
   }
 
   /// The group's waiting edits after `id`, as frames of up to

@@ -161,7 +161,9 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     // locks, or be letting go of them as it is: it holds them until sent,
     // or until the time iOS gives runs out.
     let time = BackgroundTime()
+    var sending: Task<Void, Never>?
     time.begin {
+      sending?.cancel()
       time.end()
       Task { await replies.sockets.stop() }
     }
@@ -174,7 +176,9 @@ nonisolated struct OpenedChat: Hashable, Sendable {
       }
     }
     await withdraw(in: line.groupID, line.threadID, readTo: line.seq)
-    await replies.send(line.groupID)
+    let sent = Task { await replies.send(line.groupID) }
+    sending = sent
+    await sent.value
     time.end()
   }
 
@@ -259,13 +263,15 @@ struct Replies {
   let database: any DatabaseWriter
   let sockets: GroupSockets
 
-  /// Sends what waits in the group's outbox on the group's socket, which
-  /// closes once it is sent; in the background, waits until it is.
+  /// Sends what waits in the group's outbox on the group's socket, held
+  /// open until it is sent or the task is cancelled (the time iOS gives
+  /// runs out), then let go of; in the background, closed once sent, as
+  /// the app's going to the background closes the others.
   func send(_ groupID: String) async {
-    let background = UIApplication.shared.applicationState == .background
     let (_, hold) = await sockets.open(groupID, account: account, database: database)
+    await Chats.untilSent(of: groupID, in: database)
     await sockets.close(hold, of: groupID)
-    if background {
+    if UIApplication.shared.applicationState == .background {
       await sockets.finishSending()
     }
   }
