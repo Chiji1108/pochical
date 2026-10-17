@@ -4,6 +4,7 @@ import PhotosUI
 import PochicalProto
 import SQLiteData
 import SwiftUI
+import UIKit
 
 /// One of a group's chats (/design's ChatPage), 全体チャット or a
 /// one-to-one chat: others' lines on the left with their face, and in the
@@ -131,8 +132,8 @@ struct ChatScreen: View {
   @State private var viewing: PhotoViewing?
   /// Long lines opened at 続きを読む, which stay open while the chat is.
   @State private var unfolded: Set<String> = []
-  /// A line not sent, its choices open.
-  @State private var notSent: WaitingLine?
+  /// A line not sent, its choices open by its !.
+  @State private var notSent: NotSentChoices?
   /// Others writing now, each until their typing lapses.
   @State private var typers: [String: Date] = [:]
   /// The line whose reactions and menu are open.
@@ -382,14 +383,12 @@ struct ChatScreen: View {
     .onChange(of: scenePhase) { _, phase in
       if phase != .active { keepDraft() }
     }
-    .confirmationDialog(
-      notSent?.photo == nil ? "送れなかったメッセージ" : "送れなかった写真",
-      isPresented: Binding(get: { notSent != nil }, set: { if !$0 { notSent = nil } }),
-      titleVisibility: .visible, presenting: notSent
-    ) { line in
-      Button("もう一度送る") { sendAgain(line) }
-      Button("削除", role: .destructive) { deleteUnsent(line) }
-      Button("キャンセル", role: .cancel) {}
+    // A line not sent that is gone, sent after all or deleted elsewhere,
+    // takes its choices with it.
+    .onChange(of: state.waiting.filter(\.failed).map(\.opID)) { _, failed in
+      guard let notSent, !failed.contains(notSent.opID) else { return }
+      notSent.sheet.dismiss(animated: true)
+      self.notSent = nil
     }
     .photoViewer($viewing, groupID: group.id) { photo in
       await savePhoto(photo, in: group.id, calls: groupCalls)
@@ -753,8 +752,8 @@ struct ChatScreen: View {
 
   private func act(_ action: LineAction, onWaiting line: WaitingLine, startsRun: Bool) {
     switch action {
-    case .retry:
-      notSent = line
+    case .retry(let source):
+      askNotSent(line, from: source)
     case .hold(let spot, let finger, _):
       // Still on its way: コピー for words, and 送信取消, which takes it
       // back before it goes (spec/chat.md, Lines on their way).
@@ -796,6 +795,30 @@ struct ChatScreen: View {
       write(.send(send))
     }
     withAnimation { draft.photos = [] }
+  }
+
+  /// もう一度送る or 削除 for a line not sent, pointing at its !, as a
+  /// dialog attached to the button is. A dialog attached to the screen
+  /// pointed at the screen's top; one attached in the line's cell, which
+  /// the collection view reuses and draws again, is not kept by it.
+  private func askNotSent(_ line: WaitingLine, from source: LineSource?) {
+    guard let source else { return }
+    let sheet = UIAlertController(
+      title: line.photo == nil ? "送れなかったメッセージ" : "送れなかった写真", message: nil,
+      preferredStyle: .actionSheet)
+    sheet.addAction(
+      UIAlertAction(title: "もう一度送る", style: .default) { _ in
+        notSent = nil
+        sendAgain(line)
+      })
+    sheet.addAction(
+      UIAlertAction(title: "削除", style: .destructive) { _ in
+        notSent = nil
+        deleteUnsent(line)
+      })
+    sheet.addAction(UIAlertAction(title: "キャンセル", style: .cancel) { _ in notSent = nil })
+    notSent = NotSentChoices(opID: line.opID, sheet: sheet)
+    source.space.present(sheet, from: source.frame)
   }
 
   /// Sends a line not sent once more, after the rest, as if written now.
@@ -1526,4 +1549,10 @@ private struct ReadsSeen: View {
         if !Task.isCancelled { read(seen) }
       }
   }
+}
+
+/// A line not sent and its choices, open by its !.
+private struct NotSentChoices {
+  let opID: String
+  let sheet: UIAlertController
 }
