@@ -51,14 +51,35 @@ struct ChatVectors: Decodable, Sendable {
     let expected: Int64?
   }
 
+  struct ReadTo: VectorCase {
+    struct Expected: Decodable, Sendable {
+      let read: Int64
+      let unread: Int
+    }
+    let name: String
+    let lines: [FirstComing.Line]
+    let read: Int64
+    let shown: [Int64]
+    let expected: Expected
+  }
+
   let openingFrom: [OpeningFrom]
   let firstComing: [FirstComing]
+  let readTo: [ReadTo]
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstComing)
 func comingLinesStopAt(_ vector: ChatVectors.FirstComing) {
   let lines = vector.lines.map { (seq: $0.seq, writer: $0.writer) }
   #expect(firstComing(lines, after: vector.latest, read: vector.read) == vector.expected)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).readTo)
+func readsToTheLastLineShown(_ vector: ChatVectors.ReadTo) {
+  let read = readTo(shown: vector.shown, read: vector.read)
+  #expect(read == vector.expected.read)
+  let lines = vector.lines.map { (seq: $0.seq, writer: $0.writer) }
+  #expect(unreadCount(lines, read: read) == vector.expected.unread)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).openingFrom)

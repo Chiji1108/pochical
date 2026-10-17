@@ -181,8 +181,6 @@ struct ChatLinesView: UIViewControllerRepresentable {
   let onNearTop: (String?) -> Void
   /// The day of the lines from the item `id` at the top.
   let dayOver: (String) -> Day?
-  /// The person's scrolling has come to the latest.
-  let onReachLatest: () -> Void
 
   func makeUIViewController(context: Context) -> ChatLinesController {
     let controller = ChatLinesController(scroll: scroll)
@@ -641,7 +639,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let before = scroll.place
     if place != before {
       scroll.place = place
-      if place.atLatest, !before.atLatest { settings?.onReachLatest() }
     }
     let top = lines.contentOffset.y + inset.top
     let first = lines.indexPathsForVisibleItems.sorted().first {
@@ -649,6 +646,14 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
     let day = first.flatMap { $0.item < ids.count ? settings?.dayOver(ids[$0.item]) : nil }
     if day != scroll.topDay { scroll.topDay = day }
+    // From the layout's own frames, as the visible items may not have
+    // caught up with the scroll yet (Signal's).
+    let foot = lines.contentOffset.y + lines.bounds.height - inset.bottom + 1
+    let seen = (layout.layoutAttributesForElements(in: lines.bounds) ?? [])
+      .filter { $0.representedElementCategory == .cell && $0.frame.maxY <= foot }
+      .compactMap { $0.indexPath.item < ids.count ? ids[$0.indexPath.item] : nil }
+      .filter { $0.hasPrefix("line-") }
+    if seen != scroll.seen { scroll.seen = seen }
     for case let cell as LineCell in lines.visibleCells {
       cell.space.moved()
     }

@@ -67,8 +67,6 @@ struct ChatScreen: View {
   /// What scrolling changes, kept out of the screen's own state so that
   /// scrolling remakes only what shows it, not every line.
   @State private var scroll = ChatScroll()
-  /// Times the person's scrolling has come to the latest, which reads it.
-  @State private var reachedLatest = 0
   /// The chat keeps to its latest line as lines come and the keyboard
   /// comes and goes: true until the person scrolls up, and again once they
   /// scroll back down to it, send, or tap ↓. Only their own scrolling
@@ -157,9 +155,13 @@ struct ChatScreen: View {
         }),
       ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
       shown: placed, holds: acting != nil, canAskEarlier: opened && !state.atStart,
-      onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
-      onReachLatest: { reachedLatest += 1 }
+      onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) }
     )
+    .background {
+      ReadsSeen(
+        scroll: scroll, reads: placed && scenePhase == .active,
+        seq: { seen in latestSeq(of: seen) }, read: { read(to: $0) })
+    }
     // The composer rides the keyboard on its own guide, under the lines.
     .ignoresSafeArea(.container, edges: .bottom)
     .ignoresSafeArea(.keyboard)
@@ -268,21 +270,6 @@ struct ChatScreen: View {
       // do; lines the group's catch-up still brings come in under them.
       await open()
       await hearReader()
-    }
-    // Read at the latest: as it opens, as lines come, as the app comes
-    // back, and as the person scrolls down to it (the place's action).
-    .task(
-      id: ReadKey(
-        opened: opened, active: scenePhase == .active, latest: state.lines.last?.seq ?? 0,
-        reached: reachedLatest)
-    ) {
-      guard opened, scroll.place.atLatest, scenePhase == .active else { return }
-      // Lines just come in are not yet laid out, and the place not yet
-      // moved for them: read only once they are on the screen.
-      try? await Task.sleep(for: .milliseconds(100))
-      if !Task.isCancelled, scroll.place.atLatest {
-        read()
-      }
     }
     // The socket's status, said once it has not been current for
     // statusShownAfterMs, and gone as soon as it is.
@@ -969,14 +956,23 @@ struct ChatScreen: View {
     }
   }
 
-  /// Marks the chat read up to its latest line, once it has come on screen.
-  private func read() {
-    guard let me = meID, let latest = chat.state.lines.last?.seq,
-      latest > chat.state.lastRead(by: me)
-    else { return }
+  /// The latest of the group's lines among the items `seen`, nil for
+  /// none (lines still waiting have no seq).
+  private func latestSeq(of seen: [String]) -> Int64? {
+    let ids = Set(seen)
+    return chat.state.lines.last(where: { ids.contains("line-\($0.opID)") })?.seq
+  }
+
+  /// Marks the chat read on to `seq`, the latest line whose foot has come
+  /// on screen, never back (spec/vectors/chat.json, readTo).
+  private func read(to seq: Int64) {
+    guard let me = meID else { return }
+    let before = chat.state.lastRead(by: me)
+    let mark = readTo(shown: [seq], read: before)
+    guard mark > before else { return }
     var read = Pochical_V1_ChatRead()
     read.threadID = threadID
-    read.lastReadSeq = UInt64(latest)
+    read.lastReadSeq = UInt64(mark)
     write(.read(read))
   }
 
@@ -1403,4 +1399,26 @@ private struct RowLook: Hashable {
 private struct PageAhead: Hashable {
   let from: Int64?
   let short: Bool
+}
+
+/// Reads the chat on to the latest line whose foot is on the screen, as
+/// the person scrolls through them (Signal's and Telegram's), as lines
+/// come and as the app comes back; once they have stayed a moment, so a
+/// fling reads once where it stops, and lines just come in are laid out.
+private struct ReadsSeen: View {
+  let scroll: ChatScroll
+  /// The lines are shown where the chat opens, and the app is in front.
+  let reads: Bool
+  let seq: ([String]) -> Int64?
+  let read: (Int64) -> Void
+
+  var body: some View {
+    let seen = reads ? seq(scroll.seen) : nil
+    Color.clear
+      .task(id: ReadKey(shown: reads, seen: seen ?? 0)) {
+        guard let seen else { return }
+        try? await Task.sleep(for: .milliseconds(100))
+        if !Task.isCancelled { read(seen) }
+      }
+  }
 }
