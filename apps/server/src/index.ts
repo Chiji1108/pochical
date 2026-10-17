@@ -2,6 +2,7 @@ import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
 import { registerChatService } from "./chat-service";
+import { supportPlace } from "./group-chat";
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
 import {
@@ -52,6 +53,7 @@ const rpcHandlers = new Map(
 const AUTH_PATH = "/api/auth/";
 const ANONYMOUS_SIGN_IN = "/api/auth/sign-in/anonymous";
 const USER_SOCKET_PATH = "/v1/me/socket";
+const SUPPORT_SOCKET_PATH = "/v1/me/support/socket";
 const SLACK_EVENTS_PATH = "/slack/events";
 const GROUP_SOCKET_PATH = /^\/v1\/groups\/(?<groupId>[^/]+)\/socket$/u;
 
@@ -214,6 +216,19 @@ export default {
         return signInFirst();
       }
       return await env.USERS.getByName(user.id).fetch(forUser(request, user));
+    }
+
+    // The user's chat with Pochical's people, a place of its own kept as a
+    // group's chats are (spec/chat.md, Where a chat is kept), named by the
+    // user, so no one else's is reached.
+    if (pathname === SUPPORT_SOCKET_PATH) {
+      const user = await sessionUser(request.headers);
+      if (!user) {
+        return signInFirst();
+      }
+      const place = env.GROUPS.getByName(supportPlace(user.id));
+      await place.setUpSupport(user.id);
+      return await place.fetch(forUser(request, user));
     }
 
     // Only members reach a group, and the check asks the user's own DO, so

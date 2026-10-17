@@ -1,5 +1,6 @@
 import { create, fromBinary } from "@bufbuild/protobuf";
-import { chatRules } from "@pochical/design/chat";
+import { chatPlaces, chatRules } from "@pochical/design/chat";
+import type { ChatPlaceKind, ChatPlaceRules } from "@pochical/design/chat";
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
 import { and, asc, count, eq, gt, isNull } from "drizzle-orm";
@@ -37,6 +38,7 @@ import {
   otherIn,
   pageToRead,
   seenBy,
+  supportPlace,
   takeChatEdit,
   readMarkOf,
   unreadCount,
@@ -98,6 +100,9 @@ export type NewMember = {
   // Their usual photo, already in the group's photos; empty for none.
   usualPhoto: string;
 };
+
+/** The name Pochical's people answer under, as the app's own. */
+const POCHICAL_NAME = "ポチカル";
 
 /** How a member appears: their own name for the group, else their usual one. */
 const shownName = (ownName: string | null, usualName: string, before = "") =>
@@ -473,6 +478,59 @@ export class GroupDO extends DurableObject<Env> {
     closeSessionSockets(this.ctx, sessionId);
   }
 
+  /**
+   * Sets the place up as a user's chat with Pochical's people (spec/chat.md,
+   * The chat with Pochical's people): a chat of two, the user and
+   * Pochical's people (chatRules.pochicalMember), kept as a group's chat
+   * is and doing what chatPlaces.support lets it. Setting it up again
+   * changes nothing; only the place named for the user (supportPlace) is
+   * made one, never a group.
+   */
+  setUpSupport(userId: string): boolean {
+    if (this.ctx.id.name !== supportPlace(userId)) {
+      return false;
+    }
+    const kind = this.placeKind();
+    if (kind !== undefined) {
+      return kind === "support" && this.isMember(userId);
+    }
+    this.ctx.storage.transactionSync(() => {
+      this.db
+        .insert(profile)
+        .values({
+          cursor: this.nextCursor(),
+          id: 1,
+          kind: "support",
+          name: POCHICAL_NAME,
+        })
+        .run();
+      // Neither's joining is said in the chat, nor read up to.
+      this.writeMember({
+        ownName: null,
+        userId,
+        usualName: "",
+        usualPhoto: "",
+      });
+      this.writeMember({
+        ownName: null,
+        userId: chatRules.pochicalMember,
+        usualName: POCHICAL_NAME,
+        usualPhoto: "",
+      });
+    });
+    return true;
+  }
+
+  /** What the place's chats can do (design/src/chat.ts, chatPlaces). */
+  private placeRules(): ChatPlaceRules {
+    return chatPlaces[this.placeKind() ?? "group"];
+  }
+
+  /** What the place is, or undefined before it is set up. */
+  private placeKind(): ChatPlaceKind | undefined {
+    return this.db.select({ kind: profile.kind }).from(profile).get()?.kind;
+  }
+
   /** Whether the user is in the group. */
   isMember(userId: string): boolean {
     return (
@@ -685,7 +743,7 @@ export class GroupDO extends DurableObject<Env> {
     groupName: string;
     reporterName: string;
   } | null {
-    if (!this.isMember(reporterId)) {
+    if (!(this.placeRules().reports && this.isMember(reporterId))) {
       return null;
     }
     const everyone = this.memberList();
@@ -846,13 +904,19 @@ export class GroupDO extends DurableObject<Env> {
       link: string;
       userId: string;
     }[] = [];
+    const rules = this.placeRules();
     const { changed, refused } = this.ctx.storage.transactionSync(() => {
       const made: Change[] = [];
       const back: Change[] = [];
       for (const edit of edits) {
         const cursor = this.head() + 1;
-        const taken = takeChatEdit(this.db, userId, edit, cursor, (id) =>
-          this.isMember(id)
+        const taken = takeChatEdit(
+          this.db,
+          userId,
+          edit,
+          cursor,
+          (id) => this.isMember(id),
+          rules
         );
         if (taken.change) {
           this.setHead(cursor);
@@ -986,18 +1050,22 @@ export class GroupDO extends DurableObject<Env> {
     }
     const cursor = this.head();
     const calls = [...counted].flatMap(([threadId, userIds]) =>
-      [...userIds].map(async (userId) => {
-        await this.env.USERS.getByName(userId).setUnread(
-          groupId,
-          threadId,
-          unreadCount(this.db, userId, threadId),
-          cursor,
-          alerts.get(`${threadId}\n${userId}`),
-          reads.has(`${threadId}\n${userId}`)
-            ? readMarkOf(this.db, userId, threadId)
-            : undefined
-        );
-      })
+      // Pochical's people have no User DO: they read every chat with them
+      // on the admin pages.
+      [...userIds]
+        .filter((userId) => userId !== chatRules.pochicalMember)
+        .map(async (userId) => {
+          await this.env.USERS.getByName(userId).setUnread(
+            groupId,
+            threadId,
+            unreadCount(this.db, userId, threadId),
+            cursor,
+            alerts.get(`${threadId}\n${userId}`),
+            reads.has(`${threadId}\n${userId}`)
+              ? readMarkOf(this.db, userId, threadId)
+              : undefined
+          );
+        })
     );
     this.ctx.waitUntil(Promise.allSettled(calls));
   }

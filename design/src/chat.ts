@@ -82,6 +82,11 @@ export const chatRules = {
   // A face or a group's photo mark is shrunk further, as it only ever
   // shows small: past three times its largest place on screen (88pt).
   pictureMaxEdge: 640,
+  // The member id Pochical's people write under in the chat with them
+  // (spec/chat.md, The chat with Pochical's people): no account's, as
+  // better-auth's ids are random, so their lines and reactions are told
+  // apart by it, and the apps draw it as the app's name and icon.
+  pochicalMember: "pochical",
   // How many screens' height before the top of a chat's lines its next
   // earlier page is laid out, so the reader scrolling back never comes to
   // the top waiting: Signal asks three screens ahead, Telegram five lines.
@@ -110,3 +115,57 @@ export const chatRules = {
   // after they were meant, as Signal gives up rather than send a day late.
   unsentAfterMs: 600_000,
 } as const;
+
+// What a chat can do, by where it is kept (spec/chat.md, Where a chat is
+// kept): a group's chats, or the chat with Pochical's people, which is
+// kept the same way and differs only by these. The server refuses what
+// its place does not take, and the apps leave it out of their menus and
+// tools. Within a group, a one-to-one chat's own differences (no polls,
+// no mentions) are the thread's, not the place's.
+export type ChatPlaceRules = {
+  // Lines share days (日にちを共有).
+  readonly days: boolean;
+  // Any two members have a one-to-one chat beside the place's own; without
+  // it the place's only chat is its own (thread "group").
+  readonly directChats: boolean;
+  // A line's words are changed after it is sent (編集).
+  readonly edit: boolean;
+  // Words mention a member (<@id>).
+  readonly mentions: boolean;
+  // Lines are pinned for everyone.
+  readonly pins: boolean;
+  // Days are put to the vote.
+  readonly polls: boolean;
+  // Lines and members are reported (通報), and members blocked.
+  readonly reports: boolean;
+  // Each line goes with the app's version and the device it is sent
+  // from, kept for whoever reads the chat (the chat's head says so).
+  readonly sendsDevice: boolean;
+};
+
+export const chatPlaces = {
+  group: {
+    days: true,
+    directChats: true,
+    edit: true,
+    mentions: true,
+    pins: true,
+    polls: true,
+    reports: true,
+    sendsDevice: false,
+  },
+  // A chat of two with Pochical's people, who may already be answering
+  // the words as they were: no 編集, and nothing a group's chat is for.
+  support: {
+    days: false,
+    directChats: false,
+    edit: false,
+    mentions: false,
+    pins: false,
+    polls: false,
+    reports: false,
+    sendsDevice: true,
+  },
+} as const satisfies Record<string, ChatPlaceRules>;
+
+export type ChatPlaceKind = keyof typeof chatPlaces;

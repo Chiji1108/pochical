@@ -805,15 +805,16 @@ struct ChatScreen: View {
 
   /// Stops a line's photo going up: the line is not sent, its ! offering
   /// もう一度送る and 削除 (spec/chat.md, Photos).
+  /// Nothing once its photo is up and the line is being sent.
   private func stopSending(_ line: WaitingLine) {
+    if let photo = line.photo, !PhotoUploads.shared.stop(photo.id) { return }
     try? database.write { try Chats.stopSending(line.opID, in: $0) }
-    if let photo = line.photo {
-      PhotoUploads.shared.stop(photo.id)
-    }
   }
 
   /// Sends a line not sent once more, after the rest, as if written now.
+  /// A photo up before goes again from waiting its turn, × stopping it.
   private func sendAgain(_ line: WaitingLine) {
+    if let photo = line.photo { PhotoUploads.shared.forget(photo.id) }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     sendingAgain.insert(line.opID)
     do {
@@ -834,7 +835,7 @@ struct ChatScreen: View {
   private func takeBack(_ line: WaitingLine) {
     try? database.write { try Chats.takeBack(line.opID, in: $0) }
     if let photo = line.photo {
-      PhotoUploads.shared.stop(photo.id)
+      PhotoUploads.shared.forget(photo.id)
       ChatPhotos.forget(photo.id, in: group.id)
     }
   }

@@ -24,6 +24,7 @@
     "photoThumbHashMaxBytes": 25,
     "photosPerSend": 4,
     "pictureMaxEdge": 640,
+    "pochicalMember": "pochical",
     "prefetchScreens": 2,
     "replySwipe": 56,
     "replySwipeRubber": 0.3,
@@ -31,6 +32,28 @@
     "typingSendMs": 3000,
     "typingShowMs": 5000,
     "unsentAfterMs": 600000
+  },
+  "chatPlaces": {
+    "group": {
+      "days": true,
+      "directChats": true,
+      "edit": true,
+      "mentions": true,
+      "pins": true,
+      "polls": true,
+      "reports": true,
+      "sendsDevice": false
+    },
+    "support": {
+      "days": false,
+      "directChats": false,
+      "edit": false,
+      "mentions": false,
+      "pins": false,
+      "polls": false,
+      "reports": false,
+      "sendsDevice": true
+    }
   },
   "colors": {
     "marks": [

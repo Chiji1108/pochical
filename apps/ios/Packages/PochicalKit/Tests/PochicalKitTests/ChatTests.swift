@@ -1197,3 +1197,31 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   }
   await waiting.value
 }
+
+@MainActor @Test func aPhotoUpIsPastStoppingAndAStopFirstKeepsItsLine() {
+  // Up with its line still going: sent, and × then stops nothing.
+  let uploads = PhotoUploads()
+  uploads.began("p1", try: UUID()) {}
+  #expect(uploads.stoppable("p1"))
+  uploads.finished("p1")
+  #expect(uploads.sent["p1"] == 1)
+  #expect(uploads.sending("p1") { true })
+  #expect(!uploads.stoppable("p1"))
+  #expect(!uploads.stop("p1"))
+  #expect(uploads.sent["p1"] == 1)
+
+  // Stopped with × just before: the line, marked not sent, does not go.
+  var stillGoing = true
+  uploads.began("p2", try: UUID()) {}
+  uploads.finished("p2")
+  if uploads.stop("p2") { stillGoing = false }
+  #expect(!uploads.sending("p2") { stillGoing })
+  #expect(uploads.stoppable("p2"))
+  #expect(uploads.sent["p2"] == nil)
+
+  // Going up again, as when sent again, it can be stopped once more.
+  uploads.began("p1", try: UUID()) {}
+  #expect(uploads.stoppable("p1"))
+  uploads.forget("p1")
+  #expect(uploads.sent["p1"] == nil)
+}
