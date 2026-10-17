@@ -543,15 +543,6 @@ struct ChatScreen: View {
           .padding(.top, parted ? CGFloat(Chat.runGap - Chat.lineGap) : 0)
       }
     }
-    .frame(maxWidth: .infinity)
-    // A tap off a line's own parts puts the keyboard away, as LINE does.
-    .background {
-      Color.clear.contentShape(.rect).onTapGesture {
-        UIApplication.shared.sendAction(
-          #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-      }
-      .accessibilityHidden(true)
-    }
   }
 
   // MARK: Lines
@@ -742,7 +733,8 @@ struct ChatScreen: View {
         LineContent(
           text: line.text, preview: line.preview, days: line.days, members: cardMembers,
           poll: pollLine(for: line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
-          groupID: group.id, mine: mine, first: startsRun, waiting: false, nameOf: nameOf))
+          groupID: group.id, mine: mine, first: startsRun, waiting: false, nameOf: nameOf,
+          unfolded: unfolded.contains(line.opID)))
       // A link held has its own menu, without the reactions.
       if let link {
         openActions(
@@ -809,28 +801,13 @@ struct ChatScreen: View {
     withAnimation { draft.photos = [] }
   }
 
-  /// もう一度送る or 削除 for a line not sent, pointing at its !, as a
-  /// dialog attached to the button is. A dialog attached to the screen
-  /// pointed at the screen's top; one attached in the line's cell, which
-  /// the collection view reuses and draws again, is not kept by it.
+  /// もう一度送る or 削除 for a line not sent, pointing at its !.
   private func askNotSent(_ line: WaitingLine, from source: LineSource?) {
     guard let source else { return }
-    let sheet = UIAlertController(
-      title: line.photo == nil ? "送れなかったメッセージ" : "送れなかった写真", message: nil,
-      preferredStyle: .actionSheet)
-    sheet.addAction(
-      UIAlertAction(title: "もう一度送る", style: .default) { _ in
-        notSent = nil
-        sendAgain(line)
-      })
-    sheet.addAction(
-      UIAlertAction(title: "削除", style: .destructive) { _ in
-        notSent = nil
-        deleteUnsent(line)
-      })
-    sheet.addAction(UIAlertAction(title: "キャンセル", style: .cancel) { _ in notSent = nil })
+    let sheet = source.askNotSent(
+      photo: line.photo != nil, sendAgain: { sendAgain(line) }, delete: { deleteUnsent(line) },
+      closed: { notSent = nil })
     notSent = NotSentChoices(opID: line.opID, sheet: sheet)
-    source.space.present(sheet, from: source.frame)
   }
 
   /// Stops a line's photo going up: the line is not sent, its ! offering

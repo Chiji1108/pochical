@@ -106,6 +106,9 @@ struct LineView: View {
   let writer: String?
   /// The writer's photo, one of the group's; empty for none.
   var writerPhoto = ""
+  /// The writer's face is the app's icon, with no profile behind it: an
+  /// answer of Pochical's people's.
+  var appFace = false
   /// Their name shows over the run too, as in a group chat.
   let named: Bool
   /// It starts a run of one writer's lines, its bubble's tail by the writer.
@@ -148,7 +151,10 @@ struct LineView: View {
     HStack(alignment: .top, spacing: 8) {
       if !mine {
         Group {
-          if let writer {
+          if let writer, appFace {
+            AppIconChoice.current.image(size: Self.avatar)
+              .accessibilityLabel(writer)
+          } else if let writer {
             Button { act(.openProfile) } label: {
               MemberAvatar(name: writer, photoID: writerPhoto, groupID: groupID, size: Self.avatar)
             }
