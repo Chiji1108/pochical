@@ -5,7 +5,13 @@ import { describe, expect, it } from "vitest";
 
 import { directThread, supportPlace } from "../src/group-chat";
 import { call, signInAnonymously, userIdOf } from "./helpers";
-import { changesIn, sendFrame, settled, syncSocket } from "./sync-helpers";
+import {
+  changesIn,
+  pair,
+  sendFrame,
+  settled,
+  syncSocket,
+} from "./sync-helpers";
 
 // A user's chat with Pochical's people, kept as a group's chats are and
 // doing what chatPlaces.support lets it (spec/chat.md, Where a chat is
@@ -230,24 +236,12 @@ describe("the chat with Pochical's people", () => {
   });
 
   it("is never made of a group, nor of another's place", async () => {
-    const token = await signInAnonymously();
-    const userId = await userIdOf(token);
-    const created = await call(
-      "GroupService/CreateGroup",
-      {
-        displayName: "さくら",
-        mark: { emoji: "🍉" },
-        name: "いとこ会",
-        requestId: crypto.randomUUID(),
-      },
-      token
-    );
-    const { groupId } = (await created.json()) as { groupId: string };
+    const { groupId, makerId } = await pair();
     await expect(
-      env.GROUPS.getByName(groupId).setUpSupport(userId)
+      env.GROUPS.getByName(groupId).setUpSupport(makerId)
     ).resolves.toBeFalsy();
     await expect(
-      env.GROUPS.getByName(supportPlace("someone")).setUpSupport(userId)
+      env.GROUPS.getByName(supportPlace("someone")).setUpSupport(makerId)
     ).resolves.toBeFalsy();
   });
 });

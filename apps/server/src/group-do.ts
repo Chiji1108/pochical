@@ -1,6 +1,6 @@
 import { create, fromBinary } from "@bufbuild/protobuf";
 import { chatPlaces, chatRules } from "@pochical/design/chat";
-import type { ChatPlaceRules } from "@pochical/design/chat";
+import type { ChatPlaceKind, ChatPlaceRules } from "@pochical/design/chat";
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
 import { and, asc, count, eq, gt, isNull } from "drizzle-orm";
@@ -490,9 +490,9 @@ export class GroupDO extends DurableObject<Env> {
     if (this.ctx.id.name !== supportPlace(userId)) {
       return false;
     }
-    const kind = this.db.select({ kind: profile.kind }).from(profile).get();
+    const kind = this.placeKind();
     if (kind !== undefined) {
-      return kind.kind === "support" && this.isMember(userId);
+      return kind === "support" && this.isMember(userId);
     }
     this.ctx.storage.transactionSync(() => {
       this.db
@@ -523,8 +523,12 @@ export class GroupDO extends DurableObject<Env> {
 
   /** What the place's chats can do (design/src/chat.ts, chatPlaces). */
   private placeRules(): ChatPlaceRules {
-    const row = this.db.select({ kind: profile.kind }).from(profile).get();
-    return chatPlaces[row?.kind ?? "group"];
+    return chatPlaces[this.placeKind() ?? "group"];
+  }
+
+  /** What the place is, or undefined before it is set up. */
+  private placeKind(): ChatPlaceKind | undefined {
+    return this.db.select({ kind: profile.kind }).from(profile).get()?.kind;
   }
 
   /** Whether the user is in the group. */

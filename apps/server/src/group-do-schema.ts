@@ -1,6 +1,7 @@
 // The tables in each Group DO's own SQLite. Change them here and run
 // `mise run group-do:generate`; never edit src/group-do-migrations by
 // hand. Every Group DO applies the migrations as it starts.
+import type { ChatPlaceKind } from "@pochical/design/chat";
 import { sql } from "drizzle-orm";
 import {
   check,
@@ -26,9 +27,7 @@ export const profile = sqliteTable(
     id: integer().primaryKey(),
     // What the place is (design/src/chat.ts, chatPlaces): a group, or a
     // user's chat with Pochical's people, kept the same way.
-    kind: text({ enum: ["group", "support"] })
-      .notNull()
-      .default("group"),
+    kind: text().$type<ChatPlaceKind>().notNull().default("group"),
     // Set when the group's mark is letters.
     letter: text(),
     name: text().notNull(),
