@@ -1293,11 +1293,15 @@ struct ChatScreen: View {
     if let line = state.lines.first(where: { $0.seq == target }) {
       jumpTarget = nil
       following = false
-      // Rung once there, not on the way.
-      await scroller.show("line-\(line.opID)", at: .center, animated: true)
-      marks.ringed = target
-      try? await Task.sleep(for: .milliseconds(500))
-      withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
+      // Rung once there, not on the way; by itself, as this task ends
+      // with the line gone to.
+      scroller.show("line-\(line.opID)", at: .center, animated: true) {
+        marks.ringed = target
+        Task { @MainActor in
+          try? await Task.sleep(for: .milliseconds(500))
+          withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
+        }
+      }
     } else if !state.atStart {
       // Gone to a line before those laid out: on back a page at a time.
       showEarlier(laidOut: state.lines.first.map { "line-\($0.opID)" })

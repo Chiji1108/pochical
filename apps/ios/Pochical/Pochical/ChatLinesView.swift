@@ -15,8 +15,9 @@ import UIKit
 @MainActor final class ChatLinesProxy {
   fileprivate weak var controller: ChatLinesController?
 
-  /// To the latest line's foot.
+  /// To the latest line's foot, instead of an item asked for before.
   func toLatest(animated: Bool = false) {
+    controller?.dropWaiting()
     controller?.toLatest(animated: animated)
   }
 
@@ -595,6 +596,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       waitingToShow = asked
       return
     }
+    // Instead of an item asked for before, not yet laid out.
+    dropWaiting()
     placed = true
     goingDown = false
     lines.layoutIfNeeded()
@@ -627,6 +630,13 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     else { return }
     waitingToShow = nil
     show(waiting.id, at: waiting.place, animated: waiting.animated, then: waiting.then)
+  }
+
+  /// No longer waiting to show an item: told so.
+  func dropWaiting() {
+    let dropped = waitingToShow
+    waitingToShow = nil
+    dropped?.then?()
   }
 
   /// No longer gliding to an item: told so, wherever the lines are.
@@ -739,9 +749,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     following = false
     goingDown = false
     stopGoing()
-    let waiting = waitingToShow
-    waitingToShow = nil
-    waiting?.then?()
+    dropWaiting()
     scroll.scrolling = true
     if !scroll.dayShown {
       withAnimation(.easeOut(duration: 0.2)) { scroll.dayShown = true }
