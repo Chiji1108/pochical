@@ -1,6 +1,13 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { css } from "styled-system/css";
 
+import { keptDraft } from "../lib/chat-messages";
 import { APP_VERSION, deviceNames, useDevice } from "../lib/design-device";
 import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
@@ -69,9 +76,11 @@ function useOwnIcon() {
 // people can be talked to.
 export function SupportRow({ onOpen }: { onOpen: () => void }) {
   const icon = useOwnIcon();
-  const { lines, unread } = useUser((state) => state.support);
+  const { lines, unread, draft } = useUser((state) => state.support);
   const profile = useUser((state) => state.profile);
   const last = lines.at(-1);
+  // What was being written, as the lines are now (spec/chat.md, Drafts).
+  const kept = draft && keptDraft(draft, lines);
   let preview = "ほしい機能や不具合のこと、気軽にどうぞ";
   if (last?.unsent) {
     preview = unsentLine(
@@ -83,6 +92,7 @@ export function SupportRow({ onOpen }: { onOpen: () => void }) {
   return (
     <List>
       <ChatListRow
+        draft={kept?.text}
         // The size of a face in the chats' list.
         icon={<AppIcon size={28} src={icon} />}
         label="作っている人とチャット"
@@ -157,9 +167,14 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
       setSupport((before) => ({ ...before, unread: 0 }));
     }
   }, [unread, setSupport]);
+  // The draft the chat was left with, opened again as its lines are now:
+  // a reply to a line taken back since, by either side, keeps its words
+  // without the quote, as a group chat's (spec/chat.md, Drafts).
+  const kept = useUser((state) => state.support.draft);
+  const [opened] = useState(() => kept && keptDraft(kept, lines));
   // Words, links and photos, as in the group chats, with no one to
   // mention and no days to share.
-  const composer = useComposer({});
+  const composer = useComposer({ kept: opened });
   const listRef = useRef<HTMLOListElement>(null);
   const icon = useOwnIcon();
   // A link long pressed in a line: its own small menu, as in the chats.
@@ -182,6 +197,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
     unsend,
     unsending,
   } = useChatEdits({
+    answering: opened?.replyTo,
     composer,
     mentionName: nameless,
     messages: lines,
@@ -190,6 +206,18 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
     },
     onSent: () => undefined,
   });
+  // Left, the chat keeps what is being written, as a group chat does;
+  // nothing here is changed, so only words and the line answered.
+  const keepDraft = useEffectEvent(() => {
+    const draft = keptDraft({ replyTo, text: composer.draft }, lines);
+    setSupport((before) => ({ ...before, draft }));
+  });
+  useEffect(
+    () => () => {
+      keepDraft();
+    },
+    []
+  );
   const replying = byId(replyTo);
   const writerOf = (id?: string) => members.find((member) => member.id === id);
   const scope: ChatScope = {

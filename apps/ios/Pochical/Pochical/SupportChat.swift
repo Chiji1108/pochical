@@ -1,17 +1,23 @@
 import PhotosUI
 import PochicalDesign
 import PochicalKit
+import SQLiteData
 import SwiftUI
 import UIKit
 
 /// 設定's way into the chat with the people who make Pochical (/design's
 /// SupportRow), drawn as a chat in the chats' list is: the app's icon, who
-/// it is with and the latest line, and the answers not read yet.
+/// it is with and the latest line, or the draft left in it, and the
+/// answers not read yet.
 struct SupportRow: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
-  @State private var latest: SupportLine?
+  /// The chat's lines, nil until they come.
+  @State private var lines: [SupportLine]?
   @State private var unread = 0
+  @FetchOne(SupportDraft.all) private var held: SupportDraft?
+
+  private var latest: SupportLine? { lines?.last }
 
   var body: some View {
     NavigationLink {
@@ -21,7 +27,7 @@ struct SupportRow: View {
         AppIconChoice.current.image(size: 28)
         VStack(alignment: .leading, spacing: 2) {
           Text("作っている人とチャット").foregroundStyle(colors.textPrimary)
-          Text(latest.map(SupportChatScreen.summary) ?? "ほしい機能や不具合のこと、気軽にどうぞ")
+          preview
             .font(.footnote)
             .foregroundStyle(colors.textTertiary)
             .lineLimit(1)
@@ -57,9 +63,19 @@ struct SupportRow: View {
     }
   }
 
+  /// What was being written, kept as the chat was left, in place of the
+  /// latest line: 下書き： in the danger color, as a chat in the chats'
+  /// list says it (spec/chat.md, Drafts).
+  private var preview: Text {
+    if let draft = held?.kept(lines: lines) {
+      return Text("\(Text("下書き：").foregroundStyle(colors.dangerDefault))\(draft.text)")
+    }
+    return Text(latest.map(SupportChatScreen.summary) ?? "ほしい機能や不具合のこと、気軽にどうぞ")
+  }
+
   private func refresh() async {
     guard let chat = try? await groupCalls.supportChat() else { return }
-    latest = chat.lines.last
+    lines = chat.lines
     unread = chat.unread
   }
 }
@@ -77,7 +93,14 @@ struct SupportChatScreen: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(Settings.self) private var settings
   @Environment(\.look) private var look
+  @Environment(\.scenePhase) private var scenePhase
+  @Dependency(\.defaultDatabase) private var database
   @State private var lines: [SupportLine] = []
+  /// The lines have come from the server once.
+  @State private var loaded = false
+  /// The draft the chat opened with was put back in the composer; its
+  /// quote waits for the lines to come.
+  @State private var tookDraft = false
   /// Lines being sent, shown faint until the server keeps them; one that
   /// could not go waits to be tried again.
   @State private var waiting: [Waiting] = []
@@ -198,8 +221,22 @@ struct SupportChatScreen: View {
     .onReceive(NotificationCenter.default.publisher(for: SupportLine.answered)) { _ in
       Task { await load() }
     }
-    .onAppear { Notifications.shared.supportOpen = true }
-    .onDisappear { Notifications.shared.supportOpen = false }
+    .onAppear {
+      Notifications.shared.supportOpen = true
+      if !tookDraft {
+        tookDraft = true
+        takeDraft()
+      }
+    }
+    .onDisappear {
+      Notifications.shared.supportOpen = false
+      keepDraft()
+    }
+    // As the app leaves the screen, what is written is kept, as a group
+    // chat keeps it then.
+    .onChange(of: scenePhase) { _, phase in
+      if phase != .active { keepDraft() }
+    }
     .sheet(item: $reactingTo) { line in
       EmojiKeyboardSheet(title: "リアクション") { react($0, on: line) }
     }
@@ -492,8 +529,36 @@ struct SupportChatScreen: View {
   private func load() async {
     guard let chat = try? await groupCalls.supportChat() else { return }
     lines = chat.lines
+    // The draft opened with, as the lines are now: a reply to a line
+    // taken back since keeps its words without the quote.
+    if !loaded, let replyTo = draft.replyTo,
+      SupportDraft(text: draft.text, replyTo: replyTo).kept(lines: lines)?.replyTo == nil
+    {
+      draft.replyTo = nil
+    }
+    loaded = true
     if chat.unread > 0 {
       try? await groupCalls.markSupportRead()
+    }
+  }
+
+  // MARK: Drafts
+
+  /// Puts the draft the chat was left with back in the composer
+  /// (spec/chat.md, The chat with Pochical's people).
+  private func takeDraft() {
+    guard let held = try? database.read({ try SupportDraft.held(db: $0) }) else { return }
+    draft.text = held.text
+    draft.replyTo = held.replyTo
+  }
+
+  /// Keeps what is being written, as the chat is left and as the app
+  /// leaves the screen, with the lines once they have come.
+  private func keepDraft() {
+    let kept = SupportDraft(text: draft.text, replyTo: draft.replyTo)
+    let now = Int64(Date.now.timeIntervalSince1970 * 1000)
+    try? database.write { db in
+      try SupportDraft.keep(kept, lines: loaded ? lines : nil, now: now, db: db)
     }
   }
 
