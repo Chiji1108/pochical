@@ -3,8 +3,8 @@ import PochicalKit
 import SwiftUI
 
 // Where a chat's lines are scrolled, and what shows it: the ↓ to the
-// latest, the day floating over the lines, the spinner asking for earlier
-// ones (ChatScreen).
+// latest, the day floating over the lines, the spinner while earlier ones
+// come from the server (ChatScreen).
 
 /// What scrolling changes in a chat, read by the pieces that show it
 /// (the ↓, the floating day) rather than by the screen, whose every line
@@ -17,6 +17,8 @@ final class ChatScroll {
   var topDay: Day?
   var dayShown = false
   var scrolling = false
+  /// Times lines have come in and are in place, where reading counts.
+  var landed = 0
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
@@ -130,6 +132,6 @@ struct FollowKey: Equatable {
 struct ReadKey: Hashable {
   let opened: Bool
   let active: Bool
-  let latest: Int64
+  let landed: Int
   let reached: Int
 }

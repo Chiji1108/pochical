@@ -20,9 +20,24 @@ import UIKit
     controller?.toLatest(animated: animated)
   }
 
-  /// To the item `id`, at the top of the screen or in its middle.
-  func show(_ id: String, at place: LinePlace, animated: Bool = false) {
-    controller?.show(id, at: place, animated: animated)
+  /// To the item `id`, at the top of the screen or in its middle, once it
+  /// is laid out; `then` once there, or once the person's own scrolling
+  /// takes over.
+  func show(
+    _ id: String, at place: LinePlace, animated: Bool = false, then: (() -> Void)? = nil
+  ) {
+    guard let controller else {
+      then?()
+      return
+    }
+    controller.show(id, at: place, animated: animated, then: then)
+  }
+
+  /// `show`, coming back once there.
+  func show(_ id: String, at place: LinePlace, animated: Bool = false) async {
+    await withCheckedContinuation { done in
+      show(id, at: place, animated: animated) { done.resume() }
+    }
   }
 
   /// The item `id` keeps its top where it is as it is next drawn again,
@@ -218,7 +233,9 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// Gliding to the latest, put back on its foot once there.
   private var goingDown = false
   /// Gliding to an item, put back on it exactly once there.
-  private var going: (id: String, place: LinePlace)?
+  private var going: Going?
+  /// An item to show once it is laid out, not yet when asked.
+  private var waitingToShow: Going?
   /// The items coming in at the foot in the update being put in, which
   /// rise into place from under the lines' foot as the lines slide up.
   private var risingIn: Set<String> = []
@@ -330,6 +347,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     fitRoom()
     if !placed, !ids.isEmpty, lines.bounds.height > 0 {
       toLatest()
+      showWaiting()
     }
   }
 
@@ -423,7 +441,11 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
         source.applySnapshotUsingReloadData(snapshot, commitAlongsideUpdates: {})
         lines.layoutIfNeeded()
       }
-      if lines.bounds.height > 0 { toLatest() }
+      if lines.bounds.height > 0 {
+        toLatest()
+        scroll.landed += 1
+        showWaiting()
+      }
       return true
     }
     // A page coming in above goes in at once, the lines seen held where
@@ -497,9 +519,12 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
   }
 
-  /// Lines have come in: still following, the foot is kept.
+  /// Lines have come in: an item waiting to be shown is shown, and still
+  /// following, the foot is kept.
   private func landed() {
     seePlace()
+    scroll.landed += 1
+    showWaiting()
     askEarlierIfNear()
     if following, !scroll.place.atLatest, !userScrolling, !goingDown {
       toLatest(animated: true)
@@ -544,7 +569,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   func toLatest(animated: Bool = false) {
     guard let foot = footSnapshot(), lines.bounds.height > 0 else { return }
     placed = true
-    going = nil
+    stopGoing()
     lines.layoutIfNeeded()
     let target = highest
     guard animated, !reduceMotion, abs(target - lines.contentOffset.y) > 1 else {
@@ -561,17 +586,28 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     lines.setContentOffset(CGPoint(x: lines.contentOffset.x, y: target), animated: true)
   }
 
-  func show(_ id: String, at place: LinePlace, animated: Bool) {
-    guard let index = ids.firstIndex(of: id), lines.bounds.height > 0 else { return }
+  func show(_ id: String, at place: LinePlace, animated: Bool, then: (() -> Void)?) {
+    stopGoing()
+    let asked = Going(id: id, place: place, animated: animated, then: then)
+    // Not yet laid out, or lines still going in: once they are in place.
+    guard let index = ids.firstIndex(of: id), lines.bounds.height > 0, !applying else {
+      waitingToShow?.then?()
+      waitingToShow = asked
+      return
+    }
     placed = true
     goingDown = false
     lines.layoutIfNeeded()
     let path = IndexPath(item: index, section: 0)
-    guard let frame = layout.layoutAttributesForItem(at: path)?.frame else { return }
+    guard let frame = layout.layoutAttributesForItem(at: path)?.frame else {
+      then?()
+      return
+    }
     let target = min(highest, max(lowest, frame.minY - spot(of: frame, at: place)
       - lines.adjustedContentInset.top - layout.settings.additionalInsets.top))
     guard animated, !reduceMotion, abs(target - lines.contentOffset.y) > 1 else {
       settle(on: id, at: place)
+      then?()
       return
     }
     // From far off, glides the last screen only, as to the latest, rather
@@ -580,8 +616,24 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     if abs(away) > seenHeight {
       lines.contentOffset.y = target - (away > 0 ? seenHeight : -seenHeight)
     }
-    going = (id, place)
+    going = asked
     lines.setContentOffset(CGPoint(x: lines.contentOffset.x, y: target), animated: true)
+  }
+
+  /// The item asked to be shown before it was laid out, now that it is.
+  private func showWaiting() {
+    guard let waiting = waitingToShow, ids.contains(waiting.id), lines.bounds.height > 0,
+      !applying
+    else { return }
+    waitingToShow = nil
+    show(waiting.id, at: waiting.place, animated: waiting.animated, then: waiting.then)
+  }
+
+  /// No longer gliding to an item: told so, wherever the lines are.
+  private func stopGoing() {
+    let stopped = going
+    going = nil
+    stopped?.then?()
   }
 
   /// Where an item's top goes below the top of the lines seen.
@@ -595,7 +647,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// Puts the item `id` at its place exactly: once at the heights known,
   /// again once the lines come to it are measured.
   private func settle(on id: String, at place: LinePlace) {
-    going = nil
     for _ in 0..<2 {
       guard let index = ids.firstIndex(of: id) else { return }
       let path = IndexPath(item: index, section: 0)
@@ -687,7 +738,10 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     // again where their scroll comes to rest at the foot.
     following = false
     goingDown = false
-    going = nil
+    stopGoing()
+    let waiting = waitingToShow
+    waitingToShow = nil
+    waiting?.then?()
     scroll.scrolling = true
     if !scroll.dayShown {
       withAnimation(.easeOut(duration: 0.2)) { scroll.dayShown = true }
@@ -708,6 +762,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       if let foot = footSnapshot() { layout.restoreContentOffset(with: foot) }
     } else if let going {
       settle(on: going.id, at: going.place)
+      stopGoing()
     }
     seePlace()
   }
@@ -716,6 +771,14 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     scroll.scrolling = false
     if !following { following = scroll.place.atLatest }
   }
+}
+
+/// An item being gone to, and what is told once there.
+private struct Going {
+  let id: String
+  let place: LinePlace
+  let animated: Bool
+  let then: (() -> Void)?
 }
 
 /// A cell of the lines, knowing where it is on the screen for the line it
