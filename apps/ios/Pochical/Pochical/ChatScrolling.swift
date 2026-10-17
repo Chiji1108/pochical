@@ -22,7 +22,7 @@ final class ChatScroll {
 /// The ↓ to the latest, once away from it or with others' unread lines
 /// below, counted on it as a chat's unread are; reading happens at the
 /// latest, so none while there. While ここから新着 is below the top of the
-/// screen, it goes there first.
+/// screen with lines under it still unread, it goes there first.
 struct LatestButton: View {
   @Environment(\.themeColors) private var colors
   let scroll: ChatScroll
@@ -58,7 +58,7 @@ struct LatestButton: View {
   }
 
   private func label(unseen: Int) -> String {
-    let to = scroll.place.unreadBelow ? "ここから新着へ" : "最新のメッセージへ"
+    let to = scroll.place.unreadBelow && unseen > 0 ? "ここから新着へ" : "最新のメッセージへ"
     return unseen > 0 ? "\(to)、まだ見ていない新着\(unseen)件" : to
   }
 }

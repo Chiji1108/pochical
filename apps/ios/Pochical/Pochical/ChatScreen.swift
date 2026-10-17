@@ -952,11 +952,12 @@ struct ChatScreen: View {
     }
   }
 
-  /// ↓: to ここから新着 first while it is below the top of the screen, as
-  /// Signal goes, following again only if that is the foot; else to the
-  /// latest, following it.
+  /// ↓: to ここから新着 first while it is below the top of the screen with
+  /// lines under it still unread, as Signal goes, following again only if
+  /// that is the foot; else to the latest, following it.
   private func toLatestOrUnread() {
-    guard scroll.place.unreadBelow else {
+    let unread = meID.map { chat.state.unread(by: $0) } ?? 0
+    guard scroll.place.unreadBelow, unread > 0 else {
       following = true
       toLatest(animated: true)
       return
