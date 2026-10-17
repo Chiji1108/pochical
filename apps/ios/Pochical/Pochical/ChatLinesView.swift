@@ -436,12 +436,14 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
           with: ChatLayoutPositionSnapshot(
             indexPath: IndexPath(item: index, section: 0), edge: .top, offset: held.offset))
       }
+      // The lines waiting go in next; changing none, these have landed.
       if let waiting {
         self.waiting = nil
-        setLines(waiting.rows, restyled: waiting.restyled, reduceMotion: waiting.reduceMotion)
-      } else {
-        landed()
+        if setLines(waiting.rows, restyled: waiting.restyled, reduceMotion: waiting.reduceMotion) {
+          return
+        }
       }
+      landed()
     }
     return true
   }
