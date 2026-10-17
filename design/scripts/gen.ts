@@ -7,7 +7,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
-import { chatRules } from "../src/chat";
+import { chatPlaces, chatRules } from "../src/chat";
 import {
   colorSchemes,
   markColors,
@@ -127,6 +127,7 @@ function json() {
   const tokens = {
     $comment: HEADER,
     chat: chatRules,
+    chatPlaces,
     colors: {
       // The shift colors' names, in picker order; the first is the
       // テーマ's own color.
@@ -513,21 +514,18 @@ const TEXT_FIELDS_DOC =
   "How a field shows its count and how a shift's name shortens in a day (spec/text-limits.md).";
 const SYNC_LIMITS_DOC =
   "How much of what a user owns one synced value may hold (spec/sync-protocol.md).";
+const CHAT_DOC =
+  "The chat's shared numbers (spec/chat.md); times in milliseconds.";
 const SHARED_DAYS_DOC = "The most days one chat message shares.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
 const COWORKERS_DOC = "The most people one person keeps in 一緒に働く人.";
 const PATTERNS_PAGE_DOC =
   "The shift buttons on one page of ポチポチ入力, in two rows of five.";
 
-// Chat.swift, Days.swift, Invite.swift, Review.swift, SyncSocket.swift and
-// Widgets.swift,
-// and their Kotlin twins.
+// Days.swift, Invite.swift, Review.swift, SyncSocket.swift and
+// Widgets.swift, and their Kotlin twins; Chat's are written below, with
+// its places.
 const shared: [string, string, Values][] = [
-  [
-    "Chat",
-    "The chat's shared numbers (spec/chat.md); times in milliseconds.",
-    chatRules,
-  ],
   [
     "Days",
     "What a day's values mean (design/src/days.ts): noShift is a day cleared on purpose, unlike no pattern, which follows the repeating order.",
@@ -545,6 +543,42 @@ const shared: [string, string, Values][] = [
     socketRules,
   ],
   ["Widgets", "The widgets' shared numbers (spec/widgets.md).", widgetRules],
+];
+
+// What a chat can do by where it is kept (design/src/chat.ts), one value
+// a place, beside the chat's numbers.
+const CHAT_PLACES_DOC =
+  "What a chat can do by where it is kept (spec/chat.md, Where a chat is kept).";
+const placeRules = Object.entries(chatPlaces);
+const ruleNames = Object.keys(chatPlaces.group);
+
+const swiftChatPlaces = () => [
+  `/// ${CHAT_PLACES_DOC}`,
+  "public struct ChatPlaceRules: Hashable, Sendable {",
+  ...ruleNames.map((rule) => `  public let ${rule}: Bool`),
+  ...placeRules.map(
+    ([place, rules]) =>
+      `  public static let ${place} = ChatPlaceRules(${Object.entries(rules)
+        .map(([rule, value]) => `${rule}: ${value}`)
+        .join(", ")})`
+  ),
+  "}",
+];
+
+const kotlinChatPlaces = () => [
+  `/** ${CHAT_PLACES_DOC} */`,
+  "data class ChatPlaceRules(",
+  ...ruleNames.map((rule) => `  val ${rule}: Boolean,`),
+  ") {",
+  "  companion object {",
+  ...placeRules.map(
+    ([place, rules]) =>
+      `    val ${place} = ChatPlaceRules(${Object.entries(rules)
+        .map(([rule, value]) => `${rule} = ${value}`)
+        .join(", ")})`
+  ),
+  "  }",
+  "}",
 ];
 
 const sharedOutputs = Object.fromEntries(
@@ -605,6 +639,14 @@ const outputs = {
   [`${KOTLIN_DIR}/Skies.kt`]: kotlinFile(kotlinSkies()),
   "apps/web/src/lib/holiday-names.ts": webHolidays(HEADER),
   ...sharedOutputs,
+  [`${SWIFT_DIR}/Chat.swift`]: swiftFile(
+    swiftEnum("Chat", CHAT_DOC, chatRules),
+    swiftChatPlaces()
+  ),
+  [`${KOTLIN_DIR}/Chat.kt`]: kotlinFile(
+    kotlinObject("Chat", CHAT_DOC, chatRules),
+    kotlinChatPlaces()
+  ),
   "spec/design-tokens.json": json(),
 };
 

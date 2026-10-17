@@ -158,4 +158,30 @@ public interface ChatSendOrBuilder extends
    * @return The withoutPreview.
    */
   boolean getWithoutPreview();
+
+  /**
+   * <pre>
+   * The app's version and the device, as the chat's head says reach its
+   * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+   * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+   * only there, cut short as an app's word on itself.
+   * </pre>
+   *
+   * <code>string device = 9 [json_name = "device"];</code>
+   * @return The device.
+   */
+  java.lang.String getDevice();
+  /**
+   * <pre>
+   * The app's version and the device, as the chat's head says reach its
+   * readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+   * ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+   * only there, cut short as an app's word on itself.
+   * </pre>
+   *
+   * <code>string device = 9 [json_name = "device"];</code>
+   * @return The bytes for device.
+   */
+  com.google.protobuf.ByteString
+      getDeviceBytes();
 }

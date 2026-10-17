@@ -1979,84 +1979,78 @@ public nonisolated struct Pochical_V1_ChatEdits: Sendable {
 /// One of a member's edits of a chat, which the group takes in the order it
 /// arrives; lines and their changes need no clock, as the group alone
 /// orders them.
-public nonisolated struct Pochical_V1_ChatEdit: @unchecked Sendable {
+public nonisolated struct Pochical_V1_ChatEdit: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   /// Unique per edit, as a DayEdit's: a send taken twice is one line.
-  public var opID: String {
-    get {_storage._opID}
-    set {_uniqueStorage()._opID = newValue}
-  }
+  public var opID: String = String()
 
-  public var kind: OneOf_Kind? {
-    get {return _storage._kind}
-    set {_uniqueStorage()._kind = newValue}
-  }
+  public var kind: Pochical_V1_ChatEdit.OneOf_Kind? = nil
 
   public var send: Pochical_V1_ChatSend {
     get {
-      if case .send(let v)? = _storage._kind {return v}
+      if case .send(let v)? = kind {return v}
       return Pochical_V1_ChatSend()
     }
-    set {_uniqueStorage()._kind = .send(newValue)}
+    set {kind = .send(newValue)}
   }
 
   public var change: Pochical_V1_ChatChange {
     get {
-      if case .change(let v)? = _storage._kind {return v}
+      if case .change(let v)? = kind {return v}
       return Pochical_V1_ChatChange()
     }
-    set {_uniqueStorage()._kind = .change(newValue)}
+    set {kind = .change(newValue)}
   }
 
   public var unsend: Pochical_V1_ChatUnsend {
     get {
-      if case .unsend(let v)? = _storage._kind {return v}
+      if case .unsend(let v)? = kind {return v}
       return Pochical_V1_ChatUnsend()
     }
-    set {_uniqueStorage()._kind = .unsend(newValue)}
+    set {kind = .unsend(newValue)}
   }
 
   public var read: Pochical_V1_ChatRead {
     get {
-      if case .read(let v)? = _storage._kind {return v}
+      if case .read(let v)? = kind {return v}
       return Pochical_V1_ChatRead()
     }
-    set {_uniqueStorage()._kind = .read(newValue)}
+    set {kind = .read(newValue)}
   }
 
   public var react: Pochical_V1_ChatReact {
     get {
-      if case .react(let v)? = _storage._kind {return v}
+      if case .react(let v)? = kind {return v}
       return Pochical_V1_ChatReact()
     }
-    set {_uniqueStorage()._kind = .react(newValue)}
+    set {kind = .react(newValue)}
   }
 
   public var pin: Pochical_V1_ChatPin {
     get {
-      if case .pin(let v)? = _storage._kind {return v}
+      if case .pin(let v)? = kind {return v}
       return Pochical_V1_ChatPin()
     }
-    set {_uniqueStorage()._kind = .pin(newValue)}
+    set {kind = .pin(newValue)}
   }
 
   public var vote: Pochical_V1_ChatVote {
     get {
-      if case .vote(let v)? = _storage._kind {return v}
+      if case .vote(let v)? = kind {return v}
       return Pochical_V1_ChatVote()
     }
-    set {_uniqueStorage()._kind = .vote(newValue)}
+    set {kind = .vote(newValue)}
   }
 
   public var decide: Pochical_V1_ChatDecide {
     get {
-      if case .decide(let v)? = _storage._kind {return v}
+      if case .decide(let v)? = kind {return v}
       return Pochical_V1_ChatDecide()
     }
-    set {_uniqueStorage()._kind = .decide(newValue)}
+    set {kind = .decide(newValue)}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -2074,8 +2068,6 @@ public nonisolated struct Pochical_V1_ChatEdit: @unchecked Sendable {
   }
 
   public init() {}
-
-  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 /// The member can come on one of a poll's days (行ける), or takes it
@@ -2160,57 +2152,83 @@ public nonisolated struct Pochical_V1_ChatReact: Sendable {
 
 /// A new line at the end of the chat: words, or days shared with
 /// everyone's shifts (spec/chat.md, Long messages and shared days).
-public nonisolated struct Pochical_V1_ChatSend: Sendable {
+public nonisolated struct Pochical_V1_ChatSend: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var threadID: String = String()
+  public var threadID: String {
+    get {_storage._threadID}
+    set {_uniqueStorage()._threadID = newValue}
+  }
 
   /// 1 to chatMessage characters, not blank; empty for days.
-  public var text: String = String()
+  public var text: String {
+    get {_storage._text}
+    set {_uniqueStorage()._text = newValue}
+  }
 
   /// 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
   /// each once and in order; none for words.
-  public var days: [String] = []
+  public var days: [String] {
+    get {_storage._days}
+    set {_uniqueStorage()._days = newValue}
+  }
 
   /// The days put to the vote instead: 2 days at least, in the group chat.
-  public var poll: Bool = false
+  public var poll: Bool {
+    get {_storage._poll}
+    set {_uniqueStorage()._poll = newValue}
+  }
 
   /// A photo instead, the sender's own, uploaded first; no words or days.
   public var photo: Pochical_V1_ChatPhoto {
-    get {_photo ?? Pochical_V1_ChatPhoto()}
-    set {_photo = newValue}
+    get {_storage._photo ?? Pochical_V1_ChatPhoto()}
+    set {_uniqueStorage()._photo = newValue}
   }
   /// Returns true if `photo` has been explicitly set.
-  public var hasPhoto: Bool {self._photo != nil}
+  public var hasPhoto: Bool {_storage._photo != nil}
   /// Clears the value of `photo`. Subsequent reads from it will return its default value.
-  public mutating func clearPhoto() {self._photo = nil}
+  public mutating func clearPhoto() {_uniqueStorage()._photo = nil}
 
   /// The page of the words' first link, as GetLinkPreview gave it; none
   /// when the sender took it off (×) or it had not come, when the server
   /// reads the page itself once the line is taken and adds it to the line.
   public var preview: Pochical_V1_LinkPreview {
-    get {_preview ?? Pochical_V1_LinkPreview()}
-    set {_preview = newValue}
+    get {_storage._preview ?? Pochical_V1_LinkPreview()}
+    set {_uniqueStorage()._preview = newValue}
   }
   /// Returns true if `preview` has been explicitly set.
-  public var hasPreview: Bool {self._preview != nil}
+  public var hasPreview: Bool {_storage._preview != nil}
   /// Clears the value of `preview`. Subsequent reads from it will return its default value.
-  public mutating func clearPreview() {self._preview = nil}
+  public mutating func clearPreview() {_uniqueStorage()._preview = nil}
 
   /// The line it answers (返信), an earlier one of the same chat; 0 for none.
-  public var replyTo: UInt64 = 0
+  public var replyTo: UInt64 {
+    get {_storage._replyTo}
+    set {_uniqueStorage()._replyTo = newValue}
+  }
 
   /// The sender took the page off (×): the line goes without one.
-  public var withoutPreview: Bool = false
+  public var withoutPreview: Bool {
+    get {_storage._withoutPreview}
+    set {_uniqueStorage()._withoutPreview = newValue}
+  }
+
+  /// The app's version and the device, as the chat's head says reach its
+  /// readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+  /// ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+  /// only there, cut short as an app's word on itself.
+  public var device: String {
+    get {_storage._device}
+    set {_uniqueStorage()._device = newValue}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _photo: Pochical_V1_ChatPhoto? = nil
-  fileprivate var _preview: Pochical_V1_LinkPreview? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 /// New words for one of the member's own lines of words (編集).
@@ -5209,209 +5227,171 @@ nonisolated extension Pochical_V1_ChatEdit: SwiftProtobuf.Message, SwiftProtobuf
   public static let protoMessageName: String = _protobuf_package + ".ChatEdit"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_id\0\u{1}send\0\u{1}change\0\u{1}unsend\0\u{1}read\0\u{1}react\0\u{1}pin\0\u{1}vote\0\u{1}decide\0")
 
-  fileprivate class _StorageClass {
-    var _opID: String = String()
-    var _kind: Pochical_V1_ChatEdit.OneOf_Kind?
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _opID = source._opID
-      _kind = source._kind
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._opID) }()
-        case 2: try {
-          var v: Pochical_V1_ChatSend?
-          var hadOneofValue = false
-          if let current = _storage._kind {
-            hadOneofValue = true
-            if case .send(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._kind = .send(v)
-          }
-        }()
-        case 3: try {
-          var v: Pochical_V1_ChatChange?
-          var hadOneofValue = false
-          if let current = _storage._kind {
-            hadOneofValue = true
-            if case .change(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._kind = .change(v)
-          }
-        }()
-        case 4: try {
-          var v: Pochical_V1_ChatUnsend?
-          var hadOneofValue = false
-          if let current = _storage._kind {
-            hadOneofValue = true
-            if case .unsend(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._kind = .unsend(v)
-          }
-        }()
-        case 5: try {
-          var v: Pochical_V1_ChatRead?
-          var hadOneofValue = false
-          if let current = _storage._kind {
-            hadOneofValue = true
-            if case .read(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._kind = .read(v)
-          }
-        }()
-        case 6: try {
-          var v: Pochical_V1_ChatReact?
-          var hadOneofValue = false
-          if let current = _storage._kind {
-            hadOneofValue = true
-            if case .react(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._kind = .react(v)
-          }
-        }()
-        case 7: try {
-          var v: Pochical_V1_ChatPin?
-          var hadOneofValue = false
-          if let current = _storage._kind {
-            hadOneofValue = true
-            if case .pin(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._kind = .pin(v)
-          }
-        }()
-        case 8: try {
-          var v: Pochical_V1_ChatVote?
-          var hadOneofValue = false
-          if let current = _storage._kind {
-            hadOneofValue = true
-            if case .vote(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._kind = .vote(v)
-          }
-        }()
-        case 9: try {
-          var v: Pochical_V1_ChatDecide?
-          var hadOneofValue = false
-          if let current = _storage._kind {
-            hadOneofValue = true
-            if case .decide(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._kind = .decide(v)
-          }
-        }()
-        default: break
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.opID) }()
+      case 2: try {
+        var v: Pochical_V1_ChatSend?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .send(let m) = current {v = m}
         }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .send(v)
+        }
+      }()
+      case 3: try {
+        var v: Pochical_V1_ChatChange?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .change(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .change(v)
+        }
+      }()
+      case 4: try {
+        var v: Pochical_V1_ChatUnsend?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .unsend(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .unsend(v)
+        }
+      }()
+      case 5: try {
+        var v: Pochical_V1_ChatRead?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .read(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .read(v)
+        }
+      }()
+      case 6: try {
+        var v: Pochical_V1_ChatReact?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .react(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .react(v)
+        }
+      }()
+      case 7: try {
+        var v: Pochical_V1_ChatPin?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .pin(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .pin(v)
+        }
+      }()
+      case 8: try {
+        var v: Pochical_V1_ChatVote?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .vote(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .vote(v)
+        }
+      }()
+      case 9: try {
+        var v: Pochical_V1_ChatDecide?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .decide(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .decide(v)
+        }
+      }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if !_storage._opID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._opID, fieldNumber: 1)
-      }
-      switch _storage._kind {
-      case .send?: try {
-        guard case .send(let v)? = _storage._kind else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-      }()
-      case .change?: try {
-        guard case .change(let v)? = _storage._kind else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-      }()
-      case .unsend?: try {
-        guard case .unsend(let v)? = _storage._kind else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      }()
-      case .read?: try {
-        guard case .read(let v)? = _storage._kind else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-      }()
-      case .react?: try {
-        guard case .react(let v)? = _storage._kind else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-      }()
-      case .pin?: try {
-        guard case .pin(let v)? = _storage._kind else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
-      }()
-      case .vote?: try {
-        guard case .vote(let v)? = _storage._kind else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
-      }()
-      case .decide?: try {
-        guard case .decide(let v)? = _storage._kind else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
-      }()
-      case nil: break
-      }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.opID.isEmpty {
+      try visitor.visitSingularStringField(value: self.opID, fieldNumber: 1)
+    }
+    switch self.kind {
+    case .send?: try {
+      guard case .send(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .change?: try {
+      guard case .change(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .unsend?: try {
+      guard case .unsend(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .read?: try {
+      guard case .read(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
+    case .react?: try {
+      guard case .react(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case .pin?: try {
+      guard case .pin(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case .vote?: try {
+      guard case .vote(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    }()
+    case .decide?: try {
+      guard case .decide(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    }()
+    case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_ChatEdit, rhs: Pochical_V1_ChatEdit) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._opID != rhs_storage._opID {return false}
-        if _storage._kind != rhs_storage._kind {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs.opID != rhs.opID {return false}
+    if lhs.kind != rhs.kind {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5589,68 +5569,125 @@ nonisolated extension Pochical_V1_ChatReact: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatSend"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{1}photo\0\u{1}preview\0\u{3}reply_to\0\u{3}without_preview\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{1}photo\0\u{1}preview\0\u{3}reply_to\0\u{3}without_preview\0\u{1}device\0")
+
+  fileprivate class _StorageClass {
+    var _threadID: String = String()
+    var _text: String = String()
+    var _days: [String] = []
+    var _poll: Bool = false
+    var _photo: Pochical_V1_ChatPhoto? = nil
+    var _preview: Pochical_V1_LinkPreview? = nil
+    var _replyTo: UInt64 = 0
+    var _withoutPreview: Bool = false
+    var _device: String = String()
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _threadID = source._threadID
+      _text = source._text
+      _days = source._days
+      _poll = source._poll
+      _photo = source._photo
+      _preview = source._preview
+      _replyTo = source._replyTo
+      _withoutPreview = source._withoutPreview
+      _device = source._device
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
-      case 3: try { try decoder.decodeRepeatedStringField(value: &self.days) }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.poll) }()
-      case 5: try { try decoder.decodeSingularMessageField(value: &self._photo) }()
-      case 6: try { try decoder.decodeSingularMessageField(value: &self._preview) }()
-      case 7: try { try decoder.decodeSingularUInt64Field(value: &self.replyTo) }()
-      case 8: try { try decoder.decodeSingularBoolField(value: &self.withoutPreview) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._threadID) }()
+        case 2: try { try decoder.decodeSingularStringField(value: &_storage._text) }()
+        case 3: try { try decoder.decodeRepeatedStringField(value: &_storage._days) }()
+        case 4: try { try decoder.decodeSingularBoolField(value: &_storage._poll) }()
+        case 5: try { try decoder.decodeSingularMessageField(value: &_storage._photo) }()
+        case 6: try { try decoder.decodeSingularMessageField(value: &_storage._preview) }()
+        case 7: try { try decoder.decodeSingularUInt64Field(value: &_storage._replyTo) }()
+        case 8: try { try decoder.decodeSingularBoolField(value: &_storage._withoutPreview) }()
+        case 9: try { try decoder.decodeSingularStringField(value: &_storage._device) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.threadID.isEmpty {
-      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 1)
-    }
-    if !self.text.isEmpty {
-      try visitor.visitSingularStringField(value: self.text, fieldNumber: 2)
-    }
-    if !self.days.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.days, fieldNumber: 3)
-    }
-    if self.poll != false {
-      try visitor.visitSingularBoolField(value: self.poll, fieldNumber: 4)
-    }
-    try { if let v = self._photo {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-    } }()
-    try { if let v = self._preview {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-    } }()
-    if self.replyTo != 0 {
-      try visitor.visitSingularUInt64Field(value: self.replyTo, fieldNumber: 7)
-    }
-    if self.withoutPreview != false {
-      try visitor.visitSingularBoolField(value: self.withoutPreview, fieldNumber: 8)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._threadID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._threadID, fieldNumber: 1)
+      }
+      if !_storage._text.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._text, fieldNumber: 2)
+      }
+      if !_storage._days.isEmpty {
+        try visitor.visitRepeatedStringField(value: _storage._days, fieldNumber: 3)
+      }
+      if _storage._poll != false {
+        try visitor.visitSingularBoolField(value: _storage._poll, fieldNumber: 4)
+      }
+      try { if let v = _storage._photo {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      } }()
+      try { if let v = _storage._preview {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+      } }()
+      if _storage._replyTo != 0 {
+        try visitor.visitSingularUInt64Field(value: _storage._replyTo, fieldNumber: 7)
+      }
+      if _storage._withoutPreview != false {
+        try visitor.visitSingularBoolField(value: _storage._withoutPreview, fieldNumber: 8)
+      }
+      if !_storage._device.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._device, fieldNumber: 9)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_ChatSend, rhs: Pochical_V1_ChatSend) -> Bool {
-    if lhs.threadID != rhs.threadID {return false}
-    if lhs.text != rhs.text {return false}
-    if lhs.days != rhs.days {return false}
-    if lhs.poll != rhs.poll {return false}
-    if lhs._photo != rhs._photo {return false}
-    if lhs._preview != rhs._preview {return false}
-    if lhs.replyTo != rhs.replyTo {return false}
-    if lhs.withoutPreview != rhs.withoutPreview {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._threadID != rhs_storage._threadID {return false}
+        if _storage._text != rhs_storage._text {return false}
+        if _storage._days != rhs_storage._days {return false}
+        if _storage._poll != rhs_storage._poll {return false}
+        if _storage._photo != rhs_storage._photo {return false}
+        if _storage._preview != rhs_storage._preview {return false}
+        if _storage._replyTo != rhs_storage._replyTo {return false}
+        if _storage._withoutPreview != rhs_storage._withoutPreview {return false}
+        if _storage._device != rhs_storage._device {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

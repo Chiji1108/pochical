@@ -697,6 +697,11 @@ message ChatSend {
   uint64 reply_to = 7;
   // The sender took the page off (×): the line goes without one.
   bool without_preview = 8;
+  // The app's version and the device, as the chat's head says reach its
+  // readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+  // ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+  // only there, cut short as an app's word on itself.
+  string device = 9;
 }
 
 // New words for one of the member's own lines of words (編集).
