@@ -506,15 +506,18 @@ public actor SyncClient {
 
   /// Sends the group's chat outbox as `sendOutbox` does the user's, a
   /// photo's line only once the photo is uploaded, so the edits after it
-  /// wait their turn.
+  /// wait their turn, and none that waited past `Chat.unsentAfterMs`.
   private func sendChatOutbox(of groupID: String, on socket: URLSessionWebSocketTask) async {
     var sent = 0
     let outbox = ValueObservation.tracking { try Chats.lastWaiting(of: groupID, in: $0) }
     do {
       for try await last in outbox.values(in: database) {
         guard let last, last > sent else { continue }
-        let (frames, through) = try await database.read { [sent] db in
-          try Chats.frames(of: groupID, after: sent, in: db)
+        // Lines that waited too long, as after a long time offline, wait
+        // for the member instead (spec/chat.md, Lines on their way).
+        let (frames, through) = try await database.write { [sent] db in
+          try Chats.failOverdue(of: groupID, now: Self.nowMs(), in: db)
+          return try Chats.frames(of: groupID, after: sent, in: db)
         }
         for var frame in frames {
           frame.chatEdits.edits = try await uploadingPhotos(of: frame.chatEdits.edits, in: groupID)

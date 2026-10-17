@@ -19,8 +19,18 @@ import {
 import type { ReactNode, UIEvent } from "react";
 import { cx } from "styled-system/css";
 
-import { firstUnreadOf, lastSharedOf, pinsOf } from "../lib/chat-messages";
-import { inviteCodeOf, mentionsOf } from "../lib/chat-text";
+import {
+  firstUnreadOf,
+  keptDraft,
+  lastSharedOf,
+  pinsOf,
+} from "../lib/chat-messages";
+import {
+  inviteCodeOf,
+  mentionsOf,
+  plainText,
+  withMentions,
+} from "../lib/chat-text";
 import { useUser } from "../lib/design-user-store";
 import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
@@ -42,7 +52,13 @@ import { DecidePollSheet } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
-import type { Chat, Group, Member, Message } from "./design-group-data";
+import type {
+  Chat,
+  ChatDraft,
+  Group,
+  Member,
+  Message,
+} from "./design-group-data";
 import { Avatar, badge, photoPicker } from "./design-group-parts";
 import { profileIn } from "./design-group-settings";
 import { DaySheet } from "./design-group-shifts-day-sheet";
@@ -143,15 +159,20 @@ export function ChatRow({
   onOpen: () => void;
   muted?: boolean;
 }) {
+  const yours = useYourName(group);
   const preview = lastLine(
     chat,
     group.members,
-    useYourName(group),
+    yours,
     useUser((state) => state.blocked)
   );
   const last = chat.messages.at(-1);
+  // What was being written, as the chat's lines are now (spec/chat.md,
+  // Drafts).
+  const draft = chat.draft && keptDraft(chat.draft, chat.messages);
   return (
     <ChatListRow
+      draft={draft && plainText(draft.text, nameIn(group.members, yours))}
       icon={icon}
       label={label}
       mentioned={chat.messages
@@ -194,6 +215,7 @@ export function ChatPage({
   muted = false,
   onMuted,
   onShifts,
+  onDraft,
 }: {
   // What an invitation link's code opens; undefined once it no longer
   // works. Asked as a message shows, not sent with it, so a remade link's
@@ -242,6 +264,9 @@ export function ChatPage({
   onBack: () => void;
   onChange: (messages: Message[]) => void;
   onOpenDay: (date: Date) => void;
+  // What is being written, kept as the chat is left, undefined for none
+  // (spec/chat.md, Drafts).
+  onDraft?: (draft?: ChatDraft) => void;
 }) {
   const blocked = useUser((state) => state.blocked);
   // A link long pressed in a message's words: its own small menu, 開く and
@@ -276,8 +301,13 @@ export function ChatPage({
     [...group.members, ...formerMembers],
     useYourName(group)
   );
+  // The draft the chat was left with, opened again as its lines are now.
+  const [opened] = useState(
+    () => chat.draft && keptDraft(chat.draft, chat.messages)
+  );
   const composer = useComposer({
     attach,
+    kept: opened,
     // An @ lists the others in the group chat only.
     members: isGroup ? group.members : noMembers,
     mentionName,
@@ -308,6 +338,7 @@ export function ChatPage({
     unsending,
     vote,
   } = useChatEdits({
+    answering: opened?.replyTo,
     composer,
     mentionName,
     messages: chat.messages,
@@ -321,6 +352,26 @@ export function ChatPage({
       }
     },
   });
+  // Left, the chat keeps what is being written, as Signal and Telegram
+  // keep it.
+  const keepDraft = useEffectEvent(() => {
+    onDraft?.(
+      keptDraft(
+        {
+          editing: composer.editing,
+          replyTo: composer.editing === undefined ? replyTo : undefined,
+          text: withMentions(composer.draft, composer.picked),
+        },
+        chat.messages
+      )
+    );
+  });
+  useEffect(
+    () => () => {
+      keepDraft();
+    },
+    []
+  );
   const pins = pinsOf(chat.messages);
   const [pinsOpen, setPinsOpen] = useState(false);
   const replying = byId(replyTo);

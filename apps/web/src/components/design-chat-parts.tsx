@@ -30,6 +30,7 @@ export function ChatListRow({
   label,
   icon,
   preview,
+  draft,
   time,
   unread,
   mentioned = false,
@@ -40,6 +41,9 @@ export function ChatListRow({
   icon: ReactNode;
   // The latest line, or what to say before there is one.
   preview: string;
+  // What is being written, kept as the chat was left, shown in place of
+  // the latest line (spec/chat.md, Drafts).
+  draft?: string;
   // The latest line's time, once there is one.
   time?: string;
   unread: number;
@@ -62,7 +66,16 @@ export function ChatListRow({
           {label}
           {muted && <MutedMark />}
         </span>
-        <small className={chatRow.preview}>{preview}</small>
+        <small className={chatRow.preview}>
+          {draft === undefined ? (
+            preview
+          ) : (
+            <>
+              <span className={chatRow.draft}>下書き：</span>
+              {draft}
+            </>
+          )}
+        </small>
       </span>
       {(time !== undefined || unread > 0) && (
         <span className={chatRow.meta}>

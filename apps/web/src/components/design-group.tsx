@@ -387,6 +387,15 @@ export function DesignGroup({
           onChange={(messages) => {
             setChats({ ...chats, [key]: { messages, unread: 0 } });
           }}
+          onDraft={(draft) => {
+            setChats((all) => ({
+              ...all,
+              [key]: {
+                ...(key in all ? all[key] : { messages: [], unread: 0 }),
+                draft,
+              },
+            }));
+          }}
           onOpenDay={(date) => {
             setPage({
               from: page.chatId,

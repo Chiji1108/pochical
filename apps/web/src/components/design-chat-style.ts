@@ -6,6 +6,9 @@ import { css, cva } from "styled-system/css";
 // A chat in the hub's list: its name and last line, with the time and
 // what is unread at the end.
 export const chatRow = {
+  // 下書き： before a chat's draft, in the danger color, as Telegram
+  // marks one.
+  draft: css({ color: "danger.default" }),
   meta: css({
     alignItems: "flex-end",
     display: "flex",

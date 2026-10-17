@@ -356,8 +356,11 @@ export function GroupHub({
   );
   // Members you already have a one-to-one chat with, in this group, and
   // those who left it.
+  // A chat left with only a draft stays too (spec/chat.md, Drafts).
   const talkingNow = others.filter(
-    (member) => chatOf(member.id).messages.length > 0
+    (member) =>
+      chatOf(member.id).messages.length > 0 ||
+      chatOf(member.id).draft !== undefined
   );
   const talking = [
     ...talkingNow,

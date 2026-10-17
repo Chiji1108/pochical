@@ -21,12 +21,15 @@ import { ToastContext } from "./design-toast";
 // being acted on meanwhile (its actions open, answered, reacted to from
 // every emoji, reported, taken back or settled), each asked about first.
 export function useChatEdits({
+  answering,
   messages,
   onChange,
   composer,
   mentionName,
   onSent,
 }: {
+  // The line a draft the chat was left with answers.
+  answering?: string;
   messages: Message[];
   onChange: (messages: Message[]) => void;
   composer: ComposerState;
@@ -38,7 +41,7 @@ export function useChatEdits({
   const toast = useContext(ToastContext);
   // The line whose actions are open, and the one being answered.
   const [selected, setSelected] = useState<string>();
-  const [replyTo, setReplyTo] = useState<string>();
+  const [replyTo, setReplyTo] = useState(answering);
   // The line whose reaction is being picked from every emoji.
   const [pickingFor, setPickingFor] = useState<string>();
   // Rung, as a pin or a quote jumped to it.

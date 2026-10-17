@@ -63,6 +63,23 @@ struct ChatVectors: Decodable, Sendable {
     let expected: Expected
   }
 
+  struct Draft: VectorCase {
+    struct Value: Decodable, Sendable {
+      let text: String
+      var replyTo: Int64?
+      var editing: Int64?
+    }
+    struct Line: Decodable, Sendable {
+      let seq: Int64
+      let text: String
+      let unsent: Bool
+    }
+    let name: String
+    let draft: Value
+    let lines: [Line]
+    let expected: Value?
+  }
+
   let openingFrom: [OpeningFrom]
   let firstComing: [FirstComing]
   let readTo: [ReadTo]
@@ -85,6 +102,7 @@ struct ChatVectors: Decodable, Sendable {
     let expected: [String]
   }
   let withdrawn: [Withdrawn]
+  let draft: [Draft]
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).withdrawn)
@@ -96,6 +114,19 @@ func aReadTakesBackItsNotifications(_ vector: ChatVectors.Withdrawn) {
   #expect(
     withdrawn(shown, groupID: read.groupId, threadID: read.threadId, readTo: read.readTo)
       == vector.expected)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).draft)
+func draftKept(_ vector: ChatVectors.Draft) {
+  let lines = Dictionary(
+    uniqueKeysWithValues: vector.lines.map { ($0.seq, DraftLine(text: $0.text, unsent: $0.unsent)) })
+  let kept = keptDraft(
+    KeptDraft(text: vector.draft.text, replyTo: vector.draft.replyTo, editing: vector.draft.editing)
+  ) { lines[$0] }
+  let expected = vector.expected.map {
+    KeptDraft(text: $0.text, replyTo: $0.replyTo, editing: $0.editing)
+  }
+  #expect(kept == expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstComing)
@@ -901,6 +932,97 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     try Chats.fail(try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID, in: db)
     #expect(try Chats.lastWaiting(of: "g", in: db) == waiting)
     #expect(try Chats.lastToSend(of: "g", in: db) == nil)
+  }
+}
+
+@Test func aDraftIsKeptWithTheChatAndOpensAsItsLinesAreNow() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take([line(1, "明日休み？"), line(2, "了解")], of: "g", in: db)
+    try Chats.keepDraft(
+      KeptDraft(text: "うん", replyTo: 1), of: groupThread, in: "g", now: 1, db: db)
+    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.replyTo == 1)
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).draft?.text == "うん")
+
+    // The line answered taken back meanwhile: the words stay, alone.
+    var unsent = line(1, "")
+    unsent.chatLine.unsent = true
+    try GroupSync.take([unsent], of: "g", in: db)
+    #expect(try Chats.draft(of: groupThread, in: "g", db: db) == OpenedDraft(text: "うん"))
+
+    // An edit opens with the line it changes.
+    try Chats.keepDraft(
+      KeptDraft(text: "了解です", editing: 2), of: groupThread, in: "g", now: 2, db: db)
+    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.editing?.seq == 2)
+
+    // Emptied, it is gone.
+    try Chats.keepDraft(KeptDraft(text: ""), of: groupThread, in: "g", now: 3, db: db)
+    #expect(try Chats.draft(of: groupThread, in: "g", db: db) == nil)
+  }
+}
+
+@Test func aOneToOneChatWithOnlyADraftIsListed() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let thread = directThread("me", "u2")
+    try Chats.keepDraft(KeptDraft(text: "やあ"), of: thread, in: "g", now: 1, db: db)
+    #expect(try Chats.threads(in: "g", db: db) == [thread])
+  }
+}
+
+@Test func aLineThatWaitedTooLongIsNotSentByItself() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "明日休み？"
+    try Chats.edit(.send(words), in: "g", now: 1000, db: db)
+    words.text = "あとで"
+    try Chats.edit(.send(words), in: "g", now: 5000, db: db)
+    let limit = Int64(Chat.unsentAfterMs)
+
+    #expect(try Chats.failOverdue(of: "g", now: 1000 + limit - 1, in: db) == 1000 + limit)
+    #expect(try Chats.failOverdue(of: "g", now: 1000 + limit, in: db) == 5000 + limit)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true, false])
+    let edits = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
+    #expect(edits.map(\.send.text) == ["あとで"])
+  }
+}
+
+@Test func aLineTheGroupTookWhoseAnswerWasLostStopsWaitingRatherThanFailing() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "届いた"
+    try Chats.edit(.send(words), in: "g", now: 1000, db: db)
+    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    // Its line came, but not the Acked.
+    try GroupSync.take([line(3, "届いた", op: opID)], of: "g", in: db)
+
+    #expect(try Chats.failOverdue(of: "g", now: 1000 + Int64(Chat.unsentAfterMs), in: db) == nil)
+    #expect(try Chats.lastWaiting(of: "g", in: db) == nil)
+  }
+}
+
+@Test func aLineTakenBackWhileItWaitedIsTakenBackFromTheGroupShouldItCome() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "まちがい"
+    try Chats.edit(.send(words), in: "g", now: 1, db: db)
+    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+
+    try Chats.takeBack(opID, in: db)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.isEmpty)
+    // Sent just before, the group took it: it is taken back from the group.
+    try GroupSync.take([line(7, "まちがい", op: opID)], of: "g", in: db)
+    let unsends = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
+    #expect(unsends.map(\.unsend.seq) == [7])
+    // Once, however often the line comes again.
+    try GroupSync.take([line(7, "まちがい", op: opID)], of: "g", in: db)
+    #expect(try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits).count == 1)
   }
 }
 

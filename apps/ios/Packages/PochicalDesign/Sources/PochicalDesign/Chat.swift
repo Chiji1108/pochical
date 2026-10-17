@@ -26,4 +26,5 @@ public enum Chat {
   public static let runGap = 12
   public static let typingSendMs = 3000
   public static let typingShowMs = 5000
+  public static let unsentAfterMs = 600000
 }

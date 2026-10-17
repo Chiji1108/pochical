@@ -28,4 +28,5 @@ object Chat {
   const val runGap = 12
   const val typingSendMs = 3000
   const val typingShowMs = 5000
+  const val unsentAfterMs = 600000
 }
