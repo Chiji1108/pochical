@@ -305,13 +305,9 @@ struct ChatScreen: View {
       withAnimation { typers = typers.filter { $0.value > .now } }
     }
     // Lines coming in and someone writing keep a following chat at its
-    // foot, scrolled there so the line comes in smoothly: the bottom
-    // anchor alone holds the foot only once the line is laid out, drifting
-    // as it animates in. Anything else changing the lines' height or the
-    // room they are seen in (a link's page drawn, the composer growing,
-    // the keyboard) the bottom anchor holds at the foot each frame by itself;
-    // a scroll asked for at each of those frames held the screen to a
-    // third of its frames.
+    // foot, in the same update they come in by (ChatLinesView), as does
+    // anything else changing the lines' height or the room they are seen
+    // in (a link's page drawn, the composer growing, the keyboard).
     .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count)) {
       before, now in
       guard opened, following else { return }
@@ -884,19 +880,18 @@ struct ChatScreen: View {
         unreadFrom = lines[index].seq
       }
     }
-    // With nothing new, the bottom anchor has the lines at the latest
-    // already. With something, once the lines are laid out, ここから新着
-    // goes to the top, shown only once there rather than after a trip.
+    // With nothing new, the lines are laid out at the latest already. With
+    // something, once the lines are laid out, ここから新着 goes to the top,
+    // shown only once there rather than after a trip.
     if unreadFrom == nil {
       placed = true
     } else {
       // Not carried to the foot meanwhile by lines coming in or laid out.
       following = false
-      // Once the lines are laid out.
-      try? await Task.sleep(for: .milliseconds(50))
-      // With few new lines, ここから新着 is on the screen at the latest
-      // already, and the lines stop at their foot short of it.
-      scroller.show(ChatItem.unread.id, at: .top)
+      // Once ここから新着 is laid out. With few new lines, it is on the
+      // screen at the latest already, and the lines stop at their foot
+      // short of it.
+      await scroller.show(ChatItem.unread.id, at: .top)
       following = scroll.place.atLatest
       withAnimation(.easeOut(duration: 0.15)) { placed = true }
     }
@@ -924,16 +919,14 @@ struct ChatScreen: View {
   /// stopped there under ここから新着 (unless the chat has one already).
   private func show(from first: ChatLineRow) {
     following = false
-    Task { @MainActor in
-      // Asked to the top with too few lines under it to get there, it
-      // stops at the foot.
-      scroller.show("line-\(first.opID)", at: .top, animated: true)
-      try? await Task.sleep(for: .milliseconds(400))
+    // Asked to the top with too few lines under it to get there, it stops
+    // at the foot.
+    scroller.show("line-\(first.opID)", at: .top, animated: true) {
       if scroll.place.atLatest {
         following = true
       } else if unreadFrom == nil {
+        // Shown once ここから新着 is laid out over it.
         unreadFrom = first.seq
-        try? await Task.sleep(for: .milliseconds(50))
         scroller.show(ChatItem.unread.id, at: .top)
       }
     }
@@ -949,9 +942,7 @@ struct ChatScreen: View {
       toLatest(animated: true)
       return
     }
-    Task { @MainActor in
-      scroller.show(ChatItem.unread.id, at: .top, animated: true)
-      try? await Task.sleep(for: .milliseconds(400))
+    scroller.show(ChatItem.unread.id, at: .top, animated: true) {
       if scroll.place.atLatest { following = true }
     }
   }
@@ -1302,10 +1293,15 @@ struct ChatScreen: View {
     if let line = state.lines.first(where: { $0.seq == target }) {
       jumpTarget = nil
       following = false
-      scroller.show("line-\(line.opID)", at: .center, animated: true)
-      marks.ringed = target
-      try? await Task.sleep(for: .milliseconds(500))
-      withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
+      // Rung once there, not on the way; by itself, as this task ends
+      // with the line gone to.
+      scroller.show("line-\(line.opID)", at: .center, animated: true) {
+        marks.ringed = target
+        Task { @MainActor in
+          try? await Task.sleep(for: .milliseconds(500))
+          withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
+        }
+      }
     } else if !state.atStart {
       // Gone to a line before those laid out: on back a page at a time.
       showEarlier(laidOut: state.lines.first.map { "line-\($0.opID)" })

@@ -3,8 +3,8 @@ import PochicalKit
 import SwiftUI
 
 // Where a chat's lines are scrolled, and what shows it: the ↓ to the
-// latest, the day floating over the lines, the spinner asking for earlier
-// ones (ChatScreen).
+// latest, the day floating over the lines, the spinner while earlier ones
+// come from the server (ChatScreen).
 
 /// What scrolling changes in a chat, read by the pieces that show it
 /// (the ↓, the floating day) rather than by the screen, whose every line
