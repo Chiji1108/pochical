@@ -1,6 +1,15 @@
 {
-  "originHash" : "324423d1178031d10742e38a53c10de344e7357065a102e34d4b09efbce0649d",
+  "originHash" : "449b171d0d0037c65d2ecc67d16e66e6105d44db65a5cf7c4ca76854c1953b4f",
   "pins" : [
+    {
+      "identity" : "chatlayout",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ekazaev/ChatLayout",
+      "state" : {
+        "revision" : "dd4cb5c8f91623331ba023d0ab64d844f8436204",
+        "version" : "2.5.2"
+      }
+    },
     {
       "identity" : "combine-schedulers",
       "kind" : "remoteSourceControl",

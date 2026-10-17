@@ -571,6 +571,12 @@ public struct ChatState: Hashable, Sendable {
   public var waiting: [WaitingLine]
   /// The lines reach the chat's first.
   public var atStart: Bool
+  /// How many lines the device holds before `lines`, on from them without
+  /// a gap: laid out at once as the chat scrolls back, without asking.
+  public var heldBefore = 0
+  /// The first of the lines the device holds on from the latest without a
+  /// gap, before which the server is asked for a page; none with no lines.
+  public var heldFrom: Int64?
   /// Each member's read mark.
   public var marks: [String: Int64]
   /// How far the member's own read waiting in the outbox goes, 0 with none.
@@ -600,9 +606,12 @@ public struct ChatState: Hashable, Sendable {
 
   /// How many of others' lines `me` has not read yet.
   public func unread(by me: String) -> Int {
-    let read = lastRead(by: me)
     // The app's notices are told, not counted.
-    return lines.count { $0.seq > read && $0.authorID != me && $0.notice == nil }
+    let writers = lines.map { line in
+      (seq: line.seq, writer: line.authorID == me ? LineWriter.me
+        : line.notice != nil ? .app : .others)
+    }
+    return unreadCount(writers, read: lastRead(by: me))
   }
 }
 
@@ -723,10 +732,14 @@ extension Chats {
         latest: lines.last?.seq ?? 0, read: me.map { max(readMarks[$0] ?? 0, ownRead) })
     // Pins find their lines among all of them, with what waits changed.
     let overlaid = lines
+    let heldFrom = lines.first?.seq
+    let heldBefore = lines.prefix { $0.seq < start }.count
     lines.removeAll { $0.seq < start }
     var state = ChatState(
       lines: lines, waiting: waiting, atStart: (lines.first?.seq ?? 1) <= 1,
       marks: readMarks, ownRead: ownRead)
+    state.heldBefore = heldBefore
+    state.heldFrom = heldFrom
     let pinnedSeqs = pinned.compactMap { Int64($0) }
     let shown = Set(lines.map(\.seq))
     let answered = Set(
@@ -802,6 +815,19 @@ public func firstComing(
 ) -> Int64? {
   let from = max(latest, read)
   return lines.first { $0.seq > from && $0.writer == .others }?.seq
+}
+
+/// The reader's read mark as the chat's lines show: on to the latest of
+/// those whose foot is on the screen (`shown`), never back, as a line once
+/// on screen stays read (spec/vectors/chat.json, readTo).
+public func readTo(shown: [Int64], read: Int64) -> Int64 {
+  max(read, shown.max() ?? read)
+}
+
+/// How many of others' lines are unread past the `read` mark, what ↓
+/// counts (spec/vectors/chat.json, readTo).
+public func unreadCount(_ lines: [(seq: Int64, writer: LineWriter)], read: Int64) -> Int {
+  lines.count { $0.seq > read && $0.writer == .others }
 }
 
 /// How many of a chat's unread lines count, as what notifies: all of them

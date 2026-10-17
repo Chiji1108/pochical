@@ -94,6 +94,8 @@ export default defineConfig({
           "0%, 40%": { boxShadow: "0 0 0 3px var(--accent-border)" },
           "100%": { boxShadow: "0 0 0 0 transparent" },
         },
+        // The same along a bubble's outline, as its ring.
+        ringFlash: { "0%, 40%": { opacity: 1 }, "100%": { opacity: 0 } },
         popIn: {
           from: { opacity: 0, transform: "scale(1.08)" },
           to: { opacity: 1, transform: "scale(1)" },

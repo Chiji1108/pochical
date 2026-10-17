@@ -101,6 +101,9 @@ struct MessageAction: Identifiable {
 struct HeldPress: UIGestureRecognizerRepresentable {
   /// How long a line is held before its menu opens (chatRules.longPressMs).
   static let duration = Double(Chat.longPressMs) / 1000
+  /// Says where the finger is in its chat line's cell rather than on the
+  /// screen, which a line's SwiftUI in a cell cannot tell.
+  var inLine = false
   /// The finger is down and not yet held, for the press's give.
   let onPressing: (Bool) -> Void
   /// Where the finger is as the press is held.
@@ -125,7 +128,10 @@ struct HeldPress: UIGestureRecognizerRepresentable {
   }
 
   func handleUIGestureRecognizerAction(_ recognizer: TouchedPress, context: Context) {
-    let point = context.converter.location(in: .global)
+    let point =
+      inLine
+      ? context.converter.location(in: .named(LineSpace.name))
+      : context.converter.location(in: .global)
     switch recognizer.state {
     case .began: onHold(point)
     case .changed: onMove(point)
@@ -236,7 +242,8 @@ struct MessageActionsOverlay: View {
             width: request.frame.width, height: shown ? place.bubbleHeight : request.frame.height,
             alignment: .top
           )
-          .clipped()
+          // Cut at its foot only, so a run's first bubble keeps its tail.
+          .clipShape(CutsHeight())
           // Grown about its own middle, before it is put in place; it
           // rises from where it was and goes back there.
           .scaleEffect(shown ? 1.02 : 1)
@@ -616,20 +623,24 @@ private struct HeldBubble: ViewModifier {
   @State private var pressing = false
   /// The finger that opened the menu, followed until it lifts.
   @State private var held: HeldFinger?
+  /// The chat line's cell it is in, from which its place on the screen
+  /// is told; none elsewhere.
+  @Environment(\.lineSpace) private var lineSpace
 
   func body(content: Content) -> some View {
+    let inLine = lineSpace != nil
     content
       .environment(\.linkSpots, links)
       // Its own size and where its middle is: the press's give shrinks
       // its frame on the screen, not its size.
       .onGeometryChange(for: CGRect.self) { proxy in
-        let global = proxy.frame(in: .global)
+        let seen = inLine ? proxy.frame(in: .named(LineSpace.name)) : proxy.frame(in: .global)
         return CGRect(
-          x: global.midX - proxy.size.width / 2, y: global.midY - proxy.size.height / 2,
+          x: seen.midX - proxy.size.width / 2, y: seen.midY - proxy.size.height / 2,
           width: proxy.size.width, height: proxy.size.height)
       } action: {
         frame = $0
-        spot?.frame = $0
+        if let spot { place(spot) }
       }
       .scaleEffect(pressing ? 0.96 : 1)
       .opacity(lifted ? 0 : 1)
@@ -638,14 +649,14 @@ private struct HeldBubble: ViewModifier {
       // finger lifting from the press that opened its menu.
       .onTapGesture { if !links.held { onTap() } }
       .gesture(
-        HeldPress { pressing = $0 } onHold: {
+        HeldPress(inLine: inLine) { pressing = $0 } onHold: {
           pressing = false
           // A link held opens its own menu instead.
-          open(link: links.link(at: $0), at: $0)
+          open(link: links.link(at: $0), at: onScreen($0))
         } onMove: {
-          held?.point = $0
+          held?.point = onScreen($0)
         } onLift: {
-          held?.point = $0
+          held?.point = onScreen($0)
           held?.lifted = true
           held = nil
           // Past the tap a link takes as the finger lifts.
@@ -656,7 +667,10 @@ private struct HeldBubble: ViewModifier {
         })
       .accessibilityAction(named: "リアクションとメニュー") { onActions(newSpot(), nil, nil) }
       .onChange(of: lifted) { _, lifted in
-        if !lifted { spot = nil }
+        if !lifted, let spot {
+          lineSpace?.unfollow(spot)
+          self.spot = nil
+        }
       }
   }
 
@@ -664,7 +678,22 @@ private struct HeldBubble: ViewModifier {
   private func newSpot() -> LineSpot {
     let spot = LineSpot(frame: frame)
     self.spot = spot
+    place(spot)
     return spot
+  }
+
+  /// Puts `spot` where the bubble is on the screen, kept there as its
+  /// chat line's cell moves.
+  private func place(_ spot: LineSpot) {
+    if let lineSpace {
+      lineSpace.follow(spot, at: frame)
+    } else {
+      spot.frame = frame
+    }
+  }
+
+  private func onScreen(_ point: CGPoint) -> CGPoint {
+    lineSpace?.onScreen(point) ?? point
   }
 
   /// Opens the menu, the link's when one is held, with the finger that
@@ -688,5 +717,13 @@ extension View {
     onActions: @escaping (LineSpot, HeldFinger?, URL?) -> Void
   ) -> some View {
     modifier(HeldBubble(lifted: lifted, onActions: onActions, onTap: onTap))
+  }
+}
+
+/// Its frame cut at the top and the foot only, the sides left open as far
+/// as a bubble's tail reaches.
+private struct CutsHeight: Shape {
+  nonisolated func path(in rect: CGRect) -> Path {
+    Path(rect.insetBy(dx: -BubbleShape.tailReach, dy: 0))
   }
 }

@@ -6,7 +6,7 @@ import SwiftUI
 // each line's bubble, its words, links and mentions.
 
 /// One thing in a chat's lines.
-enum ChatItem: Identifiable {
+enum ChatItem: Identifiable, Hashable {
   case day(Day)
   case unread
   case line(ChatLineRow, startsRun: Bool)
@@ -32,6 +32,14 @@ enum ChatItem: Identifiable {
   }
 }
 
+
+/// What a chat's lines show for a moment, beyond what they are: the line
+/// ringed as it is gone to, and the line whose bubble is lifted over the
+/// chat while its menu is open.
+@MainActor @Observable final class LineMarks {
+  var ringed: Int64?
+  var lifted: String?
+}
 
 /// What is done on a line of words, which the chat acts on.
 enum LineAction {
@@ -61,6 +69,7 @@ enum LineAction {
 /// while it waits to be sent. The time beside the bubble, 編集済み over it.
 struct LineView: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.openGroupRoute) private var openGroupRoute
   /// The line's opID, which its actions name it by.
   let lineID: String
   let text: String
@@ -93,7 +102,7 @@ struct LineView: View {
   var writerPhoto = ""
   /// Their name shows over the run too, as in a group chat.
   let named: Bool
-  /// It starts a run of one writer's lines, its bubble's corner drawn in.
+  /// It starts a run of one writer's lines, its bubble's tail by the writer.
   let first: Bool
   let waiting: Bool
   /// Its photo could not be sent: marked, its choices a tap away.
@@ -105,11 +114,13 @@ struct LineView: View {
   var countedReactions = false
   /// Pinned for everyone: a small pin by its time.
   var pinned = false
-  /// Gone to from the pins: ringed for a moment.
-  var ringed = false
+  /// What it shows for a moment: ringed when gone to from the pins, its
+  /// bubble lifted over the chat while its menu is open, its place standing
+  /// empty. Read by the line itself, which is drawn apart from the chat.
+  var marks: LineMarks?
+  /// Its place in the chat, by which it is ringed; none while on its way.
+  var seq: Int64?
   var meID: String?
-  /// Its bubble is lifted over the chat, its place standing empty.
-  var lifted = false
   /// What is done on the line, for the chat to act on as it is when used:
   /// the line, a chat's lines held all at once, is made again only as
   /// what it shows changes, not as the chat changes around it (a line
@@ -164,10 +175,10 @@ struct LineView: View {
           .background {
             ringShape
               .stroke(colors.accentBorder, lineWidth: 6)
-              .opacity(ringed ? 1 : 0)
+              .opacity(seq != nil && marks?.ringed == seq ? 1 : 0)
           }
           // A photo opens large at a tap; its menu is the long press's.
-          .heldForActions(lifted: lifted) {
+          .heldForActions(lifted: marks?.lifted == lineID) {
             if photo != nil, !waiting { act(.openPhoto) }
           } onActions: {
             act(.hold(spot: $0, finger: $1, link: $2))
@@ -175,8 +186,9 @@ struct LineView: View {
           if !mine { meta }
         }
         if let shifts {
-          // All the days, with everyone's shifts round them.
-          NavigationLink(value: shifts) {
+          // All the days, with everyone's shifts round them; pushed by the
+          // groups' own stack, which a line's cell is hosted apart from.
+          Button { openGroupRoute(shifts) } label: {
             Text("シフト表で見る")
               .font(.caption)
               .underline()
@@ -197,6 +209,10 @@ struct LineView: View {
             onReact: { act(.react($0)) })
         }
       }
+      // Room for the tail of a run's first bubble by the face; every line
+      // keeps it, so a run's lines line up. By the screen's edge the tail
+      // reaches into the margin, as LINE's and Messages' do.
+      .padding(.leading, mine ? 0 : BubbleShape.tailReach)
       .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
       .padding(mine ? .leading : .trailing, 40)
     }
@@ -206,9 +222,11 @@ struct LineView: View {
       children: reactions.isEmpty && poll == nil && shifts == nil ? .combine : .contain)
   }
 
-  /// The ring's shape: the bubble's, or the card's.
+  /// The ring's shape: the bubble's (a photo answering a line sits in
+  /// one), or the card's.
   private var ringShape: AnyShape {
-    days.isEmpty && photo == nil && !(quote == nil && preview == nil && largeEmoji(text) > 0)
+    days.isEmpty && (photo == nil || quote != nil)
+      && !(photo == nil && quote == nil && preview == nil && largeEmoji(text) > 0)
       ? AnyShape(BubbleShape(mine: mine, first: first))
       : AnyShape(RoundedRectangle(cornerRadius: Radius.lg))
   }
@@ -262,8 +280,8 @@ struct LineView: View {
 }
 
 /// A line's words in its bubble: others' on the quiet fill, one's own in
-/// the accent, the first of a run with its corner by the writer drawn in,
-/// dimmed while it waits to be sent.
+/// the accent, the first of a run with its tail by the writer, dimmed
+/// while it waits to be sent.
 /// The days from one through another.
 struct DaySpan: Hashable {
   let from: Day
@@ -510,36 +528,80 @@ func mentioned(by url: URL) -> String? {
 
 private let mentionScheme = "pochical-mention"
 
-/// A bubble's outline: round all over, but the first of a run, as LINE
-/// and WhatsApp draw one: its top corner by the writer's side drawn in, by
-/// the face and name the run starts with, so it says whose words follow.
+/// A bubble's outline: round all over at `Radius.lg`, but the first of a
+/// run, as LINE draws one: from a notch in its top corner by the writer's
+/// side a horn rises to a tip level with the top edge, past the bubble's
+/// frame by `tailReach`, and curves back in to the side, by the face and
+/// name the run starts with, so it says whose words follow. One outline,
+/// as /design's bubblePath draws it (spec/chat.md, In a message).
 struct BubbleShape: Shape {
   let mine: Bool
   let first: Bool
 
+  /// How far past the bubble's frame its tail reaches, which the lines
+  /// keep room for by the face.
+  static var tailReach: CGFloat { 10 }
+
   nonisolated func path(in rect: CGRect) -> Path {
-    let drawnIn = first ? Radius.sm : Radius.lg
-    return UnevenRoundedRectangle(
-      topLeadingRadius: mine ? Radius.lg : drawnIn, bottomLeadingRadius: Radius.lg,
-      bottomTrailingRadius: Radius.lg, topTrailingRadius: mine ? drawnIn : Radius.lg,
-      style: .continuous
-    )
-    .path(in: rect)
+    let w = rect.width
+    let h = rect.height
+    let r = min(Radius.lg, w / 2, h / 2)
+    var path = Path()
+    // Drawn as one's own, its tail at the top trailing corner; others'
+    // are mirrored.
+    path.move(to: CGPoint(x: r, y: 0))
+    path.addLine(to: CGPoint(x: w - r, y: 0))
+    if first {
+      // Down the corner's arc to the notch, three quarters of the way in.
+      let notch = CGPoint(x: w - 0.25 * r, y: r - (r * r - 0.5625 * r * r).squareRoot())
+      path.addRelativeArc(
+        center: CGPoint(x: w - r, y: r), radius: r, startAngle: .degrees(-90),
+        delta: .radians(atan2(notch.y - r, 0.75 * r)) + .degrees(90))
+      let tip = CGPoint(x: w + 0.6 * r, y: 0)
+      path.addCurve(
+        to: tip, control1: CGPoint(x: notch.x + 0.2 * r, y: notch.y - 0.25 * r),
+        control2: CGPoint(x: tip.x - 0.35 * r, y: 0.04 * r))
+      path.addCurve(
+        to: CGPoint(x: w, y: min(1.5 * r, h - r)),
+        control1: CGPoint(x: tip.x - 0.3 * r, y: 0.12 * r), control2: CGPoint(x: w, y: 0.55 * r))
+    } else {
+      path.addArc(
+        center: CGPoint(x: w - r, y: r), radius: r, startAngle: .degrees(-90),
+        endAngle: .degrees(0), clockwise: false)
+    }
+    path.addArc(
+      center: CGPoint(x: w - r, y: h - r), radius: r, startAngle: .degrees(0),
+      endAngle: .degrees(90), clockwise: false)
+    path.addArc(
+      center: CGPoint(x: r, y: h - r), radius: r, startAngle: .degrees(90),
+      endAngle: .degrees(180), clockwise: false)
+    path.addArc(
+      center: CGPoint(x: r, y: r), radius: r, startAngle: .degrees(180),
+      endAngle: .degrees(270), clockwise: false)
+    path.closeSubpath()
+    let mirror = mine ? .identity : CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: w, ty: 0)
+    return path.applying(mirror.concatenating(.init(translationX: rect.minX, y: rect.minY)))
   }
 }
-
 
 /// A held bubble's words drawn noting where their links are, and where
 /// they are on the screen.
 private struct FindsLinks: ViewModifier {
+  /// Measured where the held finger is told: in a chat line's cell.
+  @Environment(\.lineSpace) private var lineSpace
   let spots: LinkSpots?
 
   func body(content: Content) -> some View {
     if let spots {
+      let inLine = lineSpace != nil
       content
         .textRenderer(LinkFinder(spots: spots))
         .modifier(HeldLinksOpenNothing(spots: spots))
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { spots.frame = $0 }
+        .onGeometryChange(for: CGRect.self) {
+          inLine ? $0.frame(in: .named(LineSpace.name)) : $0.frame(in: .global)
+        } action: {
+          spots.frame = $0
+        }
     } else {
       content
     }

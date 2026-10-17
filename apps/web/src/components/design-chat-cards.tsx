@@ -8,6 +8,7 @@ import { dateKey, formatDay } from "../lib/design-days";
 import type { Photo } from "../lib/design-sample-photos";
 import { MessageActions, useLongPress } from "./design-chat-actions";
 import type { LineActions } from "./design-chat-actions";
+import { BubbleOutline } from "./design-chat-bubble";
 import { blurOf, photoSize } from "./design-chat-photos";
 import { PeopleList, PhonePopover } from "./design-chat-popover";
 import { chatStyle } from "./design-chat-style";
@@ -371,29 +372,40 @@ export function PhotoLine({
       )}
     </button>
   );
+  const held = (
+    <MessageActions
+      {...actions}
+      disabled={upload !== undefined}
+      keyboardOpens={false}
+      onSave={onSave}
+    >
+      {/* The quote is held with the photo, a tap on it its own. */}
+      <>
+        {quote}
+        {open}
+      </>
+    </MessageActions>
+  );
   return (
     <>
-      <span
+      {quoted ? (
         // A reply always starts a run.
-        className={
-          quoted ? chatStyle.bubble({ first: true, mine }) : chatStyle.photo
-        }
-        data-part="bubble"
-        style={{ width: quoted ? size.width + photoInset * 2 : size.width }}
-      >
-        <MessageActions
-          {...actions}
-          disabled={upload !== undefined}
-          keyboardOpens={false}
-          onSave={onSave}
+        <BubbleOutline
+          first
+          mine={mine}
+          style={{ width: size.width + photoInset * 2 }}
         >
-          {/* The quote is held with the photo, a tap on it its own. */}
-          <>
-            {quote}
-            {open}
-          </>
-        </MessageActions>
-      </span>
+          {held}
+        </BubbleOutline>
+      ) : (
+        <span
+          className={chatStyle.photo}
+          data-part="bubble"
+          style={{ width: size.width }}
+        >
+          {held}
+        </span>
+      )}
       <PhotoViewer
         blur={
           blur === undefined

@@ -51,14 +51,35 @@ struct ChatVectors: Decodable, Sendable {
     let expected: Int64?
   }
 
+  struct ReadTo: VectorCase {
+    struct Expected: Decodable, Sendable {
+      let read: Int64
+      let unread: Int
+    }
+    let name: String
+    let lines: [FirstComing.Line]
+    let read: Int64
+    let shown: [Int64]
+    let expected: Expected
+  }
+
   let openingFrom: [OpeningFrom]
   let firstComing: [FirstComing]
+  let readTo: [ReadTo]
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstComing)
 func comingLinesStopAt(_ vector: ChatVectors.FirstComing) {
   let lines = vector.lines.map { (seq: $0.seq, writer: $0.writer) }
   #expect(firstComing(lines, after: vector.latest, read: vector.read) == vector.expected)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).readTo)
+func readsToTheLastLineShown(_ vector: ChatVectors.ReadTo) {
+  let read = readTo(shown: vector.shown, read: vector.read)
+  #expect(read == vector.expected.read)
+  let lines = vector.lines.map { (seq: $0.seq, writer: $0.writer) }
+  #expect(unreadCount(lines, read: read) == vector.expected.unread)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).openingFrom)
@@ -130,6 +151,29 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     // Scrolled back, from wherever the screen asks.
     #expect(try firstShown(nil, 10) == 10)
     #expect(try !Chats.state(of: groupThread, in: "g", from: 10, db: db).atStart)
+  }
+}
+
+@Test func aChatSaysWhatItHoldsBeforeTheLinesLaidOut() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    // 1–2 held from before, then 11–130 on to the latest without a gap.
+    try GroupSync.take(
+      [line(1, "a"), line(2, "b")] + (11...130).map { line(UInt64($0), "\($0)") }, of: "g",
+      in: db)
+    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    // The latest page, 81–130, the rest from 11 held before it.
+    #expect(state.lines.first?.seq == 81)
+    #expect(state.heldBefore == 70)
+    #expect(state.heldFrom == 11)
+    // Scrolled back to 31: 20 held before, as far as the gap.
+    state = try Chats.state(of: groupThread, in: "g", from: 31, db: db)
+    #expect(state.heldBefore == 20)
+    // All laid out: nothing held before, the server asked before 11.
+    state = try Chats.state(of: groupThread, in: "g", from: 11, db: db)
+    #expect(state.heldBefore == 0)
+    #expect(state.heldFrom == 11)
+    #expect(!state.atStart)
   }
 }
 

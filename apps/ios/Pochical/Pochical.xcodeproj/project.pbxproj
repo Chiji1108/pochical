@@ -13,6 +13,7 @@
 		C6C3832A307345A800C0C5B8 /* PochicalDesign in Frameworks */ = {isa = PBXBuildFile; productRef = C6C38329307345A800C0C5B8 /* PochicalDesign */; };
 		C6C3832C307345D500C0C5B8 /* PochicalDesign in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3832B307345D500C0C5B8 /* PochicalDesign */; };
 		C6C3832F307345FB00C0C5B8 /* PochicalProto in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3832E307345FB00C0C5B8 /* PochicalProto */; };
+		C6C3CA0330740000000C5B81 /* ChatLayout in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3CA0230740000000C5B81 /* ChatLayout */; };
 		C6C383423073460000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C383413073460000C0C5B8 /* PochicalKit */; };
 		C6C38351307347A000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C38350307347A000C0C5B8 /* PochicalKit */; };
 /* End PBXBuildFile section */
@@ -124,6 +125,7 @@
 			files = (
 				C6C3832F307345FB00C0C5B8 /* PochicalProto in Frameworks */,
 				C6C383423073460000C0C5B8 /* PochicalKit in Frameworks */,
+				C6C3CA0330740000000C5B81 /* ChatLayout in Frameworks */,
 				C6C3832A307345A800C0C5B8 /* PochicalDesign in Frameworks */,
 			);
 		};
@@ -207,6 +209,7 @@
 				C6C38329307345A800C0C5B8 /* PochicalDesign */,
 				C6C3832E307345FB00C0C5B8 /* PochicalProto */,
 				C6C383413073460000C0C5B8 /* PochicalKit */,
+				C6C3CA0230740000000C5B81 /* ChatLayout */,
 			);
 			productName = Pochical;
 			productReference = C6C382E2307343AF00C0C5B8 /* Pochical.app */;
@@ -315,6 +318,7 @@
 				C6C38328307345A800C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalDesign" */,
 				C6C3832D307345FB00C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalProto" */,
 				C6C383403073460000C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalKit" */,
+				C6C3CA0130740000000C5B81 /* XCRemoteSwiftPackageReference "ChatLayout" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C6C382E3307343AF00C0C5B8 /* Products */;
@@ -803,7 +807,23 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		C6C3CA0130740000000C5B81 /* XCRemoteSwiftPackageReference "ChatLayout" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ekazaev/ChatLayout";
+			requirement = {
+				kind = exactVersion;
+				version = 2.5.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		C6C3CA0230740000000C5B81 /* ChatLayout */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6C3CA0130740000000C5B81 /* XCRemoteSwiftPackageReference "ChatLayout" */;
+			productName = ChatLayout;
+		};
 		C6C38329307345A800C0C5B8 /* PochicalDesign */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PochicalDesign;

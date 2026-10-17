@@ -303,6 +303,9 @@ struct SupportChatScreen: View {
             onReact: { react($0, on: line) })
         }
       }
+      // Room for the tail of a run's first bubble by the face, as the
+      // group chats'.
+      .padding(.leading, mine ? 0 : BubbleShape.tailReach)
       if !mine {
         Spacer(minLength: 48)
       }

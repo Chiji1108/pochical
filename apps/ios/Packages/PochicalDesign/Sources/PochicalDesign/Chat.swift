@@ -22,6 +22,7 @@ public enum Chat {
   public static let photoThumbHashMaxBytes = 25
   public static let photosPerSend = 4
   public static let pictureMaxEdge = 640
+  public static let prefetchScreens = 2
   public static let runGap = 12
   public static let typingSendMs = 3000
   public static let typingShowMs = 5000
