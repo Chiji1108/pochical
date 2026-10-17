@@ -272,7 +272,7 @@ struct ChatComposer: View {
       .onChange(of: photoItems) { _, items in
         guard !items.isEmpty else { return }
         photoItems = []
-        Task { await readPhotos(items) }
+        read(items.map(PhotoSource.picked))
       }
     } else {
       Button("写真を送る", systemImage: "photo") {
@@ -331,10 +331,6 @@ struct ChatComposer: View {
     }
   }
 
-  /// Reads picked photos and shrinks them to send, into the tray.
-  private func readPhotos(_ items: [PhotosPickerItem]) async {
-    await readPhotos(items.map(PhotoSource.picked))
-  }
 
   /// Images pasted into the field go in the tray as picked photos do, as
   /// many as it has room for, saying so past it as the picker's button does.
@@ -344,16 +340,18 @@ struct ChatComposer: View {
       say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
     }
     guard room > 0 else { return }
-    let pasted = images.prefix(room).map(PhotoSource.pasted)
-    Task { await readPhotos(pasted) }
+    read(images.prefix(room).map(PhotoSource.pasted))
   }
 
-  /// Reads photos, picked or pasted, and shrinks them to send, into the
-  /// tray.
-  private func readPhotos(_ sources: [PhotoSource]) async {
-    // Read one after another, each paste or pick reading its own: until
-    // the last is in, nothing is sent and the tray has no room for them.
+  /// Reads photos, picked or pasted, into the tray. Counted at once: until
+  /// the last is in, nothing is sent and the tray has no room for them.
+  private func read(_ sources: [PhotoSource]) {
     draft.comingPhotos += sources.count
+    Task { await readPhotos(sources) }
+  }
+
+  /// Reads photos counted coming, and shrinks them to send, into the tray.
+  private func readPhotos(_ sources: [PhotoSource]) async {
     var unreadable = false
     for source in sources {
       defer { draft.comingPhotos -= 1 }

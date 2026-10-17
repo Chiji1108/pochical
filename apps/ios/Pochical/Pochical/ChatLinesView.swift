@@ -346,7 +346,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     // A line dragged sideways replies to it: only a drag mostly across
     // (gestureRecognizerShouldBegin), the lines scrolling otherwise.
     swipe.delegate = self
-    swipe.onReset = { [weak self] in self?.holdBack(false) }
     lines.addGestureRecognizer(swipe)
     lines.panGestureRecognizer.require(toFail: swipe)
     replyArrow.alpha = 0
@@ -824,7 +823,10 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       if swipeStart.x > Self.backEdge, let path = lines.indexPathForItem(at: at),
         path.item < ids.count, settings?.replySwipe(ids[path.item]) == .rightward
       {
-        holdBack(true)
+        let back = navigationController?.interactiveContentPopGestureRecognizer
+        back?.isEnabled = false
+        // Given back by the pan itself, even should the chat go meanwhile.
+        swipe.heldBack = back
       }
       return true
     }
@@ -833,19 +835,10 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   // MARK: Swiping to reply
 
-  /// Going back by a drag on the screen is held off while the finger is
-  /// down, or given back.
-  private func holdBack(_ held: Bool) {
-    navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = !held
-  }
-
   /// Where the finger dragging a line went down.
   private var swipeStart: CGPoint = .zero
   /// Room kept at the screen's left edge for the system's own drag back.
   private static let backEdge: CGFloat = 24
-  /// How far a line follows the finger past chatRules.replySwipe, of the
-  /// way the finger goes on.
-  private static let rubber: CGFloat = 0.3
 
   func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
     guard gestureRecognizer === swipe else { return true }
@@ -909,7 +902,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       swipedCell = cell
     }
     let full = CGFloat(Chat.replySwipe)
-    let shift = along <= full ? along : full + (along - full) * Self.rubber
+    let shift = along <= full ? along : full + (along - full) * CGFloat(Chat.replySwipeRubber)
     let sign: CGFloat = way == .rightward ? 1 : -1
     // The cell itself: its hosted content keeps a transform of its own.
     cell.transform = CGAffineTransform(translationX: sign * shift, y: 0)
@@ -1001,14 +994,15 @@ private struct Going {
   let then: (() -> Void)?
 }
 
-/// The pan dragging a line to reply to it, telling when a touch is over,
-/// whether it dragged or not.
+/// The pan dragging a line to reply to it, which gives back going back by
+/// a drag, held off while its finger was down, once the touch is over.
 private final class SwipePan: UIPanGestureRecognizer {
-  var onReset: () -> Void = {}
+  weak var heldBack: UIGestureRecognizer?
 
   override func reset() {
     super.reset()
-    onReset()
+    heldBack?.isEnabled = true
+    heldBack = nil
   }
 }
 

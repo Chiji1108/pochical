@@ -23,10 +23,6 @@ import { spring } from "../lib/motion";
 // How far a finger moves before it is a drag rather than a press.
 const slop = 10;
 
-// How far the line follows the finger past chatRules.replySwipe, of the
-// way the finger goes on.
-const rubber = 0.3;
-
 const arrowSize = 28;
 
 const swipe = css({ position: "relative", touchAction: "pan-y" });
@@ -128,12 +124,17 @@ export function SwipeToReply({
         const shift =
           along <= chatRules.replySwipe
             ? along
-            : chatRules.replySwipe + (along - chatRules.replySwipe) * rubber;
+            : chatRules.replySwipe +
+              (along - chatRules.replySwipe) * chatRules.replySwipeRubber;
         x.set(sign * shift);
       }}
       onPointerUp={() => {
         if (swiping.current) {
           swiped.current = true;
+          // Only the click this drag ends with, if any comes.
+          window.setTimeout(() => {
+            swiped.current = false;
+          }, 0);
           if (far.current) {
             onReply();
           }
