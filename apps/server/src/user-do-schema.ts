@@ -200,6 +200,21 @@ export const unreadCounts = sqliteTable(
   ]
 );
 
+// The lines of each chat the user's devices were notified of and have not
+// yet been told to take back, from the first to the last (spec/chat.md,
+// Notifications): a read reaching them sends the devices a withdrawal.
+// Only the server keeps them, so no cursor.
+export const chatNotified = sqliteTable(
+  "chat_notified",
+  {
+    firstSeq: integer("first_seq").notNull(),
+    groupId: text("group_id").notNull(),
+    lastSeq: integer("last_seq").notNull(),
+    threadId: text("thread_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.groupId, table.threadId] })]
+);
+
 // Who the user has blocked (spec/chat.md, Reporting and blocking), one row
 // a person, the latest; unblocking keeps the row, so devices catching up
 // hear of it. Cursors are shared with day_fields.

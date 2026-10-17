@@ -14,6 +14,8 @@ struct RootView: View {
   @Environment(\.groupCalls) private var groupCalls
   /// Each group's unread lines that count (spec/chat.md, Unread lines).
   @Fetch private var unread: [String: Int] = [:]
+  /// What is read in each chat, for the notifications of lines read to go.
+  @Fetch private var read = ReadState()
   @State private var meID: String?
   @State private var tab = RootTab.calendar
   @State private var openGroupID: String?
@@ -63,6 +65,7 @@ struct RootView: View {
     .task(id: meID) {
       guard let meID else { return }
       _ = try? await $unread.load(UnreadRequest(me: meID))
+      _ = try? await $read.load(ReadStateRequest(me: meID))
     }
     .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
     .environment(\.say, SayAction(say: say))
@@ -70,6 +73,15 @@ struct RootView: View {
     // notifications set it from the server.
     .onChange(of: unread.values.reduce(0, +), initial: true) { _, total in
       UNUserNotificationCenter.current().setBadgeCount(total)
+    }
+    // The notifications of lines read go, those read on another device
+    // too, should its withdrawal not have reached this one: whatever the
+    // badge, as a chat turned off counts nothing there. What the device
+    // first loads may be from before the notifications since, so only a
+    // chat cleared after it counts.
+    .onChange(of: read, initial: true) { before, read in
+      let known = before == ReadState() ? nil : before
+      Task { await Notifications.shared.withdrawRead(read, before: known) }
     }
     // A tapped notification opens its chat, the one that launched the
     // app too.

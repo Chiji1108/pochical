@@ -32,6 +32,38 @@ const apnsCalls = () => {
   return calls;
 };
 
+const read = (socket: WebSocket, opId: string, lastReadSeq: number): void => {
+  sendFrame(socket, {
+    case: "chatEdits",
+    value: {
+      edits: [
+        {
+          kind: {
+            case: "read",
+            value: { lastReadSeq: BigInt(lastReadSeq), threadId: "group" },
+          },
+          opId,
+        },
+      ],
+    },
+  });
+};
+
+/** What reached APNs, each taken, with the push's type and priority. */
+const apnsTaking = () => {
+  const calls: { body: unknown; priority: string; type: string }[] = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const request = new Request(input, init);
+    calls.push({
+      body: await request.json(),
+      priority: request.headers.get("apns-priority") ?? "",
+      type: request.headers.get("apns-push-type") ?? "",
+    });
+    return new Response(null, { status: 200 });
+  });
+  return calls;
+};
+
 describe("a chat's notifications", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -58,8 +90,15 @@ describe("a chat's notifications", () => {
             "title-loc-key": "CHAT_TITLE",
           },
           badge: 1,
+          // Through the app's extension, for the writer's face, and
+          // answered from.
+          category: "CHAT_LINE",
+          "mutable-content": 1,
         },
+        authorId: await userIdOf(maker),
         groupId,
+        // After the line saying the guest joined.
+        seq: 2,
         threadId: "group",
       },
       url: `https://api.sandbox.push.apple.com/3/device/${TOKEN}`,
@@ -169,5 +208,59 @@ describe("a chat's notifications", () => {
       guest
     );
     expect([strangers.status, elsewhere.status]).toStrictEqual([404, 404]);
+  });
+
+  it("are taken back from the reader's devices once a read reaches them", async () => {
+    const { groupId, guest, maker } = await pair();
+    await call(
+      "UserService/RegisterPushToken",
+      { sandbox: true, token: TOKEN },
+      guest
+    );
+    const calls = apnsTaking();
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    const theirs = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    say(mine.socket, "a", "今週どう？");
+    say(mine.socket, "b", "土曜とか");
+    await expect.poll(() => calls.length).toBe(2);
+
+    // After the line saying the guest joined.
+    const [first, second] = [2, 3];
+    expect(calls.map(({ body }) => body)).toMatchObject([
+      { seq: first },
+      { seq: second },
+    ]);
+    // Read up to the first: it is taken back, the second waits.
+    read(theirs.socket, "r1", first);
+    await expect.poll(() => calls.length).toBe(3);
+    expect(calls[2]).toStrictEqual({
+      body: {
+        aps: { "content-available": 1 },
+        withdraw: { groupId, readTo: first, threadId: "group" },
+      },
+      priority: "5",
+      type: "background",
+    });
+    read(theirs.socket, "r2", second);
+    await expect.poll(() => calls.length).toBe(4);
+    expect(calls[3]?.body).toMatchObject({ withdraw: { readTo: second } });
+
+    // Nothing notified is left to take back: a read sends nothing.
+    say(mine.socket, "c", "あ、日曜でも");
+    await expect.poll(() => calls.length).toBe(5);
+    await call(
+      "UserService/SetChatMuted",
+      { groupId, muted: true, threadId: "group" },
+      guest
+    );
+    say(mine.socket, "d", "どっちがいい？");
+    read(theirs.socket, "r3", second + 1);
+    await expect.poll(() => calls.length).toBe(6);
+    expect(calls[5]?.body).toMatchObject({ withdraw: { readTo: second + 1 } });
+    read(theirs.socket, "r4", second + 2);
+    await theirs.frames.next();
+    // Time for a withdrawal that should not come: its line was not notified.
+    await scheduler.wait(100);
+    expect(calls).toHaveLength(6);
   });
 });

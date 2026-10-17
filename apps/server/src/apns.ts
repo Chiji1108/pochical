@@ -23,7 +23,14 @@ export type Alert = {
   // or with no group the chat with Pochical's people.
   groupId: string;
   threadId: string;
+  // The line: who wrote it, for their face, and where it is, for the
+  // device to take the notification back once it is read. None for an
+  // answer from Pochical's people.
+  line?: { authorId: string; seq: number };
 };
+
+/** The category of a chat line's notification, which the app answers from. */
+export const CHAT_LINE = "CHAT_LINE";
 
 /** What the APNs response says of a token. */
 export type Sent = "sent" | "gone" | "failed";
@@ -48,7 +55,12 @@ const providerToken = async (
   return jwt;
 };
 
-/** The APNs payload: words from the app's strings, the badge and the chat. */
+/**
+ * The APNs payload: words from the app's strings, the badge and the chat.
+ * A chat's line also goes through the app's Notification Service Extension
+ * (`mutable-content`), which puts the writer's face on it, and can be
+ * answered from (`category`).
+ */
 export const payloadOf = (alert: Alert, badge: number): string =>
   JSON.stringify({
     aps: {
@@ -61,20 +73,30 @@ export const payloadOf = (alert: Alert, badge: number): string =>
       badge,
       sound: "default",
       "thread-id": `${alert.groupId}/${alert.threadId}`,
+      ...(alert.line && { category: CHAT_LINE, "mutable-content": 1 }),
     },
     groupId: alert.groupId,
     threadId: alert.threadId,
+    ...(alert.line && { authorId: alert.line.authorId, seq: alert.line.seq }),
   });
 
 /**
- * Sends `alert` to one device. "gone" when APNs says the token is no
- * longer the app's (410, or 400 BadDeviceToken), so it is dropped.
+ * A chat read up to `readTo` on one of the user's devices, for the others
+ * to take back the notifications of its lines read (spec/sync-protocol.md,
+ * Push): a background push, which shows nothing.
  */
-export const sendAlert = async (
+export type Withdrawal = { groupId: string; threadId: string; readTo: number };
+
+/** The APNs payload of a withdrawal: woken in the background, nothing shown. */
+export const withdrawalOf = (withdrawal: Withdrawal): string =>
+  JSON.stringify({ aps: { "content-available": 1 }, withdraw: withdrawal });
+
+/** Posts `payload` to one device as APNs push type `type`. */
+const post = async (
   env: Env,
   device: { token: string; sandbox: boolean },
-  alert: Alert,
-  badge: number
+  payload: string,
+  type: "alert" | "background"
 ): Promise<Sent> => {
   const key = env.APNS_KEY;
   if (key === undefined || key === "") {
@@ -84,9 +106,11 @@ export const sendAlert = async (
     ? "api.sandbox.push.apple.com"
     : "api.push.apple.com";
   const response = await fetch(`https://${host}/3/device/${device.token}`, {
-    body: payloadOf(alert, badge),
+    body: payload,
     headers: {
-      "apns-push-type": "alert",
+      // A background push must go at the low priority, or APNs refuses it.
+      "apns-priority": type === "alert" ? "10" : "5",
+      "apns-push-type": type,
       "apns-topic": TOPIC,
       authorization: `bearer ${await providerToken(key, env.APNS_KEY_ID, env.APNS_TEAM_ID)}`,
     },
@@ -105,3 +129,22 @@ export const sendAlert = async (
       (reason === "BadDeviceToken" || reason === "DeviceTokenNotForTopic"));
   return gone ? "gone" : "failed";
 };
+
+/**
+ * Sends `alert` to one device. "gone" when APNs says the token is no
+ * longer the app's (410, or 400 BadDeviceToken), so it is dropped.
+ */
+export const sendAlert = async (
+  env: Env,
+  device: { token: string; sandbox: boolean },
+  alert: Alert,
+  badge: number
+): Promise<Sent> => await post(env, device, payloadOf(alert, badge), "alert");
+
+/** Sends a withdrawal to one device, as `sendAlert` sends a notification. */
+export const sendWithdrawal = async (
+  env: Env,
+  device: { token: string; sandbox: boolean },
+  withdrawal: Withdrawal
+): Promise<Sent> =>
+  await post(env, device, withdrawalOf(withdrawal), "background");

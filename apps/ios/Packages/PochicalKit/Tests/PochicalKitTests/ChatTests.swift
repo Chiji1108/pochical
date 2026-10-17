@@ -83,7 +83,37 @@ struct ChatVectors: Decodable, Sendable {
   let openingFrom: [OpeningFrom]
   let firstComing: [FirstComing]
   let readTo: [ReadTo]
+
+  struct Withdrawn: VectorCase {
+    struct Shown: Decodable, Sendable {
+      let id: String
+      let groupId: String
+      let threadId: String
+      let seq: Int64
+    }
+    struct Read: Decodable, Sendable {
+      let groupId: String
+      let threadId: String
+      let readTo: Int64?
+    }
+    let name: String
+    let shown: [Shown]
+    let read: Read
+    let expected: [String]
+  }
+  let withdrawn: [Withdrawn]
   let draft: [Draft]
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).withdrawn)
+func aReadTakesBackItsNotifications(_ vector: ChatVectors.Withdrawn) {
+  let shown = vector.shown.map {
+    NotifiedLine(id: $0.id, groupID: $0.groupId, threadID: $0.threadId, seq: $0.seq)
+  }
+  let read = vector.read
+  #expect(
+    withdrawn(shown, groupID: read.groupId, threadID: read.threadId, readTo: read.readTo)
+      == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).draft)
@@ -1066,6 +1096,33 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
     let held = try Holdings.onDevice(in: db)
     #expect(held == Holdings(shiftDays: 1))
     #expect(!held.isEmpty)
+  }
+}
+
+@Test func theNotificationsOfLinesReadAreKnownFromTheMarkOrTheCount() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let shown = [
+      NotifiedLine(id: "a", groupID: "g", threadID: groupThread, seq: 4),
+      NotifiedLine(id: "b", groupID: "g", threadID: groupThread, seq: 6),
+      NotifiedLine(id: "c", groupID: "g", threadID: "direct:me:u1", seq: 3),
+    ]
+    #expect(try readNotified(shown, ReadState(me: "me", in: db)).isEmpty)
+    // Read here up to 5: the group's first.
+    var mark = Pochical_V1_Change()
+    mark.cursor = 1
+    mark.readMark.threadID = groupThread
+    mark.readMark.userID = "me"
+    mark.readMark.lastReadSeq = 5
+    try GroupSync.take([mark], of: "g", in: db)
+    #expect(try readNotified(shown, ReadState(me: "me", in: db)) == ["a"])
+    // Read elsewhere: the one-to-one chat has nothing unread left.
+    var count = Pochical_V1_UnreadCount()
+    count.groupID = "g"
+    count.threadID = "direct:me:u1"
+    count.count = 0
+    try Chats.take(count, in: db)
+    #expect(try readNotified(shown, ReadState(me: "me", in: db)).sorted() == ["a", "c"])
   }
 }
 
