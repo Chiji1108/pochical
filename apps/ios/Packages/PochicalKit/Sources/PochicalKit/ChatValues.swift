@@ -606,9 +606,12 @@ public struct ChatState: Hashable, Sendable {
 
   /// How many of others' lines `me` has not read yet.
   public func unread(by me: String) -> Int {
-    let read = lastRead(by: me)
     // The app's notices are told, not counted.
-    return lines.count { $0.seq > read && $0.authorID != me && $0.notice == nil }
+    let writers = lines.map { line in
+      (seq: line.seq, writer: line.authorID == me ? LineWriter.me
+        : line.notice != nil ? .app : .others)
+    }
+    return unreadCount(writers, read: lastRead(by: me))
   }
 }
 
@@ -812,6 +815,19 @@ public func firstComing(
 ) -> Int64? {
   let from = max(latest, read)
   return lines.first { $0.seq > from && $0.writer == .others }?.seq
+}
+
+/// The reader's read mark as the chat's lines show: on to the latest of
+/// those whose foot is on the screen (`shown`), never back, as a line once
+/// on screen stays read (spec/vectors/chat.json, readTo).
+public func readTo(shown: [Int64], read: Int64) -> Int64 {
+  max(read, shown.max() ?? read)
+}
+
+/// How many of others' lines are unread past the `read` mark, what ↓
+/// counts (spec/vectors/chat.json, readTo).
+public func unreadCount(_ lines: [(seq: Int64, writer: LineWriter)], read: Int64) -> Int {
+  lines.count { $0.seq > read && $0.writer == .others }
 }
 
 /// How many of a chat's unread lines count, as what notifies: all of them

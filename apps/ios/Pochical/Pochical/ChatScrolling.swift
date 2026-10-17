@@ -17,14 +17,16 @@ final class ChatScroll {
   var topDay: Day?
   var dayShown = false
   var scrolling = false
-  /// Times lines have come in and are in place, where reading counts.
-  var landed = 0
+  /// The lines whose foot is on the screen, by item id: read on to the
+  /// latest of them.
+  var seen: [String] = []
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
-/// below, counted on it as a chat's unread are; reading happens at the
-/// latest, so none while there. While ここから新着 is below the top of the
-/// screen with lines under it still unread, it goes there first.
+/// below, counted on it as a chat's unread are: lines are read as they
+/// come on screen, so none while at the latest. While ここから新着 is below
+/// the top of the screen with lines under it still unread, it goes there
+/// first.
 struct LatestButton: View {
   @Environment(\.themeColors) private var colors
   let scroll: ChatScroll
@@ -130,8 +132,6 @@ struct FollowKey: Equatable {
 }
 
 struct ReadKey: Hashable {
-  let opened: Bool
-  let active: Bool
-  let landed: Int
-  let reached: Int
+  let shown: Bool
+  let seen: Int64
 }
