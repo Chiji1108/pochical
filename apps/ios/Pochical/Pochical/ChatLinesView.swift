@@ -79,6 +79,18 @@ enum LinePlace {
     spot.frame = onScreen(frame)
   }
 
+  /// Presents `controller` from the cell, a popover's arrow on `rect` in
+  /// it, as a dialog attached to its button is.
+  func present(_ controller: UIViewController, from rect: CGRect) {
+    guard let view else { return }
+    var responder: UIResponder? = view
+    while let next = responder, !(next is UIViewController) { responder = next.next }
+    guard let presenter = responder as? UIViewController else { return }
+    controller.popoverPresentationController?.sourceView = view
+    controller.popoverPresentationController?.sourceRect = rect
+    presenter.present(controller, animated: true)
+  }
+
   func unfollow(_ spot: LineSpot) {
     followed.removeAll { $0.spot === spot }
   }
@@ -90,6 +102,12 @@ enum LinePlace {
       if now != spot.frame { spot.frame = now }
     }
   }
+}
+
+/// A spot in a line's cell, which a popover points at.
+struct LineSource {
+  let space: LineSpace
+  let frame: CGRect
 }
 
 extension EnvironmentValues {

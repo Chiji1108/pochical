@@ -51,8 +51,9 @@ enum LineAction {
   case openQuote
   /// The writer's profile, from their face.
   case openProfile
-  /// Its photo that could not be sent: its choices.
-  case retry
+  /// A line that could not be sent: its choices, pointing at its ! in the
+  /// line's cell; none outside the chat's lines.
+  case retry(LineSource?)
   /// The reader's reaction put on, or taken back.
   case react(String)
   /// A poll's 行ける, on or off.
@@ -70,6 +71,9 @@ enum LineAction {
 struct LineView: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.openGroupRoute) private var openGroupRoute
+  @Environment(\.lineSpace) private var lineSpace
+  /// Where its ! is in the line's cell, for its choices to point at.
+  @State private var notSentMark: CGRect = .zero
   /// The line's opID, which its actions name it by.
   let lineID: String
   let text: String
@@ -247,12 +251,19 @@ struct LineView: View {
         }
       }
       if failed {
-        Button { act(.retry) } label: {
+        Button {
+          act(.retry(lineSpace.map { LineSource(space: $0, frame: notSentMark) }))
+        } label: {
           Image(systemName: "exclamationmark.circle.fill")
             .font(.title3)
             .foregroundStyle(colors.dangerDefault)
         }
         .buttonStyle(.plain)
+        .onGeometryChange(for: CGRect.self) {
+          $0.frame(in: .named(LineSpace.name))
+        } action: {
+          notSentMark = $0
+        }
         .accessibilityLabel("送れませんでした")
         .accessibilityHint("押すと再送か削除")
       } else if waiting {
