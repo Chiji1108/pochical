@@ -49,6 +49,14 @@ struct ChatScreen: View {
   var sharing: Day?
   /// `sharing` has been set over the composer, once.
   @State private var tookSharing = false
+  /// The chat's draft was put back in the composer as it opened.
+  @State private var tookDraft = false
+  /// The draft last kept, so it is written only as it changes.
+  @State private var keptDraft: KeptDraft?
+  /// The draft as it opened, its words as the composer showed them: kept
+  /// as it was while they stay so, so mentions of two members of one name
+  /// keep who each is.
+  @State private var openedDraft: (shown: String, sent: String)?
   @State private var meID: String?
   /// The line ここから新着 sits over: the first unread as the chat opens,
   /// or the first of others' lines coming in at once, more than the screen
@@ -80,7 +88,7 @@ struct ChatScreen: View {
   @State private var earlierFrom: Int64?
   /// What is being written, read by the composer alone.
   @State private var draft = ChatDraft()
-  @State private var unsending: ChatLineRow?
+  @State private var unsending: Unsending?
   /// A link tapped in a line, open in the browser sheet.
   @State private var browsing: OpenedLink?
 
@@ -123,8 +131,8 @@ struct ChatScreen: View {
   @State private var viewing: LinePhoto?
   /// Long lines opened at 続きを読む, which stay open while the chat is.
   @State private var unfolded: Set<String> = []
-  /// A photo's line that could not be sent, its choices open.
-  @State private var unsentPhoto: WaitingLine?
+  /// A line not sent, its choices open.
+  @State private var notSent: WaitingLine?
   /// Others writing now, each until their typing lapses.
   @State private var typers: [String: Date] = [:]
   /// The line whose reactions and menu are open.
@@ -299,6 +307,16 @@ struct ChatScreen: View {
         }
       }
     }
+    // Lines waiting too long stop going by themselves, marked, even
+    // while offline (spec/chat.md, Lines on their way).
+    .task(id: state.waiting.filter { !$0.failed }.map(\.opID)) {
+      while !Task.isCancelled {
+        let now = Int64(Date.now.timeIntervalSince1970 * 1000)
+        let next = try? await database.write { try Chats.failOverdue(of: group.id, now: now, in: $0) }
+        guard let next = next ?? nil else { return }
+        try? await Task.sleep(for: .milliseconds(max(next - now, 0)))
+      }
+    }
     .task(id: typers) {
       guard let next = typers.values.min() else { return }
       try? await Task.sleep(for: .seconds(max(next.timeIntervalSinceNow, 0)))
@@ -330,6 +348,10 @@ struct ChatScreen: View {
     // Leaving the chat takes its open menu with it.
     .onAppear {
       Notifications.shared.openChat = OpenedChat(groupID: group.id, threadID: threadID)
+      if !tookDraft {
+        tookDraft = true
+        takeDraft()
+      }
       // As sharing into a chat app does: nothing reaches everyone until it
       // is sent, with a word if one likes.
       if let sharing, !tookSharing {
@@ -339,6 +361,7 @@ struct ChatScreen: View {
     }
     .onDisappear {
       closeActions()
+      keepDraft()
       draft.stopTyping(in: threadID, socket: socket)
       if Notifications.shared.openChat?.threadID == threadID {
         Notifications.shared.openChat = nil
@@ -354,10 +377,15 @@ struct ChatScreen: View {
         groupID: group.id, people: otherID.map { Set([$0, meID ?? ""]) }, pollable: otherID == nil,
         onSend: shareDays)
     }
+    // As the app leaves the screen, what is written is kept, as Signal
+    // and Telegram keep it then.
+    .onChange(of: scenePhase) { _, phase in
+      if phase != .active { keepDraft() }
+    }
     .confirmationDialog(
-      "送れなかった写真",
-      isPresented: Binding(get: { unsentPhoto != nil }, set: { if !$0 { unsentPhoto = nil } }),
-      titleVisibility: .visible, presenting: unsentPhoto
+      notSent?.photo == nil ? "送れなかったメッセージ" : "送れなかった写真",
+      isPresented: Binding(get: { notSent != nil }, set: { if !$0 { notSent = nil } }),
+      titleVisibility: .visible, presenting: notSent
     ) { line in
       Button("もう一度送る") { sendAgain(line) }
       Button("削除", role: .destructive) { deleteUnsent(line) }
@@ -394,10 +422,19 @@ struct ChatScreen: View {
     ) {
       Button("キャンセル", role: .cancel) {}
       Button("取り消す", role: .destructive) {
-        if let line = unsending { unsend(line) }
+        switch unsending {
+        case .line(let line): unsend(line)
+        case .waiting(let line): takeBack(line)
+        case nil: break
+        }
       }
     } message: {
-      Text("メンバー全員のチャットから消えます。")
+      // A line still on its way is not in anyone's chat yet.
+      if case .waiting = unsending {
+        Text("まだ送られていないメッセージです。")
+      } else {
+        Text("メンバー全員のチャットから消えます。")
+      }
     }
     .handles(lineActions) { act($0.action, on: $0.lineID) }
   }
@@ -719,19 +756,27 @@ struct ChatScreen: View {
   private func act(_ action: LineAction, onWaiting line: WaitingLine, startsRun: Bool) {
     switch action {
     case .retry:
-      unsentPhoto = line
+      notSent = line
     case .hold(let spot, let finger, _):
-      // Still on its way: nothing but コピー yet, and days have nothing
-      // to copy.
-      guard line.days.isEmpty, line.photo == nil else { return }
+      // Still on its way: コピー for words, and 送信取消, which takes it
+      // back before it goes (spec/chat.md, Lines on their way).
+      let words = line.days.isEmpty && line.photo == nil
+      var actions = words ? [copy(line.text)] : []
+      actions.append(
+        MessageAction(
+          title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
+          startsGroup: words
+        ) { unsending = .waiting(line) })
       openActions(
         MessageActionsRequest(
           lineID: line.opID, spot: spot, mine: true,
           bubble: AnyView(
-            MessageBubble(
-              text: line.text, mine: true, first: startsRun, waiting: true, nameOf: nameOf,
-              quote: line.replyTo.map(quote(of:)), groupID: group.id)),
-          finger: finger, actions: [copy(line.text)]))
+            LineContent(
+              text: line.text, preview: line.preview, days: line.days, members: cardMembers,
+              poll: waitingPoll(line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
+              groupID: group.id, mine: true, first: startsRun, waiting: !line.failed,
+              nameOf: nameOf)),
+          finger: finger, actions: actions))
     default:
       break
     }
@@ -755,18 +800,62 @@ struct ChatScreen: View {
     withAnimation { draft.photos = [] }
   }
 
-  /// Sends a photo that could not be sent once more, after the rest.
+  /// Sends a line not sent once more, after the rest, as if written now.
   private func sendAgain(_ line: WaitingLine) {
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { try Chats.sendAgain(line.opID, now: now, in: $0) }
   }
 
-  /// Deletes a photo's line that could not be sent, and the photo kept
-  /// on the device for it.
+  /// Deletes a line not sent, and the photo kept on the device for it.
   private func deleteUnsent(_ line: WaitingLine) {
-    try? database.write { try Chats.drop(line.opID, in: $0) }
+    takeBack(line)
+  }
+
+  /// Takes a line of one's own back before the group has it: out of the
+  /// outbox, and from the group as it comes should it have gone just
+  /// before (spec/chat.md, Lines on their way).
+  private func takeBack(_ line: WaitingLine) {
+    try? database.write { try Chats.takeBack(line.opID, in: $0) }
     if let photo = line.photo {
       ChatPhotos.forget(photo.id, in: group.id)
+    }
+  }
+
+  // MARK: Drafts
+
+  /// Puts the chat's draft back in the composer, with the chat's names as
+  /// they are now for its mentions (spec/chat.md, Drafts).
+  private func takeDraft() {
+    let read = try? database.read { db in
+      (
+        draft: try Chats.draft(of: threadID, in: group.id, db: db),
+        writers: try Chats.writers(in: group.id, db: db)
+      )
+    }
+    guard let read, let kept = read.draft else { return }
+    let names = Dictionary(
+      read.writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last })
+    let nameOf = { (id: String) in names[id] ?? "メンバー" }
+    draft.text = plainText(kept.text, nameOf: nameOf)
+    draft.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }
+    draft.editing = kept.editing
+    draft.replyTo = kept.editing == nil ? kept.replyTo.map(String.init) : nil
+    keptDraft = KeptDraft(text: kept.text, replyTo: kept.replyTo, editing: kept.editing?.seq)
+    openedDraft = (shown: draft.text, sent: kept.text)
+  }
+
+  /// Keeps what is being written with the chat, as it is left and as the
+  /// app leaves the screen; written only as it changed.
+  private func keepDraft() {
+    let unchanged = openedDraft.flatMap { $0.shown == draft.text ? $0.sent : nil }
+    let kept = KeptDraft(
+      text: unchanged ?? withMentions(draft.text, picked: draft.picked),
+      replyTo: draft.replyTo.flatMap(Int64.init), editing: draft.editing?.seq)
+    guard kept != keptDraft else { return }
+    keptDraft = kept
+    let now = Int64(Date.now.timeIntervalSince1970 * 1000)
+    try? database.write { db in
+      try Chats.keepDraft(kept, of: threadID, in: group.id, now: now, db: db)
     }
   }
 
@@ -1229,7 +1318,7 @@ struct ChatScreen: View {
         MessageAction(
           title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
           startsGroup: true
-        ) { unsending = line })
+        ) { unsending = .line(line) })
     } else {
       // Last, apart and in the danger color (spec/chat.md).
       actions.append(
@@ -1364,6 +1453,13 @@ struct ChatScreen: View {
       try Chats.edit(kind, in: group.id, now: now, db: db)
     }
   }
+}
+
+/// A line of one's own whose 送信取消 is being asked: sent, or still on
+/// its way.
+private enum Unsending {
+  case line(ChatLineRow)
+  case waiting(WaitingLine)
 }
 
 /// What every line of a chat is drawn by, beyond the line itself.

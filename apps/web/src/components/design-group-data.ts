@@ -182,7 +182,12 @@ export type LinkPreview = {
   image?: string;
 };
 
-export type Chat = { messages: Message[]; unread: number };
+// What was being written in a chat, kept as it was left (spec/chat.md,
+// Drafts): its words as they would be sent, mentions as <@id>, and the
+// line it answers or changes.
+export type ChatDraft = { text: string; replyTo?: string; editing?: string };
+
+export type Chat = { messages: Message[]; unread: number; draft?: ChatDraft };
 
 export const groupChat = "group";
 

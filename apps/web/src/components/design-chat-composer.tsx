@@ -26,7 +26,12 @@ import { PhotoInput, PhotoTray, useChosenPhotos } from "./design-chat-photos";
 import { chatStyle } from "./design-chat-style";
 import { daysSummary, summaryOf } from "./design-chat-summary";
 import { LimitedTextArea } from "./design-fields";
-import type { LinkPreview, Member, Message } from "./design-group-data";
+import type {
+  ChatDraft,
+  LinkPreview,
+  Member,
+  Message,
+} from "./design-group-data";
 import { Avatar } from "./design-group-parts";
 import { previewOf } from "./design-group-samples";
 import { IconButton } from "./design-ui";
@@ -46,23 +51,30 @@ const nameless = () => "";
 // link, and your message whose words are being changed instead.
 export function useComposer({
   attach,
+  kept,
   members = noOne,
   mentionName = nameless,
 }: {
   attach?: Date[];
+  // The draft the chat was left with (spec/chat.md, Drafts).
+  kept?: ChatDraft;
   // Who an @ lists: the others in the group chat, none in a one-to-one
   // or the support chat.
   members?: Member[];
   // A mention's name, for words put back to be changed.
   mentionName?: (id: string) => string;
 }) {
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(() =>
+    kept ? plainText(kept.text, mentionName) : ""
+  );
   // Members picked from the @ list, made mentions as the message is sent.
-  const [picked, setPicked] = useState<Mention[]>([]);
+  const [picked, setPicked] = useState<Mention[]>(() =>
+    mentionsOf(kept?.text ?? "").map((id) => ({ id, name: mentionName(id) }))
+  );
   const [attached, setAttached] = useState(attach);
   const linkPreview = useLinkPreview(draft);
   const chosen = useChosenPhotos();
-  const [editing, setEditing] = useState<string>();
+  const [editing, setEditing] = useState(kept?.editing);
   const formRef = useRef<HTMLFormElement>(null);
   // An @ being written at the end of the message lists the others whose
   // name has what follows it, as LINE does; one picked goes in as @name

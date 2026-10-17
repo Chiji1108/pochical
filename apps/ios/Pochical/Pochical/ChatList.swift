@@ -198,7 +198,7 @@ private struct ChatRow<Icon: View>: View {
                 .accessibilityLabel("通知オフ")
             }
           }
-          Text(preview)
+          previewText
             .font(.caption)
             .foregroundStyle(colors.textQuaternary)
             .lineLimit(1)
@@ -238,6 +238,15 @@ private struct ChatRow<Icon: View>: View {
     .task(id: ChatSummaryRequest(groupID: group.id, threadID: threadID, me: me)) {
       _ = try? await $chat.load(ChatSummaryRequest(groupID: group.id, threadID: threadID, me: me))
     }
+  }
+
+  /// What is being written, kept as the chat was left, in place of the
+  /// latest line: 下書き： in the danger color, as Telegram marks one
+  /// (spec/chat.md, Drafts).
+  private var previewText: Text {
+    guard let draft = chat.summary.draft else { return Text(preview) }
+    let words = plainText(draft.text, nameOf: { chat.names[$0] ?? "メンバー" })
+    return Text("\(Text("下書き：").foregroundStyle(colors.dangerDefault))\(words)")
   }
 
   /// The latest line as one line of words: 自分： before one's own.

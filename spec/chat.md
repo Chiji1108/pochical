@@ -160,7 +160,24 @@ A group chat can put days to the vote, as LINE's 日程調整 does, for the step
 - In the chat a photo has no bubble (one answering a line sits in a bubble under its quote, a little in from its edge, keeping its own corners and edge): rounded at `lg` with a hairline edge, the size it was sent at within 220×260 points, cropped at its ends when wider than 2:1 or taller than 1:2. While it comes over the network its place shows the blur its ThumbHash draws, stretched to the photo's shape, and the photo fades in over it in `chatRules.photoFadeMs` milliseconds once it comes; opened large, the blur shows whole on black the same way. One that cannot be fetched keeps its blur. A photo without a ThumbHash shows a grey that breathes instead (fading to 40% and back every 1.6 seconds, still when motion is reduced or it cannot be fetched), opened large the system's spinner on black, and shows at once when it comes. While it uploads it is dimmed with 送信中. A tap opens it large on black, whole, with × and 保存, and a pull down closes it. Its menu has 保存 and ピン留め, and 送信取消 for its sender; no コピー or 編集. Saving says 写真を保存しました, over the photo opened large too.
 - In a line of words (quotes, the pin bar) it reads 📷 写真; the chat list says 写真を送りました (自分：写真を送りました for one's own).
 - Photos are kept by the server under their group, readable by its members alone through the server, never by a public address. Taking a photo's line back deletes the photo, and its small version, for everyone.
-- A photo that cannot be uploaded (refused, gone from the phone, or failing five tries a few seconds apart) leaves its line waiting, marked: a red ! beside it and 送れませんでした under it, and the lines after it go on. A tap on the ! opens 送れなかった写真: もう一度送る sends it again after the rest, 削除 takes it away with the photo kept for it.
+- A photo that cannot be uploaded (refused, gone from the phone, or failing five tries a few seconds apart) is a line not sent (Lines on their way): its choices are 送れなかった写真's, and 削除 takes the photo kept for it too.
+
+## Lines on their way
+
+A line shows the moment it is sent, dimmed, with a clock in its time's room, while it waits in the device's outbox for the group to take it (spec/sync-protocol.md, Chat); it goes by itself whenever the group's socket is open, in the order written, as Signal and Telegram keep sending what waits.
+
+- A line that has waited `chatRules.unsentAfterMs` since it was written without the group taking it (the phone offline all that time, as on a plane), or whose photo cannot be uploaded (Photos), stops going by itself and is marked as not sent: a red ! beside it in its time's room and 送れませんでした under it, as Signal and Messages mark one. Words sent long after they were written may no longer be meant, so the person chooses, as Signal gives up on a message rather than sending it a day late. The lines after it go on. A tap on the ! opens 送れなかったメッセージ (送れなかった写真 for a photo): もう一度送る sends it again, after the rest, as if written then; 削除 takes it away.
+- Failing is the device's alone. The group tells the sender of no refusal: what the apps send fits (a send that does not is dropped, spec/sync-protocol.md), and a line to someone who blocked the sender is taken as any other (Reporting and blocking), so nothing tells a block.
+- While it waits, a line's menu has コピー for words and 送信取消, asked first as for a sent line (Editing and unsending), the alert saying まだ送られていないメッセージです。 instead; 削除 of a line not sent is not asked, as nobody has it. Either takes it out of the outbox, and should the group have taken it meanwhile (sent just before, its answer not yet come), the device takes it back from the group as it comes, as 送信取消 does a sent line.
+
+## Drafts
+
+What is being written in a chat stays with the chat, as Signal and Telegram keep it.
+
+- The words with their mentions, the line being answered and the line being changed are kept on the device as the chat is left and as the app leaves the screen, and are in the composer again as the chat opens. Photos picked, days brought to share and a link's page taken off with × are not kept. A draft is the device's own: not sent to the group, nor to the member's other devices.
+- Only words make a draft: a quote alone or words of nothing but spaces are not kept, nor an edit whose words are still the line's own. Sending it, or emptying the composer, ends it.
+- Opened again: a reply whose line was taken back meanwhile keeps its words without the quote, as the group would take it then (Replies); an edit whose line was taken back, or is no longer on the device, goes with its words, which were that line's (`spec/vectors/chat.json`, draft).
+- In the chat list, a chat with a draft says 下書き： in the danger color and the draft's words in a line, in place of its latest line, as Telegram marks one; its time and unread count stay those of its latest line, and it keeps its place. A one-to-one chat started and left with only a draft stays in the list with it. Leaving the group takes its drafts with it.
 
 ## Long messages and shared days
 

@@ -1,6 +1,10 @@
 import { chatRules } from "@pochical/design/chat";
 
-import type { LinkPreview, Message } from "../components/design-group-data";
+import type {
+  ChatDraft,
+  LinkPreview,
+  Message,
+} from "../components/design-group-data";
 import { firstLink } from "./chat-text";
 
 // What a chat's lines become as people use them (spec/chat.md): pins,
@@ -156,4 +160,30 @@ export function firstUnreadOf(messages: Message[], unread: number) {
 // The last line sharing days or putting them to the vote.
 export function lastSharedOf(messages: Message[]) {
   return messages.findLast((message) => message.days || message.poll)?.id;
+}
+
+// The draft to keep, or to open again, with the chat's lines as they are
+// now; undefined for none. Words make a draft; an edit whose words are
+// still the line's own is none, and one of a line taken back or not there
+// goes with its words; a reply to a line taken back keeps its words
+// without the quote (spec/vectors/chat.json, draft).
+export function keptDraft(
+  draft: ChatDraft,
+  messages: Message[]
+): ChatDraft | undefined {
+  if (draft.text.trim() === "") {
+    return undefined;
+  }
+  const lineOf = (id: string) => messages.find((message) => message.id === id);
+  if (draft.editing !== undefined) {
+    const line = lineOf(draft.editing);
+    if (!line || line.unsent || (line.text ?? "") === draft.text) {
+      return undefined;
+    }
+    return { editing: draft.editing, text: draft.text };
+  }
+  if (draft.replyTo !== undefined && lineOf(draft.replyTo)?.unsent) {
+    return { text: draft.text };
+  }
+  return draft;
 }

@@ -214,8 +214,9 @@ struct ChatOutboxRow: Hashable, Sendable {
   /// The edit as a `pochical.v1.ChatEdit`.
   var edit: Data
   var madeAtMs: Int64
-  /// A photo's line whose photo could not be uploaded: it waits, unsent,
-  /// for the member to send it again or delete it.
+  /// A line not sent (spec/chat.md, Lines on their way): its photo could
+  /// not be uploaded, or it waited too long. It waits for the member to
+  /// send it again or delete it.
   var failed = false
 }
 
@@ -436,6 +437,7 @@ public enum Chats {
     row.replyTo = line.replyTo == 0 ? nil : Int64(line.replyTo)
     row.notice = line.hasNotice ? LineNotice(line.notice) : nil
     try ChatLineRow.insert { row }.execute(db)
+    try tookBack(line, of: groupID, in: db)
   }
 
   /// A page of earlier lines, answering the device's request, and the
@@ -479,8 +481,8 @@ public enum Chats {
     try UnreadCountRow.insert { row }.execute(db)
   }
 
-  /// The group's chats that have a line, or one of the member's own on
-  /// its way: the one-to-one chats a list shows.
+  /// The group's chats that have a line, one of the member's own on its
+  /// way, or a draft: the one-to-one chats a list shows.
   public static func threads(in groupID: String, db: Database) throws -> Set<String> {
     var threads = Set(
       try ChatLineRow.where { $0.groupID.eq(groupID) }.select(\.threadID).distinct()
@@ -490,6 +492,7 @@ public enum Chats {
         threads.insert(send.threadID)
       }
     }
+    threads.formUnion(try draftThreads(in: groupID, db: db))
     return threads
   }
 
@@ -504,14 +507,9 @@ public enum Chats {
     try ChatOutboxRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
   }
 
-  /// An edit that will not go: a photo's line deleted after it could not
-  /// be sent.
-  public static func drop(_ opID: String, in db: Database) throws {
-    try ChatOutboxRow.where { $0.opID.eq(opID) }.delete().execute(db)
-  }
-
-  /// A photo's line whose photo could not be uploaded: it stays, marked,
-  /// and the edits after it go on.
+  /// A line not sent (spec/chat.md, Lines on their way): its photo could
+  /// not be uploaded, or it waited too long. It stays, marked, and the
+  /// edits after it go on.
   static func fail(_ opID: String, in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.eq(opID) }.update { $0.failed = true }.execute(db)
   }
@@ -530,6 +528,7 @@ public enum Chats {
   /// The edits an Acked names stop waiting.
   static func acknowledge(_ opIDs: [String], in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.in(opIDs) }.delete().execute(db)
+    try forgetTakenBack(opIDs, in: db)
   }
 
   /// The group's newest waiting edit, nil when none waits.
@@ -630,7 +629,8 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public var preview: LinePreview?
   /// The line it answers (返信), by its seq.
   public var replyTo: Int64?
-  /// Its photo could not be uploaded: to send again or delete.
+  /// Not sent (its photo could not be uploaded, or it waited too long):
+  /// to send again or delete.
   public var failed = false
   public var id: String { opID }
 }
@@ -852,15 +852,19 @@ public struct ChatSummary: Hashable, Sendable {
   public var unread: Int
   /// An unread line the device holds mentions the reader.
   public var mentioned: Bool
+  /// What is being written in it, kept as it was left (spec/chat.md,
+  /// Drafts).
+  public var draft: KeptDraft?
 
   public init(
     last: ChatLineRow? = nil, waiting: WaitingLine? = nil, unread: Int = 0,
-    mentioned: Bool = false
+    mentioned: Bool = false, draft: KeptDraft? = nil
   ) {
     self.last = last
     self.waiting = waiting
     self.unread = unread
     self.mentioned = mentioned
+    self.draft = draft
   }
 }
 
@@ -905,7 +909,9 @@ extension Chats {
       ? try unreadLines(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
         .contains { mentions(in: $0).contains(me) }
       : false
-    return ChatSummary(last: last, waiting: waiting, unread: unread, mentioned: mentioned)
+    return ChatSummary(
+      last: last, waiting: waiting, unread: unread, mentioned: mentioned,
+      draft: try keptDraft(of: threadID, in: groupID, db: db))
   }
 
   /// The chat's unread lines that count: the group's count, which reaches

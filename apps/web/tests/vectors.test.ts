@@ -38,6 +38,7 @@ import {
   decidePoll,
   editMessage,
   firstUnreadOf,
+  keptDraft,
   pinMessage,
   pinsOf,
   unsendMessage,
@@ -611,6 +612,30 @@ describe("spec/vectors/chat.json", () => {
       );
       const first = firstUnreadOf(messages, count);
       expect(first === undefined ? null : Number(first)).toBe(expected);
+    });
+  }
+  for (const { name, draft, lines, expected } of chatMessages.draft) {
+    test(name, () => {
+      const messages = lines.map(({ seq, text: words, unsent }) =>
+        line(String(seq), { text: words, unsent })
+      );
+      const kept = keptDraft(
+        {
+          editing: "editing" in draft ? String(draft.editing) : undefined,
+          replyTo: "replyTo" in draft ? String(draft.replyTo) : undefined,
+          text: draft.text,
+        },
+        messages
+      );
+      expect(
+        kept && {
+          editing:
+            kept.editing === undefined ? undefined : Number(kept.editing),
+          replyTo:
+            kept.replyTo === undefined ? undefined : Number(kept.replyTo),
+          text: kept.text,
+        }
+      ).toEqual(expected ?? undefined);
     });
   }
 });
