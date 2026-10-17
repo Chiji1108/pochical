@@ -48,7 +48,7 @@ What the device holds may be a few taps tried before signing in, or months of sh
 
 1. A user linked to Sign in with Apple has Apple's tokens revoked first, as Apple asks apps that offer it. The server keeps none of them, so the app asks Apple once more for an authorization code and sends it; the server exchanges it for the app's refresh token, with a client secret signed by the Sign in with Apple key (`APPLE_SIGNIN_KEY`, `APPLE_SIGNIN_KEY_ID`, from the team), checks the token is of the Apple account linked, and revokes it. Without a code, or with one Apple does not take or of another Apple account, nothing is deleted (`FAILED_PRECONDITION`).
 2. In each group the user was ever in, left ones too, the Group DO takes them out as leaving does, their shifts with them, and marks them `deleted` with no name (`Member.deleted`): every line they wrote is taken back as 送信取消 takes one, their photos deleted, and their reactions and votes come off the lines they were on. A group with no one left in it goes whole: the Group DO's storage, its invitation and its photos.
-3. Their chat with Pochical's people goes, its photos with it; its Slack thread says the account was deleted.
+3. Their chat with Pochical's people goes, its photos with it, and its Group DO (`support:{userId}`, Chat) whole; its Slack thread says the account was deleted.
 4. The User DO's storage goes: days, patterns, coworkers, groups, push tokens. Its sockets close.
 5. better-auth deletes the user, their sessions and their provider accounts, which closes what is still open. Their other devices are signed out, as on a 401 (Reconnecting).
 

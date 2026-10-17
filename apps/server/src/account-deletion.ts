@@ -9,6 +9,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { revokeApple } from "./apple";
 import { account } from "./db/auth-schema";
 import { invites, supportChats } from "./db/schema";
+import { supportPlace } from "./group-chat";
 import { getAuth } from "./session";
 import { tellStaffOfDeletion } from "./slack";
 import { deletePhotosUnder, eraseSupportChat } from "./support-chat";
@@ -51,6 +52,8 @@ export const eraseUser = async (env: Env, userId: string): Promise<void> => {
       await eraseGroup(env, groupId);
     }
   }
+  // Their chat with Pochical's people, kept as a group's chats are.
+  await eraseGroup(env, supportPlace(userId));
   const [chat] = await drizzle(env.DB)
     .select({ thread: supportChats.slackThreadTs })
     .from(supportChats)

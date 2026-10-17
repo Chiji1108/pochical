@@ -125,6 +125,9 @@ export const chatRules = {
 export type ChatPlaceRules = {
   // Lines share days (日にちを共有).
   readonly days: boolean;
+  // Any two members have a one-to-one chat beside the place's own; without
+  // it the place's only chat is its own (thread "group").
+  readonly directChats: boolean;
   // A line's words are changed after it is sent (編集).
   readonly edit: boolean;
   // Words mention a member (<@id>).
@@ -143,6 +146,7 @@ export type ChatPlaceRules = {
 export const chatPlaces = {
   group: {
     days: true,
+    directChats: true,
     edit: true,
     mentions: true,
     pins: true,
@@ -154,6 +158,7 @@ export const chatPlaces = {
   // the words as they were: no 編集, and nothing a group's chat is for.
   support: {
     days: false,
+    directChats: false,
     edit: false,
     mentions: false,
     pins: false,

@@ -40,6 +40,7 @@ object Chat {
 /** What a chat can do by where it is kept (spec/chat.md, Where a chat is kept). */
 data class ChatPlaceRules(
   val days: Boolean,
+  val directChats: Boolean,
   val edit: Boolean,
   val mentions: Boolean,
   val pins: Boolean,
@@ -48,7 +49,7 @@ data class ChatPlaceRules(
   val sendsDevice: Boolean,
 ) {
   companion object {
-    val group = ChatPlaceRules(days = true, edit = true, mentions = true, pins = true, polls = true, reports = true, sendsDevice = false)
-    val support = ChatPlaceRules(days = false, edit = false, mentions = false, pins = false, polls = false, reports = false, sendsDevice = true)
+    val group = ChatPlaceRules(days = true, directChats = true, edit = true, mentions = true, pins = true, polls = true, reports = true, sendsDevice = false)
+    val support = ChatPlaceRules(days = false, directChats = false, edit = false, mentions = false, pins = false, polls = false, reports = false, sendsDevice = true)
   }
 }

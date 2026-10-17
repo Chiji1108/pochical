@@ -574,11 +574,18 @@ const mayWrite = (
 
 /**
  * Whether the chat's place takes the edit at all (design/src/chat.ts,
- * chatPlaces): a line of days or a poll, 編集, a pin, a vote or settling
- * a poll only where the place has them. The apps never send one it does
- * not take, so it is dropped rather than answered.
+ * chatPlaces): a one-to-one chat, a line of days or a poll, 編集, a pin,
+ * a vote or settling a poll only where the place has them. The apps
+ * never send one it does not take, so it is dropped rather than answered.
  */
 const placeTakes = (rules: ChatPlaceRules, kind: ChatEdit["kind"]): boolean => {
+  if (
+    kind.case !== undefined &&
+    !rules.directChats &&
+    kind.value.threadId !== GROUP_THREAD
+  ) {
+    return false;
+  }
   switch (kind.case) {
     case "send": {
       return (

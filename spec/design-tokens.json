@@ -36,6 +36,7 @@
   "chatPlaces": {
     "group": {
       "days": true,
+      "directChats": true,
       "edit": true,
       "mentions": true,
       "pins": true,
@@ -45,6 +46,7 @@
     },
     "support": {
       "days": false,
+      "directChats": false,
       "edit": false,
       "mentions": false,
       "pins": false,

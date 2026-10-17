@@ -8,10 +8,11 @@ The numbers named `chatRules.*` here are in `design/src/chat.ts`, the one place 
 
 A chat is kept in a place: a group, whose chats are 全体チャット and its one-to-one chats, or a user's chat with Pochical's people. Every place keeps its chats alike, in a Group DO (spec/sync-protocol.md, Chat), so a chat's lines, pages, outbox, read marks, notifications and photos work the same in each; what a place's chats can do differs only by its rules, `chatPlaces` in `design/src/chat.ts`, which the server and both apps read:
 
+- `directChats`: any two members have a one-to-one chat beside the place's own; without it the place's only chat is its own (thread "group").
 - `days`: lines share days (日にちを共有), `polls`: days are put to the vote, `pins`: lines are pinned, `edit`: words are changed after sending (編集), `mentions`: words mention a member, `reports`: lines and members are reported and blocked.
 - `sendsDevice`: each line goes with the app's version and the device (`ChatSend.device`), kept for whoever reads the chat, as its head says.
 
-The server drops an edit its place does not take (a line of days or a poll, 編集, a pin, a vote or settling a poll) and refuses a report; the apps leave each out of their menus and tools. Within a group, what a one-to-one chat lacks (polls, mentions) is the thread's, not the place's.
+The server drops an edit its place does not take (one in a one-to-one chat, a line of days or a poll, 編集, a pin, a vote or settling a poll) and refuses a report; the apps leave each out of their menus and tools. Within a group, what a one-to-one chat lacks (polls, mentions) is the thread's, not the place's.
 
 ## The chat's page
 

@@ -3,7 +3,7 @@ import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-import { supportPlace } from "../src/group-chat";
+import { directThread, supportPlace } from "../src/group-chat";
 import { call, signInAnonymously, userIdOf } from "./helpers";
 import { changesIn, sendFrame, settled, syncSocket } from "./sync-helpers";
 
@@ -86,7 +86,7 @@ describe("the chat with Pochical's people", () => {
     ).resolves.toStrictEqual([{ device: "ポチカル 1.0・iPhone (iOS 26.0)" }]);
   });
 
-  it("drops what a support chat does not take: days, polls, 編集 and pins", async () => {
+  it("drops what a support chat does not take: days, polls, 編集, pins and one-to-one chats", async () => {
     expect(chatPlaces.support).toMatchObject({
       days: false,
       edit: false,
@@ -94,6 +94,7 @@ describe("the chat with Pochical's people", () => {
       polls: false,
     });
     const token = await signInAnonymously();
+    const userId = await userIdOf(token);
     const { frames, socket } = await supportSocket(token);
     await frames.next();
     send(socket, "a", { text: "はじめ" });
@@ -137,12 +138,22 @@ describe("the chat with Pochical's people", () => {
             },
             opId: "e",
           },
+          {
+            kind: {
+              case: "send",
+              value: {
+                text: "べつのスレッド",
+                threadId: directThread(userId, chatRules.pochicalMember),
+              },
+            },
+            opId: "f",
+          },
         ],
       },
     });
     // Nothing changed: the frame is acknowledged with no changes before.
     await expect(frames.next()).resolves.toMatchObject({
-      kind: { case: "acked", value: { opIds: ["b", "c", "d", "e"] } },
+      kind: { case: "acked", value: { opIds: ["b", "c", "d", "e", "f"] } },
     });
   });
 
@@ -187,6 +198,22 @@ describe("the chat with Pochical's people", () => {
       { replyTo: 1n, seq: 2n, text: "つづき" },
       { seq: 2n, unsent: true },
     ]);
+  });
+
+  it("goes with the account", async () => {
+    const token = await signInAnonymously();
+    const userId = await userIdOf(token);
+    const { frames, socket } = await supportSocket(token);
+    await frames.next();
+    send(socket, "a", { text: "はじめ" });
+    await frames.next();
+    await frames.next();
+
+    const deleted = await call("UserService/DeleteAccount", {}, token);
+    expect(deleted.status).toBe(200);
+    await expect(
+      kept(userId, "select seq from chat_lines")
+    ).resolves.toStrictEqual([]);
   });
 
   it("is reported by no one", async () => {
