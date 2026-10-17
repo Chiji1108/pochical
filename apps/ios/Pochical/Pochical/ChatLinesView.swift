@@ -110,6 +110,36 @@ struct LineSource {
   let frame: CGRect
 }
 
+extension LineSource {
+  /// もう一度送る or 削除 for a line not sent, pointing at its !, as a
+  /// dialog attached to the button is. A dialog attached to the screen
+  /// pointed at the screen's top; one attached in the line's cell, which
+  /// the collection view reuses and draws again, is not kept by it.
+  /// `closed` first, whichever is chosen.
+  @discardableResult
+  func askNotSent(
+    photo: Bool, sendAgain: @escaping () -> Void, delete: @escaping () -> Void,
+    closed: @escaping () -> Void
+  ) -> UIAlertController {
+    let sheet = UIAlertController(
+      title: photo ? "送れなかった写真" : "送れなかったメッセージ", message: nil,
+      preferredStyle: .actionSheet)
+    sheet.addAction(
+      UIAlertAction(title: "もう一度送る", style: .default) { _ in
+        closed()
+        sendAgain()
+      })
+    sheet.addAction(
+      UIAlertAction(title: "削除", style: .destructive) { _ in
+        closed()
+        delete()
+      })
+    sheet.addAction(UIAlertAction(title: "キャンセル", style: .cancel) { _ in closed() })
+    space.present(sheet, from: frame)
+    return sheet
+  }
+}
+
 extension EnvironmentValues {
   /// The cell a chat's line is drawn in; none outside the chat's lines.
   @Entry var lineSpace: LineSpace?
@@ -190,7 +220,8 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// The top item while earlier lines are to come, which asks for them.
   static let earlier = "earlier"
 
-  /// Every item, oldest first.
+  /// Every item, oldest first; a line's id starts with `line-`, which
+  /// the lines read and seen are counted by.
   let rows: [LinesRow]
   let row: (String) -> AnyView
   let composer: AnyView
@@ -207,14 +238,18 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// line held stays under its menu; lines changing are drawn meanwhile.
   let holds: Bool
   /// Earlier lines are to come, and may be asked for: not before the chat
-  /// has opened on its place, which they would push away.
-  let canAskEarlier: Bool
+  /// has opened on its place, which they would push away. Never for a
+  /// chat that has all its lines at once.
+  var canAskEarlier = false
   /// The lines are scrolled near their top, Chat.prefetchScreens away:
   /// the next earlier page is to be laid out. Told the first line laid out,
   /// as the chat's own lines may be ahead of those in place.
-  let onNearTop: (String?) -> Void
+  var onNearTop: (String?) -> Void = { _ in }
   /// The day of the lines from the item `id` at the top.
   let dayOver: (String) -> Day?
+  /// Lines too few to fill the screen stand at its top, under a head that
+  /// starts the chat, rather than at its foot by the composer.
+  var fewAtTop = false
 
   func makeUIViewController(context: Context) -> ChatLinesController {
     let controller = ChatLinesController(scroll: scroll)
@@ -385,6 +420,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     composer.rootView = AnyView(settings.composer.environment(\.self, environment))
     latest.rootView = AnyView(settings.latest.environment(\.self, environment))
     ground.backgroundColor = UIColor(settings.ground)
+    layout.keepContentAtBottomOfVisibleArea = !settings.fewAtTop
     let alpha: CGFloat = settings.shown ? 1 : 0
     if lines.alpha != alpha {
       UIView.animate(withDuration: alpha == 1 ? 0.15 : 0, delay: 0, options: .curveEaseOut) {
@@ -882,6 +918,14 @@ private struct LineCellContent: View {
     content
       .id(id)
       .frame(maxWidth: .infinity)
+      // A tap off a line's own parts puts the keyboard away, as LINE does.
+      .background {
+        Color.clear.contentShape(.rect).onTapGesture {
+          UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+        .accessibilityHidden(true)
+      }
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
       .environment(\.self, environment)
