@@ -242,9 +242,9 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
       close.trailingAnchor.constraint(equalTo: guide.trailingAnchor, constant: -16),
       counterGlass.centerXAnchor.constraint(equalTo: view.centerXAnchor),
       counterGlass.centerYAnchor.constraint(equalTo: close.centerYAnchor),
-      counter.leadingAnchor.constraint(equalTo: counterGlass.contentView.leadingAnchor, constant: 14),
+      counter.leadingAnchor.constraint(equalTo: counterGlass.contentView.leadingAnchor, constant: 12),
       counter.trailingAnchor.constraint(
-        equalTo: counterGlass.contentView.trailingAnchor, constant: -14),
+        equalTo: counterGlass.contentView.trailingAnchor, constant: -12),
       counter.topAnchor.constraint(equalTo: counterGlass.contentView.topAnchor, constant: 8),
       counter.bottomAnchor.constraint(equalTo: counterGlass.contentView.bottomAnchor, constant: -8),
     ]
@@ -343,7 +343,8 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     guard let shown else { return }
     counter.text = "\(shown.index + 1) / \(photos.count)"
     counter.accessibilityLabel = "\(photos.count)枚中\(shown.index + 1)枚目"
-    if zooms { PhotoSpots.shared.open = shown.photo.id }
+    // Faded in too, so pulled down it leaves no second of it behind.
+    PhotoSpots.shared.open = shown.photo.id
   }
 
   /// A tap shows or hides the buttons, as Photos does.

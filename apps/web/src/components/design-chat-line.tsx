@@ -142,6 +142,7 @@ export function MessageLine({
   onVote = nothing,
   onFailed = nothing,
   onFolded = nothing,
+  onReveal = nothing,
 }: {
   message: Message;
   // The line above, after which a new day or a new run starts.
@@ -168,6 +169,9 @@ export function MessageLine({
   // Its words were measured to fold, and 続きを読む has come in under
   // them, after the chat was scrolled to its place.
   onFolded?: () => void;
+  // A blocked member's line shown at a tap, its photo among the chat's
+  // swiped through from then on.
+  onReveal?: () => void;
 }) {
   const {
     members,
@@ -238,6 +242,7 @@ export function MessageLine({
           className={chatStyle.blocked}
           onClick={() => {
             setRevealed(true);
+            onReveal();
           }}
           type="button"
         >

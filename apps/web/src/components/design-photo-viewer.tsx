@@ -126,7 +126,7 @@ const viewer = {
     color: "media.text",
     left: "50%",
     lineHeight: "action",
-    paddingInline: "14px",
+    paddingInline: "12px",
     position: "absolute",
     textStyle: "headline",
     top: "56px",

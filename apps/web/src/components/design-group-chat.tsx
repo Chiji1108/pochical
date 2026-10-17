@@ -273,6 +273,8 @@ export function ChatPage({
   // コピー, as iOS offers on a link in text, rather than the message's.
   const [linkMenu, setLinkMenu] = useState<LinkMenuAt>();
   const [failedOpen, setFailedOpen] = useState<string>();
+  // Blocked members' lines shown at a tap.
+  const [revealed, setRevealed] = useState<string[]>([]);
   const { failedCount, upload, uploads } = usePhotoUploads(photoSend);
   const [sharing, setSharing] = useState(false);
   const { answerSoon, typingMember } = useTypingSoon(group, chat.messages);
@@ -387,12 +389,13 @@ export function ChatPage({
     onMember,
     onOpenDay,
     people,
-    // Not a blocked member's, nor one of yours still going up.
+    // Not a blocked member's folded away, nor one of yours still going up.
     photos: photosOf(
       chat.messages,
       writerOf,
       (message) =>
-        !blocked.includes(message.from) && uploads[message.id] === undefined
+        (!blocked.includes(message.from) || revealed.includes(message.id)) &&
+        uploads[message.id] === undefined
     ),
     writerOf,
   };
@@ -514,6 +517,9 @@ export function ChatPage({
                     setFailedOpen(message.id);
                   }}
                   onFolded={keepPlace}
+                  onReveal={() => {
+                    setRevealed((before) => [...before, message.id]);
+                  }}
                   onSelect={() => {
                     setSelected(message.id);
                   }}
