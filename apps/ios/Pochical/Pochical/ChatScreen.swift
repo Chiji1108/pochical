@@ -733,7 +733,8 @@ struct ChatScreen: View {
         LineContent(
           text: line.text, preview: line.preview, days: line.days, members: cardMembers,
           poll: pollLine(for: line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
-          groupID: group.id, mine: mine, first: startsRun, waiting: false, nameOf: nameOf))
+          groupID: group.id, mine: mine, first: startsRun, waiting: false, nameOf: nameOf,
+          unfolded: unfolded.contains(line.opID)))
       // A link held has its own menu, without the reactions.
       if let link {
         openActions(

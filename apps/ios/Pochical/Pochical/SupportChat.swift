@@ -159,6 +159,8 @@ struct SupportChatScreen: View {
 
   /// Who answers here: Pochical's people, under the app's name.
   private static let supportName = "ポチカル"
+  /// Who put an emoji on, as a reaction's pill and its list name them.
+  private static let names = [SupportLine.me: "自分", SupportLine.support: supportName]
 
   var body: some View {
     let listed = items
@@ -334,7 +336,7 @@ struct SupportChatScreen: View {
             quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.id),
             groupID: ChatPhotos.support, time: Self.ms(line.sentAt), showsTime: showsTime,
             edited: false, mine: mine, writer: mine || !first ? nil : Self.supportName,
-            appFace: true, named: false, first: first, waiting: false, names: [:],
+            appFace: true, named: false, first: first, waiting: false, names: Self.names,
             reactions: line.reactions, countedReactions: true, marks: marks, meID: SupportLine.me,
             actions: lineActions)
         case .waiting(let line, let first):
@@ -342,7 +344,7 @@ struct SupportChatScreen: View {
             lineID: line.id, text: line.text, preview: line.preview, photo: line.photo,
             quote: line.replyTo.map(quote(of:)), groupID: ChatPhotos.support,
             time: Self.ms(line.madeAt), edited: false, mine: true, writer: nil, named: false,
-            first: first, waiting: true, failed: line.failed, names: [:], marks: marks,
+            first: first, waiting: true, failed: line.failed, names: Self.names, marks: marks,
             actions: lineActions)
         }
       }
@@ -419,7 +421,9 @@ struct SupportChatScreen: View {
         LineContent(
           text: line.text, preview: line.preview, days: [], members: [], photo: line.photo,
           quote: line.replyTo.map(quote(of:)), groupID: ChatPhotos.support, mine: mine,
-          first: first, waiting: false, nameOf: { _ in "" }))
+          first: first, waiting: false, nameOf: { _ in "" },
+          // As it is drawn in the chat, opened at 続きを読む or not.
+          unfolded: unfolded.contains(line.id)))
       // A link held has its own menu, without the reactions.
       if let link {
         openActions(
