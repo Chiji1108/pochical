@@ -39,7 +39,7 @@ import { uploadMilliseconds } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
 import { Composer, useComposer } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
-import { ChatContext, MessageLine } from "./design-chat-line";
+import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
 import {
   ChatListRow,
@@ -387,6 +387,13 @@ export function ChatPage({
     onMember,
     onOpenDay,
     people,
+    // Not a blocked member's, nor one of yours still going up.
+    photos: photosOf(
+      chat.messages,
+      writerOf,
+      (message) =>
+        !blocked.includes(message.from) && uploads[message.id] === undefined
+    ),
     writerOf,
   };
   return (

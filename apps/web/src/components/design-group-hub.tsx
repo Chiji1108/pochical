@@ -38,13 +38,8 @@ import { DayRow, DayRowsTable } from "./design-group-shifts-days";
 import { MemberTable } from "./design-group-shifts-weeks";
 import { List, ListRow } from "./design-list";
 import { IconMenu, MenuItem, MenuSeparator } from "./design-menu";
-import {
-  ConfirmDialog,
-  PhotoViewer,
-  Sheet,
-  SheetHeading,
-  sheetBody,
-} from "./design-sheet";
+import { PhotoViewer } from "./design-photo-viewer";
+import { ConfirmDialog, Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { ToastContext } from "./design-toast";
 import {
   BarGroup,
@@ -687,10 +682,9 @@ export function MemberSheet({
       )}
       {member?.photo && (
         <PhotoViewer
-          label={`${member.name}の写真`}
           onOpenChange={setViewing}
           open={viewing}
-          photo={member.photo}
+          photos={[{ label: `${member.name}の写真`, src: member.photo }]}
         />
       )}
     </Sheet>

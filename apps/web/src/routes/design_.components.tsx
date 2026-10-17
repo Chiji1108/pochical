@@ -71,6 +71,7 @@ import {
 } from "../components/design-page";
 import { Pager } from "../components/design-pager";
 import { Phone } from "../components/design-phone";
+import { PhotoViewer } from "../components/design-photo-viewer";
 import {
   DesignProviders,
   useDesignTheme,
@@ -80,7 +81,6 @@ import {
   ConfirmDialog,
   DecideHeading,
   PhoneContext,
-  PhotoViewer,
   Sheet,
   SheetHeading,
   SheetPicture,
@@ -1281,14 +1281,13 @@ function OverlaySample() {
           />
         )}
         <PhotoViewer
-          label="勤務表の写真"
           onOpenChange={(next) => {
             if (!next) {
               close();
             }
           }}
           open={open === "photo"}
-          photo={photo.src}
+          photos={[{ label: "勤務表の写真", src: photo.src }]}
           whole
         />
       </PhoneContext>

@@ -126,11 +126,26 @@ struct ChatPhotoImage: View {
   /// The longer side, in pixels, the photo is decoded at to fill the size
   /// it shows; nil opened large.
   private var pixels: Int? {
-    guard let shown, photo.width > 0, photo.height > 0 else { return nil }
+    shown.flatMap { Self.pixels(of: photo, shown: $0, scale: displayScale) }
+  }
+
+  /// The longer side, in pixels, `photo` is decoded at to fill `shown`.
+  static func pixels(of photo: LinePhoto, shown: CGSize, scale: CGFloat) -> Int? {
+    guard photo.width > 0, photo.height > 0 else { return nil }
     let width = CGFloat(photo.width)
     let height = CGFloat(photo.height)
-    let scale = min(max(shown.width / width, shown.height / height) * displayScale, 1)
+    let scale = min(max(shown.width / width, shown.height / height) * scale, 1)
     return Int((max(width, height) * scale).rounded(.up))
+  }
+
+  /// What the chat drew of `photo` and holds still, shown at once as it
+  /// opens large while the photo itself comes: the thumbnail, else its
+  /// blur.
+  static func held(_ photo: LinePhoto, scale: CGFloat) -> UIImage? {
+    let thumbnail = pixels(of: photo, shown: PhotoBox.size(of: photo), scale: scale).flatMap {
+      Thumbnails.kept(photo.id, pixels: $0)
+    }
+    return thumbnail ?? Blurs.of(photo)
   }
 }
 
@@ -222,6 +237,8 @@ struct PhotoLine: View {
   let photo: LinePhoto
   let groupID: String
   let waiting: Bool
+  /// It is open large from here.
+  @State private var open = false
 
   var body: some View {
     let size = PhotoBox.size(of: photo)
@@ -243,106 +260,17 @@ struct PhotoLine: View {
           .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
         }
       }
+      // Its place left empty while it is open large from here, as Photos
+      // leaves a photo's place, and where it opens from and closes to.
+      .opacity(open ? 0 : 1)
+      .background(PhotoSpot(id: photo.id))
+      .onAppear { open = PhotoSpots.shared.open == photo.id }
+      .onReceive(NotificationCenter.default.publisher(for: PhotoSpots.opened)) { _ in
+        open = PhotoSpots.shared.open == photo.id
+      }
       .accessibilityElement()
       .accessibilityLabel(waiting ? "送信中の写真" : "写真")
       .accessibilityAddTraits(.isImage)
-  }
-}
-
-/// A photo opened large (/design's PhotoViewer): whole on black, × to
-/// close, pulled down to close too, and 保存 for a chat's, which says here
-/// whether it was saved, as the screen under it is covered.
-struct PhotoViewer: View {
-  @Environment(\.dismiss) private var dismiss
-  let photo: LinePhoto
-  let groupID: String
-  /// Saves it, true once saved; none for someone's face, which is theirs
-  /// to keep.
-  var onSave: (() async -> Bool)?
-  @State private var pull: CGFloat = 0
-  @State private var notice: String?
-  /// Saves and copies done, each felt as it is (spec/haptics.md).
-  @State private var done = 0
-
-  /// How far a pull down closes it.
-  private static var closeAt: CGFloat { 120 }
-
-  var body: some View {
-    ZStack {
-      Color.black
-        .opacity(1 - min(pull / 400, 0.6))
-        .ignoresSafeArea()
-      ChatPhotoImage(photo: photo, groupID: groupID, fit: true)
-        .offset(y: pull)
-        .accessibilityLabel("写真")
-    }
-    .overlay(alignment: .topTrailing) {
-      // The system's glass buttons, which take a tap as buttons do.
-      Button("閉じる", systemImage: "xmark") { dismiss() }
-        .labelStyle(.iconOnly)
-        .font(.title3.weight(.semibold))
-        .foregroundStyle(.white)
-        .buttonStyle(.glass)
-        .controlSize(.large)
-        .buttonBorderShape(.circle)
-        .padding(16)
-    }
-    .overlay(alignment: .bottomTrailing) {
-      if let onSave {
-        Button("保存", systemImage: "square.and.arrow.down") {
-          Task {
-            if await onSave() {
-              sayDone("写真を保存しました")
-            } else {
-              say("保存できませんでした")
-            }
-          }
-        }
-          .labelStyle(.iconOnly)
-          .font(.title3.weight(.semibold))
-          .foregroundStyle(.white)
-          .buttonStyle(.glass)
-          .controlSize(.large)
-          .buttonBorderShape(.circle)
-          .padding(16)
-      }
-    }
-    .sensoryFeedback(.success, trigger: done)
-    .overlay(alignment: .top) {
-      if let notice {
-        NoticeCapsule(words: notice)
-          .transition(.opacity.combined(with: .move(edge: .top)))
-      }
-    }
-    .gesture(
-      DragGesture()
-        .onChanged { pull = max($0.translation.height, 0) }
-        .onEnded { _ in
-          if pull > Self.closeAt {
-            dismiss()
-          } else {
-            withAnimation(.spring(duration: 0.3)) { pull = 0 }
-          }
-        }
-    )
-    .preferredColorScheme(.dark)
-  }
-
-  /// Says a save or a copy is done, felt as well as said: what it made
-  /// happens out of sight, in Photos or on the clipboard.
-  private func sayDone(_ words: String) {
-    done += 1
-    say(words)
-  }
-
-  private func say(_ words: String) {
-    withAnimation { notice = words }
-    Task { @MainActor in
-      try? await Task.sleep(for: .seconds(2.5))
-      if notice == words {
-        withAnimation { notice = nil }
-      }
-    }
   }
 }
 

@@ -29,7 +29,8 @@ import {
   toneColor,
 } from "./design-group-parts";
 import { shortMonthOf } from "./design-month-name";
-import { PhotoViewer } from "./design-sheet";
+import { PhotoViewer } from "./design-photo-viewer";
+import type { ViewerPhoto } from "./design-photo-viewer";
 import { srOnly } from "./design-ui";
 import { useWeek } from "./design-week";
 
@@ -246,15 +247,61 @@ export function InviteCard({
   );
 }
 
+// One of a chat's photos, swiped through opened large.
+export type ChatPhoto = { photo: Photo; label: string; mine: boolean };
+
+// A chat's photo opened large: your own, or one come before, shows at
+// once; someone else's still coming shows its blur until it comes.
+function viewerPhotoOf({ photo, label, mine }: ChatPhoto): ViewerPhoto {
+  const blur =
+    photo.thumbHash === undefined
+      ? undefined
+      : { aspect: photo.width / photo.height, src: blurOf(photo.thumbHash) };
+  const here = mine || arrivedPhotos.has(photo.src) || blur === undefined;
+  return {
+    blur,
+    coming: here
+      ? undefined
+      : {
+          after: comingMilliseconds,
+          onCome: () => {
+            arrivedPhotos.add(photo.src);
+          },
+        },
+    label,
+    src: photo.src,
+  };
+}
+
+// Hands a photo to the system's share sheet, where the browser has one;
+// let go of, or not shared, nothing is said.
+async function sharePhoto({ src, label }: ViewerPhoto) {
+  try {
+    const response = await fetch(src);
+    const blob = await response.blob();
+    const file = new File([blob], "photo.jpg", { type: blob.type });
+    if (navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: label });
+    }
+  } catch {
+    // Let go of, or not shared.
+  }
+}
+
+// None but its own, outside a chat.
+const noPhotos: ChatPhoto[] = [];
+
 // How far in from a reply's bubble its photo sits (chatStyle.photoInBubble).
 const photoInset = 4;
 
 // A photo in a chat, as the messaging apps show one: in its own shape
 // with no bubble, unless it answers a line, when the quote's bubble holds
-// it. A tap opens it large, with 保存; its reactions and menu (with 保存
-// too) open from a long press, as on a photo in LINE.
+// it. A tap opens it large, with 保存 and 共有, swiped through the chat's
+// photos; its reactions and menu (with 保存 too) open from a long press,
+// as on a photo in LINE.
 export function PhotoLine({
   photo,
+  among = noPhotos,
   mine,
   label,
   quote,
@@ -263,6 +310,8 @@ export function PhotoLine({
   upload,
 }: {
   photo: Photo;
+  // The chat's photos in the order of its lines, this one among them.
+  among?: ChatPhoto[];
   mine: boolean;
   // Still going up, or not sent; neither takes reactions yet.
   upload?: Upload;
@@ -300,6 +349,9 @@ export function PhotoLine({
   }, [here, photo.src]);
   const size = photoSize(photo);
   const quoted = quote !== undefined;
+  const listed = among.some((entry) => entry.photo.src === photo.src)
+    ? among
+    : [{ label, mine, photo }];
   const open = (
     <button
       aria-label={`${label}。押すと大きく表示、長押しでリアクションと返信`}
@@ -407,17 +459,17 @@ export function PhotoLine({
         </span>
       )}
       <PhotoViewer
-        blur={
-          blur === undefined
-            ? undefined
-            : { aspect: photo.width / photo.height, src: blur }
-        }
-        label={label}
         onOpenChange={setViewing}
         onSave={onSave}
+        onShare={(shown) => {
+          sharePhoto(shown).catch(() => undefined);
+        }}
         open={viewing}
-        // Without a blur to wait on, it shows as it comes.
-        photo={here || blur === undefined ? photo.src : undefined}
+        photos={listed.map(viewerPhotoOf)}
+        start={Math.max(
+          listed.findIndex((entry) => entry.photo.src === photo.src),
+          0
+        )}
         whole
       />
     </>

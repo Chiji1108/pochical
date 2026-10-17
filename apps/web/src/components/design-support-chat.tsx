@@ -17,7 +17,7 @@ import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
 import { Composer, useComposer } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
-import { ChatContext, MessageLine } from "./design-chat-line";
+import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
 import { ChatListRow, chatGaps } from "./design-chat-parts";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
@@ -230,6 +230,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
     // No days are shared here.
     onOpenDay: () => undefined,
     people: members,
+    photos: photosOf(lines, writerOf, () => true),
     writerOf,
   };
   // Opens on the latest line and follows each one sent; with none yet,

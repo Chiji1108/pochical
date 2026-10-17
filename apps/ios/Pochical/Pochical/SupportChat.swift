@@ -116,8 +116,8 @@ struct SupportChatScreen: View {
   @State private var unfolded: Set<String> = []
   /// The line a tapped quote goes to.
   @State private var going: String?
-  /// The photo open large.
-  @State private var viewing: LinePhoto?
+  /// The photos open large.
+  @State private var viewing: PhotoViewing?
   /// Said over the lines for a moment, as a toast.
   @State private var notice: String?
   /// Saves and copies done, each felt as it is (spec/haptics.md).
@@ -240,10 +240,8 @@ struct SupportChatScreen: View {
     .sheet(item: $reactingTo) { line in
       EmojiKeyboardSheet(title: "リアクション") { react($0, on: line) }
     }
-    .fullScreenCover(item: $viewing) { photo in
-      PhotoViewer(photo: photo, groupID: ChatPhotos.support) {
-        await savePhoto(photo, in: ChatPhotos.support, calls: groupCalls)
-      }
+    .photoViewer($viewing, groupID: ChatPhotos.support) { photo in
+      await savePhoto(photo, in: ChatPhotos.support, calls: groupCalls)
     }
     .sensoryFeedback(.success, trigger: done)
     .overlay(alignment: .top) {
@@ -313,7 +311,9 @@ struct SupportChatScreen: View {
           bubble(line, first: first)
             // A photo opens large at a tap.
             .heldForActions(lifted: acting == line.id) {
-              if let photo = line.photo { viewing = photo }
+              if let photo = line.photo {
+                viewing = PhotoViewing(photo, among: lines.filter { !$0.unsent }.compactMap(\.photo))
+              }
             } onActions: { spot, finger, link in
               // A link held has its own menu, without the reactions.
               if let link {
