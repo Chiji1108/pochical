@@ -1,12 +1,17 @@
-import type { Message } from "../components/design-group-data";
+import type { ChatDraft, Message } from "../components/design-group-data";
 
 // A person's chat with the people who make Pochical (design-support-chat),
 // kept with their account like their own data: the lines, and how many of
 // the answers they have not read yet, which mark the way into it and the
 // settings tab. Its lines are a chat's messages, written by you ("me") or
-// Pochical's people ("support").
+// Pochical's people ("support"); and what is being written, kept as the
+// chat is left, as a group chat keeps it (spec/chat.md, Drafts).
 
-export type SupportThread = { lines: Message[]; unread: number };
+export type SupportThread = {
+  lines: Message[];
+  unread: number;
+  draft?: ChatDraft;
+};
 
 export type SupportSample = "none" | "answered";
 

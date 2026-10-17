@@ -1125,3 +1125,28 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
     #expect(try readNotified(shown, ReadState(me: "me", in: db)).sorted() == ["a", "c"])
   }
 }
+
+@Test func theDraftToPochicalsPeopleIsKeptAsAGroupChatsIs() throws {
+  let database = try appDatabase()
+  let asked = SupportLine(id: "s1", fromSupport: true, text: "どの画面ですか？", sentAt: .now)
+  let takenBack = SupportLine(id: "s1", fromSupport: true, text: "", sentAt: .now, unsent: true)
+  try database.write { db in
+    // Before the lines come, the reply is kept as it is.
+    try SupportDraft.keep(
+      SupportDraft(text: "設定です", replyTo: "s1"), lines: nil, now: 1, db: db)
+    #expect(try SupportDraft.held(db: db) == SupportDraft(text: "設定です", replyTo: "s1", savedAtMs: 1))
+    #expect(try SupportDraft.held(db: db)?.kept(lines: [asked])?.replyTo == "s1")
+
+    // The line answered taken back since: the words stay, alone.
+    #expect(
+      try SupportDraft.held(db: db)?.kept(lines: [takenBack])
+        == SupportDraft(text: "設定です", savedAtMs: 1))
+    try SupportDraft.keep(
+      SupportDraft(text: "設定です", replyTo: "s1"), lines: [takenBack], now: 2, db: db)
+    #expect(try SupportDraft.held(db: db)?.replyTo == nil)
+
+    // A quote alone is no draft.
+    try SupportDraft.keep(SupportDraft(text: " ", replyTo: "s1"), lines: [asked], now: 3, db: db)
+    #expect(try SupportDraft.held(db: db) == nil)
+  }
+}
