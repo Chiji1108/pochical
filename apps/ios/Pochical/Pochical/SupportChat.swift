@@ -366,8 +366,7 @@ struct SupportChatScreen: View {
     let content = LineContent(
       text: line.text, preview: line.preview, days: [], members: [], photo: line.photo,
       quote: line.replyTo.map(quote(of:)), groupID: ChatPhotos.support, mine: true,
-      first: false, waiting: !line.failed, nameOf: { _ in "" },
-      onStopSending: line.photo.map { photo in { stopSending(line.id, photo: photo) } })
+      first: false, waiting: !line.failed, nameOf: { _ in "" })
     // A clock in the time's room, as the group chats', so the bubble stays
     // as wide once sent.
     let time = Text(ChatTime.clock(Int64(Date.now.timeIntervalSince1970 * 1000)))
@@ -606,8 +605,6 @@ struct SupportChatScreen: View {
     let before = sending
     sending = Task {
       await before?.value
-      // Stopped with × while it waited its turn.
-      guard waiting.first(where: { $0.id == line.id })?.failed == false else { return }
       do {
         if let photo = line.photo {
           try await groupCalls.uploadSupportPhoto(photo.id)
@@ -618,21 +615,12 @@ struct SupportChatScreen: View {
         waiting.removeAll { $0.id == line.id }
         lines.append(kept)
       } catch {
-        if let index = waiting.firstIndex(where: { $0.id == line.id }), !waiting[index].failed {
-          ReviewPrompt.troubled = true
+        ReviewPrompt.troubled = true
+        if let index = waiting.firstIndex(where: { $0.id == line.id }) {
           waiting[index].failed = true
         }
       }
     }
-  }
-
-  /// Stops a line's photo going up, as the group chats' × does: the line
-  /// is not sent, to send again or delete.
-  private func stopSending(_ id: String, photo: LinePhoto) {
-    if let index = waiting.firstIndex(where: { $0.id == id }) {
-      waiting[index].failed = true
-    }
-    PhotoUploads.shared.stop(photo.id)
   }
 
   /// The day a line was sent, for the day over its first line.
