@@ -429,7 +429,12 @@ struct ChatScreen: View {
         }
       }
     } message: {
-      Text("メンバー全員のチャットから消えます。")
+      // A line still on its way is not in anyone's chat yet.
+      if case .waiting = unsending {
+        Text("まだ送られていないメッセージです。")
+      } else {
+        Text("メンバー全員のチャットから消えます。")
+      }
     }
     .handles(lineActions) { act($0.action, on: $0.lineID) }
   }
