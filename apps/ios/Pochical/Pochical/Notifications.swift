@@ -158,7 +158,13 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     send.text = words
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     // The app may be woken for it after letting go of the database's
-    // locks; it lets go again once sent (Replies).
+    // locks, or be letting go of them as it is: it holds them until sent,
+    // or until the time iOS gives runs out.
+    let time = BackgroundTime()
+    time.begin {
+      time.end()
+      Task { await replies.sockets.stop() }
+    }
     NotificationCenter.default.post(name: Database.resumeNotification, object: nil)
     let edits: [Pochical_V1_ChatEdit.OneOf_Kind] = [.read(read), .send(send)]
     let groupID = line.groupID
@@ -169,6 +175,7 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     }
     await withdraw(in: line.groupID, line.threadID, readTo: line.seq)
     await replies.send(line.groupID)
+    time.end()
   }
 
   /// Takes back the notifications shown of a chat's lines read up to
@@ -252,21 +259,14 @@ struct Replies {
   let database: any DatabaseWriter
   let sockets: GroupSockets
 
-  /// Sends what waits in the group's outbox: on the group's socket, which
-  /// closes once it is sent, and, in the background, within the time iOS
-  /// gives, the shared database letting go of its locks after.
+  /// Sends what waits in the group's outbox on the group's socket, which
+  /// closes once it is sent; in the background, waits until it is.
   func send(_ groupID: String) async {
     let background = UIApplication.shared.applicationState == .background
-    let time = BackgroundTime()
-    time.begin {
-      time.end()
-      Task { await sockets.stop() }
-    }
     let (_, hold) = await sockets.open(groupID, account: account, database: database)
     await sockets.close(hold, of: groupID)
     if background {
       await sockets.finishSending()
     }
-    time.end()
   }
 }

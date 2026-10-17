@@ -110,6 +110,7 @@
 		C6C3AE0C30750000000C5B81 /* Exceptions for "Pochical" folder in "PochicalNotificationsExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Localizable.strings,
 				ThemeEnvironment.swift,
 			);
 			target = C6C3AE0E30750000000C5B81 /* PochicalNotificationsExtension */;

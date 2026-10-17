@@ -89,14 +89,19 @@ struct PochicalApp: App {
   }
 }
 
-/// The time iOS gives the app in the background to send what waits. As it
-/// ends, the shared database lets go of its locks, unless the app came
-/// back meanwhile.
+/// The time iOS gives the app in the background to send what waits. As
+/// the last such time ends, the shared database lets go of its locks,
+/// unless the app came back meanwhile: an answer sent from a notification
+/// may still be sending as the app's own going to the background ends.
 @MainActor final class BackgroundTime {
+  /// Those begun and not yet ended.
+  private static var running = 0
   private var id = UIBackgroundTaskIdentifier.invalid
-  private var ended = false
+  private var ended = true
 
   func begin(expired: @escaping @MainActor () -> Void) {
+    ended = false
+    Self.running += 1
     id = UIApplication.shared.beginBackgroundTask(withName: "送信", expirationHandler: expired)
   }
 
@@ -104,7 +109,8 @@ struct PochicalApp: App {
   func end() {
     guard !ended else { return }
     ended = true
-    if UIApplication.shared.applicationState == .background {
+    Self.running -= 1
+    if Self.running == 0, UIApplication.shared.applicationState == .background {
       NotificationCenter.default.post(name: Database.suspendNotification, object: nil)
     }
     if id != .invalid {
