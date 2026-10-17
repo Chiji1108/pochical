@@ -211,6 +211,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private var settings: ChatLinesView?
   private var ids: [String] = []
   private var linesLook: LinesLook?
+  /// Motion is reduced: the lines are put where they go, never glided.
+  private var reduceMotion = false
   /// The lines have been put where the chat opens, or moved since.
   private var placed = false
   /// Gliding to the latest, put back on its foot once there.
@@ -347,6 +349,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let look = LinesLook(environment)
     let restyled = linesLook.map { $0 != look } ?? false
     linesLook = look
+    reduceMotion = environment.accessibilityReduceMotion
     let changed = setLines(
       settings.holds ? keeping(settings.rows) : settings.rows, restyled: restyled,
       reduceMotion: environment.accessibilityReduceMotion)
@@ -544,7 +547,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     going = nil
     lines.layoutIfNeeded()
     let target = highest
-    guard animated, abs(target - lines.contentOffset.y) > 1 else {
+    guard animated, !reduceMotion, abs(target - lines.contentOffset.y) > 1 else {
       goingDown = false
       layout.restoreContentOffset(with: foot)
       seePlace()
@@ -567,7 +570,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     guard let frame = layout.layoutAttributesForItem(at: path)?.frame else { return }
     let target = min(highest, max(lowest, frame.minY - spot(of: frame, at: place)
       - lines.adjustedContentInset.top - layout.settings.additionalInsets.top))
-    guard animated, abs(target - lines.contentOffset.y) > 1 else {
+    guard animated, !reduceMotion, abs(target - lines.contentOffset.y) > 1 else {
       settle(on: id, at: place)
       return
     }
