@@ -89,7 +89,7 @@ struct PollCard: View {
     .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
     .overlay(
       RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(colors.borderDefault, lineWidth: 1))
-    .opacity(waiting ? 0.6 : 1)
+    .dimmedWhileWaiting(waiting, in: RoundedRectangle(cornerRadius: Radius.lg))
   }
 
   private func row(_ day: Day) -> some View {
