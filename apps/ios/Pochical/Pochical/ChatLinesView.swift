@@ -237,6 +237,10 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private var going: Going?
   /// An item to show once it is laid out, not yet when asked.
   private var waitingToShow: Going?
+  /// The item the lines were last put on, kept there as the room they
+  /// are seen in settles while the chat opens, before the lines show; once
+  /// shown, the room changing (the keyboard) keeps their foot instead.
+  private var shownOn: (id: String, place: LinePlace)?
   /// The items coming in at the foot in the update being put in, which
   /// rise into place from under the lines' foot as the lines slide up.
   private var risingIn: Set<String> = []
@@ -542,7 +546,9 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       lines.verticalScrollIndicatorInsets.top = top
     }
     guard let room, room.height != lines.bounds.height else { return }
-    if let kept = room.kept, !userScrolling {
+    if let shownOn, settings?.shown == false, !userScrolling {
+      put(on: shownOn.id, at: shownOn.place)
+    } else if let kept = room.kept, !userScrolling {
       layout.restoreContentOffset(with: kept)
     }
     seePlace()
@@ -570,6 +576,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   func toLatest(animated: Bool = false) {
     guard let foot = footSnapshot(), lines.bounds.height > 0 else { return }
     placed = true
+    shownOn = nil
     stopGoing()
     lines.layoutIfNeeded()
     let target = highest
@@ -657,14 +664,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// Puts the item `id` at its place exactly: once at the heights known,
   /// again once the lines come to it are measured.
   private func settle(on id: String, at place: LinePlace) {
-    for _ in 0..<2 {
-      guard let index = ids.firstIndex(of: id) else { return }
-      let path = IndexPath(item: index, section: 0)
-      guard let frame = layout.layoutAttributesForItem(at: path)?.frame else { return }
-      layout.restoreContentOffset(
-        with: ChatLayoutPositionSnapshot(
-          indexPath: path, edge: .top, offset: spot(of: frame, at: place)))
-    }
+    put(on: id, at: place)
+    shownOn = (id, place)
     seePlace()
     // VoiceOver reads on from the item gone to.
     if UIAccessibility.isVoiceOverRunning, let index = ids.firstIndex(of: id) {
@@ -672,6 +673,18 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       UIAccessibility.post(
         notification: .layoutChanged,
         argument: lines.cellForItem(at: IndexPath(item: index, section: 0)))
+    }
+  }
+
+  /// The lines moved to put the item `id` at its place.
+  private func put(on id: String, at place: LinePlace) {
+    for _ in 0..<2 {
+      guard let index = ids.firstIndex(of: id) else { return }
+      let path = IndexPath(item: index, section: 0)
+      guard let frame = layout.layoutAttributesForItem(at: path)?.frame else { return }
+      layout.restoreContentOffset(
+        with: ChatLayoutPositionSnapshot(
+          indexPath: path, edge: .top, offset: spot(of: frame, at: place)))
     }
   }
 
@@ -748,6 +761,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     // again where their scroll comes to rest at the foot.
     following = false
     goingDown = false
+    shownOn = nil
     stopGoing()
     dropWaiting()
     scroll.scrolling = true
