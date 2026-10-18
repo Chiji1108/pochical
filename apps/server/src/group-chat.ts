@@ -1350,10 +1350,11 @@ const ALERT_TEXT_MAX = 200;
 export const alertOf = (
   line: ChatLine,
   group: { id: string; name: string },
-  nameOf: (id: string) => string
+  nameOf: (id: string) => string,
+  // A chat of two, worded as a one-to-one chat's: titled with the writer.
+  direct = line.threadId !== GROUP_THREAD
 ): Alert => {
   const writer = nameOf(line.authorId);
-  const direct = line.threadId !== GROUP_THREAD;
   let kind = "TEXT";
   if (line.photo !== undefined) {
     kind = "PHOTO";

@@ -67,7 +67,7 @@ struct ChatList: View {
       VStack(spacing: 0) {
         if let meID {
           ChatRow(
-            group: group, threadID: groupThread, me: meID, label: "全体チャット", blocked: blocked
+            placeID: group.id, threadID: groupThread, me: meID, label: "全体チャット", blocked: blocked
           ) {
             Image(systemName: "bubble.left.and.bubble.right")
               .font(.system(size: 13, weight: .semibold))
@@ -80,7 +80,7 @@ struct ChatList: View {
           ForEach(talking, id: \.userID) { member in
             separator
             ChatRow(
-              group: group, threadID: directThread(meID, member.userID), me: meID,
+              placeID: group.id, threadID: directThread(meID, member.userID), me: meID,
               label: member.shownName
             ) {
               MemberAvatar(
@@ -145,14 +145,16 @@ struct ChatList: View {
   }
 }
 
-/// A chat in the hub's list (/design's ChatRow): its mark, name and latest
-/// line, its time, and how many lines count as unread.
-private struct ChatRow<Icon: View>: View {
+/// A chat in the hub's list (/design's ChatRow), and the chat with
+/// Pochical's people on 設定's: its mark, name and latest line, its time,
+/// and how many lines count as unread.
+struct ChatRow<Icon: View>: View {
   @Environment(\.themeColors) private var colors
   @Fetch private var chat = ChatSummaryRequest.Value()
   /// Whether the chat's notifications are off, marked after its name.
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
-  let group: GroupRow
+  /// The chat's place, by the id the device keeps its chats by.
+  let placeID: String
   let threadID: String
   let me: String
   let label: String
@@ -164,10 +166,10 @@ private struct ChatRow<Icon: View>: View {
   /// The chat read as the row is made, so its latest line is there on the
   /// first frame rather than まだメッセージはありません for a moment.
   init(
-    group: GroupRow, threadID: String, me: String, label: String, blocked: Set<String> = [],
+    placeID: String, threadID: String, me: String, label: String, blocked: Set<String> = [],
     @ViewBuilder icon: @escaping () -> Icon, onOpen: @escaping () -> Void
   ) {
-    self.group = group
+    self.placeID = placeID
     self.threadID = threadID
     self.me = me
     self.label = label
@@ -176,7 +178,7 @@ private struct ChatRow<Icon: View>: View {
     self.onOpen = onOpen
     _chat = Fetch(
       wrappedValue: ChatSummaryRequest.Value(),
-      ChatSummaryRequest(groupID: group.id, threadID: threadID, me: me))
+      ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me))
   }
 
   var body: some View {
@@ -191,7 +193,7 @@ private struct ChatRow<Icon: View>: View {
               .font(.body)
               .foregroundStyle(colors.textPrimary)
               .lineLimit(1)
-            if notifications.isMuted(threadID, in: group.id) {
+            if notifications.isMuted(threadID, in: placeID) {
               Image(systemName: "bell.slash")
                 .font(.system(size: 12))
                 .foregroundStyle(colors.textTertiary)
@@ -235,8 +237,8 @@ private struct ChatRow<Icon: View>: View {
       .contentShape(.rect)
     }
     .buttonStyle(.plain)
-    .task(id: ChatSummaryRequest(groupID: group.id, threadID: threadID, me: me)) {
-      _ = try? await $chat.load(ChatSummaryRequest(groupID: group.id, threadID: threadID, me: me))
+    .task(id: ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me)) {
+      _ = try? await $chat.load(ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me))
     }
   }
 

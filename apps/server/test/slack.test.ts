@@ -1,14 +1,12 @@
+import { chatRules } from "@pochical/design/chat";
+import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  fromSlackText,
-  signedBySlack,
-  tellStaffOfReaction,
-  toSlackText,
-} from "../src/slack";
-import { keepReactionNotice, lineWhere, reactTo } from "../src/support-chat";
-import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
+import { supportPlace } from "../src/group-chat";
+import { fromSlackText, signedBySlack, toSlackText } from "../src/slack";
+import { ORIGIN, signInAnonymously } from "./helpers";
+import { relayed, supportChat } from "./sync-helpers";
 
 const SECRET = "slack-signing-secret";
 
@@ -110,14 +108,54 @@ const threadOf = async (userId: string): Promise<string | null> =>
     .bind(userId)
     .first<string>("slack_thread_ts");
 
-const answersTo = async (userId: string): Promise<string[]> => {
-  const { results } = await env.DB.prepare(
-    "select text from support_messages where user_id = ? and from_support = 1 order by created_at"
-  )
-    .bind(userId)
-    .all<{ text: string }>();
-  return results.map((row) => row.text);
+type Kept = {
+  seq: number;
+  author_id: string;
+  text: string;
+  unsent: number;
+  photo: string | null;
 };
+
+/** The chat's lines as its Group DO keeps them. */
+const linesOf = async (userId: string): Promise<Kept[]> =>
+  await runInDurableObject(
+    env.GROUPS.getByName(supportPlace(userId)),
+    (_, state) =>
+      state.storage.sql
+        .exec<Kept>(
+          "select seq, author_id, text, unsent, photo from chat_lines order by seq"
+        )
+        .toArray()
+  );
+
+/** Pochical's people's lines' words, oldest first. */
+const answersTo = async (userId: string): Promise<string[]> => {
+  const lines = await linesOf(userId);
+  return lines
+    .filter((line) => line.author_id === chatRules.pochicalMember)
+    .map((line) => line.text);
+};
+
+/** Who reacted with what on the line at `seq`. */
+const reactionsOn = async (userId: string, seq: number) =>
+  await runInDurableObject(
+    env.GROUPS.getByName(supportPlace(userId)),
+    (_, state) =>
+      state.storage.sql
+        .exec<{ user_id: string; emoji: string }>(
+          "select user_id, emoji from chat_reactions where seq = ? order by made_cursor",
+          seq
+        )
+        .toArray()
+  );
+
+/** The Slack message kept for the line at `seq`, if any. */
+const slackTsOf = async (userId: string, seq: number) =>
+  await env.DB.prepare(
+    "select ts from support_slack where user_id = ? and seq = ?"
+  )
+    .bind(userId, seq)
+    .first<string>("ts");
 
 describe("Slack's words", () => {
   it("go to Slack as written, never a mention or a link", () => {
@@ -204,16 +242,9 @@ describe("a request from Slack", () => {
 /** A user who wrote once, and their chat's thread in Slack. */
 const startedChat = async () => {
   const token = await signInAnonymously();
-  const userId = await userIdOf(token);
-  await call(
-    "SupportService/SendSupportMessage",
-    { id: crypto.randomUUID(), text: "質問です" },
-    token
-  );
-  await vi.waitFor(async () => {
-    await expect(threadOf(userId)).resolves.not.toBeNull();
-  });
-  return { thread: await threadOf(userId), token, userId };
+  const chat = await supportChat(token);
+  await chat.say("質問です", "ポチカル 1.0・iPhone");
+  return { ...chat, thread: await threadOf(chat.userId), token };
 };
 
 /** An image file in a Slack message, with its 1024 pixel picture. */
@@ -246,42 +277,25 @@ describe("a support chat in Slack", () => {
   it("is a thread of the user's lines, a reply in it sent to the user once", async () => {
     const calls = slackCalls();
     const token = await signInAnonymously();
-    const userId = await userIdOf(token);
-    const send = async (text: string) =>
-      await call(
-        "SupportService/SendSupportMessage",
-        { device: "ポチカル 1.0・iPhone", id: crypto.randomUUID(), text },
-        token
-      );
-    await send("色を変えたい");
-    await vi.waitFor(async () => {
-      await expect(threadOf(userId)).resolves.not.toBeNull();
-    });
+    const { say, userId } = await supportChat(token);
+    await say("色を変えたい", "ポチカル 1.0・iPhone");
     const thread = await threadOf(userId);
-    await send("あと<!channel>");
-    await vi.waitFor(() => {
-      expect(calls).toHaveLength(2);
-    });
+    await say("あと<!channel>");
     expect(
       calls.map(({ args }) => [args.channel, args.thread_ts])
     ).toStrictEqual([
       ["C-SUPPORT", undefined],
       ["C-SUPPORT", thread],
     ]);
-    expect(calls[1]?.args.text).toBe("あと&lt;!channel&gt;");
+    expect([
+      String(calls[0]?.args.text).includes("ポチカル 1.0・iPhone"),
+      calls[1]?.args.text,
+    ]).toStrictEqual([true, "あと&lt;!channel&gt;"]);
 
-    const reply = {
-      event: {
-        channel: "C-SUPPORT",
-        client_msg_id: crypto.randomUUID(),
-        text: "設定から変えられます &amp; 試してね",
-        thread_ts: thread,
-        ts: "1700000100.000001",
-        type: "message",
-        user: "U-STAFF",
-      },
-      type: "event_callback",
-    };
+    const reply = replyIn(thread, {
+      text: "設定から変えられます &amp; 試してね",
+      ts: "1700000100.000001",
+    });
     const taken = await postEvent(reply);
     expect(taken.status).toBe(200);
     await vi.waitFor(() => {
@@ -297,21 +311,16 @@ describe("a support chat in Slack", () => {
     await expect(answersTo(userId)).resolves.toStrictEqual([
       "設定から変えられます & 試してね",
     ]);
+    // An answer written in Slack is not posted there again.
+    await relayed(userId);
+    expect(
+      calls.filter(({ method }) => method === "chat.postMessage")
+    ).toHaveLength(2);
   });
 
   it("takes no reply from a bot, another channel or outside a thread", async () => {
     const calls = slackCalls();
-    const token = await signInAnonymously();
-    const userId = await userIdOf(token);
-    await call(
-      "SupportService/SendSupportMessage",
-      { id: crypto.randomUUID(), text: "質問です" },
-      token
-    );
-    await vi.waitFor(async () => {
-      await expect(threadOf(userId)).resolves.not.toBeNull();
-    });
-    const thread = await threadOf(userId);
+    const { thread, userId } = await startedChat();
     const base = {
       channel: "C-SUPPORT",
       text: "x",
@@ -347,16 +356,9 @@ describe("a support chat in Slack", () => {
   it("sends a reply's images as photos before its words, and says why not to other files", async () => {
     const calls = slackCalls();
     const { thread, userId } = await startedChat();
-    const image = {
-      id: "F1",
-      mimetype: "image/png",
-      thumb_1024: "https://files.slack.com/files-tmb/F1-1024.png",
-      thumb_1024_h: 768,
-      thumb_1024_w: 1024,
-    };
     await postEvent(
       replyIn(thread, {
-        files: [image, { id: "F2", mimetype: "application/pdf" }],
+        files: [slackImage("F1"), { id: "F2", mimetype: "application/pdf" }],
         subtype: "file_share",
         text: "設定画面です",
       })
@@ -368,210 +370,76 @@ describe("a support chat in Slack", () => {
         )
       ).toBeTruthy();
     });
-    const { results } = await env.DB.prepare(
-      "select text, photo_id, photo_width, photo_height from support_messages where user_id = ? and from_support = 1 order by id"
-    )
-      .bind(userId)
-      .all();
-    const kept = await env.PHOTOS.get(`support/${userId}/photos/slack-F1`);
+    const lines = await linesOf(userId);
+    const answers = lines.filter(
+      (line) => line.author_id === chatRules.pochicalMember
+    );
+    const kept = await env.PHOTOS.get(
+      `groups/${supportPlace(userId)}/photos/slack-F1`
+    );
     expect([
-      results,
+      answers.map(({ text, photo }) => [text, photo === null]),
+      JSON.parse(answers[0]?.photo ?? "{}"),
       kept?.httpMetadata?.contentType,
-      calls.some(({ args }) => String(args.text).includes("ファイル")),
-    ]).toStrictEqual([
+    ]).toMatchObject([
       [
-        {
-          photo_height: null,
-          photo_id: null,
-          photo_width: null,
-          text: "設定画面です",
-        },
-        {
-          photo_height: 768,
-          photo_id: "slack-F1",
-          photo_width: 1024,
-          text: "",
-        },
+        ["", false],
+        ["設定画面です", true],
       ],
+      { height: 768, id: "slack-F1", width: 1024 },
       "image/png",
-      true,
-    ]);
-  });
-
-  it("tells the user of a reply's photos and words once, by its words", async () => {
-    const calls = slackCalls();
-    const { thread, token, userId } = await startedChat();
-    await call(
-      "UserService/RegisterPushToken",
-      { sandbox: true, token: "b2".repeat(32) },
-      token
-    );
-    await postEvent(
-      replyIn(thread, {
-        files: [slackImage("F3"), slackImage("F4")],
-        subtype: "file_share",
-        text: "2枚送ります",
-        ts: "1700000200.000003",
-      })
-    );
-    await vi.waitFor(() => {
-      expect(
-        calls.some(({ method }) => method === "reactions.add")
-      ).toBeTruthy();
-    });
-    // Time for a notification that should not come.
-    await scheduler.wait(100);
-    const alerts = calls.filter(({ method }) => method.startsWith("/3/device"));
-    const { results } = await env.DB.prepare(
-      "select count(*) as lines from support_messages where user_id = ? and from_support = 1"
-    )
-      .bind(userId)
-      .all<{ lines: number }>();
-    expect([results[0]?.lines, alerts.length, alerts[0]?.args]).toMatchObject([
-      3,
-      1,
-      { aps: { alert: { "loc-args": ["2枚送ります"] } } },
     ]);
   });
 });
 
-/** A user's line in the chat, by its text. */
-const lineOf = async (userId: string, text: string) =>
-  await env.DB.prepare(
-    "select id, slack_ts, unsent from support_messages where user_id = ? and text = ?"
-  )
-    .bind(userId, text)
-    .first<{ id: string; slack_ts: string | null; unsent: number }>();
-
-const supportReactions = async (id: string): Promise<string[]> => {
-  const { results } = await env.DB.prepare(
-    "select emoji from support_reactions where message_id = ? and from_support = 1"
-  )
-    .bind(id)
-    .all<{ emoji: string }>();
-  return results.map((row) => row.emoji);
-};
+/** The user's reaction on their first line, put on or taken off. */
+const react = (emoji: string, on: boolean) => ({
+  kind: {
+    case: "react" as const,
+    value: { emoji, on, seq: 1n, threadId: "group" },
+  },
+  opId: crypto.randomUUID(),
+});
 
 describe("reactions and lines taken back, in Slack", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("show the user's on their lines' messages", async () => {
+  it("show the user's on their lines' messages, and a line taken back", async () => {
     const calls = slackCalls();
-    const { thread, token, userId } = await startedChat();
-    const line = await lineOf(userId, "質問です");
-    expect(line?.slack_ts).toBe(thread);
-    const id = line?.id ?? "";
-    await call(
-      "SupportService/ReactSupport",
-      { emoji: "👍", id, on: true },
-      token
-    );
-    await call(
-      "SupportService/ReactSupport",
-      { emoji: "🦄", id, on: true },
-      token
-    );
-    await call("SupportService/UnsendSupportMessage", { id }, token);
-    await vi.waitFor(() => {
-      expect(calls.map(({ method }) => method)).toStrictEqual([
-        "chat.postMessage",
-        "reactions.add",
-        "chat.postMessage",
-        "chat.update",
-      ]);
-    });
+    const { edit, thread, userId } = await startedChat();
+    await expect(slackTsOf(userId, 1)).resolves.toBe(thread);
+    await edit([react("👍", true)]);
+    await edit([react("🦄", true)]);
+    await edit([react("🦄", false)]);
+    await edit([
+      {
+        kind: { case: "unsend", value: { seq: 1n, threadId: "group" } },
+        opId: crypto.randomUUID(),
+      },
+    ]);
+    expect(calls.map(({ method }) => method)).toStrictEqual([
+      "chat.postMessage",
+      "reactions.add",
+      "chat.postMessage",
+      "chat.delete",
+      // Taking it back takes its reactions off too.
+      "chat.update",
+      "reactions.remove",
+    ]);
     expect([
       calls[1]?.args.name,
       calls[1]?.args.timestamp,
-      calls[3]?.args.ts,
-      String(calls[3]?.args.text).includes("管理サイトで開く"),
-    ]).toStrictEqual(["+1", thread, thread, true]);
-  });
-
-  it("say an emoji Slack has no name for in the thread, once however often put on and taken off", async () => {
-    const calls = slackCalls();
-    const { token, userId } = await startedChat();
-    const line = await lineOf(userId, "質問です");
-    const id = line?.id ?? "";
-    const react = async (on: boolean) => {
-      await call("SupportService/ReactSupport", { emoji: "🦄", id, on }, token);
-    };
-    const notice = async () => {
-      const row = await env.DB.prepare(
-        "select slack_notice_ts as ts from support_reactions where message_id = ? and from_support = 0"
-      )
-        .bind(id)
-        .first<{ ts: string | null }>();
-      return row?.ts ?? null;
-    };
-    await react(true);
-    await vi.waitFor(async () => {
-      await expect(notice()).resolves.toBeTruthy();
-    });
-    const told = await notice();
-    await react(false);
-    await vi.waitFor(() => {
-      expect(calls).toHaveLength(3);
-    });
-    await react(true);
-    await vi.waitFor(() => {
-      expect(calls).toHaveLength(4);
-    });
-    expect([
-      calls.map(({ method }) => method),
-      calls[2]?.args.ts,
-    ]).toStrictEqual([
-      [
-        "chat.postMessage",
-        "chat.postMessage",
-        "chat.delete",
-        "chat.postMessage",
-      ],
-      told,
-    ]);
-  });
-
-  it("delete a notice of an emoji no longer wanted by the time it is posted", async () => {
-    const calls = slackCalls();
-    const { userId } = await startedChat();
-    const sent = await lineOf(userId, "質問です");
-    const line = await lineWhere(env, { id: sent?.id ?? "" });
-    if (line === undefined) {
-      throw new Error("No line");
-    }
-    // Taken off while its notice was on its way.
-    await tellStaffOfReaction(env, line, "🦄", true);
-    // Put on again and told by another notice already.
-    const told = "1700000999.000001";
-    await reactTo(env, line.id, false, "🦄", true);
-    await keepReactionNotice(env, line.id, "🦄", told);
-    await tellStaffOfReaction(env, line, "🦄", true);
-    const kept = await env.DB.prepare(
-      "select slack_notice_ts as ts from support_reactions where message_id = ? and from_support = 0"
-    )
-      .bind(line.id)
-      .first<{ ts: string | null }>();
-    const after = calls.slice(1);
-    expect([
-      after.map(({ method }) => method),
-      after[1]?.args.ts === told,
-      after[3]?.args.ts === told,
-      kept?.ts,
-    ]).toStrictEqual([
-      ["chat.postMessage", "chat.delete", "chat.postMessage", "chat.delete"],
-      false,
-      false,
-      told,
-    ]);
+      String(calls[2]?.args.text).includes("🦄"),
+      calls[4]?.args.ts,
+      String(calls[4]?.args.text).includes("管理サイトで開く"),
+    ]).toStrictEqual(["+1", thread, true, thread, true]);
   });
 
   it("take Pochical's people's emoji on a user's line, not the app's own", async () => {
     slackCalls();
     const { thread, userId } = await startedChat();
-    const line = await lineOf(userId, "質問です");
-    const id = line?.id ?? "";
     const reactionEvent = (type: string, user: string, name: string) => ({
       authorizations: [{ is_bot: true, user_id: "U-BOT" }],
       event: {
@@ -582,34 +450,49 @@ describe("reactions and lines taken back, in Slack", () => {
       },
       type: "event_callback",
     });
+    const theirs = async () => {
+      const reactions = await reactionsOn(userId, 1);
+      return reactions
+        .filter((each) => each.user_id === chatRules.pochicalMember)
+        .map((each) => each.emoji);
+    };
     await postEvent(reactionEvent("reaction_added", "U-BOT", "+1"));
     await postEvent(reactionEvent("reaction_added", "U-STAFF", "eyes"));
     await postEvent(
       reactionEvent("reaction_added", "U-STAFF", "+1::skin-tone-3")
     );
     await vi.waitFor(async () => {
-      await expect(supportReactions(id)).resolves.toStrictEqual(["👀", "👍🏼"]);
+      await expect(theirs()).resolves.toStrictEqual(["👀", "👍🏼"]);
     });
     await postEvent(reactionEvent("reaction_removed", "U-STAFF", "eyes"));
     await vi.waitFor(async () => {
-      await expect(supportReactions(id)).resolves.toStrictEqual(["👍🏼"]);
+      await expect(theirs()).resolves.toStrictEqual(["👍🏼"]);
     });
   });
 
   it("take back an answer deleted there", async () => {
     slackCalls();
     const { thread, userId } = await startedChat();
-    await postEvent(
-      replyIn(thread, { text: "消す答え", ts: "1700000200.000001" })
-    );
+    const ts = "1700000200.000001";
+    await postEvent(replyIn(thread, { text: "消す答え", ts }));
     await vi.waitFor(async () => {
       await expect(answersTo(userId)).resolves.toStrictEqual(["消す答え"]);
     });
-    const answer = await lineOf(userId, "消す答え");
+    await relayed(userId);
+    // An emoji on an answer stays in Slack.
+    await postEvent({
+      event: {
+        item: { channel: "C-SUPPORT", ts, type: "message" },
+        reaction: "eyes",
+        type: "reaction_added",
+        user: "U-STAFF",
+      },
+      type: "event_callback",
+    });
     await postEvent({
       event: {
         channel: "C-SUPPORT",
-        deleted_ts: answer?.slack_ts,
+        deleted_ts: ts,
         subtype: "message_deleted",
         type: "message",
       },
@@ -618,6 +501,7 @@ describe("reactions and lines taken back, in Slack", () => {
     await vi.waitFor(async () => {
       await expect(answersTo(userId)).resolves.toStrictEqual([""]);
     });
+    await expect(reactionsOn(userId, 2)).resolves.toStrictEqual([]);
   });
 });
 
@@ -629,7 +513,7 @@ describe("a user's photo, in Slack", () => {
   it("is uploaded into their thread, its shared message kept with the line", async () => {
     const calls = slackCalls();
     const token = await signInAnonymously();
-    const userId = await userIdOf(token);
+    const { edit, userId } = await supportChat(token);
     const photoId = crypto.randomUUID();
     const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
     const put = await exports.default.fetch(
@@ -643,20 +527,21 @@ describe("a user's photo, in Slack", () => {
         method: "PUT",
       }
     );
-    const sent = await call(
-      "SupportService/SendSupportMessage",
-      { id: crypto.randomUUID(), photo: { height: 3, id: photoId, width: 4 } },
-      token
-    );
-    expect([put.status, sent.status]).toStrictEqual([204, 200]);
-    await vi.waitFor(async () => {
-      const line = await env.DB.prepare(
-        "select slack_ts from support_messages where user_id = ?"
-      )
-        .bind(userId)
-        .first<string>("slack_ts");
-      expect(line).toBe(SHARED_TS);
-    });
+    expect(put.status).toBe(204);
+    await edit([
+      {
+        kind: {
+          case: "send",
+          value: {
+            photo: { height: 3, id: photoId, width: 4 },
+            text: "",
+            threadId: "group",
+          },
+        },
+        opId: crypto.randomUUID(),
+      },
+    ]);
+    await expect(slackTsOf(userId, 1)).resolves.toBe(SHARED_TS);
     const thread = await threadOf(userId);
     expect(calls.map(({ method }) => method)).toStrictEqual([
       "chat.postMessage",
@@ -665,41 +550,5 @@ describe("a user's photo, in Slack", () => {
       "files.info",
     ]);
     expect(calls[2]?.args.thread_ts).toBe(thread);
-  });
-
-  it("goes only once uploaded, alone, and goes from the bucket when taken back", async () => {
-    slackCalls();
-    const token = await signInAnonymously();
-    const userId = await userIdOf(token);
-    const photoId = crypto.randomUUID();
-    const send = async (more: Record<string, unknown>) => {
-      const response = await call(
-        "SupportService/SendSupportMessage",
-        {
-          id: crypto.randomUUID(),
-          photo: { height: 3, id: photoId, width: 4 },
-          ...more,
-        },
-        token
-      );
-      return response.status;
-    };
-    const early = await send({});
-    await env.PHOTOS.put(`support/${userId}/photos/${photoId}`, "jpeg");
-    const withWords = await send({ text: "これです" });
-    const id = crypto.randomUUID();
-    const kept = await send({ id });
-    const again = await send({ id });
-    const twice = await send({});
-    await call("SupportService/UnsendSupportMessage", { id }, token);
-    const gone = await env.PHOTOS.head(`support/${userId}/photos/${photoId}`);
-    expect([early, withWords, kept, again, twice, gone]).toStrictEqual([
-      400,
-      400,
-      200,
-      200,
-      409,
-      null,
-    ]);
   });
 });

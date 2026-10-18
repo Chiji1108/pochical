@@ -11,7 +11,7 @@ public enum ChatPlace: Hashable, Sendable {
   /// The support chat's place on the device, in the tables a group's
   /// chats are kept in by the group's id: group ids are random, so none is
   /// named so.
-  public static let supportID = "support"
+  public static let supportID = Chat.supportPlace
 
   /// The place's id, as the device keeps its chats by.
   public var id: String {
@@ -23,10 +23,12 @@ public enum ChatPlace: Hashable, Sendable {
 
   /// What the place's chats can do (design/src/chat.ts, chatPlaces).
   public var rules: ChatPlaceRules {
-    switch self {
-    case .group: .group
-    case .support: .support
-    }
+    Self.rules(of: id)
+  }
+
+  /// What the chats of the place the device keeps by `placeID` can do.
+  public static func rules(of placeID: String) -> ChatPlaceRules {
+    placeID == supportID ? .support : .group
   }
 
   /// The group, for what only a group has: its settings, its members'

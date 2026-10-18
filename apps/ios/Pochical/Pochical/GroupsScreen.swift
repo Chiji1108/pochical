@@ -634,7 +634,8 @@ private struct GroupHeading: View {
   }
 }
 
-/// The groups' sockets, one for each group at most: open while a screen
+/// The chats' places' sockets (the groups', and the chat with Pochical's
+/// people's), one for each at most: open while a screen
 /// holds it, then closing once its chat outbox is sent and acknowledged
 /// (spec/sync-protocol.md, Sockets). The app waits for them in the
 /// background as for its own socket, those still held too, so a socket its
@@ -664,7 +665,7 @@ actor GroupSockets {
     let hold = UUID()
     var socket =
       sockets[groupID]
-      ?? Socket(client: SyncClient(account: account, database: database, peer: .group(groupID)))
+      ?? Socket(client: SyncClient(account: account, database: database, peer: .place(groupID)))
     let starting = socket.holds.isEmpty
     socket.holds.insert(hold)
     socket.closing = nil

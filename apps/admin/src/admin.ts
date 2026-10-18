@@ -8,8 +8,10 @@ export const getSupportChats = createServerFn().handler(
 );
 
 export const getSupportChat = createServerFn()
-  .validator((userId: string) => userId)
-  .handler(async ({ data }) => await env.SERVER.supportChat(data));
+  .validator((page: { userId: string; before: number }) => page)
+  .handler(
+    async ({ data }) => await env.SERVER.supportChat(data.userId, data.before)
+  );
 
 export const answerSupport = createServerFn({ method: "POST" })
   .validator((answer: { userId: string; text: string }) => answer)

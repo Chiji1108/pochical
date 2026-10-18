@@ -1,15 +1,27 @@
 import { textLimits } from "@pochical/design/limits";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { answerSupport, getSupportChat, when } from "../admin";
 
-// One user's chat, oldest first, each of their lines with the app and
-// device it came from, the line a reply is to, and the emoji on it; and a
-// form to answer as ポチカル.
+// One user's chat a page at a time, as the app pages it: the latest, and
+// earlier pages by 前のメッセージ, oldest first, each of their lines with
+// the app and device it came from, the line a reply is to, and the emoji
+// on it; and a form to answer as ポチカル.
 export const Route = createFileRoute("/support/$userId")({
   component: SupportChat,
-  loader: async ({ params }) => await getSupportChat({ data: params.userId }),
+  loader: async ({ params, deps }) =>
+    await getSupportChat({
+      data: { before: deps.before, userId: params.userId },
+    }),
+  loaderDeps: ({ search }: { search: { before?: number } }) => ({
+    before: search.before ?? 0,
+  }),
+  // The page before this line, by its seq; none for the latest.
+  validateSearch: (search: Record<string, unknown>): { before?: number } => {
+    const before = Number(search.before);
+    return Number.isInteger(before) && before > 0 ? { before } : {};
+  },
 });
 
 /** The line a reply is to, as its quote shows it. */
@@ -26,8 +38,9 @@ function quoteOf(
 }
 
 function SupportChat() {
-  const lines = Route.useLoaderData();
-  const byId = new Map(lines.map((line) => [line.id, line]));
+  const { lines, quoted, atStart } = Route.useLoaderData();
+  const bySeq = new Map([...quoted, ...lines].map((line) => [line.seq, line]));
+  const earliest = lines[0]?.seq;
   const { userId } = Route.useParams();
   const router = useRouter();
   const [draft, setDraft] = useState("");
@@ -48,18 +61,27 @@ function SupportChat() {
   return (
     <main>
       <h1>サポート・{userId.slice(0, 8)}</h1>
+      {!atStart && earliest !== undefined && (
+        <Link
+          params={{ userId }}
+          search={{ before: earliest }}
+          to="/support/$userId"
+        >
+          前のメッセージ
+        </Link>
+      )}
       {lines.map((line) => (
         <div
           className="line"
-          data-from={line.fromSupport ? "staff" : "user"}
-          key={line.id}
+          data-from={line.fromPochical ? "staff" : "user"}
+          key={line.seq}
         >
           <div className="meta">
-            {line.fromSupport ? "ポチカル" : "ユーザー"}・{when(line.atMs)}
+            {line.fromPochical ? "ポチカル" : "ユーザー"}・{when(line.sentAtMs)}
             {line.device === null ? "" : `・${line.device}`}
           </div>
           {line.replyTo !== null && (
-            <div className="quote">{quoteOf(byId.get(line.replyTo))}</div>
+            <div className="quote">{quoteOf(bySeq.get(line.replyTo))}</div>
           )}
           {line.unsent && <span className="meta">送信が取り消されました</span>}
           {line.photo !== null && (

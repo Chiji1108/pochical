@@ -157,48 +157,29 @@ export const getPhoto = async (
 ): Promise<Response> =>
   await serveChatPhoto(request, env, photoKey(groupId, photoId));
 
-/**
- * Where a photo in a user's chat with Pochical's people is kept: under the
- * user, theirs and Pochical's people's alike, so the user reads only
- * their own.
- */
-export const supportPhotoKey = (userId: string, photoId: string): string =>
-  `support/${userId}/photos/${photoId}`;
-
-/** A photo in the user's support chat: /v1/support/photos/{photoId}. */
-export const SUPPORT_PHOTO_PATH = /^\/v1\/support\/photos\/(?<photoId>[^/]+)$/u;
-
-/** The user's photo to send to Pochical's people, or one in their chat. */
-export const supportPhoto = async (
-  request: Request,
+/** Every object under `prefix` in the photos bucket deleted, page by page. */
+export const deletePhotosUnder = async (
   env: Env,
-  photoId: string,
-  userId: string
-): Promise<Response> => {
-  switch (request.method) {
-    case "PUT": {
-      const bytes = await jpegOf(request, photoId);
-      if (bytes instanceof Response) {
-        return bytes;
-      }
-      const key = supportPhotoKey(userId, photoId);
-      await env.PHOTOS.put(wantsSmall(request) ? smallKey(key) : key, bytes, {
-        httpMetadata: { contentType: "image/jpeg" },
-      });
-      return new Response(null, { status: 204 });
+  prefix: string
+): Promise<void> => {
+  let cursor: string | undefined;
+  do {
+    // oxlint-disable-next-line no-await-in-loop -- each page names the next
+    const page = await env.PHOTOS.list({ cursor, prefix });
+    if (page.objects.length > 0) {
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await env.PHOTOS.delete(page.objects.map(({ key }) => key));
     }
-    case "GET": {
-      return await serveChatPhoto(
-        request,
-        env,
-        supportPhotoKey(userId, photoId)
-      );
-    }
-    default: {
-      return new Response("Method not allowed", { status: 405 });
-    }
-  }
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor !== undefined);
 };
+
+/**
+ * A photo in the user's chat with Pochical's people: /v1/support/photos/{photoId},
+ * kept with that place's photos (its Group DO, supportPlace) as a group's
+ * are, the user's uploads noted by it, read by the user alone.
+ */
+export const SUPPORT_PHOTO_PATH = /^\/v1\/support\/photos\/(?<photoId>[^/]+)$/u;
 
 /**
  * Where a user's own photo is kept: their usual photo (spec/sync-protocol.md,

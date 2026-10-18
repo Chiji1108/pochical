@@ -8,8 +8,6 @@ import {
   text,
 } from "drizzle-orm/sqlite-core";
 
-import type { KeptPreview } from "../link-preview";
-
 // Which group each live invite code opens. The Group DO owns the group
 // itself; this index exists because a link carries only the code. A group
 // has one live code: remaking the link replaces its row, so the old code
@@ -40,73 +38,45 @@ export const reports = sqliteTable("reports", {
   threadId: text("thread_id"),
 });
 
-// Each user's chat with Pochical's people (proto/pochical/v1/support.proto):
-// its lines, in D1 rather than the User DO so Pochical's people can see
-// every user's in one place.
-export const supportMessages = sqliteTable(
-  "support_messages",
-  {
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-    // The app's version and the device a user's line came from.
-    device: text(),
-    // Written by Pochical's people, not the user.
-    fromSupport: integer("from_support", { mode: "boolean" }).notNull(),
-    // The app's own id for a user's line, so a send tried again is kept
-    // once.
-    id: text().primaryKey(),
-    // Its photo, in the photos bucket under the user's support photos,
-    // and its size and ThumbHash (base64, when it came with one); none for
-    // words.
-    photoHeight: integer("photo_height"),
-    photoId: text("photo_id"),
-    photoThumbHash: text("photo_thumb_hash"),
-    photoWidth: integer("photo_width"),
-    // The page of its words' first link, as LinkPreview's fields; none
-    // without one, and once taken back.
-    preview: text({ mode: "json" }).$type<KeptPreview>(),
-    // The line it is a reply to, by id.
-    replyTo: text("reply_to"),
-    // Its message in the chat's Slack thread.
-    slackTs: text("slack_ts"),
-    // Empty once taken back.
-    text: text().notNull(),
-    // Taken back by its writer.
-    unsent: integer({ mode: "boolean" }).notNull().default(false),
-    userId: text("user_id").notNull(),
-  },
-  (table) => [
-    index("support_messages_user").on(table.userId, table.createdAt),
-    index("support_messages_slack").on(table.slackTs),
-  ]
-);
-
-// The emoji on a support chat's lines, each put there by the user or by
-// Pochical's people.
-export const supportReactions = sqliteTable(
-  "support_reactions",
-  {
-    emoji: text().notNull(),
-    fromSupport: integer("from_support", { mode: "boolean" }).notNull(),
-    messageId: text("message_id").notNull(),
-    // The user's emoji Slack has no name for is told in the thread
-    // instead: that notice's message, deleted as the emoji comes off.
-    slackNoticeTs: text("slack_notice_ts"),
-  },
-  (table) => [
-    primaryKey({ columns: [table.messageId, table.fromSupport, table.emoji] }),
-  ]
-);
-
-// Where each user's chat stands: its latest line, and when the user last
-// read Pochical's people's answers.
+// An index of every user's chat with Pochical's people, whose lines are
+// kept in its own Group DO (support:{userId}, spec/chat.md, The chat with
+// Pochical's people): one row a chat, which the DO keeps up to date as it
+// tells its changes (support_relay), so the admin pages list every chat at
+// once, and a reply in Slack finds whose chat its thread is.
 export const supportChats = sqliteTable(
   "support_chats",
   {
+    // The latest line's time, and the list's order.
     lastAt: integer("last_at", { mode: "timestamp_ms" }).notNull(),
+    // The latest line is Pochical's people's.
+    lastFromPochical: integer("last_from_pochical", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    // The latest line's words, 📷 写真 for a photo, empty once taken back.
+    lastText: text("last_text").notNull().default(""),
+    // The latest line was taken back.
+    lastUnsent: integer("last_unsent", { mode: "boolean" })
+      .notNull()
+      .default(false),
     // The Slack thread Pochical's people read and answer the chat in.
     slackThreadTs: text("slack_thread_ts"),
+    // The user's lines after Pochical's people last wrote: waiting for an
+    // answer (未返信) while more than none.
+    unanswered: integer().notNull().default(0),
     userId: text("user_id").primaryKey(),
-    userReadAt: integer("user_read_at", { mode: "timestamp_ms" }),
   },
   (table) => [index("support_chats_slack_thread").on(table.slackThreadTs)]
+);
+
+// Which line of whose chat each Slack message is (a line's, or the notice
+// said for a reaction Slack has no name for), for what Pochical's people
+// do there: Slack's reactions and deletions name only the message.
+export const supportSlack = sqliteTable(
+  "support_slack",
+  {
+    seq: integer().notNull(),
+    ts: text().notNull(),
+    userId: text("user_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.ts, table.seq] })]
 );

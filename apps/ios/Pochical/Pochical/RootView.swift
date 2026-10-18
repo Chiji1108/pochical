@@ -31,6 +31,11 @@ struct RootView: View {
   @State private var notice: String?
   @State private var notices = 0
 
+  /// The groups' unread lines, without the chat with Pochical's people.
+  private var groupsUnread: Int {
+    unread.filter { $0.key != ChatPlace.supportID }.values.reduce(0, +)
+  }
+
   var body: some View {
     TabView(selection: $tab) {
       Tab("カレンダー", systemImage: "calendar", value: .calendar) {
@@ -41,10 +46,13 @@ struct RootView: View {
           scanning = true
         }
       }
-      .badge(unread.values.reduce(0, +))
+      .badge(groupsUnread)
       Tab("設定", systemImage: "gearshape", value: .settings) {
         SettingsScreen()
       }
+      // Pochical's people's answers not read yet, on 設定's chat with them
+      // (spec/chat.md, Unread lines and typing).
+      .badge(unread[ChatPlace.supportID] ?? 0)
     }
     .tint(colors.accentDefault)
     .toggleStyle(ThemedSwitch())

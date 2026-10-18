@@ -296,48 +296,6 @@ public object ServerFrameKt {
     public fun hasTyping(): kotlin.Boolean {
       return _builder.hasTyping()
     }
-
-    /**
-     * ```
-     * Pochical's people answered in the user's chat with them, or reacted
-     * or took a line back, on the user's own socket: the chat, if open,
-     * reads itself again.
-     * ```
-     *
-     * `.pochical.v1.SupportAnswered support_answered = 9 [json_name = "supportAnswered"];`
-     */
-    public var supportAnswered: app.pochical.v1.SupportAnswered
-      @kotlin.jvm.JvmName("getSupportAnswered")
-        get() = _builder.supportAnswered
-      @kotlin.jvm.JvmName("setSupportAnswered")
-        set(value) {
-        _builder.supportAnswered = value
-      }
-    /**
-     * ```
-     * Pochical's people answered in the user's chat with them, or reacted
-     * or took a line back, on the user's own socket: the chat, if open,
-     * reads itself again.
-     * ```
-     *
-     * `.pochical.v1.SupportAnswered support_answered = 9 [json_name = "supportAnswered"];`
-     */
-    public fun clearSupportAnswered() {
-      _builder.clearSupportAnswered()
-    }
-    /**
-     * ```
-     * Pochical's people answered in the user's chat with them, or reacted
-     * or took a line back, on the user's own socket: the chat, if open,
-     * reads itself again.
-     * ```
-     *
-     * `.pochical.v1.SupportAnswered support_answered = 9 [json_name = "supportAnswered"];`
-     * @return Whether the supportAnswered field is set.
-     */
-    public fun hasSupportAnswered(): kotlin.Boolean {
-      return _builder.hasSupportAnswered()
-    }
     public val kindCase: app.pochical.v1.ServerFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -373,7 +331,4 @@ public val app.pochical.v1.ServerFrameOrBuilder.chatPageOrNull: app.pochical.v1.
 
 public val app.pochical.v1.ServerFrameOrBuilder.typingOrNull: app.pochical.v1.Typing?
   get() = if (hasTyping()) getTyping() else null
-
-public val app.pochical.v1.ServerFrameOrBuilder.supportAnsweredOrNull: app.pochical.v1.SupportAnswered?
-  get() = if (hasSupportAnswered()) getSupportAnswered() else null
 

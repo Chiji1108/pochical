@@ -1,4 +1,5 @@
 import { create, toBinary } from "@bufbuild/protobuf";
+import { chatRules } from "@pochical/design/chat";
 import { syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
 import {
@@ -24,7 +25,6 @@ import {
   ChangesSchema,
   DayField,
   ServerError_Code,
-  SupportAnsweredSchema,
 } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
@@ -48,7 +48,6 @@ import {
   handleSyncMessage,
   rejectAndClose,
   send,
-  tellSockets,
   welcome,
 } from "./sync-socket";
 import {
@@ -100,9 +99,6 @@ import {
 
 /** The count a `select({ n: rowCount() })` gives. */
 const counted = (rows: { n: number }[]): number => rows[0]?.n ?? 0;
-
-/** How much of an answer from Pochical's people its notification shows. */
-const SUPPORT_PREVIEW = 200;
 
 // Values in one push to a group.
 const VALUES_PER_PUSH = 500;
@@ -208,6 +204,15 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /** Whether the user is in the group. */
+  /**
+   * Whether the user's chats are kept in the place: one of their groups,
+   * or their chat with Pochical's people (chatRules.supportPlace), which
+   * every user has.
+   */
+  private hasPlace(placeId: string): boolean {
+    return placeId === chatRules.supportPlace || this.isMember(placeId);
+  }
+
   isMember(groupId: string): boolean {
     return (
       this.db
@@ -595,7 +600,7 @@ export class UserDO extends DurableObject<Env> {
    * is changes nothing; false for a group the user is not in.
    */
   setChatMuted(groupId: string, threadId: string, muted: boolean): boolean {
-    if (!this.isMember(groupId)) {
+    if (!this.hasPlace(groupId)) {
       return false;
     }
     const changed = this.ctx.storage.transactionSync(() => {
@@ -706,31 +711,6 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Pochical's people changed the user's chat with them, by answering,
-   * reacting or taking a line back: an open chat reads itself again.
-   */
-  supportChanged(): void {
-    tellSockets(this.ctx, {
-      case: "supportAnswered",
-      value: create(SupportAnsweredSchema, {}),
-    });
-  }
-
-  /**
-   * Pochical's people answered in the user's chat with them: an open chat
-   * reads itself again, and each device is told, as a chat's line is.
-   */
-  async supportAnswered(text: string): Promise<void> {
-    this.supportChanged();
-    await this.notify({
-      body: { args: [text.slice(0, SUPPORT_PREVIEW)], key: "SUPPORT_BODY" },
-      groupId: "",
-      threadId: "support",
-      title: { args: [], key: "SUPPORT_TITLE" },
-    });
-  }
-
-  /**
    * Tells each of the user's devices of `alert`, the app icon's badge at
    * the user's unread lines in every group, keeping a chat's line as
    * notified for a read to take back.
@@ -797,7 +777,7 @@ export class UserDO extends DurableObject<Env> {
     groupCursor: number
   ): void {
     const changed = this.ctx.storage.transactionSync(() => {
-      if (!this.isMember(groupId)) {
+      if (!this.hasPlace(groupId)) {
         return undefined;
       }
       const stored = this.db
