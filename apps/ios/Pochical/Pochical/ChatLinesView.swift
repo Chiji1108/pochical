@@ -4,11 +4,12 @@ import PochicalKit
 import SwiftUI
 import UIKit
 
-// A chat's lines as a collection view laid out by ChatLayout, with the
-// composer under them on the keyboard's guide (spec/chat.md, Unread lines
-// and typing). ChatLayout keeps the lines seen where they are as lines
-// come in or grow above them, in the same layout pass, before the frame
-// is drawn; each line is still the chat's own SwiftUI view.
+// A chat's lines as a collection view laid out by ChatLayout, going on
+// under the composer and the keyboard, which SwiftUI keeps at the chat's
+// foot (spec/chat.md, Unread lines and typing). ChatLayout keeps the
+// lines seen where they are as lines come in or grow above them, in the
+// same layout pass, before the frame is drawn; each line is still the
+// chat's own SwiftUI view.
 
 /// Moves a chat's lines at the moments the chat does, as a scroll view's
 /// proxy would.
@@ -204,7 +205,7 @@ private struct LinesLook: Equatable {
   }
 }
 
-/// The chat's lines, and the composer under them, rising with the keyboard.
+/// The chat's lines, kept clear of the composer and the keyboard under them.
 struct ChatLinesView: UIViewControllerRepresentable {
   /// The top item while earlier lines are to come, which asks for them.
   static let earlier = "earlier"
@@ -213,14 +214,8 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// the lines read and seen are counted by.
   let rows: [LinesRow]
   let row: (String) -> AnyView
-  let composer: AnyView
-  /// What is over the composer's field: as it changes, the lines and the ↓
-  /// make room by the change's own animation.
-  var composerBars = ComposerBars()
   /// The ↓ to the latest, over the composer's right.
   let latest: AnyView
-  /// The composer's ground, carried down under the home indicator.
-  let ground: Color
   let scroll: ChatScroll
   let proxy: ChatLinesProxy
   @Binding var following: Bool
@@ -260,11 +255,10 @@ struct ChatLinesView: UIViewControllerRepresentable {
 
   func updateUIViewController(_ controller: ChatLinesController, context: Context) {
     proxy.controller = controller
-    let barsChanged = controller.settings.map { $0.composerBars != composerBars } ?? false
     controller.update(self, environment: context.environment)
-    if barsChanged {
-      controller.composerChanged { context.animate(changes: $0) }
-    }
+    // The composer and the keyboard under the lines: as it changes, the
+    // lines and the ↓ make room by the change's own animation.
+    controller.bottomRoom(scroll.bottomRoom) { context.animate(changes: $0) }
   }
 
   /// The chat has gone: whatever waits to be told the lines are in place
@@ -282,15 +276,9 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private lazy var lines = UICollectionView(frame: .zero, collectionViewLayout: layout)
   private var source: ChatLayoutDiffableDataSource<Int, String>?
   private let model = ChatLinesModel()
-  private let composer = UIHostingController(rootView: AnyView(EmptyView()))
   private let latest = UIHostingController(rootView: AnyView(EmptyView()))
-  /// Under the composer to the screen's foot.
-  private let ground = UIView()
-  /// Over the whole view under everything, owning the keyboard's guide the
-  /// composer stands on (keepOnKeyboard).
-  private let keyboardHolder = UIView()
   /// The ↓ on the lines' room, over the composer: moved with the lines'
-  /// inset rather than tied to the composer, which takes its height at once.
+  /// inset.
   private lazy var latestFoot = latest.view.bottomAnchor.constraint(equalTo: lines.bottomAnchor)
   private(set) var settings: ChatLinesView?
   private var ids: [String] = []
@@ -386,47 +374,22 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     lines.addSubview(replyArrow)
     view.addSubview(lines)
 
-    ground.translatesAutoresizingMaskIntoConstraints = false
-    view.addSubview(ground)
-    for host in [composer, latest] {
-      addChild(host)
-      host.sizingOptions = .intrinsicContentSize
-      // Put on the keyboard by the constraints below, never lifted off it
-      // by SwiftUI's own keyboard avoidance: as the keyboard went away,
-      // that took the keyboard over the composer's old place into its
-      // height, and the composer stood up hundreds of points tall.
-      host.safeAreaRegions = .container
-      host.view.backgroundColor = .clear
-      host.view.translatesAutoresizingMaskIntoConstraints = false
-      view.addSubview(host.view)
-      host.didMove(toParent: self)
-    }
-    keyboardHolder.isUserInteractionEnabled = false
-    keyboardHolder.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    holdKeyboard()
-    let foot = composer.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-    foot.priority = .defaultLow
+    addChild(latest)
+    latest.sizingOptions = .intrinsicContentSize
+    latest.safeAreaRegions = .container
+    latest.view.backgroundColor = .clear
+    latest.view.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(latest.view)
+    latest.didMove(toParent: self)
     NSLayoutConstraint.activate([
       lines.topAnchor.constraint(equalTo: view.topAnchor),
-      // Going on under the composer and the keyboard, kept clear of them
-      // by the lines' inset (fitRoom), as ChatLayout's Example keeps them
-      // over its input bar: their height stays as the keyboard comes and
-      // goes (keepingLinesStill). Ending over the home indicator's safe
-      // area, which would push a line in.
-      lines.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+      // Going on under the composer and the keyboard to the screen's foot,
+      // kept clear of them by the lines' inset (fitRoom), as ChatLayout's
+      // Example keeps them over its input bar: their height stays as the
+      // keyboard comes and goes (keepingLinesStill).
+      lines.bottomAnchor.constraint(equalTo: view.bottomAnchor),
       lines.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       lines.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      // The composer on the keyboard, following it as it is pulled down.
-      composer.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      composer.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      onKeyboard(),
-      composer.view.bottomAnchor.constraint(
-        lessThanOrEqualTo: view.safeAreaLayoutGuide.bottomAnchor),
-      foot,
-      ground.topAnchor.constraint(equalTo: composer.view.bottomAnchor),
-      ground.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      ground.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      ground.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       latest.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       latestFoot,
     ])
@@ -434,53 +397,24 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   /// The lines seen as the room they are seen in last was, and its height.
   private var room: (height: CGFloat, kept: ChatLayoutPositionSnapshot?)?
-  /// The composer is taking its new height, the room for the lines made
-  /// after it (composerChanged).
-  private var composerResizing = false
 
   /// The lines' room: over the composer, and the keyboard under it.
   private var roomHeight: CGFloat { lines.bounds.height - lines.contentInset.bottom }
 
   override func viewWillLayoutSubviews() {
     super.viewWillLayoutSubviews()
-    // Taken before the room changes (the keyboard, the composer growing).
+    keepRoom()
+  }
+
+  /// The lines seen, taken before the room changes (the lines' own size,
+  /// the composer and the keyboard under them).
+  private func keepRoom() {
     let kept = following ? footSnapshot() : layout.getContentOffsetSnapshot(from: .bottom)
     room = (roomHeight, kept)
   }
 
-  /// The composer on the keyboard's guide, following it as it is pulled
-  /// down. The guide is without the safe area, which the chat's hosting
-  /// changes as the app goes to the background and back: the guide taking
-  /// it was left with no frame on coming back from another app, the
-  /// composer at the top. Over the home indicator by its own constraint.
-  private func onKeyboard() -> NSLayoutConstraint {
-    keyboardHolder.keyboardLayoutGuide.usesBottomSafeArea = false
-    return composer.view.bottomAnchor.constraint(
-      lessThanOrEqualTo: keyboardHolder.keyboardLayoutGuide.topAnchor)
-  }
-
-  /// UIKit ties a view's keyboard guide to the window's as the view comes
-  /// into the window, and lets go of the tie as views over it are moved
-  /// within the window (the push into the chat ending, a line sent): the
-  /// guide is left with no width, and the composer under the keyboard.
-  /// Put into the window again, the guide's view has it tied anew.
-  private func keepOnKeyboard() {
-    guard view.window != nil, keyboardHolder.keyboardLayoutGuide.layoutFrame.width == 0 else {
-      return
-    }
-    keyboardHolder.removeFromSuperview()
-    holdKeyboard()
-    onKeyboard().isActive = true
-  }
-
-  private func holdKeyboard() {
-    keyboardHolder.frame = view.bounds
-    view.insertSubview(keyboardHolder, at: 0)
-  }
-
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    keepOnKeyboard()
     fitRoom()
     if !placed, !ids.isEmpty, lines.bounds.height > 0 {
       toLatest()
@@ -492,15 +426,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     self.settings = settings
     model.environment = environment
     model.row = settings.row
-    // As tall as it needs, standing on its foot whatever height its view
-    // has for a moment, so the field stays on the keyboard as a bar over it
-    // grows in or shrinks away.
-    composer.rootView = AnyView(
-      settings.composer.environment(\.self, environment)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(minHeight: 0, maxHeight: .infinity, alignment: .bottom))
     latest.rootView = AnyView(settings.latest.environment(\.self, environment))
-    ground.backgroundColor = UIColor(settings.ground)
     layout.keepContentAtBottomOfVisibleArea = !settings.fewAtTop
     replyArrow.tintColor = UIColor(environment.themeColors.textTertiary)
     let alpha: CGFloat = settings.shown ? 1 : 0
@@ -690,16 +616,22 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
   }
 
-  /// The bars over the composer's field changed, by `animate` (the
-  /// change's own animation): the composer takes its height at once, its
-  /// field staying put as the bar grows in or shrinks away in it, and the
-  /// lines and the ↓ make room by the same animation, as in Messages.
-  func composerChanged(animate: (() -> Void) -> Void) {
-    guard view.window != nil else { return }
-    composer.view.invalidateIntrinsicContentSize()
-    composerResizing = true
-    UIView.performWithoutAnimation { view.layoutIfNeeded() }
-    composerResizing = false
+  /// What is under the lines at the chat's foot: the composer, and the
+  /// keyboard or the home indicator.
+  private var under: CGFloat = 0
+
+  /// What is under the lines is `height` now (the keyboard, a bar over
+  /// the composer's field), changed by `animate` (the change's own
+  /// animation): the lines and the ↓ make room by the same animation, as in
+  /// Messages.
+  func bottomRoom(_ height: CGFloat, animate: (() -> Void) -> Void) {
+    guard height != under else { return }
+    guard view.window != nil else {
+      under = height
+      return
+    }
+    keepRoom()
+    under = height
     let makeRoom = {
       self.fitRoom()
       self.view.layoutIfNeeded()
@@ -720,8 +652,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       lines.contentInset.top = top
       lines.verticalScrollIndicatorInsets.top = top
     }
-    guard !composerResizing else { return }
-    let bottom = max(0, lines.frame.maxY - composer.view.frame.minY)
+    let bottom = under
     if lines.contentInset.bottom != bottom {
       keepingLinesStill {
         lines.contentInset.bottom = bottom
