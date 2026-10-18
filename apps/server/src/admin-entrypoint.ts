@@ -23,6 +23,11 @@ export type SupportChatSummary = {
   unsent: boolean;
   /** The user's lines since Pochical's people last wrote (未返信). */
   unanswered: number;
+  /**
+   * Since when, and why (Slack's word for it), the chat's lines have not
+   * reached Slack; null while they do.
+   */
+  slackFailure: { sinceMs: number; why: string } | null;
 };
 
 /** A page of a user's chat, as a device pages it (supportPage). */
@@ -58,6 +63,13 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     return rows.map((row) => ({
       fromSupport: row.lastFromPochical,
       lastAtMs: row.lastAt.getTime(),
+      slackFailure:
+        row.slackFailingSince === null
+          ? null
+          : {
+              sinceMs: row.slackFailingSince.getTime(),
+              why: row.slackFailure ?? "",
+            },
       text: row.lastText,
       unanswered: row.unanswered,
       unsent: row.lastUnsent,

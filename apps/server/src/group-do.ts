@@ -111,9 +111,6 @@ export type NewMember = {
 /** The app's words for the chat with Pochical's people, as a title. */
 const SUPPORT_TITLE = "SUPPORT_TITLE";
 
-/** How long a support chat's relay that failed waits to try again. */
-const RELAY_RETRY_MS = 60_000;
-
 /** The name Pochical's people answer under, as the app's own. */
 const POCHICAL_NAME = "ポチカル";
 
@@ -186,6 +183,9 @@ type MemberLog = {
 /** One Durable Object per group, named by the group's id. */
 export class GroupDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
+  // Set when a support chat's change asks for its relay, so a relay
+  // running meanwhile leaves the next alarm to it.
+  private relayRequested = false;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -1055,6 +1055,7 @@ export class GroupDO extends DurableObject<Env> {
       this.ctx.waitUntil(this.addPage(page));
     }
     if (changed.length > 0 && this.placeKind() === "support") {
+      this.relayRequested = true;
       this.ctx.waitUntil(this.ctx.storage.setAlarm(Date.now()));
     }
     return { refused, sent };
@@ -1063,18 +1064,18 @@ export class GroupDO extends DurableObject<Env> {
   /**
    * The chat with Pochical's people told outside as it changes: to D1's
    * index and its Slack thread (support-place.ts). A failure comes back
-   * later, the relayed cursor kept.
+   * after the wait the relay gives, the relayed cursor kept; a change
+   * made while it runs has set the next alarm already, which is kept.
    */
   async alarm(): Promise<void> {
     const userId = this.supportUser();
     if (userId === undefined) {
       return;
     }
-    try {
-      await relaySupport(this.env, this.db, userId);
-    } catch (error) {
-      console.error("Support relay failed", error);
-      await this.ctx.storage.setAlarm(Date.now() + RELAY_RETRY_MS);
+    this.relayRequested = false;
+    const waitMs = await relaySupport(this.env, this.db, userId);
+    if (waitMs !== null && !this.relayRequested) {
+      await this.ctx.storage.setAlarm(Date.now() + waitMs);
     }
   }
 

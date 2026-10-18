@@ -159,6 +159,106 @@ const slackSetUp = (env: Env): boolean =>
   slackSecret(env.SLACK_BOT_TOKEN) !== "" &&
   slackSecret(env.SLACK_CHANNEL_ID) !== "";
 
+/**
+ * Why Slack did not take a call: Slack's own word for it (not_in_channel,
+ * invalid_auth, ...; `http_{status}` or `network` when it gave none), and
+ * whether it passes by itself (Slack busy, down or out of reach, with how
+ * long it asked to be left alone, if it said) or lasts until someone puts
+ * the app's setup right.
+ */
+export type SlackRefusal =
+  | { kind: "passing"; why: string; afterMs: number | null }
+  | { kind: "lasting"; why: string };
+
+/** Slack's errors that are its own side failing for a while. */
+const PASSING_ERRORS = new Set([
+  "fatal_error",
+  "internal_error",
+  "ratelimited",
+  "request_timeout",
+  "service_unavailable",
+]);
+
+/**
+ * A refusal from Slack's answer: its HTTP status, its Retry-After header
+ * and the error its body names. Any other error Slack names lasts: a scope
+ * or a channel missing, a token revoked, an argument it refuses.
+ */
+export const slackRefusal = (
+  status: number,
+  retryAfter: string | null,
+  error: string | undefined
+): SlackRefusal => {
+  const why = error ?? `http_${status}`;
+  if (status === 429 || status >= 500 || PASSING_ERRORS.has(why)) {
+    const seconds = retryAfter === null ? Number.NaN : Number(retryAfter);
+    return {
+      afterMs: Number.isFinite(seconds) && seconds >= 0 ? seconds * 1000 : null,
+      kind: "passing",
+      why,
+    };
+  }
+  return { kind: "lasting", why };
+};
+
+/** A refusal that passes by itself, Slack saying nothing of when. */
+const passing = (why: string): SlackRefusal => ({
+  afterMs: null,
+  kind: "passing",
+  why,
+});
+
+/** What Slack did not take, and why, for the relay to try again. */
+export class SlackRefusedError extends Error {
+  readonly refusal: SlackRefusal;
+
+  constructor(what: string, refusal: SlackRefusal) {
+    super(`Slack did not take ${what}: ${refusal.why}`);
+    this.name = "SlackRefusedError";
+    this.refusal = refusal;
+  }
+}
+
+/** Slack's answer to a call: what it gave back, or why it refused. */
+type SlackAnswer =
+  | { taken: Record<string, unknown> }
+  | { refused: SlackRefusal };
+
+/** One of Slack's Web API methods as the app, and Slack's answer. */
+const askSlack = async (
+  env: Env,
+  method: string,
+  args: Record<string, unknown>
+): Promise<SlackAnswer> => {
+  const token = slackSecret(env.SLACK_BOT_TOKEN);
+  const channel = slackSecret(env.SLACK_CHANNEL_ID);
+  let response: Response;
+  try {
+    response = await fetch(`https://slack.com/api/${method}`, {
+      body: JSON.stringify({ channel, ...args }),
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json; charset=utf-8",
+      },
+      method: "POST",
+    });
+  } catch (error) {
+    console.error(`Slack ${method} failed`, error);
+    return { refused: passing("network") };
+  }
+  const result: unknown = await response.json().catch(() => null);
+  if (isRecord(result) && result.ok === true) {
+    return { taken: result };
+  }
+  const refused = slackRefusal(
+    response.status,
+    response.headers.get("Retry-After"),
+    isRecord(result) ? stringOf(result.error) : undefined
+  );
+  console.error(`Slack ${method} failed`, refused.why);
+  return { refused };
+};
+
 /** One of Slack's Web API methods as the app; null when it did not take. */
 export const slackCall = async (
   env: Env,
@@ -168,32 +268,25 @@ export const slackCall = async (
   if (!slackSetUp(env)) {
     return null;
   }
-  const token = slackSecret(env.SLACK_BOT_TOKEN);
-  const channel = slackSecret(env.SLACK_CHANNEL_ID);
-  try {
-    const response = await fetch(`https://slack.com/api/${method}`, {
-      body: JSON.stringify({ channel, ...args }),
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json; charset=utf-8",
-      },
-      method: "POST",
-    });
-    const result: unknown = await response.json();
-    if (isRecord(result) && result.ok === true) {
-      return result;
-    }
-    // Slack's own word for why (not_in_channel, missing_scope, ...), for
-    // the Worker's logs.
-    console.error(
-      `Slack ${method} failed`,
-      isRecord(result) ? result.error : response.status
-    );
-    return null;
-  } catch (error) {
-    console.error(`Slack ${method} failed`, error);
-    return null;
+  const answer = await askSlack(env, method, args);
+  return "taken" in answer ? answer.taken : null;
+};
+
+/**
+ * One of Slack's Web API methods the relay needs taken: what Slack gave
+ * back, or SlackRefusedError thrown, saying why, for the relay to try again.
+ */
+const slackTake = async (
+  env: Env,
+  method: string,
+  args: Record<string, unknown>,
+  what: string
+): Promise<Record<string, unknown>> => {
+  const answer = await askSlack(env, method, args);
+  if ("refused" in answer) {
+    throw new SlackRefusedError(what, answer.refused);
   }
+  return answer.taken;
 };
 
 export const threadOf = async (
@@ -268,9 +361,22 @@ const threadHead = (line: SupportLine, words: string): string => {
   return `サポートに新しいメッセージ${from}\n${words}\n<${page}|管理サイトで開く>・このスレッドに書くと、ポチカルとして返信します`;
 };
 
-/** What Slack did not take, for the relay to try again. */
-const notTaken = (what: string): Error =>
-  new Error(`Slack did not take ${what}`);
+/**
+ * A message the relay posts, and its ts; SlackRefusedError thrown when Slack
+ * did not take it, or took it without saying which message it is.
+ */
+const postForRelay = async (
+  env: Env,
+  args: Record<string, unknown>,
+  what: string
+): Promise<string> => {
+  const posted = await slackTake(env, "chat.postMessage", args, what);
+  const ts = stringOf(posted.ts);
+  if (ts === undefined) {
+    throw new SlackRefusedError(what, passing("no_ts"));
+  }
+  return ts;
+};
 
 /** A chat's thread, started by the user's first line. */
 const startThread = async (
@@ -278,13 +384,11 @@ const startThread = async (
   line: SupportLine,
   words: string
 ): Promise<string> => {
-  const posted = await slackCall(env, "chat.postMessage", {
-    text: threadHead(line, words),
-  });
-  const ts = stringOf(posted?.ts);
-  if (ts === undefined) {
-    throw notTaken("a thread");
-  }
+  const ts = await postForRelay(
+    env,
+    { text: threadHead(line, words) },
+    "a thread"
+  );
   // Two first lines at once keep the thread the first kept.
   await drizzle(env.DB)
     .update(supportChats)
@@ -338,28 +442,44 @@ const postPhoto = async (
     return null;
   }
   const bytes = await photo.arrayBuffer();
-  const slot = await slackCall(env, "files.getUploadURLExternal", {
-    alt_txt: "写真",
-    filename: "photo.jpg",
-    length: bytes.byteLength,
-  });
-  const url = stringOf(slot?.upload_url);
-  const fileId = stringOf(slot?.file_id);
+  const slot = await slackTake(
+    env,
+    "files.getUploadURLExternal",
+    { alt_txt: "写真", filename: "photo.jpg", length: bytes.byteLength },
+    "a photo"
+  );
+  const url = stringOf(slot.upload_url);
+  const fileId = stringOf(slot.file_id);
   if (url === undefined || fileId === undefined) {
-    throw notTaken("a photo");
+    throw new SlackRefusedError("a photo", passing("no_upload_url"));
   }
-  const uploaded = await fetch(url, { body: bytes, method: "POST" });
-  const shared =
-    uploaded.ok &&
-    (await slackCall(env, "files.completeUploadExternal", {
+  const uploaded = await fetch(url, { body: bytes, method: "POST" }).catch(
+    () => null
+  );
+  if (uploaded === null) {
+    throw new SlackRefusedError("a photo", passing("network"));
+  }
+  if (!uploaded.ok) {
+    throw new SlackRefusedError(
+      "a photo",
+      slackRefusal(
+        uploaded.status,
+        uploaded.headers.get("Retry-After"),
+        undefined
+      )
+    );
+  }
+  await slackTake(
+    env,
+    "files.completeUploadExternal",
+    {
       channel_id: env.SLACK_CHANNEL_ID,
       files: [{ id: fileId, title: "写真" }],
       thread_ts: thread,
       ...(quote === "" ? {} : { initial_comment: quote.trim() }),
-    })) !== null;
-  if (!shared) {
-    throw notTaken("a photo");
-  }
+    },
+    "a photo"
+  );
   for (let tries = 0; tries < SHARE_TRIES; tries += 1) {
     // oxlint-disable-next-line no-await-in-loop -- Slack shares it in a moment
     const info = await slackCall(env, "files.info", { file: fileId });
@@ -432,15 +552,7 @@ export const tellStaffOfLine = async (
   if (thread === null) {
     return await startThread(env, line, words);
   }
-  const posted = await slackCall(env, "chat.postMessage", {
-    text: words,
-    thread_ts: thread,
-  });
-  const ts = stringOf(posted?.ts);
-  if (ts === undefined) {
-    throw notTaken("a line");
-  }
-  return ts;
+  return await postForRelay(env, { text: words, thread_ts: thread }, "a line");
 };
 
 /**
@@ -455,15 +567,14 @@ export const tellStaffOfAnswer = async (
   if (!slackSetUp(env) || thread === null) {
     return null;
   }
-  const posted = await slackCall(env, "chat.postMessage", {
-    text: `管理サイトから返信しました：\n${toSlackText(wordsOf(line))}`,
-    thread_ts: thread,
-  });
-  const ts = stringOf(posted?.ts);
-  if (ts === undefined) {
-    throw notTaken("an answer");
-  }
-  return ts;
+  return await postForRelay(
+    env,
+    {
+      text: `管理サイトから返信しました：\n${toSlackText(wordsOf(line))}`,
+      thread_ts: thread,
+    },
+    "an answer"
+  );
 };
 
 /**

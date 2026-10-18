@@ -60,6 +60,13 @@ th {
   font-weight: 600;
 }
 
+.alert {
+  border: 1px solid var(--open);
+  border-radius: 8px;
+  color: var(--open);
+  padding: 8px 12px;
+}
+
 .line {
   border-radius: 12px;
   margin: 8px 0;
