@@ -1331,8 +1331,7 @@ struct ChatScreen: View {
   /// line being changed; else sends the days first, then each photo, then
   /// the words.
   private func submit() {
-    let text = String(draft.field.commit().prefix(TextLimits.chatMessage))
-      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let text = sentWords(draft.field.commit())
     if let editing = draft.editing {
       if !text.isEmpty { save(editing, text: text) }
       return
@@ -1592,13 +1591,7 @@ struct ChatScreen: View {
   }
 
   private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
-    var kind = kind
-    // Each line goes with the app's version and the device where the
-    // place keeps them (the support chat's head says so).
-    if place.rules.sendsDevice, case .send(var send) = kind {
-      send.device = AppDevice.words
-      kind = .send(send)
-    }
+    let kind = AppDevice.stamped(kind, in: place.id)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { db in
       try Chats.edit(kind, in: place.id, now: now, db: db)
