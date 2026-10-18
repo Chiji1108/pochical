@@ -177,7 +177,7 @@ struct LineView: View {
 
   /// A member's name in the group as it is now, for their mentions.
   private func nameOf(_ id: String) -> String {
-    names[id] ?? "メンバー"
+    memberName(id, in: names)
   }
 
   /// What its words take to draw: kept by the chat's lines for this line

@@ -548,7 +548,7 @@ struct ChatScreen: View {
       } else if id == ChatItemID.head {
         head
       } else if let userID = ChatItemID.typer(of: id) {
-        TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")
+        TypingLine(name: memberName(userID, in: names), photoID: faces[userID] ?? "")
           .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
       } else if let item {
         // Lines close within a run, parted where the writer changes; the
@@ -657,7 +657,8 @@ struct ChatScreen: View {
         // the names the group shows now.
         Text(
           notice.words(
-            by: names[line.authorID] ?? "メンバー", subject: names[notice.subjectID] ?? "メンバー"))
+            by: memberName(line.authorID, in: names),
+            subject: memberName(notice.subjectID, in: names)))
           .font(.caption)
           .foregroundStyle(colors.textTertiary)
           .multilineTextAlignment(.center)
@@ -695,7 +696,7 @@ struct ChatScreen: View {
       shifts: line.poll ? nil : shifts(on: line.days.first),
       time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
       writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
-      author: mine ? nil : names[line.authorID] ?? "メンバー",
+      author: mine ? nil : memberName(line.authorID, in: names),
       menu: actions(for: line, mine: mine).map(\.title),
       writerPhoto: faces[line.authorID] ?? "",
       appFace: line.authorID == Chat.pochicalMember,
@@ -724,9 +725,9 @@ struct ChatScreen: View {
   /// notice; nothing for one's own, one not shown, or a blocked writer's.
   private func spoken(_ line: ChatLineRow) -> String? {
     guard line.authorID != meID, !line.hidden, !line.unsent else { return nil }
-    let name = names[line.authorID] ?? "メンバー"
+    let name = nameOf(line.authorID)
     if let notice = line.notice {
-      return notice.words(by: name, subject: names[notice.subjectID] ?? "メンバー")
+      return notice.words(by: name, subject: nameOf(notice.subjectID))
     }
     guard !writerBlocked(line) else { return nil }
     let words =
@@ -763,7 +764,7 @@ struct ChatScreen: View {
       line.replyTo.map(jump(to:))
     case .openProfile:
       profileOf = ProfileOf(
-        id: line.authorID, name: names[line.authorID] ?? "メンバー",
+        id: line.authorID, name: nameOf(line.authorID),
         photoID: faces[line.authorID] ?? "")
     case .sendAgain, .deleteUnsent, .stopSending:
       break
@@ -897,9 +898,8 @@ struct ChatScreen: View {
       )
     }
     guard let read, let kept = read.draft else { return }
-    let names = Dictionary(
-      read.writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last })
-    let nameOf = { (id: String) in names[id] ?? "メンバー" }
+    let names = read.writers.shownNames
+    let nameOf = { (id: String) in memberName(id, in: names) }
     draft.text = plainText(kept.text, nameOf: nameOf)
     draft.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }
     draft.editing = kept.editing
@@ -927,8 +927,7 @@ struct ChatScreen: View {
 
   /// Everyone who has been in the group by id, those who left too.
   private var names: [String: String] {
-    Dictionary(
-      chat.writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last })
+    chat.writers.shownNames
   }
 
   /// Everyone's photo as the group shows it, by id.
@@ -956,7 +955,7 @@ struct ChatScreen: View {
 
   /// A member's name in the group as it is now, for their mentions.
   private func nameOf(_ id: String) -> String {
-    names[id] ?? "メンバー"
+    memberName(id, in: names)
   }
 
   /// A link tapped in a line: Pochical's invitations on their join
@@ -966,7 +965,7 @@ struct ChatScreen: View {
       // The reader's own opens nothing.
       if mentioned != meID {
         profileOf = ProfileOf(
-          id: mentioned, name: names[mentioned] ?? "メンバー", photoID: faces[mentioned] ?? "")
+          id: mentioned, name: nameOf(mentioned), photoID: faces[mentioned] ?? "")
       }
     } else if let code = inviteCode(of: url) {
       openInvite(code)
@@ -1273,7 +1272,7 @@ struct ChatScreen: View {
       return
     }
     profileOf = ProfileOf(
-      id: otherID, name: names[otherID] ?? "メンバー", photoID: faces[otherID] ?? "")
+      id: otherID, name: nameOf(otherID), photoID: faces[otherID] ?? "")
   }
 
   /// The one-to-one chat with someone, from their profile; none for the
@@ -1379,7 +1378,7 @@ struct ChatScreen: View {
     else {
       return LineQuote(seq: seq, words: "以前のメッセージ")
     }
-    let writer = names[line.authorID] ?? "メンバー"
+    let writer = nameOf(line.authorID)
     if line.unsent {
       return LineQuote(seq: seq, writer: writer, words: "取り消されたメッセージ")
     }
@@ -1470,7 +1469,7 @@ struct ChatScreen: View {
         MessageAction(
           title: "通報", systemImage: "exclamationmark.bubble", destructive: true,
           startsGroup: true
-        ) { reporting = .line(line, writer: names[line.authorID] ?? "メンバー") })
+        ) { reporting = .line(line, writer: nameOf(line.authorID)) })
     }
     return actions
   }

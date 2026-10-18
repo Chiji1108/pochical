@@ -23,6 +23,12 @@ struct UnreadCount: View {
   }
 }
 
+/// A member's name in a chat by id, from the chat's `names` as the group
+/// shows them now: メンバー for someone it does not know.
+func memberName(_ id: String, in names: [String: String]) -> String {
+  names[id] ?? "メンバー"
+}
+
 /// The line a line taken back leaves (spec/chat.md, Editing and unsending).
 func unsentLine(_ writer: String?, mine: Bool, deleted: Bool = false) -> String {
   if deleted { return "削除されたメッセージ" }
