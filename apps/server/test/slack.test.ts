@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { supportPlace } from "../src/group-chat";
 import { fromSlackText, signedBySlack, toSlackText } from "../src/slack";
-import { ORIGIN, signInAnonymously } from "./helpers";
+import { call, ORIGIN, signInAnonymously } from "./helpers";
 import { relayed, supportChat } from "./sync-helpers";
 
 const SECRET = "slack-signing-secret";
@@ -399,6 +399,45 @@ const react = (emoji: string, on: boolean) => ({
     value: { emoji, on, seq: 1n, threadId: "group" },
   },
   opId: crypto.randomUUID(),
+});
+
+describe("an answer from Pochical's people", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("notifies the user's devices, from Slack and from the admin site, as a chat's line", async () => {
+    const calls = slackCalls();
+    const { thread, token, userId } = await startedChat();
+    await call(
+      "UserService/RegisterPushToken",
+      { sandbox: true, token: "b2".repeat(32) },
+      token
+    );
+    const alerts = () =>
+      calls.filter(({ method }) => method.startsWith("/3/device"));
+    await postEvent(
+      replyIn(thread, { text: "設定から変えられます", ts: "1700000400.000001" })
+    );
+    await vi.waitFor(() => {
+      expect(alerts()).toHaveLength(1);
+    });
+    await exports.AdminEntrypoint.answerSupport(userId, "ほかにもありますか");
+    await vi.waitFor(() => {
+      expect(alerts()).toHaveLength(2);
+    });
+    expect(alerts().map(({ args }) => args)).toMatchObject([
+      {
+        aps: { alert: { "loc-args": ["設定から変えられます"] } },
+        groupId: chatRules.supportPlace,
+        threadId: "group",
+      },
+      {
+        aps: { alert: { "loc-args": ["ほかにもありますか"] } },
+        groupId: chatRules.supportPlace,
+      },
+    ]);
+  });
 });
 
 describe("reactions and lines taken back, in Slack", () => {
