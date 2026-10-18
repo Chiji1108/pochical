@@ -33,20 +33,11 @@ final class ChatDraft {
   var preview: ComposerPreview?
   /// A link whose page was taken off with ×, until sent or changed.
   var previewRemoved: String?
-  /// The composer's field is in use, its tools folded into a › (/design's
-  /// composer, as LINE's).
-  var writing = false
-  /// The tools opened from the › until the next letter.
-  var toolsOpen = false
   /// A word is being converted in the composer.
   var composing = false
   @ObservationIgnored let field = ComposerBox()
   /// When the member's own typing was last sent.
   @ObservationIgnored var typingSentAt = Date.distantPast
-
-  /// The composer's tools folded into a ›: from the field being tapped, and
-  /// while words wait in it, until › opens them.
-  var toolsFolded: Bool { (writing || !text.isEmpty) && !toolsOpen }
 
   /// The page to send with `text`: its first link's, read and not taken
   /// off; none while it is still being asked for.
@@ -74,15 +65,14 @@ final class ChatDraft {
   }
 }
 
-/// A chat's composer (/design's), a group's and the support chat's: what
-/// the message answers or changes and what goes with it (a link's page,
-/// photos) over the field,
-/// the tools folded into a › while writing, the send button, and in a
-/// group's chat the names to mention as an @ is written.
+/// A chat's composer (/design's), a group's and the support chat's, as
+/// Messages draws one: a round of glass with ＋ for what may be sent
+/// besides words (the photo tool alone in the support chat), and a glass
+/// capsule holding what the message answers or changes and what goes with
+/// it (a link's page, photos) over the field, the send button at its end;
+/// in a group's chat the names to mention over it as an @ is written.
 struct ChatComposer: View {
   @Environment(\.themeColors) private var colors
-  /// Motion reduced, the tools fold by fading alone, not sliding away.
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.groupSocket) private var socket
   @Bindable var draft: ChatDraft
@@ -103,37 +93,82 @@ struct ChatComposer: View {
   /// 日にちを共有, in a group's chat.
   var onShareDays: (() -> Void)?
   let say: (String) -> Void
+  /// The photo picker is open.
+  @State private var choosingPhotos = false
   /// What the photo picker just handed over, read into the tray.
   @State private var photoItems: [PhotosPickerItem] = []
-  /// The row's height: each of its buttons, the field at least as tall;
-  /// folded, the tools narrow to one.
-  /// Growing with the reader's text size, as the field beside them does,
-  /// but only so far (chatRules.controlsMostScale): at the accessibility sizes
-  /// the field needs the row's width more, as Messages keeps its buttons.
+  /// The row's height: the ＋'s round, the capsule at least as tall.
+  /// Growing with the reader's text size, as the field does, but only so
+  /// far (chatRules.controlsMostScale): at the accessibility sizes the
+  /// field needs the row's width more, as Messages keeps its buttons.
   @ScaledMetric(relativeTo: .body) private var scaledButton: CGFloat = 38
-  /// Its tools' and send's symbols, growing as the buttons do.
+  /// The ＋'s and send's symbols, growing as the buttons do.
   @ScaledMetric(relativeTo: .body) private var scaledIcon: CGFloat = 20
-  @ScaledMetric(relativeTo: .body) private var scaledSendIcon: CGFloat = 16
+  @ScaledMetric(relativeTo: .body) private var scaledSendIcon: CGFloat = 14
   private var buttonSize: CGFloat { min(scaledButton, 38 * Self.mostScale) }
   private var iconSize: CGFloat { min(scaledIcon, 20 * Self.mostScale) }
-  private var sendIconSize: CGFloat { min(scaledSendIcon, 16 * Self.mostScale) }
+  private var sendIconSize: CGFloat { min(scaledSendIcon, 14 * Self.mostScale) }
+  /// Send's round, inside the capsule's end.
+  private var sendSize: CGFloat { buttonSize - 2 * Self.sendInset }
+  private static let sendInset: CGFloat = 4
   private static let mostScale = CGFloat(Chat.controlsMostScale)
 
   var body: some View {
+    let editing = draft.editing
+    VStack(spacing: 8) {
+      mentionList
+      GlassEffectContainer(spacing: 8) {
+        HStack(alignment: .bottom, spacing: 8) {
+          // A message being changed keeps what it carries: only its words
+          // change.
+          if editing == nil {
+            tools
+          }
+          capsule
+        }
+      }
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 8)
+    // The composer rises with the keyboard as one: whatever comes or
+    // changes in it as the keyboard rises, a quote being answered, would
+    // otherwise be drawn where the composer ends up.
+    .geometryGroup()
+    .photosPicker(
+      isPresented: $choosingPhotos, selection: $photoItems,
+      maxSelectionCount: max(draft.photoRoom, 1), matching: .images,
+      preferredItemEncoding: .compatible
+    )
+    .onChange(of: photoItems) { _, items in
+      guard !items.isEmpty else { return }
+      photoItems = []
+      read(items.map(PhotoSource.picked))
+    }
+    // The member's own typing: at most every typingSendMs while the field
+    // holds words, and a stop once it empties.
+    .onChange(of: draft.text) { _, words in
+      guard let threadID else { return }
+      if words.isEmpty {
+        draft.stopTyping(in: threadID, socket: socket)
+      } else {
+        draft.typed(in: threadID, socket: socket)
+      }
+    }
+    .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }
+  }
+
+  /// The capsule: what the message is, then what goes with it, the photos
+  /// last nearest the field, as /design's; the field and send under them.
+  private var capsule: some View {
     let trimmed = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
     let editing = draft.editing
     let unchanged = editing.map { $0.text == withMentions(draft.text, picked: draft.picked) } ?? false
-    // With the photo tool alone, as the support chat has, it stays in
-    // sight: only a group's two tools fold into the › (spec/chat.md).
-    let folded = onShareDays != nil && draft.toolsFolded
     let blocked =
       editing == nil
       ? (trimmed.isEmpty && draft.photos.isEmpty && draft.attachedDays == nil) || draft.readingPhotos
       : trimmed.isEmpty || unchanged
-    VStack(spacing: 0) {
-      mentionList
-      // What the message is, then what goes with it, the photos last
-      // nearest the field, as /design's.
+    let shape = RoundedRectangle(cornerRadius: buttonSize / 2, style: .continuous)
+    return VStack(spacing: 0) {
       if let editing {
         ComposerBar(
           title: "メッセージを編集", words: plainText(editing.text, nameOf: nameOf),
@@ -159,50 +194,10 @@ struct ChatComposer: View {
       if editing == nil, !draft.photos.isEmpty {
         PhotoTray(photos: $draft.photos)
       }
-      HStack(alignment: .bottom, spacing: 8) {
-        // Folded, the tools give the field their room. Both stay in place,
-        // only faded and narrowed, so they ride up with the keyboard as the
-        // field does: one put in as it rises would start where it ends.
-        if editing == nil {
-          ZStack(alignment: .leading) {
-            HStack(spacing: 8) {
-              photoButton
-              if let onShareDays {
-                Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
-                  .labelStyle(.iconOnly)
-                  .font(.system(size: iconSize))
-                  .foregroundStyle(colors.textSecondary)
-                  .frame(width: buttonSize, height: buttonSize)
-              }
-            }
-            .opacity(folded ? 0 : 1)
-            // With motion reduced the row makes room at once, only the
-            // tools fading (spec/chat.md, Reduced motion).
-            .animation(reduceMotion ? .easeOut(duration: 0.2) : nil, value: folded)
-            .offset(x: folded && !reduceMotion ? -buttonSize : 0)
-            .disabled(folded)
-            .accessibilityHidden(folded)
-            Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
-              .labelStyle(.iconOnly)
-              .font(.system(size: iconSize, weight: .medium))
-              .foregroundStyle(colors.textSecondary)
-              .frame(width: buttonSize, height: buttonSize)
-              .opacity(folded ? 1 : 0)
-              .animation(reduceMotion ? .easeOut(duration: 0.2) : nil, value: folded)
-              .scaleEffect(folded || reduceMotion ? 1 : 0.6)
-              .disabled(!folded)
-              .accessibilityHidden(!folded)
-          }
-          .frame(width: folded ? buttonSize : nil, alignment: .leading)
-          .clipped()
-        }
+      HStack(alignment: .bottom, spacing: 4) {
         ComposerField(
           placeholder: "メッセージ", text: $draft.text, limit: TextLimits.chatMessage,
           composing: $draft.composing, box: draft.field,
-          onWriting: { inUse in
-            draft.writing = inUse
-            draft.toolsOpen = false
-          },
           // A message being changed keeps what it carries, as the tools go.
           onPasteImages: editing == nil ? { pastePhotos($0) } : nil)
         .overlay(alignment: .leading) {
@@ -213,29 +208,23 @@ struct ChatComposer: View {
               .accessibilityHidden(true)
           }
         }
-        .padding(.horizontal, 16)
+        .padding(.leading, 16)
         .padding(.vertical, 8)
         .frame(minHeight: buttonSize)
-        .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
         Button(action: onSubmit) {
           Image(systemName: editing == nil ? "arrow.up" : "checkmark")
             .font(.system(size: sendIconSize, weight: .bold))
             .foregroundStyle(colors.accentOnFill)
-            .frame(width: buttonSize, height: buttonSize)
+            .frame(width: sendSize, height: sendSize)
             .background(blocked ? colors.fillPrimary : colors.accentFill, in: Circle())
+            .padding(Self.sendInset)
+            .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .disabled(blocked)
         .accessibilityLabel(editing == nil ? "送る" : "編集を保存")
         .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
       }
-      .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: folded)
-      // The row's own place is not folded with them: a bar over it going
-      // as the tools unfold (a message sent, editing stopped) would carry
-      // the field down and back.
-      .geometryGroup()
-      .padding(.horizontal, 16)
-      .padding(.vertical, 8)
       if TextLimits.chatMessage - draft.text.count <= TextFields.countWhenLeft {
         Text("\(draft.text.count)/\(TextLimits.chatMessage)")
           .font(.footnote.monospacedDigit())
@@ -244,64 +233,55 @@ struct ChatComposer: View {
               ? colors.dangerDefault : colors.textTertiary
           )
           .frame(maxWidth: .infinity, alignment: .trailing)
-          .padding(.horizontal, 20)
-          .padding(.bottom, 4)
+          .padding(.horizontal, 16)
+          .padding(.bottom, 6)
           .accessibilityLabel("\(TextLimits.chatMessage)文字中\(draft.text.count)文字")
       }
     }
     // What comes in over the field (photos, a reply, a link's page) drawn
-    // only under the line as it rises, not over the chat ahead of it.
-    .clipped()
-    // The composer rises with the keyboard as one: whatever comes or
-    // changes in it as the keyboard rises, a quote being answered or the
-    // tools folding, would otherwise be drawn where the composer ends up.
-    .geometryGroup()
-    .background(colors.backgroundBase)
-    .overlay(alignment: .top) {
-      Rectangle().fill(colors.separator).frame(height: 1)
-    }
-    // The member's own typing: at most every typingSendMs while the field
-    // holds words, and a stop once it empties.
-    .onChange(of: draft.text) { _, words in
-      draft.toolsOpen = false
-      guard let threadID else { return }
-      if words.isEmpty {
-        draft.stopTyping(in: threadID, socket: socket)
-      } else {
-        draft.typed(in: threadID, socket: socket)
+    // only inside the capsule as it grows, not over the chat ahead of it.
+    .clipShape(shape)
+    .glassEffect(.regular, in: shape)
+  }
+
+  /// ＋, opening what may be sent besides words, as Messages' does: 日にち
+  /// を共有 nearest it, then 写真. With the photo tool alone, as the support
+  /// chat has, the round is the photo tool itself.
+  @ViewBuilder private var tools: some View {
+    if let onShareDays {
+      Menu {
+        Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
+        Button("写真", systemImage: "photo", action: choosePhotos)
+      } label: {
+        toolIcon("plus")
       }
+      .accessibilityLabel("写真や日にちを送る")
+      .glassEffect(.regular.interactive(), in: .circle)
+    } else {
+      Button(action: choosePhotos) {
+        toolIcon("photo")
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("写真を送る")
+      .glassEffect(.regular.interactive(), in: .circle)
     }
-    .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }
+  }
+
+  private func toolIcon(_ systemImage: String) -> some View {
+    Image(systemName: systemImage)
+      .font(.system(size: iconSize, weight: .medium))
+      .foregroundStyle(colors.textPrimary)
+      .frame(width: buttonSize, height: buttonSize)
+      .contentShape(.circle)
   }
 
   /// 写真を送る: the photo picker, up to Chat.photosPerSend in the tray at
   /// once; past it the picker does not open.
-  @ViewBuilder private var photoButton: some View {
-    let room = draft.photoRoom
-    // Read here: the picker's label is drawn off the main actor.
-    let iconColor = colors.textSecondary
-    if room > 0 {
-      PhotosPicker(
-        selection: $photoItems, maxSelectionCount: room, matching: .images,
-        preferredItemEncoding: .compatible
-      ) {
-        Image(systemName: "photo")
-          .font(.system(size: iconSize))
-          .foregroundStyle(iconColor)
-          .frame(width: buttonSize, height: buttonSize)
-      }
-      .accessibilityLabel("写真を送る")
-      .onChange(of: photoItems) { _, items in
-        guard !items.isEmpty else { return }
-        photoItems = []
-        read(items.map(PhotoSource.picked))
-      }
+  private func choosePhotos() {
+    if draft.photoRoom > 0 {
+      choosingPhotos = true
     } else {
-      Button("写真を送る", systemImage: "photo") { say(Self.photosFull) }
-      .labelStyle(.iconOnly)
-      .font(.system(size: iconSize))
-      .foregroundStyle(colors.textQuaternary)
-      .frame(width: buttonSize, height: buttonSize)
+      say(Self.photosFull)
     }
   }
 
@@ -344,10 +324,9 @@ struct ChatComposer: View {
       }
       // A few in sight, the rest a scroll away.
       .frame(height: min(CGFloat(others.count) * Metrics.touch + 8, 180))
+      .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
+      .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Radius.xl))
       .accessibilityLabel("メンションする人")
-      .overlay(alignment: .top) {
-        Rectangle().fill(colors.separator).frame(height: 1)
-      }
     }
   }
 

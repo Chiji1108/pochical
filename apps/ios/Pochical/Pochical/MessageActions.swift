@@ -229,7 +229,10 @@ struct MessageActionsOverlay: View {
     return min(reactionSize, (Self.screenWidth - 2 * Self.margin - 8 - 2 * (count - 1)) / count)
   }
   private var barHeight: CGFloat { cell + 8 }
-  private static var groupGap: CGFloat { 8 }
+  private static var groupGap: CGFloat { 9 }
+  /// The menu's corners, and how far in from them its rows are lit.
+  private static var menuCorner: CGFloat { Radius.xxl }
+  private static var menuInset: CGFloat { 6 }
   private static var margin: CGFloat { 12 }
   /// How small a tall bubble is drawn at least; past that its end is cut
   /// off.
@@ -356,12 +359,8 @@ struct MessageActionsOverlay: View {
     }
     .padding(4)
     .frame(height: barHeight)
-    // On the raised ground, as /design's bar: glass would show the lines
-    // under it through the dimming.
-    .background(colors.backgroundElevated, in: Capsule())
-    .overlay(Capsule().strokeBorder(colors.borderDefault, lineWidth: 0.5))
-    // Picked up off the line, as the reactions are (design/src/metrics.ts).
-    .shadow(.md)
+    // Glass over the dimming, as Messages' tapbacks are.
+    .glassEffect(.regular, in: .capsule)
   }
 
   /// The menu, `height` tall: scrolled through when its items, grown with
@@ -372,22 +371,22 @@ struct MessageActionsOverlay: View {
     }
     .scrollBounceBehavior(.basedOnSize)
     .frame(height: height)
-    .background(colors.backgroundElevated)
-    .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
-    .overlay(
-      RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.borderDefault, lineWidth: 0.5)
-    )
-    // A card floating free, as a menu is.
-    .shadow(.lg)
+    .clipShape(RoundedRectangle(cornerRadius: Self.menuCorner))
+    // The system's menu glass, as iOS 26 draws a context menu.
+    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Self.menuCorner))
   }
 
   private var menuItems: some View {
     VStack(spacing: 0) {
       ForEach(Array(request.actions.enumerated()), id: \.element.id) { index, action in
-        if index > 0 {
+        // Its groups apart by a rule, its items by nothing, as iOS 26's
+        // menus are.
+        if index > 0, action.startsGroup {
           Rectangle()
             .fill(colors.separator)
-            .frame(height: action.startsGroup ? Self.groupGap : 0.5)
+            .frame(height: 0.5)
+            .padding(.horizontal, 16)
+            .frame(height: Self.groupGap)
         }
         Button {
           pick(.action(action.id))
@@ -402,7 +401,7 @@ struct MessageActionsOverlay: View {
           }
           .font(.body)
           .foregroundStyle(action.destructive ? colors.dangerDefault : colors.textPrimary)
-          .padding(.horizontal, 16)
+          .padding(.horizontal, 12)
           .frame(height: rowHeight)
           .contentShape(.rect)
         }
@@ -411,6 +410,7 @@ struct MessageActionsOverlay: View {
         .modifier(Tracked(target: .action(action.id), targets: $targets))
       }
     }
+    .padding(Self.menuInset)
   }
 
   // MARK: Placing
@@ -511,8 +511,8 @@ struct MessageActionsOverlay: View {
   }
 
   private var menuHeight: CGFloat {
-    request.actions.enumerated().reduce(0) { height, item in
-      let gap = item.offset == 0 ? 0 : (item.element.startsGroup ? Self.groupGap : 0.5)
+    request.actions.enumerated().reduce(2 * Self.menuInset) { height, item in
+      let gap = item.offset > 0 && item.element.startsGroup ? Self.groupGap : 0
       return height + gap + rowHeight
     }
   }
@@ -614,14 +614,16 @@ private struct Placed: ViewModifier {
 }
 
 /// A menu row's press, the fill a system menu gives the row under the
-/// finger, a tap's or the held one's.
+/// finger, a tap's or the held one's, rounded inside the menu's corners.
 private struct MenuRowStyle: ButtonStyle {
   @Environment(\.themeColors) private var colors
   let held: Bool
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .background(configuration.isPressed || held ? colors.fillSecondary : .clear)
+      .background(
+        configuration.isPressed || held ? colors.fillSecondary : .clear,
+        in: RoundedRectangle(cornerRadius: Radius.lg))
   }
 }
 

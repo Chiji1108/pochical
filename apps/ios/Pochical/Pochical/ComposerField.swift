@@ -33,8 +33,6 @@ struct ComposerField: UIViewRepresentable {
   let limit: Int
   @Binding var composing: Bool
   let box: ComposerBox
-  /// The field taken up to write in, or left.
-  var onWriting: (Bool) -> Void = { _ in }
   /// Images pasted (the edit menu's ペースト, ⌘V), each a provider to read
   /// as the photo picker's are; none where photos cannot go, where an
   /// image pastes nothing, as before.
@@ -113,14 +111,6 @@ struct ComposerField: UIViewRepresentable {
       view.text = now.replacingCharacters(in: swapped, with: String(string.prefix(room)))
       textViewDidChange(view)
       return false
-    }
-
-    func textViewDidBeginEditing(_ view: UITextView) {
-      parent.onWriting(true)
-    }
-
-    func textViewDidEndEditing(_ view: UITextView) {
-      parent.onWriting(false)
     }
 
     func textViewDidChange(_ view: UITextView) {

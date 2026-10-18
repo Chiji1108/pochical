@@ -220,7 +220,7 @@ struct ChatScreen: View {
           .comesAsNotice()
       }
     }
-    .safeAreaInset(edge: .top, spacing: 0) {
+    .safeAreaBar(edge: .top, spacing: 0) {
       if place.rules.pins {
         PinBar(
           pins: chat.state.pins, open: $pinsOpen, nameOf: nameOf,
@@ -471,11 +471,10 @@ struct ChatScreen: View {
       Text(gone.deleted ? "相手のアカウントは削除されました" : "\(gone.displayName)はグループを抜けました")
         .font(.footnote)
         .foregroundStyle(colors.textTertiary)
-        .frame(maxWidth: .infinity, minHeight: Metrics.touch)
-        .background(colors.backgroundBase)
-        .overlay(alignment: .top) {
-          Rectangle().fill(colors.separator).frame(height: 1)
-        }
+        .padding(.horizontal, 16)
+        .frame(minHeight: Metrics.touch)
+        .glassEffect(.regular, in: .capsule)
+        .padding(8)
     } else {
       ChatComposer(
         draft: draft, groupID: place.id, threadID: threadID,
