@@ -81,6 +81,8 @@ export type ChatScope = {
   fetchFails?: boolean;
 };
 
+const photoLabel = (writer?: Member) => `${writer?.name ?? ""}が送った写真`;
+
 // The photos a chat's lines show, in their order: sent, not taken back,
 // and not a blocked member's folded away.
 export const photosOf = (
@@ -92,7 +94,7 @@ export const photosOf = (
     message.photo && !message.unsent && shown(message)
       ? [
           {
-            label: `${writerOf(message.from)?.name ?? ""}が送った写真`,
+            label: photoLabel(writerOf(message.from)),
             mine: message.from === "me",
             photo: message.photo,
           },
@@ -302,7 +304,7 @@ export function MessageLine({
             fetchFails={fetchFails}
             onStop={onStopUpload}
             upload={upload}
-            label={`${member?.name ?? ""}が送った写真`}
+            label={photoLabel(member)}
             mine={actions.mine}
             onSave={() => {
               toast("写真を保存しました");

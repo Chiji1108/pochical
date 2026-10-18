@@ -32,7 +32,7 @@ import type { LinkMenuAt } from "./design-chat-actions";
 import { BubbleOutline } from "./design-chat-bubble";
 import { uploadMilliseconds } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
-import { Composer, useComposer } from "./design-chat-composer";
+import { Composer, noOne, useComposer } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
@@ -70,8 +70,6 @@ import { IconButton, Screen } from "./design-ui";
 
 export type PhotoSend = "ok" | "fails";
 export type PhotoFetch = "ok" | "fails";
-
-const noMembers: Member[] = [];
 
 // A member's name by id, for a mention: @ and their name in the group,
 // yours too (the others see it), not 自分.
@@ -176,7 +174,7 @@ export function ChatPage({
   onOpenDay,
   onMember,
   backLabel,
-  formerMembers = noMembers,
+  formerMembers = noOne,
   gone,
   attach,
   photoSend = "ok",
@@ -286,7 +284,7 @@ export function ChatPage({
     attach,
     kept: opened,
     // An @ lists the others in the group chat only.
-    members: isGroup ? group.members : noMembers,
+    members: isGroup ? group.members : noOne,
     mentionName,
   });
   const {

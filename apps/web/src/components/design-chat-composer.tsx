@@ -42,9 +42,9 @@ import { IconButton } from "./design-ui";
 type Mention = { id: string; name: string };
 
 // A chat with no one to mention, as the support chat.
-const noOne: Member[] = [];
+export const noOne: Member[] = [];
 
-const nameless = () => "";
+export const nameless = () => "";
 
 // What is being written: the words, the members picked from the @ list,
 // days brought from the shift table, photos chosen, the page of its first
