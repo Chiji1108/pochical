@@ -184,6 +184,17 @@ const indexRow = (db: DrizzleSqliteDODatabase, userId: string) => {
   };
 };
 
+/** What a line's Slack message has been told, kept with the chat. */
+const keepTold = (
+  db: DrizzleSqliteDODatabase,
+  told: typeof supportSlackLines.$inferInsert
+): void => {
+  db.insert(supportSlackLines)
+    .values(told)
+    .onConflictDoUpdate({ set: told, target: supportSlackLines.seq })
+    .run();
+};
+
 /**
  * What the chat's Slack thread is told of a line changed since: a new
  * line posted (the user's, or an answer written on the admin site; one
@@ -222,6 +233,9 @@ const relayLine = async (
       ts = await tellStaffOfLine(env, line, repliedTo);
     }
     told = { ...told, slackTs: ts ?? null };
+    // Kept at once, before anything that may fail, so a retry never
+    // posts the line again.
+    keepTold(db, told);
   }
   // Which line its Slack message is, for what Pochical's people do to it
   // there: kept again each time the line is told, so a write that failed
@@ -267,15 +281,11 @@ const relayLine = async (
       notices.delete(emoji);
     }
   }
-  const row = {
+  keepTold(db, {
     ...told,
     notices: Object.fromEntries(notices),
     toldReactions: mine,
-  };
-  db.insert(supportSlackLines)
-    .values(row)
-    .onConflictDoUpdate({ set: row, target: supportSlackLines.seq })
-    .run();
+  });
 };
 
 /**

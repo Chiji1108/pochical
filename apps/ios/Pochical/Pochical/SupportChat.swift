@@ -10,7 +10,6 @@ import SwiftUI
 /// while it is, so its latest line is current.
 struct SupportRow: View {
   @State private var meID = GroupCalls.knownUserID
-  @State private var open = false
 
   var body: some View {
     ChatRow(
@@ -19,11 +18,11 @@ struct SupportRow: View {
     ) {
       AppIconChoice.current.image(size: 28)
     } onOpen: {
-      open = true
+      // 設定 opens it, as it does for a tapped answer's notification.
+      Notifications.shared.openingSupport = true
     }
     .listRowInsets(EdgeInsets())
     .placeSocket(ChatPlace.supportID)
-    .navigationDestination(isPresented: $open) { SupportChatScreen() }
   }
 }
 
