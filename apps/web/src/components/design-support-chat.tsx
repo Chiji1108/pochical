@@ -15,7 +15,12 @@ import { site } from "../lib/site";
 import { AppIcon, useAppIcons } from "./design-app-icon";
 import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
-import { Composer, nameless, useComposer } from "./design-chat-composer";
+import {
+  ChatEdge,
+  Composer,
+  nameless,
+  useComposer,
+} from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
@@ -277,20 +282,22 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
             ))}
           </ol>
         </ChatContext>
+        <ChatEdge edge="foot" list={listRef}>
+          <Composer
+            composer={composer}
+            onSend={send}
+            reply={
+              replying && {
+                message: replying,
+                onStop: () => {
+                  setReplyTo(undefined);
+                },
+                writer: writerOf(replying.from)?.name ?? "",
+              }
+            }
+          />
+        </ChatEdge>
       </div>
-      <Composer
-        composer={composer}
-        onSend={send}
-        reply={
-          replying && {
-            message: replying,
-            onStop: () => {
-              setReplyTo(undefined);
-            },
-            writer: writerOf(replying.from)?.name ?? "",
-          }
-        }
-      />
       <EmojiPickerSheet
         onOpenChange={(open) => {
           if (!open) {

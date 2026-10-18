@@ -68,10 +68,8 @@ struct PinBar: View {
         }
       }
       .padding(.vertical, 4)
-      .background(colors.backgroundBase)
-      .overlay(alignment: .bottom) {
-        Rectangle().fill(colors.separator).frame(height: 1)
-      }
+      .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Radius.xxl))
+      .padding(.horizontal, 8)
     }
   }
 

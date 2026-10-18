@@ -2,20 +2,21 @@ import { Popover, Portal } from "@ark-ui/react";
 import type { PopoverRootProps } from "@ark-ui/react";
 import { useContext } from "react";
 import type { ReactElement, ReactNode } from "react";
-import { css } from "styled-system/css";
+import { css, cx } from "styled-system/css";
 
 import { chatAvatarSize } from "./design-chat-style";
 import type { Member } from "./design-group-data";
 import { Avatar } from "./design-group-parts";
 import { menuStyle } from "./design-menu";
 import { PhoneContext } from "./design-sheet";
+import { floatingGlass } from "./design-ui";
 
 // The small popovers a chat opens from a line, a pin or a reaction: a
 // link's 開く and コピー, ピン留めを外す, and who chose a reaction or a
-// poll's day. Each opens over the phone in the menu's look, as the
-// message's own menu does.
+// poll's day. Each opens over the phone in the glass of the message's own
+// menu.
 
-// A popover over the phone, in the menu's look. Ark UI's Popover places
+// A popover over the phone, in the menu's glass look. Ark UI's Popover places
 // it, moves focus in, and closes it by a tap elsewhere or Escape; it
 // mounts only while open.
 export function PhonePopover({
@@ -55,7 +56,10 @@ export function PhonePopover({
       {trigger && <Popover.Trigger asChild>{trigger}</Popover.Trigger>}
       <Portal container={phone ?? undefined}>
         <Popover.Positioner>
-          <Popover.Content aria-label={label} className={menuStyle.content}>
+          <Popover.Content
+            aria-label={label}
+            className={cx(floatingGlass, menuStyle.glassContent)}
+          >
             {children}
           </Popover.Content>
         </Popover.Positioner>

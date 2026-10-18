@@ -1,15 +1,17 @@
+import { Menu } from "@ark-ui/react";
 import { chatRules } from "@pochical/design/chat";
 import {
   ArrowUp,
   CalendarPlus,
   Check,
-  ChevronRight,
   ImageIcon,
+  Plus,
   SendHorizontal,
   X,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { ReactNode, RefObject } from "react";
+import { cx } from "styled-system/css";
 
 import {
   firstLink,
@@ -21,7 +23,6 @@ import {
   siteOf,
 } from "../lib/chat-text";
 import { useDevice } from "../lib/design-device";
-import { spring } from "../lib/motion";
 import { PhotoInput, PhotoTray, useChosenPhotos } from "./design-chat-photos";
 import { chatStyle } from "./design-chat-style";
 import { daysSummary, summaryOf } from "./design-chat-summary";
@@ -34,10 +35,11 @@ import type {
 } from "./design-group-data";
 import { Avatar } from "./design-group-parts";
 import { previewOf } from "./design-group-samples";
-import { IconButton } from "./design-ui";
+import { MenuItem, menuStyle } from "./design-menu";
+import { floatingGlass, IconButton } from "./design-ui";
 
 // Writing in a chat: what is being written (useComposer), the page of a
-// link as it is written, and the composer at the chat's foot.
+// link as it is written, and the composer floating at the chat's foot.
 
 type Mention = { id: string; name: string };
 
@@ -142,8 +144,8 @@ export function useComposer({
 
 export type ComposerState = ReturnType<typeof useComposer>;
 
-// One strip over the composer: the line being changed or answered, the
-// days shared, or a link's page, with × to go without it.
+// One strip in the composer, over the words: the line being changed or
+// answered, the days shared, or a link's page, with × to go without it.
 function ComposerStrip({
   name,
   text,
@@ -171,9 +173,112 @@ function ComposerStrip({
   );
 }
 
-// The foot of the chat: what the next message carries (the line it
-// answers, days, a link's page, photos), the @ list, and the field with
-// its tools and send.
+// What floats over the lines' top or foot (the pins, the composer): it
+// sets how much of them it covers, --head-height or --foot-height, on
+// their box, for the lines to end clear of it. As it grows the lines
+// scroll by as much, so those past it stay where they are on the screen:
+// at the foot, the latest stays in sight, as in the chat apps.
+export function ChatEdge({
+  edge,
+  list,
+  children,
+}: {
+  edge: "head" | "foot";
+  list: RefObject<HTMLElement | null>;
+  children: ReactNode;
+}) {
+  const edgeRef = useRef<HTMLDivElement>(null);
+  // Before the chat puts its lines (a parent's layout effect runs after
+  // this), so they are put with the room already there.
+  useLayoutEffect(() => {
+    const over = edgeRef.current;
+    const box = over?.parentElement;
+    if (!(over && box)) {
+      return;
+    }
+    const name = `--${edge}-height`;
+    let height = over.offsetHeight;
+    box.style.setProperty(name, `${height}px`);
+    const observer = new ResizeObserver(() => {
+      const grown = over.offsetHeight - height;
+      height = over.offsetHeight;
+      box.style.setProperty(name, `${height}px`);
+      // Over the head the lines stay as it shrinks too; at the foot the
+      // room it gives back shows more below.
+      if ((grown > 0 || edge === "head") && list.current) {
+        list.current.scrollTop += grown;
+      }
+    });
+    observer.observe(over);
+    return () => {
+      observer.disconnect();
+    };
+  }, [edge, list]);
+  return (
+    <div className={chatStyle[edge]} ref={edgeRef}>
+      {children}
+    </div>
+  );
+}
+
+// Who left, in place of the composer, in a one-to-one chat.
+export function GoneNote({ name }: { name: string }) {
+  return (
+    <p className={cx(floatingGlass, chatStyle.gone)}>
+      {name}はグループを抜けました
+    </p>
+  );
+}
+
+// ＋ and what it opens over itself, as iOS 26's Messages: 日にちを共有
+// nearest the button, then 写真.
+function AttachMenu({
+  onPhotos,
+  onShareDays,
+}: {
+  onPhotos: () => void;
+  onShareDays: () => void;
+}) {
+  return (
+    <Menu.Root positioning={{ gutter: 8, placement: "top-start" }}>
+      <Menu.Trigger
+        aria-label="写真や日にちを送る"
+        className={cx(floatingGlass, chatStyle.attach)}
+      >
+        <Plus aria-hidden="true" size={22} />
+      </Menu.Trigger>
+      <Menu.Positioner>
+        <Menu.Content
+          className={cx(
+            floatingGlass,
+            menuStyle.glassContent,
+            chatStyle.attachMenu
+          )}
+        >
+          <MenuItem
+            icon={<CalendarPlus aria-hidden="true" size={18} />}
+            onSelect={onShareDays}
+            value="days"
+          >
+            日にちを共有
+          </MenuItem>
+          <MenuItem
+            icon={<ImageIcon aria-hidden="true" size={18} />}
+            onSelect={onPhotos}
+            value="photos"
+          >
+            写真
+          </MenuItem>
+        </Menu.Content>
+      </Menu.Positioner>
+    </Menu.Root>
+  );
+}
+
+// The composer, as iOS 26's Messages: ＋ in a round of glass, and beside
+// it one capsule of glass holding what the next message carries (the
+// line it answers, days, a link's page, photos), the words and send. The
+// @ list floats over it on its own.
 export function Composer({
   composer,
   editingMessage,
@@ -187,9 +292,8 @@ export function Composer({
   // The line being answered, by whom, and stopping.
   reply?: { message: Message; writer: string; onStop: () => void };
   onSend: () => void;
-  // Opens the days to share. Without it, as in the support chat, photos
-  // are the one tool, and it stays in sight while writing: folding one
-  // button into a › would give the field no room.
+  // Opens the days to share. Without it, as in the support chat, ＋ is
+  // the photos alone, with no menu to open first.
   onShareDays?: () => void;
 }) {
   const {
@@ -204,32 +308,10 @@ export function Composer({
   } = composer;
   const platform = useDevice((state) => state.platform);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  // While the field is in use, the tools fold into a ›, as in LINE,
-  // giving it their room: from the moment it is tapped, and while words
-  // wait in it. › opens them until the next letter.
-  const [writing, setWriting] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
-  const toolsFolded = (writing || draft !== "") && !toolsOpen;
-  let toolsWidth = toolsFolded
-    ? toolWidth
-    : toolWidth * toolCount + toolGap * (toolCount - 1);
-  // A message being changed keeps what it carries; only its words change.
-  if (editing !== undefined) {
-    toolsWidth = 0;
-  }
-  const photoButton = (
-    <button
-      aria-label="写真を送る"
-      className={chatStyle.composerButton({ tool: true })}
-      onClick={() => {
-        photoInputRef.current?.click();
-      }}
-      type="button"
-    >
-      <ImageIcon aria-hidden="true" size={20} />
-    </button>
-  );
-  // A strip sits over the composer, which the photos chosen go under.
+  const choosePhotos = () => {
+    photoInputRef.current?.click();
+  };
+  // A strip sits over the words, which the photos chosen go under.
   const stripped =
     editingMessage !== undefined ||
     reply !== undefined ||
@@ -237,53 +319,11 @@ export function Composer({
     linkPreview.shown !== undefined;
   return (
     <>
-      {editingMessage && (
-        <ComposerStrip
-          name="メッセージを編集"
-          onStop={() => {
-            composer.stopEditing();
-          }}
-          stopLabel="編集をやめる"
-          text={summaryOf(editingMessage, mentionName)}
-        />
-      )}
-      {reply && (
-        <ComposerStrip
-          name={`${reply.writer}に返信`}
-          onStop={() => {
-            reply.onStop();
-          }}
-          stopLabel="返信をやめる"
-          text={summaryOf(reply.message, mentionName)}
-          thumb={reply.message.photo?.src}
-        />
-      )}
-      {attached && (
-        <ComposerStrip
-          name="共有する日"
-          onStop={() => {
-            composer.setAttached(undefined);
-          }}
-          stopLabel="共有をやめる"
-          text={daysSummary(attached)}
-        />
-      )}
-      {linkPreview.shown && (
-        <ComposerStrip
-          name={linkPreview.ready?.site ?? siteOf(linkPreview.shown)}
-          onStop={linkPreview.handleSkip}
-          stopLabel="リンクのプレビューを付けない"
-          text={linkPreview.ready?.title ?? "読み込み中…"}
-          thumb={linkPreview.ready?.image}
-        />
-      )}
-      <PhotoTray
-        below={stripped}
-        onRemove={composer.handleRemovePhoto}
-        photos={photos}
-      />
       {mentionable.length > 0 && (
-        <ul aria-label="メンションする人" className={chatStyle.mentionList}>
+        <ul
+          aria-label="メンションする人"
+          className={cx(floatingGlass, chatStyle.mentionList)}
+        >
           {mentionable.map((member) => (
             <li key={member.id}>
               <button
@@ -305,9 +345,7 @@ export function Composer({
         </ul>
       )}
       <form
-        className={chatStyle.composer({
-          replying: stripped || photos.length > 0 || mentionable.length > 0,
-        })}
+        className={chatStyle.composer}
         onSubmit={(event) => {
           event.preventDefault();
           onSend();
@@ -318,137 +356,123 @@ export function Composer({
           onChoose={composer.handleChoosePhotos}
           ref={photoInputRef}
         />
-        {onShareDays ? (
-          // The tools narrow into a › and widen back, the field following
-          // them, while the icons and the › fade one into the other.
-          <motion.span
-            animate={{ width: toolsWidth }}
-            className={chatStyle.composerTools}
-            initial={false}
-            transition={toolFold}
-          >
-            <AnimatePresence initial={false} mode="popLayout">
-              {editing === undefined && toolsFolded && (
-                <motion.button
-                  animate={{ opacity: 1, scale: 1 }}
-                  aria-label="写真と日にちのボタンを表示"
-                  className={chatStyle.composerButton({ tool: true })}
-                  exit={{ opacity: 0, scale: 0.6 }}
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  key="more"
-                  onClick={() => {
-                    setToolsOpen(true);
-                  }}
-                  // The field keeps focus (and the keyboard stays up), so
-                  // the tools do not open under the finger as it leaves.
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                  }}
-                  transition={toolFold}
-                  type="button"
-                >
-                  <ChevronRight aria-hidden="true" size={22} />
-                </motion.button>
-              )}
-              {editing === undefined && !toolsFolded && (
-                <motion.span
-                  animate={{ opacity: 1, x: 0 }}
-                  className={chatStyle.composerToolRow}
-                  exit={{ opacity: 0, x: -toolWidth }}
-                  initial={{ opacity: 0, x: -toolWidth }}
-                  key="tools"
-                  transition={toolFold}
-                >
-                  {photoButton}
-                  <button
-                    aria-label="日にちを共有"
-                    className={chatStyle.composerButton({ tool: true })}
-                    onClick={() => {
-                      onShareDays();
-                    }}
-                    type="button"
-                  >
-                    <CalendarPlus aria-hidden="true" size={20} />
-                  </button>
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.span>
-        ) : (
-          <span className={chatStyle.composerToolsStill}>{photoButton}</span>
-        )}
-        <LimitedTextArea
-          aria-label="メッセージ"
-          className={chatStyle.composerInput}
-          kind="chatMessage"
-          onBlur={() => {
-            setWriting(false);
-          }}
-          onValueChange={(text) => {
-            composer.setDraft(text);
-            setToolsOpen(false);
-          }}
-          onFocus={() => {
-            setWriting(true);
-            setToolsOpen(false);
-          }}
-          // Images pasted go with the next send, as photos picked do;
-          // words paste as ever. A message being changed takes none.
-          onPaste={(event) => {
-            const images = [...event.clipboardData.files].filter((file) =>
-              file.type.startsWith("image/")
-            );
-            if (images.length === 0 || editing !== undefined) {
-              return;
-            }
-            event.preventDefault();
-            composer.handleChoosePhotos(images).catch(() => undefined);
-          }}
-          placeholder="メッセージ"
-          value={draft}
-        />
-        {editing === undefined ? (
-          <button
-            aria-label="送る"
-            className={chatStyle.composerButton({ send: true })}
-            disabled={!composer.sendable}
-            type="submit"
-          >
-            {/* Each platform's own: Messages' arrow up on iOS, Material's
-                send on Android. */}
-            {platform === "ios" ? (
-              <ArrowUp aria-hidden="true" size={18} strokeWidth={2.5} />
+        {/* A message being changed keeps what it carries; only its words
+            change, and the capsule takes the row. */}
+        {editing === undefined &&
+          (onShareDays ? (
+            <AttachMenu onPhotos={choosePhotos} onShareDays={onShareDays} />
+          ) : (
+            <button
+              aria-label="写真を送る"
+              className={cx(floatingGlass, chatStyle.attach)}
+              onClick={choosePhotos}
+              type="button"
+            >
+              <ImageIcon aria-hidden="true" size={20} />
+            </button>
+          ))}
+        <div className={cx(floatingGlass, chatStyle.capsule)}>
+          {editingMessage && (
+            <ComposerStrip
+              name="メッセージを編集"
+              onStop={() => {
+                composer.stopEditing();
+              }}
+              stopLabel="編集をやめる"
+              text={summaryOf(editingMessage, mentionName)}
+            />
+          )}
+          {reply && (
+            <ComposerStrip
+              name={`${reply.writer}に返信`}
+              onStop={() => {
+                reply.onStop();
+              }}
+              stopLabel="返信をやめる"
+              text={summaryOf(reply.message, mentionName)}
+              thumb={reply.message.photo?.src}
+            />
+          )}
+          {attached && (
+            <ComposerStrip
+              name="共有する日"
+              onStop={() => {
+                composer.setAttached(undefined);
+              }}
+              stopLabel="共有をやめる"
+              text={daysSummary(attached)}
+            />
+          )}
+          {linkPreview.shown && (
+            <ComposerStrip
+              name={linkPreview.ready?.site ?? siteOf(linkPreview.shown)}
+              onStop={linkPreview.handleSkip}
+              stopLabel="リンクのプレビューを付けない"
+              text={linkPreview.ready?.title ?? "読み込み中…"}
+              thumb={linkPreview.ready?.image}
+            />
+          )}
+          <PhotoTray
+            below={stripped}
+            onRemove={composer.handleRemovePhoto}
+            photos={photos}
+          />
+          <div className={chatStyle.fieldRow}>
+            <LimitedTextArea
+              aria-label="メッセージ"
+              className={chatStyle.composerInput}
+              kind="chatMessage"
+              onValueChange={(text) => {
+                composer.setDraft(text);
+              }}
+              // Images pasted go with the next send, as photos picked do;
+              // words paste as ever. A message being changed takes none.
+              onPaste={(event) => {
+                const images = [...event.clipboardData.files].filter((file) =>
+                  file.type.startsWith("image/")
+                );
+                if (images.length === 0 || editing !== undefined) {
+                  return;
+                }
+                event.preventDefault();
+                composer.handleChoosePhotos(images).catch(() => undefined);
+              }}
+              placeholder="メッセージ"
+              value={draft}
+            />
+            {editing === undefined ? (
+              <button
+                aria-label="送る"
+                className={chatStyle.send}
+                disabled={!composer.sendable}
+                type="submit"
+              >
+                {/* Each platform's own: Messages' arrow up on iOS,
+                    Material's send on Android. */}
+                {platform === "ios" ? (
+                  <ArrowUp aria-hidden="true" size={18} strokeWidth={2.5} />
+                ) : (
+                  <SendHorizontal aria-hidden="true" size={16} />
+                )}
+              </button>
             ) : (
-              <SendHorizontal aria-hidden="true" size={18} />
+              // Saves rather than sends: a check, as Telegram and LINE show
+              // while a message is changed. Emptying it does not delete it.
+              <button
+                aria-label="編集を保存"
+                className={chatStyle.send}
+                disabled={draft.trim() === ""}
+                type="submit"
+              >
+                <Check aria-hidden="true" size={18} strokeWidth={2.5} />
+              </button>
             )}
-          </button>
-        ) : (
-          // Saves rather than sends: a check, as Telegram and LINE show
-          // while a message is changed. Emptying it does not delete it.
-          <button
-            aria-label="編集を保存"
-            className={chatStyle.composerButton({ send: true })}
-            disabled={draft.trim() === ""}
-            type="submit"
-          >
-            <Check aria-hidden="true" size={20} />
-          </button>
-        )}
+          </div>
+        </div>
       </form>
     </>
   );
 }
-
-// The composer's tools: each one's width, the gap between them, how
-// many, and how they fold into a › and back, as quick as the calendar's
-// own fold.
-const toolWidth = 38;
-
-const toolGap = 8;
-
-const toolCount = 2;
-
-const toolFold = spring("quick");
 
 // How long the server takes to read a page in the prototype.
 const readMs = 700;

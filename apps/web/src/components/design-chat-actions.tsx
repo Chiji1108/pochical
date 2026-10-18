@@ -23,6 +23,7 @@ import { reactionChoices } from "./design-group-data";
 import { menuStyle } from "./design-menu";
 import { PhoneContext } from "./design-sheet";
 import { ToastContext } from "./design-toast";
+import { floatingGlass } from "./design-ui";
 
 // What a long press (or a right click) on a chat's line opens: its
 // reactions and menu, or a link's own small menu, and the press itself.
@@ -158,9 +159,11 @@ export const messageActions = {
     zIndex: 30,
   }),
   more: css({ color: "text.secondary" }),
+  // Lit a step above the glass, as the menu's rows are.
   reaction: css({
+    _active: { bg: "fill.secondary" },
     _focusVisible: { outline: "2px solid token(colors.accent.default)" },
-    _hover: { bg: "fill.tertiary" },
+    _hover: { bg: "fill.secondary" },
     bg: "transparent",
     border: 0,
     borderRadius: "circle",
@@ -171,12 +174,10 @@ export const messageActions = {
     textStyle: "title2",
     width: "34px",
   }),
+  // In glass, as the menu under it (floatingGlass).
   reactions: css({
     alignItems: "center",
-    bg: "background.elevated",
-    border: "1px solid token(colors.border.default)",
     borderRadius: "full",
-    boxShadow: "md",
     display: "flex",
     gap: "2px",
     padding: "4px",
@@ -345,7 +346,7 @@ export function MessageActions({
               mine ? messageActions.end : messageActions.start
             )}
           >
-            <div className={messageActions.reactions}>
+            <div className={cx(floatingGlass, messageActions.reactions)}>
               {reactionChoices.map((emoji) => (
                 <button
                   aria-label={`${emoji}でリアクション`}
@@ -368,7 +369,7 @@ export function MessageActions({
                 <Plus aria-hidden="true" size={18} />
               </button>
             </div>
-            <div className={menuStyle.content}>
+            <div className={cx(floatingGlass, menuStyle.glassContent)}>
               <PopoverMenuItem
                 icon={<Reply aria-hidden="true" size={18} />}
                 onClick={onReply}

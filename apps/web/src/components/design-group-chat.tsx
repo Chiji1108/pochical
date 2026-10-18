@@ -32,7 +32,13 @@ import type { LinkMenuAt } from "./design-chat-actions";
 import { BubbleOutline } from "./design-chat-bubble";
 import { uploadMilliseconds } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
-import { Composer, noOne, useComposer } from "./design-chat-composer";
+import {
+  ChatEdge,
+  Composer,
+  GoneNote,
+  noOne,
+  useComposer,
+} from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
@@ -451,20 +457,22 @@ export function ChatPage({
           </IconMenu>
         )}
       </header>
-      <PinBar
-        nameOf={mentionName}
-        onJump={(id) => {
-          setPinsOpen(false);
-          jumpTo(id);
-        }}
-        onOpenChange={setPinsOpen}
-        onUnpin={(id) => {
-          pin(id, false);
-        }}
-        open={pinsOpen}
-        pins={pins}
-      />
       <div className={chatStyle.lines}>
+        <ChatEdge edge="head" list={listRef}>
+          <PinBar
+            nameOf={mentionName}
+            onJump={(id) => {
+              setPinsOpen(false);
+              jumpTo(id);
+            }}
+            onOpenChange={setPinsOpen}
+            onUnpin={(id) => {
+              pin(id, false);
+            }}
+            open={pinsOpen}
+            pins={pins}
+          />
+        </ChatEdge>
         <ChatContext value={scope}>
           <ol
             aria-label={`${title}のメッセージ`}
@@ -565,28 +573,30 @@ export function ChatPage({
             )}
           </span>
         )}
+        <ChatEdge edge="foot" list={listRef}>
+          {gone ? (
+            <GoneNote name={gone.name} />
+          ) : (
+            <Composer
+              composer={composer}
+              editingMessage={byId(composer.editing)}
+              onSend={send}
+              onShareDays={() => {
+                setSharing(true);
+              }}
+              reply={
+                replying && {
+                  message: replying,
+                  onStop: () => {
+                    setReplyTo(undefined);
+                  },
+                  writer: nameOf(replying.from),
+                }
+              }
+            />
+          )}
+        </ChatEdge>
       </div>
-      {gone ? (
-        <p className={chatStyle.goneBar}>{gone.name}はグループを抜けました</p>
-      ) : (
-        <Composer
-          composer={composer}
-          editingMessage={byId(composer.editing)}
-          onSend={send}
-          onShareDays={() => {
-            setSharing(true);
-          }}
-          reply={
-            replying && {
-              message: replying,
-              onStop: () => {
-                setReplyTo(undefined);
-              },
-              writer: nameOf(replying.from),
-            }
-          }
-        />
-      )}
       <EmojiPickerSheet
         onOpenChange={(open) => {
           if (!open) {
@@ -843,26 +853,6 @@ function useChatScroll({
       placed.current = { ...at, top: scrollOnto(list, at.target) };
     }
   };
-  // When what sits over the composer (a reply, days, photos) takes room,
-  // the lines keep their bottom edge, as in the chat apps, so the latest
-  // line is not hidden under it. When it goes, the room shows more below.
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    if (!list) {
-      return;
-    }
-    let height = list.clientHeight;
-    const observer = new ResizeObserver(() => {
-      if (list.clientHeight < height) {
-        list.scrollTop += height - list.clientHeight;
-      }
-      height = list.clientHeight;
-    });
-    observer.observe(list);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
   // ↓ to the latest line, once the chat is scrolled up from it.
   const [awayFromLatest, setAwayFromLatest] = useState(false);
   // The unread lines not yet on screen, counted on the ↓, as LINE and
@@ -876,7 +866,10 @@ function useChatScroll({
     if (start === -1) {
       return;
     }
-    const foot = list.getBoundingClientRect().bottom;
+    // Lines under the composer's glass are not yet seen.
+    const foot =
+      list.getBoundingClientRect().bottom -
+      Number(getComputedStyle(list).paddingBottom.replace("px", ""));
     let count = 0;
     for (const message of messages.slice(start)) {
       const element = list.querySelector(`#message-${message.id}`);

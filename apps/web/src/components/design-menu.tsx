@@ -30,6 +30,27 @@ const menu = {
     padding: "8px",
     zIndex: 30,
   }),
+  // Over a chat, as iOS 26's context menus: glass (floatingGlass) rather
+  // than a raised card, rounder, and the row under the finger lit a step
+  // above the glass, which is fill.tertiary itself.
+  glassContent: css({
+    "& > :is(button, [role=menuitem]):is(:hover, :active, [data-highlighted])":
+      { bg: "fill.secondary" },
+    _closed: { animation: "fadeOut 0.12s ease-in" },
+    _open: {
+      _motionReduce: { animation: "fadeIn 0.12s ease-out" },
+      animation: "growIn 0.2s ease-out",
+    },
+    borderRadius: "2xl",
+    maxHeight: "var(--available-height)",
+    minWidth: "200px",
+    outline: "none",
+    overflowY: "auto",
+    padding: "8px",
+    // Grows out of what opened it, as iOS 26's menus morph from it.
+    transformOrigin: "var(--transform-origin)",
+    zIndex: 30,
+  }),
   icon: css({ color: "text.primary", display: "flex", flexShrink: 0 }),
   item: css({
     // An action that takes something away, in the danger color with its
@@ -83,6 +104,7 @@ const menu = {
 // under its reactions.
 export const menuStyle = {
   content: menu.content,
+  glassContent: menu.glassContent,
   icon: menu.icon,
   item: menu.item,
   separator: menu.separator,
