@@ -196,7 +196,8 @@ struct ChatScreen: View {
     .ignoresSafeArea(.container, edges: .bottom)
     .ignoresSafeArea(.keyboard)
     .overlay {
-      if state.lines.isEmpty, state.waiting.isEmpty {
+      // A place's head says what the chat is for in its place.
+      if state.lines.isEmpty, state.waiting.isEmpty, head == nil {
         Text("まだメッセージはありません")
           .font(.footnote)
           .foregroundStyle(colors.textQuaternary)
