@@ -34,11 +34,11 @@ export default defineConfig({
         },
         // Tests never reach the internet: what a test does not answer with
         // its own vi.spyOn(globalThis, "fetch") is answered here. Slack
-        // takes each call and gives back nothing to keep; any other host
-        // is not there.
+        // takes each call, every message posted at one time; any other
+        // host is not there.
         outboundService: (request) =>
           new URL(request.url).host === "slack.com"
-            ? Response.json({ ok: true })
+            ? Response.json({ ok: true, ts: "1700000000.000000" })
             : new Response(null, { status: 503 }),
       },
       wrangler: { configPath: "./wrangler.jsonc" },
