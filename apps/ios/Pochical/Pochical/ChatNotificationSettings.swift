@@ -169,8 +169,7 @@ struct ChatNotificationsPage: View {
   }
 }
 
-/// A chat's notifications, on or off: what the user turned shows at once,
-/// and goes back if the server could not keep it.
+/// A chat's notifications, on or off.
 struct ChatNotificationToggle<Content: View>: View {
   @Environment(\.groupCalls) private var groupCalls
   let groupID: String
@@ -181,35 +180,14 @@ struct ChatNotificationToggle<Content: View>: View {
   /// asked, as /design's チャット page does.
   var asks = false
   @ViewBuilder let label: () -> Content
-  /// On or off as turned, until the server has said so.
-  @State private var turned: Bool?
-  @State private var failed = false
 
   var body: some View {
-    Toggle(isOn: Binding(get: { turned ?? !muted }, set: turn)) {
-      label()
-    }
-    .onChange(of: muted) { turned = nil }
-    .alert("変更できませんでした", isPresented: $failed) {
-      Button("OK", role: .cancel) {}
-    } message: {
-      Text("通信できる場所で、もう一度お試しください。")
-    }
-  }
-
-  private func turn(_ on: Bool) {
-    turned = on
-    if on, asks {
-      Notifications.shared.askOnce()
-    }
-    Task {
-      do {
-        try await groupCalls.setChatMuted(threadID, in: groupID, muted: !on)
-      } catch {
-        turned = nil
-        ReviewPrompt.troubled = true
-        failed = true
+    ServerToggle(on: !muted, label: label) { on in
+      if on, asks {
+        Notifications.shared.askOnce()
       }
+    } send: { on in
+      try await groupCalls.setChatMuted(threadID, in: groupID, muted: !on)
     }
   }
 }
@@ -218,13 +196,33 @@ struct ChatNotificationToggle<Content: View>: View {
 private struct MentionsToggle: View {
   @Environment(\.groupCalls) private var groupCalls
   let on: Bool
+
+  var body: some View {
+    ServerToggle(on: on) {
+      Text("メンションはいつも通知")
+      Text("通知をオフにしたチャットでも")
+    } send: { on in
+      try await groupCalls.setMentionsWhenMuted(on)
+    }
+  }
+}
+
+/// A switch the server keeps: what the user turned shows at once, and
+/// goes back if the server could not keep it.
+private struct ServerToggle<Content: View>: View {
+  /// As the user's devices last heard.
+  let on: Bool
+  @ViewBuilder let label: () -> Content
+  /// Done as it is turned, before the server is told.
+  var turning: (Bool) -> Void = { _ in }
+  let send: (Bool) async throws -> Void
+  /// On or off as turned, until the server has said so.
   @State private var turned: Bool?
   @State private var failed = false
 
   var body: some View {
     Toggle(isOn: Binding(get: { turned ?? on }, set: turn)) {
-      Text("メンションはいつも通知")
-      Text("通知をオフにしたチャットでも")
+      label()
     }
     .onChange(of: on) { turned = nil }
     .alert("変更できませんでした", isPresented: $failed) {
@@ -236,9 +234,10 @@ private struct MentionsToggle: View {
 
   private func turn(_ value: Bool) {
     turned = value
+    turning(value)
     Task {
       do {
-        try await groupCalls.setMentionsWhenMuted(value)
+        try await send(value)
       } catch {
         turned = nil
         ReviewPrompt.troubled = true
