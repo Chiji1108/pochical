@@ -560,7 +560,9 @@ export class UserDO extends DurableObject<Env> {
     threadId: string,
     mentioned: boolean
   ): boolean {
-    if (!this.isMember(groupId)) {
+    // Any of the user's places: their groups, and their chat with
+    // Pochical's people, whose answers notify as any line does.
+    if (!this.hasPlace(groupId)) {
       return false;
     }
     return (
