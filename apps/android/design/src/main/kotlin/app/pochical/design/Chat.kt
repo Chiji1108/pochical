@@ -32,6 +32,7 @@ object Chat {
   const val replySwipe = 56
   const val replySwipeRubber = 0.3f
   const val runGap = 12
+  const val supportPlace = "support"
   const val typingSendMs = 3000
   const val typingShowMs = 5000
   const val unsentAfterMs = 600000

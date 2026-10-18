@@ -86,8 +86,8 @@
       "namespace_id": "1003",
       "simple": { "limit": 30, "period": 60 },
     },
-    // Lines to Pochical's people, by the user: plenty for someone writing,
-    // too few to flood the chat Pochical's people read.
+    // The user's lines posted to Pochical's people's Slack channel: plenty
+    // for someone writing, too few to flood it (support-place.ts).
     {
       "name": "SUPPORT_LIMIT",
       "namespace_id": "1004",

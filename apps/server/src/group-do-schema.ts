@@ -285,3 +285,37 @@ export const memberBlocks = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.userId, table.blockedId] })]
 );
+
+// How far a user's chat with Pochical's people has been told outside its
+// Group DO (support:{userId}): to D1's index of every chat, and to the
+// chat's Slack thread. One row, the cursor of the log told up to, as the
+// User DO's pushed_cursor is for its groups. Only a support place has it.
+export const supportRelay = sqliteTable(
+  "support_relay",
+  {
+    cursor: integer().notNull(),
+    id: integer().primaryKey(),
+  },
+  (table) => [check("support_relay_single_row", sql`${table.id} = 1`)]
+);
+
+// What the chat's Slack thread was told of each line: its message there,
+// the user's reactions on it as told, any said in the thread for an emoji
+// Slack has no name for (by emoji, the notice's message), and whether its
+// taking back was told. A line written in Slack has its message from the
+// start, so it is never posted again.
+export const supportSlackLines = sqliteTable("support_slack_lines", {
+  notices: text({ mode: "json" })
+    .$type<Record<string, string>>()
+    .notNull()
+    .default({}),
+  seq: integer().primaryKey(),
+  slackTs: text("slack_ts"),
+  toldReactions: text("told_reactions", { mode: "json" })
+    .$type<string[]>()
+    .notNull()
+    .default([]),
+  toldUnsent: integer("told_unsent", { mode: "boolean" })
+    .notNull()
+    .default(false),
+});

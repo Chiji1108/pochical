@@ -1,6 +1,6 @@
 import { chatPlaces, chatRules } from "@pochical/design/chat";
 import { runInDurableObject } from "cloudflare:test";
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { directThread, supportPlace } from "../src/group-chat";
@@ -220,6 +220,35 @@ describe("the chat with Pochical's people", () => {
     await expect(
       kept(userId, "select seq from chat_lines")
     ).resolves.toStrictEqual([]);
+  });
+
+  it("counts Pochical's people's answers on the user's own socket, as the support place", async () => {
+    const token = await signInAnonymously();
+    const userId = await userIdOf(token);
+    // A new user's own socket has nothing to catch up on.
+    const phone = await syncSocket("/v1/me/socket", token);
+    const { frames } = await supportSocket(token);
+    await frames.next();
+    await exports.AdminEntrypoint.answerSupport(userId, "どうしましたか");
+    const counted = changesIn(await phone.frames.next());
+    expect(counted).toMatchObject([
+      {
+        kind: {
+          case: "unreadCount",
+          value: {
+            count: 1,
+            groupId: chatRules.supportPlace,
+            threadId: thread,
+          },
+        },
+      },
+    ]);
+    const muted = await call(
+      "UserService/SetChatMuted",
+      { groupId: chatRules.supportPlace, muted: true, threadId: thread },
+      token
+    );
+    expect(muted.status).toBe(200);
   });
 
   it("is reported by no one", async () => {

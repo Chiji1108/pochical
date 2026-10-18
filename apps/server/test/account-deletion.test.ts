@@ -2,9 +2,16 @@ import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { supportPlace } from "../src/group-chat";
 import { appleKeys, idToken, link } from "./apple-helpers";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
-import { pair, sendFrame, syncSocket, untilAcked } from "./sync-helpers";
+import {
+  pair,
+  sendFrame,
+  supportChat,
+  syncSocket,
+  untilAcked,
+} from "./sync-helpers";
 
 /** A line in the group's chat, sent and taken. */
 const say = async (groupId: string, token: string, text: string) => {
@@ -57,12 +64,9 @@ describe("deleting an account", () => {
     const guestId = await userIdOf(guest);
     await say(groupId, maker, "やあ");
     await say(groupId, guest, "こんにちは");
-    await call(
-      "SupportService/SendSupportMessage",
-      { id: crypto.randomUUID(), text: "消してください" },
-      guest
-    );
-    await env.PHOTOS.put(`support/${guestId}/photos/p1`, "jpeg");
+    const support = await supportChat(guest);
+    await support.say("消してください");
+    await env.PHOTOS.put(`groups/${supportPlace(guestId)}/photos/p1`, "jpeg");
     await expect(deleteAccount(guest)).resolves.toBe(200);
 
     // The app's notices of their joining and leaving stay, as the group's.
@@ -78,12 +82,21 @@ describe("deleting an account", () => {
       groupId,
       `select display_name, deleted, left_at is not null as gone from members where user_id = '${guestId}'`
     );
-    const support = await env.DB.prepare(
-      "select count(*) as n from support_messages where user_id = ?"
+    const supportLines = await runInDurableObject(
+      env.GROUPS.getByName(supportPlace(guestId)),
+      (_, state) =>
+        state.storage.sql
+          .exec<{ n: number }>("select count(*) as n from chat_lines")
+          .one().n
+    );
+    const indexed = await env.DB.prepare(
+      "select count(*) as n from support_chats where user_id = ?"
     )
       .bind(guestId)
       .first<number>("n");
-    const photos = await env.PHOTOS.list({ prefix: `support/${guestId}/` });
+    const photos = await env.PHOTOS.list({
+      prefix: `groups/${supportPlace(guestId)}/`,
+    });
     const groups = await runInDurableObject(
       env.USERS.getByName(guestId),
       (_, state) =>
@@ -95,7 +108,7 @@ describe("deleting an account", () => {
       notices,
       photos: photos.objects.length,
       signedIn: await signedIn(guest),
-      support,
+      support: [supportLines, indexed],
       theirs,
     }).toStrictEqual({
       groups: [],
@@ -109,7 +122,7 @@ describe("deleting an account", () => {
       ],
       photos: 0,
       signedIn: 401,
-      support: 0,
+      support: [0, 0],
       theirs: [{ deleted: 1, display_name: "", gone: 1 }],
     });
   });

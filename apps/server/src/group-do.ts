@@ -17,6 +17,7 @@ import {
 } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
+  ChatEdit,
   ChatEdits,
   ChatLine,
   Profile as UsualProfile,
@@ -55,6 +56,7 @@ import {
   memberRepeatOrders,
   members,
   profile,
+  supportSlackLines,
 } from "./group-do-schema";
 import { markColumns, markOfRow, sameMark } from "./group-marks";
 import type { MarkValue } from "./group-marks";
@@ -69,6 +71,7 @@ import {
 import { linkPreview } from "./link-preview";
 import { deleteGroupPhotos } from "./photos";
 import { overLimit } from "./rate-limits";
+import { relaySupport, supportPage } from "./support-place";
 import {
   acceptSyncSocket,
   answerKeepalive,
@@ -100,6 +103,9 @@ export type NewMember = {
   // Their usual photo, already in the group's photos; empty for none.
   usualPhoto: string;
 };
+
+/** How long a support chat's relay that failed waits to try again. */
+const RELAY_RETRY_MS = 60_000;
 
 /** The name Pochical's people answer under, as the app's own. */
 const POCHICAL_NAME = "ポチカル";
@@ -526,6 +532,16 @@ export class GroupDO extends DurableObject<Env> {
     return chatPlaces[this.placeKind() ?? "group"];
   }
 
+  /**
+   * The place's id as its members' User DOs and devices keep it: the
+   * group's, or chatRules.supportPlace for the chat with Pochical's people.
+   */
+  private placeId(): string | undefined {
+    return this.placeKind() === "support"
+      ? chatRules.supportPlace
+      : this.ctx.id.name;
+  }
+
   /** What the place is, or undefined before it is set up. */
   private placeKind(): ChatPlaceKind | undefined {
     return this.db.select({ kind: profile.kind }).from(profile).get()?.kind;
@@ -711,8 +727,10 @@ export class GroupDO extends DurableObject<Env> {
     );
     return alertOf(
       line,
-      { id: this.ctx.id.name ?? "", name: this.getProfile()?.name ?? "" },
-      (id) => names.get(id) ?? "メンバー"
+      { id: this.placeId() ?? "", name: this.getProfile()?.name ?? "" },
+      (id) => names.get(id) ?? "メンバー",
+      // The chat with Pochical's people is a chat of two, worded as one.
+      this.placeKind() === "support" || line.threadId !== GROUP_THREAD
     );
   }
 
@@ -877,6 +895,26 @@ export class GroupDO extends DurableObject<Env> {
       rejectAndClose(ws, ServerError_Code.BAD_FRAME, "Not in the group");
       return;
     }
+    const { refused } = this.takeEdits(userId, edits);
+    if (refused.length > 0) {
+      send(ws, { case: "changes", value: { changes: refused } });
+    }
+    send(ws, {
+      case: "acked",
+      value: { opIds: edits.map(({ opId }) => opId) },
+    });
+  }
+
+  /**
+   * A member's chat edits taken, each change at the next cursor, and sent
+   * to everyone with the place open; their counts and notifications told,
+   * and in a support place, told outside (support-place.ts). The lines a
+   * refused edit concerned, for the writer, and the new lines.
+   */
+  private takeEdits(
+    userId: string,
+    edits: ChatEdit[]
+  ): { refused: Change[]; sent: ChatLine[] } {
     // Whose unread lines changed, by chat: everyone else's with a new
     // line, the reader's with a read.
     const counted = new Map<string, Set<string>>();
@@ -965,7 +1003,7 @@ export class GroupDO extends DurableObject<Env> {
       }
       return { changed: made, refused: back };
     });
-    // A photo taken back goes from the group's photos for everyone.
+    // A photo taken back goes from the place's photos for everyone.
     const groupId = this.ctx.id.name;
     if (groupId !== undefined && photosGone.length > 0) {
       this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, photosGone));
@@ -987,13 +1025,71 @@ export class GroupDO extends DurableObject<Env> {
     for (const page of pages) {
       this.ctx.waitUntil(this.addPage(page));
     }
-    if (refused.length > 0) {
-      send(ws, { case: "changes", value: { changes: refused } });
+    if (changed.length > 0 && this.placeKind() === "support") {
+      this.ctx.waitUntil(this.ctx.storage.setAlarm(Date.now()));
     }
-    send(ws, {
-      case: "acked",
-      value: { opIds: edits.map(({ opId }) => opId) },
-    });
+    return { refused, sent };
+  }
+
+  /**
+   * The chat with Pochical's people told outside as it changes: to D1's
+   * index and its Slack thread (support-place.ts). A failure comes back
+   * later, the relayed cursor kept.
+   */
+  async alarm(): Promise<void> {
+    const userId = this.supportUser();
+    if (userId === undefined) {
+      return;
+    }
+    try {
+      await relaySupport(this.env, this.db, userId);
+    } catch (error) {
+      console.error("Support relay failed", error);
+      await this.ctx.storage.setAlarm(Date.now() + RELAY_RETRY_MS);
+    }
+  }
+
+  /** The user whose chat with Pochical's people this is, if it is one. */
+  private supportUser(): string | undefined {
+    if (this.placeKind() !== "support") {
+      return undefined;
+    }
+    return this.memberList().find(
+      ({ userId }) => userId !== chatRules.pochicalMember
+    )?.userId;
+  }
+
+  /**
+   * Pochical's people's edits of the chat with them, from the admin pages
+   * or Slack, taken as a member's are (chatRules.pochicalMember): new
+   * lines, reactions, lines taken back. A line written in Slack keeps its
+   * message there (`slackTs`), so it is not posted again. The new lines'
+   * seqs; none outside a support place.
+   */
+  answerAsPochical(edits: ChatEdit[], slackTs?: string): number[] {
+    if (this.placeKind() !== "support") {
+      return [];
+    }
+    const { sent } = this.takeEdits(chatRules.pochicalMember, edits);
+    const seqs = sent.map((line) => Number(line.seq));
+    if (slackTs !== undefined) {
+      for (const seq of seqs) {
+        this.db
+          .insert(supportSlackLines)
+          .values({ seq, slackTs })
+          .onConflictDoNothing()
+          .run();
+      }
+    }
+    return seqs;
+  }
+
+  /** A page of the chat with Pochical's people, for the admin pages. */
+  supportPage(beforeSeq: number): ReturnType<typeof supportPage> | null {
+    const userId = this.supportUser();
+    return userId === undefined
+      ? null
+      : supportPage(this.db, userId, beforeSeq);
   }
 
   /**
@@ -1044,7 +1140,7 @@ export class GroupDO extends DurableObject<Env> {
     // too, for their devices to take back what was notified.
     reads = new Set<string>()
   ): void {
-    const groupId = this.ctx.id.name;
+    const groupId = this.placeId();
     if (groupId === undefined || counted.size === 0) {
       return;
     }

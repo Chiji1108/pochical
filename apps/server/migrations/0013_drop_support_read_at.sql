@@ -1,0 +1,1 @@
+ALTER TABLE `support_chats` DROP COLUMN `user_read_at`;

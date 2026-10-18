@@ -347,10 +347,10 @@ public enum ChatPhotos {
     return data
   }
 
-  /// Where photos in the chat with Pochical's people are kept, in place of
-  /// a group's id: on the device beside the groups', and on the server
-  /// under the user's own support photos. A group's id is never this.
-  public static let support = "support"
+  /// Where photos in the chat with Pochical's people are kept: its place's
+  /// id, on the device beside the groups', and on the server with that
+  /// place's photos (/v1/support/photos).
+  public static let support = ChatPlace.supportID
 
   /// Where the user's own photos are kept, in place of a group's id: their
   /// usual photo, on the server for them alone (spec/sync-protocol.md,

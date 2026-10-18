@@ -29,6 +29,7 @@
     "replySwipe": 56,
     "replySwipeRubber": 0.3,
     "runGap": 12,
+    "supportPlace": "support",
     "typingSendMs": 3000,
     "typingShowMs": 5000,
     "unsentAfterMs": 600000

@@ -18,13 +18,11 @@ import {
   personPhoto,
   putPhoto,
   SUPPORT_PHOTO_PATH,
-  supportPhoto,
 } from "./photos";
 import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
 import type { SessionUser } from "./session";
 import { slackEvents } from "./slack-events";
-import { registerSupportService } from "./support-service";
 import { SESSION_HEADER, USER_HEADER } from "./sync-socket";
 import { registerSystemService } from "./system-service";
 import { registerUserService } from "./user-service";
@@ -41,7 +39,6 @@ registerInviteService(router);
 registerGroupService(router);
 registerUserService(router);
 registerChatService(router);
-registerSupportService(router);
 
 const rpcHandlers = new Map(
   router.handlers.map((handler) => [
@@ -142,9 +139,23 @@ const ownPictureRequest = async (
   if (!user) {
     return signInFirst();
   }
-  return supportPhotoId === undefined
-    ? await personPhoto(request, env, personPhotoId ?? "", user.id)
-    : await supportPhoto(request, env, supportPhotoId, user.id);
+  if (supportPhotoId === undefined) {
+    return await personPhoto(request, env, personPhotoId ?? "", user.id);
+  }
+  // The chat's place, set up as its socket sets it up, holds its photos.
+  const place = supportPlace(user.id);
+  await env.GROUPS.getByName(place).setUpSupport(user.id);
+  switch (request.method) {
+    case "PUT": {
+      return await putPhoto(request, env, place, supportPhotoId, user.id);
+    }
+    case "GET": {
+      return await getPhoto(request, env, place, supportPhotoId);
+    }
+    default: {
+      return new Response("Method not allowed", { status: 405 });
+    }
+  }
 };
 
 /** A picture by its path: a preview's, a face, or a photo in a chat; else none. */

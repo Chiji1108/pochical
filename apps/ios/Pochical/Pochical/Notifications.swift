@@ -34,8 +34,6 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   var opening: OpenedChat?
   /// A tapped answer from Pochical's people asks to open their chat.
   var openingSupport = false
-  /// The chat with Pochical's people is on screen, its answers not shown.
-  var supportOpen = false
   /// Whether the person has let Pochical notify, as the system last said.
   private(set) var permission = Permission.notAsked
   private var token: Data?
@@ -115,9 +113,6 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   func userNotificationCenter(
     _ center: UNUserNotificationCenter, willPresent notification: UNNotification
   ) async -> UNNotificationPresentationOptions {
-    if Self.isSupport(notification) {
-      return supportOpen ? [] : [.banner, .list, .sound]
-    }
     let chat = Self.chat(of: notification)
     return chat != nil && chat == openChat ? [] : [.banner, .list, .sound]
   }
@@ -125,10 +120,6 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   func userNotificationCenter(
     _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse
   ) async {
-    if Self.isSupport(response.notification) {
-      openingSupport = true
-      return
-    }
     guard let chat = Self.chat(of: response.notification) else { return }
     if let answer = response as? UNTextInputNotificationResponse {
       let request = response.notification.request
@@ -137,7 +128,12 @@ nonisolated struct OpenedChat: Hashable, Sendable {
       await reply(answer.userText, to: line)
       return
     }
-    opening = chat
+    // The chat with Pochical's people is under 設定, not a group.
+    if chat.groupID == ChatPlace.supportID {
+      openingSupport = true
+    } else {
+      opening = chat
+    }
   }
 
   private static let replyAction = "REPLY"
@@ -156,6 +152,9 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     var send = Pochical_V1_ChatSend()
     send.threadID = line.threadID
     send.text = words
+    if ChatPlace.rules(of: line.groupID).sendsDevice {
+      send.device = AppDevice.words
+    }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     // The app may be woken for it after letting go of the database's
     // locks, or be letting go of them as it is: it holds them until sent,
@@ -216,12 +215,6 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     guard let read = ChatWithdrawal(payload: payload) else { return .noData }
     await withdraw(in: read.groupID, read.threadID, readTo: read.readTo)
     return .newData
-  }
-
-  /// An answer from Pochical's people: no group, their chat's thread.
-  private nonisolated static func isSupport(_ notification: UNNotification) -> Bool {
-    let info = notification.request.content.userInfo
-    return (info["groupId"] as? String)?.isEmpty == true && info["threadId"] as? String == "support"
   }
 
   private nonisolated static func chat(of notification: UNNotification) -> OpenedChat? {

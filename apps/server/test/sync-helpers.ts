@@ -1,7 +1,8 @@
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
-import { runDurableObjectAlarm } from "cloudflare:test";
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
+import { expect, vi } from "vitest";
 
 import {
   ClientFrameSchema,
@@ -12,6 +13,7 @@ import type {
   DayField,
   ServerFrame,
 } from "../src/gen/pochical/v1/sync_pb";
+import { supportPlace } from "../src/group-chat";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
 import { call, openSocket, signInAnonymously, userIdOf } from "./helpers";
 
@@ -185,3 +187,54 @@ export const rosterIn = (frame: ServerFrame) =>
   changesIn(frame).filter(
     ({ kind }) => kind.case === "groupProfile" || kind.case === "member"
   );
+
+/**
+ * Waits until the chat is told outside up to its log's head: its alarm
+ * runs as soon as it is set, and is run here should it not have yet.
+ */
+export const relayed = async (userId: string): Promise<void> => {
+  const place = env.GROUPS.getByName(supportPlace(userId));
+  await vi.waitFor(async () => {
+    await runDurableObjectAlarm(place);
+    const behind = await runInDurableObject(place, (_, state) =>
+      state.storage.sql
+        .exec<{ behind: number }>(
+          "select (select cursor from log_head) - coalesce((select cursor from support_relay), 0) as behind"
+        )
+        .one()
+    );
+    expect(behind.behind).toBe(0);
+  });
+};
+
+type ChatKind = Extract<
+  Parameters<typeof sendFrame>[1],
+  { case: "chatEdits" }
+>["value"]["edits"];
+
+/**
+ * The user's chat with Pochical's people, open on a device: each edit
+ * sent as its outbox sends one, taken once acknowledged, then told outside.
+ */
+export const supportChat = async (token: string) => {
+  const userId = await userIdOf(token);
+  const { socket, frames } = await syncSocket("/v1/me/support/socket", token);
+  await frames.next();
+  const takeEdits = async (edits: NonNullable<ChatKind>): Promise<void> => {
+    sendFrame(socket, { case: "chatEdits", value: { edits } });
+    await untilAcked(frames);
+    await relayed(userId);
+  };
+  const say = async (text: string, from = "") => {
+    await takeEdits([
+      {
+        kind: {
+          case: "send",
+          value: { device: from, text, threadId: "group" },
+        },
+        opId: crypto.randomUUID(),
+      },
+    ]);
+  };
+  return { edit: takeEdits, frames, say, socket, userId };
+};

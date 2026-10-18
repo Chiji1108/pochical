@@ -102,6 +102,11 @@ export const chatRules = {
   // The room before a run's first line, a day's title and ここから新着,
   // in points: where the writer changes, the lines part more.
   runGap: 12,
+  // The place id the chat with Pochical's people is kept by, on the
+  // devices and in the User DO's counts, mutes and notifications, as a
+  // group's chats are kept by the group's id: group ids are random, so
+  // none is named so. The server keeps it in the Group DO support:{userId}.
+  supportPlace: "support",
   // How often, in milliseconds, a client sends a typing frame while
   // someone is writing.
   typingSendMs: 3000,

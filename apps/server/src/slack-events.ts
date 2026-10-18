@@ -2,13 +2,18 @@
 // Slack's Events API tells it at `/slack/events`: a reply in a chat's
 // thread is an answer, an emoji on a user's line is their reaction, and
 // an answer deleted there is taken back.
+import { create } from "@bufbuild/protobuf";
+import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
+import { textLimits } from "@pochical/design/limits";
 import { waitUntil } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { supportChats } from "./db/schema";
-import { supportPhotoKey } from "./photos";
+import { supportChats, supportSlack } from "./db/schema";
+import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
+import { GROUP_THREAD, supportPlace } from "./group-chat";
+import { photoKey } from "./photos";
 import {
   emojiOfSlackName,
   fromSlackText,
@@ -19,30 +24,26 @@ import {
   slackSecret,
   stringOf,
 } from "./slack";
-import {
-  keepSupportAnswer,
-  PHOTO_WORDS,
-  tellAnswered,
-  tellSupportChanged,
-} from "./support-answers";
-import type { SupportPhotoOf } from "./support-answers";
-import {
-  lineWhere,
-  linesWithSlackTs,
-  reactTo,
-  unsendLine,
-} from "./support-chat";
+import { linesOfSlackTs } from "./support-place";
+import { characterCount } from "./text-limits";
+
+type EditKind = MessageInitShape<typeof ChatEditSchema>["kind"];
+
+/** One of Pochical's people's edits of the chat, as a member's outbox sends one. */
+const editOf = (opId: string, kind: EditKind) =>
+  create(ChatEditSchema, { kind, opId });
 
 /**
- * An image Pochical's people shared, kept under the user's support photos
- * at a size the chat shows: Slack's 1024 pixel picture of it, or the
- * image itself when it has none and fits chatRules.photoMaxBytes.
+ * An image Pochical's people shared, kept with the chat's photos at a size
+ * the chat shows (Slack's 1024 pixel picture of it, or the image itself
+ * when it has none and fits chatRules.photoMaxBytes) and noted as theirs,
+ * so their line may send it.
  */
 const keepSlackPhoto = async (
   env: Env,
   userId: string,
   file: Record<string, unknown>
-): Promise<SupportPhotoOf | null> => {
+): Promise<{ id: string; width: number; height: number } | null> => {
   const fileId = stringOf(file.id);
   const thumb = stringOf(file.thumb_1024);
   const url = thumb ?? stringOf(file.url_private_download);
@@ -61,7 +62,11 @@ const keepSlackPhoto = async (
     return null;
   }
   const id = `slack-${fileId}`;
-  await env.PHOTOS.put(supportPhotoKey(userId, id), image.bytes, {
+  const place = env.GROUPS.getByName(supportPlace(userId));
+  if (!(await place.notePhoto(id, chatRules.pochicalMember))) {
+    return null;
+  }
+  await env.PHOTOS.put(photoKey(supportPlace(userId), id), image.bytes, {
     httpMetadata: { contentType: image.type },
   });
   return { height, id, width };
@@ -69,9 +74,10 @@ const keepSlackPhoto = async (
 
 /**
  * A reply in a chat's thread, by one of Pochical's people: each image in
- * it, then its words, sent to the user as ポチカル and marked ✅, or
- * answered with what did not go. Slack sends an event again when unsure it
- * arrived; its message and files' ids keep each once.
+ * it, then its words, sent to the user as ポチカル, each line keeping the
+ * reply's message, and marked ✅, or answered with what did not go. Slack
+ * sends an event again when unsure it arrived; its message's id keeps
+ * each line once.
  */
 const answerFromSlack = async (
   env: Env,
@@ -89,6 +95,7 @@ const answerFromSlack = async (
   if (chat === undefined) {
     return;
   }
+  const place = env.GROUPS.getByName(supportPlace(chat.userId));
   const base = stringOf(event.client_msg_id) ?? `slack-${ts}`;
   const files = Array.isArray(event.files) ? event.files.filter(isRecord) : [];
   const images = files
@@ -98,41 +105,40 @@ const answerFromSlack = async (
   if (images.length < files.length) {
     missed.push("写真のほかのファイルや、一度に送れる枚数を超えた写真");
   }
-  // Every line the message makes is kept first, and the user told once,
-  // by its words or else its photos, not once a line.
-  let added: string | undefined;
+  const edits: ReturnType<typeof editOf>[] = [];
   for (const [index, image] of images.entries()) {
     // oxlint-disable-next-line no-await-in-loop -- the photos go in order
     const photo = await keepSlackPhoto(env, chat.userId, image);
-    const kept =
-      photo === null
-        ? null
-        : // oxlint-disable-next-line no-await-in-loop -- as above
-          await keepSupportAnswer(env, chat.userId, "", {
-            id: `${base}-photo-${index}`,
-            photo,
-            slackTs: ts,
-          });
-    if (kept === null) {
+    if (photo === null) {
       missed.push("読めなかった写真");
-    } else if (kept.added) {
-      added = PHOTO_WORDS;
+    } else {
+      edits.push(
+        editOf(`${base}-photo-${index}`, {
+          case: "send",
+          value: { photo, text: "", threadId: GROUP_THREAD },
+        })
+      );
     }
   }
-  const words = fromSlackText(stringOf(event.text) ?? "", event.blocks);
-  if (words.trim() !== "" || images.length === 0) {
-    const kept = await keepSupportAnswer(env, chat.userId, words, {
-      id: base,
-      slackTs: ts,
-    });
-    if (kept === null) {
+  const words = fromSlackText(stringOf(event.text) ?? "", event.blocks).trim();
+  if (words !== "" || images.length === 0) {
+    if (words === "" || characterCount(words) > textLimits.chatMessage) {
       missed.push("空か、長すぎる文");
-    } else if (kept.added) {
-      added = words.trim();
+    } else {
+      edits.push(
+        editOf(base, {
+          case: "send",
+          value: { text: words, threadId: GROUP_THREAD },
+        })
+      );
     }
   }
-  if (added !== undefined) {
-    await tellAnswered(env, chat.userId, added);
+  const seqs = await place.answerAsPochical(edits, ts);
+  if (seqs.length > 0) {
+    await drizzle(env.DB)
+      .insert(supportSlack)
+      .values(seqs.map((seq) => ({ seq, ts, userId: chat.userId })))
+      .onConflictDoNothing();
   }
   await (missed.length === 0
     ? slackCall(env, "reactions.add", {
@@ -150,16 +156,19 @@ const answerFromSlack = async (
  * line it was, its photos and its words.
  */
 const unsendFromSlack = async (env: Env, ts: string): Promise<void> => {
-  const withTs = await linesWithSlackTs(env, ts);
-  const lines = withTs.filter((line) => line.fromSupport && !line.unsent);
-  for (const line of lines) {
-    // oxlint-disable-next-line no-await-in-loop -- a few at most
-    await unsendLine(env, line);
-  }
+  const lines = await linesOfSlackTs(env, ts);
   const [first] = lines;
-  if (first !== undefined) {
-    await tellSupportChanged(env, first.userId);
+  if (first === undefined) {
+    return;
   }
+  await env.GROUPS.getByName(supportPlace(first.userId)).answerAsPochical(
+    lines.map(({ seq }) =>
+      editOf(`slack-unsend-${ts}-${seq}`, {
+        case: "unsend",
+        value: { seq: BigInt(seq), threadId: GROUP_THREAD },
+      })
+    )
+  );
 };
 
 /**
@@ -177,12 +186,16 @@ const reactFromSlack = async (
   if (ts === undefined || emoji === undefined) {
     return;
   }
-  const line = await lineWhere(env, { slackTs: ts });
-  if (line === undefined || line.fromSupport || line.unsent) {
+  const [line] = await linesOfSlackTs(env, ts);
+  if (line === undefined) {
     return;
   }
-  await reactTo(env, line.id, true, emoji, on);
-  await tellSupportChanged(env, line.userId);
+  await env.GROUPS.getByName(supportPlace(line.userId)).answerAsPochical([
+    editOf(crypto.randomUUID(), {
+      case: "react",
+      value: { emoji, on, seq: BigInt(line.seq), threadId: GROUP_THREAD },
+    }),
+  ]);
 };
 
 /**

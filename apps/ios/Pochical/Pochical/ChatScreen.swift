@@ -53,6 +53,9 @@ struct ChatScreen: View {
   /// A day brought from みんなのシフト, set over the composer as the chat
   /// opens.
   var sharing: Day?
+  /// What the chat's place says first, over its first line once the lines
+  /// reach it: who the chat with Pochical's people reaches, and what does.
+  var head: AnyView?
   /// `sharing` has been set over the composer, once.
   @State private var tookSharing = false
   /// The chat's draft was put back in the composer as it opened.
@@ -101,8 +104,12 @@ struct ChatScreen: View {
   /// The lines read as the screen is made, by the reader last heard of,
   /// so they are there through the push that brings it in rather than
   /// arriving, oldest first, as it ends.
-  init(place: ChatPlace, threadID: String, otherID: String?, sharing: Day? = nil) {
+  init(
+    place: ChatPlace, threadID: String, otherID: String?, sharing: Day? = nil,
+    head: AnyView? = nil
+  ) {
     self.place = place
+    self.head = head
     self.threadID = threadID
     self.otherID = otherID
     self.sharing = sharing
@@ -474,6 +481,8 @@ struct ChatScreen: View {
 
   /// Someone writing now's item, by their id.
   private static let typing = "typing-"
+  /// The place's head's item.
+  private static let head = "head"
 
   /// The lines' items, each with all its row draws, so a line is drawn
   /// again, and measured, only as that changes.
@@ -492,6 +501,9 @@ struct ChatScreen: View {
     // those the device holds are laid out before the top is reached.
     if !state.atStart, state.heldBefore == 0 {
       rows.append(LinesRow(id: ChatLinesView.earlier, look: AnyHashable(ChatLinesView.earlier)))
+    }
+    if state.atStart, head != nil {
+      rows.append(LinesRow(id: Self.head, look: AnyHashable(Self.head)))
     }
     for item in listed {
       var quote: LineQuote?
@@ -532,6 +544,8 @@ struct ChatScreen: View {
     Group {
       if id == ChatLinesView.earlier {
         EarlierLines()
+      } else if id == Self.head {
+        head
       } else if id.hasPrefix(Self.typing) {
         let userID = String(id.dropFirst(Self.typing.count))
         TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")

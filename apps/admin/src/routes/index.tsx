@@ -13,7 +13,7 @@ function summaryOf(chat: { text: string; unsent: boolean }): string {
   if (chat.unsent) {
     return "（送信取消）";
   }
-  return chat.text === "" ? "📷 写真" : chat.text.slice(0, 80);
+  return chat.text.slice(0, 80);
 }
 
 function SupportChats() {
@@ -41,10 +41,10 @@ function SupportChats() {
               </td>
               <td>{summaryOf(chat)}</td>
               <td>
-                {chat.fromSupport ? (
+                {chat.unanswered === 0 ? (
                   "返信済み"
                 ) : (
-                  <span className="open">未返信</span>
+                  <span className="open">未返信（{chat.unanswered}）</span>
                 )}
               </td>
             </tr>

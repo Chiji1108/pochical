@@ -24,6 +24,12 @@ public actor SyncClient {
     /// The user's chat with Pochical's people, kept as a group's chats are.
     case support
 
+    /// The socket of the chats' place the device keeps by `placeID`: a
+    /// group's, or the chat with Pochical's people's.
+    public static func place(_ placeID: String) -> Peer {
+      placeID == ChatPlace.supportID ? .support : .group(placeID)
+    }
+
     /// The chats' place the socket reaches, by the id the device keeps its
     /// chats by; nil for the user's own DO.
     var placeID: String? {
@@ -383,8 +389,6 @@ public actor SyncClient {
       for watcher in typingWatchers.values {
         watcher.yield(typing)
       }
-    case .supportAnswered:
-      NotificationCenter.default.post(name: SupportLine.answered, object: nil)
     case .pong(let pong):
       if pong.nonce == catchUpNonce {
         caughtUp = true

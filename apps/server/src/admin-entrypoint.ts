@@ -2,14 +2,16 @@
 // asks of the server, as Workers RPC through its service binding to this
 // named entrypoint (spec/admin.md). Nothing here has a public address: the
 // apps and the internet reach only the default entrypoint's fetch.
+import { create } from "@bufbuild/protobuf";
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { desc } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
 
-import { supportPhotoKey } from "./photos";
-import { tellStaffOfAnswer } from "./slack";
-import { answerSupport } from "./support-answers";
-import type { SupportPhotoOf } from "./support-answers";
-import { linesOf } from "./support-chat";
-import type { SupportReactionOf } from "./support-chat";
+import { supportChats } from "./db/schema";
+import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
+import { GROUP_THREAD, supportPlace } from "./group-chat";
+import { photoKey } from "./photos";
+import type { SupportLine } from "./support-lines";
 
 /** A user's chat as the list shows it: its latest line, and whose. */
 export type SupportChatSummary = {
@@ -18,23 +20,17 @@ export type SupportChatSummary = {
   text: string;
   fromSupport: boolean;
   unsent: boolean;
+  /** The user's lines since Pochical's people last wrote (未返信). */
+  unanswered: number;
 };
 
-/** A line of a user's chat, with the app and device it came from. */
-export type SupportChatLine = {
-  id: string;
-  atMs: number;
-  fromSupport: boolean;
-  text: string;
-  device: string | null;
-  /** The line it is a reply to, by id. */
-  replyTo: string | null;
-  unsent: boolean;
-  reactions: SupportReactionOf[];
-  /** Its photo, read through supportPhoto. */
-  photo: SupportPhotoOf | null;
-  /** The page of its words' first link, as the user's app shows it. */
-  preview: { site: string; title: string; url: string } | null;
+/** A page of a user's chat, as a device pages it (supportPage). */
+export type SupportChatPage = {
+  lines: SupportLine[];
+  /** The lines its replies answer from before the page. */
+  quoted: SupportLine[];
+  /** The page reaches the chat's first line. */
+  atStart: boolean;
 };
 
 /** What a member reported, with what they saw. */
@@ -51,75 +47,52 @@ export type ReportSummary = {
 const PAGE = 200;
 
 export class AdminEntrypoint extends WorkerEntrypoint<Env> {
-  /** Every user's chat, the latest first. */
+  /** Every user's chat, the latest first, from D1's index of them. */
   async supportChats(): Promise<SupportChatSummary[]> {
-    const { results } = await this.env.DB.prepare(
-      `select c.user_id, c.last_at, m.text, m.from_support, m.unsent
-       from support_chats c join support_messages m on m.user_id = c.user_id
-       and m.id = (select id from support_messages where user_id = c.user_id
-         order by created_at desc, id desc limit 1)
-       order by c.last_at desc limit ?`
-    )
-      .bind(PAGE)
-      .all<{
-        user_id: string;
-        last_at: number;
-        text: string;
-        from_support: number;
-        unsent: number;
-      }>();
-    return results.map((row) => ({
-      fromSupport: row.from_support === 1,
-      lastAtMs: row.last_at,
-      text: row.text,
-      unsent: row.unsent === 1,
-      userId: row.user_id,
-    }));
-  }
-
-  /** One user's chat, oldest first. */
-  async supportChat(userId: string): Promise<SupportChatLine[]> {
-    const lines = await linesOf(this.env, userId);
-    return lines.map((line) => ({
-      atMs: line.createdAt.getTime(),
-      device: line.device,
-      fromSupport: line.fromSupport,
-      id: line.id,
-      photo:
-        line.photoId === null
-          ? null
-          : {
-              height: line.photoHeight ?? 0,
-              id: line.photoId,
-              width: line.photoWidth ?? 0,
-            },
-      preview:
-        line.preview === null
-          ? null
-          : {
-              site: line.preview.site,
-              title: line.preview.title,
-              url: line.preview.url,
-            },
-      reactions: line.reactions,
-      replyTo: line.replyTo,
-      text: line.text,
-      unsent: line.unsent,
+    const rows = await drizzle(this.env.DB)
+      .select()
+      .from(supportChats)
+      .orderBy(desc(supportChats.lastAt))
+      .limit(PAGE);
+    return rows.map((row) => ({
+      fromSupport: row.lastFromPochical,
+      lastAtMs: row.lastAt.getTime(),
+      text: row.lastText,
+      unanswered: row.unanswered,
+      unsent: row.lastUnsent,
+      userId: row.userId,
     }));
   }
 
   /**
-   * An answer from Pochical's people, kept and told to the user at once,
-   * and put in the chat's Slack thread. False, keeping nothing, for no
-   * words or more than textLimits.chatMessage.
+   * A page of one user's chat from its Group DO: the latest, or the one
+   * before `beforeSeq`, oldest first.
+   */
+  async supportChat(userId: string, beforeSeq = 0): Promise<SupportChatPage> {
+    const page = await this.env.GROUPS.getByName(
+      supportPlace(userId)
+    ).supportPage(beforeSeq);
+    return page ?? { atStart: true, lines: [], quoted: [] };
+  }
+
+  /**
+   * An answer from Pochical's people, taken as theirs in the user's chat,
+   * which tells the user and the chat's Slack thread. False, keeping
+   * nothing, for no words or more than textLimits.chatMessage.
    */
   async answerSupport(userId: string, text: string): Promise<boolean> {
-    const kept = await answerSupport(this.env, userId, text);
-    if (kept === null) {
-      return false;
-    }
-    this.ctx.waitUntil(tellStaffOfAnswer(this.env, userId, kept, text.trim()));
-    return true;
+    // Only a chat the user opened: one never set up takes nothing.
+    const place = this.env.GROUPS.getByName(supportPlace(userId));
+    const seqs = await place.answerAsPochical([
+      create(ChatEditSchema, {
+        kind: {
+          case: "send",
+          value: { text: text.trim(), threadId: GROUP_THREAD },
+        },
+        opId: crypto.randomUUID(),
+      }),
+    ]);
+    return seqs.length > 0;
   }
 
   /** A photo in a user's chat, its bytes and their type; null when gone. */
@@ -127,7 +100,9 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     userId: string,
     photoId: string
   ): Promise<{ bytes: ArrayBuffer; type: string } | null> {
-    const photo = await this.env.PHOTOS.get(supportPhotoKey(userId, photoId));
+    const photo = await this.env.PHOTOS.get(
+      photoKey(supportPlace(userId), photoId)
+    );
     if (photo === null) {
       return null;
     }

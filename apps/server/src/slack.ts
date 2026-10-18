@@ -7,9 +7,10 @@ import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
-import { supportPhotoKey } from "./photos";
-import { keepReactionNotice, keepSlackTs } from "./support-chat";
-import type { SupportLineOf } from "./support-chat";
+import { supportPlace } from "./group-chat";
+import { photoKey } from "./photos";
+import { wordsOf } from "./support-lines";
+import type { SupportLine } from "./support-lines";
 
 /**
  * A Slack secret, or "" where this server has none: Env says they are
@@ -250,10 +251,6 @@ export const emojiOfSlackName = (name: string): string | undefined => {
 const slackNameOf = (emoji: string): string | undefined =>
   Object.entries(SLACK_EMOJI).find(([, each]) => each === emoji)?.[0];
 
-/** A line's words, or what a photo is called. */
-const wordsOf = (line: SupportLineOf): string =>
-  line.photoId === null ? line.text : "📷 写真";
-
 /** The first words of a line, as a reply to it shows them. */
 const QUOTE_LENGTH = 80;
 
@@ -261,7 +258,7 @@ const QUOTE_LENGTH = 80;
  * A chat's thread's first message: the user's first line, with the app
  * and device, the way to the admin site and how to answer.
  */
-const threadHead = (line: SupportLineOf, words: string): string => {
+const threadHead = (line: SupportLine, words: string): string => {
   const page = `${ADMIN_SITE}/support/${encodeURIComponent(line.userId)}`;
   const from = line.device === null ? "" : `（${toSlackText(line.device)}）`;
   return `サポートに新しいメッセージ${from}\n${words}\n<${page}|管理サイトで開く>・このスレッドに書くと、ポチカルとして返信します`;
@@ -273,7 +270,7 @@ const threadHead = (line: SupportLineOf, words: string): string => {
  */
 const startThread = async (
   env: Env,
-  line: SupportLineOf,
+  line: SupportLine,
   words: string
 ): Promise<string | null> => {
   const posted = await slackCall(env, "chat.postMessage", {
@@ -323,12 +320,12 @@ const sharedTs = (file: unknown, channel: string): string | undefined => {
  */
 const postPhoto = async (
   env: Env,
-  line: SupportLineOf,
+  line: SupportLine,
   thread: string,
   quote: string
 ): Promise<string | undefined> => {
   const photo = await env.PHOTOS.get(
-    supportPhotoKey(line.userId, line.photoId ?? "")
+    photoKey(supportPlace(line.userId), line.photo?.id ?? "")
   );
   if (photo === null) {
     return undefined;
@@ -400,29 +397,24 @@ export const slackFile = async (
 /**
  * A user's new line, in their chat's thread, shown in the channel too;
  * their first starts the thread, with the way to the admin site. A reply
- * quotes what it is to. Its message is kept with the line, for its
- * reactions and its taking back.
+ * quotes what it is to. Its message, for its reactions and its taking
+ * back; none when Slack did not take it.
  */
 export const tellStaffOfLine = async (
   env: Env,
-  line: SupportLineOf,
-  repliedTo: SupportLineOf | null
-): Promise<void> => {
+  line: SupportLine,
+  repliedTo: SupportLine | null
+): Promise<string | undefined> => {
   const quote =
     repliedTo === null
       ? ""
       : `> ${toSlackText(wordsOf(repliedTo).replaceAll("\n", " ").slice(0, QUOTE_LENGTH))}\n`;
   const words = `${quote}${toSlackText(wordsOf(line))}`;
   const thread = await threadOf(env, line.userId);
-  if (line.photoId !== null) {
+  if (line.photo !== null) {
     // A photo is shared in the thread, which a first line starts.
     const into = thread ?? (await startThread(env, line, words));
-    const ts =
-      into === null ? undefined : await postPhoto(env, line, into, quote);
-    if (ts !== undefined) {
-      await keepSlackTs(env, line.id, ts);
-    }
-    return;
+    return into === null ? undefined : await postPhoto(env, line, into, quote);
   }
   if (thread !== null) {
     const posted = await slackCall(env, "chat.postMessage", {
@@ -430,102 +422,77 @@ export const tellStaffOfLine = async (
       text: words,
       thread_ts: thread,
     });
-    const ts = stringOf(posted?.ts);
-    if (ts !== undefined) {
-      await keepSlackTs(env, line.id, ts);
-    }
-    return;
+    return stringOf(posted?.ts);
   }
-  const ts = await startThread(env, line, words);
-  if (ts !== null) {
-    await keepSlackTs(env, line.id, ts);
-  }
+  return (await startThread(env, line, words)) ?? undefined;
 };
 
 /** An answer written on the admin site, in the chat's thread. */
 export const tellStaffOfAnswer = async (
   env: Env,
-  userId: string,
-  messageId: string,
-  words: string
-): Promise<void> => {
-  const thread = await threadOf(env, userId);
+  line: SupportLine
+): Promise<string | undefined> => {
+  const thread = await threadOf(env, line.userId);
   if (thread === null) {
-    return;
+    return undefined;
   }
   const posted = await slackCall(env, "chat.postMessage", {
-    text: `管理サイトから返信しました：\n${toSlackText(words)}`,
+    text: `管理サイトから返信しました：\n${toSlackText(wordsOf(line))}`,
     thread_ts: thread,
   });
-  const ts = stringOf(posted?.ts);
-  if (ts !== undefined) {
-    await keepSlackTs(env, messageId, ts);
-  }
+  return stringOf(posted?.ts);
 };
 
 /**
- * The user's reaction on a line, on its message in Slack. One Slack has
- * no name for here is said in the thread instead, and that notice
- * (`notice`, when taken off) deleted as it comes off; one posted once it
- * is off already, or told already, goes again. However quickly it is put
- * on and off, at most one is left.
+ * The user's reaction on a line, on its message in Slack (`slackTs`). One
+ * Slack has no name for here is said in the thread instead, that notice's
+ * message given back to be kept, and deleted (`notice`) as it comes off.
  */
 export const tellStaffOfReaction = async (
   env: Env,
-  line: SupportLineOf,
+  line: SupportLine,
+  slackTs: string,
   emoji: string,
   on: boolean,
-  notice: string | null = null
-): Promise<void> => {
-  if (line.slackTs === null) {
-    return;
-  }
+  notice?: string
+): Promise<string | undefined> => {
   const name = slackNameOf(emoji);
   if (name !== undefined) {
     await slackCall(env, on ? "reactions.add" : "reactions.remove", {
       name,
-      timestamp: line.slackTs,
+      timestamp: slackTs,
     });
-    return;
+    return undefined;
   }
   if (!on) {
-    if (notice !== null) {
+    if (notice !== undefined) {
       await slackCall(env, "chat.delete", { ts: notice });
     }
-    return;
+    return undefined;
   }
   const thread = await threadOf(env, line.userId);
   if (thread === null) {
-    return;
+    return undefined;
   }
   const posted = await slackCall(env, "chat.postMessage", {
     text: `ユーザーが ${emoji} を付けました：「${toSlackText(wordsOf(line).slice(0, QUOTE_LENGTH))}」`,
     thread_ts: thread,
   });
-  const ts = stringOf(posted?.ts);
-  // A notice no longer wanted by the time it is posted goes again.
-  if (
-    ts !== undefined &&
-    !(await keepReactionNotice(env, line.id, emoji, ts))
-  ) {
-    await slackCall(env, "chat.delete", { ts });
-  }
+  return stringOf(posted?.ts);
 };
 
-/** A line the user took back, so said in its place in Slack. */
+/** A line the user took back, so said in its place in Slack (`slackTs`). */
 export const tellStaffOfUnsend = async (
   env: Env,
-  line: SupportLineOf
+  line: SupportLine,
+  slackTs: string
 ): Promise<void> => {
-  if (line.slackTs === null) {
-    return;
-  }
   const taken = "（ユーザーが送信を取り消しました）";
   // The thread's first message keeps the way to the admin site.
-  const first = line.slackTs === (await threadOf(env, line.userId));
+  const first = slackTs === (await threadOf(env, line.userId));
   await slackCall(env, "chat.update", {
     text: first ? threadHead(line, taken) : taken,
-    ts: line.slackTs,
+    ts: slackTs,
   });
 };
 

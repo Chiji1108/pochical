@@ -1,40 +1,68 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-import { call, signInAnonymously, userIdOf } from "./helpers";
+import { signInAnonymously } from "./helpers";
+import { relayed, supportChat } from "./sync-helpers";
 
 describe("what the admin site asks of the server", () => {
-  it("lists the chats and answers one, the user hearing of it", async () => {
+  it("lists the chats from their index and answers one, the user hearing of it", async () => {
     const token = await signInAnonymously();
-    const userId = await userIdOf(token);
-    await call(
-      "SupportService/SendSupportMessage",
-      { id: crypto.randomUUID(), text: "色を変えたい" },
-      token
-    );
+    const { frames, say, userId } = await supportChat(token);
+    await say("色を変えたい", "ポチカル 1.0・iPhone");
     const admin = exports.AdminEntrypoint;
-    const chats = await admin.supportChats();
-    const mine = chats.find((chat) => chat.userId === userId);
-    expect([mine?.text, mine?.fromSupport]).toStrictEqual([
-      "色を変えたい",
-      false,
-    ]);
+    const listed = async () => {
+      const chats = await admin.supportChats();
+      return chats.find((chat) => chat.userId === userId);
+    };
+    await expect(listed()).resolves.toMatchObject({
+      fromSupport: false,
+      text: "色を変えたい",
+      unanswered: 1,
+    });
+
     await expect(
       admin.answerSupport(userId, "設定から変えられます")
     ).resolves.toBeTruthy();
-    const lines = await admin.supportChat(userId);
-    expect(lines.map((line) => [line.fromSupport, line.text])).toStrictEqual([
-      [false, "色を変えたい"],
-      [true, "設定から変えられます"],
+    // The open chat hears of the answer as a group's chat hears a line.
+    await expect(frames.next()).resolves.toMatchObject({
+      kind: {
+        case: "changes",
+        value: {
+          changes: [
+            {
+              kind: {
+                case: "chatLine",
+                value: { authorId: "pochical", text: "設定から変えられます" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    await relayed(userId);
+    await expect(listed()).resolves.toMatchObject({
+      fromSupport: true,
+      unanswered: 0,
+    });
+    const page = await admin.supportChat(userId);
+    expect([
+      page.atStart,
+      page.lines.map((line) => [line.fromPochical, line.text, line.device]),
+    ]).toStrictEqual([
+      true,
+      [
+        [false, "色を変えたい", "ポチカル 1.0・iPhone"],
+        [true, "設定から変えられます", null],
+      ],
     ]);
-    const response = await call("SupportService/GetSupportChat", {}, token);
-    const said = JSON.stringify(await response.json());
-    expect(said.includes('"unread":1')).toBeTruthy();
   });
 
-  it("takes no empty answer", async () => {
-    const kept = await exports.AdminEntrypoint.answerSupport("someone", "  ");
-    expect(kept).toBeFalsy();
+  it("takes no empty answer, nor one to a chat never opened", async () => {
+    const token = await signInAnonymously();
+    const { userId } = await supportChat(token);
+    const admin = exports.AdminEntrypoint;
+    await expect(admin.answerSupport(userId, "  ")).resolves.toBeFalsy();
+    await expect(admin.answerSupport("someone", "やあ")).resolves.toBeFalsy();
   });
 
   it("lists the reports", async () => {

@@ -22,7 +22,7 @@ public enum LocalData {
     "blocks", "chatDrafts", "chatLines", "chatMutes", "chatNotificationSettings", "chatOutbox", "chatTakenBack",
     "coworkerOrder", "coworkers", "days", "groupCursors", "groupMembers", "groups",
     "memberDays", "memberOrders", "memberPatterns", "outbox", "patternOrder", "patterns", "preferences", "profile",
-    "readMarks", "repeatOrders", "serverValues", "supportDraft", "syncState", "unreadCounts",
+    "readMarks", "repeatOrders", "serverValues", "syncState", "unreadCounts",
   ]
 
   public static func erase(in db: Database) throws {

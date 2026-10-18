@@ -8,11 +8,11 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { revokeApple } from "./apple";
 import { account } from "./db/auth-schema";
-import { invites, supportChats } from "./db/schema";
+import { invites, supportChats, supportSlack } from "./db/schema";
 import { supportPlace } from "./group-chat";
+import { deletePhotosUnder } from "./photos";
 import { getAuth } from "./session";
 import { tellStaffOfDeletion } from "./slack";
-import { deletePhotosUnder, eraseSupportChat } from "./support-chat";
 
 /**
  * The Apple account the user signs in with, whose tokens must be revoked:
@@ -58,7 +58,12 @@ export const eraseUser = async (env: Env, userId: string): Promise<void> => {
     .select({ thread: supportChats.slackThreadTs })
     .from(supportChats)
     .where(eq(supportChats.userId, userId));
-  await eraseSupportChat(env, userId);
+  await drizzle(env.DB)
+    .delete(supportChats)
+    .where(eq(supportChats.userId, userId));
+  await drizzle(env.DB)
+    .delete(supportSlack)
+    .where(eq(supportSlack.userId, userId));
   // Their usual photo, and any before it.
   await deletePhotosUnder(env, `people/${userId}/`);
   if (chat?.thread !== undefined && chat.thread !== null) {
