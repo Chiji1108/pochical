@@ -1004,6 +1004,14 @@
       "expected": "app"
     },
     {
+      "name": "a line from the app is the app's, even when the reader set it off",
+      "author": "me",
+      "me": "me",
+      "notice": true,
+      "hidden": false,
+      "expected": "app"
+    },
+    {
       "name": "a line never delivered to the reader, from someone they blocked, is not counted",
       "author": "u2",
       "me": "me",

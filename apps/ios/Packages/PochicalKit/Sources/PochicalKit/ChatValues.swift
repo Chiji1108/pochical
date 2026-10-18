@@ -70,8 +70,8 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   /// a line never delivered to the reader are neither the reader's nor
   /// others' to count (`spec/vectors/chat.json`, writer).
   public func writer(for me: String) -> LineWriter {
-    if authorID == me { return .me }
-    return noticeJSON.isEmpty && !hidden ? .others : .app
+    if !noticeJSON.isEmpty || hidden { return .app }
+    return authorID == me ? .me : .others
   }
 
   /// What happened to the group, for a line from the app (spec/chat.md,
