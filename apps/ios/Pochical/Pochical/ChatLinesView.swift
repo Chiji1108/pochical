@@ -235,9 +235,6 @@ struct ChatLinesView: UIViewControllerRepresentable {
   let replySwipe: (String) -> ReplySwipe?
   /// The item `id` was dragged far enough to reply to it.
   let onReply: (String) -> Void
-  /// Lines too few to fill the screen stand at its top, under a head that
-  /// starts the chat, rather than at its foot by the composer.
-  var fewAtTop = false
   /// The items within Chat.photoPrefetchScreens of those in sight, told
   /// as they change while the lines scroll, for their photos to be fetched
   /// ahead. UICollectionView's own prefetching stays off (ChatLayout's).
@@ -423,7 +420,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     model.environment = environment
     model.row = settings.row
     latest.rootView = AnyView(settings.latest.environment(\.self, environment))
-    layout.keepContentAtBottomOfVisibleArea = !settings.fewAtTop
     replyArrow.tintColor = UIColor(environment.themeColors.textTertiary)
     let alpha: CGFloat = settings.shown ? 1 : 0
     if lines.alpha != alpha {
