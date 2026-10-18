@@ -276,6 +276,21 @@ export const neutralTokenGroups: ColorTokenGroup[] = [
 
 export const neutralTokens = neutralTokenGroups.flatMap(({ tokens }) => tokens);
 
+// With the system's コントラストを上げる (Increase Contrast, the web's
+// prefers-contrast: more), the quieter roles take a stronger one's color
+// in every テーマ, light and dark: secondary words, times and hairlines
+// reach the contrast body text has, and others' bubbles stand off the
+// ground. Each maps to a role that already exists, so a テーマ needs
+// nothing more of its own.
+export const increasedContrast = {
+  "accent-border": "accent-default",
+  "border-default": "border-strong",
+  "fill-tertiary": "fill-secondary",
+  separator: "border-strong",
+  "text-quaternary": "text-secondary",
+  "text-tertiary": "text-secondary",
+} as const satisfies Record<string, string>;
+
 // Tints the neutrals toward a theme: each token keeps its lightness, turns to
 // the theme's hue, and scales its chroma by `strength` (0 = pure gray).
 export type NeutralTint = { hue: number; strength: number };

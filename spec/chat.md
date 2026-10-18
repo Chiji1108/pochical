@@ -221,6 +221,12 @@ With the system's 視差効果を減らす (Reduce Motion) on, nothing in a chat
 - A photo opened large fades in and out instead of the zoom out of its place (Photos); a photo coming and its upload ring stay still: no breathing grey, no turning quarter, the ring still filling as its bytes go.
 - Haptics are not motion and stay as they are (spec/haptics.md).
 
+## Text size and contrast
+
+- Everything in a chat follows the reader's text size, the accessibility sizes included, without cutting anything off: the words and the times, and what is drawn around them, which grows with them rather than staying at its points: the reactions' pills and faces, the unread count's badge, ↓, a line's reactions and menu (its rows, its width and the reactions' rounds, within the screen's width, an item's words shrinking to stay on one line rather than being cut), and the composer's tools and send, which with ↓ grow only as far as `chatRules.controlsMostScale` so the field and the lines keep the room. At the accessibility sizes a line takes nearly the screen's width, keeping 16 points rather than 40 on the other side, and a line with a link's page is as wide as that rather than its 240 points, as Messages gives its bubbles the width. A photo keeps its box (Photos), already nearly as wide as a line may be on the smaller phones, and a bubble's corners and tail keep theirs: they hold no words.
+- With the system's 文字を太くする (Bold Text) the words are bold wherever the system's type is used, which is everywhere in a chat, and the lines are measured again for it.
+- With コントラストを上げる (Increase Contrast) every screen, a chat's included, draws its quieter roles in a stronger one's color (`design/src/colors.ts`, increasedContrast): times, names and placeholders in the secondary words' color, hairlines and separators as strong borders, others' bubbles a step off the ground, and the accent's quiet border (ここから新着, a line rung) in the accent itself, in every テーマ, light and dark. The web follows prefers-contrast the same way.
+
 ## Long messages and shared days
 
 A message may be as long as `textLimits.chatMessage` and share up to `SHARED_DAYS_MAX` days (`design/src/limits.ts`), but the chat keeps either from filling the screen.

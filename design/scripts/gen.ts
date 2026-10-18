@@ -10,6 +10,7 @@ import path from "node:path";
 import { chatPlaces, chatRules } from "../src/chat";
 import {
   colorSchemes,
+  increasedContrast,
   markColors,
   neutralTokens,
   untintedTokens,
@@ -164,6 +165,7 @@ function json() {
       noteMarkerSteps,
       roleSteps,
     },
+    increasedContrast,
     invite: inviteRules,
     limits: {
       coworkersMax: COWORKERS_MAX,
@@ -189,6 +191,13 @@ function json() {
     widgets: widgetRules,
   };
   return `${JSON.stringify(tokens, null, 2)}\n`;
+}
+
+/** The role `name` takes with Increase Contrast on: a stronger one, or itself. */
+const contrasts = new Map<string, string>(Object.entries(increasedContrast));
+
+function contrasted(name: string): string {
+  return contrasts.get(name) ?? name;
 }
 
 function swift() {
@@ -268,6 +277,19 @@ function swift() {
     "",
     "extension ThemeColors {",
     colorSets.join("\n\n"),
+    "}",
+    "",
+    "extension ThemeColors {",
+    "  /// As drawn with Increase Contrast on: the quieter roles in a stronger",
+    "  /// one's color (design/src/colors.ts, increasedContrast).",
+    "  public var increasedContrast: ThemeColors {",
+    "    ThemeColors(",
+    ...colorRoleNames.map(
+      (name) => `      ${camel(name)}: ${camel(contrasted(name))},`
+    ),
+    "      marks: marks",
+    "    )",
+    "  }",
     "}",
     "",
     "public enum Metrics {",
@@ -391,6 +413,14 @@ function kotlin() {
     "  /** The shift colors in picker order; the first is the テーマ's own. */",
     "  val marks: List<MarkColor>,",
     ") {",
+    "  /** As drawn with high contrast text on: the quieter roles in a stronger one's color (design/src/colors.ts, increasedContrast). */",
+    "  fun increasedContrast(): ThemeColors =",
+    "    copy(",
+    ...colorRoleNames
+      .filter((name) => contrasted(name) !== name)
+      .map((name) => `      ${camel(name)} = ${camel(contrasted(name))},`),
+    "    )",
+    "",
     "  companion object {",
     colorSets.join("\n\n"),
     "  }",

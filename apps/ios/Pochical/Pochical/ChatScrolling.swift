@@ -29,6 +29,10 @@ final class ChatScroll {
 /// first.
 struct LatestButton: View {
   @Environment(\.themeColors) private var colors
+  /// Growing with the reader's text size, as its chevron does, as far as
+  /// chatRules.controlsMostScale, so it never covers the lines it is over.
+  @ScaledMetric(relativeTo: .body) private var scaled = Metrics.touch - 12
+  private var size: CGFloat { min(scaled, (Metrics.touch - 12) * CGFloat(Chat.controlsMostScale)) }
   let scroll: ChatScroll
   let unread: Int
   let action: () -> Void
@@ -44,8 +48,9 @@ struct LatestButton: View {
         Button(action: action) {
           Image(systemName: "chevron.down")
             .font(.body.weight(.semibold))
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             .foregroundStyle(colors.textPrimary)
-            .frame(width: Metrics.touch - 12, height: Metrics.touch - 12)
+            .frame(width: size, height: size)
         }
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)

@@ -1,4 +1,5 @@
 import { defineConfig } from "@pandacss/dev";
+import { increasedContrast } from "@pochical/design/colors";
 import { radii, shadows, sizes, stateLayers } from "@pochical/design/metrics";
 import { colorRoleNames } from "@pochical/design/themes";
 import { textStyles } from "@pochical/design/type";
@@ -29,6 +30,17 @@ for (const name of colorRoleNames) {
     colorTokens[kind] = { ...colorTokens[kind], [key]: token };
   }
 }
+
+// With prefers-contrast: more, the quieter roles take a stronger one's
+// color (design/src/colors.ts, increasedContrast), as the native apps draw
+// them with Increase Contrast. Set under each themed element, whose own
+// inline variables would win over a rule on itself.
+const contrastedRoles = Object.fromEntries(
+  Object.entries(increasedContrast).map(([name, stronger]) => [
+    `--${name}`,
+    `var(--${stronger})`,
+  ])
+);
 
 const stateLayer = (opacity: number) =>
   `color-mix(in srgb, var(--accent-default) ${Math.round(opacity * PERCENT)}%, transparent)`;
@@ -63,6 +75,9 @@ export default defineConfig({
       outlineOffset: "4px",
     },
     ":is(.design-page, .dc-phone) button": { color: "inherit" },
+    "@media (prefers-contrast: more)": {
+      ':where(:root, [style*="--accent"]) > *': contrastedRoles,
+    },
     "body:has(.design-page) > :is(.site-header, .site-footer)": {
       display: "none",
     },

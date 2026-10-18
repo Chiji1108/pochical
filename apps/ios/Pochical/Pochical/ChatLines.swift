@@ -75,6 +75,7 @@ enum LineAction {
 /// while it waits to be sent. The time beside the bubble, 編集済み over it.
 struct LineView: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.dynamicTypeSize) private var typeSize
   @Environment(\.openGroupRoute) private var openGroupRoute
   /// The line's opID, which its actions name it by.
   let lineID: String
@@ -239,7 +240,9 @@ struct LineView: View {
       // reaches into the margin, as LINE's and Messages' do.
       .padding(.leading, mine ? 0 : BubbleShape.tailReach)
       .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
-      .padding(mine ? .leading : .trailing, 40)
+      // The room kept on the other side, less at the accessibility text
+      // sizes, where the words need the width more, as Messages gives it.
+      .padding(mine ? .leading : .trailing, typeSize.isAccessibilitySize ? 16 : 40)
     }
     // The line reads as one, everything done on it its actions; a card of
     // days or a poll keeps its own parts, the line said first by its time.
@@ -520,6 +523,7 @@ struct LineContent: View {
 
 struct MessageBubble: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.dynamicTypeSize) private var typeSize
   /// Where a held bubble notes its links, for a long press on one.
   @Environment(\.linkSpots) private var linkSpots
   let text: String
@@ -591,8 +595,11 @@ struct MessageBubble: View {
         LinkPreviewCard(preview: preview, mine: mine)
       }
     }
+    // At the accessibility text sizes as wide as the line has room for,
+    // its page's words too large for the width.
     .frame(
-      width: preview == nil && invitation == nil ? nil : Self.linkedWidth, alignment: .leading)
+      width: preview == nil && invitation == nil || typeSize.isAccessibilitySize
+        ? nil : Self.linkedWidth, alignment: .leading)
     .padding(.horizontal, 12)
     .padding(.vertical, 8)
       .background(
