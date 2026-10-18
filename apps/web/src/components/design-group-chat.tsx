@@ -33,7 +33,7 @@ import { BubbleOutline } from "./design-chat-bubble";
 import { uploadMilliseconds } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
 import {
-  ChatFoot,
+  ChatEdge,
   Composer,
   GoneNote,
   noOne,
@@ -457,20 +457,22 @@ export function ChatPage({
           </IconMenu>
         )}
       </header>
-      <PinBar
-        nameOf={mentionName}
-        onJump={(id) => {
-          setPinsOpen(false);
-          jumpTo(id);
-        }}
-        onOpenChange={setPinsOpen}
-        onUnpin={(id) => {
-          pin(id, false);
-        }}
-        open={pinsOpen}
-        pins={pins}
-      />
       <div className={chatStyle.lines}>
+        <ChatEdge edge="head" list={listRef}>
+          <PinBar
+            nameOf={mentionName}
+            onJump={(id) => {
+              setPinsOpen(false);
+              jumpTo(id);
+            }}
+            onOpenChange={setPinsOpen}
+            onUnpin={(id) => {
+              pin(id, false);
+            }}
+            open={pinsOpen}
+            pins={pins}
+          />
+        </ChatEdge>
         <ChatContext value={scope}>
           <ol
             aria-label={`${title}のメッセージ`}
@@ -571,7 +573,7 @@ export function ChatPage({
             )}
           </span>
         )}
-        <ChatFoot list={listRef}>
+        <ChatEdge edge="foot" list={listRef}>
           {gone ? (
             <GoneNote name={gone.name} />
           ) : (
@@ -593,7 +595,7 @@ export function ChatPage({
               }
             />
           )}
-        </ChatFoot>
+        </ChatEdge>
       </div>
       <EmojiPickerSheet
         onOpenChange={(open) => {
@@ -851,27 +853,6 @@ function useChatScroll({
       placed.current = { ...at, top: scrollOnto(list, at.target) };
     }
   };
-  // When the lines lose height, as the pins' bar comes in over them, they
-  // keep their bottom edge, so the latest line stays in sight. When it
-  // goes, the room shows more below. ChatFoot does the same for what
-  // floats over their foot.
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    if (!list) {
-      return;
-    }
-    let height = list.clientHeight;
-    const observer = new ResizeObserver(() => {
-      if (list.clientHeight < height) {
-        list.scrollTop += height - list.clientHeight;
-      }
-      height = list.clientHeight;
-    });
-    observer.observe(list);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
   // ↓ to the latest line, once the chat is scrolled up from it.
   const [awayFromLatest, setAwayFromLatest] = useState(false);
   // The unread lines not yet on screen, counted on the ↓, as LINE and

@@ -16,7 +16,7 @@ import { AppIcon, useAppIcons } from "./design-app-icon";
 import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
 import {
-  ChatFoot,
+  ChatEdge,
   Composer,
   nameless,
   useComposer,
@@ -282,7 +282,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
             ))}
           </ol>
         </ChatContext>
-        <ChatFoot list={listRef}>
+        <ChatEdge edge="foot" list={listRef}>
           <Composer
             composer={composer}
             onSend={send}
@@ -296,7 +296,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
               }
             }
           />
-        </ChatFoot>
+        </ChatEdge>
       </div>
       <EmojiPickerSheet
         onOpenChange={(open) => {

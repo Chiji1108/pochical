@@ -173,44 +173,47 @@ function ComposerStrip({
   );
 }
 
-// What floats over the foot of a chat's lines: the composer, or who left
-// in its place. The lines take its height as room at their foot (as
-// --foot-height on the box they share), and keep their bottom edge as it
-// grows, as in the chat apps, so the latest line is not hidden under it.
-// When it shrinks, the room shows more below.
-export function ChatFoot({
+// What floats over the lines' top or foot (the pins, the composer): it
+// sets how much of them it covers, --head-height or --foot-height, on
+// their box, for the lines to end clear of it. As it grows the lines
+// scroll by as much, so those past it stay where they are on the screen:
+// at the foot, the latest stays in sight, as in the chat apps.
+export function ChatEdge({
+  edge,
   list,
   children,
 }: {
+  edge: "head" | "foot";
   list: RefObject<HTMLElement | null>;
   children: ReactNode;
 }) {
-  const footRef = useRef<HTMLDivElement>(null);
+  const edgeRef = useRef<HTMLDivElement>(null);
   // Before the chat puts its lines (a parent's layout effect runs after
   // this), so they are put with the room already there.
   useLayoutEffect(() => {
-    const foot = footRef.current;
-    const box = foot?.parentElement;
-    if (!(foot && box)) {
+    const over = edgeRef.current;
+    const box = over?.parentElement;
+    if (!(over && box)) {
       return;
     }
-    let height = foot.offsetHeight;
-    box.style.setProperty("--foot-height", `${height}px`);
+    const name = `--${edge}-height`;
+    let height = over.offsetHeight;
+    box.style.setProperty(name, `${height}px`);
     const observer = new ResizeObserver(() => {
-      const grown = foot.offsetHeight - height;
-      height = foot.offsetHeight;
-      box.style.setProperty("--foot-height", `${height}px`);
+      const grown = over.offsetHeight - height;
+      height = over.offsetHeight;
+      box.style.setProperty(name, `${height}px`);
       if (grown > 0 && list.current) {
         list.current.scrollTop += grown;
       }
     });
-    observer.observe(foot);
+    observer.observe(over);
     return () => {
       observer.disconnect();
     };
-  }, [list]);
+  }, [edge, list]);
   return (
-    <div className={chatStyle.foot} ref={footRef}>
+    <div className={chatStyle[edge]} ref={edgeRef}>
       {children}
     </div>
   );

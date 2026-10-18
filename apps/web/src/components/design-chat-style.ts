@@ -249,7 +249,7 @@ export const chatStyle = {
   // What floats over the lines' foot, as iOS 26's Messages has no bar
   // there: the composer, or who left in its place. The lines run on
   // under it, fading into the ground at the very foot as iOS 26's scroll
-  // edge does; ChatFoot gives them the room to end clear of it.
+  // edge does; ChatEdge gives them the room to end clear of it.
   foot: css({
     // Over the fade, which is drawn first. Not by isolating the foot,
     // which would leave its glass nothing under it to blur.
@@ -274,6 +274,17 @@ export const chatStyle = {
     pointerEvents: "none",
     position: "absolute",
     right: 0,
+  }),
+  // What floats over the lines' top: the pins, the lines running on
+  // under their glass; ChatEdge gives them the room to start clear of it.
+  head: css({
+    "& > *": { pointerEvents: "auto" },
+    left: 0,
+    pointerEvents: "none",
+    position: "absolute",
+    right: 0,
+    top: 0,
+    zIndex: 1,
   }),
   // The round button and the capsule beside it, both kept at the foot as
   // the message grows, as in Messages.
@@ -450,7 +461,7 @@ export const chatStyle = {
       pointerEvents: "none",
       position: "absolute",
       textStyle: "caption2",
-      top: "8px",
+      top: "calc(var(--head-height, 0px) + 8px)",
       transform: "translateX(-50%)",
       transition: "opacity 0.2s",
     },
@@ -514,7 +525,8 @@ export const chatStyle = {
     minHeight: 0,
     overflowY: "auto",
     // The latest line ends clear of what floats over the foot.
-    padding: "12px 2px calc(var(--foot-height, 0px) + 12px)",
+    padding:
+      "calc(var(--head-height, 0px) + 12px) 2px calc(var(--foot-height, 0px) + 12px)",
     scrollbarWidth: "none",
   }),
   name: css({
