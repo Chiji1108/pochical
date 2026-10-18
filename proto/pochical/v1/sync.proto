@@ -29,6 +29,8 @@ message ClientFrame {
     Typing typing = 9;
     // The owner's preferences, from the same outbox; User DO socket only.
     PreferenceEdits preference_edits = 10;
+    // Asks for a page of a chat's photos alone; Group DO socket only.
+    ChatPhotosRequest chat_photos_request = 11;
   }
 }
 
@@ -52,6 +54,8 @@ message ServerFrame {
     ChatPage chat_page = 7;
     // Someone else is writing in a chat the device may read, or stopped.
     Typing typing = 8;
+    // A page of a chat's photos, answering a ChatPhotosRequest.
+    ChatPhotos chat_photos = 10;
   }
   // Once SupportAnswered: the chat with Pochical's people is a chat place
   // of its own now, its changes on its own socket.
@@ -743,4 +747,41 @@ message ChatPage {
   // The lines its replies answer from before it, however far back, so
   // their quotes read as the lines do (spec/chat.md, Replies).
   repeated ChatLine quoted = 5;
+}
+
+// Asks for a page of a chat's photos alone, without the lines between
+// them (spec/sync-protocol.md, Chat): those nearest a line, before it or
+// after it, as the photo opened large pages through them.
+message ChatPhotosRequest {
+  string thread_id = 1;
+  // The photos of the lines before this one, or after it with `after`,
+  // not its own; 0 for the latest (or, after, from the first).
+  uint64 seq = 2;
+  bool after = 3;
+}
+
+// Up to chatRules.photoPageSize of a chat's photos nearest the asked line
+// on the asked side, oldest first, with where they are among all of them.
+// The photos are those the reader sees in the chat: none of a line taken
+// back, nor one hidden from them, nor, in a place's own chat, one whose
+// writer they have blocked (spec/vectors/chat-photos.json, counts).
+message ChatPhotos {
+  string thread_id = 1;
+  uint64 seq = 2;
+  bool after = 3;
+  repeated ChatPhotoEntry photos = 4;
+  // How many of the chat's photos come before the page's first: 0 when
+  // the page reaches the first, and total less the page's when it reaches
+  // the last. Empty, where the page would be.
+  uint32 offset = 5;
+  // How many photos the chat holds for the reader.
+  uint32 total = 6;
+}
+
+// A photo of a chat and the line that sent it.
+message ChatPhotoEntry {
+  uint64 seq = 1;
+  string author_id = 2;
+  int64 sent_at_ms = 3;
+  ChatPhoto photo = 4;
 }

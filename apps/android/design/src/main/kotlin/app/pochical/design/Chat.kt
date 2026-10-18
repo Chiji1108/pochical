@@ -22,6 +22,8 @@ object Chat {
   const val photoMaxBytes = 4000000
   const val photoMaxEdge = 2048
   const val photoMemoryBytes = 48000000
+  const val photoPageAhead = 10
+  const val photoPageSize = 100
   const val photoPrefetchScreens = 1
   const val photoSmallEdge = 960
   const val photoThumbHashMaxBytes = 25

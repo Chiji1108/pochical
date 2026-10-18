@@ -5,6 +5,7 @@ import type { ChatPlaceKind } from "@pochical/design/chat";
 import { sql } from "drizzle-orm";
 import {
   check,
+  index,
   integer,
   primaryKey,
   sqliteTable,
@@ -209,6 +210,10 @@ export const chatLines = sqliteTable(
     primaryKey({ columns: [table.threadId, table.seq] }),
     uniqueIndex("chat_lines_cursor").on(table.cursor),
     uniqueIndex("chat_lines_op").on(table.opId),
+    // A chat's photos alone, paged without the lines between them.
+    index("chat_lines_photos")
+      .on(table.threadId, table.seq)
+      .where(sql`${table.photo} is not null`),
   ]
 );
 

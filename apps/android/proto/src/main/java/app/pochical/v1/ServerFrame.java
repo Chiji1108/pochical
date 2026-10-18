@@ -32,6 +32,7 @@ public  final class ServerFrame extends
     RESET(6),
     CHAT_PAGE(7),
     TYPING(8),
+    CHAT_PHOTOS(10),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -55,6 +56,7 @@ public  final class ServerFrame extends
         case 6: return RESET;
         case 7: return CHAT_PAGE;
         case 8: return TYPING;
+        case 10: return CHAT_PHOTOS;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -591,6 +593,76 @@ public  final class ServerFrame extends
    */
   private void clearTyping() {
     if (kindCase_ == 8) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int CHAT_PHOTOS_FIELD_NUMBER = 10;
+  /**
+   * <pre>
+   * A page of a chat's photos, answering a ChatPhotosRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+   */
+  @java.lang.Override
+  public boolean hasChatPhotos() {
+    return kindCase_ == 10;
+  }
+  /**
+   * <pre>
+   * A page of a chat's photos, answering a ChatPhotosRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatPhotos getChatPhotos() {
+    if (kindCase_ == 10) {
+       return (app.pochical.v1.ChatPhotos) kind_;
+    }
+    return app.pochical.v1.ChatPhotos.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * A page of a chat's photos, answering a ChatPhotosRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+   */
+  private void setChatPhotos(app.pochical.v1.ChatPhotos value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 10;
+  }
+  /**
+   * <pre>
+   * A page of a chat's photos, answering a ChatPhotosRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+   */
+  private void mergeChatPhotos(app.pochical.v1.ChatPhotos value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 10 &&
+        kind_ != app.pochical.v1.ChatPhotos.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatPhotos.newBuilder((app.pochical.v1.ChatPhotos) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 10;
+  }
+  /**
+   * <pre>
+   * A page of a chat's photos, answering a ChatPhotosRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+   */
+  private void clearChatPhotos() {
+    if (kindCase_ == 10) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1237,6 +1309,78 @@ public  final class ServerFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * A page of a chat's photos, answering a ChatPhotosRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+     */
+    @java.lang.Override
+    public boolean hasChatPhotos() {
+      return instance.hasChatPhotos();
+    }
+    /**
+     * <pre>
+     * A page of a chat's photos, answering a ChatPhotosRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatPhotos getChatPhotos() {
+      return instance.getChatPhotos();
+    }
+    /**
+     * <pre>
+     * A page of a chat's photos, answering a ChatPhotosRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+     */
+    public Builder setChatPhotos(app.pochical.v1.ChatPhotos value) {
+      copyOnWrite();
+      instance.setChatPhotos(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A page of a chat's photos, answering a ChatPhotosRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+     */
+    public Builder setChatPhotos(
+        app.pochical.v1.ChatPhotos.Builder builderForValue) {
+      copyOnWrite();
+      instance.setChatPhotos(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A page of a chat's photos, answering a ChatPhotosRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+     */
+    public Builder mergeChatPhotos(app.pochical.v1.ChatPhotos value) {
+      copyOnWrite();
+      instance.mergeChatPhotos(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A page of a chat's photos, answering a ChatPhotosRequest.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+     */
+    public Builder clearChatPhotos() {
+      copyOnWrite();
+      instance.clearChatPhotos();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ServerFrame)
   }
   @java.lang.Override
@@ -1263,10 +1407,11 @@ public  final class ServerFrame extends
             app.pochical.v1.Reset.class,
             app.pochical.v1.ChatPage.class,
             app.pochical.v1.Typing.class,
+            app.pochical.v1.ChatPhotos.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\u0001\b\b\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000";
+              "\u0000\t\u0001\u0000\u0001\n\t\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\n<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

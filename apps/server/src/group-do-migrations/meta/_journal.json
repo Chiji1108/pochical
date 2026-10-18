@@ -183,6 +183,13 @@
       "when": 1792288331039,
       "tag": "0025_support_relay",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1792298025657,
+      "tag": "0026_chat_photos_index",
+      "breakpoints": true
     }
   ]
 }

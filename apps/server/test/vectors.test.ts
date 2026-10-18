@@ -2,12 +2,14 @@ import { syncLimits } from "@pochical/design/limits";
 import { describe, expect, test } from "vitest";
 
 // The cases every platform checks its own code against (spec/vectors).
+import chatPhotos from "../../../spec/vectors/chat-photos.json";
 import chatText from "../../../spec/vectors/chat-text.json";
 import chat from "../../../spec/vectors/chat.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
 import text from "../../../spec/vectors/text.json";
 import { inviteCodeOf, textParts } from "../src/chat-links";
+import { photoPage, seenPhoto } from "../src/chat-photos";
 import { pinStep } from "../src/chat-pins";
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
 import { directThread, plainText } from "../src/group-chat";
@@ -93,6 +95,24 @@ describe("spec/vectors/order-clears.json", () => {
       expect(heldBackBy(floors, date, fieldOf(field), set)?.from ?? null).toBe(
         expected
       );
+    }
+  );
+});
+
+describe("spec/vectors/chat-photos.json", () => {
+  test.each(chatPhotos.seen)("seen: $name", ({ line, expected }) => {
+    expect(seenPhoto(line)).toBe(expected);
+  });
+
+  test.each(chatPhotos.page)(
+    "page: $name",
+    ({ seqs, seq, after, size, expected }) => {
+      const { from, to } = photoPage(seqs, seq, after, size);
+      expect({
+        offset: from,
+        seqs: seqs.slice(from, to),
+        total: seqs.length,
+      }).toStrictEqual(expected);
     }
   );
 });

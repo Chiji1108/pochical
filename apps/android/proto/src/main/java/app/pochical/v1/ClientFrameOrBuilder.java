@@ -190,5 +190,24 @@ public interface ClientFrameOrBuilder extends
    */
   app.pochical.v1.PreferenceEdits getPreferenceEdits();
 
+  /**
+   * <pre>
+   * Asks for a page of a chat's photos alone; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+   * @return Whether the chatPhotosRequest field is set.
+   */
+  boolean hasChatPhotosRequest();
+  /**
+   * <pre>
+   * Asks for a page of a chat's photos alone; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+   * @return The chatPhotosRequest.
+   */
+  app.pochical.v1.ChatPhotosRequest getChatPhotosRequest();
+
   public app.pochical.v1.ClientFrame.KindCase getKindCase();
 }

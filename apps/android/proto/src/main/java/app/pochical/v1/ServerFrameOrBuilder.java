@@ -146,5 +146,24 @@ public interface ServerFrameOrBuilder extends
    */
   app.pochical.v1.Typing getTyping();
 
+  /**
+   * <pre>
+   * A page of a chat's photos, answering a ChatPhotosRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+   * @return Whether the chatPhotos field is set.
+   */
+  boolean hasChatPhotos();
+  /**
+   * <pre>
+   * A page of a chat's photos, answering a ChatPhotosRequest.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];</code>
+   * @return The chatPhotos.
+   */
+  app.pochical.v1.ChatPhotos getChatPhotos();
+
   public app.pochical.v1.ServerFrame.KindCase getKindCase();
 }

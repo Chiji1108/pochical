@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
 import type { ChatPlaceRules } from "@pochical/design/chat";
 import { SHARED_DAYS_MAX, textLimits } from "@pochical/design/limits";
@@ -23,6 +24,7 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import type { Alert } from "./apns";
 import { previewLinkOf } from "./chat-links";
+import { photoPage, seenPhoto } from "./chat-photos";
 import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
 import { isDate } from "./day-values";
@@ -36,6 +38,7 @@ import {
 import type {
   Change,
   ChatEdit,
+  ChatPhotoEntrySchema,
   ChatLine,
   ChatDecide,
   ChatPin,
@@ -1185,6 +1188,84 @@ export const chatPage = (
     atStart: (rows[0]?.seq ?? 1) <= 1,
     lines,
     quoted: asRead(answeredChanges(db, lines)),
+  };
+};
+
+/**
+ * A page of the chat's photos alone (ChatPhotosRequest): up to
+ * chatRules.photoPageSize of those the reader sees nearest `seq`, before
+ * it or after it, oldest first; how many come before them, and how many
+ * the chat holds for the reader.
+ */
+export const photosPage = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  threadId: string,
+  seq: bigint,
+  after: boolean
+): {
+  photos: MessageInitShape<typeof ChatPhotoEntrySchema>[];
+  offset: number;
+  total: number;
+} => {
+  if (!mayRead(threadId, userId)) {
+    return { offset: 0, photos: [], total: 0 };
+  }
+  const ownChat = threadId === GROUP_THREAD;
+  const blocked = new Set(
+    ownChat
+      ? db
+          .select({ blockedId: memberBlocks.blockedId })
+          .from(memberBlocks)
+          .where(eq(memberBlocks.userId, userId))
+          .all()
+          .map(({ blockedId }) => blockedId)
+      : []
+  );
+  const seen = db
+    .select({
+      authorId: chatLines.authorId,
+      hiddenFrom: chatLines.hiddenFrom,
+      photo: chatLines.photo,
+      sentAt: chatLines.sentAt,
+      seq: chatLines.seq,
+      unsent: chatLines.unsent,
+    })
+    .from(chatLines)
+    .where(and(eq(chatLines.threadId, threadId), isNotNull(chatLines.photo)))
+    .orderBy(asc(chatLines.seq))
+    .all()
+    .filter((row) =>
+      seenPhoto({
+        hidden: row.hiddenFrom === userId,
+        ownChat,
+        photo: row.photo !== null,
+        unsent: row.unsent,
+        writerBlocked: blocked.has(row.authorId),
+      })
+    );
+  const { from, to } = photoPage(
+    seen.map((row) => row.seq),
+    Number(seq),
+    after
+  );
+  return {
+    offset: from,
+    photos: seen
+      .slice(from, to)
+      .flatMap(({ authorId, photo, sentAt, ...row }) =>
+        photo === null
+          ? []
+          : [
+              {
+                authorId,
+                photo: { ...photo, thumbHash: sentThumbHash(photo.thumbHash) },
+                sentAtMs: BigInt(sentAt.getTime()),
+                seq: BigInt(row.seq),
+              },
+            ]
+      ),
+    total: seen.length,
   };
 };
 

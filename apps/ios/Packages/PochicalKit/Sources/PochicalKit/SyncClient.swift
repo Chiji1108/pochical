@@ -103,6 +103,7 @@ public actor SyncClient {
   private var statusWatchers: [UUID: AsyncStream<SyncStatus>.Continuation] = [:]
   /// The screens told of others' typing, as it comes; never kept.
   private var typingWatchers: [UUID: AsyncStream<Pochical_V1_Typing>.Continuation] = [:]
+  private var photoPageWatchers: [UUID: AsyncStream<ChatPhotosPage>.Continuation] = [:]
 
   public init(
     account: Account, database: any DatabaseWriter, peer: Peer = .user, server: URL = Server.url
@@ -385,6 +386,11 @@ public actor SyncClient {
       if let placeID = peer.placeID {
         try await database.write { db in try Chats.take(page, of: placeID, in: db) }
       }
+    case .chatPhotos(let photos):
+      let page = ChatPhotosPage(photos)
+      for watcher in photoPageWatchers.values {
+        watcher.yield(page)
+      }
     case .typing(let typing):
       for watcher in typingWatchers.values {
         watcher.yield(typing)
@@ -512,6 +518,39 @@ public actor SyncClient {
     } catch {
       return false
     }
+  }
+
+  /// Asks the group for a page of a chat's photos alone, before `seq` or
+  /// after it (spec/sync-protocol.md, Chat), when its socket is open; the
+  /// page comes to `photoPages()`. False when it could not be asked.
+  @discardableResult
+  public func requestPhotos(of threadID: String, seq: Int64, after: Bool) async -> Bool {
+    guard connected, let socket else { return false }
+    var frame = Pochical_V1_ClientFrame()
+    frame.chatPhotosRequest.threadID = threadID
+    frame.chatPhotosRequest.seq = UInt64(max(seq, 0))
+    frame.chatPhotosRequest.after = after
+    do {
+      try await socket.send(.data(frame.serializedData()))
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /// The pages of a chat's photos as they come, until the stream is let go.
+  public func photoPages() -> AsyncStream<ChatPhotosPage> {
+    let (stream, continuation) = AsyncStream<ChatPhotosPage>.makeStream()
+    let id = UUID()
+    photoPageWatchers[id] = continuation
+    continuation.onTermination = { [weak self] _ in
+      Task { await self?.stopWatchingPhotoPages(id) }
+    }
+    return stream
+  }
+
+  private func stopWatchingPhotoPages(_ id: UUID) {
+    photoPageWatchers[id] = nil
   }
 
   /// Sends the group's chat outbox as `sendOutbox` does the user's, a

@@ -1,6 +1,8 @@
+import GRDB
 import Nuke
 import PochicalDesign
 import PochicalKit
+import SQLiteData
 import SwiftUI
 import UIKit
 
@@ -12,22 +14,44 @@ import UIKit
 // view controller, a scroll view's zooming.
 
 /// The photos opened large: the chat's, in the order of its lines, and
-/// the one tapped among them.
+/// the one tapped among them, or a photo alone.
 struct PhotoViewing: Identifiable {
-  let photos: [LinePhoto]
-  let start: Int
-  var id: String { photos[start].id }
+  let run: PhotoRun
+  /// Where the rest of the chat's photos come from; none for a photo alone.
+  let pager: PhotoPager?
+  let id: String
 
-  /// `photo` among `photos`, or alone when it is not one of them.
-  init(_ photo: LinePhoto, among photos: [LinePhoto] = []) {
-    if let index = photos.firstIndex(where: { $0.id == photo.id }) {
-      self.photos = photos
-      start = index
-    } else {
-      self.photos = [photo]
-      start = 0
-    }
+  /// `photo` alone, as someone's face.
+  init(_ photo: LinePhoto) {
+    run = PhotoRun(
+      held: [ChatPhotoItem(seq: 0, photo: photo, authorID: "", sentAt: .now)], tapped: 0)
+    pager = nil
+    id = photo.id
   }
+
+  /// `tapped` among the chat's photos, those `held` of its lines laid out
+  /// first and the rest from `pager`; alone when it is not one of them
+  /// (a blocked member's shown for once, or one of the reader's on its way).
+  init(_ tapped: ChatPhotoItem, among held: [ChatPhotoItem], pager: PhotoPager?) {
+    let among = held.contains { $0.seq == tapped.seq }
+    run = PhotoRun(held: among ? held : [tapped], tapped: tapped.seq)
+    self.pager = among ? pager : nil
+    id = tapped.id
+  }
+}
+
+/// A chat's photos beyond the lines laid out (spec/sync-protocol.md,
+/// Chat): asked of its place a page at a time on the place's socket, held
+/// open while they show, as the chat under them lets go of it; and followed
+/// as the chat's lines on the device change.
+struct PhotoPager {
+  let placeID: String
+  let threadID: String
+  let sockets: GroupSockets
+  let account: Account
+  let database: any DatabaseWriter
+  /// Whom the reader has blocked, whose photos fold away in its own chat.
+  let blocked: Set<String>
 }
 
 extension View {
@@ -130,7 +154,14 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   UIPageViewControllerDelegate, UIGestureRecognizerDelegate
 {
   var onClosed: (() -> Void)?
-  private let photos: [LinePhoto]
+  private var run: PhotoRun
+  private let pager: PhotoPager?
+  /// Asking for pages and following the chat, while open.
+  private var following: [Task<Void, Never>] = []
+  /// The place's socket, held open while the photos show; nil until held.
+  private var socket: (client: SyncClient, hold: UUID)?
+  /// The photos about to be swiped to, fetched ahead.
+  private let ahead = PhotoPrefetch()
   private let groupID: String
   private let calls: GroupCalls
   private let onSave: ((LinePhoto) async -> Bool)?
@@ -158,19 +189,23 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     _ viewing: PhotoViewing, groupID: String, calls: GroupCalls, colors: ThemeColors, zooms: Bool,
     onSave: ((LinePhoto) async -> Bool)?
   ) {
-    photos = viewing.photos
+    run = viewing.run
+    pager = viewing.pager
     self.groupID = groupID
     self.calls = calls
     self.zooms = zooms
     self.onSave = onSave
     notice = UIHostingController(rootView: ViewerNotice(words: noticeWords, colors: colors))
     super.init(nibName: nil, bundle: nil)
-    pages.setViewControllers([page(viewing.start)], direction: .forward, animated: false)
+    if let start = run.photos.first(where: { $0.seq == run.shown }) {
+      pages.setViewControllers([page(start)], direction: .forward, animated: false)
+    }
     if zooms {
       let options = UIViewController.Transition.ZoomOptions()
-      // Not while zoomed in, which a drag pans.
-      options.interactiveDismissShouldBegin = { [weak self] _ in
-        self?.shown?.zoomedIn != true
+      // Pulled down, as Photos closes one: not swiped sideways, which
+      // goes to the next photo, nor while zoomed in, which a drag pans.
+      options.interactiveDismissShouldBegin = { [weak self] context in
+        context.velocity.dy >= abs(context.velocity.dx) && self?.shown?.zoomedIn != true
       }
       // The photo itself goes to its place, not the black around it.
       options.alignmentRectProvider = { [weak self] context in
@@ -206,7 +241,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     pages.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
     view.addSubview(pages.view)
     pages.didMove(toParent: self)
-    pages.dataSource = photos.count > 1 ? self : nil
+    pages.dataSource = pager != nil || run.photos.count > 1 ? self : nil
     pages.delegate = self
 
     let close = Self.button("閉じる", systemImage: "xmark") { [weak self] in
@@ -228,7 +263,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     counter.adjustsFontForContentSizeCategory = true
     counter.textColor = .white
     counter.translatesAutoresizingMaskIntoConstraints = false
-    counterGlass.isHidden = photos.count < 2
+    counterGlass.isHidden = true
     counterGlass.cornerConfiguration = .capsule()
     counterGlass.translatesAutoresizingMaskIntoConstraints = false
     counterGlass.contentView.addSubview(counter)
@@ -280,6 +315,11 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
       view.addGestureRecognizer(pull)
     }
     showing()
+    follow()
+  }
+
+  deinit {
+    for task in following { task.cancel() }
   }
 
   // Zooming, the buttons come once it is open and go as it closes, so
@@ -325,6 +365,11 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   override func viewDidDisappear(_ animated: Bool) {
     super.viewDidDisappear(animated)
     guard isBeingDismissed else { return }
+    for task in following { task.cancel() }
+    if let pager, let hold = socket?.hold {
+      Task { await pager.sockets.close(hold, of: pager.placeID) }
+    }
+    ahead.stop()
     PhotoSpots.shared.open = nil
     onClosed?()
   }
@@ -349,19 +394,103 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     return button
   }
 
-  private func page(_ index: Int) -> PhotoPage {
-    let page = PhotoPage(photos[index], index: index, groupID: groupID, calls: calls)
+  private func page(_ item: ChatPhotoItem) -> PhotoPage {
+    let page = PhotoPage(item, groupID: groupID, calls: calls)
     page.onTap = { [weak self] in self?.toggleChrome() }
     return page
   }
 
-  /// The page shown has changed: its count, and its place left empty.
+  /// The page shown has changed, or where it is among the chat's photos:
+  /// its count, its place left empty, the next pages asked for and the
+  /// photos about to be swiped to fetched ahead.
   private func showing() {
     guard let shown else { return }
-    counter.text = "\(shown.index + 1) / \(photos.count)"
-    counter.accessibilityLabel = "\(photos.count)枚中\(shown.index + 1)枚目"
+    if let place = run.place, place.of > 1 {
+      counter.text = "\(place.number) / \(place.of)"
+      counter.accessibilityLabel = "\(place.of)枚中\(place.number)枚目"
+      counterGlass.isHidden = false
+    } else {
+      counterGlass.isHidden = true
+    }
     // Faded in too, so pulled down it leaves no second of it behind.
     PhotoSpots.shared.open = shown.photo.id
+    guard let index = run.index else { return }
+    let near = run.photos[max(index - 2, 0)...min(index + 2, run.photos.count - 1)]
+    ahead.whole(near.map(\.photo), in: groupID, calls: calls)
+    guard let pager, let client = socket?.client else { return }
+    for ask in run.asks() {
+      Task {
+        let asked = await client.requestPhotos(
+          of: pager.threadID, seq: ask.seq, after: ask.after)
+        if !asked { run.unasked(ask) }
+      }
+    }
+  }
+
+  /// The chat's photos as pages of them come and its lines change, until
+  /// closed. Covering the chat, they hold its place's socket themselves,
+  /// and ask for pages once their answers are listened to.
+  private func follow() {
+    guard let pager else { return }
+    let groupID = groupID
+    following.append(
+      Task { [weak self] in
+        let (client, hold) = await pager.sockets.open(
+          pager.placeID, account: pager.account, database: pager.database)
+        guard let self, !Task.isCancelled else {
+          await pager.sockets.close(hold, of: pager.placeID)
+          return
+        }
+        let pages = await client.photoPages()
+        socket = (client, hold)
+        showing()
+        following.append(
+          Task { [weak self] in
+            // Open again after a drop: what was asked is asked again.
+            var open = true
+            for await status in await client.statuses() {
+              let now = status != .connecting
+              if now, !open { self?.changed { $0.reconnected() } }
+              open = now
+            }
+          })
+        for await page in pages where page.threadID == pager.threadID {
+          changed { $0.take(page) }
+        }
+      })
+    following.append(
+      Task { [weak self] in
+        let lines = ValueObservation.tracking { db in
+          try Chats.photoLines(
+            of: groupID, thread: pager.threadID, blocked: pager.blocked, in: db)
+        }
+        do {
+          for try await now in lines.values(in: pager.database) {
+            self?.changed { $0.follow(now) }
+          }
+        } catch {}
+      })
+  }
+
+  /// The photos after `change`: the one shown again should it have gone,
+  /// closed once none is left, and the pages next to it asked for again
+  /// once there are more of them.
+  private func changed(_ change: (inout PhotoRun) -> Void) {
+    let ends = (run.photos.first?.seq, run.photos.last?.seq)
+    change(&run)
+    guard let seq = run.shown, let item = run.photos.first(where: { $0.seq == seq }) else {
+      if !isBeingDismissed { dismiss(animated: true) }
+      return
+    }
+    if shown?.item.seq != seq {
+      pages.setViewControllers([page(item)], direction: .forward, animated: false)
+    } else if ends != (run.photos.first?.seq, run.photos.last?.seq) {
+      // The page view asks again for the pages beside the one shown,
+      // which it remembers as none at an end.
+      pages.dataSource = nil
+      pages.dataSource = self
+    }
+    showing()
   }
 
   /// A tap shows or hides the buttons, as Photos does.
@@ -379,23 +508,30 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     _ pageViewController: UIPageViewController,
     viewControllerBefore viewController: UIViewController
   ) -> UIViewController? {
-    guard let at = viewController as? PhotoPage, at.index > 0 else { return nil }
-    return page(at.index - 1)
+    guard let at = viewController as? PhotoPage,
+      let index = run.photos.firstIndex(where: { $0.seq == at.item.seq }), index > 0
+    else { return nil }
+    return page(run.photos[index - 1])
   }
 
   func pageViewController(
     _ pageViewController: UIPageViewController,
     viewControllerAfter viewController: UIViewController
   ) -> UIViewController? {
-    guard let at = viewController as? PhotoPage, at.index < photos.count - 1 else { return nil }
-    return page(at.index + 1)
+    guard let at = viewController as? PhotoPage,
+      let index = run.photos.firstIndex(where: { $0.seq == at.item.seq }),
+      index < run.photos.count - 1
+    else { return nil }
+    return page(run.photos[index + 1])
   }
 
   func pageViewController(
     _ pageViewController: UIPageViewController, didFinishAnimating finished: Bool,
     previousViewControllers: [UIViewController], transitionCompleted completed: Bool
   ) {
-    if completed { showing() }
+    guard completed, let shown else { return }
+    run.show(shown.item.seq)
+    showing()
   }
 
   // MARK: Save and share
@@ -466,8 +602,8 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
 
 /// One photo large, zoomed by the system's scroll view.
 private final class PhotoPage: UIViewController, UIScrollViewDelegate {
-  let photo: LinePhoto
-  let index: Int
+  let item: ChatPhotoItem
+  var photo: LinePhoto { item.photo }
   var onTap: (() -> Void)?
   private let groupID: String
   private let calls: GroupCalls
@@ -486,9 +622,8 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   private static let deepest: CGFloat = 4
   private static let tapped: CGFloat = 2
 
-  init(_ photo: LinePhoto, index: Int, groupID: String, calls: GroupCalls) {
-    self.photo = photo
-    self.index = index
+  init(_ item: ChatPhotoItem, groupID: String, calls: GroupCalls) {
+    self.item = item
     self.groupID = groupID
     self.calls = calls
     super.init(nibName: nil, bundle: nil)

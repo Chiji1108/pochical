@@ -296,6 +296,42 @@ public object ServerFrameKt {
     public fun hasTyping(): kotlin.Boolean {
       return _builder.hasTyping()
     }
+
+    /**
+     * ```
+     * A page of a chat's photos, answering a ChatPhotosRequest.
+     * ```
+     *
+     * `.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];`
+     */
+    public var chatPhotos: app.pochical.v1.ChatPhotos
+      @kotlin.jvm.JvmName("getChatPhotos")
+        get() = _builder.chatPhotos
+      @kotlin.jvm.JvmName("setChatPhotos")
+        set(value) {
+        _builder.chatPhotos = value
+      }
+    /**
+     * ```
+     * A page of a chat's photos, answering a ChatPhotosRequest.
+     * ```
+     *
+     * `.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];`
+     */
+    public fun clearChatPhotos() {
+      _builder.clearChatPhotos()
+    }
+    /**
+     * ```
+     * A page of a chat's photos, answering a ChatPhotosRequest.
+     * ```
+     *
+     * `.pochical.v1.ChatPhotos chat_photos = 10 [json_name = "chatPhotos"];`
+     * @return Whether the chatPhotos field is set.
+     */
+    public fun hasChatPhotos(): kotlin.Boolean {
+      return _builder.hasChatPhotos()
+    }
     public val kindCase: app.pochical.v1.ServerFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -331,4 +367,7 @@ public val app.pochical.v1.ServerFrameOrBuilder.chatPageOrNull: app.pochical.v1.
 
 public val app.pochical.v1.ServerFrameOrBuilder.typingOrNull: app.pochical.v1.Typing?
   get() = if (hasTyping()) getTyping() else null
+
+public val app.pochical.v1.ServerFrameOrBuilder.chatPhotosOrNull: app.pochical.v1.ChatPhotos?
+  get() = if (hasChatPhotos()) getChatPhotos() else null
 

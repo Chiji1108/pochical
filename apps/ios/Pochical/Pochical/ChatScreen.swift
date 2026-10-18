@@ -23,6 +23,8 @@ struct ChatScreen: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.displayScale) private var displayScale
   @Environment(\.groupSocket) private var socket
+  @Environment(\.groupSockets) private var groupSockets
+  @Environment(\.account) private var account
   /// The socket said under the title, once it has stayed not current for
   /// a moment (spec/chat.md): the lines shown may not be all there is.
   @State private var syncSaid = SyncStatus.current
@@ -726,7 +728,7 @@ struct ChatScreen: View {
       scroller.growDown("line-\(line.opID)")
       withAnimation { _ = unfolded.insert(line.opID) }
     case .openPhoto:
-      viewing = line.photo.map { PhotoViewing($0, among: photosShown()) }
+      openPhoto(of: line)
     case .openQuote:
       line.replyTo.map(jump(to:))
     case .openProfile:
@@ -1158,15 +1160,20 @@ struct ChatScreen: View {
     photoPrefetch.near(photos, in: place.id, scale: displayScale, calls: groupCalls)
   }
 
-  /// The photos the chat's lines show, in their order, swiped through
-  /// opened large: not a blocked member's folded away.
-  private func photosShown() -> [LinePhoto] {
-    chat.state.lines.compactMap { line in
-      let folded =
-        otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
-      guard !line.hidden, !line.unsent, !folded else { return nil }
-      return line.photo
+  /// The line's photo opened large among the chat's: those its lines laid
+  /// out show at once, and the rest a page at a time from the group (not a
+  /// blocked member's folded away, as the group leaves them out too).
+  private func openPhoto(of line: ChatLineRow) {
+    guard let photo = line.photo else { return }
+    guard let tapped = ChatPhotoItem(line, blocked: []) else {
+      viewing = PhotoViewing(photo)
+      return
     }
+    let held = chat.state.lines.compactMap { ChatPhotoItem($0, blocked: blocked) }
+    let pager = PhotoPager(
+      placeID: place.id, threadID: threadID, sockets: groupSockets, account: account,
+      database: database, blocked: blocked)
+    viewing = PhotoViewing(tapped, among: held, pager: pager)
   }
 
   /// Saves a photo to the person's library, and says so.

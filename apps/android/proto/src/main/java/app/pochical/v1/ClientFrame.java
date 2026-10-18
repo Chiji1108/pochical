@@ -34,6 +34,7 @@ public  final class ClientFrame extends
     CHAT_PAGE_REQUEST(8),
     TYPING(9),
     PREFERENCE_EDITS(10),
+    CHAT_PHOTOS_REQUEST(11),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -59,6 +60,7 @@ public  final class ClientFrame extends
         case 8: return CHAT_PAGE_REQUEST;
         case 9: return TYPING;
         case 10: return PREFERENCE_EDITS;
+        case 11: return CHAT_PHOTOS_REQUEST;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -750,6 +752,76 @@ public  final class ClientFrame extends
    */
   private void clearPreferenceEdits() {
     if (kindCase_ == 10) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int CHAT_PHOTOS_REQUEST_FIELD_NUMBER = 11;
+  /**
+   * <pre>
+   * Asks for a page of a chat's photos alone; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+   */
+  @java.lang.Override
+  public boolean hasChatPhotosRequest() {
+    return kindCase_ == 11;
+  }
+  /**
+   * <pre>
+   * Asks for a page of a chat's photos alone; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatPhotosRequest getChatPhotosRequest() {
+    if (kindCase_ == 11) {
+       return (app.pochical.v1.ChatPhotosRequest) kind_;
+    }
+    return app.pochical.v1.ChatPhotosRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Asks for a page of a chat's photos alone; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+   */
+  private void setChatPhotosRequest(app.pochical.v1.ChatPhotosRequest value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 11;
+  }
+  /**
+   * <pre>
+   * Asks for a page of a chat's photos alone; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+   */
+  private void mergeChatPhotosRequest(app.pochical.v1.ChatPhotosRequest value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 11 &&
+        kind_ != app.pochical.v1.ChatPhotosRequest.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatPhotosRequest.newBuilder((app.pochical.v1.ChatPhotosRequest) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 11;
+  }
+  /**
+   * <pre>
+   * Asks for a page of a chat's photos alone; Group DO socket only.
+   * </pre>
+   *
+   * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+   */
+  private void clearChatPhotosRequest() {
+    if (kindCase_ == 11) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1558,6 +1630,78 @@ public  final class ClientFrame extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Asks for a page of a chat's photos alone; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+     */
+    @java.lang.Override
+    public boolean hasChatPhotosRequest() {
+      return instance.hasChatPhotosRequest();
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's photos alone; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatPhotosRequest getChatPhotosRequest() {
+      return instance.getChatPhotosRequest();
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's photos alone; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+     */
+    public Builder setChatPhotosRequest(app.pochical.v1.ChatPhotosRequest value) {
+      copyOnWrite();
+      instance.setChatPhotosRequest(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's photos alone; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+     */
+    public Builder setChatPhotosRequest(
+        app.pochical.v1.ChatPhotosRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setChatPhotosRequest(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's photos alone; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+     */
+    public Builder mergeChatPhotosRequest(app.pochical.v1.ChatPhotosRequest value) {
+      copyOnWrite();
+      instance.mergeChatPhotosRequest(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Asks for a page of a chat's photos alone; Group DO socket only.
+     * </pre>
+     *
+     * <code>.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];</code>
+     */
+    public Builder clearChatPhotosRequest() {
+      copyOnWrite();
+      instance.clearChatPhotosRequest();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ClientFrame)
   }
   @java.lang.Override
@@ -1586,11 +1730,12 @@ public  final class ClientFrame extends
             app.pochical.v1.ChatPageRequest.class,
             app.pochical.v1.Typing.class,
             app.pochical.v1.PreferenceEdits.class,
+            app.pochical.v1.ChatPhotosRequest.class,
           };
           java.lang.String info =
-              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<" +
-              "\u0000";
+              "\u0000\u000b\u0001\u0000\u0001\u000b\u000b\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
+              "\t<\u0000\n<\u0000\u000b<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
