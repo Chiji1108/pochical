@@ -3,11 +3,13 @@
 // unread ones to open on ここから新着, lines arriving while it is open, a
 // page of earlier ones.
 //
-//   bun tools/chat-try/index.ts <invite code> [count] [--every <ms>]
+//   bun tools/chat-try/index.ts <invite code> [count] [--every <ms>] [--rich]
 //
 // A new anonymous user joins with the invite code (the group's 招待 link
 // ends with it) and sends `count` lines (10 by default) to the group chat,
-// one at a time `--every` ms apart (0 by default: all at once). Local only
+// one at a time `--every` ms apart (0 by default: all at once). With
+// `--rich` the lines are a long chat's, for measuring how it scrolls:
+// long words cut at 続きを読む, links, mentions and large emoji. Local only
 // (http://localhost:8787); the user it made stays in the group, to be
 // removed from the app.
 
@@ -28,7 +30,8 @@ const fail = (message: string): never => {
   process.exit(1);
 };
 
-const args = process.argv.slice(2);
+const args = process.argv.slice(2).filter((arg) => arg !== "--rich");
+const rich = process.argv.includes("--rich");
 const everyAt = args.indexOf("--every");
 const every = everyAt === -1 ? 0 : Number(args[everyAt + 1]);
 const [code, countArg] = args.filter(
@@ -36,7 +39,9 @@ const [code, countArg] = args.filter(
 );
 const count = countArg === undefined ? DEFAULT_COUNT : Number(countArg);
 if (code === undefined || !Number.isInteger(count) || count < 1) {
-  fail("bun tools/chat-try/index.ts <invite code> [count] [--every <ms>]");
+  fail(
+    "bun tools/chat-try/index.ts <invite code> [count] [--every <ms>] [--rich]"
+  );
 }
 
 // A Connect JSON call, as the apps make one.
@@ -60,18 +65,37 @@ const rpc = async (
   return Object.fromEntries(Object.entries(data));
 };
 
-const signIn = async (): Promise<string> => {
+const signIn = async (): Promise<{ token: string; userId: string }> => {
   const response = await fetch(`${api}/api/auth/sign-in/anonymous`, {
     body: "{}",
     headers: { "Content-Type": "application/json" },
     method: "POST",
   });
   const token = response.headers.get("set-auth-token");
-  if (!response.ok || token === null) {
-    return fail(`sign-in: ${response.status} ${await response.text()}`);
+  const body: unknown = await response.json();
+  const user =
+    typeof body === "object" && body !== null && "user" in body
+      ? body.user
+      : undefined;
+  const userId =
+    typeof user === "object" && user !== null && "id" in user
+      ? user.id
+      : undefined;
+  if (!response.ok || token === null || typeof userId !== "string") {
+    return fail(`sign-in: ${response.status} ${JSON.stringify(body)}`);
   }
-  return token;
+  return { token, userId };
 };
+
+// A long chat's lines, in turn: long words, links, a mention, emoji.
+const richLines = (userId: string): string[] => [
+  "明日のシフト、朝からだっけ？",
+  `${"来週の予定をまとめておきます。月曜は早番、火曜は休み、水曜と木曜は遅番で、金曜は研修があるので午後から入ります。".repeat(4)}よろしくお願いします！`,
+  "これ見て https://www.apple.com/jp/iphone/ と https://ja.wikipedia.org/wiki/チャット のところ",
+  `<@${userId}> 土曜の夜、代わってもらえたりしますか？ 詳しくは https://example.com/shifts/2026/10/swap?from=sat&to=sun に`,
+  "🎉🎉",
+  "了解です、ありがとう！ 店長にも https://pochical.app で共有しておきます。",
+];
 
 const send = (socket: WebSocket, texts: string[]): void => {
   const frame = create(ClientFrameSchema, {
@@ -88,7 +112,7 @@ const send = (socket: WebSocket, texts: string[]): void => {
   socket.send(toBinary(ClientFrameSchema, frame));
 };
 
-const token = await signIn();
+const { token, userId } = await signIn();
 const name = `テスト送信${Math.floor(Math.random() * 100)}`;
 const joined = await rpc(
   "GroupService/JoinGroup",
@@ -132,9 +156,9 @@ socket.addEventListener("message", (event) => {
 socket.addEventListener("error", () => fail("socket: could not connect"));
 await welcomed.promise;
 
-const texts = Array.from(
-  { length: count },
-  (_, index) => `テスト ${index + 1}`
+const lines = richLines(userId);
+const texts = Array.from({ length: count }, (_, index) =>
+  rich ? (lines[index % lines.length] ?? "") : `テスト ${index + 1}`
 );
 if (every > 0) {
   for (const text of texts) {

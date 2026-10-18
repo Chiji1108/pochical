@@ -107,6 +107,9 @@ extension EnvironmentValues {
   /// The line is drawn only to be measured, apart from the screen: its
   /// photos are not fetched for it.
   @Entry var measuringLine = false
+  /// Where the line's drawing is kept while its row looks the same; none
+  /// outside the chat's lines.
+  @Entry var keptDrawing: KeptDrawing?
 }
 
 /// An item of the lines: its id, and all its row draws, compared to tell
@@ -128,6 +131,13 @@ struct LinesRow: Equatable {
   var looks: [String: AnyHashable] = [:]
   /// Each item's height as measured, at its look and the width it had.
   private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:]
+  /// What each item's words take to draw, at its look (LineDrawing), for
+  /// the lines most recently drawn or measured.
+  private let drawings = {
+    let drawings = NSCache<NSString, KeptDrawing>()
+    drawings.countLimit = 1000
+    return drawings
+  }()
   /// Where items are measured, apart from the cells: a cell given another
   /// item draws the one it had for a moment, and measured then says that
   /// one's height.
@@ -141,17 +151,31 @@ struct LinesRow: Equatable {
     }
     sizer.rootView = AnyView(
       LineCellContent(
-        id: id, content: row(id), environment: environment, space: LineSpace(), measuring: true))
+        id: id, content: row(id), environment: environment, space: LineSpace(),
+        drawing: drawing(of: id), measuring: true))
     let height = ceil(
       sizer.sizeThatFits(in: CGSize(width: width, height: .greatestFiniteMagnitude)).height)
     heights[id] = (look, width, height)
     return height
   }
 
-  /// Every item is measured again, the chat's environment having changed
-  /// how they are drawn.
+  /// Where the item `id`'s drawing is kept, for its look: made again as
+  /// its look changes.
+  func drawing(of id: String) -> KeptDrawing {
+    let look = looks[id] ?? AnyHashable(id)
+    if let kept = drawings.object(forKey: id as NSString), kept.look == look {
+      return kept
+    }
+    let kept = KeptDrawing(id: id, look: look)
+    drawings.setObject(kept, forKey: id as NSString)
+    return kept
+  }
+
+  /// Every item is drawn and measured again, the chat's environment having
+  /// changed how they are drawn.
   func forgetHeights() {
     heights.removeAll()
+    drawings.removeAllObjects()
   }
 
   /// Only the items laid out are kept measured.
@@ -333,9 +357,11 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       let content = model.row(id)
       let environment = model.environment
       let space = cell.space
+      let drawing = model.drawing(of: id)
       cell.measure = { [weak model] width in model?.height(of: id, width: width) ?? 0 }
       cell.contentConfiguration = UIHostingConfiguration {
-        LineCellContent(id: id, content: content, environment: environment, space: space)
+        LineCellContent(
+          id: id, content: content, environment: environment, space: space, drawing: drawing)
       }
       .margins(.all, 0)
     }
@@ -1165,6 +1191,7 @@ private struct LineCellContent: View {
   let content: AnyView
   let environment: EnvironmentValues
   let space: LineSpace
+  let drawing: KeptDrawing
   var measuring = false
 
   var body: some View {
@@ -1181,6 +1208,7 @@ private struct LineCellContent: View {
       }
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
+      .environment(\.keptDrawing, drawing)
       .environment(\.measuringLine, measuring)
       .environment(\.self, environment)
   }

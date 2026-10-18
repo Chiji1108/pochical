@@ -143,6 +143,8 @@ struct LineView: View {
   /// coming, the keyboard moving).
   let actions: Handler<(lineID: String, action: LineAction)>
   @Environment(\.openURL) private var openURL
+  /// What its words take to draw, kept while its row looks the same.
+  @Environment(\.keptDrawing) private var kept
   /// Opens its reactions and menu for VoiceOver, from its bubble.
   @State private var opener = MenuOpener()
 
@@ -151,6 +153,17 @@ struct LineView: View {
   /// A member's name in the group as it is now, for their mentions.
   private func nameOf(_ id: String) -> String {
     names[id] ?? "メンバー"
+  }
+
+  /// What its words take to draw: kept by the chat's lines for this line
+  /// alone. A cell's views of the line it had before are drawn once more
+  /// in the next line's environment as they go, which they leave alone.
+  private var drawing: LineDrawing {
+    guard let kept, kept.id == "line-\(lineID)" else { return LineDrawing(text: text) }
+    if let drawing = kept.drawing, drawing.text == text { return drawing }
+    let drawing = LineDrawing(text: text)
+    kept.drawing = drawing
+    return drawing
   }
 
   private func act(_ action: LineAction) {
@@ -189,7 +202,7 @@ struct LineView: View {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { voicedMeta }
           LineContent(
-            text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
+            text: text, drawing: drawing, preview: preview, days: days, members: members, poll: poll, photo: photo,
             quote: quote, groupID: groupID, mine: mine, first: first,
             waiting: waiting && !failed, nameOf: nameOf, onOpenQuote: { act(.openQuote) },
             onStopSending: { act(.stopSending) },
@@ -281,7 +294,12 @@ struct LineView: View {
     if let photo {
       parts.append(photoWords(photo))
     } else {
-      parts.append(lineWords(text, days: days, poll: poll != nil, decided: poll?.decided, nameOf: nameOf))
+      let drawing = drawing
+      let words =
+        drawing.said
+        ?? lineWords(text, days: days, poll: poll != nil, decided: poll?.decided, nameOf: nameOf)
+      drawing.said = words
+      parts.append(words)
       if let preview, !preview.title.isEmpty {
         parts.append("リンク「\(preview.title)」")
       }
@@ -331,7 +349,7 @@ struct LineView: View {
     if quote != nil {
       actions.append(VoiceAction(title: "返信元を表示") { act(.openQuote) })
     }
-    for part in textParts(text) {
+    for part in drawing.parts {
       if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
         actions.append(
           VoiceAction(title: "リンクを開く \(link.host() ?? part.text)", target: link.absoluteString) {
@@ -357,7 +375,7 @@ struct LineView: View {
   /// one), or the card's.
   private var ringShape: AnyShape {
     days.isEmpty && (photo == nil || quote != nil)
-      && !(photo == nil && quote == nil && preview == nil && largeEmoji(text) > 0)
+      && !(photo == nil && quote == nil && preview == nil && drawing.largeEmoji > 0)
       ? AnyShape(BubbleShape(mine: mine, first: first))
       : AnyShape(RoundedRectangle(cornerRadius: Radius.lg))
   }
@@ -464,6 +482,8 @@ struct DaySpan: Hashable {
 /// What a line is drawn as: its words in a bubble, or its days on a card.
 struct LineContent: View {
   let text: String
+  /// What its words take to draw, when kept.
+  var drawing: LineDrawing?
   /// Its first link's page.
   var preview: LinePreview?
   let days: [Day]
@@ -513,7 +533,7 @@ struct LineContent: View {
         onVote: onVote, onDecide: onDecide)
     } else if days.isEmpty {
       MessageBubble(
-        text: text, mine: mine, first: first, waiting: waiting, nameOf: nameOf, preview: preview,
+        text: text, drawing: drawing, mine: mine, first: first, waiting: waiting, nameOf: nameOf, preview: preview,
         quote: quote, groupID: groupID, onOpenQuote: onOpenQuote, unfolded: unfolded,
         onUnfold: onUnfold)
     } else {
@@ -529,6 +549,8 @@ struct MessageBubble: View {
   /// Where a held bubble notes its links, for a long press on one.
   @Environment(\.linkSpots) private var linkSpots
   let text: String
+  /// What its words take to draw, when kept; made as drawn otherwise.
+  var drawing: LineDrawing?
   let mine: Bool
   let first: Bool
   let waiting: Bool
@@ -546,48 +568,43 @@ struct MessageBubble: View {
   /// Emoji drawn large grow with the reader's text size, as body does.
   @ScaledMetric(relativeTo: .body) private var emojiSize = CGFloat(Chat.largeEmojiSize)
 
-  /// The invitation code of its first link, when that is one of
-  /// Pochical's invitations.
-  private var invitation: String? {
-    firstLink(text).flatMap { URL(string: $0) }.flatMap(inviteCode(of:))
-  }
-
   /// How wide a bubble with a page is, as /design's linked bubble.
   private static var linkedWidth: CGFloat { 240 }
 
   var body: some View {
+    let drawing = drawing.flatMap { $0.text == text ? $0 : nil } ?? LineDrawing(text: text)
     // Nothing but a few emoji: large, without a bubble (spec/chat.md,
     // Large emoji); a reply keeps its bubble, its quote inside it.
-    if quote == nil, preview == nil, invitation == nil, largeEmoji(text) > 0 {
+    if quote == nil, preview == nil, drawing.invitation == nil, drawing.largeEmoji > 0 {
       Text(text)
         .font(.system(size: emojiSize))
         .dimmedWhileWaiting(waiting) { Text(text).font(.system(size: emojiSize)) }
     } else {
-      bubble
+      bubble(drawing)
     }
   }
 
-  private var bubble: some View {
-    VStack(alignment: .leading, spacing: 8) {
+  private func bubble(_ drawing: LineDrawing) -> some View {
+    let invitation = drawing.invitation
+    let pieces = pieces(drawing)
+    return VStack(alignment: .leading, spacing: 8) {
       if let quote {
         BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpenQuote)
           .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
       }
-      // Whether the words run past chatRules.foldLines is measured in the
-      // same layout that draws them, so a long line has its final height
-      // the first time it is laid out (spec/chat.md, Long messages).
-      FoldsWords(open: unfolded) {
-        Text(words).styledAsWords.lineLimit(Chat.foldLines).hidden()
-        ViewThatFits(in: .vertical) {
-          shownWords
-          VStack(alignment: .leading, spacing: 4) {
-            shownWords.lineLimit(Chat.foldLines)
-            Button("続きを読む", action: onUnfold)
-              .font(.footnote.weight(.semibold))
-              .foregroundStyle(mine ? colors.accentOnFill : colors.accentDefault)
-              .buttonStyle(.plain)
+      if unfolded {
+        shownWords(pieces)
+      } else {
+        // Whether the words run past chatRules.foldLines is measured in
+        // the same layout that draws them, so a long line has its final
+        // height the first time it is laid out (spec/chat.md, Long
+        // messages).
+        FoldsWords(drawing: drawing) {
+          Text(words(pieces)).styledAsWords.lineLimit(Chat.foldLines).hidden()
+          ViewThatFits(in: .vertical) {
+            shownWords(pieces)
+            foldedWords(pieces)
           }
-          .fixedSize(horizontal: false, vertical: true)
         }
       }
       // An invitation's card takes the place of the one page.
@@ -611,9 +628,21 @@ struct MessageBubble: View {
       .dimmedWhileWaiting(waiting, in: BubbleShape(mine: mine, first: first))
   }
 
+  /// The words cut at chatRules.foldLines lines, with 続きを読む.
+  private func foldedWords(_ pieces: [LinePiece]) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      shownWords(pieces).lineLimit(Chat.foldLines)
+      Button("続きを読む", action: onUnfold)
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(mine ? colors.accentOnFill : colors.accentDefault)
+        .buttonStyle(.plain)
+    }
+    .fixedSize(horizontal: false, vertical: true)
+  }
+
   /// The words as drawn in the bubble, their links marked.
-  private var shownWords: some View {
-    markedWords
+  private func shownWords(_ pieces: [LinePiece]) -> some View {
+    markedWords(pieces)
       .styledAsWords
       .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
       .tint(mine ? colors.accentOnFill : colors.accentDefault)
@@ -623,21 +652,23 @@ struct MessageBubble: View {
   /// The line's words, its mentions as @ and the name in the name's
   /// weight and its links underlined, both in the accent in others' lines
   /// and in the bubble's color in one's own (spec/chat.md, In a message).
-  private var words: AttributedString {
+  private func words(_ pieces: [LinePiece]) -> AttributedString {
     pieces.reduce(into: AttributedString()) { $0 += $1.words }
   }
 
   /// The words with their links marked, for a long press to find.
-  private var markedWords: Text {
+  private func markedWords(_ pieces: [LinePiece]) -> Text {
     pieces.reduce(Text(verbatim: "")) { sofar, piece in
       let text = Text(piece.words)
       return Text("\(sofar)\(piece.link.map { text.customAttribute(LinkMark(url: $0)) } ?? text)")
     }
   }
 
-  /// Each part of the words as drawn, and the page it links to.
-  private var pieces: [(words: AttributedString, link: URL?)] {
-    textParts(text).map { part in
+  /// Each part of the words as drawn, and the page it links to: styled
+  /// once for the line as its row looks, kept in `drawing`.
+  private func pieces(_ drawing: LineDrawing) -> [LinePiece] {
+    if let kept = drawing.pieces, kept.mine == mine { return kept.pieces }
+    let pieces = drawing.parts.map { part -> LinePiece in
       var piece = AttributedString(part.mention.map { "@\(nameOf($0))" } ?? part.text)
       if let mentioned = part.mention {
         piece.font = .body.weight(.semibold)
@@ -647,10 +678,12 @@ struct MessageBubble: View {
       } else if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
         piece.link = link
         piece.underlineStyle = .single
-        return (piece, link)
+        return LinePiece(words: piece, link: link)
       }
-      return (piece, nil)
+      return LinePiece(words: piece, link: nil)
     }
+    drawing.pieces = (mine, pieces)
+    return pieces
   }
 
 }
@@ -662,32 +695,114 @@ extension Text {
   }
 }
 
+/// A part of a message's words as drawn, and the page it links to.
+struct LinePiece {
+  let words: AttributedString
+  let link: URL?
+}
+
+/// What a chat line's words take to draw, made once and kept while its
+/// row looks the same, as Signal and Telegram keep theirs: its parts, its
+/// words styled, and what they measure cut at 続きを読む and whole. Each
+/// is made as first asked for. The chat's lines keep one for each line,
+/// for its look, in ChatLinesModel; drawn elsewhere, a line makes its own
+/// as it is drawn.
+@MainActor final class LineDrawing {
+  let text: String
+  /// Its words, links and mentions.
+  private(set) lazy var parts = textParts(text)
+  /// The invitation code of its first link, when that is one of
+  /// Pochical's invitations.
+  private(set) lazy var invitation: String? = parts.lazy.compactMap(\.url).first
+    .flatMap { URL(string: $0) }.flatMap(inviteCode(of:))
+  /// How many emoji it is, when it is nothing else (spec/chat.md, Large
+  /// emoji).
+  private(set) lazy var largeEmoji = PochicalKit.largeEmoji(text)
+  /// Its words styled, for one's own line or another's.
+  var pieces: (mine: Bool, pieces: [LinePiece])?
+  /// What its words measure at each width offered them (FoldsWords).
+  var measured: [CGFloat?: Measured] = [:]
+  /// What VoiceOver says of its words.
+  var said: String?
+
+  init(text: String) {
+    self.text = text
+  }
+
+  /// The height a message's words take cut at chatRules.foldLines lines,
+  /// and the size of the words, whole or cut with 続きを読む.
+  struct Measured {
+    let cut: CGFloat
+    let size: CGSize
+  }
+
+}
+
+/// Where the chat's lines keep the item `id`'s drawing, for its row's look.
+@MainActor final class KeptDrawing {
+  let id: String
+  let look: AnyHashable
+  var drawing: LineDrawing?
+
+  init(id: String, look: AnyHashable) {
+    self.id = id
+    self.look = look
+  }
+}
+
 /// A message's words cut at chatRules.foldLines lines with 続きを読む, or
 /// whole, decided while they are laid out: its first view is the words cut
 /// (hidden, measured only), its second a ViewThatFits of the words whole
 /// and the words cut with 続きを読む, offered the height of the cut words,
-/// so the whole words fit there only when nothing is cut. Opened, it is
-/// offered any height. Measuring in a later update instead grew each long
-/// line by 続きを読む a frame after it first showed, moving the lines.
+/// so the whole words fit there only when nothing is cut. Measuring in a
+/// later update instead grew each long line by 続きを読む a frame after it
+/// first showed, moving the lines. What it measures is kept in `drawing`
+/// for each width, for the next time the line is measured or drawn.
 private struct FoldsWords: Layout {
-  let open: Bool
+  let drawing: LineDrawing
 
   func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-    subviews[1].sizeThatFits(offer(proposal.width, subviews))
+    measure(proposal.width, subviews).size
   }
 
   func placeSubviews(
     in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
   ) {
-    subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(width: bounds.width, height: nil))
-    subviews[1].place(at: bounds.origin, proposal: offer(bounds.width, subviews))
+    // Offered the width they were measured at, which they take no more of.
+    let width = proposal.width ?? bounds.width
+    let cut = measure(width, subviews).cut
+    subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(width: width, height: nil))
+    subviews[1].place(at: bounds.origin, proposal: ProposedViewSize(width: width, height: cut))
   }
 
-  /// What the words are offered: the height the cut words take, or any.
-  private func offer(_ width: CGFloat?, _ subviews: Subviews) -> ProposedViewSize {
-    guard !open else { return ProposedViewSize(width: width, height: nil) }
-    let cut = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil)).height
-    return ProposedViewSize(width: width, height: cut)
+  // Placed where the lines put them, the words need no guides of their
+  // own; the default asks the words for theirs, measuring them again.
+  func explicitAlignment(
+    of guide: HorizontalAlignment, in bounds: CGRect, proposal: ProposedViewSize,
+    subviews: Subviews, cache: inout ()
+  ) -> CGFloat? {
+    nil
+  }
+
+  func explicitAlignment(
+    of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize,
+    subviews: Subviews, cache: inout ()
+  ) -> CGFloat? {
+    nil
+  }
+
+  /// The height the cut words take at `width`, and the size of the words
+  /// offered that height: measured once for each width.
+  private func measure(_ width: CGFloat?, _ subviews: Subviews) -> LineDrawing.Measured {
+    // SwiftUI lays out on the main thread.
+    MainActor.assumeIsolated {
+      if let known = drawing.measured[width] { return known }
+      let cut = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil)).height
+      let size = subviews[1].sizeThatFits(ProposedViewSize(width: width, height: cut))
+      let measured = LineDrawing.Measured(cut: cut, size: size)
+      drawing.measured[width] = measured
+      return measured
+    }
   }
 }
 
