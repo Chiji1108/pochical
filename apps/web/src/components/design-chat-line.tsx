@@ -20,7 +20,6 @@ import {
   textParts,
 } from "../lib/chat-text";
 import {
-  linkAt,
   linkElementAt,
   mentionAt,
   MessageActions,
@@ -386,7 +385,7 @@ export function MessageLine({
                   // A tap on a link opens it rather than the
                   // actions, as in the chat apps.
                   onClickCapture={(event) => {
-                    const url = linkAt(event.target);
+                    const url = linkElementAt(event.target)?.url;
                     if (url) {
                       event.preventDefault();
                       openUrl(url);
@@ -550,7 +549,7 @@ function BubbleQuote({
 }
 
 // A message's words with its links and mentions marked. A tap on a link
-// opens it (see linkAt), on a mention that member's profile: they are not
+// opens it (see linkElementAt), on a mention that member's profile: they are not
 // links of their own, as the whole message is the button that opens its
 // actions; the page under it and リンクをコピー reach a link without that
 // tap.

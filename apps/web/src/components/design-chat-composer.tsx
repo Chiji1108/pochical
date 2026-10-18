@@ -67,10 +67,11 @@ export function useComposer({
   const [draft, setDraft] = useState(() =>
     kept ? plainText(kept.text, mentionName) : ""
   );
+  // The mentions in words put back in the composer, as if picked.
+  const picksOf = (text: string): Mention[] =>
+    mentionsOf(text).map((id) => ({ id, name: mentionName(id) }));
   // Members picked from the @ list, made mentions as the message is sent.
-  const [picked, setPicked] = useState<Mention[]>(() =>
-    mentionsOf(kept?.text ?? "").map((id) => ({ id, name: mentionName(id) }))
-  );
+  const [picked, setPicked] = useState(() => picksOf(kept?.text ?? ""));
   const [attached, setAttached] = useState(attach);
   const linkPreview = useLinkPreview(draft);
   const chosen = useChosenPhotos();
@@ -104,7 +105,7 @@ export function useComposer({
     const text = message.text ?? "";
     setEditing(message.id);
     setDraft(plainText(text, mentionName));
-    setPicked(mentionsOf(text).map((id) => ({ id, name: mentionName(id) })));
+    setPicked(picksOf(text));
     formRef.current?.querySelector("textarea")?.focus();
   };
   const stopEditing = () => {
