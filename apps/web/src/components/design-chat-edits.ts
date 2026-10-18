@@ -21,6 +21,7 @@ import { ToastContext } from "./design-toast";
 // being acted on meanwhile (its actions open, answered, reacted to from
 // every emoji, reported, taken back or settled), each asked about first.
 export function useChatEdits({
+  allows = everyAction,
   answering,
   messages,
   onChange,
@@ -28,6 +29,8 @@ export function useChatEdits({
   mentionName,
   onSent,
 }: {
+  // 編集, ピン留め and 通報 in its long press, unless the chat has none.
+  allows?: ChatAllows;
   // The line a draft the chat was left with answers.
   answering?: string;
   messages: Message[];
@@ -162,7 +165,7 @@ export function useChatEdits({
   const actionsOf = (message: Message): LineActions => ({
     mine: message.from === "me",
     onEdit:
-      message.from === "me" && message.text !== undefined
+      allows.edit && message.from === "me" && message.text !== undefined
         ? () => {
             startEditing(message);
           }
@@ -175,7 +178,7 @@ export function useChatEdits({
       setSelected(open ? message.id : undefined);
     },
     onPin:
-      message.notice || message.unsent
+      !allows.pin || message.notice || message.unsent
         ? undefined
         : () => {
             pin(message.id, message.pinned === undefined);
@@ -191,7 +194,7 @@ export function useChatEdits({
       setSelected(undefined);
     },
     onReport:
-      message.from === "me"
+      !allows.report || message.from === "me"
         ? undefined
         : () => {
             setReporting(message.id);
@@ -236,6 +239,10 @@ export function useChatEdits({
     vote,
   };
 }
+
+type ChatAllows = { edit: boolean; pin: boolean; report: boolean };
+
+const everyAction: ChatAllows = { edit: true, pin: true, report: true };
 
 const flashMilliseconds = 1200;
 

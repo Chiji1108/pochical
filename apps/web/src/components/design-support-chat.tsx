@@ -197,6 +197,8 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
     unsend,
     unsending,
   } = useChatEdits({
+    // What the group chats offer that this one leaves out.
+    allows: { edit: false, pin: false, report: false },
     answering: opened?.replyTo,
     composer,
     mentionName: nameless,
@@ -260,13 +262,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
             <Intro icon={icon} />
             {lines.map((line, index) => (
               <MessageLine
-                // What the group chats offer that this one leaves out.
-                actions={{
-                  ...actionsOf(line),
-                  onEdit: undefined,
-                  onPin: undefined,
-                  onReport: undefined,
-                }}
+                actions={actionsOf(line)}
                 flash={flash === line.id}
                 hidden={false}
                 key={line.id}
