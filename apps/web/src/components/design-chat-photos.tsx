@@ -13,10 +13,6 @@ import { srOnly } from "./design-ui";
 // them: choosing them for the next send, holding them above the composer,
 // and the size a photo's line takes.
 
-// How many photos go in one send: a roster is a page or two, and more
-// would flood a small group's chat.
-export const maxPhotos = chatRules.photosPerSend;
-
 // The longest side a photo is drawn at to make its ThumbHash, the most
 // the format reads.
 const thumbHashEdge = 100;
@@ -55,7 +51,7 @@ export const blurOf = (thumbHash: string) =>
 // A chosen photo with its size and ThumbHash, read before it is shown so
 // its line keeps its place; the apps make them while shrinking the photo
 // to send.
-export async function photoOf(file: File): Promise<Photo> {
+async function photoOf(file: File): Promise<Photo> {
   const src = URL.createObjectURL(file);
   const image = new Image();
   image.src = src;
@@ -94,9 +90,13 @@ export function useChosenPhotos() {
   // pastes in a row), which the state would tell only once drawn again.
   const coming = useRef(0);
   const handleChoose = async (files: File[]) => {
-    const room = Math.max(0, maxPhotos - photos.length - coming.current);
+    // A roster is a page or two, and more would flood a small group's chat.
+    const room = Math.max(
+      0,
+      chatRules.photosPerSend - photos.length - coming.current
+    );
     if (files.length > room) {
-      toast(`写真は一度に${maxPhotos}枚まで送れます`, "problem");
+      toast(`写真は一度に${chatRules.photosPerSend}枚まで送れます`, "problem");
     }
     const taken = files.slice(0, room);
     coming.current += taken.length;
@@ -108,7 +108,9 @@ export function useChosenPhotos() {
     const chosen = results.flatMap((result) =>
       result.status === "fulfilled" ? [result.value] : []
     );
-    setPhotos((before) => [...before, ...chosen].slice(0, maxPhotos));
+    setPhotos((before) =>
+      [...before, ...chosen].slice(0, chatRules.photosPerSend)
+    );
     if (chosen.length < taken.length) {
       toast("開けない写真がありました", "problem");
     }

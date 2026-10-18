@@ -475,21 +475,19 @@ export function ChatPage({
           </IconMenu>
         )}
       </header>
-      {pins[0] && (
-        <PinBar
-          nameOf={mentionName}
-          onJump={(id) => {
-            setPinsOpen(false);
-            jumpTo(id);
-          }}
-          onOpenChange={setPinsOpen}
-          onUnpin={(id) => {
-            pin(id, false);
-          }}
-          open={pinsOpen}
-          pins={pins}
-        />
-      )}
+      <PinBar
+        nameOf={mentionName}
+        onJump={(id) => {
+          setPinsOpen(false);
+          jumpTo(id);
+        }}
+        onOpenChange={setPinsOpen}
+        onUnpin={(id) => {
+          pin(id, false);
+        }}
+        open={pinsOpen}
+        pins={pins}
+      />
       <div className={chatStyle.lines}>
         <ChatContext value={scope}>
           <ol

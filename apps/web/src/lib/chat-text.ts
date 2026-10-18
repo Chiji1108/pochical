@@ -23,7 +23,7 @@ const LINK_OR_MENTION = new RegExp(
 // Closes a sentence rather than the address when it comes last.
 const TRAILING = /[.,!?:;'*]+$/u;
 
-export type TextPart = { text: string; url?: string; mention?: string };
+type TextPart = { text: string; url?: string; mention?: string };
 
 // The address without what closes the sentence around it: a full stop,
 // a comma, or a bracket opened before the address.
