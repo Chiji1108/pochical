@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { supportPlace } from "../src/group-chat";
 import { fromSlackText, signedBySlack, toSlackText } from "../src/slack";
-import { ORIGIN, signInAnonymously } from "./helpers";
+import { call, ORIGIN, signInAnonymously } from "./helpers";
 import { relayed, supportChat } from "./sync-helpers";
 
 const SECRET = "slack-signing-secret";
@@ -287,10 +287,12 @@ describe("a support chat in Slack", () => {
       ["C-SUPPORT", undefined],
       ["C-SUPPORT", thread],
     ]);
+    // Later lines stay in the thread, not sent to the channel too.
     expect([
       String(calls[0]?.args.text).includes("ポチカル 1.0・iPhone"),
       calls[1]?.args.text,
-    ]).toStrictEqual([true, "あと&lt;!channel&gt;"]);
+      calls[1]?.args.reply_broadcast,
+    ]).toStrictEqual([true, "あと&lt;!channel&gt;", undefined]);
 
     const reply = replyIn(thread, {
       text: "設定から変えられます &amp; 試してね",
@@ -399,6 +401,54 @@ const react = (emoji: string, on: boolean) => ({
     value: { emoji, on, seq: 1n, threadId: "group" },
   },
   opId: crypto.randomUUID(),
+});
+
+describe("an answer from Pochical's people", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("notifies the user's devices, from Slack and from the admin site, titled with the chat", async () => {
+    const calls = slackCalls();
+    const { thread, token, userId } = await startedChat();
+    await call(
+      "UserService/RegisterPushToken",
+      { sandbox: true, token: "b2".repeat(32) },
+      token
+    );
+    const alerts = () =>
+      calls.filter(({ method }) => method.startsWith("/3/device"));
+    await postEvent(
+      replyIn(thread, { text: "設定から変えられます", ts: "1700000400.000001" })
+    );
+    await vi.waitFor(() => {
+      expect(alerts()).toHaveLength(1);
+    });
+    await exports.AdminEntrypoint.answerSupport(userId, "ほかにもありますか");
+    await vi.waitFor(() => {
+      expect(alerts()).toHaveLength(2);
+    });
+    expect(alerts().map(({ args }) => args)).toMatchObject([
+      {
+        // Titled with the chat, as 設定's row names it: no writer.
+        aps: {
+          alert: {
+            "loc-args": ["設定から変えられます"],
+            "loc-key": "CHAT_TEXT",
+            "title-loc-args": [],
+            "title-loc-key": "SUPPORT_TITLE",
+          },
+          category: "CHAT_LINE",
+        },
+        groupId: chatRules.supportPlace,
+        threadId: "group",
+      },
+      {
+        aps: { alert: { "loc-args": ["ほかにもありますか"] } },
+        groupId: chatRules.supportPlace,
+      },
+    ]);
+  });
 });
 
 describe("reactions and lines taken back, in Slack", () => {
