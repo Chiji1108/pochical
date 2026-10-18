@@ -244,6 +244,11 @@ public actor SyncClient {
 
   private func run() async {
     while !Task.isCancelled {
+      // Closed before the wait, so the network coming back meanwhile tries
+      // again at once rather than after it.
+      connected = false
+      caughtUp = false
+      status = .connecting
       if tries > 0 {
         let most = reconnectWaitMost(
           tries: tries, firstMs: SyncSocket.reconnectFirstMs, mostMs: SyncSocket.reconnectMostMs)
@@ -251,9 +256,6 @@ public actor SyncClient {
         if Task.isCancelled { return }
       }
       tries += 1
-      connected = false
-      caughtUp = false
-      status = .connecting
       do {
         try await connect()
       } catch let stop as Stop {
