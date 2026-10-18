@@ -675,35 +675,49 @@ struct ChatScreen: View {
           .frame(maxWidth: .infinity)
           .padding(.vertical, 8)
       } else {
-        let mine = line.authorID == meID
-        LineView(
-          lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
-          members: cardMembers, poll: pollLine(for: line), photo: line.photo,
-          quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
-          groupID: place.id,
-          shifts: line.poll ? nil : shifts(on: line.days.first),
-          time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
-          writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
-          author: mine ? nil : names[line.authorID] ?? "メンバー",
-          menu: actions(for: line, mine: mine).map(\.title),
-          writerPhoto: faces[line.authorID] ?? "",
-          appFace: line.authorID == Chat.pochicalMember,
-          named: !ofTwo, first: startsRun, waiting: false, names: names,
-          reactions: line.reactions, countedReactions: ofTwo,
-          pinned: chat.state.pins.contains { $0.seq == line.seq }, marks: marks, seq: line.seq,
-          meID: meID,
-          actions: lineActions)
+        lineView(line, startsRun: startsRun, showsTime: showsTime, names: names)
       }
     case .waiting(let line, let startsRun):
-      LineView(
-        lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
-        members: cardMembers, poll: waitingPoll(line), photo: line.photo,
-        quote: line.replyTo.map(quote(of:)), groupID: place.id, time: line.madeAtMs,
-        edited: false, mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
-        named: false, first: startsRun, waiting: true, failed: line.failed, names: names,
-        marks: marks,
-        actions: lineActions)
+      lineView(waiting: line, startsRun: startsRun, names: names)
     }
+  }
+
+  /// A line of words, as its row draws it and its bubble is held.
+  private func lineView(
+    _ line: ChatLineRow, startsRun: Bool, showsTime: Bool = true, names: [String: String]
+  ) -> LineView {
+    let mine = line.authorID == meID
+    return LineView(
+      lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
+      members: cardMembers, poll: pollLine(for: line), photo: line.photo,
+      quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
+      groupID: place.id,
+      shifts: line.poll ? nil : shifts(on: line.days.first),
+      time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
+      writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
+      author: mine ? nil : names[line.authorID] ?? "メンバー",
+      menu: actions(for: line, mine: mine).map(\.title),
+      writerPhoto: faces[line.authorID] ?? "",
+      appFace: line.authorID == Chat.pochicalMember,
+      named: !ofTwo, first: startsRun, waiting: false, names: names,
+      reactions: line.reactions, countedReactions: ofTwo,
+      pinned: chat.state.pins.contains { $0.seq == line.seq }, marks: marks, seq: line.seq,
+      meID: meID,
+      actions: lineActions)
+  }
+
+  /// A line still on its way, as its row draws it and its bubble is held.
+  private func lineView(
+    waiting line: WaitingLine, startsRun: Bool, names: [String: String]
+  ) -> LineView {
+    LineView(
+      lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
+      members: cardMembers, poll: waitingPoll(line), photo: line.photo,
+      quote: line.replyTo.map(quote(of:)), groupID: place.id, time: line.madeAtMs,
+      edited: false, mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
+      named: false, first: startsRun, waiting: true, failed: line.failed, names: names,
+      marks: marks,
+      actions: lineActions)
   }
 
   /// A line come in as VoiceOver says it: who and what, or the app's
@@ -768,12 +782,7 @@ struct ChatScreen: View {
       actions(for: line, mine: line.authorID == meID).first { $0.title == title }?.run()
     case .hold(let spot, let finger, let link):
       let mine = line.authorID == meID
-      let bubble = AnyView(
-        LineContent(
-          text: line.text, preview: line.preview, days: line.days, members: cardMembers,
-          poll: pollLine(for: line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
-          groupID: place.id, mine: mine, first: startsRun, waiting: false, nameOf: nameOf,
-          unfolded: unfolded.contains(line.opID)))
+      let bubble = AnyView(lineView(line, startsRun: startsRun, names: names).bubble)
       // A link held has its own menu, without the reactions.
       if let link {
         openActions(
@@ -805,12 +814,7 @@ struct ChatScreen: View {
       openActions(
         MessageActionsRequest(
           lineID: line.opID, spot: spot, mine: true,
-          bubble: AnyView(
-            LineContent(
-              text: line.text, preview: line.preview, days: line.days, members: cardMembers,
-              poll: waitingPoll(line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
-              groupID: place.id, mine: true, first: startsRun, waiting: !line.failed,
-              nameOf: nameOf)),
+          bubble: AnyView(lineView(waiting: line, startsRun: startsRun, names: names).bubble),
           finger: finger, actions: actions(forWaiting: line)))
     default:
       break

@@ -230,15 +230,7 @@ struct LineView: View {
         }
         HStack(alignment: .bottom, spacing: 8) {
           if mine { voicedMeta }
-          LineContent(
-            text: text, drawing: drawing, preview: preview, days: days, members: members,
-            poll: poll, photo: photo,
-            quote: quote, groupID: groupID, mine: mine, first: first,
-            waiting: waiting && !failed, nameOf: nameOf, onOpenQuote: { act(.openQuote) },
-            onStopSending: { act(.stopSending) },
-            unfolded: unfolded, onUnfold: { act(.unfold) },
-            onVote: { act(.vote($0, $1)) }, onDecide: { act(.decide) }
-          )
+          actedBubble
           // Rung for a moment when gone to from the pins, as /design's
           // flash: a ring just outside the bubble, held, then fading.
           .background {
@@ -291,6 +283,27 @@ struct LineView: View {
     // days or a poll keeps its own parts, the line said first by its time.
     .accessibilityElement(children: .contain)
     .modifier(voice(!carded))
+  }
+
+  /// What the line is drawn as, alone: its bubble lifted over the chat
+  /// while its menu is open, where nothing on it is done.
+  var bubble: LineContent {
+    LineContent(
+      text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
+      quote: quote, groupID: groupID, mine: mine, first: first, waiting: waiting && !failed,
+      nameOf: nameOf, unfolded: unfolded)
+  }
+
+  /// The bubble in the chat, its drawing kept and its parts acting.
+  private var actedBubble: LineContent {
+    var bubble = bubble
+    bubble.drawing = drawing
+    bubble.onOpenQuote = { act(.openQuote) }
+    bubble.onStopSending = { act(.stopSending) }
+    bubble.onUnfold = { act(.unfold) }
+    bubble.onVote = { act(.vote($0, $1)) }
+    bubble.onDecide = { act(.decide) }
+    return bubble
   }
 
   /// Days or a poll on a card, whose days and 行ける VoiceOver goes
