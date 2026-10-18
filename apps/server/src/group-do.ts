@@ -35,6 +35,7 @@ import {
   forReader,
   GROUP_THREAD,
   hearsFrom,
+  latestPageAfter,
   mayRead,
   moveReadMark,
   otherIn,
@@ -1037,7 +1038,7 @@ export class GroupDO extends DurableObject<Env> {
     // as the line (spec/sync-protocol.md, Chat).
     const farBack = sent.filter(
       ({ threadId, replyTo }) =>
-        Number(replyTo) <= chatHead(this.db, threadId) - chatRules.pageSize
+        Number(replyTo) <= latestPageAfter(this.db, threadId)
     );
     broadcastChanges(
       this.ctx,

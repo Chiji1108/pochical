@@ -395,6 +395,12 @@ export const chatHead = (
     .where(eq(chatLines.threadId, threadId))
     .get()?.head ?? 0;
 
+/** The seq the chat's latest page comes after: its last chatRules.pageSize lines. */
+export const latestPageAfter = (
+  db: DrizzleSqliteDODatabase,
+  threadId: string
+): number => chatHead(db, threadId) - chatRules.pageSize;
+
 /**
  * A member's line of the chat at `seq`, for an edit, a reply or a report:
  * the app's notices are none of these (they take no reactions, replies,
@@ -1282,7 +1288,7 @@ export const chatChangesAfter = (
           gt(chatLines.cursor, cursor),
           or(
             lte(chatLines.createdCursor, cursor),
-            gt(chatLines.seq, chatHead(db, threadId) - chatRules.pageSize),
+            gt(chatLines.seq, latestPageAfter(db, threadId)),
             // Pinned lines however far back, for the pins over the chat.
             isNotNull(chatLines.pinnedAt)
           )
