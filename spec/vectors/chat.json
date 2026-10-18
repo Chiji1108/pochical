@@ -1,5 +1,5 @@
 {
-  "about": "What a chat's lines become as people use them (spec/chat.md). pins (Pins, Polls, Editing and unsending): a chat's `lines` by id in order, its `pins` the latest first, then one `step`: pin or unpin a line, unsend one (送信取消), or settle the poll a line carries (日にちを決める). `expected` is the pins after it, the latest first, and the one that made room for the new pin (`dropped`, for the app to say so), if any. The most pinned at once is design/src/chat.ts's chatRules.maxPins, 5. edited (Editing and unsending): a line with words and its link's page is given new words; `expected` says whether it keeps its page (`kept`) or takes the new words' (`new`). firstUnread (Unread lines and typing): who wrote each line, oldest first (`others`, `me`, or `app` for the app's own lines such as someone joining), and how many are unread; `expected` is the index of the line the chat opens on under ここから新着, null with nothing unread. Only others' lines count. directThread (One-to-one chats, spec/sync-protocol.md): two members' ids, given in either order; `expected` is their chat's thread id, the same from both sides: \"direct:\" and the two ids in order (by their UTF-16 code units, as every id is ASCII), joined by \":\". openingFrom (Unread lines and typing): the first line a chat lays out as it opens, from its `latest` line's seq and the reader's `read` mark (null for no reader): its latest page, back to the first unread line when that is earlier, at most chatRules.openMax lines (pageSize 50, openMax 200). firstComing (Unread lines and typing): when lines come in while the chat is open and following, the first of them it stops at under ここから新着 rather than going past: of the chat's `lines` (each a seq and who wrote it, as firstUnread counts them), the first after both the `latest` line it held before and the reader's `read` mark that others wrote; `expected` is its seq, null for none. Whether to stop there or go on to the foot is the screen's: when they fit, it goes on. readTo (Unread lines and typing): what the reader's `read` mark comes to as the chat's `lines` (each a seq and who wrote it, as firstUnread counts them) show: `shown` are the seqs of those whose foot is on the screen, in no particular order; `expected.read` is the mark after, the latest of them, never back (a line once on screen stays read), and `expected.unread` how many of others' lines are still unread past it, what ↓ counts. draft (Drafts): what was being written in a chat, its `text` as it would be sent (mentions as <@id>), the line it answers (`replyTo`) or changes (`editing`) by seq, and the chat's `lines` the device holds then; `expected` is the draft kept, or opened again, or null when there is none to keep. withdrawn (Notifications): the chat lines' notifications a device has shown, each its `id`, chat (`groupId`, `threadId`) and line `seq`, and a `read` of one chat: its `readTo`, or null when the chat has no unread lines left; `expected` are the ids of those it takes back, in the order shown: the chat's, at or before readTo, all of the chat's for null. Another chat's, or a group's of the same thread name, stay.",
+  "about": "What a chat's lines become as people use them (spec/chat.md). pins (Pins, Polls, Editing and unsending): a chat's `lines` by id in order, its `pins` the latest first, then one `step`: pin or unpin a line, unsend one (送信取消), or settle the poll a line carries (日にちを決める). `expected` is the pins after it, the latest first, and the one that made room for the new pin (`dropped`, for the app to say so), if any. The most pinned at once is design/src/chat.ts's chatRules.maxPins, 5. edited (Editing and unsending): a line with words and its link's page is given new words; `expected` says whether it keeps its page (`kept`) or takes the new words' (`new`). firstUnread (Unread lines and typing): who wrote each line, oldest first (`others`, `me`, or `app` for the app's own lines such as someone joining), and how many are unread; `expected` is the index of the line the chat opens on under ここから新着, null with nothing unread. Only others' lines count. writer (Unread lines and typing): whose a line is to the reader `me`, which every count of unread lines and ここから新着 go by: from its `author`, whether it is a `notice` from the app, and whether it is `hidden` (sent in a one-to-one chat by someone the reader blocked, never delivered); `expected` is `me`, `others` or `app`, the app's own and the undelivered ones never counted. directThread (One-to-one chats, spec/sync-protocol.md): two members' ids, given in either order; `expected` is their chat's thread id, the same from both sides: \"direct:\" and the two ids in order (by their UTF-16 code units, as every id is ASCII), joined by \":\". openingFrom (Unread lines and typing): the first line a chat lays out as it opens, from its `latest` line's seq and the reader's `read` mark (null for no reader): its latest page, back to the first unread line when that is earlier, at most chatRules.openMax lines (pageSize 50, openMax 200). firstComing (Unread lines and typing): when lines come in while the chat is open and following, the first of them it stops at under ここから新着 rather than going past: of the chat's `lines` (each a seq and who wrote it, as firstUnread counts them), the first after both the `latest` line it held before and the reader's `read` mark that others wrote; `expected` is its seq, null for none. Whether to stop there or go on to the foot is the screen's: when they fit, it goes on. readTo (Unread lines and typing): what the reader's `read` mark comes to as the chat's `lines` (each a seq and who wrote it, as firstUnread counts them) show: `shown` are the seqs of those whose foot is on the screen, in no particular order; `expected.read` is the mark after, the latest of them, never back (a line once on screen stays read), and `expected.unread` how many of others' lines are still unread past it, what ↓ counts. draft (Drafts): what was being written in a chat, its `text` as it would be sent (mentions as <@id>), the line it answers (`replyTo`) or changes (`editing`) by seq, and the chat's `lines` the device holds then; `expected` is the draft kept, or opened again, or null when there is none to keep. withdrawn (Notifications): the chat lines' notifications a device has shown, each its `id`, chat (`groupId`, `threadId`) and line `seq`, and a `read` of one chat: its `readTo`, or null when the chat has no unread lines left; `expected` are the ids of those it takes back, in the order shown: the chat's, at or before readTo, all of the chat's for null. Another chat's, or a group's of the same thread name, stay.",
   "pins": [
     {
       "name": "a pinned line comes first among the pins",
@@ -976,6 +976,40 @@
         "readTo": 4
       },
       "expected": []
+    }
+  ],
+  "writer": [
+    {
+      "name": "the reader's own line is theirs",
+      "author": "me",
+      "me": "me",
+      "notice": false,
+      "hidden": false,
+      "expected": "me"
+    },
+    {
+      "name": "another member's line is others'",
+      "author": "u2",
+      "me": "me",
+      "notice": false,
+      "hidden": false,
+      "expected": "others"
+    },
+    {
+      "name": "a line from the app is the app's",
+      "author": "u2",
+      "me": "me",
+      "notice": true,
+      "hidden": false,
+      "expected": "app"
+    },
+    {
+      "name": "a line never delivered to the reader, from someone they blocked, is not counted",
+      "author": "u2",
+      "me": "me",
+      "notice": false,
+      "hidden": true,
+      "expected": "app"
     }
   ]
 }

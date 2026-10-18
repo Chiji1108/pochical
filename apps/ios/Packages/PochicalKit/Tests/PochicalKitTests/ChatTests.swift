@@ -36,7 +36,17 @@ struct ChatVectors: Decodable, Sendable {
     let expected: Int64
   }
 
+  struct Writer: VectorCase {
+    let name: String
+    let author: String
+    let me: String
+    let notice: Bool
+    let hidden: Bool
+    let expected: LineWriter
+  }
+
   let firstUnread: [FirstUnread]
+  let writer: [Writer]
   let directThread: [DirectThread]
   let edited: [Edited]
   struct FirstComing: VectorCase {
@@ -156,6 +166,18 @@ func anEditKeepsItsPageWhileItsFirstLinkStays(_ vector: ChatVectors.Edited) {
 @Test(arguments: try vectors("chat", as: ChatVectors.self).directThread)
 func directThreadOfTwo(_ vector: ChatVectors.DirectThread) {
   #expect(directThread(vector.a, vector.b) == vector.expected)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).writer)
+func writerOfALine(_ vector: ChatVectors.Writer) {
+  var row = ChatLineRow(
+    groupID: "g", threadID: groupThread, seq: 1, authorID: vector.author, text: "",
+    sentAtMs: 0, edited: false, unsent: false, opID: "op1")
+  row.hidden = vector.hidden
+  if vector.notice {
+    row.notice = LineNotice(kind: .joined)
+  }
+  #expect(row.writer(for: vector.me) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstUnread)
@@ -288,6 +310,23 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     let state = try Chats.state(of: groupThread, in: "g", db: db)
     #expect(state.lastRead(by: "me") == 3)
     #expect(state.unread(by: "me") == 0)
+  }
+}
+
+@Test func aLineNeverDeliveredIsUnreadNowhere() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var blocked = line(2, "")
+    blocked.chatLine.hidden = true
+    try GroupSync.take([line(1, "a"), blocked, line(3, "c")], of: "g", in: db)
+    var read = Pochical_V1_ChatRead()
+    read.threadID = groupThread
+    read.lastReadSeq = 1
+    try Chats.edit(.read(read), in: "g", now: 5, db: db)
+    // The ↓'s count and the chat list's agree.
+    let state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.unread(by: "me") == 1)
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).unread == 1)
   }
 }
 
