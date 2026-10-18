@@ -71,12 +71,14 @@ public struct ChatPhotosPage: Sendable {
   }
 }
 
-/// The photos a chat's photo opened large swipes through (spec/chat.md,
-/// Photos), as spec/vectors/chat-photos.json pins them down: those the
-/// device holds of all the chat's, from the lines laid out as it opens and
-/// then a page at a time from the group as the person nears an end, where
-/// they are among all of them, and the one shown. It follows the chat as
-/// photos come and go while it is open.
+/// The photos a chat's photo opened large swipes through, and its list of
+/// them (写真) scrolls through (spec/chat.md, Photos), as
+/// spec/vectors/chat-photos.json pins them down: those the device holds of
+/// all the chat's, from the lines laid out as it opens (or, listed, from
+/// the latest) and then a page at a time from the group as the person
+/// nears an end, where they are among all of them, and the one shown (in
+/// the list, the one last come into sight). It follows the chat as photos
+/// come and go while it is open.
 public struct PhotoRun: Sendable {
   /// A page to ask the group for: the photos before `seq`, or after it.
   public struct Ask: Hashable, Sendable {
@@ -100,6 +102,9 @@ public struct PhotoRun: Sendable {
   public private(set) var shown: Int64?
   private var asked: Set<Ask> = []
   private let ahead: Int
+  /// Opened with none held, as the list is: the latest page is asked for
+  /// until it comes.
+  private var fromLatest = false
   /// The chat's lines on the device as last followed: whether each is a
   /// photo the reader sees.
   private var followed: [Int64: Bool]?
@@ -120,6 +125,15 @@ public struct PhotoRun: Sendable {
     self.ahead = ahead
   }
 
+  /// Opened with none held, as the list of the chat's photos is: the
+  /// latest page asked for, and its latest photo shown once it comes.
+  public init(latest ahead: Int = Chat.photoPageAhead) {
+    photos = []
+    shown = nil
+    self.ahead = ahead
+    fromLatest = true
+  }
+
   /// Where the photo shown is among those held.
   public var index: Int? { photos.firstIndex { $0.seq == shown } }
 
@@ -134,19 +148,32 @@ public struct PhotoRun: Sendable {
   /// once the photo shown is fewer than `ahead` from it, and both ends
   /// while where the photos are is unknown.
   public mutating func asks() -> [Ask] {
-    guard let index, let first = photos.first, let last = photos.last else { return [] }
     var wanted: [Ask] = []
-    if let offset, let total {
-      if offset > 0, index < ahead { wanted.append(Ask(seq: first.seq, after: false)) }
-      if offset + photos.count < total, photos.count - 1 - index < ahead {
-        wanted.append(Ask(seq: last.seq, after: true))
-      }
-    } else {
-      wanted = [Ask(seq: first.seq, after: false), Ask(seq: last.seq, after: true)]
+    if fromLatest {
+      wanted = [Ask(seq: 0, after: false)]
+    } else if let index, let first = photos.first, let last = photos.last {
+      wanted = Self.wanted(
+        index: index, first: first.seq, last: last.seq, count: photos.count, offset: offset,
+        total: total, ahead: ahead)
     }
     let new = wanted.filter { !asked.contains($0) }
     asked.formUnion(new)
     return new
+  }
+
+  private static func wanted(
+    index: Int, first: Int64, last: Int64, count: Int, offset: Int?, total: Int?, ahead: Int
+  ) -> [Ask] {
+    var wanted: [Ask] = []
+    if let offset, let total {
+      if offset > 0, index < ahead { wanted.append(Ask(seq: first, after: false)) }
+      if offset + count < total, count - 1 - index < ahead {
+        wanted.append(Ask(seq: last, after: true))
+      }
+    } else {
+      wanted = [Ask(seq: first, after: false), Ask(seq: last, after: true)]
+    }
+    return wanted
   }
 
   /// An ask that could not be sent, to be asked again.
@@ -164,6 +191,15 @@ public struct PhotoRun: Sendable {
   /// the one asked from.
   public mutating func take(_ page: ChatPhotosPage) {
     asked.remove(Ask(seq: page.seq, after: page.after))
+    if fromLatest {
+      guard page.seq == 0, !page.after else { return }
+      fromLatest = false
+      photos = page.photos
+      offset = page.offset
+      total = page.total
+      shown = photos.last?.seq
+      return
+    }
     guard let first = photos.first, let last = photos.last else { return }
     if page.after {
       guard page.seq == last.seq else { return }
@@ -185,8 +221,12 @@ public struct PhotoRun: Sendable {
   /// A new line with a photo the reader sees: one more in all, and held
   /// when the last is.
   public mutating func added(_ item: ChatPhotoItem) {
-    guard let last = photos.last, item.seq > last.seq, let total else { return }
-    if let offset, offset + photos.count == total { photos.append(item) }
+    guard let total, item.seq > photos.last?.seq ?? 0 else { return }
+    if let offset, offset + photos.count == total {
+      photos.append(item)
+      // The first in a list that had none.
+      if shown == nil { shown = item.seq }
+    }
     self.total = total + 1
   }
 
@@ -200,6 +240,14 @@ public struct PhotoRun: Sendable {
       total = total.map { $0 - 1 }
       if shown == seq {
         shown = photos.isEmpty ? nil : photos[min(index, photos.count - 1)].seq
+      }
+      // All held gone with more before them: the list asks for the latest
+      // again (open large, it closes).
+      if photos.isEmpty, let offset, offset > 0 {
+        self.offset = nil
+        total = nil
+        fromLatest = true
+        asked = []
       }
       return
     }
