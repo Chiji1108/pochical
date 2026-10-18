@@ -1,3 +1,4 @@
+import { chatRules } from "@pochical/design/chat";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
@@ -54,6 +55,25 @@ describe("what the admin site asks of the server", () => {
         [false, "色を変えたい", "ポチカル 1.0・iPhone"],
         [true, "設定から変えられます", null],
       ],
+    ]);
+  });
+
+  it("pages a chat as a device does, its one full page reaching the first line", async () => {
+    const token = await signInAnonymously();
+    const { edit, userId } = await supportChat(token);
+    await edit(
+      Array.from({ length: chatRules.pageSize }, (_, at) => ({
+        kind: {
+          case: "send" as const,
+          value: { text: `${at + 1}`, threadId: "group" },
+        },
+        opId: crypto.randomUUID(),
+      }))
+    );
+    const page = await exports.AdminEntrypoint.supportChat(userId);
+    expect([page.atStart, page.lines.length]).toStrictEqual([
+      true,
+      chatRules.pageSize,
     ]);
   });
 
