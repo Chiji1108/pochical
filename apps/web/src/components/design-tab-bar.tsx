@@ -5,7 +5,7 @@ import { css, cva, cx } from "styled-system/css";
 import { useUser } from "../lib/design-user-store";
 import { groupsUnread } from "./design-group-data";
 import { badge } from "./design-group-parts";
-import { srOnly } from "./design-ui";
+import { floatingGlass, srOnly } from "./design-ui";
 
 export type Tab = "calendar" | "group" | "settings";
 
@@ -22,8 +22,6 @@ const tabs: { tab: Tab; label: string; icon: typeof CalendarDays }[] = [
 // system's tab bars do. The screen leaves room for it: see Screen.
 const tabBar = {
   bar: css({
-    backdropFilter: "blur(16px) saturate(1.4)",
-    bg: "color-mix(in srgb, token(colors.fill.tertiary) 80%, transparent)",
     borderRadius: "full",
     bottom: "var(--tab-bar-bottom)",
     boxShadow: "md",
@@ -84,7 +82,11 @@ export function TabBar({
   const unread = useUnread();
   const id = useId();
   return (
-    <nav aria-label="タブ" className={tabBar.bar} data-tab-bar="">
+    <nav
+      aria-label="タブ"
+      className={cx(floatingGlass, tabBar.bar)}
+      data-tab-bar=""
+    >
       {tabs.map(({ tab, label, icon: Icon }) => (
         <button
           aria-current={active === tab ? "page" : undefined}

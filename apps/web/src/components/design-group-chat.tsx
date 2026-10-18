@@ -32,7 +32,13 @@ import type { LinkMenuAt } from "./design-chat-actions";
 import { BubbleOutline } from "./design-chat-bubble";
 import { uploadMilliseconds } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
-import { Composer, noOne, useComposer } from "./design-chat-composer";
+import {
+  ChatFoot,
+  Composer,
+  GoneNote,
+  noOne,
+  useComposer,
+} from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
@@ -565,28 +571,30 @@ export function ChatPage({
             )}
           </span>
         )}
+        <ChatFoot list={listRef}>
+          {gone ? (
+            <GoneNote name={gone.name} />
+          ) : (
+            <Composer
+              composer={composer}
+              editingMessage={byId(composer.editing)}
+              onSend={send}
+              onShareDays={() => {
+                setSharing(true);
+              }}
+              reply={
+                replying && {
+                  message: replying,
+                  onStop: () => {
+                    setReplyTo(undefined);
+                  },
+                  writer: nameOf(replying.from),
+                }
+              }
+            />
+          )}
+        </ChatFoot>
       </div>
-      {gone ? (
-        <p className={chatStyle.goneBar}>{gone.name}はグループを抜けました</p>
-      ) : (
-        <Composer
-          composer={composer}
-          editingMessage={byId(composer.editing)}
-          onSend={send}
-          onShareDays={() => {
-            setSharing(true);
-          }}
-          reply={
-            replying && {
-              message: replying,
-              onStop: () => {
-                setReplyTo(undefined);
-              },
-              writer: nameOf(replying.from),
-            }
-          }
-        />
-      )}
       <EmojiPickerSheet
         onOpenChange={(open) => {
           if (!open) {
@@ -843,9 +851,10 @@ function useChatScroll({
       placed.current = { ...at, top: scrollOnto(list, at.target) };
     }
   };
-  // When what sits over the composer (a reply, days, photos) takes room,
-  // the lines keep their bottom edge, as in the chat apps, so the latest
-  // line is not hidden under it. When it goes, the room shows more below.
+  // When the lines lose height, as the pins' bar comes in over them, they
+  // keep their bottom edge, so the latest line stays in sight. When it
+  // goes, the room shows more below. ChatFoot does the same for what
+  // floats over their foot.
   useLayoutEffect(() => {
     const list = listRef.current;
     if (!list) {
@@ -876,7 +885,10 @@ function useChatScroll({
     if (start === -1) {
       return;
     }
-    const foot = list.getBoundingClientRect().bottom;
+    // Lines under the composer's glass are not yet seen.
+    const foot =
+      list.getBoundingClientRect().bottom -
+      Number(getComputedStyle(list).paddingBottom.replace("px", ""));
     let count = 0;
     for (const message of messages.slice(start)) {
       const element = list.querySelector(`#message-${message.id}`);

@@ -56,7 +56,7 @@ export const chatRow = {
 // A chat as the messaging apps draw one: others' bubbles on the left with
 // their avatar and name at the start of a run, yours on the right in the
 // accent; the day between runs, the time by the bubble, reactions under
-// it, and the reply being written above the composer.
+// it, and the composer floating over their foot.
 export const chatStyle = {
   avatar: css({ flexShrink: 0, width: "32px" }),
   body: cva({
@@ -214,33 +214,25 @@ export const chatStyle = {
     base: { fontWeight: 600 },
     variants: { mine: { false: { color: "accent.default" }, true: {} } },
   }),
-  // The others to mention, over the composer, a few in sight and the rest
-  // a scroll away.
+  // The others to mention, a card of glass floating over the composer, a
+  // few in sight and the rest a scroll away.
   mentionList: css({
-    borderTop: "1px solid token(colors.separator)",
+    borderRadius: "2xl",
     display: "flex",
     flexDirection: "column",
     listStyle: "none",
-    marginBottom: 0,
-    // Out to the screen's edges, so its line runs from edge to edge as a
-    // bar's does on iOS and Android (a list's lines stay inset); its
-    // contents stay where they were.
-    marginLeft: "calc(-1 * var(--screen-left))",
-    marginRight: "calc(-1 * var(--screen-right))",
-    marginTop: 0,
+    margin: 0,
     maxHeight: "180px",
     overflowY: "auto",
-    paddingBottom: "4px",
-    paddingLeft: "var(--screen-left)",
-    paddingRight: "var(--screen-right)",
-    paddingTop: "4px",
+    padding: "4px",
   }),
   mentionPick: css({
-    _hover: { bg: "fill.tertiary" },
+    _active: { bg: "fill.secondary" },
+    _hover: { bg: "fill.secondary" },
     alignItems: "center",
     bg: "transparent",
     border: 0,
-    borderRadius: "md",
+    borderRadius: "xl",
     color: "text.primary",
     display: "flex",
     gap: "12px",
@@ -254,89 +246,113 @@ export const chatStyle = {
   // page's picture, as LINE draws one: 240px where the row has room, and
   // narrower where it does not, so the time beside it stays in the row.
   linked: css({ flex: "1 1 240px" }),
-  // Its buttons stay at the foot as the message grows, as in Messages.
-  composer: cva({
-    base: {
-      alignItems: "flex-end",
-      borderTop: "1px solid token(colors.separator)",
-      display: "flex",
-      gap: "8px",
-      // Out to the screen's edges, so its line runs from edge to edge as a
-      // bar's does on iOS and Android (a list's lines stay inset); its
-      // contents stay where they were.
-      marginLeft: "calc(-1 * var(--screen-left))",
-      marginRight: "calc(-1 * var(--screen-right))",
-      paddingBottom: "4px",
-      paddingLeft: "var(--screen-left)",
-      paddingRight: "var(--screen-right)",
-      paddingTop: "8px",
+  // What floats over the lines' foot, as iOS 26's Messages has no bar
+  // there: the composer, or who left in its place. The lines run on
+  // under it, fading into the ground at the very foot as iOS 26's scroll
+  // edge does; ChatFoot gives them the room to end clear of it.
+  foot: css({
+    // Over the fade, which is drawn first. Not by isolating the foot,
+    // which would leave its glass nothing under it to blur.
+    "& > *": { pointerEvents: "auto", position: "relative" },
+    "&::before": {
+      bg: "linear-gradient(to bottom, transparent, token(colors.background.base))",
+      bottom: 0,
+      content: '""',
+      height: "32px",
+      left: "calc(-1 * var(--screen-left))",
+      position: "absolute",
+      right: "calc(-1 * var(--screen-right))",
     },
-    // The reply above it already draws the line.
-    variants: { replying: { true: { borderTop: 0 } } },
-  }),
-  // In place of the composer, in a one-to-one chat with someone who left.
-  goneBar: css({
-    alignItems: "center",
-    borderTop: "1px solid token(colors.separator)",
-    color: "text.tertiary",
+    bottom: 0,
     display: "flex",
-    justifyContent: "center",
-    margin: 0,
-    marginLeft: "calc(-1 * var(--screen-left))",
-    marginRight: "calc(-1 * var(--screen-right))",
-    minHeight: "44px",
+    flexDirection: "column",
+    gap: "8px",
+    left: 0,
     paddingBottom: "4px",
+    paddingTop: "8px",
+    // The lines in the gaps around its glass stay to be pressed.
+    pointerEvents: "none",
+    position: "absolute",
+    right: 0,
+  }),
+  // The round button and the capsule beside it, both kept at the foot as
+  // the message grows, as in Messages.
+  composer: css({ alignItems: "flex-end", display: "flex", gap: "8px" }),
+  // What the next message carries and its words, in one piece of glass:
+  // a capsule with one line (xl, past half its height), and a rectangle
+  // with the capsule's corners as it grows.
+  capsule: css({
+    borderRadius: "xl",
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    minWidth: 0,
+  }),
+  // The field and send at its end; the count, near the limit, under the
+  // field's end.
+  fieldRow: css({
+    "& > span[aria-hidden]": {
+      gridArea: "count",
+      justifySelf: "end",
+      paddingBottom: "6px",
+      paddingRight: "4px",
+    },
+    alignItems: "end",
+    display: "grid",
+    gridTemplateAreas: '"field send" "count ."',
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+  }),
+  // In place of the composer, in a one-to-one chat with someone who left:
+  // quiet words in a capsule of glass.
+  gone: css({
+    alignSelf: "center",
+    borderRadius: "full",
+    color: "text.tertiary",
+    margin: 0,
+    padding: "8px 16px",
     textStyle: "footnote",
   }),
-  composerButton: cva({
-    base: {
-      bg: "transparent",
-      border: 0,
-      borderRadius: "circle",
-      color: "accent.default",
-      display: "grid",
-      flexShrink: 0,
-      height: "38px",
-      placeItems: "center",
-      width: "38px",
-    },
-    variants: {
-      // Lights up softly once there is something to send, and dims back
-      // the same way.
-      send: {
-        true: {
-          _disabled: { bg: "fill.primary" },
-          bg: "accent.fill",
-          color: "accent.onFill",
-          transition: "background-color 0.15s ease-out, color 0.15s ease-out",
-        },
-      },
-      // The tools at the start, as wide as the send button, a gap apart
-      // as the row's other pieces are.
-      tool: { true: { borderRadius: "sm" } },
-    },
-  }),
-  composerToolRow: css({ display: "flex", gap: "8px" }),
-  // A lone tool, as the support chat's photo button, which never folds.
-  composerToolsStill: css({ display: "flex", flexShrink: 0 }),
-  composerTools: css({
-    display: "flex",
+  // ＋ before the capsule, a round of glass the field's height.
+  attach: css({
+    border: 0,
+    borderRadius: "circle",
+    color: "text.primary",
+    display: "grid",
     flexShrink: 0,
-    // The folding tools stay inside while they narrow.
-    overflow: "hidden",
-    position: "relative",
+    height: "38px",
+    placeItems: "center",
+    width: "38px",
   }),
-  // One line to start with, nearly as round-ended as the buttons beside
-  // it (xl, the radius nearest half its height); it grows with the lines
-  // written, up to five, and then scrolls.
+  // ＋'s menu over it, its first item nearest the button. Shut, it stays
+  // hidden.
+  attachMenu: css({
+    "&:not([hidden])": { display: "flex" },
+    flexDirection: "column-reverse",
+  }),
+  // Send at the field's end, bottom-aligned with its last line. Lights up
+  // softly once there is something to send, and dims back the same way.
+  send: css({
+    _disabled: { bg: "fill.primary" },
+    bg: "accent.fill",
+    border: 0,
+    borderRadius: "circle",
+    color: "accent.onFill",
+    display: "grid",
+    gridArea: "send",
+    height: "30px",
+    margin: "4px",
+    placeItems: "center",
+    transition: "background-color 0.15s ease-out, color 0.15s ease-out",
+    width: "30px",
+  }),
+  // One line to start with, filling the capsule's height; it grows with
+  // the lines written, up to five, and then scrolls.
   composerInput: css({
     "--lines": "5",
-    "--pad-x": "16px",
+    "--pad-x": "14px",
     "--pad-y": "8px",
-    bg: "fill.quaternary",
-    borderRadius: "xl",
     color: "text.primary",
-    flex: 1,
+    gridArea: "field",
     lineHeight: "22px",
     minWidth: 0,
     textStyle: "body",
@@ -442,7 +458,12 @@ export const chatStyle = {
       shown: { false: { opacity: 0 }, true: { opacity: 1 } },
     },
   }),
-  latest: css({ bottom: "12px", position: "absolute", right: "4px" }),
+  // Over the foot's glass, which takes --foot-height of the lines.
+  latest: css({
+    bottom: "calc(var(--foot-height, 0px) + 12px)",
+    position: "absolute",
+    right: "4px",
+  }),
   // The count of new lines below, on the ↓'s corner as a chat's unread.
   latestCount: css({ position: "absolute", right: "-4px", top: "-4px" }),
   // ここから新着: a rule either side of the words, in the accent, as LINE
@@ -492,7 +513,8 @@ export const chatStyle = {
     margin: 0,
     minHeight: 0,
     overflowY: "auto",
-    padding: "12px 2px",
+    // The latest line ends clear of what floats over the foot.
+    padding: "12px 2px calc(var(--foot-height, 0px) + 12px)",
     scrollbarWidth: "none",
   }),
   name: css({
@@ -682,27 +704,18 @@ export const chatStyle = {
     paddingRight: "40px",
     textStyle: "caption2",
   }),
-  // Photos chosen to send, in a row above the composer, each with its ×.
+  // Photos chosen to send, in a row in the capsule over the words, each
+  // with its ×.
   tray: cva({
     base: {
-      borderTop: "1px solid token(colors.separator)",
       display: "flex",
       gap: "8px",
       listStyle: "none",
-      marginBottom: 0,
-      // Out to the screen's edges, so its line runs from edge to edge as a
-      // bar's does on iOS and Android (a list's lines stay inset); its
-      // contents stay where they were.
-      marginLeft: "calc(-1 * var(--screen-left))",
-      marginRight: "calc(-1 * var(--screen-right))",
-      marginTop: 0,
-      paddingBottom: "4px",
-      paddingLeft: "var(--screen-left)",
-      paddingRight: "var(--screen-right)",
-      paddingTop: "12px",
+      margin: 0,
+      padding: "12px 12px 4px",
     },
-    // The reply or the days above already draw the line.
-    variants: { below: { true: { borderTop: 0, paddingTop: "8px" } } },
+    // Under a strip, nearer to it.
+    variants: { below: { true: { paddingTop: "8px" } } },
   }),
   trayImage: css({
     borderRadius: "md",
@@ -733,19 +746,12 @@ export const chatStyle = {
     base: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "-1px" },
     variants: { mine: { true: { justifyContent: "flex-end" } } },
   }),
+  // A strip in the capsule, over the words.
   replying: css({
     alignItems: "center",
-    borderTop: "1px solid token(colors.separator)",
     display: "flex",
     gap: "8px",
-    // Out to the screen's edges, so its line runs from edge to edge as a
-    // bar's does on iOS and Android (a list's lines stay inset); its
-    // contents stay where they were.
-    marginLeft: "calc(-1 * var(--screen-left))",
-    marginRight: "calc(-1 * var(--screen-right))",
-    paddingLeft: "var(--screen-left)",
-    paddingRight: "var(--screen-right)",
-    paddingTop: "8px",
+    padding: "4px 0 0 12px",
   }),
   tap: cva({
     base: {

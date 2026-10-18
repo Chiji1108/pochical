@@ -115,6 +115,11 @@ export default defineConfig({
           from: { opacity: 0, transform: "scale(1.08)" },
           to: { opacity: 1, transform: "scale(1)" },
         },
+        // A menu growing out of what opened it.
+        growIn: {
+          from: { opacity: 0, transform: "scale(0.6)" },
+          to: { opacity: 1, transform: "scale(1)" },
+        },
         sheetIn: {
           from: { transform: "translateY(100%)" },
           to: { transform: "translateY(0)" },

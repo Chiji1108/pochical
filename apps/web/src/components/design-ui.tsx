@@ -134,6 +134,15 @@ export const iconButtonStyle = cva({
   },
 });
 
+// Glass floating over what scrolls, as iOS 26's: see-through and
+// blurring what runs under it, where gray glass on the ground
+// (fill.quaternary) would hide it or vanish. The tab bar, the chat's
+// composer and its menus.
+export const floatingGlass = css({
+  backdropFilter: "blur(16px) saturate(1.4)",
+  bg: "color-mix(in srgb, token(colors.fill.tertiary) 80%, transparent)",
+});
+
 export function IconButton({
   label,
   glass = true,

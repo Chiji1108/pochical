@@ -1,34 +1,34 @@
 import { ChevronDown, ChevronUp, Pin, PinOff } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { css } from "styled-system/css";
+import { css, cx } from "styled-system/css";
 
 import { useLongPress } from "./design-chat-actions";
 import { PhonePopover, PopoverMenuItem } from "./design-chat-popover";
 import { summaryOf } from "./design-chat-summary";
 import type { Message } from "./design-group-data";
-import { IconButton } from "./design-ui";
+import { floatingGlass, IconButton } from "./design-ui";
 
 // The lines pinned over a chat (spec/chat.md, Pins): the bar under the
 // header, and the list of all of them under it.
 
 const pinBar = {
-  // Under the header, the latest pinned line, as LINE shows its
-  // announcement: the pin, whose words, and a tap jumps to it.
+  // Under the header, a card of glass with the latest pinned line in it,
+  // as LINE shows its announcement, and all of them under it once opened:
+  // the pin, whose words, and a tap jumps to it.
+  card: css({
+    borderRadius: "2xl",
+    marginBottom: "4px",
+    marginTop: "4px",
+    paddingBottom: "4px",
+    paddingLeft: "8px",
+    paddingRight: "8px",
+    paddingTop: "4px",
+  }),
   bar: css({
     alignItems: "center",
-    borderBottom: "1px solid token(colors.separator)",
     display: "flex",
     gap: "4px",
-    // Out to the screen's edges, so its line runs from edge to edge as a
-    // bar's does on iOS and Android (a list's lines stay inset); its
-    // contents stay where they were.
-    marginLeft: "calc(-1 * var(--screen-left))",
-    marginRight: "calc(-1 * var(--screen-right))",
-    paddingBottom: "4px",
-    paddingLeft: "var(--screen-left)",
-    paddingRight: "var(--screen-right)",
-    paddingTop: "4px",
   }),
   jump: css({
     alignItems: "center",
@@ -67,19 +67,10 @@ const pinBar = {
   }),
   // All of them, opened from ▾ under the bar.
   list: css({
-    borderBottom: "1px solid token(colors.separator)",
+    borderTop: "1px solid token(colors.separator)",
     listStyle: "none",
-    marginBottom: 0,
-    // Out to the screen's edges, so its line runs from edge to edge as a
-    // bar's does on iOS and Android (a list's lines stay inset); its
-    // contents stay where they were.
-    marginLeft: "calc(-1 * var(--screen-left))",
-    marginRight: "calc(-1 * var(--screen-right))",
-    marginTop: 0,
-    paddingBottom: "4px",
-    paddingLeft: "var(--screen-left)",
-    paddingRight: "var(--screen-right)",
-    paddingTop: "4px",
+    margin: 0,
+    padding: 0,
   }),
 };
 
@@ -161,7 +152,7 @@ export function PinBar({
   }
   const many = pins.length > 1;
   return (
-    <>
+    <div className={cx(pinBar.card, floatingGlass)}>
       <div className={pinBar.bar}>
         <PinItem
           label={`ピン留め：${summaryOf(latest, nameOf)}`}
@@ -219,6 +210,6 @@ export function PinBar({
           ))}
         </ul>
       )}
-    </>
+    </div>
   );
 }
