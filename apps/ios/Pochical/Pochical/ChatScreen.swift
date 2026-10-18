@@ -562,8 +562,6 @@ struct ChatScreen: View {
 
   // MARK: Lines
 
-  /// What the lines show, in order: each day's title, ここから新着, and
-  /// the lines with whether each starts a run of one writer's.
   /// The day whose lines are at the top, from the first item in sight:
   /// none while that is the day's own title.
   private func dayOver(_ top: String?, in items: [ChatItem]) -> Day? {
@@ -576,6 +574,8 @@ struct ChatScreen: View {
     return nil
   }
 
+  /// What the lines show, in order: each day's title, ここから新着, and
+  /// the lines with whether each starts a run of one writer's.
   private func items(_ state: ChatState) -> [ChatItem] {
     var items: [ChatItem] = []
     var lastDay: Day?
@@ -1489,7 +1489,6 @@ struct ChatScreen: View {
         : on ? "ピン留めしました" : "ピン留めを外しました")
   }
 
-  /// Says `words` over the lines for a moment, as a toast does.
   /// Says a save or a copy is done, felt as well as said: what it made
   /// happens out of sight, in Photos or on the clipboard.
   private func sayDone(_ words: String) {
@@ -1497,6 +1496,7 @@ struct ChatScreen: View {
     say(words)
   }
 
+  /// Says `words` over the lines for a moment, as a toast does.
   private func say(_ words: String) {
     notices += 1
     let said = notices

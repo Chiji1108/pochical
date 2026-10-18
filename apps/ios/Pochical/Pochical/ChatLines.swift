@@ -517,9 +517,6 @@ extension View {
   }
 }
 
-/// A line's words in its bubble: others' on the quiet fill, one's own in
-/// the accent, the first of a run with its tail by the writer, dimmed
-/// while it waits to be sent.
 /// The days from one through another.
 struct DaySpan: Hashable {
   let from: Day
@@ -591,6 +588,9 @@ struct LineContent: View {
   }
 }
 
+/// A line's words in its bubble: others' on the quiet fill, one's own in
+/// the accent, the first of a run with its tail by the writer, dimmed
+/// while it waits to be sent.
 struct MessageBubble: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dynamicTypeSize) private var typeSize
@@ -669,11 +669,11 @@ struct MessageBubble: View {
         ? nil : Self.linkedWidth, alignment: .leading)
     .padding(.horizontal, 12)
     .padding(.vertical, 8)
-      .background(
-        mine ? colors.accentFill : colors.fillTertiary,
-        in: BubbleShape(mine: mine, first: first)
-      )
-      .dimmedWhileWaiting(waiting, in: BubbleShape(mine: mine, first: first))
+    .background(
+      mine ? colors.accentFill : colors.fillTertiary,
+      in: BubbleShape(mine: mine, first: first)
+    )
+    .dimmedWhileWaiting(waiting, in: BubbleShape(mine: mine, first: first))
   }
 
   /// The words cut at chatRules.foldLines lines, with 続きを読む.
@@ -733,7 +733,6 @@ struct MessageBubble: View {
     drawing.pieces = (mine, pieces)
     return pieces
   }
-
 }
 
 extension Text {

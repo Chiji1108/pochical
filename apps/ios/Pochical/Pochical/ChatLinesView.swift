@@ -877,7 +877,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     )
   }
 
-  /// Where the lines are scrolled, told to what shows it.
   /// The items last told near those in sight.
   private var near: [String] = []
 
@@ -895,6 +894,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     settings.onNear(ids)
   }
 
+  /// Where the lines are scrolled, told to what shows it.
   private func seePlace() {
     seeNear()
     guard lines.bounds.height > 0 else { return }
@@ -1017,7 +1017,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       letGoOfSwipe()
     }
   }
-
 
   /// Draws the line `id` dragged `along` toward the middle, past
   /// chatRules.replySwipe less and less, the arrow beside it.
