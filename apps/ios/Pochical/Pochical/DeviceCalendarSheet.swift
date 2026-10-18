@@ -38,13 +38,13 @@ import UIKit
   /// Keeps `sources` current until the task ends: read now, then again
   /// whenever the device's calendars change outside the app, as when a
   /// Google account's calendar is turned on in 設定 with the sheet open.
-  /// `read` runs after each, for what the caller works out from them.
-  func follow(_ read: () -> Void) async {
+  /// `changed` runs after each, for what the caller works out from them.
+  func follow(_ changed: () -> Void) async {
     readSources()
-    read()
+    changed()
     for await _ in NotificationCenter.default.notifications(named: .EKEventStoreChanged) {
       readSources()
-      read()
+      changed()
     }
   }
 
