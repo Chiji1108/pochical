@@ -199,8 +199,9 @@ const keepTold = (
  * What the chat's Slack thread is told of a line changed since: a new
  * line posted (the user's, or an answer written on the admin site; one
  * written in Slack is there already), the user's taking one back, and the
- * user's reactions put on or taken off. Slack failing leaves it untold,
- * as it never fails what the user did.
+ * user's reactions put on or taken off. A line Slack did not take throws,
+ * left untold for the alarm to post again; it never fails what the user
+ * did.
  */
 const relayLine = async (
   env: Env,
@@ -226,15 +227,16 @@ const relayLine = async (
     // pages, but are not posted, so no one floods the channel.
     const flooding =
       !line.fromPochical && (await overLimit(env.SUPPORT_LIMIT, line.userId));
-    let ts: string | undefined;
+    let ts: string | null = null;
     if (line.fromPochical) {
       ts = await tellStaffOfAnswer(env, line);
     } else if (!flooding) {
       ts = await tellStaffOfLine(env, line, repliedTo);
     }
-    told = { ...told, slackTs: ts ?? null };
+    told = { ...told, slackTs: ts };
     // Kept at once, before anything that may fail, so a retry never
-    // posts the line again.
+    // posts the line again: a kept line is settled, its message or none
+    // when it is not to be posted (past the limit, say).
     keepTold(db, told);
   }
   // Which line its Slack message is, for what Pochical's people do to it
