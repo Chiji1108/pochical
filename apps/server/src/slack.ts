@@ -395,8 +395,9 @@ export const slackFile = async (
 };
 
 /**
- * A user's new line, in their chat's thread, shown in the channel too;
- * their first starts the thread, with the way to the admin site. A reply
+ * A user's new line: their first starts their chat's thread in the
+ * channel, with the way to the admin site; each after it stays in the
+ * thread, which Pochical's people follow. A reply
  * quotes what it is to. Its message, for its reactions and its taking
  * back; none when Slack did not take it.
  */
@@ -418,7 +419,6 @@ export const tellStaffOfLine = async (
   }
   if (thread !== null) {
     const posted = await slackCall(env, "chat.postMessage", {
-      reply_broadcast: true,
       text: words,
       thread_ts: thread,
     });
