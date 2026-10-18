@@ -26,6 +26,7 @@ import type {
 import {
   addPreview,
   answeredChanges,
+  atLine,
   chatChangesAfter,
   chatHead,
   chatPage,
@@ -1115,9 +1116,7 @@ export class GroupDO extends DurableObject<Env> {
       this.db
         .select({ authorId: chatLines.authorId })
         .from(chatLines)
-        .where(
-          and(eq(chatLines.threadId, GROUP_THREAD), eq(chatLines.seq, seq))
-        )
+        .where(atLine(GROUP_THREAD, seq))
         .get()?.authorId === userId
     );
   }

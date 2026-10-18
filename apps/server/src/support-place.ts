@@ -10,7 +10,7 @@ import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import { supportChats, supportSlack } from "./db/schema";
-import { GROUP_THREAD } from "./group-chat";
+import { atLine, GROUP_THREAD } from "./group-chat";
 import {
   chatLines,
   chatReactions,
@@ -97,7 +97,7 @@ const lineAt = (
   const row = db
     .select()
     .from(chatLines)
-    .where(and(eq(chatLines.threadId, GROUP_THREAD), eq(chatLines.seq, seq)))
+    .where(atLine(GROUP_THREAD, seq))
     .get();
   return row === undefined ? null : lineOf(db, userId, row);
 };

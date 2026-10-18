@@ -20,6 +20,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import type { Alert } from "./apns";
@@ -125,6 +126,10 @@ export const seenBy = (change: Change, userId: string): boolean => {
 
 type LineRow = typeof chatLines.$inferSelect;
 type MarkRow = typeof readMarks.$inferSelect;
+
+/** The condition for the chat's line at `seq`. */
+export const atLine = (threadId: string, seq: number): SQL | undefined =>
+  and(eq(chatLines.threadId, threadId), eq(chatLines.seq, seq));
 
 /**
  * A line's reactions: each emoji, in the order first chosen, with who
@@ -244,12 +249,7 @@ export const forReader = (
   const hidden = db
     .select({ hiddenFrom: chatLines.hiddenFrom })
     .from(chatLines)
-    .where(
-      and(
-        eq(chatLines.threadId, line.threadId),
-        eq(chatLines.seq, Number(line.seq))
-      )
-    )
+    .where(atLine(line.threadId, Number(line.seq)))
     .get()?.hiddenFrom;
   if (hidden !== userId) {
     return change;
@@ -408,13 +408,7 @@ const lineAt = (
   db
     .select()
     .from(chatLines)
-    .where(
-      and(
-        eq(chatLines.threadId, threadId),
-        eq(chatLines.seq, Number(seq)),
-        isNull(chatLines.notice)
-      )
-    )
+    .where(and(atLine(threadId, Number(seq)), isNull(chatLines.notice)))
     .get();
 
 /**
@@ -637,7 +631,7 @@ const takeReaction = (
   const row = db
     .update(chatLines)
     .set({ cursor })
-    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, line.seq)))
+    .where(atLine(threadId, line.seq))
     .returning()
     .get();
   return row === undefined ? {} : { change: chatLineChange(db, row) };
@@ -714,9 +708,7 @@ const takeWords = (
             text,
           }
     )
-    .where(
-      and(eq(chatLines.threadId, line.threadId), eq(chatLines.seq, line.seq))
-    )
+    .where(atLine(line.threadId, line.seq))
     .returning()
     .get();
   if (row === undefined) {
@@ -752,7 +744,7 @@ const pinning = (
     db
       .update(chatLines)
       .set({ cursor: at, ...more })
-      .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, lineSeq)))
+      .where(atLine(threadId, lineSeq))
       .returning()
       .get();
   const stays = pins.includes(String(line.seq));
@@ -831,7 +823,7 @@ const takeVote = (
   const row = db
     .update(chatLines)
     .set({ cursor })
-    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, line.seq)))
+    .where(atLine(threadId, line.seq))
     .returning()
     .get();
   return row === undefined ? {} : { change: chatLineChange(db, row) };
@@ -982,11 +974,7 @@ export const addPreview = (
   preview: LinkPreview,
   cursor: number
 ): Change | undefined => {
-  const line = db
-    .select()
-    .from(chatLines)
-    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, seq)))
-    .get();
+  const line = db.select().from(chatLines).where(atLine(threadId, seq)).get();
   const kept = keptPreview(preview);
   if (
     line === undefined ||
@@ -1000,7 +988,7 @@ export const addPreview = (
   const row = db
     .update(chatLines)
     .set({ cursor, preview: kept })
-    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, seq)))
+    .where(atLine(threadId, seq))
     .returning()
     .get();
   return row === undefined ? undefined : chatLineChange(db, row);
@@ -1117,13 +1105,7 @@ export const eraseMemberChat = (
     const row = db
       .update(chatLines)
       .set({ cursor: nextCursor() })
-      .where(
-        and(
-          eq(chatLines.threadId, threadId),
-          eq(chatLines.seq, seq),
-          eq(chatLines.unsent, false)
-        )
-      )
+      .where(and(atLine(threadId, seq), eq(chatLines.unsent, false)))
       .returning()
       .get();
     if (row !== undefined) {
