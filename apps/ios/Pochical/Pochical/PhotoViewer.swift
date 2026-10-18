@@ -868,7 +868,7 @@ private struct ViewerNotice: View {
     ZStack {
       if let words = words.words {
         NoticeCapsule(words: words)
-          .transition(.opacity.combined(with: .move(edge: .top)))
+          .comesAsNotice()
       }
     }
     .frame(maxWidth: .infinity)

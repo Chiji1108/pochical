@@ -344,7 +344,7 @@ struct ShareDaysSheet: View {
       .overlay(alignment: .top) {
         if let notice {
           NoticeCapsule(words: notice)
-            .transition(.opacity.combined(with: .move(edge: .top)))
+            .comesAsNotice()
         }
       }
     }
@@ -517,5 +517,26 @@ struct NoticeCapsule: View {
       .padding(.top, 8)
       .padding(.horizontal, 16)
       .accessibilityAddTraits(.isStaticText)
+      // Said as it comes, as VoiceOver would not read it otherwise.
+      .onChange(of: words, initial: true) {
+        AccessibilityNotification.Announcement(words).post()
+      }
+  }
+}
+
+/// A notice coming down from the top and fading, as it goes; fading
+/// alone with motion reduced.
+private struct ComesAsNotice: ViewModifier {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func body(content: Content) -> some View {
+    content.transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .top)))
+  }
+}
+
+extension View {
+  /// Comes and goes as a notice over the screen does (ComesAsNotice).
+  func comesAsNotice() -> some View {
+    modifier(ComesAsNotice())
   }
 }

@@ -99,6 +99,8 @@ struct ComposerBars: Equatable {
 /// group's chat the names to mention as an @ is written.
 struct ChatComposer: View {
   @Environment(\.themeColors) private var colors
+  /// Motion reduced, the tools fold by fading alone, not sliding away.
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.groupSocket) private var socket
   @Bindable var draft: ChatDraft
@@ -182,7 +184,7 @@ struct ChatComposer: View {
               }
             }
             .opacity(folded ? 0 : 1)
-            .offset(x: folded ? -Self.buttonSize : 0)
+            .offset(x: folded && !reduceMotion ? -Self.buttonSize : 0)
             .disabled(folded)
             .accessibilityHidden(folded)
             Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
@@ -191,7 +193,7 @@ struct ChatComposer: View {
               .foregroundStyle(colors.textSecondary)
               .frame(width: Self.buttonSize, height: Self.buttonSize)
               .opacity(folded ? 1 : 0)
-              .scaleEffect(folded ? 1 : 0.6)
+              .scaleEffect(folded || reduceMotion ? 1 : 0.6)
               .disabled(!folded)
               .accessibilityHidden(!folded)
           }

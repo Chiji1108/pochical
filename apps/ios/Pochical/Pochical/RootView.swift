@@ -136,7 +136,7 @@ struct RootView: View {
     .overlay(alignment: .top) {
       if let notice {
         NoticeCapsule(words: notice)
-          .transition(.move(edge: .top).combined(with: .opacity))
+          .comesAsNotice()
       }
     }
   }

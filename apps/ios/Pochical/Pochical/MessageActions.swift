@@ -202,6 +202,9 @@ struct MessageActionsRequest: Identifiable {
 /// the system's menu does: what it opens comes in as the menu goes.
 struct MessageActionsOverlay: View {
   @Environment(\.themeColors) private var colors
+  /// Motion reduced, it fades in and out where it is, nothing growing or
+  /// lifting (spec/chat.md, Opening a message's menu).
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let request: MessageActionsRequest
   /// Takes the overlay away, once it has gone.
   let onClose: () -> Void
@@ -230,7 +233,7 @@ struct MessageActionsOverlay: View {
         if request.reactions != nil {
           reactionBar
             .modifier(Placed(edge: place.edge, x: place.x, y: place.barY, width: proxy.size.width))
-            .scaleEffect(shown ? 1 : 0.85, anchor: request.mine ? .bottomTrailing : .bottomLeading)
+            .scaleEffect(grown ? 1 : 0.85, anchor: request.mine ? .bottomTrailing : .bottomLeading)
             .opacity(shown ? 1 : 0)
         }
         request.bubble
@@ -246,13 +249,13 @@ struct MessageActionsOverlay: View {
           .clipShape(CutsHeight())
           // Grown about its own middle, before it is put in place; it
           // rises from where it was and goes back there.
-          .scaleEffect(shown ? 1.02 : 1)
+          .scaleEffect(shown && !reduceMotion ? 1.02 : 1)
           .offset(x: request.frame.minX, y: shown ? place.bubbleY : request.frame.minY)
           .accessibilityHidden(true)
         menu
           .frame(width: Self.menuWidth)
           .modifier(Placed(edge: place.edge, x: place.x, y: place.menuY, width: proxy.size.width))
-          .scaleEffect(shown ? 1 : 0.85, anchor: menuAnchor(under: place.menuUnder))
+          .scaleEffect(grown ? 1 : 0.85, anchor: menuAnchor(under: place.menuUnder))
           .opacity(shown ? 1 : 0)
       }
       .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
@@ -282,11 +285,17 @@ struct MessageActionsOverlay: View {
       }
     }
     .onAppear {
-      withAnimation(.spring(duration: 0.28, bounce: 0.2)) { shown = true }
+      withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.28, bounce: 0.2)) {
+        shown = true
+      }
       // VoiceOver goes into it, over the chat.
       AccessibilityNotification.ScreenChanged().post()
     }
   }
+
+  /// The bar and the menu at their size: grown from their corner by the
+  /// bubble as they come, unless motion is reduced.
+  private var grown: Bool { shown || reduceMotion }
 
   // MARK: Parts
 
@@ -302,8 +311,11 @@ struct MessageActionsOverlay: View {
           Text(emoji)
             .font(.system(size: 26))
             .frame(width: 40, height: 40)
-            .background(chosen ? colors.accentContainer : .clear, in: Circle())
-            .scaleEffect(underFinger == .reaction(emoji) ? 1.3 : 1)
+            .background(
+              chosen ? colors.accentContainer
+                : underFinger == .reaction(emoji) && reduceMotion ? colors.fillSecondary : .clear,
+              in: Circle())
+            .scaleEffect(underFinger == .reaction(emoji) && !reduceMotion ? 1.3 : 1)
             .animation(.spring(duration: 0.2), value: underFinger)
         }
         .buttonStyle(.plain)
@@ -318,7 +330,7 @@ struct MessageActionsOverlay: View {
           .foregroundStyle(colors.textSecondary)
           .frame(width: 40, height: 40)
           .background(colors.fillTertiary, in: Circle())
-          .scaleEffect(underFinger == .moreReactions ? 1.3 : 1)
+          .scaleEffect(underFinger == .moreReactions && !reduceMotion ? 1.3 : 1)
           .animation(.spring(duration: 0.2), value: underFinger)
       }
       .buttonStyle(.plain)

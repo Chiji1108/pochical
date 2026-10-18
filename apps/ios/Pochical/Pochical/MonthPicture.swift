@@ -124,7 +124,7 @@ struct MonthPicturePage: View {
       .overlay(alignment: .top) {
         if let notice {
           NoticeCapsule(words: notice)
-            .transition(.opacity.combined(with: .move(edge: .top)))
+            .comesAsNotice()
         }
       }
     }

@@ -147,7 +147,10 @@ export const messageActions = {
   // menus put them: nothing drawn around the two.
   content: css({
     _closed: { animation: "fadeOut 0.12s ease-in" },
-    _open: { animation: "popIn 0.15s ease-out" },
+    _open: {
+      _motionReduce: { animation: "fadeIn 0.15s ease-out" },
+      animation: "popIn 0.15s ease-out",
+    },
     display: "flex",
     flexDirection: "column",
     gap: "8px",

@@ -215,7 +215,7 @@ struct ChatScreen: View {
     .overlay(alignment: .top) {
       if let notice {
         NoticeCapsule(words: notice)
-          .transition(.opacity.combined(with: .move(edge: .top)))
+          .comesAsNotice()
       }
     }
     .safeAreaInset(edge: .top, spacing: 0) {
@@ -758,7 +758,7 @@ struct ChatScreen: View {
       // messaging apps open a long one: not carried to the foot.
       following = false
       scroller.growDown("line-\(line.opID)")
-      withAnimation { _ = unfolded.insert(line.opID) }
+      withAnimation(reduceMotion ? nil : .default) { _ = unfolded.insert(line.opID) }
     case .openPhoto:
       openPhoto(of: line)
     case .openQuote:
