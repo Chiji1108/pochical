@@ -12,6 +12,7 @@ import type {
   Change,
   ChatEdits,
   ChatPageRequest,
+  ChatPhotosRequest,
   ClientFrame,
   CoworkerEdits,
   DayEdits,
@@ -67,6 +68,11 @@ type ChatHandlers = {
     ws: WebSocket,
     userId: string,
     request: ChatPageRequest
+  ) => void;
+  chatPhotosRequest?: (
+    ws: WebSocket,
+    userId: string,
+    request: ChatPhotosRequest
   ) => void;
   typing?: (ws: WebSocket, userId: string, typing: Typing) => void;
 };
@@ -404,6 +410,14 @@ export const handleSyncMessage = (
     case "chatPageRequest": {
       if (handlers.chatPageRequest) {
         handlers.chatPageRequest(ws, attachment.userId, kind.value);
+      } else {
+        rejectAndClose(ws, ServerError_Code.BAD_FRAME, GROUP_SOCKET_ONLY);
+      }
+      return;
+    }
+    case "chatPhotosRequest": {
+      if (handlers.chatPhotosRequest) {
+        handlers.chatPhotosRequest(ws, attachment.userId, kind.value);
       } else {
         rejectAndClose(ws, ServerError_Code.BAD_FRAME, GROUP_SOCKET_ONLY);
       }

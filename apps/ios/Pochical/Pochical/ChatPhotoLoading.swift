@@ -161,6 +161,18 @@ enum PhotoBox {
     near(requests)
   }
 
+  /// The photos about to be swiped to opened large, in `groupID`'s chat,
+  /// are now `photos`: each fetched whole, as it opens.
+  func whole(_ photos: [LinePhoto], in groupID: String, calls: GroupCalls) {
+    var requests: [String: ImageRequest] = [:]
+    for photo in photos {
+      requests[photo.id] = ChatPhotoLoading.request(
+        photo, in: groupID, pixels: nil, calls: calls,
+        held: ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+    }
+    near(requests)
+  }
+
   private func near(_ requests: [String: ImageRequest]) {
     let gone = near.filter { requests[$0.key] == nil }.map(\.value)
     let new = requests.filter { near[$0.key] == nil }.map(\.value)

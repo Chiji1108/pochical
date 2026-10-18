@@ -20,6 +20,8 @@ public enum Chat {
   public static let photoMaxBytes = 4000000
   public static let photoMaxEdge = 2048
   public static let photoMemoryBytes = 48000000
+  public static let photoPageAhead = 10
+  public static let photoPageSize = 100
   public static let photoPrefetchScreens = 1
   public static let photoSmallEdge = 960
   public static let photoThumbHashMaxBytes = 25

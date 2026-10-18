@@ -377,6 +377,42 @@ public object ClientFrameKt {
     public fun hasPreferenceEdits(): kotlin.Boolean {
       return _builder.hasPreferenceEdits()
     }
+
+    /**
+     * ```
+     * Asks for a page of a chat's photos alone; Group DO socket only.
+     * ```
+     *
+     * `.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];`
+     */
+    public var chatPhotosRequest: app.pochical.v1.ChatPhotosRequest
+      @kotlin.jvm.JvmName("getChatPhotosRequest")
+        get() = _builder.chatPhotosRequest
+      @kotlin.jvm.JvmName("setChatPhotosRequest")
+        set(value) {
+        _builder.chatPhotosRequest = value
+      }
+    /**
+     * ```
+     * Asks for a page of a chat's photos alone; Group DO socket only.
+     * ```
+     *
+     * `.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];`
+     */
+    public fun clearChatPhotosRequest() {
+      _builder.clearChatPhotosRequest()
+    }
+    /**
+     * ```
+     * Asks for a page of a chat's photos alone; Group DO socket only.
+     * ```
+     *
+     * `.pochical.v1.ChatPhotosRequest chat_photos_request = 11 [json_name = "chatPhotosRequest"];`
+     * @return Whether the chatPhotosRequest field is set.
+     */
+    public fun hasChatPhotosRequest(): kotlin.Boolean {
+      return _builder.hasChatPhotosRequest()
+    }
     public val kindCase: app.pochical.v1.ClientFrame.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -418,4 +454,7 @@ public val app.pochical.v1.ClientFrameOrBuilder.typingOrNull: app.pochical.v1.Ty
 
 public val app.pochical.v1.ClientFrameOrBuilder.preferenceEditsOrNull: app.pochical.v1.PreferenceEdits?
   get() = if (hasPreferenceEdits()) getPreferenceEdits() else null
+
+public val app.pochical.v1.ClientFrameOrBuilder.chatPhotosRequestOrNull: app.pochical.v1.ChatPhotosRequest?
+  get() = if (hasChatPhotosRequest()) getChatPhotosRequest() else null
 

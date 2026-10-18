@@ -38,6 +38,7 @@ import {
   moveReadMark,
   otherIn,
   pageToRead,
+  photosPage,
   seenBy,
   supportPlace,
   takeChatEdit,
@@ -804,6 +805,17 @@ export class GroupDO extends DurableObject<Env> {
             beforeSeq,
             threadId,
             ...chatPage(this.db, userId, threadId, beforeSeq),
+          },
+        });
+      },
+      chatPhotosRequest: (socket, userId, { after, seq, threadId }) => {
+        send(socket, {
+          case: "chatPhotos",
+          value: {
+            after,
+            seq,
+            threadId,
+            ...photosPage(this.db, userId, threadId, seq, after),
           },
         });
       },

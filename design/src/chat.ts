@@ -64,6 +64,14 @@ export const chatRules = {
   // while the app runs, so a line scrolled back into sight draws at once;
   // the system lets them go sooner when memory runs short.
   photoMemoryBytes: 48_000_000,
+  // How near the end of the photos it holds the photo opened large may be
+  // swiped, in photos, before it asks for the next page, so a swipe never
+  // waits for one.
+  photoPageAhead: 10,
+  // How many photos a page of a chat's photos holds (ChatPhotosRequest),
+  // each only its id, size and ThumbHash, as the photo opened large pages
+  // through them past the lines laid out.
+  photoPageSize: 100,
   // How many screens' height above and below the lines in sight their
   // photos are fetched ahead, so a reader scrolling finds them there, and
   // let go of again past it: a screen, as Signal and Telegram fetch the

@@ -1,0 +1,1 @@
+CREATE INDEX `chat_lines_photos` ON `chat_lines` (`thread_id`,`seq`) WHERE "chat_lines"."photo" is not null;
