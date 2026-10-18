@@ -287,10 +287,12 @@ describe("a support chat in Slack", () => {
       ["C-SUPPORT", undefined],
       ["C-SUPPORT", thread],
     ]);
+    // Later lines stay in the thread, not sent to the channel too.
     expect([
       String(calls[0]?.args.text).includes("ポチカル 1.0・iPhone"),
       calls[1]?.args.text,
-    ]).toStrictEqual([true, "あと&lt;!channel&gt;"]);
+      calls[1]?.args.reply_broadcast,
+    ]).toStrictEqual([true, "あと&lt;!channel&gt;", undefined]);
 
     const reply = replyIn(thread, {
       text: "設定から変えられます &amp; 試してね",
