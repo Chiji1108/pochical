@@ -362,6 +362,11 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     for host in [composer, latest] {
       addChild(host)
       host.sizingOptions = .intrinsicContentSize
+      // Put on the keyboard by the constraints below, never lifted off it
+      // by SwiftUI's own keyboard avoidance: as the keyboard went away,
+      // that took the keyboard over the composer's old place into its
+      // height, and the composer stood up hundreds of points tall.
+      host.safeAreaRegions = .container
       host.view.backgroundColor = .clear
       host.view.translatesAutoresizingMaskIntoConstraints = false
       view.addSubview(host.view)
