@@ -10,7 +10,10 @@ import { inviteRules } from "@pochical/design/invite";
 const LINK = /https?:\/\/[\w\-.~:/?#[\]@!$&'()*+,;=%]+/giu;
 
 // A mention as a message keeps it: the member's id.
-const MENTION = /<@(?<id>[\w-]+)>/gu;
+export const MENTION = /<@(?<id>[\w-]+)>/gu;
+
+/** How a message's words keep a mention of `userId`. */
+export const mentionOf = (userId: string): string => `<@${userId}>`;
 
 const LINK_OR_MENTION = new RegExp(
   `${MENTION.source}|${LINK.source}`,

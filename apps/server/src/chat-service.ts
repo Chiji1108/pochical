@@ -11,7 +11,7 @@ import {
   ReportReason,
   ReportResponseSchema,
 } from "./gen/pochical/v1/chat_pb";
-import { linkPreview, mayRead } from "./link-preview";
+import { linkPreview, mayFetch } from "./link-preview";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
 import { tellStaffOfReport } from "./slack";
@@ -33,7 +33,7 @@ export const registerChatService = (router: ConnectRouter): void => {
         throw new ConnectError("Try again in a minute", Code.ResourceExhausted);
       }
       const link = URL.parse(url);
-      if (link === null || !mayRead(link)) {
+      if (link === null || !mayFetch(link)) {
         throw new ConnectError("Not a link to read", Code.InvalidArgument);
       }
       const preview = await linkPreview(env.PHOTOS, link);

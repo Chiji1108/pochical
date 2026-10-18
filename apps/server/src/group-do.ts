@@ -9,6 +9,7 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import type { Alert } from "./apns";
+import { mentionOf } from "./chat-links";
 import {
   ChangeSchema,
   ChangesSchema,
@@ -33,7 +34,6 @@ import {
   forReader,
   GROUP_THREAD,
   hearsFrom,
-  mentionOf,
   mayRead,
   moveReadMark,
   otherIn,

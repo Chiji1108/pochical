@@ -23,7 +23,7 @@ import {
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import type { Alert } from "./apns";
-import { previewLinkOf } from "./chat-links";
+import { MENTION, mentionOf, previewLinkOf } from "./chat-links";
 import { photoPage, seenPhoto } from "./chat-photos";
 import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
@@ -55,11 +55,7 @@ import {
   readMarks,
 } from "./group-do-schema";
 import { isId } from "./ids";
-import {
-  keptPreview,
-  mayRead as mayReadPage,
-  sentPreview,
-} from "./link-preview";
+import { keptPreview, mayFetch, sentPreview } from "./link-preview";
 import { fitsText, isEmoji } from "./text-limits";
 import { fitsThumbHash, keptThumbHash, sentThumbHash } from "./thumb-hash";
 
@@ -513,9 +509,6 @@ export const readMarkOf = (
     .from(readMarks)
     .where(and(eq(readMarks.userId, userId), eq(readMarks.threadId, threadId)))
     .get()?.lastReadSeq ?? 0;
-
-/** How a message's words keep a mention of `userId`. */
-export const mentionOf = (userId: string): string => `<@${userId}>`;
 
 /**
  * A chat's lines `userId` has not read, others' past their read mark, and
@@ -975,7 +968,7 @@ export const pageToRead = (send: ChatSend): string | undefined => {
   }
   const link = previewLinkOf(send.text);
   const url = link === undefined ? null : URL.parse(link);
-  return url !== null && mayReadPage(url) ? link : undefined;
+  return url !== null && mayFetch(url) ? link : undefined;
 };
 
 /**
@@ -1331,8 +1324,6 @@ export const notePhoto = (
   db.insert(chatPhotos).values({ id: photoId, userId }).run();
   return true;
 };
-
-const MENTION = /<@(?<id>[\w-]+)>/gu;
 
 /** A message's words with each mention as @ and the name (spec/vectors/chat-text.json, plainText). */
 export const plainText = (

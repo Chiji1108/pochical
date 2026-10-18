@@ -31,7 +31,7 @@ const IPV4 = /^\d{1,3}(?:\.\d{1,3}){3}$/u;
  * a named host or a public address. Addresses on private, loopback or
  * link-local ranges are refused, as the page's own redirects are.
  */
-export const mayRead = (url: URL): boolean => {
+export const mayFetch = (url: URL): boolean => {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     return false;
   }
@@ -59,7 +59,7 @@ const fetchChecked = async (
 ): Promise<{ response: Response; at: URL } | null> => {
   let at = url;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    if (!mayRead(at)) {
+    if (!mayFetch(at)) {
       return null;
     }
     // oxlint-disable-next-line no-await-in-loop -- each hop follows the last
@@ -395,7 +395,7 @@ export const pageOfWords = async (
 ): Promise<KeptPreview | null> => {
   const link = previewLinkOf(text);
   const url = link === undefined ? null : URL.parse(link);
-  if (url === null || !mayRead(url)) {
+  if (url === null || !mayFetch(url)) {
     return null;
   }
   return keptPreview((await linkPreview(bucket, url)) ?? undefined);
