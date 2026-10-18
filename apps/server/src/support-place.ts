@@ -222,12 +222,15 @@ const relayLine = async (
       ts = await tellStaffOfLine(env, line, repliedTo);
     }
     told = { ...told, slackTs: ts ?? null };
-    if (ts !== undefined) {
-      await drizzle(env.DB)
-        .insert(supportSlack)
-        .values({ seq: line.seq, ts, userId: line.userId })
-        .onConflictDoNothing();
-    }
+  }
+  // Which line its Slack message is, for what Pochical's people do to it
+  // there: kept again each time the line is told, so a write that failed
+  // is put right as the relay tries again.
+  if (told.slackTs !== null) {
+    await drizzle(env.DB)
+      .insert(supportSlack)
+      .values({ seq: line.seq, ts: told.slackTs, userId: line.userId })
+      .onConflictDoNothing();
   }
   if (line.unsent && !told.toldUnsent) {
     if (kept !== undefined && !line.fromPochical && told.slackTs !== null) {

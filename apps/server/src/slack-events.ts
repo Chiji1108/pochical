@@ -10,7 +10,7 @@ import { waitUntil } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { supportChats, supportSlack } from "./db/schema";
+import { supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
 import { GROUP_THREAD, supportPlace } from "./group-chat";
 import { photoKey } from "./photos";
@@ -133,13 +133,8 @@ const answerFromSlack = async (
       );
     }
   }
-  const seqs = await place.answerAsPochical(edits, ts);
-  if (seqs.length > 0) {
-    await drizzle(env.DB)
-      .insert(supportSlack)
-      .values(seqs.map((seq) => ({ seq, ts, userId: chat.userId })))
-      .onConflictDoNothing();
-  }
+  // The chat's relay keeps which lines the message is (support_slack).
+  await place.answerAsPochical(edits, ts);
   await (missed.length === 0
     ? slackCall(env, "reactions.add", {
         name: "white_check_mark",
@@ -190,7 +185,12 @@ const reactFromSlack = async (
   if (line === undefined) {
     return;
   }
-  await env.GROUPS.getByName(supportPlace(line.userId)).answerAsPochical([
+  const place = env.GROUPS.getByName(supportPlace(line.userId));
+  // Only the user's lines: an emoji on an answer stays in Slack.
+  if (!(await place.isUsersLine(line.seq))) {
+    return;
+  }
+  await place.answerAsPochical([
     editOf(crypto.randomUUID(), {
       case: "react",
       value: { emoji, on, seq: BigInt(line.seq), threadId: GROUP_THREAD },

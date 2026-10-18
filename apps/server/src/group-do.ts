@@ -50,6 +50,7 @@ import {
 } from "./group-chat";
 import migrations from "./group-do-migrations/migrations.js";
 import {
+  chatLines,
   logHead,
   memberDays,
   memberPatterns,
@@ -1082,6 +1083,21 @@ export class GroupDO extends DurableObject<Env> {
       }
     }
     return seqs;
+  }
+
+  /** Whether the chat with Pochical's people's line `seq` is the user's. */
+  isUsersLine(seq: number): boolean {
+    const userId = this.supportUser();
+    return (
+      userId !== undefined &&
+      this.db
+        .select({ authorId: chatLines.authorId })
+        .from(chatLines)
+        .where(
+          and(eq(chatLines.threadId, GROUP_THREAD), eq(chatLines.seq, seq))
+        )
+        .get()?.authorId === userId
+    );
   }
 
   /** A page of the chat with Pochical's people, for the admin pages. */

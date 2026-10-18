@@ -478,6 +478,17 @@ describe("reactions and lines taken back, in Slack", () => {
     await vi.waitFor(async () => {
       await expect(answersTo(userId)).resolves.toStrictEqual(["消す答え"]);
     });
+    await relayed(userId);
+    // An emoji on an answer stays in Slack.
+    await postEvent({
+      event: {
+        item: { channel: "C-SUPPORT", ts, type: "message" },
+        reaction: "eyes",
+        type: "reaction_added",
+        user: "U-STAFF",
+      },
+      type: "event_callback",
+    });
     await postEvent({
       event: {
         channel: "C-SUPPORT",
@@ -490,6 +501,7 @@ describe("reactions and lines taken back, in Slack", () => {
     await vi.waitFor(async () => {
       await expect(answersTo(userId)).resolves.toStrictEqual([""]);
     });
+    await expect(reactionsOn(userId, 2)).resolves.toStrictEqual([]);
   });
 });
 
