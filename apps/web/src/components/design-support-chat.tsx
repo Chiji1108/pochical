@@ -1,10 +1,5 @@
-import {
-  useEffect,
-  useEffectEvent,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { chatPlaces } from "@pochical/design/chat";
+import { useEffect, useState } from "react";
 import { css } from "styled-system/css";
 
 import { keptDraft } from "../lib/chat-messages";
@@ -13,37 +8,24 @@ import { useSettings } from "../lib/design-settings-store";
 import { useUser } from "../lib/design-user-store";
 import { site } from "../lib/site";
 import { AppIcon, useAppIcons } from "./design-app-icon";
-import { LinkMenu, openLink } from "./design-chat-actions";
-import type { LinkMenuAt } from "./design-chat-actions";
-import {
-  ChatEdge,
-  Composer,
-  nameless,
-  useComposer,
-} from "./design-chat-composer";
-import { useChatEdits } from "./design-chat-edits";
-import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
-import type { ChatScope } from "./design-chat-line";
-import { ChatListRow, chatGaps } from "./design-chat-parts";
-import { chatAvatarSize, chatStyle } from "./design-chat-style";
+import { nameless } from "./design-chat-composer";
+import { ChatListRow } from "./design-chat-parts";
+import { ChatScreen } from "./design-chat-screen";
+import { chatAvatarSize } from "./design-chat-style";
 import { lastLineOf } from "./design-chat-summary";
-import { EmojiPickerSheet } from "./design-emoji-picker";
 import type { Member, Profile } from "./design-group-data";
-import { BackButton } from "./design-header";
 import { List } from "./design-list";
-import { ConfirmDialog } from "./design-sheet";
-import { Screen } from "./design-ui";
 
 // Writing to support as a chat with the people who make Pochical, rather
 // than a mail: a small complaint or wish is easier to write in a chat,
-// and the answer comes back in the same place. It is drawn and pressed as
-// the group chats are, with their lines and their long press, so it is
-// already familiar: words, links and their pages, and photos (a
-// screenshot of what went wrong); reactions, so a 👍 can answer and a 👀
-// say it was read; 返信, for a thread that holds more than one matter;
-// コピー; and 送信取消, for a screenshot sent with more in it than meant.
-// Not what only a group needs: no days, polls, mentions, pins or reports,
-// and no 編集, as an answer may already be written to the words. Its head
+// and the answer comes back in the same place. It is the group chats' own
+// ChatScreen, so it is already familiar: words, links and their pages,
+// and photos (a screenshot of what went wrong); reactions, so a 👍 can
+// answer and a 👀 say it was read; 返信, for a thread that holds more
+// than one matter; コピー; and 送信取消, for a screenshot sent with more
+// in it than meant. Its place's rules (chatPlaces.support) leave out what
+// only a group needs: no days, polls, mentions, pins or reports, and no
+// 編集, as an answer may already be written to the words. Its head
 // says plainly who reads it and what reaches them, since only this chat
 // is read by Pochical's people.
 
@@ -78,7 +60,7 @@ function useOwnIcon() {
 // people can be talked to.
 export function SupportRow({ onOpen }: { onOpen: () => void }) {
   const icon = useOwnIcon();
-  const { lines, unread, draft } = useUser((state) => state.support);
+  const { messages: lines, unread, draft } = useUser((state) => state.support);
   const profile = useUser((state) => state.profile);
   const last = lines.at(-1);
   // What was being written, as the lines are now (spec/chat.md, Drafts).
@@ -159,179 +141,38 @@ function Intro({ icon }: { icon?: string }) {
 }
 
 export function SupportChatPage({ onBack }: { onBack: () => void }) {
-  const lines = useUser((state) => state.support.lines);
+  const chat = useUser((state) => state.support);
   const setSupport = useUser((state) => state.setSupport);
   const profile = useUser((state) => state.profile);
-  // Answers on screen are read: those waiting as it opens, and those that
-  // come while it is open.
-  const unread = useUser((state) => state.support.unread);
+  const icon = useOwnIcon();
+  // Answers on screen are read: those waiting as it opens, under
+  // ここから新着, and those that come while it is open.
+  const [unreadAtOpen] = useState(chat.unread);
   useEffect(() => {
-    if (unread > 0) {
+    if (chat.unread > 0) {
       setSupport((before) => ({ ...before, unread: 0 }));
     }
-  }, [unread, setSupport]);
-  // The draft the chat was left with, opened again as its lines are now:
-  // a reply to a line taken back since, by either side, keeps its words
-  // without the quote, as a group chat's (spec/chat.md, Drafts).
-  const kept = useUser((state) => state.support.draft);
-  const [opened] = useState(() => kept && keptDraft(kept, lines));
-  // Words, links and photos, as in the group chats, with no one to
-  // mention and no days to share.
-  const composer = useComposer({ kept: opened });
-  const listRef = useRef<HTMLOListElement>(null);
-  const icon = useOwnIcon();
-  // A link long pressed in a line: its own small menu, as in the chats.
-  const [linkMenu, setLinkMenu] = useState<LinkMenuAt>();
-  const members = membersOf(profile, icon);
-  const {
-    actionsOf,
-    byId,
-    flash,
-    jumpTo,
-    pickingFor,
-    react,
-    replyTo,
-    selected,
-    send,
-    setPickingFor,
-    setReplyTo,
-    setSelected,
-    setUnsending,
-    unsend,
-    unsending,
-  } = useChatEdits({
-    // What the group chats offer that this one leaves out.
-    allows: { edit: false, pin: false, report: false },
-    answering: opened?.replyTo,
-    composer,
-    mentionName: nameless,
-    messages: lines,
-    onChange: (next) => {
-      setSupport((before) => ({ ...before, lines: next }));
-    },
-    onSent: () => undefined,
-  });
-  // Left, the chat keeps what is being written, as a group chat does;
-  // nothing here is changed, so only words and the line answered.
-  const keepDraft = useEffectEvent(() => {
-    const draft = keptDraft({ replyTo, text: composer.draft }, lines);
-    setSupport((before) => ({ ...before, draft }));
-  });
-  useEffect(
-    () => () => {
-      keepDraft();
-    },
-    []
-  );
-  const replying = byId(replyTo);
-  const writerOf = (id?: string) => members.find((member) => member.id === id);
-  const scope: ChatScope = {
-    faces: { support: <AppIcon size={chatAvatarSize} src={icon} /> },
-    isGroup: false,
-    members,
-    mentionName: nameless,
-    onJump: jumpTo,
-    onLinkMenu: setLinkMenu,
-    // No days are shared here.
-    onOpenDay: () => undefined,
-    openUrl: openLink,
-    people: members,
-    photos: photosOf(lines, writerOf, () => true),
-    writerOf,
-  };
-  // Opens on the latest line and follows each one sent; with none yet,
-  // the intro stays in sight from its top.
-  const latest = lines.at(-1)?.id;
-  useLayoutEffect(() => {
-    const list = listRef.current;
-    if (list && latest !== undefined) {
-      list.scrollTop = list.scrollHeight;
-    }
-  }, [latest]);
+  }, [chat.unread, setSupport]);
   return (
-    <Screen>
-      <header className={chatStyle.header}>
-        <BackButton onClick={onBack}>設定</BackButton>
-        {/* Named for who is on the other side, as a chat is. */}
-        <h3 className={chatStyle.title}>{site.name}</h3>
-      </header>
-      <div className={chatStyle.lines}>
-        <ChatContext value={scope}>
-          <ol
-            aria-label={`${site.name}とのメッセージ`}
-            className={chatStyle.messages}
-            style={chatGaps}
-            ref={listRef}
-          >
-            <Intro icon={icon} />
-            {lines.map((line, index) => (
-              <MessageLine
-                actions={actionsOf(line)}
-                flash={flash === line.id}
-                hidden={false}
-                key={line.id}
-                lifted={selected === line.id}
-                message={line}
-                onSelect={() => {
-                  setSelected(line.id);
-                }}
-                next={lines[index + 1]}
-                previous={lines[index - 1]}
-                quoted={byId(line.replyTo)}
-              />
-            ))}
-          </ol>
-        </ChatContext>
-        <ChatEdge edge="foot" list={listRef}>
-          <Composer
-            composer={composer}
-            onSend={send}
-            reply={
-              replying && {
-                message: replying,
-                onStop: () => {
-                  setReplyTo(undefined);
-                },
-                writer: writerOf(replying.from)?.name ?? "",
-              }
-            }
-          />
-        </ChatEdge>
-      </div>
-      <EmojiPickerSheet
-        onOpenChange={(open) => {
-          if (!open) {
-            setPickingFor(undefined);
-          }
-        }}
-        onPick={(emoji) => {
-          if (pickingFor) {
-            react(pickingFor, emoji);
-          }
-        }}
-        open={pickingFor !== undefined}
-        title="リアクション"
-      />
-      <LinkMenu
-        at={linkMenu}
-        onClose={() => {
-          setLinkMenu(undefined);
-        }}
-        onOpen={openLink}
-      />
-      {unsending !== undefined && (
-        <ConfirmDialog
-          action="取り消す"
-          message={`${site.name}を作っている人のチャットからも消えます。`}
-          onCancel={() => {
-            setUnsending(undefined);
-          }}
-          onConfirm={() => {
-            unsend(unsending);
-          }}
-          title="送信を取り消しますか？"
-        />
-      )}
-    </Screen>
+    <ChatScreen
+      backLabel="設定"
+      chat={chat}
+      faces={{ support: <AppIcon size={chatAvatarSize} src={icon} /> }}
+      head={<Intro icon={icon} />}
+      members={membersOf(profile, icon)}
+      mentionName={nameless}
+      onBack={onBack}
+      onChange={(messages) => {
+        setSupport((before) => ({ ...before, messages }));
+      }}
+      onDraft={(draft) => {
+        setSupport((before) => ({ ...before, draft }));
+      }}
+      rules={chatPlaces.support}
+      // Named for who is on the other side, as a chat is.
+      title={site.name}
+      unreadAtOpen={unreadAtOpen}
+      unsendNote={`${site.name}を作っている人のチャットからも消えます。`}
+    />
   );
 }

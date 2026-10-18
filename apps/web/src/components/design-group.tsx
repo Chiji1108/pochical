@@ -4,8 +4,8 @@ import type { Schedule } from "../lib/design-days";
 import type { Pattern } from "../lib/design-patterns";
 import { useUser } from "../lib/design-user-store";
 import type { InviteLook } from "./design-chat-cards";
-import { ChatPage } from "./design-group-chat";
-import type { PhotoFetch, PhotoSend } from "./design-group-chat";
+import type { PhotoFetch, PhotoSend } from "./design-chat-screen";
+import { GroupChatPage } from "./design-group-chat";
 import {
   chatKey,
   chatTitle,
@@ -369,7 +369,7 @@ export function DesignGroup({
     const key = chatKey(group.id, page.chatId);
     return (
       <>
-        <ChatPage
+        <GroupChatPage
           inviteOf={inviteOf}
           onInvite={openInvite}
           attach={page.attach}
