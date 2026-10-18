@@ -216,7 +216,7 @@ With the system's 視差効果を減らす (Reduce Motion) on, nothing in a chat
 - A line's reactions and menu fade in and out where they are: the bar and the menu are not grown from the bubble's corner, the bubble is not lifted, nothing springs, and a reaction under the held finger is lit rather than grown. A bubble the menu has to move or draw smaller (a tall line, the keyboard up) is put there at once, not slid.
 - A line sent, others' lines and someone writing fade in at the foot, the lines put there at once rather than sliding up; ↓, a jump and following the latest put the lines where they go at once, never gliding (Unread lines and typing). 続きを読む opens a line at once.
 - A line let go after a drag to reply goes straight back, without its spring; the drag itself follows the finger as ever.
-- The composer's tools fold into the › and back by fading alone, not sliding or shrinking, the field taking their room at once; its bars come and go as they do, the lines and ↓ making room at once.
+- The composer's tools fold into the › and back by fading alone, not sliding or shrinking, the field taking their room at once; its bars come and go as they do. The lines and ↓ make room with them as they come and go, and with the keyboard, which the system moves as ever: they never stand apart from what moves under them, which would open a gap over the keyboard as it rises.
 - The floating day and ↓ fade, as they always do. A notice over the screen (コピーしました) fades without coming down from the top.
 - A photo opened large fades in and out instead of the zoom out of its place (Photos); a photo coming and its upload ring stay still: no breathing grey, no turning quarter, the ring still filling as its bytes go.
 - Haptics are not motion and stay as they are (spec/haptics.md).

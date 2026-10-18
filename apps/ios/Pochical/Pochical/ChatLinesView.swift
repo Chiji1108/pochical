@@ -623,7 +623,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// What is under the lines is `height` now (the keyboard, a bar over
   /// the composer's field), changed by `animate` (the change's own
   /// animation): the lines and the ↓ make room by the same animation, as in
-  /// Messages.
+  /// Messages, with motion reduced too, never standing apart from what
+  /// moves under them (spec/chat.md, Reduced motion).
   func bottomRoom(_ height: CGFloat, animate: (() -> Void) -> Void) {
     guard height != under else { return }
     guard view.window != nil else {
@@ -636,11 +637,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       self.fitRoom()
       self.view.layoutIfNeeded()
     }
-    if reduceMotion {
-      makeRoom()
-    } else {
-      animate(makeRoom)
-    }
+    animate(makeRoom)
   }
 
   /// The lines seen kept at the foot of the room they are seen in as it
