@@ -25,12 +25,7 @@ import {
   lastSharedOf,
   pinsOf,
 } from "../lib/chat-messages";
-import {
-  inviteCodeOf,
-  mentionsOf,
-  plainText,
-  withMentions,
-} from "../lib/chat-text";
+import { inviteCodeOf, plainText, withMentions } from "../lib/chat-text";
 import { useUser } from "../lib/design-user-store";
 import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
@@ -52,6 +47,7 @@ import { DecidePollSheet } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
+import { unreadMentions } from "./design-group-data";
 import type {
   Chat,
   ChatDraft,
@@ -176,9 +172,7 @@ export function ChatRow({
       draft={draft && plainText(draft.text, nameIn(group.members, yours))}
       icon={icon}
       label={label}
-      mentioned={chat.messages
-        .slice(chat.messages.length - chat.unread)
-        .some((message) => mentionsOf(message.text ?? "").includes("me"))}
+      mentioned={unreadMentions(chat) > 0}
       muted={muted}
       onOpen={onOpen}
       preview={preview ?? "まだメッセージはありません"}
