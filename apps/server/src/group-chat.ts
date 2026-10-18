@@ -71,12 +71,6 @@ import { fitsThumbHash, keptThumbHash, sentThumbHash } from "./thumb-hash";
 /** The group's own chat, 全体チャット. */
 export const GROUP_THREAD = "group";
 
-/**
- * The Group DO a user's chat with Pochical's people is kept in, its one
- * chat being GROUP_THREAD. Group ids are random, so none is named so.
- */
-export const supportPlace = (userId: string): string => `support:${userId}`;
-
 const DIRECT = "direct:";
 
 /**

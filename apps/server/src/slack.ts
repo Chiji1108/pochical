@@ -7,9 +7,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
-import { supportPlace } from "./group-chat";
 import { photoKey } from "./photos";
-import { wordsOf } from "./support-lines";
+import { supportPlace, wordsOf } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
 /**

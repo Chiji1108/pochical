@@ -2,7 +2,7 @@ import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { supportPlace } from "../src/group-chat";
+import { supportPlace } from "../src/support-lines";
 import { appleKeys, idToken, link } from "./apple-helpers";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {

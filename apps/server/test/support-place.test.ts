@@ -3,7 +3,8 @@ import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-import { directThread, supportPlace } from "../src/group-chat";
+import { directThread } from "../src/group-chat";
+import { supportPlace } from "../src/support-lines";
 import { call, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesIn,

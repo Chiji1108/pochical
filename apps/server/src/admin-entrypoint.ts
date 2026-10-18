@@ -9,8 +9,9 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
-import { GROUP_THREAD, supportPlace } from "./group-chat";
+import { GROUP_THREAD } from "./group-chat";
 import { photoKey } from "./photos";
+import { supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
 /** A user's chat as the list shows it: its latest line, and whose. */

@@ -1,6 +1,12 @@
 // A line of a user's chat with Pochical's people as the admin pages and
 // Slack read it, from its Group DO (support-place.ts).
 
+/**
+ * The Group DO a user's chat with Pochical's people is kept in, its one
+ * chat being GROUP_THREAD. Group ids are random, so none is named so.
+ */
+export const supportPlace = (userId: string): string => `support:${userId}`;
+
 /** How a photo reads in a line of words: the list, a notification. */
 const PHOTO_WORDS = "📷 写真";
 

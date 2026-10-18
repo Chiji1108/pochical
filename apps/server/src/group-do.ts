@@ -40,7 +40,6 @@ import {
   pageToRead,
   photosPage,
   seenBy,
-  supportPlace,
   takeChatEdit,
   readMarkOf,
   unreadCount,
@@ -73,6 +72,7 @@ import {
 import { linkPreview } from "./link-preview";
 import { deleteGroupPhotos } from "./photos";
 import { overLimit } from "./rate-limits";
+import { supportPlace } from "./support-lines";
 import { relaySupport, supportPage } from "./support-place";
 import {
   acceptSyncSocket,
