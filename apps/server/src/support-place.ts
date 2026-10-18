@@ -177,7 +177,7 @@ const indexRow = (db: DrizzleSqliteDODatabase, userId: string) => {
   return {
     lastAt: new Date(line.sentAtMs),
     lastFromPochical: line.fromPochical,
-    lastText: line.unsent ? "" : wordsOf(line),
+    lastText: wordsOf(line),
     lastUnsent: line.unsent,
     unanswered,
     userId,
