@@ -15,6 +15,7 @@
 		C6C3832F307345FB00C0C5B8 /* PochicalProto in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3832E307345FB00C0C5B8 /* PochicalProto */; };
 		C6C3CA0330740000000C5B81 /* ChatLayout in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3CA0230740000000C5B81 /* ChatLayout */; };
 		C6C3CB0330740000000C5B81 /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3CB0230740000000C5B81 /* Nuke */; };
+		C6C3CC0330740000000C5B81 /* SwiftUINavigation in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3CC0230740000000C5B81 /* SwiftUINavigation */; };
 		C6C383423073460000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C383413073460000C0C5B8 /* PochicalKit */; };
 		C6C38351307347A000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C38350307347A000C0C5B8 /* PochicalKit */; };
 		C6C3AE0330750000000C5B81 /* PochicalNotificationsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C6C3AE0130750000000C5B81 /* PochicalNotificationsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -173,6 +174,7 @@
 				C6C383423073460000C0C5B8 /* PochicalKit in Frameworks */,
 				C6C3CA0330740000000C5B81 /* ChatLayout in Frameworks */,
 				C6C3CB0330740000000C5B81 /* Nuke in Frameworks */,
+				C6C3CC0330740000000C5B81 /* SwiftUINavigation in Frameworks */,
 				C6C3832A307345A800C0C5B8 /* PochicalDesign in Frameworks */,
 			);
 		};
@@ -269,6 +271,7 @@
 				C6C383413073460000C0C5B8 /* PochicalKit */,
 				C6C3CA0230740000000C5B81 /* ChatLayout */,
 				C6C3CB0230740000000C5B81 /* Nuke */,
+				C6C3CC0230740000000C5B81 /* SwiftUINavigation */,
 			);
 			productName = Pochical;
 			productReference = C6C382E2307343AF00C0C5B8 /* Pochical.app */;
@@ -404,6 +407,7 @@
 				C6C383403073460000C0C5B8 /* XCLocalSwiftPackageReference "../Packages/PochicalKit" */,
 				C6C3CA0130740000000C5B81 /* XCRemoteSwiftPackageReference "ChatLayout" */,
 				C6C3CB0130740000000C5B81 /* XCRemoteSwiftPackageReference "Nuke" */,
+				C6C3CC0130740000000C5B81 /* XCRemoteSwiftPackageReference "swift-navigation" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C6C382E3307343AF00C0C5B8 /* Products */;
@@ -993,6 +997,14 @@
 				version = 13.2.0;
 			};
 		};
+		C6C3CC0130740000000C5B81 /* XCRemoteSwiftPackageReference "swift-navigation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-navigation";
+			requirement = {
+				kind = exactVersion;
+				version = 2.11.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1000,6 +1012,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C6C3CB0130740000000C5B81 /* XCRemoteSwiftPackageReference "Nuke" */;
 			productName = Nuke;
+		};
+		C6C3CC0230740000000C5B81 /* SwiftUINavigation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6C3CC0130740000000C5B81 /* XCRemoteSwiftPackageReference "swift-navigation" */;
+			productName = SwiftUINavigation;
 		};
 		C6C3CA0230740000000C5B81 /* ChatLayout */ = {
 			isa = XCSwiftPackageProductDependency;
