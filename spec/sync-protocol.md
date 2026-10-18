@@ -101,7 +101,7 @@ A device keeps its User DO socket open while the app is in the foreground, and a
 The numbers are `socketRules` in `design/src/socket.ts`.
 
 - While a socket is open, a device sends the text message `keepaliveText` every `keepaliveEveryMs`, and the server answers `keepaliveReply`. The runtime answers it (`setWebSocketAutoResponse`), so keeping a socket alive never wakes a hibernating Durable Object. With no answer within `keepaliveWithinMs`, the device takes the socket for dead, closes it and reconnects. A device that the OS says has lost its network closes its sockets at once rather than waiting for that, and connects again as the network comes back.
-- `Ping { nonce }` is answered with `Pong { nonce }` by the Durable Object itself, after every frame it sent before. It is not for keeping alive: a device that sends one after `Welcome` knows, at its `Pong`, that its catch-up has all arrived.
+- `Ping { nonce }` is answered with `Pong { nonce }` by the Durable Object itself, after every frame it sent before. It is not for keeping alive: a device that sends one after `Welcome` knows, at its `Pong`, that its catch-up has all arrived. A device that cannot send that `Ping` gives the socket up and asks again on the next one, rather than staying open on a catch-up it never sees end.
 
 ### Reconnecting
 

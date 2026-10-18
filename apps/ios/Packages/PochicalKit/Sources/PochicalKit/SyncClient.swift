@@ -333,7 +333,7 @@ public actor SyncClient {
       tries = 0
       connected = true
       status = .catchingUp
-      askCaughtUp()
+      try await askCaughtUp(on: socket)
       // A group's socket sends its chat outbox; the user's corrects the
       // time and sends theirs.
       guard peer == .user else {
@@ -431,14 +431,16 @@ public actor SyncClient {
     }
   }
 
-  /// Sends the Ping whose Pong says the catch-up has all arrived.
-  private func askCaughtUp() {
+  /// Sends the Ping whose Pong says the catch-up has all arrived. A
+  /// socket that cannot send it is given up, as one that cannot receive:
+  /// the next asks again, rather than this one staying open never caught
+  /// up.
+  private func askCaughtUp(on socket: URLSessionWebSocketTask) async throws {
     caughtUp = false
     catchUpNonce &+= 1
     var frame = Pochical_V1_ClientFrame()
     frame.ping.nonce = catchUpNonce
-    guard let socket, let data = try? frame.serializedData() else { return }
-    Task { try? await socket.send(.data(data)) }
+    try await socket.send(.data(frame.serializedData()))
   }
 
   /// Waits until what the DO had at Welcome has been taken, or `limit`
