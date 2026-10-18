@@ -231,6 +231,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
     onLinkMenu: setLinkMenu,
     // No days are shared here.
     onOpenDay: () => undefined,
+    openUrl: openLink,
     people: members,
     photos: photosOf(lines, writerOf, () => true),
     writerOf,

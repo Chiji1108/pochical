@@ -372,6 +372,14 @@ export function ChatPage({
     },
     []
   );
+  const openUrl = (url: string) => {
+    const code = inviteCodeOf(url);
+    if (code) {
+      onInvite(code);
+    } else {
+      openLink(url);
+    }
+  };
   const pins = pinsOf(chat.messages);
   const [pinsOpen, setPinsOpen] = useState(false);
   const replying = byId(replyTo);
@@ -387,6 +395,7 @@ export function ChatPage({
     onLinkMenu: setLinkMenu,
     onMember,
     onOpenDay,
+    openUrl,
     people,
     // Not a blocked member's folded away, nor one of yours still going up.
     photos: photosOf(
@@ -666,14 +675,7 @@ export function ChatPage({
         onClose={() => {
           setLinkMenu(undefined);
         }}
-        onOpen={(url) => {
-          const code = inviteCodeOf(url);
-          if (code) {
-            onInvite(code);
-          } else {
-            openLink(url);
-          }
-        }}
+        onOpen={openUrl}
       />
       <ReportSheet
         member={writerOf(byId(reporting)?.from)}

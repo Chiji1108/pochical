@@ -25,7 +25,6 @@ import {
   mentionAt,
   MessageActions,
   messageActions,
-  openLink,
 } from "./design-chat-actions";
 import type { LineActions, LinkMenuAt } from "./design-chat-actions";
 import {
@@ -68,6 +67,9 @@ export type ChatScope = {
   // any other, opened in the browser.
   inviteOf?: (code: string) => InviteLook | undefined;
   onInvite?: (code: string) => void;
+  // Opens a link tapped or long pressed: an invitation in the app where
+  // the chat has onInvite, else in the browser.
+  openUrl: (url: string) => void;
   onMember?: (member: Member) => void;
   onJump: (id: string) => void;
   onLinkMenu: (at: LinkMenuAt) => void;
@@ -189,6 +191,7 @@ export function MessageLine({
     mentionName,
     inviteOf,
     onInvite,
+    openUrl,
     onMember,
     onJump,
     onLinkMenu,
@@ -395,12 +398,7 @@ export function MessageLine({
                     const url = linkAt(event.target);
                     if (url) {
                       event.preventDefault();
-                      const code = inviteCodeOf(url);
-                      if (code !== undefined && onInvite) {
-                        onInvite(code);
-                      } else {
-                        openLink(url);
-                      }
+                      openUrl(url);
                       return;
                     }
                     // A mention opens that member's profile, as
