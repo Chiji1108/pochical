@@ -214,11 +214,15 @@ struct ChatOutboxRow: Hashable, Sendable {
   var opID: String
   /// The edit as a `pochical.v1.ChatEdit`.
   var edit: Data
+  /// When it was written, or sent again, by the server's time.
   var madeAtMs: Int64
   /// A line not sent (spec/chat.md, Lines on their way): its photo could
   /// not be uploaded, or it waited too long. It waits for the member to
   /// send it again or delete it.
   var failed = false
+  /// It has gone out on a socket, so the group may have taken it though
+  /// no answer came; one that never went, the group cannot have.
+  var wentOut = false
 }
 
 /// How many lines of a chat the user has not read, as the group counted
@@ -386,6 +390,14 @@ extension DatabaseMigrator {
       )
       .execute(db)
     }
+    registerMigration("Keep which waiting chat edits went out") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatOutbox" ADD COLUMN "wentOut" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
   }
 }
 
@@ -458,7 +470,7 @@ public enum Chats {
   }
 
   /// Puts the member's edit in the group's chat outbox, to be sent and
-  /// shown at once.
+  /// shown at once, made at the device's time `now`.
   public static func edit(
     _ kind: Pochical_V1_ChatEdit.OneOf_Kind, in groupID: String, now: Int64, db: Database
   ) throws {
@@ -466,8 +478,9 @@ public enum Chats {
     edit.opID = UUID().uuidString.lowercased()
     edit.kind = kind
     let data = try edit.serializedData()
+    let madeAt = try SyncState.corrected(now, in: db)
     try ChatOutboxRow.insert {
-      ChatOutboxRow.Draft(groupID: groupID, opID: edit.opID, edit: data, madeAtMs: now)
+      ChatOutboxRow.Draft(groupID: groupID, opID: edit.opID, edit: data, madeAtMs: madeAt)
     }
     .execute(db)
   }
@@ -523,14 +536,31 @@ public enum Chats {
   }
 
   /// Sends a line that could not be sent again, as the newest waiting
-  /// edit, so the outbox takes it up after what it has sent.
+  /// edit made at the device's time `now`, so the outbox takes it up after
+  /// what it has sent.
   public static func sendAgain(_ opID: String, now: Int64, in db: Database) throws {
     guard let row = try ChatOutboxRow.where({ $0.opID.eq(opID) }).fetchOne(db) else { return }
     try ChatOutboxRow.where { $0.opID.eq(opID) }.delete().execute(db)
+    let madeAt = try SyncState.corrected(now, in: db)
     try ChatOutboxRow.insert {
-      ChatOutboxRow.Draft(groupID: row.groupID, opID: row.opID, edit: row.edit, madeAtMs: now)
+      ChatOutboxRow.Draft(
+        groupID: row.groupID, opID: row.opID, edit: row.edit, madeAtMs: madeAt,
+        wentOut: row.wentOut)
     }
     .execute(db)
+  }
+
+  /// Of a frame's edits about to go out on a socket, those still going
+  /// (not taken back nor marked not sent since the frame was made), each
+  /// marked as gone out before it goes, so one taken back from then on is
+  /// watched for as it comes (`takeBack`).
+  static func goOut(_ edits: [Pochical_V1_ChatEdit], in db: Database) throws
+    -> [Pochical_V1_ChatEdit]
+  {
+    let going = ChatOutboxRow.where { $0.opID.in(edits.map(\.opID)) && !$0.failed }
+    let opIDs = Set(try going.select(\.opID).fetchAll(db))
+    try going.update { $0.wentOut = true }.execute(db)
+    return edits.filter { opIDs.contains($0.opID) }
   }
 
   /// The edits an Acked names stop waiting.

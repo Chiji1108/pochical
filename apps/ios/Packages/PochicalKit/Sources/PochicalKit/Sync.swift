@@ -96,7 +96,7 @@ extension Sync {
       }
     }
     for var edit in try OutboxEdit.order(by: \.id).fetchAll(db) {
-      last = last.tick(now: now + state.offsetMs)
+      last = last.tick(now: state.corrected(now))
       var hlc = Pochical_V1_Hlc()
       hlc.physicalMs = last.ms
       hlc.counter = last.counter

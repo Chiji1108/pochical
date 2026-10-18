@@ -572,7 +572,9 @@ public actor SyncClient {
           return try Chats.frames(of: groupID, after: sent, in: db)
         }
         for var frame in frames {
-          frame.chatEdits.edits = try await uploadingPhotos(of: frame.chatEdits.edits, in: groupID)
+          let uploaded = try await uploadingPhotos(of: frame.chatEdits.edits, in: groupID)
+          frame.chatEdits.edits = try await database.write { try Chats.goOut(uploaded, in: $0) }
+          guard !frame.chatEdits.edits.isEmpty else { continue }
           try await socket.send(.data(frame.serializedData()))
         }
         sent = through

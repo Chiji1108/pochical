@@ -343,9 +343,9 @@ struct ChatScreen: View {
     .task(id: state.waiting.filter { !$0.failed }.map(\.opID)) {
       while !Task.isCancelled {
         let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-        let next = try? await database.write { try Chats.failOverdue(of: place.id, now: now, in: $0) }
-        guard let next = next ?? nil else { return }
-        try? await Task.sleep(for: .milliseconds(max(next - now, 0)))
+        let wait = try? await database.write { try Chats.failOverdue(of: place.id, now: now, in: $0) }
+        guard let wait = wait ?? nil else { return }
+        try? await Task.sleep(for: .milliseconds(wait))
       }
     }
     .task(id: typers) {
@@ -891,14 +891,9 @@ struct ChatScreen: View {
   /// Puts the chat's draft back in the composer, with the chat's names as
   /// they are now for its mentions (spec/chat.md, Drafts).
   private func takeDraft() {
-    let read = try? database.read { db in
-      (
-        draft: try Chats.draft(of: threadID, in: place.id, db: db),
-        writers: try Chats.writers(in: place.id, db: db)
-      )
-    }
-    guard let read, let kept = read.draft else { return }
-    let names = read.writers.shownNames
+    let read = try? database.read { try Chats.draft(of: threadID, in: place.id, db: $0) }
+    guard let kept = read ?? nil else { return }
+    let names = names
     let nameOf = { (id: String) in memberName(id, in: names) }
     draft.text = plainText(kept.text, nameOf: nameOf)
     draft.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }

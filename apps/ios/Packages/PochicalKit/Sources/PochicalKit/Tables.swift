@@ -116,6 +116,17 @@ struct SyncState: Hashable, Sendable {
       ?? SyncState(
         deviceID: UUID().uuidString.lowercased(), lastMs: 0, lastCounter: 0, offsetMs: 0)
   }
+
+  /// The device's time `now` corrected to the server's (HLC), whatever
+  /// the device's own clock says.
+  func corrected(_ now: Int64) -> Int64 {
+    now + offsetMs
+  }
+
+  /// The device's time `now` corrected to the server's as last heard.
+  static func corrected(_ now: Int64, in db: Database) throws -> Int64 {
+    try current(in: db).corrected(now)
+  }
 }
 
 extension DatabaseMigrator {
