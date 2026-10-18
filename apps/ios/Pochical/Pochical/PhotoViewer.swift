@@ -416,6 +416,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
       shown.place = counter.accessibilityLabel
     } else {
       counterGlass.isHidden = true
+      shown.place = nil
     }
     // Faded in too, so pulled down it leaves no second of it behind.
     PhotoSpots.shared.open = shown.photo.id
@@ -546,7 +547,9 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     run.show(shown.item.seq)
     showing()
     // VoiceOver reads the photo swiped to, and where it is among them.
-    UIAccessibility.post(notification: .pageScrolled, argument: shown.voiceLabel)
+    UIAccessibility.post(
+      notification: .pageScrolled,
+      argument: [shown.voiceLabel, shown.place].compactMap(\.self).joined(separator: "、"))
   }
 
   // MARK: Save and share

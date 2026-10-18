@@ -6,6 +6,11 @@ export const chatRules = {
   // open wait to be said by the screen reader, so a run of them is said
   // once, as how many and the latest, rather than one over the other.
   announceSettleMs: 1000,
+  // How much larger than at the default text size a card of shared days
+  // or a poll draws its small type, faces and table as the reader's text
+  // grows, so a week of days or six people still fit across a line on the
+  // narrowest phone.
+  cardsMostScale: 1.3,
   // How much larger than at the default text size the chat's round
   // controls (the composer's tools and send, ↓) grow at most as the
   // reader's text grows, so at the accessibility sizes the field and the

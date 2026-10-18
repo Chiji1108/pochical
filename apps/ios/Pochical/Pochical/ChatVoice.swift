@@ -72,8 +72,11 @@ struct LineVoice: ViewModifier {
 /// One of a line's VoiceOver actions.
 struct VoiceAction: Identifiable {
   let title: String
+  /// What it acts on, when two of a line's may say the same: two links to
+  /// one site stay two actions.
+  var target: String?
   let run: () -> Void
-  var id: String { title }
+  var id: String { target ?? title }
 }
 
 /// Says others' lines as they come in while the chat is open, once they

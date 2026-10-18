@@ -334,7 +334,9 @@ struct LineView: View {
     for part in textParts(text) {
       if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
         actions.append(
-          VoiceAction(title: "リンクを開く \(link.host() ?? part.text)") { openURL(link) })
+          VoiceAction(title: "リンクを開く \(link.host() ?? part.text)", target: link.absoluteString) {
+            openURL(link)
+          })
       } else if let id = part.mention, id != meID, let link = mentionLink(id) {
         actions.append(VoiceAction(title: "\(nameOf(id))のプロフィール") { openURL(link) })
       }
@@ -346,9 +348,9 @@ struct LineView: View {
     if let shifts {
       actions.append(VoiceAction(title: "シフト表で見る") { openGroupRoute(shifts) })
     }
-    // One title once: a link written twice, a mention of the writer.
+    // Each once: a link written twice, a mention of the writer.
     var seen: Set<String> = []
-    return actions.filter { seen.insert($0.title).inserted }
+    return actions.filter { seen.insert($0.id).inserted }
   }
 
   /// The ring's shape: the bubble's (a photo answering a line sits in
