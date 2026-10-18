@@ -66,9 +66,10 @@ private struct SupportHead: View {
 extension View {
   /// Holds the socket of the chats' place `placeID` open while the view is
   /// on screen and the app in front, for the chat's lines, outbox and
-  /// someone writing, as a group's page holds its group's
-  /// (spec/sync-protocol.md, Sockets).
-  func placeSocket(_ placeID: String) -> some View {
+  /// someone writing, as the groups hold the open group's
+  /// (spec/sync-protocol.md, Sockets); none for nil. The view's content
+  /// has it as its groupSocket, the last held while none is.
+  func placeSocket(_ placeID: String?) -> some View {
     modifier(PlaceSocket(placeID: placeID))
   }
 }
@@ -79,19 +80,27 @@ private struct PlaceSocket: ViewModifier {
   @Environment(\.scenePhase) private var scenePhase
   @Dependency(\.defaultDatabase) private var database
   @State private var socket: SyncClient?
-  let placeID: String
+  let placeID: String?
 
   func body(content: Content) -> some View {
     content
       .environment(\.groupSocket, socket)
-      .task(id: scenePhase == .active) {
-        guard scenePhase == .active else { return }
+      .task(id: SocketKey(placeID: placeID, active: scenePhase == .active)) {
+        guard scenePhase == .active, let placeID else { return }
         let (client, hold) = await groupSockets.open(placeID, account: account, database: database)
         socket = client
         while !Task.isCancelled {
           try? await Task.sleep(for: .seconds(3600))
         }
+        // Lines just sent still go, the app gone to the background or
+        // another place opened (spec/sync-protocol.md, Sockets).
         await groupSockets.close(hold, of: placeID)
       }
   }
+}
+
+/// The place a socket is for, and whether the app is in the foreground.
+private struct SocketKey: Hashable {
+  let placeID: String?
+  let active: Bool
 }
