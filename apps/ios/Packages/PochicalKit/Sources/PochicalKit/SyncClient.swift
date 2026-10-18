@@ -330,6 +330,8 @@ public actor SyncClient {
   ) async throws {
     switch frame.kind {
     case .welcome(let welcome):
+      // Before the Ping's send, whose wait would skew the clock's offset.
+      let receivedMs = Self.nowMs()
       tries = 0
       connected = true
       status = .catchingUp
@@ -343,7 +345,6 @@ public actor SyncClient {
         }
         return
       }
-      let receivedMs = Self.nowMs()
       try await database.write { db in
         try Sync.welcome(
           sentMs: sentMs, receivedMs: receivedMs, serverMs: welcome.serverMs, in: db)
