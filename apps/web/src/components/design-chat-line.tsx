@@ -158,7 +158,7 @@ export function MessageLine({
   next?: Message;
   // The line it answers.
   quoted?: Message;
-  // Written by someone you blocked: folded away until shown.
+  // Written by someone you blocked, and not shown yet: folded away.
   hidden: boolean;
   // Rung, as a pin or a quote jumped to it.
   flash: boolean;
@@ -208,8 +208,6 @@ export function MessageLine({
       foldedIn();
     }
   }, [folded]);
-  // A blocked member's line, shown for now.
-  const [revealed, setRevealed] = useState(false);
   const toast = useContext(ToastContext);
   const member = writerOf(message.from);
   const current = member !== undefined && members.includes(member);
@@ -246,17 +244,10 @@ export function MessageLine({
       </ChatItem>
     );
   }
-  if (hidden && !revealed) {
+  if (hidden) {
     return (
       <ChatItem day={day}>
-        <button
-          className={chatStyle.blocked}
-          onClick={() => {
-            setRevealed(true);
-            onReveal();
-          }}
-          type="button"
-        >
+        <button className={chatStyle.blocked} onClick={onReveal} type="button">
           {blockedLine}
           <span className={chatStyle.blockedShow}>表示</span>
         </button>

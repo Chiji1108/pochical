@@ -273,6 +273,8 @@ export function ChatPage({
   const [failedOpen, setFailedOpen] = useState<string>();
   // Blocked members' lines shown at a tap.
   const [revealed, setRevealed] = useState<string[]>([]);
+  const folded = (message: Message) =>
+    blocked.includes(message.from) && !revealed.includes(message.id);
   const { failedCount, stop, upload, uploads } = usePhotoUploads(photoSend);
   const [sharing, setSharing] = useState(false);
   const { answerSoon, typingMember } = useTypingSoon(group, chat.messages);
@@ -401,9 +403,7 @@ export function ChatPage({
     photos: photosOf(
       chat.messages,
       writerOf,
-      (message) =>
-        (!blocked.includes(message.from) || revealed.includes(message.id)) &&
-        uploads[message.id] === undefined
+      (message) => !folded(message) && uploads[message.id] === undefined
     ),
     writerOf,
   };
@@ -513,7 +513,7 @@ export function ChatPage({
                 <MessageLine
                   actions={actionsOf(message)}
                   flash={flash === message.id}
-                  hidden={blocked.includes(message.from)}
+                  hidden={folded(message)}
                   lifted={selected === message.id}
                   message={message}
                   onDecide={() => {
