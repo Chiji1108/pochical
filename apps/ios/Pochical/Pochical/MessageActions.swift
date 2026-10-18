@@ -209,6 +209,9 @@ struct MessageActionsOverlay: View {
   /// Takes the overlay away, once it has gone.
   let onClose: () -> Void
   @State private var shown = false
+  /// A choice was made: the menu goes, and leaves the keyboard to it (返信
+  /// brings it up as the menu goes).
+  @State private var closing = false
   /// Where each choice is on the screen, for the held finger.
   @State private var targets: [Target: CGRect] = [:]
 
@@ -464,6 +467,7 @@ struct MessageActionsOverlay: View {
 
   /// Puts the keyboard down when the three do not fit over it in place.
   private func makeRoom(in size: CGSize) {
+    guard !closing else { return }
     let (top, bottom) = room(in: size)
     if KeyboardTop.shared.y != nil, !fitsInPlace(top: top, bottom: bottom) {
       UIApplication.shared.sendAction(
@@ -546,6 +550,7 @@ struct MessageActionsOverlay: View {
   /// Goes, quick at first and settling, and acts meanwhile.
   private func close(_ action: (() -> Void)?) {
     guard shown else { return }
+    closing = true
     withAnimation(.smooth(duration: 0.25)) {
       shown = false
     } completion: {
