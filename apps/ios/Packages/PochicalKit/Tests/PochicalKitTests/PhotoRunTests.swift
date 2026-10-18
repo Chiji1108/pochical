@@ -29,11 +29,17 @@ private struct PhotoVectors: Decodable {
         let seq: Int64
         let wasPhoto: Bool?
       }
+      struct Line: Decodable, Sendable {
+        let seq: Int64
+        let photo: Bool
+      }
       let open: Open?
       let page: Page?
       let show: Int64?
       let line: Int64?
       let gone: Gone?
+      let lines: [Line]?
+      let reconnected: Bool?
     }
     struct Expected: Decodable, Sendable, Equatable {
       struct Ask: Decodable, Sendable, Equatable {
@@ -90,6 +96,10 @@ private func photoRun(_ test: PhotoVectors.Run) {
     if let show = given.show { run?.show(show) }
     if let line = given.line { run?.added(item(line)) }
     if let gone = given.gone { run?.gone(gone.seq, wasPhoto: gone.wasPhoto) }
+    if let lines = given.lines {
+      run?.follow(lines.map { ($0.seq, $0.photo ? item($0.seq) : nil) })
+    }
+    if given.reconnected == true { run?.reconnected() }
     guard var now = run else {
       Issue.record("step \(number) before opening")
       return
@@ -103,16 +113,3 @@ private func photoRun(_ test: PhotoVectors.Run) {
   }
 }
 
-@Test func followsTheChatsLines() {
-  var run = PhotoRun(held: [item(3), item(5)], tapped: 5, ahead: 1)
-  run.take(
-    ChatPhotosPage(threadID: "group", seq: 5, after: true, photos: [], offset: 2, total: 2))
-  run.take(
-    ChatPhotosPage(threadID: "group", seq: 3, after: false, photos: [], offset: 0, total: 2))
-  run.follow([(3, item(3)), (4, nil), (5, item(5))])
-  // A new photo at the end, and one taken back.
-  run.follow([(3, nil), (4, nil), (5, item(5)), (6, item(6))])
-  #expect(run.photos.map(\.seq) == [5, 6])
-  #expect(run.total == 2)
-  #expect(run.place?.number == 1)
-}

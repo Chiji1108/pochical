@@ -1,5 +1,5 @@
 {
-  "about": "A chat's photos alone, as the photo opened large pages through them (spec/chat.md, Photos; spec/sync-protocol.md, Chat). seen: whether a reader sees a line's photo among the chat's: `photo` (it is one), `unsent` (taken back), `hidden` (sent in a one-to-one chat while the reader had blocked its writer), `ownChat` (the place's own chat, thread \"group\", not a one-to-one one) and `writerBlocked` (the reader has blocked its writer, whose lines fold away in the place's own chat). page: the chat's photos the reader sees by their lines' `seqs` in order, and a ChatPhotosRequest for those before `seq` (or after it, with `after`; 0 for the latest, or after from the first), `size` a page; `expected` is the page's seqs, how many photos come before it (`offset`) and how many the chat holds (`total`). run: the photos a device holds open large, as steps: `open` with the `held` photos among the lines laid out and the `tapped` one; `page`, a ChatPhotos answering one of its asks (dropped unless `seq` is still the end it asked from); `show`, swiped to a photo; `line`, a new line with a photo the reader sees; `gone`, a line taken back or hidden, `wasPhoto` whether the device knew it as one of the photos (null when it did not hold the line). After each step `expected` is the photos held (`seqs`), how many come before them (`offset`) and in all (`total`), null while unknown, the one shown (null once none is left, which closes it) and the pages newly asked for (`asks`), as `ahead` (chatRules.photoPageAhead) has it: an end's next page once the photo shown is fewer than `ahead` from it, and both ends while `offset` is unknown.",
+  "about": "A chat's photos alone, as the photo opened large pages through them (spec/chat.md, Photos; spec/sync-protocol.md, Chat). seen: whether a reader sees a line's photo among the chat's: `photo` (it is one), `unsent` (taken back), `hidden` (sent in a one-to-one chat while the reader had blocked its writer), `ownChat` (the place's own chat, thread \"group\", not a one-to-one one) and `writerBlocked` (the reader has blocked its writer, whose lines fold away in the place's own chat). page: the chat's photos the reader sees by their lines' `seqs` in order, and a ChatPhotosRequest for those before `seq` (or after it, with `after`; 0 for the latest, or after from the first), `size` a page; `expected` is the page's seqs, how many photos come before it (`offset`) and how many the chat holds (`total`). run: the photos a device holds open large, as steps: `open` with the `held` photos among the lines laid out and the `tapped` one; `page`, a ChatPhotos answering one of its asks (dropped unless `seq` is still the end it asked from); `show`, swiped to a photo; `line`, a new line with a photo the reader sees; `gone`, a line taken back or hidden, `wasPhoto` whether the device knew it as one of the photos (null when it did not hold the line); `lines`, the chat's lines on the device now, each with whether it is a photo the reader sees, the first time only noted, then a new photo past them all added and a photo no longer seen gone; `reconnected`, the socket open again, the asks not yet answered asked again. After each step `expected` is the photos held (`seqs`), how many come before them (`offset`) and in all (`total`), null while unknown, the one shown (null once none is left, which closes it) and the pages newly asked for (`asks`), as `ahead` (chatRules.photoPageAhead) has it: an end's next page once the photo shown is fewer than `ahead` from it, and both ends while `offset` is unknown.",
   "seen": [
     {
       "name": "a photo in the place's own chat",
@@ -86,7 +86,11 @@
       "seq": 0,
       "after": false,
       "size": 3,
-      "expected": { "seqs": [10, 12, 14], "offset": 4, "total": 7 }
+      "expected": {
+        "seqs": [10, 12, 14],
+        "offset": 4,
+        "total": 7
+      }
     },
     {
       "name": "before a photo",
@@ -94,7 +98,11 @@
       "seq": 10,
       "after": false,
       "size": 3,
-      "expected": { "seqs": [4, 6, 8], "offset": 1, "total": 7 }
+      "expected": {
+        "seqs": [4, 6, 8],
+        "offset": 1,
+        "total": 7
+      }
     },
     {
       "name": "before, reaching the first",
@@ -102,7 +110,11 @@
       "seq": 6,
       "after": false,
       "size": 3,
-      "expected": { "seqs": [2, 4], "offset": 0, "total": 7 }
+      "expected": {
+        "seqs": [2, 4],
+        "offset": 0,
+        "total": 7
+      }
     },
     {
       "name": "before the first",
@@ -110,7 +122,11 @@
       "seq": 2,
       "after": false,
       "size": 3,
-      "expected": { "seqs": [], "offset": 0, "total": 7 }
+      "expected": {
+        "seqs": [],
+        "offset": 0,
+        "total": 7
+      }
     },
     {
       "name": "from the first",
@@ -118,7 +134,11 @@
       "seq": 0,
       "after": true,
       "size": 3,
-      "expected": { "seqs": [2, 4, 6], "offset": 0, "total": 7 }
+      "expected": {
+        "seqs": [2, 4, 6],
+        "offset": 0,
+        "total": 7
+      }
     },
     {
       "name": "after a photo",
@@ -126,7 +146,11 @@
       "seq": 6,
       "after": true,
       "size": 3,
-      "expected": { "seqs": [8, 10, 12], "offset": 3, "total": 7 }
+      "expected": {
+        "seqs": [8, 10, 12],
+        "offset": 3,
+        "total": 7
+      }
     },
     {
       "name": "after, reaching the last",
@@ -134,7 +158,11 @@
       "seq": 12,
       "after": true,
       "size": 3,
-      "expected": { "seqs": [14], "offset": 6, "total": 7 }
+      "expected": {
+        "seqs": [14],
+        "offset": 6,
+        "total": 7
+      }
     },
     {
       "name": "after the last",
@@ -142,7 +170,11 @@
       "seq": 14,
       "after": true,
       "size": 3,
-      "expected": { "seqs": [], "offset": 7, "total": 7 }
+      "expected": {
+        "seqs": [],
+        "offset": 7,
+        "total": 7
+      }
     },
     {
       "name": "before a line of words",
@@ -150,7 +182,11 @@
       "seq": 7,
       "after": false,
       "size": 3,
-      "expected": { "seqs": [2, 4, 6], "offset": 0, "total": 7 }
+      "expected": {
+        "seqs": [2, 4, 6],
+        "offset": 0,
+        "total": 7
+      }
     },
     {
       "name": "after a line of words",
@@ -158,7 +194,11 @@
       "seq": 7,
       "after": true,
       "size": 3,
-      "expected": { "seqs": [8, 10, 12], "offset": 3, "total": 7 }
+      "expected": {
+        "seqs": [8, 10, 12],
+        "offset": 3,
+        "total": 7
+      }
     },
     {
       "name": "a chat without photos",
@@ -166,7 +206,11 @@
       "seq": 0,
       "after": false,
       "size": 3,
-      "expected": { "seqs": [], "offset": 0, "total": 0 }
+      "expected": {
+        "seqs": [],
+        "offset": 0,
+        "total": 0
+      }
     }
   ],
   "run": [
@@ -175,15 +219,26 @@
       "ahead": 2,
       "steps": [
         {
-          "step": { "open": { "held": [7, 9], "tapped": 9 } },
+          "step": {
+            "open": {
+              "held": [7, 9],
+              "tapped": 9
+            }
+          },
           "expected": {
             "seqs": [7, 9],
             "offset": null,
             "total": null,
             "shown": 9,
             "asks": [
-              { "seq": 7, "after": false },
-              { "seq": 9, "after": true }
+              {
+                "seq": 7,
+                "after": false
+              },
+              {
+                "seq": 9,
+                "after": true
+              }
             ]
           }
         },
@@ -224,13 +279,20 @@
           }
         },
         {
-          "step": { "show": 3 },
+          "step": {
+            "show": 3
+          },
           "expected": {
             "seqs": [3, 5, 7, 9, 12, 15, 18],
             "offset": 2,
             "total": 9,
             "shown": 3,
-            "asks": [{ "seq": 3, "after": false }]
+            "asks": [
+              {
+                "seq": 3,
+                "after": false
+              }
+            ]
           }
         },
         {
@@ -252,7 +314,9 @@
           }
         },
         {
-          "step": { "line": 20 },
+          "step": {
+            "line": 20
+          },
           "expected": {
             "seqs": [1, 2, 3, 5, 7, 9, 12, 15, 18, 20],
             "offset": 0,
@@ -262,7 +326,12 @@
           }
         },
         {
-          "step": { "gone": { "seq": 5, "wasPhoto": true } },
+          "step": {
+            "gone": {
+              "seq": 5,
+              "wasPhoto": true
+            }
+          },
           "expected": {
             "seqs": [1, 2, 3, 7, 9, 12, 15, 18, 20],
             "offset": 0,
@@ -272,7 +341,12 @@
           }
         },
         {
-          "step": { "gone": { "seq": 3, "wasPhoto": true } },
+          "step": {
+            "gone": {
+              "seq": 3,
+              "wasPhoto": true
+            }
+          },
           "expected": {
             "seqs": [1, 2, 7, 9, 12, 15, 18, 20],
             "offset": 0,
@@ -288,26 +362,47 @@
       "ahead": 2,
       "steps": [
         {
-          "step": { "open": { "held": [5, 7], "tapped": 7 } },
+          "step": {
+            "open": {
+              "held": [5, 7],
+              "tapped": 7
+            }
+          },
           "expected": {
             "seqs": [5, 7],
             "offset": null,
             "total": null,
             "shown": 7,
             "asks": [
-              { "seq": 5, "after": false },
-              { "seq": 7, "after": true }
+              {
+                "seq": 5,
+                "after": false
+              },
+              {
+                "seq": 7,
+                "after": true
+              }
             ]
           }
         },
         {
-          "step": { "gone": { "seq": 5, "wasPhoto": true } },
+          "step": {
+            "gone": {
+              "seq": 5,
+              "wasPhoto": true
+            }
+          },
           "expected": {
             "seqs": [7],
             "offset": null,
             "total": null,
             "shown": 7,
-            "asks": [{ "seq": 7, "after": false }]
+            "asks": [
+              {
+                "seq": 7,
+                "after": false
+              }
+            ]
           }
         },
         {
@@ -371,15 +466,26 @@
       "ahead": 1,
       "steps": [
         {
-          "step": { "open": { "held": [10, 12], "tapped": 10 } },
+          "step": {
+            "open": {
+              "held": [10, 12],
+              "tapped": 10
+            }
+          },
           "expected": {
             "seqs": [10, 12],
             "offset": null,
             "total": null,
             "shown": 10,
             "asks": [
-              { "seq": 10, "after": false },
-              { "seq": 12, "after": true }
+              {
+                "seq": 10,
+                "after": false
+              },
+              {
+                "seq": 12,
+                "after": true
+              }
             ]
           }
         },
@@ -420,7 +526,12 @@
           }
         },
         {
-          "step": { "gone": { "seq": 2, "wasPhoto": true } },
+          "step": {
+            "gone": {
+              "seq": 2,
+              "wasPhoto": true
+            }
+          },
           "expected": {
             "seqs": [8, 10, 12, 14],
             "offset": 2,
@@ -430,7 +541,12 @@
           }
         },
         {
-          "step": { "gone": { "seq": 30, "wasPhoto": true } },
+          "step": {
+            "gone": {
+              "seq": 30,
+              "wasPhoto": true
+            }
+          },
           "expected": {
             "seqs": [8, 10, 12, 14],
             "offset": 2,
@@ -440,7 +556,12 @@
           }
         },
         {
-          "step": { "gone": { "seq": 6, "wasPhoto": false } },
+          "step": {
+            "gone": {
+              "seq": 6,
+              "wasPhoto": false
+            }
+          },
           "expected": {
             "seqs": [8, 10, 12, 14],
             "offset": 2,
@@ -450,15 +571,26 @@
           }
         },
         {
-          "step": { "gone": { "seq": 4, "wasPhoto": null } },
+          "step": {
+            "gone": {
+              "seq": 4,
+              "wasPhoto": null
+            }
+          },
           "expected": {
             "seqs": [8, 10, 12, 14],
             "offset": null,
             "total": null,
             "shown": 10,
             "asks": [
-              { "seq": 8, "after": false },
-              { "seq": 14, "after": true }
+              {
+                "seq": 8,
+                "after": false
+              },
+              {
+                "seq": 14,
+                "after": true
+              }
             ]
           }
         },
@@ -487,15 +619,26 @@
       "ahead": 0,
       "steps": [
         {
-          "step": { "open": { "held": [5], "tapped": 5 } },
+          "step": {
+            "open": {
+              "held": [5],
+              "tapped": 5
+            }
+          },
           "expected": {
             "seqs": [5],
             "offset": null,
             "total": null,
             "shown": 5,
             "asks": [
-              { "seq": 5, "after": false },
-              { "seq": 5, "after": true }
+              {
+                "seq": 5,
+                "after": false
+              },
+              {
+                "seq": 5,
+                "after": true
+              }
             ]
           }
         },
@@ -518,7 +661,9 @@
           }
         },
         {
-          "step": { "line": 50 },
+          "step": {
+            "line": 50
+          },
           "expected": {
             "seqs": [5, 8],
             "offset": 0,
@@ -534,25 +679,164 @@
       "ahead": 2,
       "steps": [
         {
-          "step": { "open": { "held": [4], "tapped": 4 } },
+          "step": {
+            "open": {
+              "held": [4],
+              "tapped": 4
+            }
+          },
           "expected": {
             "seqs": [4],
             "offset": null,
             "total": null,
             "shown": 4,
             "asks": [
-              { "seq": 4, "after": false },
-              { "seq": 4, "after": true }
+              {
+                "seq": 4,
+                "after": false
+              },
+              {
+                "seq": 4,
+                "after": true
+              }
             ]
           }
         },
         {
-          "step": { "gone": { "seq": 4, "wasPhoto": true } },
+          "step": {
+            "gone": {
+              "seq": 4,
+              "wasPhoto": true
+            }
+          },
           "expected": {
             "seqs": [],
             "offset": null,
             "total": null,
             "shown": null,
+            "asks": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "follows the chat's lines on the device, and asks again once the socket is back",
+      "ahead": 1,
+      "steps": [
+        {
+          "step": {
+            "open": {
+              "held": [3, 5],
+              "tapped": 5
+            }
+          },
+          "expected": {
+            "seqs": [3, 5],
+            "offset": null,
+            "total": null,
+            "shown": 5,
+            "asks": [
+              {
+                "seq": 3,
+                "after": false
+              },
+              {
+                "seq": 5,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "reconnected": true
+          },
+          "expected": {
+            "seqs": [3, 5],
+            "offset": null,
+            "total": null,
+            "shown": 5,
+            "asks": [
+              {
+                "seq": 3,
+                "after": false
+              },
+              {
+                "seq": 5,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 5,
+              "after": true,
+              "seqs": [],
+              "offset": 2,
+              "total": 2
+            }
+          },
+          "expected": {
+            "seqs": [3, 5],
+            "offset": 0,
+            "total": 2,
+            "shown": 5,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": [
+              {
+                "seq": 3,
+                "photo": true
+              },
+              {
+                "seq": 4,
+                "photo": false
+              },
+              {
+                "seq": 5,
+                "photo": true
+              }
+            ]
+          },
+          "expected": {
+            "seqs": [3, 5],
+            "offset": 0,
+            "total": 2,
+            "shown": 5,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": [
+              {
+                "seq": 3,
+                "photo": false
+              },
+              {
+                "seq": 4,
+                "photo": false
+              },
+              {
+                "seq": 5,
+                "photo": true
+              },
+              {
+                "seq": 6,
+                "photo": true
+              }
+            ]
+          },
+          "expected": {
+            "seqs": [5, 6],
+            "offset": 0,
+            "total": 2,
+            "shown": 5,
             "asks": []
           }
         }

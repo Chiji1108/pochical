@@ -205,7 +205,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
       // Pulled down, as Photos closes one: not swiped sideways, which
       // goes to the next photo, nor while zoomed in, which a drag pans.
       options.interactiveDismissShouldBegin = { [weak self] context in
-        context.velocity.dy > abs(context.velocity.dx) && self?.shown?.zoomedIn != true
+        context.velocity.dy >= abs(context.velocity.dx) && self?.shown?.zoomedIn != true
       }
       // The photo itself goes to its place, not the black around it.
       options.alignmentRectProvider = { [weak self] context in
@@ -444,6 +444,16 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
         let pages = await client.photoPages()
         socket = (client, hold)
         showing()
+        following.append(
+          Task { [weak self] in
+            // Open again after a drop: what was asked is asked again.
+            var open = true
+            for await status in await client.statuses() {
+              let now = status != .connecting
+              if now, !open { self?.changed { $0.reconnected() } }
+              open = now
+            }
+          })
         for await page in pages where page.threadID == pager.threadID {
           changed { $0.take(page) }
         }

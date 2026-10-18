@@ -154,6 +154,12 @@ public struct PhotoRun: Sendable {
     asked.remove(ask)
   }
 
+  /// The socket opened again: the asks not yet answered, their answers
+  /// perhaps lost with it, are asked again.
+  public mutating func reconnected() {
+    asked = []
+  }
+
   /// A page answering one of the asks, dropped when its end is no longer
   /// the one asked from.
   public mutating func take(_ page: ChatPhotosPage) {
