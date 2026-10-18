@@ -206,11 +206,7 @@ private struct LinesLook: Equatable {
 
 /// The chat's lines, and the composer under them, rising with the keyboard.
 struct ChatLinesView: UIViewControllerRepresentable {
-  /// The top item while earlier lines are to come, which asks for them.
-  static let earlier = "earlier"
-
-  /// Every item, oldest first; a line's id starts with `line-`, which
-  /// the lines read and seen are counted by.
+  /// Every item, oldest first, by its ChatItemID.
   let rows: [LinesRow]
   let row: (String) -> AnyView
   let composer: AnyView
@@ -500,7 +496,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
     let fromTop = lines.contentOffset.y - lowest
     if fromTop < seenHeight * CGFloat(Chat.prefetchScreens) {
-      settings.onNearTop(ids.first { $0.hasPrefix("line-") })
+      settings.onNearTop(ids.first(where: ChatItemID.isLine))
     }
   }
 
@@ -597,11 +593,11 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// Lines new to `new` stand above the first line it keeps from `old`,
   /// the spinner over the earlier lines aside.
   private func cameAbove(_ old: [String], in new: [String]) -> Bool {
-    let lines = old.filter { $0 != ChatLinesView.earlier }
+    let lines = old.filter { $0 != ChatItemID.earlier }
     guard let kept = lines.first(where: new.contains), let at = new.firstIndex(of: kept) else {
       return false
     }
-    return new[..<at].contains { $0 != ChatLinesView.earlier && !old.contains($0) }
+    return new[..<at].contains { $0 != ChatItemID.earlier && !old.contains($0) }
   }
 
   /// The items new to `new` below the last line it keeps from `old`:
@@ -613,7 +609,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     for id in new.reversed() {
       if !kept.contains(id) {
         below.insert(id)
-      } else if id.hasPrefix("line-") {
+      } else if ChatItemID.isLine(id) {
         break
       }
     }
@@ -924,7 +920,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let seen = (layout.layoutAttributesForElements(in: lines.bounds) ?? [])
       .filter { $0.representedElementCategory == .cell && $0.frame.maxY <= foot }
       .compactMap { $0.indexPath.item < ids.count ? ids[$0.indexPath.item] : nil }
-      .filter { $0.hasPrefix("line-") }
+      .filter(ChatItemID.isLine)
     if seen != scroll.seen { scroll.seen = seen }
     for case let cell as LineCell in lines.visibleCells {
       cell.space.moved()

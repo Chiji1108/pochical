@@ -486,11 +486,6 @@ struct ChatScreen: View {
     }
   }
 
-  /// Someone writing now's item, by their id.
-  private static let typing = "typing-"
-  /// The place's head's item.
-  private static let head = "head"
-
   /// The lines' items, each with all its row draws, so a line is drawn
   /// again, and measured, only as that changes.
   private func rows(
@@ -500,17 +495,16 @@ struct ChatScreen: View {
     // What every line draws by: when it changes, every line is drawn again.
     let common = RowsLook(
       names: names, faces: faces, meID: meID, deleted: deletedIDs, members: cardMembers,
-      left: Set(chat.writers.filter(\.left).map(\.userID))
-    ).hashValue
+      left: Set(chat.writers.filter(\.left).map(\.userID)))
     let pins = Set(state.pins.map(\.seq))
     var rows: [LinesRow] = []
     // Only while the next earlier page is on its way from the server:
     // those the device holds are laid out before the top is reached.
     if !state.atStart, state.heldBefore == 0 {
-      rows.append(LinesRow(id: ChatLinesView.earlier, look: AnyHashable(ChatLinesView.earlier)))
+      rows.append(LinesRow(id: ChatItemID.earlier, look: AnyHashable(ChatItemID.earlier)))
     }
     if state.atStart, head != nil {
-      rows.append(LinesRow(id: Self.head, look: AnyHashable(Self.head)))
+      rows.append(LinesRow(id: ChatItemID.head, look: AnyHashable(ChatItemID.head)))
     }
     for item in listed {
       var quote: LineQuote?
@@ -539,7 +533,7 @@ struct ChatScreen: View {
       rows.append(LinesRow(id: item.id, look: AnyHashable(look)))
     }
     for userID in writers {
-      rows.append(LinesRow(id: "\(Self.typing)\(userID)", look: AnyHashable(common)))
+      rows.append(LinesRow(id: ChatItemID.typing(userID), look: AnyHashable(common)))
     }
     return rows
   }
@@ -549,12 +543,11 @@ struct ChatScreen: View {
     _ id: String, item: ChatItem?, first: String?, names: [String: String], showsTime: Bool
   ) -> some View {
     Group {
-      if id == ChatLinesView.earlier {
+      if id == ChatItemID.earlier {
         EarlierLines()
-      } else if id == Self.head {
+      } else if id == ChatItemID.head {
         head
-      } else if id.hasPrefix(Self.typing) {
-        let userID = String(id.dropFirst(Self.typing.count))
+      } else if let userID = ChatItemID.typer(of: id) {
         TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")
           .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
       } else if let item {
@@ -653,14 +646,12 @@ struct ChatScreen: View {
     case .line(let line, _) where line.hidden:
       // Never delivered to the reader: nothing shows.
       EmptyView()
-    case .line(let line, _)
-    where otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
-      && !line.unsent && line.notice == nil:
+    case .line(let line, _) where folded(line) && !line.unsent && line.notice == nil:
       BlockedLine { shownBlocked.insert(line.seq) }
     case .line(let line, let runStart):
       // A blocked member's line shown at a tap stands alone between the
       // folded ones, with their face, the way to their profile.
-      let startsRun = runStart || (otherID == nil && blocked.contains(line.authorID))
+      let startsRun = runStart || writerBlocked(line)
       if let notice = line.notice {
         // A line from the app, as an unsent line sits: who did what, by
         // the names the group shows now.
@@ -723,7 +714,7 @@ struct ChatScreen: View {
     if let notice = line.notice {
       return notice.words(by: name, subject: names[notice.subjectID] ?? "メンバー")
     }
-    guard otherID != nil || !blocked.contains(line.authorID) else { return nil }
+    guard !writerBlocked(line) else { return nil }
     let words =
       line.photo.map(photoWords)
       ?? lineWords(line.text, days: line.days, poll: line.poll, decided: line.decided, nameOf: nameOf)
@@ -737,7 +728,7 @@ struct ChatScreen: View {
 
   /// Acts on the line `lineID` as the chat is now.
   private func act(_ action: LineAction, on lineID: String) {
-    switch items(chat.state).first(where: { $0.id == "line-\(lineID)" }) {
+    switch items(chat.state).first(where: { $0.id == ChatItemID.line(lineID) }) {
     case .line(let line, let startsRun): act(action, on: line, startsRun: startsRun)
     case .waiting(let line, let startsRun): act(action, onWaiting: line, startsRun: startsRun)
     default: break
@@ -750,7 +741,7 @@ struct ChatScreen: View {
       // Opened where it is, its words going on down from there, as the
       // messaging apps open a long one: not carried to the foot.
       following = false
-      scroller.growDown("line-\(line.opID)")
+      scroller.growDown(ChatItemID.line(line.opID))
       withAnimation(reduceMotion ? nil : .default) { _ = unfolded.insert(line.opID) }
     case .openPhoto:
       openPhoto(of: line)
@@ -948,6 +939,17 @@ struct ChatScreen: View {
     Set(chat.writers.filter(\.deleted).map(\.userID))
   }
 
+  /// The line's writer is blocked, in the place's own chat, where their
+  /// lines fold away; a one-to-one chat with them shows all it has.
+  private func writerBlocked(_ line: ChatLineRow) -> Bool {
+    otherID == nil && blocked.contains(line.authorID)
+  }
+
+  /// The line is folded away for its blocked writer, not shown at a tap.
+  private func folded(_ line: ChatLineRow) -> Bool {
+    writerBlocked(line) && !shownBlocked.contains(line.seq)
+  }
+
   /// A member's name in the group as it is now, for their mentions.
   private func nameOf(_ id: String) -> String {
     names[id] ?? "メンバー"
@@ -995,7 +997,7 @@ struct ChatScreen: View {
   private func showEarlier(laidOut: String?) {
     let state = chat.state
     guard opened, state.heldBefore > 0, let line = state.lines.first, line.seq != earlierFrom,
-      laidOut == "line-\(line.opID)"
+      laidOut == ChatItemID.line(line.opID)
     else { return }
     let first = line.seq
     earlierFrom = first
@@ -1079,7 +1081,7 @@ struct ChatScreen: View {
     following = false
     // Asked to the top with too few lines under it to get there, it stops
     // at the foot.
-    scroller.show("line-\(first.opID)", at: .top, animated: true) {
+    scroller.show(ChatItemID.line(first.opID), at: .top, animated: true) {
       if scroll.place.atLatest {
         following = true
       } else if unreadFrom == nil {
@@ -1109,7 +1111,7 @@ struct ChatScreen: View {
   /// none (lines still waiting have no seq).
   private func latestSeq(of seen: [String]) -> Int64? {
     let ids = Set(seen)
-    return chat.state.lines.last(where: { ids.contains("line-\($0.opID)") })?.seq
+    return chat.state.lines.last(where: { ids.contains(ChatItemID.line($0.opID)) })?.seq
   }
 
   /// Marks the chat read on to `seq`, the latest line whose foot has come
@@ -1179,9 +1181,7 @@ struct ChatScreen: View {
     let photos = near.compactMap { item -> LinePhoto? in
       switch item {
       case .line(let line, _):
-        let folded =
-          otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
-        return line.hidden || line.unsent || folded ? nil : line.photo
+        return line.hidden || line.unsent || folded(line) ? nil : line.photo
       case .waiting(let line, _): return line.photo
       default: return nil
       }
@@ -1348,7 +1348,7 @@ struct ChatScreen: View {
   /// still on its way.
   private func replySwipe(_ item: ChatItem?) -> ReplySwipe? {
     guard case .line(let line, _) = item, !line.hidden, !line.unsent, line.notice == nil,
-      otherID != nil || !blocked.contains(line.authorID) || shownBlocked.contains(line.seq)
+      !folded(line)
     else { return nil }
     return line.authorID == meID ? .leftward : .rightward
   }
@@ -1525,7 +1525,7 @@ struct ChatScreen: View {
       following = false
       // Rung once there, not on the way; by itself, as this task ends
       // with the line gone to.
-      scroller.show("line-\(line.opID)", at: .center, animated: true) {
+      scroller.show(ChatItemID.line(line.opID), at: .center, animated: true) {
         marks.ringed = target
         Task { @MainActor in
           try? await Task.sleep(for: .milliseconds(500))
@@ -1534,7 +1534,7 @@ struct ChatScreen: View {
       }
     } else if !state.atStart {
       // Gone to a line before those laid out: on back a page at a time.
-      showEarlier(laidOut: state.lines.first.map { "line-\($0.opID)" })
+      showEarlier(laidOut: state.lines.first.map { ChatItemID.line($0.opID) })
     } else {
       jumpTarget = nil
     }
@@ -1630,7 +1630,7 @@ private struct RowLook: Hashable {
   let blockedWriter: Bool
   let shownAnyway: Bool
   let unfolded: Bool
-  let common: Int
+  let common: RowsLook
 }
 
 /// When the server is asked for the page before the lines held: as the

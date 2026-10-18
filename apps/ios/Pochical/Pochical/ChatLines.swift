@@ -14,11 +14,11 @@ enum ChatItem: Identifiable, Hashable {
 
   var id: String {
     switch self {
-    case .day(let day): "day-\(day.key)"
-    case .unread: "unread"
-    case .line(let line, _): "line-\(line.opID)"
+    case .day(let day): ChatItemID.day(day)
+    case .unread: ChatItemID.unread
+    case .line(let line, _): ChatItemID.line(line.opID)
     // As the group's line will be, so it stays in place once taken.
-    case .waiting(let line, _): "line-\(line.opID)"
+    case .waiting(let line, _): ChatItemID.line(line.opID)
     }
   }
 
@@ -32,6 +32,31 @@ enum ChatItem: Identifiable, Hashable {
   }
 }
 
+/// The ids of a chat's items, as its lines lay them out: a line's, by its
+/// opID, is what the lines read and seen are counted by.
+enum ChatItemID {
+  /// The top item while earlier lines are to come, which asks for them.
+  static let earlier = "earlier"
+  /// The place's head, over its first line.
+  static let head = "head"
+  static let unread = "unread"
+  private static let linePrefix = "line-"
+  private static let typingPrefix = "typing-"
+
+  static func day(_ day: Day) -> String { "day-\(day.key)" }
+
+  static func line(_ opID: String) -> String { linePrefix + opID }
+
+  static func isLine(_ id: String) -> Bool { id.hasPrefix(linePrefix) }
+
+  /// Someone writing now, under the latest line.
+  static func typing(_ userID: String) -> String { typingPrefix + userID }
+
+  /// Who is writing, for someone writing's item; nil for any other.
+  static func typer(of id: String) -> String? {
+    id.hasPrefix(typingPrefix) ? String(id.dropFirst(typingPrefix.count)) : nil
+  }
+}
 
 /// What a chat's lines show for a moment, beyond what they are: the line
 /// ringed as it is gone to, and the line whose bubble is lifted over the
@@ -161,7 +186,7 @@ struct LineView: View {
   /// which they leave alone; one of the same line drawn before its names
   /// changed makes its own.
   private var drawing: LineDrawing {
-    guard let kept, kept.id == "line-\(lineID)" else {
+    guard let kept, kept.id == ChatItemID.line(lineID) else {
       return LineDrawing(text: text, names: names)
     }
     if let drawing = kept.drawing, drawing.text == text, drawing.names == names { return drawing }
