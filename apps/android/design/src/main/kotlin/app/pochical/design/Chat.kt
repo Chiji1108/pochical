@@ -4,6 +4,7 @@ package app.pochical.design
 
 /** The chat's shared numbers (spec/chat.md); times in milliseconds. */
 object Chat {
+  const val announceSettleMs = 1000
   const val dayCardColumns = 6
   const val dayCardRows = 7
   const val floatingDayMs = 1500

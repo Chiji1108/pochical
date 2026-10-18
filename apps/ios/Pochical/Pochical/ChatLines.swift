@@ -66,6 +66,8 @@ enum LineAction {
   /// Held: its reactions and menu, from where its bubble is, with the
   /// finger that opened them while it stays down, and the link held.
   case hold(spot: LineSpot, finger: HeldFinger?, link: URL?)
+  /// An item of its menu by name, from VoiceOver, without the menu.
+  case menu(String)
 }
 
 /// A line of words: others' on the left with their face and, at the start
@@ -102,6 +104,12 @@ struct LineView: View {
   /// The writer's name at the start of a run of others' lines, for their
   /// face.
   let writer: String?
+  /// Who wrote it, which VoiceOver says with every line, not only the
+  /// run's first; none for one's own.
+  var author: String?
+  /// Its menu's items by name, which VoiceOver offers as the line's own
+  /// actions too.
+  var menu: [String] = []
   /// The writer's photo, one of the group's; empty for none.
   var writerPhoto = ""
   /// The writer's face is the app's icon, with no profile behind it: an
@@ -133,6 +141,9 @@ struct LineView: View {
   /// what it shows changes, not as the chat changes around it (a line
   /// coming, the keyboard moving).
   let actions: Handler<(lineID: String, action: LineAction)>
+  @Environment(\.openURL) private var openURL
+  /// Opens its reactions and menu for VoiceOver, from its bubble.
+  @State private var opener = MenuOpener()
 
   private static var avatar: CGFloat { 32 }
 
@@ -163,6 +174,8 @@ struct LineView: View {
           }
         }
         .frame(width: Self.avatar, height: writer == nil ? 0 : Self.avatar)
+        // Said with the line, whose actions open the profile.
+        .accessibilityHidden(true)
       }
       VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
         if let writer, named {
@@ -170,9 +183,10 @@ struct LineView: View {
             .font(.caption2)
             .foregroundStyle(colors.textTertiary)
             .padding(.leading, 4)
+            .accessibilityHidden(true)
         }
         HStack(alignment: .bottom, spacing: 8) {
-          if mine { meta }
+          if mine { voicedMeta }
           LineContent(
             text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
             quote: quote, groupID: groupID, mine: mine, first: first,
@@ -189,12 +203,12 @@ struct LineView: View {
               .opacity(seq != nil && marks?.ringed == seq ? 1 : 0)
           }
           // A photo opens large at a tap; its menu is the long press's.
-          .heldForActions(lifted: marks?.lifted == lineID) {
+          .heldForActions(lifted: marks?.lifted == lineID, opener: opener) {
             if photo != nil, !waiting { act(.openPhoto) }
           } onActions: {
             act(.hold(spot: $0, finger: $1, link: $2))
           }
-          if !mine { meta }
+          if !mine { voicedMeta }
         }
         if let shifts {
           // All the days, with everyone's shifts round them; pushed by the
@@ -227,10 +241,111 @@ struct LineView: View {
       .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
       .padding(mine ? .leading : .trailing, 40)
     }
-    // The line reads as one; its reactions, a poll's 行ける and シフト表で見る
-    // stay buttons of their own.
-    .accessibilityElement(
-      children: reactions.isEmpty && poll == nil && shifts == nil ? .combine : .contain)
+    // The line reads as one, everything done on it its actions; a card of
+    // days or a poll keeps its own parts, the line said first by its time.
+    .accessibilityElement(children: .contain)
+    .modifier(voice(!carded))
+  }
+
+  /// Days or a poll on a card, whose days and 行ける VoiceOver goes
+  /// through one by one.
+  private var carded: Bool { !days.isEmpty }
+
+  /// The time and state, the line as VoiceOver says it on a card's line.
+  private var voicedMeta: some View {
+    meta.modifier(voice(carded)).accessibilitySortPriority(1)
+  }
+
+  /// VoiceOver's line, where `here`.
+  private func voice(_ here: Bool) -> OptionalVoice {
+    guard here else { return OptionalVoice(voice: nil) }
+    let people =
+      countedReactions || reactions.isEmpty ? nil : reactionPeople(reactions, nameOf: nameOf)
+    let opensPhoto = photo != nil && !waiting
+    return OptionalVoice(
+      voice: LineVoice(
+        label: voiceLabel, people: people, isImage: photo != nil,
+        activate: opensPhoto ? { act(.openPhoto) } : { opener.open?() },
+        actions: voiceActions))
+  }
+
+  /// Who wrote it, what, when, and how it stands, as VoiceOver reads it.
+  private var voiceLabel: String {
+    var parts = [mine ? "自分" : author ?? writer ?? "メンバー"]
+    if let quote {
+      parts.append(quote.writer.map { "\($0)「\(quote.words)」への返信" } ?? "\(quote.words)への返信")
+    }
+    if let photo {
+      parts.append(photoWords(photo))
+    } else {
+      parts.append(lineWords(text, days: days, poll: poll != nil, decided: poll?.decided, nameOf: nameOf))
+      if let preview, !preview.title.isEmpty {
+        parts.append("リンク「\(preview.title)」")
+      }
+    }
+    parts.append(ChatTime.clock(time))
+    if pinned { parts.append("ピン留め中") }
+    if edited { parts.append("編集済み") }
+    if failed {
+      parts.append("送れませんでした")
+    } else if waiting {
+      parts.append("送信中")
+    }
+    if !reactions.isEmpty {
+      parts.append(reactionWords(reactions, meID: meID))
+    }
+    return parts.joined(separator: "、")
+  }
+
+  /// All that is done on the line by a gesture or a part of it, as
+  /// VoiceOver's actions: what to do with it not sent first, then its menu
+  /// as the long press opens it (返信 first, as the swipe does), and the
+  /// rest of its parts.
+  private var voiceActions: [VoiceAction] {
+    var actions: [VoiceAction] = []
+    if failed {
+      actions.append(VoiceAction(title: "もう一度送る") { act(.sendAgain) })
+      actions.append(VoiceAction(title: "削除") { act(.deleteUnsent) })
+    } else if waiting, let photo, PhotoUploads.shared.stoppable(photo.id) {
+      actions.append(VoiceAction(title: "送信をやめる") { act(.stopSending) })
+    }
+    if photo != nil, !waiting {
+      actions.append(VoiceAction(title: "写真を開く") { act(.openPhoto) })
+    }
+    for title in menu {
+      actions.append(VoiceAction(title: title) { act(.menu(title)) })
+    }
+    if !waiting {
+      actions.append(VoiceAction(title: "リアクション") { opener.open?() })
+      for reaction in reactions {
+        let on = reaction.userIDs.contains(meID ?? "")
+        actions.append(
+          VoiceAction(title: on ? "\(reaction.emoji)を外す" : "\(reaction.emoji)を付ける") {
+            act(.react(reaction.emoji))
+          })
+      }
+    }
+    if quote != nil {
+      actions.append(VoiceAction(title: "返信元を表示") { act(.openQuote) })
+    }
+    for part in textParts(text) {
+      if let link = part.url.flatMap({ URL(string: $0, encodingInvalidCharacters: true) }) {
+        actions.append(
+          VoiceAction(title: "リンクを開く \(link.host() ?? part.text)") { openURL(link) })
+      } else if let id = part.mention, id != meID, let link = mentionLink(id) {
+        actions.append(VoiceAction(title: "\(nameOf(id))のプロフィール") { openURL(link) })
+      }
+    }
+    if !mine, !appFace {
+      actions.append(
+        VoiceAction(title: "\(author ?? writer ?? "メンバー")のプロフィール") { act(.openProfile) })
+    }
+    if let shifts {
+      actions.append(VoiceAction(title: "シフト表で見る") { openGroupRoute(shifts) })
+    }
+    // One title once: a link written twice, a mention of the writer.
+    var seen: Set<String> = []
+    return actions.filter { seen.insert($0.title).inserted }
   }
 
   /// The ring's shape: the bubble's (a photo answering a line sits in

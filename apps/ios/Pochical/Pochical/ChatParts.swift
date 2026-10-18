@@ -74,6 +74,8 @@ struct DayChip: View {
       .padding(.vertical, 2)
       .background(colors.fillTertiary, in: RoundedRectangle(cornerRadius: Radius.sm))
       .padding(.top, 8)
+      // VoiceOver's rotor goes from day to day by its headings.
+      .accessibilityAddTraits(.isHeader)
   }
 }
 

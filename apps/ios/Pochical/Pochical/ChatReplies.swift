@@ -98,6 +98,8 @@ struct ComposerBar<Picture: View>: View {
           .foregroundStyle(colors.textQuaternary)
           .lineLimit(1)
       }
+      // Said as one: what it is, and what it holds.
+      .accessibilityElement(children: .combine)
       .padding(.leading, 12)
       .overlay(alignment: .leading) {
         RoundedRectangle(cornerRadius: Radius.xxs)

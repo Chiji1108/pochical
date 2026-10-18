@@ -2,6 +2,10 @@
 // place: apps/web imports them, and `mise run gen` writes them out for the
 // native apps (Chat.swift, Chat.kt) and as JSON (spec/design-tokens.json).
 export const chatRules = {
+  // How long, in milliseconds, others' lines coming in while a chat is
+  // open wait to be said by the screen reader, so a run of them is said
+  // once, as how many and the latest, rather than one over the other.
+  announceSettleMs: 1000,
   // A card of shared days shows this many days (or people) across, all
   // that fit in a bubble on the narrowest phone; past it the card turns
   // to a row per person.

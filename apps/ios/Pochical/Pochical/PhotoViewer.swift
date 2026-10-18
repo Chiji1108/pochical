@@ -20,6 +20,8 @@ struct PhotoViewing: Identifiable {
   /// Where the rest of the chat's photos come from; none for a photo alone.
   let pager: PhotoPager?
   let id: String
+  /// Who wrote each photo's line, by id, for VoiceOver to say whose it is.
+  var names: [String: String] = [:]
 
   /// `photo` alone, as someone's face.
   init(_ photo: LinePhoto) {
@@ -156,6 +158,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   var onClosed: (() -> Void)?
   private var run: PhotoRun
   private let pager: PhotoPager?
+  private let names: [String: String]
   /// Asking for pages and following the chat, while open.
   private var following: [Task<Void, Never>] = []
   /// The place's socket, held open while the photos show; nil until held.
@@ -191,6 +194,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   ) {
     run = viewing.run
     pager = viewing.pager
+    names = viewing.names
     self.groupID = groupID
     self.calls = calls
     self.zooms = zooms
@@ -395,7 +399,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   }
 
   private func page(_ item: ChatPhotoItem) -> PhotoPage {
-    let page = PhotoPage(item, groupID: groupID, calls: calls)
+    let page = PhotoPage(item, writer: names[item.authorID], groupID: groupID, calls: calls)
     page.onTap = { [weak self] in self?.toggleChrome() }
     return page
   }
@@ -409,6 +413,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
       counter.text = "\(place.number) / \(place.of)"
       counter.accessibilityLabel = "\(place.of)枚中\(place.number)枚目"
       counterGlass.isHidden = false
+      shown.place = counter.accessibilityLabel
     } else {
       counterGlass.isHidden = true
     }
@@ -493,8 +498,16 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     showing()
   }
 
-  /// A tap shows or hides the buttons, as Photos does.
+  /// VoiceOver's scrub, two fingers in a Z, closes it, as its × does.
+  override func accessibilityPerformEscape() -> Bool {
+    dismiss(animated: true)
+    return true
+  }
+
+  /// A tap shows or hides the buttons, as Photos does; not with VoiceOver,
+  /// whose double tap on the photo would take its buttons out of reach.
   private func toggleChrome() {
+    guard !UIAccessibility.isVoiceOverRunning else { return }
     chromeHidden.toggle()
     UIView.animate(withDuration: 0.2) {
       for view in self.chrome { view.alpha = self.chromeHidden ? 0 : 1 }
@@ -532,6 +545,8 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     guard completed, let shown else { return }
     run.show(shown.item.seq)
     showing()
+    // VoiceOver reads the photo swiped to, and where it is among them.
+    UIAccessibility.post(notification: .pageScrolled, argument: shown.voiceLabel)
   }
 
   // MARK: Save and share
@@ -605,6 +620,12 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   let item: ChatPhotoItem
   var photo: LinePhoto { item.photo }
   var onTap: (() -> Void)?
+  /// Who sent it, said by VoiceOver.
+  private let writer: String?
+  /// Where it is among the photos, said by VoiceOver after it.
+  var place: String? {
+    didSet { picture.accessibilityValue = place }
+  }
   private let groupID: String
   private let calls: GroupCalls
   private let scroll = UIScrollView()
@@ -622,8 +643,9 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   private static let deepest: CGFloat = 4
   private static let tapped: CGFloat = 2
 
-  init(_ item: ChatPhotoItem, groupID: String, calls: GroupCalls) {
+  init(_ item: ChatPhotoItem, writer: String?, groupID: String, calls: GroupCalls) {
     self.item = item
+    self.writer = writer
     self.groupID = groupID
     self.calls = calls
     super.init(nibName: nil, bundle: nil)
@@ -655,8 +677,16 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
     picture.image = ChatPhotoLoading.held(
       photo, in: groupID, scale: traitCollection.displayScale, calls: calls)
     picture.isAccessibilityElement = true
-    picture.accessibilityLabel = "写真"
+    picture.accessibilityLabel = voiceLabel
     picture.accessibilityTraits = .image
+    // The pinch and the double tap's zoom, for VoiceOver, which pans the
+    // zoomed photo by three fingers as the scroll view's own.
+    picture.accessibilityCustomActions = [
+      UIAccessibilityCustomAction(name: "拡大") { [weak self] _ in self?.zoom(in: true) ?? false },
+      UIAccessibilityCustomAction(name: "元の大きさに戻す") { [weak self] _ in
+        self?.zoom(in: false) ?? false
+      },
+    ]
     scroll.addSubview(picture)
 
     spinner.color = .white
@@ -743,6 +773,28 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   func scrollViewDidZoom(_ scrollView: UIScrollView) { center() }
 
   @objc private func tappedOnce() { onTap?() }
+
+  /// Whose photo, of what shape, and when, as VoiceOver says it.
+  var voiceLabel: String {
+    let day = Day(item.sentAt, in: .current)
+    let ms = Int64(item.sentAt.timeIntervalSince1970 * 1000)
+    let when = "\(ChatTime.day(day)) \(ChatTime.clock(ms))"
+    return [writer.map { "\($0)の\(photoWords(photo))" } ?? photoWords(photo), when]
+      .joined(separator: "、")
+  }
+
+  /// In on its middle a step at a time, as far as it goes, or back out,
+  /// for VoiceOver; false when it is as far as it goes.
+  private func zoom(in closer: Bool) -> Bool {
+    let scale =
+      closer
+      ? min(scroll.zoomScale * Self.tapped, scroll.maximumZoomScale) : scroll.minimumZoomScale
+    guard abs(scale - scroll.zoomScale) > 0.01 else { return false }
+    scroll.setZoomScale(scale, animated: !UIAccessibility.isReduceMotionEnabled)
+    UIAccessibility.post(
+      notification: .announcement, argument: closer ? "\(Int(scale * 100))%" : "元の大きさ")
+    return true
+  }
 
   /// In on the point tapped, or back out.
   @objc private func tappedTwice(_ tap: UITapGestureRecognizer) {
