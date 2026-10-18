@@ -28,7 +28,7 @@ struct ChatNotificationsPage: View {
   @State private var meID: String?
   /// The one-to-one chats turned off as the page opened: one turned on
   /// again stays, so it can be turned off again here.
-  @State private var directOff: [[String]]?
+  @State private var directOff: [ChatKey]?
   @State private var unblocking: Person?
   @State private var failed = false
 
@@ -60,16 +60,16 @@ struct ChatNotificationsPage: View {
 
       Section {
         ForEach(directOff ?? [], id: \.self) { chat in
-          let group = groups.first { $0.id == chat[0] }
-          let other = meID.flatMap { otherIn(chat[1], me: $0) }
+          let group = groups.first { $0.id == chat.groupID }
+          let other = meID.flatMap { otherIn(chat.threadID, me: $0) }
           ChatNotificationToggle(
-            groupID: chat[0], threadID: chat[1],
-            muted: notifications.isMuted(chat[1], in: chat[0]), asks: true
+            groupID: chat.groupID, threadID: chat.threadID,
+            muted: notifications.isMuted(chat.threadID, in: chat.groupID), asks: true
           ) {
-            let member = memberOf(other, in: chat[0])
+            let member = memberOf(other, in: chat.groupID)
             PersonLabel(
               name: member?.shownName ?? "メンバー", group: group?.name ?? "",
-              photoID: member?.photoID ?? "", groupID: chat[0])
+              photoID: member?.photoID ?? "", groupID: chat.groupID)
           }
         }
       } header: {
@@ -113,7 +113,8 @@ struct ChatNotificationsPage: View {
     }
     .onAppear {
       if directOff == nil {
-        directOff = notifications.muted.filter { $0[1] != groupThread }.sorted { $0[1] < $1[1] }
+        directOff = notifications.muted.filter { $0.threadID != groupThread }
+          .sorted { $0.threadID < $1.threadID }
       }
     }
     .alert(

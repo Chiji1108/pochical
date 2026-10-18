@@ -50,18 +50,29 @@ extension DatabaseMigrator {
   }
 }
 
+/// A chat, by its group (or place) and thread.
+public struct ChatKey: Hashable, Sendable {
+  public var groupID: String
+  public var threadID: String
+
+  public init(groupID: String, threadID: String) {
+    self.groupID = groupID
+    self.threadID = threadID
+  }
+}
+
 /// The user's chat notifications: the chats turned off, and whether
 /// mentions notify in them.
 public struct ChatNotificationState: Hashable, Sendable {
-  /// Each chat turned off, as its group and thread.
-  public internal(set) var muted: Set<[String]> = []
+  /// Each chat turned off.
+  public internal(set) var muted: Set<ChatKey> = []
   /// メンションはいつも通知: on until the user turns it off.
   public var mentionsWhenMuted = true
 
   public init() {}
 
   public func isMuted(_ threadID: String, in groupID: String) -> Bool {
-    muted.contains([groupID, threadID])
+    muted.contains(ChatKey(groupID: groupID, threadID: threadID))
   }
 }
 
@@ -88,7 +99,8 @@ public enum ChatNotifications {
 
   public static func state(in db: Database) throws -> ChatNotificationState {
     var state = ChatNotificationState()
-    state.muted = Set(try ChatMuteRow.fetchAll(db).map { [$0.groupID, $0.threadID] })
+    state.muted = Set(
+      try ChatMuteRow.fetchAll(db).map { ChatKey(groupID: $0.groupID, threadID: $0.threadID) })
     state.mentionsWhenMuted =
       try ChatNotificationSettingsRow.fetchOne(db)?.mentionsWhenMuted ?? true
     return state
