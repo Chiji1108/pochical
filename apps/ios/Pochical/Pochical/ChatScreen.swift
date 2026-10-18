@@ -29,9 +29,6 @@ struct ChatScreen: View {
   /// The socket said under the title, once it has stayed not current for
   /// a moment (spec/chat.md): the lines shown may not be all there is.
   @State private var syncSaid = SyncStatus.current
-  /// What is under the lines at the chat's foot: the composer, and the
-  /// keyboard or the home indicator.
-  @State private var bottomRoom: CGFloat = 0
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.openGroupRoute) private var openGroupRoute
@@ -181,7 +178,6 @@ struct ChatScreen: View {
             id, item: byID[id], first: listed.first?.id, names: names,
             showsTime: !timeless.contains(id)))
       },
-      bottomRoom: bottomRoom,
       latest: AnyView(
         LatestButton(scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0) {
           toLatestOrUnread()
@@ -203,7 +199,7 @@ struct ChatScreen: View {
     // Going on under the composer and the keyboard, which SwiftUI keeps
     // at the chat's foot, the lines told how much of them is under there.
     .ignoresSafeArea(edges: .bottom)
-    .onGeometryChange(for: CGFloat.self, of: { $0.safeAreaInsets.bottom }) { bottomRoom = $0 }
+    .onGeometryChange(for: CGFloat.self, of: { $0.safeAreaInsets.bottom }) { scroll.bottomRoom = $0 }
     .safeAreaBar(edge: .bottom) { composer }
     .overlay {
       // A place's head says what the chat is for in its place.

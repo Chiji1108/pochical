@@ -214,10 +214,6 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// the lines read and seen are counted by.
   let rows: [LinesRow]
   let row: (String) -> AnyView
-  /// What is under the lines at the chat's foot, the composer and the
-  /// keyboard: as it changes, the lines and the ↓ make room by the change's
-  /// own animation.
-  let bottomRoom: CGFloat
   /// The ↓ to the latest, over the composer's right.
   let latest: AnyView
   let scroll: ChatScroll
@@ -259,11 +255,10 @@ struct ChatLinesView: UIViewControllerRepresentable {
 
   func updateUIViewController(_ controller: ChatLinesController, context: Context) {
     proxy.controller = controller
-    let roomChanged = controller.settings.map { $0.bottomRoom != bottomRoom } ?? false
     controller.update(self, environment: context.environment)
-    if roomChanged {
-      controller.bottomRoomChanged { context.animate(changes: $0) }
-    }
+    // The composer and the keyboard under the lines: as it changes, the
+    // lines and the ↓ make room by the change's own animation.
+    controller.bottomRoom(scroll.bottomRoom) { context.animate(changes: $0) }
   }
 
   /// The chat has gone: whatever waits to be told the lines are in place
@@ -408,7 +403,12 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   override func viewWillLayoutSubviews() {
     super.viewWillLayoutSubviews()
-    // Taken before the room changes (the keyboard, the composer growing).
+    keepRoom()
+  }
+
+  /// The lines seen, taken before the room changes (the lines' own size,
+  /// the composer and the keyboard under them).
+  private func keepRoom() {
     let kept = following ? footSnapshot() : layout.getContentOffsetSnapshot(from: .bottom)
     room = (roomHeight, kept)
   }
@@ -616,11 +616,22 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
   }
 
-  /// What is under the lines changed (the keyboard, a bar over the
-  /// composer's field), by `animate` (the change's own animation): the
-  /// lines and the ↓ make room by the same animation, as in Messages.
-  func bottomRoomChanged(animate: (() -> Void) -> Void) {
-    guard view.window != nil else { return }
+  /// What is under the lines at the chat's foot: the composer, and the
+  /// keyboard or the home indicator.
+  private var under: CGFloat = 0
+
+  /// What is under the lines is `height` now (the keyboard, a bar over
+  /// the composer's field), changed by `animate` (the change's own
+  /// animation): the lines and the ↓ make room by the same animation, as in
+  /// Messages.
+  func bottomRoom(_ height: CGFloat, animate: (() -> Void) -> Void) {
+    guard height != under else { return }
+    guard view.window != nil else {
+      under = height
+      return
+    }
+    keepRoom()
+    under = height
     let makeRoom = {
       self.fitRoom()
       self.view.layoutIfNeeded()
@@ -641,7 +652,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       lines.contentInset.top = top
       lines.verticalScrollIndicatorInsets.top = top
     }
-    let bottom = settings?.bottomRoom ?? 0
+    let bottom = under
     if lines.contentInset.bottom != bottom {
       keepingLinesStill {
         lines.contentInset.bottom = bottom
