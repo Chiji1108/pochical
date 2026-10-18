@@ -553,6 +553,10 @@ message ChatLine {
   // Notices): author_id is who did it. It has no words, takes no
   // reactions, replies or pins, and is never unread.
   ChatNotice notice = 19;
+  // The photos sent together with this one (spec/chat.md, Albums), as
+  // ChatSend.album named them; empty for a photo sent alone, and for
+  // anything else.
+  string album = 20;
 }
 
 // What a notice line says happened to the group, its names worded by
@@ -702,6 +706,11 @@ message ChatSend {
   // ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
   // only there, cut short as an app's word on itself.
   string device = 9;
+  // With a photo: the photos sent at once, each its own line, share one
+  // name, 1 to 64 characters of the sender's choosing, that their apps
+  // draw them together by (spec/chat.md, Albums); empty for a photo sent
+  // alone. Refused with anything but a photo.
+  string album = 10;
 }
 
 // New words for one of the member's own lines of words (編集).

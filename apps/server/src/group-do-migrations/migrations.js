@@ -26,6 +26,7 @@ import m0023 from './0023_chat_notices.sql';
 import m0024 from './0024_chat_places.sql';
 import m0025 from './0025_support_relay.sql';
 import m0026 from './0026_chat_photos_index.sql';
+import m0027 from './0027_chat-albums.sql';
 
   export default {
     journal,
@@ -56,7 +57,8 @@ m0022,
 m0023,
 m0024,
 m0025,
-m0026
+m0026,
+m0027
     }
   }
   

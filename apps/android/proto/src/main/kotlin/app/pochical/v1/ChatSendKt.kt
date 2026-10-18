@@ -370,6 +370,37 @@ public object ChatSendKt {
     public fun clearDevice() {
       _builder.clearDevice()
     }
+
+    /**
+     * ```
+     * With a photo: the photos sent at once, each its own line, share one
+     * name, 1 to 64 characters of the sender's choosing, that their apps
+     * draw them together by (spec/chat.md, Albums); empty for a photo sent
+     * alone. Refused with anything but a photo.
+     * ```
+     *
+     * `string album = 10 [json_name = "album"];`
+     */
+    public var album: kotlin.String
+      @kotlin.jvm.JvmName("getAlbum")
+        get() = _builder.album
+      @kotlin.jvm.JvmName("setAlbum")
+        set(value) {
+        _builder.album = value
+      }
+    /**
+     * ```
+     * With a photo: the photos sent at once, each its own line, share one
+     * name, 1 to 64 characters of the sender's choosing, that their apps
+     * draw them together by (spec/chat.md, Albums); empty for a photo sent
+     * alone. Refused with anything but a photo.
+     * ```
+     *
+     * `string album = 10 [json_name = "album"];`
+     */
+    public fun clearAlbum() {
+      _builder.clearAlbum()
+    }
   }
 }
 public inline fun app.pochical.v1.ChatSend.copy(block: `app.pochical.v1`.ChatSendKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatSend =

@@ -116,7 +116,13 @@ const answerFromSlack = async (
       edits.push(
         editOf(`${base}-photo-${index}`, {
           case: "send",
-          value: { photo, text: "", threadId: GROUP_THREAD },
+          value: {
+            // Photos posted at once are one album, as the app sends them.
+            album: images.length > 1 ? base : "",
+            photo,
+            text: "",
+            threadId: GROUP_THREAD,
+          },
         })
       );
     }
