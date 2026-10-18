@@ -21,7 +21,7 @@ import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
 import { ChatListRow, chatGaps } from "./design-chat-parts";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
-import { summaryOf, unsentLine } from "./design-chat-summary";
+import { lastLineOf } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import type { Member, Profile } from "./design-group-data";
 import { BackButton } from "./design-header";
@@ -82,12 +82,13 @@ export function SupportRow({ onOpen }: { onOpen: () => void }) {
   // What was being written, as the lines are now (spec/chat.md, Drafts).
   const kept = draft && keptDraft(draft, lines);
   let preview = "ほしい機能や不具合のこと、気軽にどうぞ";
-  if (last?.unsent) {
-    preview = unsentLine(
-      membersOf(profile, icon).find((member) => member.id === last.from)
+  if (last) {
+    preview = lastLineOf(
+      last,
+      membersOf(profile, icon).find((member) => member.id === last.from),
+      nameless,
+      false
     );
-  } else if (last) {
-    preview = summaryOf(last, nameless);
   }
   return (
     <List>

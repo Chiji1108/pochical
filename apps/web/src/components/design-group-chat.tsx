@@ -45,7 +45,7 @@ import {
 import { PinBar } from "./design-chat-pins";
 import { DecidePollSheet } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
-import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
+import { lastLineOf } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import { unreadMentions } from "./design-group-data";
 import type {
@@ -88,35 +88,6 @@ function useYourName(group: Omit<Group, "members">) {
   ).name;
 }
 
-function lastLine(
-  chat: Chat,
-  members: Member[],
-  yours: string,
-  blocked: string[]
-) {
-  const last = chat.messages.at(-1);
-  if (!last) {
-    return;
-  }
-  const who = members.find((member) => member.id === last.from);
-  if (last.notice) {
-    return last.notice;
-  }
-  if (last.unsent) {
-    return unsentLine(who);
-  }
-  if (blocked.includes(last.from)) {
-    return blockedLine;
-  }
-  let text = summaryOf(last, nameIn(members, yours));
-  if (last.days || (last.poll && !last.poll.decided)) {
-    text = `${text}を共有しました`;
-  } else if (last.photo) {
-    text = "写真を送りました";
-  }
-  return who?.me ? `自分：${text}` : text;
-}
-
 // A chat's title in its header: the name, the mute mark, and for a group
 // the count under them.
 function ChatTitle({
@@ -157,12 +128,7 @@ export function ChatRow({
   muted?: boolean;
 }) {
   const yours = useYourName(group);
-  const preview = lastLine(
-    chat,
-    group.members,
-    yours,
-    useUser((state) => state.blocked)
-  );
+  const blocked = useUser((state) => state.blocked);
   const last = chat.messages.at(-1);
   // What was being written, as the chat's lines are now (spec/chat.md,
   // Drafts).
@@ -175,7 +141,16 @@ export function ChatRow({
       mentioned={unreadMentions(chat) > 0}
       muted={muted}
       onOpen={onOpen}
-      preview={preview ?? "まだメッセージはありません"}
+      preview={
+        last
+          ? lastLineOf(
+              last,
+              group.members.find((member) => member.id === last.from),
+              nameIn(group.members, yours),
+              blocked.includes(last.from)
+            )
+          : "まだメッセージはありません"
+      }
       time={last?.time}
       unread={chat.unread}
     />
