@@ -442,9 +442,11 @@ struct ChatScreen: View {
     .sheet(item: $browsing) { link in
       SafariView(url: link.url).ignoresSafeArea()
     }
-    .alert(item: $unsending) { _ in
-      Text("送信を取り消しますか？")
-    } actions: { unsending in
+    .alert(
+      "送信を取り消しますか？",
+      isPresented: Binding<Bool>($unsending),
+      presenting: unsending
+    ) { unsending in
       Button("キャンセル", role: .cancel) {}
       Button("取り消す", role: .destructive) {
         switch unsending {

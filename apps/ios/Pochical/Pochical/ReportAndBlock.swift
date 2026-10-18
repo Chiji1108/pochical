@@ -53,9 +53,11 @@ struct ReportAndBlock: ViewModifier {
           },
           onRemove: onRemove.map { remove in { remove(person) } })
       }
-      .alert(item: $blockQuestion) { question in
-        Text(question.title)
-      } actions: { question in
+      .alert(
+        blockQuestion?.title ?? "",
+        isPresented: Binding($blockQuestion),
+        presenting: blockQuestion
+      ) { question in
         Button(question.afterReport ? "しない" : "キャンセル", role: .cancel) {}
         Button(question.block ? "ブロック" : "解除", role: question.block ? .destructive : nil) {
           onSetBlocked(question)

@@ -116,9 +116,11 @@ struct ChatNotificationsPage: View {
         directOff = notifications.muted.filter { $0[1] != groupThread }.sorted { $0[1] < $1[1] }
       }
     }
-    .alert(item: $unblocking) { person in
-      Text("\(person.name)のブロックを解除しますか？")
-    } actions: { person in
+    .alert(
+      unblocking.map { "\($0.name)のブロックを解除しますか？" } ?? "",
+      isPresented: Binding($unblocking),
+      presenting: unblocking
+    ) { person in
       Button("キャンセル", role: .cancel) {}
       Button("解除") { unblock(person) }
     } message: { _ in

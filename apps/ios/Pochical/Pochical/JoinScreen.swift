@@ -64,9 +64,11 @@ struct JoinScreen: View {
       }
     }
     .task { await load() }
-    .alert(item: $joinError) { error in
-      Text(error == .full ? "このグループには参加できません" : "参加できませんでした")
-    } actions: { _ in
+    .alert(
+      joinError == .full ? "このグループには参加できません" : "参加できませんでした",
+      isPresented: Binding($joinError),
+      presenting: joinError
+    ) { _ in
       Button("OK", role: .cancel) {}
     } message: { error in
       Text(message(for: error))

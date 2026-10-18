@@ -271,9 +271,7 @@ struct DeviceCalendarSheet: View {
           Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
         }
       }
-      .alert(item: $failure) { failure in
-        Text(failure)
-      } actions: { _ in
+      .alert(failure ?? "", isPresented: Binding($failure), presenting: failure) { _ in
         Button("OK", role: .cancel) {}
       }
       .sheet(item: $guide) { page in

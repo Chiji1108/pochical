@@ -173,9 +173,7 @@ struct GroupSettingsPage: View {
     } message: {
       Text("「\(group.name)」のシフトとチャットが見られなくなります。もう一度入るには、招待してもらう必要があります。")
     }
-    .alert(item: $failed) { failed in
-      Text(failed)
-    } actions: { _ in
+    .alert(failed ?? "", isPresented: Binding($failed), presenting: failed) { _ in
       Button("OK", role: .cancel) {}
     } message: { _ in
       Text("通信できる場所で、もう一度お試しください。")
