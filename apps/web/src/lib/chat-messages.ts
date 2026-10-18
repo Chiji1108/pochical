@@ -187,3 +187,48 @@ export function keptDraft(
   }
   return draft;
 }
+
+// The albums a chat draws (spec/chat.md, Albums), each as its lines' ids:
+// one writer's photos one after another sent at once, any other line
+// between them, or one of them taken back, ending it. A photo left alone
+// is drawn as a photo is, so only those of two or more.
+export function albumsOf(messages: Message[]): string[][] {
+  const albums: string[][] = [];
+  let run: Message[] = [];
+  const end = () => {
+    if (run.length > 1) {
+      albums.push(run.map(({ id }) => id));
+    }
+    run = [];
+  };
+  for (const message of messages) {
+    const [first] = run;
+    const inAlbum =
+      message.album !== undefined &&
+      message.photo !== undefined &&
+      !message.unsent;
+    if (
+      first &&
+      !(inAlbum && message.album === first.album && message.from === first.from)
+    ) {
+      end();
+    }
+    if (inAlbum) {
+      run.push(message);
+    }
+  }
+  end();
+  return albums;
+}
+
+// How many of an album's photos go in each of its rows, top first: three
+// as one over two, else rows of two and three, the fewest there can be,
+// the twos first, as Telegram lays out an album.
+export function albumRows(count: number): number[] {
+  if (count === 3) {
+    return [1, 2];
+  }
+  const rows = Math.ceil(count / 3);
+  const twos = rows * 3 - count;
+  return Array.from({ length: rows }, (_, row) => (row < twos ? 2 : 3));
+}

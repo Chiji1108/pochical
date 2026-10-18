@@ -22,7 +22,13 @@ import {
   useComposer,
 } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
-import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
+import {
+  albumOf,
+  ChatContext,
+  drawnLines,
+  MessageLine,
+  photosOf,
+} from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
 import { ChatListRow, chatGaps } from "./design-chat-parts";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
@@ -264,22 +270,28 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
             ref={listRef}
           >
             <Intro icon={icon} />
-            {lines.map((line, index) => (
-              <MessageLine
-                actions={actionsOf(line)}
-                flash={flash === line.id}
-                hidden={false}
-                key={line.id}
-                lifted={selected === line.id}
-                message={line}
-                onSelect={() => {
-                  setSelected(line.id);
-                }}
-                next={lines[index + 1]}
-                previous={lines[index - 1]}
-                quoted={byId(line.replyTo)}
-              />
-            ))}
+            {drawnLines(lines).map(
+              ({ message: line, previous, next, album }) => (
+                <MessageLine
+                  actions={actionsOf(line)}
+                  album={albumOf(album, (photo) => ({
+                    actions: actionsOf(photo),
+                    lifted: selected === photo.id,
+                  }))}
+                  flash={(album ?? [line]).some(({ id }) => id === flash)}
+                  hidden={false}
+                  key={line.id}
+                  lifted={selected === line.id}
+                  message={line}
+                  onSelect={() => {
+                    setSelected(line.id);
+                  }}
+                  next={next}
+                  previous={previous}
+                  quoted={byId(line.replyTo)}
+                />
+              )
+            )}
           </ol>
         </ChatContext>
         <ChatEdge edge="foot" list={listRef}>

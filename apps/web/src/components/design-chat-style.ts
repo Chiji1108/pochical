@@ -581,30 +581,49 @@ export const chatStyle = {
   // A photo line on its own; the photo is rounded like the shared days'
   // card.
   photo: css({ display: "flex", maxWidth: "100%" }),
-  photoButton: css({
-    bg: "transparent",
-    border: 0,
-    position: "relative",
-    // The focus ring follows the photo's corners.
-    borderRadius: "lg",
-    display: "block",
-    padding: 0,
-    // A long press opens the actions, not the phone's own callout.
-    userSelect: "none",
-    WebkitTouchCallout: "none",
+  photoButton: cva({
+    base: {
+      bg: "transparent",
+      border: 0,
+      position: "relative",
+      // The focus ring follows the photo's corners.
+      borderRadius: "lg",
+      display: "block",
+      padding: 0,
+      // A long press opens the actions, not the phone's own callout.
+      userSelect: "none",
+      WebkitTouchCallout: "none",
+    },
+    // In an album, its cell's whole, the grid rounding the corners.
+    variants: {
+      cell: { true: { borderRadius: 0, height: "100%", width: "100%" } },
+    },
   }),
   // Where a photo is: its blur (ThumbHash) or grey while it comes. A
   // pale photo, like a paper roster, keeps its edge on the ground, and
   // inside a reply's bubble the same, so it reads as the photo it is.
-  photoPlace: css({
-    backgroundSize: "cover",
-    bgColor: "fill.tertiary",
-    borderRadius: "lg",
-    display: "block",
-    maxWidth: "100%",
-    outline: "1px solid token(colors.border.default)",
-    outlineOffset: "-1px",
-    overflow: "hidden",
+  photoPlace: cva({
+    base: {
+      backgroundSize: "cover",
+      bgColor: "fill.tertiary",
+      borderRadius: "lg",
+      display: "block",
+      maxWidth: "100%",
+      outline: "1px solid token(colors.border.default)",
+      outlineOffset: "-1px",
+      overflow: "hidden",
+    },
+    // In an album the grid has the edge.
+    variants: {
+      cell: {
+        true: {
+          borderRadius: 0,
+          height: "100%",
+          outline: "none",
+          width: "100%",
+        },
+      },
+    },
   }),
   photoImage: css({
     display: "block",
@@ -622,25 +641,29 @@ export const chatStyle = {
   // WhatsApp sets one.
   photoInBubble: css({ margin: "8px 4px 4px" }),
   // A photo with what lies over it: ↻, or the ring of one going up.
-  photoFrame: css({
-    borderRadius: "lg",
-    display: "block",
-    position: "relative",
+  photoFrame: cva({
+    base: { borderRadius: "lg", display: "block", position: "relative" },
+    variants: {
+      cell: { true: { borderRadius: 0, height: "100%", width: "100%" } },
+    },
   }),
   // A photo that could not be fetched: the whole of it a button fetching
   // it again, ↻ in its middle, as Signal and Telegram mark one.
-  photoRetry: css({
-    _focusVisible: { outline: "2px solid", outlineColor: "accent.default" },
-    alignItems: "center",
-    bg: "transparent",
-    border: 0,
-    borderRadius: "lg",
-    cursor: "pointer",
-    display: "flex",
-    inset: 0,
-    justifyContent: "center",
-    padding: 0,
-    position: "absolute",
+  photoRetry: cva({
+    base: {
+      _focusVisible: { outline: "2px solid", outlineColor: "accent.default" },
+      alignItems: "center",
+      bg: "transparent",
+      border: 0,
+      borderRadius: "lg",
+      cursor: "pointer",
+      display: "flex",
+      inset: 0,
+      justifyContent: "center",
+      padding: 0,
+      position: "absolute",
+    },
+    variants: { cell: { true: { borderRadius: 0 } } },
   }),
   // ↻, or the ring going up with × in it, on the photo's shade.
   photoMark: css({
@@ -671,13 +694,57 @@ export const chatStyle = {
   }),
   // A photo going up: dimmed, with a ring filling as it goes, as LINE
   // draws one.
-  uploading: css({
+  uploading: cva({
+    base: {
+      alignItems: "center",
+      bg: "media.dim",
+      borderRadius: "lg",
+      display: "flex",
+      inset: 0,
+      justifyContent: "center",
+      position: "absolute",
+    },
+    variants: { cell: { true: { borderRadius: 0 } } },
+  }),
+  // Photos sent at once, as one grid with no bubble (spec/chat.md,
+  // Albums): rows 2 apart, its photos 2 apart in them, the whole rounded
+  // with a hairline edge as a photo is.
+  album: css({
+    borderRadius: "lg",
+    display: "flex",
+    flexDirection: "column",
+    flexShrink: 0,
+    gap: "2px",
+    maxWidth: "100%",
+    outline: "1px solid token(colors.border.default)",
+    outlineOffset: "-1px",
+    overflow: "hidden",
+  }),
+  albumRow: css({ display: "flex", gap: "2px" }),
+  // Its ! in red, as Messages marks one not sent, clear on any photo.
+  albumFailedMark: css({
+    bg: "danger.fill",
+    borderRadius: "full",
+    color: "danger.onFill",
+    display: "flex",
+  }),
+  albumCell: css({
+    display: "block",
+    flex: 1,
+    minWidth: 0,
+    position: "relative",
+  }),
+  // A photo of an album that could not be sent: its ! over it, the whole
+  // of it the button, as its time has no room beside each.
+  albumFailed: css({
     alignItems: "center",
     bg: "media.dim",
-    borderRadius: "lg",
+    border: 0,
+    cursor: "pointer",
     display: "flex",
     inset: 0,
     justifyContent: "center",
+    padding: 0,
     position: "absolute",
   }),
   uploadRing: css({
@@ -724,7 +791,11 @@ export const chatStyle = {
       gap: "8px",
       listStyle: "none",
       margin: 0,
+      // Ten photos are wider than the capsule: they scroll across, the
+      // room around them keeping each × in sight.
+      overflowX: "auto",
       padding: "12px 12px 4px",
+      scrollbarWidth: "none",
     },
     // Under a strip, nearer to it.
     variants: { below: { true: { paddingTop: "8px" } } },

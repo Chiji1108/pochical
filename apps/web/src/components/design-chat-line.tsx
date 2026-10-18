@@ -12,6 +12,7 @@ import {
 import type { CSSProperties, ReactNode } from "react";
 import { cx } from "styled-system/css";
 
+import { albumsOf } from "../lib/chat-messages";
 import {
   firstLink,
   inviteCodeOf,
@@ -30,10 +31,16 @@ import {
   DayCard,
   InviteCard,
   LinkCard,
+  PhotoAlbum,
   PhotoLine,
   ReactionPill,
 } from "./design-chat-cards";
-import type { ChatPhoto, InviteLook, Upload } from "./design-chat-cards";
+import type {
+  AlbumCell,
+  ChatPhoto,
+  InviteLook,
+  Upload,
+} from "./design-chat-cards";
 import { Bubble, ChatItem, LargeEmoji, LineFrame } from "./design-chat-parts";
 import { PollCard } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
@@ -102,6 +109,71 @@ export const photosOf = (
       : []
   );
 
+// A chat's lines as they are drawn, each with the lines around it: an
+// album as its first line holding them all, unless a line of it is
+// folded away (a blocked member's), when each is drawn alone.
+export type DrawnLine = {
+  message: Message;
+  previous?: Message;
+  next?: Message;
+  album?: Message[];
+};
+
+export function drawnLines(
+  messages: Message[],
+  folded: (message: Message) => boolean = () => false
+): DrawnLine[] {
+  // Each album by its first line.
+  const albums = new Map<string, Message[]>();
+  for (const ids of albumsOf(messages)) {
+    const lines = messages.filter((message) => ids.includes(message.id));
+    const [first] = lines;
+    if (first && !lines.some(folded)) {
+      albums.set(first.id, lines);
+    }
+  }
+  const inAlbums = new Set(
+    [...albums.values()].flatMap((lines) => lines.slice(1).map(({ id }) => id))
+  );
+  return messages.flatMap((message, index) => {
+    if (inAlbums.has(message.id)) {
+      return [];
+    }
+    const album = albums.get(message.id);
+    return [
+      {
+        album,
+        message,
+        next: messages[index + (album?.length ?? 1)],
+        previous: messages[index - 1],
+      },
+    ];
+  });
+}
+
+// An album's photos as MessageLine draws them, each with what its chat
+// gives its line.
+export const albumOf = (
+  lines: Message[] | undefined,
+  cellOf: (line: Message) => Omit<AlbumCell, "anchor" | "key" | "photo">
+) =>
+  lines && {
+    cells: lines.flatMap((line, index) =>
+      line.photo
+        ? [
+            {
+              ...cellOf(line),
+              // The first's place is the whole album's.
+              anchor: index === 0 ? undefined : `message-${line.id}`,
+              key: line.id,
+              photo: line.photo,
+            },
+          ]
+        : []
+    ),
+    lines,
+  };
+
 export const ChatContext = createContext<ChatScope | undefined>(undefined);
 
 function useChatScope() {
@@ -143,6 +215,7 @@ export function MessageLine({
   flash,
   lifted,
   upload,
+  album,
   actions,
   onSelect,
   onDecide = nothing,
@@ -166,6 +239,9 @@ export function MessageLine({
   // Its actions are open over it.
   lifted: boolean;
   upload?: Upload;
+  // The album it starts, drawn here as one with its lines after it
+  // (albumsOf); `next` is then the line after the album.
+  album?: { lines: Message[]; cells: AlbumCell[] };
   actions: LineActions;
   // Opens its actions, from a card's long press.
   onSelect: () => void;
@@ -255,6 +331,23 @@ export function MessageLine({
       </ChatItem>
     );
   }
+  // An album's time is its last photo's, beside it, held back while any
+  // of its photos goes up; a quoted album is lifted whole, as its bubble
+  // clips the photo held.
+  const timed = album?.lines.at(-1) ?? message;
+  const going = album
+    ? album.cells.some((cell) => cell.upload === "sending")
+    : upload !== undefined;
+  const failedBeside = upload === "failed" && !album;
+  const notSent = album
+    ? album.cells.some((cell) => cell.upload === "failed")
+    : upload === "failed";
+  const pinned = (album?.lines ?? [message]).some(
+    (line) => line.pinned !== undefined
+  );
+  const rowLifted = album
+    ? quoted !== undefined && album.cells.some((cell) => cell.lifted)
+    : lifted;
   const face =
     member &&
     (faces?.[member.id] ?? <Avatar member={member} size={chatAvatarSize} />);
@@ -288,7 +381,7 @@ export function MessageLine({
       <SwipeToReply
         className={cx(
           chatStyle.bubbleRow({ mine }),
-          lifted && messageActions.lifted
+          rowLifted && messageActions.lifted
         )}
         // Not while it goes up, nor once it could not.
         disabled={upload !== undefined}
@@ -297,7 +390,20 @@ export function MessageLine({
           actions.onReply();
         }}
       >
-        {message.photo && (
+        {album && (
+          <PhotoAlbum
+            among={photos}
+            cells={album.cells}
+            fetchFails={fetchFails ?? false}
+            label={photoLabel(member)}
+            mine={actions.mine}
+            onSave={() => {
+              toast("写真を保存しました");
+            }}
+            quote={quote}
+          />
+        )}
+        {!album && message.photo && (
           <PhotoLine
             actions={actions}
             among={photos}
@@ -448,7 +554,7 @@ export function MessageLine({
             )}
           </Bubble>
         )}
-        {upload === "failed" && (
+        {failedBeside && (
           <button
             aria-label="送れませんでした。押すと再送か削除"
             className={chatStyle.failed}
@@ -458,28 +564,26 @@ export function MessageLine({
             <CircleAlert aria-hidden="true" size={22} />
           </button>
         )}
-        {upload !== "failed" && (
+        {!failedBeside && (
           <small className={chatStyle.time}>
-            {(message.pinned !== undefined || message.edited) && (
+            {(pinned || message.edited) && (
               <span className={chatStyle.timeNote({ mine })}>
-                {message.pinned !== undefined && (
-                  <Pin aria-label="ピン留め中" role="img" size={11} />
-                )}
+                {pinned && <Pin aria-label="ピン留め中" role="img" size={11} />}
                 {message.edited && "編集済み"}
               </span>
             )}
             {/* Left to the next line, or while its photo goes up, its
                 room is kept, so the bubble is as wide either way
                 (spec/chat.md, In a message). */}
-            {upload === undefined && showsTime(message, next) ? (
-              message.time
+            {!going && showsTime(timed, next) ? (
+              timed.time
             ) : (
-              <span className={chatStyle.timeKept}>{message.time}</span>
+              <span className={chatStyle.timeKept}>{timed.time}</span>
             )}
           </small>
         )}
       </SwipeToReply>
-      {upload === "failed" && (
+      {notSent && (
         <small className={chatStyle.failedNote}>送れませんでした</small>
       )}
       {message.days && (
