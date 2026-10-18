@@ -15,7 +15,7 @@ const round = (value: number) => Math.round(value * 100) / 100;
 // and curves back in to the side. One outline, never a tail laid on a
 // corner (spec/chat.md, In a message). Drawn as one's own, its tail at
 // the top right; others' are mirrored.
-export function bubblePath(
+function bubblePath(
   width: number,
   height: number,
   mine: boolean,

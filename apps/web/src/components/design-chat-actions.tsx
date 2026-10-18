@@ -44,6 +44,7 @@ export function mentionAt(target: EventTarget) {
 // menu opens under.
 export type LinkMenuAt = { url: string; element: HTMLElement };
 
+// The link under a press in a message's words, if it was on one.
 export function linkElementAt(
   target: EventTarget | null
 ): LinkMenuAt | undefined {
@@ -56,6 +57,19 @@ export function linkElementAt(
 }
 
 // 開く and コピー for a link long pressed in a message, under the link.
+// コピー, from a line's menu or a link's, said in a toast.
+function useCopy() {
+  const toast = useContext(ToastContext);
+  return async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast("コピーしました");
+    } catch {
+      toast("コピーできませんでした", "problem");
+    }
+  };
+}
+
 export function LinkMenu({
   at,
   onClose,
@@ -65,7 +79,7 @@ export function LinkMenu({
   onClose: () => void;
   onOpen: (url: string) => void;
 }) {
-  const toast = useContext(ToastContext);
+  const copy = useCopy();
   return (
     <PhonePopover
       label="リンク"
@@ -97,27 +111,13 @@ export function LinkMenu({
         onClick={() => {
           const url = at?.url ?? "";
           onClose();
-          navigator.clipboard
-            .writeText(url)
-            .then(() => {
-              toast("コピーしました");
-            })
-            .catch(() => {
-              toast("コピーできませんでした", "problem");
-            });
+          copy(url).catch(() => undefined);
         }}
       >
         リンクをコピー
       </PopoverMenuItem>
     </PhonePopover>
   );
-}
-
-// The link under a tap in a message's words, if it was on one.
-export function linkAt(target: EventTarget) {
-  return target instanceof Element
-    ? target.closest<HTMLElement>("[data-link]")?.dataset.link
-    : undefined;
 }
 
 // The apps open a link in the system's browser sheet (SFSafariViewController,
@@ -246,7 +246,7 @@ export function MessageActions({
   children: ReactElement;
 }) {
   const phone = useContext(PhoneContext);
-  const toast = useContext(ToastContext);
+  const copy = useCopy();
   // Focus lands on the whole, as in a sheet, not on 👍 with a ring.
   const contentRef = useRef<HTMLDivElement>(null);
   // The message itself, whatever element it is.
@@ -269,15 +269,6 @@ export function MessageActions({
   const closeThen = (action: () => void) => {
     after.current = action;
     onOpenChange(false);
-  };
-  const copy = async (value: string) => {
-    onOpenChange(false);
-    try {
-      await navigator.clipboard.writeText(value);
-      toast("コピーしました");
-    } catch {
-      toast("コピーできませんでした", "problem");
-    }
   };
   return (
     <Popover.Root
@@ -388,6 +379,7 @@ export function MessageActions({
                 <PopoverMenuItem
                   icon={<Copy aria-hidden="true" size={18} />}
                   onClick={() => {
+                    onOpenChange(false);
                     copy(text).catch(() => undefined);
                   }}
                 >

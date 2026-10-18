@@ -9,10 +9,10 @@ import { drizzle } from "drizzle-orm/d1";
 import { revokeApple } from "./apple";
 import { account } from "./db/auth-schema";
 import { invites, supportChats, supportSlack } from "./db/schema";
-import { supportPlace } from "./group-chat";
 import { deletePhotosUnder } from "./photos";
 import { getAuth } from "./session";
 import { tellStaffOfDeletion } from "./slack";
+import { supportPlace } from "./support-lines";
 
 /**
  * The Apple account the user signs in with, whose tokens must be revoked:

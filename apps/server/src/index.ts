@@ -2,7 +2,6 @@ import { createConnectRouter } from "@connectrpc/connect";
 import { createFetchHandler } from "@connectrpc/connect/protocol";
 
 import { registerChatService } from "./chat-service";
-import { supportPlace } from "./group-chat";
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
 import {
@@ -23,6 +22,7 @@ import { tooManySignIns } from "./rate-limits";
 import { getAuth, sessionUser } from "./session";
 import type { SessionUser } from "./session";
 import { slackEvents } from "./slack-events";
+import { supportPlace } from "./support-lines";
 import { SESSION_HEADER, USER_HEADER } from "./sync-socket";
 import { registerSystemService } from "./system-service";
 import { registerUserService } from "./user-service";

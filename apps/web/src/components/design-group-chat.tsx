@@ -25,19 +25,14 @@ import {
   lastSharedOf,
   pinsOf,
 } from "../lib/chat-messages";
-import {
-  inviteCodeOf,
-  mentionsOf,
-  plainText,
-  withMentions,
-} from "../lib/chat-text";
+import { inviteCodeOf, plainText, withMentions } from "../lib/chat-text";
 import { useUser } from "../lib/design-user-store";
 import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
 import { BubbleOutline } from "./design-chat-bubble";
 import { uploadMilliseconds } from "./design-chat-cards";
 import type { InviteLook, Upload } from "./design-chat-cards";
-import { Composer, useComposer } from "./design-chat-composer";
+import { Composer, noOne, useComposer } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
@@ -50,8 +45,9 @@ import {
 import { PinBar } from "./design-chat-pins";
 import { DecidePollSheet } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
-import { blockedLine, summaryOf, unsentLine } from "./design-chat-summary";
+import { lastLineOf } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
+import { unreadMentions } from "./design-group-data";
 import type {
   Chat,
   ChatDraft,
@@ -75,8 +71,6 @@ import { IconButton, Screen } from "./design-ui";
 export type PhotoSend = "ok" | "fails";
 export type PhotoFetch = "ok" | "fails";
 
-const noMembers: Member[] = [];
-
 // A member's name by id, for a mention: @ and their name in the group,
 // yours too (the others see it), not 自分.
 const nameIn = (members: Member[], yours: string) => (id: string) => {
@@ -90,35 +84,6 @@ function useYourName(group: Omit<Group, "members">) {
     group,
     useUser((state) => state.profile)
   ).name;
-}
-
-function lastLine(
-  chat: Chat,
-  members: Member[],
-  yours: string,
-  blocked: string[]
-) {
-  const last = chat.messages.at(-1);
-  if (!last) {
-    return;
-  }
-  const who = members.find((member) => member.id === last.from);
-  if (last.notice) {
-    return last.notice;
-  }
-  if (last.unsent) {
-    return unsentLine(who);
-  }
-  if (blocked.includes(last.from)) {
-    return blockedLine;
-  }
-  let text = summaryOf(last, nameIn(members, yours));
-  if (last.days || (last.poll && !last.poll.decided)) {
-    text = `${text}を共有しました`;
-  } else if (last.photo) {
-    text = "写真を送りました";
-  }
-  return who?.me ? `自分：${text}` : text;
 }
 
 // A chat's title in its header: the name, the mute mark, and for a group
@@ -161,12 +126,7 @@ export function ChatRow({
   muted?: boolean;
 }) {
   const yours = useYourName(group);
-  const preview = lastLine(
-    chat,
-    group.members,
-    yours,
-    useUser((state) => state.blocked)
-  );
+  const blocked = useUser((state) => state.blocked);
   const last = chat.messages.at(-1);
   // What was being written, as the chat's lines are now (spec/chat.md,
   // Drafts).
@@ -176,12 +136,19 @@ export function ChatRow({
       draft={draft && plainText(draft.text, nameIn(group.members, yours))}
       icon={icon}
       label={label}
-      mentioned={chat.messages
-        .slice(chat.messages.length - chat.unread)
-        .some((message) => mentionsOf(message.text ?? "").includes("me"))}
+      mentioned={unreadMentions(chat) > 0}
       muted={muted}
       onOpen={onOpen}
-      preview={preview ?? "まだメッセージはありません"}
+      preview={
+        last
+          ? lastLineOf(
+              last,
+              group.members.find((member) => member.id === last.from),
+              nameIn(group.members, yours),
+              blocked.includes(last.from)
+            )
+          : "まだメッセージはありません"
+      }
       time={last?.time}
       unread={chat.unread}
     />
@@ -207,7 +174,7 @@ export function ChatPage({
   onOpenDay,
   onMember,
   backLabel,
-  formerMembers = noMembers,
+  formerMembers = noOne,
   gone,
   attach,
   photoSend = "ok",
@@ -279,6 +246,8 @@ export function ChatPage({
   const [failedOpen, setFailedOpen] = useState<string>();
   // Blocked members' lines shown at a tap.
   const [revealed, setRevealed] = useState<string[]>([]);
+  const folded = (message: Message) =>
+    blocked.includes(message.from) && !revealed.includes(message.id);
   const { failedCount, stop, upload, uploads } = usePhotoUploads(photoSend);
   const [sharing, setSharing] = useState(false);
   const { answerSoon, typingMember } = useTypingSoon(group, chat.messages);
@@ -315,7 +284,7 @@ export function ChatPage({
     attach,
     kept: opened,
     // An @ lists the others in the group chat only.
-    members: isGroup ? group.members : noMembers,
+    members: isGroup ? group.members : noOne,
     mentionName,
   });
   const {
@@ -378,6 +347,14 @@ export function ChatPage({
     },
     []
   );
+  const openUrl = (url: string) => {
+    const code = inviteCodeOf(url);
+    if (code) {
+      onInvite(code);
+    } else {
+      openLink(url);
+    }
+  };
   const pins = pinsOf(chat.messages);
   const [pinsOpen, setPinsOpen] = useState(false);
   const replying = byId(replyTo);
@@ -393,14 +370,13 @@ export function ChatPage({
     onLinkMenu: setLinkMenu,
     onMember,
     onOpenDay,
+    openUrl,
     people,
     // Not a blocked member's folded away, nor one of yours still going up.
     photos: photosOf(
       chat.messages,
       writerOf,
-      (message) =>
-        (!blocked.includes(message.from) || revealed.includes(message.id)) &&
-        uploads[message.id] === undefined
+      (message) => !folded(message) && uploads[message.id] === undefined
     ),
     writerOf,
   };
@@ -475,21 +451,19 @@ export function ChatPage({
           </IconMenu>
         )}
       </header>
-      {pins[0] && (
-        <PinBar
-          nameOf={mentionName}
-          onJump={(id) => {
-            setPinsOpen(false);
-            jumpTo(id);
-          }}
-          onOpenChange={setPinsOpen}
-          onUnpin={(id) => {
-            pin(id, false);
-          }}
-          open={pinsOpen}
-          pins={pins}
-        />
-      )}
+      <PinBar
+        nameOf={mentionName}
+        onJump={(id) => {
+          setPinsOpen(false);
+          jumpTo(id);
+        }}
+        onOpenChange={setPinsOpen}
+        onUnpin={(id) => {
+          pin(id, false);
+        }}
+        open={pinsOpen}
+        pins={pins}
+      />
       <div className={chatStyle.lines}>
         <ChatContext value={scope}>
           <ol
@@ -512,7 +486,7 @@ export function ChatPage({
                 <MessageLine
                   actions={actionsOf(message)}
                   flash={flash === message.id}
-                  hidden={blocked.includes(message.from)}
+                  hidden={folded(message)}
                   lifted={selected === message.id}
                   message={message}
                   onDecide={() => {
@@ -674,14 +648,7 @@ export function ChatPage({
         onClose={() => {
           setLinkMenu(undefined);
         }}
-        onOpen={(url) => {
-          const code = inviteCodeOf(url);
-          if (code) {
-            onInvite(code);
-          } else {
-            openLink(url);
-          }
-        }}
+        onOpen={openUrl}
       />
       <ReportSheet
         member={writerOf(byId(reporting)?.from)}

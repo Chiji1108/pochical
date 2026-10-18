@@ -44,8 +44,7 @@ struct ChatSummaryRequest: FetchKeyRequest, Hashable {
     let writers = try Chats.writers(in: groupID, db: db)
     return Value(
       summary: try Chats.summary(of: threadID, in: groupID, me: me, db: db),
-      names: Dictionary(
-        writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last }),
+      names: writers.shownNames,
       deleted: Set(writers.filter(\.deleted).map(\.userID)))
   }
 }

@@ -142,9 +142,7 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   /// composer would, the line and those before it read, and waits until it
   /// is sent while iOS gives the time (spec/chat.md, Notifications).
   private func reply(_ text: String, to line: NotifiedLine) async {
-    // Cut to the limit, as pasted text is (spec/text-limits.md).
-    let words = String(
-      text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(TextLimits.chatMessage))
+    let words = sentWords(text)
     guard !words.isEmpty, let replies else { return }
     var read = Pochical_V1_ChatRead()
     read.threadID = line.threadID
@@ -152,9 +150,6 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     var send = Pochical_V1_ChatSend()
     send.threadID = line.threadID
     send.text = words
-    if ChatPlace.rules(of: line.groupID).sendsDevice {
-      send.device = AppDevice.words
-    }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     // The app may be woken for it after letting go of the database's
     // locks, or be letting go of them as it is: it holds them until sent,
@@ -167,7 +162,9 @@ nonisolated struct OpenedChat: Hashable, Sendable {
       Task { await replies.sockets.stop() }
     }
     NotificationCenter.default.post(name: Database.resumeNotification, object: nil)
-    let edits: [Pochical_V1_ChatEdit.OneOf_Kind] = [.read(read), .send(send)]
+    let edits: [Pochical_V1_ChatEdit.OneOf_Kind] = [
+      .read(read), AppDevice.stamped(.send(send), in: line.groupID),
+    ]
     let groupID = line.groupID
     try? await replies.database.write { db in
       for edit in edits {

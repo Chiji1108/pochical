@@ -13,8 +13,8 @@ import type {
   DayField,
   ServerFrame,
 } from "../src/gen/pochical/v1/sync_pb";
-import { supportPlace } from "../src/group-chat";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
+import { supportPlace } from "../src/support-lines";
 import { call, openSocket, signInAnonymously, userIdOf } from "./helpers";
 
 // Sync sockets in tests: their frames as they arrive, and the edits sent

@@ -20,12 +20,10 @@ import {
   textParts,
 } from "../lib/chat-text";
 import {
-  linkAt,
   linkElementAt,
   mentionAt,
   MessageActions,
   messageActions,
-  openLink,
 } from "./design-chat-actions";
 import type { LineActions, LinkMenuAt } from "./design-chat-actions";
 import {
@@ -68,6 +66,9 @@ export type ChatScope = {
   // any other, opened in the browser.
   inviteOf?: (code: string) => InviteLook | undefined;
   onInvite?: (code: string) => void;
+  // Opens a link tapped or long pressed: an invitation in the app where
+  // the chat has onInvite, else in the browser.
+  openUrl: (url: string) => void;
   onMember?: (member: Member) => void;
   onJump: (id: string) => void;
   onLinkMenu: (at: LinkMenuAt) => void;
@@ -80,6 +81,8 @@ export type ChatScope = {
   fetchFails?: boolean;
 };
 
+const photoLabel = (writer?: Member) => `${writer?.name ?? ""}が送った写真`;
+
 // The photos a chat's lines show, in their order: sent, not taken back,
 // and not a blocked member's folded away.
 export const photosOf = (
@@ -91,7 +94,7 @@ export const photosOf = (
     message.photo && !message.unsent && shown(message)
       ? [
           {
-            label: `${writerOf(message.from)?.name ?? ""}が送った写真`,
+            label: photoLabel(writerOf(message.from)),
             mine: message.from === "me",
             photo: message.photo,
           },
@@ -156,7 +159,7 @@ export function MessageLine({
   next?: Message;
   // The line it answers.
   quoted?: Message;
-  // Written by someone you blocked: folded away until shown.
+  // Written by someone you blocked, and not shown yet: folded away.
   hidden: boolean;
   // Rung, as a pin or a quote jumped to it.
   flash: boolean;
@@ -189,6 +192,7 @@ export function MessageLine({
     mentionName,
     inviteOf,
     onInvite,
+    openUrl,
     onMember,
     onJump,
     onLinkMenu,
@@ -205,8 +209,6 @@ export function MessageLine({
       foldedIn();
     }
   }, [folded]);
-  // A blocked member's line, shown for now.
-  const [revealed, setRevealed] = useState(false);
   const toast = useContext(ToastContext);
   const member = writerOf(message.from);
   const current = member !== undefined && members.includes(member);
@@ -243,17 +245,10 @@ export function MessageLine({
       </ChatItem>
     );
   }
-  if (hidden && !revealed) {
+  if (hidden) {
     return (
       <ChatItem day={day}>
-        <button
-          className={chatStyle.blocked}
-          onClick={() => {
-            setRevealed(true);
-            onReveal();
-          }}
-          type="button"
-        >
+        <button className={chatStyle.blocked} onClick={onReveal} type="button">
           {blockedLine}
           <span className={chatStyle.blockedShow}>表示</span>
         </button>
@@ -309,7 +304,7 @@ export function MessageLine({
             fetchFails={fetchFails}
             onStop={onStopUpload}
             upload={upload}
-            label={`${member?.name ?? ""}が送った写真`}
+            label={photoLabel(member)}
             mine={actions.mine}
             onSave={() => {
               toast("写真を保存しました");
@@ -392,15 +387,10 @@ export function MessageLine({
                   // A tap on a link opens it rather than the
                   // actions, as in the chat apps.
                   onClickCapture={(event) => {
-                    const url = linkAt(event.target);
+                    const url = linkElementAt(event.target)?.url;
                     if (url) {
                       event.preventDefault();
-                      const code = inviteCodeOf(url);
-                      if (code !== undefined && onInvite) {
-                        onInvite(code);
-                      } else {
-                        openLink(url);
-                      }
+                      openUrl(url);
                       return;
                     }
                     // A mention opens that member's profile, as
@@ -561,7 +551,7 @@ function BubbleQuote({
 }
 
 // A message's words with its links and mentions marked. A tap on a link
-// opens it (see linkAt), on a mention that member's profile: they are not
+// opens it (see linkElementAt), on a mention that member's profile: they are not
 // links of their own, as the whole message is the button that opens its
 // actions; the page under it and リンクをコピー reach a link without that
 // tap.

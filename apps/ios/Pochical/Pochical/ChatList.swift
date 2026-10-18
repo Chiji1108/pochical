@@ -247,14 +247,14 @@ struct ChatRow<Icon: View>: View {
   /// (spec/chat.md, Drafts).
   private var previewText: Text {
     guard let draft = chat.summary.draft else { return Text(preview) }
-    let words = plainText(draft.text, nameOf: { chat.names[$0] ?? "メンバー" })
+    let words = plainText(draft.text, nameOf: { memberName($0, in: chat.names) })
     return Text("\(Text("下書き：").foregroundStyle(colors.dangerDefault))\(words)")
   }
 
   /// The latest line as one line of words: 自分： before one's own.
   private var preview: String {
     let summary = chat.summary
-    let nameOf = { (id: String) in chat.names[id] ?? "メンバー" }
+    let nameOf = { (id: String) in memberName(id, in: chat.names) }
     if let waiting = summary.waiting, waiting.photo != nil {
       return "自分：写真を送りました"
     }
@@ -264,7 +264,8 @@ struct ChatRow<Icon: View>: View {
     guard let last = summary.last else { return "まだメッセージはありません" }
     if let notice = last.notice {
       return notice.words(
-        by: chat.names[last.authorID] ?? "メンバー", subject: chat.names[notice.subjectID] ?? "メンバー")
+        by: memberName(last.authorID, in: chat.names),
+        subject: memberName(notice.subjectID, in: chat.names))
     }
     if last.unsent {
       return unsentLine(

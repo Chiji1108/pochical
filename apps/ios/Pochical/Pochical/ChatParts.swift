@@ -1,9 +1,10 @@
 import PochicalDesign
 import PochicalKit
+import PochicalProto
 import SwiftUI
 
 // Small pieces chats share: their times and days, an unsent line's
-// words, and the count of unread lines.
+// words, the count of unread lines, and what goes with a line sent.
 
 /// How many lines are unread, in the badge's red.
 struct UnreadCount: View {
@@ -21,6 +22,12 @@ struct UnreadCount: View {
       .background(colors.dangerFill, in: Capsule())
       .accessibilityLabel("\(count)件の未読")
   }
+}
+
+/// A member's name in a chat by id, from the chat's `names` as the group
+/// shows them now: メンバー for someone it does not know.
+func memberName(_ id: String, in names: [String: String]) -> String {
+  names[id] ?? "メンバー"
 }
 
 /// The line a line taken back leaves (spec/chat.md, Editing and unsending).
@@ -89,4 +96,22 @@ enum AppDevice {
     let system = UIDevice.current
     return "ポチカル \(version)・\(system.model)・\(system.systemName) \(system.systemVersion)"
   }
+
+  /// A chat edit as it goes from the place `placeID`: each line with the
+  /// app's version and the device where the place keeps them (the
+  /// support chat's head says so).
+  static func stamped(
+    _ kind: Pochical_V1_ChatEdit.OneOf_Kind, in placeID: String
+  ) -> Pochical_V1_ChatEdit.OneOf_Kind {
+    guard ChatPlace.rules(of: placeID).sendsDevice, case .send(var send) = kind else { return kind }
+    send.device = words
+    return .send(send)
+  }
+}
+
+/// A message's words as they are sent, from the composer or a
+/// notification's answer: without the space around them, cut to the limit
+/// (spec/text-limits.md).
+func sentWords(_ text: String) -> String {
+  String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(TextLimits.chatMessage))
 }

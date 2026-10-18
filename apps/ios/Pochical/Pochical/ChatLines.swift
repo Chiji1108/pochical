@@ -14,11 +14,11 @@ enum ChatItem: Identifiable, Hashable {
 
   var id: String {
     switch self {
-    case .day(let day): "day-\(day.key)"
-    case .unread: "unread"
-    case .line(let line, _): "line-\(line.opID)"
+    case .day(let day): ChatItemID.day(day)
+    case .unread: ChatItemID.unread
+    case .line(let line, _): ChatItemID.line(line.opID)
     // As the group's line will be, so it stays in place once taken.
-    case .waiting(let line, _): "line-\(line.opID)"
+    case .waiting(let line, _): ChatItemID.line(line.opID)
     }
   }
 
@@ -32,6 +32,31 @@ enum ChatItem: Identifiable, Hashable {
   }
 }
 
+/// The ids of a chat's items, as its lines lay them out: a line's, by its
+/// opID, is what the lines read and seen are counted by.
+enum ChatItemID {
+  /// The top item while earlier lines are to come, which asks for them.
+  static let earlier = "earlier"
+  /// The place's head, over its first line.
+  static let head = "head"
+  static let unread = "unread"
+  private static let linePrefix = "line-"
+  private static let typingPrefix = "typing-"
+
+  static func day(_ day: Day) -> String { "day-\(day.key)" }
+
+  static func line(_ opID: String) -> String { linePrefix + opID }
+
+  static func isLine(_ id: String) -> Bool { id.hasPrefix(linePrefix) }
+
+  /// Someone writing now, under the latest line.
+  static func typing(_ userID: String) -> String { typingPrefix + userID }
+
+  /// Who is writing, for someone writing's item; nil for any other.
+  static func typer(of id: String) -> String? {
+    id.hasPrefix(typingPrefix) ? String(id.dropFirst(typingPrefix.count)) : nil
+  }
+}
 
 /// What a chat's lines show for a moment, beyond what they are: the line
 /// ringed as it is gone to, and the line whose bubble is lifted over the
@@ -152,7 +177,7 @@ struct LineView: View {
 
   /// A member's name in the group as it is now, for their mentions.
   private func nameOf(_ id: String) -> String {
-    names[id] ?? "メンバー"
+    memberName(id, in: names)
   }
 
   /// What its words take to draw: kept by the chat's lines for this line
@@ -161,7 +186,7 @@ struct LineView: View {
   /// which they leave alone; one of the same line drawn before its names
   /// changed makes its own.
   private var drawing: LineDrawing {
-    guard let kept, kept.id == "line-\(lineID)" else {
+    guard let kept, kept.id == ChatItemID.line(lineID) else {
       return LineDrawing(text: text, names: names)
     }
     if let drawing = kept.drawing, drawing.text == text, drawing.names == names { return drawing }
@@ -205,15 +230,7 @@ struct LineView: View {
         }
         HStack(alignment: .bottom, spacing: 8) {
           if mine { voicedMeta }
-          LineContent(
-            text: text, drawing: drawing, preview: preview, days: days, members: members,
-            poll: poll, photo: photo,
-            quote: quote, groupID: groupID, mine: mine, first: first,
-            waiting: waiting && !failed, nameOf: nameOf, onOpenQuote: { act(.openQuote) },
-            onStopSending: { act(.stopSending) },
-            unfolded: unfolded, onUnfold: { act(.unfold) },
-            onVote: { act(.vote($0, $1)) }, onDecide: { act(.decide) }
-          )
+          actedBubble
           // Rung for a moment when gone to from the pins, as /design's
           // flash: a ring just outside the bubble, held, then fading.
           .background {
@@ -266,6 +283,27 @@ struct LineView: View {
     // days or a poll keeps its own parts, the line said first by its time.
     .accessibilityElement(children: .contain)
     .modifier(voice(!carded))
+  }
+
+  /// What the line is drawn as, alone: its bubble lifted over the chat
+  /// while its menu is open, where nothing on it is done.
+  var bubble: LineContent {
+    LineContent(
+      text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
+      quote: quote, groupID: groupID, mine: mine, first: first, waiting: waiting && !failed,
+      nameOf: nameOf, unfolded: unfolded)
+  }
+
+  /// The bubble in the chat, its drawing kept and its parts acting.
+  private var actedBubble: LineContent {
+    var bubble = bubble
+    bubble.drawing = drawing
+    bubble.onOpenQuote = { act(.openQuote) }
+    bubble.onStopSending = { act(.stopSending) }
+    bubble.onUnfold = { act(.unfold) }
+    bubble.onVote = { act(.vote($0, $1)) }
+    bubble.onDecide = { act(.decide) }
+    return bubble
   }
 
   /// Days or a poll on a card, whose days and 行ける VoiceOver goes
@@ -479,9 +517,6 @@ extension View {
   }
 }
 
-/// A line's words in its bubble: others' on the quiet fill, one's own in
-/// the accent, the first of a run with its tail by the writer, dimmed
-/// while it waits to be sent.
 /// The days from one through another.
 struct DaySpan: Hashable {
   let from: Day
@@ -553,6 +588,9 @@ struct LineContent: View {
   }
 }
 
+/// A line's words in its bubble: others' on the quiet fill, one's own in
+/// the accent, the first of a run with its tail by the writer, dimmed
+/// while it waits to be sent.
 struct MessageBubble: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dynamicTypeSize) private var typeSize
@@ -631,11 +669,11 @@ struct MessageBubble: View {
         ? nil : Self.linkedWidth, alignment: .leading)
     .padding(.horizontal, 12)
     .padding(.vertical, 8)
-      .background(
-        mine ? colors.accentFill : colors.fillTertiary,
-        in: BubbleShape(mine: mine, first: first)
-      )
-      .dimmedWhileWaiting(waiting, in: BubbleShape(mine: mine, first: first))
+    .background(
+      mine ? colors.accentFill : colors.fillTertiary,
+      in: BubbleShape(mine: mine, first: first)
+    )
+    .dimmedWhileWaiting(waiting, in: BubbleShape(mine: mine, first: first))
   }
 
   /// The words cut at chatRules.foldLines lines, with 続きを読む.
@@ -695,7 +733,6 @@ struct MessageBubble: View {
     drawing.pieces = (mine, pieces)
     return pieces
   }
-
 }
 
 extension Text {

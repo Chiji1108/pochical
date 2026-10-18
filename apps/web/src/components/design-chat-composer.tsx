@@ -42,9 +42,9 @@ import { IconButton } from "./design-ui";
 type Mention = { id: string; name: string };
 
 // A chat with no one to mention, as the support chat.
-const noOne: Member[] = [];
+export const noOne: Member[] = [];
 
-const nameless = () => "";
+export const nameless = () => "";
 
 // What is being written: the words, the members picked from the @ list,
 // days brought from the shift table, photos chosen, the page of its first
@@ -67,10 +67,11 @@ export function useComposer({
   const [draft, setDraft] = useState(() =>
     kept ? plainText(kept.text, mentionName) : ""
   );
+  // The mentions in words put back in the composer, as if picked.
+  const picksOf = (text: string): Mention[] =>
+    mentionsOf(text).map((id) => ({ id, name: mentionName(id) }));
   // Members picked from the @ list, made mentions as the message is sent.
-  const [picked, setPicked] = useState<Mention[]>(() =>
-    mentionsOf(kept?.text ?? "").map((id) => ({ id, name: mentionName(id) }))
-  );
+  const [picked, setPicked] = useState(() => picksOf(kept?.text ?? ""));
   const [attached, setAttached] = useState(attach);
   const linkPreview = useLinkPreview(draft);
   const chosen = useChosenPhotos();
@@ -104,7 +105,7 @@ export function useComposer({
     const text = message.text ?? "";
     setEditing(message.id);
     setDraft(plainText(text, mentionName));
-    setPicked(mentionsOf(text).map((id) => ({ id, name: mentionName(id) })));
+    setPicked(picksOf(text));
     formRef.current?.querySelector("textarea")?.focus();
   };
   const stopEditing = () => {
@@ -140,6 +141,35 @@ export function useComposer({
 }
 
 export type ComposerState = ReturnType<typeof useComposer>;
+
+// One strip over the composer: the line being changed or answered, the
+// days shared, or a link's page, with × to go without it.
+function ComposerStrip({
+  name,
+  text,
+  thumb,
+  stopLabel,
+  onStop,
+}: {
+  name: string;
+  text: string;
+  thumb?: string;
+  stopLabel: string;
+  onStop: () => void;
+}) {
+  return (
+    <div className={chatStyle.replying}>
+      <span className={chatStyle.quote}>
+        <span className={chatStyle.quoteName}>{name}</span>
+        <span className={chatStyle.quoteText}>{text}</span>
+      </span>
+      {thumb && <img alt="" className={chatStyle.quoteThumb} src={thumb} />}
+      <IconButton glass={false} label={stopLabel} onClick={onStop}>
+        <X aria-hidden="true" size={16} />
+      </IconButton>
+    </div>
+  );
+}
 
 // The foot of the chat: what the next message carries (the line it
 // answers, days, a link's page, photos), the @ list, and the field with
@@ -199,102 +229,56 @@ export function Composer({
       <ImageIcon aria-hidden="true" size={20} />
     </button>
   );
+  // A strip sits over the composer, which the photos chosen go under.
+  const stripped =
+    editingMessage !== undefined ||
+    reply !== undefined ||
+    attached !== undefined ||
+    linkPreview.shown !== undefined;
   return (
     <>
       {editingMessage && (
-        <div className={chatStyle.replying}>
-          <span className={chatStyle.quote}>
-            <span className={chatStyle.quoteName}>メッセージを編集</span>
-            <span className={chatStyle.quoteText}>
-              {summaryOf(editingMessage, mentionName)}
-            </span>
-          </span>
-          <IconButton
-            glass={false}
-            label="編集をやめる"
-            onClick={() => {
-              composer.stopEditing();
-            }}
-          >
-            <X aria-hidden="true" size={16} />
-          </IconButton>
-        </div>
+        <ComposerStrip
+          name="メッセージを編集"
+          onStop={() => {
+            composer.stopEditing();
+          }}
+          stopLabel="編集をやめる"
+          text={summaryOf(editingMessage, mentionName)}
+        />
       )}
       {reply && (
-        <div className={chatStyle.replying}>
-          <span className={chatStyle.quote}>
-            <span className={chatStyle.quoteName}>{reply.writer}に返信</span>
-            <span className={chatStyle.quoteText}>
-              {summaryOf(reply.message, mentionName)}
-            </span>
-          </span>
-          {reply.message.photo && (
-            <img
-              alt=""
-              className={chatStyle.quoteThumb}
-              src={reply.message.photo.src}
-            />
-          )}
-          <IconButton
-            glass={false}
-            label="返信をやめる"
-            onClick={() => {
-              reply.onStop();
-            }}
-          >
-            <X aria-hidden="true" size={16} />
-          </IconButton>
-        </div>
+        <ComposerStrip
+          name={`${reply.writer}に返信`}
+          onStop={() => {
+            reply.onStop();
+          }}
+          stopLabel="返信をやめる"
+          text={summaryOf(reply.message, mentionName)}
+          thumb={reply.message.photo?.src}
+        />
       )}
       {attached && (
-        <div className={chatStyle.replying}>
-          <span className={chatStyle.quote}>
-            <span className={chatStyle.quoteName}>共有する日</span>
-            <span className={chatStyle.quoteText}>{daysSummary(attached)}</span>
-          </span>
-          <IconButton
-            glass={false}
-            label="共有をやめる"
-            onClick={() => {
-              composer.setAttached(undefined);
-            }}
-          >
-            <X aria-hidden="true" size={16} />
-          </IconButton>
-        </div>
+        <ComposerStrip
+          name="共有する日"
+          onStop={() => {
+            composer.setAttached(undefined);
+          }}
+          stopLabel="共有をやめる"
+          text={daysSummary(attached)}
+        />
       )}
       {linkPreview.shown && (
-        <div className={chatStyle.replying}>
-          <span className={chatStyle.quote}>
-            <span className={chatStyle.quoteName}>
-              {linkPreview.ready?.site ?? siteOf(linkPreview.shown)}
-            </span>
-            <span className={chatStyle.quoteText}>
-              {linkPreview.ready?.title ?? "読み込み中…"}
-            </span>
-          </span>
-          {linkPreview.ready?.image && (
-            <img
-              alt=""
-              className={chatStyle.quoteThumb}
-              src={linkPreview.ready.image}
-            />
-          )}
-          <IconButton
-            glass={false}
-            label="リンクのプレビューを付けない"
-            onClick={linkPreview.handleSkip}
-          >
-            <X aria-hidden="true" size={16} />
-          </IconButton>
-        </div>
+        <ComposerStrip
+          name={linkPreview.ready?.site ?? siteOf(linkPreview.shown)}
+          onStop={linkPreview.handleSkip}
+          stopLabel="リンクのプレビューを付けない"
+          text={linkPreview.ready?.title ?? "読み込み中…"}
+          thumb={linkPreview.ready?.image}
+        />
       )}
       <PhotoTray
-        below={
-          reply !== undefined ||
-          attached !== undefined ||
-          linkPreview.shown !== undefined
-        }
+        below={stripped}
         onRemove={composer.handleRemovePhoto}
         photos={photos}
       />
@@ -322,13 +306,7 @@ export function Composer({
       )}
       <form
         className={chatStyle.composer({
-          replying:
-            editing !== undefined ||
-            reply !== undefined ||
-            attached !== undefined ||
-            linkPreview.shown !== undefined ||
-            photos.length > 0 ||
-            mentionable.length > 0,
+          replying: stripped || photos.length > 0 || mentionable.length > 0,
         })}
         onSubmit={(event) => {
           event.preventDefault();

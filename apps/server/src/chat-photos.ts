@@ -5,7 +5,7 @@ import { chatRules } from "@pochical/design/chat";
 // spec/vectors/chat-photos.json pins them down.
 
 /** A line, as far as whether its photo is among the chat's for a reader. */
-export type PhotoLine = {
+type PhotoLine = {
   // It is a photo.
   photo: boolean;
   // Taken back by its writer.

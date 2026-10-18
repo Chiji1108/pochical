@@ -59,15 +59,8 @@ extension EnvironmentValues {
 /// /design's rail, and the one open beside them.
 struct GroupsScreen: View {
   @Environment(\.themeColors) private var colors
-  @Environment(\.account) private var account
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.scenePhase) private var scenePhase
-  @Environment(\.groupSockets) private var groupSockets
-  @Dependency(\.defaultDatabase) private var database
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
-  /// The open group's socket, open while the group's screens are and the
-  /// app is in the foreground (spec/sync-protocol.md, Sockets).
-  @State private var socket: SyncClient?
   /// The group open beside the rail, the first until one is picked.
   @Binding var openID: String?
   /// A chat a notification opened, shown once its group is.
@@ -165,7 +158,9 @@ struct GroupsScreen: View {
     .onChange(of: path) { _, path in
       if !path.isEmpty { inviting = nil }
     }
-    .environment(\.groupSocket, socket)
+    // The open group's, while the group's screens are open and the app is
+    // in the foreground.
+    .placeSocket(openGroupID)
     .environment(\.photoGroupID, (groups.first { $0.id == openID } ?? groups.first)?.id ?? "")
     // Once its group has come, at launch.
     .task(id: OpeningKey(chat: openingChat, groupIDs: groups.map(\.id))) {
@@ -183,17 +178,6 @@ struct GroupsScreen: View {
         return
       }
       path = link.day.map { [.shifts(group, day: $0)] } ?? []
-    }
-    .task(id: SocketKey(groupID: openGroupID ?? "", active: scenePhase == .active)) {
-      guard scenePhase == .active, let groupID = openGroupID else { return }
-      let (client, hold) = await groupSockets.open(groupID, account: account, database: database)
-      socket = client
-      while !Task.isCancelled {
-        try? await Task.sleep(for: .seconds(3600))
-      }
-      // Lines just sent still go, the app gone to the background or
-      // another group opened (spec/sync-protocol.md, Sockets).
-      await groupSockets.close(hold, of: groupID)
     }
   }
 
@@ -727,12 +711,6 @@ actor GroupSockets {
       await socket.client.stop()
     }
   }
-}
-
-/// The group a socket is for, and whether the app is in the foreground.
-private struct SocketKey: Hashable {
-  let groupID: String
-  let active: Bool
 }
 
 /// Everyone in a group with their shifts, read again as the group's

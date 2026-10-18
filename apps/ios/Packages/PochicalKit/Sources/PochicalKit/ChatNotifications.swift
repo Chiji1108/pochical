@@ -50,23 +50,29 @@ extension DatabaseMigrator {
   }
 }
 
+/// A chat, by its group (or place) and thread.
+public struct ChatKey: Hashable, Sendable {
+  public var groupID: String
+  public var threadID: String
+
+  public init(groupID: String, threadID: String) {
+    self.groupID = groupID
+    self.threadID = threadID
+  }
+}
+
 /// The user's chat notifications: the chats turned off, and whether
 /// mentions notify in them.
 public struct ChatNotificationState: Hashable, Sendable {
-  /// Each chat turned off, as its group and thread.
-  public internal(set) var muted: Set<[String]> = []
+  /// Each chat turned off.
+  public internal(set) var muted: Set<ChatKey> = []
   /// メンションはいつも通知: on until the user turns it off.
   public var mentionsWhenMuted = true
 
   public init() {}
 
   public func isMuted(_ threadID: String, in groupID: String) -> Bool {
-    muted.contains([groupID, threadID])
-  }
-
-  /// The chats turned off in `groupID`.
-  public func mutedThreads(in groupID: String) -> [String] {
-    muted.filter { $0[0] == groupID }.map { $0[1] }.sorted()
+    muted.contains(ChatKey(groupID: groupID, threadID: threadID))
   }
 }
 
@@ -93,7 +99,8 @@ public enum ChatNotifications {
 
   public static func state(in db: Database) throws -> ChatNotificationState {
     var state = ChatNotificationState()
-    state.muted = Set(try ChatMuteRow.fetchAll(db).map { [$0.groupID, $0.threadID] })
+    state.muted = Set(
+      try ChatMuteRow.fetchAll(db).map { ChatKey(groupID: $0.groupID, threadID: $0.threadID) })
     state.mentionsWhenMuted =
       try ChatNotificationSettingsRow.fetchOne(db)?.mentionsWhenMuted ?? true
     return state
@@ -116,8 +123,9 @@ public struct ChatNotificationsRequest: FetchKeyRequest, Hashable {
 }
 
 /// How many of a chat's unread lines count, as what notifies, from the
-/// group's count of them and of their mentions of the reader (spec/chat.md,
-/// Unread lines): `notifyingUnread` on counts instead of the lines' words.
+/// count of them and of their mentions of the reader: all of them in a
+/// chat that is on; in one turned off only the mentions, and those only
+/// while mentions always notify (spec/chat.md, Unread lines).
 func notifyingCount(count: Int, mentions: Int, muted: Bool, mentionsWhenMuted: Bool) -> Int {
   guard muted else { return count }
   return mentionsWhenMuted ? mentions : 0

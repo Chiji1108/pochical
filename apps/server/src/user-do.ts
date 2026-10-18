@@ -203,7 +203,6 @@ export class UserDO extends DurableObject<Env> {
     return groupId;
   }
 
-  /** Whether the user is in the group. */
   /**
    * Whether the user's chats are kept in the place: one of their groups,
    * or their chat with Pochical's people (chatRules.supportPlace), which
@@ -213,6 +212,7 @@ export class UserDO extends DurableObject<Env> {
     return placeId === chatRules.supportPlace || this.isMember(placeId);
   }
 
+  /** Whether the user is in the group. */
   isMember(groupId: string): boolean {
     return (
       this.db
@@ -329,10 +329,6 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Whether the user is in the group or was once, so a leaving whose
-   * second step failed can be finished.
-   */
-  /**
    * What the user holds that the person entered (spec/sync-protocol.md,
    * Switching to an account in use): days with a shift, whether a
    * repeating order is set, coworkers, and the groups they are in.
@@ -400,6 +396,10 @@ export class UserDO extends DurableObject<Env> {
     await migrate(this.db, migrations);
   }
 
+  /**
+   * Whether the user is in the group or was once, so a leaving whose
+   * second step failed can be finished.
+   */
   wasMember(groupId: string): boolean {
     return (
       this.db

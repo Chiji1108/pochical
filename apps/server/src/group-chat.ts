@@ -20,10 +20,11 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import type { Alert } from "./apns";
-import { previewLinkOf } from "./chat-links";
+import { MENTION, mentionOf, previewLinkOf } from "./chat-links";
 import { photoPage, seenPhoto } from "./chat-photos";
 import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
@@ -33,10 +34,10 @@ import {
   ChangeSchema,
   ChatLineSchema,
   ChatNotice_Kind,
-  ChatUnsendSchema,
 } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
+  ChatChange,
   ChatEdit,
   ChatPhotoEntrySchema,
   ChatLine,
@@ -55,11 +56,7 @@ import {
   readMarks,
 } from "./group-do-schema";
 import { isId } from "./ids";
-import {
-  keptPreview,
-  mayRead as mayReadPage,
-  sentPreview,
-} from "./link-preview";
+import { keptPreview, mayFetch, sentPreview } from "./link-preview";
 import { fitsText, isEmoji } from "./text-limits";
 import { fitsThumbHash, keptThumbHash, sentThumbHash } from "./thumb-hash";
 
@@ -70,12 +67,6 @@ import { fitsThumbHash, keptThumbHash, sentThumbHash } from "./thumb-hash";
 
 /** The group's own chat, 全体チャット. */
 export const GROUP_THREAD = "group";
-
-/**
- * The Group DO a user's chat with Pochical's people is kept in, its one
- * chat being GROUP_THREAD. Group ids are random, so none is named so.
- */
-export const supportPlace = (userId: string): string => `support:${userId}`;
 
 const DIRECT = "direct:";
 
@@ -136,11 +127,15 @@ export const seenBy = (change: Change, userId: string): boolean => {
 type LineRow = typeof chatLines.$inferSelect;
 type MarkRow = typeof readMarks.$inferSelect;
 
+/** The condition for the chat's line at `seq`. */
+export const atLine = (threadId: string, seq: number): SQL | undefined =>
+  and(eq(chatLines.threadId, threadId), eq(chatLines.seq, seq));
+
 /**
  * A line's reactions: each emoji, in the order first chosen, with who
  * chose it in the order they did.
  */
-const reactionsOf = (
+export const reactionsOf = (
   db: DrizzleSqliteDODatabase,
   row: LineRow
 ): { emoji: string; userIds: string[] }[] => {
@@ -196,7 +191,7 @@ const noticeKinds = {
 } as const;
 
 /** What happened to the group, as a notice line keeps it. */
-export type Notice = NonNullable<LineRow["notice"]>;
+type Notice = NonNullable<LineRow["notice"]>;
 
 const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
   create(ChatLineSchema, {
@@ -231,10 +226,7 @@ const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
     votes: votesOf(db, row),
   });
 
-export const chatLineChange = (
-  db: DrizzleSqliteDODatabase,
-  row: LineRow
-): Change =>
+const chatLineChange = (db: DrizzleSqliteDODatabase, row: LineRow): Change =>
   create(ChangeSchema, {
     cursor: BigInt(row.cursor),
     kind: { case: "chatLine", value: lineOf(db, row) },
@@ -257,12 +249,7 @@ export const forReader = (
   const hidden = db
     .select({ hiddenFrom: chatLines.hiddenFrom })
     .from(chatLines)
-    .where(
-      and(
-        eq(chatLines.threadId, line.threadId),
-        eq(chatLines.seq, Number(line.seq))
-      )
-    )
+    .where(atLine(line.threadId, Number(line.seq)))
     .get()?.hiddenFrom;
   if (hidden !== userId) {
     return change;
@@ -327,7 +314,7 @@ export const setMemberBlocks = (
   }
 };
 
-export const readMarkChange = (row: MarkRow): Change =>
+const readMarkChange = (row: MarkRow): Change =>
   create(ChangeSchema, {
     cursor: BigInt(row.cursor),
     kind: {
@@ -408,12 +395,18 @@ export const chatHead = (
     .where(eq(chatLines.threadId, threadId))
     .get()?.head ?? 0;
 
+/** The seq the chat's latest page comes after: its last chatRules.pageSize lines. */
+export const latestPageAfter = (
+  db: DrizzleSqliteDODatabase,
+  threadId: string
+): number => chatHead(db, threadId) - chatRules.pageSize;
+
 /**
  * A member's line of the chat at `seq`, for an edit, a reply or a report:
  * the app's notices are none of these (they take no reactions, replies,
  * pins or reports, and their author cannot change or take them back).
  */
-const lineAt = (
+export const lineAt = (
   db: DrizzleSqliteDODatabase,
   threadId: string,
   seq: bigint
@@ -421,13 +414,7 @@ const lineAt = (
   db
     .select()
     .from(chatLines)
-    .where(
-      and(
-        eq(chatLines.threadId, threadId),
-        eq(chatLines.seq, Number(seq)),
-        isNull(chatLines.notice)
-      )
-    )
+    .where(and(atLine(threadId, Number(seq)), isNull(chatLines.notice)))
     .get();
 
 /**
@@ -447,7 +434,7 @@ const answers = (
   return line !== undefined && !line.unsent && line.hiddenFrom !== userId;
 };
 
-const lineKey = (threadId: string, seq: bigint): string =>
+const lineKey = (threadId: string, seq: bigint | number): string =>
   `${threadId}\n${seq}`;
 
 /** The lines among `changes`. */
@@ -522,9 +509,6 @@ export const readMarkOf = (
     .from(readMarks)
     .where(and(eq(readMarks.userId, userId), eq(readMarks.threadId, threadId)))
     .get()?.lastReadSeq ?? 0;
-
-/** How a message's words keep a mention of `userId`. */
-export const mentionOf = (userId: string): string => `<@${userId}>`;
 
 /**
  * A chat's lines `userId` has not read, others' past their read mark, and
@@ -618,6 +602,21 @@ const placeTakes = (rules: ChatPlaceRules, kind: ChatEdit["kind"]): boolean => {
   }
 };
 
+/** The line moved to `cursor`, as what is on it (reactions, votes) changed. */
+const moveLine = (
+  db: DrizzleSqliteDODatabase,
+  { threadId, seq }: LineRow,
+  cursor: number
+): Taken => {
+  const row = db
+    .update(chatLines)
+    .set({ cursor })
+    .where(atLine(threadId, seq))
+    .returning()
+    .get();
+  return row === undefined ? {} : { change: chatLineChange(db, row) };
+};
+
 /**
  * The member's reaction on a line put on or taken off, the line moving to
  * `cursor` with it; nothing for a line taken back, gone, or an emoji that
@@ -650,22 +649,83 @@ const takeReaction = (
   } else {
     db.delete(chatReactions).where(mine).run();
   }
+  return moveLine(db, line, cursor);
+};
+
+/**
+ * One of the member's lines taken back (送信取消) at `cursor`, with its
+ * words, days, photo, reactions, votes and pin.
+ */
+const unsendLine = (
+  db: DrizzleSqliteDODatabase,
+  line: LineRow,
+  cursor: number
+): Taken => {
+  const { threadId, seq } = line;
+  db.delete(chatReactions)
+    .where(
+      and(eq(chatReactions.threadId, threadId), eq(chatReactions.seq, seq))
+    )
+    .run();
+  db.delete(chatVotes)
+    .where(and(eq(chatVotes.threadId, threadId), eq(chatVotes.seq, seq)))
+    .run();
   const row = db
     .update(chatLines)
-    .set({ cursor })
-    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, line.seq)))
+    .set({
+      cursor,
+      days: null,
+      decided: null,
+      photo: null,
+      pinnedAt: null,
+      preview: null,
+      replyTo: null,
+      text: "",
+      unsent: true,
+    })
+    .where(atLine(threadId, seq))
+    .returning()
+    .get();
+  if (row === undefined) {
+    return {};
+  }
+  const change = chatLineChange(db, row);
+  // Its photo goes from the group's photos too, once the change is kept.
+  return line.photo === null
+    ? { change }
+    : { change, photoGone: line.photo.id };
+};
+
+/** New words for one of the member's own lines at `cursor` (編集). */
+const changeWords = (
+  db: DrizzleSqliteDODatabase,
+  line: LineRow,
+  { text, keepsPreview, preview }: ChatChange,
+  cursor: number
+): Taken => {
+  const row = db
+    .update(chatLines)
+    .set({
+      cursor,
+      edited: true,
+      // The page stays while the first link does (spec/vectors/chat.json,
+      // edited); else the new link's, or none.
+      preview: keepsPreview ? line.preview : sentPreview(preview, text),
+      text,
+    })
+    .where(atLine(line.threadId, line.seq))
     .returning()
     .get();
   return row === undefined ? {} : { change: chatLineChange(db, row) };
 };
 
 /**
- * New words for one of the member's own lines, or the line taken back
- * with its days, reactions and pin; the line comes back to the member as
- * the group holds it when it is not theirs, taken back already, a line of
- * days (which has no words to change), or the words do not fit.
+ * New words for one of the member's own lines, or the line taken back;
+ * the line comes back to the member as the group holds it when it is not
+ * theirs, taken back already, a line of days or a photo (which has no
+ * words to change), or the words do not fit.
  */
-const takeWords = (
+const takeOwnLine = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   kind: Extract<ChatEdit["kind"], { case: "change" | "unsend" }>,
@@ -675,73 +735,15 @@ const takeWords = (
   if (line === undefined) {
     return {};
   }
-  const unsend = kind.case === "unsend";
-  const text = unsend ? "" : kind.value.text;
-  // A line of days or a photo has no words to change.
-  const words =
-    unsend || (line.days === null && line.photo === null && fitsLine(text));
-  if (line.authorId !== userId || line.unsent || !words) {
+  const fits =
+    kind.case === "unsend" ||
+    (line.days === null && line.photo === null && fitsLine(kind.value.text));
+  if (line.authorId !== userId || line.unsent || !fits) {
     return { refused: chatLineChange(db, line) };
   }
-  // Taking a line back takes its reactions and votes with it.
-  if (unsend) {
-    db.delete(chatReactions)
-      .where(
-        and(
-          eq(chatReactions.threadId, line.threadId),
-          eq(chatReactions.seq, line.seq)
-        )
-      )
-      .run();
-    db.delete(chatVotes)
-      .where(
-        and(eq(chatVotes.threadId, line.threadId), eq(chatVotes.seq, line.seq))
-      )
-      .run();
-  }
-  const row = db
-    .update(chatLines)
-    .set(
-      // Taking a line back takes its pin off too.
-      unsend
-        ? {
-            cursor,
-            days: null,
-            decided: null,
-            photo: null,
-            pinnedAt: null,
-            preview: null,
-            replyTo: null,
-            text,
-            unsent: true,
-          }
-        : {
-            cursor,
-            edited: true,
-            // The page stays while the first link does (spec/vectors/chat.json,
-            // edited); else the new link's, or none.
-            preview:
-              kind.case === "change" && kind.value.keepsPreview
-                ? line.preview
-                : sentPreview(
-                    kind.case === "change" ? kind.value.preview : undefined,
-                    text
-                  ),
-            text,
-          }
-    )
-    .where(
-      and(eq(chatLines.threadId, line.threadId), eq(chatLines.seq, line.seq))
-    )
-    .returning()
-    .get();
-  if (row === undefined) {
-    return {};
-  }
-  // Its photo goes from the group's photos too, once the change is kept.
-  return unsend && line.photo !== null
-    ? { change: chatLineChange(db, row), photoGone: line.photo.id }
-    : { change: chatLineChange(db, row) };
+  return kind.case === "unsend"
+    ? unsendLine(db, line, cursor)
+    : changeWords(db, line, kind.value, cursor);
 };
 
 /**
@@ -768,7 +770,7 @@ const pinning = (
     db
       .update(chatLines)
       .set({ cursor: at, ...more })
-      .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, lineSeq)))
+      .where(atLine(threadId, lineSeq))
       .returning()
       .get();
   const stays = pins.includes(String(line.seq));
@@ -844,13 +846,7 @@ const takeVote = (
   } else {
     db.delete(chatVotes).where(mine).run();
   }
-  const row = db
-    .update(chatLines)
-    .set({ cursor })
-    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, line.seq)))
-    .returning()
-    .get();
-  return row === undefined ? {} : { change: chatLineChange(db, row) };
+  return moveLine(db, line, cursor);
 };
 
 /**
@@ -884,7 +880,6 @@ const takeDecide = (
   );
 };
 
-/** What taking an edit did: its change, and the line to send back when it was refused. */
 /** How much of the app's word on itself a line keeps. */
 const DEVICE_MAX = 100;
 
@@ -898,6 +893,7 @@ const deviceOf = (
 ): string | null =>
   rules.sendsDevice && device !== "" ? device.slice(0, DEVICE_MAX) : null;
 
+/** What taking an edit did: its change, and the line to send back when it was refused. */
 type Taken = {
   change?: Change;
   // A second line it changed, at the cursor after: the pin a new pin
@@ -984,7 +980,7 @@ export const pageToRead = (send: ChatSend): string | undefined => {
   }
   const link = previewLinkOf(send.text);
   const url = link === undefined ? null : URL.parse(link);
-  return url !== null && mayReadPage(url) ? link : undefined;
+  return url !== null && mayFetch(url) ? link : undefined;
 };
 
 /**
@@ -998,11 +994,7 @@ export const addPreview = (
   preview: LinkPreview,
   cursor: number
 ): Change | undefined => {
-  const line = db
-    .select()
-    .from(chatLines)
-    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, seq)))
-    .get();
+  const line = db.select().from(chatLines).where(atLine(threadId, seq)).get();
   const kept = keptPreview(preview);
   if (
     line === undefined ||
@@ -1016,7 +1008,7 @@ export const addPreview = (
   const row = db
     .update(chatLines)
     .set({ cursor, preview: kept })
-    .where(and(eq(chatLines.threadId, threadId), eq(chatLines.seq, seq)))
+    .where(atLine(threadId, seq))
     .returning()
     .get();
   return row === undefined ? undefined : chatLineChange(db, row);
@@ -1051,7 +1043,7 @@ export const takeChatEdit = (
     }
     case "change":
     case "unsend": {
-      return takeWords(db, userId, kind, cursor);
+      return takeOwnLine(db, userId, kind, cursor);
     }
     case "react": {
       return takeReaction(db, userId, kind.value, cursor);
@@ -1096,20 +1088,19 @@ export const eraseMemberChat = (
   const changes: Change[] = [];
   const photosGone: string[] = [];
   const written = db
-    .select({ seq: chatLines.seq, threadId: chatLines.threadId })
+    .select()
     .from(chatLines)
-    .where(and(eq(chatLines.authorId, userId), eq(chatLines.unsent, false)))
+    .where(
+      and(
+        eq(chatLines.authorId, userId),
+        eq(chatLines.unsent, false),
+        // The app's notices of their joining or leaving stay.
+        isNull(chatLines.notice)
+      )
+    )
     .all();
-  for (const { seq, threadId } of written) {
-    const taken = takeWords(
-      db,
-      userId,
-      {
-        case: "unsend",
-        value: create(ChatUnsendSchema, { seq: BigInt(seq), threadId }),
-      },
-      nextCursor()
-    );
+  for (const line of written) {
+    const taken = unsendLine(db, line, nextCursor());
     if (taken.change !== undefined) {
       changes.push(taken.change);
     }
@@ -1125,7 +1116,7 @@ export const eraseMemberChat = (
       .from(table)
       .where(eq(table.userId, userId))
       .all()) {
-      touched.set(`${threadId}\n${seq}`, { seq, threadId });
+      touched.set(lineKey(threadId, seq), { seq, threadId });
     }
     db.delete(table).where(eq(table.userId, userId)).run();
   }
@@ -1133,13 +1124,7 @@ export const eraseMemberChat = (
     const row = db
       .update(chatLines)
       .set({ cursor: nextCursor() })
-      .where(
-        and(
-          eq(chatLines.threadId, threadId),
-          eq(chatLines.seq, seq),
-          eq(chatLines.unsent, false)
-        )
-      )
+      .where(and(atLine(threadId, seq), eq(chatLines.unsent, false)))
       .returning()
       .get();
     if (row !== undefined) {
@@ -1159,6 +1144,28 @@ export const eraseMemberChat = (
  * Up to chatRules.pageSize lines of the chat before `beforeSeq` (the
  * latest with 0), oldest first, and whether they reach its first line.
  */
+export const pageRows = (
+  db: DrizzleSqliteDODatabase,
+  threadId: string,
+  beforeSeq: number
+): { rows: LineRow[]; atStart: boolean } => {
+  const rows = db
+    .select()
+    .from(chatLines)
+    .where(
+      and(
+        eq(chatLines.threadId, threadId),
+        beforeSeq > 0 ? lt(chatLines.seq, beforeSeq) : undefined
+      )
+    )
+    .orderBy(desc(chatLines.seq))
+    .limit(chatRules.pageSize)
+    .all()
+    .toReversed();
+  return { atStart: (rows[0]?.seq ?? 1) <= 1, rows };
+};
+
+/** A page of the chat as `userId` reads it (pageRows), with the lines its replies answer. */
 export const chatPage = (
   db: DrizzleSqliteDODatabase,
   userId: string,
@@ -1168,27 +1175,11 @@ export const chatPage = (
   if (!mayRead(threadId, userId)) {
     return { atStart: true, lines: [], quoted: [] };
   }
-  const rows = db
-    .select()
-    .from(chatLines)
-    .where(
-      and(
-        eq(chatLines.threadId, threadId),
-        beforeSeq > 0n ? lt(chatLines.seq, Number(beforeSeq)) : undefined
-      )
-    )
-    .orderBy(desc(chatLines.seq))
-    .limit(chatRules.pageSize)
-    .all()
-    .toReversed();
+  const { atStart, rows } = pageRows(db, threadId, Number(beforeSeq));
   const asRead = (changes: Change[]): ChatLine[] =>
     linesOf(changes.map((change) => forReader(db, change, userId)));
   const lines = asRead(rows.map((row) => chatLineChange(db, row)));
-  return {
-    atStart: (rows[0]?.seq ?? 1) <= 1,
-    lines,
-    quoted: asRead(answeredChanges(db, lines)),
-  };
+  return { atStart, lines, quoted: asRead(answeredChanges(db, lines)) };
 };
 
 /**
@@ -1297,7 +1288,7 @@ export const chatChangesAfter = (
           gt(chatLines.cursor, cursor),
           or(
             lte(chatLines.createdCursor, cursor),
-            gt(chatLines.seq, chatHead(db, threadId) - chatRules.pageSize),
+            gt(chatLines.seq, latestPageAfter(db, threadId)),
             // Pinned lines however far back, for the pins over the chat.
             isNotNull(chatLines.pinnedAt)
           )
@@ -1340,8 +1331,6 @@ export const notePhoto = (
   db.insert(chatPhotos).values({ id: photoId, userId }).run();
   return true;
 };
-
-const MENTION = /<@(?<id>[\w-]+)>/gu;
 
 /** A message's words with each mention as @ and the name (spec/vectors/chat-text.json, plainText). */
 export const plainText = (

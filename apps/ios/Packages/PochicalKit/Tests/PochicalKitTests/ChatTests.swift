@@ -409,6 +409,22 @@ private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String =
   }
 }
 
+@Test func aChatsListShowsALineWaitingAsTheChatDoes() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var send = Pochical_V1_ChatSend()
+    send.threadID = groupThread
+    send.text = "まだ"
+    send.replyTo = 4
+    try Chats.edit(.send(send), in: "g", now: 5, db: db)
+    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    try Chats.fail(opID, in: db)
+    let waiting = try Chats.state(of: groupThread, in: "g", db: db).waiting
+    #expect(waiting.map(\.failed) == [true])
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).waiting == waiting[0])
+  }
+}
+
 @Test func aGroupLeftTakesItsCountsWithIt() throws {
   let database = try appDatabase()
   try database.write { db in
@@ -929,7 +945,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     #expect(try Chats.stillGoing(opID, in: db))
 
     // Stopped with ×: not sent, as one whose photo failed.
-    try Chats.stopSending(opID, in: db)
+    try Chats.fail(opID, in: db)
     #expect(try !Chats.stillGoing(opID, in: db))
     #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true])
 

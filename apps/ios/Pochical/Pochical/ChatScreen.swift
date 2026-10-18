@@ -353,19 +353,15 @@ struct ChatScreen: View {
       try? await Task.sleep(for: .seconds(max(next.timeIntervalSinceNow, 0)))
       withAnimation { typers = typers.filter { $0.value > .now } }
     }
-    // Lines coming in and someone writing keep a following chat at its
-    // foot, in the same update they come in by (ChatLinesView), as does
-    // anything else changing the lines' height or the room they are seen
-    // in (a link's page drawn, the composer growing, the keyboard).
-    .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count)) {
-      before, now in
-      guard opened, following else { return }
-      // Others' lines the reader has not read stop at ここから新着 rather
-      // than going past it, as the chat's catch-up bringing many at once.
-      // Else the lines keep to their foot as they come in (ChatLinesView).
-      if before.latest != now.latest, let first = unreadComing(after: before.latest) {
-        show(from: first)
-      }
+    // A following chat keeps to its foot as lines come in and someone
+    // writes, in the update they come in by (ChatLinesView's `landed`), as
+    // it does for anything else changing the lines' height or the room
+    // they are seen in (a link's page drawn, the composer growing, the
+    // keyboard). Others' lines the reader has not read stop at ここから新着
+    // instead, as the chat's catch-up bringing many at once.
+    .onChange(of: state.lines.last?.seq) { before, _ in
+      guard opened, following, let first = unreadComing(after: before) else { return }
+      show(from: first)
     }
     // Others' lines coming in while it is open are said by VoiceOver,
     // wherever the lines are scrolled (spec/chat.md, VoiceOver).
@@ -485,16 +481,11 @@ struct ChatScreen: View {
         draft: draft, groupID: place.id, threadID: threadID,
         mentionable: otherID != nil || !place.rules.mentions
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
-        nameOf: nameOf, quoteOf: { quote(of: Int64($0) ?? 0) }, onSubmit: submit,
+        nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
         onStopEditing: stopEditing,
         onShareDays: place.rules.days ? { sharingDays = true } : nil, say: say)
     }
   }
-
-  /// Someone writing now's item, by their id.
-  private static let typing = "typing-"
-  /// The place's head's item.
-  private static let head = "head"
 
   /// The lines' items, each with all its row draws, so a line is drawn
   /// again, and measured, only as that changes.
@@ -505,17 +496,16 @@ struct ChatScreen: View {
     // What every line draws by: when it changes, every line is drawn again.
     let common = RowsLook(
       names: names, faces: faces, meID: meID, deleted: deletedIDs, members: cardMembers,
-      left: Set(chat.writers.filter(\.left).map(\.userID))
-    ).hashValue
+      left: Set(chat.writers.filter(\.left).map(\.userID)))
     let pins = Set(state.pins.map(\.seq))
     var rows: [LinesRow] = []
     // Only while the next earlier page is on its way from the server:
     // those the device holds are laid out before the top is reached.
     if !state.atStart, state.heldBefore == 0 {
-      rows.append(LinesRow(id: ChatLinesView.earlier, look: AnyHashable(ChatLinesView.earlier)))
+      rows.append(LinesRow(id: ChatItemID.earlier, look: AnyHashable(ChatItemID.earlier)))
     }
     if state.atStart, head != nil {
-      rows.append(LinesRow(id: Self.head, look: AnyHashable(Self.head)))
+      rows.append(LinesRow(id: ChatItemID.head, look: AnyHashable(ChatItemID.head)))
     }
     for item in listed {
       var quote: LineQuote?
@@ -544,7 +534,7 @@ struct ChatScreen: View {
       rows.append(LinesRow(id: item.id, look: AnyHashable(look)))
     }
     for userID in writers {
-      rows.append(LinesRow(id: "\(Self.typing)\(userID)", look: AnyHashable(common)))
+      rows.append(LinesRow(id: ChatItemID.typing(userID), look: AnyHashable(common)))
     }
     return rows
   }
@@ -554,13 +544,12 @@ struct ChatScreen: View {
     _ id: String, item: ChatItem?, first: String?, names: [String: String], showsTime: Bool
   ) -> some View {
     Group {
-      if id == ChatLinesView.earlier {
+      if id == ChatItemID.earlier {
         EarlierLines()
-      } else if id == Self.head {
+      } else if id == ChatItemID.head {
         head
-      } else if id.hasPrefix(Self.typing) {
-        let userID = String(id.dropFirst(Self.typing.count))
-        TypingLine(name: names[userID] ?? "メンバー", photoID: faces[userID] ?? "")
+      } else if let userID = ChatItemID.typer(of: id) {
+        TypingLine(name: memberName(userID, in: names), photoID: faces[userID] ?? "")
           .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
       } else if let item {
         // Lines close within a run, parted where the writer changes; the
@@ -574,8 +563,6 @@ struct ChatScreen: View {
 
   // MARK: Lines
 
-  /// What the lines show, in order: each day's title, ここから新着, and
-  /// the lines with whether each starts a run of one writer's.
   /// The day whose lines are at the top, from the first item in sight:
   /// none while that is the day's own title.
   private func dayOver(_ top: String?, in items: [ChatItem]) -> Day? {
@@ -588,6 +575,8 @@ struct ChatScreen: View {
     return nil
   }
 
+  /// What the lines show, in order: each day's title, ここから新着, and
+  /// the lines with whether each starts a run of one writer's.
   private func items(_ state: ChatState) -> [ChatItem] {
     var items: [ChatItem] = []
     var lastDay: Day?
@@ -658,20 +647,19 @@ struct ChatScreen: View {
     case .line(let line, _) where line.hidden:
       // Never delivered to the reader: nothing shows.
       EmptyView()
-    case .line(let line, _)
-    where otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
-      && !line.unsent && line.notice == nil:
+    case .line(let line, _) where folded(line) && !line.unsent && line.notice == nil:
       BlockedLine { shownBlocked.insert(line.seq) }
     case .line(let line, let runStart):
       // A blocked member's line shown at a tap stands alone between the
       // folded ones, with their face, the way to their profile.
-      let startsRun = runStart || (otherID == nil && blocked.contains(line.authorID))
+      let startsRun = runStart || writerBlocked(line)
       if let notice = line.notice {
         // A line from the app, as an unsent line sits: who did what, by
         // the names the group shows now.
         Text(
           notice.words(
-            by: names[line.authorID] ?? "メンバー", subject: names[notice.subjectID] ?? "メンバー"))
+            by: memberName(line.authorID, in: names),
+            subject: memberName(notice.subjectID, in: names)))
           .font(.caption)
           .foregroundStyle(colors.textTertiary)
           .multilineTextAlignment(.center)
@@ -689,46 +677,60 @@ struct ChatScreen: View {
           .frame(maxWidth: .infinity)
           .padding(.vertical, 8)
       } else {
-        let mine = line.authorID == meID
-        LineView(
-          lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
-          members: cardMembers, poll: pollLine(for: line), photo: line.photo,
-          quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
-          groupID: place.id,
-          shifts: line.poll ? nil : shifts(on: line.days.first),
-          time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
-          writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
-          author: mine ? nil : names[line.authorID] ?? "メンバー",
-          menu: actions(for: line, mine: mine).map(\.title),
-          writerPhoto: faces[line.authorID] ?? "",
-          appFace: line.authorID == Chat.pochicalMember,
-          named: !ofTwo, first: startsRun, waiting: false, names: names,
-          reactions: line.reactions, countedReactions: ofTwo,
-          pinned: chat.state.pins.contains { $0.seq == line.seq }, marks: marks, seq: line.seq,
-          meID: meID,
-          actions: lineActions)
+        lineView(line, startsRun: startsRun, showsTime: showsTime, names: names)
       }
     case .waiting(let line, let startsRun):
-      LineView(
-        lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
-        members: cardMembers, poll: waitingPoll(line), photo: line.photo,
-        quote: line.replyTo.map(quote(of:)), groupID: place.id, time: line.madeAtMs,
-        edited: false, mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
-        named: false, first: startsRun, waiting: true, failed: line.failed, names: names,
-        marks: marks,
-        actions: lineActions)
+      lineView(waiting: line, startsRun: startsRun, names: names)
     }
+  }
+
+  /// A line of words, as its row draws it and its bubble is held.
+  private func lineView(
+    _ line: ChatLineRow, startsRun: Bool, showsTime: Bool = true, names: [String: String]
+  ) -> LineView {
+    let mine = line.authorID == meID
+    return LineView(
+      lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
+      members: cardMembers, poll: pollLine(for: line), photo: line.photo,
+      quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
+      groupID: place.id,
+      shifts: line.poll ? nil : shifts(on: line.days.first),
+      time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
+      writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
+      author: mine ? nil : memberName(line.authorID, in: names),
+      menu: actions(for: line, mine: mine).map(\.title),
+      writerPhoto: faces[line.authorID] ?? "",
+      appFace: line.authorID == Chat.pochicalMember,
+      named: !ofTwo, first: startsRun, waiting: false, names: names,
+      reactions: line.reactions, countedReactions: ofTwo,
+      pinned: chat.state.pins.contains { $0.seq == line.seq }, marks: marks, seq: line.seq,
+      meID: meID,
+      actions: lineActions)
+  }
+
+  /// A line still on its way, as its row draws it and its bubble is held.
+  private func lineView(
+    waiting line: WaitingLine, startsRun: Bool, names: [String: String]
+  ) -> LineView {
+    LineView(
+      lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
+      members: cardMembers, poll: waitingPoll(line), photo: line.photo,
+      quote: line.replyTo.map(quote(of:)), groupID: place.id, time: line.madeAtMs,
+      edited: false, mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
+      named: false, first: startsRun, waiting: true, failed: line.failed, names: names,
+      marks: marks,
+      actions: lineActions)
   }
 
   /// A line come in as VoiceOver says it: who and what, or the app's
   /// notice; nothing for one's own, one not shown, or a blocked writer's.
   private func spoken(_ line: ChatLineRow) -> String? {
     guard line.authorID != meID, !line.hidden, !line.unsent else { return nil }
-    let name = names[line.authorID] ?? "メンバー"
+    let name = nameOf(line.authorID)
     if let notice = line.notice {
-      return notice.words(by: name, subject: names[notice.subjectID] ?? "メンバー")
+      return notice.words(by: name, subject: nameOf(notice.subjectID))
     }
-    guard otherID != nil || !blocked.contains(line.authorID) else { return nil }
+    guard !writerBlocked(line) else { return nil }
     let words =
       line.photo.map(photoWords)
       ?? lineWords(line.text, days: line.days, poll: line.poll, decided: line.decided, nameOf: nameOf)
@@ -742,7 +744,7 @@ struct ChatScreen: View {
 
   /// Acts on the line `lineID` as the chat is now.
   private func act(_ action: LineAction, on lineID: String) {
-    switch items(chat.state).first(where: { $0.id == "line-\(lineID)" }) {
+    switch items(chat.state).first(where: { $0.id == ChatItemID.line(lineID) }) {
     case .line(let line, let startsRun): act(action, on: line, startsRun: startsRun)
     case .waiting(let line, let startsRun): act(action, onWaiting: line, startsRun: startsRun)
     default: break
@@ -755,7 +757,7 @@ struct ChatScreen: View {
       // Opened where it is, its words going on down from there, as the
       // messaging apps open a long one: not carried to the foot.
       following = false
-      scroller.growDown("line-\(line.opID)")
+      scroller.growDown(ChatItemID.line(line.opID))
       withAnimation(reduceMotion ? nil : .default) { _ = unfolded.insert(line.opID) }
     case .openPhoto:
       openPhoto(of: line)
@@ -763,7 +765,7 @@ struct ChatScreen: View {
       line.replyTo.map(jump(to:))
     case .openProfile:
       profileOf = ProfileOf(
-        id: line.authorID, name: names[line.authorID] ?? "メンバー",
+        id: line.authorID, name: nameOf(line.authorID),
         photoID: faces[line.authorID] ?? "")
     case .sendAgain, .deleteUnsent, .stopSending:
       break
@@ -782,12 +784,7 @@ struct ChatScreen: View {
       actions(for: line, mine: line.authorID == meID).first { $0.title == title }?.run()
     case .hold(let spot, let finger, let link):
       let mine = line.authorID == meID
-      let bubble = AnyView(
-        LineContent(
-          text: line.text, preview: line.preview, days: line.days, members: cardMembers,
-          poll: pollLine(for: line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
-          groupID: place.id, mine: mine, first: startsRun, waiting: false, nameOf: nameOf,
-          unfolded: unfolded.contains(line.opID)))
+      let bubble = AnyView(lineView(line, startsRun: startsRun, names: names).bubble)
       // A link held has its own menu, without the reactions.
       if let link {
         openActions(
@@ -810,7 +807,7 @@ struct ChatScreen: View {
     case .sendAgain:
       sendAgain(line)
     case .deleteUnsent:
-      deleteUnsent(line)
+      takeBack(line)
     case .stopSending:
       stopSending(line)
     case .menu(let title):
@@ -819,12 +816,7 @@ struct ChatScreen: View {
       openActions(
         MessageActionsRequest(
           lineID: line.opID, spot: spot, mine: true,
-          bubble: AnyView(
-            LineContent(
-              text: line.text, preview: line.preview, days: line.days, members: cardMembers,
-              poll: waitingPoll(line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
-              groupID: place.id, mine: true, first: startsRun, waiting: !line.failed,
-              nameOf: nameOf)),
+          bubble: AnyView(lineView(waiting: line, startsRun: startsRun, names: names).bubble),
           finger: finger, actions: actions(forWaiting: line)))
     default:
       break
@@ -867,7 +859,7 @@ struct ChatScreen: View {
   /// Nothing once its photo is up and the line is being sent.
   private func stopSending(_ line: WaitingLine) {
     if let photo = line.photo, !PhotoUploads.shared.stop(photo.id) { return }
-    try? database.write { try Chats.stopSending(line.opID, in: $0) }
+    try? database.write { try Chats.fail(line.opID, in: $0) }
   }
 
   /// Sends a line not sent once more, after the rest, as if written now.
@@ -883,12 +875,8 @@ struct ChatScreen: View {
     }
   }
 
-  /// Deletes a line not sent, and the photo kept on the device for it.
-  private func deleteUnsent(_ line: WaitingLine) {
-    takeBack(line)
-  }
-
-  /// Takes a line of one's own back before the group has it: out of the
+  /// Takes a line of one's own back before the group has it, or deletes
+  /// one not sent, with the photo kept on the device for it: out of the
   /// outbox, and from the group as it comes should it have gone just
   /// before (spec/chat.md, Lines on their way).
   private func takeBack(_ line: WaitingLine) {
@@ -911,13 +899,12 @@ struct ChatScreen: View {
       )
     }
     guard let read, let kept = read.draft else { return }
-    let names = Dictionary(
-      read.writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last })
-    let nameOf = { (id: String) in names[id] ?? "メンバー" }
+    let names = read.writers.shownNames
+    let nameOf = { (id: String) in memberName(id, in: names) }
     draft.text = plainText(kept.text, nameOf: nameOf)
     draft.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }
     draft.editing = kept.editing
-    draft.replyTo = kept.editing == nil ? kept.replyTo.map(String.init) : nil
+    draft.replyTo = kept.editing == nil ? kept.replyTo : nil
     keptDraft = KeptDraft(text: kept.text, replyTo: kept.replyTo, editing: kept.editing?.seq)
     openedDraft = (shown: draft.text, sent: kept.text)
   }
@@ -928,7 +915,7 @@ struct ChatScreen: View {
     let unchanged = openedDraft.flatMap { $0.shown == draft.text ? $0.sent : nil }
     let kept = KeptDraft(
       text: unchanged ?? withMentions(draft.text, picked: draft.picked),
-      replyTo: draft.replyTo.flatMap(Int64.init), editing: draft.editing?.seq)
+      replyTo: draft.replyTo, editing: draft.editing?.seq)
     guard kept != keptDraft else { return }
     keptDraft = kept
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
@@ -941,8 +928,7 @@ struct ChatScreen: View {
 
   /// Everyone who has been in the group by id, those who left too.
   private var names: [String: String] {
-    Dictionary(
-      chat.writers.map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last })
+    chat.writers.shownNames
   }
 
   /// Everyone's photo as the group shows it, by id.
@@ -957,9 +943,20 @@ struct ChatScreen: View {
     Set(chat.writers.filter(\.deleted).map(\.userID))
   }
 
+  /// The line's writer is blocked, in the place's own chat, where their
+  /// lines fold away; a one-to-one chat with them shows all it has.
+  private func writerBlocked(_ line: ChatLineRow) -> Bool {
+    otherID == nil && blocked.contains(line.authorID)
+  }
+
+  /// The line is folded away for its blocked writer, not shown at a tap.
+  private func folded(_ line: ChatLineRow) -> Bool {
+    writerBlocked(line) && !shownBlocked.contains(line.seq)
+  }
+
   /// A member's name in the group as it is now, for their mentions.
   private func nameOf(_ id: String) -> String {
-    names[id] ?? "メンバー"
+    memberName(id, in: names)
   }
 
   /// A link tapped in a line: Pochical's invitations on their join
@@ -969,7 +966,7 @@ struct ChatScreen: View {
       // The reader's own opens nothing.
       if mentioned != meID {
         profileOf = ProfileOf(
-          id: mentioned, name: names[mentioned] ?? "メンバー", photoID: faces[mentioned] ?? "")
+          id: mentioned, name: nameOf(mentioned), photoID: faces[mentioned] ?? "")
       }
     } else if let code = inviteCode(of: url) {
       openInvite(code)
@@ -1004,7 +1001,7 @@ struct ChatScreen: View {
   private func showEarlier(laidOut: String?) {
     let state = chat.state
     guard opened, state.heldBefore > 0, let line = state.lines.first, line.seq != earlierFrom,
-      laidOut == "line-\(line.opID)"
+      laidOut == ChatItemID.line(line.opID)
     else { return }
     let first = line.seq
     earlierFrom = first
@@ -1088,7 +1085,7 @@ struct ChatScreen: View {
     following = false
     // Asked to the top with too few lines under it to get there, it stops
     // at the foot.
-    scroller.show("line-\(first.opID)", at: .top, animated: true) {
+    scroller.show(ChatItemID.line(first.opID), at: .top, animated: true) {
       if scroll.place.atLatest {
         following = true
       } else if unreadFrom == nil {
@@ -1118,7 +1115,7 @@ struct ChatScreen: View {
   /// none (lines still waiting have no seq).
   private func latestSeq(of seen: [String]) -> Int64? {
     let ids = Set(seen)
-    return chat.state.lines.last(where: { ids.contains("line-\($0.opID)") })?.seq
+    return chat.state.lines.last(where: { ids.contains(ChatItemID.line($0.opID)) })?.seq
   }
 
   /// Marks the chat read on to `seq`, the latest line whose foot has come
@@ -1188,9 +1185,7 @@ struct ChatScreen: View {
     let photos = near.compactMap { item -> LinePhoto? in
       switch item {
       case .line(let line, _):
-        let folded =
-          otherID == nil && blocked.contains(line.authorID) && !shownBlocked.contains(line.seq)
-        return line.hidden || line.unsent || folded ? nil : line.photo
+        return line.hidden || line.unsent || folded(line) ? nil : line.photo
       case .waiting(let line, _): return line.photo
       default: return nil
       }
@@ -1278,7 +1273,7 @@ struct ChatScreen: View {
       return
     }
     profileOf = ProfileOf(
-      id: otherID, name: names[otherID] ?? "メンバー", photoID: faces[otherID] ?? "")
+      id: otherID, name: nameOf(otherID), photoID: faces[otherID] ?? "")
   }
 
   /// The one-to-one chat with someone, from their profile; none for the
@@ -1337,8 +1332,7 @@ struct ChatScreen: View {
   /// line being changed; else sends the days first, then each photo, then
   /// the words.
   private func submit() {
-    let text = String(draft.field.commit().prefix(TextLimits.chatMessage))
-      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let text = sentWords(draft.field.commit())
     if let editing = draft.editing {
       if !text.isEmpty { save(editing, text: text) }
       return
@@ -1357,7 +1351,7 @@ struct ChatScreen: View {
   /// still on its way.
   private func replySwipe(_ item: ChatItem?) -> ReplySwipe? {
     guard case .line(let line, _) = item, !line.hidden, !line.unsent, line.notice == nil,
-      otherID != nil || !blocked.contains(line.authorID) || shownBlocked.contains(line.seq)
+      !folded(line)
     else { return nil }
     return line.authorID == meID ? .leftward : .rightward
   }
@@ -1365,14 +1359,14 @@ struct ChatScreen: View {
   /// Answers a line (返信): quoted over the composer until sent or ×.
   private func reply(to line: ChatLineRow) {
     if draft.editing != nil { stopEditing() }
-    withAnimation { draft.replyTo = String(line.seq) }
+    withAnimation { draft.replyTo = line.seq }
     draft.field.focus()
   }
 
   /// The line being answered, for the first line sent: then no more.
   private func takeReply() -> UInt64 {
     defer { draft.replyTo = nil }
-    return draft.replyTo.flatMap(UInt64.init) ?? 0
+    return draft.replyTo.map(UInt64.init) ?? 0
   }
 
   /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):
@@ -1384,7 +1378,7 @@ struct ChatScreen: View {
     else {
       return LineQuote(seq: seq, words: "以前のメッセージ")
     }
-    let writer = names[line.authorID] ?? "メンバー"
+    let writer = nameOf(line.authorID)
     if line.unsent {
       return LineQuote(seq: seq, writer: writer, words: "取り消されたメッセージ")
     }
@@ -1475,7 +1469,7 @@ struct ChatScreen: View {
         MessageAction(
           title: "通報", systemImage: "exclamationmark.bubble", destructive: true,
           startsGroup: true
-        ) { reporting = .line(line, writer: names[line.authorID] ?? "メンバー") })
+        ) { reporting = .line(line, writer: nameOf(line.authorID)) })
     }
     return actions
   }
@@ -1496,7 +1490,6 @@ struct ChatScreen: View {
         : on ? "ピン留めしました" : "ピン留めを外しました")
   }
 
-  /// Says `words` over the lines for a moment, as a toast does.
   /// Says a save or a copy is done, felt as well as said: what it made
   /// happens out of sight, in Photos or on the clipboard.
   private func sayDone(_ words: String) {
@@ -1504,6 +1497,7 @@ struct ChatScreen: View {
     say(words)
   }
 
+  /// Says `words` over the lines for a moment, as a toast does.
   private func say(_ words: String) {
     notices += 1
     let said = notices
@@ -1534,7 +1528,7 @@ struct ChatScreen: View {
       following = false
       // Rung once there, not on the way; by itself, as this task ends
       // with the line gone to.
-      scroller.show("line-\(line.opID)", at: .center, animated: true) {
+      scroller.show(ChatItemID.line(line.opID), at: .center, animated: true) {
         marks.ringed = target
         Task { @MainActor in
           try? await Task.sleep(for: .milliseconds(500))
@@ -1543,7 +1537,7 @@ struct ChatScreen: View {
       }
     } else if !state.atStart {
       // Gone to a line before those laid out: on back a page at a time.
-      showEarlier(laidOut: state.lines.first.map { "line-\($0.opID)" })
+      showEarlier(laidOut: state.lines.first.map { ChatItemID.line($0.opID) })
     } else {
       jumpTarget = nil
     }
@@ -1598,13 +1592,7 @@ struct ChatScreen: View {
   }
 
   private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
-    var kind = kind
-    // Each line goes with the app's version and the device where the
-    // place keeps them (the support chat's head says so).
-    if place.rules.sendsDevice, case .send(var send) = kind {
-      send.device = AppDevice.words
-      kind = .send(send)
-    }
+    let kind = AppDevice.stamped(kind, in: place.id)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { db in
       try Chats.edit(kind, in: place.id, now: now, db: db)
@@ -1639,7 +1627,7 @@ private struct RowLook: Hashable {
   let blockedWriter: Bool
   let shownAnyway: Bool
   let unfolded: Bool
-  let common: Int
+  let common: RowsLook
 }
 
 /// When the server is asked for the page before the lines held: as the

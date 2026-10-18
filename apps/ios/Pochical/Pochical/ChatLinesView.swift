@@ -207,11 +207,7 @@ private struct LinesLook: Equatable {
 
 /// The chat's lines, kept clear of the composer and the keyboard under them.
 struct ChatLinesView: UIViewControllerRepresentable {
-  /// The top item while earlier lines are to come, which asks for them.
-  static let earlier = "earlier"
-
-  /// Every item, oldest first; a line's id starts with `line-`, which
-  /// the lines read and seen are counted by.
+  /// Every item, oldest first, by its ChatItemID.
   let rows: [LinesRow]
   let row: (String) -> AnyView
   /// The ↓ to the latest, over the composer's right.
@@ -239,9 +235,6 @@ struct ChatLinesView: UIViewControllerRepresentable {
   let replySwipe: (String) -> ReplySwipe?
   /// The item `id` was dragged far enough to reply to it.
   let onReply: (String) -> Void
-  /// Lines too few to fill the screen stand at its top, under a head that
-  /// starts the chat, rather than at its foot by the composer.
-  var fewAtTop = false
   /// The items within Chat.photoPrefetchScreens of those in sight, told
   /// as they change while the lines scroll, for their photos to be fetched
   /// ahead. UICollectionView's own prefetching stays off (ChatLayout's).
@@ -427,7 +420,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     model.environment = environment
     model.row = settings.row
     latest.rootView = AnyView(settings.latest.environment(\.self, environment))
-    layout.keepContentAtBottomOfVisibleArea = !settings.fewAtTop
     replyArrow.tintColor = UIColor(environment.themeColors.textTertiary)
     let alpha: CGFloat = settings.shown ? 1 : 0
     if lines.alpha != alpha {
@@ -458,7 +450,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
     let fromTop = lines.contentOffset.y - lowest
     if fromTop < seenHeight * CGFloat(Chat.prefetchScreens) {
-      settings.onNearTop(ids.first { $0.hasPrefix("line-") })
+      settings.onNearTop(ids.first(where: ChatItemID.isLine))
     }
   }
 
@@ -555,11 +547,11 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// Lines new to `new` stand above the first line it keeps from `old`,
   /// the spinner over the earlier lines aside.
   private func cameAbove(_ old: [String], in new: [String]) -> Bool {
-    let lines = old.filter { $0 != ChatLinesView.earlier }
+    let lines = old.filter { $0 != ChatItemID.earlier }
     guard let kept = lines.first(where: new.contains), let at = new.firstIndex(of: kept) else {
       return false
     }
-    return new[..<at].contains { $0 != ChatLinesView.earlier && !old.contains($0) }
+    return new[..<at].contains { $0 != ChatItemID.earlier && !old.contains($0) }
   }
 
   /// The items new to `new` below the last line it keeps from `old`:
@@ -571,7 +563,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     for id in new.reversed() {
       if !kept.contains(id) {
         below.insert(id)
-      } else if id.hasPrefix("line-") {
+      } else if ChatItemID.isLine(id) {
         break
       }
     }
@@ -718,12 +710,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       seePlace()
       return
     }
-    // From far up, glides the last screen only.
-    if target - lines.contentOffset.y > seenHeight {
-      lines.contentOffset.y = target - seenHeight
-    }
     goingDown = true
-    lines.setContentOffset(CGPoint(x: lines.contentOffset.x, y: target), animated: true)
+    glide(to: target)
   }
 
   func show(_ id: String, at place: LinePlace, animated: Bool, then: (() -> Void)?) {
@@ -752,13 +740,17 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       then?()
       return
     }
-    // From far off, glides the last screen only, as to the latest, rather
-    // than through all between.
+    going = asked
+    glide(to: target)
+  }
+
+  /// Glides the lines to `target`, from far off the last screen only rather
+  /// than through all between.
+  private func glide(to target: CGFloat) {
     let away = target - lines.contentOffset.y
     if abs(away) > seenHeight {
       lines.contentOffset.y = target - (away > 0 ? seenHeight : -seenHeight)
     }
-    going = asked
     lines.setContentOffset(CGPoint(x: lines.contentOffset.x, y: target), animated: true)
   }
 
@@ -841,7 +833,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     )
   }
 
-  /// Where the lines are scrolled, told to what shows it.
   /// The items last told near those in sight.
   private var near: [String] = []
 
@@ -859,6 +850,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     settings.onNear(ids)
   }
 
+  /// Where the lines are scrolled, told to what shows it.
   private func seePlace() {
     seeNear()
     guard lines.bounds.height > 0 else { return }
@@ -866,7 +858,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let content = layout.collectionViewContentSize.height
     let below = content + inset.bottom - (lines.contentOffset.y + lines.bounds.height)
     let place = ScrollPlace(
-      atLatest: below < 24, away: below > seenHeight / 2, fits: content <= seenHeight + 1,
+      atLatest: below < 24, away: below > seenHeight / 2,
       unreadBelow: isBelowTop(ChatItem.unread.id))
     let before = scroll.place
     if place != before {
@@ -884,7 +876,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let seen = (layout.layoutAttributesForElements(in: lines.bounds) ?? [])
       .filter { $0.representedElementCategory == .cell && $0.frame.maxY <= foot }
       .compactMap { $0.indexPath.item < ids.count ? ids[$0.indexPath.item] : nil }
-      .filter { $0.hasPrefix("line-") }
+      .filter(ChatItemID.isLine)
     if seen != scroll.seen { scroll.seen = seen }
     for case let cell as LineCell in lines.visibleCells {
       cell.space.moved()
@@ -981,7 +973,6 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       letGoOfSwipe()
     }
   }
-
 
   /// Draws the line `id` dragged `along` toward the middle, past
   /// chatRules.replySwipe less and less, the arrow beside it.

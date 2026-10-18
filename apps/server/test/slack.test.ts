@@ -3,8 +3,8 @@ import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { supportPlace } from "../src/group-chat";
 import { fromSlackText, signedBySlack, toSlackText } from "../src/slack";
+import { supportPlace } from "../src/support-lines";
 import { call, ORIGIN, signInAnonymously } from "./helpers";
 import { relayed, supportChat } from "./sync-helpers";
 

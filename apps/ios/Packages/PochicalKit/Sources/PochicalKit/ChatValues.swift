@@ -509,16 +509,11 @@ public enum Chats {
   }
 
   /// A line not sent (spec/chat.md, Lines on their way): its photo could
-  /// not be uploaded, or it waited too long. It stays, marked, and the
+  /// not be uploaded, the member stopped it going up (Photos), or it
+  /// waited too long. It stays, marked, to send again or delete, and the
   /// edits after it go on.
-  static func fail(_ opID: String, in db: Database) throws {
+  public static func fail(_ opID: String, in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.eq(opID) }.update { $0.failed = true }.execute(db)
-  }
-
-  /// The member stopped their photo going up (spec/chat.md, Photos): its
-  /// line is not sent, as one whose photo failed, to send again or delete.
-  public static func stopSending(_ opID: String, in db: Database) throws {
-    try fail(opID, in: db)
   }
 
   /// The line still waits to go: not sent yet, nor marked not sent, nor
@@ -657,6 +652,19 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   /// to send again or delete.
   public var failed = false
   public var id: String { opID }
+
+  /// The line `send` waits as, kept in the outbox as `row`.
+  init(_ send: Pochical_V1_ChatSend, opID: String, row: ChatOutboxRow) {
+    self.opID = opID
+    text = send.text
+    madeAtMs = row.madeAtMs
+    days = send.days.compactMap(Day.init)
+    poll = send.poll
+    photo = send.hasPhoto ? LinePhoto(send.photo) : nil
+    preview = send.hasPreview ? LinePreview(send.preview) : nil
+    replyTo = send.replyTo == 0 ? nil : Int64(send.replyTo)
+    failed = row.failed
+  }
 }
 
 extension Chats {
@@ -679,8 +687,6 @@ extension Chats {
       }
       block.append(row)
     }
-    let waitingEdits = try ChatOutboxRow.where { $0.groupID.eq(groupID) }.order(by: \.id)
-      .fetchAll(db)
     let taken = Set(all.map(\.opID))
     var lines = Array(block.reversed())
     var waiting: [WaitingLine] = []
@@ -691,17 +697,10 @@ extension Chats {
         && !$0.unsent
     }
     .order { $0.pinnedOrder.desc() }.fetchAll(db).map { String($0.seq) }
-    for row in waitingEdits {
-      let edit = try Pochical_V1_ChatEdit(serializedBytes: row.edit)
+    for (edit, row) in try waitingEdits(of: groupID, in: db) {
       switch edit.kind {
       case .send(let send) where send.threadID == threadID && !taken.contains(edit.opID):
-        waiting.append(
-          WaitingLine(
-            opID: edit.opID, text: send.text, madeAtMs: row.madeAtMs,
-            days: send.days.compactMap(Day.init), poll: send.poll,
-            photo: send.hasPhoto ? LinePhoto(send.photo) : nil,
-            preview: send.hasPreview ? LinePreview(send.preview) : nil,
-            replyTo: send.replyTo == 0 ? nil : Int64(send.replyTo), failed: row.failed))
+        waiting.append(WaitingLine(send, opID: edit.opID, row: row))
       case .change(let change) where change.threadID == threadID:
         if let at = lines.firstIndex(where: { $0.seq == Int64(change.seq) }) {
           lines[at].text = change.text
@@ -854,16 +853,15 @@ public func unreadCount(_ lines: [(seq: Int64, writer: LineWriter)], read: Int64
   lines.count { $0.seq > read && $0.writer == .others }
 }
 
-/// How many of a chat's unread lines count, as what notifies: all of them
-/// in a chat that is on; in one turned off only those mentioning `me`,
-/// and those only while mentions always notify (spec/chat.md, Unread
-/// lines; spec/vectors/unread.json).
+/// How many of a chat's unread lines count, as what notifies, from their
+/// words: `notifyingCount` with those mentioning `me` as its mentions
+/// (spec/vectors/unread.json).
 public func notifyingUnread(
   _ unread: [String], muted: Bool, mentionsWhenMuted: Bool, me: String
 ) -> Int {
-  guard muted else { return unread.count }
-  guard mentionsWhenMuted else { return 0 }
-  return unread.count { mentions(in: $0).contains(me) }
+  notifyingCount(
+    count: unread.count, mentions: unread.count { mentions(in: $0).contains(me) }, muted: muted,
+    mentionsWhenMuted: mentionsWhenMuted)
 }
 
 /// A chat as a list shows it: its latest line, and how many lines count
@@ -902,16 +900,12 @@ extension Chats {
     let reads = try waitingEdits(of: groupID, in: db)
     var ownRead: Int64 = 0
     var waiting: WaitingLine?
-    for (edit, madeAtMs) in reads {
+    for (edit, row) in reads {
       switch edit.kind {
       case .read(let read) where read.threadID == threadID:
         ownRead = max(ownRead, Int64(read.lastReadSeq))
       case .send(let send) where send.threadID == threadID:
-        waiting = WaitingLine(
-          opID: edit.opID, text: send.text, madeAtMs: madeAtMs, days: send.days.compactMap(Day.init),
-          poll: send.poll, photo: send.hasPhoto ? LinePhoto(send.photo) : nil,
-          preview: send.hasPreview ? LinePreview(send.preview) : nil,
-          replyTo: send.replyTo == 0 ? nil : Int64(send.replyTo))
+        waiting = WaitingLine(send, opID: edit.opID, row: row)
       default: break
       }
     }
@@ -1011,12 +1005,12 @@ extension Chats {
     return counts
   }
 
-  /// The group's waiting edits in the order made, with when each was made.
+  /// The group's waiting edits in the order made, each with its row.
   private static func waitingEdits(of groupID: String, in db: Database) throws
-    -> [(Pochical_V1_ChatEdit, Int64)]
+    -> [(Pochical_V1_ChatEdit, ChatOutboxRow)]
   {
     try ChatOutboxRow.where { $0.groupID.eq(groupID) }.order(by: \.id).fetchAll(db).map {
-      (try Pochical_V1_ChatEdit(serializedBytes: $0.edit), $0.madeAtMs)
+      (try Pochical_V1_ChatEdit(serializedBytes: $0.edit), $0)
     }
   }
 }
@@ -1035,7 +1029,7 @@ public struct LineNotice: Codable, Hashable, Sendable {
   /// The group's icon changed.
   public var markChanged = false
 
-  public init(kind: Kind, subjectID: String = "", name: String = "", markChanged: Bool = false) {
+  init(kind: Kind, subjectID: String = "", name: String = "", markChanged: Bool = false) {
     self.kind = kind
     self.subjectID = subjectID
     self.name = name

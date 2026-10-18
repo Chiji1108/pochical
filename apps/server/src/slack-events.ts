@@ -12,7 +12,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
-import { GROUP_THREAD, supportPlace } from "./group-chat";
+import { GROUP_THREAD } from "./group-chat";
 import { photoKey } from "./photos";
 import {
   emojiOfSlackName,
@@ -24,6 +24,7 @@ import {
   slackSecret,
   stringOf,
 } from "./slack";
+import { supportPlace } from "./support-lines";
 import { linesOfSlackTs } from "./support-place";
 import { characterCount } from "./text-limits";
 

@@ -123,7 +123,7 @@ public enum ChatPhotos {
 
   /// Where a group's photo is kept on the device once seen or sent: among
   /// the App Group's caches, so the widgets show the faces too.
-  public static func cached(_ photoID: String, in groupID: String) -> URL {
+  static func cached(_ photoID: String, in groupID: String) -> URL {
     caches("ChatPhotos/\(groupID)").appending(path: "\(photoID).jpg")
   }
 
@@ -347,11 +347,6 @@ public enum ChatPhotos {
     return data
   }
 
-  /// Where photos in the chat with Pochical's people are kept: its place's
-  /// id, on the device beside the groups', and on the server with that
-  /// place's photos (/v1/support/photos).
-  public static let support = ChatPlace.supportID
-
   /// Where the user's own photos are kept, in place of a group's id: their
   /// usual photo, on the server for them alone (spec/sync-protocol.md,
   /// Profile). A group's id is never this.
@@ -381,7 +376,7 @@ public enum ChatPhotos {
 
   private static func photoURL(_ photoID: String, in groupID: String, server: URL) -> URL {
     switch groupID {
-    case support: server.appending(path: "v1/support/photos/\(photoID)")
+    case ChatPlace.supportID: server.appending(path: "v1/support/photos/\(photoID)")
     case mine: server.appending(path: "v1/me/photos/\(photoID)")
     case let shelf where shelf.hasPrefix("invites/"):
       server.appending(path: "v1/\(shelf)/photos/\(photoID)")

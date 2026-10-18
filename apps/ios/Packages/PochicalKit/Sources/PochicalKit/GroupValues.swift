@@ -38,6 +38,14 @@ public struct GroupMemberRow: Hashable, Sendable {
   }
 }
 
+extension [GroupMemberRow] {
+  /// Each one's name as the app shows it, by id: the last kept for an id
+  /// listed twice.
+  public var shownNames: [String: String] {
+    Dictionary(map { ($0.userID, $0.shownName) }, uniquingKeysWith: { _, last in last })
+  }
+}
+
 /// A member's day as the group sees it: its pattern and times only.
 @Table("memberDays")
 struct MemberDayRow: Hashable, Sendable {

@@ -72,20 +72,20 @@ public func withdrawn(
 /// notifications of lines read elsewhere: the chats with nothing unread
 /// left, and how far the user read each.
 public struct ReadState: Hashable, Sendable {
-  /// Each chat, as its group and thread, with nothing unread left.
-  public var cleared: Set<[String]> = []
-  /// The user's own read mark in each chat, by its group and thread.
-  public var marks: [[String]: Int64] = [:]
+  /// Each chat with nothing unread left.
+  public var cleared: Set<ChatKey> = []
+  /// The user's own read mark in each chat.
+  public var marks: [ChatKey: Int64] = [:]
 
   public init() {}
 
   /// As the database holds it for the user `me`.
   public init(me: String, in db: Database) throws {
     for count in try UnreadCountRow.where({ $0.count.eq(0) }).fetchAll(db) {
-      cleared.insert([count.groupID, count.threadID])
+      cleared.insert(ChatKey(groupID: count.groupID, threadID: count.threadID))
     }
     for mark in try ReadMarkRow.where({ $0.userID.eq(me) }).fetchAll(db) {
-      let chat = [mark.groupID, mark.threadID]
+      let chat = ChatKey(groupID: mark.groupID, threadID: mark.threadID)
       marks[chat] = max(marks[chat] ?? 0, mark.lastReadSeq)
     }
   }
@@ -96,11 +96,12 @@ public struct ReadState: Hashable, Sendable {
 /// has nothing unread left, as another device's read says.
 public func readNotified(_ shown: [NotifiedLine], _ read: ReadState) -> [String] {
   var ids: [String] = []
-  for chat in Set(shown.map { [$0.groupID, $0.threadID] }) {
+  for chat in Set(shown.map { ChatKey(groupID: $0.groupID, threadID: $0.threadID) }) {
     let cleared = read.cleared.contains(chat)
     guard cleared || read.marks[chat] != nil else { continue }
     ids += withdrawn(
-      shown, groupID: chat[0], threadID: chat[1], readTo: cleared ? nil : read.marks[chat])
+      shown, groupID: chat.groupID, threadID: chat.threadID,
+      readTo: cleared ? nil : read.marks[chat])
   }
   return ids
 }

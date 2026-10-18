@@ -251,7 +251,12 @@ function notifyingUnread(
   if (!muted) {
     return chat.unread;
   }
-  if (!mentionsWhenMuted || chat.unread === 0) {
+  return mentionsWhenMuted ? unreadMentions(chat) : 0;
+}
+
+// How many of a chat's unread lines mention the reader.
+export function unreadMentions(chat: Chat) {
+  if (chat.unread === 0) {
     return 0;
   }
   return chat.messages

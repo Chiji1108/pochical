@@ -1,7 +1,12 @@
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { imageSize, linkPreview, mayRead, pageTags } from "../src/link-preview";
+import {
+  imageSize,
+  linkPreview,
+  mayFetch,
+  pageTags,
+} from "../src/link-preview";
 
 const html = (body: string) => new Uint8Array(new TextEncoder().encode(body));
 
@@ -66,7 +71,7 @@ describe("a link's preview", () => {
       "http://10.0.0.1/",
       "http://169.254.169.254/",
       "http://[::1]/",
-    ].map((url) => mayRead(new URL(url)));
+    ].map((url) => mayFetch(new URL(url)));
     expect(readable).toStrictEqual([
       true,
       true,

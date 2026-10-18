@@ -18,6 +18,32 @@ export function unsentLine(writer?: Member) {
     : `${writer?.name ?? "メンバー"}がメッセージの送信を取り消しました`;
 }
 
+// A chat's latest line in the chats' list: what was shared or sent rather
+// than the card's words, and 自分： before your own (spec/chat.md, Photos).
+export function lastLineOf(
+  last: Message,
+  writer: Member | undefined,
+  nameOf: (id: string) => string,
+  blocked: boolean
+) {
+  if (last.notice) {
+    return last.notice;
+  }
+  if (last.unsent) {
+    return unsentLine(writer);
+  }
+  if (blocked) {
+    return blockedLine;
+  }
+  let text = summaryOf(last, nameOf);
+  if (last.days || (last.poll && !last.poll.decided)) {
+    text = `${text}を共有しました`;
+  } else if (last.photo) {
+    text = "写真を送りました";
+  }
+  return writer?.me ? `自分：${text}` : text;
+}
+
 export function summaryOf(message: Message, nameOf: (id: string) => string) {
   if (message.unsent) {
     return "取り消されたメッセージ";

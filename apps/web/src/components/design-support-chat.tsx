@@ -15,13 +15,13 @@ import { site } from "../lib/site";
 import { AppIcon, useAppIcons } from "./design-app-icon";
 import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
-import { Composer, useComposer } from "./design-chat-composer";
+import { Composer, nameless, useComposer } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
 import { ChatListRow, chatGaps } from "./design-chat-parts";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
-import { summaryOf, unsentLine } from "./design-chat-summary";
+import { lastLineOf } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import type { Member, Profile } from "./design-group-data";
 import { BackButton } from "./design-header";
@@ -43,9 +43,6 @@ import { Screen } from "./design-ui";
 // is read by Pochical's people.
 
 const noShift = () => undefined;
-
-// No one is mentioned here.
-const nameless = () => "";
 
 // Who the chat is between: you, and Pochical's people, who answer under
 // the app's name and its icon.
@@ -82,12 +79,13 @@ export function SupportRow({ onOpen }: { onOpen: () => void }) {
   // What was being written, as the lines are now (spec/chat.md, Drafts).
   const kept = draft && keptDraft(draft, lines);
   let preview = "ほしい機能や不具合のこと、気軽にどうぞ";
-  if (last?.unsent) {
-    preview = unsentLine(
-      membersOf(profile, icon).find((member) => member.id === last.from)
+  if (last) {
+    preview = lastLineOf(
+      last,
+      membersOf(profile, icon).find((member) => member.id === last.from),
+      nameless,
+      false
     );
-  } else if (last) {
-    preview = summaryOf(last, nameless);
   }
   return (
     <List>
@@ -197,6 +195,8 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
     unsend,
     unsending,
   } = useChatEdits({
+    // What the group chats offer that this one leaves out.
+    allows: { edit: false, pin: false, report: false },
     answering: opened?.replyTo,
     composer,
     mentionName: nameless,
@@ -229,6 +229,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
     onLinkMenu: setLinkMenu,
     // No days are shared here.
     onOpenDay: () => undefined,
+    openUrl: openLink,
     people: members,
     photos: photosOf(lines, writerOf, () => true),
     writerOf,
@@ -260,13 +261,7 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
             <Intro icon={icon} />
             {lines.map((line, index) => (
               <MessageLine
-                // What the group chats offer that this one leaves out.
-                actions={{
-                  ...actionsOf(line),
-                  onEdit: undefined,
-                  onPin: undefined,
-                  onReport: undefined,
-                }}
+                actions={actionsOf(line)}
                 flash={flash === line.id}
                 hidden={false}
                 key={line.id}
