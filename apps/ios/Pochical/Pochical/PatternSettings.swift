@@ -2,6 +2,7 @@ import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
+import SwiftUINavigation
 
 // 設定 › シフトパターン (/design's PatternsPage, AddPatternPage,
 // PatternEditor and LookEditorPage; spec/shift-patterns.md): the person's
@@ -380,7 +381,7 @@ struct PatternEditor: View {
     }
     .alert(
       "「\(initial.name)」を削除しますか？",
-      isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+      isPresented: Binding($deleting),
       presenting: deleting
     ) { _ in
       Button("キャンセル", role: .cancel) {}

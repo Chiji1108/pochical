@@ -2,6 +2,7 @@ import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
+import SwiftUINavigation
 
 // The chats' notifications (spec/chat.md, Notifications; /design's
 // ChatNotificationsPage): each group chat's switch, the one-to-one chats
@@ -117,7 +118,7 @@ struct ChatNotificationsPage: View {
     }
     .alert(
       unblocking.map { "\($0.name)のブロックを解除しますか？" } ?? "",
-      isPresented: Binding(get: { unblocking != nil }, set: { if !$0 { unblocking = nil } }),
+      isPresented: Binding($unblocking),
       presenting: unblocking
     ) { person in
       Button("キャンセル", role: .cancel) {}
