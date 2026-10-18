@@ -206,7 +206,8 @@ struct LineView: View {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { voicedMeta }
           LineContent(
-            text: text, drawing: drawing, preview: preview, days: days, members: members, poll: poll, photo: photo,
+            text: text, drawing: drawing, preview: preview, days: days, members: members,
+            poll: poll, photo: photo,
             quote: quote, groupID: groupID, mine: mine, first: first,
             waiting: waiting && !failed, nameOf: nameOf, onOpenQuote: { act(.openQuote) },
             onStopSending: { act(.stopSending) },
@@ -541,7 +542,8 @@ struct LineContent: View {
         onVote: onVote, onDecide: onDecide)
     } else if days.isEmpty {
       MessageBubble(
-        text: text, drawing: drawing, mine: mine, first: first, waiting: waiting, nameOf: nameOf, preview: preview,
+        text: text, drawing: drawing, mine: mine, first: first, waiting: waiting, nameOf: nameOf,
+        preview: preview,
         quote: quote, groupID: groupID, onOpenQuote: onOpenQuote, unfolded: unfolded,
         onUnfold: onUnfold)
     } else {
@@ -746,7 +748,6 @@ struct LinePiece {
     let cut: CGFloat
     let size: CGSize
   }
-
 }
 
 /// Where the chat's lines keep the item `id`'s drawing, for its row's look.
