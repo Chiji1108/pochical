@@ -408,7 +408,7 @@ describe("an answer from Pochical's people", () => {
     vi.restoreAllMocks();
   });
 
-  it("notifies the user's devices, from Slack and from the admin site, as a chat's line", async () => {
+  it("notifies the user's devices, from Slack and from the admin site, titled with the chat", async () => {
     const calls = slackCalls();
     const { thread, token, userId } = await startedChat();
     await call(
@@ -430,7 +430,16 @@ describe("an answer from Pochical's people", () => {
     });
     expect(alerts().map(({ args }) => args)).toMatchObject([
       {
-        aps: { alert: { "loc-args": ["設定から変えられます"] } },
+        // Titled with the chat, as 設定's row names it: no writer.
+        aps: {
+          alert: {
+            "loc-args": ["設定から変えられます"],
+            "loc-key": "CHAT_TEXT",
+            "title-loc-args": [],
+            "title-loc-key": "SUPPORT_TITLE",
+          },
+          category: "CHAT_LINE",
+        },
         groupId: chatRules.supportPlace,
         threadId: "group",
       },
