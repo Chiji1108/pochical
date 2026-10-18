@@ -6,6 +6,11 @@ export const chatRules = {
   // open wait to be said by the screen reader, so a run of them is said
   // once, as how many and the latest, rather than one over the other.
   announceSettleMs: 1000,
+  // How much larger than at the default text size the chat's round
+  // controls (the composer's tools and send, ↓) grow at most as the
+  // reader's text grows, so at the accessibility sizes the field and the
+  // lines keep the room, as Messages keeps its own controls.
+  controlsMostScale: 1.5,
   // A card of shared days shows this many days (or people) across, all
   // that fit in a bubble on the narrowest phone; past it the card turns
   // to a row per person.

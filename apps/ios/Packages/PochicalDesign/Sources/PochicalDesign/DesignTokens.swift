@@ -1436,6 +1436,61 @@ extension ThemeColors {
   )
 }
 
+extension ThemeColors {
+  /// As drawn with Increase Contrast on: the quieter roles in a stronger
+  /// one's color (design/src/colors.ts, increasedContrast).
+  public var increasedContrast: ThemeColors {
+    ThemeColors(
+      backgroundBase: backgroundBase,
+      backgroundCard: backgroundCard,
+      backgroundElevated: backgroundElevated,
+      fillQuaternary: fillQuaternary,
+      fillTertiary: fillSecondary,
+      fillSecondary: fillSecondary,
+      fillPrimary: fillPrimary,
+      textPrimary: textPrimary,
+      textSecondary: textSecondary,
+      textTertiary: textSecondary,
+      textQuaternary: textSecondary,
+      textDisabled: textDisabled,
+      borderDefault: borderStrong,
+      separator: borderStrong,
+      borderStrong: borderStrong,
+      calendarHoliday: calendarHoliday,
+      calendarSaturday: calendarSaturday,
+      dangerDefault: dangerDefault,
+      dangerFill: dangerFill,
+      dangerOnFill: dangerOnFill,
+      inverseBackground: inverseBackground,
+      inverseText: inverseText,
+      controlKnob: controlKnob,
+      homeIndicator: homeIndicator,
+      scrim: scrim,
+      shadowSmall: shadowSmall,
+      shadowMedium: shadowMedium,
+      shadowLarge: shadowLarge,
+      mediaBackground: mediaBackground,
+      mediaText: mediaText,
+      mediaTextSecondary: mediaTextSecondary,
+      mediaFill: mediaFill,
+      mediaFillFaint: mediaFillFaint,
+      mediaDim: mediaDim,
+      mediaShade: mediaShade,
+      mediaWarning: mediaWarning,
+      accentDefault: accentDefault,
+      accentFill: accentFill,
+      accentOnFill: accentOnFill,
+      accentFocus: accentFocus,
+      accentBorder: accentDefault,
+      accentContainer: accentContainer,
+      accentSwitch: accentSwitch,
+      calendarOffTint: calendarOffTint,
+      calendarNoteMarker: calendarNoteMarker,
+      marks: marks
+    )
+  }
+}
+
 public enum Metrics {
   public static let spacingStep: CGFloat = 4
   public static let action: CGFloat = 40

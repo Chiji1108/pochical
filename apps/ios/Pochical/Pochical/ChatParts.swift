@@ -9,13 +9,15 @@ import SwiftUI
 struct UnreadCount: View {
   @Environment(\.themeColors) private var colors
   let count: Int
+  /// Its round, growing with the reader's text size as its digits do.
+  @ScaledMetric(relativeTo: .caption2) private var least: CGFloat = 18
 
   var body: some View {
     Text("\(count)")
-      .font(.system(size: 11, weight: .bold).monospacedDigit())
+      .font(.caption2.weight(.bold).monospacedDigit())
       .foregroundStyle(colors.dangerOnFill)
       .padding(.horizontal, 5)
-      .frame(minWidth: 18, minHeight: 18)
+      .frame(minWidth: least, minHeight: least)
       .background(colors.dangerFill, in: Capsule())
       .accessibilityLabel("\(count)件の未読")
   }

@@ -3,6 +3,7 @@
 /// The chat's shared numbers (spec/chat.md); times in milliseconds.
 public enum Chat {
   public static let announceSettleMs = 1000
+  public static let controlsMostScale = 1.5
   public static let dayCardColumns = 6
   public static let dayCardRows = 7
   public static let floatingDayMs = 1500

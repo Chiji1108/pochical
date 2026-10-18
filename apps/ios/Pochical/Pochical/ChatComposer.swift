@@ -125,7 +125,17 @@ struct ChatComposer: View {
   @State private var photoItems: [PhotosPickerItem] = []
   /// The row's height: each of its buttons, the field at least as tall;
   /// folded, the tools narrow to one.
-  private static let buttonSize: CGFloat = 38
+  /// Growing with the reader's text size, as the field beside them does,
+  /// but only so far (chatRules.controlsMostScale): at the accessibility sizes
+  /// the field needs the row's width more, as Messages keeps its buttons.
+  @ScaledMetric(relativeTo: .body) private var scaledButton: CGFloat = 38
+  /// Its tools' and send's symbols, growing as the buttons do.
+  @ScaledMetric(relativeTo: .body) private var scaledIcon: CGFloat = 20
+  @ScaledMetric(relativeTo: .body) private var scaledSendIcon: CGFloat = 16
+  private var buttonSize: CGFloat { min(scaledButton, 38 * Self.mostScale) }
+  private var iconSize: CGFloat { min(scaledIcon, 20 * Self.mostScale) }
+  private var sendIconSize: CGFloat { min(scaledSendIcon, 16 * Self.mostScale) }
+  private static let mostScale = CGFloat(Chat.controlsMostScale)
 
   var body: some View {
     let trimmed = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -178,26 +188,26 @@ struct ChatComposer: View {
               if let onShareDays {
                 Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
                   .labelStyle(.iconOnly)
-                  .font(.system(size: 20))
+                  .font(.system(size: iconSize))
                   .foregroundStyle(colors.textSecondary)
-                  .frame(width: Self.buttonSize, height: Self.buttonSize)
+                  .frame(width: buttonSize, height: buttonSize)
               }
             }
             .opacity(folded ? 0 : 1)
-            .offset(x: folded && !reduceMotion ? -Self.buttonSize : 0)
+            .offset(x: folded && !reduceMotion ? -buttonSize : 0)
             .disabled(folded)
             .accessibilityHidden(folded)
             Button("写真と日にちのボタンを表示", systemImage: "chevron.right") { draft.toolsOpen = true }
               .labelStyle(.iconOnly)
-              .font(.system(size: 20, weight: .medium))
+              .font(.system(size: iconSize, weight: .medium))
               .foregroundStyle(colors.textSecondary)
-              .frame(width: Self.buttonSize, height: Self.buttonSize)
+              .frame(width: buttonSize, height: buttonSize)
               .opacity(folded ? 1 : 0)
               .scaleEffect(folded || reduceMotion ? 1 : 0.6)
               .disabled(!folded)
               .accessibilityHidden(!folded)
           }
-          .frame(width: folded ? Self.buttonSize : nil, alignment: .leading)
+          .frame(width: folded ? buttonSize : nil, alignment: .leading)
           .clipped()
         }
         ComposerField(
@@ -219,13 +229,13 @@ struct ChatComposer: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .frame(minHeight: Self.buttonSize)
+        .frame(minHeight: buttonSize)
         .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xl))
         Button(action: onSubmit) {
           Image(systemName: editing == nil ? "arrow.up" : "checkmark")
-            .font(.system(size: 16, weight: .bold))
+            .font(.system(size: sendIconSize, weight: .bold))
             .foregroundStyle(colors.accentOnFill)
-            .frame(width: Self.buttonSize, height: Self.buttonSize)
+            .frame(width: buttonSize, height: buttonSize)
             .background(blocked ? colors.fillPrimary : colors.accentFill, in: Circle())
         }
         .buttonStyle(.plain)
@@ -290,9 +300,9 @@ struct ChatComposer: View {
         preferredItemEncoding: .compatible
       ) {
         Image(systemName: "photo")
-          .font(.system(size: 20))
+          .font(.system(size: iconSize))
           .foregroundStyle(iconColor)
-          .frame(width: Self.buttonSize, height: Self.buttonSize)
+          .frame(width: buttonSize, height: buttonSize)
       }
       .accessibilityLabel("写真を送る")
       .onChange(of: photoItems) { _, items in
@@ -305,9 +315,9 @@ struct ChatComposer: View {
         say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
       }
       .labelStyle(.iconOnly)
-      .font(.system(size: 20))
+      .font(.system(size: iconSize))
       .foregroundStyle(colors.textQuaternary)
-      .frame(width: Self.buttonSize, height: Self.buttonSize)
+      .frame(width: buttonSize, height: buttonSize)
     }
   }
 

@@ -41,6 +41,10 @@ private struct ReactionPill: View {
   @Environment(\.memberFaces) private var photos
   var counted = false
   let onToggle: () -> Void
+  /// Its height and faces, growing with the reader's text size as its
+  /// emoji and count do.
+  @ScaledMetric(relativeTo: .subheadline) private var height: CGFloat = 24
+  @ScaledMetric(relativeTo: .subheadline) private var face: CGFloat = 18
 
   private static var mostFaces: Int { 3 }
 
@@ -60,7 +64,7 @@ private struct ReactionPill: View {
         } else {
           HStack(spacing: -2) {
             ForEach(faces, id: \.self) { id in
-              MemberAvatar(name: nameOf(id), photoID: photos[id] ?? "", size: 18, userID: id)
+              MemberAvatar(name: nameOf(id), photoID: photos[id] ?? "", size: face, userID: id)
                 .overlay(
                   Circle().strokeBorder(mine ? colors.accentContainer : colors.backgroundCard))
             }
@@ -75,7 +79,7 @@ private struct ReactionPill: View {
       }
       .padding(.leading, 8)
       .padding(.trailing, counted ? 8 : 3)
-      .frame(height: 24)
+      .frame(minHeight: height)
       .background(mine ? colors.accentContainer : colors.backgroundCard, in: Capsule())
       .overlay(Capsule().strokeBorder(mine ? colors.accentDefault : colors.borderDefault))
     }

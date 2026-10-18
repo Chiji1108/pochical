@@ -98,6 +98,17 @@ data class ThemeColors(
   /** The shift colors in picker order; the first is the テーマ's own. */
   val marks: List<MarkColor>,
 ) {
+  /** As drawn with high contrast text on: the quieter roles in a stronger one's color (design/src/colors.ts, increasedContrast). */
+  fun increasedContrast(): ThemeColors =
+    copy(
+      fillTertiary = fillSecondary,
+      textTertiary = textSecondary,
+      textQuaternary = textSecondary,
+      borderDefault = borderStrong,
+      separator = borderStrong,
+      accentBorder = accentDefault,
+    )
+
   companion object {
     val PochicalLight =
       ThemeColors(

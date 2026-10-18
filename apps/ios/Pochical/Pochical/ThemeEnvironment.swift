@@ -44,13 +44,16 @@ extension Appearance {
   }
 }
 
-/// The テーマ's colors in the light or dark the screen is drawn in.
+/// The テーマ's colors in the light or dark the screen is drawn in, its
+/// quieter ones stronger with Increase Contrast on.
 private struct ThemeColorsForScheme: ViewModifier {
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.colorSchemeContrast) private var contrast
   let theme: Theme
 
   func body(content: Content) -> some View {
-    content.environment(\.themeColors, theme.colors(theme.isAlwaysDark ? .dark : colorScheme))
+    let colors = theme.colors(theme.isAlwaysDark ? .dark : colorScheme)
+    content.environment(\.themeColors, contrast == .increased ? colors.increasedContrast : colors)
   }
 }
 

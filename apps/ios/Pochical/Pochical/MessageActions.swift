@@ -212,10 +212,20 @@ struct MessageActionsOverlay: View {
   /// Where each choice is on the screen, for the held finger.
   @State private var targets: [Target: CGRect] = [:]
 
-  private static var barHeight: CGFloat { 48 }
   private static var gap: CGFloat { 8 }
-  private static var menuWidth: CGFloat { 250 }
-  private static var rowHeight: CGFloat { Metrics.touch }
+  /// A reaction's round, its rows and its width grow with the reader's
+  /// text size, as the words in them do; within the screen's width.
+  @ScaledMetric(relativeTo: .body) private var reactionSize: CGFloat = 40
+  @ScaledMetric(relativeTo: .body) private var rowHeight: CGFloat = Metrics.touch
+  @ScaledMetric(relativeTo: .body) private var menuSize: CGFloat = 250
+  private var menuWidth: CGFloat { min(menuSize, Self.screenWidth - 2 * Self.margin) }
+  /// A reaction's round: as large as the text says, but the bar, the
+  /// first reactions and +, within the screen's width.
+  private var cell: CGFloat {
+    let count = CGFloat(reactionChoices.count + 1)
+    return min(reactionSize, (Self.screenWidth - 2 * Self.margin - 8 - 2 * (count - 1)) / count)
+  }
+  private var barHeight: CGFloat { cell + 8 }
   private static var groupGap: CGFloat { 8 }
   private static var margin: CGFloat { 12 }
   /// How small a tall bubble is drawn at least; past that its end is cut
@@ -253,7 +263,7 @@ struct MessageActionsOverlay: View {
           .offset(x: request.frame.minX, y: shown ? place.bubbleY : request.frame.minY)
           .accessibilityHidden(true)
         menu
-          .frame(width: Self.menuWidth)
+          .frame(width: menuWidth)
           .modifier(Placed(edge: place.edge, x: place.x, y: place.menuY, width: proxy.size.width))
           .scaleEffect(grown ? 1 : 0.85, anchor: menuAnchor(under: place.menuUnder))
           .opacity(shown ? 1 : 0)
@@ -309,8 +319,8 @@ struct MessageActionsOverlay: View {
           pick(.reaction(emoji))
         } label: {
           Text(emoji)
-            .font(.system(size: 26))
-            .frame(width: 40, height: 40)
+            .font(.system(size: cell * 0.65))
+            .frame(width: cell, height: cell)
             .background(
               chosen ? colors.accentContainer
                 : underFinger == .reaction(emoji) && reduceMotion ? colors.fillSecondary : .clear,
@@ -326,9 +336,9 @@ struct MessageActionsOverlay: View {
         pick(.moreReactions)
       } label: {
         Image(systemName: "plus")
-          .font(.system(size: 18, weight: .semibold))
+          .font(.system(size: cell * 0.45, weight: .semibold))
           .foregroundStyle(colors.textSecondary)
-          .frame(width: 40, height: 40)
+          .frame(width: cell, height: cell)
           .background(colors.fillTertiary, in: Circle())
           .scaleEffect(underFinger == .moreReactions && !reduceMotion ? 1.3 : 1)
           .animation(.spring(duration: 0.2), value: underFinger)
@@ -338,7 +348,7 @@ struct MessageActionsOverlay: View {
       .modifier(Tracked(target: .moreReactions, targets: $targets))
     }
     .padding(4)
-    .frame(height: Self.barHeight)
+    .frame(height: barHeight)
     // On the raised ground, as /design's bar: glass would show the lines
     // under it through the dimming.
     .background(colors.backgroundElevated, in: Capsule())
@@ -360,13 +370,16 @@ struct MessageActionsOverlay: View {
         } label: {
           HStack {
             Text(action.title)
+              // One line in its row, however large the text.
+              .lineLimit(1)
+              .minimumScaleFactor(0.6)
             Spacer(minLength: 12)
             Image(systemName: action.systemImage)
           }
           .font(.body)
           .foregroundStyle(action.destructive ? colors.dangerDefault : colors.textPrimary)
           .padding(.horizontal, 16)
-          .frame(height: Self.rowHeight)
+          .frame(height: rowHeight)
           .contentShape(.rect)
         }
         .buttonStyle(MenuRowStyle(held: underFinger == .action(action.id)))
@@ -452,7 +465,7 @@ struct MessageActionsOverlay: View {
     return stays && (frame.maxY + menuSpace <= bottom || frame.minY - barSpace - menuSpace >= top)
   }
 
-  private var barSpace: CGFloat { request.reactions == nil ? 0 : Self.barHeight + Self.gap }
+  private var barSpace: CGFloat { request.reactions == nil ? 0 : barHeight + Self.gap }
   private var menuSpace: CGFloat { Self.gap + menuHeight }
 
   /// Where the menu grows from: its corner by the bubble.
@@ -468,8 +481,14 @@ struct MessageActionsOverlay: View {
   private var menuHeight: CGFloat {
     request.actions.enumerated().reduce(0) { height, item in
       let gap = item.offset == 0 ? 0 : (item.element.startsGroup ? Self.groupGap : 0.5)
-      return height + gap + Self.rowHeight
+      return height + gap + rowHeight
     }
+  }
+
+  private static var screenWidth: CGFloat {
+    UIApplication.shared.connectedScenes
+      .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+      .first?.bounds.width ?? 390
   }
 
   private static var safeInsets: UIEdgeInsets {

@@ -2,6 +2,7 @@
   "$comment": "Code generated from design/ by `mise run gen`. Do not edit.",
   "chat": {
     "announceSettleMs": 1000,
+    "controlsMostScale": 1.5,
     "dayCardColumns": 6,
     "dayCardRows": 7,
     "floatingDayMs": 1500,
@@ -3157,6 +3158,14 @@
         }
       }
     }
+  },
+  "increasedContrast": {
+    "accent-border": "accent-default",
+    "border-default": "border-strong",
+    "fill-tertiary": "fill-secondary",
+    "separator": "border-strong",
+    "text-quaternary": "text-secondary",
+    "text-tertiary": "text-secondary"
   },
   "invite": {
     "codeAlphabet": "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789",
