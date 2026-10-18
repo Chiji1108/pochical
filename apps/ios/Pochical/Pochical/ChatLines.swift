@@ -156,12 +156,16 @@ struct LineView: View {
   }
 
   /// What its words take to draw: kept by the chat's lines for this line
-  /// alone. A cell's views of the line it had before are drawn once more
-  /// in the next line's environment as they go, which they leave alone.
+  /// alone, for these words and names. A cell's views of the line it had
+  /// before are drawn once more in the next line's environment as they go,
+  /// which they leave alone; one of the same line drawn before its names
+  /// changed makes its own.
   private var drawing: LineDrawing {
-    guard let kept, kept.id == "line-\(lineID)" else { return LineDrawing(text: text) }
-    if let drawing = kept.drawing, drawing.text == text { return drawing }
-    let drawing = LineDrawing(text: text)
+    guard let kept, kept.id == "line-\(lineID)" else {
+      return LineDrawing(text: text, names: names)
+    }
+    if let drawing = kept.drawing, drawing.text == text, drawing.names == names { return drawing }
+    let drawing = LineDrawing(text: text, names: names)
     kept.drawing = drawing
     return drawing
   }
@@ -294,12 +298,16 @@ struct LineView: View {
     if let photo {
       parts.append(photoWords(photo))
     } else {
-      let drawing = drawing
-      let words =
-        drawing.said
-        ?? lineWords(text, days: days, poll: poll != nil, decided: poll?.decided, nameOf: nameOf)
-      drawing.said = words
-      parts.append(words)
+      if days.isEmpty, poll == nil {
+        // Its words alone, kept with what the names make of them.
+        let drawing = drawing
+        let words = drawing.said ?? plainText(text, nameOf: nameOf)
+        drawing.said = words
+        parts.append(words)
+      } else {
+        parts.append(
+          lineWords(text, days: days, poll: poll != nil, decided: poll?.decided, nameOf: nameOf))
+      }
       if let preview, !preview.title.isEmpty {
         parts.append("リンク「\(preview.title)」")
       }
@@ -709,6 +717,8 @@ struct LinePiece {
 /// as it is drawn.
 @MainActor final class LineDrawing {
   let text: String
+  /// The members' names its mentions were drawn with.
+  let names: [String: String]
   /// Its words, links and mentions.
   private(set) lazy var parts = textParts(text)
   /// The invitation code of its first link, when that is one of
@@ -725,8 +735,9 @@ struct LinePiece {
   /// What VoiceOver says of its words.
   var said: String?
 
-  init(text: String) {
+  init(text: String, names: [String: String] = [:]) {
     self.text = text
+    self.names = names
   }
 
   /// The height a message's words take cut at chatRules.foldLines lines,
