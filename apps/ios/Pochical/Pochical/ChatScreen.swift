@@ -480,7 +480,7 @@ struct ChatScreen: View {
         draft: draft, groupID: place.id, threadID: threadID,
         mentionable: otherID != nil || !place.rules.mentions
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
-        nameOf: nameOf, quoteOf: { quote(of: Int64($0) ?? 0) }, onSubmit: submit,
+        nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
         onStopEditing: stopEditing,
         onShareDays: place.rules.days ? { sharingDays = true } : nil, say: say)
     }
@@ -903,7 +903,7 @@ struct ChatScreen: View {
     draft.text = plainText(kept.text, nameOf: nameOf)
     draft.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }
     draft.editing = kept.editing
-    draft.replyTo = kept.editing == nil ? kept.replyTo.map(String.init) : nil
+    draft.replyTo = kept.editing == nil ? kept.replyTo : nil
     keptDraft = KeptDraft(text: kept.text, replyTo: kept.replyTo, editing: kept.editing?.seq)
     openedDraft = (shown: draft.text, sent: kept.text)
   }
@@ -914,7 +914,7 @@ struct ChatScreen: View {
     let unchanged = openedDraft.flatMap { $0.shown == draft.text ? $0.sent : nil }
     let kept = KeptDraft(
       text: unchanged ?? withMentions(draft.text, picked: draft.picked),
-      replyTo: draft.replyTo.flatMap(Int64.init), editing: draft.editing?.seq)
+      replyTo: draft.replyTo, editing: draft.editing?.seq)
     guard kept != keptDraft else { return }
     keptDraft = kept
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
@@ -1359,14 +1359,14 @@ struct ChatScreen: View {
   /// Answers a line (返信): quoted over the composer until sent or ×.
   private func reply(to line: ChatLineRow) {
     if draft.editing != nil { stopEditing() }
-    withAnimation { draft.replyTo = String(line.seq) }
+    withAnimation { draft.replyTo = line.seq }
     draft.field.focus()
   }
 
   /// The line being answered, for the first line sent: then no more.
   private func takeReply() -> UInt64 {
     defer { draft.replyTo = nil }
-    return draft.replyTo.flatMap(UInt64.init) ?? 0
+    return draft.replyTo.map(UInt64.init) ?? 0
   }
 
   /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):

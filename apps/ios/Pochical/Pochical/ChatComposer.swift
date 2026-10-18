@@ -12,9 +12,9 @@ final class ChatDraft {
   var text = ""
   /// The line of one's own being changed in the composer.
   var editing: ChatLineRow?
-  /// The line being answered (返信), by its id in its chat, quoted over
+  /// The line being answered (返信), by its seq, quoted over
   /// the composer as the chat has it now.
-  var replyTo: String?
+  var replyTo: Int64?
   /// Days to go with the next message (共有する日), sent first.
   var attachedDays: [Day]?
   /// Members picked from the list of names while writing, to be sent as
@@ -27,6 +27,8 @@ final class ChatDraft {
   var comingPhotos = 0
   /// Picked photos are being read and shrunk: nothing is sent meanwhile.
   var readingPhotos: Bool { comingPhotos > 0 }
+  /// How many more photos the tray has room for, up to Chat.photosPerSend.
+  var photoRoom: Int { Chat.photosPerSend - photos.count - comingPhotos }
   /// The page of the words' first link, while writing.
   var preview: ComposerPreview?
   /// A link whose page was taken off with ×, until sent or changed.
@@ -85,7 +87,7 @@ final class ChatDraft {
 /// The bars over a composer's field (ChatDraft.bars).
 struct ComposerBars: Equatable {
   var editing: Int64?
-  var replyTo: String?
+  var replyTo: Int64?
   var days: Int?
   var preview: String?
   var previewRead = false
@@ -115,7 +117,7 @@ struct ChatComposer: View {
   var nameOf: (String) -> String = { _ in "" }
   /// The line being answered as its quote shows it, read each time from
   /// the chat as it is: taken back or its writer blocked, it says so.
-  let quoteOf: (String) -> LineQuote
+  let quoteOf: (Int64) -> LineQuote
   let onSubmit: () -> Void
   var onStopEditing: () -> Void = {}
   /// 日にちを共有, in a group's chat.
@@ -295,7 +297,7 @@ struct ChatComposer: View {
   /// 写真を送る: the photo picker, up to Chat.photosPerSend in the tray at
   /// once; past it the picker does not open.
   @ViewBuilder private var photoButton: some View {
-    let room = Chat.photosPerSend - draft.photos.count - draft.comingPhotos
+    let room = draft.photoRoom
     // Read here: the picker's label is drawn off the main actor.
     let iconColor = colors.textSecondary
     if room > 0 {
@@ -315,9 +317,7 @@ struct ChatComposer: View {
         read(items.map(PhotoSource.picked))
       }
     } else {
-      Button("写真を送る", systemImage: "photo") {
-        say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
-      }
+      Button("写真を送る", systemImage: "photo") { say(Self.photosFull) }
       .labelStyle(.iconOnly)
       .font(.system(size: iconSize))
       .foregroundStyle(colors.textQuaternary)
@@ -371,13 +371,15 @@ struct ChatComposer: View {
     }
   }
 
+  /// What the photo button and a paste say past the tray's room.
+  private static let photosFull = "写真は一度に\(Chat.photosPerSend)枚まで送れます"
 
   /// Images pasted into the field go in the tray as picked photos do, as
   /// many as it has room for, saying so past it as the picker's button does.
   private func pastePhotos(_ images: [NSItemProvider]) {
-    let room = Chat.photosPerSend - draft.photos.count - draft.comingPhotos
+    let room = draft.photoRoom
     if images.count > room {
-      say("写真は一度に\(Chat.photosPerSend)枚まで送れます")
+      say(Self.photosFull)
     }
     guard room > 0 else { return }
     read(images.prefix(room).map(PhotoSource.pasted))
