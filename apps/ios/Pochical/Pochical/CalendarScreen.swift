@@ -3,6 +3,7 @@ import PochicalKit
 import SQLiteData
 import StoreKit
 import SwiftUI
+import SwiftUINavigation
 
 /// カレンダー: the person's month, a page a month, turned by swiping.
 struct CalendarScreen: View {
@@ -284,28 +285,22 @@ struct CalendarScreen: View {
         .presentationBackground(colors.backgroundBase)
       }
     }
-    .sheet(isPresented: Binding { breakingDown != nil } set: { if !$0 { breakingDown = nil } }) {
-      if let month = breakingDown {
-        let days = monthDays(month, calendar)
-        MonthBreakdownSheet(
-          month: month,
-          counts: calendar.patterns.map { pattern in
-            (pattern, days.values.count { $0.shift == pattern.id })
-          },
-          unfilled: month.daysOfMonth.count - days.count)
-      }
+    .sheet(item: $breakingDown, id: \.self) { month in
+      let days = monthDays(month, calendar)
+      MonthBreakdownSheet(
+        month: month,
+        counts: calendar.patterns.map { pattern in
+          (pattern, days.values.count { $0.shift == pattern.id })
+        },
+        unfilled: month.daysOfMonth.count - days.count)
     }
-    .sheet(isPresented: Binding { picturing != nil } set: { if !$0 { picturing = nil } }) {
-      if let month = picturing {
-        MonthPicturePage(month: month, calendar: currentCalendar)
-      }
+    .sheet(item: $picturing, id: \.self) { month in
+      MonthPicturePage(month: month, calendar: currentCalendar)
     }
-    .sheet(isPresented: Binding { addingToCalendar != nil } set: { if !$0 { addingToCalendar = nil } }) {
-      if let month = addingToCalendar {
-        DeviceCalendarSheet(
-          month: month, calendar: currentCalendar,
-          coworkers: Dictionary(uniqueKeysWithValues: coworkerRows.map { ($0.id, $0.name) }))
-      }
+    .sheet(item: $addingToCalendar, id: \.self) { month in
+      DeviceCalendarSheet(
+        month: month, calendar: currentCalendar,
+        coworkers: Dictionary(uniqueKeysWithValues: coworkerRows.map { ($0.id, $0.name) }))
     }
     .onChange(of: gaps) { _, gaps in
       if gaps.isEmpty {
@@ -320,7 +315,7 @@ struct CalendarScreen: View {
     // question only if wanted (spec/calendar.md, Reminders).
     .alert(
       "前の晩に、明日のシフトをお知らせしますか？",
-      isPresented: Binding { offeringReminders != nil } set: { if !$0 { offeringReminders = nil } },
+      isPresented: Binding($offeringReminders),
       presenting: offeringReminders
     ) { _ in
       Button("あとで", role: .cancel) {}

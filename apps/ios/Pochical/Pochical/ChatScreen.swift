@@ -5,6 +5,7 @@ import PhotosUI
 import PochicalProto
 import SQLiteData
 import SwiftUI
+import SwiftUINavigation
 import UIKit
 
 /// A chat of a place (/design's ChatPage): a group's 全体チャット or a
@@ -441,23 +442,17 @@ struct ChatScreen: View {
     .sheet(item: $browsing) { link in
       SafariView(url: link.url).ignoresSafeArea()
     }
-    .alert(
-      "送信を取り消しますか？",
-      isPresented: Binding {
-        unsending != nil
-      } set: {
-        if !$0 { unsending = nil }
-      }
-    ) {
+    .alert(item: $unsending) { _ in
+      Text("送信を取り消しますか？")
+    } actions: { unsending in
       Button("キャンセル", role: .cancel) {}
       Button("取り消す", role: .destructive) {
         switch unsending {
         case .line(let line): unsend(line)
         case .waiting(let line): takeBack(line)
-        case nil: break
         }
       }
-    } message: {
+    } message: { unsending in
       // A line still on its way is not in anyone's chat yet.
       if case .waiting = unsending {
         Text("まだ送られていないメッセージです。")

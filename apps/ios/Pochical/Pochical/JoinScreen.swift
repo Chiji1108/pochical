@@ -2,6 +2,7 @@ import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
+import SwiftUINavigation
 
 /// An invitation code opened in the app, to show over the screens.
 struct OpenedInvite: Identifiable, Hashable {
@@ -63,13 +64,12 @@ struct JoinScreen: View {
       }
     }
     .task { await load() }
-    .alert(
-      joinError == .full ? "このグループには参加できません" : "参加できませんでした",
-      isPresented: Binding { joinError != nil } set: { if !$0 { joinError = nil } }
-    ) {
+    .alert(item: $joinError) { error in
+      Text(error == .full ? "このグループには参加できません" : "参加できませんでした")
+    } actions: { _ in
       Button("OK", role: .cancel) {}
-    } message: {
-      Text(joinError.map { message(for: $0) } ?? "")
+    } message: { error in
+      Text(message(for: error))
     }
   }
 

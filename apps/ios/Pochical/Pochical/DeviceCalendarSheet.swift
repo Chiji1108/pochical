@@ -2,6 +2,7 @@ import EventKit
 import PochicalDesign
 import PochicalKit
 import SwiftUI
+import SwiftUINavigation
 import UIKit
 
 /// The device's calendars, through EventKit: asked for once, then listed
@@ -270,9 +271,9 @@ struct DeviceCalendarSheet: View {
           Button("閉じる", systemImage: "xmark", role: .close) { dismiss() }
         }
       }
-      .alert(
-        failure ?? "", isPresented: Binding { failure != nil } set: { if !$0 { failure = nil } }
-      ) {
+      .alert(item: $failure) { failure in
+        Text(failure)
+      } actions: { _ in
         Button("OK", role: .cancel) {}
       }
       .sheet(item: $guide) { page in

@@ -3,6 +3,7 @@ import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
+import SwiftUINavigation
 import WidgetKit
 
 /// How signing in ended: Apple's account linked to this user, keeping what
@@ -63,7 +64,7 @@ struct AppleSignInButton: View {
     }
     .alert(
       "どちらのデータを使いますか？",
-      isPresented: Binding { choosing != nil } set: { if !$0 { choosing = nil } },
+      isPresented: Binding($choosing),
       presenting: choosing
     ) { choice in
       Button("アカウントのデータを使う") { Task { await useAccount(choice) } }

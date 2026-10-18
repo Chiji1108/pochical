@@ -1,5 +1,6 @@
 import PochicalKit
 import SwiftUI
+import SwiftUINavigation
 
 /// Someone else whose profile is open.
 struct ProfileOf: Identifiable {
@@ -52,11 +53,9 @@ struct ReportAndBlock: ViewModifier {
           },
           onRemove: onRemove.map { remove in { remove(person) } })
       }
-      .alert(
-        blockQuestion?.title ?? "", isPresented: Binding(
-          get: { blockQuestion != nil }, set: { if !$0 { blockQuestion = nil } }),
-        presenting: blockQuestion
-      ) { question in
+      .alert(item: $blockQuestion) { question in
+        Text(question.title)
+      } actions: { question in
         Button(question.afterReport ? "しない" : "キャンセル", role: .cancel) {}
         Button(question.block ? "ブロック" : "解除", role: question.block ? .destructive : nil) {
           onSetBlocked(question)

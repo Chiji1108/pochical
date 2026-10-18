@@ -2,6 +2,7 @@ import PochicalDesign
 import PochicalKit
 import SQLiteData
 import SwiftUI
+import SwiftUINavigation
 
 /// グループの設定 (/design's GroupSettingsPage): the group's name and mark,
 /// how the person appears in it, its chat's 通知, who is in it with a way
@@ -172,11 +173,11 @@ struct GroupSettingsPage: View {
     } message: {
       Text("「\(group.name)」のシフトとチャットが見られなくなります。もう一度入るには、招待してもらう必要があります。")
     }
-    .alert(
-      failed ?? "", isPresented: Binding { failed != nil } set: { if !$0 { failed = nil } }
-    ) {
+    .alert(item: $failed) { failed in
+      Text(failed)
+    } actions: { _ in
       Button("OK", role: .cancel) {}
-    } message: {
+    } message: { _ in
       Text("通信できる場所で、もう一度お試しください。")
     }
   }
