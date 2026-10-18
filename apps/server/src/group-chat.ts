@@ -135,7 +135,7 @@ export const atLine = (threadId: string, seq: number): SQL | undefined =>
  * A line's reactions: each emoji, in the order first chosen, with who
  * chose it in the order they did.
  */
-const reactionsOf = (
+export const reactionsOf = (
   db: DrizzleSqliteDODatabase,
   row: LineRow
 ): { emoji: string; userIds: string[] }[] => {
@@ -400,7 +400,7 @@ export const chatHead = (
  * the app's notices are none of these (they take no reactions, replies,
  * pins or reports, and their author cannot change or take them back).
  */
-const lineAt = (
+export const lineAt = (
   db: DrizzleSqliteDODatabase,
   threadId: string,
   seq: bigint
@@ -1125,6 +1125,28 @@ export const eraseMemberChat = (
  * Up to chatRules.pageSize lines of the chat before `beforeSeq` (the
  * latest with 0), oldest first, and whether they reach its first line.
  */
+export const pageRows = (
+  db: DrizzleSqliteDODatabase,
+  threadId: string,
+  beforeSeq: number
+): { rows: LineRow[]; atStart: boolean } => {
+  const rows = db
+    .select()
+    .from(chatLines)
+    .where(
+      and(
+        eq(chatLines.threadId, threadId),
+        beforeSeq > 0 ? lt(chatLines.seq, beforeSeq) : undefined
+      )
+    )
+    .orderBy(desc(chatLines.seq))
+    .limit(chatRules.pageSize)
+    .all()
+    .toReversed();
+  return { atStart: (rows[0]?.seq ?? 1) <= 1, rows };
+};
+
+/** A page of the chat as `userId` reads it (pageRows), with the lines its replies answer. */
 export const chatPage = (
   db: DrizzleSqliteDODatabase,
   userId: string,
@@ -1134,27 +1156,11 @@ export const chatPage = (
   if (!mayRead(threadId, userId)) {
     return { atStart: true, lines: [], quoted: [] };
   }
-  const rows = db
-    .select()
-    .from(chatLines)
-    .where(
-      and(
-        eq(chatLines.threadId, threadId),
-        beforeSeq > 0n ? lt(chatLines.seq, Number(beforeSeq)) : undefined
-      )
-    )
-    .orderBy(desc(chatLines.seq))
-    .limit(chatRules.pageSize)
-    .all()
-    .toReversed();
+  const { atStart, rows } = pageRows(db, threadId, Number(beforeSeq));
   const asRead = (changes: Change[]): ChatLine[] =>
     linesOf(changes.map((change) => forReader(db, change, userId)));
   const lines = asRead(rows.map((row) => chatLineChange(db, row)));
-  return {
-    atStart: (rows[0]?.seq ?? 1) <= 1,
-    lines,
-    quoted: asRead(answeredChanges(db, lines)),
-  };
+  return { atStart, lines, quoted: asRead(answeredChanges(db, lines)) };
 };
 
 /**
