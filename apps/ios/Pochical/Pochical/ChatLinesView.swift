@@ -376,11 +376,12 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     foot.priority = .defaultLow
     NSLayoutConstraint.activate([
       lines.topAnchor.constraint(equalTo: view.topAnchor),
-      // Going on under the composer, which is opaque, kept clear of it by
-      // the lines' inset (fitRoom), as ChatLayout's Example keeps them over
-      // its input bar; ending with it, never under the home indicator's
-      // safe area, which would push a line in.
-      lines.bottomAnchor.constraint(equalTo: composer.view.bottomAnchor),
+      // Going on under the composer and the keyboard, kept clear of them
+      // by the lines' inset (fitRoom), as ChatLayout's Example keeps them
+      // over its input bar: their height stays as the keyboard comes and
+      // goes (keepingLinesStill). Ending over the home indicator's safe
+      // area, which would push a line in.
+      lines.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
       lines.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       lines.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       // The composer on the keyboard, following it as it is pulled down.
@@ -405,7 +406,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// after it (composerChanged).
   private var composerResizing = false
 
-  /// The lines' room: over the composer.
+  /// The lines' room: over the composer, and the keyboard under it.
   private var roomHeight: CGFloat { lines.bounds.height - lines.contentInset.bottom }
 
   override func viewWillLayoutSubviews() {
@@ -641,10 +642,12 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       lines.verticalScrollIndicatorInsets.top = top
     }
     guard !composerResizing else { return }
-    let bottom = composer.view.frame.height
+    let bottom = max(0, lines.frame.maxY - composer.view.frame.minY)
     if lines.contentInset.bottom != bottom {
-      lines.contentInset.bottom = bottom
-      lines.verticalScrollIndicatorInsets.bottom = bottom
+      keepingLinesStill {
+        lines.contentInset.bottom = bottom
+        lines.verticalScrollIndicatorInsets.bottom = bottom
+      }
       latestFoot.constant = -bottom
     }
     guard let room, room.height != roomHeight else { return }
@@ -654,6 +657,26 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       layout.restoreContentOffset(with: kept)
     }
     seePlace()
+  }
+
+  /// Changes the lines' room with every line left where it is on the
+  /// screen, outside any animation: they then move to their new place by
+  /// the scroll alone, in the animation of the change (the keyboard's).
+  /// Changed in it, the room would be laid out anew in it, and UIKit draw
+  /// every line again, fading in at its new place over the one fading out
+  /// at the old, as lines too few to fill the room stand at its foot.
+  private func keepingLinesStill(_ change: () -> Void) {
+    UIView.performWithoutAnimation {
+      let first = lines.indexPathsForVisibleItems.min()
+      let top = first.flatMap { layout.layoutAttributesForItem(at: $0)?.frame.minY }
+      let seen = top.map { $0 - lines.contentOffset.y }
+      change()
+      lines.layoutIfNeeded()
+      if let first, let seen, let top = layout.layoutAttributesForItem(at: first)?.frame.minY {
+        lines.contentOffset.y = top - seen
+        lines.layoutIfNeeded()
+      }
+    }
   }
 
   private func footSnapshot() -> ChatLayoutPositionSnapshot? {
