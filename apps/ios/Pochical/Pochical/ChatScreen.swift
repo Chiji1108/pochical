@@ -156,6 +156,8 @@ struct ChatScreen: View {
   @State private var acting: MessageActionsRequest?
   /// The photos of the lines near those in sight, fetched ahead.
   @State private var photoPrefetch = PhotoPrefetch()
+  /// Says others' lines as they come in, for VoiceOver.
+  @State private var announcer = LineAnnouncer()
   /// What is done on a line, for every line of the chat.
   @State private var lineActions = Handler<(lineID: String, action: LineAction)>()
 
@@ -363,6 +365,14 @@ struct ChatScreen: View {
         show(from: first)
       }
     }
+    // Others' lines coming in while it is open are said by VoiceOver,
+    // wherever the lines are scrolled (spec/chat.md, VoiceOver).
+    .onChange(of: state.lines.last?.seq) { before, _ in
+      guard opened, scenePhase == .active, let before else { return }
+      for line in chat.state.lines where line.seq > before {
+        if let words = spoken(line) { announcer.heard(words) }
+      }
+    }
     // One's own line just sent shows at the foot, wherever the lines were;
     // already there, the lines slid up to it as it was written (`write`).
     .onChange(of: state.waiting.last?.opID) { _, sent in
@@ -387,6 +397,7 @@ struct ChatScreen: View {
       }
     }
     .onDisappear {
+      announcer.stop()
       closeActions()
       keepDraft()
       photoPrefetch.stop()
@@ -643,6 +654,9 @@ struct ChatScreen: View {
         Rectangle().fill(colors.accentBorder).frame(height: 1)
       }
       .padding(.vertical, 4)
+      // A heading, as the days are, for VoiceOver's rotor to go to.
+      .accessibilityElement(children: .combine)
+      .accessibilityAddTraits(.isHeader)
     case .line(let line, _) where line.hidden:
       // Never delivered to the reader: nothing shows.
       EmptyView()
@@ -686,6 +700,8 @@ struct ChatScreen: View {
           shifts: line.poll ? nil : shifts(on: line.days.first),
           time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
           writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
+          author: mine ? nil : names[line.authorID] ?? "メンバー",
+          menu: actions(for: line, mine: mine).map(\.title),
           writerPhoto: faces[line.authorID] ?? "",
           appFace: line.authorID == Chat.pochicalMember,
           named: !ofTwo, first: startsRun, waiting: false, names: names,
@@ -699,10 +715,26 @@ struct ChatScreen: View {
         lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
         members: cardMembers, poll: waitingPoll(line), photo: line.photo,
         quote: line.replyTo.map(quote(of:)), groupID: place.id, time: line.madeAtMs,
-        edited: false, mine: true, writer: nil, named: false, first: startsRun, waiting: true,
-        failed: line.failed, names: names, marks: marks,
+        edited: false, mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
+        named: false, first: startsRun, waiting: true, failed: line.failed, names: names,
+        marks: marks,
         actions: lineActions)
     }
+  }
+
+  /// A line come in as VoiceOver says it: who and what, or the app's
+  /// notice; nothing for one's own, one not shown, or a blocked writer's.
+  private func spoken(_ line: ChatLineRow) -> String? {
+    guard line.authorID != meID, !line.hidden, !line.unsent else { return nil }
+    let name = names[line.authorID] ?? "メンバー"
+    if let notice = line.notice {
+      return notice.words(by: name, subject: names[notice.subjectID] ?? "メンバー")
+    }
+    guard otherID != nil || !blocked.contains(line.authorID) else { return nil }
+    let words =
+      line.photo.map(photoWords)
+      ?? lineWords(line.text, days: line.days, poll: line.poll, decided: line.decided, nameOf: nameOf)
+    return "\(name)、\(words)"
   }
 
   /// A poll on its way: nothing voted yet.
@@ -748,6 +780,8 @@ struct ChatScreen: View {
       write(.vote(vote))
     case .decide:
       deciding = line
+    case .menu(let title):
+      actions(for: line, mine: line.authorID == meID).first { $0.title == title }?.run()
     case .hold(let spot, let finger, let link):
       let mine = line.authorID == meID
       let bubble = AnyView(
@@ -781,16 +815,9 @@ struct ChatScreen: View {
       deleteUnsent(line)
     case .stopSending:
       stopSending(line)
+    case .menu(let title):
+      actions(forWaiting: line).first { $0.title == title }?.run()
     case .hold(let spot, let finger, _):
-      // Still on its way: コピー for words, and 送信取消, which takes it
-      // back before it goes (spec/chat.md, Lines on their way).
-      let words = line.days.isEmpty && line.photo == nil
-      var actions = words ? [copy(line.text)] : []
-      actions.append(
-        MessageAction(
-          title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
-          startsGroup: words
-        ) { unsending = .waiting(line) })
       openActions(
         MessageActionsRequest(
           lineID: line.opID, spot: spot, mine: true,
@@ -800,10 +827,23 @@ struct ChatScreen: View {
               poll: waitingPoll(line), photo: line.photo, quote: line.replyTo.map(quote(of:)),
               groupID: place.id, mine: true, first: startsRun, waiting: !line.failed,
               nameOf: nameOf)),
-          finger: finger, actions: actions))
+          finger: finger, actions: actions(forWaiting: line)))
     default:
       break
     }
+  }
+
+  /// A line still on its way's menu: コピー for words, and 送信取消, which
+  /// takes it back before it goes (spec/chat.md, Lines on their way).
+  private func actions(forWaiting line: WaitingLine) -> [MessageAction] {
+    let words = line.days.isEmpty && line.photo == nil
+    var actions = words ? [copy(line.text)] : []
+    actions.append(
+      MessageAction(
+        title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
+        startsGroup: words
+      ) { unsending = .waiting(line) })
+    return actions
   }
 
   // MARK: Composer
@@ -1174,6 +1214,7 @@ struct ChatScreen: View {
       placeID: place.id, threadID: threadID, sockets: groupSockets, account: account,
       database: database, blocked: blocked)
     viewing = PhotoViewing(tapped, among: held, pager: pager)
+    viewing?.names = names
   }
 
   /// Saves a photo to the person's library, and says so.

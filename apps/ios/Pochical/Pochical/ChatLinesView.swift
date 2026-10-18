@@ -251,7 +251,7 @@ struct ChatLinesView: UIViewControllerRepresentable {
 }
 
 final class ChatLinesController: UIViewController, UICollectionViewDelegate,
-  UIGestureRecognizerDelegate, ChatLayoutDelegate
+  UIGestureRecognizerDelegate, ChatLayoutDelegate, UIScrollViewAccessibilityDelegate
 {
   private let scroll: ChatScroll
   private let layout = CollectionViewChatLayout()
@@ -1030,6 +1030,14 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   }
 
   // MARK: Scrolling
+
+  /// What VoiceOver says as it scrolls the lines by a page: the day of the
+  /// lines at the top, as the floating day shows it to the eye.
+  func accessibilityScrollStatus(for scrollView: UIScrollView) -> String? {
+    seePlace()
+    if scroll.place.atLatest { return "最新のメッセージ" }
+    return scroll.topDay.map(ChatTime.day)
+  }
 
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
     seePlace()

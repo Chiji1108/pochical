@@ -283,6 +283,8 @@ struct MessageActionsOverlay: View {
     }
     .onAppear {
       withAnimation(.spring(duration: 0.28, bounce: 0.2)) { shown = true }
+      // VoiceOver goes into it, over the chat.
+      AccessibilityNotification.ScreenChanged().post()
     }
   }
 
@@ -356,6 +358,7 @@ struct MessageActionsOverlay: View {
           .contentShape(.rect)
         }
         .buttonStyle(MenuRowStyle(held: underFinger == .action(action.id)))
+        .accessibilityLabel(action.title)
         .modifier(Tracked(target: .action(action.id), targets: $targets))
       }
     }
@@ -608,6 +611,8 @@ private final class KeylessWindow: UIWindow {
 private struct HeldBubble: ViewModifier {
   /// Its bubble is lifted over the chat, its place standing empty.
   let lifted: Bool
+  /// Told how to open them without the press, for VoiceOver's action.
+  let opener: MenuOpener?
   /// Opens the reactions and menu, from where the bubble is, with the
   /// finger that opened them while it stays down, and the link held, for
   /// its own menu instead.
@@ -665,7 +670,7 @@ private struct HeldBubble: ViewModifier {
             links.held = false
           }
         })
-      .accessibilityAction(named: "リアクションとメニュー") { onActions(newSpot(), nil, nil) }
+      .onAppear { opener?.open = { onActions(newSpot(), nil, nil) } }
       .onChange(of: lifted) { _, lifted in
         if !lifted, let spot {
           lineSpace?.unfollow(spot)
@@ -713,10 +718,10 @@ extension View {
   /// Held, opens the bubble's reactions and menu (HeldBubble); a tap on
   /// it does `onTap`.
   func heldForActions(
-    lifted: Bool, onTap: @escaping () -> Void = {},
+    lifted: Bool, opener: MenuOpener? = nil, onTap: @escaping () -> Void = {},
     onActions: @escaping (LineSpot, HeldFinger?, URL?) -> Void
   ) -> some View {
-    modifier(HeldBubble(lifted: lifted, onActions: onActions, onTap: onTap))
+    modifier(HeldBubble(lifted: lifted, opener: opener, onActions: onActions, onTap: onTap))
   }
 }
 
