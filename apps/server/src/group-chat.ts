@@ -196,7 +196,7 @@ const noticeKinds = {
 } as const;
 
 /** What happened to the group, as a notice line keeps it. */
-export type Notice = NonNullable<LineRow["notice"]>;
+type Notice = NonNullable<LineRow["notice"]>;
 
 const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
   create(ChatLineSchema, {
@@ -231,10 +231,7 @@ const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
     votes: votesOf(db, row),
   });
 
-export const chatLineChange = (
-  db: DrizzleSqliteDODatabase,
-  row: LineRow
-): Change =>
+const chatLineChange = (db: DrizzleSqliteDODatabase, row: LineRow): Change =>
   create(ChangeSchema, {
     cursor: BigInt(row.cursor),
     kind: { case: "chatLine", value: lineOf(db, row) },
@@ -327,7 +324,7 @@ export const setMemberBlocks = (
   }
 };
 
-export const readMarkChange = (row: MarkRow): Change =>
+const readMarkChange = (row: MarkRow): Change =>
   create(ChangeSchema, {
     cursor: BigInt(row.cursor),
     kind: {
@@ -884,7 +881,6 @@ const takeDecide = (
   );
 };
 
-/** What taking an edit did: its change, and the line to send back when it was refused. */
 /** How much of the app's word on itself a line keeps. */
 const DEVICE_MAX = 100;
 
@@ -898,6 +894,7 @@ const deviceOf = (
 ): string | null =>
   rules.sendsDevice && device !== "" ? device.slice(0, DEVICE_MAX) : null;
 
+/** What taking an edit did: its change, and the line to send back when it was refused. */
 type Taken = {
   change?: Change;
   // A second line it changed, at the cursor after: the pin a new pin

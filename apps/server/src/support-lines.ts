@@ -2,7 +2,7 @@
 // Slack read it, from its Group DO (support-place.ts).
 
 /** How a photo reads in a line of words: the list, a notification. */
-export const PHOTO_WORDS = "📷 写真";
+const PHOTO_WORDS = "📷 写真";
 
 /** An emoji on a line, and who put it there. */
 export type SupportReaction = {
