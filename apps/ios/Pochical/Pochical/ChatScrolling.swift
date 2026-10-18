@@ -20,6 +20,10 @@ final class ChatScroll {
   /// The lines whose foot is on the screen, by item id: read on to the
   /// latest of them.
   var seen: [String] = []
+  /// What is under the lines at the chat's foot, the composer and the
+  /// keyboard: read by the lines alone, so the chat is not drawn again for
+  /// every step of the keyboard pulled down.
+  var bottomRoom: CGFloat = 0
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines

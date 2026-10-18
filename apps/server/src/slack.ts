@@ -154,17 +154,22 @@ export const signedBySlack = async (
   );
 };
 
+/** Whether this server posts to Slack: not on a computer without it. */
+const slackSetUp = (env: Env): boolean =>
+  slackSecret(env.SLACK_BOT_TOKEN) !== "" &&
+  slackSecret(env.SLACK_CHANNEL_ID) !== "";
+
 /** One of Slack's Web API methods as the app; null when it did not take. */
 export const slackCall = async (
   env: Env,
   method: string,
   args: Record<string, unknown>
 ): Promise<Record<string, unknown> | null> => {
-  const token = slackSecret(env.SLACK_BOT_TOKEN);
-  const channel = slackSecret(env.SLACK_CHANNEL_ID);
-  if (token === "" || channel === "") {
+  if (!slackSetUp(env)) {
     return null;
   }
+  const token = slackSecret(env.SLACK_BOT_TOKEN);
+  const channel = slackSecret(env.SLACK_CHANNEL_ID);
   try {
     const response = await fetch(`https://slack.com/api/${method}`, {
       body: JSON.stringify({ channel, ...args }),
@@ -263,21 +268,22 @@ const threadHead = (line: SupportLine, words: string): string => {
   return `サポートに新しいメッセージ${from}\n${words}\n<${page}|管理サイトで開く>・このスレッドに書くと、ポチカルとして返信します`;
 };
 
-/**
- * A chat's thread, started by the user's first line; null when Slack did
- * not take it.
- */
+/** What Slack did not take, for the relay to try again. */
+const notTaken = (what: string): Error =>
+  new Error(`Slack did not take ${what}`);
+
+/** A chat's thread, started by the user's first line. */
 const startThread = async (
   env: Env,
   line: SupportLine,
   words: string
-): Promise<string | null> => {
+): Promise<string> => {
   const posted = await slackCall(env, "chat.postMessage", {
     text: threadHead(line, words),
   });
   const ts = stringOf(posted?.ts);
   if (ts === undefined) {
-    return null;
+    throw notTaken("a thread");
   }
   // Two first lines at once keep the thread the first kept.
   await drizzle(env.DB)
@@ -315,19 +321,21 @@ const sharedTs = (file: unknown, channel: string): string | undefined => {
 /**
  * A user's photo, uploaded into their chat's thread (files:write), a
  * reply's quote over it; the message it was shared in (files:read), for
- * its reactions and its taking back.
+ * its reactions and its taking back. Null when there is no photo to
+ * upload, or Slack shared it without saying where: it is not uploaded
+ * again.
  */
 const postPhoto = async (
   env: Env,
   line: SupportLine,
   thread: string,
   quote: string
-): Promise<string | undefined> => {
+): Promise<string | null> => {
   const photo = await env.PHOTOS.get(
     photoKey(supportPlace(line.userId), line.photo?.id ?? "")
   );
   if (photo === null) {
-    return undefined;
+    return null;
   }
   const bytes = await photo.arrayBuffer();
   const slot = await slackCall(env, "files.getUploadURLExternal", {
@@ -338,7 +346,7 @@ const postPhoto = async (
   const url = stringOf(slot?.upload_url);
   const fileId = stringOf(slot?.file_id);
   if (url === undefined || fileId === undefined) {
-    return undefined;
+    throw notTaken("a photo");
   }
   const uploaded = await fetch(url, { body: bytes, method: "POST" });
   const shared =
@@ -350,7 +358,7 @@ const postPhoto = async (
       ...(quote === "" ? {} : { initial_comment: quote.trim() }),
     })) !== null;
   if (!shared) {
-    return undefined;
+    throw notTaken("a photo");
   }
   for (let tries = 0; tries < SHARE_TRIES; tries += 1) {
     // oxlint-disable-next-line no-await-in-loop -- Slack shares it in a moment
@@ -362,7 +370,7 @@ const postPhoto = async (
     // oxlint-disable-next-line no-await-in-loop -- waiting is the point
     await scheduler.wait(SHARE_WAIT_MS);
   }
-  return undefined;
+  return null;
 };
 
 /**
@@ -398,13 +406,18 @@ export const slackFile = async (
  * channel, with the way to the admin site; each after it stays in the
  * thread, which Pochical's people follow. A reply
  * quotes what it is to. Its message, for its reactions and its taking
- * back; none when Slack did not take it.
+ * back, or null when there is none to keep (Slack not set up here, or a
+ * photo shared without its message); throws when Slack did not take it,
+ * for the relay to try again.
  */
 export const tellStaffOfLine = async (
   env: Env,
   line: SupportLine,
   repliedTo: SupportLine | null
-): Promise<string | undefined> => {
+): Promise<string | null> => {
+  if (!slackSetUp(env)) {
+    return null;
+  }
   const quote =
     repliedTo === null
       ? ""
@@ -414,32 +427,43 @@ export const tellStaffOfLine = async (
   if (line.photo !== null) {
     // A photo is shared in the thread, which a first line starts.
     const into = thread ?? (await startThread(env, line, words));
-    return into === null ? undefined : await postPhoto(env, line, into, quote);
+    return await postPhoto(env, line, into, quote);
   }
-  if (thread !== null) {
-    const posted = await slackCall(env, "chat.postMessage", {
-      text: words,
-      thread_ts: thread,
-    });
-    return stringOf(posted?.ts);
+  if (thread === null) {
+    return await startThread(env, line, words);
   }
-  return (await startThread(env, line, words)) ?? undefined;
+  const posted = await slackCall(env, "chat.postMessage", {
+    text: words,
+    thread_ts: thread,
+  });
+  const ts = stringOf(posted?.ts);
+  if (ts === undefined) {
+    throw notTaken("a line");
+  }
+  return ts;
 };
 
-/** An answer written on the admin site, in the chat's thread. */
+/**
+ * An answer written on the admin site, in the chat's thread, as
+ * tellStaffOfLine posts a line: null with no thread to post it in.
+ */
 export const tellStaffOfAnswer = async (
   env: Env,
   line: SupportLine
-): Promise<string | undefined> => {
+): Promise<string | null> => {
   const thread = await threadOf(env, line.userId);
-  if (thread === null) {
-    return undefined;
+  if (!slackSetUp(env) || thread === null) {
+    return null;
   }
   const posted = await slackCall(env, "chat.postMessage", {
     text: `管理サイトから返信しました：\n${toSlackText(wordsOf(line))}`,
     thread_ts: thread,
   });
-  return stringOf(posted?.ts);
+  const ts = stringOf(posted?.ts);
+  if (ts === undefined) {
+    throw notTaken("an answer");
+  }
+  return ts;
 };
 
 /**

@@ -33,10 +33,25 @@ import UIKit
 
   /// The calendars that take new events, by account in the system's
   /// order: read-only ones like holidays and birthdays are left out.
-  var sources: [(title: String, calendars: [EKCalendar])] {
+  private(set) var sources: [(title: String, calendars: [EKCalendar])] = []
+
+  /// Keeps `sources` current until the task ends: read now, then again
+  /// whenever the device's calendars change outside the app, as when a
+  /// Google account's calendar is turned on in 設定 with the sheet open.
+  /// `changed` runs after each, for what the caller works out from them.
+  func follow(_ changed: () -> Void) async {
+    readSources()
+    changed()
+    for await _ in NotificationCenter.default.notifications(named: .EKEventStoreChanged) {
+      readSources()
+      changed()
+    }
+  }
+
+  private func readSources() {
     let calendars = store.calendars(for: .event).filter(\.allowsContentModifications)
     let grouped = Dictionary(grouping: calendars, by: \.source.sourceIdentifier)
-    return store.sources.compactMap { source in
+    sources = store.sources.compactMap { source in
       grouped[source.sourceIdentifier].map {
         (source.title, $0.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending })
       }
@@ -282,9 +297,15 @@ struct DeviceCalendarSheet: View {
       if calendars.access == .notAsked {
         await calendars.ask()
       }
-      calendarID = calendarID ?? calendars.pickedFirst
-      if calendars.access == .granted, let meID {
-        put = calendars.marked(month, by: meID).count
+      guard calendars.access == .granted else { return }
+      await calendars.follow {
+        // The one picked stays while it still takes events.
+        if calendarID.flatMap({ calendars.calendar($0) })?.allowsContentModifications != true {
+          calendarID = calendars.pickedFirst
+        }
+        if let meID {
+          put = calendars.marked(month, by: meID).count
+        }
       }
     }
   }

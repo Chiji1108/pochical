@@ -178,12 +178,11 @@ struct ChatScreen: View {
             id, item: byID[id], first: listed.first?.id, names: names,
             showsTime: !timeless.contains(id)))
       },
-      composer: AnyView(composer), composerBars: draft.bars,
       latest: AnyView(
         LatestButton(scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0) {
           toLatestOrUnread()
         }),
-      ground: colors.backgroundBase, scroll: scroll, proxy: scroller, following: $following,
+      scroll: scroll, proxy: scroller, following: $following,
       shown: placed, holds: acting != nil, canAskEarlier: opened && !state.atStart,
       onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
       replySwipe: { replySwipe(byID[$0]) },
@@ -197,9 +196,11 @@ struct ChatScreen: View {
         scroll: scroll, reads: placed && scenePhase == .active,
         seq: { seen in latestSeq(of: seen) }, read: { read(to: $0) })
     }
-    // The composer rides the keyboard on its own guide, under the lines.
-    .ignoresSafeArea(.container, edges: .bottom)
-    .ignoresSafeArea(.keyboard)
+    // Going on under the composer and the keyboard, which SwiftUI keeps
+    // at the chat's foot, the lines told how much of them is under there.
+    .ignoresSafeArea(edges: .bottom)
+    .onGeometryChange(for: CGFloat.self, of: { $0.safeAreaInsets.bottom }) { scroll.bottomRoom = $0 }
+    .safeAreaBar(edge: .bottom) { composer }
     .overlay {
       // A place's head says what the chat is for in its place.
       if state.lines.isEmpty, state.waiting.isEmpty, head == nil {
