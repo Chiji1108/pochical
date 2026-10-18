@@ -122,18 +122,8 @@ struct EarlierLines: View {
 struct ScrollPlace: Hashable {
   var atLatest = true
   var away = false
-  /// The lines are shorter than the screen, held at its foot, with
-  /// nowhere to scroll.
-  var fits = true
   /// ここから新着 is below the top of the screen, where ↓ goes first.
   var unreadBelow = false
-}
-
-/// What moves a following chat to its foot: a line coming in and someone
-/// writing.
-struct FollowKey: Equatable {
-  let latest: Int64?
-  let writers: Int
 }
 
 struct ReadKey: Hashable {

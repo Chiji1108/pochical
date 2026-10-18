@@ -929,7 +929,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     #expect(try Chats.stillGoing(opID, in: db))
 
     // Stopped with ×: not sent, as one whose photo failed.
-    try Chats.stopSending(opID, in: db)
+    try Chats.fail(opID, in: db)
     #expect(try !Chats.stillGoing(opID, in: db))
     #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true])
 

@@ -352,19 +352,15 @@ struct ChatScreen: View {
       try? await Task.sleep(for: .seconds(max(next.timeIntervalSinceNow, 0)))
       withAnimation { typers = typers.filter { $0.value > .now } }
     }
-    // Lines coming in and someone writing keep a following chat at its
-    // foot, in the same update they come in by (ChatLinesView), as does
-    // anything else changing the lines' height or the room they are seen
-    // in (a link's page drawn, the composer growing, the keyboard).
-    .onChange(of: FollowKey(latest: state.lines.last?.seq, writers: typers.count)) {
-      before, now in
-      guard opened, following else { return }
-      // Others' lines the reader has not read stop at ここから新着 rather
-      // than going past it, as the chat's catch-up bringing many at once.
-      // Else the lines keep to their foot as they come in (ChatLinesView).
-      if before.latest != now.latest, let first = unreadComing(after: before.latest) {
-        show(from: first)
-      }
+    // A following chat keeps to its foot as lines come in and someone
+    // writes, in the update they come in by (ChatLinesView's `landed`), as
+    // it does for anything else changing the lines' height or the room
+    // they are seen in (a link's page drawn, the composer growing, the
+    // keyboard). Others' lines the reader has not read stop at ここから新着
+    // instead, as the chat's catch-up bringing many at once.
+    .onChange(of: state.lines.last?.seq) { before, _ in
+      guard opened, following, let first = unreadComing(after: before) else { return }
+      show(from: first)
     }
     // Others' lines coming in while it is open are said by VoiceOver,
     // wherever the lines are scrolled (spec/chat.md, VoiceOver).
@@ -809,7 +805,7 @@ struct ChatScreen: View {
     case .sendAgain:
       sendAgain(line)
     case .deleteUnsent:
-      deleteUnsent(line)
+      takeBack(line)
     case .stopSending:
       stopSending(line)
     case .menu(let title):
@@ -866,7 +862,7 @@ struct ChatScreen: View {
   /// Nothing once its photo is up and the line is being sent.
   private func stopSending(_ line: WaitingLine) {
     if let photo = line.photo, !PhotoUploads.shared.stop(photo.id) { return }
-    try? database.write { try Chats.stopSending(line.opID, in: $0) }
+    try? database.write { try Chats.fail(line.opID, in: $0) }
   }
 
   /// Sends a line not sent once more, after the rest, as if written now.
@@ -882,12 +878,8 @@ struct ChatScreen: View {
     }
   }
 
-  /// Deletes a line not sent, and the photo kept on the device for it.
-  private func deleteUnsent(_ line: WaitingLine) {
-    takeBack(line)
-  }
-
-  /// Takes a line of one's own back before the group has it: out of the
+  /// Takes a line of one's own back before the group has it, or deletes
+  /// one not sent, with the photo kept on the device for it: out of the
   /// outbox, and from the group as it comes should it have gone just
   /// before (spec/chat.md, Lines on their way).
   private func takeBack(_ line: WaitingLine) {

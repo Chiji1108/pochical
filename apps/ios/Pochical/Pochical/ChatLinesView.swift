@@ -906,7 +906,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let content = layout.collectionViewContentSize.height
     let below = content + inset.bottom - (lines.contentOffset.y + lines.bounds.height)
     let place = ScrollPlace(
-      atLatest: below < 24, away: below > seenHeight / 2, fits: content <= seenHeight + 1,
+      atLatest: below < 24, away: below > seenHeight / 2,
       unreadBelow: isBelowTop(ChatItem.unread.id))
     let before = scroll.place
     if place != before {

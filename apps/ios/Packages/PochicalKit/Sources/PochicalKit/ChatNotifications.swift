@@ -63,11 +63,6 @@ public struct ChatNotificationState: Hashable, Sendable {
   public func isMuted(_ threadID: String, in groupID: String) -> Bool {
     muted.contains([groupID, threadID])
   }
-
-  /// The chats turned off in `groupID`.
-  public func mutedThreads(in groupID: String) -> [String] {
-    muted.filter { $0[0] == groupID }.map { $0[1] }.sorted()
-  }
 }
 
 public enum ChatNotifications {

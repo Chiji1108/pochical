@@ -509,16 +509,11 @@ public enum Chats {
   }
 
   /// A line not sent (spec/chat.md, Lines on their way): its photo could
-  /// not be uploaded, or it waited too long. It stays, marked, and the
+  /// not be uploaded, the member stopped it going up (Photos), or it
+  /// waited too long. It stays, marked, to send again or delete, and the
   /// edits after it go on.
-  static func fail(_ opID: String, in db: Database) throws {
+  public static func fail(_ opID: String, in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.eq(opID) }.update { $0.failed = true }.execute(db)
-  }
-
-  /// The member stopped their photo going up (spec/chat.md, Photos): its
-  /// line is not sent, as one whose photo failed, to send again or delete.
-  public static func stopSending(_ opID: String, in db: Database) throws {
-    try fail(opID, in: db)
   }
 
   /// The line still waits to go: not sent yet, nor marked not sent, nor
@@ -1035,7 +1030,7 @@ public struct LineNotice: Codable, Hashable, Sendable {
   /// The group's icon changed.
   public var markChanged = false
 
-  public init(kind: Kind, subjectID: String = "", name: String = "", markChanged: Bool = false) {
+  init(kind: Kind, subjectID: String = "", name: String = "", markChanged: Bool = false) {
     self.kind = kind
     self.subjectID = subjectID
     self.name = name
