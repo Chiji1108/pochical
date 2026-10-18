@@ -596,6 +596,21 @@ const placeTakes = (rules: ChatPlaceRules, kind: ChatEdit["kind"]): boolean => {
   }
 };
 
+/** The line moved to `cursor`, as what is on it (reactions, votes) changed. */
+const moveLine = (
+  db: DrizzleSqliteDODatabase,
+  { threadId, seq }: LineRow,
+  cursor: number
+): Taken => {
+  const row = db
+    .update(chatLines)
+    .set({ cursor })
+    .where(atLine(threadId, seq))
+    .returning()
+    .get();
+  return row === undefined ? {} : { change: chatLineChange(db, row) };
+};
+
 /**
  * The member's reaction on a line put on or taken off, the line moving to
  * `cursor` with it; nothing for a line taken back, gone, or an emoji that
@@ -628,13 +643,7 @@ const takeReaction = (
   } else {
     db.delete(chatReactions).where(mine).run();
   }
-  const row = db
-    .update(chatLines)
-    .set({ cursor })
-    .where(atLine(threadId, line.seq))
-    .returning()
-    .get();
-  return row === undefined ? {} : { change: chatLineChange(db, row) };
+  return moveLine(db, line, cursor);
 };
 
 /**
@@ -831,13 +840,7 @@ const takeVote = (
   } else {
     db.delete(chatVotes).where(mine).run();
   }
-  const row = db
-    .update(chatLines)
-    .set({ cursor })
-    .where(atLine(threadId, line.seq))
-    .returning()
-    .get();
-  return row === undefined ? {} : { change: chatLineChange(db, row) };
+  return moveLine(db, line, cursor);
 };
 
 /**
