@@ -19,6 +19,8 @@ Both apps use the system's own feedback, which follows the device's own setting 
 
 ## Where not
 
+- Nothing is played in place of motion left out: with 視差効果を減らす on, what would have moved fades (spec/chat.md, Reduced motion), and the haptics above play as ever. An action taken from a screen reader (a line's 返信 or its menu, spec/chat.md, Screen readers) plays none of a gesture's haptics; the screen reader's own sounds answer it.
+
 - Turning months or pages by a swipe, switching tabs, opening screens and sheets. These are seen, and the OS plays nothing for its own.
 - Switches, pickers and segmented controls beyond what the system's own controls play.
 - Sending a chat message, a reaction, saving a form, and errors. What they do is seen on the screen, nothing a finger is not on at that moment buzzes, and a failure is said in words.

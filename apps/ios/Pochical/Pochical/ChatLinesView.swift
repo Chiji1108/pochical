@@ -530,10 +530,11 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       return true
     }
     // A page coming in above goes in at once, the lines seen held where
-    // they are; lines coming at the foot come in moving, unless motion is
-    // reduced.
+    // they are; lines coming at the foot come in moving, or with motion
+    // reduced fade in where they go, the lines put there at once.
     let earlier = cameAbove(old, in: new)
     let animated = new != old && !earlier && !reduceMotion && !userScrolling
+    let fading = new != old && !earlier && reduceMotion ? cameBelow(old, in: new) : []
     let held = heldTop.flatMap { redrawn.contains($0.id) ? $0 : nil }
     if held != nil { heldTop = nil }
     risingIn = animated ? cameBelow(old, in: new) : []
@@ -556,6 +557,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
         }
       }
       landed()
+      // Once at the foot, where they are seen.
+      fadeIn(fading)
     }
     return true
   }
@@ -597,6 +600,19 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     originalAttributes.alpha = 0
     if indexPath.item < ids.count, risingIn.contains(ids[indexPath.item]) {
       originalAttributes.center.y += originalAttributes.frame.height
+    }
+  }
+
+  /// The items `ids` just put in fade in where they are, the cells' own
+  /// content alone, as lines come in with motion reduced.
+  private func fadeIn(_ ids: Set<String>) {
+    guard !ids.isEmpty else { return }
+    let cells = ids.compactMap { id in
+      self.ids.firstIndex(of: id).flatMap { lines.cellForItem(at: IndexPath(item: $0, section: 0)) }
+    }
+    for cell in cells { cell.contentView.alpha = 0 }
+    UIView.animate(withDuration: 0.2, delay: 0, options: .allowUserInteraction) {
+      for cell in cells { cell.contentView.alpha = 1 }
     }
   }
 
