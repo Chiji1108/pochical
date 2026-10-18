@@ -38,7 +38,10 @@ final class NotificationService: UNNotificationServiceExtension {
   ) async -> UNNotificationContent {
     let content = request.content
     let payload = content.userInfo
+    // The chat with Pochical's people stays a plain notification: only
+    // they write there, so it has no writer of its own to show.
     guard let line = NotifiedLine(id: request.identifier, payload: payload),
+      line.groupID != ChatPlace.supportID,
       let authorID = payload["authorId"] as? String,
       let from = from(line, authorID: authorID)
     else { return content }

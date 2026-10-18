@@ -18,5 +18,4 @@
 
 /* An answer in the chat with Pochical's people: who answers, and the
    answer's words. */
-"SUPPORT_TITLE" = "ポチカル";
-"SUPPORT_BODY" = "%@";
+"SUPPORT_TITLE" = "作っている人とチャット";
