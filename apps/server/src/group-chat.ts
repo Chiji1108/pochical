@@ -34,10 +34,10 @@ import {
   ChangeSchema,
   ChatLineSchema,
   ChatNotice_Kind,
-  ChatUnsendSchema,
 } from "./gen/pochical/v1/sync_pb";
 import type {
   Change,
+  ChatChange,
   ChatEdit,
   ChatPhotoEntrySchema,
   ChatLine,
@@ -428,7 +428,7 @@ const answers = (
   return line !== undefined && !line.unsent && line.hiddenFrom !== userId;
 };
 
-const lineKey = (threadId: string, seq: bigint): string =>
+const lineKey = (threadId: string, seq: bigint | number): string =>
   `${threadId}\n${seq}`;
 
 /** The lines among `changes`. */
@@ -638,12 +638,79 @@ const takeReaction = (
 };
 
 /**
- * New words for one of the member's own lines, or the line taken back
- * with its days, reactions and pin; the line comes back to the member as
- * the group holds it when it is not theirs, taken back already, a line of
- * days (which has no words to change), or the words do not fit.
+ * One of the member's lines taken back (送信取消) at `cursor`, with its
+ * words, days, photo, reactions, votes and pin.
  */
-const takeWords = (
+const unsendLine = (
+  db: DrizzleSqliteDODatabase,
+  line: LineRow,
+  cursor: number
+): Taken => {
+  const { threadId, seq } = line;
+  db.delete(chatReactions)
+    .where(
+      and(eq(chatReactions.threadId, threadId), eq(chatReactions.seq, seq))
+    )
+    .run();
+  db.delete(chatVotes)
+    .where(and(eq(chatVotes.threadId, threadId), eq(chatVotes.seq, seq)))
+    .run();
+  const row = db
+    .update(chatLines)
+    .set({
+      cursor,
+      days: null,
+      decided: null,
+      photo: null,
+      pinnedAt: null,
+      preview: null,
+      replyTo: null,
+      text: "",
+      unsent: true,
+    })
+    .where(atLine(threadId, seq))
+    .returning()
+    .get();
+  if (row === undefined) {
+    return {};
+  }
+  const change = chatLineChange(db, row);
+  // Its photo goes from the group's photos too, once the change is kept.
+  return line.photo === null
+    ? { change }
+    : { change, photoGone: line.photo.id };
+};
+
+/** New words for one of the member's own lines at `cursor` (編集). */
+const changeWords = (
+  db: DrizzleSqliteDODatabase,
+  line: LineRow,
+  { text, keepsPreview, preview }: ChatChange,
+  cursor: number
+): Taken => {
+  const row = db
+    .update(chatLines)
+    .set({
+      cursor,
+      edited: true,
+      // The page stays while the first link does (spec/vectors/chat.json,
+      // edited); else the new link's, or none.
+      preview: keepsPreview ? line.preview : sentPreview(preview, text),
+      text,
+    })
+    .where(atLine(line.threadId, line.seq))
+    .returning()
+    .get();
+  return row === undefined ? {} : { change: chatLineChange(db, row) };
+};
+
+/**
+ * New words for one of the member's own lines, or the line taken back;
+ * the line comes back to the member as the group holds it when it is not
+ * theirs, taken back already, a line of days or a photo (which has no
+ * words to change), or the words do not fit.
+ */
+const takeOwnLine = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   kind: Extract<ChatEdit["kind"], { case: "change" | "unsend" }>,
@@ -653,71 +720,15 @@ const takeWords = (
   if (line === undefined) {
     return {};
   }
-  const unsend = kind.case === "unsend";
-  const text = unsend ? "" : kind.value.text;
-  // A line of days or a photo has no words to change.
-  const words =
-    unsend || (line.days === null && line.photo === null && fitsLine(text));
-  if (line.authorId !== userId || line.unsent || !words) {
+  const fits =
+    kind.case === "unsend" ||
+    (line.days === null && line.photo === null && fitsLine(kind.value.text));
+  if (line.authorId !== userId || line.unsent || !fits) {
     return { refused: chatLineChange(db, line) };
   }
-  // Taking a line back takes its reactions and votes with it.
-  if (unsend) {
-    db.delete(chatReactions)
-      .where(
-        and(
-          eq(chatReactions.threadId, line.threadId),
-          eq(chatReactions.seq, line.seq)
-        )
-      )
-      .run();
-    db.delete(chatVotes)
-      .where(
-        and(eq(chatVotes.threadId, line.threadId), eq(chatVotes.seq, line.seq))
-      )
-      .run();
-  }
-  const row = db
-    .update(chatLines)
-    .set(
-      // Taking a line back takes its pin off too.
-      unsend
-        ? {
-            cursor,
-            days: null,
-            decided: null,
-            photo: null,
-            pinnedAt: null,
-            preview: null,
-            replyTo: null,
-            text,
-            unsent: true,
-          }
-        : {
-            cursor,
-            edited: true,
-            // The page stays while the first link does (spec/vectors/chat.json,
-            // edited); else the new link's, or none.
-            preview:
-              kind.case === "change" && kind.value.keepsPreview
-                ? line.preview
-                : sentPreview(
-                    kind.case === "change" ? kind.value.preview : undefined,
-                    text
-                  ),
-            text,
-          }
-    )
-    .where(atLine(line.threadId, line.seq))
-    .returning()
-    .get();
-  if (row === undefined) {
-    return {};
-  }
-  // Its photo goes from the group's photos too, once the change is kept.
-  return unsend && line.photo !== null
-    ? { change: chatLineChange(db, row), photoGone: line.photo.id }
-    : { change: chatLineChange(db, row) };
+  return kind.case === "unsend"
+    ? unsendLine(db, line, cursor)
+    : changeWords(db, line, kind.value, cursor);
 };
 
 /**
@@ -1023,7 +1034,7 @@ export const takeChatEdit = (
     }
     case "change":
     case "unsend": {
-      return takeWords(db, userId, kind, cursor);
+      return takeOwnLine(db, userId, kind, cursor);
     }
     case "react": {
       return takeReaction(db, userId, kind.value, cursor);
@@ -1068,20 +1079,19 @@ export const eraseMemberChat = (
   const changes: Change[] = [];
   const photosGone: string[] = [];
   const written = db
-    .select({ seq: chatLines.seq, threadId: chatLines.threadId })
+    .select()
     .from(chatLines)
-    .where(and(eq(chatLines.authorId, userId), eq(chatLines.unsent, false)))
+    .where(
+      and(
+        eq(chatLines.authorId, userId),
+        eq(chatLines.unsent, false),
+        // The app's notices of their joining or leaving stay.
+        isNull(chatLines.notice)
+      )
+    )
     .all();
-  for (const { seq, threadId } of written) {
-    const taken = takeWords(
-      db,
-      userId,
-      {
-        case: "unsend",
-        value: create(ChatUnsendSchema, { seq: BigInt(seq), threadId }),
-      },
-      nextCursor()
-    );
+  for (const line of written) {
+    const taken = unsendLine(db, line, nextCursor());
     if (taken.change !== undefined) {
       changes.push(taken.change);
     }
@@ -1097,7 +1107,7 @@ export const eraseMemberChat = (
       .from(table)
       .where(eq(table.userId, userId))
       .all()) {
-      touched.set(`${threadId}\n${seq}`, { seq, threadId });
+      touched.set(lineKey(threadId, seq), { seq, threadId });
     }
     db.delete(table).where(eq(table.userId, userId)).run();
   }
