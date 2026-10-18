@@ -853,16 +853,15 @@ public func unreadCount(_ lines: [(seq: Int64, writer: LineWriter)], read: Int64
   lines.count { $0.seq > read && $0.writer == .others }
 }
 
-/// How many of a chat's unread lines count, as what notifies: all of them
-/// in a chat that is on; in one turned off only those mentioning `me`,
-/// and those only while mentions always notify (spec/chat.md, Unread
-/// lines; spec/vectors/unread.json).
+/// How many of a chat's unread lines count, as what notifies, from their
+/// words: `notifyingCount` with those mentioning `me` as its mentions
+/// (spec/vectors/unread.json).
 public func notifyingUnread(
   _ unread: [String], muted: Bool, mentionsWhenMuted: Bool, me: String
 ) -> Int {
-  guard muted else { return unread.count }
-  guard mentionsWhenMuted else { return 0 }
-  return unread.count { mentions(in: $0).contains(me) }
+  notifyingCount(
+    count: unread.count, mentions: unread.count { mentions(in: $0).contains(me) }, muted: muted,
+    mentionsWhenMuted: mentionsWhenMuted)
 }
 
 /// A chat as a list shows it: its latest line, and how many lines count

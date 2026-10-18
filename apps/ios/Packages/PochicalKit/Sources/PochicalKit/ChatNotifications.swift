@@ -111,8 +111,9 @@ public struct ChatNotificationsRequest: FetchKeyRequest, Hashable {
 }
 
 /// How many of a chat's unread lines count, as what notifies, from the
-/// group's count of them and of their mentions of the reader (spec/chat.md,
-/// Unread lines): `notifyingUnread` on counts instead of the lines' words.
+/// count of them and of their mentions of the reader: all of them in a
+/// chat that is on; in one turned off only the mentions, and those only
+/// while mentions always notify (spec/chat.md, Unread lines).
 func notifyingCount(count: Int, mentions: Int, muted: Bool, mentionsWhenMuted: Bool) -> Int {
   guard muted else { return count }
   return mentionsWhenMuted ? mentions : 0
