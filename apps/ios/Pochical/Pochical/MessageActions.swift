@@ -235,6 +235,7 @@ struct MessageActionsOverlay: View {
   var body: some View {
     GeometryReader { proxy in
       let place = placement(in: proxy.size)
+      let (top, bottom) = room(in: proxy.size)
       ZStack(alignment: .topLeading) {
         colors.scrim
           .opacity(shown ? 1 : 0)
@@ -250,9 +251,9 @@ struct MessageActionsOverlay: View {
           .frame(width: request.frame.width, height: request.frame.height)
           // Drawn smaller about its top corner by the writer when too tall,
           // then cut to the room.
-          .scaleEffect(shown ? place.scale : 1, anchor: request.mine ? .topTrailing : .topLeading)
+          .scaleEffect(placed ? place.scale : 1, anchor: request.mine ? .topTrailing : .topLeading)
           .frame(
-            width: request.frame.width, height: shown ? place.bubbleHeight : request.frame.height,
+            width: request.frame.width, height: placed ? place.bubbleHeight : request.frame.height,
             alignment: .top
           )
           // Cut at its foot only, so a run's first bubble keeps its tail.
@@ -260,9 +261,9 @@ struct MessageActionsOverlay: View {
           // Grown about its own middle, before it is put in place; it
           // rises from where it was and goes back there.
           .scaleEffect(shown && !reduceMotion ? 1.02 : 1)
-          .offset(x: request.frame.minX, y: shown ? place.bubbleY : request.frame.minY)
+          .offset(x: request.frame.minX, y: placed ? place.bubbleY : request.frame.minY)
           .accessibilityHidden(true)
-        menu
+        menu(height: menuShown(top, bottom))
           .frame(width: menuWidth)
           .modifier(Placed(edge: place.edge, x: place.x, y: place.menuY, width: proxy.size.width))
           .scaleEffect(grown ? 1 : 0.85, anchor: menuAnchor(under: place.menuUnder))
@@ -306,6 +307,9 @@ struct MessageActionsOverlay: View {
   /// The bar and the menu at their size: grown from their corner by the
   /// bubble as they come, unless motion is reduced.
   private var grown: Bool { shown || reduceMotion }
+  /// The bubble where the menu puts it, drawn smaller when too tall: from
+  /// the start with motion reduced, rather than moving there.
+  private var placed: Bool { shown || reduceMotion }
 
   // MARK: Parts
 
@@ -357,7 +361,24 @@ struct MessageActionsOverlay: View {
     .shadow(.md)
   }
 
-  private var menu: some View {
+  /// The menu, `height` tall: scrolled through when its items, grown with
+  /// a large text size, are taller than the room.
+  private func menu(height: CGFloat) -> some View {
+    ScrollView {
+      menuItems
+    }
+    .scrollBounceBehavior(.basedOnSize)
+    .frame(height: height)
+    .background(colors.backgroundElevated)
+    .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
+    .overlay(
+      RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.borderDefault, lineWidth: 0.5)
+    )
+    // A card floating free, as a menu is.
+    .shadow(.lg)
+  }
+
+  private var menuItems: some View {
     VStack(spacing: 0) {
       ForEach(Array(request.actions.enumerated()), id: \.element.id) { index, action in
         if index > 0 {
@@ -387,13 +408,6 @@ struct MessageActionsOverlay: View {
         .modifier(Tracked(target: .action(action.id), targets: $targets))
       }
     }
-    .background(colors.backgroundElevated)
-    .clipShape(RoundedRectangle(cornerRadius: Radius.xl))
-    .overlay(
-      RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(colors.borderDefault, lineWidth: 0.5)
-    )
-    // A card floating free, as a menu is.
-    .shadow(.lg)
   }
 
   // MARK: Placing
@@ -408,7 +422,7 @@ struct MessageActionsOverlay: View {
     let (top, bottom) = room(in: size)
     let frame = request.frame
     if fitsInPlace(top: top, bottom: bottom) {
-      let under = frame.maxY + menuSpace <= bottom
+      let under = frame.maxY + menuSpace(top, bottom) <= bottom
       return Placement(
         edge: request.mine ? .trailing : .leading,
         x: request.mine ? frame.maxX : frame.minX,
@@ -416,18 +430,18 @@ struct MessageActionsOverlay: View {
         bubbleY: frame.minY,
         bubbleHeight: frame.height,
         scale: 1,
-        menuY: under ? frame.maxY + Self.gap : frame.minY - barSpace - menuSpace,
+        menuY: under ? frame.maxY + Self.gap : frame.minY - barSpace - menuSpace(top, bottom),
         menuUnder: under)
     }
-    let space = max(bottom - top - barSpace - menuSpace, 60)
+    let space = max(bottom - top - barSpace - menuSpace(top, bottom), Self.leastBubble)
     let scale = min(1, max(space / frame.height, Self.leastScale))
     let bubbleHeight = min(frame.height * scale, space)
     var bubbleY = frame.minY
     if bubbleY - barSpace < top {
       bubbleY = top + barSpace
     }
-    if bubbleY + bubbleHeight + menuSpace > bottom {
-      bubbleY = bottom - menuSpace - bubbleHeight
+    if bubbleY + bubbleHeight + menuSpace(top, bottom) > bottom {
+      bubbleY = bottom - menuSpace(top, bottom) - bubbleHeight
     }
     return Placement(
       edge: request.mine ? .trailing : .leading,
@@ -462,11 +476,25 @@ struct MessageActionsOverlay: View {
   private func fitsInPlace(top: CGFloat, bottom: CGFloat) -> Bool {
     let frame = request.frame
     let stays = frame.minY - barSpace >= top && frame.maxY <= bottom
-    return stays && (frame.maxY + menuSpace <= bottom || frame.minY - barSpace - menuSpace >= top)
+    let menu = menuSpace(top, bottom)
+    return stays && (frame.maxY + menu <= bottom || frame.minY - barSpace - menu >= top)
   }
 
   private var barSpace: CGFloat { request.reactions == nil ? 0 : barHeight + Self.gap }
-  private var menuSpace: CGFloat { Self.gap + menuHeight }
+  private func menuSpace(_ top: CGFloat, _ bottom: CGFloat) -> CGFloat {
+    Self.gap + menuShown(top, bottom)
+  }
+
+  /// How tall the menu is drawn between `top` and `bottom`: all its items,
+  /// or with a large text size as much as leaves the bar and the bubble at
+  /// its least their room, the rest scrolled to.
+  private func menuShown(_ top: CGFloat, _ bottom: CGFloat) -> CGFloat {
+    let room = bottom - top - barSpace - Self.leastBubble - 2 * Self.gap
+    return min(menuHeight, max(rowHeight, room))
+  }
+
+  /// The least height a bubble is drawn at beside its menu.
+  private static var leastBubble: CGFloat { 60 }
 
   /// Where the menu grows from: its corner by the bubble.
   private func menuAnchor(under: Bool) -> UnitPoint {

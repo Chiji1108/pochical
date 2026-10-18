@@ -2,6 +2,7 @@
   "$comment": "Code generated from design/ by `mise run gen`. Do not edit.",
   "chat": {
     "announceSettleMs": 1000,
+    "cardsMostScale": 1.3,
     "controlsMostScale": 1.5,
     "dayCardColumns": 6,
     "dayCardRows": 7,

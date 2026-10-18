@@ -194,6 +194,9 @@ struct ChatComposer: View {
               }
             }
             .opacity(folded ? 0 : 1)
+            // With motion reduced the row makes room at once, only the
+            // tools fading (spec/chat.md, Reduced motion).
+            .animation(reduceMotion ? .easeOut(duration: 0.2) : nil, value: folded)
             .offset(x: folded && !reduceMotion ? -buttonSize : 0)
             .disabled(folded)
             .accessibilityHidden(folded)
@@ -203,6 +206,7 @@ struct ChatComposer: View {
               .foregroundStyle(colors.textSecondary)
               .frame(width: buttonSize, height: buttonSize)
               .opacity(folded ? 1 : 0)
+              .animation(reduceMotion ? .easeOut(duration: 0.2) : nil, value: folded)
               .scaleEffect(folded || reduceMotion ? 1 : 0.6)
               .disabled(!folded)
               .accessibilityHidden(!folded)
@@ -243,7 +247,7 @@ struct ChatComposer: View {
         .accessibilityLabel(editing == nil ? "送る" : "編集を保存")
         .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
       }
-      .animation(.snappy(duration: 0.25), value: folded)
+      .animation(reduceMotion ? nil : .snappy(duration: 0.25), value: folded)
       // The row's own place is not folded with them: a bar over it going
       // as the tools unfold (a message sent, editing stopped) would carry
       // the field down and back.

@@ -48,13 +48,17 @@ struct PollCard: View {
   let waiting: Bool
   var onVote: (Day, Bool) -> Void = { _, _ in }
   var onDecide: () -> Void = {}
+  /// How much its small type and its date column grow with the reader's
+  /// text size, as far as chatRules.cardsMostScale (DayCard's).
+  @ScaledMetric(relativeTo: .caption2) private var scaled: CGFloat = 1
+  private var k: CGFloat { min(scaled, CGFloat(Chat.cardsMostScale)) }
 
   var body: some View {
     let voters = Set(votes.flatMap(\.userIDs))
     VStack(spacing: 0) {
       HStack(spacing: 8) {
         Image(systemName: "calendar.badge.checkmark")
-          .font(.system(size: 18))
+          .font(.system(size: 18 * k))
           .foregroundStyle(colors.accentDefault)
           .accessibilityHidden(true)
         VStack(alignment: .leading, spacing: 2) {
@@ -99,17 +103,17 @@ struct PollCard: View {
     return HStack(spacing: 8) {
       VStack(alignment: .leading, spacing: 0) {
         HStack(alignment: .firstTextBaseline, spacing: 2) {
-          Text(day.slashText).font(.system(size: 13, weight: .semibold))
-          Text(day.weekdayName(english: english)).font(.system(size: 10))
+          Text(day.slashText).font(.system(size: 13 * k, weight: .semibold))
+          Text(day.weekdayName(english: english)).font(.system(size: 10 * k))
         }
         .foregroundStyle(dayTone(day))
         if together(day) {
           Text("みんな休み")
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: 10 * k, weight: .semibold))
             .foregroundStyle(colors.accentDefault)
         }
       }
-      .frame(width: 60, alignment: .leading)
+      .frame(width: 60 * k, alignment: .leading)
       Voters(day: day, people: people.map { Voter(id: $0, name: names[$0] ?? "メンバー") })
       if isDecided {
         Label("決定", systemImage: "checkmark")
@@ -128,7 +132,7 @@ struct PollCard: View {
           .font(.footnote.weight(.semibold))
           .foregroundStyle(yours ? colors.accentOnFill : colors.textSecondary)
           .padding(.horizontal, 12)
-          .frame(height: 32)
+          .frame(minHeight: 32 * k)
           .background(yours ? colors.accentFill : colors.backgroundCard, in: Capsule())
           .overlay {
             if !yours {
@@ -182,6 +186,9 @@ private struct Voter: Hashable {
 
 private struct Voters: View {
   @Environment(\.themeColors) private var colors
+  /// Its faces, growing as the card's type does (PollCard's).
+  @ScaledMetric(relativeTo: .caption2) private var scaled: CGFloat = 1
+  private var k: CGFloat { min(scaled, CGFloat(Chat.cardsMostScale)) }
   let day: Day
   @Environment(\.memberFaces) private var faces
   let people: [Voter]
@@ -197,7 +204,7 @@ private struct Voters: View {
       HStack(spacing: -4) {
         ForEach(Array(shown.enumerated()), id: \.offset) { _, person in
           MemberAvatar(
-            name: person.name, photoID: faces[person.id] ?? "", size: 22, userID: person.id)
+            name: person.name, photoID: faces[person.id] ?? "", size: 22 * k, userID: person.id)
             .overlay(Circle().stroke(colors.backgroundCard, lineWidth: 1.5))
         }
         if !people.isEmpty {

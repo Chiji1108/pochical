@@ -49,6 +49,11 @@ struct DayCard: View {
   @Environment(Settings.self) private var settings
   let days: [Day]
   let members: [GroupMember]
+  /// How much its small type and its table grow with the reader's text
+  /// size: as far as chatRules.cardsMostScale, so its columns still fit a
+  /// line on the narrowest phone.
+  @ScaledMetric(relativeTo: .caption2) private var scaled: CGFloat = 1
+  private var k: CGFloat { min(scaled, CGFloat(Chat.cardsMostScale)) }
 
   var body: some View {
     let shifts = Shifts(days: days, members: members)
@@ -87,7 +92,7 @@ struct DayCard: View {
       // and many wrapping onto more lines in the same columns rather than
       // widen the card (/design's minmax(36px, 1fr)).
       let columns = max(min(members.count, Chat.dayCardColumns), 1)
-      let column = max(Self.leastColumn, Self.oneDayInside / CGFloat(columns))
+      let column = max(Self.leastColumn * k, Self.oneDayInside * k / CGFloat(columns))
       VStack(alignment: .leading, spacing: 8) {
         ForEach(Array(stride(from: 0, to: members.count, by: columns)), id: \.self) { start in
           HStack(spacing: 0) {
@@ -95,11 +100,11 @@ struct DayCard: View {
               let pattern = shifts.pattern(of: member, on: day)
               VStack(spacing: 4) {
                 MemberAvatar(
-                  name: member.name, photoID: member.photoID, size: 24, userID: member.userID)
-                mark(pattern, size: 16)
+                  name: member.name, photoID: member.photoID, size: 24 * k, userID: member.userID)
+                mark(pattern, size: 16 * k)
                   .marks(drawnAs: member.markLook)
                 Text(pattern?.name ?? "未入力")
-                  .font(.system(size: 9))
+                  .font(.system(size: 9 * k))
                   .foregroundStyle(colors.textTertiary)
                   .lineLimit(1)
               }
@@ -114,7 +119,7 @@ struct DayCard: View {
     .padding(12)
     // As wide with みんな休み as without, and for any date, so shared
     // days stacked in a chat line up.
-    .frame(minWidth: Self.oneDayInside + 24, alignment: .leading)
+    .frame(minWidth: Self.oneDayInside * k + 24, alignment: .leading)
   }
 
   /// Inside one day's card at its narrowest, room for 12月27日(日) and the
@@ -128,35 +133,35 @@ struct DayCard: View {
     let shown = Array(days.prefix(Chat.dayCardRows))
     return VStack(alignment: .trailing, spacing: 0) {
       HStack(spacing: 4) {
-        Color.clear.frame(width: Self.dateWidth, height: 1)
+        Color.clear.frame(width: Self.dateWidth * k, height: 1)
         ForEach(members) { member in
           MemberAvatar(
-            name: member.name, photoID: member.photoID, size: 22, userID: member.userID)
-            .frame(width: 26)
+            name: member.name, photoID: member.photoID, size: 22 * k, userID: member.userID)
+            .frame(width: 26 * k)
             .accessibilityLabel(member.name)
         }
       }
-      .frame(minHeight: 30)
+      .frame(minHeight: 30 * k)
       ForEach(shown, id: \.self) { day in
         HStack(spacing: 4) {
           HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Text(day.slashText).font(.system(size: 11, weight: .semibold))
-            Text(day.weekdayName(english: english)).font(.system(size: 9))
+            Text(day.slashText).font(.system(size: 11 * k, weight: .semibold))
+            Text(day.weekdayName(english: english)).font(.system(size: 9 * k))
           }
           .foregroundStyle(dateTone(day, week: settings.device.week, colors: colors))
           .lineLimit(1)
           .fixedSize()
           .padding(.leading, 4)
-          .frame(width: Self.dateWidth, alignment: .leading)
+          .frame(width: Self.dateWidth * k, alignment: .leading)
           ForEach(members) { member in
             cell(shifts.pattern(of: member, on: day))
               .marks(drawnAs: member.markLook)
-              .frame(width: 26)
+              .frame(width: 26 * k)
               .accessibilityLabel(
                 "\(member.name)：\(shifts.pattern(of: member, on: day)?.name ?? "未入力")")
           }
         }
-        .frame(minHeight: 28)
+        .frame(minHeight: 28 * k)
         .background(
           shifts.together(day) ? colors.accentContainer : .clear,
           in: RoundedRectangle(cornerRadius: Radius.sm)
@@ -177,40 +182,40 @@ struct DayCard: View {
         // As in the shift table, the month once in the corner and the
         // days by number, with a new month's where it turns.
         Text(shown.first?.shortMonth(english: english) ?? "")
-          .font(.system(size: 9))
+          .font(.system(size: 9 * k))
           .foregroundStyle(colors.textTertiary)
-          .frame(width: 26)
+          .frame(width: 26 * k)
         ForEach(Array(shown.enumerated()), id: \.element) { index, day in
           let turns = index > 0 && day.month != shown[index - 1].month
           VStack(spacing: 0) {
             Text(turns ? day.slashText : "\(day.day)")
-              .font(.system(size: 11, weight: .semibold))
-            Text(day.weekdayName(english: english)).font(.system(size: 9))
+              .font(.system(size: 11 * k, weight: .semibold))
+            Text(day.weekdayName(english: english)).font(.system(size: 9 * k))
           }
           .foregroundStyle(dateTone(day, week: settings.device.week, colors: colors))
           .padding(.vertical, 2)
-          .frame(width: 28)
+          .frame(width: 28 * k)
           .background(
             shifts.together(day) ? colors.accentContainer : .clear,
             in: RoundedRectangle(cornerRadius: Radius.sm))
         }
       }
-      .frame(minHeight: 30)
+      .frame(minHeight: 30 * k)
       ForEach(members) { member in
         HStack(spacing: 4) {
           MemberAvatar(
-            name: member.name, photoID: member.photoID, size: 22, userID: member.userID)
-            .frame(width: 26)
+            name: member.name, photoID: member.photoID, size: 22 * k, userID: member.userID)
+            .frame(width: 26 * k)
             .accessibilityLabel(member.name)
           ForEach(shown, id: \.self) { day in
             cell(shifts.pattern(of: member, on: day))
               .marks(drawnAs: member.markLook)
-              .frame(width: 28)
+              .frame(width: 28 * k)
               .accessibilityLabel(
                 "\(day.fullText)：\(shifts.pattern(of: member, on: day)?.name ?? "未入力")")
           }
         }
-        .frame(minHeight: 28)
+        .frame(minHeight: 28 * k)
         .accessibilityElement(children: .combine)
       }
       rest(days.count - shown.count)
@@ -222,8 +227,8 @@ struct DayCard: View {
 
   /// A person's shift on a day in a table, on the tile's color when off.
   private func cell(_ pattern: Pattern?) -> some View {
-    mark(pattern, size: 15)
-      .frame(maxWidth: .infinity, minHeight: 24)
+    mark(pattern, size: 15 * k)
+      .frame(maxWidth: .infinity, minHeight: 24 * k)
       .background(
         pattern?.countsAsOff == true ? colors.accentContainer : .clear,
         in: RoundedRectangle(cornerRadius: Radius.sm))
