@@ -729,17 +729,18 @@ export class GroupDO extends DurableObject<Env> {
         .all()
         .map((member) => [member.userId, member.displayName])
     );
+    const support = this.placeKind() === "support";
     const alert = alertOf(
       line,
       { id: this.placeId() ?? "", name: this.getProfile()?.name ?? "" },
       (id) => names.get(id) ?? "メンバー",
       // The chat with Pochical's people is a chat of two, worded as one.
-      this.placeKind() === "support" || line.threadId !== GROUP_THREAD
+      support || line.threadId !== GROUP_THREAD
     );
     // Only Pochical's people notify in the chat with them: it is titled
     // with the chat, as 設定's row names it, with no writer of its own
     // (spec/chat.md, The chat with Pochical's people).
-    return this.placeKind() === "support"
+    return support
       ? { ...alert, title: { args: [], key: SUPPORT_TITLE } }
       : alert;
   }
