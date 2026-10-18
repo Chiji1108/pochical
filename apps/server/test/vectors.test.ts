@@ -9,13 +9,13 @@ import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
 import text from "../../../spec/vectors/text.json";
 import { inviteCodeOf, textParts } from "../src/chat-links";
-import { photoPage, seenPhoto } from "../src/chat-photos";
 import { pinStep } from "../src/chat-pins";
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
 import { directThread, plainText } from "../src/group-chat";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
 import { characterCount, isEmoji } from "../src/text-limits";
+import { photosAmong } from "./helpers";
 
 // Which thread two members' one-to-one chat is, as their apps name it.
 describe("spec/vectors/chat.json", () => {
@@ -100,19 +100,43 @@ describe("spec/vectors/order-clears.json", () => {
 });
 
 describe("spec/vectors/chat-photos.json", () => {
-  test.each(chatPhotos.seen)("seen: $name", ({ line, expected }) => {
-    expect(seenPhoto(line)).toBe(expected);
+  // The group's own answer, from its database: the line alone in its chat,
+  // counted among the reader's photos or not.
+  test.each(chatPhotos.seen)("seen: $name", async ({ line, expected }) => {
+    const threadId = line.ownChat ? "group" : directThread("reader", "writer");
+    const { total } = await photosAmong({
+      after: false,
+      blocked: line.writerBlocked ? ["writer"] : [],
+      lines: [
+        {
+          authorId: "writer",
+          hiddenFrom: line.hidden ? "reader" : undefined,
+          photo: line.photo,
+          seq: 1,
+          threadId,
+          unsent: line.unsent,
+        },
+      ],
+      seq: 0,
+      threadId,
+      userId: "reader",
+    });
+    expect(total).toBe(expected ? 1 : 0);
   });
 
+  // The chat's lines from the first, words where no photo is.
   test.each(chatPhotos.page)(
     "page: $name",
-    ({ seqs, seq, after, size, expected }) => {
-      const { from, to } = photoPage(seqs, seq, after, size);
-      expect({
-        offset: from,
-        seqs: seqs.slice(from, to),
-        total: seqs.length,
-      }).toStrictEqual(expected);
+    async ({ seqs, seq, after, size, expected }) => {
+      const last = Math.max(seq, ...seqs);
+      const lines = Array.from({ length: last }, (_, index) => ({
+        authorId: "writer",
+        photo: seqs.includes(index + 1),
+        seq: index + 1,
+      }));
+      await expect(
+        photosAmong({ after, lines, seq, size, userId: "reader" })
+      ).resolves.toStrictEqual(expected);
     }
   );
 });

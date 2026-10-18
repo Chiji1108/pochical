@@ -1,5 +1,10 @@
+import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
+import { drizzle } from "drizzle-orm/durable-sqlite";
 import { expect } from "vitest";
+
+import { photosPage } from "../src/group-chat";
+import { chatLines, memberBlocks } from "../src/group-do-schema";
 
 export const ORIGIN = "https://server.test";
 
@@ -109,3 +114,70 @@ export const inOneLimitWindow = async <T>(
   }
   throw new Error(`No round of ${LIMIT_ROUNDS} fell inside one limit window`);
 };
+
+/** A line of a chat laid straight into a group's database, by what makes its photo seen or not. */
+export type PhotoLine = {
+  authorId: string;
+  hiddenFrom?: string;
+  photo: boolean;
+  seq: number;
+  threadId?: string;
+  unsent?: boolean;
+};
+
+/**
+ * What a ChatPhotosRequest answers `userId` (photosPage), the page as its
+ * lines' seqs, in a new group whose chats hold `lines` and where `userId`
+ * has blocked `blocked`.
+ */
+export const photosAmong = async ({
+  after,
+  blocked = [],
+  lines,
+  seq,
+  size,
+  threadId = "group",
+  userId,
+}: {
+  after: boolean;
+  blocked?: string[];
+  lines: PhotoLine[];
+  seq: number;
+  size?: number;
+  threadId?: string;
+  userId: string;
+}): Promise<{ offset: number; seqs: number[]; total: number }> =>
+  await runInDurableObject(
+    env.GROUPS.getByName(crypto.randomUUID()),
+    (_, state) => {
+      const db = drizzle(state.storage);
+      for (const [index, line] of lines.entries()) {
+        db.insert(chatLines)
+          .values({
+            authorId: line.authorId,
+            createdCursor: index + 1,
+            cursor: index + 1,
+            hiddenFrom: line.hiddenFrom ?? null,
+            opId: `op-${index}`,
+            photo: line.photo
+              ? { height: 1, id: `photo-${index}`, width: 1 }
+              : null,
+            sentAt: new Date(line.seq),
+            seq: line.seq,
+            text: "",
+            threadId: line.threadId ?? "group",
+            unsent: line.unsent ?? false,
+          })
+          .run();
+      }
+      for (const blockedId of blocked) {
+        db.insert(memberBlocks).values({ blockedId, userId }).run();
+      }
+      const page = photosPage(db, userId, threadId, BigInt(seq), after, size);
+      return {
+        offset: page.offset,
+        seqs: page.photos.map((photo) => Number(photo.seq)),
+        total: page.total,
+      };
+    }
+  );

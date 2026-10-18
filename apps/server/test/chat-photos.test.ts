@@ -2,7 +2,7 @@ import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { directThread } from "../src/group-chat";
-import { call, ORIGIN, userIdOf } from "./helpers";
+import { call, ORIGIN, photosAmong, userIdOf } from "./helpers";
 import type { framesOf } from "./sync-helpers";
 import {
   pair,
@@ -165,6 +165,90 @@ describe("a chat's photos alone", () => {
       seqs: [],
       total: 0,
     });
+  });
+
+  // The place's own chat: words at 3, m's photo taken back at 4, and the
+  // photos of b, whom r blocked, at 6 and 8. r sees 1, 2, 5, 7, 9 and 10.
+  const ownChat = [
+    { authorId: "m", photo: true, seq: 1 },
+    { authorId: "m", photo: true, seq: 2 },
+    { authorId: "m", photo: false, seq: 3 },
+    { authorId: "m", photo: true, seq: 4, unsent: true },
+    { authorId: "m", photo: true, seq: 5 },
+    { authorId: "b", photo: true, seq: 6 },
+    { authorId: "m", photo: true, seq: 7 },
+    { authorId: "b", photo: true, seq: 8 },
+    { authorId: "m", photo: true, seq: 9 },
+    { authorId: "m", photo: true, seq: 10 },
+  ];
+
+  it.each([
+    { after: false, expected: { offset: 4, seqs: [9, 10] }, seq: 0 },
+    { after: false, expected: { offset: 2, seqs: [5, 7] }, seq: 9 },
+    { after: false, expected: { offset: 0, seqs: [1, 2] }, seq: 5 },
+    { after: true, expected: { offset: 0, seqs: [1, 2] }, seq: 0 },
+    // From a line r does not see, those up to it come before.
+    { after: true, expected: { offset: 3, seqs: [7, 9] }, seq: 6 },
+    { after: true, expected: { offset: 6, seqs: [] }, seq: 10 },
+  ])(
+    "page past those taken back or of someone blocked, counting the rest (seq $seq, after $after)",
+    async ({ after, expected, seq }) => {
+      await expect(
+        photosAmong({
+          after,
+          blocked: ["b"],
+          lines: ownChat,
+          seq,
+          size: 2,
+          userId: "r",
+        })
+      ).resolves.toStrictEqual({ ...expected, total: 6 });
+    }
+  );
+
+  it("count a blocked member's for everyone else", async () => {
+    await expect(
+      photosAmong({
+        after: false,
+        lines: ownChat,
+        seq: 0,
+        size: 2,
+        userId: "s",
+      })
+    ).resolves.toStrictEqual({ offset: 6, seqs: [9, 10], total: 8 });
+  });
+
+  it("leave out in a one-to-one chat those kept from the reader alone", async () => {
+    // 2 was sent while r had blocked w, and kept from r alone; 3 was taken
+    // back. r's block of w hides nothing else there.
+    const threadId = directThread("r", "w");
+    const direct = [1, 2, 3, 4].map((seq) => ({
+      authorId: "w",
+      hiddenFrom: seq === 2 ? "r" : undefined,
+      photo: true,
+      seq,
+      threadId,
+      unsent: seq === 3,
+    }));
+    await expect(
+      photosAmong({
+        after: false,
+        blocked: ["w"],
+        lines: direct,
+        seq: 0,
+        threadId,
+        userId: "r",
+      })
+    ).resolves.toStrictEqual({ offset: 0, seqs: [1, 4], total: 2 });
+    await expect(
+      photosAmong({
+        after: true,
+        lines: direct,
+        seq: 1,
+        threadId,
+        userId: "w",
+      })
+    ).resolves.toStrictEqual({ offset: 1, seqs: [2, 4], total: 3 });
   });
 
   it("come the same way in the chat with Pochical's people", async () => {
