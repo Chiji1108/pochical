@@ -754,12 +754,8 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       seePlace()
       return
     }
-    // From far up, glides the last screen only.
-    if target - lines.contentOffset.y > seenHeight {
-      lines.contentOffset.y = target - seenHeight
-    }
     goingDown = true
-    lines.setContentOffset(CGPoint(x: lines.contentOffset.x, y: target), animated: true)
+    glide(to: target)
   }
 
   func show(_ id: String, at place: LinePlace, animated: Bool, then: (() -> Void)?) {
@@ -788,13 +784,17 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       then?()
       return
     }
-    // From far off, glides the last screen only, as to the latest, rather
-    // than through all between.
+    going = asked
+    glide(to: target)
+  }
+
+  /// Glides the lines to `target`, from far off the last screen only rather
+  /// than through all between.
+  private func glide(to target: CGFloat) {
     let away = target - lines.contentOffset.y
     if abs(away) > seenHeight {
       lines.contentOffset.y = target - (away > 0 ? seenHeight : -seenHeight)
     }
-    going = asked
     lines.setContentOffset(CGPoint(x: lines.contentOffset.x, y: target), animated: true)
   }
 
