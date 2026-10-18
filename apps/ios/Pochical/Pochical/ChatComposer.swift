@@ -258,8 +258,9 @@ struct ChatComposer: View {
       .accessibilityLabel("写真や日にちを送る")
       .glassEffect(.regular.interactive(), in: .circle)
     } else {
+      // Quiet once the tray is full, as the picker would not open.
       Button(action: choosePhotos) {
-        toolIcon("photo")
+        toolIcon("photo", quiet: draft.photoRoom <= 0)
       }
       .buttonStyle(.plain)
       .accessibilityLabel("写真を送る")
@@ -267,10 +268,10 @@ struct ChatComposer: View {
     }
   }
 
-  private func toolIcon(_ systemImage: String) -> some View {
+  private func toolIcon(_ systemImage: String, quiet: Bool = false) -> some View {
     Image(systemName: systemImage)
       .font(.system(size: iconSize, weight: .medium))
-      .foregroundStyle(colors.textPrimary)
+      .foregroundStyle(quiet ? colors.textQuaternary : colors.textPrimary)
       .frame(width: buttonSize, height: buttonSize)
       .contentShape(.circle)
   }

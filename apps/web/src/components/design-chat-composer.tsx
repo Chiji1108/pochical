@@ -203,7 +203,9 @@ export function ChatEdge({
       const grown = over.offsetHeight - height;
       height = over.offsetHeight;
       box.style.setProperty(name, `${height}px`);
-      if (grown > 0 && list.current) {
+      // Over the head the lines stay as it shrinks too; at the foot the
+      // room it gives back shows more below.
+      if ((grown > 0 || edge === "head") && list.current) {
         list.current.scrollTop += grown;
       }
     });
