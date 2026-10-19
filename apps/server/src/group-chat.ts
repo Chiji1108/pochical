@@ -358,6 +358,20 @@ const fitsPhotoSize = (side: number): boolean =>
  * A photo line: the sender's own photo, uploaded and not sent before,
  * with no words or days.
  */
+/** Whether `photoId` is one `userId` uploaded and has not sent. */
+const ownUnsentPhoto = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  photoId: string
+): boolean => {
+  const uploaded = db
+    .select()
+    .from(chatPhotos)
+    .where(eq(chatPhotos.id, photoId))
+    .get();
+  return uploaded?.userId === userId && !uploaded.sent;
+};
+
 const fitsPhoto = (
   db: DrizzleSqliteDODatabase,
   userId: string,
@@ -366,14 +380,8 @@ const fitsPhoto = (
   if (photo === undefined || text !== "" || days.length > 0 || poll) {
     return false;
   }
-  const uploaded = db
-    .select()
-    .from(chatPhotos)
-    .where(eq(chatPhotos.id, photo.id))
-    .get();
   return (
-    uploaded?.userId === userId &&
-    !uploaded.sent &&
+    ownUnsentPhoto(db, userId, photo.id) &&
     fitsPhotoSize(photo.width) &&
     fitsPhotoSize(photo.height) &&
     fitsThumbHash(photo.thumbHash) &&
@@ -982,6 +990,10 @@ const takeSend = (
   const { photo, replyTo } = send;
   const fits =
     photo === undefined ? fitsSend(send) : fitsPhoto(db, userId, send);
+  if (taken === undefined && recalled !== undefined && photo !== undefined) {
+    // A photo taken back before its send came goes, as a line's does.
+    return ownUnsentPhoto(db, userId, photo.id) ? { photoGone: photo.id } : {};
+  }
   if (taken !== undefined || recalled !== undefined || !fits) {
     return {};
   }
