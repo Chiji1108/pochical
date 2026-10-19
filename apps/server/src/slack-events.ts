@@ -26,7 +26,7 @@ import {
 } from "./slack";
 import { supportPlace } from "./support-lines";
 import { linesOfSlackTs } from "./support-place";
-import { characterCount } from "./text-limits";
+import { withinLimit } from "./text-limits";
 
 type EditKind = MessageInitShape<typeof ChatEditSchema>["kind"];
 
@@ -129,7 +129,7 @@ const answerFromSlack = async (
   }
   const words = fromSlackText(stringOf(event.text) ?? "", event.blocks).trim();
   if (words !== "" || images.length === 0) {
-    if (words === "" || characterCount(words) > textLimits.chatMessage) {
+    if (words === "" || !withinLimit(words, textLimits.chatMessage)) {
       missed.push("空か、長すぎる文");
     } else {
       edits.push(
