@@ -220,13 +220,14 @@ public enum ChatPhotos {
     _ photoID: String, in groupID: String, account: Account, server: URL = Server.url,
     send: Account.Send? = nil
   ) async throws {
-    guard let jpeg = try? Data(contentsOf: pending(photoID, in: groupID)) else {
-      // Sent before, from another socket, or never kept.
-      if FileManager.default.fileExists(atPath: cached(photoID, in: groupID).path()) {
-        return
-      }
-      throw UploadError.gone
-    }
+    // Uploaded before, from another socket, it goes up again from the copy
+    // kept to show: the group lets a photo no line carries go once its
+    // uploader has uploaded nothing for a while, so a line sent again,
+    // or long after, finds it there.
+    guard
+      let jpeg = (try? Data(contentsOf: pending(photoID, in: groupID)))
+        ?? (try? Data(contentsOf: cached(photoID, in: groupID)))
+    else { throw UploadError.gone }
     let small = groupID == mine ? nil : small(jpeg)
     // Told as one, the small version's bytes first.
     let total = Double((small?.count ?? 0) + jpeg.count)

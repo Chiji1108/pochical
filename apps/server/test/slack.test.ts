@@ -424,6 +424,37 @@ describe("a support chat in Slack", () => {
     ).toHaveLength(2);
   });
 
+  it("posts the longest line, escaped, whole within Slack's 40,000 characters", async () => {
+    const { textLimits } = await import("@pochical/design/limits");
+    // chat.postMessage truncates text past this many characters.
+    const slackTextMost = 40_000;
+    const calls = slackCalls();
+    const token = await signInAnonymously();
+    const { edit, say, userId } = await supportChat(token);
+    // As large as a line may be: each character an "&", the longest
+    // escaped, stacked with marks up to its most code units.
+    const longest = `&${"́".repeat(31)}`.repeat(textLimits.chatMessage);
+    await say(longest, "&".repeat(200));
+    await edit([
+      {
+        kind: {
+          case: "send",
+          value: { replyTo: 1n, text: longest, threadId: "group" },
+        },
+        opId: crypto.randomUUID(),
+      },
+    ]);
+    const texts = calls.map(({ args }) => String(args.text));
+    expect(texts).toHaveLength(2);
+    for (const text of texts) {
+      expect([
+        text.length <= slackTextMost,
+        text.includes(toSlackText(longest)),
+      ]).toStrictEqual([true, true]);
+    }
+    await expect(linesOf(userId)).resolves.toHaveLength(2);
+  });
+
   it("posts a line again while Slack does not take it, once taken", async () => {
     const calls = slackCalls(
       (method, before) => method === "chat.postMessage" && before < 2
@@ -734,7 +765,7 @@ describe("a user's photo, in Slack", () => {
     expect(calls[2]?.args.thread_ts).toBe(thread);
   });
 
-  it("is uploaded again while Slack does not take it, but not once shared", async () => {
+  it("is looked for and uploaded again while Slack does not take it, but not once shared", async () => {
     const calls = slackCalls(
       (method, before) =>
         (method === "files.getUploadURLExternal" && before === 0) ||
@@ -754,12 +785,50 @@ describe("a user's photo, in Slack", () => {
     ).toStrictEqual([
       "chat.postMessage",
       "files.getUploadURLExternal",
+      "conversations.replies",
       "files.getUploadURLExternal",
       "files.completeUploadExternal",
     ]);
     await expect(slackTsOf(userId, 1)).resolves.toBeNull();
   });
+
+  it("is looked for again after its upload is refused, an earlier try having maybe shared it", async () => {
+    const calls = slackCalls((method, before) => {
+      if (method === "files.completeUploadExternal" && before === 0) {
+        // Its answer lost: Slack may have shared it.
+        return { error: "internal_error", status: 500 };
+      }
+      return method === "files.getUploadURLExternal" && before === 1;
+    });
+    const token = await signInAnonymously();
+    const { edit } = await supportChat(token);
+    await sendPhoto(token, edit);
+    // Each try after the first looks for it before readying an upload.
+    expect(
+      calls
+        .map(({ method }) => method)
+        .filter((method) => method !== "files.info")
+    ).toStrictEqual([
+      "chat.postMessage",
+      "files.getUploadURLExternal",
+      "files.completeUploadExternal",
+      "conversations.replies",
+      "files.getUploadURLExternal",
+      "conversations.replies",
+      "files.getUploadURLExternal",
+      "files.completeUploadExternal",
+    ]);
+  });
 });
+
+/** When the chat's relay comes back, in seconds from now; null for never. */
+const nextTry = async (userId: string): Promise<number | null> => {
+  const at = await runInDurableObject(
+    env.GROUPS.getByName(supportPlace(userId)),
+    async (_, state) => await state.storage.getAlarm()
+  );
+  return at === null ? null : Math.round((at - Date.now()) / 1000);
+};
 
 describe("a line Slack took with its answer lost", () => {
   afterEach(() => {
@@ -848,6 +917,67 @@ describe("a line Slack took with its answer lost", () => {
     ]);
     await expect(slackTsOf(userId, 2)).resolves.not.toBeNull();
   });
+
+  it("taken back before the next try, is found and said to be taken back", async () => {
+    const calls = slackCalls(
+      (method, before) => method === "chat.postMessage" && before === 1 && lost
+    );
+    const token = await signInAnonymously();
+    const { frames, say, socket, userId } = await supportChat(token);
+    await say("はじめまして");
+    const thread = await threadOf(userId);
+    const edit = async (kind: Parameters<typeof sendFrame>[1]) => {
+      sendFrame(socket, kind);
+      await untilAcked(frames);
+    };
+    await edit({
+      case: "chatEdits",
+      value: {
+        edits: [
+          {
+            kind: {
+              case: "send",
+              value: { text: "まちがい", threadId: "group" },
+            },
+            opId: crypto.randomUUID(),
+          },
+        ],
+      },
+    });
+    // Posted, its answer lost: the relay waits to try again.
+    await vi.waitFor(async () => {
+      await expect(nextTry(userId)).resolves.toBeGreaterThan(0);
+    });
+    await edit({
+      case: "chatEdits",
+      value: {
+        edits: [
+          {
+            kind: { case: "unsend", value: { seq: 2n, threadId: "group" } },
+            opId: crypto.randomUUID(),
+          },
+        ],
+      },
+    });
+    await relayed(userId);
+    const posted = calls.find(
+      ({ method, args }) =>
+        method === "chat.postMessage" && args.text === "まちがい"
+    );
+    expect(posted).toBeDefined();
+    expect(
+      calls.slice(-2).map(({ method, args }) => [method, args.text])
+    ).toStrictEqual([
+      ["conversations.replies", undefined],
+      ["chat.update", "（ユーザーが送信を取り消しました）"],
+    ]);
+    expect(calls.at(-2)?.args.ts).toBe(thread);
+    const ts = await slackTsOf(userId, 2);
+    expect([ts === null, calls.at(-1)?.args.ts === ts]).toStrictEqual([
+      false,
+      true,
+    ]);
+  });
 });
 
 describe("Slack's refusals", () => {
@@ -871,15 +1001,6 @@ describe("Slack's refusals", () => {
 });
 
 const MINUTE_S = 60;
-
-/** When the chat's relay comes back, in seconds from now; null for never. */
-const nextTry = async (userId: string): Promise<number | null> => {
-  const at = await runInDurableObject(
-    env.GROUPS.getByName(supportPlace(userId)),
-    async (_, state) => await state.storage.getAlarm()
-  );
-  return at === null ? null : Math.round((at - Date.now()) / 1000);
-};
 
 /** The relay run once, and when it comes back. */
 const relayOnce = async (userId: string): Promise<number | null> => {

@@ -743,6 +743,10 @@ message ChatUnsend {
 message ChatRecall {
   string thread_id = 1;
   string send_op_id = 2;
+  // The photo the send carries, uploaded before it went out: deleted with
+  // the line, or at once when the group does not have the line, as no
+  // line will ever carry it. Empty for a send of anything else.
+  string photo_id = 3;
 }
 
 // The member has read the chat up to here; the group only moves a mark

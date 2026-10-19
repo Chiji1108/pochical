@@ -933,6 +933,39 @@ describe("a group's chat", () => {
     });
   });
 
+  it("keeps a send taken back from coming for as long as a line goes by itself, and while its writer stays", async () => {
+    const { runInDurableObject } = await import("cloudflare:test");
+    const { env } = await import("cloudflare:workers");
+    const { call } = await import("./helpers");
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+    const recalls = async () =>
+      await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) =>
+        state.storage.sql
+          .exec<{ op_id: string }>("select op_id from chat_recalls")
+          .toArray()
+          .map((row) => row.op_id)
+      );
+    chat(mine.socket, [{ kind: { recall: "a" }, opId: "r1" }]);
+    await mine.frames.next();
+    // Taken back longer ago than a line goes out by itself.
+    await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
+      state.storage.sql.exec(
+        "update chat_recalls set taken_at = ?",
+        Date.now() - chatRules.unsentAfterMs - 1
+      );
+    });
+    chat(mine.socket, [{ kind: { recall: "b" }, opId: "r2" }]);
+    await mine.frames.next();
+    await expect(recalls()).resolves.toStrictEqual(["b"]);
+    chat(theirs.socket, [{ kind: { recall: "c" }, opId: "r3" }]);
+    await theirs.frames.next();
+
+    await call("GroupService/LeaveGroup", { groupId }, guest);
+    await expect(recalls()).resolves.toStrictEqual(["b"]);
+  });
+
   it("takes back by op_id only the member's own line, from any of their devices", async () => {
     const { groupId, guest, maker } = await pair();
     const phone = await groupSocket(groupId, maker);
@@ -1000,6 +1033,47 @@ describe("a group's chat", () => {
     expect(lines[1]).toMatchObject({
       kind: { case: "chatLine", value: { pinnedOrder: 0n, unsent: true } },
     });
+  });
+
+  it("gives a device catching up every line changed since, each with its reactions, past a query's hundred values", async () => {
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const count = 120;
+    chat(
+      mine.socket,
+      Array.from({ length: count }, (_, at) => ({
+        kind: { send: `${at + 1}` },
+        opId: `m${at}`,
+      }))
+    );
+    await mine.frames.next();
+    await mine.frames.next();
+    chat(
+      mine.socket,
+      Array.from({ length: count }, (_, at) => ({
+        kind: { react: [at + 2, at % 2 === 0 ? "👍" : "🎉", true] },
+        opId: `r${at}`,
+      }))
+    );
+    await mine.frames.next();
+    await mine.frames.next();
+
+    const later = await groupSocket(
+      groupId,
+      guest,
+      PAIR_ROSTER + BigInt(count)
+    );
+    const lines = changesIn(await later.frames.next()).flatMap(({ kind }) =>
+      kind.case === "chatLine"
+        ? [[Number(kind.value.seq), kind.value.reactions.map((r) => r.emoji)]]
+        : []
+    );
+    expect(lines).toStrictEqual(
+      Array.from({ length: count }, (_, at) => [
+        at + 2,
+        [at % 2 === 0 ? "👍" : "🎉"],
+      ])
+    );
   });
 
   it("gives a device catching up a pinned line however far back", async () => {

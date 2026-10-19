@@ -208,43 +208,21 @@ const passing = (why: string): SlackRefusal => ({
   why,
 });
 
-/**
- * What Slack did not take, and why, for the relay to try again; and
- * whether that leaves the line surely not posted, or perhaps posted with
- * Slack's answer lost, for the retry to look for it in Slack first.
- */
+/** What Slack did not take, and why, for the relay to try again. */
 export class SlackRefusedError extends Error {
   readonly refusal: SlackRefusal;
-  readonly notPosted: boolean;
 
-  constructor(what: string, refusal: SlackRefusal, notPosted: boolean) {
+  constructor(what: string, refusal: SlackRefusal) {
     super(`Slack did not take ${what}: ${refusal.why}`);
     this.name = "SlackRefusedError";
     this.refusal = refusal;
-    this.notPosted = notPosted;
   }
 }
 
-/**
- * Slack's errors that may come after it did part of the call
- * (chat.postMessage's reference says so of internal_error and
- * fatal_error), or when it gave up waiting on itself.
- */
-const UNSURE_ERRORS = new Set([
-  "fatal_error",
-  "internal_error",
-  "request_timeout",
-  "service_unavailable",
-]);
-
-/**
- * Slack's answer to a call: what it gave back, or why it refused and
- * whether it may have done it all the same (no answer, a 5xx, or an
- * error Slack gives when unsure).
- */
+/** Slack's answer to a call: what it gave back, or why it refused. */
 type SlackAnswer =
   | { taken: Record<string, unknown> }
-  | { refused: SlackRefusal; unsure: boolean };
+  | { refused: SlackRefusal };
 
 /**
  * One of Slack's Web API methods as the app, and Slack's answer: its
@@ -283,7 +261,7 @@ const askSlack = async (
     }
   } catch (error) {
     console.error(`Slack ${method} failed`, error);
-    return { refused: passing("network"), unsure: true };
+    return { refused: passing("network") };
   }
   const result: unknown = await response.json().catch(() => null);
   if (isRecord(result) && result.ok === true) {
@@ -296,11 +274,7 @@ const askSlack = async (
     error
   );
   console.error(`Slack ${method} failed`, refused.why);
-  return {
-    refused,
-    unsure:
-      response.status >= 500 || error === undefined || UNSURE_ERRORS.has(error),
-  };
+  return { refused };
 };
 
 /** One of Slack's Web API methods as the app; null when it did not take. */
@@ -317,30 +291,20 @@ export const slackCall = async (
 };
 
 /**
- * What a call of the relay's does to a line's message: posts it (surely
- * not, only when Slack says it did not take it), readies its posting
- * (never posting it), or looks for it (saying nothing of whether it is).
- */
-type RelayCall = "posts" | "readies" | "looks";
-
-/**
- * One of Slack's Web API methods the relay needs taken: what Slack gave
- * back, or SlackRefusedError thrown, saying why, for the relay to try again.
+ * One of Slack's Web API methods the relay needs taken (`reads` as
+ * askSlack has it): what Slack gave back, or SlackRefusedError thrown,
+ * saying why, for the relay to try again.
  */
 const slackTake = async (
   env: Env,
   method: string,
   args: Record<string, unknown>,
   what: string,
-  call: RelayCall
+  reads = false
 ): Promise<Record<string, unknown>> => {
-  const answer = await askSlack(env, method, args, call === "looks");
+  const answer = await askSlack(env, method, args, reads);
   if ("refused" in answer) {
-    throw new SlackRefusedError(
-      what,
-      answer.refused,
-      call === "readies" || (call === "posts" && !answer.unsure)
-    );
+    throw new SlackRefusedError(what, answer.refused);
   }
   return answer.taken;
 };
@@ -498,7 +462,7 @@ const findPosted = async (
         ...(cursor === "" ? {} : { cursor }),
       },
       "a look for a line",
-      "looks"
+      true
     );
     const messages: unknown[] = Array.isArray(page.messages)
       ? page.messages
@@ -532,8 +496,7 @@ const postForRelay = async (
     env,
     "chat.postMessage",
     { ...args, metadata: lineMetadata(line) },
-    what,
-    "posts"
+    what
   );
   const said = posted.response_metadata;
   const warnings = isRecord(said) ? said.warnings : undefined;
@@ -542,7 +505,7 @@ const postForRelay = async (
   }
   const ts = stringOf(posted.ts);
   if (ts === undefined) {
-    throw new SlackRefusedError(what, passing("no_ts"), false);
+    throw new SlackRefusedError(what, passing("no_ts"));
   }
   return ts;
 };
@@ -575,6 +538,21 @@ const postOnce = async (
   );
 };
 
+/** The message that starts a user's chat's thread, kept as its thread. */
+const keepThread = async (
+  env: Env,
+  userId: string,
+  ts: string
+): Promise<void> => {
+  // Two first lines at once keep the thread the first kept.
+  await drizzle(env.DB)
+    .update(supportChats)
+    .set({ slackThreadTs: ts })
+    .where(
+      and(eq(supportChats.userId, userId), isNull(supportChats.slackThreadTs))
+    );
+};
+
 /** A chat's thread, started by the user's first line. */
 const startThread = async (
   env: Env,
@@ -590,16 +568,7 @@ const startThread = async (
     threadHead(line, words),
     "a thread"
   );
-  // Two first lines at once keep the thread the first kept.
-  await drizzle(env.DB)
-    .update(supportChats)
-    .set({ slackThreadTs: ts })
-    .where(
-      and(
-        eq(supportChats.userId, line.userId),
-        isNull(supportChats.slackThreadTs)
-      )
-    );
+  await keepThread(env, line.userId, ts);
   return ts;
 };
 
@@ -656,19 +625,18 @@ const postPhoto = async (
     env,
     "files.getUploadURLExternal",
     { alt_txt: "写真", filename: photoName(line), length: bytes.byteLength },
-    "a photo",
-    "readies"
+    "a photo"
   );
   const url = stringOf(slot.upload_url);
   const fileId = stringOf(slot.file_id);
   if (url === undefined || fileId === undefined) {
-    throw new SlackRefusedError("a photo", passing("no_upload_url"), true);
+    throw new SlackRefusedError("a photo", passing("no_upload_url"));
   }
   const uploaded = await fetch(url, { body: bytes, method: "POST" }).catch(
     () => null
   );
   if (uploaded === null) {
-    throw new SlackRefusedError("a photo", passing("network"), true);
+    throw new SlackRefusedError("a photo", passing("network"));
   }
   if (!uploaded.ok) {
     throw new SlackRefusedError(
@@ -677,8 +645,7 @@ const postPhoto = async (
         uploaded.status,
         uploaded.headers.get("Retry-After"),
         undefined
-      ),
-      true
+      )
     );
   }
   await slackTake(
@@ -690,8 +657,7 @@ const postPhoto = async (
       thread_ts: thread,
       ...(quote === "" ? {} : { initial_comment: quote.trim() }),
     },
-    "a photo",
-    "posts"
+    "a photo"
   );
   for (let tries = 0; tries < SHARE_TRIES; tries += 1) {
     // oxlint-disable-next-line no-await-in-loop -- Slack shares it in a moment
@@ -768,6 +734,37 @@ export const tellStaffOfLine = async (
     return await startThread(env, line, words, unsureSince);
   }
   return await postOnce(env, line, unsureSince, thread, words, "a line");
+};
+
+/**
+ * The message a try of a line's since `since` may have posted, Slack's
+ * answer lost, now that the line is not to be posted (taken back
+ * meanwhile, or past the user's limit): its photo's, else its own, as a
+ * post would have kept; one that started the chat's thread is kept as the
+ * thread too. Null when Slack has none, or is not set up here.
+ */
+export const findStaffLine = async (
+  env: Env,
+  line: SupportLine,
+  since: Date
+): Promise<string | null> => {
+  if (!slackSetUp(env)) {
+    return null;
+  }
+  let thread = await threadOf(env, line.userId);
+  if (thread === null) {
+    const head = await findPosted(env, since, null, isMessageOf(line));
+    if (head === undefined) {
+      return null;
+    }
+    await keepThread(env, line.userId, head);
+    thread = head;
+  }
+  return (
+    (await findPosted(env, since, thread, hasPhotoOf(line))) ??
+    (await findPosted(env, since, thread, isMessageOf(line))) ??
+    null
+  );
 };
 
 /**

@@ -275,11 +275,18 @@ export const chatVotes = sqliteTable(
 
 // The sends members took back (ChatRecall) before the group had their
 // line, by op_id: should one come after all, as from a socket that died
-// with it on the way, it is dropped.
+// with it on the way, it is dropped. Kept for chatRules.unsentAfterMs
+// from when it was taken, the longest a device sends a line by itself,
+// far past any send still on its way; and while the member is in the
+// group, whose sends are taken no more once they leave.
 export const chatRecalls = sqliteTable(
   "chat_recalls",
   {
     opId: text("op_id").notNull(),
+    // Those kept before the time was are past it already.
+    takenAt: integer("taken_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`0`),
     userId: text("user_id").notNull(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.opId] })]
@@ -287,11 +294,21 @@ export const chatRecalls = sqliteTable(
 
 // Photos members have uploaded to the group's chats (the Worker notes each
 // as it stores it in R2), so a line can send only its uploader's own photo,
-// and only once.
+// and only once. One no line carries, nor a member's own photo in the group,
+// goes chatRules.unsentAfterMs after its uploader last uploaded to the group
+// (GroupDO.sweepPhotos): a device uploads a line's photo again each time it
+// sends the line, so a send comes moments after that upload.
 export const chatPhotos = sqliteTable("chat_photos", {
   id: text().primaryKey(),
   // Sent as a line already.
   sent: integer({ mode: "boolean" }).notNull().default(false),
+  // When its uploader last uploaded to the group while it was not sent:
+  // each upload sets it on all of theirs not sent, so the photos of a
+  // frame stay while the rest of the frame goes up. Those kept before the
+  // time was are past it already.
+  uploadedAt: integer("uploaded_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`0`),
   userId: text("user_id").notNull(),
 });
 
@@ -321,8 +338,8 @@ export const supportRelay = sqliteTable(
     failures: integer().notNull().default(0),
     id: integer().primaryKey(),
     // The line being posted to Slack, since its first try, until its
-    // message is kept or Slack's answer says it was not posted: a retry
-    // after an answer lost looks for it in Slack before posting again.
+    // message is kept: a retry looks for it in Slack before posting
+    // again, and a line taken back before it was kept finds it there.
     postingSeq: integer("posting_seq"),
     postingSince: integer("posting_since", { mode: "timestamp_ms" }),
   },

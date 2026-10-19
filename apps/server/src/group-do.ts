@@ -32,9 +32,8 @@ import {
   chatPage,
   alertOf,
   eraseMemberChat,
-  forReader,
   GROUP_THREAD,
-  hearsFrom,
+  blockersOf,
   latestPageAfter,
   mayRead,
   moveReadMark,
@@ -46,13 +45,18 @@ import {
   readMarkOf,
   unreadCount,
   notePhoto,
+  forgetUnclaimedPhotos,
+  oldestUnclaimedPhoto,
+  unclaimedPhotos,
   reportContext,
   setMemberBlocks,
+  readerView,
   writeNotice,
 } from "./group-chat";
 import migrations from "./group-do-migrations/migrations.js";
 import {
   chatLines,
+  chatRecalls,
   logHead,
   memberDays,
   memberPatterns,
@@ -373,6 +377,8 @@ export class GroupDO extends DurableObject<Env> {
         .delete(memberRepeatOrders)
         .where(eq(memberRepeatOrders.userId, userId))
         .run();
+      // Their sends are taken no more, so none is to be kept from coming.
+      this.db.delete(chatRecalls).where(eq(chatRecalls.userId, userId)).run();
       const row = this.db
         .update(members)
         .set({
@@ -469,8 +475,11 @@ export class GroupDO extends DurableObject<Env> {
         await deleteGroupPhotos(this.env, groupId, taken.photosGone);
       }
       closeUserSockets(this.ctx, userId);
-      broadcastChanges(this.ctx, taken.changes, seenBy, (change, reader) =>
-        forReader(this.db, change, reader)
+      broadcastChanges(
+        this.ctx,
+        taken.changes,
+        seenBy,
+        readerView(this.db, taken.changes)
       );
       if (taken.row !== undefined) {
         broadcastChanges(this.ctx, [memberChange(taken.row)]);
@@ -726,8 +735,11 @@ export class GroupDO extends DurableObject<Env> {
     return cursor;
   }
 
-  /** A new line as its readers' notifications word it. */
-  private alertOf(line: ChatLine): Alert {
+  /**
+   * How new lines' notifications word them, the names and the group read
+   * once for them all.
+   */
+  private alerts(): (line: ChatLine) => Alert {
     // Everyone who was ever in it, for a name in the words.
     const names = new Map(
       this.db
@@ -737,19 +749,25 @@ export class GroupDO extends DurableObject<Env> {
         .map((member) => [member.userId, member.displayName])
     );
     const support = this.placeKind() === "support";
-    const alert = alertOf(
-      line,
-      { id: this.placeId() ?? "", name: this.getProfile()?.name ?? "" },
-      (id) => names.get(id) ?? "メンバー",
-      // The chat with Pochical's people is a chat of two, worded as one.
-      support || line.threadId !== GROUP_THREAD
-    );
-    // Only Pochical's people notify in the chat with them: it is titled
-    // with the chat, as 設定's row names it, with no writer of its own
-    // (spec/chat.md, The chat with Pochical's people).
-    return support
-      ? { ...alert, title: { args: [], key: SUPPORT_TITLE } }
-      : alert;
+    const group = {
+      id: this.placeId() ?? "",
+      name: this.getProfile()?.name ?? "",
+    };
+    return (line) => {
+      const alert = alertOf(
+        line,
+        group,
+        (id) => names.get(id) ?? "メンバー",
+        // The chat with Pochical's people is a chat of two, worded as one.
+        support || line.threadId !== GROUP_THREAD
+      );
+      // Only Pochical's people notify in the chat with them: it is titled
+      // with the chat, as 設定's row names it, with no writer of its own
+      // (spec/chat.md, The chat with Pochical's people).
+      return support
+        ? { ...alert, title: { args: [], key: SUPPORT_TITLE } }
+        : alert;
+    };
   }
 
   /**
@@ -800,8 +818,39 @@ export class GroupDO extends DurableObject<Env> {
    * stores it: false when the id is someone else's photo already, or the
    * user is not in the group.
    */
-  notePhoto(photoId: string, userId: string): boolean {
-    return this.isMember(userId) && notePhoto(this.db, photoId, userId);
+  async notePhoto(photoId: string, userId: string): Promise<boolean> {
+    if (!(this.isMember(userId) && notePhoto(this.db, photoId, userId))) {
+      return false;
+    }
+    const due = Date.now() + chatRules.unsentAfterMs;
+    const set = await this.ctx.storage.getAlarm();
+    if (set === null || set > due) {
+      await this.ctx.storage.setAlarm(due);
+    }
+    return true;
+  }
+
+  /**
+   * The photos uploaded that nothing came to carry (spec/sync-protocol.md,
+   * Chat), deleted once their uploader has uploaded nothing to the group
+   * for chatRules.unsentAfterMs: from storage first, then from the group,
+   * but those uploaded again meanwhile. When the next are due, if any.
+   */
+  private async sweepPhotos(): Promise<number | undefined> {
+    const groupId = this.ctx.id.name;
+    if (groupId === undefined) {
+      return undefined;
+    }
+    const before = new Date(Date.now() - chatRules.unsentAfterMs);
+    const stale = unclaimedPhotos(this.db, before);
+    if (stale.length > 0) {
+      await deleteGroupPhotos(this.env, groupId, stale);
+      forgetUnclaimedPhotos(this.db, before);
+    }
+    const oldest = oldestUnclaimedPhoto(this.db);
+    return oldest === undefined
+      ? undefined
+      : oldest.getTime() + chatRules.unsentAfterMs;
   }
 
   /** A member's socket, forwarded once the Worker has checked them. */
@@ -962,8 +1011,11 @@ export class GroupDO extends DurableObject<Env> {
       }
       counted.set(threadId, users);
     };
-    // The other members, read once for every send in the frame.
+    // The other members, who blocked the writer, and how a line's
+    // notification words it: read once for every send in the frame.
     let others: string[] | undefined;
+    let blockers: Set<string> | undefined;
+    let alertOfLine: ((line: ChatLine) => Alert) | undefined;
     const photosGone: string[] = [];
     // The new lines, whose answered lines go out with them.
     const sent: ChatLine[] = [];
@@ -1011,9 +1063,11 @@ export class GroupDO extends DurableObject<Env> {
               if (link !== undefined) {
                 pages.push({ link, seq: Number(line.seq), threadId, userId });
               }
-              const alert = this.alertOf(line);
+              alertOfLine ??= this.alerts();
+              blockers ??= blockersOf(this.db, userId);
+              const alert = alertOfLine(line);
               for (const reader of readers) {
-                if (hearsFrom(this.db, reader, userId)) {
+                if (!blockers.has(reader)) {
                   alerts.set(readerKey(threadId, reader), {
                     alert,
                     mentioned: line.text.includes(mentionOf(reader)),
@@ -1047,12 +1101,8 @@ export class GroupDO extends DurableObject<Env> {
       ({ threadId, replyTo }) =>
         Number(replyTo) <= latestPageAfter(this.db, threadId)
     );
-    broadcastChanges(
-      this.ctx,
-      [...answeredChanges(this.db, farBack), ...changed],
-      seenBy,
-      (change, reader) => forReader(this.db, change, reader)
-    );
+    const told = [...answeredChanges(this.db, farBack), ...changed];
+    broadcastChanges(this.ctx, told, seenBy, readerView(this.db, told));
     this.tellUnread(counted, alerts, reads);
     for (const page of pages) {
       this.ctx.waitUntil(this.addPage(page));
@@ -1068,17 +1118,27 @@ export class GroupDO extends DurableObject<Env> {
    * The chat with Pochical's people told outside as it changes: to D1's
    * index and its Slack thread (support-place.ts). A failure comes back
    * after the wait the relay gives, the relayed cursor kept; a change
-   * made while it runs has set the next alarm already, which is kept.
+   * made while it runs has set the next alarm already, which is kept. The
+   * photos nothing carries are swept, and the alarm comes back for the
+   * next (`sweepPhotos`).
    */
   async alarm(): Promise<void> {
+    this.relayRequested = false;
     const userId = this.supportUser();
-    if (userId === undefined) {
+    const waitMs =
+      userId === undefined
+        ? null
+        : await relaySupport(this.env, this.db, userId);
+    const photosDue = await this.sweepPhotos();
+    if (this.relayRequested) {
       return;
     }
-    this.relayRequested = false;
-    const waitMs = await relaySupport(this.env, this.db, userId);
-    if (waitMs !== null && !this.relayRequested) {
-      await this.ctx.storage.setAlarm(Date.now() + waitMs);
+    const dues = [
+      ...(waitMs === null ? [] : [Date.now() + waitMs]),
+      ...(photosDue === undefined ? [] : [photosDue]),
+    ];
+    if (dues.length > 0) {
+      await this.ctx.storage.setAlarm(Math.min(...dues));
     }
   }
 
@@ -1167,9 +1227,7 @@ export class GroupDO extends DurableObject<Env> {
       return change;
     });
     if (added !== undefined) {
-      broadcastChanges(this.ctx, [added], seenBy, (change, reader) =>
-        forReader(this.db, change, reader)
-      );
+      broadcastChanges(this.ctx, [added], seenBy, readerView(this.db, [added]));
     }
   }
 

@@ -7,6 +7,7 @@ public enum Chat {
   public static let controlsMostScale = 1.5
   public static let dayCardColumns = 6
   public static let dayCardRows = 7
+  public static let draftSettleMs = 500
   public static let floatingDayMs = 1500
   public static let foldLines = 10
   public static let largeEmojiMax = 3

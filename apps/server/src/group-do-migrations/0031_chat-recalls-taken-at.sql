@@ -1,0 +1,1 @@
+ALTER TABLE `chat_recalls` ADD `taken_at` integer DEFAULT 0 NOT NULL;

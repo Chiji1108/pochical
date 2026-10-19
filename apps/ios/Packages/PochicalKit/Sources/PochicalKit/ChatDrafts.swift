@@ -204,6 +204,8 @@ extension Chats {
     var recall = Pochical_V1_ChatRecall()
     recall.threadID = send.threadID
     recall.sendOpID = opID
+    // Its photo, uploaded, goes with the line, or at once if it never came.
+    if send.hasPhoto { recall.photoID = send.photo.id }
     try edit(
       .recall(recall), in: row.groupID, now: Int64(Date.now.timeIntervalSince1970 * 1000), db: db)
   }
