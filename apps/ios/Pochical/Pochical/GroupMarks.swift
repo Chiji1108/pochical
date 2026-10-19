@@ -68,30 +68,16 @@ private struct MarkPhoto: View {
   let photoID: String
   let shelf: String
   let size: CGFloat
-  @State private var image: UIImage?
 
   var body: some View {
-    Group {
-      if let image {
-        Image(uiImage: image)
-          .resizable()
-          .scaledToFill()
-      } else {
-        colors.fillQuaternary
-      }
+    PipelinePicture(
+      request: ChatPhotoLoading.picture(
+        photoID, in: shelf, size: CGSize(width: size, height: size), scale: displayScale,
+        calls: groupCalls)
+    ) {
+      colors.fillQuaternary
     }
     .frame(width: size, height: size)
-    .task(id: photoID) {
-      image = nil
-      // One the user picked waits on the device until the group has it.
-      var data = ChatPhotos.held(photoID, in: ChatPhotos.mine)
-      if data == nil, !shelf.isEmpty {
-        data = try? await groupCalls.photo(photoID, in: shelf)
-      }
-      guard let data, let whole = UIImage(data: data) else { return }
-      let edge = size * displayScale
-      image = await whole.byPreparingThumbnail(ofSize: CGSize(width: edge, height: edge)) ?? whole
-    }
   }
 }
 

@@ -5,7 +5,7 @@ import SwiftUI
 
 /// Someone's face (/design's PhotoAvatar): their photo, one of the group's
 /// photos or the user's own (`ChatPhotos.mine`), else the first letter of
-/// their name, which also shows while the photo loads.
+/// their name, which also shows while the photo first loads.
 struct MemberAvatar: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.displayScale) private var displayScale
@@ -20,35 +20,26 @@ struct MemberAvatar: View {
   var userID: String?
   /// The viewer's own, known without an id.
   var me = false
-  @State private var image: UIImage?
 
   var body: some View {
+    let letter = LetterAvatar(name: name, size: size, me: me || (userID != nil && userID == meID))
     Group {
-      if let image, !photoID.isEmpty {
-        Image(uiImage: image)
-          .resizable()
-          .scaledToFill()
-          .frame(width: size, height: size)
-          .clipShape(Circle())
-      } else {
-        LetterAvatar(name: name, size: size, me: me || (userID != nil && userID == meID))
-      }
-    }
-    .task(id: photoID) {
-      image = nil
       if photoID.hasPrefix(samplePhoto) {
-        image = UIImage(named: String(photoID.dropFirst(samplePhoto.count)))
-        return
+        Image(String(photoID.dropFirst(samplePhoto.count))).resizable().scaledToFill()
+      } else {
+        PipelinePicture(
+          request: photoID.isEmpty
+            ? nil
+            : ChatPhotoLoading.picture(
+              photoID, in: groupID ?? openGroupID, size: CGSize(width: size, height: size),
+              scale: displayScale, calls: groupCalls)
+        ) {
+          letter
+        }
       }
-      guard !photoID.isEmpty,
-        let data = try? await groupCalls.photo(photoID, in: groupID ?? openGroupID),
-        let whole = UIImage(data: data)
-      else { return }
-      // Decoded at the size it shows, not the photo's own.
-      let edge = size * displayScale
-      image =
-        await whole.byPreparingThumbnail(ofSize: CGSize(width: edge, height: edge)) ?? whole
     }
+    .frame(width: size, height: size)
+    .clipShape(Circle())
   }
 }
 

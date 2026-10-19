@@ -5,25 +5,21 @@ import SwiftUI
 // A link's page in a chat (spec/chat.md, Previews): the card under a
 // message's words, and the bar over the composer while it is written.
 
-/// A link preview's picture, from the device or else the server.
+/// A link preview's picture, from the device or else the server, read at
+/// `size`, the most it is shown at; whole for none.
 struct PreviewImage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.themeColors) private var colors
+  @Environment(\.displayScale) private var displayScale
   let imageID: String
-  @State private var image: UIImage?
+  let size: CGSize?
 
   var body: some View {
-    Group {
-      if let image {
-        Image(uiImage: image).resizable().scaledToFill()
-      } else {
-        colors.fillTertiary
-      }
-    }
-    .task(id: imageID) {
-      if let data = try? await groupCalls.previewImage(imageID) {
-        image = UIImage(data: data)
-      }
+    PipelinePicture(
+      request: ChatPhotoLoading.previewImage(
+        imageID, size: size, scale: displayScale, calls: groupCalls)
+    ) {
+      colors.fillTertiary
     }
   }
 }
@@ -35,8 +31,18 @@ struct PreviewImage: View {
 struct LinkPreviewCard: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.openURL) private var openURL
+  @Environment(\.dynamicTypeSize) private var typeSize
   let preview: LinePreview
   let mine: Bool
+
+  /// Its picture as the linked bubble shows it (MessageBubble.linkedWidth);
+  /// at the accessibility text sizes, as wide as the line has room for,
+  /// whole.
+  private var imageSize: CGSize? {
+    guard !typeSize.isAccessibilitySize else { return nil }
+    let width = MessageBubble.linkedWidth
+    return CGSize(width: width, height: width / Chat.linkPreviewAspect)
+  }
 
   var body: some View {
     // A tap, not a button: a button would take the long press, which is
@@ -45,7 +51,7 @@ struct LinkPreviewCard: View {
       if !preview.imageID.isEmpty {
         Color.clear
           .aspectRatio(Chat.linkPreviewAspect, contentMode: .fit)
-          .overlay { PreviewImage(imageID: preview.imageID) }
+          .overlay { PreviewImage(imageID: preview.imageID, size: imageSize) }
           .clipped()
       }
       VStack(alignment: .leading, spacing: 2) {
@@ -102,7 +108,7 @@ struct ComposerPreviewBar: View {
       onStop: onRemove
     ) {
       if let imageID = state.preview?.imageID, !imageID.isEmpty {
-        PreviewImage(imageID: imageID)
+        PreviewImage(imageID: imageID, size: CGSize(width: 32, height: 32))
           .frame(width: 32, height: 32)
           .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
       }

@@ -1,13 +1,16 @@
 import Nuke
 import PochicalDesign
 import PochicalKit
+import SwiftUI
 import UIKit
 
 /// How the chat's photos come (spec/chat.md, Photos), by Nuke, as Signal
 /// and Telegram load theirs: fetched once however many lines, quotes and
 /// the photo opened large ask at once, read straight at the size they show,
 /// kept drawn in memory and as fetched on the disk, each within its limit,
-/// the least lately seen let go first.
+/// the least lately seen let go first. Faces, groups' photo marks and
+/// links' page pictures come the same way (PipelinePicture), drawn from
+/// memory as soon as a view drawing them is made again.
 enum ChatPhotoLoading {
   /// The photos drawn at their size, `Chat.photoMemoryBytes` at most, and
   /// the blurs their ThumbHashes draw.
@@ -43,6 +46,46 @@ enum ChatPhotoLoading {
     }
     return request
   }
+
+  /// A face or a group's photo mark as the app draws it, `size` points at
+  /// `scale`, cut to fill: the member's own picked photo, still waiting on
+  /// the device for the group to have it, read from there, else one of
+  /// `groupID`'s photos. `GroupCalls.photo` keeps it on the disk.
+  static func picture(
+    _ photoID: String, in groupID: String, size: CGSize, scale: CGFloat, calls: GroupCalls
+  ) -> ImageRequest {
+    var request = ImageRequest(
+      id: "picture/\(groupID)/\(photoID)",
+      data: {
+        if let held = ChatPhotos.held(photoID, in: ChatPhotos.mine) { return held }
+        guard !groupID.isEmpty else { throw NoPicture() }
+        return try await calls.photo(photoID, in: groupID)
+      },
+      options: [.disableDiskCache])
+    request.thumbnail = filling(size, scale: scale)
+    return request
+  }
+
+  /// A link preview's picture, read to fill `size` points at `scale`, whole
+  /// for none. `GroupCalls.previewImage` keeps it on the disk.
+  static func previewImage(_ imageID: String, size: CGSize?, scale: CGFloat, calls: GroupCalls)
+    -> ImageRequest
+  {
+    var request = ImageRequest(
+      id: "preview/\(imageID)", data: { try await calls.previewImage(imageID) },
+      options: [.disableDiskCache])
+    request.thumbnail = size.map { filling($0, scale: scale) }
+    return request
+  }
+
+  private static func filling(_ size: CGSize, scale: CGFloat) -> ImageRequest.ThumbnailOptions {
+    ImageRequest.ThumbnailOptions(
+      size: CGSize(width: size.width * scale, height: size.height * scale), unit: .pixels,
+      contentMode: .aspectFill)
+  }
+
+  /// A picture with nowhere to read it from.
+  private struct NoPicture: Error {}
 
   /// What a photo is kept under, small or whole.
   private static func key(_ photoID: String, in groupID: String, small: Bool) -> String {
@@ -117,6 +160,36 @@ enum ChatPhotoLoading {
     return try? await pipeline.data(
       for: request(photo, in: groupID, pixels: nil, calls: calls, held: held)
     ).0
+  }
+}
+
+/// A small picture the app reads by `ChatPhotoLoading.pipeline`, filling its
+/// frame, `placeholder` until it comes: drawn from memory in its first
+/// frame when memory holds it, as a face or a page's picture drawn anew
+/// (its line's cell made again) would otherwise blink to its placeholder.
+struct PipelinePicture<Placeholder: View>: View {
+  let request: ImageRequest?
+  @ViewBuilder let placeholder: Placeholder
+  /// The picture as it came, while memory may have let it go.
+  @State private var loaded: (key: ImageCacheKey, image: UIImage)?
+
+  var body: some View {
+    let key = request.map { ImageCacheKey(request: $0) }
+    let held = request.flatMap { ChatPhotoLoading.pipeline.cache[$0]?.image }
+    let image = held ?? loaded.flatMap { $0.key == key ? $0.image : nil }
+    Group {
+      if let image {
+        Image(uiImage: image).resizable().scaledToFill()
+      } else {
+        placeholder
+      }
+    }
+    .task(id: key) {
+      guard held == nil, let request, let key,
+        let image = try? await ChatPhotoLoading.pipeline.image(for: request)
+      else { return }
+      loaded = (key, image)
+    }
   }
 }
 
