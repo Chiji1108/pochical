@@ -39,6 +39,7 @@ import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
 import { sharePersonPhoto } from "./photos";
+import { retryWait } from "./retry-wait";
 import {
   acceptSyncSocket,
   answerKeepalive,
@@ -900,10 +901,7 @@ export class UserDO extends DurableObject<Env> {
     if (failures > PUSH_RETRIES_MOST) {
       return undefined;
     }
-    return Math.min(
-      PUSH_RETRY_FIRST_MS * 2 ** (failures - 1),
-      PUSH_RETRY_MOST_MS
-    );
+    return retryWait(failures, PUSH_RETRY_FIRST_MS, PUSH_RETRY_MOST_MS);
   }
 
   private pushSucceeded(groupId: string): void {

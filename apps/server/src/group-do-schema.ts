@@ -298,10 +298,15 @@ export const memberBlocks = sqliteTable(
 // Group DO (support:{userId}): to D1's index of every chat, and to the
 // chat's Slack thread. One row, the cursor of the log told up to, as the
 // User DO's pushed_cursor is for its groups. Only a support place has it.
+// While telling fails, how many times in a row and since when, for how
+// long the relay waits before it tries again and what the admin pages
+// say; none once it is told.
 export const supportRelay = sqliteTable(
   "support_relay",
   {
     cursor: integer().notNull(),
+    failingSince: integer("failing_since", { mode: "timestamp_ms" }),
+    failures: integer().notNull().default(0),
     id: integer().primaryKey(),
   },
   (table) => [check("support_relay_single_row", sql`${table.id} = 1`)]

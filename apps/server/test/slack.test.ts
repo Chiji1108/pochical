@@ -1,12 +1,23 @@
 import { chatRules } from "@pochical/design/chat";
-import { runInDurableObject } from "cloudflare:test";
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fromSlackText, signedBySlack, toSlackText } from "../src/slack";
+import {
+  fromSlackText,
+  signedBySlack,
+  slackRefusal,
+  toSlackText,
+} from "../src/slack";
 import { supportPlace } from "../src/support-lines";
-import { call, ORIGIN, signInAnonymously } from "./helpers";
-import { relayed, supportChat } from "./sync-helpers";
+import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
+import {
+  relayed,
+  sendFrame,
+  supportChat,
+  syncSocket,
+  untilAcked,
+} from "./sync-helpers";
 
 const SECRET = "slack-signing-secret";
 
@@ -39,13 +50,30 @@ const slackAnswer = (method: string): Record<string, unknown> => {
   }
 };
 
+/** How Slack refuses a call: its error, HTTP status and Retry-After. */
+type Refusal = { error: string; status?: number; retryAfterS?: number };
+
+/** Slack's answer refusing a call, ratelimited unless said otherwise. */
+const refusalAnswer = (refusal: true | Refusal): Response => {
+  const { error, retryAfterS, status } =
+    refusal === true ? { error: "ratelimited" } : refusal;
+  return Response.json(
+    { error, ok: false },
+    {
+      headers:
+        retryAfterS === undefined ? {} : { "Retry-After": String(retryAfterS) },
+      status: status ?? 200,
+    }
+  );
+};
+
 /**
  * What reached Slack's Web API, as each method and its arguments; Slack's
  * file host takes uploads and gives back a small PNG. Slack refuses the
  * calls `refused` says to, by the method and how many came before.
  */
 const slackCalls = (
-  refused: (method: string, before: number) => boolean = () => false
+  refused: (method: string, before: number) => boolean | Refusal = () => false
 ) => {
   const calls: { method: string; args: Record<string, unknown> }[] = [];
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
@@ -60,11 +88,10 @@ const slackCalls = (
     const method = url.pathname.replace("/api/", "");
     const before = calls.filter((each) => each.method === method).length;
     calls.push({ args, method });
-    return Response.json(
-      refused(method, before)
-        ? { error: "ratelimited", ok: false }
-        : slackAnswer(method)
-    );
+    const refusal = refused(method, before);
+    return refusal === false
+      ? Response.json(slackAnswer(method))
+      : refusalAnswer(refusal);
   });
   return calls;
 };
@@ -108,6 +135,10 @@ const postEvent = async (payload: unknown): Promise<Response> => {
     method: "POST",
   });
 };
+
+/** How many messages were posted among Slack's calls. */
+const postsIn = (calls: { method: string }[]): number =>
+  calls.filter(({ method }) => method === "chat.postMessage").length;
 
 const threadOf = async (userId: string): Promise<string | null> =>
   await env.DB.prepare(
@@ -674,5 +705,165 @@ describe("a user's photo, in Slack", () => {
       "files.completeUploadExternal",
     ]);
     await expect(slackTsOf(userId, 1)).resolves.toBeNull();
+  });
+});
+
+describe("Slack's refusals", () => {
+  it("pass by themselves when Slack is busy, down or out of reach, and last otherwise", () => {
+    expect([
+      slackRefusal(429, "30", "ratelimited"),
+      slackRefusal(200, null, "ratelimited"),
+      slackRefusal(503, null, undefined),
+      slackRefusal(200, null, "not_in_channel"),
+      slackRefusal(200, null, "invalid_auth"),
+      slackRefusal(404, null, undefined),
+    ]).toStrictEqual([
+      { afterMs: 30_000, kind: "passing", why: "ratelimited" },
+      { afterMs: null, kind: "passing", why: "ratelimited" },
+      { afterMs: null, kind: "passing", why: "http_503" },
+      { kind: "lasting", why: "not_in_channel" },
+      { kind: "lasting", why: "invalid_auth" },
+      { kind: "lasting", why: "http_404" },
+    ]);
+  });
+});
+
+const MINUTE_S = 60;
+
+/** When the chat's relay comes back, in seconds from now; null for never. */
+const nextTry = async (userId: string): Promise<number | null> => {
+  const at = await runInDurableObject(
+    env.GROUPS.getByName(supportPlace(userId)),
+    async (_, state) => await state.storage.getAlarm()
+  );
+  return at === null ? null : Math.round((at - Date.now()) / 1000);
+};
+
+/** The relay run once, and when it comes back. */
+const relayOnce = async (userId: string): Promise<number | null> => {
+  await runDurableObjectAlarm(env.GROUPS.getByName(supportPlace(userId)));
+  return await nextTry(userId);
+};
+
+/** What the admin pages say of the chat's lines not reaching Slack. */
+const failureOf = async (userId: string) => {
+  const chats = await exports.AdminEntrypoint.supportChats();
+  return chats.find((chat) => chat.userId === userId)?.slackFailure;
+};
+
+/**
+ * The user's chat open, a line sent and taken, and Slack's first refusal
+ * of it: the relay waiting to try again, its first wait in seconds.
+ */
+const refusedOnce = async (token: string) => {
+  const userId = await userIdOf(token);
+  const { socket, frames } = await syncSocket("/v1/me/support/socket", token);
+  await frames.next();
+  const send = async (text: string): Promise<void> => {
+    sendFrame(socket, {
+      case: "chatEdits",
+      value: {
+        edits: [
+          {
+            kind: { case: "send", value: { text, threadId: "group" } },
+            opId: crypto.randomUUID(),
+          },
+        ],
+      },
+    });
+    await untilAcked(frames);
+  };
+  /** The try a line asks for, once refused: how long until the next. */
+  const refused = async (): Promise<number> => {
+    let wait = 0;
+    // The alarm a line sets for now runs by itself.
+    await vi.waitFor(async () => {
+      wait = (await nextTry(userId)) ?? 0;
+      expect(wait).toBeGreaterThan(0);
+    });
+    return wait;
+  };
+  await send("届いてますか");
+  return { firstWait: await refused(), refused, send, userId };
+};
+
+describe("a support chat Slack does not take", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("waits twice as long each time while its setup is wrong, said on the admin pages, and posts once put right", async () => {
+    let broken = true;
+    const calls = slackCalls(
+      (method) =>
+        broken && method === "chat.postMessage" && { error: "not_in_channel" }
+    );
+    const token = await signInAnonymously();
+    const { firstWait, userId } = await refusedOnce(token);
+
+    const waits: (number | null)[] = [firstWait];
+    const first = await failureOf(userId);
+    for (let tries = 1; tries < 7; tries += 1) {
+      // oxlint-disable-next-line no-await-in-loop -- one try after another
+      waits.push(await relayOnce(userId));
+    }
+    expect(waits).toStrictEqual(
+      [1, 2, 4, 8, 16, 32, 60].map((minutes) => minutes * MINUTE_S)
+    );
+    // Failing since the first try, not the latest.
+    await expect(failureOf(userId)).resolves.toStrictEqual({
+      sinceMs: first?.sinceMs,
+      why: "not_in_channel",
+    });
+
+    broken = false;
+    const nextAfterTaken = await relayOnce(userId);
+    // No more tries, nothing said on the admin pages, and each try posted
+    // the line once, Slack keeping the last.
+    expect([
+      nextAfterTaken,
+      await failureOf(userId),
+      postsIn(calls),
+    ]).toStrictEqual([null, null, 8]);
+    const thread = await threadOf(userId);
+    await expect(slackTsOf(userId, 1)).resolves.toBe(thread ?? "a thread");
+  });
+
+  it("waits as long as Slack asks while it limits the rate, and no more than ten minutes while Slack is down", async () => {
+    let refusal: Refusal = {
+      error: "ratelimited",
+      retryAfterS: 300,
+      status: 429,
+    };
+    slackCalls(() => refusal);
+    const token = await signInAnonymously();
+    const { firstWait, userId } = await refusedOnce(token);
+    expect(firstWait).toBe(300);
+    await expect(failureOf(userId)).resolves.toMatchObject({
+      why: "ratelimited",
+    });
+
+    refusal = { error: "internal_error", status: 500 };
+    const waits = [];
+    for (let tries = 0; tries < 4; tries += 1) {
+      // oxlint-disable-next-line no-await-in-loop -- one try after another
+      waits.push(await relayOnce(userId));
+    }
+    expect(waits).toStrictEqual(
+      [2, 4, 8, 10].map((minutes) => minutes * MINUTE_S)
+    );
+  });
+
+  it("tries again at once for a new line, without waiting out its wait", async () => {
+    const calls = slackCalls(
+      (method) => method === "chat.postMessage" && { error: "invalid_auth" }
+    );
+    const token = await signInAnonymously();
+    const { firstWait, refused, send } = await refusedOnce(token);
+    expect(firstWait).toBe(MINUTE_S);
+    await send("まだですか");
+    // Tried again now, the line before it first, then waiting longer.
+    await expect(refused()).resolves.toBe(2 * MINUTE_S);
+    expect(postsIn(calls)).toBe(2);
   });
 });

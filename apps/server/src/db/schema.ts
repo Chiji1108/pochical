@@ -58,6 +58,10 @@ export const supportChats = sqliteTable(
     lastUnsent: integer("last_unsent", { mode: "boolean" })
       .notNull()
       .default(false),
+    // Since when, and why (Slack's word for it), the chat's Group DO has
+    // not told Slack its lines; none while it tells them.
+    slackFailingSince: integer("slack_failing_since", { mode: "timestamp_ms" }),
+    slackFailure: text("slack_failure"),
     // The Slack thread Pochical's people read and answer the chat in.
     slackThreadTs: text("slack_thread_ts"),
     // The user's lines after Pochical's people last wrote: waiting for an
