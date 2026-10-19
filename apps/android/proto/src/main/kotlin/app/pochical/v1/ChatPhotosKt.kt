@@ -16,7 +16,7 @@ public inline fun chatPhotos(block: app.pochical.v1.ChatPhotosKt.Dsl.() -> kotli
  * on the asked side, oldest first, with where they are among all of them.
  * The photos are those the reader sees in the chat: none of a line taken
  * back, nor one hidden from them, nor, in a place's own chat, one whose
- * writer they have blocked (spec/vectors/chat-photos.json, counts).
+ * writer they have blocked (spec/vectors/chat-photos.json, seen).
  * ```
  *
  * Protobuf type `pochical.v1.ChatPhotos`
@@ -211,6 +211,35 @@ public object ChatPhotosKt {
      */
     public fun clearTotal() {
       _builder.clearTotal()
+    }
+
+    /**
+     * ```
+     * The group's change log head as it answered: the page counts every
+     * change up to it, so a device that has taken a later change to the
+     * chat's photos drops the page and asks again.
+     * ```
+     *
+     * `uint64 cursor = 7 [json_name = "cursor"];`
+     */
+    public var cursor: kotlin.Long
+      @kotlin.jvm.JvmName("getCursor")
+        get() = _builder.cursor
+      @kotlin.jvm.JvmName("setCursor")
+        set(value) {
+        _builder.cursor = value
+      }
+    /**
+     * ```
+     * The group's change log head as it answered: the page counts every
+     * change up to it, so a device that has taken a later change to the
+     * chat's photos drops the page and asks again.
+     * ```
+     *
+     * `uint64 cursor = 7 [json_name = "cursor"];`
+     */
+    public fun clearCursor() {
+      _builder.clearCursor()
     }
   }
 }

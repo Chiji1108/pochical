@@ -11,7 +11,7 @@ package app.pochical.v1;
  * on the asked side, oldest first, with where they are among all of them.
  * The photos are those the reader sees in the chat: none of a line taken
  * back, nor one hidden from them, nor, in a place's own chat, one whose
- * writer they have blocked (spec/vectors/chat-photos.json, counts).
+ * writer they have blocked (spec/vectors/chat-photos.json, seen).
  * </pre>
  *
  * Protobuf type {@code pochical.v1.ChatPhotos}
@@ -301,6 +301,50 @@ public  final class ChatPhotos extends
     total_ = 0;
   }
 
+  public static final int CURSOR_FIELD_NUMBER = 7;
+  private long cursor_;
+  /**
+   * <pre>
+   * The group's change log head as it answered: the page counts every
+   * change up to it, so a device that has taken a later change to the
+   * chat's photos drops the page and asks again.
+   * </pre>
+   *
+   * <code>uint64 cursor = 7 [json_name = "cursor"];</code>
+   * @return The cursor.
+   */
+  @java.lang.Override
+  public long getCursor() {
+    return cursor_;
+  }
+  /**
+   * <pre>
+   * The group's change log head as it answered: the page counts every
+   * change up to it, so a device that has taken a later change to the
+   * chat's photos drops the page and asks again.
+   * </pre>
+   *
+   * <code>uint64 cursor = 7 [json_name = "cursor"];</code>
+   * @param value The cursor to set.
+   */
+  private void setCursor(long value) {
+    
+    cursor_ = value;
+  }
+  /**
+   * <pre>
+   * The group's change log head as it answered: the page counts every
+   * change up to it, so a device that has taken a later change to the
+   * chat's photos drops the page and asks again.
+   * </pre>
+   *
+   * <code>uint64 cursor = 7 [json_name = "cursor"];</code>
+   */
+  private void clearCursor() {
+
+    cursor_ = 0L;
+  }
+
   public static app.pochical.v1.ChatPhotos parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -390,7 +434,7 @@ public  final class ChatPhotos extends
    * on the asked side, oldest first, with where they are among all of them.
    * The photos are those the reader sees in the chat: none of a line taken
    * back, nor one hidden from them, nor, in a place's own chat, one whose
-   * writer they have blocked (spec/vectors/chat-photos.json, counts).
+   * writer they have blocked (spec/vectors/chat-photos.json, seen).
    * </pre>
    *
    * Protobuf type {@code pochical.v1.ChatPhotos}
@@ -699,6 +743,52 @@ public  final class ChatPhotos extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The group's change log head as it answered: the page counts every
+     * change up to it, so a device that has taken a later change to the
+     * chat's photos drops the page and asks again.
+     * </pre>
+     *
+     * <code>uint64 cursor = 7 [json_name = "cursor"];</code>
+     * @return The cursor.
+     */
+    @java.lang.Override
+    public long getCursor() {
+      return instance.getCursor();
+    }
+    /**
+     * <pre>
+     * The group's change log head as it answered: the page counts every
+     * change up to it, so a device that has taken a later change to the
+     * chat's photos drops the page and asks again.
+     * </pre>
+     *
+     * <code>uint64 cursor = 7 [json_name = "cursor"];</code>
+     * @param value The cursor to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCursor(long value) {
+      copyOnWrite();
+      instance.setCursor(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The group's change log head as it answered: the page counts every
+     * change up to it, so a device that has taken a later change to the
+     * chat's photos drops the page and asks again.
+     * </pre>
+     *
+     * <code>uint64 cursor = 7 [json_name = "cursor"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCursor() {
+      copyOnWrite();
+      instance.clearCursor();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatPhotos)
   }
   @java.lang.Override
@@ -722,10 +812,11 @@ public  final class ChatPhotos extends
             app.pochical.v1.ChatPhotoEntry.class,
             "offset_",
             "total_",
+            "cursor_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0001\u0000\u0001\u0208\u0002\u0003" +
-              "\u0003\u0007\u0004\u001b\u0005\u000b\u0006\u000b";
+              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0001\u0000\u0001\u0208\u0002\u0003" +
+              "\u0003\u0007\u0004\u001b\u0005\u000b\u0006\u000b\u0007\u0003";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

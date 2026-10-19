@@ -20,27 +20,24 @@ private struct PhotoVectors: Decodable {
         let held: [Int64]
         let tapped: Int64
       }
+      struct Lines: Decodable, Sendable {
+        let cursor: UInt64
+        let photos: [Int64]
+        let gone: [Int64]?
+        let blocked: [String]?
+      }
       struct Page: Decodable, Sendable {
         let seq: Int64
         let after: Bool
         let seqs: [Int64]
         let offset, total: Int
-      }
-      struct Gone: Decodable, Sendable {
-        let seq: Int64
-        let wasPhoto: Bool?
-      }
-      struct Line: Decodable, Sendable {
-        let seq: Int64
-        let photo: Bool
+        let cursor: UInt64
       }
       let open: Open?
       let latest: Bool?
+      let lines: Lines?
       let page: Page?
       let show: Int64?
-      let line: Int64?
-      let gone: Gone?
-      let lines: [Line]?
       let reconnected: Bool?
     }
     struct Expected: Decodable, Sendable, Equatable {
@@ -49,8 +46,8 @@ private struct PhotoVectors: Decodable {
         let after: Bool
       }
       let seqs: [Int64]
-      let offset, total: Int?
       let shown: Int64?
+      let place: [Int]?
       let asks: [Ask]
     }
     struct Case: Decodable, Sendable {
@@ -66,9 +63,11 @@ private struct PhotoVectors: Decodable {
   let run: [Run]
 }
 
+/// The photo of the line `seq`, its writer `w` and the seq, as the
+/// vectors name them.
 private func item(_ seq: Int64) -> ChatPhotoItem {
   ChatPhotoItem(
-    seq: seq, photo: LinePhoto(id: "p\(seq)", width: 1, height: 1), authorID: "a",
+    seq: seq, photo: LinePhoto(id: "p\(seq)", width: 1, height: 1), authorID: "w\(seq)",
     sentAt: Date(timeIntervalSince1970: 0))
 }
 
@@ -90,21 +89,19 @@ private func photoRun(_ test: PhotoVectors.Run) {
       run = PhotoRun(held: open.held.map(item), tapped: open.tapped, ahead: test.ahead)
     }
     if given.latest == true { run = PhotoRun(latest: test.ahead) }
+    if let lines = given.lines {
+      run?.follow(
+        PhotoLines(
+          cursor: lines.cursor, photos: lines.photos, gone: Set(lines.gone ?? []),
+          blocked: Set(lines.blocked ?? [])))
+    }
     if let page = given.page {
       run?.take(
         ChatPhotosPage(
           threadID: "group", seq: page.seq, after: page.after, photos: page.seqs.map(item),
-          offset: page.offset, total: page.total))
+          offset: page.offset, total: page.total, cursor: page.cursor))
     }
     if let show = given.show { run?.show(show) }
-    if let line = given.line { run?.added(item(line)) }
-    if let gone = given.gone { run?.gone(gone.seq, wasPhoto: gone.wasPhoto) }
-    if let lines = given.lines {
-      run?.follow(
-        PhotoLines(
-          latest: lines.map(\.seq).max() ?? 0,
-          lines: lines.map { PhotoLines.Line(seq: $0.seq, item: $0.photo ? item($0.seq) : nil) }))
-    }
     if given.reconnected == true { run?.reconnected() }
     guard var now = run else {
       Issue.record("step \(number) before opening")
@@ -113,7 +110,7 @@ private func photoRun(_ test: PhotoVectors.Run) {
     let asks = now.asks().map { PhotoVectors.Run.Expected.Ask(seq: $0.seq, after: $0.after) }
     run = now
     let got = PhotoVectors.Run.Expected(
-      seqs: now.photos.map(\.seq), offset: now.offset, total: now.total, shown: now.shown,
+      seqs: now.photos.map(\.seq), shown: now.shown, place: now.place.map { [$0.number, $0.of] },
       asks: asks)
     #expect(got == step.expected, "step \(number)")
   }
@@ -142,6 +139,14 @@ private func chatLine(
   return change
 }
 
+private func page(
+  _ seq: Int64, after: Bool, _ photos: [ChatPhotoItem], offset: Int, total: Int, cursor: UInt64
+) -> ChatPhotosPage {
+  ChatPhotosPage(
+    threadID: groupThread, seq: seq, after: after, photos: photos, offset: offset, total: total,
+    cursor: cursor)
+}
+
 @Test func thePhotoOpenedLargeFollowsThePhotosOnTheDevice() throws {
   let database = try appDatabase()
   try database.write { db in
@@ -151,25 +156,44 @@ private func chatLine(
         chatLine(1, photo: "p1"), chatLine(2), chatLine(3, photo: "p3", author: "blocked"),
         chatLine(4, photo: "p4"), chatLine(5),
       ], of: "g", in: db)
-    let lines = { try Chats.photoLines(of: "g", thread: groupThread, blocked: ["blocked"], in: db) }
+    try BlockRow.upsert { BlockRow(userID: "blocked") }.execute(db)
+    let lines = { try Chats.photoLines(of: "g", thread: groupThread, in: db) }
     let first = try lines()
-    #expect(first.latest == 5)
-    #expect(first.lines.map(\.seq) == [1, 3, 4])
-    #expect(first.lines.compactMap(\.item?.seq) == [1, 4])
+    #expect(first.cursor == 5)
+    #expect(first.photos == [1, 4])
+    #expect(first.gone.isEmpty)
+    #expect(first.blocked == ["blocked"])
 
-    var run = PhotoRun(held: first.lines.compactMap(\.item), tapped: 4)
+    let held = try ChatLineRow.where { $0.groupID.eq("g") }.order(by: \.seq).fetchAll(db)
+      .compactMap { ChatPhotoItem($0, blocked: first.blocked) }
+    var run = PhotoRun(held: held, tapped: 4)
     run.follow(first)
-    run.take(
-      ChatPhotosPage(
-        threadID: groupThread, seq: 1, after: false, photos: [], offset: 0, total: 2))
+    run.take(page(4, after: false, [held[0]], offset: 0, total: 2, cursor: 5))
+    #expect(run.place?.number == 2)
+    #expect(run.place?.of == 2)
+
     // 1 taken back, and a photo sent at 6.
     try GroupSync.take(
       [chatLine(1, cursor: 6, unsent: true), chatLine(6, cursor: 7, photo: "p6")], of: "g",
       in: db)
-    run.follow(try lines())
-    #expect(run.photos.map(\.seq) == [4, 6])
-    #expect(run.total == 2)
+    let now = try lines()
+    #expect(now.cursor == 7)
+    #expect(!now.samePhotos(as: first))
+    run.follow(now)
+    #expect(run.photos.map(\.seq) == [4])
     #expect(run.shown == 4)
+    #expect(run.place == nil)
+
+    // A page the group counted before the change is dropped; one after it
+    // says where the photo is now.
+    run.take(page(4, after: false, [held[0]], offset: 0, total: 2, cursor: 5))
+    #expect(run.place == nil)
+    let sixth = ChatPhotoItem(
+      seq: 6, photo: LinePhoto(id: "p6", width: 1, height: 1), authorID: "u1", sentAt: .now)
+    run.take(page(4, after: true, [sixth], offset: 1, total: 2, cursor: 7))
+    run.take(page(4, after: false, [], offset: 0, total: 2, cursor: 7))
+    #expect(run.photos.map(\.seq) == [4, 6])
+    #expect(run.place?.number == 1)
+    #expect(run.place?.of == 2)
   }
 }
-

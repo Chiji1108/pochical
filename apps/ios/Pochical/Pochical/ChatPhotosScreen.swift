@@ -17,8 +17,6 @@ struct ChatPhotosScreen: View {
   /// Who wrote each photo's line, by id, for VoiceOver to say whose it is.
   let names: [String: String]
   @State private var run = PhotoRun(latest: Chat.photoPageAhead)
-  /// The place's socket, held while the list shows; nil until held.
-  @State private var client: SyncClient?
   @State private var viewing: PhotoViewing?
   /// The grid's width, each square a quarter of it less the gaps.
   @State private var width: CGFloat = 0
@@ -35,15 +33,10 @@ struct ChatPhotosScreen: View {
       .navigationBarTitleDisplayMode(.inline)
       .toolbarVisibility(.hidden, for: .tabBar)
       .task {
-        await pager.follow(
-          opened: { client in
-            self.client = client
-            ask()
-          },
-          change: { edit in
-            edit(&run)
-            ask()
-          })
+        await pager.follow { edit in
+          edit(&run)
+          ask()
+        }
       }
       .photoViewer($viewing, groupID: pager.placeID) { photo in
         await savePhoto(photo, in: pager.placeID, calls: groupCalls)
@@ -88,10 +81,9 @@ struct ChatPhotosScreen: View {
 
   /// The pages the photos held want now, each asked once until it comes.
   private func ask() {
-    guard let client else { return }
     for ask in run.asks() {
       Task {
-        let asked = await client.requestPhotos(
+        let asked = await pager.client.requestPhotos(
           of: pager.threadID, seq: ask.seq, after: ask.after)
         if !asked { run.unasked(ask) }
       }

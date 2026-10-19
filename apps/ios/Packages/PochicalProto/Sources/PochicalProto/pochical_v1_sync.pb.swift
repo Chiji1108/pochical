@@ -2403,7 +2403,7 @@ public nonisolated struct Pochical_V1_ChatPhotosRequest: Sendable {
 /// on the asked side, oldest first, with where they are among all of them.
 /// The photos are those the reader sees in the chat: none of a line taken
 /// back, nor one hidden from them, nor, in a place's own chat, one whose
-/// writer they have blocked (spec/vectors/chat-photos.json, counts).
+/// writer they have blocked (spec/vectors/chat-photos.json, seen).
 public nonisolated struct Pochical_V1_ChatPhotos: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2424,6 +2424,11 @@ public nonisolated struct Pochical_V1_ChatPhotos: Sendable {
 
   /// How many photos the chat holds for the reader.
   public var total: UInt32 = 0
+
+  /// The group's change log head as it answered: the page counts every
+  /// change up to it, so a device that has taken a later change to the
+  /// chat's photos drops the page and asks again.
+  public var cursor: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -6130,7 +6135,7 @@ nonisolated extension Pochical_V1_ChatPhotosRequest: SwiftProtobuf.Message, Swif
 
 nonisolated extension Pochical_V1_ChatPhotos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatPhotos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{1}after\0\u{1}photos\0\u{1}offset\0\u{1}total\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{1}after\0\u{1}photos\0\u{1}offset\0\u{1}total\0\u{1}cursor\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6144,6 +6149,7 @@ nonisolated extension Pochical_V1_ChatPhotos: SwiftProtobuf.Message, SwiftProtob
       case 4: try { try decoder.decodeRepeatedMessageField(value: &self.photos) }()
       case 5: try { try decoder.decodeSingularUInt32Field(value: &self.offset) }()
       case 6: try { try decoder.decodeSingularUInt32Field(value: &self.total) }()
+      case 7: try { try decoder.decodeSingularUInt64Field(value: &self.cursor) }()
       default: break
       }
     }
@@ -6168,6 +6174,9 @@ nonisolated extension Pochical_V1_ChatPhotos: SwiftProtobuf.Message, SwiftProtob
     if self.total != 0 {
       try visitor.visitSingularUInt32Field(value: self.total, fieldNumber: 6)
     }
+    if self.cursor != 0 {
+      try visitor.visitSingularUInt64Field(value: self.cursor, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6178,6 +6187,7 @@ nonisolated extension Pochical_V1_ChatPhotos: SwiftProtobuf.Message, SwiftProtob
     if lhs.photos != rhs.photos {return false}
     if lhs.offset != rhs.offset {return false}
     if lhs.total != rhs.total {return false}
+    if lhs.cursor != rhs.cursor {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

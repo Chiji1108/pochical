@@ -50,18 +50,18 @@ final class ChatDraft {
 
   /// Says the member is writing: at most every typingSendMs while the field
   /// holds words.
-  func typed(in threadID: String, socket: SyncClient?) {
+  func typed(in threadID: String, socket: SyncClient) {
     let now = Date.now
     guard now.timeIntervalSince(typingSentAt) * 1000 >= Double(Chat.typingSendMs) else { return }
     typingSentAt = now
-    Task { await socket?.sendTyping(in: threadID, on: true) }
+    Task { await socket.sendTyping(in: threadID, on: true) }
   }
 
   /// Says the member stopped writing, once they said they were.
-  func stopTyping(in threadID: String, socket: SyncClient?) {
+  func stopTyping(in threadID: String, socket: SyncClient) {
     guard typingSentAt != .distantPast else { return }
     typingSentAt = .distantPast
-    Task { await socket?.sendTyping(in: threadID, on: false) }
+    Task { await socket.sendTyping(in: threadID, on: false) }
   }
 }
 
@@ -74,7 +74,7 @@ final class ChatDraft {
 struct ChatComposer: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.groupSocket) private var socket
+  @Environment(\.groupSockets) private var groupSockets
   @Bindable var draft: ChatDraft
   /// Where the chat's photos are kept: the group's, or the support chat's.
   let groupID: String
@@ -149,9 +149,9 @@ struct ChatComposer: View {
     .onChange(of: draft.text) { _, words in
       guard let threadID else { return }
       if words.isEmpty {
-        draft.stopTyping(in: threadID, socket: socket)
+        draft.stopTyping(in: threadID, socket: groupSockets.client(groupID))
       } else {
-        draft.typed(in: threadID, socket: socket)
+        draft.typed(in: threadID, socket: groupSockets.client(groupID))
       }
     }
     .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }

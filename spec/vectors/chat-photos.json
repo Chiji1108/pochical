@@ -1,5 +1,5 @@
 {
-  "about": "A chat's photos alone, as the photo opened large pages through them (spec/chat.md, Photos; spec/sync-protocol.md, Chat). seen: whether a reader sees a line's photo among the chat's: `photo` (it is one), `unsent` (taken back), `hidden` (sent in a one-to-one chat while the reader had blocked its writer), `ownChat` (the place's own chat, thread \"group\", not a one-to-one one) and `writerBlocked` (the reader has blocked its writer, whose lines fold away in the place's own chat). page: the chat's photos the reader sees by their lines' `seqs` in order, and a ChatPhotosRequest for those before `seq` (or after it, with `after`; 0 for the latest, or after from the first), `size` a page; `expected` is the page's seqs, how many photos come before it (`offset`) and how many the chat holds (`total`). run: the photos a device holds open large, or listed (写真), as steps: `open` with the `held` photos among the lines laid out and the `tapped` one; `latest`, the list opened with none held, asking for the latest page and showing its latest photo once it comes, photos come or gone meanwhile put right on it as it comes; `page`, a ChatPhotos answering one of its asks (dropped unless `seq` is still the end it asked from); `show`, swiped to a photo; `line`, a new line with a photo the reader sees; `gone`, a line taken back or hidden, `wasPhoto` whether the device knew it as one of the photos (null when it did not hold the line); `lines`, the chat's lines on the device now, each with whether it is a photo the reader sees, the first time only noted, then a new photo past them all added and a photo no longer seen gone; `reconnected`, the socket open again, the asks not yet answered asked again. After each step `expected` is the photos held (`seqs`), how many come before them (`offset`) and in all (`total`), null while unknown, the one shown (null once none is left, which closes it) and the pages newly asked for (`asks`), as `ahead` (chatRules.photoPageAhead) has it: an end's next page once the photo shown is fewer than `ahead` from it, and both ends while `offset` is unknown.",
+  "about": "A chat's photos alone, as the photo opened large pages through them (spec/chat.md, Photos; spec/sync-protocol.md, Chat). seen: whether a reader sees a line's photo among the chat's: `photo` (it is one), `unsent` (taken back), `hidden` (sent in a one-to-one chat while the reader had blocked its writer), `ownChat` (the place's own chat, thread \"group\", not a one-to-one one) and `writerBlocked` (the reader has blocked its writer, whose lines fold away in the place's own chat). page: the chat's photos the reader sees by their lines' `seqs` in order, and a ChatPhotosRequest for those before `seq` (or after it, with `after`; 0 for the latest, or after from the first), `size` a page; `expected` is the page's seqs, how many photos come before it (`offset`) and how many the chat holds (`total`). run: the photos a device holds open large, or listed (写真), as steps, each photo's writer `w` and its seq: `open` with the `held` photos among the lines laid out and the `tapped` one; `latest`, the list opened with none held; `lines`, the chat's photos on the device, read at the group's `cursor`: the lines whose photo the reader sees (`photos`), those taken back or hidden (`gone`) and, in the place's own chat, whose photos fold away (`blocked`); the first time, or changed since, those out, the next shown in place of one gone, and where they are among all of them forgotten, the same photos at a later cursor changing nothing; `page`, a ChatPhotos answering an ask, made at the group's `cursor`, its photos taking the place of those held over the lines it covers (dropped when its cursor is older than the last `lines`, or its `seq` is past those held); `show`, swiped to a photo; `reconnected`, the socket open again, the asks not yet answered asked again. After each step `expected` is the photos held (`seqs`), the one shown (null once none is left, which closes it), its `place` among all the chat's as the group last said it (how many come before it, plus one, and in all; null while unknown) and the pages newly asked for (`asks`), each once until the chat's photos change and none before they are first followed: the latest with none held, both sides of the one shown while its place is unknown, else an end's next once the one shown is fewer than `ahead` (chatRules.photoPageAhead) from it.",
   "seen": [
     {
       "name": "a photo in the place's own chat",
@@ -215,7 +215,7 @@
   ],
   "run": [
     {
-      "name": "opens from the photos laid out, then pages both ways and follows the chat",
+      "name": "opens from the photos laid out, finds where the one shown is, pages both ways and follows the chat",
       "ahead": 2,
       "steps": [
         {
@@ -227,12 +227,25 @@
           },
           "expected": {
             "seqs": [7, 9],
-            "offset": null,
-            "total": null,
             "shown": 9,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 20,
+              "photos": [7, 9]
+            }
+          },
+          "expected": {
+            "seqs": [7, 9],
+            "shown": 9,
+            "place": null,
             "asks": [
               {
-                "seq": 7,
+                "seq": 9,
                 "after": false
               },
               {
@@ -245,18 +258,18 @@
         {
           "step": {
             "page": {
-              "seq": 7,
+              "seq": 9,
               "after": false,
-              "seqs": [3, 5],
+              "seqs": [3, 5, 7],
               "offset": 2,
-              "total": 9
+              "total": 9,
+              "cursor": 20
             }
           },
           "expected": {
             "seqs": [3, 5, 7, 9],
-            "offset": 2,
-            "total": 9,
             "shown": 9,
+            "place": [6, 9],
             "asks": []
           }
         },
@@ -267,14 +280,28 @@
               "after": true,
               "seqs": [12, 15, 18],
               "offset": 6,
-              "total": 9
+              "total": 9,
+              "cursor": 21
             }
           },
           "expected": {
             "seqs": [3, 5, 7, 9, 12, 15, 18],
-            "offset": 2,
-            "total": 9,
             "shown": 9,
+            "place": [6, 9],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 21,
+              "photos": [7, 9]
+            }
+          },
+          "expected": {
+            "seqs": [3, 5, 7, 9, 12, 15, 18],
+            "shown": 9,
+            "place": [6, 9],
             "asks": []
           }
         },
@@ -284,9 +311,8 @@
           },
           "expected": {
             "seqs": [3, 5, 7, 9, 12, 15, 18],
-            "offset": 2,
-            "total": 9,
             "shown": 3,
+            "place": [3, 9],
             "asks": [
               {
                 "seq": 3,
@@ -302,63 +328,178 @@
               "after": false,
               "seqs": [1, 2],
               "offset": 0,
-              "total": 9
+              "total": 9,
+              "cursor": 21
             }
           },
           "expected": {
             "seqs": [1, 2, 3, 5, 7, 9, 12, 15, 18],
-            "offset": 0,
-            "total": 9,
             "shown": 3,
+            "place": [3, 9],
             "asks": []
           }
         },
         {
           "step": {
-            "line": 20
-          },
-          "expected": {
-            "seqs": [1, 2, 3, 5, 7, 9, 12, 15, 18, 20],
-            "offset": 0,
-            "total": 10,
-            "shown": 3,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "gone": {
-              "seq": 5,
-              "wasPhoto": true
+            "lines": {
+              "cursor": 22,
+              "photos": [7, 9],
+              "gone": [5]
             }
           },
           "expected": {
-            "seqs": [1, 2, 3, 7, 9, 12, 15, 18, 20],
-            "offset": 0,
-            "total": 9,
+            "seqs": [1, 2, 3, 7, 9, 12, 15, 18],
             "shown": 3,
-            "asks": []
+            "place": null,
+            "asks": [
+              {
+                "seq": 3,
+                "after": false
+              },
+              {
+                "seq": 3,
+                "after": true
+              }
+            ]
           }
         },
         {
           "step": {
-            "gone": {
+            "page": {
               "seq": 3,
-              "wasPhoto": true
+              "after": false,
+              "seqs": [1, 2],
+              "offset": 0,
+              "total": 8,
+              "cursor": 22
             }
           },
           "expected": {
-            "seqs": [1, 2, 7, 9, 12, 15, 18, 20],
-            "offset": 0,
-            "total": 8,
+            "seqs": [1, 2, 3, 7, 9, 12, 15, 18],
+            "shown": 3,
+            "place": [3, 8],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 23,
+              "photos": [7, 9],
+              "gone": [3, 5]
+            }
+          },
+          "expected": {
+            "seqs": [1, 2, 7, 9, 12, 15, 18],
             "shown": 7,
+            "place": null,
+            "asks": [
+              {
+                "seq": 7,
+                "after": false
+              },
+              {
+                "seq": 7,
+                "after": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "a photo sent while the list's latest page is on its way: the page counted before it is dropped, and the latest asked again",
+      "ahead": 2,
+      "steps": [
+        {
+          "step": {
+            "latest": true
+          },
+          "expected": {
+            "seqs": [],
+            "shown": null,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 10,
+              "photos": [3, 5, 7]
+            }
+          },
+          "expected": {
+            "seqs": [],
+            "shown": null,
+            "place": null,
+            "asks": [
+              {
+                "seq": 0,
+                "after": false
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 11,
+              "photos": [3, 5, 7, 9]
+            }
+          },
+          "expected": {
+            "seqs": [],
+            "shown": null,
+            "place": null,
+            "asks": [
+              {
+                "seq": 0,
+                "after": false
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 0,
+              "after": false,
+              "seqs": [3, 5, 7],
+              "offset": 0,
+              "total": 3,
+              "cursor": 10
+            }
+          },
+          "expected": {
+            "seqs": [],
+            "shown": null,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 0,
+              "after": false,
+              "seqs": [3, 5, 7, 9],
+              "offset": 0,
+              "total": 4,
+              "cursor": 11
+            }
+          },
+          "expected": {
+            "seqs": [3, 5, 7, 9],
+            "shown": 9,
+            "place": [4, 4],
             "asks": []
           }
         }
       ]
     },
     {
-      "name": "a page answering an end no longer there is dropped",
+      "name": "a photo taken back while the one shown is being found: the page counted before it is dropped",
       "ahead": 2,
       "steps": [
         {
@@ -370,12 +511,25 @@
           },
           "expected": {
             "seqs": [5, 7],
-            "offset": null,
-            "total": null,
             "shown": 7,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 1,
+              "photos": [5, 7]
+            }
+          },
+          "expected": {
+            "seqs": [5, 7],
+            "shown": 7,
+            "place": null,
             "asks": [
               {
-                "seq": 5,
+                "seq": 7,
                 "after": false
               },
               {
@@ -387,20 +541,24 @@
         },
         {
           "step": {
-            "gone": {
-              "seq": 5,
-              "wasPhoto": true
+            "lines": {
+              "cursor": 2,
+              "photos": [7],
+              "gone": [5]
             }
           },
           "expected": {
             "seqs": [7],
-            "offset": null,
-            "total": null,
             "shown": 7,
+            "place": null,
             "asks": [
               {
                 "seq": 7,
                 "after": false
+              },
+              {
+                "seq": 7,
+                "after": true
               }
             ]
           }
@@ -408,18 +566,18 @@
         {
           "step": {
             "page": {
-              "seq": 5,
+              "seq": 7,
               "after": false,
-              "seqs": [1, 3],
+              "seqs": [1, 3, 5],
               "offset": 0,
-              "total": 5
+              "total": 5,
+              "cursor": 1
             }
           },
           "expected": {
             "seqs": [7],
-            "offset": null,
-            "total": null,
             "shown": 7,
+            "place": null,
             "asks": []
           }
         },
@@ -430,15 +588,317 @@
               "after": false,
               "seqs": [1, 3],
               "offset": 0,
-              "total": 4
+              "total": 4,
+              "cursor": 2
             }
           },
           "expected": {
             "seqs": [1, 3, 7],
-            "offset": 0,
-            "total": 4,
             "shown": 7,
+            "place": [3, 4],
             "asks": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "a photo the device sees but the group does not goes once a page covers it, and the count stays the group's",
+      "ahead": 2,
+      "steps": [
+        {
+          "step": {
+            "open": {
+              "held": [3, 5, 7],
+              "tapped": 7
+            }
+          },
+          "expected": {
+            "seqs": [3, 5, 7],
+            "shown": 7,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 30,
+              "photos": [3, 5, 7]
+            }
+          },
+          "expected": {
+            "seqs": [3, 5, 7],
+            "shown": 7,
+            "place": null,
+            "asks": [
+              {
+                "seq": 7,
+                "after": false
+              },
+              {
+                "seq": 7,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 7,
+              "after": true,
+              "seqs": [],
+              "offset": 3,
+              "total": 3,
+              "cursor": 30
+            }
+          },
+          "expected": {
+            "seqs": [3, 5, 7],
+            "shown": 7,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 7,
+              "after": false,
+              "seqs": [1, 3],
+              "offset": 0,
+              "total": 3,
+              "cursor": 30
+            }
+          },
+          "expected": {
+            "seqs": [1, 3, 7],
+            "shown": 7,
+            "place": [3, 3],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "show": 1
+          },
+          "expected": {
+            "seqs": [1, 3, 7],
+            "shown": 1,
+            "place": [1, 3],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 30,
+              "photos": [3, 7],
+              "blocked": ["w5"]
+            }
+          },
+          "expected": {
+            "seqs": [1, 3, 7],
+            "shown": 1,
+            "place": null,
+            "asks": [
+              {
+                "seq": 1,
+                "after": false
+              },
+              {
+                "seq": 1,
+                "after": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "a block on the device takes its writer's photos out at once, and asks where the one shown is",
+      "ahead": 2,
+      "steps": [
+        {
+          "step": {
+            "open": {
+              "held": [3, 5, 7],
+              "tapped": 5
+            }
+          },
+          "expected": {
+            "seqs": [3, 5, 7],
+            "shown": 5,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 4,
+              "photos": [3, 5, 7]
+            }
+          },
+          "expected": {
+            "seqs": [3, 5, 7],
+            "shown": 5,
+            "place": null,
+            "asks": [
+              {
+                "seq": 5,
+                "after": false
+              },
+              {
+                "seq": 5,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 4,
+              "photos": [3, 7],
+              "blocked": ["w5"]
+            }
+          },
+          "expected": {
+            "seqs": [3, 7],
+            "shown": 7,
+            "place": null,
+            "asks": [
+              {
+                "seq": 7,
+                "after": false
+              },
+              {
+                "seq": 7,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 5,
+              "after": false,
+              "seqs": [3],
+              "offset": 0,
+              "total": 3,
+              "cursor": 4
+            }
+          },
+          "expected": {
+            "seqs": [3, 7],
+            "shown": 7,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 7,
+              "after": false,
+              "seqs": [3],
+              "offset": 0,
+              "total": 2,
+              "cursor": 4
+            }
+          },
+          "expected": {
+            "seqs": [3, 7],
+            "shown": 7,
+            "place": [2, 2],
+            "asks": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "a page answering a photo no longer held is dropped",
+      "ahead": 2,
+      "steps": [
+        {
+          "step": {
+            "open": {
+              "held": [5, 7],
+              "tapped": 7
+            }
+          },
+          "expected": {
+            "seqs": [5, 7],
+            "shown": 7,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 1,
+              "photos": [5, 7]
+            }
+          },
+          "expected": {
+            "seqs": [5, 7],
+            "shown": 7,
+            "place": null,
+            "asks": [
+              {
+                "seq": 7,
+                "after": false
+              },
+              {
+                "seq": 7,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 7,
+              "after": false,
+              "seqs": [1, 3, 5],
+              "offset": 0,
+              "total": 5,
+              "cursor": 1
+            }
+          },
+          "expected": {
+            "seqs": [1, 3, 5, 7],
+            "shown": 7,
+            "place": [4, 5],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 2,
+              "photos": [5],
+              "gone": [7]
+            }
+          },
+          "expected": {
+            "seqs": [1, 3, 5],
+            "shown": 5,
+            "place": null,
+            "asks": [
+              {
+                "seq": 5,
+                "after": false
+              },
+              {
+                "seq": 5,
+                "after": true
+              }
+            ]
           }
         },
         {
@@ -448,198 +908,15 @@
               "after": true,
               "seqs": [9],
               "offset": 3,
-              "total": 4
+              "total": 4,
+              "cursor": 2
             }
           },
           "expected": {
-            "seqs": [1, 3, 7, 9],
-            "offset": 0,
-            "total": 4,
-            "shown": 7,
-            "asks": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "photos gone outside those held",
-      "ahead": 1,
-      "steps": [
-        {
-          "step": {
-            "open": {
-              "held": [10, 12],
-              "tapped": 10
-            }
-          },
-          "expected": {
-            "seqs": [10, 12],
-            "offset": null,
-            "total": null,
-            "shown": 10,
-            "asks": [
-              {
-                "seq": 10,
-                "after": false
-              },
-              {
-                "seq": 12,
-                "after": true
-              }
-            ]
-          }
-        },
-        {
-          "step": {
-            "page": {
-              "seq": 10,
-              "after": false,
-              "seqs": [8],
-              "offset": 3,
-              "total": 8
-            }
-          },
-          "expected": {
-            "seqs": [8, 10, 12],
-            "offset": 3,
-            "total": 8,
-            "shown": 10,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "page": {
-              "seq": 12,
-              "after": true,
-              "seqs": [14],
-              "offset": 6,
-              "total": 8
-            }
-          },
-          "expected": {
-            "seqs": [8, 10, 12, 14],
-            "offset": 3,
-            "total": 8,
-            "shown": 10,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "gone": {
-              "seq": 2,
-              "wasPhoto": true
-            }
-          },
-          "expected": {
-            "seqs": [8, 10, 12, 14],
-            "offset": 2,
-            "total": 7,
-            "shown": 10,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "gone": {
-              "seq": 30,
-              "wasPhoto": true
-            }
-          },
-          "expected": {
-            "seqs": [8, 10, 12, 14],
-            "offset": 2,
-            "total": 6,
-            "shown": 10,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "gone": {
-              "seq": 6,
-              "wasPhoto": false
-            }
-          },
-          "expected": {
-            "seqs": [8, 10, 12, 14],
-            "offset": 2,
-            "total": 6,
-            "shown": 10,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "gone": {
-              "seq": 4,
-              "wasPhoto": null
-            }
-          },
-          "expected": {
-            "seqs": [8, 10, 12, 14],
-            "offset": null,
-            "total": null,
-            "shown": 10,
-            "asks": [
-              {
-                "seq": 8,
-                "after": false
-              },
-              {
-                "seq": 14,
-                "after": true
-              }
-            ]
-          }
-        },
-        {
-          "step": {
-            "page": {
-              "seq": 14,
-              "after": true,
-              "seqs": [],
-              "offset": 5,
-              "total": 5
-            }
-          },
-          "expected": {
-            "seqs": [8, 10, 12, 14],
-            "offset": 1,
-            "total": 5,
-            "shown": 10,
-            "asks": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "a new photo while the last is not held only counts",
-      "ahead": 0,
-      "steps": [
-        {
-          "step": {
-            "open": {
-              "held": [5],
-              "tapped": 5
-            }
-          },
-          "expected": {
-            "seqs": [5],
-            "offset": null,
-            "total": null,
+            "seqs": [1, 3, 5],
             "shown": 5,
-            "asks": [
-              {
-                "seq": 5,
-                "after": false
-              },
-              {
-                "seq": 5,
-                "after": true
-              }
-            ]
+            "place": null,
+            "asks": []
           }
         },
         {
@@ -647,28 +924,34 @@
             "page": {
               "seq": 5,
               "after": true,
-              "seqs": [8],
-              "offset": 1,
-              "total": 5
+              "seqs": [9],
+              "offset": 3,
+              "total": 4,
+              "cursor": 2
             }
           },
           "expected": {
-            "seqs": [5, 8],
-            "offset": 0,
-            "total": 5,
+            "seqs": [1, 3, 5, 9],
             "shown": 5,
+            "place": null,
             "asks": []
           }
         },
         {
           "step": {
-            "line": 50
+            "page": {
+              "seq": 5,
+              "after": false,
+              "seqs": [1, 3],
+              "offset": 0,
+              "total": 4,
+              "cursor": 2
+            }
           },
           "expected": {
-            "seqs": [5, 8],
-            "offset": 0,
-            "total": 6,
+            "seqs": [1, 3, 5, 9],
             "shown": 5,
+            "place": [3, 4],
             "asks": []
           }
         }
@@ -687,9 +970,22 @@
           },
           "expected": {
             "seqs": [4],
-            "offset": null,
-            "total": null,
             "shown": 4,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 1,
+              "photos": [4]
+            }
+          },
+          "expected": {
+            "seqs": [4],
+            "shown": 4,
+            "place": null,
             "asks": [
               {
                 "seq": 4,
@@ -704,24 +1000,29 @@
         },
         {
           "step": {
-            "gone": {
-              "seq": 4,
-              "wasPhoto": true
+            "lines": {
+              "cursor": 2,
+              "photos": [],
+              "gone": [4]
             }
           },
           "expected": {
             "seqs": [],
-            "offset": null,
-            "total": null,
             "shown": null,
-            "asks": []
+            "place": null,
+            "asks": [
+              {
+                "seq": 0,
+                "after": false
+              }
+            ]
           }
         }
       ]
     },
     {
-      "name": "follows the chat's lines on the device, and asks again once the socket is back",
-      "ahead": 1,
+      "name": "asks again once the socket is back",
+      "ahead": 2,
       "steps": [
         {
           "step": {
@@ -732,12 +1033,25 @@
           },
           "expected": {
             "seqs": [3, 5],
-            "offset": null,
-            "total": null,
             "shown": 5,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 1,
+              "photos": [3, 5]
+            }
+          },
+          "expected": {
+            "seqs": [3, 5],
+            "shown": 5,
+            "place": null,
             "asks": [
               {
-                "seq": 3,
+                "seq": 5,
                 "after": false
               },
               {
@@ -753,12 +1067,11 @@
           },
           "expected": {
             "seqs": [3, 5],
-            "offset": null,
-            "total": null,
             "shown": 5,
+            "place": null,
             "asks": [
               {
-                "seq": 3,
+                "seq": 5,
                 "after": false
               },
               {
@@ -775,75 +1088,39 @@
               "after": true,
               "seqs": [],
               "offset": 2,
-              "total": 2
+              "total": 2,
+              "cursor": 1
             }
           },
           "expected": {
             "seqs": [3, 5],
-            "offset": 0,
-            "total": 2,
             "shown": 5,
+            "place": null,
             "asks": []
           }
         },
         {
           "step": {
-            "lines": [
-              {
-                "seq": 3,
-                "photo": true
-              },
-              {
-                "seq": 4,
-                "photo": false
-              },
-              {
-                "seq": 5,
-                "photo": true
-              }
-            ]
+            "page": {
+              "seq": 5,
+              "after": false,
+              "seqs": [3],
+              "offset": 0,
+              "total": 2,
+              "cursor": 1
+            }
           },
           "expected": {
             "seqs": [3, 5],
-            "offset": 0,
-            "total": 2,
             "shown": 5,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "lines": [
-              {
-                "seq": 3,
-                "photo": false
-              },
-              {
-                "seq": 4,
-                "photo": false
-              },
-              {
-                "seq": 5,
-                "photo": true
-              },
-              {
-                "seq": 6,
-                "photo": true
-              }
-            ]
-          },
-          "expected": {
-            "seqs": [5, 6],
-            "offset": 0,
-            "total": 2,
-            "shown": 5,
+            "place": [2, 2],
             "asks": []
           }
         }
       ]
     },
     {
-      "name": "lists the chat's photos from the latest, a page at a time",
+      "name": "lists the chat's photos from the latest, a page at a time, a photo sent meanwhile coming in at the top",
       "ahead": 2,
       "steps": [
         {
@@ -852,9 +1129,22 @@
           },
           "expected": {
             "seqs": [],
-            "offset": null,
-            "total": null,
             "shown": null,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 5,
+              "photos": [10, 12]
+            }
+          },
+          "expected": {
+            "seqs": [],
+            "shown": null,
+            "place": null,
             "asks": [
               {
                 "seq": 0,
@@ -870,14 +1160,14 @@
               "after": false,
               "seqs": [8, 10, 12],
               "offset": 4,
-              "total": 7
+              "total": 7,
+              "cursor": 5
             }
           },
           "expected": {
             "seqs": [8, 10, 12],
-            "offset": 4,
-            "total": 7,
             "shown": 12,
+            "place": [7, 7],
             "asks": []
           }
         },
@@ -887,9 +1177,8 @@
           },
           "expected": {
             "seqs": [8, 10, 12],
-            "offset": 4,
-            "total": 7,
             "shown": 10,
+            "place": [6, 7],
             "asks": [
               {
                 "seq": 8,
@@ -905,26 +1194,73 @@
               "after": false,
               "seqs": [2, 4, 6],
               "offset": 1,
-              "total": 7
+              "total": 7,
+              "cursor": 5
             }
           },
           "expected": {
             "seqs": [2, 4, 6, 8, 10, 12],
-            "offset": 1,
-            "total": 7,
             "shown": 10,
+            "place": [6, 7],
             "asks": []
           }
         },
         {
           "step": {
-            "line": 14
+            "lines": {
+              "cursor": 6,
+              "photos": [10, 12, 14]
+            }
+          },
+          "expected": {
+            "seqs": [2, 4, 6, 8, 10, 12],
+            "shown": 10,
+            "place": null,
+            "asks": [
+              {
+                "seq": 10,
+                "after": false
+              },
+              {
+                "seq": 10,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 10,
+              "after": true,
+              "seqs": [12, 14],
+              "offset": 6,
+              "total": 8,
+              "cursor": 6
+            }
           },
           "expected": {
             "seqs": [2, 4, 6, 8, 10, 12, 14],
-            "offset": 1,
-            "total": 8,
             "shown": 10,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 10,
+              "after": false,
+              "seqs": [4, 6, 8],
+              "offset": 1,
+              "total": 8,
+              "cursor": 6
+            }
+          },
+          "expected": {
+            "seqs": [2, 4, 6, 8, 10, 12, 14],
+            "shown": 10,
+            "place": [5, 8],
             "asks": []
           }
         },
@@ -934,9 +1270,8 @@
           },
           "expected": {
             "seqs": [2, 4, 6, 8, 10, 12, 14],
-            "offset": 1,
-            "total": 8,
             "shown": 4,
+            "place": [2, 8],
             "asks": [
               {
                 "seq": 2,
@@ -952,14 +1287,14 @@
               "after": false,
               "seqs": [1],
               "offset": 0,
-              "total": 8
+              "total": 8,
+              "cursor": 6
             }
           },
           "expected": {
             "seqs": [1, 2, 4, 6, 8, 10, 12, 14],
-            "offset": 0,
-            "total": 8,
             "shown": 4,
+            "place": [2, 8],
             "asks": []
           }
         }
@@ -975,9 +1310,22 @@
           },
           "expected": {
             "seqs": [],
-            "offset": null,
-            "total": null,
             "shown": null,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 1,
+              "photos": []
+            }
+          },
+          "expected": {
+            "seqs": [],
+            "shown": null,
+            "place": null,
             "asks": [
               {
                 "seq": 0,
@@ -993,26 +1341,51 @@
               "after": false,
               "seqs": [],
               "offset": 0,
-              "total": 0
+              "total": 0,
+              "cursor": 1
             }
           },
           "expected": {
             "seqs": [],
-            "offset": 0,
-            "total": 0,
             "shown": null,
+            "place": null,
             "asks": []
           }
         },
         {
           "step": {
-            "line": 5
+            "lines": {
+              "cursor": 2,
+              "photos": [5]
+            }
+          },
+          "expected": {
+            "seqs": [],
+            "shown": null,
+            "place": null,
+            "asks": [
+              {
+                "seq": 0,
+                "after": false
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 0,
+              "after": false,
+              "seqs": [5],
+              "offset": 0,
+              "total": 1,
+              "cursor": 2
+            }
           },
           "expected": {
             "seqs": [5],
-            "offset": 0,
-            "total": 1,
             "shown": 5,
+            "place": [1, 1],
             "asks": []
           }
         }
@@ -1028,9 +1401,22 @@
           },
           "expected": {
             "seqs": [],
-            "offset": null,
-            "total": null,
             "shown": null,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 1,
+              "photos": [9]
+            }
+          },
+          "expected": {
+            "seqs": [],
+            "shown": null,
+            "place": null,
             "asks": [
               {
                 "seq": 0,
@@ -1045,9 +1431,8 @@
           },
           "expected": {
             "seqs": [],
-            "offset": null,
-            "total": null,
             "shown": null,
+            "place": null,
             "asks": [
               {
                 "seq": 0,
@@ -1063,14 +1448,14 @@
               "after": false,
               "seqs": [9],
               "offset": 3,
-              "total": 4
+              "total": 4,
+              "cursor": 1
             }
           },
           "expected": {
             "seqs": [9],
-            "offset": 3,
-            "total": 4,
             "shown": 9,
+            "place": [4, 4],
             "asks": [
               {
                 "seq": 9,
@@ -1081,143 +1466,22 @@
         },
         {
           "step": {
-            "gone": {
-              "seq": 9,
-              "wasPhoto": true
+            "lines": {
+              "cursor": 2,
+              "photos": [],
+              "gone": [9]
             }
           },
           "expected": {
             "seqs": [],
-            "offset": null,
-            "total": null,
             "shown": null,
+            "place": null,
             "asks": [
               {
                 "seq": 0,
                 "after": false
               }
             ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "photos come and gone before the latest page are put right as it comes, when it was made before them",
-      "ahead": 2,
-      "steps": [
-        {
-          "step": {
-            "latest": true
-          },
-          "expected": {
-            "seqs": [],
-            "offset": null,
-            "total": null,
-            "shown": null,
-            "asks": [
-              {
-                "seq": 0,
-                "after": false
-              }
-            ]
-          }
-        },
-        {
-          "step": {
-            "line": 9
-          },
-          "expected": {
-            "seqs": [],
-            "offset": null,
-            "total": null,
-            "shown": null,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "gone": {
-              "seq": 5,
-              "wasPhoto": true
-            }
-          },
-          "expected": {
-            "seqs": [],
-            "offset": null,
-            "total": null,
-            "shown": null,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "page": {
-              "seq": 0,
-              "after": false,
-              "seqs": [3, 5, 7],
-              "offset": 2,
-              "total": 5
-            }
-          },
-          "expected": {
-            "seqs": [3, 7, 9],
-            "offset": 2,
-            "total": 5,
-            "shown": 9,
-            "asks": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "a photo come before the latest page is not held twice, when the page was made after it",
-      "ahead": 2,
-      "steps": [
-        {
-          "step": {
-            "latest": true
-          },
-          "expected": {
-            "seqs": [],
-            "offset": null,
-            "total": null,
-            "shown": null,
-            "asks": [
-              {
-                "seq": 0,
-                "after": false
-              }
-            ]
-          }
-        },
-        {
-          "step": {
-            "line": 9
-          },
-          "expected": {
-            "seqs": [],
-            "offset": null,
-            "total": null,
-            "shown": null,
-            "asks": []
-          }
-        },
-        {
-          "step": {
-            "page": {
-              "seq": 0,
-              "after": false,
-              "seqs": [5, 7, 9],
-              "offset": 2,
-              "total": 5
-            }
-          },
-          "expected": {
-            "seqs": [5, 7, 9],
-            "offset": 2,
-            "total": 5,
-            "shown": 9,
-            "asks": []
           }
         }
       ]
