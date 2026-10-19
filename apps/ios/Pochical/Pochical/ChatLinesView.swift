@@ -768,12 +768,11 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   func show(_ id: String, at place: LinePlace, animated: Bool, then: (() -> Void)?) {
     let asked = Showing(id: id, place: place, animated: animated, then: then)
-    // Not yet laid out, or lines still going in: once they are in place.
-    guard ready, updating == nil, ids.contains(id) else {
-      hold(hold.opening ? .opening(asked) : .waiting(asked))
-      return
-    }
-    go(to: asked)
+    // Held from now on, so it is told once there however it gets there,
+    // at once or gliding (hold(_:)); gone to now if laid out, else once
+    // it is and lines going in are in place.
+    hold(hold.opening ? .opening(asked) : .waiting(asked))
+    showWaiting()
   }
 
   /// To the item asked for, laid out now: gliding, or put there at once.
