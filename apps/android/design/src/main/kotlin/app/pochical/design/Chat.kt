@@ -9,6 +9,7 @@ object Chat {
   const val controlsMostScale = 1.5f
   const val dayCardColumns = 6
   const val dayCardRows = 7
+  const val draftSettleMs = 500
   const val floatingDayMs = 1500
   const val foldLines = 10
   const val largeEmojiMax = 3

@@ -464,8 +464,8 @@ struct ChatScreen: View {
         groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) },
         pollable: otherID == nil && place.rules.polls, onSend: shareDays)
     }
-    // As the app leaves the screen, what is written is kept, as Signal
-    // and Telegram keep it then.
+    // As the app leaves the screen, what is written is kept at once,
+    // without waiting for the writing to pause.
     .onChange(of: scenePhase) { _, phase in
       if phase != .active { keepDraft() }
     }
@@ -534,7 +534,7 @@ struct ChatScreen: View {
         mentionable: otherID != nil || !place.rules.mentions
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
         nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
-        onStopEditing: stopEditing,
+        onStopEditing: stopEditing, keepDraft: keepDraft,
         onShareDays: place.rules.days ? { sharingDays = true } : nil, say: say)
     }
   }
@@ -1121,13 +1121,14 @@ struct ChatScreen: View {
     openedDraft = (shown: draft.text, sent: kept.text)
   }
 
-  /// Keeps what is being written with the chat, as it is left and as the
-  /// app leaves the screen; written only as it changed.
+  /// Keeps what is being written with the chat, the one place a chat's
+  /// draft is written: as the composer changes, as the chat is left and as
+  /// the app leaves the screen; written only as it changed, and not before
+  /// the chat's draft is back in the composer.
   private func keepDraft() {
-    let unchanged = openedDraft.flatMap { $0.shown == draft.text ? $0.sent : nil }
-    let kept = KeptDraft(
-      text: unchanged ?? withMentions(draft.text, picked: draft.picked),
-      replyTo: draft.replyTo, editing: draft.editing?.seq)
+    guard tookDraft else { return }
+    var kept = draft.kept
+    if let opened = openedDraft, opened.shown == draft.text { kept.text = opened.sent }
     guard kept != keptDraft else { return }
     keptDraft = kept
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
