@@ -918,11 +918,15 @@ const refusedOnce = async (token: string) => {
   /** The try a line asks for, once refused: how long until the next. */
   const refused = async (): Promise<number> => {
     let wait = 0;
-    // The alarm a line sets for now runs by itself.
-    await vi.waitFor(async () => {
-      wait = (await nextTry(userId)) ?? 0;
-      expect(wait).toBeGreaterThan(0);
-    });
+    // The alarm a line sets for now runs by itself, however slow the
+    // runner: waited for, not run here, which would run the relay twice.
+    await vi.waitFor(
+      async () => {
+        wait = (await nextTry(userId)) ?? 0;
+        expect(wait).toBeGreaterThan(0);
+      },
+      { interval: 50, timeout: 10_000 }
+    );
     return wait;
   };
   await send("届いてますか");
