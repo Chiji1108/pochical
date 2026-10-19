@@ -118,5 +118,16 @@ public interface ChatEditOrBuilder extends
    */
   app.pochical.v1.ChatDecide getDecide();
 
+  /**
+   * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+   * @return Whether the recall field is set.
+   */
+  boolean hasRecall();
+  /**
+   * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+   * @return The recall.
+   */
+  app.pochical.v1.ChatRecall getRecall();
+
   public app.pochical.v1.ChatEdit.KindCase getKindCase();
 }

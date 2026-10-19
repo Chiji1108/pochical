@@ -251,6 +251,7 @@ struct ChatLinesView: UIViewControllerRepresentable {
     controller.update(self, environment: context.environment)
     // The composer and the keyboard under the lines: as it changes, the
     // lines and the ↓ make room by the change's own animation.
+    controller.topRoom(scroll.topRoom)
     controller.bottomRoom(scroll.bottomRoom) { context.animate(changes: $0) }
   }
 
@@ -611,6 +612,18 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// What is under the lines at the chat's foot: the composer, and the
   /// keyboard or the home indicator.
   private var under: CGFloat = 0
+  /// What is over the lines at the chat's top: the header, and the pins.
+  private var over: CGFloat = 0
+
+  /// What is over the lines is `height` now (the pins come or go, or
+  /// open): the lines stay where they are on the screen, going on under
+  /// it, as they do under the header.
+  func topRoom(_ height: CGFloat) {
+    guard height != over else { return }
+    over = height
+    guard view.window != nil else { return }
+    fitRoom()
+  }
 
   /// What is under the lines is `height` now (the keyboard, a bar over
   /// the composer's field), changed by `animate` (the change's own
@@ -653,7 +666,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// changes (the keyboard, the composer growing), as ChatLayout's Example
   /// keeps them; not under the finger pulling the keyboard down.
   private func fitRoom() {
-    let top = view.safeAreaInsets.top
+    let top = over
     if lines.contentInset.top != top {
       lines.contentInset.top = top
       lines.verticalScrollIndicatorInsets.top = top

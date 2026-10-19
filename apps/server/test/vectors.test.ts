@@ -14,7 +14,7 @@ import { DayField } from "../src/gen/pochical/v1/sync_pb";
 import { directThread, plainText } from "../src/group-chat";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
-import { characterCount, isEmoji } from "../src/text-limits";
+import { characterCount, fitsText, isEmoji } from "../src/text-limits";
 import { photosAmong } from "./helpers";
 
 // Which thread two members' one-to-one chat is, as their apps name it.
@@ -68,6 +68,13 @@ describe("spec/vectors/text.json", () => {
   test.each(text.isEmoji)("isEmoji: $name", ({ text: written, expected }) => {
     expect(isEmoji(written)).toBe(expected);
   });
+
+  test.each(text.fitsText)(
+    "fitsText: $name",
+    ({ text: written, limit, expected }) => {
+      expect(fitsText(written, limit)).toBe(expected);
+    }
+  );
 });
 
 // The vectors name fields as DayField does, without DAY_FIELD_.

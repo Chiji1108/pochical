@@ -251,6 +251,30 @@ public object ChatEditKt {
     public fun hasDecide(): kotlin.Boolean {
       return _builder.hasDecide()
     }
+
+    /**
+     * `.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];`
+     */
+    public var recall: app.pochical.v1.ChatRecall
+      @kotlin.jvm.JvmName("getRecall")
+        get() = _builder.recall
+      @kotlin.jvm.JvmName("setRecall")
+        set(value) {
+        _builder.recall = value
+      }
+    /**
+     * `.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];`
+     */
+    public fun clearRecall() {
+      _builder.clearRecall()
+    }
+    /**
+     * `.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];`
+     * @return Whether the recall field is set.
+     */
+    public fun hasRecall(): kotlin.Boolean {
+      return _builder.hasRecall()
+    }
     public val kindCase: app.pochical.v1.ChatEdit.KindCase
     @kotlin.jvm.JvmName("getKindCase")
       get() = _builder.kindCase
@@ -286,4 +310,7 @@ public val app.pochical.v1.ChatEditOrBuilder.voteOrNull: app.pochical.v1.ChatVot
 
 public val app.pochical.v1.ChatEditOrBuilder.decideOrNull: app.pochical.v1.ChatDecide?
   get() = if (hasDecide()) getDecide() else null
+
+public val app.pochical.v1.ChatEditOrBuilder.recallOrNull: app.pochical.v1.ChatRecall?
+  get() = if (hasRecall()) getRecall() else null
 

@@ -45,7 +45,7 @@ const appIcons = {
 };
 
 const appearanceOptions: { appearance: Appearance; name: string }[] = [
-  { appearance: "system", name: "自動" },
+  { appearance: "system", name: "端末に合わせる" },
   { appearance: "light", name: "ライト" },
   { appearance: "dark", name: "ダーク" },
 ];
@@ -244,8 +244,8 @@ function SchemeScreen({
 }
 
 // As iOS's 画面表示と明るさ: ライト and ダーク side by side, each a small
-// screen in the テーマ, and 自動 under them to follow the device. With 自動
-// on, the one the screen is in now is checked; picking one turns 自動 off,
+// screen in the テーマ, and 端末に合わせる under them to follow the device.
+// With it on, the one the screen is in now is checked; picking one turns it off,
 // and turning it off keeps the one in use. The choice stays open under an
 // always-dark テーマ, which says so, since it takes effect again once the
 // テーマ changes.
@@ -289,7 +289,7 @@ export function AppearancePage({ onBack }: { onBack: () => void }) {
         </ChoiceGrid>
         <SwitchRow
           checked={appearance === "system"}
-          label="自動"
+          label="端末に合わせる"
           onChange={(checked) => {
             setAppearance(checked ? "system" : scheme);
           }}
@@ -298,7 +298,7 @@ export function AppearancePage({ onBack }: { onBack: () => void }) {
       <Note>
         {alwaysDark
           ? `テーマの「${alwaysDark.name}」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。`
-          : "自動にすると、スマホの設定に合わせてライトとダークが切り替わります。"}
+          : "オンにすると、端末の設定に合わせてライトとダークが切り替わります。"}
       </Note>
     </>
   );

@@ -1,10 +1,11 @@
 import { chatRules } from "@pochical/design/chat";
-import { BellOff } from "lucide-react";
+import { BellOff, CircleAlert } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { css, cx } from "styled-system/css";
 
 import { BubbleOutline } from "./design-chat-bubble";
 import { chatRow, chatStyle } from "./design-chat-style";
+import type { ListedLine } from "./design-chat-summary";
 import { badge } from "./design-group-parts";
 import { listRow } from "./design-list";
 import { srOnly } from "./design-ui";
@@ -24,6 +25,28 @@ export function MutedMark() {
   );
 }
 
+// A chat row's line: the draft left in it, else its latest line, which
+// for one of yours not sent is the line's red ! and 送れませんでした.
+function RowLine({ preview, draft }: { preview: ListedLine; draft?: string }) {
+  if (draft !== undefined) {
+    return (
+      <>
+        <span className={chatRow.draft}>下書き：</span>
+        {draft}
+      </>
+    );
+  }
+  if (typeof preview === "string") {
+    return preview;
+  }
+  return (
+    <>
+      <CircleAlert aria-hidden="true" className={chatRow.failed} size={13} />
+      送れませんでした
+    </>
+  );
+}
+
 // A chat in a list: its face, who it is with and its latest line, and at
 // the end that line's time and the count of lines not read yet.
 export function ChatListRow({
@@ -40,7 +63,7 @@ export function ChatListRow({
   label: string;
   icon: ReactNode;
   // The latest line, or what to say before there is one.
-  preview: string;
+  preview: ListedLine;
   // What is being written, kept as the chat was left, shown in place of
   // the latest line (spec/chat.md, Drafts).
   draft?: string;
@@ -67,14 +90,7 @@ export function ChatListRow({
           {muted && <MutedMark />}
         </span>
         <small className={chatRow.preview}>
-          {draft === undefined ? (
-            preview
-          ) : (
-            <>
-              <span className={chatRow.draft}>下書き：</span>
-              {draft}
-            </>
-          )}
+          <RowLine draft={draft} preview={preview} />
         </small>
       </span>
       {(time !== undefined || unread > 0) && (

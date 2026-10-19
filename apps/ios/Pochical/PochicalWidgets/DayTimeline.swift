@@ -130,7 +130,7 @@ enum DayMoments {
 }
 
 /// A widget's view in the person's テーマ, in the light or dark 外観 picks
-/// (the system's on 自動, and where the system recolors it), their marks' shape and 月と曜日, which the
+/// (the system's on 端末に合わせる, and where the system recolors it), their marks' shape and 月と曜日, which the
 /// system's relative times (3時間12分, 3 hr, 12 min) follow too. On the
 /// lock screen the system draws the ground.
 struct WidgetLook<Content: View>: View {
