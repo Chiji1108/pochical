@@ -105,7 +105,7 @@ The numbers are `socketRules` in `design/src/socket.ts`.
 
 ### Reconnecting
 
-- A device reconnects when a socket closes, or its keepalive goes unanswered. Before each try it waits a time drawn at random from 0 up to `reconnectFirstMs` doubled for each try before it since its last `Welcome`, at most `reconnectMostMs` (`spec/vectors/reconnect.json`). A `Welcome` starts the count again. The random wait keeps devices cut off together, as by a deploy, from coming back together.
+- A device reconnects when a socket closes, or its keepalive goes unanswered. Before each try it waits a time drawn at random from 0 up to `reconnectFirstMs` doubled for each try before it since a socket last caught up, at most `reconnectMostMs` (`spec/vectors/reconnect.json`). A socket's catch-up coming to its end (the `Pong` to the `Ping` after `Welcome`, Keepalive) starts the count again, not the `Welcome` itself, so a socket that breaks right after its `Welcome`, again and again, still waits longer each time rather than hammering the server. The random wait keeps devices cut off together, as by a deploy, from coming back together.
 - It tries at once, starting the count again, when the app comes to the foreground or the network comes back: the person is waiting then.
 - After `CODE_CLOCK_AHEAD` it reconnects at once (HLC).
 - It does not reconnect after `CODE_PROTOCOL_TOO_OLD` until the app is updated, nor after a 401 to the upgrade, nor to a group after a 403. A 403 says only that the user's own DO does not list the group, which can lag the Group DO that decides (a join half done), so the device asks the server for its groups again rather than dropping the group (not built yet: no call lists a user's groups).

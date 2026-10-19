@@ -4,8 +4,8 @@
 // this against them.
 import { socketRules } from "@pochical/design/socket";
 
-// The most a device may wait before its `tries`th try since the last
-// Welcome: the first wait doubled for each try before it, up to the most.
+// The most a device may wait before its `tries`th try since a socket
+// last caught up: the first wait doubled for each try before it, up to the most.
 export function reconnectWaitMost(
   tries: number,
   firstMs: number = socketRules.reconnectFirstMs,

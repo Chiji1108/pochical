@@ -70,7 +70,8 @@ public actor SyncClient {
   /// The socket open or opening, closed by `stop` at once rather than
   /// left to notice its task's cancellation.
   private var socket: URLSessionWebSocketTask?
-  /// Tries since the last Welcome.
+  /// Tries since a socket last caught up: not since its Welcome, so one
+  /// that breaks right after it, again and again, still waits longer.
   private var tries = 0
   private var connected = false
   /// When the server last answered the keepalive.
@@ -243,6 +244,11 @@ public actor SyncClient {
 
   private func run() async {
     while !Task.isCancelled {
+      // Closed before the wait, so the network coming back meanwhile tries
+      // again at once rather than after it.
+      connected = false
+      caughtUp = false
+      status = .connecting
       if tries > 0 {
         let most = reconnectWaitMost(
           tries: tries, firstMs: SyncSocket.reconnectFirstMs, mostMs: SyncSocket.reconnectMostMs)
@@ -250,9 +256,6 @@ public actor SyncClient {
         if Task.isCancelled { return }
       }
       tries += 1
-      connected = false
-      caughtUp = false
-      status = .connecting
       do {
         try await connect()
       } catch let stop as Stop {
@@ -332,7 +335,6 @@ public actor SyncClient {
     case .welcome(let welcome):
       // Before the Ping's send, whose wait would skew the clock's offset.
       let receivedMs = Self.nowMs()
-      tries = 0
       connected = true
       status = .catchingUp
       try await askCaughtUp(on: socket)
@@ -398,6 +400,7 @@ public actor SyncClient {
       }
     case .pong(let pong):
       if pong.nonce == catchUpNonce {
+        tries = 0
         caughtUp = true
         status = .current
         for waiter in catchUpWaiters.values {
