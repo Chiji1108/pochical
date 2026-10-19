@@ -352,4 +352,28 @@ public interface ChatLineOrBuilder extends
    * @return The notice.
    */
   app.pochical.v1.ChatNotice getNotice();
+
+  /**
+   * <pre>
+   * The photos sent together with this one (spec/chat.md, Albums), as
+   * ChatSend.album named them; empty for a photo sent alone, and for
+   * anything else.
+   * </pre>
+   *
+   * <code>string album = 20 [json_name = "album"];</code>
+   * @return The album.
+   */
+  java.lang.String getAlbum();
+  /**
+   * <pre>
+   * The photos sent together with this one (spec/chat.md, Albums), as
+   * ChatSend.album named them; empty for a photo sent alone, and for
+   * anything else.
+   * </pre>
+   *
+   * <code>string album = 20 [json_name = "album"];</code>
+   * @return The bytes for album.
+   */
+  com.google.protobuf.ByteString
+      getAlbumBytes();
 }

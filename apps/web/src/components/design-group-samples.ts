@@ -10,6 +10,7 @@ import type {
   LinkPreview,
   Member,
   MemberPattern,
+  Message,
 } from "./design-group-data";
 import { holidayName } from "./design-week";
 import { guessLook, sampleLooks } from "./shift-mark";
@@ -314,6 +315,28 @@ export function previewOf(url: string): LinkPreview {
   );
 }
 
+// Photos someone sent at once, each its own line in one album: Unsplash
+// photos from picsum.photos, by id and size.
+function albumPhotos(
+  id: string,
+  from: string,
+  time: string,
+  photos: [number, number, number][]
+): Message[] {
+  return photos.map(([photo, width, height], index) => ({
+    album: `${id}-album`,
+    from,
+    id: `${id}-photo${index + 1}`,
+    photo: {
+      height,
+      src: `https://picsum.photos/id/${photo}/${width}/${height}`,
+      width,
+    },
+    time,
+    when: "昨日",
+  }));
+}
+
 export const sampleChats: Record<string, Chat> = {
   "family:group": {
     messages: [
@@ -363,6 +386,13 @@ export const sampleChats: Record<string, Chat> = {
         time: "19:10",
         when: "昨日",
       },
+      // Photos sent at once, drawn as one album (spec/chat.md, Albums).
+      ...albumPhotos("f2", "yuki", "19:11", [
+        [102, 640, 480],
+        [1080, 480, 640],
+        [312, 640, 480],
+        [425, 640, 640],
+      ]),
       {
         from: "me",
         id: "f4",
