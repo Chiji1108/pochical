@@ -218,6 +218,13 @@
       "when": 1792388408003,
       "tag": "0030_support_relay_posting",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1792413843307,
+      "tag": "0031_chat-recalls-taken-at",
+      "breakpoints": true
     }
   ]
 }

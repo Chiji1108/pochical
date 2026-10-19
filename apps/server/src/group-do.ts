@@ -53,6 +53,7 @@ import {
 import migrations from "./group-do-migrations/migrations.js";
 import {
   chatLines,
+  chatRecalls,
   logHead,
   memberDays,
   memberPatterns,
@@ -373,6 +374,8 @@ export class GroupDO extends DurableObject<Env> {
         .delete(memberRepeatOrders)
         .where(eq(memberRepeatOrders.userId, userId))
         .run();
+      // Their sends are taken no more, so none is to be kept from coming.
+      this.db.delete(chatRecalls).where(eq(chatRecalls.userId, userId)).run();
       const row = this.db
         .update(members)
         .set({

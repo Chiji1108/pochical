@@ -275,11 +275,18 @@ export const chatVotes = sqliteTable(
 
 // The sends members took back (ChatRecall) before the group had their
 // line, by op_id: should one come after all, as from a socket that died
-// with it on the way, it is dropped.
+// with it on the way, it is dropped. Kept for chatRules.unsentAfterMs
+// from when it was taken, the longest a device sends a line by itself,
+// far past any send still on its way; and while the member is in the
+// group, whose sends are taken no more once they leave.
 export const chatRecalls = sqliteTable(
   "chat_recalls",
   {
     opId: text("op_id").notNull(),
+    // Those kept before the time was are past it already.
+    takenAt: integer("taken_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`0`),
     userId: text("user_id").notNull(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.opId] })]

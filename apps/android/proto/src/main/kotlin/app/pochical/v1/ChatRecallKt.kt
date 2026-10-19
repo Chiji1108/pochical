@@ -71,6 +71,35 @@ public object ChatRecallKt {
     public fun clearSendOpId() {
       _builder.clearSendOpId()
     }
+
+    /**
+     * ```
+     * The photo the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry it. Empty for a send of anything else.
+     * ```
+     *
+     * `string photo_id = 3 [json_name = "photoId"];`
+     */
+    public var photoId: kotlin.String
+      @kotlin.jvm.JvmName("getPhotoId")
+        get() = _builder.photoId
+      @kotlin.jvm.JvmName("setPhotoId")
+        set(value) {
+        _builder.photoId = value
+      }
+    /**
+     * ```
+     * The photo the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry it. Empty for a send of anything else.
+     * ```
+     *
+     * `string photo_id = 3 [json_name = "photoId"];`
+     */
+    public fun clearPhotoId() {
+      _builder.clearPhotoId()
+    }
   }
 }
 public inline fun app.pochical.v1.ChatRecall.copy(block: `app.pochical.v1`.ChatRecallKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatRecall =

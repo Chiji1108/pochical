@@ -26,6 +26,7 @@ public  final class ChatRecall extends
   private ChatRecall() {
     threadId_ = "";
     sendOpId_ = "";
+    photoId_ = "";
   }
   public static final int THREAD_ID_FIELD_NUMBER = 1;
   private java.lang.String threadId_;
@@ -118,6 +119,83 @@ public  final class ChatRecall extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     sendOpId_ = value.toStringUtf8();
+
+  }
+
+  public static final int PHOTO_ID_FIELD_NUMBER = 3;
+  private java.lang.String photoId_;
+  /**
+   * <pre>
+   * The photo the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry it. Empty for a send of anything else.
+   * </pre>
+   *
+   * <code>string photo_id = 3 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  @java.lang.Override
+  public java.lang.String getPhotoId() {
+    return photoId_;
+  }
+  /**
+   * <pre>
+   * The photo the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry it. Empty for a send of anything else.
+   * </pre>
+   *
+   * <code>string photo_id = 3 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPhotoIdBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(photoId_);
+  }
+  /**
+   * <pre>
+   * The photo the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry it. Empty for a send of anything else.
+   * </pre>
+   *
+   * <code>string photo_id = 3 [json_name = "photoId"];</code>
+   * @param value The photoId to set.
+   */
+  private void setPhotoId(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    photoId_ = value;
+  }
+  /**
+   * <pre>
+   * The photo the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry it. Empty for a send of anything else.
+   * </pre>
+   *
+   * <code>string photo_id = 3 [json_name = "photoId"];</code>
+   */
+  private void clearPhotoId() {
+
+    photoId_ = getDefaultInstance().getPhotoId();
+  }
+  /**
+   * <pre>
+   * The photo the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry it. Empty for a send of anything else.
+   * </pre>
+   *
+   * <code>string photo_id = 3 [json_name = "photoId"];</code>
+   * @param value The bytes for photoId to set.
+   */
+  private void setPhotoIdBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    photoId_ = value.toStringUtf8();
 
   }
 
@@ -325,6 +403,85 @@ public  final class ChatRecall extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The photo the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry it. Empty for a send of anything else.
+     * </pre>
+     *
+     * <code>string photo_id = 3 [json_name = "photoId"];</code>
+     * @return The photoId.
+     */
+    @java.lang.Override
+    public java.lang.String getPhotoId() {
+      return instance.getPhotoId();
+    }
+    /**
+     * <pre>
+     * The photo the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry it. Empty for a send of anything else.
+     * </pre>
+     *
+     * <code>string photo_id = 3 [json_name = "photoId"];</code>
+     * @return The bytes for photoId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getPhotoIdBytes() {
+      return instance.getPhotoIdBytes();
+    }
+    /**
+     * <pre>
+     * The photo the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry it. Empty for a send of anything else.
+     * </pre>
+     *
+     * <code>string photo_id = 3 [json_name = "photoId"];</code>
+     * @param value The photoId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhotoId(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setPhotoId(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The photo the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry it. Empty for a send of anything else.
+     * </pre>
+     *
+     * <code>string photo_id = 3 [json_name = "photoId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPhotoId() {
+      copyOnWrite();
+      instance.clearPhotoId();
+      return this;
+    }
+    /**
+     * <pre>
+     * The photo the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry it. Empty for a send of anything else.
+     * </pre>
+     *
+     * <code>string photo_id = 3 [json_name = "photoId"];</code>
+     * @param value The bytes for photoId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPhotoIdBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setPhotoIdBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatRecall)
   }
   @java.lang.Override
@@ -343,10 +500,11 @@ public  final class ChatRecall extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "threadId_",
             "sendOpId_",
+            "photoId_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

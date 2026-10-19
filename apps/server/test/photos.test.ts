@@ -171,33 +171,31 @@ describe("a group's photos", () => {
       .toBeNull();
   });
 
-  it("deletes a photo whose send was taken back before it came", async () => {
-    const { groupId, maker } = await pair();
+  it("deletes a photo whose send was taken back before it came, the send never coming", async () => {
+    const { groupId, guest, maker } = await pair();
     await photo("PUT", groupId, "early", maker, JPEG, "small");
     await photo("PUT", groupId, "early", maker, JPEG);
+    await photo("PUT", groupId, "theirs", guest, JPEG);
     const later = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
-    const before = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
-    sendFrame(later.socket, {
-      case: "chatEdits",
-      value: {
-        edits: [
-          {
-            kind: {
-              case: "recall",
-              value: { sendOpId: "a", threadId: "group" },
+    const recall = (sendOpId: string, photoId: string, opId: string) => {
+      sendFrame(later.socket, {
+        case: "chatEdits",
+        value: {
+          edits: [
+            {
+              kind: {
+                case: "recall",
+                value: { photoId, sendOpId, threadId: "group" },
+              },
+              opId,
             },
-            opId: "r",
-          },
-        ],
-      },
-    });
-    let acked = false;
-    while (!acked) {
-      // oxlint-disable-next-line no-await-in-loop -- frames come in order
-      const frame = await later.frames.next();
-      acked = frame.kind.case === "acked";
-    }
-    sendPhoto(before.socket, "a", "early");
+          ],
+        },
+      });
+    };
+    recall("a", "early", "r1");
+    // Naming someone else's photo deletes nothing.
+    recall("b", "theirs", "r2");
     await expect
       .poll(async () => await env.PHOTOS.head(photoKey(groupId, "early")))
       .toBeNull();
@@ -206,5 +204,34 @@ describe("a group's photos", () => {
         async () => await env.PHOTOS.head(smallKey(photoKey(groupId, "early")))
       )
       .toBeNull();
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, "theirs"))
+    ).resolves.not.toBeNull();
+
+    // Should the send come after all, it is dropped, its photo gone.
+    const before = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    sendPhoto(before.socket, "a", "early");
+    sendFrame(before.socket, {
+      case: "chatEdits",
+      value: {
+        edits: [
+          {
+            kind: { case: "send", value: { text: "次", threadId: "group" } },
+            opId: "n",
+          },
+        ],
+      },
+    });
+    const sent: string[] = [];
+    while (!sent.includes("n")) {
+      // oxlint-disable-next-line no-await-in-loop -- frames come in order
+      const frame = await before.frames.next();
+      for (const { kind } of changesBesidesNotices(frame)) {
+        if (kind.case === "chatLine") {
+          sent.push(kind.value.opId);
+        }
+      }
+    }
+    expect(sent).toStrictEqual(["n"]);
   });
 });

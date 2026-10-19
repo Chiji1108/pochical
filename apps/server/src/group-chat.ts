@@ -920,17 +920,46 @@ const takeOwnLine = (
 };
 
 /**
+ * A send kept from coming after all, as its recall is taken at `now`;
+ * those kept chatRules.unsentAfterMs ago go, no send being on its way
+ * that long. Its photo goes at once, as no line will ever carry it.
+ */
+const keepRecall = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  { sendOpId, photoId }: ChatRecall,
+  now: Date
+): Taken => {
+  db.delete(chatRecalls)
+    .where(
+      lt(chatRecalls.takenAt, new Date(now.getTime() - chatRules.unsentAfterMs))
+    )
+    .run();
+  db.insert(chatRecalls)
+    .values({ opId: sendOpId, takenAt: now, userId })
+    .onConflictDoNothing()
+    .run();
+  if (photoId === "" || !ownUnsentPhoto(db, userId, photoId)) {
+    return {};
+  }
+  db.delete(chatPhotos).where(eq(chatPhotos.id, photoId)).run();
+  return { photoGone: photoId };
+};
+
+/**
  * One of the member's lines taken back by its send's op_id, as they took
  * it back while it waited on their device: taken back as 送信取消 takes
  * one when the group has it, and else its send is kept from coming after
- * all. Nothing for someone else's line, or one taken back already.
+ * all (`keepRecall`). Nothing for someone else's line, or one taken back
+ * already.
  */
 const takeRecall = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  { threadId, sendOpId }: ChatRecall,
+  recall: ChatRecall,
   cursor: number
 ): Taken => {
+  const { threadId, sendOpId } = recall;
   if (!isId(sendOpId)) {
     return {};
   }
@@ -940,11 +969,7 @@ const takeRecall = (
     .where(eq(chatLines.opId, sendOpId))
     .get();
   if (line === undefined) {
-    db.insert(chatRecalls)
-      .values({ opId: sendOpId, userId })
-      .onConflictDoNothing()
-      .run();
-    return {};
+    return keepRecall(db, userId, recall, new Date());
   }
   if (line.authorId !== userId || line.threadId !== threadId || line.unsent) {
     return {};
@@ -1135,10 +1160,6 @@ const takeSend = (
   const { photo, replyTo } = send;
   const fits =
     photo === undefined ? fitsSend(send) : fitsPhoto(db, userId, send);
-  if (taken === undefined && recalled !== undefined && photo !== undefined) {
-    // A photo taken back before its send came goes, as a line's does.
-    return ownUnsentPhoto(db, userId, photo.id) ? { photoGone: photo.id } : {};
-  }
   if (taken !== undefined || recalled !== undefined || !fits) {
     return {};
   }
