@@ -201,6 +201,12 @@ struct ChatScreen: View {
       },
       onNear: { prefetchPhotos(of: $0.compactMap { byID[$0] }) }
     )
+    // A line gone from the chat (taken back by its writer) takes its
+    // open menu with it; the lines laid out keep it meanwhile (`holds`).
+    .onChange(of: acting.map { acting in state.lines.contains { $0.opID == acting.lineID } }) {
+      _, there in
+      if there == false { closeActions() }
+    }
     .background {
       ReadsSeen(
         scroll: scroll, reads: placed && scenePhase == .active,
