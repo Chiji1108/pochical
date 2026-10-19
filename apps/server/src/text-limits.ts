@@ -10,9 +10,27 @@ const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 export const characterCount = (text: string): number =>
   [...graphemes.segment(text)].length;
 
-/** Whether the text has 1 to `limit` characters and is not only spaces. */
+/**
+ * The most UTF-16 code units one character may take on average: more than
+ * any emoji sequence or accented letter (Unicode's stream-safe text keeps
+ * a run of combining marks to 30), so text counted within its limit is
+ * bounded in size too, and one character stacked with thousands of marks
+ * is not.
+ */
+const UNITS_PER_CHARACTER_MOST = 32;
+
+/** Whether the text is no larger than `limit` characters can be. */
+const withinSize = (text: string, limit: number): boolean =>
+  text.length <= limit * UNITS_PER_CHARACTER_MOST;
+
+/**
+ * Whether the text has 1 to `limit` characters, is not only spaces, and
+ * is no larger than that many characters can be.
+ */
 export const fitsText = (text: string, limit: number): boolean =>
-  text.trim() !== "" && characterCount(text) <= limit;
+  text.trim() !== "" &&
+  withinSize(text, limit) &&
+  characterCount(text) <= limit;
 
 /**
  * The text, when it has 1 to `limit` characters and is not only spaces;
@@ -26,7 +44,7 @@ export const requireText = (
   if (text.trim() === "") {
     throw new ConnectError(`${field} is empty`, Code.InvalidArgument);
   }
-  if (characterCount(text) > limit) {
+  if (!withinSize(text, limit) || characterCount(text) > limit) {
     throw new ConnectError(
       `${field} is over ${limit} characters`,
       Code.InvalidArgument
