@@ -48,13 +48,10 @@ struct PochicalApp: App {
   var body: some Scene {
     WindowGroup {
       AppRoot()
-        .modifier(Themed(theme: settings.device.theme, appearance: settings.device.appearance))
-        .environment(settings)
-        .environment(\.groupCalls, groupCalls)
-        .environment(\.account, account)
-        .environment(\.userSocket, sync)
-        .environment(\.groupSockets, groupSockets)
-        .environment(openPlace)
+        .modifier(
+          AppEnvironment(
+            settings: settings, groupCalls: groupCalls, account: account, userSocket: sync,
+            groupSockets: groupSockets, openPlace: openPlace))
         // The person's preferences, kept with the account from launch.
         .task { settings.sync(with: database) }
     }
@@ -92,6 +89,28 @@ struct PochicalApp: App {
         break
       }
     }
+  }
+}
+
+/// What every screen of the app is given: put at the window's root, and
+/// again on what UIKit hosts with an environment of its own (RootView).
+struct AppEnvironment: ViewModifier {
+  let settings: Settings
+  let groupCalls: GroupCalls
+  let account: Account
+  let userSocket: SyncClient?
+  let groupSockets: GroupSockets
+  let openPlace: OpenPlaceSocket
+
+  func body(content: Content) -> some View {
+    content
+      .modifier(Themed(theme: settings.device.theme, appearance: settings.device.appearance))
+      .environment(settings)
+      .environment(\.groupCalls, groupCalls)
+      .environment(\.account, account)
+      .environment(\.userSocket, userSocket)
+      .environment(\.groupSockets, groupSockets)
+      .environment(openPlace)
   }
 }
 

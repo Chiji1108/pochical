@@ -31,6 +31,7 @@ struct ChatScreen: View {
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.openGroupRoute) private var openGroupRoute
+  @Environment(\.rootNavigator) private var navigator
   @Dependency(\.defaultDatabase) private var database
   /// The chat, read by this screen alone while it is there.
   @State private var feed: ChatFeed
@@ -114,8 +115,6 @@ struct ChatScreen: View {
   @State private var unsending: Unsending?
   /// A link tapped in a line, open in the browser sheet.
   @State private var browsing: OpenedLink?
-  /// 写真 from ⋯: the chat's photos alone, pushed over it.
-  @State private var listingPhotos = false
 
   /// The lines read as the screen first draws, by the reader last heard
   /// of, so they are there through the push that brings it in rather than
@@ -260,7 +259,6 @@ struct ChatScreen: View {
     .navigationTitle(title)
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.visible, for: .navigationBar)
-    .toolbarVisibility(.hidden, for: .tabBar)
     .toolbar {
       // The title drawn here to carry 通知オフ's bell after it, which the
       // bar's own title does not draw, and to open what the chat is of:
@@ -303,7 +301,8 @@ struct ChatScreen: View {
             }
           }
           Button("写真", systemImage: "photo.on.rectangle") {
-            listingPhotos = true
+            navigator?.open(
+              .photos(PhotosOfChat(placeID: place.id, threadID: threadID, names: names)))
           }
           Divider()
           let muted = isMuted
@@ -439,9 +438,6 @@ struct ChatScreen: View {
     }
     .photoViewer($viewing, groupID: place.id) { photo in
       await savePhoto(photo, in: place.id, calls: groupCalls)
-    }
-    .navigationDestination(isPresented: $listingPhotos) {
-      ChatPhotosScreen(pager: photoPager, names: names)
     }
     .modifier(
       ReportAndBlock(

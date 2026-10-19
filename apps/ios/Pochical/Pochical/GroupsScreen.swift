@@ -23,9 +23,9 @@ struct OpenInviteAction {
   }
 }
 
-/// Opens one of the グループ tab's pages over the one showing, as a link
-/// within the group does, for what cannot be a link: a menu's button or a
-/// sheet's.
+/// Opens one of a group's pages over the one showing, as a link within the
+/// group does, for what cannot be a link: a menu's button or a sheet's. A
+/// chat, and whatever a chat opens, goes over the tabs (RootNavigator).
 struct OpenGroupRouteAction {
   let open: @MainActor (GroupRoute) -> Void
 
@@ -47,7 +47,7 @@ extension EnvironmentValues {
   /// Opens one of Pochical's invitations on its join screen, as reading
   /// its link does.
   @Entry var openInvite = OpenInviteAction { _ in }
-  /// Opens a page of the グループ tab over the one showing.
+  /// Opens a group's page over the one showing.
   @Entry var openGroupRoute = OpenGroupRouteAction { _ in }
   /// The group whose photos its screens' faces are, for those that know a
   /// member's photo but not the group (MemberAvatar).
@@ -64,16 +64,19 @@ extension EnvironmentValues {
 struct GroupsScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.rootNavigator) private var navigator
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// The group open beside the rail, the first until one is picked.
   @Binding var openID: String?
+  /// The tab's pages over the group, never a chat: chats open over the
+  /// tabs.
+  @Binding var path: [GroupRoute]
   /// A chat a notification opened, shown once its group is.
   @Binding var openingChat: OpenedChat?
   /// Each group's unread lines that count.
   let unread: [String: Int]
   /// Opens the camera to read a group's QR code.
   let onScan: () -> Void
-  @State private var path: [GroupRoute] = []
   /// A group just made, whose メンバーを招待 opens over its hub once the
   /// group has come, as /design goes on to it.
   @State private var inviting: String?
@@ -102,7 +105,7 @@ struct GroupsScreen: View {
             } onShifts: { day in
               path.append(.shifts(open, day: day))
             } onChat: { thread, other in
-              path.append(.chat(open, thread: thread, with: other))
+              self.open(.chat(open, thread: thread, with: other))
             }
             .padding(.horizontal, 16)
           }
@@ -129,29 +132,16 @@ struct GroupsScreen: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .background(colors.backgroundBase)
       .navigationDestination(for: GroupRoute.self) { route in
-        // Pages show the group as it is now, renamed meanwhile or not.
-        let live = { (group: GroupRow) in groups.first { $0.id == group.id } ?? group }
-        switch route {
-        case .newGroup:
-          NewGroupPage { made in
-            openID = made
-            inviting = made
-            path.removeAll()
-            inviteMade()
-          }
-        case .invite(let group):
-          InvitePage(group: live(group))
-        case .shifts(let group, let day):
-          GroupShiftsPage(group: live(group), day: day)
-        case .chat(let group, let thread, let other, let sharing):
-          ChatScreen(place: .group(live(group)), threadID: thread, otherID: other, sharing: sharing)
-        case .settings(let group):
-          GroupSettingsPage(group: live(group)) {
-            path.append(.invite(group))
-          } onLeft: {
-            openID = nil
-            path.removeAll()
-          }
+        GroupPage(route: route) { group in
+          path.append(.invite(group))
+        } onLeft: {
+          openID = nil
+          path.removeAll()
+        } onMade: { made in
+          openID = made
+          inviting = made
+          path.removeAll()
+          inviteMade()
         }
       }
     }
@@ -194,14 +184,16 @@ struct GroupsScreen: View {
     let groupIDs: [String]
   }
 
-  /// Shows the chat a notification opened, over its group.
+  /// Shows the chat a notification opened, over its group and nothing
+  /// else.
   private func showOpeningChat() async {
     guard let chat = openingChat,
       let group = groups.first(where: { $0.id == chat.groupID })
     else { return }
     let me = await groupCalls.userID()
     let other = me.flatMap { otherIn(chat.threadID, me: $0) }
-    path = [.chat(group, thread: chat.threadID, with: other)]
+    path = []
+    navigator?.show([.group(.chat(group, thread: chat.threadID, with: other))])
     openingChat = nil
   }
 
@@ -219,21 +211,45 @@ struct GroupsScreen: View {
 }
 
 extension GroupsScreen {
-  /// Goes to `route`; a chat already open below, as when its day is
-  /// shared from みんなのシフト opened from it, is gone back to rather
-  /// than opened twice.
+  /// Goes to `route`: a chat over the tabs, any other page in the tab.
   fileprivate func open(_ route: GroupRoute) {
-    if case .chat(let group, let thread, _, _) = route,
-      let below = path.firstIndex(where: {
-        if case .chat(let other, let otherThread, _, _) = $0 {
-          return other.id == group.id && otherThread == thread
-        }
-        return false
-      })
-    {
-      path.removeSubrange(below...)
+    if case .chat = route {
+      navigator?.open(.group(route))
+    } else {
+      path.append(route)
     }
-    path.append(route)
+  }
+}
+
+/// One of a group's pages, showing the group as it is now, renamed
+/// meanwhile or not: in the グループ tab, or over the tabs from a chat.
+struct GroupPage: View {
+  @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
+  let route: GroupRoute
+  /// メンバーを招待, from the group's settings.
+  let onInvite: (GroupRow) -> Void
+  /// The person has left the group, from its settings.
+  let onLeft: () -> Void
+  /// A group has been made, its id.
+  var onMade: (String) -> Void = { _ in }
+
+  var body: some View {
+    switch route {
+    case .newGroup:
+      NewGroupPage(onMade: onMade)
+    case .invite(let group):
+      InvitePage(group: live(group))
+    case .shifts(let group, let day):
+      GroupShiftsPage(group: live(group), day: day)
+    case .chat(let group, let thread, let other, let sharing):
+      ChatScreen(place: .group(live(group)), threadID: thread, otherID: other, sharing: sharing)
+    case .settings(let group):
+      GroupSettingsPage(group: live(group)) { onInvite(group) } onLeft: { onLeft() }
+    }
+  }
+
+  private func live(_ group: GroupRow) -> GroupRow {
+    groups.first { $0.id == group.id } ?? group
   }
 }
 
@@ -246,6 +262,15 @@ enum GroupRoute: Hashable {
   /// One of the group's chats: 全体チャット, or a one-to-one chat with the
   /// member `with`; `sharing`, a day brought from みんなのシフト to share.
   case chat(GroupRow, thread: String, with: String?, sharing: Day? = nil)
+
+  /// The group the page is of; none for a new one.
+  var group: GroupRow? {
+    switch self {
+    case .newGroup: nil
+    case .invite(let group), .shifts(let group, _), .settings(let group), .chat(let group, _, _, _):
+      group
+    }
+  }
 }
 
 /// No group yet: a sample of 一覧, the table a group is mostly read in,

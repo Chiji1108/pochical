@@ -31,7 +31,6 @@ struct ChatPhotosScreen: View {
       .background(colors.backgroundBase)
       .navigationTitle("写真")
       .navigationBarTitleDisplayMode(.inline)
-      .toolbarVisibility(.hidden, for: .tabBar)
       .task {
         await pager.follow { edit in
           edit(&run)

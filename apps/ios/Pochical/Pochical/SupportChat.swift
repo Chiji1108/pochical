@@ -18,7 +18,7 @@ struct SupportRow: View {
     ) {
       AppIconChoice.current.image(size: 28)
     } onOpen: {
-      // 設定 opens it, as it does for a tapped answer's notification.
+      // Over the tabs, as a tapped answer's notification opens it.
       Notifications.shared.openingSupport = true
     }
     .listRowInsets(EdgeInsets())
