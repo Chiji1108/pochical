@@ -1156,6 +1156,12 @@ private final class LineCell: UICollectionViewCell {
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
+  /// None: the lines keep clear of the header and the composer by their
+  /// own insets. A cell under either would be in the screen's safe area,
+  /// in which its hosted line is laid out apart from how it was measured,
+  /// shifted in the cell, over the lines next to it.
+  override var safeAreaInsets: UIEdgeInsets { .zero }
+
   /// Its item's height at the width the layout gives it, measured apart
   /// from the cell (ChatLinesModel.height).
   override func preferredLayoutAttributesFitting(_ attributes: UICollectionViewLayoutAttributes)
