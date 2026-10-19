@@ -119,8 +119,6 @@ struct ChatComposer: View {
   private var sendSize: CGFloat { buttonSize - 2 * Self.sendInset }
   private static let sendInset: CGFloat = 4
   private static let mostScale = CGFloat(Chat.controlsMostScale)
-  /// How long the writing pauses before what is written is kept.
-  private static let keepPause = Duration.milliseconds(500)
 
   var body: some View {
     let editing = draft.editing
@@ -164,11 +162,12 @@ struct ChatComposer: View {
       }
     }
     .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }
-    // The draft is kept as it changes, once the writing pauses; an emptied
+    // The draft is kept as it changes, once the writing pauses
+    // (chatRules.draftSettleMs); an emptied
     // composer at once, so words sent are never a draft again.
     .task(id: draft.kept) {
       if !draft.text.isEmpty {
-        do { try await Task.sleep(for: Self.keepPause) } catch { return }
+        do { try await Task.sleep(for: .milliseconds(Chat.draftSettleMs)) } catch { return }
       }
       keepDraft()
     }

@@ -6,6 +6,7 @@
     "controlsMostScale": 1.5,
     "dayCardColumns": 6,
     "dayCardRows": 7,
+    "draftSettleMs": 500,
     "floatingDayMs": 1500,
     "foldLines": 10,
     "largeEmojiMax": 3,

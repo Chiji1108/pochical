@@ -23,6 +23,10 @@ export const chatRules = {
   // A card of shared days in rows shows this many, a week, and ほか{n}日
   // under them.
   dayCardRows: 7,
+  // How long, in milliseconds, the writing in a composer must pause before
+  // it is kept as the chat's draft, so a draft is not written at every
+  // letter (an emptied composer is kept at once).
+  draftSettleMs: 500,
   // How long, in milliseconds, the day floating over the lines stays once
   // the chat stops scrolling, as LINE shows it while scrolling back.
   floatingDayMs: 1500,
