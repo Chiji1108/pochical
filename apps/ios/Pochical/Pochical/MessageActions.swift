@@ -107,8 +107,8 @@ struct KeyboardMove: Equatable {
 @MainActor @Observable final class LineSpot {
   var frame: CGRect
   /// Its bubble is lifted out of its line, which draws it again as the
-  /// menu closes.
-  @ObservationIgnored private var lifted = true
+  /// menu closes; or no longer, its line gone from the chat meanwhile.
+  private(set) var lifted = true
   @ObservationIgnored private var onBack: (() -> Void)?
 
   init(frame: CGRect) {
@@ -117,6 +117,7 @@ struct KeyboardMove: Equatable {
 
   /// Its line draws its bubble again, or no longer can, gone from the chat.
   func back() {
+    guard lifted else { return }
     lifted = false
     let onBack = onBack
     self.onBack = nil
@@ -337,6 +338,15 @@ struct MessageActionsOverlay: View {
     .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidChangeNotification)) {
       _ in close(nil)
     }
+    // Its line gone from the chat (taken back, its cell let go, the chat
+    // closed), it goes too, as it does when the app leaves the screen, as
+    // the system's menus do.
+    .onChange(of: request.spot.lifted) { _, lifted in
+      if !lifted { close(nil) }
+    }
+    .onReceive(
+      NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)
+    ) { _ in close(nil) }
     .onChange(of: request.finger?.lifted) { _, lifted in
       // Lifted over nothing, or held still where the menu came to it, it
       // stays open for a tap, as a system menu does.

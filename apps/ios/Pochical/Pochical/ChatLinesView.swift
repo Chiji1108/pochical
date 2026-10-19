@@ -92,6 +92,15 @@ enum ReplySwipe {
     followed.removeAll { $0.spot === spot }
   }
 
+  /// The cell no longer draws its line, given another or gone from the
+  /// screen with the chat: its open menus' bubbles are back, as far as
+  /// they go, whatever SwiftUI still tells the line.
+  fileprivate func letGo() {
+    let spots = followed.map(\.spot)
+    followed = []
+    for spot in spots { spot.back() }
+  }
+
   /// The cell has moved on the screen.
   fileprivate func moved() {
     for (spot, frame) in followed {
@@ -130,7 +139,15 @@ struct LinesRow: Equatable {
   /// Each item's look, as last laid out.
   var looks: [String: AnyHashable] = [:]
   /// Each item's height as measured, at its look and the width it had.
-  private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:]
+  private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:] {
+    didSet {
+      typicalHeight =
+        heights.isEmpty ? nil : heights.values.reduce(0) { $0 + $1.height } / CGFloat(heights.count)
+    }
+  }
+  /// The items measured, on average: how tall an item not yet measured is
+  /// taken to be, as close as a guess gets before it is drawn.
+  private(set) var typicalHeight: CGFloat?
   /// What each item's words take to draw, at its look (LineDrawing), for
   /// the lines most recently drawn or measured.
   private let drawings = {
@@ -512,14 +529,14 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     return true
   }
 
-  /// Lines new to `new` stand above the first line it keeps from `old`,
-  /// the spinner over the earlier lines aside.
+  /// Lines new to `new` stand above the first line it keeps from `old`:
+  /// lines alone, as the day over them and the spinner over the earlier
+  /// lines stay at the top of both.
   private func cameAbove(_ old: [String], in new: [String]) -> Bool {
-    let lines = old.filter { $0 != ChatItemID.earlier }
-    guard let kept = lines.first(where: new.contains), let at = new.firstIndex(of: kept) else {
-      return false
-    }
-    return new[..<at].contains { $0 != ChatItemID.earlier && !old.contains($0) }
+    guard let kept = old.first(where: { ChatItemID.isLine($0) && new.contains($0) }),
+      let at = new.firstIndex(of: kept)
+    else { return false }
+    return new[..<at].contains { ChatItemID.isLine($0) && !old.contains($0) }
   }
 
   /// The items new to `new` below the last line it keeps from `old`:
@@ -553,14 +570,17 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   }
 
   /// An item's height once measured, so the layout puts it where it goes
-  /// before its cell is drawn; each still takes its height from its cell
-  /// (LineCell), which ChatLayout asks by index paths that may be the
-  /// update's before or after.
+  /// before its cell is drawn, and the items measured on average before
+  /// then: a page coming in above is laid out near its own height, rather
+  /// than at ChatLayout's 40pt each, and its lines growing to theirs as
+  /// they show move the scroll by a little each, not by a screen. Each
+  /// still takes its height from its cell (LineCell), which ChatLayout
+  /// asks by index paths that may be the update's before or after.
   func sizeForItem(_ chatLayout: CollectionViewChatLayout, at indexPath: IndexPath) -> ItemSize {
     let width = chatLayout.layoutFrame.width
-    guard indexPath.item < ids.count,
-      let height = model.knownHeight(of: ids[indexPath.item], width: width)
-    else { return .auto }
+    let known =
+      indexPath.item < ids.count ? model.knownHeight(of: ids[indexPath.item], width: width) : nil
+    guard let height = known ?? model.typicalHeight else { return .auto }
     return .estimated(CGSize(width: width, height: height))
   }
 
@@ -692,11 +712,16 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// Changed in it, the room would be laid out anew in it, and UIKit draw
   /// every line again, fading in at its new place over the one fading out
   /// at the old, as lines too few to fill the room stand at its foot.
+  /// Not while the person scrolls them, as when their drag pulls the
+  /// keyboard down: the scroll is theirs, and their drag would set it
+  /// back each frame from where it began, the lines going to and fro and
+  /// their cells made anew, faces and all (ChatLayout's Example leaves it
+  /// to them too).
   private func keepingLinesStill(_ change: () -> Void) {
     UIView.performWithoutAnimation {
       let seen = layout.getContentOffsetSnapshot(from: .top)
       change()
-      if let seen { layout.restoreContentOffset(with: seen) }
+      if let seen, !userScrolling { layout.restoreContentOffset(with: seen) }
     }
   }
 
@@ -768,12 +793,11 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   func show(_ id: String, at place: LinePlace, animated: Bool, then: (() -> Void)?) {
     let asked = Showing(id: id, place: place, animated: animated, then: then)
-    // Not yet laid out, or lines still going in: once they are in place.
-    guard ready, updating == nil, ids.contains(id) else {
-      hold(hold.opening ? .opening(asked) : .waiting(asked))
-      return
-    }
-    go(to: asked)
+    // Held from now on, so it is told once there however it gets there,
+    // at once or gliding (hold(_:)); gone to now if laid out, else once
+    // it is and lines going in are in place.
+    hold(hold.opening ? .opening(asked) : .waiting(asked))
+    showWaiting()
   }
 
   /// To the item asked for, laid out now: gliding, or put there at once.
@@ -1298,6 +1322,16 @@ private final class LineCell: UICollectionViewCell {
   /// in which its hosted line is laid out apart from how it was measured,
   /// shifted in the cell, over the lines next to it.
   override var safeAreaInsets: UIEdgeInsets { .zero }
+
+  override func prepareForReuse() {
+    super.prepareForReuse()
+    space.letGo()
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    if window == nil { space.letGo() }
+  }
 
   /// Its item's height at the width the layout gives it, measured apart
   /// from the cell (ChatLinesModel.height).
