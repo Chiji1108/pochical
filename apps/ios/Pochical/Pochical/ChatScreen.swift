@@ -199,9 +199,14 @@ struct ChatScreen: View {
         seq: { seen in latestSeq(of: seen, in: listed) }, read: { read(to: $0) })
     }
     // Going on under the composer and the keyboard, which SwiftUI keeps
-    // at the chat's foot, the lines told how much of them is under there.
-    .ignoresSafeArea(edges: .bottom)
-    .onGeometryChange(for: CGFloat.self, of: { $0.safeAreaInsets.bottom }) { scroll.bottomRoom = $0 }
+    // at the chat's foot, and under the header and the pins at its top,
+    // the lines told how much of them is under each: never resized as
+    // those come and go, which would draw every line again for each step.
+    .ignoresSafeArea(edges: [.top, .bottom])
+    .onGeometryChange(for: EdgeInsets.self, of: \.safeAreaInsets) { insets in
+      scroll.topRoom = insets.top
+      scroll.bottomRoom = insets.bottom
+    }
     .safeAreaBar(edge: .bottom) { composer }
     .overlay {
       // A place's head says what the chat is for in its place.
