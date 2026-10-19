@@ -11,6 +11,7 @@ import {
   eq,
   gt,
   gte,
+  inArray,
   isNotNull,
   isNull,
   lt,
@@ -133,54 +134,139 @@ type MarkRow = typeof readMarks.$inferSelect;
 export const atLine = (threadId: string, seq: number): SQL | undefined =>
   and(eq(chatLines.threadId, threadId), eq(chatLines.seq, seq));
 
+/** A line by its chat and its place there. */
+type LinePlace = { threadId: string; seq: number };
+
+export const lineKey = (threadId: string, seq: bigint | number): string =>
+  `${threadId}\n${seq}`;
+
+/** The lines among `changes`. */
+const linesOf = (changes: Change[]): ChatLine[] =>
+  changes.flatMap(({ kind }) => (kind.case === "chatLine" ? [kind.value] : []));
+
 /**
- * A line's reactions: each emoji, in the order first chosen, with who
- * chose it in the order they did.
+ * The most seqs one query names beside its chat's id: Durable Objects'
+ * SQLite binds at most 100 values in a query.
  */
-export const reactionsOf = (
-  db: DrizzleSqliteDODatabase,
-  row: LineRow
-): { emoji: string; userIds: string[] }[] => {
-  const chosen = db
-    .select()
-    .from(chatReactions)
-    .where(
-      and(
-        eq(chatReactions.threadId, row.threadId),
-        eq(chatReactions.seq, row.seq)
-      )
-    )
-    .orderBy(asc(chatReactions.madeCursor))
-    .all();
-  const byEmoji = new Map<string, string[]>();
-  for (const { emoji, userId } of chosen) {
-    byEmoji.set(emoji, [...(byEmoji.get(emoji) ?? []), userId]);
+const SEQS_PER_QUERY = 99;
+
+/** The lines by chat, in runs of seqs one query may name. */
+const seqRuns = (
+  lines: LinePlace[]
+): { threadId: string; seqs: number[] }[] => {
+  const byThread = new Map<string, Set<number>>();
+  for (const { threadId, seq } of lines) {
+    byThread.set(threadId, (byThread.get(threadId) ?? new Set()).add(seq));
   }
-  return [...byEmoji].map(([emoji, userIds]) => ({ emoji, userIds }));
+  return [...byThread].flatMap(([threadId, all]) => {
+    const seqs = [...all];
+    return Array.from(
+      { length: Math.ceil(seqs.length / SEQS_PER_QUERY) },
+      (_, at) => ({
+        seqs: seqs.slice(at * SEQS_PER_QUERY, (at + 1) * SEQS_PER_QUERY),
+        threadId,
+      })
+    );
+  });
 };
 
-/** A poll's votes: each day someone can come, with who can, in order. */
-const votesOf = (
-  db: DrizzleSqliteDODatabase,
-  row: LineRow
-): { day: string; userIds: string[] }[] => {
-  if (!row.poll) {
-    return [];
+/** `rows` by their line, each line's in the order read. */
+const byLine = <Row extends LinePlace>(rows: Row[]): Map<string, Row[]> => {
+  const found = new Map<string, Row[]>();
+  for (const row of rows) {
+    const key = lineKey(row.threadId, row.seq);
+    found.set(key, [...(found.get(key) ?? []), row]);
   }
-  const said = db
-    .select()
-    .from(chatVotes)
-    .where(
-      and(eq(chatVotes.threadId, row.threadId), eq(chatVotes.seq, row.seq))
-    )
-    .orderBy(asc(chatVotes.madeCursor))
-    .all();
-  return (row.days ?? []).flatMap((day) => {
-    const userIds = said
-      .filter((vote) => vote.day === day)
-      .map((vote) => vote.userId);
-    return userIds.length === 0 ? [] : [{ day, userIds }];
-  });
+  return found;
+};
+
+/** Who chose what, grouped by `pick` in the order first chosen. */
+const grouped = <Row extends { userId: string }>(
+  rows: Row[],
+  pick: (row: Row) => string
+): Map<string, string[]> => {
+  const by = new Map<string, string[]>();
+  for (const row of rows) {
+    by.set(pick(row), [...(by.get(pick(row)) ?? []), row.userId]);
+  }
+  return by;
+};
+
+/**
+ * Each of the lines' reactions, by line (lineKey): each emoji, in the
+ * order first chosen, with who chose it in the order they did. Read a run
+ * of lines at a time, not a query a line.
+ */
+export const reactionsOn = (
+  db: DrizzleSqliteDODatabase,
+  lines: LinePlace[]
+): Map<string, { emoji: string; userIds: string[] }[]> => {
+  const chosen = seqRuns(lines).flatMap(({ threadId, seqs }) =>
+    db
+      .select()
+      .from(chatReactions)
+      .where(
+        and(
+          eq(chatReactions.threadId, threadId),
+          inArray(chatReactions.seq, seqs)
+        )
+      )
+      .orderBy(asc(chatReactions.madeCursor))
+      .all()
+  );
+  return new Map(
+    [...byLine(chosen)].map(([key, rows]) => [
+      key,
+      [...grouped(rows, (row) => row.emoji)].map(([emoji, userIds]) => ({
+        emoji,
+        userIds,
+      })),
+    ])
+  );
+};
+
+/**
+ * Each of the polls' votes, by line (lineKey): who said they can come on
+ * which of its days, in the order they did; read as reactionsOn reads.
+ */
+const votesOn = (
+  db: DrizzleSqliteDODatabase,
+  rows: LineRow[]
+): Map<string, Map<string, string[]>> => {
+  const said = seqRuns(rows.filter((row) => row.poll)).flatMap(
+    ({ threadId, seqs }) =>
+      db
+        .select()
+        .from(chatVotes)
+        .where(
+          and(eq(chatVotes.threadId, threadId), inArray(chatVotes.seq, seqs))
+        )
+        .orderBy(asc(chatVotes.madeCursor))
+        .all()
+  );
+  return new Map(
+    [...byLine(said)].map(([key, votes]) => [
+      key,
+      grouped(votes, (vote) => vote.day),
+    ])
+  );
+};
+
+/** The lines' reactions and a poll's votes, read for all of them at once. */
+const onLines = (db: DrizzleSqliteDODatabase, rows: LineRow[]) => {
+  const reactions = reactionsOn(db, rows);
+  const votes = votesOn(db, rows);
+  return (row: LineRow) => {
+    const key = lineKey(row.threadId, row.seq);
+    const voters = votes.get(key);
+    return {
+      reactions: reactions.get(key) ?? [],
+      votes: (row.days ?? []).flatMap((day) => {
+        const userIds = voters?.get(day) ?? [];
+        return userIds.length === 0 ? [] : [{ day, userIds }];
+      }),
+    };
+  };
 };
 
 /** The wire's kind of each notice kept. */
@@ -195,69 +281,64 @@ const noticeKinds = {
 /** What happened to the group, as a notice line keeps it. */
 type Notice = NonNullable<LineRow["notice"]>;
 
-const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
-  create(ChatLineSchema, {
-    album: row.album ?? "",
-    authorId: row.authorId,
-    days: row.days ?? [],
-    decided: row.decided ?? "",
-    edited: row.edited,
-    notice:
-      row.notice === null
-        ? undefined
-        : {
-            kind: noticeKinds[row.notice.kind],
-            markChanged: row.notice.markChanged ?? false,
-            name: row.notice.name ?? "",
-            subjectId: row.notice.subjectId ?? "",
-          },
-    opId: row.opId,
-    photo:
-      row.photo === null
-        ? undefined
-        : { ...row.photo, thumbHash: sentThumbHash(row.photo.thumbHash) },
-    pinnedOrder: BigInt(row.pinnedAt ?? 0),
-    poll: row.poll,
-    preview: row.preview ?? undefined,
-    reactions: reactionsOf(db, row),
-    replyTo: BigInt(row.replyTo ?? 0),
-    sentAtMs: BigInt(row.sentAt.getTime()),
-    seq: BigInt(row.seq),
-    text: row.text,
-    threadId: row.threadId,
-    unsent: row.unsent,
-    votes: votesOf(db, row),
-  });
-
-const chatLineChange = (db: DrizzleSqliteDODatabase, row: LineRow): Change =>
+const lineChange = (
+  row: LineRow,
+  { reactions, votes }: ReturnType<ReturnType<typeof onLines>>
+): Change =>
   create(ChangeSchema, {
     cursor: BigInt(row.cursor),
-    kind: { case: "chatLine", value: lineOf(db, row) },
+    kind: {
+      case: "chatLine",
+      value: create(ChatLineSchema, {
+        album: row.album ?? "",
+        authorId: row.authorId,
+        days: row.days ?? [],
+        decided: row.decided ?? "",
+        edited: row.edited,
+        notice:
+          row.notice === null
+            ? undefined
+            : {
+                kind: noticeKinds[row.notice.kind],
+                markChanged: row.notice.markChanged ?? false,
+                name: row.notice.name ?? "",
+                subjectId: row.notice.subjectId ?? "",
+              },
+        opId: row.opId,
+        photo:
+          row.photo === null
+            ? undefined
+            : { ...row.photo, thumbHash: sentThumbHash(row.photo.thumbHash) },
+        pinnedOrder: BigInt(row.pinnedAt ?? 0),
+        poll: row.poll,
+        preview: row.preview ?? undefined,
+        reactions,
+        replyTo: BigInt(row.replyTo ?? 0),
+        sentAtMs: BigInt(row.sentAt.getTime()),
+        seq: BigInt(row.seq),
+        text: row.text,
+        threadId: row.threadId,
+        unsent: row.unsent,
+        votes,
+      }),
+    },
   });
 
-/**
- * A line's change as `userId` gets it: a one-to-one chat's line from
- * someone they had blocked when it was sent comes without its content,
- * marked hidden, so their device keeps its place and shows nothing.
- */
-export const forReader = (
+/** The lines as changes, what is on them read for all of them at once. */
+export const chatLineChanges = (
   db: DrizzleSqliteDODatabase,
-  change: Change,
-  userId: string
-): Change => {
-  if (change.kind.case !== "chatLine") {
-    return change;
-  }
-  const line = change.kind.value;
-  const hidden = db
-    .select({ hiddenFrom: chatLines.hiddenFrom })
-    .from(chatLines)
-    .where(atLine(line.threadId, Number(line.seq)))
-    .get()?.hiddenFrom;
-  if (hidden !== userId) {
-    return change;
-  }
-  return create(ChangeSchema, {
+  rows: LineRow[]
+): Change[] => {
+  const on = onLines(db, rows);
+  return rows.map((row) => lineChange(row, on(row)));
+};
+
+const chatLineChange = (db: DrizzleSqliteDODatabase, row: LineRow): Change =>
+  lineChange(row, onLines(db, [row])(row));
+
+/** A line's change without its content, marked hidden. */
+const hiddenChange = (change: Change, line: ChatLine): Change =>
+  create(ChangeSchema, {
     cursor: change.cursor,
     kind: {
       case: "chatLine",
@@ -271,6 +352,60 @@ export const forReader = (
       }),
     },
   });
+
+/**
+ * How each reader gets `changes`: a one-to-one chat's line from someone
+ * they had blocked when it was sent comes without its content, marked
+ * hidden, so their device keeps its place and shows nothing. Whom each
+ * line is hidden from is read once for all the changes, not per reader.
+ */
+export const readerView = (
+  db: DrizzleSqliteDODatabase,
+  changes: Change[]
+): ((change: Change, userId: string) => Change) => {
+  const places = linesOf(changes).map(({ threadId, seq }) => ({
+    seq: Number(seq),
+    threadId,
+  }));
+  const hiddenFrom = new Map(
+    seqRuns(places).flatMap(({ threadId, seqs }) =>
+      db
+        .select({
+          hiddenFrom: chatLines.hiddenFrom,
+          seq: chatLines.seq,
+          threadId: chatLines.threadId,
+        })
+        .from(chatLines)
+        .where(
+          and(
+            eq(chatLines.threadId, threadId),
+            inArray(chatLines.seq, seqs),
+            isNotNull(chatLines.hiddenFrom)
+          )
+        )
+        .all()
+        .map((row) => [lineKey(row.threadId, row.seq), row.hiddenFrom])
+    )
+  );
+  return (change, userId) => {
+    if (change.kind.case !== "chatLine") {
+      return change;
+    }
+    const line = change.kind.value;
+    return hiddenFrom.get(lineKey(line.threadId, line.seq)) === userId
+      ? hiddenChange(change, line)
+      : change;
+  };
+};
+
+/** The changes as `userId` gets them (readerView). */
+const asReadBy = (
+  db: DrizzleSqliteDODatabase,
+  changes: Change[],
+  userId: string
+): Change[] => {
+  const view = readerView(db, changes);
+  return changes.map((change) => view(change, userId));
 };
 
 /** Whether `userId` has blocked `blockedId`, as their User DO told the group. */
@@ -456,12 +591,28 @@ const answers = (
   return line !== undefined && !line.unsent && line.hiddenFrom !== userId;
 };
 
-const lineKey = (threadId: string, seq: bigint | number): string =>
-  `${threadId}\n${seq}`;
-
-/** The lines among `changes`. */
-const linesOf = (changes: Change[]): ChatLine[] =>
-  changes.flatMap(({ kind }) => (kind.case === "chatLine" ? [kind.value] : []));
+/**
+ * The lines at `places` there are, as lineAt reads one (no notices), in
+ * each chat's order: a run of lines a query, not a query a line.
+ */
+export const linesAt = (
+  db: DrizzleSqliteDODatabase,
+  places: LinePlace[]
+): LineRow[] =>
+  seqRuns(places).flatMap(({ threadId, seqs }) =>
+    db
+      .select()
+      .from(chatLines)
+      .where(
+        and(
+          eq(chatLines.threadId, threadId),
+          inArray(chatLines.seq, seqs),
+          isNull(chatLines.notice)
+        )
+      )
+      .orderBy(asc(chatLines.seq))
+      .all()
+  );
 
 /**
  * The lines the replies among `lines` answer that are not among them,
@@ -475,18 +626,12 @@ export const answeredChanges = (
   const sent = new Set(
     lines.map(({ threadId, seq }) => lineKey(threadId, seq))
   );
-  const answered = new Map<string, LineRow>();
-  for (const { threadId, replyTo } of lines) {
-    const key = lineKey(threadId, replyTo);
-    if (replyTo === 0n || sent.has(key) || answered.has(key)) {
-      continue;
-    }
-    const row = lineAt(db, threadId, replyTo);
-    if (row !== undefined) {
-      answered.set(key, row);
-    }
-  }
-  return [...answered.values()].map((row) => chatLineChange(db, row));
+  const answered = lines.flatMap(({ threadId, replyTo }) =>
+    replyTo === 0n || sent.has(lineKey(threadId, replyTo))
+      ? []
+      : [{ seq: Number(replyTo), threadId }]
+  );
+  return chatLineChanges(db, linesAt(db, answered));
 };
 
 /**
@@ -1199,17 +1344,16 @@ export const eraseMemberChat = (
     }
     db.delete(table).where(eq(table.userId, userId)).run();
   }
-  for (const { seq, threadId } of touched.values()) {
-    const row = db
-      .update(chatLines)
-      .set({ cursor: nextCursor() })
-      .where(and(atLine(threadId, seq), eq(chatLines.unsent, false)))
-      .returning()
-      .get();
-    if (row !== undefined) {
-      changes.push(chatLineChange(db, row));
-    }
-  }
+  const moved = [...touched.values()].flatMap(
+    ({ seq, threadId }) =>
+      db
+        .update(chatLines)
+        .set({ cursor: nextCursor() })
+        .where(and(atLine(threadId, seq), eq(chatLines.unsent, false)))
+        .returning()
+        .get() ?? []
+  );
+  changes.push(...chatLineChanges(db, moved));
   db.delete(readMarks).where(eq(readMarks.userId, userId)).run();
   db.delete(chatRecalls).where(eq(chatRecalls.userId, userId)).run();
   db.delete(memberBlocks)
@@ -1257,8 +1401,8 @@ export const chatPage = (
   }
   const { atStart, rows } = pageRows(db, threadId, Number(beforeSeq));
   const asRead = (changes: Change[]): ChatLine[] =>
-    linesOf(changes.map((change) => forReader(db, change, userId)));
-  const lines = asRead(rows.map((row) => chatLineChange(db, row)));
+    linesOf(asReadBy(db, changes, userId));
+  const lines = asRead(chatLineChanges(db, rows));
   return { atStart, lines, quoted: asRead(answeredChanges(db, lines)) };
 };
 
@@ -1381,7 +1525,7 @@ export const chatChangesAfter = (
     .from(chatLines)
     .all()
     .filter(({ threadId }) => mayRead(threadId, userId));
-  const lines = threads.flatMap(({ threadId }) =>
+  const rows = threads.flatMap(({ threadId }) =>
     db
       .select()
       .from(chatLines)
@@ -1399,8 +1543,8 @@ export const chatChangesAfter = (
       )
       .orderBy(asc(chatLines.cursor))
       .all()
-      .map((row) => forReader(db, chatLineChange(db, row), userId))
   );
+  const lines = asReadBy(db, chatLineChanges(db, rows), userId);
   const marks = db
     .select()
     .from(readMarks)
@@ -1408,9 +1552,7 @@ export const chatChangesAfter = (
     .all()
     .filter(({ threadId }) => mayRead(threadId, userId))
     .map(readMarkChange);
-  const answered = answeredChanges(db, linesOf(lines)).map((change) =>
-    forReader(db, change, userId)
-  );
+  const answered = asReadBy(db, answeredChanges(db, linesOf(lines)), userId);
   return [...lines, ...answered, ...marks];
 };
 
@@ -1556,12 +1698,22 @@ export const alertOf = (
   };
 };
 
-/** Whether `userId` would hear of a line by `authorId`: not if they blocked them. */
-export const hearsFrom = (
+/**
+ * Who would not hear of a line by `authorId`, having blocked them: read
+ * once for all of a line's readers.
+ */
+export const blockersOf = (
   db: DrizzleSqliteDODatabase,
-  userId: string,
   authorId: string
-): boolean => !hasBlocked(db, userId, authorId);
+): Set<string> =>
+  new Set(
+    db
+      .select({ userId: memberBlocks.userId })
+      .from(memberBlocks)
+      .where(eq(memberBlocks.blockedId, authorId))
+      .all()
+      .map((row) => row.userId)
+  );
 
 /**
  * A line from the app at 全体チャット's end (spec/chat.md, Notices), written

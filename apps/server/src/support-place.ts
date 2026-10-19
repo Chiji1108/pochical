@@ -10,7 +10,13 @@ import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import { supportChats, supportSlack } from "./db/schema";
-import { GROUP_THREAD, lineAt, pageRows, reactionsOf } from "./group-chat";
+import {
+  GROUP_THREAD,
+  lineKey,
+  linesAt,
+  pageRows,
+  reactionsOn,
+} from "./group-chat";
 import {
   chatLines,
   logHead,
@@ -32,47 +38,65 @@ import type { SupportLine } from "./support-lines";
 
 type LineRow = typeof chatLines.$inferSelect;
 
-const lineOf = (
+/**
+ * The rows as the admin pages and Slack read them, their reactions read
+ * for all of them at once.
+ */
+const linesOfRows = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  row: LineRow
-): SupportLine => ({
-  device: row.device,
-  fromPochical: row.authorId === chatRules.pochicalMember,
-  photo:
-    row.photo === null
-      ? null
-      : { height: row.photo.height, id: row.photo.id, width: row.photo.width },
-  preview:
-    row.preview === null
-      ? null
-      : {
-          site: row.preview.site,
-          title: row.preview.title,
-          url: row.preview.url,
-        },
-  reactions: reactionsOf(db, row).map(({ emoji, userIds }) => ({
-    emoji,
-    mine: userIds.some((id) => id !== chatRules.pochicalMember),
-    support: userIds.includes(chatRules.pochicalMember),
-  })),
-  replyTo: row.replyTo,
-  sentAtMs: row.sentAt.getTime(),
-  seq: row.seq,
-  text: row.text,
-  unsent: row.unsent,
-  userId,
-});
-
-/** The line at `seq` of the chat a reply answers, if there is one. */
-const answeredLine = (
-  db: DrizzleSqliteDODatabase,
-  userId: string,
-  seq: number
-): SupportLine | null => {
-  const row = lineAt(db, GROUP_THREAD, BigInt(seq));
-  return row === undefined ? null : lineOf(db, userId, row);
+  rows: LineRow[]
+): SupportLine[] => {
+  const reactions = reactionsOn(db, rows);
+  return rows.map((row) => ({
+    device: row.device,
+    fromPochical: row.authorId === chatRules.pochicalMember,
+    photo:
+      row.photo === null
+        ? null
+        : {
+            height: row.photo.height,
+            id: row.photo.id,
+            width: row.photo.width,
+          },
+    preview:
+      row.preview === null
+        ? null
+        : {
+            site: row.preview.site,
+            title: row.preview.title,
+            url: row.preview.url,
+          },
+    reactions: (reactions.get(lineKey(row.threadId, row.seq)) ?? []).map(
+      ({ emoji, userIds }) => ({
+        emoji,
+        mine: userIds.some((id) => id !== chatRules.pochicalMember),
+        support: userIds.includes(chatRules.pochicalMember),
+      })
+    ),
+    replyTo: row.replyTo,
+    sentAtMs: row.sentAt.getTime(),
+    seq: row.seq,
+    text: row.text,
+    unsent: row.unsent,
+    userId,
+  }));
 };
+
+/** The lines at `seqs` of the chat, those there are. */
+const linesAtSeqs = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  seqs: number[]
+): SupportLine[] =>
+  linesOfRows(
+    db,
+    userId,
+    linesAt(
+      db,
+      seqs.map((seq) => ({ seq, threadId: GROUP_THREAD }))
+    )
+  );
 
 /**
  * A page of the chat for the admin pages: up to chatRules.pageSize lines
@@ -86,15 +110,15 @@ export const supportPage = (
   beforeSeq: number
 ): { lines: SupportLine[]; quoted: SupportLine[]; atStart: boolean } => {
   const { atStart, rows } = pageRows(db, GROUP_THREAD, beforeSeq);
-  const lines = rows.map((row) => lineOf(db, userId, row));
+  const lines = linesOfRows(db, userId, rows);
   const first = lines[0]?.seq ?? beforeSeq;
-  const quoted = [
-    ...new Set(
-      lines.flatMap(({ replyTo }) =>
-        replyTo !== null && replyTo < first ? [replyTo] : []
-      )
-    ),
-  ].flatMap((seq) => answeredLine(db, userId, seq) ?? []);
+  const quoted = linesAtSeqs(
+    db,
+    userId,
+    lines.flatMap(({ replyTo }) =>
+      replyTo !== null && replyTo < first ? [replyTo] : []
+    )
+  );
   return { atStart, lines, quoted };
 };
 
@@ -133,7 +157,10 @@ const indexRow = (db: DrizzleSqliteDODatabase, userId: string) => {
         )
       )
       .get()?.n ?? 0;
-  const line = lineOf(db, userId, latest);
+  const [line] = linesOfRows(db, userId, [latest]);
+  if (line === undefined) {
+    return undefined;
+  }
   return {
     lastAt: new Date(line.sentAtMs),
     lastFromPochical: line.fromPochical,
@@ -210,10 +237,8 @@ const relayLine = async (
     toldUnsent: false,
   };
   if (kept === undefined && !line.unsent) {
-    const repliedTo =
-      line.replyTo === null
-        ? null
-        : answeredLine(db, line.userId, line.replyTo);
+    const [repliedTo = null] =
+      line.replyTo === null ? [] : linesAtSeqs(db, line.userId, [line.replyTo]);
     // Past the user's limit their lines stay in the chat and on the admin
     // pages, but are not posted, so no one floods the channel.
     const flooding =
@@ -379,9 +404,9 @@ const tellSince = async (
     )
     .orderBy(asc(chatLines.seq))
     .all();
-  for (const row of changed) {
+  for (const line of linesOfRows(db, userId, changed)) {
     // oxlint-disable-next-line no-await-in-loop -- in the chat's order
-    await relayLine(env, db, lineOf(db, userId, row));
+    await relayLine(env, db, line);
   }
 };
 
