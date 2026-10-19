@@ -37,22 +37,18 @@ func reactionPeople(_ reactions: [LineReaction], nameOf: (String) -> String) -> 
   }.joined(separator: "。")
 }
 
-/// Opens a line's reactions and menu from VoiceOver, as the long press
-/// does from where its bubble is: set by the bubble, which knows that.
-@MainActor final class MenuOpener {
-  var open: (() -> Void)?
-}
+/// VoiceOver asking a line, or one of its album's photos, to open its
+/// reactions and menu, as the long press does from where its bubble is:
+/// a value the bubble watches. A closure the bubble left with the line
+/// held the bubble, and through it the line, so neither ever went, nor
+/// the chat screen its environment held.
+struct MenuAsk: Equatable {
+  let lineID: String
+  /// Each ask its own, so asking again opens it again.
+  private let id = UUID()
 
-/// A MenuOpener for each of a line's parts held on their own: an album's
-/// photos, by their lines' opIDs.
-@MainActor final class MenuOpeners {
-  private var each: [String: MenuOpener] = [:]
-
-  func callAsFunction(_ lineID: String) -> MenuOpener {
-    if let opener = each[lineID] { return opener }
-    let opener = MenuOpener()
-    each[lineID] = opener
-    return opener
+  init(_ lineID: String) {
+    self.lineID = lineID
   }
 }
 

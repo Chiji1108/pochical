@@ -352,6 +352,8 @@ struct ChatScreen: View {
       await open()
       await hearReader()
     }
+    // The chat is read while the screen is shown, and stops as it goes.
+    .task { await feed.follow() }
     // The socket's status, said once it has not been current for
     // statusShownAfterMs, and gone as soon as it is.
     .task(id: place.id) {
