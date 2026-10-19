@@ -13,6 +13,7 @@ import { ChatListRow } from "./design-chat-parts";
 import { ChatScreen } from "./design-chat-screen";
 import { chatAvatarSize } from "./design-chat-style";
 import { lastLineOf } from "./design-chat-summary";
+import type { ListedLine } from "./design-chat-summary";
 import type { Member, Profile } from "./design-group-data";
 import { List } from "./design-list";
 
@@ -65,7 +66,7 @@ export function SupportRow({ onOpen }: { onOpen: () => void }) {
   const last = lines.at(-1);
   // What was being written, as the lines are now (spec/chat.md, Drafts).
   const kept = draft && keptDraft(draft, lines);
-  let preview = "ほしい機能や不具合のこと、気軽にどうぞ";
+  let preview: ListedLine = "ほしい機能や不具合のこと、気軽にどうぞ";
   if (last) {
     preview = lastLineOf(
       last,

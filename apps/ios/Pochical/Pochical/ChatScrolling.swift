@@ -24,6 +24,9 @@ final class ChatScroll {
   /// keyboard: read by the lines alone, so the chat is not drawn again for
   /// every step of the keyboard pulled down.
   var bottomRoom: CGFloat = 0
+  /// What is over the lines at the chat's top, the header and the pins,
+  /// read by the lines alone as the bottom's is.
+  var topRoom: CGFloat = 0
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines

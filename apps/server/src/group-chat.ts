@@ -44,6 +44,7 @@ import type {
   ChatDecide,
   ChatPin,
   ChatReact,
+  ChatRecall,
   ChatSend,
   ChatVote,
 } from "./gen/pochical/v1/sync_pb";
@@ -52,6 +53,7 @@ import {
   memberBlocks,
   chatPhotos,
   chatReactions,
+  chatRecalls,
   chatVotes,
   readMarks,
 } from "./group-do-schema";
@@ -352,6 +354,20 @@ const ALBUM_NAME = /^[\u0021-\u007E]{1,64}$/u;
 const fitsPhotoSize = (side: number): boolean =>
   side >= 1 && side <= chatRules.photoMaxEdge;
 
+/** Whether `photoId` is one `userId` uploaded and has not sent. */
+const ownUnsentPhoto = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  photoId: string
+): boolean => {
+  const uploaded = db
+    .select()
+    .from(chatPhotos)
+    .where(eq(chatPhotos.id, photoId))
+    .get();
+  return uploaded?.userId === userId && !uploaded.sent;
+};
+
 /**
  * A photo line: the sender's own photo, uploaded and not sent before,
  * with no words or days.
@@ -364,14 +380,8 @@ const fitsPhoto = (
   if (photo === undefined || text !== "" || days.length > 0 || poll) {
     return false;
   }
-  const uploaded = db
-    .select()
-    .from(chatPhotos)
-    .where(eq(chatPhotos.id, photo.id))
-    .get();
   return (
-    uploaded?.userId === userId &&
-    !uploaded.sent &&
+    ownUnsentPhoto(db, userId, photo.id) &&
     fitsPhotoSize(photo.width) &&
     fitsPhotoSize(photo.height) &&
     fitsThumbHash(photo.thumbHash) &&
@@ -608,6 +618,7 @@ const placeTakes = (rules: ChatPlaceRules, kind: ChatEdit["kind"]): boolean => {
     }
     case "react":
     case "unsend":
+    case "recall":
     case "read":
     case undefined: {
       return true;
@@ -761,6 +772,39 @@ const takeOwnLine = (
   return kind.case === "unsend"
     ? unsendLine(db, line, cursor)
     : changeWords(db, line, kind.value, cursor);
+};
+
+/**
+ * One of the member's lines taken back by its send's op_id, as they took
+ * it back while it waited on their device: taken back as 送信取消 takes
+ * one when the group has it, and else its send is kept from coming after
+ * all. Nothing for someone else's line, or one taken back already.
+ */
+const takeRecall = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  { threadId, sendOpId }: ChatRecall,
+  cursor: number
+): Taken => {
+  if (!isId(sendOpId)) {
+    return {};
+  }
+  const line = db
+    .select()
+    .from(chatLines)
+    .where(eq(chatLines.opId, sendOpId))
+    .get();
+  if (line === undefined) {
+    db.insert(chatRecalls)
+      .values({ opId: sendOpId, userId })
+      .onConflictDoNothing()
+      .run();
+    return {};
+  }
+  if (line.authorId !== userId || line.threadId !== threadId || line.unsent) {
+    return {};
+  }
+  return unsendLine(db, line, cursor);
 };
 
 /**
@@ -921,7 +965,10 @@ type Taken = {
   refused?: Change;
 };
 
-/** A new line at the chat's end, when it fits and was not taken before. */
+/**
+ * A new line at the chat's end, when it fits and was neither taken before
+ * nor taken back by its op_id (`takeRecall`).
+ */
 const takeSend = (
   db: DrizzleSqliteDODatabase,
   userId: string,
@@ -935,10 +982,19 @@ const takeSend = (
     .from(chatLines)
     .where(eq(chatLines.opId, opId))
     .get();
+  const recalled = db
+    .select({ opId: chatRecalls.opId })
+    .from(chatRecalls)
+    .where(and(eq(chatRecalls.userId, userId), eq(chatRecalls.opId, opId)))
+    .get();
   const { photo, replyTo } = send;
   const fits =
     photo === undefined ? fitsSend(send) : fitsPhoto(db, userId, send);
-  if (taken !== undefined || !fits) {
+  if (taken === undefined && recalled !== undefined && photo !== undefined) {
+    // A photo taken back before its send came goes, as a line's does.
+    return ownUnsentPhoto(db, userId, photo.id) ? { photoGone: photo.id } : {};
+  }
+  if (taken !== undefined || recalled !== undefined || !fits) {
     return {};
   }
   if (photo !== undefined) {
@@ -1035,8 +1091,9 @@ export const addPreview = (
 /**
  * A member's edit of a chat, taken at `cursor` when it is theirs to make:
  * a new line at the chat's end, new words or a taking back of one of
- * their own lines, or their read mark moved forward. A send taken before
- * (the same op_id) changes nothing. A change or unsend that is not theirs,
+ * their own lines (by its seq, or by its send's op_id), or their read mark
+ * moved forward. A send taken before (the same op_id), or taken back
+ * before it came, changes nothing. A change or unsend that is not theirs,
  * or does not fit, gives back the line as the group holds it, so the
  * device puts it right. What the chat's place does not take
  * (`placeTakes`) is dropped.
@@ -1062,6 +1119,9 @@ export const takeChatEdit = (
     case "change":
     case "unsend": {
       return takeOwnLine(db, userId, kind, cursor);
+    }
+    case "recall": {
+      return takeRecall(db, userId, kind.value, cursor);
     }
     case "react": {
       return takeReaction(db, userId, kind.value, cursor);
@@ -1096,7 +1156,8 @@ export const takeChatEdit = (
  * protocol.md, Deleting an account): each line they wrote taken back, as
  * 送信取消 takes one, their photos with them; their reactions and votes
  * taken off the lines they were on, which move to new cursors; and their
- * read marks and blocks dropped. The changes, and the photos to delete.
+ * read marks, blocks and sends taken back dropped. The changes, and the
+ * photos to delete.
  */
 export const eraseMemberChat = (
   db: DrizzleSqliteDODatabase,
@@ -1150,6 +1211,7 @@ export const eraseMemberChat = (
     }
   }
   db.delete(readMarks).where(eq(readMarks.userId, userId)).run();
+  db.delete(chatRecalls).where(eq(chatRecalls.userId, userId)).run();
   db.delete(memberBlocks)
     .where(
       or(eq(memberBlocks.userId, userId), eq(memberBlocks.blockedId, userId))

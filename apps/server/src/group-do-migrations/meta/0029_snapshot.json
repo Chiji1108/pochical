@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9817831c-772f-413b-b577-7eb120855ee8",
+  "id": "928d47eb-3379-4e2f-b6ba-e0a1794c8850",
   "prevId": "7c3836f9-2d55-495b-ad3a-72b84fdf8f9a",
   "tables": {
     "chat_lines": {
@@ -278,6 +278,38 @@
             "emoji"
           ],
           "name": "chat_reactions_thread_id_seq_user_id_emoji_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "chat_recalls": {
+      "name": "chat_recalls",
+      "columns": {
+        "op_id": {
+          "name": "op_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "chat_recalls_user_id_op_id_pk": {
+          "columns": [
+            "user_id",
+            "op_id"
+          ],
+          "name": "chat_recalls_user_id_op_id_pk"
         }
       },
       "uniqueConstraints": {},
@@ -889,20 +921,6 @@
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
-        },
-        "posting_seq": {
-          "name": "posting_seq",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "posting_since": {
-          "name": "posting_since",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         }
       },

@@ -273,6 +273,18 @@ export const chatVotes = sqliteTable(
   ]
 );
 
+// The sends members took back (ChatRecall) before the group had their
+// line, by op_id: should one come after all, as from a socket that died
+// with it on the way, it is dropped.
+export const chatRecalls = sqliteTable(
+  "chat_recalls",
+  {
+    opId: text("op_id").notNull(),
+    userId: text("user_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.opId] })]
+);
+
 // Photos members have uploaded to the group's chats (the Worker notes each
 // as it stores it in R2), so a line can send only its uploader's own photo,
 // and only once.

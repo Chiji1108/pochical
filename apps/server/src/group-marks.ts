@@ -6,7 +6,7 @@ import { markIconGlyphs } from "@pochical/design/mark-icons";
 import type { GroupMark } from "./gen/pochical/v1/marks_pb";
 import { isId } from "./ids";
 import { hasPersonPhoto, personPhotoKey, sharePersonPhoto } from "./photos";
-import { characterCount, isEmoji } from "./text-limits";
+import { isEmoji, withinLimit } from "./text-limits";
 
 /**
  * A group's mark as the server keeps and sends it (proto GroupMark): one
@@ -52,8 +52,7 @@ export const requireMark = (mark: GroupMark | undefined): MarkValue => {
     (emoji === "" || isEmoji(emoji)) &&
     (icon === "" || isMarkIcon(icon)) &&
     (letter === "" ||
-      (letter.trim() !== "" &&
-        characterCount(letter) <= textLimits.groupMark)) &&
+      (letter.trim() !== "" && withinLimit(letter, textLimits.groupMark))) &&
     (photoId === "" || isId(photoId)) &&
     color < markColors.length;
   if (!fits) {

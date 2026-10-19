@@ -9,6 +9,13 @@ export const chatRow = {
   // 下書き： before a chat's draft, in the danger color, as Telegram
   // marks one.
   draft: css({ color: "danger.default" }),
+  // The red ! of a latest line not sent, as the line itself has it.
+  failed: css({
+    color: "danger.default",
+    display: "inline",
+    marginRight: "3px",
+    verticalAlign: "-2px",
+  }),
   meta: css({
     alignItems: "flex-end",
     display: "flex",

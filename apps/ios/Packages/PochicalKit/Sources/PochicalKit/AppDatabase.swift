@@ -95,5 +95,6 @@ var migrator: DatabaseMigrator {
   migrator.registerSupportDraft()
   migrator.registerChatAlbums()
   migrator.registerChatWentOut()
+  migrator.registerChatRecalls()
   return migrator
 }

@@ -170,4 +170,41 @@ describe("a group's photos", () => {
       )
       .toBeNull();
   });
+
+  it("deletes a photo whose send was taken back before it came", async () => {
+    const { groupId, maker } = await pair();
+    await photo("PUT", groupId, "early", maker, JPEG, "small");
+    await photo("PUT", groupId, "early", maker, JPEG);
+    const later = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    const before = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    sendFrame(later.socket, {
+      case: "chatEdits",
+      value: {
+        edits: [
+          {
+            kind: {
+              case: "recall",
+              value: { sendOpId: "a", threadId: "group" },
+            },
+            opId: "r",
+          },
+        ],
+      },
+    });
+    let acked = false;
+    while (!acked) {
+      // oxlint-disable-next-line no-await-in-loop -- frames come in order
+      const frame = await later.frames.next();
+      acked = frame.kind.case === "acked";
+    }
+    sendPhoto(before.socket, "a", "early");
+    await expect
+      .poll(async () => await env.PHOTOS.head(photoKey(groupId, "early")))
+      .toBeNull();
+    await expect
+      .poll(
+        async () => await env.PHOTOS.head(smallKey(photoKey(groupId, "early")))
+      )
+      .toBeNull();
+  });
 });
