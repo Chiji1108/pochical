@@ -667,128 +667,140 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   }
 }
 
+/// The line before another of the same chat, to find where the latest run
+/// of lines without a gap begins.
+private enum Earlier: AliasName {}
+
 extension Chats {
   /// The chat as its screen shows it: the lines on from the latest back to
   /// the first gap, the member's sends still waiting (and their changes
   /// and taking back already in place), and every read mark. The lines
   /// are those from `from` on; with none, as the chat opens: its latest
   /// page, back to `me`'s first unread line when that is earlier, at most
-  /// `Chat.openMax` lines.
+  /// `Chat.openMax` lines. Only the lines it returns are read.
   public static func state(
     of threadID: String, in groupID: String, me: String? = nil, from: Int64? = nil,
     db: Database
   ) throws -> ChatState {
-    let all = try ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
-      .order { $0.seq.desc() }.fetchAll(db)
-    var block: [ChatLineRow] = []
-    for row in all {
-      if let last = block.last, row.seq != last.seq - 1 {
-        break
-      }
-      block.append(row)
-    }
-    let taken = Set(all.map(\.opID))
-    var lines = Array(block.reversed())
-    var waiting: [WaitingLine] = []
-    var ownRead: Int64 = 0
+    let thread = ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
     let unpinned: Int64 = 0
-    var pinned = try ChatLineRow.where {
-      $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.pinnedOrder > unpinned
-        && !$0.unsent
-    }
-    .order { $0.pinnedOrder.desc() }.fetchAll(db).map { String($0.seq) }
+    var pinned = try thread.where { $0.pinnedOrder > unpinned && !$0.unsent }
+      .order { $0.pinnedOrder.desc() }.select(\.seq).fetchAll(db).map { String($0) }
+    var sends: [WaitingLine] = []
+    var ownRead: Int64 = 0
+    // The member's waiting edits to each line, in the order made.
+    var edits: [Int64: [Pochical_V1_ChatEdit.OneOf_Kind]] = [:]
     for (edit, row) in try waitingEdits(of: groupID, in: db) {
       switch edit.kind {
-      case .send(let send) where send.threadID == threadID && !taken.contains(edit.opID):
-        waiting.append(WaitingLine(send, opID: edit.opID, row: row))
+      case .send(let send) where send.threadID == threadID:
+        sends.append(WaitingLine(send, opID: edit.opID, row: row))
       case .change(let change) where change.threadID == threadID:
-        if let at = lines.firstIndex(where: { $0.seq == Int64(change.seq) }) {
-          lines[at].text = change.text
-          lines[at].edited = true
-          if !change.keepsPreview {
-            lines[at].preview = change.hasPreview ? LinePreview(change.preview) : nil
-          }
-        }
+        edits[Int64(change.seq), default: []].append(.change(change))
       case .unsend(let unsend) where unsend.threadID == threadID:
-        if let at = lines.firstIndex(where: { $0.seq == Int64(unsend.seq) }) {
-          lines[at].text = ""
-          lines[at].unsent = true
-          lines[at].reactions = []
-          lines[at].days = []
-          lines[at].votes = []
-          lines[at].decided = nil
-          lines[at].photo = nil
-          lines[at].preview = nil
-        }
+        edits[Int64(unsend.seq), default: []].append(.unsend(unsend))
         pinned = pinStep(pinned, unsend: String(unsend.seq)).pins
       case .pin(let pin) where pin.threadID == threadID:
         let id = String(pin.seq)
         pinned = (pin.on ? pinStep(pinned, pin: id) : pinStep(pinned, unpin: id)).pins
       case .vote(let vote) where vote.threadID == threadID:
-        if let me, let day = Day(vote.day),
-          let at = lines.firstIndex(where: { $0.seq == Int64(vote.seq) }), lines[at].decided == nil
-        {
-          lines[at].votes = lines[at].votes.voting(
-            day, by: me, on: vote.on, order: lines[at].days)
-        }
+        edits[Int64(vote.seq), default: []].append(.vote(vote))
       case .decide(let decide) where decide.threadID == threadID:
-        if let at = lines.firstIndex(where: { $0.seq == Int64(decide.seq) }) {
-          lines[at].decided = Day(decide.day)
-        }
+        edits[Int64(decide.seq), default: []].append(.decide(decide))
         // Settling pins the poll (spec/vectors/chat.json, pins).
         pinned = pinStep(pinned, pin: String(decide.seq)).pins
       case .react(let react) where react.threadID == threadID:
-        if let me, let at = lines.firstIndex(where: { $0.seq == Int64(react.seq) }) {
-          lines[at].reactions = lines[at].reactions.toggling(react.emoji, by: me, on: react.on)
-        }
+        edits[Int64(react.seq), default: []].append(.react(react))
       case .read(let read) where read.threadID == threadID:
         ownRead = max(ownRead, Int64(read.lastReadSeq))
       default: break
       }
     }
+    let shown = { (row: ChatLineRow) in showing(edits[row.seq] ?? [], on: row, me: me) }
+    let taken =
+      sends.isEmpty
+      ? [] : Set(try thread.where { $0.opID.in(sends.map(\.opID)) }.select(\.opID).fetchAll(db))
+    let waiting = sends.filter { !taken.contains($0.opID) }
+
+    let latest = try thread.order { $0.seq.desc() }.select(\.seq).limit(1).fetchOne(db)
+    let one: Int64 = 1
+    let heldFrom = try thread.where { line in
+      !ChatLineRow.as(Earlier.self).where {
+        $0.groupID.eq(line.groupID) && $0.threadID.eq(line.threadID) && $0.seq.eq(line.seq - one)
+      }
+      .exists()
+    }
+    .order { $0.seq.desc() }.select(\.seq).limit(1).fetchOne(db)
     let marks = try ReadMarkRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
       .fetchAll(db)
     let readMarks = Dictionary(marks.map { ($0.userID, $0.lastReadSeq) }, uniquingKeysWith: max)
     let start =
       from
-      ?? openingFrom(
-        latest: lines.last?.seq ?? 0, read: me.map { max(readMarks[$0] ?? 0, ownRead) })
-    // Pins find their lines among all of them, with what waits changed.
-    let overlaid = lines
-    let heldFrom = lines.first?.seq
-    let heldBefore = lines.prefix { $0.seq < start }.count
-    lines.removeAll { $0.seq < start }
+      ?? openingFrom(latest: latest ?? 0, read: me.map { max(readMarks[$0] ?? 0, ownRead) })
+    let laidFrom = max(heldFrom ?? start, start)
+    let lines = try thread.where { $0.seq >= laidFrom }.order(by: \.seq).fetchAll(db).map(shown)
     var state = ChatState(
       lines: lines, waiting: waiting, atStart: (lines.first?.seq ?? 1) <= 1,
       marks: readMarks, ownRead: ownRead)
-    state.heldBefore = heldBefore
+    // The run without a gap holds every seq from heldFrom to latest.
+    if let heldFrom, let latest {
+      state.heldBefore = Int(min(max(start - heldFrom, 0), latest - heldFrom + 1))
+    }
     state.heldFrom = heldFrom
+
     let pinnedSeqs = pinned.compactMap { Int64($0) }
-    let shown = Set(lines.map(\.seq))
-    let answered = Set(
-      (lines.compactMap(\.replyTo) + waiting.compactMap(\.replyTo)).filter {
-        !shown.contains($0)
-      })
-    let heldRows = try ChatLineRow.where {
-      $0.groupID.eq(groupID) && $0.threadID.eq(threadID)
-        && $0.seq.in(pinnedSeqs + Array(answered))
-    }
-    .fetchAll(db)
-    var held: [String: ChatLineRow] = [:]
-    for row in heldRows {
-      held[String(row.seq)] = row
-    }
-    state.pins = pinned.compactMap { id in
-      // As the screen shows it: changed or taken back while waiting.
-      overlaid.first { String($0.seq) == id } ?? held[id]
-    }
-    .filter { !$0.unsent }
-    for seq in answered {
-      if let row = overlaid.first(where: { $0.seq == seq }) ?? held[String(seq)] {
-        state.quoted[seq] = row
+    var held: [Int64: ChatLineRow] = Dictionary(uniqueKeysWithValues: lines.map { ($0.seq, $0) })
+    let replies: [Int64] = lines.compactMap(\.replyTo) + waiting.compactMap(\.replyTo)
+    let answered = Set(replies.filter { held[$0] == nil })
+    let elsewhere = Array(Set(pinnedSeqs).union(answered).filter { held[$0] == nil })
+    if !elsewhere.isEmpty {
+      for row in try thread.where({ $0.seq.in(elsewhere) }).fetchAll(db) {
+        held[row.seq] = shown(row)
       }
     }
+    state.pins = pinnedSeqs.compactMap { held[$0] }.filter { !$0.unsent }
+    for seq in answered {
+      state.quoted[seq] = held[seq]
+    }
     return state
+  }
+
+  /// `row` as the screen shows it, with the member's waiting `edits` to it
+  /// in place, in the order made.
+  private static func showing(
+    _ edits: [Pochical_V1_ChatEdit.OneOf_Kind], on row: ChatLineRow, me: String?
+  ) -> ChatLineRow {
+    var row = row
+    for edit in edits {
+      switch edit {
+      case .change(let change):
+        row.text = change.text
+        row.edited = true
+        if !change.keepsPreview {
+          row.preview = change.hasPreview ? LinePreview(change.preview) : nil
+        }
+      case .unsend:
+        row.text = ""
+        row.unsent = true
+        row.reactions = []
+        row.days = []
+        row.votes = []
+        row.decided = nil
+        row.photo = nil
+        row.preview = nil
+      case .vote(let vote):
+        if let me, let day = Day(vote.day), row.decided == nil {
+          row.votes = row.votes.voting(day, by: me, on: vote.on, order: row.days)
+        }
+      case .decide(let decide):
+        row.decided = Day(decide.day)
+      case .react(let react):
+        if let me {
+          row.reactions = row.reactions.toggling(react.emoji, by: me, on: react.on)
+        }
+      default: break
+      }
+    }
+    return row
   }
 
   /// Everyone who has been in the group, those who left too, for the

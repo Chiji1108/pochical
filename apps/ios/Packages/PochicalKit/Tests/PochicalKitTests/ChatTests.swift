@@ -892,6 +892,80 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   }
 }
 
+@Test func pinsAndQuotesBeforeTheLinesShowTheMembersWaitingEdits() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    // 1–3, a gap, then 11–130 on to the latest; the chat opens on 81–130.
+    var beforeGap = line(2, "ギャップの前")
+    beforeGap.chatLine.pinnedOrder = 1
+    var held = line(20, "ひらく前")
+    held.chatLine.pinnedOrder = 2
+    var answersHeld = line(120, "それ")
+    answersHeld.chatLine.replyTo = 30
+    var answersBeforeGap = line(125, "あれ")
+    answersBeforeGap.chatLine.replyTo = 3
+    let lines =
+      [line(1, "a"), beforeGap, line(3, "c")]
+      + (11...130).map { seq in
+        switch seq {
+        case 20: held
+        case 120: answersHeld
+        case 125: answersBeforeGap
+        default: line(UInt64(seq), "\(seq)")
+        }
+      }
+    try GroupSync.take(lines, of: "g", in: db)
+    for (seq, text) in [(UInt64(2), "なおした"), (20, "これもなおした")] {
+      var change = Pochical_V1_ChatChange()
+      change.threadID = groupThread
+      change.seq = seq
+      change.text = text
+      try Chats.edit(.change(change), in: "g", now: 1, db: db)
+    }
+    for seq in [UInt64(3), 30] {
+      var unsend = Pochical_V1_ChatUnsend()
+      unsend.threadID = groupThread
+      unsend.seq = seq
+      try Chats.edit(.unsend(unsend), in: "g", now: 2, db: db)
+    }
+
+    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines.first?.seq == 81)
+    #expect(state.pins.map(\.seq) == [20, 2])
+    #expect(state.pins.map(\.text) == ["これもなおした", "なおした"])
+    #expect(state.pins.map(\.edited) == [true, true])
+    #expect(state.quoted.mapValues(\.unsent) == [3: true, 30: true])
+    #expect(state.quoted.mapValues(\.text) == [3: "", 30: ""])
+
+    // Asked from past the latest: nothing laid out, all of 11–130 held.
+    state = try Chats.state(of: groupThread, in: "g", from: 200, db: db)
+    #expect(state.lines.isEmpty)
+    #expect(state.heldBefore == 120)
+    #expect(state.heldFrom == 11)
+  }
+}
+
+@Test func aSendTheGroupTookLongAgoNoLongerWaits() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var send = Pochical_V1_ChatSend()
+    send.threadID = groupThread
+    send.text = "とどいた"
+    try Chats.edit(.send(send), in: "g", now: 1, db: db)
+    let taken = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    send.text = "まだ"
+    try Chats.edit(.send(send), in: "g", now: 2, db: db)
+    // Its line came first, then 129 more: it is far before the lines shown.
+    try GroupSync.take(
+      [line(1, "とどいた", op: taken)] + (2...130).map { line(UInt64($0), "\($0)") }, of: "g",
+      in: db)
+
+    let state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines.first?.seq == 81)
+    #expect(state.waiting.map(\.text) == ["まだ"])
+  }
+}
+
 struct LargeEmojiVectors: Decodable, Sendable {
   struct Case: VectorCase {
     let name: String
