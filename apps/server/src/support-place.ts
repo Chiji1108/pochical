@@ -156,6 +156,35 @@ const keepTold = (
 };
 
 /**
+ * Marks the line at `seq` as being posted to Slack, before its first
+ * call: a try that ends with no word of Slack taking it (its answer lost,
+ * the DO stopped) leaves the mark. Since when an earlier try of the line
+ * may have posted it, for this one to look for it in Slack first, or null.
+ */
+const startPosting = (
+  db: DrizzleSqliteDODatabase,
+  seq: number
+): Date | null => {
+  const relay = db.select().from(supportRelay).get();
+  const unsureSince =
+    relay?.postingSeq === seq ? (relay.postingSince ?? null) : null;
+  const posting = { postingSeq: seq, postingSince: unsureSince ?? new Date() };
+  db.insert(supportRelay)
+    .values({ cursor: 0, id: 1, ...posting })
+    .onConflictDoUpdate({ set: posting, target: supportRelay.id })
+    .run();
+  return unsureSince;
+};
+
+/** The line being posted settled: kept, or surely not posted. */
+const stopPosting = (db: DrizzleSqliteDODatabase): void => {
+  db.update(supportRelay)
+    .set({ postingSeq: null, postingSince: null })
+    .where(eq(supportRelay.id, 1))
+    .run();
+};
+
+/**
  * What the chat's Slack thread is told of a line changed since: a new
  * line posted (the user's, or an answer written on the admin site; one
  * written in Slack is there already), the user's taking one back, and the
@@ -190,16 +219,18 @@ const relayLine = async (
     const flooding =
       !line.fromPochical && (await overLimit(env.SUPPORT_LIMIT, line.userId));
     let ts: string | null = null;
-    if (line.fromPochical) {
-      ts = await tellStaffOfAnswer(env, line);
-    } else if (!flooding) {
-      ts = await tellStaffOfLine(env, line, repliedTo);
+    if (line.fromPochical || !flooding) {
+      const unsureSince = startPosting(db, line.seq);
+      ts = line.fromPochical
+        ? await tellStaffOfAnswer(env, line, unsureSince)
+        : await tellStaffOfLine(env, line, repliedTo, unsureSince);
     }
     told = { ...told, slackTs: ts };
     // Kept at once, before anything that may fail, so a retry never
     // posts the line again: a kept line is settled, its message or none
     // when it is not to be posted (past the limit, say).
     keepTold(db, told);
+    stopPosting(db);
   }
   // Which line its Slack message is, for what Pochical's people do to it
   // there: kept again each time the line is told, so a write that failed
@@ -294,6 +325,9 @@ const relayFailed = async (
       target: supportRelay.id,
     })
     .run();
+  if (error instanceof SlackRefusedError && error.notPosted) {
+    stopPosting(db);
+  }
   const refusal = refusalOf(error);
   const asked = refusal.kind === "passing" ? (refusal.afterMs ?? 0) : 0;
   const waitMs = Math.max(
