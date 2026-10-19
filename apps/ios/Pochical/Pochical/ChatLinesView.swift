@@ -413,6 +413,16 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     room = (roomHeight, kept)
   }
 
+  /// The lines are the screen's scroll view for its header, as a list's
+  /// are: the header's edge effect sets the lines going under it off, as
+  /// iOS 26 does for every screen whose content goes under its bars.
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    var screen = parent
+    while let next = screen?.parent, !(next is UINavigationController) { screen = next }
+    screen?.setContentScrollView(lines, for: .top)
+  }
+
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
     fitRoom()
@@ -620,12 +630,12 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// What is under the lines at the chat's foot: the composer, and the
   /// keyboard or the home indicator.
   private var under: CGFloat = 0
-  /// What is over the lines at the chat's top: the pins.
+  /// What is over the lines at the chat's top: the header, and the pins.
   private var over: CGFloat = 0
 
   /// What is over the lines is `height` now (the pins come or go, or
   /// open): the lines stay where they are on the screen, going on under
-  /// them.
+  /// them and the header.
   func topRoom(_ height: CGFloat) {
     guard height != over else { return }
     over = height

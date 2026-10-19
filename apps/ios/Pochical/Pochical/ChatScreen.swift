@@ -208,9 +208,14 @@ struct ChatScreen: View {
         seq: { seen in latestSeq(of: seen, in: listed) }, read: { read(to: $0) })
     }
     // Going on under the composer and the keyboard, which SwiftUI keeps
-    // at the chat's foot, the lines told how much of them is under there.
-    .ignoresSafeArea(edges: .bottom)
-    .onGeometryChange(for: CGFloat.self, of: { $0.safeAreaInsets.bottom }) { scroll.bottomRoom = $0 }
+    // at the chat's foot, and under the header at its top, as iOS 26's
+    // lists go under their bars (its edge effect setting it off), the
+    // lines told how much of them is under each.
+    .ignoresSafeArea(edges: [.top, .bottom])
+    .onGeometryChange(for: EdgeInsets.self, of: \.safeAreaInsets) { insets in
+      scroll.headerRoom = insets.top
+      scroll.bottomRoom = insets.bottom
+    }
     .safeAreaBar(edge: .bottom) { composer }
     .overlay {
       // A place's head says what the chat is for in its place.
@@ -235,7 +240,7 @@ struct ChatScreen: View {
           }
         }
         .frame(maxWidth: .infinity)
-        .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { scroll.topRoom = $0 }
+        .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { scroll.pinsRoom = $0 }
         // Under the pins, over the lines.
         ZStack(alignment: .top) {
           FloatingDay(scroll: scroll, covered: notice != nil)
