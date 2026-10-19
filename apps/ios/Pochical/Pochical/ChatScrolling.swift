@@ -28,7 +28,8 @@ final class ChatScroll {
 
 /// The ↓ to the latest, once away from it or with others' unread lines
 /// below, counted on it as a chat's unread are: lines are read as they
-/// come on screen, so none while at the latest. While ここから新着 is below
+/// come on screen, so none while at the latest (at the foot of lines that
+/// stop short of it, those after them still count). While ここから新着 is below
 /// the top of the screen with lines under it still unread, it goes there
 /// first.
 struct LatestButton: View {
@@ -39,10 +40,12 @@ struct LatestButton: View {
   private var size: CGFloat { min(scaled, (Metrics.touch - 12) * CGFloat(Chat.controlsMostScale)) }
   let scroll: ChatScroll
   let unread: Int
+  /// The lines laid out reach the latest (ChatState.atEnd).
+  var atEnd = true
   let action: () -> Void
 
   var body: some View {
-    let unseen = scroll.place.atLatest ? 0 : unread
+    let unseen = scroll.place.atLatest && atEnd ? 0 : unread
     // Over the composer's right, rising with it on the keyboard.
     ZStack {
       if scroll.place.away || unseen > 0 {

@@ -98,6 +98,9 @@ struct ChatScreen: View {
   /// The first line laid out as the page before it was last laid out, so a
   /// page is laid out once as the top nears, not at each scroll.
   @State private var earlierFrom: Int64?
+  /// The last item is near those in sight (ChatLinesView's `onNear`): the
+  /// page after the lines is asked while they stop short of the latest.
+  @State private var footNear = false
   /// What is being written, read by the composer alone.
   @State private var draft = ChatDraft()
   @State private var unsending: Unsending?
@@ -181,7 +184,9 @@ struct ChatScreen: View {
             showsTime: !timeless.contains(id)))
       },
       latest: AnyView(
-        LatestButton(scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0) {
+        LatestButton(
+          scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0, atEnd: state.atEnd
+        ) {
           toLatestOrUnread()
         }),
       scroll: scroll, proxy: scroller, following: $following,
@@ -191,7 +196,10 @@ struct ChatScreen: View {
       onReply: { id in
         if let line = answered(byID[id]) { reply(to: line) }
       },
-      onNear: { prefetchPhotos(of: $0.compactMap { byID[$0] }) }
+      onNear: { near in
+        prefetchPhotos(of: near.compactMap { byID[$0] })
+        footNear = listed.last.map { near.contains($0.id) } ?? false
+      }
     )
     .background {
       ReadsSeen(
@@ -242,6 +250,11 @@ struct ChatScreen: View {
         short: chat.state.heldBefore < Chat.pageSize)
     ) {
       await askAhead()
+    }
+    // The page after the lines laid out, as their foot nears, while they
+    // stop short of the latest (past a gap the catch-up left).
+    .task(id: opened && footNear && !chat.state.atEnd ? chat.state.lines.last?.seq : nil) {
+      await askAfter()
     }
     .background(colors.backgroundBase)
     .environment(\.memberFaces, faces)
@@ -381,6 +394,10 @@ struct ChatScreen: View {
     .onChange(of: state.waiting.last?.opID) { _, sent in
       guard sent != nil else { return }
       following = true
+      guard state.atEnd else {
+        toLatestRun()
+        return
+      }
       // At the foot already, the lines slid up to it as it came in.
       toLatest(animated: !reduceMotion)
     }
@@ -1190,6 +1207,35 @@ struct ChatScreen: View {
     }
   }
 
+  /// Asks the server for the page straight after the lines laid out while
+  /// they stop short of the latest the device holds and their foot is
+  /// near, again until the socket is open to ask; the lines then go on
+  /// into it, and on to the latest once it meets the lines held after.
+  private func askAfter() async {
+    let state = chat.state
+    guard opened, footNear, !state.atEnd, let through = state.lines.last?.seq else { return }
+    while !Task.isCancelled,
+      await socket?.requestPage(of: threadID, before: pageAfter(through: through)) != true
+    {
+      try? await Task.sleep(for: .seconds(1))
+    }
+  }
+
+  /// To the latest when the lines laid out stop short of it: the latest
+  /// lines laid out instead, as the chat opens, following them. Others'
+  /// unread lines among them stop it under ここから新着, as the catch-up's do.
+  private func toLatestRun() {
+    let before = chat.state.lines.last?.seq
+    following = true
+    window = nil
+    earlierFrom = nil
+    Task {
+      await reload()
+      window = chat.state.lines.first?.seq
+      if unreadComing(after: before) == nil { toLatest() }
+    }
+  }
+
   /// What the title says of the socket in place of how many are in the
   /// group, as the messaging apps do; nil while it is current.
   private var syncWords: String? {
@@ -1264,6 +1310,10 @@ struct ChatScreen: View {
   private func toLatestOrUnread() {
     let unread = meID.map { chat.state.unread(by: $0) } ?? 0
     guard scroll.place.unreadBelow, unread > 0 else {
+      guard chat.state.atEnd else {
+        toLatestRun()
+        return
+      }
       following = true
       toLatest(animated: true)
       return
@@ -1712,6 +1762,11 @@ struct ChatScreen: View {
           withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
         }
       }
+    } else if let last = state.lines.last, target > last.seq {
+      // Gone to a line after those laid out, past a gap: laid out from it.
+      window = target
+      earlierFrom = nil
+      await reload()
     } else if !state.atStart {
       // Gone to a line before those laid out: on back a page at a time.
       showEarlier(laidOut: state.lines.first.map { ChatItemID.line($0.opID) })
