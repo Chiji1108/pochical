@@ -89,11 +89,8 @@ struct PhotoPager {
         },
         Task {
           // Open again after a drop: what was asked is asked again.
-          var open = true
-          for await status in await client.statuses() {
-            let now = status != .connecting
-            if now, !open { change { $0.reconnected() } }
-            open = now
+          for await _ in await client.statuses().reopenings() {
+            change { $0.reconnected() }
           }
         },
         Task {
