@@ -183,8 +183,6 @@ struct PhotoLine: View {
   /// Its cell in an album, cropped to fill it, the album rounding and
   /// edging them all; none for a photo alone.
   var cell: CGSize?
-  /// It is open large from here.
-  @State private var open = false
 
   var body: some View {
     let size = cell ?? PhotoBox.size(of: photo)
@@ -207,14 +205,7 @@ struct PhotoLine: View {
             .clipShape(RoundedRectangle(cornerRadius: corner))
         }
       }
-      // Its place left empty while it is open large from here, as Photos
-      // leaves a photo's place, and where it opens from and closes to.
-      .opacity(open ? 0 : 1)
-      .background(PhotoSpot(id: photo.id))
-      .onAppear { open = PhotoSpots.shared.open == photo.id }
-      .onReceive(NotificationCenter.default.publisher(for: PhotoSpots.opened)) { _ in
-        open = PhotoSpots.shared.open == photo.id
-      }
+      .photoSpot(photo.id)
       .accessibilityElement(children: waiting ? .contain : .ignore)
       .accessibilityLabel(waiting ? "送信中の写真" : "写真")
       .accessibilityAddTraits(.isImage)

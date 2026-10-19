@@ -103,6 +103,8 @@ struct ChatScreen: View {
   @State private var unsending: Unsending?
   /// A link tapped in a line, open in the browser sheet.
   @State private var browsing: OpenedLink?
+  /// 写真 from ⋯: the chat's photos alone, pushed over it.
+  @State private var listingPhotos = false
 
   /// The lines read as the screen is made, by the reader last heard of,
   /// so they are there through the push that brings it in rather than
@@ -287,8 +289,11 @@ struct ChatScreen: View {
             Button("みんなのシフト", systemImage: "calendar") {
               openGroupRoute(.shifts(group, day: nil))
             }
-            Divider()
           }
+          Button("写真", systemImage: "photo.on.rectangle") {
+            listingPhotos = true
+          }
+          Divider()
           let muted = isMuted
           Button(
             muted ? "通知をオンにする" : "通知をオフにする",
@@ -421,6 +426,9 @@ struct ChatScreen: View {
     }
     .photoViewer($viewing, groupID: place.id) { photo in
       await savePhoto(photo, in: place.id, calls: groupCalls)
+    }
+    .navigationDestination(isPresented: $listingPhotos) {
+      ChatPhotosScreen(pager: photoPager, names: names)
     }
     .modifier(
       ReportAndBlock(
@@ -1377,11 +1385,16 @@ struct ChatScreen: View {
       return
     }
     let held = chat.state.lines.compactMap { ChatPhotoItem($0, blocked: blocked) }
-    let pager = PhotoPager(
+    viewing = PhotoViewing(tapped, among: held, pager: photoPager)
+    viewing?.names = names
+  }
+
+  /// Where the chat's photos come from beyond its lines laid out: not a
+  /// blocked member's folded away, as the group leaves them out too.
+  private var photoPager: PhotoPager {
+    PhotoPager(
       placeID: place.id, threadID: threadID, sockets: groupSockets, account: account,
       database: database, blocked: blocked)
-    viewing = PhotoViewing(tapped, among: held, pager: pager)
-    viewing?.names = names
   }
 
   /// Saves a photo to the person's library, and says so.

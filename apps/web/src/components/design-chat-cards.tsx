@@ -253,11 +253,17 @@ export function InviteCard({
 }
 
 // One of a chat's photos, swiped through opened large.
-export type ChatPhoto = { photo: Photo; label: string; mine: boolean };
+// `when` is the day it was sent, as its line says it (今日, 昨日).
+export type ChatPhoto = {
+  photo: Photo;
+  label: string;
+  mine: boolean;
+  when: string;
+};
 
 // A chat's photo opened large: your own, or one come before, shows at
 // once; someone else's still coming shows its blur until it comes.
-function viewerPhotoOf({ photo, label, mine }: ChatPhoto): ViewerPhoto {
+export function viewerPhotoOf({ photo, label, mine }: ChatPhoto): ViewerPhoto {
   const blur =
     photo.thumbHash === undefined
       ? undefined
@@ -280,7 +286,7 @@ function viewerPhotoOf({ photo, label, mine }: ChatPhoto): ViewerPhoto {
 
 // Hands a photo to the system's share sheet, where the browser has one;
 // let go of, or not shared, nothing is said.
-async function sharePhoto({ src, label }: ViewerPhoto) {
+export async function sharePhoto({ src, label }: ViewerPhoto) {
   try {
     const response = await fetch(src);
     const blob = await response.blob();
@@ -375,7 +381,7 @@ export function PhotoLine({
   const quoted = quote !== undefined;
   const listed = among.some((entry) => entry.photo.src === photo.src)
     ? among
-    : [{ label, mine, photo }];
+    : [{ label, mine, photo, when: "" }];
   const open = (
     <button
       aria-label={`${album === undefined ? "" : `${album}枚の写真。`}${label}。押すと大きく表示、長押しでリアクションと返信`}
