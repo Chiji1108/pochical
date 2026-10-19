@@ -15,7 +15,7 @@ const deviceScheme = (): ColorScheme =>
   window.matchMedia(DARK_QUERY).matches ? "dark" : "light";
 
 // The light or dark setting of the device viewing the page, standing in for
-// the phone's own setting behind 外観 → 自動. Server renders light.
+// the phone's own setting behind 外観 → 端末に合わせる. Server renders light.
 export function useDeviceScheme(): ColorScheme {
   return useSyncExternalStore(subscribe, deviceScheme, () => "light");
 }
