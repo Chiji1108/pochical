@@ -1,3 +1,4 @@
+import { chatRules } from "@pochical/design/chat";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
@@ -233,5 +234,94 @@ describe("a group's photos", () => {
       }
     }
     expect(sent).toStrictEqual(["n"]);
+  });
+
+  it("deletes the photos no line came to carry once their uploader has uploaded nothing for as long as a line goes by itself", async () => {
+    const { runDurableObjectAlarm, runInDurableObject } =
+      await import("cloudflare:test");
+    const { call } = await import("./helpers");
+    const { groupId, guest, maker } = await pair();
+    const group = env.GROUPS.getByName(groupId);
+    const own = crypto.randomUUID();
+    await photo("PUT", groupId, "lost", maker, JPEG, "small");
+    await photo("PUT", groupId, "lost", maker, JPEG);
+    await photo("PUT", groupId, "sent", maker, JPEG);
+    await photo("PUT", groupId, own, maker, JPEG);
+    await call("GroupService/SetGroupPhoto", { groupId, photoId: own }, maker);
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    sendPhoto(mine.socket, "a", "sent");
+    let acked = false;
+    while (!acked) {
+      // oxlint-disable-next-line no-await-in-loop -- frames come in order
+      const frame = await mine.frames.next();
+      acked = frame.kind.case === "acked";
+    }
+    const uploadedAgo = async (ms: number, ...ids: string[]) => {
+      await runInDurableObject(group, (_, state) => {
+        for (const id of ids) {
+          state.storage.sql.exec(
+            "update chat_photos set uploaded_at = ? where id = ?",
+            Date.now() - ms,
+            id
+          );
+        }
+      });
+    };
+    const stored = async (id: string) =>
+      (await env.PHOTOS.head(photoKey(groupId, id))) !== null;
+    await uploadedAgo(chatRules.unsentAfterMs, "lost", "sent", own);
+    await photo("PUT", groupId, "fresh", guest, JPEG);
+    await uploadedAgo(chatRules.unsentAfterMs - 60_000, "fresh");
+
+    // The uploads set the alarm, so a group that goes quiet sweeps too.
+    await expect(runDurableObjectAlarm(group)).resolves.toBeTruthy();
+    const kept = {
+      fresh: await stored("fresh"),
+      lost: await stored("lost"),
+      lostSmall:
+        (await env.PHOTOS.head(smallKey(photoKey(groupId, "lost")))) !== null,
+      own: await stored(own),
+      sent: await stored("sent"),
+    };
+    expect(kept).toStrictEqual({
+      fresh: true,
+      lost: false,
+      lostSmall: false,
+      own: true,
+      sent: true,
+    });
+    // Its id is free of its line for good: a send naming it is dropped.
+    await expect(
+      runInDurableObject(group, (_, state) =>
+        state.storage.sql
+          .exec<{ id: string }>("select id from chat_photos order by id")
+          .toArray()
+          .map(({ id }) => id)
+      )
+    ).resolves.toStrictEqual([own, "fresh", "sent"].toSorted());
+
+    // The alarm comes back for the one still within its time.
+    await uploadedAgo(chatRules.unsentAfterMs, "fresh");
+    await expect(runDurableObjectAlarm(group)).resolves.toBeTruthy();
+    await expect(stored("fresh")).resolves.toBeFalsy();
+  });
+
+  it("keeps a member's photos not sent while they upload more, as the rest of a frame's go up", async () => {
+    const { runDurableObjectAlarm, runInDurableObject } =
+      await import("cloudflare:test");
+    const { groupId, maker } = await pair();
+    const group = env.GROUPS.getByName(groupId);
+    await photo("PUT", groupId, "first", maker, JPEG);
+    await runInDurableObject(group, (_, state) => {
+      state.storage.sql.exec(
+        "update chat_photos set uploaded_at = ?",
+        Date.now() - chatRules.unsentAfterMs
+      );
+    });
+    await photo("PUT", groupId, "second", maker, JPEG);
+    await runDurableObjectAlarm(group);
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, "first"))
+    ).resolves.not.toBeNull();
   });
 });

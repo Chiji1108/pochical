@@ -225,6 +225,13 @@
       "when": 1792413843307,
       "tag": "0031_chat-recalls-taken-at",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1792415005155,
+      "tag": "0032_chat-photos-uploaded-at",
+      "breakpoints": true
     }
   ]
 }

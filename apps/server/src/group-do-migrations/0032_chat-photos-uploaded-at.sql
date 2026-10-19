@@ -1,0 +1,1 @@
+ALTER TABLE `chat_photos` ADD `uploaded_at` integer DEFAULT 0 NOT NULL;

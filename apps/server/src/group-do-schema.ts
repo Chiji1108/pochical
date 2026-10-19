@@ -294,11 +294,21 @@ export const chatRecalls = sqliteTable(
 
 // Photos members have uploaded to the group's chats (the Worker notes each
 // as it stores it in R2), so a line can send only its uploader's own photo,
-// and only once.
+// and only once. One no line carries, nor a member's own photo in the group,
+// goes chatRules.unsentAfterMs after its uploader last uploaded to the group
+// (GroupDO.sweepPhotos): a device uploads a line's photo again each time it
+// sends the line, so a send comes moments after that upload.
 export const chatPhotos = sqliteTable("chat_photos", {
   id: text().primaryKey(),
   // Sent as a line already.
   sent: integer({ mode: "boolean" }).notNull().default(false),
+  // When its uploader last uploaded to the group while it was not sent:
+  // each upload sets it on all of theirs not sent, so the photos of a
+  // frame stay while the rest of the frame goes up. Those kept before the
+  // time was are past it already.
+  uploadedAt: integer("uploaded_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`0`),
   userId: text("user_id").notNull(),
 });
 

@@ -45,6 +45,9 @@ import {
   readMarkOf,
   unreadCount,
   notePhoto,
+  forgetUnclaimedPhotos,
+  oldestUnclaimedPhoto,
+  unclaimedPhotos,
   reportContext,
   setMemberBlocks,
   readerView,
@@ -815,8 +818,39 @@ export class GroupDO extends DurableObject<Env> {
    * stores it: false when the id is someone else's photo already, or the
    * user is not in the group.
    */
-  notePhoto(photoId: string, userId: string): boolean {
-    return this.isMember(userId) && notePhoto(this.db, photoId, userId);
+  async notePhoto(photoId: string, userId: string): Promise<boolean> {
+    if (!(this.isMember(userId) && notePhoto(this.db, photoId, userId))) {
+      return false;
+    }
+    const due = Date.now() + chatRules.unsentAfterMs;
+    const set = await this.ctx.storage.getAlarm();
+    if (set === null || set > due) {
+      await this.ctx.storage.setAlarm(due);
+    }
+    return true;
+  }
+
+  /**
+   * The photos uploaded that nothing came to carry (spec/sync-protocol.md,
+   * Chat), deleted once their uploader has uploaded nothing to the group
+   * for chatRules.unsentAfterMs: from storage first, then from the group,
+   * but those uploaded again meanwhile. When the next are due, if any.
+   */
+  private async sweepPhotos(): Promise<number | undefined> {
+    const groupId = this.ctx.id.name;
+    if (groupId === undefined) {
+      return undefined;
+    }
+    const before = new Date(Date.now() - chatRules.unsentAfterMs);
+    const stale = unclaimedPhotos(this.db, before);
+    if (stale.length > 0) {
+      await deleteGroupPhotos(this.env, groupId, stale);
+      forgetUnclaimedPhotos(this.db, before);
+    }
+    const oldest = oldestUnclaimedPhoto(this.db);
+    return oldest === undefined
+      ? undefined
+      : oldest.getTime() + chatRules.unsentAfterMs;
   }
 
   /** A member's socket, forwarded once the Worker has checked them. */
@@ -1084,17 +1118,27 @@ export class GroupDO extends DurableObject<Env> {
    * The chat with Pochical's people told outside as it changes: to D1's
    * index and its Slack thread (support-place.ts). A failure comes back
    * after the wait the relay gives, the relayed cursor kept; a change
-   * made while it runs has set the next alarm already, which is kept.
+   * made while it runs has set the next alarm already, which is kept. The
+   * photos nothing carries are swept, and the alarm comes back for the
+   * next (`sweepPhotos`).
    */
   async alarm(): Promise<void> {
+    this.relayRequested = false;
     const userId = this.supportUser();
-    if (userId === undefined) {
+    const waitMs =
+      userId === undefined
+        ? null
+        : await relaySupport(this.env, this.db, userId);
+    const photosDue = await this.sweepPhotos();
+    if (this.relayRequested) {
       return;
     }
-    this.relayRequested = false;
-    const waitMs = await relaySupport(this.env, this.db, userId);
-    if (waitMs !== null && !this.relayRequested) {
-      await this.ctx.storage.setAlarm(Date.now() + waitMs);
+    const dues = [
+      ...(waitMs === null ? [] : [Date.now() + waitMs]),
+      ...(photosDue === undefined ? [] : [photosDue]),
+    ];
+    if (dues.length > 0) {
+      await this.ctx.storage.setAlarm(Math.min(...dues));
     }
   }
 
