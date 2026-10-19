@@ -620,12 +620,12 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// What is under the lines at the chat's foot: the composer, and the
   /// keyboard or the home indicator.
   private var under: CGFloat = 0
-  /// What is over the lines at the chat's top: the header, and the pins.
+  /// What is over the lines at the chat's top: the pins.
   private var over: CGFloat = 0
 
   /// What is over the lines is `height` now (the pins come or go, or
   /// open): the lines stay where they are on the screen, going on under
-  /// it, as they do under the header.
+  /// them.
   func topRoom(_ height: CGFloat) {
     guard height != over else { return }
     over = height
