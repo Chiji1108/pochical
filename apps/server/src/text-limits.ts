@@ -24,13 +24,15 @@ const withinSize = (text: string, limit: number): boolean =>
   text.length <= limit * UNITS_PER_CHARACTER_MOST;
 
 /**
- * Whether the text has 1 to `limit` characters, is not only spaces, and
- * is no larger than that many characters can be.
+ * Whether the text has at most `limit` characters and is no larger than
+ * that many characters can be: the limit every limited text is held to.
  */
+export const withinLimit = (text: string, limit: number): boolean =>
+  withinSize(text, limit) && characterCount(text) <= limit;
+
+/** Whether the text is within `limit` and not empty or only spaces. */
 export const fitsText = (text: string, limit: number): boolean =>
-  text.trim() !== "" &&
-  withinSize(text, limit) &&
-  characterCount(text) <= limit;
+  text.trim() !== "" && withinLimit(text, limit);
 
 /**
  * The text, when it has 1 to `limit` characters and is not only spaces;
@@ -44,7 +46,7 @@ export const requireText = (
   if (text.trim() === "") {
     throw new ConnectError(`${field} is empty`, Code.InvalidArgument);
   }
-  if (!withinSize(text, limit) || characterCount(text) > limit) {
+  if (!withinLimit(text, limit)) {
     throw new ConnectError(
       `${field} is over ${limit} characters`,
       Code.InvalidArgument
@@ -61,4 +63,4 @@ const EMOJI =
 
 /** Whether the text is exactly one character that is an emoji. */
 export const isEmoji = (text: string): boolean =>
-  characterCount(text) === 1 && EMOJI.test(text);
+  withinLimit(text, 1) && characterCount(text) === 1 && EMOJI.test(text);

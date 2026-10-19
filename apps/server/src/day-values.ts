@@ -4,7 +4,7 @@ import { syncLimits, textLimits } from "@pochical/design/limits";
 import { DayField } from "./gen/pochical/v1/sync_pb";
 import type { DayValue } from "./gen/pochical/v1/sync_pb";
 import { hasDeviceClock, isId, isIdList } from "./ids";
-import { characterCount } from "./text-limits";
+import { withinLimit } from "./text-limits";
 
 // What a day's field may hold (spec/sync-protocol.md, Shifts), checked as
 // the owner's edits arrive.
@@ -64,7 +64,7 @@ const fits: Record<DayField, (value: string) => boolean> = {
   [DayField.PATTERN]: (value) => value === dayRules.noShift || isId(value),
   [DayField.START]: isTime,
   [DayField.END]: isTime,
-  [DayField.NOTE]: (value) => characterCount(value) <= textLimits.dayNote,
+  [DayField.NOTE]: (value) => withinLimit(value, textLimits.dayNote),
   [DayField.PEOPLE]: isPeople,
 };
 
