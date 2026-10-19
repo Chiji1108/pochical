@@ -440,7 +440,8 @@ const isMessageOf =
     const payload = metadata.event_payload;
     return (
       isRecord(payload) &&
-      payload.seq === line.seq &&
+      // Slack may give a number in the payload back as a string.
+      Number(payload.seq) === line.seq &&
       payload.user_id === line.userId
     );
   };
@@ -454,6 +455,8 @@ const photoName = (line: SupportLine): string => `photo-${line.seq}.jpg`;
 const hasPhotoOf =
   (line: SupportLine) =>
   (message: Record<string, unknown>): boolean =>
+    // Posted by an app, so not a file of the same name a person shared.
+    typeof message.bot_id === "string" &&
     Array.isArray(message.files) &&
     message.files.some(
       (file: unknown) => isRecord(file) && file.name === photoName(line)

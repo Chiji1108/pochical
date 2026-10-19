@@ -149,6 +149,8 @@ const slackCalls = (
     if (taken && method === "files.completeUploadExternal") {
       posts += 1;
       messages.push({
+        // As Slack gives a file the app shared.
+        bot_id: "B0",
         files: [{ name: filename }],
         thread_ts: args.thread_ts,
         ts: `${SHARED_PREFIX}${String(posts).padStart(6, "0")}`,
