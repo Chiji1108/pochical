@@ -1238,7 +1238,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   }
 }
 
-@Test func aLineTakenBackBeforeItWentOutLeavesNothingToWatchFor() throws {
+@Test func aLineTakenBackBeforeItWentOutLeavesNothingToTakeBack() throws {
   let database = try appDatabase()
   try database.write { db in
     var words = Pochical_V1_ChatSend()
@@ -1249,7 +1249,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     try Chats.fail(opID, in: db)
 
     try Chats.takeBack(opID, in: db)
-    #expect(try ChatTakenBackRow.fetchCount(db) == 0)
+    #expect(try Chats.lastWaiting(of: "g", in: db) == nil)
   }
 }
 
@@ -1267,7 +1267,9 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     try Chats.takeBack(frame.chatEdits.edits[0].opID, in: db)
     let going = try Chats.goOut(frame.chatEdits.edits, in: db)
     #expect(going.map(\.send.text) == ["明日休み？"])
-    #expect(try ChatTakenBackRow.fetchCount(db) == 0)
+    // Nothing to take back from the group: it never went out.
+    let left = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
+    #expect(left.map(\.send.text) == ["明日休み？"])
   }
 }
 
@@ -1287,7 +1289,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   }
 }
 
-@Test func aLineTakenBackWhileItWaitedIsTakenBackFromTheGroupShouldItCome() throws {
+@Test func aLineTakenBackAfterItWentOutIsTakenBackFromTheGroupByItsOpID() throws {
   let database = try appDatabase()
   try database.write { db in
     var words = Pochical_V1_ChatSend()
@@ -1300,13 +1302,13 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
 
     try Chats.takeBack(opID, in: db)
     #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.isEmpty)
-    // Sent just before, the group took it: it is taken back from the group.
+    // The group may have taken it, its answer not yet come: it is named.
+    let recalls = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
+    #expect(recalls.map(\.recall.sendOpID) == [opID])
+    #expect(recalls.map(\.recall.threadID) == [groupThread])
+    // Should it come meanwhile, it shows taken back already.
     try GroupSync.take([line(7, "まちがい", op: opID)], of: "g", in: db)
-    let unsends = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
-    #expect(unsends.map(\.unsend.seq) == [7])
-    // Once, however often the line comes again.
-    try GroupSync.take([line(7, "まちがい", op: opID)], of: "g", in: db)
-    #expect(try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits).count == 1)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.unsent) == [true])
   }
 }
 

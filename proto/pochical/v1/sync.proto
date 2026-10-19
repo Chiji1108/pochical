@@ -639,6 +639,7 @@ message ChatEdit {
     ChatPin pin = 7;
     ChatVote vote = 8;
     ChatDecide decide = 9;
+    ChatRecall recall = 10;
   }
 }
 
@@ -731,6 +732,17 @@ message ChatChange {
 message ChatUnsend {
   string thread_id = 1;
   uint64 seq = 2;
+}
+
+// One of the member's own lines taken back while it waited on their
+// device (送信取消, or 削除 of one not sent), named by its send's op_id:
+// the device cannot know whether the group took the send, its Acked lost.
+// The group takes it back as ChatUnsend does if it has the line, and else
+// drops the send should it come after all (spec/chat.md, Lines on their
+// way).
+message ChatRecall {
+  string thread_id = 1;
+  string send_op_id = 2;
 }
 
 // The member has read the chat up to here; the group only moves a mark

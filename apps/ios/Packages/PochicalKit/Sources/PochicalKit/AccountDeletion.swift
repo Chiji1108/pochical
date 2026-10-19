@@ -19,7 +19,7 @@ extension GroupCalls {
 public enum LocalData {
   /// Every table the user's data is in.
   private static let tables = [
-    "blocks", "chatDrafts", "chatLines", "chatMutes", "chatNotificationSettings", "chatOutbox", "chatTakenBack",
+    "blocks", "chatDrafts", "chatLines", "chatMutes", "chatNotificationSettings", "chatOutbox",
     "coworkerOrder", "coworkers", "days", "groupCursors", "groupMembers", "groups",
     "memberDays", "memberOrders", "memberPatterns", "outbox", "patternOrder", "patterns", "preferences", "profile",
     "readMarks", "repeatOrders", "serverValues", "syncState", "unreadCounts",

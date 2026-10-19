@@ -207,6 +207,43 @@ describe("the chat with Pochical's people", () => {
     ]);
   });
 
+  it("takes a line back by its send's op_id, and drops a send taken back before it came", async () => {
+    const token = await signInAnonymously();
+    const { frames, socket } = await supportSocket(token);
+    await frames.next();
+    send(socket, "a", { text: "まちがい" });
+    await frames.next();
+    await frames.next();
+
+    const recall = (sendOpId: string, opId: string) => {
+      sendFrame(socket, {
+        case: "chatEdits",
+        value: {
+          edits: [
+            {
+              kind: { case: "recall", value: { sendOpId, threadId: thread } },
+              opId,
+            },
+          ],
+        },
+      });
+    };
+    recall("a", "r1");
+    expect(changesIn(await frames.next())).toMatchObject([
+      { kind: { value: { opId: "a", seq: 1n, unsent: true } } },
+    ]);
+    await frames.next();
+
+    recall("b", "r2");
+    await expect(frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["r2"] } },
+    });
+    send(socket, "b", { text: "これも" });
+    await expect(frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["b"] } },
+    });
+  });
+
   it("goes with the account", async () => {
     const token = await signInAnonymously();
     const userId = await userIdOf(token);

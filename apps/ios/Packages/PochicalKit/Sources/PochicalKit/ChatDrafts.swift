@@ -62,15 +62,6 @@ struct ChatDraftRow: Hashable, Sendable {
   var savedAtMs: Int64
 }
 
-/// A line of the member's taken back while it waited, by its op_id: should
-/// the group have taken it meanwhile, it is taken back from the group as
-/// it comes.
-@Table("chatTakenBack")
-struct ChatTakenBackRow: Hashable, Sendable {
-  var opID: String
-  var groupID: String
-}
-
 /// A draft as a chat opens with it: the line being changed whole, for the
 /// composer to change.
 public struct OpenedDraft: Hashable, Sendable {
@@ -102,6 +93,17 @@ extension DatabaseMigrator {
           "opID" TEXT PRIMARY KEY NOT NULL,
           "groupID" TEXT NOT NULL
         ) STRICT
+        """
+      )
+      .execute(db)
+    }
+  }
+
+  mutating func registerChatRecalls() {
+    registerMigration("Take back by op_id rather than watch for lines taken back") { db in
+      try #sql(
+        """
+        DROP TABLE "chatTakenBack"
         """
       )
       .execute(db)
@@ -158,10 +160,9 @@ extension Chats {
     try ChatDraftRow.where { $0.groupID.eq(groupID) }.select(\.threadID).fetchAll(db)
   }
 
-  /// A group left takes its drafts and the lines taken back with it.
+  /// A group left takes its drafts with it.
   static func dropDrafts(of groupID: String, in db: Database) throws {
     try ChatDraftRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
-    try ChatTakenBackRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
   }
 
   private static func keptDraft(
@@ -223,37 +224,28 @@ extension Chats {
   }
 
   /// A line of the member's taken out of the outbox while it waited
-  /// (送信取消, or 削除 once not sent); should the group have taken it
-  /// meanwhile, it is taken back from the group as it comes (`tookBack`).
-  /// One that never went out on a socket the group cannot have, and never
-  /// will, as it is no longer in the outbox: nothing is left to watch for.
+  /// (送信取消, or 削除 once not sent). One that went out on a socket the
+  /// group may have taken meanwhile, its answer not yet come, so it is
+  /// taken back from the group by its send's op_id (`ChatRecall`), which
+  /// also keeps the send from coming after should the group not have it
+  /// yet. One that never went out the group cannot have, and never will,
+  /// as it is no longer in the outbox: nothing is left to take back.
   public static func takeBack(_ opID: String, in db: Database) throws {
     guard let row = try ChatOutboxRow.where({ $0.opID.eq(opID) }).fetchOne(db) else { return }
     try ChatOutboxRow.where { $0.opID.eq(opID) }.delete().execute(db)
-    guard row.wentOut else { return }
-    try ChatTakenBackRow.where { $0.opID.eq(opID) }.delete().execute(db)
-    try ChatTakenBackRow.insert { ChatTakenBackRow(opID: opID, groupID: row.groupID) }.execute(db)
+    guard row.wentOut,
+      case .send(let send) = try Pochical_V1_ChatEdit(serializedBytes: row.edit).kind
+    else { return }
+    var recall = Pochical_V1_ChatRecall()
+    recall.threadID = send.threadID
+    recall.sendOpID = opID
+    try edit(
+      .recall(recall), in: row.groupID, now: Int64(Date.now.timeIntervalSince1970 * 1000), db: db)
   }
 
-  /// A line come from the group: one taken back while it waited is taken
-  /// back from the group now, and one marked not sent that the group took
+  /// A line come from the group: one marked not sent that the group took
   /// after all (its answer lost) stops waiting.
   static func tookBack(_ line: Pochical_V1_ChatLine, of groupID: String, in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.eq(line.opID) && $0.failed }.delete().execute(db)
-    let taken = ChatTakenBackRow.where { $0.opID.eq(line.opID) }
-    guard try taken.fetchCount(db) > 0 else { return }
-    try taken.delete().execute(db)
-    guard !line.unsent else { return }
-    var unsend = Pochical_V1_ChatUnsend()
-    unsend.threadID = line.threadID
-    unsend.seq = line.seq
-    try edit(
-      .unsend(unsend), in: groupID, now: Int64(Date.now.timeIntervalSince1970 * 1000), db: db)
-  }
-
-  /// The edits an Acked names: those taken back while they waited are
-  /// done with, the group having taken them (and they came) or not.
-  static func forgetTakenBack(_ opIDs: [String], in db: Database) throws {
-    try ChatTakenBackRow.where { $0.opID.in(opIDs) }.delete().execute(db)
   }
 }
