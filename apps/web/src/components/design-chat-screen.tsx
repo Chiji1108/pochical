@@ -22,6 +22,7 @@ import type { ReactNode, UIEvent } from "react";
 import { cx } from "styled-system/css";
 
 import {
+  chatOrder,
   firstUnreadOf,
   keptDraft,
   lastSharedOf,
@@ -227,6 +228,18 @@ export function ChatScreen({
   // A line's upload as this screen has it, else as the chat kept it.
   const uploadOf = (message: Message): Upload | undefined =>
     uploads[message.id] ?? (message.failed ? "failed" : undefined);
+  // The lines in the chat's order (spec/chat.md, Lines on their way): a
+  // photo going up last, as the newest, and one not sent where it was
+  // written. The prototype keeps a chat's lines in the order written, so
+  // each one's place stands for its time.
+  const timed = chat.messages.map((message, at) => {
+    const going = uploadOf(message);
+    return { at, failed: going === "failed", going, id: message };
+  });
+  const shown = chatOrder(
+    timed.filter(({ going }) => going === undefined),
+    timed.filter(({ going }) => going !== undefined)
+  );
   const [sharing, setSharing] = useState(false);
   const { answerSoon, typingMember } = useTypingSoon(members, chat.messages);
   const {
@@ -277,6 +290,7 @@ export function ChatScreen({
     reporting,
     selected,
     send,
+    sendAgain,
     setDeciding,
     setPickingFor,
     setReplyTo,
@@ -506,7 +520,7 @@ export function ChatScreen({
                     まだメッセージはありません
                   </li>
                 ))}
-              {drawnLines(chat.messages, folded).map(
+              {drawnLines(shown, folded).map(
                 ({ message, previous, next, album }) => {
                   const lines = album ?? [message];
                   return (
@@ -671,7 +685,7 @@ export function ChatScreen({
               leading={<RotateCcw aria-hidden="true" size={20} />}
               onClick={() => {
                 if (failedOpen) {
-                  upload([failedOpen]);
+                  sendAgain(failedOpen);
                 }
                 setFailedOpen(undefined);
               }}

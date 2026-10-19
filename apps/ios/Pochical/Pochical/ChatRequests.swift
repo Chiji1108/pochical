@@ -11,6 +11,10 @@ struct ChatRequest: FetchKeyRequest, Hashable {
   /// The first line shown, once the chat has opened; none as it opens
   /// (Chats.state).
   var from: Int64?
+  /// The device's time its lines not sent are read by, the chat reading
+  /// again with a later one as the next line still being sent stops going
+  /// by itself (ChatState.failsAt).
+  var now: Int64
 
   struct Value: Hashable, Sendable {
     var state = ChatState(lines: [], waiting: [], atStart: true, marks: [:])
@@ -20,7 +24,8 @@ struct ChatRequest: FetchKeyRequest, Hashable {
 
   func fetch(_ db: Database) throws -> Value {
     Value(
-      state: try Chats.state(of: threadID, in: groupID, me: me, from: from, db: db),
+      state: try Chats.state(
+        of: threadID, in: groupID, me: me, from: from, now: now, db: db),
       writers: try Chats.writers(in: groupID, db: db))
   }
 }
@@ -80,6 +85,10 @@ struct ChatSummaryRequest: FetchKeyRequest, Hashable {
   let groupID: String
   let threadID: String
   let me: String
+  /// The device's time its lines not sent are read by, the row reading
+  /// again with a later one as the next line still being sent stops going
+  /// by itself (ChatSummary.failsAt).
+  let now: Int64
 
   struct Value: Hashable, Sendable {
     var summary = ChatSummary()
@@ -92,7 +101,7 @@ struct ChatSummaryRequest: FetchKeyRequest, Hashable {
   func fetch(_ db: Database) throws -> Value {
     let writers = try Chats.writers(in: groupID, db: db)
     return Value(
-      summary: try Chats.summary(of: threadID, in: groupID, me: me, db: db),
+      summary: try Chats.summary(of: threadID, in: groupID, me: me, now: now, db: db),
       names: writers.shownNames,
       deleted: Set(writers.filter(\.deleted).map(\.userID)))
   }

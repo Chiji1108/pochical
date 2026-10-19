@@ -153,6 +153,8 @@ struct ChatRow<Icon: View>: View {
   @Fetch private var chat = ChatSummaryRequest.Value()
   /// Whether the chat's notifications are off, marked after its name.
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
+  /// The device's time the chat's lines not sent are read by.
+  @State private var now = ChatTime.nowMs
   /// The chat's place, by the id the device keeps its chats by.
   let placeID: String
   let threadID: String
@@ -178,7 +180,7 @@ struct ChatRow<Icon: View>: View {
     self.onOpen = onOpen
     _chat = Fetch(
       wrappedValue: ChatSummaryRequest.Value(),
-      ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me))
+      ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me, now: ChatTime.nowMs))
   }
 
   var body: some View {
@@ -237,9 +239,20 @@ struct ChatRow<Icon: View>: View {
       .contentShape(.rect)
     }
     .buttonStyle(.plain)
-    .task(id: ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me)) {
-      _ = try? await $chat.load(ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me))
+    .task(id: request) {
+      _ = try? await $chat.load(request)
     }
+    // A line still being sent says 送れませんでした the moment its wait is
+    // over, the chat open or not (spec/chat.md, Lines on their way).
+    .task(id: chat.summary.failsAt) {
+      guard let at = chat.summary.failsAt else { return }
+      await ChatTime.sleep(until: at)
+      if !Task.isCancelled { now = ChatTime.nowMs }
+    }
+  }
+
+  private var request: ChatSummaryRequest {
+    ChatSummaryRequest(groupID: placeID, threadID: threadID, me: me, now: now)
   }
 
   /// What is being written, kept as the chat was left, in place of the

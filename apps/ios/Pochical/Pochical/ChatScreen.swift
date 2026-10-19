@@ -97,6 +97,9 @@ struct ChatScreen: View {
   /// add to it rather than move it, and moved back a page at a time.
   /// Changed only by `layOut(from:)`, which reads the lines again for it.
   @State private var window: Int64?
+  /// The device's time the lines not sent are read by, later as the next
+  /// line still being sent stops going by itself.
+  @State private var now = ChatTime.nowMs
   /// The first line laid out as the page before it was last laid out, so a
   /// page is laid out once as the top nears, not at each scroll.
   @State private var earlierFrom: Int64?
@@ -129,7 +132,8 @@ struct ChatScreen: View {
     let me = GroupCalls.knownUserID
     _meID = State(initialValue: me)
     _feed = State(
-      initialValue: ChatFeed(ChatRequest(groupID: place.id, threadID: threadID, me: me)))
+      initialValue: ChatFeed(
+        ChatRequest(groupID: place.id, threadID: threadID, me: me, now: ChatTime.nowMs)))
   }
   /// All the pins open under the bar.
   @State private var pinsOpen = false
@@ -389,15 +393,14 @@ struct ChatScreen: View {
         }
       }
     }
-    // Lines waiting too long stop going by themselves, marked, even
-    // while offline (spec/chat.md, Lines on their way).
-    .task(id: state.waiting.filter { !$0.failed }.map(\.opID)) {
-      while !Task.isCancelled {
-        let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-        let wait = try? await database.write { try Chats.failOverdue(of: place.id, now: now, in: $0) }
-        guard let wait = wait ?? nil else { return }
-        try? await Task.sleep(for: .milliseconds(wait))
-      }
+    // A line still being sent shows not sent the moment its wait is over,
+    // even while offline (spec/chat.md, Lines on their way).
+    .task(id: state.failsAt) {
+      guard let at = state.failsAt else { return }
+      await ChatTime.sleep(until: at)
+      guard !Task.isCancelled else { return }
+      now = ChatTime.nowMs
+      await reload()
     }
     .task(id: typers) {
       guard let next = typers.values.min() else { return }
@@ -647,12 +650,19 @@ struct ChatScreen: View {
       lastWriter = writer
       return starts
     }
-    var lines = state.lines.map { ChatItem.line($0, startsRun: false) }
-    for var line in state.waiting {
+    let waiting = state.waiting.map { line in
+      var line = line
       // Sent again: waiting from the tap, before the outbox is read again.
       if sendingAgain[line.opID] == line.madeAtMs { line.failed = false }
-      lines.append(.waiting(line, startsRun: false))
+      return line
     }
+    // A line still being sent last, one not sent where it was written
+    // (spec/chat.md, Lines on their way).
+    let lines = chatOrder(
+      sent: state.lines.map { TimedLine(id: ChatItem.line($0, startsRun: false), at: $0.sentAtMs) },
+      waiting: waiting.map {
+        TimedLine(id: ChatItem.waiting($0, startsRun: false), at: $0.madeAtMs, failed: $0.failed)
+      })
     // Photos sent at once as one item, by its first (spec/chat.md, Albums).
     var albumOf: [String: [ChatItem]] = [:]
     var inAlbums: Set<String> = []
@@ -1203,7 +1213,7 @@ struct ChatScreen: View {
   /// Reads the chat again for the reader and the lines laid out.
   private func reload() async {
     await feed.load(
-      ChatRequest(groupID: place.id, threadID: threadID, me: meID, from: window))
+      ChatRequest(groupID: place.id, threadID: threadID, me: meID, from: window, now: now))
   }
 
   /// Lays the lines out from `first` on, read again at once. Nil lays

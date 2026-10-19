@@ -44,6 +44,14 @@ enum ChatTime {
     Date(timeIntervalSince1970: TimeInterval(ms) / 1000)
   }
 
+  /// The device's time now, in milliseconds.
+  static var nowMs: Int64 { Int64(Date.now.timeIntervalSince1970 * 1000) }
+
+  /// Returns at the device's time `ms`, or as the task is cancelled.
+  static func sleep(until ms: Int64) async {
+    try? await Task.sleep(for: .milliseconds(max(ms - nowMs, 0)))
+  }
+
   /// The time by a line: 9:41.
   static func clock(_ ms: Int64) -> String {
     let parts = calendar.dateComponents([.hour, .minute], from: date(ms))

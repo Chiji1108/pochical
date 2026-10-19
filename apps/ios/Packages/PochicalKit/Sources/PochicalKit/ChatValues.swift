@@ -228,12 +228,28 @@ struct ChatOutboxRow: Hashable, Sendable {
   /// When it was written, or sent again, by the server's time.
   var madeAtMs: Int64
   /// A line not sent (spec/chat.md, Lines on their way): its photo could
-  /// not be uploaded, or it waited too long. It waits for the member to
-  /// send it again or delete it.
+  /// not be uploaded, or the member stopped it going up. It waits for the
+  /// member to send it again or delete it. One that waited too long is not
+  /// sent by its time alone (`notSent`).
   var failed = false
   /// It has gone out on a socket, so the group may have taken it though
   /// no answer came; one that never went, the group cannot have.
   var wentOut = false
+
+  /// When the line `edit` sends stops going by itself, by the server's
+  /// time: once it has waited `Chat.unsentAfterMs` since it was written.
+  /// Nil for an edit that sends no line, which waits on.
+  func failsAt(_ edit: Pochical_V1_ChatEdit) -> Int64? {
+    guard case .send = edit.kind else { return nil }
+    return madeAtMs + Int64(Chat.unsentAfterMs)
+  }
+
+  /// The row, waiting to send `edit`, is not sent at the server's time
+  /// `now`: marked so, or a line whose wait is over. Read from its time,
+  /// it is so from the moment the wait is over, whatever runs then.
+  func notSent(_ edit: Pochical_V1_ChatEdit, at now: Int64) -> Bool {
+    failed || failsAt(edit).map { $0 <= now } == true
+  }
 }
 
 /// How many lines of a chat the user has not read, as the group counted
@@ -550,17 +566,33 @@ public enum Chats {
   }
 
   /// A line not sent (spec/chat.md, Lines on their way): its photo could
-  /// not be uploaded, the member stopped it going up (Photos), or it
-  /// waited too long. It stays, marked, to send again or delete, and the
-  /// edits after it go on.
+  /// not be uploaded, or the member stopped it going up (Photos). It
+  /// stays, marked, to send again or delete, and the edits after it go on.
   public static func fail(_ opID: String, in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.eq(opID) }.update { $0.failed = true }.execute(db)
   }
 
-  /// The line still waits to go: not sent yet, nor marked not sent, nor
-  /// taken back.
-  static func stillGoing(_ opID: String, in db: Database) throws -> Bool {
-    try ChatOutboxRow.where { $0.opID.eq(opID) && !$0.failed }.fetchCount(db) > 0
+  /// The line still waits to go at the device's time `now`: not sent yet,
+  /// nor not sent, nor taken back.
+  static func stillGoing(_ opID: String, now: Int64, in db: Database) throws -> Bool {
+    let now = try SyncState.corrected(now, in: db)
+    return try ChatOutboxRow.where { $0.opID.eq(opID) }.fetchAll(db).contains {
+      try !$0.notSent(Pochical_V1_ChatEdit(serializedBytes: $0.edit), at: now)
+    }
+  }
+
+  /// The group's edits after `id` still to send at the device's time
+  /// `now`, in the order made, and the last one's id, past those not sent,
+  /// which wait for the member instead.
+  static func toSend(of groupID: String, after id: Int = 0, now: Int64, in db: Database) throws
+    -> (rows: [(Pochical_V1_ChatEdit, ChatOutboxRow)], last: Int)
+  {
+    let now = try SyncState.corrected(now, in: db)
+    let rows = try ChatOutboxRow.where { $0.groupID.eq(groupID) && $0.id > id }.order(by: \.id)
+      .fetchAll(db)
+    let going = try rows.map { (try Pochical_V1_ChatEdit(serializedBytes: $0.edit), $0) }
+      .filter { !$1.notSent($0, at: now) }
+    return (going, rows.last?.id ?? id)
   }
 
   /// Sends a line that could not be sent again, as the newest waiting
@@ -578,16 +610,19 @@ public enum Chats {
     .execute(db)
   }
 
-  /// Of a frame's edits about to go out on a socket, those still going
-  /// (not taken back nor marked not sent since the frame was made), each
-  /// marked as gone out before it goes, so one taken back from then on is
-  /// taken back from the group too (`takeBack`).
-  static func goOut(_ edits: [Pochical_V1_ChatEdit], in db: Database) throws
+  /// Of a frame's edits about to go out on a socket at the device's time
+  /// `now`, those still going (not taken back nor not sent since the frame
+  /// was made), each marked as gone out before it goes, so one taken back
+  /// from then on is taken back from the group too (`takeBack`).
+  static func goOut(_ edits: [Pochical_V1_ChatEdit], now: Int64, in db: Database) throws
     -> [Pochical_V1_ChatEdit]
   {
-    let going = ChatOutboxRow.where { $0.opID.in(edits.map(\.opID)) && !$0.failed }
-    let opIDs = Set(try going.select(\.opID).fetchAll(db))
-    try going.update { $0.wentOut = true }.execute(db)
+    let now = try SyncState.corrected(now, in: db)
+    let rows = try ChatOutboxRow.where { $0.opID.in(edits.map(\.opID)) }.fetchAll(db)
+    let opIDs = Set(
+      try rows.filter { try !$0.notSent(Pochical_V1_ChatEdit(serializedBytes: $0.edit), at: now) }
+        .map(\.opID))
+    try ChatOutboxRow.where { $0.opID.in(Array(opIDs)) }.update { $0.wentOut = true }.execute(db)
     return edits.filter { opIDs.contains($0.opID) }
   }
 
@@ -601,39 +636,80 @@ public enum Chats {
     try ChatOutboxRow.where { $0.groupID.eq(groupID) }.order { $0.id.desc() }.fetchOne(db)?.id
   }
 
-  /// The group's newest edit still to be sent, nil when none is; one
-  /// whose photo could not go waits for the member instead.
-  static func lastToSend(of groupID: String, in db: Database) throws -> Int? {
-    try ChatOutboxRow.where { $0.groupID.eq(groupID) && !$0.failed }.order { $0.id.desc() }
-      .fetchOne(db)?.id
+  /// The group's newest edit still to be sent at the device's time `now`,
+  /// nil when none is; one not sent waits for the member instead.
+  static func lastToSend(of groupID: String, now: Int64, in db: Database) throws -> Int? {
+    try toSend(of: groupID, now: now, in: db).rows.last?.1.id
+  }
+
+  /// When the next of the group's lines still to send stops going by
+  /// itself, by the device's clock; nil with none.
+  static func nextFailing(of groupID: String, now: Int64, in db: Database) throws -> Int64? {
+    let offset = try SyncState.current(in: db).offsetMs
+    let due = try toSend(of: groupID, now: now, in: db).rows.compactMap { $1.failsAt($0) }.min()
+    return due.map { $0 - offset }
   }
 
   /// Returns once the group's chat outbox has nothing left to send, or as
-  /// the task waiting is cancelled.
+  /// the task waiting is cancelled; read again as the outbox changes, and
+  /// as a line still to send stops going by itself.
   public static func untilSent(of groupID: String, in database: any DatabaseReader) async {
-    let outbox = ValueObservation.tracking { try lastToSend(of: groupID, in: $0) }
-    do {
-      for try await last in outbox.values(in: database) where last == nil {
-        return
-      }
-    } catch {}
+    await waitUntil(in: database) { db, now in
+      guard try lastToSend(of: groupID, now: now, in: db) != nil else { return (true, nil) }
+      return (false, try nextFailing(of: groupID, now: now, in: db))
+    }
   }
 
-  /// The group's waiting edits after `id`, as frames of up to
-  /// `editsPerFrame`, and the last one's id.
-  static func frames(of groupID: String, after id: Int, in db: Database) throws -> (
+  /// The group's edits after `id` still to send at the device's time
+  /// `now`, as frames of up to `editsPerFrame`, and the last waiting one's
+  /// id, past those not sent.
+  static func frames(of groupID: String, after id: Int, now: Int64, in db: Database) throws -> (
     frames: [Pochical_V1_ClientFrame], last: Int
   ) {
-    let rows = try ChatOutboxRow.where { $0.groupID.eq(groupID) && $0.id > id && !$0.failed }
-      .order(by: \.id).fetchAll(db)
+    let (rows, last) = try toSend(of: groupID, after: id, now: now, in: db)
+    let edits = rows.map(\.0)
     var frames: [Pochical_V1_ClientFrame] = []
-    for chunk in stride(from: 0, to: rows.count, by: SyncLimits.editsPerFrame) {
+    for chunk in stride(from: 0, to: edits.count, by: SyncLimits.editsPerFrame) {
       var frame = Pochical_V1_ClientFrame()
-      frame.chatEdits.edits = try rows[chunk..<min(chunk + SyncLimits.editsPerFrame, rows.count)]
-        .map { try Pochical_V1_ChatEdit(serializedBytes: $0.edit) }
+      frame.chatEdits.edits = Array(
+        edits[chunk..<min(chunk + SyncLimits.editsPerFrame, edits.count)])
       frames.append(frame)
     }
-    return (frames, rows.last?.id ?? id)
+    return (frames, last)
+  }
+}
+
+/// Returns once `read` says it is done, or as the task waiting is
+/// cancelled: read at the device's time, now, again as what it reads
+/// changes, and at the time it says it may be done by time alone (by the
+/// device's clock), as a line's wait is over without anything changing.
+func waitUntil(
+  in database: any DatabaseReader,
+  _ read: @escaping @Sendable (Database, _ now: Int64) throws -> (done: Bool, wakeAt: Int64?)
+) async {
+  let (wakes, wake) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+  let watching = Task {
+    let changes = ValueObservation.tracking { try read($0, SyncClient.nowMs()) }
+    do {
+      for try await _ in changes.values(in: database) { wake.yield() }
+    } catch {}
+    wake.finish()
+  }
+  var timer: Task<Void, Never>?
+  defer {
+    watching.cancel()
+    timer?.cancel()
+  }
+  for await _ in wakes {
+    guard let now = try? await database.read({ try read($0, SyncClient.nowMs()) }), !now.done
+    else { return }
+    timer?.cancel()
+    timer = now.wakeAt.map { at in
+      Task {
+        try? await Task.sleep(for: .milliseconds(max(at - SyncClient.nowMs(), 0)))
+        if !Task.isCancelled { wake.yield() }
+      }
+    }
   }
 }
 
@@ -643,8 +719,13 @@ public struct ChatState: Hashable, Sendable {
   /// end of the run without a gap they are in, what is known to follow
   /// on, the rest coming as pages (spec/vectors/chat.json, window).
   public var lines: [ChatLineRow]
-  /// The member's lines still on their way, in the order written.
+  /// The member's lines still on their way, in the order written: those
+  /// still being sent, and those not sent that fall among `lines`.
   public var waiting: [WaitingLine]
+  /// When the next of `waiting` still being sent stops going by itself,
+  /// by the device's clock, for the chat to show it not sent then; none
+  /// with none.
+  public var failsAt: Int64?
   /// The lines reach the chat's first.
   public var atStart: Bool
   /// How many lines the device holds before `lines`, on from them without
@@ -715,8 +796,9 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public var failed = false
   public var id: String { opID }
 
-  /// The line `send` waits as, kept in the outbox as `row`.
-  init(_ send: Pochical_V1_ChatSend, opID: String, row: ChatOutboxRow) {
+  /// The line `send` waits as, kept in the outbox as `row`, not sent or
+  /// not (`failed`).
+  init(_ send: Pochical_V1_ChatSend, opID: String, row: ChatOutboxRow, failed: Bool) {
     self.opID = opID
     text = send.text
     madeAtMs = row.madeAtMs
@@ -726,8 +808,43 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
     preview = send.hasPreview ? LinePreview(send.preview) : nil
     replyTo = send.replyTo == 0 ? nil : Int64(send.replyTo)
     album = send.album
-    failed = row.failed
+    self.failed = failed
   }
+}
+
+/// A line placed in a chat by its time: one the group holds, by when it
+/// took it, or one of the member's still waiting, by when it was written,
+/// and whether it is not sent.
+public struct TimedLine<ID> {
+  public var id: ID
+  public var at: Int64
+  public var failed = false
+
+  public init(id: ID, at: Int64, failed: Bool = false) {
+    self.id = id
+    self.at = at
+    self.failed = failed
+  }
+}
+
+/// The chat's lines in the order shown (spec/chat.md, Lines on their
+/// way): the group's in the order it took them, each of the member's not
+/// sent where it was written, before the first of the group's whose time
+/// is later, and theirs still being sent last, as the newest; each kind of
+/// theirs in the order written (spec/vectors/chat.json, order). The chat
+/// list's latest line is the last of them.
+public func chatOrder<ID>(sent: [TimedLine<ID>], waiting: [TimedLine<ID>]) -> [ID] {
+  var failed = waiting.filter(\.failed)[...]
+  var order: [ID] = []
+  for line in sent {
+    let later = failed.firstIndex { $0.at >= line.at } ?? failed.endIndex
+    order += failed[..<later].map(\.id)
+    failed = failed[later...]
+    order.append(line.id)
+  }
+  order += failed.map(\.id)
+  order += waiting.filter { !$0.failed }.map(\.id)
+  return order
 }
 
 /// The line before another of the same chat, to find where a run of
@@ -748,22 +865,21 @@ extension Chats {
   /// they are the latest run's: its latest page, back to `me`'s first
   /// unread line when that is earlier, at most `Chat.openMax` lines. Only
   /// the lines it returns are read, and those after them past `me`'s mark.
+  /// Its lines not sent are those by the device's time `now`.
   public static func state(
     of threadID: String, in groupID: String, me: String? = nil, from: Int64? = nil,
-    db: Database
+    now: Int64, db: Database
   ) throws -> ChatState {
     let thread = ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
     let unpinned: Int64 = 0
     var pinned = try thread.where { $0.pinnedOrder > unpinned && !$0.unsent }
       .order { $0.pinnedOrder.desc() }.select(\.seq).fetchAll(db).map { String($0) }
-    var sends: [WaitingLine] = []
+    let (waiting, failsAt) = try waitingLines(of: threadID, in: groupID, now: now, db: db)
     var ownRead: Int64 = 0
     // The member's waiting edits to each line, in the order made.
     var edits: [Int64: [Pochical_V1_ChatEdit.OneOf_Kind]] = [:]
-    for (edit, row) in try waitingEdits(of: groupID, in: db) {
+    for (edit, _) in try waitingEdits(of: groupID, in: db) {
       switch edit.kind {
-      case .send(let send) where send.threadID == threadID:
-        sends.append(WaitingLine(send, opID: edit.opID, row: row))
       case .change(let change) where change.threadID == threadID:
         edits[Int64(change.seq), default: []].append(.change(change))
       case .unsend(let unsend) where unsend.threadID == threadID:
@@ -793,10 +909,6 @@ extension Chats {
       }
     }
     let shown = { (row: ChatLineRow) in showing(edits[row.seq] ?? [], on: row, me: me) }
-    let taken =
-      sends.isEmpty
-      ? [] : Set(try thread.where { $0.opID.in(sends.map(\.opID)) }.select(\.opID).fetchAll(db))
-    let waiting = sends.filter { !taken.contains($0.opID) }
 
     let latest = try thread.order { $0.seq.desc() }.select(\.seq).limit(1).fetchOne(db)
     let marks = try ReadMarkRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
@@ -862,6 +974,15 @@ extension Chats {
         }
       }
     }
+    // A line not sent shows where it falls among the lines laid out, not
+    // past them while later or earlier lines are still to be laid out.
+    state.waiting = waiting.filter { line in
+      guard line.failed else { return true }
+      if !state.atEnd, let last = lines.last, line.madeAtMs >= last.sentAtMs { return false }
+      if !state.atStart, let first = lines.first, line.madeAtMs < first.sentAtMs { return false }
+      return true
+    }
+    state.failsAt = failsAt
 
     let pinnedSeqs = pinned.compactMap { Int64($0) }
     var held: [Int64: ChatLineRow] = Dictionary(uniqueKeysWithValues: lines.map { ($0.seq, $0) })
@@ -1055,8 +1176,14 @@ public func notifyingUnread(
 public struct ChatSummary: Hashable, Sendable {
   /// The latest line the group holds.
   public var last: ChatLineRow?
-  /// The member's latest line still on its way, newer than `last`.
+  /// The member's line on its way that is the chat's latest, in the
+  /// chat's order (`chatOrder`): one still being sent, or one not sent
+  /// that came after `last`.
   public var waiting: WaitingLine?
+  /// When the next of the member's lines still being sent stops going by
+  /// itself, by the device's clock, for the list to say so then; none
+  /// with none.
+  public var failsAt: Int64?
   public var unread: Int
   /// An unread line the device holds mentions the reader.
   public var mentioned: Bool
@@ -1065,11 +1192,12 @@ public struct ChatSummary: Hashable, Sendable {
   public var draft: KeptDraft?
 
   public init(
-    last: ChatLineRow? = nil, waiting: WaitingLine? = nil, unread: Int = 0,
-    mentioned: Bool = false, draft: KeptDraft? = nil
+    last: ChatLineRow? = nil, waiting: WaitingLine? = nil, failsAt: Int64? = nil,
+    unread: Int = 0, mentioned: Bool = false, draft: KeptDraft? = nil
   ) {
     self.last = last
     self.waiting = waiting
+    self.failsAt = failsAt
     self.unread = unread
     self.mentioned = mentioned
     self.draft = draft
@@ -1079,20 +1207,15 @@ public struct ChatSummary: Hashable, Sendable {
 extension Chats {
   /// A chat's latest line and its unread lines that count, for `me`: as
   /// the group counted them, or, while a read of theirs waits to be sent,
-  /// others' lines the device holds past it.
-  public static func summary(of threadID: String, in groupID: String, me: String, db: Database)
-    throws -> ChatSummary
-  {
-    let reads = try waitingEdits(of: groupID, in: db)
+  /// others' lines the device holds past it. Its lines not sent are those
+  /// by the device's time `now`.
+  public static func summary(
+    of threadID: String, in groupID: String, me: String, now: Int64, db: Database
+  ) throws -> ChatSummary {
     var ownRead: Int64 = 0
-    var waiting: WaitingLine?
-    for (edit, row) in reads {
-      switch edit.kind {
-      case .read(let read) where read.threadID == threadID:
+    for (edit, _) in try waitingEdits(of: groupID, in: db) {
+      if case .read(let read) = edit.kind, read.threadID == threadID {
         ownRead = max(ownRead, Int64(read.lastReadSeq))
-      case .send(let send) where send.threadID == threadID:
-        waiting = WaitingLine(send, opID: edit.opID, row: row)
-      default: break
       }
     }
     // Lines never delivered to the reader are not theirs to see.
@@ -1100,13 +1223,13 @@ extension Chats {
       $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && !$0.hidden
     }
     .order { $0.seq.desc() }.fetchOne(db)
-    // Shown as the group's line once it has come.
-    if let sent = waiting,
-      try ChatLineRow.where({ $0.groupID.eq(groupID) && $0.opID.eq(sent.opID) }).fetchCount(db)
-        > 0
-    {
-      waiting = nil
-    }
+    let (waiting, failsAt) = try waitingLines(of: threadID, in: groupID, now: now, db: db)
+    // The chat's latest line: one of the member's waiting, or nil for the
+    // group's.
+    let latest = chatOrder(
+      sent: last.map { [TimedLine(id: nil, at: $0.sentAtMs)] } ?? [],
+      waiting: waiting.map { TimedLine(id: Optional($0), at: $0.madeAtMs, failed: $0.failed) }
+    ).last
     let unread = try unread(of: threadID, in: groupID, me: me, ownRead: ownRead, db: db)
     let mentioned =
       unread > 0
@@ -1114,8 +1237,31 @@ extension Chats {
         .contains { mentions(in: $0).contains(me) }
       : false
     return ChatSummary(
-      last: last, waiting: waiting, unread: unread, mentioned: mentioned,
-      draft: try keptDraft(of: threadID, in: groupID, db: db))
+      last: last, waiting: latest ?? nil, failsAt: failsAt, unread: unread,
+      mentioned: mentioned, draft: try keptDraft(of: threadID, in: groupID, db: db))
+  }
+
+  /// The member's lines of the chat waiting in the group's outbox, in the
+  /// order written, each not sent or not by the device's time `now`; and
+  /// when the next still being sent stops going by itself, by the device's
+  /// clock. A line the group has taken is no longer in the outbox
+  /// (`tookBack`).
+  private static func waitingLines(
+    of threadID: String, in groupID: String, now: Int64, db: Database
+  ) throws -> (lines: [WaitingLine], failsAt: Int64?) {
+    let clock = try SyncState.current(in: db)
+    let now = clock.corrected(now)
+    var lines: [WaitingLine] = []
+    var failsAt: Int64?
+    for (edit, row) in try waitingEdits(of: groupID, in: db) {
+      guard case .send(let send) = edit.kind, send.threadID == threadID else { continue }
+      let failed = row.notSent(edit, at: now)
+      lines.append(WaitingLine(send, opID: edit.opID, row: row, failed: failed))
+      if !failed, let due = row.failsAt(edit) {
+        failsAt = min(failsAt ?? due, due)
+      }
+    }
+    return (lines, failsAt.map { $0 - clock.offsetMs })
   }
 
   /// The chat's unread lines that count: the group's count, which reaches
