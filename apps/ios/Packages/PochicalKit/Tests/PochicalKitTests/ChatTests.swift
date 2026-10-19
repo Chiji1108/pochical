@@ -7,6 +7,9 @@ import Testing
 
 @testable import PochicalKit
 
+/// A device's time before the wait of any line these tests write is over.
+let early: Int64 = 100_000
+
 struct ChatVectors: Decodable, Sendable {
   struct FirstUnread: VectorCase {
     let name: String
@@ -158,6 +161,28 @@ struct ChatVectors: Decodable, Sendable {
   }
   let albums: [Albums]
   let albumRows: [AlbumRows]
+
+  struct Order: VectorCase {
+    struct Line: Decodable, Sendable {
+      let id: String
+      let at: Int64
+      let failed: Bool?
+    }
+    let name: String
+    let sent: [Line]
+    let waiting: [Line]
+    let expected: [String]
+  }
+  let order: [Order]
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).order)
+func aChatsLinesInOrder(_ vector: ChatVectors.Order) {
+  let timed = { (line: ChatVectors.Order.Line) in
+    TimedLine(id: line.id, at: line.at, failed: line.failed ?? false)
+  }
+  #expect(
+    chatOrder(sent: vector.sent.map(timed), waiting: vector.waiting.map(timed)) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).albums)
@@ -233,7 +258,7 @@ func theLinesLaidOut(_ vector: ChatVectors.Window) throws {
     mark.readMark.userID = "me"
     mark.readMark.lastReadSeq = UInt64(vector.read)
     try GroupSync.take([mark], of: "g", in: db)
-    let state = try Chats.state(of: groupThread, in: "g", me: "me", from: vector.from, db: db)
+    let state = try Chats.state(of: groupThread, in: "g", me: "me", from: vector.from, now: early, db: db)
     let laidOut = [state.lines.first?.seq, state.lines.last?.seq].compactMap(\.self)
     #expect(laidOut == vector.expected.lines)
     #expect(state.lines.map(\.seq) == Array(vector.expected.lines[0]...vector.expected.lines[1]))
@@ -292,7 +317,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
   try database.write { db in
     // 1–2 held from before, then a catch-up's latest page 5–6.
     try GroupSync.take([line(1, "a"), line(2, "b"), line(5, "e"), line(6, "f")], of: "g", in: db)
-    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.map(\.seq) == [5, 6])
     #expect(!state.atStart)
 
@@ -300,7 +325,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     page.threadID = groupThread
     page.lines = [line(3, "c"), line(4, "d")].map(\.chatLine)
     try Chats.take(page, of: "g", in: db)
-    state = try Chats.state(of: groupThread, in: "g", db: db)
+    state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.map(\.seq) == [1, 2, 3, 4, 5, 6])
     #expect(state.atStart)
   }
@@ -311,7 +336,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
   try database.write { db in
     try GroupSync.take((1...130).map { line(UInt64($0), "\($0)") }, of: "g", in: db)
     let firstShown = { (me: String?, from: Int64?) in
-      try Chats.state(of: groupThread, in: "g", me: me, from: from, db: db).lines.first?.seq
+      try Chats.state(of: groupThread, in: "g", me: me, from: from, now: early, db: db).lines.first?.seq
     }
     #expect(try firstShown(nil, nil) == 81)
     var mark = Pochical_V1_Change()
@@ -324,7 +349,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     #expect(try firstShown("me", nil) == 21)
     // Scrolled back, from wherever the screen asks.
     #expect(try firstShown(nil, 10) == 10)
-    #expect(try !Chats.state(of: groupThread, in: "g", from: 10, db: db).atStart)
+    #expect(try !Chats.state(of: groupThread, in: "g", from: 10, now: early, db: db).atStart)
   }
 }
 
@@ -335,16 +360,16 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     try GroupSync.take(
       [line(1, "a"), line(2, "b")] + (11...130).map { line(UInt64($0), "\($0)") }, of: "g",
       in: db)
-    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     // The latest page, 81–130, the rest from 11 held before it.
     #expect(state.lines.first?.seq == 81)
     #expect(state.heldBefore == 70)
     #expect(state.heldFrom == 11)
     // Scrolled back to 31: 20 held before, as far as the gap.
-    state = try Chats.state(of: groupThread, in: "g", from: 31, db: db)
+    state = try Chats.state(of: groupThread, in: "g", from: 31, now: early, db: db)
     #expect(state.heldBefore == 20)
     // All laid out: nothing held before, the server asked before 11.
-    state = try Chats.state(of: groupThread, in: "g", from: 11, db: db)
+    state = try Chats.state(of: groupThread, in: "g", from: 11, now: early, db: db)
     #expect(state.heldBefore == 0)
     #expect(state.heldFrom == 11)
     #expect(!state.atStart)
@@ -365,7 +390,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     change.text = "なおした"
     try Chats.edit(.change(change), in: "g", now: 11, db: db)
 
-    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.waiting.map(\.text) == ["まだ届いてない"])
     #expect(state.lines.first?.text == "なおした")
     #expect(state.lines.first?.edited == true)
@@ -373,7 +398,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     // The group's line for the send takes the waiting one's place.
     let opID = try #require(state.waiting.first).opID
     try GroupSync.take([line(2, "まだ届いてない", op: opID)], of: "g", in: db)
-    state = try Chats.state(of: groupThread, in: "g", db: db)
+    state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.waiting.isEmpty)
     #expect(state.lines.map(\.text) == ["なおした", "まだ届いてない"])
   }
@@ -391,14 +416,14 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     mark.readMark.userID = "me"
     mark.readMark.lastReadSeq = 1
     try GroupSync.take([mark], of: "g", in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).unread(by: "me") == 1)
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).unread(by: "me") == 1)
 
     // A read waiting to be sent counts at once.
     var read = Pochical_V1_ChatRead()
     read.threadID = groupThread
     read.lastReadSeq = 3
     try Chats.edit(.read(read), in: "g", now: 5, db: db)
-    let state = try Chats.state(of: groupThread, in: "g", db: db)
+    let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lastRead(by: "me") == 3)
     #expect(state.unread(by: "me") == 0)
   }
@@ -415,9 +440,9 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
     read.lastReadSeq = 1
     try Chats.edit(.read(read), in: "g", now: 5, db: db)
     // The ↓'s count and the chat list's agree.
-    let state = try Chats.state(of: groupThread, in: "g", db: db)
+    let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.unread(by: "me") == 1)
-    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).unread == 1)
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).unread == 1)
   }
 }
 
@@ -519,7 +544,7 @@ private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String =
     try GroupSync.take([line(1, "a"), mine, line(3, "c")], of: "g", in: db)
     // Every group's count comes from the user's own socket.
     try Sync.take([unreadCount(1, 2), unreadCount(2, 4, in: "other")], in: db)
-    var summary = try Chats.summary(of: groupThread, in: "g", me: "me", db: db)
+    var summary = try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db)
     #expect(summary.last?.seq == 3)
     #expect(summary.unread == 2)
     #expect(try Chats.unreadByGroup(me: "me", db: db) == ["g": 2, "other": 4])
@@ -532,7 +557,7 @@ private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String =
     read.threadID = groupThread
     read.lastReadSeq = 3
     try Chats.edit(.read(read), in: "g", now: 6, db: db)
-    summary = try Chats.summary(of: groupThread, in: "g", me: "me", db: db)
+    summary = try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db)
     #expect(summary.waiting?.text == "まだ")
     #expect(summary.unread == 0)
     #expect(try Chats.unreadByGroup(me: "me", db: db) == ["other": 4])
@@ -547,11 +572,11 @@ private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String =
     send.text = "まだ"
     send.replyTo = 4
     try Chats.edit(.send(send), in: "g", now: 5, db: db)
-    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
     try Chats.fail(opID, in: db)
-    let waiting = try Chats.state(of: groupThread, in: "g", db: db).waiting
+    let waiting = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting
     #expect(waiting.map(\.failed) == [true])
-    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).waiting == waiting[0])
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).waiting == waiting[0])
   }
 }
 
@@ -639,8 +664,8 @@ func theNamesToListWhileWriting(_ vector: MessageTextVectors.Query) {
   try database.write { db in
     try GroupSync.take([line(1, "<@me> 来れる？"), line(2, "どう？")], of: "g", in: db)
     try Sync.take([unreadCount(1, 2)], in: db)
-    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).mentioned)
-    #expect(try !Chats.summary(of: groupThread, in: "g", me: "aya", db: db).mentioned)
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).mentioned)
+    #expect(try !Chats.summary(of: groupThread, in: "g", me: "aya", now: early, db: db).mentioned)
   }
 }
 
@@ -693,7 +718,7 @@ func aFullMarkLetterTakesWhatIsTyped(_ vector: MarkLetterVectors.Case) {
     try Chats.edit(.react(react), in: "g", now: 1, db: db)
     react.emoji = "🎉"
     try Chats.edit(.react(react), in: "g", now: 2, db: db)
-    let state = try Chats.state(of: groupThread, in: "g", me: "me", db: db)
+    let state = try Chats.state(of: groupThread, in: "g", me: "me", now: early, db: db)
     #expect(
       state.lines.first?.reactions == [
         LineReaction(emoji: "👍", userIDs: ["aya", "me"]),
@@ -703,7 +728,7 @@ func aFullMarkLetterTakesWhatIsTyped(_ vector: MarkLetterVectors.Case) {
     react.on = false
     try Chats.edit(.react(react), in: "g", now: 3, db: db)
     #expect(
-      try Chats.state(of: groupThread, in: "g", me: "me", db: db).lines.first?.reactions
+      try Chats.state(of: groupThread, in: "g", me: "me", now: early, db: db).lines.first?.reactions
         == [LineReaction(emoji: "👍", userIDs: ["aya", "me"])])
   }
 }
@@ -758,7 +783,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     pin.seq = 6
     pin.on = true
     try Chats.edit(.pin(pin), in: "g", now: 1, db: db)
-    let state = try Chats.state(of: groupThread, in: "g", db: db)
+    let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.map(\.seq) == [5, 6])
     #expect(state.pins.map(\.seq) == [6, 1])
   }
@@ -777,12 +802,12 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     var unsend = Pochical_V1_ChatUnsend()
     unsend.threadID = groupThread
     unsend.seq = 1
-    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.map(\.days) == [[Day(year: 2026, month: 10, day: 10), Day(year: 2026, month: 10, day: 12)]])
     #expect(state.waiting.map(\.days) == [[Day(year: 2026, month: 11, day: 3)]])
 
     try Chats.edit(.unsend(unsend), in: "g", now: 11, db: db)
-    state = try Chats.state(of: groupThread, in: "g", db: db)
+    state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.map(\.days) == [[]])
   }
 }
@@ -804,7 +829,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     vote.day = "2026-10-11"
     vote.on = true
     try Chats.edit(.vote(vote), in: "g", now: 1, db: db)
-    var state = try Chats.state(of: groupThread, in: "g", me: "me", db: db)
+    var state = try Chats.state(of: groupThread, in: "g", me: "me", now: early, db: db)
     let tenth = Day(year: 2026, month: 10, day: 11)
     #expect(state.lines[0].votes.voters(on: tenth) == ["u2", "me"])
 
@@ -813,7 +838,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     decide.seq = 1
     decide.day = "2026-10-11"
     try Chats.edit(.decide(decide), in: "g", now: 2, db: db)
-    state = try Chats.state(of: groupThread, in: "g", me: "me", db: db)
+    state = try Chats.state(of: groupThread, in: "g", me: "me", now: early, db: db)
     #expect(state.lines[0].decided == tenth)
     #expect(state.pins.map(\.seq) == [1])
   }
@@ -833,7 +858,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     send.photo.width = 10
     send.photo.height = 20
     try Chats.edit(.send(send), in: "g", now: 1, db: db)
-    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.map(\.photo) == [LinePhoto(id: "p1", width: 300, height: 200)])
     #expect(state.waiting.map(\.photo) == [LinePhoto(id: "p2", width: 10, height: 20)])
 
@@ -841,7 +866,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     unsend.threadID = groupThread
     unsend.seq = 1
     try Chats.edit(.unsend(unsend), in: "g", now: 2, db: db)
-    state = try Chats.state(of: groupThread, in: "g", db: db)
+    state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines[0].photo == nil)
   }
 }
@@ -858,7 +883,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     send.photo.id = "p2"
     send.album = "second"
     try Chats.edit(.send(send), in: "g", now: 1, opID: "second", db: db)
-    let state = try Chats.state(of: groupThread, in: "g", db: db)
+    let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.map(\.album) == ["first"])
     #expect(state.waiting.map(\.album) == ["second"])
     #expect(state.waiting.map(\.opID) == ["second"])
@@ -930,13 +955,13 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     change.text = "ここどう？ https://cafe.example"
     change.keepsPreview = true
     try Chats.edit(.change(change), in: "g", now: 1, db: db)
-    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines[0].preview?.title == "店")
 
     change.text = "やっぱりいいや"
     change.keepsPreview = false
     try Chats.edit(.change(change), in: "g", now: 2, db: db)
-    state = try Chats.state(of: groupThread, in: "g", db: db)
+    state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines[0].preview == nil)
   }
 }
@@ -957,9 +982,9 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     var hidden = line(1, "")
     hidden.chatLine.hidden = true
     try GroupSync.take([hidden], of: "g", in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.hidden) == [true])
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).lines.map(\.hidden) == [true])
     // Nor is it the chat's latest line in the list.
-    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).last == nil)
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).last == nil)
   }
 }
 
@@ -992,7 +1017,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(try ChatNotifications.state(in: db).isMuted(groupThread, in: "g"))
     #expect(try Chats.unreadByGroup(me: "me", db: db) == ["g": 1])
     // A chat's own row still counts every unread line.
-    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).unread == 3)
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).unread == 3)
 
     var settings = Pochical_V1_Change()
     settings.cursor = 3
@@ -1012,7 +1037,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     var reply = line(2, "なに？")
     reply.chatLine.replyTo = 1
     try GroupSync.take([line(1, "はじめ"), reply], of: "g", in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.replyTo) == [nil, 1])
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).lines.map(\.replyTo) == [nil, 1])
   }
 }
 
@@ -1023,7 +1048,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     var reply = line(6, "これ")
     reply.chatLine.replyTo = 1
     try GroupSync.take([line(1, "ずっと前"), line(5, "e"), reply], of: "g", in: db)
-    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.map(\.seq) == [5, 6])
     #expect(state.quoted[1]?.text == "ずっと前")
 
@@ -1035,7 +1060,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     page.lines = [earlier.chatLine]
     page.quoted = [line(2, "b").chatLine]
     try Chats.take(page, of: "g", in: db)
-    state = try Chats.state(of: groupThread, in: "g", db: db)
+    state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.map(\.seq) == [4, 5, 6])
     #expect(state.quoted.mapValues(\.text) == [1: "ずっと前", 2: "b"])
   }
@@ -1078,7 +1103,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
       try Chats.edit(.unsend(unsend), in: "g", now: 2, db: db)
     }
 
-    var state = try Chats.state(of: groupThread, in: "g", db: db)
+    var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.first?.seq == 81)
     #expect(state.pins.map(\.seq) == [20, 2])
     #expect(state.pins.map(\.text) == ["これもなおした", "なおした"])
@@ -1088,7 +1113,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
 
     // Asked from past the latest, none held there: laid out as the chat
     // opens, its latest page, the rest of 11–130 held before it.
-    state = try Chats.state(of: groupThread, in: "g", from: 200, db: db)
+    state = try Chats.state(of: groupThread, in: "g", from: 200, now: early, db: db)
     #expect(state.lines.first?.seq == 81)
     #expect(state.heldBefore == 70)
     #expect(state.heldFrom == 11)
@@ -1102,7 +1127,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     send.threadID = groupThread
     send.text = "とどいた"
     try Chats.edit(.send(send), in: "g", now: 1, db: db)
-    let taken = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    let taken = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
     send.text = "まだ"
     try Chats.edit(.send(send), in: "g", now: 2, db: db)
     // Its line came first, then 129 more: it is far before the lines shown.
@@ -1110,7 +1135,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
       [line(1, "とどいた", op: taken)] + (2...130).map { line(UInt64($0), "\($0)") }, of: "g",
       in: db)
 
-    let state = try Chats.state(of: groupThread, in: "g", db: db)
+    let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.first?.seq == 81)
     #expect(state.waiting.map(\.text) == ["まだ"])
   }
@@ -1142,19 +1167,19 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     words.threadID = groupThread
     words.text = "見て"
     try Chats.edit(.send(words), in: "g", now: 2, db: db)
-    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
 
     try Chats.fail(opID, in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true, false])
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting.map(\.failed) == [true, false])
     // The words go on without it.
-    let (frames, sent) = try Chats.frames(of: "g", after: 0, in: db)
+    let (frames, sent) = try Chats.frames(of: "g", after: 0, now: early, in: db)
     #expect(frames.flatMap(\.chatEdits.edits).map(\.send.text) == ["見て"])
 
     // Sent again, it comes after what was sent, as itself.
     try Chats.sendAgain(opID, now: 3, in: db)
-    let again = try Chats.frames(of: "g", after: sent, in: db).frames.flatMap(\.chatEdits.edits)
+    let again = try Chats.frames(of: "g", after: sent, now: early, in: db).frames.flatMap(\.chatEdits.edits)
     #expect(again.map(\.opID) == [opID])
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [false, false])
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting.map(\.failed) == [false, false])
   }
 }
 
@@ -1165,21 +1190,21 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     photo.threadID = groupThread
     photo.photo.id = "p1"
     try Chats.edit(.send(photo), in: "g", now: 1, db: db)
-    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
-    #expect(try Chats.stillGoing(opID, in: db))
+    let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
+    #expect(try Chats.stillGoing(opID, now: early, in: db))
 
     // Stopped with ×: not sent, as one whose photo failed.
     try Chats.fail(opID, in: db)
-    #expect(try !Chats.stillGoing(opID, in: db))
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true])
+    #expect(try !Chats.stillGoing(opID, now: early, in: db))
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting.map(\.failed) == [true])
 
     // Sent again, it goes once more.
     try Chats.sendAgain(opID, now: 2, in: db)
-    #expect(try Chats.stillGoing(opID, in: db))
+    #expect(try Chats.stillGoing(opID, now: early, in: db))
 
     // Taken back, nothing is left to go.
     try Chats.takeBack(opID, in: db)
-    #expect(try !Chats.stillGoing(opID, in: db))
+    #expect(try !Chats.stillGoing(opID, now: early, in: db))
   }
 }
 
@@ -1191,12 +1216,12 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     photo.photo.id = "p1"
     try Chats.edit(.send(photo), in: "g", now: 1, db: db)
     let waiting = try Chats.lastWaiting(of: "g", in: db)
-    #expect(try Chats.lastToSend(of: "g", in: db) == waiting)
+    #expect(try Chats.lastToSend(of: "g", now: early, in: db) == waiting)
 
     // It waits for the member, so the socket closes without it.
-    try Chats.fail(try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID, in: db)
+    try Chats.fail(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID, in: db)
     #expect(try Chats.lastWaiting(of: "g", in: db) == waiting)
-    #expect(try Chats.lastToSend(of: "g", in: db) == nil)
+    #expect(try Chats.lastToSend(of: "g", now: early, in: db) == nil)
   }
 }
 
@@ -1207,7 +1232,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     try Chats.keepDraft(
       KeptDraft(text: "うん", replyTo: 1), of: groupThread, in: "g", now: 1, db: db)
     #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.replyTo == 1)
-    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", db: db).draft?.text == "うん")
+    #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).draft?.text == "うん")
 
     // The line answered taken back meanwhile: the words stay, alone.
     var unsent = line(1, "")
@@ -1246,11 +1271,77 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     try Chats.edit(.send(words), in: "g", now: 5000, db: db)
     let limit = Int64(Chat.unsentAfterMs)
 
-    #expect(try Chats.failOverdue(of: "g", now: 1000 + limit - 1, in: db) == 1)
-    #expect(try Chats.failOverdue(of: "g", now: 1000 + limit, in: db) == 4000)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true, false])
-    let edits = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
+    // Read at its time, with nothing written: the chat, its row in the
+    // list and the outbox say so alike, the moment its wait is over.
+    let before = try Chats.state(of: groupThread, in: "g", now: 1000 + limit - 1, db: db)
+    #expect(before.waiting.map(\.failed) == [false, false])
+    #expect(before.failsAt == 1000 + limit)
+    let after = try Chats.state(of: groupThread, in: "g", now: 1000 + limit, db: db)
+    #expect(after.waiting.map(\.failed) == [true, false])
+    #expect(after.failsAt == 5000 + limit)
+    let listed = try Chats.summary(of: groupThread, in: "g", me: "me", now: 1000 + limit, db: db)
+    #expect(listed.waiting?.text == "あとで")
+    #expect(listed.failsAt == 5000 + limit)
+    let edits = try Chats.frames(of: "g", after: 0, now: 1000 + limit, in: db).frames
+      .flatMap(\.chatEdits.edits)
     #expect(edits.map(\.send.text) == ["あとで"])
+    #expect(try Chats.lastToSend(of: "g", now: 5000 + limit, in: db) == nil)
+  }
+}
+
+@Test func theChatListSaysTheLatestLineAsTheChatOrdersItsLines() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var photo = Pochical_V1_ChatSend()
+    photo.threadID = groupThread
+    photo.photo.id = "p1"
+    try Chats.edit(.send(photo), in: "g", now: 1000, db: db)
+    let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
+    try Chats.fail(opID, in: db)
+    // Not sent and the latest: the list says so.
+    #expect(
+      try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).waiting?.failed
+        == true)
+
+    // Someone answers after it: their line is the latest.
+    var ok = line(1, "ok")
+    ok.chatLine.sentAtMs = 2000
+    try GroupSync.take([ok], of: "g", in: db)
+    let summary = try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db)
+    #expect(summary.waiting == nil)
+    #expect(summary.last?.text == "ok")
+
+    // A line still being sent is the newest, whenever it was written.
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "見て"
+    try Chats.edit(.send(words), in: "g", now: 1500, db: db)
+    #expect(
+      try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).waiting?.text
+        == "見て")
+  }
+}
+
+@Test func aLineNotSentShowsOnlyWhereItFallsAmongTheLinesLaidOut() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    // 1–2 laid out, 5 held past a gap.
+    var lines = [line(1, "a"), line(2, "b"), line(5, "e")]
+    for index in lines.indices {
+      lines[index].chatLine.sentAtMs = Int64(lines[index].chatLine.seq) * 1000
+    }
+    try GroupSync.take(lines, of: "g", in: db)
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "あとで"
+    try Chats.edit(.send(words), in: "g", now: 6000, db: db)
+    try Chats.fail(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID, in: db)
+
+    let earlier = try Chats.state(of: groupThread, in: "g", from: 1, now: early, db: db)
+    #expect(earlier.lines.map(\.seq) == [1, 2])
+    #expect(earlier.waiting.isEmpty)
+    let latest = try Chats.state(of: groupThread, in: "g", from: 5, now: early, db: db)
+    #expect(latest.waiting.map(\.text) == ["あとで"])
   }
 }
 
@@ -1266,10 +1357,12 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
 
     // The device's clock jumps an hour ahead, and Welcome corrects it.
     try Sync.welcome(sentMs: 1000 + hour, receivedMs: 1000 + hour, serverMs: 1000, in: db)
-    try Chats.failOverdue(of: "g", now: 1000 + hour + limit - 1, in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [false])
-    try Chats.failOverdue(of: "g", now: 1000 + hour + limit, in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true])
+    let before = try Chats.state(of: groupThread, in: "g", now: 1000 + hour + limit - 1, db: db)
+    #expect(before.waiting.map(\.failed) == [false])
+    // When by the device's own clock.
+    #expect(before.failsAt == 1000 + hour + limit)
+    let after = try Chats.state(of: groupThread, in: "g", now: 1000 + hour + limit, db: db)
+    #expect(after.waiting.map(\.failed) == [true])
   }
 }
 
@@ -1284,15 +1377,16 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     let made: Int64 = 1_000 * minute
     try Chats.edit(.send(words), in: "g", now: made, db: db)
 
-    // Set back 15 minutes while offline, checked meanwhile.
-    try Chats.failOverdue(of: "g", now: made - 15 * minute, in: db)
+    // Set back 15 minutes while offline, read meanwhile.
+    let offline = try Chats.state(of: groupThread, in: "g", now: made - 15 * minute, db: db)
+    #expect(offline.waiting.map(\.failed) == [false])
     // Back online a minute after writing: Welcome corrects the clock.
     try Sync.welcome(
       sentMs: made - 14 * minute, receivedMs: made - 14 * minute, serverMs: made + minute, in: db)
-    try Chats.failOverdue(of: "g", now: made - 14 * minute, in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [false])
-    try Chats.failOverdue(of: "g", now: made - 15 * minute + limit, in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true])
+    let online = try Chats.state(of: groupThread, in: "g", now: made - 14 * minute, db: db)
+    #expect(online.waiting.map(\.failed) == [false])
+    let over = try Chats.state(of: groupThread, in: "g", now: made - 15 * minute + limit, db: db)
+    #expect(over.waiting.map(\.failed) == [true])
   }
 }
 
@@ -1303,7 +1397,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     words.threadID = groupThread
     words.text = "まちがい"
     try Chats.edit(.send(words), in: "g", now: 1, db: db)
-    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
     try Chats.fail(opID, in: db)
 
     try Chats.takeBack(opID, in: db)
@@ -1320,13 +1414,13 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     try Chats.edit(.send(words), in: "g", now: 1, db: db)
     words.text = "明日休み？"
     try Chats.edit(.send(words), in: "g", now: 2, db: db)
-    let frame = try Chats.frames(of: "g", after: 0, in: db).frames[0]
+    let frame = try Chats.frames(of: "g", after: 0, now: early, in: db).frames[0]
 
     try Chats.takeBack(frame.chatEdits.edits[0].opID, in: db)
-    let going = try Chats.goOut(frame.chatEdits.edits, in: db)
+    let going = try Chats.goOut(frame.chatEdits.edits, now: early, in: db)
     #expect(going.map(\.send.text) == ["明日休み？"])
     // Nothing to take back from the group: it never went out.
-    let left = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
+    let left = try Chats.frames(of: "g", after: 0, now: early, in: db).frames.flatMap(\.chatEdits.edits)
     #expect(left.map(\.send.text) == ["明日休み？"])
   }
 }
@@ -1338,12 +1432,15 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     words.threadID = groupThread
     words.text = "届いた"
     try Chats.edit(.send(words), in: "g", now: 1000, db: db)
-    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
     // Its line came, but not the Acked.
     try GroupSync.take([line(3, "届いた", op: opID)], of: "g", in: db)
 
-    #expect(try Chats.failOverdue(of: "g", now: 1000 + Int64(Chat.unsentAfterMs), in: db) == nil)
     #expect(try Chats.lastWaiting(of: "g", in: db) == nil)
+    let state = try Chats.state(
+      of: groupThread, in: "g", now: 1000 + Int64(Chat.unsentAfterMs), db: db)
+    #expect(state.waiting.isEmpty)
+    #expect(state.lines.map(\.text) == ["届いた"])
   }
 }
 
@@ -1354,19 +1451,19 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     words.threadID = groupThread
     words.text = "まちがい"
     try Chats.edit(.send(words), in: "g", now: 1, db: db)
-    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
-    let frame = try Chats.frames(of: "g", after: 0, in: db).frames[0]
-    #expect(try Chats.goOut(frame.chatEdits.edits, in: db).map(\.opID) == [opID])
+    let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
+    let frame = try Chats.frames(of: "g", after: 0, now: early, in: db).frames[0]
+    #expect(try Chats.goOut(frame.chatEdits.edits, now: early, in: db).map(\.opID) == [opID])
 
     try Chats.takeBack(opID, in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.isEmpty)
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting.isEmpty)
     // The group may have taken it, its answer not yet come: it is named.
-    let recalls = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
+    let recalls = try Chats.frames(of: "g", after: 0, now: early, in: db).frames.flatMap(\.chatEdits.edits)
     #expect(recalls.map(\.recall.sendOpID) == [opID])
     #expect(recalls.map(\.recall.threadID) == [groupThread])
     // Should it come meanwhile, it shows taken back already.
     try GroupSync.take([line(7, "まちがい", op: opID)], of: "g", in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.unsent) == [true])
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).lines.map(\.unsent) == [true])
   }
 }
 
@@ -1426,7 +1523,7 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   try database.write { db in
     try GroupSync.take([line(1, "やあ")], of: "g", in: db)
     try LocalData.erase(in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.isEmpty)
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).lines.isEmpty)
     #expect(try Int.fetchOne(db, sql: "SELECT count(*) FROM syncState") == 0)
   }
 }
@@ -1476,9 +1573,10 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   send.threadID = groupThread
   send.text = "行けそう"
   let edit = Pochical_V1_ChatEdit.OneOf_Kind.send(send)
+  let now = SyncClient.nowMs()
   try await database.write { db in
-    try Chats.edit(edit, in: "g", now: 1, db: db)
-    try Chats.edit(edit, in: "g", now: 2, db: db)
+    try Chats.edit(edit, in: "g", now: now, db: db)
+    try Chats.edit(edit, in: "g", now: now, db: db)
   }
   let waiting = Task { await Chats.untilSent(of: "g", in: database) }
   let opIDs = try await database.read { db in
@@ -1490,6 +1588,22 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
     try Chats.fail(opIDs[1], in: db)
   }
   await waiting.value
+}
+
+@Test func untilSentReturnsAsTheLastLineToSendStopsGoingByItself() async throws {
+  let database = try appDatabase()
+  var send = Pochical_V1_ChatSend()
+  send.threadID = groupThread
+  send.text = "行けそう"
+  let edit = Pochical_V1_ChatEdit.OneOf_Kind.send(send)
+  let waitLeft: Int64 = 300
+  let written = SyncClient.nowMs() - Int64(Chat.unsentAfterMs) + waitLeft
+  try await database.write { db in
+    try Chats.edit(edit, in: "g", now: written, db: db)
+  }
+  // Nothing written: its wait being over is what ends it.
+  await Chats.untilSent(of: "g", in: database)
+  #expect(SyncClient.nowMs() >= written + Int64(Chat.unsentAfterMs))
 }
 
 @MainActor @Test func aPhotoUpIsPastStoppingAndAStopFirstKeepsItsLine() {

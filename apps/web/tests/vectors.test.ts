@@ -37,6 +37,7 @@ import { guessLook, nextColor } from "../src/components/shift-mark";
 import {
   albumRows,
   albumsOf,
+  chatOrder,
   decidePoll,
   editMessage,
   firstUnreadOf,
@@ -661,6 +662,11 @@ describe("spec/vectors/chat.json", () => {
   for (const { name, count, expected } of chatMessages.albumRows) {
     test(name, () => {
       expect(albumRows(count)).toEqual(expected);
+    });
+  }
+  for (const { name, sent, waiting, expected } of chatMessages.order) {
+    test(name, () => {
+      expect(chatOrder(sent, waiting)).toEqual(expected);
     });
   }
 });

@@ -125,6 +125,16 @@ export function useChatEdits({
   const remove = (id: string) => {
     onChange(messages.filter((message) => message.id !== id));
   };
+  // A photo that could not be sent, sent again after the rest, as if
+  // written then (spec/chat.md, Lines on their way).
+  const sendAgain = (id: string) => {
+    const line = byId(id);
+    if (!line) {
+      return;
+    }
+    onChange([...messages.filter((message) => message.id !== id), line]);
+    onSent([line]);
+  };
   const send = () => {
     const text = composer.draft.trim();
     // The changed words replace the old ones, marked 編集済み; the page of
@@ -252,6 +262,7 @@ export function useChatEdits({
     reporting,
     selected,
     send,
+    sendAgain,
     setDeciding,
     setPickingFor,
     setReplyTo,

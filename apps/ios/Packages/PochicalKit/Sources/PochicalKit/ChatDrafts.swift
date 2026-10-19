@@ -188,41 +188,6 @@ extension Chats {
 
   // MARK: Lines not sent
 
-  /// Marks the group's lines that have waited `Chat.unsentAfterMs` without
-  /// the group taking them as not sent, so they stop going by themselves,
-  /// by the device's time `now` corrected to the server's, as theirs are;
-  /// gives how long until the next of those still waiting is, nil with
-  /// none. A line's time is never written again here: one the device's
-  /// clock set back has not reached yet waits on until a Welcome corrects
-  /// the clock, rather than failing early once it does. A line that came
-  /// while its Acked was lost stops waiting instead.
-  @discardableResult
-  public static func failOverdue(of groupID: String, now: Int64, in db: Database) throws
-    -> Int64?
-  {
-    let now = try SyncState.corrected(now, in: db)
-    let rows = try ChatOutboxRow.where { $0.groupID.eq(groupID) && !$0.failed }.fetchAll(db)
-    var next: Int64?
-    for row in rows {
-      guard case .send = try Pochical_V1_ChatEdit(serializedBytes: row.edit).kind else {
-        continue
-      }
-      if try ChatLineRow.where({ $0.groupID.eq(groupID) && $0.opID.eq(row.opID) }).fetchCount(db)
-        > 0
-      {
-        try ChatOutboxRow.where { $0.opID.eq(row.opID) }.delete().execute(db)
-        continue
-      }
-      let due = row.madeAtMs + Int64(Chat.unsentAfterMs)
-      if due <= now {
-        try fail(row.opID, in: db)
-      } else {
-        next = min(next ?? due, due)
-      }
-    }
-    return next.map { $0 - now }
-  }
-
   /// A line of the member's taken out of the outbox while it waited
   /// (送信取消, or 削除 once not sent). One that went out on a socket the
   /// group may have taken meanwhile, its answer not yet come, so it is
@@ -243,9 +208,10 @@ extension Chats {
       .recall(recall), in: row.groupID, now: Int64(Date.now.timeIntervalSince1970 * 1000), db: db)
   }
 
-  /// A line come from the group: one marked not sent that the group took
-  /// after all (its answer lost) stops waiting.
+  /// A line come from the group stops waiting, as the group's line from
+  /// then on: one whose answer is still to come or was lost, and one not
+  /// sent that the group took after all.
   static func tookBack(_ line: Pochical_V1_ChatLine, of groupID: String, in db: Database) throws {
-    try ChatOutboxRow.where { $0.opID.eq(line.opID) && $0.failed }.delete().execute(db)
+    try ChatOutboxRow.where { $0.opID.eq(line.opID) }.delete().execute(db)
   }
 }

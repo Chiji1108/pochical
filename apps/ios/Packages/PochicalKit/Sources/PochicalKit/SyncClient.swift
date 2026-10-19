@@ -202,7 +202,9 @@ public actor SyncClient {
   /// `start` takes it back, the socket then staying open.
   @discardableResult
   public func closeOnceSent() -> Task<Void, Never> {
-    let waiting = (try? database.read { [peer] in try Self.lastToSend(to: peer, in: $0) }) ?? nil
+    let waiting =
+      (try? database.read { [peer] in try Self.lastToSend(to: peer, now: Self.nowMs(), in: $0) })
+      ?? nil
     guard waiting != nil, stopped == nil else {
       stop()
       return Task {}
@@ -211,12 +213,11 @@ public actor SyncClient {
       start()
     }
     let emptied = Task { [database, peer] in
-      let outbox = ValueObservation.tracking { try Self.lastToSend(to: peer, in: $0) }
-      do {
-        for try await last in outbox.values(in: database) where last == nil {
-          return
-        }
-      } catch {}
+      await waitUntil(in: database) { db, now in
+        guard try Self.lastToSend(to: peer, now: now, in: db) != nil else { return (true, nil) }
+        guard let placeID = peer.placeID else { return (false, nil) }
+        return (false, try Chats.nextFailing(of: placeID, now: now, in: db))
+      }
     }
     finishing = emptied
     return Task {
@@ -228,10 +229,11 @@ public actor SyncClient {
     }
   }
 
-  /// The newest edit still to go to `peer`, nil when none is.
-  private static func lastToSend(to peer: Peer, in db: Database) throws -> Int? {
+  /// The newest edit still to go to `peer` at the device's time `now`,
+  /// nil when none is.
+  private static func lastToSend(to peer: Peer, now: Int64, in db: Database) throws -> Int? {
     guard let placeID = peer.placeID else { return try Sync.lastWaiting(in: db) }
-    return try Chats.lastToSend(of: placeID, in: db)
+    return try Chats.lastToSend(of: placeID, now: now, in: db)
   }
 
   /// With no network the socket is gone, though the keepalive would take
@@ -576,13 +578,14 @@ public actor SyncClient {
         guard let last, last > sent else { continue }
         // Lines that waited too long, as after a long time offline, wait
         // for the member instead (spec/chat.md, Lines on their way).
-        let (frames, through) = try await database.write { [sent] db in
-          try Chats.failOverdue(of: groupID, now: Self.nowMs(), in: db)
-          return try Chats.frames(of: groupID, after: sent, in: db)
+        let (frames, through) = try await database.read { [sent] db in
+          try Chats.frames(of: groupID, after: sent, now: Self.nowMs(), in: db)
         }
         for var frame in frames {
           let uploaded = try await uploadingPhotos(of: frame.chatEdits.edits, in: groupID)
-          frame.chatEdits.edits = try await database.write { try Chats.goOut(uploaded, in: $0) }
+          frame.chatEdits.edits = try await database.write {
+            try Chats.goOut(uploaded, now: Self.nowMs(), in: $0)
+          }
           guard !frame.chatEdits.edits.isEmpty else { continue }
           try await socket.send(.data(frame.serializedData()))
         }
@@ -618,7 +621,8 @@ public actor SyncClient {
           // Stopped as its last bytes went: left as the member left it.
           // Past here × does nothing, so the line is sent as it shows.
           let going = await PhotoUploads.shared.sending(send.photo.id) { [database] in
-            (try? database.read { try Chats.stillGoing(edit.opID, in: $0) }) ?? false
+            (try? database.read { try Chats.stillGoing(edit.opID, now: Self.nowMs(), in: $0) })
+              ?? false
           }
           if going { kept.append(edit) }
           break
@@ -652,7 +656,7 @@ public actor SyncClient {
   }
 
   private func stillGoing(_ opID: String) async throws -> Bool {
-    try await database.read { try Chats.stillGoing(opID, in: $0) }
+    try await database.read { try Chats.stillGoing(opID, now: Self.nowMs(), in: $0) }
   }
 
   /// Sends the keepalive text every so often, and takes the socket for
@@ -676,7 +680,7 @@ public actor SyncClient {
     (socket.response as? HTTPURLResponse)?.statusCode == 401 ? .signedOut : nil
   }
 
-  private static func nowMs() -> Int64 {
+  static func nowMs() -> Int64 {
     Int64(Date.now.timeIntervalSince1970 * 1000)
   }
 }

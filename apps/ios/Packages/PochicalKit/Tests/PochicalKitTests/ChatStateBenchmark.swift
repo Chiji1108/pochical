@@ -57,7 +57,7 @@ func longChatsState(_ count: Int) throws {
   let database = try appDatabase()
   try database.write { db in try longChat(count, in: db) }
   try database.read { db in
-    let read = { try Chats.state(of: groupThread, in: "g", me: "me", db: db) }
+    let read = { try Chats.state(of: groupThread, in: "g", me: "me", now: early, db: db) }
     #expect(try read().lines.count == Chat.pageSize)
     for _ in 0..<5 { _ = try read() }
     var times: [Duration] = []

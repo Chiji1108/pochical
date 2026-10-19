@@ -232,3 +232,32 @@ export function albumRows(count: number): number[] {
   const twos = rows * 3 - count;
   return Array.from({ length: rows }, (_, row) => (row < twos ? 2 : 3));
 }
+
+// A line placed by its time: one the group holds, by when it took it, or
+// one of yours still waiting, by when it was written, and whether it is
+// not sent.
+export type TimedLine<Id> = { id: Id; at: number; failed?: boolean };
+
+// The chat's lines in the order shown (spec/chat.md, Lines on their way):
+// the group's in the order it took them, each of yours not sent where it
+// was written, before the first of the group's whose time is later, and
+// yours still being sent last, as the newest; each kind of yours in the
+// order written (spec/vectors/chat.json, order). The chat list's latest
+// line is the last of them.
+export function chatOrder<Id>(
+  sent: TimedLine<Id>[],
+  waiting: TimedLine<Id>[]
+): Id[] {
+  const failed = waiting.filter((line) => line.failed);
+  const order: Id[] = [];
+  for (const line of sent) {
+    const later = failed.findIndex((one) => one.at >= line.at);
+    const before = failed.splice(0, later === -1 ? failed.length : later);
+    order.push(...before.map(({ id }) => id), line.id);
+  }
+  order.push(
+    ...failed.map(({ id }) => id),
+    ...waiting.filter((line) => !line.failed).map(({ id }) => id)
+  );
+  return order;
+}
