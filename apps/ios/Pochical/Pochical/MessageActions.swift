@@ -133,7 +133,10 @@ struct HeldPress: UIGestureRecognizerRepresentable {
   /// Where the finger is as the press is held.
   let onHold: (CGPoint) -> Void
   let onMove: (CGPoint) -> Void
-  let onLift: (CGPoint) -> Void
+  /// Where the finger lifted; none when the press was cancelled instead
+  /// (the system took the touch, or the bubble went from the screen), with
+  /// no place to tell.
+  let onLift: (CGPoint?) -> Void
 
   func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
 
@@ -152,14 +155,18 @@ struct HeldPress: UIGestureRecognizerRepresentable {
   }
 
   func handleUIGestureRecognizerAction(_ recognizer: TouchedPress, context: Context) {
-    let point =
+    // A press cancelled as its view leaves the screen comes while SwiftUI
+    // takes that view down, where its geometry is no longer to be read.
+    func point() -> CGPoint {
       inLine
-      ? context.converter.location(in: .named(LineSpace.name))
-      : context.converter.location(in: .global)
+        ? context.converter.location(in: .named(LineSpace.name))
+        : context.converter.location(in: .global)
+    }
     switch recognizer.state {
-    case .began: onHold(point)
-    case .changed: onMove(point)
-    case .ended, .cancelled: onLift(point)
+    case .began: onHold(point())
+    case .changed: onMove(point())
+    case .ended: onLift(point())
+    case .cancelled: onLift(nil)
     default: break
     }
   }
@@ -761,8 +768,9 @@ private struct HeldBubble: ViewModifier {
           open(link: links.link(at: $0), at: onScreen($0))
         } onMove: {
           held?.point = onScreen($0)
-        } onLift: {
-          held?.point = onScreen($0)
+        } onLift: { point in
+          // Cancelled, it picks nothing, as a system menu's press does.
+          held?.point = point.map(onScreen)
           held?.lifted = true
           held = nil
           // Past the tap a link takes as the finger lifts.
