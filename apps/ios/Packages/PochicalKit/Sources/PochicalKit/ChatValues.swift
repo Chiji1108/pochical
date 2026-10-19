@@ -639,8 +639,9 @@ public enum Chats {
 
 /// A chat as its screen shows it.
 public struct ChatState: Hashable, Sendable {
-  /// The lines from the latest back to the first gap, oldest first: what
-  /// is known to follow on, the rest coming as pages.
+  /// The lines laid out, oldest first: from the first laid out on to the
+  /// end of the run without a gap they are in, what is known to follow
+  /// on, the rest coming as pages (spec/vectors/chat.json, window).
   public var lines: [ChatLineRow]
   /// The member's lines still on their way, in the order written.
   public var waiting: [WaitingLine]
@@ -649,9 +650,15 @@ public struct ChatState: Hashable, Sendable {
   /// How many lines the device holds before `lines`, on from them without
   /// a gap: laid out at once as the chat scrolls back, without asking.
   public var heldBefore = 0
-  /// The first of the lines the device holds on from the latest without a
-  /// gap, before which the server is asked for a page; none with no lines.
+  /// The first of the run without a gap the lines are in, before which
+  /// the server is asked for a page; none with no lines.
   public var heldFrom: Int64?
+  /// The lines reach the latest the device holds; else the page after
+  /// them is asked as their foot nears (`pageAfter`).
+  public var atEnd = true
+  /// How many of others' lines after `lines` the reader has not read,
+  /// each the device does not hold yet counted as unread.
+  public var unreadAfter = 0
   /// Each member's read mark.
   public var marks: [String: Int64]
   /// How far the member's own read waiting in the outbox goes, 0 with none.
@@ -679,9 +686,10 @@ public struct ChatState: Hashable, Sendable {
     max(marks[me] ?? 0, ownRead)
   }
 
-  /// How many of others' lines `me` has not read yet.
+  /// How many of others' lines `me` has not read yet, those after the
+  /// lines laid out too (counted for the reader the state was read for).
   public func unread(by me: String) -> Int {
-    unreadCount(lines.map { ($0.seq, $0.writer(for: me)) }, read: lastRead(by: me))
+    unreadCount(lines.map { ($0.seq, $0.writer(for: me)) }, read: lastRead(by: me)) + unreadAfter
   }
 }
 
@@ -722,17 +730,24 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   }
 }
 
-/// The line before another of the same chat, to find where the latest run
-/// of lines without a gap begins.
+/// The line before another of the same chat, to find where a run of
+/// lines without a gap begins.
 private enum Earlier: AliasName {}
 
+/// The line after another of the same chat, to find where a run of lines
+/// without a gap ends.
+private enum Later: AliasName {}
+
 extension Chats {
-  /// The chat as its screen shows it: the lines on from the latest back to
-  /// the first gap, the member's sends still waiting (and their changes
-  /// and taking back already in place), and every read mark. The lines
-  /// are those from `from` on; with none, as the chat opens: its latest
-  /// page, back to `me`'s first unread line when that is earlier, at most
-  /// `Chat.openMax` lines. Only the lines it returns are read.
+  /// The chat as its screen shows it: the lines laid out, the member's
+  /// sends still waiting (and their changes and taking back already in
+  /// place), and every read mark. The lines are those of the run without a
+  /// gap holding the first line held at or after `from`, from `from` to
+  /// the run's last, so that they stay as later lines come past a gap
+  /// (spec/vectors/chat.json, window). With no `from`, as the chat opens,
+  /// they are the latest run's: its latest page, back to `me`'s first
+  /// unread line when that is earlier, at most `Chat.openMax` lines. Only
+  /// the lines it returns are read, and those after them past `me`'s mark.
   public static func state(
     of threadID: String, in groupID: String, me: String? = nil, from: Int64? = nil,
     db: Database
@@ -784,30 +799,69 @@ extension Chats {
     let waiting = sends.filter { !taken.contains($0.opID) }
 
     let latest = try thread.order { $0.seq.desc() }.select(\.seq).limit(1).fetchOne(db)
-    let one: Int64 = 1
-    let heldFrom = try thread.where { line in
-      !ChatLineRow.as(Earlier.self).where {
-        $0.groupID.eq(line.groupID) && $0.threadID.eq(line.threadID) && $0.seq.eq(line.seq - one)
-      }
-      .exists()
-    }
-    .order { $0.seq.desc() }.select(\.seq).limit(1).fetchOne(db)
     let marks = try ReadMarkRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
       .fetchAll(db)
     let readMarks = Dictionary(marks.map { ($0.userID, $0.lastReadSeq) }, uniquingKeysWith: max)
-    let start =
-      from
-      ?? openingFrom(latest: latest ?? 0, read: me.map { max(readMarks[$0] ?? 0, ownRead) })
-    let laidFrom = max(heldFrom ?? start, start)
-    let lines = try thread.where { $0.seq >= laidFrom }.order(by: \.seq).fetchAll(db).map(shown)
+    let read = me.map { max(readMarks[$0] ?? 0, ownRead) }
+    // The line the run laid out holds: the first held from `from`, else
+    // the latest, laid out as the chat opens.
+    let firstHeld = try from.flatMap { from in
+      try thread.where { $0.seq >= from }.order(by: \.seq).select(\.seq).limit(1).fetchOne(db)
+    }
+    let anchor = firstHeld ?? latest
+    let start: Int64 =
+      if firstHeld != nil, let from { from } else { openingFrom(latest: latest ?? 0, read: read) }
+    let one: Int64 = 1
+    let runFrom = try anchor.flatMap { anchor in
+      try thread.where { line in
+        line.seq <= anchor
+          && !ChatLineRow.as(Earlier.self).where {
+            $0.groupID.eq(line.groupID) && $0.threadID.eq(line.threadID)
+              && $0.seq.eq(line.seq - one)
+          }
+          .exists()
+      }
+      .order { $0.seq.desc() }.select(\.seq).limit(1).fetchOne(db)
+    }
+    let runThrough = try anchor.flatMap { anchor in
+      try thread.where { line in
+        line.seq >= anchor
+          && !ChatLineRow.as(Later.self).where {
+            $0.groupID.eq(line.groupID) && $0.threadID.eq(line.threadID)
+              && $0.seq.eq(line.seq + one)
+          }
+          .exists()
+      }
+      .order(by: \.seq).select(\.seq).limit(1).fetchOne(db)
+    }
+    var lines: [ChatLineRow] = []
+    var laidFrom = start
+    if let runFrom, let runThrough {
+      laidFrom = min(max(runFrom, start), runThrough)
+      lines = try thread.where { $0.seq >= laidFrom && $0.seq <= runThrough }.order(by: \.seq)
+        .fetchAll(db).map(shown)
+    }
     var state = ChatState(
       lines: lines, waiting: waiting, atStart: (lines.first?.seq ?? 1) <= 1,
       marks: readMarks, ownRead: ownRead)
-    // The run without a gap holds every seq from heldFrom to latest.
-    if let heldFrom, let latest {
-      state.heldBefore = Int(min(max(start - heldFrom, 0), latest - heldFrom + 1))
+    // The run holds every seq from runFrom to runThrough.
+    if let runFrom {
+      state.heldBefore = Int(max(laidFrom - runFrom, 0))
     }
-    state.heldFrom = heldFrom
+    state.heldFrom = runFrom
+    if let runThrough, let latest, runThrough < latest {
+      state.atEnd = false
+      if let me, let read {
+        // Past both the lines laid out and the mark: others' lines held,
+        // and every line not held yet.
+        let after = max(runThrough, read)
+        if after < latest {
+          let past = try thread.where { $0.seq > after }.fetchAll(db)
+          state.unreadAfter =
+            Int(latest - after) - past.count + past.count { $0.writer(for: me) == .others }
+        }
+      }
+    }
 
     let pinnedSeqs = pinned.compactMap { Int64($0) }
     var held: [Int64: ChatLineRow] = Dictionary(uniqueKeysWithValues: lines.map { ($0.seq, $0) })
@@ -880,6 +934,14 @@ public func openingFrom(latest: Int64, read: Int64?) -> Int64 {
   let page = latest - Int64(Chat.pageSize) + 1
   let unread = (read ?? latest) + 1
   return max(latest - Int64(Chat.openMax) + 1, min(page, unread), 1)
+}
+
+/// The `before_seq` asking the page straight after a run of lines ending
+/// at `through`: as a chat's seqs run without a gap on the server, the
+/// page before it holds the lines after `through`, or near the latest the
+/// latest page, which reaches them too (spec/vectors/chat.json, pageAfter).
+public func pageAfter(through: Int64) -> Int64 {
+  through + Int64(Chat.pageSize) + 1
 }
 
 /// Who wrote a line, as the unread line counts them

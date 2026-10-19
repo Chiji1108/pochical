@@ -90,9 +90,33 @@ struct ChatVectors: Decodable, Sendable {
     let expected: Value?
   }
 
+  struct Window: VectorCase {
+    struct Expected: Decodable, Sendable {
+      let lines: [Int64]
+      let heldFrom: Int64
+      let heldBefore: Int
+      let atEnd: Bool
+      let unread: Int
+    }
+    let name: String
+    let held: [[Int64]]
+    let mine: [Int64]
+    let read: Int64
+    let from: Int64?
+    let expected: Expected
+  }
+
+  struct PageAfter: VectorCase {
+    let name: String
+    let through: Int64
+    let expected: Int64
+  }
+
   let openingFrom: [OpeningFrom]
   let firstComing: [FirstComing]
   let readTo: [ReadTo]
+  let window: [Window]
+  let pageAfter: [PageAfter]
 
   struct Withdrawn: VectorCase {
     struct Shown: Decodable, Sendable {
@@ -190,6 +214,39 @@ func readsToTheLastLineShown(_ vector: ChatVectors.ReadTo) {
 @Test(arguments: try vectors("chat", as: ChatVectors.self).openingFrom)
 func aChatOpensFrom(_ vector: ChatVectors.OpeningFrom) {
   #expect(openingFrom(latest: vector.latest, read: vector.read) == vector.expected)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).window)
+func theLinesLaidOut(_ vector: ChatVectors.Window) throws {
+  let database = try appDatabase()
+  try database.write { db in
+    let seqs = vector.held.flatMap { $0[0]...$0[1] }
+    try GroupSync.take(
+      seqs.map { seq in
+        var change = line(UInt64(seq), "\(seq)")
+        if vector.mine.contains(seq) { change.chatLine.authorID = "me" }
+        return change
+      }, of: "g", in: db)
+    var mark = Pochical_V1_Change()
+    mark.cursor = UInt64(seqs.max() ?? 0) + 1
+    mark.readMark.threadID = groupThread
+    mark.readMark.userID = "me"
+    mark.readMark.lastReadSeq = UInt64(vector.read)
+    try GroupSync.take([mark], of: "g", in: db)
+    let state = try Chats.state(of: groupThread, in: "g", me: "me", from: vector.from, db: db)
+    let laidOut = [state.lines.first?.seq, state.lines.last?.seq].compactMap(\.self)
+    #expect(laidOut == vector.expected.lines)
+    #expect(state.lines.map(\.seq) == Array(vector.expected.lines[0]...vector.expected.lines[1]))
+    #expect(state.heldFrom == vector.expected.heldFrom)
+    #expect(state.heldBefore == vector.expected.heldBefore)
+    #expect(state.atEnd == vector.expected.atEnd)
+    #expect(state.unread(by: "me") == vector.expected.unread)
+  }
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).pageAfter)
+func thePageAfterTheLinesLaidOut(_ vector: ChatVectors.PageAfter) {
+  #expect(pageAfter(through: vector.through) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).edited)
@@ -1029,10 +1086,11 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     #expect(state.quoted.mapValues(\.unsent) == [3: true, 30: true])
     #expect(state.quoted.mapValues(\.text) == [3: "", 30: ""])
 
-    // Asked from past the latest: nothing laid out, all of 11–130 held.
+    // Asked from past the latest, none held there: laid out as the chat
+    // opens, its latest page, the rest of 11–130 held before it.
     state = try Chats.state(of: groupThread, in: "g", from: 200, db: db)
-    #expect(state.lines.isEmpty)
-    #expect(state.heldBefore == 120)
+    #expect(state.lines.first?.seq == 81)
+    #expect(state.heldBefore == 70)
     #expect(state.heldFrom == 11)
   }
 }

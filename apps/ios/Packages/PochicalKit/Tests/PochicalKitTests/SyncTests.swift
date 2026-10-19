@@ -154,3 +154,26 @@ private func change(_ value: String, cursor: UInt64, ms: Int64) -> Pochical_V1_C
       ])
   }
 }
+
+@Test func aSocketReopensEachTimeItOpensAfterADrop() async {
+  let statuses: [SyncStatus] = [
+    .current, .catchingUp, .connecting, .connecting, .catchingUp, .current, .connecting, .current,
+  ]
+  let stream = AsyncStream<SyncStatus> { continuation in
+    for status in statuses { continuation.yield(status) }
+    continuation.finish()
+  }
+  var reopened = 0
+  for await _ in stream.reopenings() { reopened += 1 }
+  #expect(reopened == 2)
+}
+
+@Test func aSocketStillConnectingWhenWatchedReopensAsItOpens() async {
+  let stream = AsyncStream<SyncStatus> { continuation in
+    for status in [SyncStatus.connecting, .catchingUp, .current] { continuation.yield(status) }
+    continuation.finish()
+  }
+  var reopened = 0
+  for await _ in stream.reopenings() { reopened += 1 }
+  #expect(reopened == 1)
+}

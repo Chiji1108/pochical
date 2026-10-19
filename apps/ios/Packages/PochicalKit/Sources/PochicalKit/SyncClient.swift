@@ -704,3 +704,23 @@ public enum SyncStatus: Sendable {
   /// Open and caught up.
   case current
 }
+
+extension AsyncStream where Element == SyncStatus {
+  /// Each time the socket opens again after a drop (`connecting`), for
+  /// what was asked of the server to be asked again: its answer may have
+  /// gone with the socket.
+  public func reopenings() -> AsyncStream<Void> {
+    AsyncStream<Void> { continuation in
+      let task = Task {
+        var open = true
+        for await status in self {
+          let now = status != .connecting
+          if now, !open { continuation.yield() }
+          open = now
+        }
+        continuation.finish()
+      }
+      continuation.onTermination = { _ in task.cancel() }
+    }
+  }
+}
