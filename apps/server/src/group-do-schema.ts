@@ -149,6 +149,9 @@ export const memberRepeatOrders = sqliteTable(
 export const chatLines = sqliteTable(
   "chat_lines",
   {
+    // The photos sent together with it (pochical.v1.ChatLine.album); none
+    // for a photo sent alone, and for anything else.
+    album: text(),
     authorId: text("author_id").notNull(),
     createdCursor: integer("created_cursor").notNull(),
     cursor: integer().notNull(),

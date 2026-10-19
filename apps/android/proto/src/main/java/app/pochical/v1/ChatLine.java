@@ -28,6 +28,7 @@ public  final class ChatLine extends
     days_ = emptyProtobufList();
     votes_ = emptyProtobufList();
     decided_ = "";
+    album_ = "";
   }
   private int bitField0_;
   public static final int THREAD_ID_FIELD_NUMBER = 1;
@@ -1313,6 +1314,83 @@ public  final class ChatLine extends
   private void clearNotice() {
     notice_ = null;
     bitField0_ = (bitField0_ & ~0x00000004);
+  }
+
+  public static final int ALBUM_FIELD_NUMBER = 20;
+  private java.lang.String album_;
+  /**
+   * <pre>
+   * The photos sent together with this one (spec/chat.md, Albums), as
+   * ChatSend.album named them; empty for a photo sent alone, and for
+   * anything else.
+   * </pre>
+   *
+   * <code>string album = 20 [json_name = "album"];</code>
+   * @return The album.
+   */
+  @java.lang.Override
+  public java.lang.String getAlbum() {
+    return album_;
+  }
+  /**
+   * <pre>
+   * The photos sent together with this one (spec/chat.md, Albums), as
+   * ChatSend.album named them; empty for a photo sent alone, and for
+   * anything else.
+   * </pre>
+   *
+   * <code>string album = 20 [json_name = "album"];</code>
+   * @return The bytes for album.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAlbumBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(album_);
+  }
+  /**
+   * <pre>
+   * The photos sent together with this one (spec/chat.md, Albums), as
+   * ChatSend.album named them; empty for a photo sent alone, and for
+   * anything else.
+   * </pre>
+   *
+   * <code>string album = 20 [json_name = "album"];</code>
+   * @param value The album to set.
+   */
+  private void setAlbum(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    album_ = value;
+  }
+  /**
+   * <pre>
+   * The photos sent together with this one (spec/chat.md, Albums), as
+   * ChatSend.album named them; empty for a photo sent alone, and for
+   * anything else.
+   * </pre>
+   *
+   * <code>string album = 20 [json_name = "album"];</code>
+   */
+  private void clearAlbum() {
+
+    album_ = getDefaultInstance().getAlbum();
+  }
+  /**
+   * <pre>
+   * The photos sent together with this one (spec/chat.md, Albums), as
+   * ChatSend.album named them; empty for a photo sent alone, and for
+   * anything else.
+   * </pre>
+   *
+   * <code>string album = 20 [json_name = "album"];</code>
+   * @param value The bytes for album to set.
+   */
+  private void setAlbumBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    album_ = value.toStringUtf8();
+
   }
 
   public static app.pochical.v1.ChatLine parseFrom(
@@ -2767,6 +2845,85 @@ public  final class ChatLine extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The photos sent together with this one (spec/chat.md, Albums), as
+     * ChatSend.album named them; empty for a photo sent alone, and for
+     * anything else.
+     * </pre>
+     *
+     * <code>string album = 20 [json_name = "album"];</code>
+     * @return The album.
+     */
+    @java.lang.Override
+    public java.lang.String getAlbum() {
+      return instance.getAlbum();
+    }
+    /**
+     * <pre>
+     * The photos sent together with this one (spec/chat.md, Albums), as
+     * ChatSend.album named them; empty for a photo sent alone, and for
+     * anything else.
+     * </pre>
+     *
+     * <code>string album = 20 [json_name = "album"];</code>
+     * @return The bytes for album.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getAlbumBytes() {
+      return instance.getAlbumBytes();
+    }
+    /**
+     * <pre>
+     * The photos sent together with this one (spec/chat.md, Albums), as
+     * ChatSend.album named them; empty for a photo sent alone, and for
+     * anything else.
+     * </pre>
+     *
+     * <code>string album = 20 [json_name = "album"];</code>
+     * @param value The album to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAlbum(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setAlbum(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The photos sent together with this one (spec/chat.md, Albums), as
+     * ChatSend.album named them; empty for a photo sent alone, and for
+     * anything else.
+     * </pre>
+     *
+     * <code>string album = 20 [json_name = "album"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAlbum() {
+      copyOnWrite();
+      instance.clearAlbum();
+      return this;
+    }
+    /**
+     * <pre>
+     * The photos sent together with this one (spec/chat.md, Albums), as
+     * ChatSend.album named them; empty for a photo sent alone, and for
+     * anything else.
+     * </pre>
+     *
+     * <code>string album = 20 [json_name = "album"];</code>
+     * @param value The bytes for album to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAlbumBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setAlbumBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatLine)
   }
   @java.lang.Override
@@ -2805,12 +2962,13 @@ public  final class ChatLine extends
             "hidden_",
             "replyTo_",
             "notice_",
+            "album_",
           };
           java.lang.String info =
-              "\u0000\u0013\u0000\u0001\u0001\u0013\u0013\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
+              "\u0000\u0014\u0000\u0001\u0001\u0014\u0014\u0000\u0003\u0000\u0001\u0208\u0002\u0003" +
               "\u0003\u0208\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003" +
               "\u000b\u021a\f\u0007\r\u001b\u000e\u0208\u000f\u1009\u0000\u0010\u1009\u0001\u0011" +
-              "\u0007\u0012\u0003\u0013\u1009\u0002";
+              "\u0007\u0012\u0003\u0013\u1009\u0002\u0014\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -800,6 +800,35 @@ public object ChatLineKt {
 
     public val ChatLineKt.Dsl.noticeOrNull: app.pochical.v1.ChatNotice?
       get() = _builder.noticeOrNull
+
+    /**
+     * ```
+     * The photos sent together with this one (spec/chat.md, Albums), as
+     * ChatSend.album named them; empty for a photo sent alone, and for
+     * anything else.
+     * ```
+     *
+     * `string album = 20 [json_name = "album"];`
+     */
+    public var album: kotlin.String
+      @kotlin.jvm.JvmName("getAlbum")
+        get() = _builder.album
+      @kotlin.jvm.JvmName("setAlbum")
+        set(value) {
+        _builder.album = value
+      }
+    /**
+     * ```
+     * The photos sent together with this one (spec/chat.md, Albums), as
+     * ChatSend.album named them; empty for a photo sent alone, and for
+     * anything else.
+     * ```
+     *
+     * `string album = 20 [json_name = "album"];`
+     */
+    public fun clearAlbum() {
+      _builder.clearAlbum()
+    }
   }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =

@@ -181,6 +181,20 @@ A group chat can put days to the vote, as LINE's 日程調整 does, for the step
 - Photos are kept by the server under their group, readable by its members alone through the server, never by a public address. Taking a photo's line back deletes the photo, and its small version, for everyone.
 - A photo that cannot be uploaded (refused, gone from the phone, or failing five tries a few seconds apart) is a line not sent (Lines on their way): its choices are 送れなかった写真's, and 削除 takes the photo kept for it too.
 
+## Albums
+
+Photos sent at once are drawn together, as Telegram, WhatsApp and Messages draw them, rather than a line each down the chat, while each stays a line of its own: answered, saved, pinned and taken back one by one, as Telegram keeps an album's.
+
+- Two photos or more picked or pasted for one send share an album (`ChatSend.album`, the name of the first photo's send); a photo sent alone has none. Pochical's people's photos posted at once from Slack are one album the same way.
+- The chat draws as one album the lines one after another by the same writer with the same album that are still photos; any other line between them ends it, and a photo taken back leaves it, cutting it there (`spec/vectors/chat.json`, albums). One left alone is drawn as a photo is.
+- An album is a grid with no bubble, as wide as a line with a link's page (240 points), rounded at `lg` with a hairline edge, its photos 2 points apart and each cropped to fill its cell. Its photos go in rows, top first: two side by side, three as one over two, four as two over two, and past that rows of two and three with the twos first (`spec/vectors/chat.json`, albumRows). A row of several is as tall as one of its cells is wide; the row of one, over two, is half the grid's width tall. Each photo shows its blur while it comes, as a photo does.
+- The time sits beside the grid by its last photo, as for a photo, and a reply's quote (the first photo's, as the quote goes with the first line sent) over it in a bubble.
+- Each photo is its own line in it: a tap opens it large (and the viewer goes on through the chat's photos as ever), a long press lifts it alone with its own menu (返信 quoting it, 保存, ピン留め, 送信取消), and while it goes up it has its own ring and ×, and its own ! when not sent.
+- The album takes reactions as one, as Telegram's does: they are its first photo's line's, shown once under the grid, and a reaction from any of its photos' menus goes on that line. Dragging it sideways answers its first photo.
+- With a screen reader each photo is read as its line, the first saying how many the album holds (〇枚の写真).
+- Its lines are read and counted as any lines are; the album is on the screen as each of its photos is.
+- Its notifications come as one: each photo's takes the place of the one before (spec/sync-protocol.md, Push).
+
 ## Lines on their way
 
 A line shows the moment it is sent, dimmed (as it would be on the chat's ground, so it looks the same lifted over the dimmed screen for its menu, and as the menu comes and goes), with a clock in its time's room, while it waits in the device's outbox for the group to take it (spec/sync-protocol.md, Chat); it goes by itself whenever the group's socket is open, in the order written, as Signal and Telegram keep sending what waits.

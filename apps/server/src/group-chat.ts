@@ -195,6 +195,7 @@ type Notice = NonNullable<LineRow["notice"]>;
 
 const lineOf = (db: DrizzleSqliteDODatabase, row: LineRow): ChatLine =>
   create(ChatLineSchema, {
+    album: row.album ?? "",
     authorId: row.authorId,
     days: row.days ?? [],
     decided: row.decided ?? "",
@@ -341,6 +342,12 @@ const fitsDays = (days: readonly string[]): boolean =>
 /** The fewest days a poll puts to the vote. */
 const POLL_MIN_DAYS = 2;
 
+/**
+ * An album's name (ChatSend.album): printable ASCII, 64 at most, as it is
+ * the notifications' apns-collapse-id, which APNs takes up to 64 bytes.
+ */
+const ALBUM_NAME = /^[\u0021-\u007E]{1,64}$/u;
+
 /** A photo's size, as the sender read it while shrinking it to send. */
 const fitsPhotoSize = (side: number): boolean =>
   side >= 1 && side <= chatRules.photoMaxEdge;
@@ -352,7 +359,7 @@ const fitsPhotoSize = (side: number): boolean =>
 const fitsPhoto = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  { text, days, poll, photo }: ChatSend
+  { text, days, poll, photo, album }: ChatSend
 ): boolean => {
   if (photo === undefined || text !== "" || days.length > 0 || poll) {
     return false;
@@ -367,7 +374,8 @@ const fitsPhoto = (
     !uploaded.sent &&
     fitsPhotoSize(photo.width) &&
     fitsPhotoSize(photo.height) &&
-    fitsThumbHash(photo.thumbHash)
+    fitsThumbHash(photo.thumbHash) &&
+    (album === "" || ALBUM_NAME.test(album))
   );
 };
 
@@ -375,7 +383,11 @@ const fitsPhoto = (
  * A new line's words, or its days with no words; a poll's days are two
  * at least, in the group chat (a one-to-one chat has no polls).
  */
-const fitsSend = ({ text, days, poll, threadId }: ChatSend): boolean => {
+const fitsSend = ({ text, days, poll, threadId, album }: ChatSend): boolean => {
+  // An album is photos'.
+  if (album !== "") {
+    return false;
+  }
   if (days.length === 0) {
     return !poll && fitsLine(text);
   }
@@ -673,6 +685,7 @@ const unsendLine = (
   const row = db
     .update(chatLines)
     .set({
+      album: null,
       cursor,
       days: null,
       decided: null,
@@ -933,6 +946,7 @@ const takeSend = (
   const row = db
     .insert(chatLines)
     .values({
+      album: send.album === "" ? null : send.album,
       authorId: userId,
       createdCursor: cursor,
       cursor,
@@ -1443,6 +1457,9 @@ export const alertOf = (
     body: direct
       ? { args: said, key: `CHAT_${kind}` }
       : { args: [writer, ...said], key: `CHAT_GROUP_${kind}` },
+    // An album's photos come as one notification, each new one in its
+    // place, as Messages and Telegram show them.
+    collapseId: line.album === "" ? undefined : line.album,
     groupId: group.id,
     line: { authorId: line.authorId, seq: Number(line.seq) },
     threadId: line.threadId,

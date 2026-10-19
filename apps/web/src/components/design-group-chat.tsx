@@ -41,7 +41,13 @@ import {
   useComposer,
 } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
-import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
+import {
+  albumOf,
+  ChatContext,
+  drawnLines,
+  MessageLine,
+  photosOf,
+} from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
 import {
   ChatListRow,
@@ -497,45 +503,62 @@ export function ChatPage({
               {chat.messages.length === 0 && (
                 <li className={chatStyle.empty}>まだメッセージはありません</li>
               )}
-              {chat.messages.map((message, index) => (
-                <Fragment key={message.id}>
-                  {message.id === firstUnreadId && (
-                    <li className={chatStyle.unread} id="unread-line">
-                      <span>ここから新着</span>
-                    </li>
-                  )}
-                  <MessageLine
-                    actions={actionsOf(message)}
-                    flash={flash === message.id}
-                    hidden={folded(message)}
-                    lifted={selected === message.id}
-                    message={message}
-                    onDecide={() => {
-                      setDeciding(message.id);
-                    }}
-                    onFailed={() => {
-                      setFailedOpen(message.id);
-                    }}
-                    onStopUpload={() => {
-                      stop(message.id);
-                    }}
-                    onFolded={keepPlace}
-                    onReveal={() => {
-                      setRevealed((before) => [...before, message.id]);
-                    }}
-                    onSelect={() => {
-                      setSelected(message.id);
-                    }}
-                    onVote={(key) => {
-                      vote(message.id, key);
-                    }}
-                    next={chat.messages[index + 1]}
-                    previous={chat.messages[index - 1]}
-                    quoted={byId(message.replyTo)}
-                    upload={uploads[message.id]}
-                  />
-                </Fragment>
-              ))}
+              {drawnLines(chat.messages, folded).map(
+                ({ message, previous, next, album }) => {
+                  const lines = album ?? [message];
+                  return (
+                    <Fragment key={message.id}>
+                      {/* Over the album an unread photo of it is in. */}
+                      {lines.some((line) => line.id === firstUnreadId) && (
+                        <li className={chatStyle.unread} id="unread-line">
+                          <span>ここから新着</span>
+                        </li>
+                      )}
+                      <MessageLine
+                        actions={actionsOf(message)}
+                        album={albumOf(album, (line) => ({
+                          actions: actionsOf(line),
+                          lifted: selected === line.id,
+                          onFailed: () => {
+                            setFailedOpen(line.id);
+                          },
+                          onStop: () => {
+                            stop(line.id);
+                          },
+                          upload: uploads[line.id],
+                        }))}
+                        flash={lines.some((line) => line.id === flash)}
+                        hidden={folded(message)}
+                        lifted={selected === message.id}
+                        message={message}
+                        onDecide={() => {
+                          setDeciding(message.id);
+                        }}
+                        onFailed={() => {
+                          setFailedOpen(message.id);
+                        }}
+                        onStopUpload={() => {
+                          stop(message.id);
+                        }}
+                        onFolded={keepPlace}
+                        onReveal={() => {
+                          setRevealed((before) => [...before, message.id]);
+                        }}
+                        onSelect={() => {
+                          setSelected(message.id);
+                        }}
+                        onVote={(key) => {
+                          vote(message.id, key);
+                        }}
+                        next={next}
+                        previous={previous}
+                        quoted={byId(message.replyTo)}
+                        upload={uploads[message.id]}
+                      />
+                    </Fragment>
+                  );
+                }
+              )}
               {typingMember && (
                 <LineFrame
                   avatar={

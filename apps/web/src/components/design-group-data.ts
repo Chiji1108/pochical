@@ -159,6 +159,9 @@ export type Message = {
   notice?: string;
   days?: Date[];
   photo?: Photo;
+  // The send a photo went with, when it went with others: they are drawn
+  // as one album (spec/chat.md, Albums).
+  album?: string;
   replyTo?: string;
   reactions?: Reaction[];
 };

@@ -43,6 +43,19 @@ func reactionPeople(_ reactions: [LineReaction], nameOf: (String) -> String) -> 
   var open: (() -> Void)?
 }
 
+/// A MenuOpener for each of a line's parts held on their own: an album's
+/// photos, by their lines' opIDs.
+@MainActor final class MenuOpeners {
+  private var each: [String: MenuOpener] = [:]
+
+  func callAsFunction(_ lineID: String) -> MenuOpener {
+    if let opener = each[lineID] { return opener }
+    let opener = MenuOpener()
+    each[lineID] = opener
+    return opener
+  }
+}
+
 /// What VoiceOver says of a line, and does on it.
 struct LineVoice: ViewModifier {
   let label: String

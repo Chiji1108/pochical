@@ -30,7 +30,7 @@ object Chat {
   const val photoPrefetchScreens = 1
   const val photoSmallEdge = 960
   const val photoThumbHashMaxBytes = 25
-  const val photosPerSend = 4
+  const val photosPerSend = 10
   const val pictureMaxEdge = 640
   const val pochicalMember = "pochical"
   const val prefetchScreens = 2
