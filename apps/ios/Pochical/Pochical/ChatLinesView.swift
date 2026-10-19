@@ -228,6 +228,12 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// the next earlier page is to be laid out. Told the first line laid out,
   /// as the chat's own lines may be ahead of those in place.
   var onNearTop: (String?) -> Void = { _ in }
+  /// Later lines are to come past the last laid out, and may be asked for,
+  /// as earlier ones are (`canAskEarlier`).
+  var canAskLater = false
+  /// The lines are scrolled near their foot, Chat.prefetchScreens away:
+  /// the page after them is to be asked. Told the last line laid out.
+  var onNearFoot: (String?) -> Void = { _ in }
   /// The day of the lines from the item `id` at the top.
   let dayOver: (String) -> Day?
   /// How the item `id` is dragged to reply to it; none for an item the
@@ -436,22 +442,24 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       settings.holds ? keeping(settings.rows) : settings.rows, restyled: restyled,
       reduceMotion: environment.accessibilityReduceMotion)
     // A page come from the server, changing no line laid out, is laid out
-    // at once if the top is near still; asked after this update, not in it.
+    // at once if an end is near still; asked after this update, not in it.
     // Lines changed are asked after once in place (`landed`).
     if !changed {
-      Task { @MainActor [weak self] in self?.askEarlierIfNear() }
+      Task { @MainActor [weak self] in self?.askIfNear() }
     }
   }
 
-  /// Asks for the next earlier page once the top is Chat.prefetchScreens
-  /// away, so the reader scrolling back finds it laid out already.
-  private func askEarlierIfNear() {
-    guard let settings, settings.canAskEarlier, placed, !applying, lines.bounds.height > 0 else {
-      return
-    }
-    let fromTop = lines.contentOffset.y - lowest
-    if fromTop < seenHeight * CGFloat(Chat.prefetchScreens) {
+  /// Asks for the next page beyond either end once that end is
+  /// Chat.prefetchScreens away, measured where the lines are now, so the
+  /// reader scrolling on finds it laid out already.
+  private func askIfNear() {
+    guard let settings, placed, !applying, lines.bounds.height > 0 else { return }
+    let reach = seenHeight * CGFloat(Chat.prefetchScreens)
+    if settings.canAskEarlier, lines.contentOffset.y - lowest < reach {
       settings.onNearTop(ids.first(where: ChatItemID.isLine))
+    }
+    if settings.canAskLater, highest - lines.contentOffset.y < reach {
+      settings.onNearFoot(ids.last(where: ChatItemID.isLine))
     }
   }
 
@@ -603,7 +611,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private func landed() {
     seePlace()
     showWaiting()
-    askEarlierIfNear()
+    askIfNear()
     if following, !scroll.place.atLatest, !userScrolling, !goingDown {
       toLatest(animated: true)
     }
@@ -1069,7 +1077,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
     seePlace()
-    askEarlierIfNear()
+    askIfNear()
   }
 
   func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {

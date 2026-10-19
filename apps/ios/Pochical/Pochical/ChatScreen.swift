@@ -99,9 +99,9 @@ struct ChatScreen: View {
   /// The first line laid out as the page before it was last laid out, so a
   /// page is laid out once as the top nears, not at each scroll.
   @State private var earlierFrom: Int64?
-  /// The last item is near those in sight (ChatLinesView's `onNear`): the
-  /// page after the lines is asked while they stop short of the latest.
-  @State private var footNear = false
+  /// The last line laid out as the page after it was last asked, so that
+  /// page is asked once as the foot nears, not at each scroll.
+  @State private var laterThrough: Int64?
   /// How many times the socket has opened again after a drop: the pages
   /// asked of the server are asked again, their answers maybe lost.
   @State private var reopened = 0
@@ -195,15 +195,13 @@ struct ChatScreen: View {
         }),
       scroll: scroll, proxy: scroller, following: $following,
       shown: placed, holds: acting != nil, canAskEarlier: opened && !state.atStart,
-      onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
+      onNearTop: { showEarlier(laidOut: $0) }, canAskLater: opened && !state.atEnd,
+      onNearFoot: { askLater(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
       replySwipe: { replySwipe(byID[$0]) },
       onReply: { id in
         if let line = answered(byID[id]) { reply(to: line) }
       },
-      onNear: { near in
-        prefetchPhotos(of: near.compactMap { byID[$0] })
-        footNear = listed.last.map { near.contains($0.id) } ?? false
-      }
+      onNear: { prefetchPhotos(of: $0.compactMap { byID[$0] }) }
     )
     .background {
       ReadsSeen(
@@ -264,8 +262,7 @@ struct ChatScreen: View {
     // stop short of the latest (past a gap the catch-up left).
     .task(
       id: PageAfter(
-        through: opened && footNear && !chat.state.atEnd ? chat.state.lines.last?.seq : nil,
-        reopened: reopened)
+        through: opened && !chat.state.atEnd ? laterThrough : nil, reopened: reopened)
     ) {
       await askAfter()
     }
@@ -412,18 +409,6 @@ struct ChatScreen: View {
       for line in chat.state.lines where line.seq > before {
         if let words = spoken(line) { announcer.heard(words) }
       }
-    }
-    // One's own line just sent shows at the foot, wherever the lines were;
-    // already there, the lines slid up to it as it was written (`write`).
-    .onChange(of: state.waiting.last?.opID) { _, sent in
-      guard sent != nil else { return }
-      following = true
-      guard state.atEnd else {
-        toLatestRun(stoppingAtUnread: false)
-        return
-      }
-      // At the foot already, the lines slid up to it as it came in.
-      toLatest(animated: !reduceMotion)
     }
     .environment(\.openURL, OpenURLAction { open($0) })
     // Leaving the chat takes its open menu with it.
@@ -1243,13 +1228,25 @@ struct ChatScreen: View {
     }
   }
 
+  /// The page after the lines laid out is to be asked as their foot nears
+  /// (ChatLinesView's `onNearFoot`), the same as the page before them as
+  /// their top nears: once the lines read are those laid out (`laidOut`,
+  /// the last in place), not while a page after them is still going in.
+  private func askLater(laidOut: String?) {
+    let state = chat.state
+    guard opened, !state.atEnd, let line = state.lines.last, line.seq != laterThrough,
+      laidOut == items(state).last(where: { ChatItemID.isLine($0.id) })?.id
+    else { return }
+    laterThrough = line.seq
+  }
+
   /// Asks the server for the page straight after the lines laid out while
   /// they stop short of the latest the device holds and their foot is
-  /// near, again until the socket is open to ask; the lines then go on
-  /// into it, and on to the latest once it meets the lines held after.
+  /// near (`laterThrough`), again until the socket is open to ask; the
+  /// lines then go on into it, and on to the latest once it meets the lines
+  /// held after.
   private func askAfter() async {
-    let state = chat.state
-    guard opened, footNear, !state.atEnd, let through = state.lines.last?.seq else { return }
+    guard opened, !chat.state.atEnd, let through = laterThrough else { return }
     while !Task.isCancelled,
       await socket?.requestPage(of: threadID, before: pageAfter(through: through)) != true
     {
@@ -1257,22 +1254,41 @@ struct ChatScreen: View {
     }
   }
 
+  /// One's own line just sent shows at the foot, wherever the lines were;
+  /// already there, the lines slide up to it as it comes in. Gone to from
+  /// the send itself, not from the line seen waiting: the server's answer
+  /// can come before the lines are read again, and the line is then never
+  /// seen waiting (as the first send's notification alert holds the app).
+  private func toOwnLine() {
+    following = true
+    guard chat.state.atEnd else {
+      toLatestRun(stoppingAtUnread: false)
+      return
+    }
+    toLatest(animated: !reduceMotion)
+  }
+
   /// To the latest when the lines laid out stop short of it: the latest
   /// lines laid out instead, as the chat opens, following them. From ↓,
   /// others' unread lines among them stop it under ここから新着, as the
-  /// catch-up's do; for one's own line sent, it goes on to the foot, where
-  /// that line is.
+  /// catch-up's do, the lines hidden as the chat's are as it opens until
+  /// there: where the new lines first land is neither seen nor read. For
+  /// one's own line sent, it goes on to the foot, where that line is.
   private func toLatestRun(stoppingAtUnread: Bool) {
     let before = chat.state.lines.last?.seq
     following = !stoppingAtUnread
     earlierFrom = nil
+    if stoppingAtUnread { placed = false }
     Task {
       await layOut(from: nil)
       if stoppingAtUnread, let first = unreadComing(after: before) {
-        show(from: first)
+        show(from: first, animated: false) {
+          withAnimation(.easeOut(duration: 0.15)) { placed = true }
+        }
       } else {
         following = true
         toLatest()
+        placed = true
       }
     }
   }
@@ -1329,18 +1345,22 @@ struct ChatScreen: View {
   /// Shows the lines from `first` as far as the screen goes rather than
   /// the latest: at the foot after all when they fit, following on, else
   /// stopped there under ここから新着 (unless the chat has one already).
-  private func show(from first: ChatLineRow) {
+  private func show(
+    from first: ChatLineRow, animated: Bool = true, then: @escaping () -> Void = {}
+  ) {
     following = false
     // Asked to the top with too few lines under it to get there, it stops
     // at the foot.
-    scroller.show(itemID(of: first), at: .top, animated: true) {
+    scroller.show(itemID(of: first), at: .top, animated: animated) {
       if scroll.place.atLatest {
         following = true
       } else if unreadFrom == nil {
         // Shown once ここから新着 is laid out over it.
         unreadFrom = first.seq
-        scroller.show(ChatItem.unread.id, at: .top)
+        scroller.show(ChatItem.unread.id, at: .top, then: then)
+        return
       }
+      then()
     }
   }
 
@@ -1873,6 +1893,7 @@ struct ChatScreen: View {
         try Chats.edit(kind, in: place.id, now: now, db: db)
       }
     }
+    if case .send = kind { toOwnLine() }
   }
 }
 
@@ -1917,7 +1938,7 @@ private struct PageAhead: Hashable {
 }
 
 /// When the server is asked for the page after the lines laid out: as
-/// their last changes while their foot is near and they stop short of the
+/// their foot nears with a new last line while they stop short of the
 /// latest (`through`, else nil), and again as the socket opens after a
 /// drop.
 private struct PageAfter: Hashable {
