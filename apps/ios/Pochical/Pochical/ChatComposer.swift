@@ -39,6 +39,11 @@ final class ChatDraft {
   /// When the member's own typing was last sent.
   @ObservationIgnored var typingSentAt = Date.distantPast
 
+  /// What is written as a draft keeps it, its mentions as <@id>.
+  var kept: KeptDraft {
+    KeptDraft(text: withMentions(text, picked: picked), replyTo: replyTo, editing: editing?.seq)
+  }
+
   /// The page to send with `text`: its first link's, read and not taken
   /// off; none while it is still being asked for.
   func attachedPreview(for text: String) -> LinePreview? {
@@ -90,6 +95,8 @@ struct ChatComposer: View {
   let quoteOf: (Int64) -> LineQuote
   let onSubmit: () -> Void
   var onStopEditing: () -> Void = {}
+  /// Keeps the draft as it is now (spec/chat.md, Drafts).
+  let keepDraft: () -> Void
   /// 日にちを共有, in a group's chat.
   var onShareDays: (() -> Void)?
   let say: (String) -> Void
@@ -112,6 +119,8 @@ struct ChatComposer: View {
   private var sendSize: CGFloat { buttonSize - 2 * Self.sendInset }
   private static let sendInset: CGFloat = 4
   private static let mostScale = CGFloat(Chat.controlsMostScale)
+  /// How long the writing pauses before what is written is kept.
+  private static let keepPause = Duration.milliseconds(500)
 
   var body: some View {
     let editing = draft.editing
@@ -155,6 +164,14 @@ struct ChatComposer: View {
       }
     }
     .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }
+    // The draft is kept as it changes, once the writing pauses; an emptied
+    // composer at once, so words sent are never a draft again.
+    .task(id: draft.kept) {
+      if !draft.text.isEmpty {
+        do { try await Task.sleep(for: Self.keepPause) } catch { return }
+      }
+      keepDraft()
+    }
   }
 
   /// The capsule: what the message is, then what goes with it, the photos
