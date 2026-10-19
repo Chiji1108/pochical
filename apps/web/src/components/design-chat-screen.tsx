@@ -224,6 +224,9 @@ export function ChatScreen({
   const folded = (message: Message) =>
     blocked.includes(message.from) && !revealed.includes(message.id);
   const { failedCount, stop, upload, uploads } = usePhotoUploads(photoSend);
+  // A line's upload as this screen has it, else as the chat kept it.
+  const uploadOf = (message: Message): Upload | undefined =>
+    uploads[message.id] ?? (message.failed ? "failed" : undefined);
   const [sharing, setSharing] = useState(false);
   const { answerSoon, typingMember } = useTypingSoon(members, chat.messages);
   const {
@@ -321,6 +324,39 @@ export function ChatScreen({
     },
     []
   );
+  // A photo not sent stays so with its line, as the apps keep it in their
+  // outbox, so the chats' list says so once the chat is left; sent again,
+  // it no longer is.
+  // The uploads as last seen, to tell a photo that went (gone from them
+  // after sending) from one only not tried on this screen.
+  const lastUploads = useRef<Record<string, Upload>>({});
+  const keepFailed = useEffectEvent((now: Record<string, Upload>) => {
+    const before = lastUploads.current;
+    lastUploads.current = now;
+    // Failed once it fails; not failed only once it is sent, so leaving
+    // while it is sent again keeps it failed.
+    const failedNow = (message: Message) => {
+      if (now[message.id] === "failed") {
+        return true;
+      }
+      const sent = before[message.id] === "sending" && !(message.id in now);
+      return sent ? false : (message.failed ?? false);
+    };
+    const changed = (message: Message) =>
+      failedNow(message) !== (message.failed ?? false);
+    if (chat.messages.some(changed)) {
+      onChange(
+        chat.messages.map((message) =>
+          changed(message)
+            ? { ...message, failed: failedNow(message) }
+            : message
+        )
+      );
+    }
+  });
+  useEffect(() => {
+    keepFailed(uploads);
+  }, [uploads]);
   const openUrl = (url: string) => {
     const code = onInvite && inviteCodeOf(url);
     if (code) {
@@ -353,7 +389,7 @@ export function ChatScreen({
     photos: photosOf(
       chat.messages,
       writerOf,
-      (message) => !folded(message) && uploads[message.id] === undefined
+      (message) => !folded(message) && uploadOf(message) === undefined
     ),
     writerOf,
   };
@@ -492,7 +528,7 @@ export function ChatScreen({
                           onStop: () => {
                             stop(line.id);
                           },
-                          upload: uploads[line.id],
+                          upload: uploadOf(line),
                         }))}
                         flash={lines.some((line) => line.id === flash)}
                         hidden={folded(message)}
@@ -520,7 +556,7 @@ export function ChatScreen({
                         next={next}
                         previous={previous}
                         quoted={byId(message.replyTo)}
-                        upload={uploads[message.id]}
+                        upload={uploadOf(message)}
                       />
                     </Fragment>
                   );

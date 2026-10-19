@@ -244,11 +244,20 @@ struct ChatRow<Icon: View>: View {
 
   /// What is being written, kept as the chat was left, in place of the
   /// latest line: 下書き： in the danger color, as Telegram marks one
-  /// (spec/chat.md, Drafts).
+  /// (spec/chat.md, Drafts). Else the member's own latest line not sent
+  /// says so in place of its words: the line's red ! and 送れませんでした,
+  /// as Messages marks one (spec/chat.md, Lines on their way).
   private var previewText: Text {
-    guard let draft = chat.summary.draft else { return Text(preview) }
-    let words = plainText(draft.text, nameOf: { memberName($0, in: chat.names) })
-    return Text("\(Text("下書き：").foregroundStyle(colors.dangerDefault))\(words)")
+    if let draft = chat.summary.draft {
+      let words = plainText(draft.text, nameOf: { memberName($0, in: chat.names) })
+      return Text("\(Text("下書き：").foregroundStyle(colors.dangerDefault))\(words)")
+    }
+    if chat.summary.waiting?.failed == true {
+      let mark = Text(Image(systemName: "exclamationmark.circle.fill"))
+        .foregroundStyle(colors.dangerDefault)
+      return Text("\(mark) 送れませんでした").accessibilityLabel("送れませんでした")
+    }
+    return Text(preview)
   }
 
   /// The latest line as one line of words: 自分： before one's own.
