@@ -35,6 +35,7 @@ private struct PhotoVectors: Decodable {
         let photo: Bool
       }
       let open: Open?
+      let latest: Bool?
       let page: Page?
       let show: Int64?
       let line: Int64?
@@ -88,6 +89,7 @@ private func photoRun(_ test: PhotoVectors.Run) {
     if let open = given.open {
       run = PhotoRun(held: open.held.map(item), tapped: open.tapped, ahead: test.ahead)
     }
+    if given.latest == true { run = PhotoRun(latest: test.ahead) }
     if let page = given.page {
       run?.take(
         ChatPhotosPage(
