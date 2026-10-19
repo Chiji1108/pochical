@@ -54,6 +54,57 @@ struct PhotoPager {
   let database: any DatabaseWriter
   /// Whom the reader has blocked, whose photos fold away in its own chat.
   let blocked: Set<String>
+
+  /// Holds the place's socket while the chat's photos show, and follows
+  /// them until cancelled, then lets go of it: `opened` once held, with its
+  /// client to ask for pages on (as their answers are listened to by
+  /// then), and each change to them as `change`: a page come, the socket
+  /// open again after a drop, the chat's lines on the device changed.
+  @MainActor func follow(
+    opened: @escaping @MainActor (SyncClient) -> Void,
+    change: @escaping @MainActor (_ edit: (inout PhotoRun) -> Void) -> Void
+  ) async {
+    let (client, hold) = await sockets.open(placeID, account: account, database: database)
+    if !Task.isCancelled {
+      let pages = await client.photoPages()
+      opened(client)
+      let threadID = threadID
+      let blocked = blocked
+      let database = database
+      let following = [
+        Task {
+          for await page in pages where page.threadID == threadID {
+            change { $0.take(page) }
+          }
+        },
+        Task {
+          // Open again after a drop: what was asked is asked again.
+          var open = true
+          for await status in await client.statuses() {
+            let now = status != .connecting
+            if now, !open { change { $0.reconnected() } }
+            open = now
+          }
+        },
+        Task {
+          let lines = ValueObservation.tracking { db in
+            try Chats.photoLines(of: placeID, thread: threadID, blocked: blocked, in: db)
+          }
+          do {
+            for try await now in lines.values(in: database) {
+              change { $0.follow(now) }
+            }
+          } catch {}
+        },
+      ]
+      await withTaskCancellationHandler {
+        for task in following { await task.value }
+      } onCancel: {
+        for task in following { task.cancel() }
+      }
+    }
+    await sockets.close(hold, of: placeID)
+  }
 }
 
 extension View {
@@ -110,6 +161,30 @@ struct PhotoSpot: UIViewRepresentable {
   }
 }
 
+extension View {
+  /// The photo `id`'s place, where it opens large from and closes back to,
+  /// left empty while it is open, as Photos leaves a photo's place.
+  func photoSpot(_ id: String) -> some View {
+    modifier(PhotoSpotted(id: id))
+  }
+}
+
+private struct PhotoSpotted: ViewModifier {
+  let id: String
+  /// It is open large from here.
+  @State private var open = false
+
+  func body(content: Content) -> some View {
+    content
+      .opacity(open ? 0 : 1)
+      .background(PhotoSpot(id: id))
+      .onAppear { open = PhotoSpots.shared.open == id }
+      .onReceive(NotificationCenter.default.publisher(for: PhotoSpots.opened)) { _ in
+        open = PhotoSpots.shared.open == id
+      }
+  }
+}
+
 private struct PhotoViewerPresenter: UIViewControllerRepresentable {
   @Binding var viewing: PhotoViewing?
   let groupID: String
@@ -162,7 +237,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   /// Asking for pages and following the chat, while open.
   private var following: [Task<Void, Never>] = []
   /// The place's socket, held open while the photos show; nil until held.
-  private var socket: (client: SyncClient, hold: UUID)?
+  private var client: SyncClient?
   /// The photos about to be swiped to, fetched ahead.
   private let ahead = PhotoPrefetch()
   private let groupID: String
@@ -369,10 +444,8 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   override func viewDidDisappear(_ animated: Bool) {
     super.viewDidDisappear(animated)
     guard isBeingDismissed else { return }
+    // Following no more lets go of the socket.
     for task in following { task.cancel() }
-    if let pager, let hold = socket?.hold {
-      Task { await pager.sockets.close(hold, of: pager.placeID) }
-    }
     ahead.stop()
     PhotoSpots.shared.open = nil
     onClosed?()
@@ -423,7 +496,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     guard let index = run.index else { return }
     let near = run.photos[max(index - 2, 0)...min(index + 2, run.photos.count - 1)]
     ahead.whole(near.map(\.photo), in: groupID, calls: calls)
-    guard let pager, let client = socket?.client else { return }
+    guard let pager, let client else { return }
     for ask in run.asks() {
       Task {
         let asked = await client.requestPhotos(
@@ -434,47 +507,17 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   }
 
   /// The chat's photos as pages of them come and its lines change, until
-  /// closed. Covering the chat, they hold its place's socket themselves,
-  /// and ask for pages once their answers are listened to.
+  /// closed. Covering the chat, they hold its place's socket themselves.
   private func follow() {
     guard let pager else { return }
-    let groupID = groupID
     following.append(
       Task { [weak self] in
-        let (client, hold) = await pager.sockets.open(
-          pager.placeID, account: pager.account, database: pager.database)
-        guard let self, !Task.isCancelled else {
-          await pager.sockets.close(hold, of: pager.placeID)
-          return
-        }
-        let pages = await client.photoPages()
-        socket = (client, hold)
-        showing()
-        following.append(
-          Task { [weak self] in
-            // Open again after a drop: what was asked is asked again.
-            var open = true
-            for await status in await client.statuses() {
-              let now = status != .connecting
-              if now, !open { self?.changed { $0.reconnected() } }
-              open = now
-            }
-          })
-        for await page in pages where page.threadID == pager.threadID {
-          changed { $0.take(page) }
-        }
-      })
-    following.append(
-      Task { [weak self] in
-        let lines = ValueObservation.tracking { db in
-          try Chats.photoLines(
-            of: groupID, thread: pager.threadID, blocked: pager.blocked, in: db)
-        }
-        do {
-          for try await now in lines.values(in: pager.database) {
-            self?.changed { $0.follow(now) }
-          }
-        } catch {}
+        await pager.follow(
+          opened: { client in
+            self?.client = client
+            self?.showing()
+          },
+          change: { edit in self?.changed(edit) })
       })
   }
 
