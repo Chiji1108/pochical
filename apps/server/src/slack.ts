@@ -208,55 +208,99 @@ const passing = (why: string): SlackRefusal => ({
   why,
 });
 
-/** What Slack did not take, and why, for the relay to try again. */
+/**
+ * What Slack did not take, and why, for the relay to try again; and
+ * whether that leaves the line surely not posted, or perhaps posted with
+ * Slack's answer lost, for the retry to look for it in Slack first.
+ */
 export class SlackRefusedError extends Error {
   readonly refusal: SlackRefusal;
+  readonly notPosted: boolean;
 
-  constructor(what: string, refusal: SlackRefusal) {
+  constructor(what: string, refusal: SlackRefusal, notPosted: boolean) {
     super(`Slack did not take ${what}: ${refusal.why}`);
     this.name = "SlackRefusedError";
     this.refusal = refusal;
+    this.notPosted = notPosted;
   }
 }
 
-/** Slack's answer to a call: what it gave back, or why it refused. */
+/**
+ * Slack's errors that may come after it did part of the call
+ * (chat.postMessage's reference says so of internal_error and
+ * fatal_error), or when it gave up waiting on itself.
+ */
+const UNSURE_ERRORS = new Set([
+  "fatal_error",
+  "internal_error",
+  "request_timeout",
+  "service_unavailable",
+]);
+
+/**
+ * Slack's answer to a call: what it gave back, or why it refused and
+ * whether it may have done it all the same (no answer, a 5xx, or an
+ * error Slack gives when unsure).
+ */
 type SlackAnswer =
   | { taken: Record<string, unknown> }
-  | { refused: SlackRefusal };
+  | { refused: SlackRefusal; unsure: boolean };
 
-/** One of Slack's Web API methods as the app, and Slack's answer. */
+/**
+ * One of Slack's Web API methods as the app, and Slack's answer: its
+ * arguments as JSON, or in the URL for a method that only reads, as
+ * Slack's conversations methods take them.
+ */
 const askSlack = async (
   env: Env,
   method: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  reads = false
 ): Promise<SlackAnswer> => {
   const token = slackSecret(env.SLACK_BOT_TOKEN);
-  const channel = slackSecret(env.SLACK_CHANNEL_ID);
+  const all = { channel: slackSecret(env.SLACK_CHANNEL_ID), ...args };
+  const url = new URL(`https://slack.com/api/${method}`);
+  const headers = { Authorization: `Bearer ${token}` };
   let response: Response;
   try {
-    response = await fetch(`https://slack.com/api/${method}`, {
-      body: JSON.stringify({ channel, ...args }),
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json; charset=utf-8",
-      },
-      method: "POST",
-    });
+    if (reads) {
+      for (const [name, value] of Object.entries(all)) {
+        url.searchParams.set(
+          name,
+          typeof value === "string" ? value : JSON.stringify(value)
+        );
+      }
+      response = await fetch(url, { headers });
+    } else {
+      response = await fetch(url, {
+        body: JSON.stringify(all),
+        headers: {
+          ...headers,
+          "Content-Type": "application/json; charset=utf-8",
+        },
+        method: "POST",
+      });
+    }
   } catch (error) {
     console.error(`Slack ${method} failed`, error);
-    return { refused: passing("network") };
+    return { refused: passing("network"), unsure: true };
   }
   const result: unknown = await response.json().catch(() => null);
   if (isRecord(result) && result.ok === true) {
     return { taken: result };
   }
+  const error = isRecord(result) ? stringOf(result.error) : undefined;
   const refused = slackRefusal(
     response.status,
     response.headers.get("Retry-After"),
-    isRecord(result) ? stringOf(result.error) : undefined
+    error
   );
   console.error(`Slack ${method} failed`, refused.why);
-  return { refused };
+  return {
+    refused,
+    unsure:
+      response.status >= 500 || error === undefined || UNSURE_ERRORS.has(error),
+  };
 };
 
 /** One of Slack's Web API methods as the app; null when it did not take. */
@@ -273,6 +317,13 @@ export const slackCall = async (
 };
 
 /**
+ * What a call of the relay's does to a line's message: posts it (surely
+ * not, only when Slack says it did not take it), readies its posting
+ * (never posting it), or looks for it (saying nothing of whether it is).
+ */
+type RelayCall = "posts" | "readies" | "looks";
+
+/**
  * One of Slack's Web API methods the relay needs taken: what Slack gave
  * back, or SlackRefusedError thrown, saying why, for the relay to try again.
  */
@@ -280,11 +331,16 @@ const slackTake = async (
   env: Env,
   method: string,
   args: Record<string, unknown>,
-  what: string
+  what: string,
+  call: RelayCall
 ): Promise<Record<string, unknown>> => {
-  const answer = await askSlack(env, method, args);
+  const answer = await askSlack(env, method, args, call === "looks");
   if ("refused" in answer) {
-    throw new SlackRefusedError(what, answer.refused);
+    throw new SlackRefusedError(
+      what,
+      answer.refused,
+      call === "readies" || (call === "posts" && !answer.unsure)
+    );
   }
   return answer.taken;
 };
@@ -362,31 +418,176 @@ const threadHead = (line: SupportLine, words: string): string => {
 };
 
 /**
- * A message the relay posts, and its ts; SlackRefusedError thrown when Slack
- * did not take it, or took it without saying which message it is.
+ * The metadata each message the relay posts carries (Slack's message
+ * metadata, read back with include_all_metadata): the line it is, by
+ * which a retry finds it.
+ */
+const LINE_EVENT = "pochical_support_line";
+
+const lineMetadata = (line: SupportLine) => ({
+  event_payload: { seq: line.seq, user_id: line.userId },
+  event_type: LINE_EVENT,
+});
+
+/** Whether a message in Slack is the one the relay posted for `line`. */
+const isMessageOf =
+  (line: SupportLine) =>
+  (message: Record<string, unknown>): boolean => {
+    const { metadata } = message;
+    if (!isRecord(metadata) || metadata.event_type !== LINE_EVENT) {
+      return false;
+    }
+    const payload = metadata.event_payload;
+    return (
+      isRecord(payload) &&
+      // Slack may give a number in the payload back as a string.
+      Number(payload.seq) === line.seq &&
+      payload.user_id === line.userId
+    );
+  };
+
+/**
+ * The file a line's photo is uploaded as, the line in its name, by which
+ * a retry finds its message: a file's message carries no metadata.
+ */
+const photoName = (line: SupportLine): string => `photo-${line.seq}.jpg`;
+
+const hasPhotoOf =
+  (line: SupportLine) =>
+  (message: Record<string, unknown>): boolean =>
+    // Posted by an app, so not a file of the same name a person shared.
+    typeof message.bot_id === "string" &&
+    Array.isArray(message.files) &&
+    message.files.some(
+      (file: unknown) => isRecord(file) && file.name === photoName(line)
+    );
+
+/** How much earlier than this server's clock Slack's may say a post was. */
+const CLOCK_SKEW_S = 60;
+
+/** The most messages one look asks Slack for, as its references advise. */
+const LOOK_PAGE = 200;
+
+/**
+ * The message `matches` finds in the channel (conversations.history) or in
+ * `thread` (conversations.replies), posted since `since` or a little
+ * before; undefined when there is none. For a retry after Slack's answer
+ * to a post was lost, which may have been taken all the same: reading
+ * needs channels:history or groups:history, which the message event the
+ * app takes replies by needs too.
+ */
+const findPosted = async (
+  env: Env,
+  since: Date,
+  thread: string | null,
+  matches: (message: Record<string, unknown>) => boolean
+): Promise<string | undefined> => {
+  const method =
+    thread === null ? "conversations.history" : "conversations.replies";
+  let cursor = "";
+  do {
+    // oxlint-disable-next-line no-await-in-loop -- page after page
+    const page = await slackTake(
+      env,
+      method,
+      {
+        include_all_metadata: true,
+        limit: LOOK_PAGE,
+        oldest: (since.getTime() / 1000 - CLOCK_SKEW_S).toFixed(6),
+        ...(thread === null ? {} : { ts: thread }),
+        ...(cursor === "" ? {} : { cursor }),
+      },
+      "a look for a line",
+      "looks"
+    );
+    const messages: unknown[] = Array.isArray(page.messages)
+      ? page.messages
+      : [];
+    const found = messages.find(
+      (message) => isRecord(message) && matches(message)
+    );
+    const ts = isRecord(found) ? stringOf(found.ts) : undefined;
+    if (ts !== undefined) {
+      return ts;
+    }
+    const next = page.response_metadata;
+    cursor = (isRecord(next) ? stringOf(next.next_cursor) : undefined) ?? "";
+  } while (cursor !== "");
+  return undefined;
+};
+
+/**
+ * A line's message posted by the relay, with its metadata, and its ts;
+ * SlackRefusedError thrown when Slack did not take it, or took it without
+ * saying which message it is. Slack ignores metadata it finds wrong, with
+ * a warning, so its warnings are logged.
  */
 const postForRelay = async (
   env: Env,
+  line: SupportLine,
   args: Record<string, unknown>,
   what: string
 ): Promise<string> => {
-  const posted = await slackTake(env, "chat.postMessage", args, what);
+  const posted = await slackTake(
+    env,
+    "chat.postMessage",
+    { ...args, metadata: lineMetadata(line) },
+    what,
+    "posts"
+  );
+  const said = posted.response_metadata;
+  const warnings = isRecord(said) ? said.warnings : undefined;
+  if (Array.isArray(warnings) && warnings.length > 0) {
+    console.warn("Slack warned of a relay post", warnings);
+  }
   const ts = stringOf(posted.ts);
   if (ts === undefined) {
-    throw new SlackRefusedError(what, passing("no_ts"));
+    throw new SlackRefusedError(what, passing("no_ts"), false);
   }
   return ts;
+};
+
+/**
+ * A line's message, in `thread` or (null) in the channel: posted, or,
+ * when a post of it since `unsureSince` may have been taken with Slack's
+ * answer lost, found first and posted only when it is not there.
+ */
+const postOnce = async (
+  env: Env,
+  line: SupportLine,
+  unsureSince: Date | null,
+  thread: string | null,
+  text: string,
+  what: string
+): Promise<string> => {
+  const found =
+    unsureSince === null
+      ? undefined
+      : await findPosted(env, unsureSince, thread, isMessageOf(line));
+  return (
+    found ??
+    (await postForRelay(
+      env,
+      line,
+      thread === null ? { text } : { text, thread_ts: thread },
+      what
+    ))
+  );
 };
 
 /** A chat's thread, started by the user's first line. */
 const startThread = async (
   env: Env,
   line: SupportLine,
-  words: string
+  words: string,
+  unsureSince: Date | null
 ): Promise<string> => {
-  const ts = await postForRelay(
+  const ts = await postOnce(
     env,
-    { text: threadHead(line, words) },
+    line,
+    unsureSince,
+    null,
+    threadHead(line, words),
     "a thread"
   );
   // Two first lines at once keep the thread the first kept.
@@ -427,14 +628,23 @@ const sharedTs = (file: unknown, channel: string): string | undefined => {
  * reply's quote over it; the message it was shared in (files:read), for
  * its reactions and its taking back. Null when there is no photo to
  * upload, or Slack shared it without saying where: it is not uploaded
- * again.
+ * again. When an upload since `unsureSince` may have been shared with
+ * Slack's answer lost, its message is looked for in the thread first.
  */
 const postPhoto = async (
   env: Env,
   line: SupportLine,
   thread: string,
-  quote: string
+  quote: string,
+  unsureSince: Date | null
 ): Promise<string | null> => {
+  const found =
+    unsureSince === null
+      ? undefined
+      : await findPosted(env, unsureSince, thread, hasPhotoOf(line));
+  if (found !== undefined) {
+    return found;
+  }
   const photo = await env.PHOTOS.get(
     photoKey(supportPlace(line.userId), line.photo?.id ?? "")
   );
@@ -445,19 +655,20 @@ const postPhoto = async (
   const slot = await slackTake(
     env,
     "files.getUploadURLExternal",
-    { alt_txt: "写真", filename: "photo.jpg", length: bytes.byteLength },
-    "a photo"
+    { alt_txt: "写真", filename: photoName(line), length: bytes.byteLength },
+    "a photo",
+    "readies"
   );
   const url = stringOf(slot.upload_url);
   const fileId = stringOf(slot.file_id);
   if (url === undefined || fileId === undefined) {
-    throw new SlackRefusedError("a photo", passing("no_upload_url"));
+    throw new SlackRefusedError("a photo", passing("no_upload_url"), true);
   }
   const uploaded = await fetch(url, { body: bytes, method: "POST" }).catch(
     () => null
   );
   if (uploaded === null) {
-    throw new SlackRefusedError("a photo", passing("network"));
+    throw new SlackRefusedError("a photo", passing("network"), true);
   }
   if (!uploaded.ok) {
     throw new SlackRefusedError(
@@ -466,7 +677,8 @@ const postPhoto = async (
         uploaded.status,
         uploaded.headers.get("Retry-After"),
         undefined
-      )
+      ),
+      true
     );
   }
   await slackTake(
@@ -478,7 +690,8 @@ const postPhoto = async (
       thread_ts: thread,
       ...(quote === "" ? {} : { initial_comment: quote.trim() }),
     },
-    "a photo"
+    "a photo",
+    "posts"
   );
   for (let tries = 0; tries < SHARE_TRIES; tries += 1) {
     // oxlint-disable-next-line no-await-in-loop -- Slack shares it in a moment
@@ -528,12 +741,14 @@ export const slackFile = async (
  * quotes what it is to. Its message, for its reactions and its taking
  * back, or null when there is none to keep (Slack not set up here, or a
  * photo shared without its message); throws when Slack did not take it,
- * for the relay to try again.
+ * for the relay to try again. A try after one since `unsureSince` whose
+ * answer was lost finds the line's message in Slack before posting it.
  */
 export const tellStaffOfLine = async (
   env: Env,
   line: SupportLine,
-  repliedTo: SupportLine | null
+  repliedTo: SupportLine | null,
+  unsureSince: Date | null
 ): Promise<string | null> => {
   if (!slackSetUp(env)) {
     return null;
@@ -546,13 +761,13 @@ export const tellStaffOfLine = async (
   const thread = await threadOf(env, line.userId);
   if (line.photo !== null) {
     // A photo is shared in the thread, which a first line starts.
-    const into = thread ?? (await startThread(env, line, words));
-    return await postPhoto(env, line, into, quote);
+    const into = thread ?? (await startThread(env, line, words, unsureSince));
+    return await postPhoto(env, line, into, quote, unsureSince);
   }
   if (thread === null) {
-    return await startThread(env, line, words);
+    return await startThread(env, line, words, unsureSince);
   }
-  return await postForRelay(env, { text: words, thread_ts: thread }, "a line");
+  return await postOnce(env, line, unsureSince, thread, words, "a line");
 };
 
 /**
@@ -561,18 +776,19 @@ export const tellStaffOfLine = async (
  */
 export const tellStaffOfAnswer = async (
   env: Env,
-  line: SupportLine
+  line: SupportLine,
+  unsureSince: Date | null
 ): Promise<string | null> => {
   const thread = await threadOf(env, line.userId);
   if (!slackSetUp(env) || thread === null) {
     return null;
   }
-  return await postForRelay(
+  return await postOnce(
     env,
-    {
-      text: `管理サイトから返信しました：\n${toSlackText(wordsOf(line))}`,
-      thread_ts: thread,
-    },
+    line,
+    unsureSince,
+    thread,
+    `管理サイトから返信しました：\n${toSlackText(wordsOf(line))}`,
     "an answer"
   );
 };

@@ -27,8 +27,18 @@ let posts = 0;
 /** Where Slack says a file uploaded by the app was shared. */
 const SHARED_TS = "1700000300.000001";
 
+/** How the messages a photo is shared in begin, as conversations.* say. */
+const SHARED_PREFIX = "1700000400.";
+
+/** A message in the channel as Slack keeps it, for conversations.* here. */
+type SlackMessage = Record<string, unknown> & { ts: string };
+
 /** What Slack answers each of its Web API methods with here. */
-const slackAnswer = (method: string): Record<string, unknown> => {
+const slackAnswer = (
+  method: string,
+  args: Record<string, unknown>,
+  messages: SlackMessage[]
+): Record<string, unknown> => {
   switch (method) {
     case "files.getUploadURLExternal": {
       return {
@@ -43,6 +53,23 @@ const slackAnswer = (method: string): Record<string, unknown> => {
         ok: true,
       };
     }
+    case "conversations.history": {
+      return {
+        messages: messages.filter(
+          (message) =>
+            message.thread_ts === undefined || message.thread_ts === message.ts
+        ),
+        ok: true,
+      };
+    }
+    case "conversations.replies": {
+      return {
+        messages: messages.filter(
+          (message) => message.ts === args.ts || message.thread_ts === args.ts
+        ),
+        ok: true,
+      };
+    }
     default: {
       posts += method === "chat.postMessage" ? 1 : 0;
       return { ok: true, ts: `1700000000.${String(posts).padStart(6, "0")}` };
@@ -50,8 +77,16 @@ const slackAnswer = (method: string): Record<string, unknown> => {
   }
 };
 
-/** How Slack refuses a call: its error, HTTP status and Retry-After. */
-type Refusal = { error: string; status?: number; retryAfterS?: number };
+/**
+ * How Slack refuses a call: its error, HTTP status and Retry-After; and
+ * whether it did it all the same, its answer lost.
+ */
+type Refusal = {
+  error: string;
+  status?: number;
+  retryAfterS?: number;
+  taken?: boolean;
+};
 
 /** Slack's answer refusing a call, ratelimited unless said otherwise. */
 const refusalAnswer = (refusal: true | Refusal): Response => {
@@ -67,15 +102,28 @@ const refusalAnswer = (refusal: true | Refusal): Response => {
   );
 };
 
+/** A call's arguments: its JSON body, or its URL's query for a GET. */
+const argsOf = async (
+  request: Request,
+  url: URL
+): Promise<Record<string, unknown>> =>
+  request.method === "GET"
+    ? Object.fromEntries(url.searchParams)
+    : await request.json();
+
 /**
  * What reached Slack's Web API, as each method and its arguments; Slack's
  * file host takes uploads and gives back a small PNG. Slack refuses the
- * calls `refused` says to, by the method and how many came before.
+ * calls `refused` says to, by the method and how many came before, and
+ * keeps the messages posted and photos shared, for conversations.* to
+ * give back.
  */
 const slackCalls = (
   refused: (method: string, before: number) => boolean | Refusal = () => false
 ) => {
   const calls: { method: string; args: Record<string, unknown> }[] = [];
+  const messages: SlackMessage[] = [];
+  let filename = "";
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const request = new Request(input, init);
     const url = new URL(request.url);
@@ -84,14 +132,31 @@ const slackCalls = (
         headers: { "Content-Type": "image/png" },
       });
     }
-    const args: Record<string, unknown> = await request.json();
+    const args = await argsOf(request, url);
     const method = url.pathname.replace("/api/", "");
     const before = calls.filter((each) => each.method === method).length;
     calls.push({ args, method });
     const refusal = refused(method, before);
-    return refusal === false
-      ? Response.json(slackAnswer(method))
-      : refusalAnswer(refusal);
+    const taken =
+      refusal === false || (refusal !== true && refusal.taken === true);
+    const answer = taken ? slackAnswer(method, args, messages) : {};
+    if (taken && method === "chat.postMessage") {
+      messages.push({ ...args, ts: String(answer.ts) });
+    }
+    if (taken && method === "files.getUploadURLExternal") {
+      filename = String(args.filename);
+    }
+    if (taken && method === "files.completeUploadExternal") {
+      posts += 1;
+      messages.push({
+        // As Slack gives a file the app shared.
+        bot_id: "B0",
+        files: [{ name: filename }],
+        thread_ts: args.thread_ts,
+        ts: `${SHARED_PREFIX}${String(posts).padStart(6, "0")}`,
+      });
+    }
+    return refusal === false ? Response.json(answer) : refusalAnswer(refusal);
   });
   return calls;
 };
@@ -613,6 +678,41 @@ describe("reactions and lines taken back, in Slack", () => {
   });
 });
 
+/** A photo the user sends in their chat, uploaded first as the app does. */
+const sendPhoto = async (
+  token: string,
+  edit: Awaited<ReturnType<typeof supportChat>>["edit"]
+): Promise<void> => {
+  const photoId = crypto.randomUUID();
+  const put = await exports.default.fetch(
+    `${ORIGIN}/v1/support/photos/${photoId}`,
+    {
+      body: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]),
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "image/jpeg",
+      },
+      method: "PUT",
+    }
+  );
+  if (!put.ok) {
+    throw new Error(`The photo was not uploaded: ${put.status}`);
+  }
+  await edit([
+    {
+      kind: {
+        case: "send",
+        value: {
+          photo: { height: 3, id: photoId, width: 4 },
+          text: "",
+          threadId: "group",
+        },
+      },
+      opId: crypto.randomUUID(),
+    },
+  ]);
+};
+
 describe("a user's photo, in Slack", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -622,33 +722,7 @@ describe("a user's photo, in Slack", () => {
     const calls = slackCalls();
     const token = await signInAnonymously();
     const { edit, userId } = await supportChat(token);
-    const photoId = crypto.randomUUID();
-    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
-    const put = await exports.default.fetch(
-      `${ORIGIN}/v1/support/photos/${photoId}`,
-      {
-        body: jpeg,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "image/jpeg",
-        },
-        method: "PUT",
-      }
-    );
-    expect(put.status).toBe(204);
-    await edit([
-      {
-        kind: {
-          case: "send",
-          value: {
-            photo: { height: 3, id: photoId, width: 4 },
-            text: "",
-            threadId: "group",
-          },
-        },
-        opId: crypto.randomUUID(),
-      },
-    ]);
+    await sendPhoto(token, edit);
     await expect(slackTsOf(userId, 1)).resolves.toBe(SHARED_TS);
     const thread = await threadOf(userId);
     expect(calls.map(({ method }) => method)).toStrictEqual([
@@ -670,28 +744,7 @@ describe("a user's photo, in Slack", () => {
     vi.spyOn(scheduler, "wait").mockResolvedValue();
     const token = await signInAnonymously();
     const { edit, userId } = await supportChat(token);
-    const photoId = crypto.randomUUID();
-    await exports.default.fetch(`${ORIGIN}/v1/support/photos/${photoId}`, {
-      body: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]),
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "image/jpeg",
-      },
-      method: "PUT",
-    });
-    await edit([
-      {
-        kind: {
-          case: "send",
-          value: {
-            photo: { height: 3, id: photoId, width: 4 },
-            text: "",
-            threadId: "group",
-          },
-        },
-        opId: crypto.randomUUID(),
-      },
-    ]);
+    await sendPhoto(token, edit);
     // Shared, though Slack never says where: not shared again.
     await relayed(userId);
     expect(
@@ -705,6 +758,95 @@ describe("a user's photo, in Slack", () => {
       "files.completeUploadExternal",
     ]);
     await expect(slackTsOf(userId, 1)).resolves.toBeNull();
+  });
+});
+
+describe("a line Slack took with its answer lost", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** Slack's answer to a call it did all the same, lost to an error. */
+  const lost: Refusal = { error: "internal_error", status: 500, taken: true };
+
+  it("is found in its thread on the next try, not posted again", async () => {
+    const calls = slackCalls(
+      (method, before) => method === "chat.postMessage" && before === 1 && lost
+    );
+    const token = await signInAnonymously();
+    const { say, userId } = await supportChat(token);
+    await say("はじめまして");
+    const thread = await threadOf(userId);
+    await say("二つ目です");
+    expect(calls.map(({ method }) => method)).toStrictEqual([
+      "chat.postMessage",
+      "chat.postMessage",
+      "conversations.replies",
+    ]);
+    expect(calls[2]?.args.ts).toBe(thread);
+    const ts = await slackTsOf(userId, 2);
+    expect([ts === null, ts === thread]).toStrictEqual([false, false]);
+  });
+
+  it("starting its thread, is found in the channel and kept as the thread", async () => {
+    const calls = slackCalls(
+      (method, before) =>
+        method === "chat.postMessage" &&
+        before === 0 && { ...lost, status: 200 }
+    );
+    const token = await signInAnonymously();
+    const { say, userId } = await supportChat(token);
+    await say("はじめまして");
+    expect(calls.map(({ method }) => method)).toStrictEqual([
+      "chat.postMessage",
+      "conversations.history",
+    ]);
+    // Found by the line it is, which Slack keeps with the message.
+    expect(calls[0]?.args.metadata).toStrictEqual({
+      event_payload: { seq: 1, user_id: userId },
+      event_type: "pochical_support_line",
+    });
+    const thread = await threadOf(userId);
+    expect(thread).not.toBeNull();
+    await expect(slackTsOf(userId, 1)).resolves.toBe(thread);
+  });
+
+  it("as a photo, is found by its file's name, not uploaded again", async () => {
+    const calls = slackCalls(
+      (method, before) =>
+        method === "files.completeUploadExternal" && before === 0 && lost
+    );
+    const token = await signInAnonymously();
+    const { edit, userId } = await supportChat(token);
+    await sendPhoto(token, edit);
+    expect(calls.map(({ method }) => method)).toStrictEqual([
+      "chat.postMessage",
+      "files.getUploadURLExternal",
+      "files.completeUploadExternal",
+      "conversations.replies",
+    ]);
+    expect(calls[1]?.args.filename).toBe("photo-1.jpg");
+    const ts = await slackTsOf(userId, 1);
+    expect(ts?.slice(0, SHARED_PREFIX.length)).toBe(SHARED_PREFIX);
+  });
+
+  it("is posted again when Slack, its answer lost, did not take it", async () => {
+    const calls = slackCalls(
+      (method, before) =>
+        method === "chat.postMessage" &&
+        before === 1 && { ...lost, taken: false }
+    );
+    const token = await signInAnonymously();
+    const { say, userId } = await supportChat(token);
+    await say("はじめまして");
+    await say("二つ目です");
+    expect(calls.map(({ method }) => method)).toStrictEqual([
+      "chat.postMessage",
+      "chat.postMessage",
+      "conversations.replies",
+      "chat.postMessage",
+    ]);
+    await expect(slackTsOf(userId, 2)).resolves.not.toBeNull();
   });
 });
 
@@ -776,11 +918,15 @@ const refusedOnce = async (token: string) => {
   /** The try a line asks for, once refused: how long until the next. */
   const refused = async (): Promise<number> => {
     let wait = 0;
-    // The alarm a line sets for now runs by itself.
-    await vi.waitFor(async () => {
-      wait = (await nextTry(userId)) ?? 0;
-      expect(wait).toBeGreaterThan(0);
-    });
+    // The alarm a line sets for now runs by itself, however slow the
+    // runner: waited for, not run here, which would run the relay twice.
+    await vi.waitFor(
+      async () => {
+        wait = (await nextTry(userId)) ?? 0;
+        expect(wait).toBeGreaterThan(0);
+      },
+      { interval: 50, timeout: 10_000 }
+    );
     return wait;
   };
   await send("届いてますか");
