@@ -624,9 +624,10 @@ public  final class ChatSend extends
   /**
    * <pre>
    * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 characters of the sender's choosing, that their apps
-   * draw them together by (spec/chat.md, Albums); empty for a photo sent
-   * alone. Refused with anything but a photo.
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
    * </pre>
    *
    * <code>string album = 10 [json_name = "album"];</code>
@@ -639,9 +640,10 @@ public  final class ChatSend extends
   /**
    * <pre>
    * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 characters of the sender's choosing, that their apps
-   * draw them together by (spec/chat.md, Albums); empty for a photo sent
-   * alone. Refused with anything but a photo.
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
    * </pre>
    *
    * <code>string album = 10 [json_name = "album"];</code>
@@ -655,9 +657,10 @@ public  final class ChatSend extends
   /**
    * <pre>
    * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 characters of the sender's choosing, that their apps
-   * draw them together by (spec/chat.md, Albums); empty for a photo sent
-   * alone. Refused with anything but a photo.
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
    * </pre>
    *
    * <code>string album = 10 [json_name = "album"];</code>
@@ -672,9 +675,10 @@ public  final class ChatSend extends
   /**
    * <pre>
    * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 characters of the sender's choosing, that their apps
-   * draw them together by (spec/chat.md, Albums); empty for a photo sent
-   * alone. Refused with anything but a photo.
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
    * </pre>
    *
    * <code>string album = 10 [json_name = "album"];</code>
@@ -686,9 +690,10 @@ public  final class ChatSend extends
   /**
    * <pre>
    * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 characters of the sender's choosing, that their apps
-   * draw them together by (spec/chat.md, Albums); empty for a photo sent
-   * alone. Refused with anything but a photo.
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
    * </pre>
    *
    * <code>string album = 10 [json_name = "album"];</code>
@@ -1419,9 +1424,10 @@ public  final class ChatSend extends
     /**
      * <pre>
      * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 characters of the sender's choosing, that their apps
-     * draw them together by (spec/chat.md, Albums); empty for a photo sent
-     * alone. Refused with anything but a photo.
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
      * </pre>
      *
      * <code>string album = 10 [json_name = "album"];</code>
@@ -1434,9 +1440,10 @@ public  final class ChatSend extends
     /**
      * <pre>
      * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 characters of the sender's choosing, that their apps
-     * draw them together by (spec/chat.md, Albums); empty for a photo sent
-     * alone. Refused with anything but a photo.
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
      * </pre>
      *
      * <code>string album = 10 [json_name = "album"];</code>
@@ -1450,9 +1457,10 @@ public  final class ChatSend extends
     /**
      * <pre>
      * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 characters of the sender's choosing, that their apps
-     * draw them together by (spec/chat.md, Albums); empty for a photo sent
-     * alone. Refused with anything but a photo.
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
      * </pre>
      *
      * <code>string album = 10 [json_name = "album"];</code>
@@ -1468,9 +1476,10 @@ public  final class ChatSend extends
     /**
      * <pre>
      * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 characters of the sender's choosing, that their apps
-     * draw them together by (spec/chat.md, Albums); empty for a photo sent
-     * alone. Refused with anything but a photo.
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
      * </pre>
      *
      * <code>string album = 10 [json_name = "album"];</code>
@@ -1484,9 +1493,10 @@ public  final class ChatSend extends
     /**
      * <pre>
      * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 characters of the sender's choosing, that their apps
-     * draw them together by (spec/chat.md, Albums); empty for a photo sent
-     * alone. Refused with anything but a photo.
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
      * </pre>
      *
      * <code>string album = 10 [json_name = "album"];</code>

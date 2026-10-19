@@ -342,8 +342,11 @@ const fitsDays = (days: readonly string[]): boolean =>
 /** The fewest days a poll puts to the vote. */
 const POLL_MIN_DAYS = 2;
 
-/** The most characters of an album's name (ChatSend.album). */
-const ALBUM_MAX = 64;
+/**
+ * An album's name (ChatSend.album): printable ASCII, 64 at most, as it is
+ * the notifications' apns-collapse-id, which APNs takes up to 64 bytes.
+ */
+const ALBUM_NAME = /^[\u0021-\u007E]{1,64}$/u;
 
 /** A photo's size, as the sender read it while shrinking it to send. */
 const fitsPhotoSize = (side: number): boolean =>
@@ -372,7 +375,7 @@ const fitsPhoto = (
     fitsPhotoSize(photo.width) &&
     fitsPhotoSize(photo.height) &&
     fitsThumbHash(photo.thumbHash) &&
-    album.length <= ALBUM_MAX
+    (album === "" || ALBUM_NAME.test(album))
   );
 };
 
@@ -1456,8 +1459,7 @@ export const alertOf = (
       : { args: [writer, ...said], key: `CHAT_GROUP_${kind}` },
     // An album's photos come as one notification, each new one in its
     // place, as Messages and Telegram show them.
-    collapseId:
-      line.album === "" ? undefined : `${line.threadId}/${line.album}`,
+    collapseId: line.album === "" ? undefined : line.album,
     groupId: group.id,
     line: { authorId: line.authorId, seq: Number(line.seq) },
     threadId: line.threadId,

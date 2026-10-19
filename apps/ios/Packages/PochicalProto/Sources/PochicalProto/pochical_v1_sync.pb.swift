@@ -2228,9 +2228,10 @@ public nonisolated struct Pochical_V1_ChatSend: @unchecked Sendable {
   }
 
   /// With a photo: the photos sent at once, each its own line, share one
-  /// name, 1 to 64 characters of the sender's choosing, that their apps
-  /// draw them together by (spec/chat.md, Albums); empty for a photo sent
-  /// alone. Refused with anything but a photo.
+  /// name, 1 to 64 printable ASCII characters of the sender's choosing (a
+  /// random one, as it also collapses their notifications), that their
+  /// apps draw them together by (spec/chat.md, Albums); empty for a photo
+  /// sent alone. Refused with anything but a photo.
   public var album: String {
     get {_storage._album}
     set {_uniqueStorage()._album = newValue}

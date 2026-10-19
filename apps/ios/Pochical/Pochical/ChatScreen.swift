@@ -660,13 +660,25 @@ struct ChatScreen: View {
   private func linesWithoutTime(_ items: [ChatItem]) -> Set<String> {
     var timeless: Set<String> = []
     for (item, next) in zip(items, items.dropFirst()) {
-      guard case .line(let line, _) = item, case .line(let after, let startsRun) = next,
-        !startsRun, !line.unsent, !after.unsent, line.notice == nil, after.notice == nil,
-        ChatTime.clock(line.sentAtMs) == ChatTime.clock(after.sentAtMs)
+      guard let time = sentAt(item, last: true), let after = sentAt(next, last: false),
+        !next.startsRun, ChatTime.clock(time) == ChatTime.clock(after)
       else { continue }
       timeless.insert(item.id)
     }
     return timeless
+  }
+
+  /// When a message the group took was sent, for its time to be left to
+  /// the next: an album's by its `last` photo or its first; nil for what
+  /// shows no time of its own (a notice, a line taken back or waiting).
+  private func sentAt(_ item: ChatItem, last: Bool) -> Int64? {
+    switch item {
+    case .line(let line, _):
+      line.unsent || line.notice != nil ? nil : line.sentAtMs
+    case .album(let photos, _):
+      (last ? photos.last : photos.first).flatMap { sentAt($0, last: last) }
+    default: nil
+    }
   }
 
   @ViewBuilder private func row(
@@ -723,7 +735,7 @@ struct ChatScreen: View {
     case .waiting(let line, let startsRun):
       lineView(waiting: line, startsRun: startsRun, names: names)
     case .album(let photos, let startsRun):
-      if let album = albumView(photos, startsRun: startsRun, names: names) {
+      if let album = albumView(photos, startsRun: startsRun, showsTime: showsTime, names: names) {
         album
       }
     }
@@ -770,8 +782,9 @@ struct ChatScreen: View {
   /// Photos sent at once, drawn as one album: the line as its first
   /// photo's, with its last photo's time, and each photo its own line in
   /// it (spec/chat.md, Albums).
-  private func albumView(_ photos: [ChatItem], startsRun: Bool, names: [String: String])
-    -> LineView?
+  private func albumView(
+    _ photos: [ChatItem], startsRun: Bool, showsTime: Bool, names: [String: String]
+  ) -> LineView?
   {
     var album: LineView
     switch photos.first {
@@ -804,7 +817,7 @@ struct ChatScreen: View {
     album.failed = false
     album.pinned = false
     album.seq = nil
-    album.showsTime = true
+    album.showsTime = showsTime
     album.menu = []
     return album
   }

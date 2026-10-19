@@ -97,8 +97,9 @@ describe("an album", () => {
       { album: "x", photo: "a2" },
       // Words never go in an album.
       { album: "x", text: "見て" },
-      // A name past 64 characters is refused.
+      // A name past 64 characters, or past ASCII, is refused.
       { album: "y".repeat(65), photo: "b1" },
+      { album: "アルバム", photo: "b1" },
     ]);
     await expect(linesOf(groupId, guest)).resolves.toStrictEqual([
       { album: "x", photo: "a1", seq: 2, text: "" },
@@ -119,8 +120,11 @@ describe("an album", () => {
     }
     const collapse: (string | null)[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      collapse.push(new Request(input, init).headers.get("apns-collapse-id"));
-      return Promise.resolve(new Response(null, { status: 200 }));
+      const request = new Request(input, init);
+      collapse.push(request.headers.get("apns-collapse-id"));
+      // Read through, as APNs reads the payload.
+      await request.text();
+      return new Response(null, { status: 200 });
     });
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
     // Each as its upload ends, as the outbox sends them.
@@ -128,6 +132,6 @@ describe("an album", () => {
     await send(mine, [{ album: "x", photo: "a2" }]);
     await send(mine, [{ album: "", photo: "solo" }]);
     await expect.poll(() => collapse.length).toBe(3);
-    expect(collapse).toStrictEqual(["group/x", "group/x", null]);
+    expect(collapse).toStrictEqual(["x", "x", null]);
   });
 });
