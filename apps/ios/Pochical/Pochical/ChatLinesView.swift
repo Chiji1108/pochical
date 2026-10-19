@@ -18,7 +18,6 @@ import UIKit
 
   /// To the latest line's foot, instead of an item asked for before.
   func toLatest(animated: Bool = false) {
-    controller?.dropWaiting()
     controller?.toLatest(animated: animated)
   }
 
@@ -144,12 +143,17 @@ struct LinesRow: Equatable {
   /// one's height.
   private let sizer = UIHostingController(rootView: AnyView(EmptyView()))
 
+  /// The item `id`'s height at `width`, if measured already for its look.
+  func knownHeight(of id: String, width: CGFloat) -> CGFloat? {
+    let look = looks[id] ?? AnyHashable(id)
+    guard let known = heights[id], known.look == look, known.width == width else { return nil }
+    return known.height
+  }
+
   /// The item `id`'s height at `width`, measured once for its look.
   func height(of id: String, width: CGFloat) -> CGFloat {
+    if let known = knownHeight(of: id, width: width) { return known }
     let look = looks[id] ?? AnyHashable(id)
-    if let known = heights[id], known.look == look, known.width == width {
-      return known.height
-    }
     sizer.rootView = AnyView(
       LineCellContent(
         id: id, content: row(id), environment: environment, space: LineSpace(),
@@ -220,20 +224,6 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// A line's menu is open: lines coming in wait until it closes, so the
   /// line held stays under its menu; lines changing are drawn meanwhile.
   let holds: Bool
-  /// Earlier lines are to come, and may be asked for: not before the chat
-  /// has opened on its place, which they would push away. Never for a
-  /// chat that has all its lines at once.
-  var canAskEarlier = false
-  /// The lines are scrolled near their top, Chat.prefetchScreens away:
-  /// the next earlier page is to be laid out. Told the first line laid out,
-  /// as the chat's own lines may be ahead of those in place.
-  var onNearTop: (String?) -> Void = { _ in }
-  /// Later lines are to come past the last laid out, and may be asked for,
-  /// as earlier ones are (`canAskEarlier`).
-  var canAskLater = false
-  /// The lines are scrolled near their foot, Chat.prefetchScreens away:
-  /// the page after them is to be asked. Told the last line laid out.
-  var onNearFoot: (String?) -> Void = { _ in }
   /// The day of the lines from the item `id` at the top.
   let dayOver: (String) -> Day?
   /// How the item `id` is dragged to reply to it; none for an item the
@@ -285,21 +275,11 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private var linesLook: LinesLook?
   /// Motion is reduced: the lines are put where they go, never glided.
   private var reduceMotion = false
-  /// The lines have been put where the chat opens, or moved since.
-  private var placed = false
-  /// Gliding to the latest, put back on its foot once there.
-  private var goingDown = false
-  /// Gliding to an item, put back on it exactly once there.
-  private var going: Going?
-  /// An item to show once it is laid out, not yet when asked.
-  private var waitingToShow: Going?
-  /// The item the lines were last put on, kept there as the room they
-  /// are seen in settles while the chat opens, before the lines show; once
-  /// shown, the room changing (the keyboard) keeps their foot instead.
-  private var shownOn: (id: String, place: LinePlace)?
-  /// The items coming in at the foot in the update being put in, which
-  /// rise into place from under the lines' foot as the lines slide up.
-  private var risingIn: Set<String> = []
+  /// Where the lines are being taken or kept, between the person's own
+  /// scrolling: changed only by `hold(_:)`.
+  private var hold = Hold.opening(nil)
+  /// The update of the lines being put in, while it is.
+  private var updating: Updating?
   /// Drags a line sideways to reply to it.
   private lazy var swipe = SwipePan(target: self, action: #selector(swiped))
   /// The line being dragged, which way, and whether it is far enough.
@@ -349,7 +329,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       let environment = model.environment
       let space = cell.space
       let drawing = model.drawing(of: id)
-      cell.measure = { [weak model] width in model?.height(of: id, width: width) ?? 0 }
+      cell.measure = { width in model.height(of: id, width: width) }
       cell.contentConfiguration = UIHostingConfiguration {
         LineCellContent(
           id: id, content: content, environment: environment, space: space, drawing: drawing)
@@ -359,9 +339,10 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     source = ChatLayoutDiffableDataSource(collectionView: lines) { lines, path, id in
       lines.dequeueConfiguredReusableCell(using: registration, for: path, item: id)
     }
-    // A tap off the lines puts the keyboard away, as LINE does; a tap on a
-    // line stays the line's own.
-    let tap = UITapGestureRecognizer(target: self, action: #selector(tappedOff))
+    // A tap on the lines puts the keyboard away, as LINE does, unless a
+    // line's own part takes it (a link, a photo, a bubble): it waits for
+    // theirs to fail (gestureRecognizer(_:shouldRequireFailureOf:)).
+    let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
     tap.cancelsTouchesInView = false
     tap.delegate = self
     lines.addGestureRecognizer(tap)
@@ -426,10 +407,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
     fitRoom()
-    if !placed, !ids.isEmpty, lines.bounds.height > 0 {
-      toLatest()
-      showWaiting()
-    }
+    place()
   }
 
   func update(_ settings: ChatLinesView, environment: EnvironmentValues) {
@@ -448,29 +426,10 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     let restyled = linesLook.map { $0 != look } ?? false
     linesLook = look
     reduceMotion = environment.accessibilityReduceMotion
-    let changed = setLines(
-      settings.holds ? keeping(settings.rows) : settings.rows, restyled: restyled,
-      reduceMotion: environment.accessibilityReduceMotion)
-    // A page come from the server, changing no line laid out, is laid out
-    // at once if an end is near still; asked after this update, not in it.
-    // Lines changed are asked after once in place (`landed`).
-    if !changed {
-      Task { @MainActor [weak self] in self?.askIfNear() }
-    }
-  }
-
-  /// Asks for the next page beyond either end once that end is
-  /// Chat.prefetchScreens away, measured where the lines are now, so the
-  /// reader scrolling on finds it laid out already.
-  private func askIfNear() {
-    guard let settings, placed, !applying, lines.bounds.height > 0 else { return }
-    let reach = seenHeight * CGFloat(Chat.prefetchScreens)
-    if settings.canAskEarlier, lines.contentOffset.y - lowest < reach {
-      settings.onNearTop(ids.first(where: ChatItemID.isLine))
-    }
-    if settings.canAskLater, highest - lines.contentOffset.y < reach {
-      settings.onNearFoot(ids.last(where: ChatItemID.isLine))
-    }
+    setLines(
+      Rows(
+        rows: settings.holds ? keeping(settings.rows) : settings.rows, restyled: restyled,
+        reduceMotion: environment.accessibilityReduceMotion))
   }
 
   /// `rows` without the lines coming or going, which wait while a line's
@@ -489,25 +448,25 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   private var userScrolling: Bool { lines.isDragging || lines.isDecelerating }
 
-  /// Lines being put in, whose place is not yet where it will be.
-  private var applying = false
-  /// The latest lines come while others were being put in, put in once
-  /// those are in place, as ChatLayout's Example holds an update back.
-  private var waiting: (rows: [LinesRow], restyled: Bool, reduceMotion: Bool)?
+  /// Lines are laid out, in a room to show them in.
+  private var ready: Bool { !ids.isEmpty && lines.bounds.height > 0 }
 
   /// Puts in `rows`, saying whether any changed.
   @discardableResult
-  private func setLines(_ rows: [LinesRow], restyled: Bool, reduceMotion: Bool) -> Bool {
+  private func setLines(_ rows: Rows) -> Bool {
     guard let source else { return false }
-    if applying {
-      waiting = (rows, restyled || (waiting?.restyled ?? false), reduceMotion)
+    if let busy = updating {
+      // The latest come while others are being put in, put in once those
+      // are in place, as ChatLayout's Example holds an update back.
+      let restyled = rows.restyled || (busy.next?.restyled ?? false)
+      updating?.next = Rows(rows: rows.rows, restyled: restyled, reduceMotion: rows.reduceMotion)
       return true
     }
-    let new = rows.map(\.id)
+    let new = rows.rows.map(\.id)
     // Lines there before whose look has changed are drawn and measured
     // again, in the same update.
-    let redrawn = rows.filter { row in
-      model.looks[row.id].map { restyled || $0 != row.look } ?? false
+    let redrawn = rows.rows.filter { row in
+      model.looks[row.id].map { rows.restyled || $0 != row.look } ?? false
     }.map(\.id)
     guard new != ids || !redrawn.isEmpty else { return false }
     var snapshot = NSDiffableDataSourceSnapshot<Int, String>()
@@ -516,46 +475,36 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     snapshot.reconfigureItems(redrawn)
     let old = ids
     ids = new
-    model.looks = Dictionary(rows.map { ($0.id, $0.look) }) { first, _ in first }
-    if restyled { model.forgetHeights() } else { model.keepHeights(of: new) }
-    guard !old.isEmpty, source.snapshot != nil else {
+    model.looks = Dictionary(rows.rows.map { ($0.id, $0.look) }) { first, _ in first }
+    if rows.restyled { model.forgetHeights() } else { model.keepHeights(of: new) }
+    // Lines laid out anew, none kept (the chat's first, the latest after a
+    // gap): put in at once, at their foot, as the chat opens on them.
+    guard source.snapshot != nil, old.contains(where: { ChatItemID.isLine($0) && new.contains($0) })
+    else {
       UIView.performWithoutAnimation {
         source.applySnapshotUsingReloadData(snapshot, commitAlongsideUpdates: {})
         lines.layoutIfNeeded()
       }
-      if lines.bounds.height > 0 {
-        toLatest()
-        showWaiting()
-      }
+      laidOutAnew()
       return true
     }
     // A page coming in above goes in at once, the lines seen held where
     // they are; lines coming at the foot come in moving, or with motion
     // reduced fade in where they go, the lines put there at once.
     let earlier = cameAbove(old, in: new)
-    let animated = new != old && !earlier && !reduceMotion && !userScrolling
-    let fading = new != old && !earlier && reduceMotion ? cameBelow(old, in: new) : []
-    let held = heldTop.flatMap { redrawn.contains($0.id) ? $0 : nil }
-    if held != nil { heldTop = nil }
-    risingIn = animated ? cameBelow(old, in: new) : []
-    applying = true
+    let animated = new != old && !earlier && !rows.reduceMotion && !userScrolling
+    let fading = new != old && !earlier && rows.reduceMotion ? cameBelow(old, in: new) : []
+    updating = Updating(risingIn: animated ? cameBelow(old, in: new) : [])
     source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
       [weak self] in
       guard let self else { return }
-      applying = false
-      risingIn = []
-      if let held, let index = ids.firstIndex(of: held.id) {
-        layout.restoreContentOffset(
-          with: ChatLayoutPositionSnapshot(
-            indexPath: IndexPath(item: index, section: 0), edge: .top, offset: held.offset))
+      let next = updating?.next
+      updating = nil
+      if case .on(let anchor) = hold, redrawn.contains(anchor.id), !userScrolling {
+        put(anchor)
       }
       // The lines waiting go in next; changing none, these have landed.
-      if let waiting {
-        self.waiting = nil
-        if setLines(waiting.rows, restyled: waiting.restyled, reduceMotion: waiting.reduceMotion) {
-          return
-        }
-      }
+      if let next, setLines(next) { return }
       landed()
       // Once at the foot, where they are seen.
       fadeIn(fading)
@@ -598,9 +547,21 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     modifying originalAttributes: ChatLayoutAttributes, on state: InitialAttributesRequestType
   ) {
     originalAttributes.alpha = 0
-    if indexPath.item < ids.count, risingIn.contains(ids[indexPath.item]) {
+    if indexPath.item < ids.count, updating?.risingIn.contains(ids[indexPath.item]) == true {
       originalAttributes.center.y += originalAttributes.frame.height
     }
+  }
+
+  /// An item's height once measured, so the layout puts it where it goes
+  /// before its cell is drawn; each still takes its height from its cell
+  /// (LineCell), which ChatLayout asks by index paths that may be the
+  /// update's before or after.
+  func sizeForItem(_ chatLayout: CollectionViewChatLayout, at indexPath: IndexPath) -> ItemSize {
+    let width = chatLayout.layoutFrame.width
+    guard indexPath.item < ids.count,
+      let height = model.knownHeight(of: ids[indexPath.item], width: width)
+    else { return .auto }
+    return .estimated(CGSize(width: width, height: height))
   }
 
   /// The items `ids` just put in fade in where they are, the cells' own
@@ -621,9 +582,24 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private func landed() {
     seePlace()
     showWaiting()
-    askIfNear()
-    if following, !scroll.place.atLatest, !userScrolling, !goingDown {
+    if following, !scroll.place.atLatest, !userScrolling, !hold.gliding {
       toLatest(animated: true)
+    }
+  }
+
+  /// Lines laid out anew: put at their foot, as the chat opens on them,
+  /// and on to an item waiting to be shown.
+  private func laidOutAnew() {
+    guard lines.bounds.height > 0 else { return }
+    switch hold {
+    case .opening:
+      place()
+    case .waiting:
+      putAtFoot()
+      showWaiting()
+    case .free, .on, .toLatest, .goingTo:
+      putAtFoot()
+      hold(.free)
     }
   }
 
@@ -682,7 +658,9 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   /// The lines seen kept at the foot of the room they are seen in as it
   /// changes (the keyboard, the composer growing), as ChatLayout's Example
-  /// keeps them; not under the finger pulling the keyboard down.
+  /// keeps them; not under the finger pulling the keyboard down. While the
+  /// chat opens, before the lines show, the item they are on is kept
+  /// instead, as the room settles.
   private func fitRoom() {
     let top = over
     if lines.contentInset.top != top {
@@ -698,10 +676,12 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       latestFoot.constant = -bottom
     }
     guard let room, room.height != roomHeight else { return }
-    if let shownOn, settings?.shown == false, !userScrolling {
-      put(on: shownOn.id, at: shownOn.place)
-    } else if let kept = room.kept, !userScrolling {
-      layout.restoreContentOffset(with: kept)
+    if !userScrolling {
+      if case .on(let anchor) = hold, settings?.shown == false {
+        put(anchor)
+      } else if let kept = room.kept {
+        layout.restoreContentOffset(with: kept)
+      }
     }
     seePlace()
   }
@@ -714,15 +694,9 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// at the old, as lines too few to fill the room stand at its foot.
   private func keepingLinesStill(_ change: () -> Void) {
     UIView.performWithoutAnimation {
-      let first = lines.indexPathsForVisibleItems.min()
-      let top = first.flatMap { layout.layoutAttributesForItem(at: $0)?.frame.minY }
-      let seen = top.map { $0 - lines.contentOffset.y }
+      let seen = layout.getContentOffsetSnapshot(from: .top)
       change()
-      lines.layoutIfNeeded()
-      if let first, let seen, let top = layout.layoutAttributesForItem(at: first)?.frame.minY {
-        lines.contentOffset.y = top - seen
-        lines.layoutIfNeeded()
-      }
+      if let seen { layout.restoreContentOffset(with: seen) }
     }
   }
 
@@ -745,50 +719,79 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
         + lines.adjustedContentInset.bottom)
   }
 
+  // MARK: Where the lines are held
+
+  /// Holds the lines as `next` says from now on: an item asked to be shown
+  /// that `next` no longer goes to is told it is done with, wherever the
+  /// lines are.
+  private func hold(_ next: Hold) {
+    let left = hold.asked
+    hold = next
+    if let left, left !== next.asked { left.finish() }
+  }
+
+  /// The lines put where the chat opens, once they and their room are
+  /// there: the item asked for meanwhile, from their foot, else the foot.
+  private func place() {
+    guard case .opening(let asked) = hold, ready else { return }
+    putAtFoot()
+    guard let asked else {
+      hold(.free)
+      return
+    }
+    hold(.waiting(asked))
+    showWaiting()
+  }
+
   func toLatest(animated: Bool = false) {
-    guard let foot = footSnapshot(), lines.bounds.height > 0 else { return }
-    placed = true
-    shownOn = nil
-    stopGoing()
+    guard ready else {
+      hold(hold.opening ? .opening(nil) : .free)
+      return
+    }
     lines.layoutIfNeeded()
     let target = highest
     guard animated, !reduceMotion, abs(target - lines.contentOffset.y) > 1 else {
-      goingDown = false
-      layout.restoreContentOffset(with: foot)
-      seePlace()
+      hold(.free)
+      putAtFoot()
       return
     }
-    goingDown = true
+    hold(.toLatest)
     glide(to: target)
   }
 
+  /// The lines put at their foot, with no change to where they are held.
+  private func putAtFoot() {
+    guard let foot = footSnapshot() else { return }
+    layout.restoreContentOffset(with: foot)
+    seePlace()
+  }
+
   func show(_ id: String, at place: LinePlace, animated: Bool, then: (() -> Void)?) {
-    stopGoing()
-    let asked = Going(id: id, place: place, animated: animated, then: then)
+    let asked = Showing(id: id, place: place, animated: animated, then: then)
     // Not yet laid out, or lines still going in: once they are in place.
-    guard let index = ids.firstIndex(of: id), lines.bounds.height > 0, !applying else {
-      waitingToShow?.then?()
-      waitingToShow = asked
+    guard ready, updating == nil, ids.contains(id) else {
+      hold(hold.opening ? .opening(asked) : .waiting(asked))
       return
     }
-    // Instead of an item asked for before, not yet laid out.
-    dropWaiting()
-    placed = true
-    goingDown = false
+    go(to: asked)
+  }
+
+  /// To the item asked for, laid out now: gliding, or put there at once.
+  private func go(to asked: Showing) {
     lines.layoutIfNeeded()
-    let path = IndexPath(item: index, section: 0)
-    guard let frame = layout.layoutAttributesForItem(at: path)?.frame else {
-      then?()
+    guard let index = ids.firstIndex(of: asked.id),
+      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
+    else {
+      hold(.free)
       return
     }
-    let target = min(highest, max(lowest, frame.minY - spot(of: frame, at: place)
+    let target = min(highest, max(lowest, frame.minY - offset(of: frame, at: asked.spot)
       - lines.adjustedContentInset.top - layout.settings.additionalInsets.top))
-    guard animated, !reduceMotion, abs(target - lines.contentOffset.y) > 1 else {
-      settle(on: id, at: place)
-      then?()
+    guard asked.animated, !reduceMotion, abs(target - lines.contentOffset.y) > 1 else {
+      settle(on: asked)
       return
     }
-    going = asked
+    hold(.goingTo(asked))
     glide(to: target)
   }
 
@@ -802,83 +805,100 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     lines.setContentOffset(CGPoint(x: lines.contentOffset.x, y: target), animated: true)
   }
 
-  /// The item asked to be shown before it was laid out, now that it is.
+  /// The item asked to be shown before it was laid out, once it is.
   private func showWaiting() {
-    guard let waiting = waitingToShow, ids.contains(waiting.id), lines.bounds.height > 0,
-      !applying
-    else { return }
-    waitingToShow = nil
-    show(waiting.id, at: waiting.place, animated: waiting.animated, then: waiting.then)
+    guard case .waiting(let asked) = hold, ready, updating == nil, ids.contains(asked.id) else {
+      return
+    }
+    go(to: asked)
   }
 
   /// Nothing more to go to, the lines gone: told so.
   func letGo() {
-    stopGoing()
-    dropWaiting()
-  }
-
-  /// No longer waiting to show an item: told so.
-  func dropWaiting() {
-    let dropped = waitingToShow
-    waitingToShow = nil
-    dropped?.then?()
-  }
-
-  /// No longer gliding to an item: told so, wherever the lines are.
-  private func stopGoing() {
-    let stopped = going
-    going = nil
-    stopped?.then?()
+    hold(.free)
   }
 
   /// Where an item's top goes below the top of the lines seen.
-  private func spot(of frame: CGRect, at place: LinePlace) -> CGFloat {
-    switch place {
-    case .top: 0
-    case .center: max(0, (seenHeight - frame.height) / 2) - layout.settings.additionalInsets.top
+  private func offset(of frame: CGRect, at spot: Spot) -> CGFloat {
+    switch spot {
+    case .below(let offset): offset
+    case .middle: max(0, (seenHeight - frame.height) / 2) - layout.settings.additionalInsets.top
     }
   }
 
-  /// Puts the item `id` at its place exactly: once at the heights known,
-  /// again once the lines come to it are measured.
-  private func settle(on id: String, at place: LinePlace) {
-    put(on: id, at: place)
-    shownOn = (id, place)
+  /// Puts the lines on the item asked for, there from now on: told so
+  /// once there.
+  private func settle(on asked: Showing) {
+    let anchor = Anchor(id: asked.id, spot: asked.spot)
+    put(anchor)
     seePlace()
     // VoiceOver reads on from the item gone to.
-    if UIAccessibility.isVoiceOverRunning, let index = ids.firstIndex(of: id) {
+    if UIAccessibility.isVoiceOverRunning, let index = ids.firstIndex(of: asked.id) {
       lines.layoutIfNeeded()
       UIAccessibility.post(
         notification: .layoutChanged,
         argument: lines.cellForItem(at: IndexPath(item: index, section: 0)))
     }
+    hold(.on(anchor))
   }
 
-  /// The lines moved to put the item `id` at its place.
-  private func put(on id: String, at place: LinePlace) {
-    for _ in 0..<2 {
-      guard let index = ids.firstIndex(of: id) else { return }
-      let path = IndexPath(item: index, section: 0)
-      guard let frame = layout.layoutAttributesForItem(at: path)?.frame else { return }
-      layout.restoreContentOffset(
-        with: ChatLayoutPositionSnapshot(
-          indexPath: path, edge: .top, offset: spot(of: frame, at: place)))
+  /// The lines moved to put the item at its spot: the items it then shows
+  /// measured first, so they are put there once, at their own heights.
+  private func put(_ anchor: Anchor) {
+    guard let index = ids.firstIndex(of: anchor.id) else { return }
+    measure(around: index, at: anchor.spot)
+    let path = IndexPath(item: index, section: 0)
+    guard let frame = layout.layoutAttributesForItem(at: path)?.frame else { return }
+    layout.restoreContentOffset(
+      with: ChatLayoutPositionSnapshot(
+        indexPath: path, edge: .top, offset: offset(of: frame, at: anchor.spot)))
+  }
+
+  /// Measures the items the screen shows with the item at `index` at
+  /// `spot`, the room over and under the lines seen too, and has the
+  /// layout take their heights (sizeForItem). Put there at heights
+  /// estimated, the items drawn would take their own as they show, and
+  /// the layout, keeping the lines' foot, move the item off its spot.
+  private func measure(around index: Int, at spot: Spot) {
+    let width = layout.layoutFrame.width
+    let gap = layout.settings.interItemSpacing
+    var learned = false
+    func height(_ item: Int) -> CGFloat {
+      if model.knownHeight(of: ids[item], width: width) == nil { learned = true }
+      return model.height(of: ids[item], width: width) + gap
     }
+    let own = height(index)
+    let above =
+      switch spot {
+      case .below(let offset): offset
+      case .middle: max(0, (seenHeight - own) / 2)
+      }
+    var reach = -(above + lines.adjustedContentInset.top + layout.settings.additionalInsets.top)
+    var item = index - 1
+    while item >= 0, reach < 0 {
+      reach += height(item)
+      item -= 1
+    }
+    reach = own
+    item = index + 1
+    while item < ids.count, reach < lines.bounds.height {
+      reach += height(item)
+      item += 1
+    }
+    if learned { layout.invalidateLayout() }
   }
-
-  /// The item whose top is put back where it was, below the top of the
-  /// lines seen, once it is drawn again.
-  private var heldTop: (id: String, offset: CGFloat)?
 
   func growDown(_ id: String) {
     guard let index = ids.firstIndex(of: id),
       let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
     else { return }
-    heldTop = (
-      id,
-      frame.minY - lines.contentOffset.y - lines.adjustedContentInset.top
-        - layout.settings.additionalInsets.top
-    )
+    hold(
+      .on(
+        Anchor(
+          id: id,
+          spot: .below(
+            frame.minY - lines.contentOffset.y - lines.adjustedContentInset.top
+              - layout.settings.additionalInsets.top))))
   }
 
   /// The items last told near those in sight.
@@ -887,7 +907,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// Tells the items within Chat.photoPrefetchScreens above and below the
   /// lines in sight, as they change.
   private func seeNear() {
-    guard let settings, placed, lines.bounds.height > 0 else { return }
+    guard let settings, !hold.opening, lines.bounds.height > 0 else { return }
     let reach = lines.bounds.height * CGFloat(Chat.photoPrefetchScreens)
     let around = lines.bounds.insetBy(dx: 0, dy: -reach)
     let ids = (layout.layoutAttributesForElements(in: around) ?? [])
@@ -898,9 +918,23 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     settings.onNear(ids)
   }
 
+  /// Tells which end of the lines laid out is Chat.prefetchScreens away
+  /// or nearer, measured where the lines are now, so the page beyond it
+  /// is laid out before the reader scrolling on reaches it; not while
+  /// lines are going in, which move them.
+  private func seeEnds() {
+    guard !hold.opening, updating == nil, lines.bounds.height > 0 else { return }
+    let reach = seenHeight * CGFloat(Chat.prefetchScreens)
+    let ends = NearEnds(
+      top: lines.contentOffset.y - lowest < reach ? ids.first(where: ChatItemID.isLine) : nil,
+      foot: highest - lines.contentOffset.y < reach ? ids.last(where: ChatItemID.isLine) : nil)
+    if ends != scroll.near { scroll.near = ends }
+  }
+
   /// Where the lines are scrolled, told to what shows it.
   private func seePlace() {
     seeNear()
+    seeEnds()
     guard lines.bounds.height > 0 else { return }
     let inset = lines.adjustedContentInset
     let content = layout.collectionViewContentSize.height
@@ -941,7 +975,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     return frame.minY > top + 1
   }
 
-  @objc private func tappedOff() {
+  @objc private func tapped() {
     UIApplication.shared.sendAction(
       #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
   }
@@ -949,24 +983,32 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch)
     -> Bool
   {
-    if gestureRecognizer === swipe {
-      swipeStart = touch.location(in: view)
-      // On a line dragged rightward to reply, going back by a drag
-      // anywhere on the screen would take the drag first, whatever it
-      // is told to wait for: it waits out this touch, as in Messages.
-      // From the screen's edge going back is still the system's.
-      let at = touch.location(in: lines)
-      if swipeStart.x > Self.backEdge, let path = lines.indexPathForItem(at: at),
-        path.item < ids.count, settings?.replySwipe(ids[path.item]) == .rightward
-      {
-        let back = navigationController?.interactiveContentPopGestureRecognizer
-        back?.isEnabled = false
-        // Given back by the pan itself, even should the chat go meanwhile.
-        swipe.heldBack = back
-      }
-      return true
+    guard gestureRecognizer === swipe else { return true }
+    swipeStart = touch.location(in: view)
+    // On a line dragged rightward to reply, going back by a drag
+    // anywhere on the screen would take the drag first, whatever it
+    // is told to wait for: it waits out this touch, as in Messages.
+    // From the screen's edge going back is still the system's.
+    let at = touch.location(in: lines)
+    if swipeStart.x > Self.backEdge, let path = lines.indexPathForItem(at: at),
+      path.item < ids.count, settings?.replySwipe(ids[path.item]) == .rightward
+    {
+      let back = navigationController?.interactiveContentPopGestureRecognizer
+      back?.isEnabled = false
+      // Given back by the pan itself, even should the chat go meanwhile.
+      swipe.heldBack = back
     }
-    return touch.view === lines
+    return true
+  }
+
+  /// The tap putting the keyboard away waits for a line's own parts'.
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer
+  ) -> Bool {
+    gestureRecognizer is UITapGestureRecognizer && gestureRecognizer.view === lines
+      && otherGestureRecognizer.view?.isDescendant(of: lines) == true
+      && otherGestureRecognizer.view !== lines
   }
 
   // MARK: Swiping to reply
@@ -1087,17 +1129,13 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   func scrollViewDidScroll(_ scrollView: UIScrollView) {
     seePlace()
-    askIfNear()
   }
 
   func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
     // Following is the person's to change: off as they scroll, and on
     // again where their scroll comes to rest at the foot.
     following = false
-    goingDown = false
-    shownOn = nil
-    stopGoing()
-    dropWaiting()
+    hold(.free)
     scroll.scrolling = true
     if !scroll.dayShown {
       withAnimation(.easeOut(duration: 0.2)) { scroll.dayShown = true }
@@ -1113,12 +1151,14 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   }
 
   func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
-    if goingDown {
-      goingDown = false
-      if let foot = footSnapshot() { layout.restoreContentOffset(with: foot) }
-    } else if let going {
-      settle(on: going.id, at: going.place)
-      stopGoing()
+    switch hold {
+    case .toLatest:
+      hold(.free)
+      putAtFoot()
+    case .goingTo(let asked):
+      settle(on: asked)
+    case .opening, .free, .waiting, .on:
+      break
     }
     seePlace()
   }
@@ -1129,12 +1169,99 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   }
 }
 
-/// An item being gone to, and what is told once there.
-private struct Going {
+/// Where a chat's lines are taken or kept, between the person's own
+/// scrolling: one at a time, so going anywhere ends going anywhere else.
+private enum Hold {
+  /// Not yet put where the chat opens, an item maybe asked for meanwhile.
+  case opening(Showing?)
+  /// Where the person's scrolling, or lines coming and going, leave them.
+  case free
+  /// An item asked for, gone to once it is laid out and lines going in
+  /// are in place.
+  case waiting(Showing)
+  /// Gliding to the latest, put on its foot exactly once there.
+  case toLatest
+  /// Gliding to an item asked for, put on it exactly once there.
+  case goingTo(Showing)
+  /// On an item: put back there as it is drawn again, and as the room the
+  /// lines are seen in settles while the chat opens.
+  case on(Anchor)
+
+  /// The item asked for, while it is being gone to.
+  var asked: Showing? {
+    switch self {
+    case .opening(let asked): asked
+    case .waiting(let asked), .goingTo(let asked): asked
+    case .free, .toLatest, .on: nil
+    }
+  }
+
+  var opening: Bool {
+    if case .opening = self { true } else { false }
+  }
+
+  var gliding: Bool {
+    switch self {
+    case .toLatest, .goingTo: true
+    case .opening, .free, .waiting, .on: false
+    }
+  }
+}
+
+/// Where an item is put on the screen: its top this far below the top of
+/// the lines seen, or in their middle.
+private enum Spot {
+  case below(CGFloat)
+  case middle
+}
+
+/// An item the lines are on, and where.
+private struct Anchor {
   let id: String
-  let place: LinePlace
+  let spot: Spot
+}
+
+/// An item asked to be shown, and what is told once it is, or once the
+/// lines are taken elsewhere instead: told once.
+@MainActor private final class Showing {
+  let id: String
+  let spot: Spot
   let animated: Bool
-  let then: (() -> Void)?
+  private var then: (() -> Void)?
+
+  init(id: String, place: LinePlace, animated: Bool, then: (() -> Void)?) {
+    self.id = id
+    spot =
+      switch place {
+      case .top: .below(0)
+      case .center: .middle
+      }
+    self.animated = animated
+    self.then = then
+  }
+
+  func finish() {
+    let then = then
+    self.then = nil
+    then?()
+  }
+}
+
+/// The lines to put in, and how.
+private struct Rows {
+  let rows: [LinesRow]
+  /// The chat's environment changed how every line is drawn.
+  let restyled: Bool
+  let reduceMotion: Bool
+}
+
+/// An update of the lines being put in.
+private struct Updating {
+  /// The items coming in at the foot, which rise into place from under
+  /// the lines' foot as the lines slide up.
+  let risingIn: Set<String>
+  /// The latest lines come meanwhile, put in next.
+  var next: Rows?
 }
 
 /// The pan dragging a line to reply to it, which gives back going back by
@@ -1165,6 +1292,12 @@ private final class LineCell: UICollectionViewCell {
 
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+  /// None: the lines keep clear of the header and the composer by their
+  /// own insets. A cell under either would be in the screen's safe area,
+  /// in which its hosted line is laid out apart from how it was measured,
+  /// shifted in the cell, over the lines next to it.
+  override var safeAreaInsets: UIEdgeInsets { .zero }
 
   /// Its item's height at the width the layout gives it, measured apart
   /// from the cell (ChatLinesModel.height).
@@ -1197,14 +1330,6 @@ private struct LineCellContent: View {
     content
       .id(id)
       .frame(maxWidth: .infinity)
-      // A tap off a line's own parts puts the keyboard away, as LINE does.
-      .background {
-        Color.clear.contentShape(.rect).onTapGesture {
-          UIApplication.shared.sendAction(
-            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        }
-        .accessibilityHidden(true)
-      }
       .coordinateSpace(.named(LineSpace.name))
       .environment(\.lineSpace, space)
       .environment(\.keptDrawing, drawing)
