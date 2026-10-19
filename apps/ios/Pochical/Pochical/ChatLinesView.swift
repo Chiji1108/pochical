@@ -130,7 +130,15 @@ struct LinesRow: Equatable {
   /// Each item's look, as last laid out.
   var looks: [String: AnyHashable] = [:]
   /// Each item's height as measured, at its look and the width it had.
-  private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:]
+  private var heights: [String: (look: AnyHashable, width: CGFloat, height: CGFloat)] = [:] {
+    didSet {
+      typicalHeight =
+        heights.isEmpty ? nil : heights.values.reduce(0) { $0 + $1.height } / CGFloat(heights.count)
+    }
+  }
+  /// The items measured, on average: how tall an item not yet measured is
+  /// taken to be, as close as a guess gets before it is drawn.
+  private(set) var typicalHeight: CGFloat?
   /// What each item's words take to draw, at its look (LineDrawing), for
   /// the lines most recently drawn or measured.
   private let drawings = {
@@ -512,14 +520,14 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     return true
   }
 
-  /// Lines new to `new` stand above the first line it keeps from `old`,
-  /// the spinner over the earlier lines aside.
+  /// Lines new to `new` stand above the first line it keeps from `old`:
+  /// lines alone, as the day over them and the spinner over the earlier
+  /// lines stay at the top of both.
   private func cameAbove(_ old: [String], in new: [String]) -> Bool {
-    let lines = old.filter { $0 != ChatItemID.earlier }
-    guard let kept = lines.first(where: new.contains), let at = new.firstIndex(of: kept) else {
-      return false
-    }
-    return new[..<at].contains { $0 != ChatItemID.earlier && !old.contains($0) }
+    guard let kept = old.first(where: { ChatItemID.isLine($0) && new.contains($0) }),
+      let at = new.firstIndex(of: kept)
+    else { return false }
+    return new[..<at].contains { ChatItemID.isLine($0) && !old.contains($0) }
   }
 
   /// The items new to `new` below the last line it keeps from `old`:
@@ -553,14 +561,17 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   }
 
   /// An item's height once measured, so the layout puts it where it goes
-  /// before its cell is drawn; each still takes its height from its cell
-  /// (LineCell), which ChatLayout asks by index paths that may be the
-  /// update's before or after.
+  /// before its cell is drawn, and the items measured on average before
+  /// then: a page coming in above is laid out near its own height, rather
+  /// than at ChatLayout's 40pt each, and its lines growing to theirs as
+  /// they show move the scroll by a little each, not by a screen. Each
+  /// still takes its height from its cell (LineCell), which ChatLayout
+  /// asks by index paths that may be the update's before or after.
   func sizeForItem(_ chatLayout: CollectionViewChatLayout, at indexPath: IndexPath) -> ItemSize {
     let width = chatLayout.layoutFrame.width
-    guard indexPath.item < ids.count,
-      let height = model.knownHeight(of: ids[indexPath.item], width: width)
-    else { return .auto }
+    let known =
+      indexPath.item < ids.count ? model.knownHeight(of: ids[indexPath.item], width: width) : nil
+    guard let height = known ?? model.typicalHeight else { return .auto }
     return .estimated(CGSize(width: width, height: height))
   }
 
