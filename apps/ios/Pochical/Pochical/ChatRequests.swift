@@ -36,6 +36,9 @@ struct ChatRequest: FetchKeyRequest, Hashable {
 final class ChatFeed {
   private var request: ChatRequest
   private var fetch: Fetch<ChatRequest.Value>?
+  /// The `follow()` going on, the last begun; none once it has ended. The
+  /// chat is read as the screen first draws, before one begins.
+  private var follower: UUID? = UUID()
 
   init(_ request: ChatRequest) {
     self.request = request
@@ -48,10 +51,26 @@ final class ChatFeed {
     return made.wrappedValue
   }
 
-  /// Reads the chat again as `request` asks, and from then on.
+  /// Reads the chat again as `request` asks, and from then on; once the
+  /// screen is gone, only keeps it for `follow()`.
   func load(_ request: ChatRequest) async {
     self.request = request
+    guard follower != nil else { return }
     _ = try? await fetch?.load(request)
+  }
+
+  /// Reads the chat for as long as the calling task runs, the screen's
+  /// while it is shown, and stops with it: SwiftUI keeps a closed screen's
+  /// state a while longer (its toolbar until the next push, its last
+  /// text field's environment until another is typed in), and the read
+  /// went on with it.
+  func follow() async {
+    guard let fetch else { return }
+    let me = UUID()
+    follower = me
+    let subscription = try? await fetch.load(request)
+    try? await subscription?.task
+    if follower == me { follower = nil }
   }
 }
 
