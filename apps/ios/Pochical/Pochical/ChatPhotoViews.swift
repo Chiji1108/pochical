@@ -180,8 +180,6 @@ struct PhotoLine: View {
   /// Stops it going up, leaving its line not sent; none where it cannot
   /// be stopped.
   var onStop: (() -> Void)?
-  /// It is open large from here.
-  @State private var open = false
 
   var body: some View {
     let size = PhotoBox.size(of: photo)
@@ -199,14 +197,7 @@ struct PhotoLine: View {
             .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
         }
       }
-      // Its place left empty while it is open large from here, as Photos
-      // leaves a photo's place, and where it opens from and closes to.
-      .opacity(open ? 0 : 1)
-      .background(PhotoSpot(id: photo.id))
-      .onAppear { open = PhotoSpots.shared.open == photo.id }
-      .onReceive(NotificationCenter.default.publisher(for: PhotoSpots.opened)) { _ in
-        open = PhotoSpots.shared.open == photo.id
-      }
+      .photoSpot(photo.id)
       .accessibilityElement(children: waiting ? .contain : .ignore)
       .accessibilityLabel(waiting ? "送信中の写真" : "写真")
       .accessibilityAddTraits(.isImage)

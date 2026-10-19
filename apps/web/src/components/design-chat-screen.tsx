@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChevronDown,
   Ellipsis,
+  Images,
   RotateCcw,
   Trash2,
 } from "lucide-react";
@@ -44,6 +45,7 @@ import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
 import { LineFrame, MutedMark, chatGaps } from "./design-chat-parts";
+import { ChatPhotoList } from "./design-chat-photo-list";
 import { PinBar } from "./design-chat-pins";
 import { DecidePollSheet } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
@@ -322,6 +324,9 @@ export function ChatScreen({
     }
   };
   const [pinsOpen, setPinsOpen] = useState(false);
+  // 写真 from ⋯: the chat's photos alone, over the chat, which keeps
+  // where it was and what is being written under it.
+  const [listingPhotos, setListingPhotos] = useState(false);
   const replying = byId(replyTo);
   // What every line shares, given once rather than to each.
   const scope: ChatScope = {
@@ -347,340 +352,364 @@ export function ChatScreen({
     writerOf,
   };
   return (
-    <Screen>
-      <header className={chatStyle.header}>
-        <BackButton onClick={onBack}>{backLabel}</BackButton>
-        {/* The group's name, and under it how many are in it, as
+    <>
+      <Screen hidden={listingPhotos}>
+        <header className={chatStyle.header}>
+          <BackButton onClick={onBack}>{backLabel}</BackButton>
+          {/* The group's name, and under it how many are in it, as
             Telegram and Messages head a group: clear which group this is,
             without a count in brackets. A long name is cut short, the mute
             mark stays. A tap opens the group's settings and members, or in
             a one-to-one chat the other member's profile. */}
-        <h3 className={chatStyle.title}>
-          {onTitle ? (
-            <button
-              aria-label={
-                isGroup
-                  ? `${title}、${members.length}人。押すとグループの設定`
-                  : `${title}。押すとプロフィール`
-              }
-              className={chatStyle.titleButton}
-              onClick={onTitle}
-              type="button"
-            >
+          <h3 className={chatStyle.title}>
+            {onTitle ? (
+              <button
+                aria-label={
+                  isGroup
+                    ? `${title}、${members.length}人。押すとグループの設定`
+                    : `${title}。押すとプロフィール`
+                }
+                className={chatStyle.titleButton}
+                onClick={onTitle}
+                type="button"
+              >
+                <ChatTitle
+                  count={isGroup ? members.length : undefined}
+                  muted={muted}
+                  title={title}
+                />
+              </button>
+            ) : (
               <ChatTitle
                 count={isGroup ? members.length : undefined}
                 muted={muted}
                 title={title}
               />
-            </button>
-          ) : (
-            <ChatTitle
-              count={isGroup ? members.length : undefined}
-              muted={muted}
-              title={title}
-            />
-          )}
-        </h3>
-        {onMuted && (
+            )}
+          </h3>
           <IconMenu
             className={chatStyle.menu}
             icon={<Ellipsis aria-hidden="true" size={20} />}
             label="チャットのメニュー"
           >
             {onShifts && (
-              <>
-                <MenuItem
-                  icon={<CalendarDays aria-hidden="true" size={18} />}
-                  onSelect={onShifts}
-                  value="shifts"
-                >
-                  みんなのシフト
-                </MenuItem>
-                <MenuSeparator />
-              </>
+              <MenuItem
+                icon={<CalendarDays aria-hidden="true" size={18} />}
+                onSelect={onShifts}
+                value="shifts"
+              >
+                みんなのシフト
+              </MenuItem>
             )}
             <MenuItem
-              icon={
-                muted ? (
-                  <Bell aria-hidden="true" size={18} />
-                ) : (
-                  <BellOff aria-hidden="true" size={18} />
-                )
-              }
+              icon={<Images aria-hidden="true" size={18} />}
               onSelect={() => {
-                onMuted(!muted);
+                setListingPhotos(true);
               }}
-              value="notifications"
+              value="photos"
             >
-              {muted ? "通知をオンにする" : "通知をオフにする"}
+              写真
             </MenuItem>
-          </IconMenu>
-        )}
-      </header>
-      <div className={chatStyle.lines}>
-        {rules.pins && (
-          <ChatEdge edge="head" list={listRef}>
-            <PinBar
-              nameOf={mentionName}
-              onJump={(id) => {
-                setPinsOpen(false);
-                jumpTo(id);
-              }}
-              onOpenChange={setPinsOpen}
-              onUnpin={(id) => {
-                pin(id, false);
-              }}
-              open={pinsOpen}
-              pins={pinsOf(chat.messages)}
-            />
-          </ChatEdge>
-        )}
-        <ChatContext value={scope}>
-          <ol
-            aria-label={`${title}のメッセージ`}
-            className={chatStyle.messages}
-            style={chatGaps}
-            onScroll={handleScroll}
-            ref={listRef}
-          >
-            {head ??
-              (chat.messages.length === 0 && (
-                <li className={chatStyle.empty}>まだメッセージはありません</li>
-              ))}
-            {chat.messages.map((message, index) => (
-              <Fragment key={message.id}>
-                {message.id === firstUnreadId && (
-                  <li className={chatStyle.unread} id="unread-line">
-                    <span>ここから新着</span>
-                  </li>
-                )}
-                <MessageLine
-                  actions={actionsOf(message)}
-                  flash={flash === message.id}
-                  hidden={folded(message)}
-                  lifted={selected === message.id}
-                  message={message}
-                  onDecide={() => {
-                    setDeciding(message.id);
-                  }}
-                  onFailed={() => {
-                    setFailedOpen(message.id);
-                  }}
-                  onStopUpload={() => {
-                    stop(message.id);
-                  }}
-                  onFolded={keepPlace}
-                  onReveal={() => {
-                    setRevealed((before) => [...before, message.id]);
-                  }}
+            {onMuted && (
+              <>
+                <MenuSeparator />
+                <MenuItem
+                  icon={
+                    muted ? (
+                      <Bell aria-hidden="true" size={18} />
+                    ) : (
+                      <BellOff aria-hidden="true" size={18} />
+                    )
+                  }
                   onSelect={() => {
-                    setSelected(message.id);
+                    onMuted(!muted);
                   }}
-                  onVote={(key) => {
-                    vote(message.id, key);
-                  }}
-                  next={chat.messages[index + 1]}
-                  previous={chat.messages[index - 1]}
-                  quoted={byId(message.replyTo)}
-                  upload={uploads[message.id]}
-                />
-              </Fragment>
-            ))}
-            {typingMember && (
-              <LineFrame
-                avatar={<Avatar member={typingMember} size={chatAvatarSize} />}
-                mine={false}
-              >
-                <BubbleOutline first mine={false}>
-                  <span
-                    aria-label={`${typingMember.name}が入力中`}
-                    className={chatStyle.typing}
-                    role="status"
-                  >
-                    <span />
-                    <span />
-                    <span />
-                  </span>
-                </BubbleOutline>
-              </LineFrame>
+                  value="notifications"
+                >
+                  {muted ? "通知をオンにする" : "通知をオフにする"}
+                </MenuItem>
+              </>
             )}
-          </ol>
-        </ChatContext>
-        {floatingDay !== undefined && (
-          <span
-            aria-hidden="true"
-            className={chatStyle.floatingDay({ shown: dayShown })}
-          >
-            {floatingDay}
-          </span>
-        )}
-        {(awayFromLatest || unseen > 0) && (
-          <span className={chatStyle.latest}>
-            <IconButton
-              label={
-                unseen > 0
-                  ? `最新のメッセージへ、まだ見ていない新着${unseen}件`
-                  : "最新のメッセージへ"
-              }
-              onClick={handleLatest}
-            >
-              <ChevronDown aria-hidden="true" size={20} />
-            </IconButton>
-            {unseen > 0 && (
-              <span
-                aria-hidden="true"
-                className={cx(badge, chatStyle.latestCount)}
-              >
-                {unseen}
-              </span>
-            )}
-          </span>
-        )}
-        <ChatEdge edge="foot" list={listRef}>
-          {gone ? (
-            <GoneNote name={gone.name} />
-          ) : (
-            <Composer
-              composer={composer}
-              editingMessage={byId(composer.editing)}
-              onSend={send}
-              onShareDays={
-                rules.days
-                  ? () => {
-                      setSharing(true);
-                    }
-                  : undefined
-              }
-              reply={
-                replying && {
-                  message: replying,
-                  onStop: () => {
-                    setReplyTo(undefined);
-                  },
-                  writer: nameOf(replying.from),
-                }
-              }
-            />
+          </IconMenu>
+        </header>
+        <div className={chatStyle.lines}>
+          {rules.pins && (
+            <ChatEdge edge="head" list={listRef}>
+              <PinBar
+                nameOf={mentionName}
+                onJump={(id) => {
+                  setPinsOpen(false);
+                  jumpTo(id);
+                }}
+                onOpenChange={setPinsOpen}
+                onUnpin={(id) => {
+                  pin(id, false);
+                }}
+                open={pinsOpen}
+                pins={pinsOf(chat.messages)}
+              />
+            </ChatEdge>
           )}
-        </ChatEdge>
-      </div>
-      <EmojiPickerSheet
-        onOpenChange={(open) => {
-          if (!open) {
-            setPickingFor(undefined);
-          }
-        }}
-        onPick={(emoji) => {
-          if (pickingFor) {
-            react(pickingFor, emoji);
-          }
-        }}
-        open={pickingFor !== undefined}
-        title="リアクション"
-      />
-      <Sheet
-        label="送れなかった写真"
-        onOpenChange={(open) => {
-          if (!open) {
-            setFailedOpen(undefined);
-          }
-        }}
-        open={failedOpen !== undefined}
-      >
-        <List>
-          <ListRow
-            label="もう一度送る"
-            leading={<RotateCcw aria-hidden="true" size={20} />}
-            onClick={() => {
-              if (failedOpen) {
-                upload([failedOpen]);
-              }
-              setFailedOpen(undefined);
-            }}
-          />
-          <ListRow
-            danger
-            label="削除"
-            leading={<Trash2 aria-hidden="true" size={20} />}
-            onClick={() => {
-              if (failedOpen) {
-                remove(failedOpen);
-              }
-              setFailedOpen(undefined);
-            }}
-          />
-        </List>
-        <button
-          className={photoPicker.cancel}
-          onClick={() => {
-            setFailedOpen(undefined);
-          }}
-          type="button"
-        >
-          キャンセル
-        </button>
-      </Sheet>
-      <LinkMenu
-        at={linkMenu}
-        onClose={() => {
-          setLinkMenu(undefined);
-        }}
-        onOpen={openUrl}
-      />
-      {rules.reports && (
-        <ReportSheet
-          member={writerOf(byId(reporting)?.from)}
-          onClose={() => {
-            setReporting(undefined);
-          }}
-          sends="このメッセージと前後の数件"
-          what={
-            reporting === undefined
-              ? undefined
-              : `${nameOf(byId(reporting)?.from ?? "")}のメッセージ`
-          }
-        />
-      )}
-      {unsending !== undefined && (
-        <ConfirmDialog
-          action="取り消す"
-          message={unsendNote}
-          onCancel={() => {
-            setUnsending(undefined);
-          }}
-          onConfirm={() => {
-            unsend(unsending);
-          }}
-          title="送信を取り消しますか？"
-        />
-      )}
-      {rules.days && (
-        <DaySheet
-          members={people}
-          onOpenChange={setSharing}
-          onShare={(days, poll) => {
-            post(poll ? { poll: { days, votes: {} } } : { days });
-            setSharing(false);
-          }}
-          open={sharing}
-          pollable={isGroup && rules.polls}
-        />
-      )}
-      {rules.polls && (
-        <DecidePollSheet
-          key={deciding ?? "none"}
-          onClose={() => {
-            setDeciding(undefined);
-          }}
-          onDecide={(key) => {
-            if (deciding) {
-              decide(deciding, key);
+          <ChatContext value={scope}>
+            <ol
+              aria-label={`${title}のメッセージ`}
+              className={chatStyle.messages}
+              style={chatGaps}
+              onScroll={handleScroll}
+              ref={listRef}
+            >
+              {head ??
+                (chat.messages.length === 0 && (
+                  <li className={chatStyle.empty}>
+                    まだメッセージはありません
+                  </li>
+                ))}
+              {chat.messages.map((message, index) => (
+                <Fragment key={message.id}>
+                  {message.id === firstUnreadId && (
+                    <li className={chatStyle.unread} id="unread-line">
+                      <span>ここから新着</span>
+                    </li>
+                  )}
+                  <MessageLine
+                    actions={actionsOf(message)}
+                    flash={flash === message.id}
+                    hidden={folded(message)}
+                    lifted={selected === message.id}
+                    message={message}
+                    onDecide={() => {
+                      setDeciding(message.id);
+                    }}
+                    onFailed={() => {
+                      setFailedOpen(message.id);
+                    }}
+                    onStopUpload={() => {
+                      stop(message.id);
+                    }}
+                    onFolded={keepPlace}
+                    onReveal={() => {
+                      setRevealed((before) => [...before, message.id]);
+                    }}
+                    onSelect={() => {
+                      setSelected(message.id);
+                    }}
+                    onVote={(key) => {
+                      vote(message.id, key);
+                    }}
+                    next={chat.messages[index + 1]}
+                    previous={chat.messages[index - 1]}
+                    quoted={byId(message.replyTo)}
+                    upload={uploads[message.id]}
+                  />
+                </Fragment>
+              ))}
+              {typingMember && (
+                <LineFrame
+                  avatar={
+                    <Avatar member={typingMember} size={chatAvatarSize} />
+                  }
+                  mine={false}
+                >
+                  <BubbleOutline first mine={false}>
+                    <span
+                      aria-label={`${typingMember.name}が入力中`}
+                      className={chatStyle.typing}
+                      role="status"
+                    >
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </BubbleOutline>
+                </LineFrame>
+              )}
+            </ol>
+          </ChatContext>
+          {floatingDay !== undefined && (
+            <span
+              aria-hidden="true"
+              className={chatStyle.floatingDay({ shown: dayShown })}
+            >
+              {floatingDay}
+            </span>
+          )}
+          {(awayFromLatest || unseen > 0) && (
+            <span className={chatStyle.latest}>
+              <IconButton
+                label={
+                  unseen > 0
+                    ? `最新のメッセージへ、まだ見ていない新着${unseen}件`
+                    : "最新のメッセージへ"
+                }
+                onClick={handleLatest}
+              >
+                <ChevronDown aria-hidden="true" size={20} />
+              </IconButton>
+              {unseen > 0 && (
+                <span
+                  aria-hidden="true"
+                  className={cx(badge, chatStyle.latestCount)}
+                >
+                  {unseen}
+                </span>
+              )}
+            </span>
+          )}
+          <ChatEdge edge="foot" list={listRef}>
+            {gone ? (
+              <GoneNote name={gone.name} />
+            ) : (
+              <Composer
+                composer={composer}
+                editingMessage={byId(composer.editing)}
+                onSend={send}
+                onShareDays={
+                  rules.days
+                    ? () => {
+                        setSharing(true);
+                      }
+                    : undefined
+                }
+                reply={
+                  replying && {
+                    message: replying,
+                    onStop: () => {
+                      setReplyTo(undefined);
+                    },
+                    writer: nameOf(replying.from),
+                  }
+                }
+              />
+            )}
+          </ChatEdge>
+        </div>
+        <EmojiPickerSheet
+          onOpenChange={(open) => {
+            if (!open) {
+              setPickingFor(undefined);
             }
           }}
-          poll={byId(deciding)?.poll}
+          onPick={(emoji) => {
+            if (pickingFor) {
+              react(pickingFor, emoji);
+            }
+          }}
+          open={pickingFor !== undefined}
+          title="リアクション"
+        />
+        <Sheet
+          label="送れなかった写真"
+          onOpenChange={(open) => {
+            if (!open) {
+              setFailedOpen(undefined);
+            }
+          }}
+          open={failedOpen !== undefined}
+        >
+          <List>
+            <ListRow
+              label="もう一度送る"
+              leading={<RotateCcw aria-hidden="true" size={20} />}
+              onClick={() => {
+                if (failedOpen) {
+                  upload([failedOpen]);
+                }
+                setFailedOpen(undefined);
+              }}
+            />
+            <ListRow
+              danger
+              label="削除"
+              leading={<Trash2 aria-hidden="true" size={20} />}
+              onClick={() => {
+                if (failedOpen) {
+                  remove(failedOpen);
+                }
+                setFailedOpen(undefined);
+              }}
+            />
+          </List>
+          <button
+            className={photoPicker.cancel}
+            onClick={() => {
+              setFailedOpen(undefined);
+            }}
+            type="button"
+          >
+            キャンセル
+          </button>
+        </Sheet>
+        <LinkMenu
+          at={linkMenu}
+          onClose={() => {
+            setLinkMenu(undefined);
+          }}
+          onOpen={openUrl}
+        />
+        {rules.reports && (
+          <ReportSheet
+            member={writerOf(byId(reporting)?.from)}
+            onClose={() => {
+              setReporting(undefined);
+            }}
+            sends="このメッセージと前後の数件"
+            what={
+              reporting === undefined
+                ? undefined
+                : `${nameOf(byId(reporting)?.from ?? "")}のメッセージ`
+            }
+          />
+        )}
+        {unsending !== undefined && (
+          <ConfirmDialog
+            action="取り消す"
+            message={unsendNote}
+            onCancel={() => {
+              setUnsending(undefined);
+            }}
+            onConfirm={() => {
+              unsend(unsending);
+            }}
+            title="送信を取り消しますか？"
+          />
+        )}
+        {rules.days && (
+          <DaySheet
+            members={people}
+            onOpenChange={setSharing}
+            onShare={(days, poll) => {
+              post(poll ? { poll: { days, votes: {} } } : { days });
+              setSharing(false);
+            }}
+            open={sharing}
+            pollable={isGroup && rules.polls}
+          />
+        )}
+        {rules.polls && (
+          <DecidePollSheet
+            key={deciding ?? "none"}
+            onClose={() => {
+              setDeciding(undefined);
+            }}
+            onDecide={(key) => {
+              if (deciding) {
+                decide(deciding, key);
+              }
+            }}
+            poll={byId(deciding)?.poll}
+          />
+        )}
+      </Screen>
+      {listingPhotos && (
+        <ChatPhotoList
+          backLabel={title}
+          onBack={() => {
+            setListingPhotos(false);
+          }}
+          photos={scope.photos}
         />
       )}
-    </Screen>
+    </>
   );
 }
 

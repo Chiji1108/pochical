@@ -97,6 +97,7 @@ export const photosOf = (
             label: photoLabel(writerOf(message.from)),
             mine: message.from === "me",
             photo: message.photo,
+            when: message.when,
           },
         ]
       : []
