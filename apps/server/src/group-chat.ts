@@ -354,10 +354,6 @@ const ALBUM_NAME = /^[\u0021-\u007E]{1,64}$/u;
 const fitsPhotoSize = (side: number): boolean =>
   side >= 1 && side <= chatRules.photoMaxEdge;
 
-/**
- * A photo line: the sender's own photo, uploaded and not sent before,
- * with no words or days.
- */
 /** Whether `photoId` is one `userId` uploaded and has not sent. */
 const ownUnsentPhoto = (
   db: DrizzleSqliteDODatabase,
@@ -372,6 +368,10 @@ const ownUnsentPhoto = (
   return uploaded?.userId === userId && !uploaded.sent;
 };
 
+/**
+ * A photo line: the sender's own photo, uploaded and not sent before,
+ * with no words or days.
+ */
 const fitsPhoto = (
   db: DrizzleSqliteDODatabase,
   userId: string,
