@@ -92,6 +92,15 @@ enum ReplySwipe {
     followed.removeAll { $0.spot === spot }
   }
 
+  /// The cell no longer draws its line, given another or gone from the
+  /// screen with the chat: its open menus' bubbles are back, as far as
+  /// they go, whatever SwiftUI still tells the line.
+  fileprivate func letGo() {
+    let spots = followed.map(\.spot)
+    followed = []
+    for spot in spots { spot.back() }
+  }
+
   /// The cell has moved on the screen.
   fileprivate func moved() {
     for (spot, frame) in followed {
@@ -1313,6 +1322,16 @@ private final class LineCell: UICollectionViewCell {
   /// in which its hosted line is laid out apart from how it was measured,
   /// shifted in the cell, over the lines next to it.
   override var safeAreaInsets: UIEdgeInsets { .zero }
+
+  override func prepareForReuse() {
+    super.prepareForReuse()
+    space.letGo()
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    if window == nil { space.letGo() }
+  }
 
   /// Its item's height at the width the layout gives it, measured apart
   /// from the cell (ChatLinesModel.height).
