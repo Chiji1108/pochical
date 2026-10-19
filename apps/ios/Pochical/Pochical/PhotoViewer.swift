@@ -470,6 +470,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
           try Chats.photoLines(
             of: groupID, thread: pager.threadID, blocked: pager.blocked, in: db)
         }
+        .removeDuplicates()
         do {
           for try await now in lines.values(in: pager.database) {
             self?.changed { $0.follow(now) }

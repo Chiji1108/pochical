@@ -100,9 +100,9 @@ public struct PhotoRun: Sendable {
   public private(set) var shown: Int64?
   private var asked: Set<Ask> = []
   private let ahead: Int
-  /// The chat's lines on the device as last followed: whether each is a
-  /// photo the reader sees.
-  private var followed: [Int64: Bool]?
+  /// The chat's lines on the device as last followed: the last one's seq,
+  /// and those that are photos the reader sees.
+  private var followed: (latest: Int64, seen: Set<Int64>)?
 
   /// Whether the reader sees a line's photo among the chat's: not once
   /// taken back, nor hidden from them, nor in the place's own chat when
@@ -215,33 +215,58 @@ public struct PhotoRun: Sendable {
     total = total.map { $0 - 1 }
   }
 
-  /// The chat's lines on the device now, each with its photo when the
-  /// reader sees it: a new line's photo past them all is `added`, and a
-  /// photo taken back or hidden is `gone`. The first only notes them.
-  public mutating func follow(_ lines: [(seq: Int64, item: ChatPhotoItem?)]) {
-    let now = Dictionary(lines.map { ($0.seq, $0.item != nil) }, uniquingKeysWith: { $1 })
-    defer { followed = now }
+  /// The chat's lines on the device now: a new line's photo past them all
+  /// is `added`, and a photo taken back or hidden is `gone`. The first only
+  /// notes them.
+  public mutating func follow(_ now: PhotoLines) {
+    defer { followed = (now.latest, Set(now.lines.compactMap { $0.item?.seq })) }
     guard let before = followed else { return }
-    let latest = before.keys.max() ?? 0
-    for line in lines {
-      let was = before[line.seq]
+    for line in now.lines {
       if let item = line.item {
-        if was == nil, line.seq > latest { added(item) }
-      } else if was == true || photos.contains(where: { $0.seq == line.seq }) {
+        if line.seq > before.latest { added(item) }
+      } else if before.seen.contains(line.seq) || photos.contains(where: { $0.seq == line.seq }) {
         gone(line.seq, wasPhoto: true)
       }
     }
   }
 }
 
+/// A chat's lines on the device as the photo opened large follows them
+/// (`PhotoRun.follow`): the last line's seq, and in order the lines that
+/// are or were a photo, each with its photo when the reader sees it. The
+/// rest, words never taken back, can be neither.
+public struct PhotoLines: Equatable, Sendable {
+  public struct Line: Equatable, Sendable {
+    public let seq: Int64
+    public let item: ChatPhotoItem?
+
+    public init(seq: Int64, item: ChatPhotoItem?) {
+      self.seq = seq
+      self.item = item
+    }
+  }
+
+  public let latest: Int64
+  public let lines: [Line]
+
+  public init(latest: Int64, lines: [Line]) {
+    self.latest = latest
+    self.lines = lines
+  }
+}
+
 extension Chats {
-  /// A chat's lines on the device, each with its photo when the reader
-  /// sees it, for the photo opened large to follow as they change.
+  /// A chat's lines on the device as the photo opened large follows them,
+  /// each photo the reader sees by the rule `ChatPhotoItem` keeps.
   public static func photoLines(
     of groupID: String, thread threadID: String, blocked: Set<String>, in db: Database
-  ) throws -> [(seq: Int64, item: ChatPhotoItem?)] {
-    try ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
+  ) throws -> PhotoLines {
+    let inChat = ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
+    let latest = try inChat.select { $0.seq.max() }.fetchOne(db) ?? nil
+    let lines = try inChat.where { $0.photoJSON.neq("") || $0.unsent || $0.hidden }
+      .order(by: \.seq)
       .fetchAll(db)
-      .map { ($0.seq, ChatPhotoItem($0, blocked: blocked)) }
+      .map { PhotoLines.Line(seq: $0.seq, item: ChatPhotoItem($0, blocked: blocked)) }
+    return PhotoLines(latest: latest ?? 0, lines: lines)
   }
 }
