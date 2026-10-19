@@ -1,0 +1,8 @@
+still                                            reuse=  0 configured=  0 visibleRedequeued=  0
+paste 1                                          reuse=  0 configured=  0 visibleRedequeued=  0
+paste 2                                          reuse=  0 configured=  0 visibleRedequeued=  0
+paste 3                                          reuse=  0 configured=  0 visibleRedequeued=  0
+paste 4                                          reuse=  0 configured=  0 visibleRedequeued=  0
+paste 5                                          reuse=  0 configured=  0 visibleRedequeued=  0
+send                                             reuse=  1 configured=  2 visibleRedequeued=  0
+after                                            reuse=  0 configured=  0 visibleRedequeued=  0

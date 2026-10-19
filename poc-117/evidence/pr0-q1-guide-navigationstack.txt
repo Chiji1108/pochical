@@ -1,0 +1,16 @@
+done bg
+466061.6673 STEP focus
+466061.8867 KEYBOARD willChange end=(0.0, 538.0, 402.0, 336.0) duration=0.3833
+466062.7514 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=1
+466065.6346 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=2
+466065.6351 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=2
+466065.7071 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=1
+466066.4757 KEYBOARD willChange end=(0.0, 538.0, 402.0, 336.0) duration=0.0
+466066.4796 KEYBOARD willChange end=(0.0, 538.0, 402.0, 336.0) duration=0.0
+466066.9516 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+466068.0016 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+466069.0437 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+466070.0699 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+466070.9265 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+466072.1677 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+466073.2299 TICK guide=(0.0, 538.0, 402.0, 336.0) windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0

@@ -1,0 +1,14 @@
+461941.2338 STEP quote on
+461942.8671 SAMPLE end reuse=11 configs=23 redequeues=0
+461943.3525 STEP quote off
+461944.9672 SAMPLE end reuse=12 configs=25 redequeues=0
+461945.4482 STEP three lines
+461947.5523 STEP one line
+461949.6376 STEP focus
+461950.9672 SAMPLE end reuse=12 configs=25 redequeues=0
+461951.7338 STEP quote on (keyboard up)
+461953.3505 SAMPLE end reuse=12 configs=25 redequeues=0
+461953.8374 STEP quote off (keyboard up)
+461955.4506 SAMPLE end reuse=13 configs=26 redequeues=0
+461955.9533 STEP unfocus
+461957.0005 SAMPLE end reuse=17 configs=34 redequeues=0

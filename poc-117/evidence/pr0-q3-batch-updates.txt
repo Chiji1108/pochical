@@ -1,0 +1,17 @@
+462017.3505 STEP grow swiftui
+462017.3538 ANIM lines keys=["bounds.size:0.44094051784378036", "bounds.origin:0.44094051784378036"]
+462019.3672 SAMPLE end reuse=11 configs=24 redequeues=0
+462019.9666 STEP shrink swiftui
+462019.9767 ANIM lines keys=["bounds.size:0.44094051784378036", "bounds.origin:0.44094051784378036"]
+462021.9839 SAMPLE end reuse=13 configs=27 redequeues=0
+462022.5693 STEP grow classic
+462022.5761 ANIM lines keys=["bounds.size:1.2", "bounds.origin:1.2"]
+462024.5838 SAMPLE end reuse=13 configs=28 redequeues=0
+462025.2188 STEP shrink classic
+462025.2205 ANIM lines keys=["bounds.size:1.2", "bounds.origin:1.2"]
+462027.2338 SAMPLE end reuse=15 configs=31 redequeues=0
+462027.8236 STEP grow bare
+462027.8290 ANIM lines keys=["bounds.size:0.44094051784378036", "bounds.origin:0.44094051784378036"]
+462029.8338 SAMPLE end reuse=15 configs=32 redequeues=0
+462030.4688 STEP shrink bare
+462030.4756 ANIM lines keys=["bounds.size:0.44094051784378036", "bounds.origin:0.44094051784378036"]
