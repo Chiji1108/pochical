@@ -23,6 +23,7 @@ struct AppleSignInButton: View {
   @Environment(\.account) private var account
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.userSocket) private var userSocket
+  @Environment(\.groupSockets) private var groupSockets
   @Dependency(\.defaultDatabase) private var database
   /// Told once signed in, the button busy until it returns.
   let onSignedIn: (LinkedAccount, SignedIn) async -> Void
@@ -154,8 +155,7 @@ struct AppleSignInButton: View {
     // The device's user, left behind: everything of it goes, tried again
     // as the app comes back should the connection be lost meanwhile.
     await groupCalls.deleteLeftBehind(before)
-    await forgetDevice(database: database, userSocket: userSocket)
-    await userSocket?.startAfresh()
+    await forgetDevice(database: database, userSocket: userSocket, groupSockets: groupSockets)
     await keep(email: choice.email, .switched)
   }
 
@@ -191,11 +191,18 @@ extension Notification.Name {
 }
 
 /// The device holding nothing of the user, as a new install does: its own
-/// settings stay. Told to the app, as the user is someone else from now.
-@MainActor func forgetDevice(database: any DatabaseWriter, userSocket: SyncClient?) async {
+/// settings stay. Told to the app, as the user is someone else from now,
+/// and every socket, the user's and the places' kept ones, closed first
+/// and connected again after as whoever the account is now.
+@MainActor func forgetDevice(
+  database: any DatabaseWriter, userSocket: SyncClient?, groupSockets: GroupSockets
+) async {
   await userSocket?.stop()
+  await groupSockets.forgetAccount()
   try? await database.write { try LocalData.erase(in: $0) }
   LocalData.eraseFiles()
   WidgetCenter.shared.reloadAllTimelines()
   NotificationCenter.default.post(name: .accountChanged, object: nil)
+  await userSocket?.startAfresh()
+  await groupSockets.startHeld()
 }

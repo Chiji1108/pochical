@@ -32,8 +32,7 @@ struct ChatPhotosScreen: View {
       .navigationTitle("写真")
       .navigationBarTitleDisplayMode(.inline)
       .toolbarVisibility(.hidden, for: .tabBar)
-      // Followed again should the place's socket come only once open.
-      .task(id: pager.client.map(ObjectIdentifier.init)) {
+      .task {
         await pager.follow { edit in
           edit(&run)
           ask()
@@ -82,10 +81,9 @@ struct ChatPhotosScreen: View {
 
   /// The pages the photos held want now, each asked once until it comes.
   private func ask() {
-    guard let client = pager.client else { return }
     for ask in run.asks() {
       Task {
-        let asked = await client.requestPhotos(
+        let asked = await pager.client.requestPhotos(
           of: pager.threadID, seq: ask.seq, after: ask.after)
         if !asked { run.unasked(ask) }
       }

@@ -38,6 +38,7 @@ enum FirstRun {
 /// the tabs, and is asked about there as any other time.
 struct AppRoot: View {
   @AppStorage(FirstRun.doneKey) private var done = false
+  @Environment(OpenPlaceSocket.self) private var openPlace
   @Fetch private var hasPatterns: Bool
   @State private var invite: OpenedInvite?
 
@@ -48,9 +49,11 @@ struct AppRoot: View {
     _hasPatterns = Fetch(wrappedValue: has, HasPatternsRequest(), animation: .default)
   }
 
+  private var showsTabs: Bool { done || hasPatterns }
+
   var body: some View {
     Group {
-      if done || hasPatterns {
+      if showsTabs {
         RootView(invite: $invite)
       } else {
         Onboarding()
@@ -58,6 +61,12 @@ struct AppRoot: View {
     }
     .onChange(of: hasPatterns, initial: true) { _, has in
       if has { done = true }
+    }
+    // RootView holds the open place's socket; はじめの設定 replacing it
+    // (after signing out or deleting the account) lets go of it here, as
+    // RootView is gone.
+    .onChange(of: showsTabs) { _, tabs in
+      if !tabs { openPlace.want(nil) }
     }
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {

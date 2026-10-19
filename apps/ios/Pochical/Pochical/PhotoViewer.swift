@@ -55,12 +55,14 @@ struct PhotoViewing: Identifiable {
 /// A chat's photos beyond the lines laid out (spec/sync-protocol.md,
 /// Chat): asked of its place a page at a time on the place's socket, which
 /// the app holds while the place is open (OpenPlaceSocket), and followed as
-/// the chat's photos on the device change.
+/// the chat's photos on the device change. The client is the place's kept
+/// one (GroupSockets), there before its socket opens, so a pager made at
+/// once pages and counts as soon as it does.
 struct PhotoPager {
   let placeID: String
   let threadID: String
-  /// The place's socket; none until the app has first held it.
-  let client: SyncClient?
+  /// The place's socket.
+  let client: SyncClient
   let database: any DatabaseWriter
 
   /// Follows the chat's photos until cancelled, each change to them as
@@ -75,27 +77,25 @@ struct PhotoPager {
     let read: @Sendable (Database) throws -> PhotoLines = { [placeID] db in
       try Chats.photoLines(of: placeID, thread: threadID, in: db)
     }
-    var following: [Task<Void, Never>] = []
-    if let client {
-      let pages = await client.photoPages()
-      let statuses = await client.statuses()
-      following += [
-        Task {
-          for await page in pages where page.threadID == threadID {
-            change { $0.take(page) }
-          }
-        },
-        Task {
-          // Open again after a drop: what was asked is asked again.
-          var open = true
-          for await status in statuses {
-            let now = status != .connecting
-            if now, !open { change { $0.reconnected() } }
-            open = now
-          }
-        },
-      ]
-    }
+    let pages = await client.photoPages()
+    let statuses = await client.statuses()
+    var following: [Task<Void, Never>] = [
+      Task {
+        for await page in pages where page.threadID == threadID {
+          change { $0.take(page) }
+        }
+      },
+      Task {
+        // Open, after a drop or for the first time: what was asked is
+        // asked again.
+        var open = true
+        for await status in statuses {
+          let now = status != .connecting
+          if now, !open { change { $0.reconnected() } }
+          open = now
+        }
+      },
+    ]
     if !Task.isCancelled, let first = try? await database.read(read) {
       // Pages asked for before, while not listened to, are asked again.
       change {
@@ -511,10 +511,10 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     guard let index = run.index else { return }
     let near = run.photos[max(index - 2, 0)...min(index + 2, run.photos.count - 1)]
     ahead.whole(near.map(\.photo), in: groupID, calls: calls)
-    guard let pager, let client = pager.client else { return }
+    guard let pager else { return }
     for ask in run.asks() {
       Task {
-        let asked = await client.requestPhotos(
+        let asked = await pager.client.requestPhotos(
           of: pager.threadID, seq: ask.seq, after: ask.after)
         if !asked { run.unasked(ask) }
       }

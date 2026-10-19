@@ -9,7 +9,6 @@ import SwiftUI
 /// yet. The chat's socket is open while 設定 shows, as a group's while it
 /// does, so its latest line is current.
 struct SupportRow: View {
-  @Environment(OpenPlaceSocket.self) private var openPlace
   @State private var meID = GroupCalls.knownUserID
 
   var body: some View {
@@ -23,7 +22,6 @@ struct SupportRow: View {
       Notifications.shared.openingSupport = true
     }
     .listRowInsets(EdgeInsets())
-    .environment(\.groupSocket, openPlace.clients[ChatPlace.supportID])
   }
 }
 
@@ -31,13 +29,11 @@ struct SupportRow: View {
 /// its place like any other (spec/chat.md, Where a chat is kept), headed by
 /// who it reaches and what does.
 struct SupportChatScreen: View {
-  @Environment(OpenPlaceSocket.self) private var openPlace
 
   var body: some View {
     ChatScreen(
       place: .support, threadID: groupThread, otherID: nil, head: AnyView(SupportHead())
     )
-    .environment(\.groupSocket, openPlace.clients[ChatPlace.supportID])
   }
 }
 

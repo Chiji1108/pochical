@@ -159,9 +159,16 @@ public actor SyncClient {
   /// Connects as whoever the account is now, after it changed: stopped
   /// for good before (a 401) or not.
   public func startAfresh() {
+    forgetStop()
+    start()
+  }
+
+  /// Closes the socket and forgets why it stopped for good, without
+  /// connecting: the account changed, and the next `start` connects as
+  /// whoever it is then.
+  public func forgetStop() {
     stop()
     stopped = nil
-    start()
   }
 
   /// Closes the socket: the app went to the background.

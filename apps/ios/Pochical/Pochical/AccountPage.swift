@@ -55,6 +55,7 @@ struct AccountPage: View {
   @Environment(\.account) private var account
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.userSocket) private var userSocket
+  @Environment(\.groupSockets) private var groupSockets
   @Dependency(\.defaultDatabase) private var database
   @Binding var linked: LinkedAccount?
   @State private var confirmingDelete = false
@@ -179,9 +180,8 @@ struct AccountPage: View {
       await userSocket?.start()
       return
     }
-    await forgetDevice(database: database, userSocket: userSocket)
+    await forgetDevice(database: database, userSocket: userSocket, groupSockets: groupSockets)
     withAnimation { linked = nil }
-    await userSocket?.startAfresh()
     // The device starts over as a new one does, with はじめの設定.
     FirstRun.again()
   }
@@ -209,8 +209,7 @@ struct AccountPage: View {
       return
     }
     try? await account.forget()
-    await forgetDevice(database: database, userSocket: userSocket)
-    await userSocket?.startAfresh()
+    await forgetDevice(database: database, userSocket: userSocket, groupSockets: groupSockets)
     withAnimation { linked = nil }
     // The device starts over as a new one does, with はじめの設定, which
     // says the account was deleted.
