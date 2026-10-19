@@ -69,4 +69,16 @@ public interface ChatPhotosOrBuilder extends
    * @return The total.
    */
   int getTotal();
+
+  /**
+   * <pre>
+   * The group's change log head as it answered: the page counts every
+   * change up to it, so a device that has taken a later change to the
+   * chat's photos drops the page and asks again.
+   * </pre>
+   *
+   * <code>uint64 cursor = 7 [json_name = "cursor"];</code>
+   * @return The cursor.
+   */
+  long getCursor();
 }

@@ -35,6 +35,7 @@ public  final class ChatEdit extends
     PIN(7),
     VOTE(8),
     DECIDE(9),
+    RECALL(10),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -58,6 +59,7 @@ public  final class ChatEdit extends
         case 7: return PIN;
         case 8: return VOTE;
         case 9: return DECIDE;
+        case 10: return RECALL;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -541,6 +543,56 @@ public  final class ChatEdit extends
    */
   private void clearDecide() {
     if (kindCase_ == 9) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int RECALL_FIELD_NUMBER = 10;
+  /**
+   * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+   */
+  @java.lang.Override
+  public boolean hasRecall() {
+    return kindCase_ == 10;
+  }
+  /**
+   * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatRecall getRecall() {
+    if (kindCase_ == 10) {
+       return (app.pochical.v1.ChatRecall) kind_;
+    }
+    return app.pochical.v1.ChatRecall.getDefaultInstance();
+  }
+  /**
+   * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+   */
+  private void setRecall(app.pochical.v1.ChatRecall value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 10;
+  }
+  /**
+   * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+   */
+  private void mergeRecall(app.pochical.v1.ChatRecall value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 10 &&
+        kind_ != app.pochical.v1.ChatRecall.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatRecall.newBuilder((app.pochical.v1.ChatRecall) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 10;
+  }
+  /**
+   * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+   */
+  private void clearRecall() {
+    if (kindCase_ == 10) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1114,6 +1166,54 @@ public  final class ChatEdit extends
       return this;
     }
 
+    /**
+     * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+     */
+    @java.lang.Override
+    public boolean hasRecall() {
+      return instance.hasRecall();
+    }
+    /**
+     * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatRecall getRecall() {
+      return instance.getRecall();
+    }
+    /**
+     * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+     */
+    public Builder setRecall(app.pochical.v1.ChatRecall value) {
+      copyOnWrite();
+      instance.setRecall(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+     */
+    public Builder setRecall(
+        app.pochical.v1.ChatRecall.Builder builderForValue) {
+      copyOnWrite();
+      instance.setRecall(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+     */
+    public Builder mergeRecall(app.pochical.v1.ChatRecall value) {
+      copyOnWrite();
+      instance.mergeRecall(value);
+      return this;
+    }
+    /**
+     * <code>.pochical.v1.ChatRecall recall = 10 [json_name = "recall"];</code>
+     */
+    public Builder clearRecall() {
+      copyOnWrite();
+      instance.clearRecall();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatEdit)
   }
   @java.lang.Override
@@ -1141,10 +1241,12 @@ public  final class ChatEdit extends
             app.pochical.v1.ChatPin.class,
             app.pochical.v1.ChatVote.class,
             app.pochical.v1.ChatDecide.class,
+            app.pochical.v1.ChatRecall.class,
           };
           java.lang.String info =
-              "\u0000\t\u0001\u0000\u0001\t\t\u0000\u0000\u0000\u0001\u0208\u0002<\u0000\u0003<" +
-              "\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000";
+              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001\u0208\u0002<\u0000\u0003<" +
+              "\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -12,6 +12,9 @@ struct RootView: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(\.scenePhase) private var scenePhase
+  @Environment(OpenPlaceSocket.self) private var openPlace
+  @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// Each group's unread lines that count (spec/chat.md, Unread lines).
   @Fetch private var unread: [String: Int] = [:]
   /// What is read in each chat, for the notifications of lines read to go.
@@ -30,6 +33,18 @@ struct RootView: View {
   /// Said over the tabs for a moment, as a toast is.
   @State private var notice: String?
   @State private var notices = 0
+
+  /// The place whose socket is held (spec/sync-protocol.md, Sockets): the
+  /// open group's while グループ shows, the chat with Pochical's people's
+  /// while 設定 does, none in the background.
+  private var openPlaceID: String? {
+    guard scenePhase == .active else { return nil }
+    switch tab {
+    case .calendar: return nil
+    case .groups: return openGroup(openGroupID, among: groups)?.id
+    case .settings: return ChatPlace.supportID
+    }
+  }
 
   /// The groups' unread lines, without the chat with Pochical's people.
   private var groupsUnread: Int {
@@ -75,6 +90,9 @@ struct RootView: View {
       _ = try? await $unread.load(UnreadRequest(me: meID))
       _ = try? await $read.load(ReadStateRequest(me: meID))
     }
+    // Here, under any cover over the tabs, rather than on a screen a cover
+    // or a tab switch takes away.
+    .onChange(of: openPlaceID, initial: true) { _, placeID in openPlace.want(placeID) }
     .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
     .environment(\.say, SayAction(say: say))
     // The app icon's badge follows what is read here too, as the

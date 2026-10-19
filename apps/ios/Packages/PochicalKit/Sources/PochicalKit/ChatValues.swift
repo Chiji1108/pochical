@@ -581,7 +581,7 @@ public enum Chats {
   /// Of a frame's edits about to go out on a socket, those still going
   /// (not taken back nor marked not sent since the frame was made), each
   /// marked as gone out before it goes, so one taken back from then on is
-  /// watched for as it comes (`takeBack`).
+  /// taken back from the group too (`takeBack`).
   static func goOut(_ edits: [Pochical_V1_ChatEdit], in db: Database) throws
     -> [Pochical_V1_ChatEdit]
   {
@@ -594,7 +594,6 @@ public enum Chats {
   /// The edits an Acked names stop waiting.
   static func acknowledge(_ opIDs: [String], in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.in(opIDs) }.delete().execute(db)
-    try forgetTakenBack(opIDs, in: db)
   }
 
   /// The group's newest waiting edit, nil when none waits.
@@ -770,6 +769,13 @@ extension Chats {
       case .unsend(let unsend) where unsend.threadID == threadID:
         edits[Int64(unsend.seq), default: []].append(.unsend(unsend))
         pinned = pinStep(pinned, unsend: String(unsend.seq)).pins
+      case .recall(let recall) where recall.threadID == threadID:
+        // Taken back by its send's op_id, should the line have come.
+        guard
+          let seq = try thread.where({ $0.opID.eq(recall.sendOpID) }).select(\.seq).fetchOne(db)
+        else { break }
+        edits[seq, default: []].append(.recall(recall))
+        pinned = pinStep(pinned, unsend: String(seq)).pins
       case .pin(let pin) where pin.threadID == threadID:
         let id = String(pin.seq)
         pinned = (pin.on ? pinStep(pinned, pin: id) : pinStep(pinned, unpin: id)).pins
@@ -888,7 +894,7 @@ extension Chats {
         if !change.keepsPreview {
           row.preview = change.hasPreview ? LinePreview(change.preview) : nil
         }
-      case .unsend:
+      case .unsend, .recall:
         row.text = ""
         row.unsent = true
         row.reactions = []

@@ -17,7 +17,9 @@ struct PochicalApp: App {
   /// The calls that make and join groups, as the same user.
   private let groupCalls: GroupCalls
   /// The groups' sockets, closed once their chat outbox is sent.
-  private let groupSockets = GroupSockets()
+  private let groupSockets: GroupSockets
+  /// The socket of the place open on screen, which RootView moves.
+  private let openPlace: OpenPlaceSocket
   @State private var settings = Settings()
   private let database: any DatabaseWriter
 
@@ -35,9 +37,11 @@ struct PochicalApp: App {
     account = Account()
     sync = SyncClient(account: account, database: database)
     groupCalls = GroupCalls(account: account)
+    groupSockets = GroupSockets(account: account, database: database)
+    openPlace = OpenPlaceSocket(sockets: groupSockets)
     Notifications.shared.groupCalls = groupCalls
     Notifications.shared.replies = Replies(
-      account: account, database: database, sockets: groupSockets, userSocket: sync)
+      database: database, sockets: groupSockets, userSocket: sync)
     KeyboardTop.shared.watch()
   }
 
@@ -50,6 +54,7 @@ struct PochicalApp: App {
         .environment(\.account, account)
         .environment(\.userSocket, sync)
         .environment(\.groupSockets, groupSockets)
+        .environment(openPlace)
         // The person's preferences, kept with the account from launch.
         .task { settings.sync(with: database) }
     }

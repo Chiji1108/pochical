@@ -204,6 +204,20 @@
       "when": 1792370088923,
       "tag": "0028_support_relay_failures",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1792377284878,
+      "tag": "0029_chat-recalls",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1792388408003,
+      "tag": "0030_support_relay_posting",
+      "breakpoints": true
     }
   ]
 }

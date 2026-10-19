@@ -6,8 +6,8 @@ import SwiftUI
 /// 設定's way into the chat with the people who make Pochical (/design's
 /// SupportRow): a chat's row as the hub's list draws one, with the app's
 /// icon, the latest line or the draft left in it, and the answers not read
-/// yet. The chat's socket is open while the row is on screen, as a group's
-/// while it is, so its latest line is current.
+/// yet. The chat's socket is open while 設定 shows, as a group's while it
+/// does, so its latest line is current.
 struct SupportRow: View {
   @State private var meID = GroupCalls.knownUserID
 
@@ -22,7 +22,6 @@ struct SupportRow: View {
       Notifications.shared.openingSupport = true
     }
     .listRowInsets(EdgeInsets())
-    .placeSocket(ChatPlace.supportID)
   }
 }
 
@@ -30,11 +29,11 @@ struct SupportRow: View {
 /// its place like any other (spec/chat.md, Where a chat is kept), headed by
 /// who it reaches and what does.
 struct SupportChatScreen: View {
+
   var body: some View {
     ChatScreen(
       place: .support, threadID: groupThread, otherID: nil, head: AnyView(SupportHead())
     )
-    .placeSocket(ChatPlace.supportID)
   }
 }
 
@@ -61,46 +60,4 @@ private struct SupportHead: View {
     .frame(maxWidth: .infinity)
     .padding(.vertical, 16)
   }
-}
-
-extension View {
-  /// Holds the socket of the chats' place `placeID` open while the view is
-  /// on screen and the app in front, for the chat's lines, outbox and
-  /// someone writing, as the groups hold the open group's
-  /// (spec/sync-protocol.md, Sockets); none for nil. The view's content
-  /// has it as its groupSocket, the last held while none is.
-  func placeSocket(_ placeID: String?) -> some View {
-    modifier(PlaceSocket(placeID: placeID))
-  }
-}
-
-private struct PlaceSocket: ViewModifier {
-  @Environment(\.groupSockets) private var groupSockets
-  @Environment(\.account) private var account
-  @Environment(\.scenePhase) private var scenePhase
-  @Dependency(\.defaultDatabase) private var database
-  @State private var socket: SyncClient?
-  let placeID: String?
-
-  func body(content: Content) -> some View {
-    content
-      .environment(\.groupSocket, socket)
-      .task(id: SocketKey(placeID: placeID, active: scenePhase == .active)) {
-        guard scenePhase == .active, let placeID else { return }
-        let (client, hold) = await groupSockets.open(placeID, account: account, database: database)
-        socket = client
-        while !Task.isCancelled {
-          try? await Task.sleep(for: .seconds(3600))
-        }
-        // Lines just sent still go, the app gone to the background or
-        // another place opened (spec/sync-protocol.md, Sockets).
-        await groupSockets.close(hold, of: placeID)
-      }
-  }
-}
-
-/// The place a socket is for, and whether the app is in the foreground.
-private struct SocketKey: Hashable {
-  let placeID: String?
-  let active: Bool
 }

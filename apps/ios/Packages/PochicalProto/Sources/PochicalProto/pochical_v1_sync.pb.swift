@@ -2056,6 +2056,14 @@ public nonisolated struct Pochical_V1_ChatEdit: Sendable {
     set {kind = .decide(newValue)}
   }
 
+  public var recall: Pochical_V1_ChatRecall {
+    get {
+      if case .recall(let v)? = kind {return v}
+      return Pochical_V1_ChatRecall()
+    }
+    set {kind = .recall(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -2067,6 +2075,7 @@ public nonisolated struct Pochical_V1_ChatEdit: Sendable {
     case pin(Pochical_V1_ChatPin)
     case vote(Pochical_V1_ChatVote)
     case decide(Pochical_V1_ChatDecide)
+    case recall(Pochical_V1_ChatRecall)
 
   }
 
@@ -2293,6 +2302,26 @@ public nonisolated struct Pochical_V1_ChatUnsend: Sendable {
   public init() {}
 }
 
+/// One of the member's own lines taken back while it waited on their
+/// device (送信取消, or 削除 of one not sent), named by its send's op_id:
+/// the device cannot know whether the group took the send, its Acked lost.
+/// The group takes it back as ChatUnsend does if it has the line, and else
+/// drops the send should it come after all (spec/chat.md, Lines on their
+/// way).
+public nonisolated struct Pochical_V1_ChatRecall: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var threadID: String = String()
+
+  public var sendOpID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// The member has read the chat up to here; the group only moves a mark
 /// forward.
 public nonisolated struct Pochical_V1_ChatRead: Sendable {
@@ -2374,7 +2403,7 @@ public nonisolated struct Pochical_V1_ChatPhotosRequest: Sendable {
 /// on the asked side, oldest first, with where they are among all of them.
 /// The photos are those the reader sees in the chat: none of a line taken
 /// back, nor one hidden from them, nor, in a place's own chat, one whose
-/// writer they have blocked (spec/vectors/chat-photos.json, counts).
+/// writer they have blocked (spec/vectors/chat-photos.json, seen).
 public nonisolated struct Pochical_V1_ChatPhotos: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2395,6 +2424,11 @@ public nonisolated struct Pochical_V1_ChatPhotos: Sendable {
 
   /// How many photos the chat holds for the reader.
   public var total: UInt32 = 0
+
+  /// The group's change log head as it answered: the page counts every
+  /// change up to it, so a device that has taken a later change to the
+  /// chat's photos drops the page and asks again.
+  public var cursor: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5323,7 +5357,7 @@ nonisolated extension Pochical_V1_ChatEdits: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pochical_V1_ChatEdit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatEdit"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_id\0\u{1}send\0\u{1}change\0\u{1}unsend\0\u{1}read\0\u{1}react\0\u{1}pin\0\u{1}vote\0\u{1}decide\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_id\0\u{1}send\0\u{1}change\0\u{1}unsend\0\u{1}read\0\u{1}react\0\u{1}pin\0\u{1}vote\0\u{1}decide\0\u{1}recall\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5436,6 +5470,19 @@ nonisolated extension Pochical_V1_ChatEdit: SwiftProtobuf.Message, SwiftProtobuf
           self.kind = .decide(v)
         }
       }()
+      case 10: try {
+        var v: Pochical_V1_ChatRecall?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .recall(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .recall(v)
+        }
+      }()
       default: break
       }
     }
@@ -5481,6 +5528,10 @@ nonisolated extension Pochical_V1_ChatEdit: SwiftProtobuf.Message, SwiftProtobuf
     case .decide?: try {
       guard case .decide(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    }()
+    case .recall?: try {
+      guard case .recall(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
     }()
     case nil: break
     }
@@ -5887,6 +5938,41 @@ nonisolated extension Pochical_V1_ChatUnsend: SwiftProtobuf.Message, SwiftProtob
   }
 }
 
+nonisolated extension Pochical_V1_ChatRecall: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ChatRecall"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}send_op_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.sendOpID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.threadID.isEmpty {
+      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 1)
+    }
+    if !self.sendOpID.isEmpty {
+      try visitor.visitSingularStringField(value: self.sendOpID, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ChatRecall, rhs: Pochical_V1_ChatRecall) -> Bool {
+    if lhs.threadID != rhs.threadID {return false}
+    if lhs.sendOpID != rhs.sendOpID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Pochical_V1_ChatRead: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatRead"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}last_read_seq\0")
@@ -6049,7 +6135,7 @@ nonisolated extension Pochical_V1_ChatPhotosRequest: SwiftProtobuf.Message, Swif
 
 nonisolated extension Pochical_V1_ChatPhotos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatPhotos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{1}after\0\u{1}photos\0\u{1}offset\0\u{1}total\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{1}after\0\u{1}photos\0\u{1}offset\0\u{1}total\0\u{1}cursor\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6063,6 +6149,7 @@ nonisolated extension Pochical_V1_ChatPhotos: SwiftProtobuf.Message, SwiftProtob
       case 4: try { try decoder.decodeRepeatedMessageField(value: &self.photos) }()
       case 5: try { try decoder.decodeSingularUInt32Field(value: &self.offset) }()
       case 6: try { try decoder.decodeSingularUInt32Field(value: &self.total) }()
+      case 7: try { try decoder.decodeSingularUInt64Field(value: &self.cursor) }()
       default: break
       }
     }
@@ -6087,6 +6174,9 @@ nonisolated extension Pochical_V1_ChatPhotos: SwiftProtobuf.Message, SwiftProtob
     if self.total != 0 {
       try visitor.visitSingularUInt32Field(value: self.total, fieldNumber: 6)
     }
+    if self.cursor != 0 {
+      try visitor.visitSingularUInt64Field(value: self.cursor, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -6097,6 +6187,7 @@ nonisolated extension Pochical_V1_ChatPhotos: SwiftProtobuf.Message, SwiftProtob
     if lhs.photos != rhs.photos {return false}
     if lhs.offset != rhs.offset {return false}
     if lhs.total != rhs.total {return false}
+    if lhs.cursor != rhs.cursor {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -11,7 +11,7 @@ import SQLiteData
 /// with the device's cursor, corrects the device's time by Welcome, takes
 /// the catch-up and every change after it into the database, and sends the
 /// outbox's edits as they come, which the server's Acked then ends
-/// (Outbox). A group's, open while the group is on screen, takes the
+/// (Outbox). A group's, open while the app has the group open, takes the
 /// group's values the same way and sends the group's chat outbox. Each
 /// keeps its socket alive and reconnects after a random wait that doubles
 /// with each failed try, at once when the network comes back; never after
@@ -123,8 +123,7 @@ public actor SyncClient {
     socketURL = socket.url!
   }
 
-  // A group's client goes with its screen; its watch on the network goes
-  // with it.
+  // Its watch on the network goes with it.
   deinit {
     paths.cancel()
   }
@@ -160,9 +159,16 @@ public actor SyncClient {
   /// Connects as whoever the account is now, after it changed: stopped
   /// for good before (a 401) or not.
   public func startAfresh() {
+    forgetStop()
+    start()
+  }
+
+  /// Closes the socket and forgets why it stopped for good, without
+  /// connecting: the account changed, and the next `start` connects as
+  /// whoever it is then.
+  public func forgetStop() {
     stop()
     stopped = nil
-    start()
   }
 
   /// Closes the socket: the app went to the background.

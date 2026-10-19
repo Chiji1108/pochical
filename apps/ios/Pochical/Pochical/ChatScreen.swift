@@ -23,7 +23,6 @@ struct ChatScreen: View {
   @Environment(\.look) private var look
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.displayScale) private var displayScale
-  @Environment(\.groupSocket) private var socket
   @Environment(\.groupSockets) private var groupSockets
   @Environment(\.account) private var account
   /// The socket said under the title, once it has stayed not current for
@@ -340,8 +339,7 @@ struct ChatScreen: View {
     }
     // The socket's status, said once it has not been current for
     // statusShownAfterMs, and gone as soon as it is.
-    .task(id: socket.map(ObjectIdentifier.init)) {
-      guard let socket else { return }
+    .task(id: place.id) {
       var saying: Task<Void, Never>?
       for await status in await socket.statuses() {
         saying?.cancel()
@@ -356,13 +354,11 @@ struct ChatScreen: View {
       }
       saying?.cancel()
     }
-    .task(id: socket.map(ObjectIdentifier.init)) {
-      guard let socket else { return }
+    .task(id: place.id) {
       for await _ in await socket.statuses().reopenings() { reopened += 1 }
     }
     // Others' typing, as it comes, each shown until it lapses.
-    .task(id: socket.map(ObjectIdentifier.init)) {
-      guard let socket else { return }
+    .task(id: place.id) {
       for await typing in await socket.typing() where typing.threadID == threadID {
         withAnimation {
           typers[typing.userID] = typing.on ? Date.now.addingTimeInterval(
@@ -1223,7 +1219,7 @@ struct ChatScreen: View {
     guard opened, state.heldBefore < Chat.pageSize, let from = state.heldFrom, from > 1 else {
       return
     }
-    while !Task.isCancelled, await socket?.requestPage(of: threadID, before: from) != true {
+    while !Task.isCancelled, await socket.requestPage(of: threadID, before: from) != true {
       try? await Task.sleep(for: .seconds(1))
     }
   }
@@ -1248,7 +1244,7 @@ struct ChatScreen: View {
   private func askAfter() async {
     guard opened, !chat.state.atEnd, let through = laterThrough else { return }
     while !Task.isCancelled,
-      await socket?.requestPage(of: threadID, before: pageAfter(through: through)) != true
+      await socket.requestPage(of: threadID, before: pageAfter(through: through)) != true
     {
       try? await Task.sleep(for: .seconds(1))
     }
@@ -1489,12 +1485,16 @@ struct ChatScreen: View {
     viewing?.names = names
   }
 
+  /// The place's socket, which the app holds while the place is open
+  /// (OpenPlaceSocket).
+  private var socket: SyncClient {
+    groupSockets.client(place.id)
+  }
+
   /// Where the chat's photos come from beyond its lines laid out: not a
   /// blocked member's folded away, as the group leaves them out too.
   private var photoPager: PhotoPager {
-    PhotoPager(
-      placeID: place.id, threadID: threadID, sockets: groupSockets, account: account,
-      database: database, blocked: blocked)
+    PhotoPager(placeID: place.id, threadID: threadID, client: socket, database: database)
   }
 
   /// Saves a photo to the person's library, and says so.

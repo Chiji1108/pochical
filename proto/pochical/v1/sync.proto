@@ -639,6 +639,7 @@ message ChatEdit {
     ChatPin pin = 7;
     ChatVote vote = 8;
     ChatDecide decide = 9;
+    ChatRecall recall = 10;
   }
 }
 
@@ -733,6 +734,17 @@ message ChatUnsend {
   uint64 seq = 2;
 }
 
+// One of the member's own lines taken back while it waited on their
+// device (送信取消, or 削除 of one not sent), named by its send's op_id:
+// the device cannot know whether the group took the send, its Acked lost.
+// The group takes it back as ChatUnsend does if it has the line, and else
+// drops the send should it come after all (spec/chat.md, Lines on their
+// way).
+message ChatRecall {
+  string thread_id = 1;
+  string send_op_id = 2;
+}
+
 // The member has read the chat up to here; the group only moves a mark
 // forward.
 message ChatRead {
@@ -774,7 +786,7 @@ message ChatPhotosRequest {
 // on the asked side, oldest first, with where they are among all of them.
 // The photos are those the reader sees in the chat: none of a line taken
 // back, nor one hidden from them, nor, in a place's own chat, one whose
-// writer they have blocked (spec/vectors/chat-photos.json, counts).
+// writer they have blocked (spec/vectors/chat-photos.json, seen).
 message ChatPhotos {
   string thread_id = 1;
   uint64 seq = 2;
@@ -786,6 +798,10 @@ message ChatPhotos {
   uint32 offset = 5;
   // How many photos the chat holds for the reader.
   uint32 total = 6;
+  // The group's change log head as it answered: the page counts every
+  // change up to it, so a device that has taken a later change to the
+  // chat's photos drops the page and asks again.
+  uint64 cursor = 7;
 }
 
 // A photo of a chat and the line that sent it.

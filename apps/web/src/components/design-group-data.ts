@@ -164,6 +164,10 @@ export type Message = {
   album?: string;
   replyTo?: string;
   reactions?: Reaction[];
+  // Yours, not sent (its photo could not be uploaded): only this phone
+  // knows, as the apps keep it in their outbox (spec/chat.md, Lines on
+  // their way).
+  failed?: boolean;
 };
 
 export type Reaction = { emoji: string; by: string[] };

@@ -249,7 +249,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 /// What an answer written on a notification goes through: the chat outbox
 /// the app keeps, sent on the group's socket as a chat's screen sends it.
 struct Replies {
-  let account: Account
   let database: any DatabaseWriter
   let sockets: GroupSockets
   /// The user's socket, for the counts after the read.
@@ -260,7 +259,7 @@ struct Replies {
   /// runs out), then let go of; in the background, closed once sent, as
   /// the app's going to the background closes the others.
   func send(_ groupID: String) async {
-    let (_, hold) = await sockets.open(groupID, account: account, database: database)
+    let hold = await sockets.open(groupID)
     await Chats.untilSent(of: groupID, in: database)
     await sockets.close(hold, of: groupID)
     guard UIApplication.shared.applicationState == .background else { return }

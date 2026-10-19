@@ -18,6 +18,13 @@ export function unsentLine(writer?: Member) {
     : `${writer?.name ?? "メンバー"}がメッセージの送信を取り消しました`;
 }
 
+// One of yours not sent, as the chats' list says it: the line's red ! and
+// 送れませんでした in place of its words (spec/chat.md, Lines on their way).
+export const failedLine = { failed: true } as const;
+
+// What a chat's row says of its latest line.
+export type ListedLine = string | typeof failedLine;
+
 // A chat's latest line in the chats' list: what was shared or sent rather
 // than the card's words, and 自分： before your own (spec/chat.md, Photos).
 export function lastLineOf(
@@ -25,7 +32,10 @@ export function lastLineOf(
   writer: Member | undefined,
   nameOf: (id: string) => string,
   blocked: boolean
-) {
+): ListedLine {
+  if (last.failed) {
+    return failedLine;
+  }
   if (last.notice) {
     return last.notice;
   }

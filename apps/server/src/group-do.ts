@@ -829,6 +829,9 @@ export class GroupDO extends DurableObject<Env> {
           case: "chatPhotos",
           value: {
             after,
+            // The head the page counts every change up to, for the device
+            // to drop a page older than a change it has taken.
+            cursor: BigInt(this.head()),
             seq,
             threadId,
             ...photosPage(this.db, userId, threadId, seq, after),

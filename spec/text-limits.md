@@ -34,4 +34,4 @@ A value within its limit can still be wider than where it is shown.
 
 ## Server
 
-The server rejects a change whose text is over its limit, counted the same way, so a client that does not hold a field to its limit cannot store a longer value. It never cuts the text itself.
+The server rejects a change whose text is over its limit, counted the same way, so a client that does not hold a field to its limit cannot store a longer value. It never cuts the text itself. It also rejects text larger than its limit's characters can be, more than 32 UTF-16 code units a character in all: more than any emoji sequence or accented letter takes (Unicode's stream-safe text keeps a run of combining marks to 30), so one character stacked with thousands of marks, which no keyboard writes, cannot carry a value past what everything downstream takes (`spec/vectors/text.json`, fitsText).

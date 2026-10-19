@@ -157,7 +157,7 @@ public enum Appearance: String, Codable, CaseIterable, Sendable {
 
   public var name: String {
     switch self {
-    case .system: "自動"
+    case .system: "端末に合わせる"
     case .light: "ライト"
     case .dark: "ダーク"
     }

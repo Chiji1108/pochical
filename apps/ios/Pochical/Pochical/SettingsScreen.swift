@@ -220,9 +220,9 @@ struct SettingsScreen: View {
 }
 
 /// 外観 (/design's AppearancePage), as iOS's 画面表示と明るさ: ライト and
-/// ダーク side by side, each a small screen in the テーマ, and 自動 under
-/// them to follow the phone. With 自動 on, the one the screen is in now is
-/// checked; picking one turns 自動 off, and turning it off keeps the one in
+/// ダーク side by side, each a small screen in the テーマ, and 端末に合わせる
+/// under them to follow the phone. With it on, the one the screen is in now
+/// is checked; picking one turns it off, and turning it off keeps the one in
 /// use. It stays open under a テーマ drawn dark whatever it says, which
 /// says so, as it takes effect again once the テーマ changes.
 private struct AppearanceSettings: View {
@@ -247,11 +247,11 @@ private struct AppearanceSettings: View {
           }
         }
         .padding(.vertical, 8)
-        // The line under it starts where 自動's words do, not at its
+        // The line under it starts where 端末に合わせる's words do, not at its
         // choices.
         .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         Toggle(
-          "自動",
+          "端末に合わせる",
           isOn: Binding(
             get: { settings.device.appearance == .system },
             set: { isOn in
@@ -263,7 +263,7 @@ private struct AppearanceSettings: View {
         Text(
           theme.isAlwaysDark
             ? "テーマの「\(theme.name)」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。"
-            : "自動にすると、スマホの設定に合わせてライトとダークが切り替わります。")
+            : "オンにすると、端末の設定に合わせてライトとダークが切り替わります。")
       }
       .settingsRows()
     }
@@ -271,7 +271,7 @@ private struct AppearanceSettings: View {
     .navigationTitle("外観")
   }
 
-  /// The one checked: what 外観 keeps, or with 自動 the screen's own.
+  /// The one checked: what 外観 keeps, or with 端末に合わせる the screen's own.
   private var shown: ColorScheme {
     switch settings.device.appearance {
     case .system: colorScheme
