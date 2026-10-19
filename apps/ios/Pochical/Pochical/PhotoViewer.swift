@@ -40,6 +40,16 @@ struct PhotoViewing: Identifiable {
     self.pager = among ? pager : nil
     id = tapped.id
   }
+
+  /// `tapped` among the photos the list of them holds, with where they are
+  /// among all the chat's known already, paging on from `pager`.
+  init(_ tapped: ChatPhotoItem, listed: PhotoRun, pager: PhotoPager) {
+    var run = listed
+    run.show(tapped.seq)
+    self.run = run
+    self.pager = pager
+    id = tapped.id
+  }
 }
 
 /// A chat's photos beyond the lines laid out (spec/sync-protocol.md,

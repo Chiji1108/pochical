@@ -98,9 +98,10 @@ struct ChatPhotosScreen: View {
     }
   }
 
-  /// `item` opened large among the photos held, paging on from there.
+  /// `item` opened large among the photos held, its count known at once,
+  /// paging on from there.
   private func open(_ item: ChatPhotoItem) {
-    viewing = PhotoViewing(item, among: run.photos, pager: pager)
+    viewing = PhotoViewing(item, listed: run, pager: pager)
     viewing?.names = names
   }
 }
