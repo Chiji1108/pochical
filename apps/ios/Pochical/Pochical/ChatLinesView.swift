@@ -629,8 +629,25 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       self.fitRoom()
       self.view.layoutIfNeeded()
     }
-    animate(makeRoom)
+    // The first change after the keyboard sets off is the keyboard's,
+    // coming up or going down however it was asked to: the lines go by
+    // its own animation, as UIKit's keyboard guides do, rather than by
+    // whichever SwiftUI hands over (none, as it goes on a tap off them).
+    // A drag pulling it down moves the room under the finger, frame by
+    // frame, before its release sets it off.
+    let now = CACurrentMediaTime()
+    if let move = KeyboardTop.shared.move, move != keyboardMoveTaken, now < move.ends {
+      keyboardMoveTaken = move
+      UIView.animate(
+        withDuration: move.ends - now, delay: 0, options: [move.curve, .beginFromCurrentState],
+        animations: makeRoom)
+    } else {
+      animate(makeRoom)
+    }
   }
+
+  /// The keyboard's move the lines last went along with.
+  private var keyboardMoveTaken: KeyboardMove?
 
   /// The lines seen kept at the foot of the room they are seen in as it
   /// changes (the keyboard, the composer growing), as ChatLayout's Example
