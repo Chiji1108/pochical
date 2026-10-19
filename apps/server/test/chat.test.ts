@@ -1002,6 +1002,47 @@ describe("a group's chat", () => {
     });
   });
 
+  it("gives a device catching up every line changed since, each with its reactions, past a query's hundred values", async () => {
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const count = 120;
+    chat(
+      mine.socket,
+      Array.from({ length: count }, (_, at) => ({
+        kind: { send: `${at + 1}` },
+        opId: `m${at}`,
+      }))
+    );
+    await mine.frames.next();
+    await mine.frames.next();
+    chat(
+      mine.socket,
+      Array.from({ length: count }, (_, at) => ({
+        kind: { react: [at + 2, at % 2 === 0 ? "👍" : "🎉", true] },
+        opId: `r${at}`,
+      }))
+    );
+    await mine.frames.next();
+    await mine.frames.next();
+
+    const later = await groupSocket(
+      groupId,
+      guest,
+      PAIR_ROSTER + BigInt(count)
+    );
+    const lines = changesIn(await later.frames.next()).flatMap(({ kind }) =>
+      kind.case === "chatLine"
+        ? [[Number(kind.value.seq), kind.value.reactions.map((r) => r.emoji)]]
+        : []
+    );
+    expect(lines).toStrictEqual(
+      Array.from({ length: count }, (_, at) => [
+        at + 2,
+        [at % 2 === 0 ? "👍" : "🎉"],
+      ])
+    );
+  });
+
   it("gives a device catching up a pinned line however far back", async () => {
     const { groupId, guest, maker } = await pair();
     const mine = await groupSocket(groupId, maker);
