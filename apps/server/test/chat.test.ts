@@ -43,6 +43,7 @@ type ChatKind =
   | { reply: [number, string] }
   | { change: [number, string] }
   | { unsend: number }
+  | { recall: string }
   | { read: number };
 
 function sendChatKind(kind: ChatKind, threadId: string) {
@@ -113,6 +114,12 @@ function sendChatKind(kind: ChatKind, threadId: string) {
     return {
       case: "unsend",
       value: { seq: BigInt(kind.unsend), threadId },
+    } as const;
+  }
+  if ("recall" in kind) {
+    return {
+      case: "recall",
+      value: { sendOpId: kind.recall, threadId },
     } as const;
   }
   return {
@@ -875,6 +882,74 @@ describe("a group's chat", () => {
     expect(changes[1]).toMatchObject({
       kind: { case: "chatLine", value: { reactions: [], unsent: true } },
     });
+  });
+
+  it("takes back by its send's op_id a line whose Acked was lost, once", async () => {
+    const { groupId, guest, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+    chat(mine.socket, [{ kind: { send: "まちがい" }, opId: "a" }]);
+    await mine.frames.next();
+    await mine.frames.next();
+    expect(changesIn(await theirs.frames.next())).toMatchObject([
+      { kind: { value: { seq: 2n, unsent: false } } },
+    ]);
+
+    chat(mine.socket, [
+      { kind: { recall: "a" }, opId: "r1" },
+      { kind: { recall: "a" }, opId: "r2" },
+    ]);
+    expect(changesIn(await theirs.frames.next())).toMatchObject([
+      { kind: { value: { seq: 2n, text: "", unsent: true } } },
+    ]);
+    await expect(settled(theirs.socket, theirs.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+    expect(changesIn(await mine.frames.next())).toHaveLength(1);
+    await expect(mine.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["r1", "r2"] } },
+    });
+  });
+
+  it("drops a send taken back before it came, as from a socket that died with it", async () => {
+    const { groupId, guest, maker } = await pair();
+    const before = await groupSocket(groupId, maker);
+    const after = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+
+    chat(after.socket, [{ kind: { recall: "a" }, opId: "r" }]);
+    await expect(after.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["r"] } },
+    });
+    chat(before.socket, [
+      { kind: { send: "まちがい" }, opId: "a" },
+      { kind: { send: "明日休み？" }, opId: "b" },
+    ]);
+    expect(changesIn(await theirs.frames.next())).toMatchObject([
+      { kind: { value: { opId: "b", seq: 2n, text: "明日休み？" } } },
+    ]);
+    await expect(settled(theirs.socket, theirs.frames)).resolves.toMatchObject({
+      kind: { case: "pong" },
+    });
+  });
+
+  it("takes back by op_id only the member's own line, from any of their devices", async () => {
+    const { groupId, guest, maker } = await pair();
+    const phone = await groupSocket(groupId, maker);
+    const tablet = await groupSocket(groupId, maker);
+    const theirs = await groupSocket(groupId, guest);
+    chat(phone.socket, [{ kind: { send: "まちがい" }, opId: "a" }]);
+    await theirs.frames.next();
+
+    // Someone else naming it changes nothing, nor keeps it from them.
+    chat(theirs.socket, [{ kind: { recall: "a" }, opId: "x" }]);
+    await expect(theirs.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["x"] } },
+    });
+    chat(tablet.socket, [{ kind: { recall: "a" }, opId: "r" }]);
+    expect(changesIn(await theirs.frames.next())).toMatchObject([
+      { kind: { value: { opId: "a", seq: 2n, unsent: true } } },
+    ]);
   });
 
   it("pins a line for everyone, a sixth taking the place of the oldest", async () => {
