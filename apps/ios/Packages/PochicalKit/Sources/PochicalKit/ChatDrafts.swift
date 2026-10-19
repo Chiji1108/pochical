@@ -191,9 +191,10 @@ extension Chats {
   /// the group taking them as not sent, so they stop going by themselves,
   /// by the device's time `now` corrected to the server's, as theirs are;
   /// gives how long until the next of those still waiting is, nil with
-  /// none. One made after `now`, the device's clock set back since,
-  /// starts its wait again from `now` rather than waiting longer. A line
-  /// that came while its Acked was lost stops waiting instead.
+  /// none. A line's time is never written again here: one the device's
+  /// clock set back has not reached yet waits on until a Welcome corrects
+  /// the clock, rather than failing early once it does. A line that came
+  /// while its Acked was lost stops waiting instead.
   @discardableResult
   public static func failOverdue(of groupID: String, now: Int64, in db: Database) throws
     -> Int64?
@@ -211,10 +212,7 @@ extension Chats {
         try ChatOutboxRow.where { $0.opID.eq(row.opID) }.delete().execute(db)
         continue
       }
-      if row.madeAtMs > now {
-        try ChatOutboxRow.where { $0.opID.eq(row.opID) }.update { $0.madeAtMs = now }.execute(db)
-      }
-      let due = min(row.madeAtMs, now) + Int64(Chat.unsentAfterMs)
+      let due = row.madeAtMs + Int64(Chat.unsentAfterMs)
       if due <= now {
         try fail(row.opID, in: db)
       } else {

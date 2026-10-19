@@ -1102,21 +1102,25 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   }
 }
 
-@Test func aClockSetBackKeepsALineWaitingNoLongerThanTheLimit() throws {
+@Test func aClockSetBackFailsNoLineEarlyOnceAWelcomeCorrectsIt() throws {
   let database = try appDatabase()
-  let hour: Int64 = 3_600_000
+  let minute: Int64 = 60_000
   let limit = Int64(Chat.unsentAfterMs)
   try database.write { db in
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
     words.text = "明日休み？"
-    try Chats.edit(.send(words), in: "g", now: 10 * hour, db: db)
+    let made: Int64 = 1_000 * minute
+    try Chats.edit(.send(words), in: "g", now: made, db: db)
 
-    // Set back an hour while offline, with no Welcome to correct it.
-    try Chats.failOverdue(of: "g", now: 9 * hour, in: db)
-    try Chats.failOverdue(of: "g", now: 9 * hour + limit - 1, in: db)
+    // Set back 15 minutes while offline, checked meanwhile.
+    try Chats.failOverdue(of: "g", now: made - 15 * minute, in: db)
+    // Back online a minute after writing: Welcome corrects the clock.
+    try Sync.welcome(
+      sentMs: made - 14 * minute, receivedMs: made - 14 * minute, serverMs: made + minute, in: db)
+    try Chats.failOverdue(of: "g", now: made - 14 * minute, in: db)
     #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [false])
-    try Chats.failOverdue(of: "g", now: 9 * hour + limit, in: db)
+    try Chats.failOverdue(of: "g", now: made - 15 * minute + limit, in: db)
     #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true])
   }
 }
