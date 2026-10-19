@@ -33,4 +33,28 @@ public interface ChatRecallOrBuilder extends
    */
   com.google.protobuf.ByteString
       getSendOpIdBytes();
+
+  /**
+   * <pre>
+   * The photo the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry it. Empty for a send of anything else.
+   * </pre>
+   *
+   * <code>string photo_id = 3 [json_name = "photoId"];</code>
+   * @return The photoId.
+   */
+  java.lang.String getPhotoId();
+  /**
+   * <pre>
+   * The photo the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry it. Empty for a send of anything else.
+   * </pre>
+   *
+   * <code>string photo_id = 3 [json_name = "photoId"];</code>
+   * @return The bytes for photoId.
+   */
+  com.google.protobuf.ByteString
+      getPhotoIdBytes();
 }

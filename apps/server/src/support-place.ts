@@ -10,7 +10,13 @@ import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import { supportChats, supportSlack } from "./db/schema";
-import { GROUP_THREAD, lineAt, pageRows, reactionsOf } from "./group-chat";
+import {
+  GROUP_THREAD,
+  lineKey,
+  linesAt,
+  pageRows,
+  reactionsOn,
+} from "./group-chat";
 import {
   chatLines,
   logHead,
@@ -20,6 +26,7 @@ import {
 import { overLimit } from "./rate-limits";
 import { retryWait } from "./retry-wait";
 import {
+  findStaffLine,
   SlackRefusedError,
   tellStaffOfAnswer,
   tellStaffOfLine,
@@ -32,47 +39,65 @@ import type { SupportLine } from "./support-lines";
 
 type LineRow = typeof chatLines.$inferSelect;
 
-const lineOf = (
+/**
+ * The rows as the admin pages and Slack read them, their reactions read
+ * for all of them at once.
+ */
+const linesOfRows = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  row: LineRow
-): SupportLine => ({
-  device: row.device,
-  fromPochical: row.authorId === chatRules.pochicalMember,
-  photo:
-    row.photo === null
-      ? null
-      : { height: row.photo.height, id: row.photo.id, width: row.photo.width },
-  preview:
-    row.preview === null
-      ? null
-      : {
-          site: row.preview.site,
-          title: row.preview.title,
-          url: row.preview.url,
-        },
-  reactions: reactionsOf(db, row).map(({ emoji, userIds }) => ({
-    emoji,
-    mine: userIds.some((id) => id !== chatRules.pochicalMember),
-    support: userIds.includes(chatRules.pochicalMember),
-  })),
-  replyTo: row.replyTo,
-  sentAtMs: row.sentAt.getTime(),
-  seq: row.seq,
-  text: row.text,
-  unsent: row.unsent,
-  userId,
-});
-
-/** The line at `seq` of the chat a reply answers, if there is one. */
-const answeredLine = (
-  db: DrizzleSqliteDODatabase,
-  userId: string,
-  seq: number
-): SupportLine | null => {
-  const row = lineAt(db, GROUP_THREAD, BigInt(seq));
-  return row === undefined ? null : lineOf(db, userId, row);
+  rows: LineRow[]
+): SupportLine[] => {
+  const reactions = reactionsOn(db, rows);
+  return rows.map((row) => ({
+    device: row.device,
+    fromPochical: row.authorId === chatRules.pochicalMember,
+    photo:
+      row.photo === null
+        ? null
+        : {
+            height: row.photo.height,
+            id: row.photo.id,
+            width: row.photo.width,
+          },
+    preview:
+      row.preview === null
+        ? null
+        : {
+            site: row.preview.site,
+            title: row.preview.title,
+            url: row.preview.url,
+          },
+    reactions: (reactions.get(lineKey(row.threadId, row.seq)) ?? []).map(
+      ({ emoji, userIds }) => ({
+        emoji,
+        mine: userIds.some((id) => id !== chatRules.pochicalMember),
+        support: userIds.includes(chatRules.pochicalMember),
+      })
+    ),
+    replyTo: row.replyTo,
+    sentAtMs: row.sentAt.getTime(),
+    seq: row.seq,
+    text: row.text,
+    unsent: row.unsent,
+    userId,
+  }));
 };
+
+/** The lines at `seqs` of the chat, those there are. */
+const linesAtSeqs = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  seqs: number[]
+): SupportLine[] =>
+  linesOfRows(
+    db,
+    userId,
+    linesAt(
+      db,
+      seqs.map((seq) => ({ seq, threadId: GROUP_THREAD }))
+    )
+  );
 
 /**
  * A page of the chat for the admin pages: up to chatRules.pageSize lines
@@ -86,15 +111,15 @@ export const supportPage = (
   beforeSeq: number
 ): { lines: SupportLine[]; quoted: SupportLine[]; atStart: boolean } => {
   const { atStart, rows } = pageRows(db, GROUP_THREAD, beforeSeq);
-  const lines = rows.map((row) => lineOf(db, userId, row));
+  const lines = linesOfRows(db, userId, rows);
   const first = lines[0]?.seq ?? beforeSeq;
-  const quoted = [
-    ...new Set(
-      lines.flatMap(({ replyTo }) =>
-        replyTo !== null && replyTo < first ? [replyTo] : []
-      )
-    ),
-  ].flatMap((seq) => answeredLine(db, userId, seq) ?? []);
+  const quoted = linesAtSeqs(
+    db,
+    userId,
+    lines.flatMap(({ replyTo }) =>
+      replyTo !== null && replyTo < first ? [replyTo] : []
+    )
+  );
   return { atStart, lines, quoted };
 };
 
@@ -133,7 +158,10 @@ const indexRow = (db: DrizzleSqliteDODatabase, userId: string) => {
         )
       )
       .get()?.n ?? 0;
-  const line = lineOf(db, userId, latest);
+  const [line] = linesOfRows(db, userId, [latest]);
+  if (line === undefined) {
+    return undefined;
+  }
   return {
     lastAt: new Date(line.sentAtMs),
     lastFromPochical: line.fromPochical,
@@ -156,18 +184,30 @@ const keepTold = (
 };
 
 /**
+ * Since when a try of the line at `seq` may have posted it to Slack, its
+ * answer lost, for the next to look for it there first; null when none
+ * has tried.
+ */
+const postingSince = (
+  db: DrizzleSqliteDODatabase,
+  seq: number
+): Date | null => {
+  const relay = db.select().from(supportRelay).get();
+  return relay?.postingSeq === seq ? (relay.postingSince ?? null) : null;
+};
+
+/**
  * Marks the line at `seq` as being posted to Slack, before its first
- * call: a try that ends with no word of Slack taking it (its answer lost,
- * the DO stopped) leaves the mark. Since when an earlier try of the line
- * may have posted it, for this one to look for it in Slack first, or null.
+ * call, until its message is kept: any try may have posted it, whatever
+ * Slack answered of the call it failed on (a photo refused at its upload
+ * after an earlier try shared it, an answer lost), and only a look in
+ * Slack says. Since when an earlier try may have (postingSince).
  */
 const startPosting = (
   db: DrizzleSqliteDODatabase,
   seq: number
 ): Date | null => {
-  const relay = db.select().from(supportRelay).get();
-  const unsureSince =
-    relay?.postingSeq === seq ? (relay.postingSince ?? null) : null;
+  const unsureSince = postingSince(db, seq);
   const posting = { postingSeq: seq, postingSince: unsureSince ?? new Date() };
   db.insert(supportRelay)
     .values({ cursor: 0, id: 1, ...posting })
@@ -176,12 +216,43 @@ const startPosting = (
   return unsureSince;
 };
 
-/** The line being posted settled: kept, or surely not posted. */
+/** The line being posted settled: its message, or none, kept. */
 const stopPosting = (db: DrizzleSqliteDODatabase): void => {
   db.update(supportRelay)
     .set({ postingSeq: null, postingSince: null })
     .where(eq(supportRelay.id, 1))
     .run();
+};
+
+/**
+ * The message a line not kept yet has in Slack: posted now, the user's
+ * line or an answer written on the admin site; or, when it is not to be
+ * posted (taken back, or past the user's limit), the one an earlier try
+ * may have posted with Slack's answer lost, found there. Null for none.
+ */
+const messageOf = async (
+  env: Env,
+  db: DrizzleSqliteDODatabase,
+  line: SupportLine
+): Promise<string | null> => {
+  // Past the user's limit their lines stay in the chat and on the admin
+  // pages, but are not posted, so no one floods the channel.
+  const posts =
+    !line.unsent &&
+    (line.fromPochical || !(await overLimit(env.SUPPORT_LIMIT, line.userId)));
+  if (!posts) {
+    const unsureSince = postingSince(db, line.seq);
+    return unsureSince === null
+      ? null
+      : await findStaffLine(env, line, unsureSince);
+  }
+  const unsureSince = startPosting(db, line.seq);
+  if (line.fromPochical) {
+    return await tellStaffOfAnswer(env, line, unsureSince);
+  }
+  const [repliedTo = null] =
+    line.replyTo === null ? [] : linesAtSeqs(db, line.userId, [line.replyTo]);
+  return await tellStaffOfLine(env, line, repliedTo, unsureSince);
 };
 
 /**
@@ -209,23 +280,8 @@ const relayLine = async (
     toldReactions: [],
     toldUnsent: false,
   };
-  if (kept === undefined && !line.unsent) {
-    const repliedTo =
-      line.replyTo === null
-        ? null
-        : answeredLine(db, line.userId, line.replyTo);
-    // Past the user's limit their lines stay in the chat and on the admin
-    // pages, but are not posted, so no one floods the channel.
-    const flooding =
-      !line.fromPochical && (await overLimit(env.SUPPORT_LIMIT, line.userId));
-    let ts: string | null = null;
-    if (line.fromPochical || !flooding) {
-      const unsureSince = startPosting(db, line.seq);
-      ts = line.fromPochical
-        ? await tellStaffOfAnswer(env, line, unsureSince)
-        : await tellStaffOfLine(env, line, repliedTo, unsureSince);
-    }
-    told = { ...told, slackTs: ts };
+  if (kept === undefined) {
+    told = { ...told, slackTs: await messageOf(env, db, line) };
     // Kept at once, before anything that may fail, so a retry never
     // posts the line again: a kept line is settled, its message or none
     // when it is not to be posted (past the limit, say).
@@ -242,7 +298,7 @@ const relayLine = async (
       .onConflictDoNothing();
   }
   if (line.unsent && !told.toldUnsent) {
-    if (kept !== undefined && !line.fromPochical && told.slackTs !== null) {
+    if (!line.fromPochical && told.slackTs !== null) {
       await tellStaffOfUnsend(env, line, told.slackTs);
     }
     told = { ...told, toldUnsent: true };
@@ -325,9 +381,6 @@ const relayFailed = async (
       target: supportRelay.id,
     })
     .run();
-  if (error instanceof SlackRefusedError && error.notPosted) {
-    stopPosting(db);
-  }
   const refusal = refusalOf(error);
   const asked = refusal.kind === "passing" ? (refusal.afterMs ?? 0) : 0;
   const waitMs = Math.max(
@@ -379,9 +432,9 @@ const tellSince = async (
     )
     .orderBy(asc(chatLines.seq))
     .all();
-  for (const row of changed) {
+  for (const line of linesOfRows(db, userId, changed)) {
     // oxlint-disable-next-line no-await-in-loop -- in the chat's order
-    await relayLine(env, db, lineOf(db, userId, row));
+    await relayLine(env, db, line);
   }
 };
 

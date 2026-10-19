@@ -1,3 +1,4 @@
+import { chatRules } from "@pochical/design/chat";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
@@ -171,33 +172,31 @@ describe("a group's photos", () => {
       .toBeNull();
   });
 
-  it("deletes a photo whose send was taken back before it came", async () => {
-    const { groupId, maker } = await pair();
+  it("deletes a photo whose send was taken back before it came, the send never coming", async () => {
+    const { groupId, guest, maker } = await pair();
     await photo("PUT", groupId, "early", maker, JPEG, "small");
     await photo("PUT", groupId, "early", maker, JPEG);
+    await photo("PUT", groupId, "theirs", guest, JPEG);
     const later = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
-    const before = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
-    sendFrame(later.socket, {
-      case: "chatEdits",
-      value: {
-        edits: [
-          {
-            kind: {
-              case: "recall",
-              value: { sendOpId: "a", threadId: "group" },
+    const recall = (sendOpId: string, photoId: string, opId: string) => {
+      sendFrame(later.socket, {
+        case: "chatEdits",
+        value: {
+          edits: [
+            {
+              kind: {
+                case: "recall",
+                value: { photoId, sendOpId, threadId: "group" },
+              },
+              opId,
             },
-            opId: "r",
-          },
-        ],
-      },
-    });
-    let acked = false;
-    while (!acked) {
-      // oxlint-disable-next-line no-await-in-loop -- frames come in order
-      const frame = await later.frames.next();
-      acked = frame.kind.case === "acked";
-    }
-    sendPhoto(before.socket, "a", "early");
+          ],
+        },
+      });
+    };
+    recall("a", "early", "r1");
+    // Naming someone else's photo deletes nothing.
+    recall("b", "theirs", "r2");
     await expect
       .poll(async () => await env.PHOTOS.head(photoKey(groupId, "early")))
       .toBeNull();
@@ -206,5 +205,123 @@ describe("a group's photos", () => {
         async () => await env.PHOTOS.head(smallKey(photoKey(groupId, "early")))
       )
       .toBeNull();
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, "theirs"))
+    ).resolves.not.toBeNull();
+
+    // Should the send come after all, it is dropped, its photo gone.
+    const before = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    sendPhoto(before.socket, "a", "early");
+    sendFrame(before.socket, {
+      case: "chatEdits",
+      value: {
+        edits: [
+          {
+            kind: { case: "send", value: { text: "次", threadId: "group" } },
+            opId: "n",
+          },
+        ],
+      },
+    });
+    const sent: string[] = [];
+    while (!sent.includes("n")) {
+      // oxlint-disable-next-line no-await-in-loop -- frames come in order
+      const frame = await before.frames.next();
+      for (const { kind } of changesBesidesNotices(frame)) {
+        if (kind.case === "chatLine") {
+          sent.push(kind.value.opId);
+        }
+      }
+    }
+    expect(sent).toStrictEqual(["n"]);
+  });
+
+  it("deletes the photos no line came to carry once their uploader has uploaded nothing for as long as a line goes by itself", async () => {
+    const { runDurableObjectAlarm, runInDurableObject } =
+      await import("cloudflare:test");
+    const { call } = await import("./helpers");
+    const { groupId, guest, maker } = await pair();
+    const group = env.GROUPS.getByName(groupId);
+    const own = crypto.randomUUID();
+    await photo("PUT", groupId, "lost", maker, JPEG, "small");
+    await photo("PUT", groupId, "lost", maker, JPEG);
+    await photo("PUT", groupId, "sent", maker, JPEG);
+    await photo("PUT", groupId, own, maker, JPEG);
+    await call("GroupService/SetGroupPhoto", { groupId, photoId: own }, maker);
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    sendPhoto(mine.socket, "a", "sent");
+    let acked = false;
+    while (!acked) {
+      // oxlint-disable-next-line no-await-in-loop -- frames come in order
+      const frame = await mine.frames.next();
+      acked = frame.kind.case === "acked";
+    }
+    const uploadedAgo = async (ms: number, ...ids: string[]) => {
+      await runInDurableObject(group, (_, state) => {
+        for (const id of ids) {
+          state.storage.sql.exec(
+            "update chat_photos set uploaded_at = ? where id = ?",
+            Date.now() - ms,
+            id
+          );
+        }
+      });
+    };
+    const stored = async (id: string) =>
+      (await env.PHOTOS.head(photoKey(groupId, id))) !== null;
+    await uploadedAgo(chatRules.unsentAfterMs, "lost", "sent", own);
+    await photo("PUT", groupId, "fresh", guest, JPEG);
+    await uploadedAgo(chatRules.unsentAfterMs - 60_000, "fresh");
+
+    // The uploads set the alarm, so a group that goes quiet sweeps too.
+    await expect(runDurableObjectAlarm(group)).resolves.toBeTruthy();
+    const kept = {
+      fresh: await stored("fresh"),
+      lost: await stored("lost"),
+      lostSmall:
+        (await env.PHOTOS.head(smallKey(photoKey(groupId, "lost")))) !== null,
+      own: await stored(own),
+      sent: await stored("sent"),
+    };
+    expect(kept).toStrictEqual({
+      fresh: true,
+      lost: false,
+      lostSmall: false,
+      own: true,
+      sent: true,
+    });
+    // Its id is free of its line for good: a send naming it is dropped.
+    await expect(
+      runInDurableObject(group, (_, state) =>
+        state.storage.sql
+          .exec<{ id: string }>("select id from chat_photos order by id")
+          .toArray()
+          .map(({ id }) => id)
+      )
+    ).resolves.toStrictEqual([own, "fresh", "sent"].toSorted());
+
+    // The alarm comes back for the one still within its time.
+    await uploadedAgo(chatRules.unsentAfterMs, "fresh");
+    await expect(runDurableObjectAlarm(group)).resolves.toBeTruthy();
+    await expect(stored("fresh")).resolves.toBeFalsy();
+  });
+
+  it("keeps a member's photos not sent while they upload more, as the rest of a frame's go up", async () => {
+    const { runDurableObjectAlarm, runInDurableObject } =
+      await import("cloudflare:test");
+    const { groupId, maker } = await pair();
+    const group = env.GROUPS.getByName(groupId);
+    await photo("PUT", groupId, "first", maker, JPEG);
+    await runInDurableObject(group, (_, state) => {
+      state.storage.sql.exec(
+        "update chat_photos set uploaded_at = ?",
+        Date.now() - chatRules.unsentAfterMs
+      );
+    });
+    await photo("PUT", groupId, "second", maker, JPEG);
+    await runDurableObjectAlarm(group);
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, "first"))
+    ).resolves.not.toBeNull();
   });
 });

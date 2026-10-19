@@ -2317,6 +2317,11 @@ public nonisolated struct Pochical_V1_ChatRecall: Sendable {
 
   public var sendOpID: String = String()
 
+  /// The photo the send carries, uploaded before it went out: deleted with
+  /// the line, or at once when the group does not have the line, as no
+  /// line will ever carry it. Empty for a send of anything else.
+  public var photoID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5940,7 +5945,7 @@ nonisolated extension Pochical_V1_ChatUnsend: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Pochical_V1_ChatRecall: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatRecall"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}send_op_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}send_op_id\0\u{3}photo_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5950,6 +5955,7 @@ nonisolated extension Pochical_V1_ChatRecall: SwiftProtobuf.Message, SwiftProtob
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.sendOpID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
       default: break
       }
     }
@@ -5962,12 +5968,16 @@ nonisolated extension Pochical_V1_ChatRecall: SwiftProtobuf.Message, SwiftProtob
     if !self.sendOpID.isEmpty {
       try visitor.visitSingularStringField(value: self.sendOpID, fieldNumber: 2)
     }
+    if !self.photoID.isEmpty {
+      try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_ChatRecall, rhs: Pochical_V1_ChatRecall) -> Bool {
     if lhs.threadID != rhs.threadID {return false}
     if lhs.sendOpID != rhs.sendOpID {return false}
+    if lhs.photoID != rhs.photoID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
