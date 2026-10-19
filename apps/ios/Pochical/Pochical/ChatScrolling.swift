@@ -25,15 +25,6 @@ final class ChatScroll {
   /// laid out or asked for. By item id, as the chat's own lines may be
   /// ahead of those in place.
   var near = NearEnds()
-  /// What is under the lines at the chat's foot, the composer and the
-  /// keyboard: read by the lines alone, so the chat is not drawn again for
-  /// every step of the keyboard pulled down.
-  var bottomRoom: CGFloat = 0
-  /// What is over the lines at the chat's top, read by the lines alone as
-  /// the bottom's is: the header, and the pins floating under it.
-  var headerRoom: CGFloat = 0
-  var pinsRoom: CGFloat = 0
-  var topRoom: CGFloat { headerRoom + pinsRoom }
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
@@ -127,7 +118,7 @@ struct FloatingDay: View {
 
 /// The top of the lines while the next earlier page is on its way from
 /// the server: pages the device holds come in before the top is reached
-/// (ChatLinesView asks Chat.prefetchScreens ahead).
+/// (ChatStage asks Chat.prefetchScreens ahead).
 struct EarlierLines: View {
   var body: some View {
     ProgressView()

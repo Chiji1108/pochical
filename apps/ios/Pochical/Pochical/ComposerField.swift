@@ -20,6 +20,21 @@ import UniformTypeIdentifiers
   func focus() {
     view?.becomeFirstResponder()
   }
+
+  /// How many lines `text` takes in the field, up to ComposerField.maxLines,
+  /// told from the words, however they came there (typed, put in for 編集,
+  /// emptied as they are sent), so the composer grows and shrinks with
+  /// them in the update that changed them, by its one animation.
+  func lines(for text: String) -> Int {
+    guard let view, let font = view.font, view.bounds.width > 0 else { return 1 }
+    // A last line ending in a newline is a line too, as the field has it.
+    let words = (text.hasSuffix("\n") || text.isEmpty ? text + " " : text) as NSString
+    let height = words.boundingRect(
+      with: CGSize(width: view.bounds.width, height: .greatestFiniteMagnitude),
+      options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font], context: nil
+    ).height
+    return min(ComposerField.maxLines, max(1, Int((height / font.lineHeight).rounded())))
+  }
 }
 
 /// The chat's field, from one line growing to `maxLines` and then
