@@ -692,11 +692,16 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// Changed in it, the room would be laid out anew in it, and UIKit draw
   /// every line again, fading in at its new place over the one fading out
   /// at the old, as lines too few to fill the room stand at its foot.
+  /// Not while the person scrolls them, as when their drag pulls the
+  /// keyboard down: the scroll is theirs, and their drag would set it
+  /// back each frame from where it began, the lines going to and fro and
+  /// their cells made anew, faces and all (ChatLayout's Example leaves it
+  /// to them too).
   private func keepingLinesStill(_ change: () -> Void) {
     UIView.performWithoutAnimation {
       let seen = layout.getContentOffsetSnapshot(from: .top)
       change()
-      if let seen { layout.restoreContentOffset(with: seen) }
+      if let seen, !userScrolling { layout.restoreContentOffset(with: seen) }
     }
   }
 
