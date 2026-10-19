@@ -251,7 +251,9 @@ struct ChatLinesView: UIViewControllerRepresentable {
     controller.update(self, environment: context.environment)
     // The composer and the keyboard under the lines: as it changes, the
     // lines and the ↓ make room by the change's own animation.
-    controller.bottomRoom(scroll.bottomRoom) { context.animate(changes: $0) }
+    controller.bottomRoom(scroll.bottomRoom, animated: context.transaction.animation != nil) {
+      context.animate(changes: $0)
+    }
   }
 
   /// The chat has gone: whatever waits to be told the lines are in place
@@ -617,7 +619,7 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   /// animation): the lines and the ↓ make room by the same animation, as in
   /// Messages, with motion reduced too, never standing apart from what
   /// moves under them (spec/chat.md, Reduced motion).
-  func bottomRoom(_ height: CGFloat, animate: (() -> Void) -> Void) {
+  func bottomRoom(_ height: CGFloat, animated: Bool, animate: (() -> Void) -> Void) {
     guard height != under else { return }
     guard view.window != nil else {
       under = height
@@ -629,7 +631,19 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
       self.fitRoom()
       self.view.layoutIfNeeded()
     }
-    animate(makeRoom)
+    // The keyboard put down by a tap off the lines changes the room with
+    // no animation around it, as it does when it comes up: the lines then
+    // go with it by its own curve, for the time it has left.
+    let left = (KeyboardTop.shared.move?.ends ?? 0) - CACurrentMediaTime()
+    if !animated, UIView.inheritedAnimationDuration == 0, left > 0,
+      let move = KeyboardTop.shared.move
+    {
+      UIView.animate(
+        withDuration: left, delay: 0, options: [move.curve, .beginFromCurrentState],
+        animations: makeRoom)
+    } else {
+      animate(makeRoom)
+    }
   }
 
   /// The lines seen kept at the foot of the room they are seen in as it

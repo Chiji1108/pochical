@@ -51,6 +51,9 @@ struct MessageAction: Identifiable {
 @MainActor @Observable final class KeyboardTop {
   static let shared = KeyboardTop()
   private(set) var y: CGFloat?
+  /// The keyboard's last move, as the system animates it: when it ends,
+  /// and its curve, for what moves with it outside that animation.
+  @ObservationIgnored private(set) var move: (ends: CFTimeInterval, curve: UIView.AnimationOptions)?
   private var watching = false
 
   func watch() {
@@ -60,8 +63,14 @@ struct MessageAction: Identifiable {
     center.addObserver(
       forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main
     ) { note in
-      let end = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-      MainActor.assumeIsolated { self.take(end) }
+      let info = note.userInfo
+      let end = info?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+      let duration = info?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0
+      let curve = info?[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt ?? 0
+      MainActor.assumeIsolated {
+        self.move = (CACurrentMediaTime() + duration, UIView.AnimationOptions(rawValue: curve << 16))
+        self.take(end)
+      }
     }
     center.addObserver(
       forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main
