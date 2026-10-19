@@ -105,6 +105,10 @@ public struct PhotoRun: Sendable {
   /// Opened with none held, as the list is: the latest page is asked for
   /// until it comes.
   private var fromLatest = false
+  /// Photos come and gone in the chat while the latest page is on its way,
+  /// which it may or may not hold already: put right as it comes.
+  private var cameBefore: [ChatPhotoItem] = []
+  private var goneBefore: Set<Int64> = []
   /// The chat's lines on the device as last followed: whether each is a
   /// photo the reader sees.
   private var followed: [Int64: Bool]?
@@ -194,10 +198,14 @@ public struct PhotoRun: Sendable {
     if fromLatest {
       guard page.seq == 0, !page.after else { return }
       fromLatest = false
-      photos = page.photos
+      let last = page.photos.last?.seq ?? 0
+      let came = cameBefore.filter { $0.seq > last && !goneBefore.contains($0.seq) }
+      photos = page.photos.filter { !goneBefore.contains($0.seq) } + came
       offset = page.offset
-      total = page.total
+      total = page.total - (page.photos.count + came.count - photos.count) + came.count
       shown = photos.last?.seq
+      cameBefore = []
+      goneBefore = []
       return
     }
     guard let first = photos.first, let last = photos.last else { return }
@@ -221,6 +229,10 @@ public struct PhotoRun: Sendable {
   /// A new line with a photo the reader sees: one more in all, and held
   /// when the last is.
   public mutating func added(_ item: ChatPhotoItem) {
+    if fromLatest {
+      cameBefore.append(item)
+      return
+    }
     guard let total, item.seq > photos.last?.seq ?? 0 else { return }
     if let offset, offset + photos.count == total {
       photos.append(item)
@@ -235,6 +247,10 @@ public struct PhotoRun: Sendable {
   /// when the device did not hold the line, which leaves where the photos
   /// are unknown until the next page says.
   public mutating func gone(_ seq: Int64, wasPhoto: Bool?) {
+    if fromLatest {
+      if wasPhoto != false { goneBefore.insert(seq) }
+      return
+    }
     if let index = photos.firstIndex(where: { $0.seq == seq }) {
       photos.remove(at: index)
       total = total.map { $0 - 1 }
