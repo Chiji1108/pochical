@@ -64,6 +64,9 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   public var replyTo: Int64?
   /// A line from the app, as JSON, `LineNotice`; empty for a message.
   var noticeJSON = ""
+  /// The album a photo was sent in with others (spec/chat.md, Albums);
+  /// empty for none.
+  public var album = ""
   public var id: Int64 { seq }
 
   /// Whose line it is to `me`, for what is unread: the app's notices and
@@ -395,6 +398,17 @@ extension DatabaseMigrator {
       .execute(db)
     }
   }
+
+  mutating func registerChatAlbums() {
+    registerMigration("Keep the photos' albums") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "album" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+    }
+  }
 }
 
 /// What the group's socket brings of its chats, and the member's edits.
@@ -445,6 +459,7 @@ public enum Chats {
     row.hidden = line.hidden
     row.replyTo = line.replyTo == 0 ? nil : Int64(line.replyTo)
     row.notice = line.hasNotice ? LineNotice(line.notice) : nil
+    row.album = line.album
     try ChatLineRow.insert { row }.execute(db)
     try tookBack(line, of: groupID, in: db)
   }
@@ -466,12 +481,14 @@ public enum Chats {
   }
 
   /// Puts the member's edit in the group's chat outbox, to be sent and
-  /// shown at once.
+  /// shown at once, as `opID` when it is named before (an album's first
+  /// photo, which names the album).
   public static func edit(
-    _ kind: Pochical_V1_ChatEdit.OneOf_Kind, in groupID: String, now: Int64, db: Database
+    _ kind: Pochical_V1_ChatEdit.OneOf_Kind, in groupID: String, now: Int64,
+    opID: String = UUID().uuidString.lowercased(), db: Database
   ) throws {
     var edit = Pochical_V1_ChatEdit()
-    edit.opID = UUID().uuidString.lowercased()
+    edit.opID = opID
     edit.kind = kind
     let data = try edit.serializedData()
     try ChatOutboxRow.insert {
@@ -651,6 +668,8 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public var preview: LinePreview?
   /// The line it answers (返信), by its seq.
   public var replyTo: Int64?
+  /// The album its photo goes in with others; empty for none.
+  public var album = ""
   /// Not sent (its photo could not be uploaded, or it waited too long):
   /// to send again or delete.
   public var failed = false
@@ -666,6 +685,7 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
     photo = send.hasPhoto ? LinePhoto(send.photo) : nil
     preview = send.hasPreview ? LinePreview(send.preview) : nil
     replyTo = send.replyTo == 0 ? nil : Int64(send.replyTo)
+    album = send.album
     failed = row.failed
   }
 }
@@ -848,6 +868,56 @@ public func firstComing(
 /// on screen stays read (spec/vectors/chat.json, readTo).
 public func readTo(shown: [Int64], read: Int64) -> Int64 {
   max(read, shown.max() ?? read)
+}
+
+/// A line as albums are found by: who wrote it, the album it was sent in
+/// (empty for none), and whether it is still a photo, not taken back.
+public struct AlbumLine<ID: Hashable>: Hashable {
+  public let id: ID
+  public let writer: String
+  public let album: String
+  public let photo: Bool
+
+  public init(id: ID, writer: String, album: String, photo: Bool) {
+    self.id = id
+    self.writer = writer
+    self.album = album
+    self.photo = photo
+  }
+}
+
+/// The albums a chat draws of its lines in order, each as its lines' ids:
+/// lines one after another by the same writer with the same album that
+/// are still photos, two or more (spec/vectors/chat.json, albums).
+public func albums<ID>(_ lines: [AlbumLine<ID>]) -> [[ID]] {
+  var albums: [[ID]] = []
+  var run: [ID] = []
+  var last: AlbumLine<ID>?
+  for line in lines {
+    let goesOn =
+      line.photo && !line.album.isEmpty && last.map {
+        $0.photo && $0.album == line.album && $0.writer == line.writer
+      } == true
+    if !goesOn {
+      if run.count > 1 { albums.append(run) }
+      run = []
+    }
+    if line.photo, !line.album.isEmpty { run.append(line.id) }
+    last = line
+  }
+  if run.count > 1 { albums.append(run) }
+  return albums
+}
+
+/// How many of an album's `count` photos go in each of its rows, top
+/// first: two side by side, three as one over two, and past that rows of
+/// two and three, as few as can be, the twos first (spec/vectors/chat.json,
+/// albumRows).
+public func albumRows(_ count: Int) -> [Int] {
+  if count == 3 { return [1, 2] }
+  let rows = (count + 2) / 3
+  let twos = 3 * rows - count
+  return Array(repeating: 2, count: twos) + Array(repeating: 3, count: rows - twos)
 }
 
 /// How many of others' lines are unread past the `read` mark, what ↓

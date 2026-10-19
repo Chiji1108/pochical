@@ -113,6 +113,40 @@ struct ChatVectors: Decodable, Sendable {
   }
   let withdrawn: [Withdrawn]
   let draft: [Draft]
+
+  struct Albums: VectorCase {
+    struct Line: Decodable, Sendable {
+      let seq: Int64
+      let writer: String
+      let album: String
+      let photo: Bool
+      let unsent: Bool
+    }
+    let name: String
+    let lines: [Line]
+    let expected: [[Int64]]
+  }
+
+  struct AlbumRows: VectorCase {
+    let name: String
+    let count: Int
+    let expected: [Int]
+  }
+  let albums: [Albums]
+  let albumRows: [AlbumRows]
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).albums)
+func photosSentAtOnceAreAnAlbum(_ vector: ChatVectors.Albums) {
+  let lines = vector.lines.map {
+    AlbumLine(id: $0.seq, writer: $0.writer, album: $0.album, photo: $0.photo && !$0.unsent)
+  }
+  #expect(albums(lines) == vector.expected)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).albumRows)
+func anAlbumsRows(_ vector: ChatVectors.AlbumRows) {
+  #expect(albumRows(vector.count) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).withdrawn)
@@ -752,6 +786,25 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     try Chats.edit(.unsend(unsend), in: "g", now: 2, db: db)
     state = try Chats.state(of: groupThread, in: "g", db: db)
     #expect(state.lines[0].photo == nil)
+  }
+}
+
+@Test func anAlbumsPhotosKeepItsNameWaitingAndTaken() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var photo = line(1, "")
+    photo.chatLine.photo.id = "p1"
+    photo.chatLine.album = "first"
+    try GroupSync.take([photo], of: "g", in: db)
+    var send = Pochical_V1_ChatSend()
+    send.threadID = groupThread
+    send.photo.id = "p2"
+    send.album = "second"
+    try Chats.edit(.send(send), in: "g", now: 1, opID: "second", db: db)
+    let state = try Chats.state(of: groupThread, in: "g", db: db)
+    #expect(state.lines.map(\.album) == ["first"])
+    #expect(state.waiting.map(\.album) == ["second"])
+    #expect(state.waiting.map(\.opID) == ["second"])
   }
 }
 

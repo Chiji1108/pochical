@@ -27,6 +27,9 @@ export type Alert = {
   // device to take the notification back once it is read. None for an
   // answer from Pochical's people.
   line?: { authorId: string; seq: number };
+  // Notifications with the same one show as one, the latest in place of
+  // those before (apns-collapse-id): an album's photos.
+  collapseId?: string;
 };
 
 /** The category of a chat line's notification, which the app answers from. */
@@ -96,7 +99,8 @@ const post = async (
   env: Env,
   device: { token: string; sandbox: boolean },
   payload: string,
-  type: "alert" | "background"
+  type: "alert" | "background",
+  collapseId?: string
 ): Promise<Sent> => {
   const key = env.APNS_KEY;
   if (key === undefined || key === "") {
@@ -112,6 +116,7 @@ const post = async (
       "apns-priority": type === "alert" ? "10" : "5",
       "apns-push-type": type,
       "apns-topic": TOPIC,
+      ...(collapseId !== undefined && { "apns-collapse-id": collapseId }),
       authorization: `bearer ${await providerToken(key, env.APNS_KEY_ID, env.APNS_TEAM_ID)}`,
     },
     method: "POST",
@@ -139,7 +144,8 @@ export const sendAlert = async (
   device: { token: string; sandbox: boolean },
   alert: Alert,
   badge: number
-): Promise<Sent> => await post(env, device, payloadOf(alert, badge), "alert");
+): Promise<Sent> =>
+  await post(env, device, payloadOf(alert, badge), "alert", alert.collapseId);
 
 /** Sends a withdrawal to one device, as `sendAlert` sends a notification. */
 export const sendWithdrawal = async (

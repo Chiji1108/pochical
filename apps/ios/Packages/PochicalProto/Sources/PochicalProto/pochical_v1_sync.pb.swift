@@ -1794,6 +1794,14 @@ public nonisolated struct Pochical_V1_ChatLine: @unchecked Sendable {
   /// Clears the value of `notice`. Subsequent reads from it will return its default value.
   public mutating func clearNotice() {_uniqueStorage()._notice = nil}
 
+  /// The photos sent together with this one (spec/chat.md, Albums), as
+  /// ChatSend.album named them; empty for a photo sent alone, and for
+  /// anything else.
+  public var album: String {
+    get {_storage._album}
+    set {_uniqueStorage()._album = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2217,6 +2225,16 @@ public nonisolated struct Pochical_V1_ChatSend: @unchecked Sendable {
   public var device: String {
     get {_storage._device}
     set {_uniqueStorage()._device = newValue}
+  }
+
+  /// With a photo: the photos sent at once, each its own line, share one
+  /// name, 1 to 64 printable ASCII characters of the sender's choosing (a
+  /// random one, as it also collapses their notifications), that their
+  /// apps draw them together by (spec/chat.md, Albums); empty for a photo
+  /// sent alone. Refused with anything but a photo.
+  public var album: String {
+    get {_storage._album}
+    set {_uniqueStorage()._album = newValue}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -4868,7 +4886,7 @@ nonisolated extension Pochical_V1_Reset: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatLine"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{1}photo\0\u{1}preview\0\u{1}hidden\0\u{3}reply_to\0\u{1}notice\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{1}photo\0\u{1}preview\0\u{1}hidden\0\u{3}reply_to\0\u{1}notice\0\u{1}album\0")
 
   fileprivate class _StorageClass {
     var _threadID: String = String()
@@ -4890,6 +4908,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     var _hidden: Bool = false
     var _replyTo: UInt64 = 0
     var _notice: Pochical_V1_ChatNotice? = nil
+    var _album: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -4919,6 +4938,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       _hidden = source._hidden
       _replyTo = source._replyTo
       _notice = source._notice
+      _album = source._album
     }
   }
 
@@ -4956,6 +4976,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         case 17: try { try decoder.decodeSingularBoolField(value: &_storage._hidden) }()
         case 18: try { try decoder.decodeSingularUInt64Field(value: &_storage._replyTo) }()
         case 19: try { try decoder.decodeSingularMessageField(value: &_storage._notice) }()
+        case 20: try { try decoder.decodeSingularStringField(value: &_storage._album) }()
         default: break
         }
       }
@@ -5025,6 +5046,9 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       try { if let v = _storage._notice {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
       } }()
+      if !_storage._album.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._album, fieldNumber: 20)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -5053,6 +5077,7 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._hidden != rhs_storage._hidden {return false}
         if _storage._replyTo != rhs_storage._replyTo {return false}
         if _storage._notice != rhs_storage._notice {return false}
+        if _storage._album != rhs_storage._album {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -5642,7 +5667,7 @@ nonisolated extension Pochical_V1_ChatReact: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatSend"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{1}photo\0\u{1}preview\0\u{3}reply_to\0\u{3}without_preview\0\u{1}device\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{1}photo\0\u{1}preview\0\u{3}reply_to\0\u{3}without_preview\0\u{1}device\0\u{1}album\0")
 
   fileprivate class _StorageClass {
     var _threadID: String = String()
@@ -5654,6 +5679,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
     var _replyTo: UInt64 = 0
     var _withoutPreview: Bool = false
     var _device: String = String()
+    var _album: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -5673,6 +5699,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
       _replyTo = source._replyTo
       _withoutPreview = source._withoutPreview
       _device = source._device
+      _album = source._album
     }
   }
 
@@ -5700,6 +5727,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
         case 7: try { try decoder.decodeSingularUInt64Field(value: &_storage._replyTo) }()
         case 8: try { try decoder.decodeSingularBoolField(value: &_storage._withoutPreview) }()
         case 9: try { try decoder.decodeSingularStringField(value: &_storage._device) }()
+        case 10: try { try decoder.decodeSingularStringField(value: &_storage._album) }()
         default: break
         }
       }
@@ -5739,6 +5767,9 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
       if !_storage._device.isEmpty {
         try visitor.visitSingularStringField(value: _storage._device, fieldNumber: 9)
       }
+      if !_storage._album.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._album, fieldNumber: 10)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -5757,6 +5788,7 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._replyTo != rhs_storage._replyTo {return false}
         if _storage._withoutPreview != rhs_storage._withoutPreview {return false}
         if _storage._device != rhs_storage._device {return false}
+        if _storage._album != rhs_storage._album {return false}
         return true
       }
       if !storagesAreEqual {return false}

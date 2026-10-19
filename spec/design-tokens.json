@@ -27,7 +27,7 @@
     "photoPrefetchScreens": 1,
     "photoSmallEdge": 960,
     "photoThumbHashMaxBytes": 25,
-    "photosPerSend": 4,
+    "photosPerSend": 10,
     "pictureMaxEdge": 640,
     "pochicalMember": "pochical",
     "prefetchScreens": 2,
