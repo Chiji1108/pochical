@@ -32,7 +32,9 @@ struct ChatScreen: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.openGroupRoute) private var openGroupRoute
   @Dependency(\.defaultDatabase) private var database
-  @Fetch private var chat = ChatRequest.Value()
+  /// The chat, read by this screen alone while it is there.
+  @State private var feed: ChatFeed
+  private var chat: ChatRequest.Value { feed.value }
   /// Everyone with their shifts over the days the chat's lines share.
   @Fetch private var dayMembers: [GroupMember] = []
   /// Whom the user has blocked: their lines fold away.
@@ -112,8 +114,8 @@ struct ChatScreen: View {
   /// 写真 from ⋯: the chat's photos alone, pushed over it.
   @State private var listingPhotos = false
 
-  /// The lines read as the screen is made, by the reader last heard of,
-  /// so they are there through the push that brings it in rather than
+  /// The lines read as the screen first draws, by the reader last heard
+  /// of, so they are there through the push that brings it in rather than
   /// arriving, oldest first, as it ends.
   init(
     place: ChatPlace, threadID: String, otherID: String?, sharing: Day? = nil,
@@ -126,9 +128,8 @@ struct ChatScreen: View {
     self.sharing = sharing
     let me = GroupCalls.knownUserID
     _meID = State(initialValue: me)
-    _chat = Fetch(
-      wrappedValue: ChatRequest.Value(),
-      ChatRequest(groupID: place.id, threadID: threadID, me: me))
+    _feed = State(
+      initialValue: ChatFeed(ChatRequest(groupID: place.id, threadID: threadID, me: me)))
   }
   /// All the pins open under the bar.
   @State private var pinsOpen = false
@@ -1178,7 +1179,7 @@ struct ChatScreen: View {
 
   /// Reads the chat again for the reader and the lines laid out.
   private func reload() async {
-    _ = try? await $chat.load(
+    await feed.load(
       ChatRequest(groupID: place.id, threadID: threadID, me: meID, from: window))
   }
 
