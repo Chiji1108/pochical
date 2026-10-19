@@ -188,13 +188,18 @@ extension Chats {
   // MARK: Lines not sent
 
   /// Marks the group's lines that have waited `Chat.unsentAfterMs` without
-  /// the group taking them as not sent, so they stop going by themselves;
-  /// gives when the next of those still waiting will be, nil with none. A
-  /// line that came while its Acked was lost stops waiting instead.
+  /// the group taking them as not sent, so they stop going by themselves,
+  /// by the device's time `now` corrected to the server's, as theirs are;
+  /// gives how long until the next of those still waiting is, nil with
+  /// none. A line's time is never written again here: one the device's
+  /// clock set back has not reached yet waits on until a Welcome corrects
+  /// the clock, rather than failing early once it does. A line that came
+  /// while its Acked was lost stops waiting instead.
   @discardableResult
   public static func failOverdue(of groupID: String, now: Int64, in db: Database) throws
     -> Int64?
   {
+    let now = try SyncState.corrected(now, in: db)
     let rows = try ChatOutboxRow.where { $0.groupID.eq(groupID) && !$0.failed }.fetchAll(db)
     var next: Int64?
     for row in rows {
@@ -214,15 +219,18 @@ extension Chats {
         next = min(next ?? due, due)
       }
     }
-    return next
+    return next.map { $0 - now }
   }
 
   /// A line of the member's taken out of the outbox while it waited
   /// (送信取消, or 削除 once not sent); should the group have taken it
   /// meanwhile, it is taken back from the group as it comes (`tookBack`).
+  /// One that never went out on a socket the group cannot have, and never
+  /// will, as it is no longer in the outbox: nothing is left to watch for.
   public static func takeBack(_ opID: String, in db: Database) throws {
     guard let row = try ChatOutboxRow.where({ $0.opID.eq(opID) }).fetchOne(db) else { return }
     try ChatOutboxRow.where { $0.opID.eq(opID) }.delete().execute(db)
+    guard row.wentOut else { return }
     try ChatTakenBackRow.where { $0.opID.eq(opID) }.delete().execute(db)
     try ChatTakenBackRow.insert { ChatTakenBackRow(opID: opID, groupID: row.groupID) }.execute(db)
   }

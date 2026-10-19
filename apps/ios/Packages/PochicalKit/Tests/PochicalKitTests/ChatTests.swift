@@ -1188,11 +1188,86 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     try Chats.edit(.send(words), in: "g", now: 5000, db: db)
     let limit = Int64(Chat.unsentAfterMs)
 
-    #expect(try Chats.failOverdue(of: "g", now: 1000 + limit - 1, in: db) == 1000 + limit)
-    #expect(try Chats.failOverdue(of: "g", now: 1000 + limit, in: db) == 5000 + limit)
+    #expect(try Chats.failOverdue(of: "g", now: 1000 + limit - 1, in: db) == 1)
+    #expect(try Chats.failOverdue(of: "g", now: 1000 + limit, in: db) == 4000)
     #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true, false])
     let edits = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
     #expect(edits.map(\.send.text) == ["あとで"])
+  }
+}
+
+@Test func aLineWaitsByTheServersTimeWhateverTheDevicesClockDoes() throws {
+  let database = try appDatabase()
+  let hour: Int64 = 3_600_000
+  let limit = Int64(Chat.unsentAfterMs)
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "明日休み？"
+    try Chats.edit(.send(words), in: "g", now: 1000, db: db)
+
+    // The device's clock jumps an hour ahead, and Welcome corrects it.
+    try Sync.welcome(sentMs: 1000 + hour, receivedMs: 1000 + hour, serverMs: 1000, in: db)
+    try Chats.failOverdue(of: "g", now: 1000 + hour + limit - 1, in: db)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [false])
+    try Chats.failOverdue(of: "g", now: 1000 + hour + limit, in: db)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true])
+  }
+}
+
+@Test func aClockSetBackFailsNoLineEarlyOnceAWelcomeCorrectsIt() throws {
+  let database = try appDatabase()
+  let minute: Int64 = 60_000
+  let limit = Int64(Chat.unsentAfterMs)
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "明日休み？"
+    let made: Int64 = 1_000 * minute
+    try Chats.edit(.send(words), in: "g", now: made, db: db)
+
+    // Set back 15 minutes while offline, checked meanwhile.
+    try Chats.failOverdue(of: "g", now: made - 15 * minute, in: db)
+    // Back online a minute after writing: Welcome corrects the clock.
+    try Sync.welcome(
+      sentMs: made - 14 * minute, receivedMs: made - 14 * minute, serverMs: made + minute, in: db)
+    try Chats.failOverdue(of: "g", now: made - 14 * minute, in: db)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [false])
+    try Chats.failOverdue(of: "g", now: made - 15 * minute + limit, in: db)
+    #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.map(\.failed) == [true])
+  }
+}
+
+@Test func aLineTakenBackBeforeItWentOutLeavesNothingToWatchFor() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "まちがい"
+    try Chats.edit(.send(words), in: "g", now: 1, db: db)
+    let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    try Chats.fail(opID, in: db)
+
+    try Chats.takeBack(opID, in: db)
+    #expect(try ChatTakenBackRow.fetchCount(db) == 0)
+  }
+}
+
+@Test func aLineTakenBackAfterItsFrameWasMadeDoesNotGoOut() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "まちがい"
+    try Chats.edit(.send(words), in: "g", now: 1, db: db)
+    words.text = "明日休み？"
+    try Chats.edit(.send(words), in: "g", now: 2, db: db)
+    let frame = try Chats.frames(of: "g", after: 0, in: db).frames[0]
+
+    try Chats.takeBack(frame.chatEdits.edits[0].opID, in: db)
+    let going = try Chats.goOut(frame.chatEdits.edits, in: db)
+    #expect(going.map(\.send.text) == ["明日休み？"])
+    #expect(try ChatTakenBackRow.fetchCount(db) == 0)
   }
 }
 
@@ -1220,6 +1295,8 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     words.text = "まちがい"
     try Chats.edit(.send(words), in: "g", now: 1, db: db)
     let opID = try Chats.state(of: groupThread, in: "g", db: db).waiting[0].opID
+    let frame = try Chats.frames(of: "g", after: 0, in: db).frames[0]
+    #expect(try Chats.goOut(frame.chatEdits.edits, in: db).map(\.opID) == [opID])
 
     try Chats.takeBack(opID, in: db)
     #expect(try Chats.state(of: groupThread, in: "g", db: db).waiting.isEmpty)

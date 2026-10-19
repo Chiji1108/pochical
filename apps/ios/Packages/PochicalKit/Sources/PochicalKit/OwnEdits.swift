@@ -125,7 +125,7 @@ extension OwnValues {
   public static func nextClock(now: Int64, in db: Database) throws -> Pochical_V1_Hlc {
     var state = try SyncState.current(in: db)
     let last = HlcTime(ms: state.lastMs, counter: UInt32(state.lastCounter))
-    let clock = last.tick(now: now + state.offsetMs)
+    let clock = last.tick(now: state.corrected(now))
     state.lastMs = clock.ms
     state.lastCounter = Int64(clock.counter)
     try SyncState.upsert { state }.execute(db)
