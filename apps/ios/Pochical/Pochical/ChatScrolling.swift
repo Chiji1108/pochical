@@ -48,7 +48,8 @@ struct LatestButton: View {
     let unseen = scroll.place.atLatest && atEnd ? 0 : unread
     // Over the composer's right, rising with it on the keyboard.
     ZStack {
-      if scroll.place.away || unseen > 0 {
+      // Shown too short of the latest, read or not: the only way on to it.
+      if scroll.place.away || !atEnd || unseen > 0 {
         // The system's glass button, which takes the tap as a button: glass
         // made to respond to a finger on a plain button's label took it on a
         // device, over the scrolling lines, and the button did nothing.
