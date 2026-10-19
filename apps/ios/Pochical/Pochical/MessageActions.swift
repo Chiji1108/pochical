@@ -106,9 +106,31 @@ struct KeyboardMove: Equatable {
 /// bubble and menu go along.
 @MainActor @Observable final class LineSpot {
   var frame: CGRect
+  /// Its bubble is lifted out of its line, which draws it again as the
+  /// menu closes.
+  @ObservationIgnored private var lifted = true
+  @ObservationIgnored private var onBack: (() -> Void)?
 
   init(frame: CGRect) {
     self.frame = frame
+  }
+
+  /// Its line draws its bubble again, or no longer can, gone from the chat.
+  func back() {
+    lifted = false
+    let onBack = onBack
+    self.onBack = nil
+    onBack?()
+  }
+
+  /// Does `action` once its line draws its bubble again, in the same
+  /// update: at once when it is no longer lifted out of it.
+  func whenBack(_ action: @escaping () -> Void) {
+    if lifted {
+      onBack = action
+    } else {
+      action()
+    }
   }
 }
 
@@ -680,15 +702,17 @@ private final class KeylessWindow: UIWindow {
     self.window = window
   }
 
-  /// Takes the window shown now away after `delay`; one shown meanwhile,
-  /// for another line, stays.
-  func hide(after delay: Duration = .zero) {
+  /// Takes the window shown now away once the line under it draws its
+  /// bubble again, so the bubble never blinks out between the two; one
+  /// shown meanwhile, for another line, stays.
+  func hide(once spot: LineSpot?) {
     guard let closing = window else { return }
     window = nil
-    Task { @MainActor in
-      try? await Task.sleep(for: delay)
+    guard let spot else {
       closing.isHidden = true
+      return
     }
+    spot.whenBack { closing.isHidden = true }
   }
 }
 
@@ -762,8 +786,10 @@ private struct HeldBubble: ViewModifier {
         if !lifted, let spot {
           lineSpace?.unfollow(spot)
           self.spot = nil
+          spot.back()
         }
       }
+      .onDisappear { spot?.back() }
   }
 
   /// Where the bubble is now, kept from here on for the menu opening.

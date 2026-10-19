@@ -194,9 +194,7 @@ struct ChatScreen: View {
           toLatestOrUnread()
         }),
       scroll: scroll, proxy: scroller, following: $following,
-      shown: placed, holds: acting != nil, canAskEarlier: opened && !state.atStart,
-      onNearTop: { showEarlier(laidOut: $0) }, canAskLater: opened && !state.atEnd,
-      onNearFoot: { askLater(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
+      shown: placed, holds: acting != nil, dayOver: { dayOver($0, in: listed) },
       replySwipe: { replySwipe(byID[$0]) },
       onReply: { id in
         if let line = answered(byID[id]) { reply(to: line) }
@@ -207,6 +205,14 @@ struct ChatScreen: View {
       ReadsSeen(
         scroll: scroll, reads: placed && scenePhase == .active,
         seq: { seen in latestSeq(of: seen, in: listed) }, read: { read(to: $0) })
+      PagesNear(
+        scroll: scroll,
+        lines: LinesHeld(
+          opened: opened, before: state.heldBefore, atStart: state.atStart, atEnd: state.atEnd)
+      ) { near in
+        if let top = near.top { showEarlier(laidOut: top) }
+        if let foot = near.foot { askLater(laidOut: foot) }
+      }
     }
     // Going on under the composer and the keyboard, which SwiftUI keeps
     // at the chat's foot, and under the header and the pins at its top,
@@ -1196,8 +1202,9 @@ struct ChatScreen: View {
   }
 
   /// Lays out a page more of the earlier lines the device holds, at once,
-  /// as the reader scrolls near the top. With none held, the page the
-  /// server was asked for ahead (`askAhead`) is laid out as it arrives.
+  /// as the reader scrolls near the top (ChatScroll.near). With none held,
+  /// the page the server was asked for ahead (`askAhead`) is laid out as it
+  /// arrives.
   /// Only once the lines read are those laid out (`laidOut`, the first in
   /// place), not while the page before them is still going in.
   private func showEarlier(laidOut: String?) {
@@ -1226,7 +1233,7 @@ struct ChatScreen: View {
   }
 
   /// The page after the lines laid out is to be asked as their foot nears
-  /// (ChatLinesView's `onNearFoot`), the same as the page before them as
+  /// (ChatScroll.near), the same as the page before them as
   /// their top nears: once the lines read are those laid out (`laidOut`,
   /// the last in place), not while a page after them is still going in.
   private func askLater(laidOut: String?) {
@@ -1262,7 +1269,7 @@ struct ChatScreen: View {
       toLatestRun(stoppingAtUnread: false)
       return
     }
-    toLatest(animated: !reduceMotion)
+    scroller.toLatest(animated: !reduceMotion)
   }
 
   /// To the latest when the lines laid out stop short of it: the latest
@@ -1283,8 +1290,8 @@ struct ChatScreen: View {
           withAnimation(.easeOut(duration: 0.15)) { placed = true }
         }
       } else {
+        // Laid out anew, at their foot (ChatLinesView), following them.
         following = true
-        toLatest()
         placed = true
       }
     }
@@ -1372,7 +1379,7 @@ struct ChatScreen: View {
         return
       }
       following = true
-      toLatest(animated: true)
+      scroller.toLatest(animated: true)
       return
     }
     scroller.show(ChatItem.unread.id, at: .top, animated: true) {
@@ -1608,11 +1615,6 @@ struct ChatScreen: View {
     decide.day = day.key
     write(.decide(decide))
     say("\(day.fullText)に決めました")
-  }
-
-  /// To the foot, once what asked has been laid out.
-  private func toLatest(animated: Bool = false) {
-    Task { @MainActor in scroller.toLatest(animated: animated) }
   }
 
   /// The composer's send: a word still being converted goes too,
@@ -1854,13 +1856,13 @@ struct ChatScreen: View {
       .environment(\.look, look))
   }
 
-  /// Gives the line back its bubble in the chat, then takes the overlay
-  /// away once the chat has drawn it, so the bubble never blinks out
-  /// between the two.
+  /// Gives the line back its bubble in the chat, and takes the overlay
+  /// away as the chat draws it.
   private func closeActions() {
+    let spot = acting?.spot
     acting = nil
     marks.lifted = nil
-    OverlayWindow.shared.hide(after: .milliseconds(50))
+    OverlayWindow.shared.hide(once: spot)
   }
 
   /// Puts the reader's `emoji` on the line, or takes it back if it was
@@ -1952,6 +1954,38 @@ private struct PageAfter: Hashable {
 private struct LinesEnds: Equatable {
   let first: Int64?
   let last: Int64?
+}
+
+/// What of the lines the device holds beyond those laid out the chat can
+/// go on to, for the page beyond an end once the reader nears it.
+private struct LinesHeld: Hashable {
+  /// The chat has opened on its place: none before, which the lines laid
+  /// out then would push away.
+  let opened: Bool
+  /// How many lines are held before the first laid out.
+  let before: Int
+  let atStart: Bool
+  let atEnd: Bool
+}
+
+/// Asks for the page beyond an end of the lines laid out as the reader
+/// scrolls near it (ChatScroll.near), and as more lines are held there
+/// while they are near, so the reader scrolling on finds it laid out
+/// already; apart from the screen, which reading `near` would draw again.
+private struct PagesNear: View {
+  let scroll: ChatScroll
+  let lines: LinesHeld
+  let ask: (NearEnds) -> Void
+
+  var body: some View {
+    Color.clear
+      .onChange(of: PagesNearKey(near: scroll.near, lines: lines)) { _, key in ask(key.near) }
+  }
+}
+
+private struct PagesNearKey: Hashable {
+  let near: NearEnds
+  let lines: LinesHeld
 }
 
 /// Reads the chat on to the latest line whose foot is on the screen, as

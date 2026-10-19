@@ -20,6 +20,11 @@ final class ChatScroll {
   /// The lines whose foot is on the screen, by item id: read on to the
   /// latest of them.
   var seen: [String] = []
+  /// The first and last lines laid out, each while the lines are scrolled
+  /// within Chat.prefetchScreens of it: the next page beyond it is to be
+  /// laid out or asked for. By item id, as the chat's own lines may be
+  /// ahead of those in place.
+  var near = NearEnds()
   /// What is under the lines at the chat's foot, the composer and the
   /// keyboard: read by the lines alone, so the chat is not drawn again for
   /// every step of the keyboard pulled down.
@@ -135,6 +140,12 @@ struct ScrollPlace: Hashable {
   var away = false
   /// ここから新着 is below the top of the screen, where ↓ goes first.
   var unreadBelow = false
+}
+
+/// The lines laid out whose end is near (ChatScroll.near).
+struct NearEnds: Hashable {
+  var top: String?
+  var foot: String?
 }
 
 struct ReadKey: Hashable {
