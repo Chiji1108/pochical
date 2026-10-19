@@ -194,10 +194,9 @@ struct LineView: View {
   @Environment(\.openURL) private var openURL
   /// What its words take to draw, kept while its row looks the same.
   @Environment(\.keptDrawing) private var kept
-  /// Opens its reactions and menu for VoiceOver, from its bubble.
-  @State private var opener = MenuOpener()
-  /// Opens each of an album's photos' menus for VoiceOver.
-  @State private var openers = MenuOpeners()
+  /// The menu VoiceOver asked last to open: the line's, or one of its
+  /// album's photos'.
+  @State private var menuAsk: MenuAsk?
 
   private static var avatar: CGFloat { 32 }
 
@@ -219,6 +218,12 @@ struct LineView: View {
     let drawing = LineDrawing(text: text, names: names)
     kept.drawing = drawing
     return drawing
+  }
+
+  /// VoiceOver's ask to open the menu of `lineID`, the line or one of its
+  /// album's photos, for that one's bubble alone.
+  private func asked(_ lineID: String) -> MenuAsk? {
+    menuAsk?.lineID == lineID ? menuAsk : nil
   }
 
   private func act(_ action: LineAction, on lineID: String? = nil) {
@@ -266,7 +271,7 @@ struct LineView: View {
                   .opacity(seq != nil && marks?.ringed == seq ? 1 : 0)
               }
               // A photo opens large at a tap; its menu is the long press's.
-              .heldForActions(lifted: marks?.lifted == lineID, opener: opener) {
+              .heldForActions(lifted: marks?.lifted == lineID, asked: asked(lineID)) {
                 if photo != nil, !waiting { act(.openPhoto) }
               } onActions: {
                 act(.hold(spot: $0, finger: $1, link: $2))
@@ -335,8 +340,7 @@ struct LineView: View {
   }
 
   private func albumPhoto(_ cell: AlbumPhoto, at index: Int, size: CGSize) -> some View {
-    let opener = openers(cell.lineID)
-    return PhotoLine(
+    PhotoLine(
       photo: cell.photo, groupID: groupID, waiting: cell.waiting && !cell.failed,
       onStop: { act(.stopSending, on: cell.lineID) }, cell: size
     )
@@ -352,12 +356,12 @@ struct LineView: View {
         .opacity(cell.seq != nil && marks?.ringed == cell.seq ? 1 : 0)
         .allowsHitTesting(false)
     }
-    .heldForActions(lifted: marks?.lifted == cell.lineID, opener: opener) {
+    .heldForActions(lifted: marks?.lifted == cell.lineID, asked: asked(cell.lineID)) {
       if !cell.waiting { act(.openPhoto, on: cell.lineID) }
     } onActions: {
       act(.hold(spot: $0, finger: $1, link: $2), on: cell.lineID)
     }
-    .modifier(OptionalVoice(voice: voice(of: voiced(cell, at: index), opener: opener)))
+    .modifier(OptionalVoice(voice: voice(of: voiced(cell, at: index))))
   }
 
   /// What the line is drawn as, alone: its bubble lifted over the chat
@@ -430,18 +434,19 @@ struct LineView: View {
 
   /// VoiceOver's line, where `here`.
   private func voice(_ here: Bool) -> OptionalVoice {
-    OptionalVoice(voice: here ? voice(of: voiced, opener: opener) : nil)
+    OptionalVoice(voice: here ? voice(of: voiced) : nil)
   }
 
-  private func voice(of line: Voiced, opener: MenuOpener) -> LineVoice {
+  private func voice(of line: Voiced) -> LineVoice {
     let people =
       countedReactions || line.reactions.isEmpty
       ? nil : reactionPeople(line.reactions, nameOf: nameOf)
     let opensPhoto = line.photo != nil && !line.waiting
     return LineVoice(
       label: voiceLabel(of: line), people: people, isImage: line.photo != nil,
-      activate: opensPhoto ? { act(.openPhoto, on: line.lineID) } : { opener.open?() },
-      actions: voiceActions(of: line, opener: opener))
+      activate: opensPhoto
+        ? { act(.openPhoto, on: line.lineID) } : { menuAsk = MenuAsk(line.lineID) },
+      actions: voiceActions(of: line))
   }
 
   /// Who wrote it, what, when, and how it stands, as VoiceOver reads it.
@@ -488,7 +493,7 @@ struct LineView: View {
   /// VoiceOver's actions: what to do with it not sent first, then its menu
   /// as the long press opens it (返信 first, as the swipe does), and the
   /// rest of its parts.
-  private func voiceActions(of line: Voiced, opener: MenuOpener) -> [VoiceAction] {
+  private func voiceActions(of line: Voiced) -> [VoiceAction] {
     let id = line.lineID
     var actions: [VoiceAction] = []
     if line.failed {
@@ -504,7 +509,7 @@ struct LineView: View {
       actions.append(VoiceAction(title: title) { act(.menu(title), on: id) })
     }
     if !line.waiting {
-      actions.append(VoiceAction(title: "リアクション") { opener.open?() })
+      actions.append(VoiceAction(title: "リアクション") { menuAsk = MenuAsk(id) })
       for reaction in line.reactions {
         let on = reaction.userIDs.contains(meID ?? "")
         actions.append(
