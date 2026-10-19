@@ -1364,9 +1364,34 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     let recalls = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
     #expect(recalls.map(\.recall.sendOpID) == [opID])
     #expect(recalls.map(\.recall.threadID) == [groupThread])
+    // A line of words carries no photo to delete.
+    #expect(recalls.map(\.recall.photoID) == [""])
     // Should it come meanwhile, it shows taken back already.
     try GroupSync.take([line(7, "まちがい", op: opID)], of: "g", in: db)
     #expect(try Chats.state(of: groupThread, in: "g", db: db).lines.map(\.unsent) == [true])
+  }
+}
+
+@Test func eachPhotoOfAnAlbumTakenBackAfterItWentOutNamesItsOwnPhoto() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    for id in ["p1", "p2"] {
+      var photo = Pochical_V1_ChatSend()
+      photo.threadID = groupThread
+      photo.photo.id = id
+      photo.album = "a1"
+      try Chats.edit(.send(photo), in: "g", now: 1, db: db)
+    }
+    let frame = try Chats.frames(of: "g", after: 0, in: db).frames[0]
+    let sent = try Chats.goOut(frame.chatEdits.edits, in: db)
+
+    for edit in sent.reversed() {
+      try Chats.takeBack(edit.opID, in: db)
+    }
+    // The group deletes each photo with its line, or at once without it.
+    let recalls = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
+    #expect(recalls.map(\.recall.sendOpID) == sent.reversed().map(\.opID))
+    #expect(recalls.map(\.recall.photoID) == ["p2", "p1"])
   }
 }
 
