@@ -1,17 +1,11 @@
-import type { ChatDraft, Message } from "../components/design-group-data";
+import type { Chat, Message } from "../components/design-group-data";
 
 // A person's chat with the people who make Pochical (design-support-chat),
-// kept with their account like their own data: the lines, and how many of
-// the answers they have not read yet, which mark the way into it and the
-// settings tab. Its lines are a chat's messages, written by you ("me") or
-// Pochical's people ("support"); and what is being written, kept as the
-// chat is left, as a group chat keeps it (spec/chat.md, Drafts).
-
-export type SupportThread = {
-  lines: Message[];
-  unread: number;
-  draft?: ChatDraft;
-};
+// kept with their account like their own data and as a group's chats are:
+// its lines, written by you ("me") or Pochical's people ("support"); how
+// many of the answers they have not read yet, which mark the way into it
+// and the settings tab; and what is being written, kept as the chat is
+// left (spec/chat.md, Drafts).
 
 export type SupportSample = "none" | "answered";
 
@@ -34,8 +28,8 @@ const answeredLines: Message[] = [
 ];
 
 // Nothing said yet, or an answer that has just come and is not read.
-export function supportThreadOf(sample: SupportSample): SupportThread {
+export function supportChatOf(sample: SupportSample): Chat {
   return sample === "answered"
-    ? { lines: answeredLines, unread: 1 }
-    : { lines: [], unread: 0 };
+    ? { messages: answeredLines, unread: 1 }
+    : { messages: [], unread: 0 };
 }

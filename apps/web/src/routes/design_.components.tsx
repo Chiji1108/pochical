@@ -110,13 +110,13 @@ import {
 } from "../components/shift-mark";
 import type { OffLookId, ShiftMarkStyle } from "../components/shift-mark";
 import { sampleRosterPhoto } from "../lib/design-sample-photos";
-import { supportThreadOf } from "../lib/design-support";
+import { supportChatOf } from "../lib/design-support";
 import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import { pageMeta } from "../lib/site";
 
 // The sample person the tab bar counts unread for: their groups' chats
 // and an answer from support, so both counts show.
-const tabBarPerson = createUserStore({ support: supportThreadOf("answered") });
+const tabBarPerson = createUserStore({ support: supportChatOf("answered") });
 
 // The two kinds of toast, one above the other.
 const toastKinds = css({

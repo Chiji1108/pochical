@@ -22,7 +22,7 @@ import { initialDesignSchedule, patternSets } from "../lib/design-days";
 import type { RepeatRule } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
 import { presetList } from "../lib/design-patterns";
-import { supportThreadOf } from "../lib/design-support";
+import { supportChatOf } from "../lib/design-support";
 import {
   createUserStore,
   sampleProfile,
@@ -93,7 +93,7 @@ function makePerson(
     ...(profileSample === "none" ? { profile: noProfile } : {}),
     rules: sampleRules(repeatSample),
     schedule: sample === "empty" ? {} : initialDesignSchedule(),
-    support: supportThreadOf(supportSample),
+    support: supportChatOf(supportSample),
   });
 }
 
@@ -216,7 +216,7 @@ function DemoPage() {
               }
               if (key === "supportSample") {
                 person.setState({
-                  support: supportThreadOf(
+                  support: supportChatOf(
                     value as DesignVariants["supportSample"]
                   ),
                 });

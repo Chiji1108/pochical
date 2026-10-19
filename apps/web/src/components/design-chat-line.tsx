@@ -55,8 +55,8 @@ import { ToastContext } from "./design-toast";
 // long), its time and its reactions.
 
 // What every line of a chat shares: who is in it, who wrote what, and
-// where a tap in it goes. ChatPage gives it once for all its lines, and so
-// does the support chat, with Pochical's people as its other member.
+// where a tap in it goes. ChatScreen gives it once for all its lines, in a
+// group's chats and the support chat alike.
 export type ChatScope = {
   // Who is in the chat now: a mention or a face opens only theirs.
   members: Member[];

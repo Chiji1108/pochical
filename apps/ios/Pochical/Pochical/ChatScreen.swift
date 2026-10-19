@@ -8,7 +8,7 @@ import SwiftUI
 import SwiftUINavigation
 import UIKit
 
-/// A chat of a place (/design's ChatPage): a group's 全体チャット or a
+/// A chat of a place (/design's ChatScreen): a group's 全体チャット or a
 /// one-to-one chat, or the chat with Pochical's people, each doing what
 /// its place's rules let it (spec/chat.md, Where a chat is kept). Others'
 /// lines on the left with their face, and in the
