@@ -51,9 +51,9 @@ struct MessageAction: Identifiable {
 @MainActor @Observable final class KeyboardTop {
   static let shared = KeyboardTop()
   private(set) var y: CGFloat?
-  /// The keyboard's last move, as the system animates it: when it ends,
-  /// and its curve, for what moves with it outside that animation.
-  @ObservationIgnored private(set) var move: (ends: CFTimeInterval, curve: UIView.AnimationOptions)?
+  /// The keyboard's last move as the system animates it, for what moves
+  /// with it to go by the same animation.
+  @ObservationIgnored private(set) var move: KeyboardMove?
   private var watching = false
 
   func watch() {
@@ -68,7 +68,9 @@ struct MessageAction: Identifiable {
       let duration = info?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0
       let curve = info?[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt ?? 0
       MainActor.assumeIsolated {
-        self.move = (CACurrentMediaTime() + duration, UIView.AnimationOptions(rawValue: curve << 16))
+        self.move = KeyboardMove(
+          starts: CACurrentMediaTime(), duration: duration,
+          curve: UIView.AnimationOptions(rawValue: curve << 16))
         self.take(end)
       }
     }
@@ -86,6 +88,16 @@ struct MessageAction: Identifiable {
     }
     y = end.minY
   }
+}
+
+/// One move of the keyboard: when it began, how long it takes, and its
+/// curve, as its notification gives them.
+struct KeyboardMove: Equatable {
+  let starts: CFTimeInterval
+  let duration: Double
+  let curve: UIView.AnimationOptions
+
+  var ends: CFTimeInterval { starts + duration }
 }
 
 /// Where a held line's bubble is on the screen, kept while its menu is
