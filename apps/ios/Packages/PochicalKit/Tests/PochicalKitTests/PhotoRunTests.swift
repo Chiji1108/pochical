@@ -1,4 +1,5 @@
 import Foundation
+import PochicalProto
 import Testing
 
 @testable import PochicalKit
@@ -99,7 +100,10 @@ private func photoRun(_ test: PhotoVectors.Run) {
     if let line = given.line { run?.added(item(line)) }
     if let gone = given.gone { run?.gone(gone.seq, wasPhoto: gone.wasPhoto) }
     if let lines = given.lines {
-      run?.follow(lines.map { ($0.seq, $0.photo ? item($0.seq) : nil) })
+      run?.follow(
+        PhotoLines(
+          latest: lines.map(\.seq).max() ?? 0,
+          lines: lines.map { PhotoLines.Line(seq: $0.seq, item: $0.photo ? item($0.seq) : nil) }))
     }
     if given.reconnected == true { run?.reconnected() }
     guard var now = run else {
@@ -112,6 +116,60 @@ private func photoRun(_ test: PhotoVectors.Run) {
       seqs: now.photos.map(\.seq), offset: now.offset, total: now.total, shown: now.shown,
       asks: asks)
     #expect(got == step.expected, "step \(number)")
+  }
+}
+
+/// A line of the place's own chat as the group sends it: a photo when
+/// `photo` names one, else words.
+private func chatLine(
+  _ seq: UInt64, cursor: UInt64? = nil, photo: String? = nil, author: String = "u1",
+  unsent: Bool = false
+) -> Pochical_V1_Change {
+  var change = Pochical_V1_Change()
+  change.cursor = cursor ?? seq
+  change.chatLine.threadID = groupThread
+  change.chatLine.seq = seq
+  change.chatLine.authorID = author
+  change.chatLine.opID = "op\(seq)"
+  change.chatLine.unsent = unsent
+  if let photo {
+    change.chatLine.photo.id = photo
+    change.chatLine.photo.width = 1
+    change.chatLine.photo.height = 1
+  } else if !unsent {
+    change.chatLine.text = "words"
+  }
+  return change
+}
+
+@Test func thePhotoOpenedLargeFollowsThePhotosOnTheDevice() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    // Words at 2 and 5, and at 3 a photo of someone the reader blocked.
+    try GroupSync.take(
+      [
+        chatLine(1, photo: "p1"), chatLine(2), chatLine(3, photo: "p3", author: "blocked"),
+        chatLine(4, photo: "p4"), chatLine(5),
+      ], of: "g", in: db)
+    let lines = { try Chats.photoLines(of: "g", thread: groupThread, blocked: ["blocked"], in: db) }
+    let first = try lines()
+    #expect(first.latest == 5)
+    #expect(first.lines.map(\.seq) == [1, 3, 4])
+    #expect(first.lines.compactMap(\.item?.seq) == [1, 4])
+
+    var run = PhotoRun(held: first.lines.compactMap(\.item), tapped: 4)
+    run.follow(first)
+    run.take(
+      ChatPhotosPage(
+        threadID: groupThread, seq: 1, after: false, photos: [], offset: 0, total: 2))
+    // 1 taken back, and a photo sent at 6.
+    try GroupSync.take(
+      [chatLine(1, cursor: 6, unsent: true), chatLine(6, cursor: 7, photo: "p6")], of: "g",
+      in: db)
+    run.follow(try lines())
+    #expect(run.photos.map(\.seq) == [4, 6])
+    #expect(run.total == 2)
+    #expect(run.shown == 4)
   }
 }
 

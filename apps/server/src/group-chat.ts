@@ -17,6 +17,7 @@ import {
   lte,
   max,
   ne,
+  notInArray,
   or,
   sql,
 } from "drizzle-orm";
@@ -25,7 +26,6 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import type { Alert } from "./apns";
 import { MENTION, mentionOf, previewLinkOf } from "./chat-links";
-import { photoPage, seenPhoto } from "./chat-photos";
 import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
 import { isDate } from "./day-values";
@@ -510,6 +510,10 @@ export const moveReadMark = (
   return readMarkChange(row);
 };
 
+/** The lines not kept from `userId`, as one-to-one lines from someone they had blocked are. */
+const notHiddenFrom = (userId: string): SQL | undefined =>
+  or(isNull(chatLines.hiddenFrom), ne(chatLines.hiddenFrom, userId));
+
 /** How far `userId` has read the chat: 0 for none. */
 export const readMarkOf = (
   db: DrizzleSqliteDODatabase,
@@ -548,7 +552,7 @@ export const unreadCount = (
         // Lines from the app are told, not counted.
         isNull(chatLines.notice),
         // Lines kept from them, from someone they blocked, never count.
-        or(isNull(chatLines.hiddenFrom), ne(chatLines.hiddenFrom, userId))
+        notHiddenFrom(userId)
       )
     )
     .get();
@@ -1197,17 +1201,52 @@ export const chatPage = (
 };
 
 /**
- * A page of the chat's photos alone (ChatPhotosRequest): up to
- * chatRules.photoPageSize of those the reader sees nearest `seq`, before
- * it or after it, oldest first; how many come before them, and how many
- * the chat holds for the reader.
+ * The chat's photos the reader sees among them (spec/vectors/chat-photos.json,
+ * seen): not a line taken back or hidden from them, nor in the place's own
+ * chat one of a member they blocked, whose lines fold away there.
+ */
+const seenPhotos = (
+  db: DrizzleSqliteDODatabase,
+  userId: string,
+  threadId: string
+): SQL | undefined =>
+  and(
+    eq(chatLines.threadId, threadId),
+    isNotNull(chatLines.photo),
+    eq(chatLines.unsent, false),
+    notHiddenFrom(userId),
+    threadId === GROUP_THREAD
+      ? notInArray(
+          chatLines.authorId,
+          db
+            .select({ blockedId: memberBlocks.blockedId })
+            .from(memberBlocks)
+            .where(eq(memberBlocks.userId, userId))
+        )
+      : undefined
+  );
+
+/** The lines on the side of `seq` a ChatPhotosRequest asks for, all of them before 0. */
+const askedSide = (seq: number, after: boolean): SQL | undefined => {
+  if (after) {
+    return gt(chatLines.seq, seq);
+  }
+  return seq === 0 ? undefined : lt(chatLines.seq, seq);
+};
+
+/**
+ * A page of the chat's photos alone (ChatPhotosRequest): up to `size` of
+ * those the reader sees nearest `seq`, before it or after it, oldest first;
+ * how many come before them, and how many the chat holds for the reader
+ * (spec/vectors/chat-photos.json, page).
  */
 export const photosPage = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   threadId: string,
   seq: bigint,
-  after: boolean
+  after: boolean,
+  size: number = chatRules.photoPageSize
 ): {
   photos: MessageInitShape<typeof ChatPhotoEntrySchema>[];
   offset: number;
@@ -1216,61 +1255,49 @@ export const photosPage = (
   if (!mayRead(threadId, userId)) {
     return { offset: 0, photos: [], total: 0 };
   }
-  const ownChat = threadId === GROUP_THREAD;
-  const blocked = new Set(
-    ownChat
-      ? db
-          .select({ blockedId: memberBlocks.blockedId })
-          .from(memberBlocks)
-          .where(eq(memberBlocks.userId, userId))
-          .all()
-          .map(({ blockedId }) => blockedId)
-      : []
-  );
-  const seen = db
+  const seen = seenPhotos(db, userId, threadId);
+  const side = askedSide(Number(seq), after);
+  const counted = db
+    .select({
+      onSide:
+        side === undefined ? count() : sql<number>`coalesce(sum(${side}), 0)`,
+      total: count(),
+    })
+    .from(chatLines)
+    .where(seen)
+    .get() ?? { onSide: 0, total: 0 };
+  const nearest = db
     .select({
       authorId: chatLines.authorId,
-      hiddenFrom: chatLines.hiddenFrom,
       photo: chatLines.photo,
       sentAt: chatLines.sentAt,
       seq: chatLines.seq,
-      unsent: chatLines.unsent,
     })
     .from(chatLines)
-    .where(and(eq(chatLines.threadId, threadId), isNotNull(chatLines.photo)))
-    .orderBy(asc(chatLines.seq))
-    .all()
-    .filter((row) =>
-      seenPhoto({
-        hidden: row.hiddenFrom === userId,
-        ownChat,
-        photo: row.photo !== null,
-        unsent: row.unsent,
-        writerBlocked: blocked.has(row.authorId),
-      })
-    );
-  const { from, to } = photoPage(
-    seen.map((row) => row.seq),
-    Number(seq),
-    after
-  );
+    .where(and(seen, side))
+    .orderBy(after ? asc(chatLines.seq) : desc(chatLines.seq))
+    .limit(size)
+    .all();
+  const page = after ? nearest : nearest.toReversed();
   return {
-    offset: from,
-    photos: seen
-      .slice(from, to)
-      .flatMap(({ authorId, photo, sentAt, ...row }) =>
-        photo === null
-          ? []
-          : [
-              {
-                authorId,
-                photo: { ...photo, thumbHash: sentThumbHash(photo.thumbHash) },
-                sentAtMs: BigInt(sentAt.getTime()),
-                seq: BigInt(row.seq),
-              },
-            ]
-      ),
-    total: seen.length,
+    // After `seq`, those up to it come before; before it, those before it
+    // the page leaves out.
+    offset: after
+      ? counted.total - counted.onSide
+      : counted.onSide - page.length,
+    photos: page.flatMap(({ authorId, photo, sentAt, seq: lineSeq }) =>
+      photo === null
+        ? []
+        : [
+            {
+              authorId,
+              photo: { ...photo, thumbHash: sentThumbHash(photo.thumbHash) },
+              sentAtMs: BigInt(sentAt.getTime()),
+              seq: BigInt(lineSeq),
+            },
+          ]
+    ),
+    total: counted.total,
   };
 };
 

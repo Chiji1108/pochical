@@ -100,6 +100,7 @@ struct PhotoPager {
           let lines = ValueObservation.tracking { db in
             try Chats.photoLines(of: placeID, thread: threadID, blocked: blocked, in: db)
           }
+          .removeDuplicates()
           do {
             for try await now in lines.values(in: database) {
               change { $0.follow(now) }
