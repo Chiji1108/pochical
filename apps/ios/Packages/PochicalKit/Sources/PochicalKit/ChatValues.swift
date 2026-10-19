@@ -69,6 +69,14 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   public var album = ""
   public var id: Int64 { seq }
 
+  /// Whose line it is to `me`, for what is unread: the app's notices and
+  /// a line never delivered to the reader are neither the reader's nor
+  /// others' to count (`spec/vectors/chat.json`, writer).
+  public func writer(for me: String) -> LineWriter {
+    if !noticeJSON.isEmpty || hidden { return .app }
+    return authorID == me ? .me : .others
+  }
+
   /// What happened to the group, for a line from the app (spec/chat.md,
   /// Notices).
   public var notice: LineNotice? {
@@ -641,12 +649,7 @@ public struct ChatState: Hashable, Sendable {
 
   /// How many of others' lines `me` has not read yet.
   public func unread(by me: String) -> Int {
-    // The app's notices are told, not counted.
-    let writers = lines.map { line in
-      (seq: line.seq, writer: line.authorID == me ? LineWriter.me
-        : line.notice != nil ? .app : .others)
-    }
-    return unreadCount(writers, read: lastRead(by: me))
+    unreadCount(lines.map { ($0.seq, $0.writer(for: me)) }, read: lastRead(by: me))
   }
 }
 
@@ -1038,9 +1041,8 @@ extension Chats {
     let read = max(mark, ownRead)
     return try ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq > read
-        && $0.authorID.neq(me) && !$0.hidden && $0.noticeJSON.eq("")
     }
-    .select(\.text).fetchAll(db)
+    .fetchAll(db).filter { $0.writer(for: me) == .others }.map(\.text)
   }
 
   /// The member's newest read waiting to be sent in each of the group's

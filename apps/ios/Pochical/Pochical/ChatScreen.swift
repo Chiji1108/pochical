@@ -1210,8 +1210,7 @@ struct ChatScreen: View {
   private func open() async {
     if let me = meID {
       let lines = chat.state.lines
-      // The app's notices are never unread, as one's own lines are not.
-      let writers = lines.map { $0.authorID == me || $0.notice != nil ? LineWriter.me : .others }
+      let writers = lines.map { $0.writer(for: me) }
       if let index = firstUnread(writers, unread: chat.state.unread(by: me)) {
         unreadFrom = lines[index].seq
       }
@@ -1241,11 +1240,7 @@ struct ChatScreen: View {
   private func unreadComing(after latest: Int64?) -> ChatLineRow? {
     guard let me = meID else { return nil }
     let state = chat.state
-    // A line never delivered to the reader counts as the app's, passed over.
-    let writers = state.lines.map { line in
-      (seq: line.seq, writer: line.authorID == me ? LineWriter.me
-        : line.notice != nil || line.hidden ? .app : .others)
-    }
+    let writers = state.lines.map { ($0.seq, $0.writer(for: me)) }
     let seq = firstComing(writers, after: latest ?? 0, read: state.lastRead(by: me))
     return seq.flatMap { seq in state.lines.first { $0.seq == seq } }
   }
