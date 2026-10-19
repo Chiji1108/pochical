@@ -328,8 +328,8 @@ export const supportRelay = sqliteTable(
     failures: integer().notNull().default(0),
     id: integer().primaryKey(),
     // The line being posted to Slack, since its first try, until its
-    // message is kept or Slack's answer says it was not posted: a retry
-    // after an answer lost looks for it in Slack before posting again.
+    // message is kept: a retry looks for it in Slack before posting
+    // again, and a line taken back before it was kept finds it there.
     postingSeq: integer("posting_seq"),
     postingSince: integer("posting_since", { mode: "timestamp_ms" }),
   },

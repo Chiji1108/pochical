@@ -26,6 +26,7 @@ import {
 import { overLimit } from "./rate-limits";
 import { retryWait } from "./retry-wait";
 import {
+  findStaffLine,
   SlackRefusedError,
   tellStaffOfAnswer,
   tellStaffOfLine,
@@ -183,18 +184,30 @@ const keepTold = (
 };
 
 /**
+ * Since when a try of the line at `seq` may have posted it to Slack, its
+ * answer lost, for the next to look for it there first; null when none
+ * has tried.
+ */
+const postingSince = (
+  db: DrizzleSqliteDODatabase,
+  seq: number
+): Date | null => {
+  const relay = db.select().from(supportRelay).get();
+  return relay?.postingSeq === seq ? (relay.postingSince ?? null) : null;
+};
+
+/**
  * Marks the line at `seq` as being posted to Slack, before its first
- * call: a try that ends with no word of Slack taking it (its answer lost,
- * the DO stopped) leaves the mark. Since when an earlier try of the line
- * may have posted it, for this one to look for it in Slack first, or null.
+ * call, until its message is kept: any try may have posted it, whatever
+ * Slack answered of the call it failed on (a photo refused at its upload
+ * after an earlier try shared it, an answer lost), and only a look in
+ * Slack says. Since when an earlier try may have (postingSince).
  */
 const startPosting = (
   db: DrizzleSqliteDODatabase,
   seq: number
 ): Date | null => {
-  const relay = db.select().from(supportRelay).get();
-  const unsureSince =
-    relay?.postingSeq === seq ? (relay.postingSince ?? null) : null;
+  const unsureSince = postingSince(db, seq);
   const posting = { postingSeq: seq, postingSince: unsureSince ?? new Date() };
   db.insert(supportRelay)
     .values({ cursor: 0, id: 1, ...posting })
@@ -203,12 +216,43 @@ const startPosting = (
   return unsureSince;
 };
 
-/** The line being posted settled: kept, or surely not posted. */
+/** The line being posted settled: its message, or none, kept. */
 const stopPosting = (db: DrizzleSqliteDODatabase): void => {
   db.update(supportRelay)
     .set({ postingSeq: null, postingSince: null })
     .where(eq(supportRelay.id, 1))
     .run();
+};
+
+/**
+ * The message a line not kept yet has in Slack: posted now, the user's
+ * line or an answer written on the admin site; or, when it is not to be
+ * posted (taken back, or past the user's limit), the one an earlier try
+ * may have posted with Slack's answer lost, found there. Null for none.
+ */
+const messageOf = async (
+  env: Env,
+  db: DrizzleSqliteDODatabase,
+  line: SupportLine
+): Promise<string | null> => {
+  // Past the user's limit their lines stay in the chat and on the admin
+  // pages, but are not posted, so no one floods the channel.
+  const posts =
+    !line.unsent &&
+    (line.fromPochical || !(await overLimit(env.SUPPORT_LIMIT, line.userId)));
+  if (!posts) {
+    const unsureSince = postingSince(db, line.seq);
+    return unsureSince === null
+      ? null
+      : await findStaffLine(env, line, unsureSince);
+  }
+  const unsureSince = startPosting(db, line.seq);
+  if (line.fromPochical) {
+    return await tellStaffOfAnswer(env, line, unsureSince);
+  }
+  const [repliedTo = null] =
+    line.replyTo === null ? [] : linesAtSeqs(db, line.userId, [line.replyTo]);
+  return await tellStaffOfLine(env, line, repliedTo, unsureSince);
 };
 
 /**
@@ -236,21 +280,8 @@ const relayLine = async (
     toldReactions: [],
     toldUnsent: false,
   };
-  if (kept === undefined && !line.unsent) {
-    const [repliedTo = null] =
-      line.replyTo === null ? [] : linesAtSeqs(db, line.userId, [line.replyTo]);
-    // Past the user's limit their lines stay in the chat and on the admin
-    // pages, but are not posted, so no one floods the channel.
-    const flooding =
-      !line.fromPochical && (await overLimit(env.SUPPORT_LIMIT, line.userId));
-    let ts: string | null = null;
-    if (line.fromPochical || !flooding) {
-      const unsureSince = startPosting(db, line.seq);
-      ts = line.fromPochical
-        ? await tellStaffOfAnswer(env, line, unsureSince)
-        : await tellStaffOfLine(env, line, repliedTo, unsureSince);
-    }
-    told = { ...told, slackTs: ts };
+  if (kept === undefined) {
+    told = { ...told, slackTs: await messageOf(env, db, line) };
     // Kept at once, before anything that may fail, so a retry never
     // posts the line again: a kept line is settled, its message or none
     // when it is not to be posted (past the limit, say).
@@ -267,7 +298,7 @@ const relayLine = async (
       .onConflictDoNothing();
   }
   if (line.unsent && !told.toldUnsent) {
-    if (kept !== undefined && !line.fromPochical && told.slackTs !== null) {
+    if (!line.fromPochical && told.slackTs !== null) {
       await tellStaffOfUnsend(env, line, told.slackTs);
     }
     told = { ...told, toldUnsent: true };
@@ -350,9 +381,6 @@ const relayFailed = async (
       target: supportRelay.id,
     })
     .run();
-  if (error instanceof SlackRefusedError && error.notPosted) {
-    stopPosting(db);
-  }
   const refusal = refusalOf(error);
   const asked = refusal.kind === "passing" ? (refusal.afterMs ?? 0) : 0;
   const waitMs = Math.max(
