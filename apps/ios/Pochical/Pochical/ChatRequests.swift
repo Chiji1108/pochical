@@ -25,6 +25,36 @@ struct ChatRequest: FetchKeyRequest, Hashable {
   }
 }
 
+/// The chat a screen shows, read for it alone for as long as the screen
+/// is there. SwiftUI makes a screen's state anew each time its parent
+/// draws and keeps only the first, so this reads nothing as it is made:
+/// the chat is read as the screen first draws, in that frame, and again
+/// as the database or the request changes. A read made with the screen
+/// (`@Fetch` given its request) was made again at each of those, and the
+/// request it began with kept being read beside the one laid out.
+@MainActor
+final class ChatFeed {
+  private var request: ChatRequest
+  private var fetch: Fetch<ChatRequest.Value>?
+
+  init(_ request: ChatRequest) {
+    self.request = request
+  }
+
+  var value: ChatRequest.Value {
+    if let fetch { return fetch.wrappedValue }
+    let made = Fetch(wrappedValue: ChatRequest.Value(), request)
+    fetch = made
+    return made.wrappedValue
+  }
+
+  /// Reads the chat again as `request` asks, and from then on.
+  func load(_ request: ChatRequest) async {
+    self.request = request
+    _ = try? await fetch?.load(request)
+  }
+}
+
 /// A chat's latest line and unread count for `me`, and everyone's names
 /// for its writer and mentions, read again as they change.
 struct ChatSummaryRequest: FetchKeyRequest, Hashable {
