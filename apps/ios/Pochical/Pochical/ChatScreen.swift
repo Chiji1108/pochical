@@ -189,14 +189,14 @@ struct ChatScreen: View {
       onNearTop: { showEarlier(laidOut: $0) }, dayOver: { dayOver($0, in: listed) },
       replySwipe: { replySwipe(byID[$0]) },
       onReply: { id in
-        if case .line(let line, _) = byID[id] { reply(to: line) }
+        if let line = answered(byID[id]) { reply(to: line) }
       },
       onNear: { prefetchPhotos(of: $0.compactMap { byID[$0] }) }
     )
     .background {
       ReadsSeen(
         scroll: scroll, reads: placed && scenePhase == .active,
-        seq: { seen in latestSeq(of: seen) }, read: { read(to: $0) })
+        seq: { seen in latestSeq(of: seen, in: listed) }, read: { read(to: $0) })
     }
     // Going on under the composer and the keyboard, which SwiftUI keeps
     // at the chat's foot, the lines told how much of them is under there.
@@ -515,12 +515,12 @@ struct ChatScreen: View {
       rows.append(LinesRow(id: ChatItemID.head, look: AnyHashable(ChatItemID.head)))
     }
     for item in listed {
+      // An album's quote is its first photo's.
+      let first = if case .album(let photos, _) = item { photos.first ?? item } else { item }
       var quote: LineQuote?
-      var pinned = false
-      if case .line(let line, _) = item {
+      if case .line(let line, _) = first {
         quote = line.replyTo.map(self.quote(of:))
-        pinned = pins.contains(line.seq)
-      } else if case .waiting(let line, _) = item {
+      } else if case .waiting(let line, _) = first {
         quote = line.replyTo.map(self.quote(of:))
       }
       // What the line shows of the person's own choices: its writer
@@ -528,14 +528,15 @@ struct ChatScreen: View {
       var blockedWriter = false
       var shownAnyway = false
       var unfoldedLine = false
-      if case .line(let line, _) = item {
+      if case .line(let line, _) = first {
         blockedWriter = blocked.contains(line.authorID)
         shownAnyway = shownBlocked.contains(line.seq)
         unfoldedLine = unfolded.contains(line.opID)
       }
       let look = RowLook(
         item: item, parted: item.startsRun && item.id != listed.first?.id,
-        showsTime: !timeless.contains(item.id), pinned: pinned, quote: quote,
+        showsTime: !timeless.contains(item.id), pinned: item.seqs.filter(pins.contains),
+        quote: quote,
         blockedWriter: blockedWriter, shownAnyway: shownAnyway, unfolded: unfoldedLine,
         common: common)
       rows.append(LinesRow(id: item.id, look: AnyHashable(look)))
@@ -601,23 +602,64 @@ struct ChatScreen: View {
       lastWriter = writer
       return starts
     }
-    for line in state.lines {
-      let starts = startsRun(
-        at: line.sentAtMs, writer: line.unsent || line.notice != nil ? nil : line.authorID)
-      if line.seq == unreadFrom {
-        items.append(.unread)
-      }
-      // A reply starts a run, as its quote begins it.
-      items.append(
-        .line(line, startsRun: starts || line.seq == unreadFrom || line.replyTo != nil))
-    }
+    var lines = state.lines.map { ChatItem.line($0, startsRun: false) }
     for var line in state.waiting {
       // Sent again: waiting from the tap, before the outbox is read again.
       if sendingAgain[line.opID] == line.madeAtMs { line.failed = false }
-      let starts = startsRun(at: line.madeAtMs, writer: meID)
-      items.append(.waiting(line, startsRun: starts || line.replyTo != nil))
+      lines.append(.waiting(line, startsRun: false))
+    }
+    // Photos sent at once as one item, by its first (spec/chat.md, Albums).
+    var albumOf: [String: [ChatItem]] = [:]
+    var inAlbums: Set<String> = []
+    let byID = Dictionary(lines.map { ($0.id, $0) }) { first, _ in first }
+    for album in albums(lines.compactMap(albumLine(of:))) {
+      albumOf[album[0]] = album.compactMap { byID[$0] }
+      inAlbums.formUnion(album.dropFirst())
+    }
+    for item in lines where !inAlbums.contains(item.id) {
+      let photos = albumOf[item.id]
+      // ここから新着 goes over the album it falls in.
+      let unread = unreadFrom.map { from in (photos ?? [item]).contains { $0.seqs.contains(from) } }
+        ?? false
+      let starts: Bool
+      let replies: Bool
+      switch item {
+      case .line(let line, _):
+        starts = startsRun(
+          at: line.sentAtMs, writer: line.unsent || line.notice != nil ? nil : line.authorID)
+        replies = line.replyTo != nil
+      case .waiting(let line, _):
+        starts = startsRun(at: line.madeAtMs, writer: meID)
+        replies = line.replyTo != nil
+      default: continue
+      }
+      if unread {
+        items.append(.unread)
+      }
+      // A reply starts a run, as its quote begins it.
+      let runs = starts || unread || replies
+      switch item {
+      case _ where photos != nil: items.append(.album(photos ?? [], startsRun: runs))
+      case .line(let line, _): items.append(.line(line, startsRun: runs))
+      case .waiting(let line, _): items.append(.waiting(line, startsRun: runs))
+      default: break
+      }
     }
     return items
+  }
+
+  /// A line as albums are found by: still a photo while it shows one, not
+  /// a line not shown or folded away.
+  private func albumLine(of item: ChatItem) -> AlbumLine<String>? {
+    switch item {
+    case .line(let line, _):
+      let shows = line.photo != nil && !line.unsent && !line.hidden && !folded(line)
+      return AlbumLine(id: item.id, writer: line.authorID, album: line.album, photo: shows)
+    case .waiting(let line, _):
+      return AlbumLine(
+        id: item.id, writer: meID ?? "", album: line.album, photo: line.photo != nil)
+    default: return nil
+    }
   }
 
   /// The lines whose time is left to the next (spec/chat.md, In a
@@ -626,13 +668,25 @@ struct ChatScreen: View {
   private func linesWithoutTime(_ items: [ChatItem]) -> Set<String> {
     var timeless: Set<String> = []
     for (item, next) in zip(items, items.dropFirst()) {
-      guard case .line(let line, _) = item, case .line(let after, let startsRun) = next,
-        !startsRun, !line.unsent, !after.unsent, line.notice == nil, after.notice == nil,
-        ChatTime.clock(line.sentAtMs) == ChatTime.clock(after.sentAtMs)
+      guard let time = sentAt(item, last: true), let after = sentAt(next, last: false),
+        !next.startsRun, ChatTime.clock(time) == ChatTime.clock(after)
       else { continue }
       timeless.insert(item.id)
     }
     return timeless
+  }
+
+  /// When a message the group took was sent, for its time to be left to
+  /// the next: an album's by its `last` photo or its first; nil for what
+  /// shows no time of its own (a notice, a line taken back or waiting).
+  private func sentAt(_ item: ChatItem, last: Bool) -> Int64? {
+    switch item {
+    case .line(let line, _):
+      line.unsent || line.notice != nil ? nil : line.sentAtMs
+    case .album(let photos, _):
+      (last ? photos.last : photos.first).flatMap { sentAt($0, last: last) }
+    default: nil
+    }
   }
 
   @ViewBuilder private func row(
@@ -688,6 +742,10 @@ struct ChatScreen: View {
       }
     case .waiting(let line, let startsRun):
       lineView(waiting: line, startsRun: startsRun, names: names)
+    case .album(let photos, let startsRun):
+      if let album = albumView(photos, startsRun: startsRun, showsTime: showsTime, names: names) {
+        album
+      }
     }
   }
 
@@ -729,6 +787,58 @@ struct ChatScreen: View {
       actions: lineActions)
   }
 
+  /// Photos sent at once, drawn as one album: the line as its first
+  /// photo's, with its last photo's time, and each photo its own line in
+  /// it (spec/chat.md, Albums).
+  private func albumView(
+    _ photos: [ChatItem], startsRun: Bool, showsTime: Bool, names: [String: String]
+  ) -> LineView?
+  {
+    var album: LineView
+    switch photos.first {
+    case .line(let line, _): album = lineView(line, startsRun: startsRun, names: names)
+    case .waiting(let line, _): album = lineView(waiting: line, startsRun: startsRun, names: names)
+    default: return nil
+    }
+    let pins = Set(chat.state.pins.map(\.seq))
+    album.album = photos.compactMap { item in
+      switch item {
+      case .line(let line, _):
+        line.photo.map { photo in
+          AlbumPhoto(
+            lineID: line.opID, photo: photo, time: line.sentAtMs, pinned: pins.contains(line.seq),
+            seq: line.seq, menu: actions(for: line, mine: line.authorID == meID).map(\.title))
+        }
+      case .waiting(let line, _):
+        line.photo.map { photo in
+          AlbumPhoto(
+            lineID: line.opID, photo: photo, time: line.madeAtMs, waiting: true,
+            failed: line.failed, menu: actions(forWaiting: line).map(\.title))
+        }
+      default: nil
+      }
+    }
+    let last = album.album.last
+    album.photo = nil
+    album.time = last?.time ?? album.time
+    album.waiting = last?.waiting == true && last?.failed == false
+    album.failed = false
+    album.pinned = false
+    album.seq = nil
+    album.showsTime = showsTime
+    album.menu = []
+    return album
+  }
+
+  /// The line an item answers by a swipe: its own, or its album's first.
+  private func answered(_ item: ChatItem?) -> ChatLineRow? {
+    switch item {
+    case .line(let line, _): line
+    case .album(let photos, _): answered(photos.first)
+    default: nil
+    }
+  }
+
   /// A line come in as VoiceOver says it: who and what, or the app's
   /// notice; nothing for one's own, one not shown, or a blocked writer's.
   private func spoken(_ line: ChatLineRow) -> String? {
@@ -751,11 +861,63 @@ struct ChatScreen: View {
 
   /// Acts on the line `lineID` as the chat is now.
   private func act(_ action: LineAction, on lineID: String) {
-    switch items(chat.state).first(where: { $0.id == ChatItemID.line(lineID) }) {
+    let id = ChatItemID.line(lineID)
+    switch items(chat.state).first(where: { $0.lineIDs.contains(id) }) {
     case .line(let line, let startsRun): act(action, on: line, startsRun: startsRun)
     case .waiting(let line, let startsRun): act(action, onWaiting: line, startsRun: startsRun)
+    case .album(let photos, _):
+      if let photo = photos.first(where: { $0.id == id }) {
+        act(action, on: photo, inAlbum: photos)
+      }
     default: break
     }
+  }
+
+  /// Acts on one of an album's photos as its own line, but for reactions,
+  /// which are the album's first line's (spec/chat.md, Albums); held, it
+  /// lifts alone.
+  private func act(_ action: LineAction, on photo: ChatItem, inAlbum photos: [ChatItem]) {
+    let first: ChatLineRow? = if case .line(let line, _) = photos.first { line } else { nil }
+    let index = photos.firstIndex { $0.id == photo.id } ?? 0
+    switch (action, photo) {
+    case (.react(let emoji), _):
+      if let first { react(emoji, on: first) }
+    case (.hold(let spot, let finger, _), .line(let line, _)):
+      let mine = line.authorID == meID
+      openActions(
+        MessageActionsRequest(
+          lineID: line.opID, spot: spot, mine: mine,
+          bubble: albumBubble(line.photo, at: index, of: photos.count, waiting: false),
+          finger: finger, reactions: first?.reactions, meID: meID,
+          onReact: { emoji in first.map { react(emoji, on: $0) } },
+          onMoreReactions: { reactingTo = first }, actions: actions(for: line, mine: mine)))
+    case (.hold(let spot, let finger, _), .waiting(let line, _)):
+      openActions(
+        MessageActionsRequest(
+          lineID: line.opID, spot: spot, mine: true,
+          bubble: albumBubble(
+            line.photo, at: index, of: photos.count, waiting: !line.failed),
+          finger: finger, actions: actions(forWaiting: line)))
+    case (_, .line(let line, _)):
+      act(action, on: line, startsRun: false)
+    case (_, .waiting(let line, _)):
+      act(action, onWaiting: line, startsRun: false)
+    default:
+      break
+    }
+  }
+
+  /// An album's photo lifted alone over the chat for its menu.
+  private func albumBubble(_ photo: LinePhoto?, at index: Int, of count: Int, waiting: Bool)
+    -> AnyView
+  {
+    guard let photo else { return AnyView(EmptyView()) }
+    return AnyView(
+      PhotoLine(
+        photo: photo, groupID: place.id, waiting: waiting,
+        cell: AlbumBox.size(of: index, in: count)
+      )
+      .clipShape(RoundedRectangle(cornerRadius: Radius.md)))
   }
 
   private func act(_ action: LineAction, on line: ChatLineRow, startsRun: Bool) {
@@ -846,17 +1008,20 @@ struct ChatScreen: View {
   // MARK: Composer
 
   /// Sends the tray's photos, each as its own line, kept on the device to
-  /// upload before its line goes.
+  /// upload before its line goes; two or more as one album, named by the
+  /// first's send (spec/chat.md, Albums).
   private func sendPhotos() {
-    for picked in draft.photos {
-      guard (try? ChatPhotos.keep(picked.shrunk.jpeg, as: picked.id, in: place.id)) != nil else {
-        continue
-      }
+    let kept = draft.photos.filter {
+      (try? ChatPhotos.keep($0.shrunk.jpeg, as: $0.id, in: place.id)) != nil
+    }
+    let album = kept.count > 1 ? UUID().uuidString.lowercased() : ""
+    for (index, picked) in kept.enumerated() {
       var send = Pochical_V1_ChatSend()
       send.threadID = threadID
       send.photo = picked.shrunk.line(picked.id).wire
       send.replyTo = takeReply()
-      write(.send(send))
+      send.album = album
+      write(.send(send), as: index == 0 && !album.isEmpty ? album : nil)
     }
     withAnimation { draft.photos = [] }
   }
@@ -1092,7 +1257,7 @@ struct ChatScreen: View {
     following = false
     // Asked to the top with too few lines under it to get there, it stops
     // at the foot.
-    scroller.show(ChatItemID.line(first.opID), at: .top, animated: true) {
+    scroller.show(itemID(of: first), at: .top, animated: true) {
       if scroll.place.atLatest {
         following = true
       } else if unreadFrom == nil {
@@ -1118,11 +1283,18 @@ struct ChatScreen: View {
     }
   }
 
-  /// The latest of the group's lines among the items `seen`, nil for
-  /// none (lines still waiting have no seq).
-  private func latestSeq(of seen: [String]) -> Int64? {
+  /// The latest of the group's lines among the items `seen` of those
+  /// `listed`, an album's lines all with it, nil for none (lines still
+  /// waiting have no seq).
+  private func latestSeq(of seen: [String], in listed: [ChatItem]) -> Int64? {
     let ids = Set(seen)
-    return chat.state.lines.last(where: { ids.contains(ChatItemID.line($0.opID)) })?.seq
+    return listed.lazy.filter { ids.contains($0.id) }.flatMap(\.seqs).max()
+  }
+
+  /// The item the chat draws `line` in: its own, or its album.
+  private func itemID(of line: ChatLineRow) -> String {
+    let id = ChatItemID.line(line.opID)
+    return items(chat.state).first { $0.lineIDs.contains(id) }?.id ?? id
   }
 
   /// Marks the chat read on to `seq`, the latest line whose foot has come
@@ -1189,7 +1361,10 @@ struct ChatScreen: View {
   /// lines draw them, and lets go of the rest: not a blocked member's
   /// folded away.
   private func prefetchPhotos(of near: [ChatItem]) {
-    let photos = near.compactMap { item -> LinePhoto? in
+    let lines = near.flatMap { item in
+      if case .album(let photos, _) = item { photos } else { [item] }
+    }
+    let photos = lines.compactMap { item -> LinePhoto? in
       switch item {
       case .line(let line, _):
         return line.hidden || line.unsent || folded(line) ? nil : line.photo
@@ -1362,7 +1537,7 @@ struct ChatScreen: View {
   /// notices, a line taken back or folded for a blocked writer, nor one
   /// still on its way.
   private func replySwipe(_ item: ChatItem?) -> ReplySwipe? {
-    guard case .line(let line, _) = item, !line.hidden, !line.unsent, line.notice == nil,
+    guard let line = answered(item), !line.hidden, !line.unsent, line.notice == nil,
       !folded(line)
     else { return nil }
     return line.authorID == meID ? .leftward : .rightward
@@ -1540,7 +1715,7 @@ struct ChatScreen: View {
       following = false
       // Rung once there, not on the way; by itself, as this task ends
       // with the line gone to.
-      scroller.show(ChatItemID.line(line.opID), at: .center, animated: true) {
+      scroller.show(itemID(of: line), at: .center, animated: true) {
         marks.ringed = target
         Task { @MainActor in
           try? await Task.sleep(for: .milliseconds(500))
@@ -1603,11 +1778,16 @@ struct ChatScreen: View {
     if draft.editing?.seq == line.seq { stopEditing() }
   }
 
-  private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
+  /// Puts an edit in the outbox, as `opID` when it names an album.
+  private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind, as opID: String? = nil) {
     let kind = AppDevice.stamped(kind, in: place.id)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     try? database.write { db in
-      try Chats.edit(kind, in: place.id, now: now, db: db)
+      if let opID {
+        try Chats.edit(kind, in: place.id, now: now, opID: opID, db: db)
+      } else {
+        try Chats.edit(kind, in: place.id, now: now, db: db)
+      }
     }
   }
 }
@@ -1634,7 +1814,8 @@ private struct RowLook: Hashable {
   let item: ChatItem
   let parted: Bool
   let showsTime: Bool
-  let pinned: Bool
+  /// Its lines pinned, by seq.
+  let pinned: [Int64]
   let quote: LineQuote?
   let blockedWriter: Bool
   let shownAnyway: Bool
