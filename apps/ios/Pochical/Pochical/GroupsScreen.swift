@@ -60,6 +60,7 @@ extension EnvironmentValues {
 struct GroupsScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
+  @Environment(OpenPlaceSocket.self) private var openPlace
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// The group open beside the rail, the first until one is picked.
   @Binding var openID: String?
@@ -79,7 +80,7 @@ struct GroupsScreen: View {
   var body: some View {
     NavigationStack(path: $path) {
       Group {
-        if let open = groups.first(where: { $0.id == openID }) ?? groups.first {
+        if let open = openGroup(openID, among: groups) {
           HStack(alignment: .top, spacing: 0) {
             GroupRail(
               groups: groups, openID: open.id, unread: unread,
@@ -158,10 +159,9 @@ struct GroupsScreen: View {
     .onChange(of: path) { _, path in
       if !path.isEmpty { inviting = nil }
     }
-    // The open group's, while the group's screens are open and the app is
-    // in the foreground.
-    .placeSocket(openGroupID)
-    .environment(\.photoGroupID, (groups.first { $0.id == openID } ?? groups.first)?.id ?? "")
+    // The open group's, held by the app while this tab shows.
+    .environment(\.groupSocket, openGroupID.flatMap { openPlace.clients[$0] })
+    .environment(\.photoGroupID, openGroupID ?? "")
     // Once its group has come, at launch.
     .task(id: OpeningKey(chat: openingChat, groupIDs: groups.map(\.id))) {
       await showOpeningChat()
@@ -213,7 +213,7 @@ struct GroupsScreen: View {
 
   /// The group open, whose socket is kept.
   private var openGroupID: String? {
-    (groups.first { $0.id == openID } ?? groups.first)?.id
+    openGroup(openID, among: groups)?.id
   }
 }
 
@@ -619,9 +619,10 @@ private struct GroupHeading: View {
 }
 
 /// The chats' places' sockets (the groups', and the chat with Pochical's
-/// people's), one for each at most: open while a screen
+/// people's), one client for each, kept for good: open while something
 /// holds it, then closing once its chat outbox is sent and acknowledged
-/// (spec/sync-protocol.md, Sockets). The app waits for them in the
+/// (spec/sync-protocol.md, Sockets), and opened again by the next hold, so
+/// a client handed out stays the place's. The app waits for them in the
 /// background as for its own socket, those still held too, so a socket its
 /// screen has not let go of yet is not missed. A group opened again takes
 /// back the socket it has, closing or not yet let go of, rather than
@@ -641,8 +642,7 @@ actor GroupSockets {
   private var sockets: [String: Socket] = [:]
 
   /// The group's socket and a hold on it, kept open until `close` lets go
-  /// of the hold: the one there is, taken back if it was closing, else a
-  /// new one.
+  /// of the hold: taken back if it was closing, opened again if closed.
   func open(_ groupID: String, account: Account, database: any DatabaseWriter) async
     -> (client: SyncClient, hold: UUID)
   {
@@ -688,7 +688,8 @@ actor GroupSockets {
       }
       await sent.value
       if self.sockets[groupID]?.closing == id {
-        self.sockets[groupID] = nil
+        self.sockets[groupID]?.closing = nil
+        self.sockets[groupID]?.closed = nil
       }
     }
     sockets[groupID] = socket
@@ -697,7 +698,7 @@ actor GroupSockets {
   /// Closes every one once sent, those held too, and waits until they all
   /// have, those left meanwhile too.
   func finishSending() async {
-    for (groupID, socket) in sockets where socket.closing == nil {
+    for (groupID, socket) in sockets where !socket.holds.isEmpty {
       beginClosing(groupID)
     }
     while let next = sockets.values.first(where: { $0.closing != nil })?.closed {
@@ -711,6 +712,60 @@ actor GroupSockets {
       await socket.client.stop()
     }
   }
+}
+
+/// The socket of the place open on screen, held while it shows and the app
+/// is in front (spec/sync-protocol.md, Sockets): the open group's in グループ,
+/// the chat with Pochical's people's in 設定. One hold at a time, moved as
+/// the place changes, whatever covers the screen meanwhile, so the screens
+/// over a place (its chat, its photos open large) share it rather than
+/// each holding it.
+@MainActor @Observable final class OpenPlaceSocket {
+  /// Each place's client once held, kept for its screens as GroupSockets
+  /// keeps it.
+  private(set) var clients: [String: SyncClient] = [:]
+  @ObservationIgnored private let sockets: GroupSockets
+  @ObservationIgnored private let account: Account
+  @ObservationIgnored private let database: any DatabaseWriter
+  /// The place whose socket is wanted now; nil for none.
+  @ObservationIgnored private var wanted: String?
+  @ObservationIgnored private var held: (placeID: String, hold: UUID)?
+  @ObservationIgnored private var moving = false
+
+  init(sockets: GroupSockets, account: Account, database: any DatabaseWriter) {
+    self.sockets = sockets
+    self.account = account
+    self.database = database
+  }
+
+  /// Holds `placeID`'s socket from now, letting go of any other; none for
+  /// nil. Wanting the same again changes nothing, and wishes made while
+  /// one is under way end at the latest.
+  func want(_ placeID: String?) {
+    wanted = placeID
+    guard !moving, held?.placeID != placeID else { return }
+    moving = true
+    Task {
+      while held?.placeID != wanted {
+        if let held {
+          self.held = nil
+          await sockets.close(held.hold, of: held.placeID)
+        }
+        if let placeID = wanted {
+          let (client, hold) = await sockets.open(placeID, account: account, database: database)
+          held = (placeID, hold)
+          clients[placeID] = client
+        }
+      }
+      moving = false
+    }
+  }
+}
+
+/// The group open in グループ: the one picked, the first until one is or
+/// once the one picked is gone.
+func openGroup(_ openID: String?, among groups: [GroupRow]) -> GroupRow? {
+  groups.first { $0.id == openID } ?? groups.first
 }
 
 /// Everyone in a group with their shifts, read again as the group's

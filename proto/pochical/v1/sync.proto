@@ -774,7 +774,7 @@ message ChatPhotosRequest {
 // on the asked side, oldest first, with where they are among all of them.
 // The photos are those the reader sees in the chat: none of a line taken
 // back, nor one hidden from them, nor, in a place's own chat, one whose
-// writer they have blocked (spec/vectors/chat-photos.json, counts).
+// writer they have blocked (spec/vectors/chat-photos.json, seen).
 message ChatPhotos {
   string thread_id = 1;
   uint64 seq = 2;
@@ -786,6 +786,10 @@ message ChatPhotos {
   uint32 offset = 5;
   // How many photos the chat holds for the reader.
   uint32 total = 6;
+  // The group's change log head as it answered: the page counts every
+  // change up to it, so a device that has taken a later change to the
+  // chat's photos drops the page and asks again.
+  uint64 cursor = 7;
 }
 
 // A photo of a chat and the line that sent it.

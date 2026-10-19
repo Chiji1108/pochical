@@ -11,7 +11,7 @@ import SQLiteData
 /// with the device's cursor, corrects the device's time by Welcome, takes
 /// the catch-up and every change after it into the database, and sends the
 /// outbox's edits as they come, which the server's Acked then ends
-/// (Outbox). A group's, open while the group is on screen, takes the
+/// (Outbox). A group's, open while the app has the group open, takes the
 /// group's values the same way and sends the group's chat outbox. Each
 /// keeps its socket alive and reconnects after a random wait that doubles
 /// with each failed try, at once when the network comes back; never after
@@ -123,8 +123,7 @@ public actor SyncClient {
     socketURL = socket.url!
   }
 
-  // A group's client goes with its screen; its watch on the network goes
-  // with it.
+  // Its watch on the network goes with it.
   deinit {
     paths.cancel()
   }

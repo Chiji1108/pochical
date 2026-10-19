@@ -79,8 +79,9 @@ const photosOf = async (
     // oxlint-disable-next-line no-await-in-loop -- frames come in order
     const frame = await frames.next();
     if (frame.kind.case === "chatPhotos") {
-      const { offset, photos, total } = frame.kind.value;
+      const { cursor, offset, photos, total } = frame.kind.value;
       return {
+        cursor: Number(cursor),
         ids: photos.map(({ photo }) => photo?.id),
         offset,
         seqs: photos.map(({ seq: each }) => Number(each)),
@@ -115,7 +116,8 @@ const withPhotos = async () => {
 describe("a chat's photos alone", () => {
   it("come a page at a time, with how many the reader sees", async () => {
     const { mine, theirs } = await withPhotos();
-    await expect(photosOf(mine, 0, false)).resolves.toStrictEqual({
+    const first = await photosOf(mine, 0, false);
+    expect(first).toMatchObject({
       ids: ["m1", "m2", "m3", "g1"],
       offset: 0,
       seqs: [2, 4, 5, 6],
@@ -130,12 +132,12 @@ describe("a chat's photos alone", () => {
       offset: 0,
     });
 
-    // Taken back, a photo is no longer among them.
+    // Taken back, a photo is no longer among them, and the page says it
+    // counts that change.
     await send(mine, [{ unsend: 4 }]);
-    await expect(photosOf(theirs, 0, false)).resolves.toMatchObject({
-      ids: ["m1", "m3", "g1"],
-      total: 3,
-    });
+    const after = await photosOf(theirs, 0, false);
+    expect(after).toMatchObject({ ids: ["m1", "m3", "g1"], total: 3 });
+    expect(after.cursor).toBeGreaterThan(first.cursor);
   });
 
   it("leave out a blocked member's in the place's own chat, and others' chats", async () => {
@@ -159,7 +161,7 @@ describe("a chat's photos alone", () => {
 
     // Nor are someone else's one-to-one chat's photos theirs to page.
     const elsewhere = directThread(makerId, "someone-else");
-    await expect(photosOf(theirs, 0, false, elsewhere)).resolves.toStrictEqual({
+    await expect(photosOf(theirs, 0, false, elsewhere)).resolves.toMatchObject({
       ids: [],
       offset: 0,
       seqs: [],

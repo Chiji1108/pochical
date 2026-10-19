@@ -1382,9 +1382,7 @@ struct ChatScreen: View {
   /// Where the chat's photos come from beyond its lines laid out: not a
   /// blocked member's folded away, as the group leaves them out too.
   private var photoPager: PhotoPager {
-    PhotoPager(
-      placeID: place.id, threadID: threadID, sockets: groupSockets, account: account,
-      database: database, blocked: blocked)
+    PhotoPager(placeID: place.id, threadID: threadID, client: socket, database: database)
   }
 
   /// Saves a photo to the person's library, and says so.

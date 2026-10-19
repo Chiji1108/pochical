@@ -53,35 +53,33 @@ struct PhotoViewing: Identifiable {
 }
 
 /// A chat's photos beyond the lines laid out (spec/sync-protocol.md,
-/// Chat): asked of its place a page at a time on the place's socket, held
-/// open while they show, as the chat under them lets go of it; and followed
-/// as the chat's lines on the device change.
+/// Chat): asked of its place a page at a time on the place's socket, which
+/// the app holds while the place is open (OpenPlaceSocket), and followed as
+/// the chat's photos on the device change.
 struct PhotoPager {
   let placeID: String
   let threadID: String
-  let sockets: GroupSockets
-  let account: Account
+  /// The place's socket; none until the app has first held it.
+  let client: SyncClient?
   let database: any DatabaseWriter
-  /// Whom the reader has blocked, whose photos fold away in its own chat.
-  let blocked: Set<String>
 
-  /// Holds the place's socket while the chat's photos show, and follows
-  /// them until cancelled, then lets go of it: `opened` once held, with its
-  /// client to ask for pages on (as their answers are listened to by
-  /// then), and each change to them as `change`: a page come, the socket
-  /// open again after a drop, the chat's lines on the device changed.
+  /// Follows the chat's photos until cancelled, each change to them as
+  /// `change`: first the photos on the device as they are, once the pages
+  /// are listened to, so nothing is asked before either (PhotoRun asks
+  /// nothing until it has followed them); then a page come, the socket
+  /// open again after a drop, the photos on the device changed.
   @MainActor func follow(
-    opened: @escaping @MainActor (SyncClient) -> Void,
     change: @escaping @MainActor (_ edit: (inout PhotoRun) -> Void) -> Void
   ) async {
-    let (client, hold) = await sockets.open(placeID, account: account, database: database)
-    if !Task.isCancelled {
+    let threadID = threadID
+    let read: @Sendable (Database) throws -> PhotoLines = { [placeID] db in
+      try Chats.photoLines(of: placeID, thread: threadID, in: db)
+    }
+    var following: [Task<Void, Never>] = []
+    if let client {
       let pages = await client.photoPages()
-      opened(client)
-      let threadID = threadID
-      let blocked = blocked
-      let database = database
-      let following = [
+      let statuses = await client.statuses()
+      following += [
         Task {
           for await page in pages where page.threadID == threadID {
             change { $0.take(page) }
@@ -90,31 +88,35 @@ struct PhotoPager {
         Task {
           // Open again after a drop: what was asked is asked again.
           var open = true
-          for await status in await client.statuses() {
+          for await status in statuses {
             let now = status != .connecting
             if now, !open { change { $0.reconnected() } }
             open = now
           }
         },
+      ]
+    }
+    if !Task.isCancelled, let first = try? await database.read(read) {
+      // Pages asked for before, while not listened to, are asked again.
+      change {
+        $0.reconnected()
+        $0.follow(first)
+      }
+      let database = database
+      following.append(
         Task {
-          let lines = ValueObservation.tracking { db in
-            try Chats.photoLines(of: placeID, thread: threadID, blocked: blocked, in: db)
-          }
-          .removeDuplicates()
           do {
-            for try await now in lines.values(in: database) {
+            for try await now in ValueObservation.tracking(read).values(in: database) {
               change { $0.follow(now) }
             }
           } catch {}
-        },
-      ]
-      await withTaskCancellationHandler {
-        for task in following { await task.value }
-      } onCancel: {
-        for task in following { task.cancel() }
-      }
+        })
     }
-    await sockets.close(hold, of: placeID)
+    await withTaskCancellationHandler {
+      for task in following { await task.value }
+    } onCancel: {
+      for task in following { task.cancel() }
+    }
   }
 }
 
@@ -247,8 +249,9 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   private let names: [String: String]
   /// Asking for pages and following the chat, while open.
   private var following: [Task<Void, Never>] = []
-  /// The place's socket, held open while the photos show; nil until held.
-  private var client: SyncClient?
+  /// The photo the count is of: kept on it while the group is asked again
+  /// where it is, after the chat's photos changed, so it does not blink.
+  private var counted: Int64?
   /// The photos about to be swiped to, fetched ahead.
   private let ahead = PhotoPrefetch()
   private let groupID: String
@@ -455,7 +458,6 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   override func viewDidDisappear(_ animated: Bool) {
     super.viewDidDisappear(animated)
     guard isBeingDismissed else { return }
-    // Following no more lets go of the socket.
     for task in following { task.cancel() }
     ahead.stop()
     PhotoSpots.shared.open = nil
@@ -498,16 +500,18 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
       counter.accessibilityLabel = "\(place.of)枚中\(place.number)枚目"
       counterGlass.isHidden = false
       shown.place = counter.accessibilityLabel
-    } else {
+      counted = shown.item.seq
+    } else if run.place != nil || counted != shown.item.seq {
       counterGlass.isHidden = true
       shown.place = nil
+      counted = nil
     }
     // Faded in too, so pulled down it leaves no second of it behind.
     PhotoSpots.shared.open = shown.photo.id
     guard let index = run.index else { return }
     let near = run.photos[max(index - 2, 0)...min(index + 2, run.photos.count - 1)]
     ahead.whole(near.map(\.photo), in: groupID, calls: calls)
-    guard let pager, let client else { return }
+    guard let pager, let client = pager.client else { return }
     for ask in run.asks() {
       Task {
         let asked = await client.requestPhotos(
@@ -518,25 +522,20 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   }
 
   /// The chat's photos as pages of them come and its lines change, until
-  /// closed. Covering the chat, they hold its place's socket themselves.
+  /// closed.
   private func follow() {
     guard let pager else { return }
     following.append(
       Task { [weak self] in
-        await pager.follow(
-          opened: { client in
-            self?.client = client
-            self?.showing()
-          },
-          change: { edit in self?.changed(edit) })
+        await pager.follow { edit in self?.changed(edit) }
       })
   }
 
   /// The photos after `change`: the one shown again should it have gone,
   /// closed once none is left, and the pages next to it asked for again
-  /// once there are more of them.
+  /// once those beside it are others.
   private func changed(_ change: (inout PhotoRun) -> Void) {
-    let ends = (run.photos.first?.seq, run.photos.last?.seq)
+    let held = run.photos.map(\.seq)
     change(&run)
     guard let seq = run.shown, let item = run.photos.first(where: { $0.seq == seq }) else {
       if !isBeingDismissed { dismiss(animated: true) }
@@ -544,7 +543,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     }
     if shown?.item.seq != seq {
       pages.setViewControllers([page(item)], direction: .forward, animated: false)
-    } else if ends != (run.photos.first?.seq, run.photos.last?.seq) {
+    } else if held != run.photos.map(\.seq) {
       // The page view asks again for the pages beside the one shown,
       // which it remembers as none at an end.
       pages.dataSource = nil
