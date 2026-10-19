@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "2186c41d-5e86-4ec8-a1ab-8111c684d46b",
+  "id": "7d4037e1-2c79-42c4-81a1-ffc0a5b02b97",
   "prevId": "4c813055-cea3-434b-bc5f-219f0086039a",
   "tables": {
     "chat_lines": {
@@ -66,6 +66,13 @@
         },
         "notice": {
           "name": "notice",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "album": {
+          "name": "album",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -861,21 +868,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "failing_since": {
-          "name": "failing_since",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "failures": {
-          "name": "failures",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         },
         "id": {
           "name": "id",

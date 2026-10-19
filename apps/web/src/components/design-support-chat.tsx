@@ -1,3 +1,4 @@
+import { Ellipsis, Images } from "lucide-react";
 import {
   useEffect,
   useEffectEvent,
@@ -22,15 +23,23 @@ import {
   useComposer,
 } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
-import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
+import {
+  albumOf,
+  ChatContext,
+  drawnLines,
+  MessageLine,
+  photosOf,
+} from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
 import { ChatListRow, chatGaps } from "./design-chat-parts";
+import { ChatPhotoList } from "./design-chat-photo-list";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
 import { lastLineOf } from "./design-chat-summary";
 import { EmojiPickerSheet } from "./design-emoji-picker";
 import type { Member, Profile } from "./design-group-data";
 import { BackButton } from "./design-header";
 import { List } from "./design-list";
+import { IconMenu, MenuItem } from "./design-menu";
 import { ConfirmDialog } from "./design-sheet";
 import { Screen } from "./design-ui";
 
@@ -182,6 +191,8 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
   const icon = useOwnIcon();
   // A link long pressed in a line: its own small menu, as in the chats.
   const [linkMenu, setLinkMenu] = useState<LinkMenuAt>();
+  // 写真 from ⋯, over the chat, as a group chat lists its photos.
+  const [listingPhotos, setListingPhotos] = useState(false);
   const members = membersOf(profile, icon);
   const {
     actionsOf,
@@ -249,89 +260,121 @@ export function SupportChatPage({ onBack }: { onBack: () => void }) {
     }
   }, [latest]);
   return (
-    <Screen>
-      <header className={chatStyle.header}>
-        <BackButton onClick={onBack}>設定</BackButton>
-        {/* Named for who is on the other side, as a chat is. */}
-        <h3 className={chatStyle.title}>{site.name}</h3>
-      </header>
-      <div className={chatStyle.lines}>
-        <ChatContext value={scope}>
-          <ol
-            aria-label={`${site.name}とのメッセージ`}
-            className={chatStyle.messages}
-            style={chatGaps}
-            ref={listRef}
+    <>
+      <Screen hidden={listingPhotos}>
+        <header className={chatStyle.header}>
+          <BackButton onClick={onBack}>設定</BackButton>
+          {/* Named for who is on the other side, as a chat is. */}
+          <h3 className={chatStyle.title}>{site.name}</h3>
+          <IconMenu
+            className={chatStyle.menu}
+            icon={<Ellipsis aria-hidden="true" size={20} />}
+            label="チャットのメニュー"
           >
-            <Intro icon={icon} />
-            {lines.map((line, index) => (
-              <MessageLine
-                actions={actionsOf(line)}
-                flash={flash === line.id}
-                hidden={false}
-                key={line.id}
-                lifted={selected === line.id}
-                message={line}
-                onSelect={() => {
-                  setSelected(line.id);
-                }}
-                next={lines[index + 1]}
-                previous={lines[index - 1]}
-                quoted={byId(line.replyTo)}
-              />
-            ))}
-          </ol>
-        </ChatContext>
-        <ChatEdge edge="foot" list={listRef}>
-          <Composer
-            composer={composer}
-            onSend={send}
-            reply={
-              replying && {
-                message: replying,
-                onStop: () => {
-                  setReplyTo(undefined);
-                },
-                writer: writerOf(replying.from)?.name ?? "",
+            <MenuItem
+              icon={<Images aria-hidden="true" size={18} />}
+              onSelect={() => {
+                setListingPhotos(true);
+              }}
+              value="photos"
+            >
+              写真
+            </MenuItem>
+          </IconMenu>
+        </header>
+        <div className={chatStyle.lines}>
+          <ChatContext value={scope}>
+            <ol
+              aria-label={`${site.name}とのメッセージ`}
+              className={chatStyle.messages}
+              style={chatGaps}
+              ref={listRef}
+            >
+              <Intro icon={icon} />
+              {drawnLines(lines).map(
+                ({ message: line, previous, next, album }) => (
+                  <MessageLine
+                    actions={actionsOf(line)}
+                    album={albumOf(album, (photo) => ({
+                      actions: actionsOf(photo),
+                      lifted: selected === photo.id,
+                    }))}
+                    flash={(album ?? [line]).some(({ id }) => id === flash)}
+                    hidden={false}
+                    key={line.id}
+                    lifted={selected === line.id}
+                    message={line}
+                    onSelect={() => {
+                      setSelected(line.id);
+                    }}
+                    next={next}
+                    previous={previous}
+                    quoted={byId(line.replyTo)}
+                  />
+                )
+              )}
+            </ol>
+          </ChatContext>
+          <ChatEdge edge="foot" list={listRef}>
+            <Composer
+              composer={composer}
+              onSend={send}
+              reply={
+                replying && {
+                  message: replying,
+                  onStop: () => {
+                    setReplyTo(undefined);
+                  },
+                  writer: writerOf(replying.from)?.name ?? "",
+                }
               }
+            />
+          </ChatEdge>
+        </div>
+        <EmojiPickerSheet
+          onOpenChange={(open) => {
+            if (!open) {
+              setPickingFor(undefined);
             }
+          }}
+          onPick={(emoji) => {
+            if (pickingFor) {
+              react(pickingFor, emoji);
+            }
+          }}
+          open={pickingFor !== undefined}
+          title="リアクション"
+        />
+        <LinkMenu
+          at={linkMenu}
+          onClose={() => {
+            setLinkMenu(undefined);
+          }}
+          onOpen={openLink}
+        />
+        {unsending !== undefined && (
+          <ConfirmDialog
+            action="取り消す"
+            message={`${site.name}を作っている人のチャットからも消えます。`}
+            onCancel={() => {
+              setUnsending(undefined);
+            }}
+            onConfirm={() => {
+              unsend(unsending);
+            }}
+            title="送信を取り消しますか？"
           />
-        </ChatEdge>
-      </div>
-      <EmojiPickerSheet
-        onOpenChange={(open) => {
-          if (!open) {
-            setPickingFor(undefined);
-          }
-        }}
-        onPick={(emoji) => {
-          if (pickingFor) {
-            react(pickingFor, emoji);
-          }
-        }}
-        open={pickingFor !== undefined}
-        title="リアクション"
-      />
-      <LinkMenu
-        at={linkMenu}
-        onClose={() => {
-          setLinkMenu(undefined);
-        }}
-        onOpen={openLink}
-      />
-      {unsending !== undefined && (
-        <ConfirmDialog
-          action="取り消す"
-          message={`${site.name}を作っている人のチャットからも消えます。`}
-          onCancel={() => {
-            setUnsending(undefined);
+        )}
+      </Screen>
+      {listingPhotos && (
+        <ChatPhotoList
+          backLabel={site.name}
+          onBack={() => {
+            setListingPhotos(false);
           }}
-          onConfirm={() => {
-            unsend(unsending);
-          }}
-          title="送信を取り消しますか？"
+          photos={scope.photos}
         />
       )}
-    </Screen>
+    </>
   );
 }

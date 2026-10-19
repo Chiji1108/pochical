@@ -166,8 +166,8 @@ private struct PhotoLoad: Equatable {
 }
 
 /// A photo sent as a line: no bubble, rounded, the size it was sent at
-/// within the box; dimmed while it uploads, ringed with how far it has
-/// gone, × in the ring stopping it.
+/// within the box, or filling its cell in an album; dimmed while it
+/// uploads, ringed with how far it has gone, × in the ring stopping it.
 struct PhotoLine: View {
   @Environment(\.themeColors) private var colors
   /// The chat line's cell it is drawn in, there only while near the
@@ -180,33 +180,32 @@ struct PhotoLine: View {
   /// Stops it going up, leaving its line not sent; none where it cannot
   /// be stopped.
   var onStop: (() -> Void)?
-  /// It is open large from here.
-  @State private var open = false
+  /// Its cell in an album, cropped to fill it, the album rounding and
+  /// edging them all; none for a photo alone.
+  var cell: CGSize?
 
   var body: some View {
-    let size = PhotoBox.size(of: photo)
+    let size = cell ?? PhotoBox.size(of: photo)
+    let corner = cell == nil ? Radius.lg : 0
+    // Read as a photo alone would be, so a photo is fetched and kept once
+    // for its line, its cell, its quote and the photo opened large.
     ChatPhotoImage(
-      photo: photo, groupID: groupID, shown: size, whileInSight: lineSpace == nil,
-      retries: !waiting)
+      photo: photo, groupID: groupID, shown: PhotoBox.size(of: photo),
+      whileInSight: lineSpace == nil, retries: !waiting)
       .frame(width: size.width, height: size.height)
-      .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
-      .overlay(
-        RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(colors.borderDefault, lineWidth: 1)
-      )
+      .clipShape(RoundedRectangle(cornerRadius: corner))
+      .overlay {
+        if cell == nil {
+          RoundedRectangle(cornerRadius: corner).strokeBorder(colors.borderDefault, lineWidth: 1)
+        }
+      }
       .overlay {
         if waiting {
           PhotoGoingUp(photoID: photo.id, onStop: onStop)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.lg))
+            .clipShape(RoundedRectangle(cornerRadius: corner))
         }
       }
-      // Its place left empty while it is open large from here, as Photos
-      // leaves a photo's place, and where it opens from and closes to.
-      .opacity(open ? 0 : 1)
-      .background(PhotoSpot(id: photo.id))
-      .onAppear { open = PhotoSpots.shared.open == photo.id }
-      .onReceive(NotificationCenter.default.publisher(for: PhotoSpots.opened)) { _ in
-        open = PhotoSpots.shared.open == photo.id
-      }
+      .photoSpot(photo.id)
       .accessibilityElement(children: waiting ? .contain : .ignore)
       .accessibilityLabel(waiting ? "送信中の写真" : "写真")
       .accessibilityAddTraits(.isImage)

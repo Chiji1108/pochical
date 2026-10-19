@@ -24,6 +24,7 @@ public  final class ChatSend extends
     text_ = "";
     days_ = emptyProtobufList();
     device_ = "";
+    album_ = "";
   }
   private int bitField0_;
   public static final int THREAD_ID_FIELD_NUMBER = 1;
@@ -615,6 +616,93 @@ public  final class ChatSend extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     device_ = value.toStringUtf8();
+
+  }
+
+  public static final int ALBUM_FIELD_NUMBER = 10;
+  private java.lang.String album_;
+  /**
+   * <pre>
+   * With a photo: the photos sent at once, each its own line, share one
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
+   * </pre>
+   *
+   * <code>string album = 10 [json_name = "album"];</code>
+   * @return The album.
+   */
+  @java.lang.Override
+  public java.lang.String getAlbum() {
+    return album_;
+  }
+  /**
+   * <pre>
+   * With a photo: the photos sent at once, each its own line, share one
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
+   * </pre>
+   *
+   * <code>string album = 10 [json_name = "album"];</code>
+   * @return The bytes for album.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getAlbumBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(album_);
+  }
+  /**
+   * <pre>
+   * With a photo: the photos sent at once, each its own line, share one
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
+   * </pre>
+   *
+   * <code>string album = 10 [json_name = "album"];</code>
+   * @param value The album to set.
+   */
+  private void setAlbum(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    album_ = value;
+  }
+  /**
+   * <pre>
+   * With a photo: the photos sent at once, each its own line, share one
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
+   * </pre>
+   *
+   * <code>string album = 10 [json_name = "album"];</code>
+   */
+  private void clearAlbum() {
+
+    album_ = getDefaultInstance().getAlbum();
+  }
+  /**
+   * <pre>
+   * With a photo: the photos sent at once, each its own line, share one
+   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+   * random one, as it also collapses their notifications), that their
+   * apps draw them together by (spec/chat.md, Albums); empty for a photo
+   * sent alone. Refused with anything but a photo.
+   * </pre>
+   *
+   * <code>string album = 10 [json_name = "album"];</code>
+   * @param value The bytes for album to set.
+   */
+  private void setAlbumBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    album_ = value.toStringUtf8();
 
   }
 
@@ -1333,6 +1421,95 @@ public  final class ChatSend extends
       return this;
     }
 
+    /**
+     * <pre>
+     * With a photo: the photos sent at once, each its own line, share one
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
+     * </pre>
+     *
+     * <code>string album = 10 [json_name = "album"];</code>
+     * @return The album.
+     */
+    @java.lang.Override
+    public java.lang.String getAlbum() {
+      return instance.getAlbum();
+    }
+    /**
+     * <pre>
+     * With a photo: the photos sent at once, each its own line, share one
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
+     * </pre>
+     *
+     * <code>string album = 10 [json_name = "album"];</code>
+     * @return The bytes for album.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getAlbumBytes() {
+      return instance.getAlbumBytes();
+    }
+    /**
+     * <pre>
+     * With a photo: the photos sent at once, each its own line, share one
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
+     * </pre>
+     *
+     * <code>string album = 10 [json_name = "album"];</code>
+     * @param value The album to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAlbum(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setAlbum(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * With a photo: the photos sent at once, each its own line, share one
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
+     * </pre>
+     *
+     * <code>string album = 10 [json_name = "album"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAlbum() {
+      copyOnWrite();
+      instance.clearAlbum();
+      return this;
+    }
+    /**
+     * <pre>
+     * With a photo: the photos sent at once, each its own line, share one
+     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
+     * random one, as it also collapses their notifications), that their
+     * apps draw them together by (spec/chat.md, Albums); empty for a photo
+     * sent alone. Refused with anything but a photo.
+     * </pre>
+     *
+     * <code>string album = 10 [json_name = "album"];</code>
+     * @param value The bytes for album to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAlbumBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setAlbumBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatSend)
   }
   @java.lang.Override
@@ -1359,10 +1536,12 @@ public  final class ChatSend extends
             "replyTo_",
             "withoutPreview_",
             "device_",
+            "album_",
           };
           java.lang.String info =
-              "\u0000\t\u0000\u0001\u0001\t\t\u0000\u0001\u0000\u0001\u0208\u0002\u0208\u0003\u021a" +
-              "\u0004\u0007\u0005\u1009\u0000\u0006\u1009\u0001\u0007\u0003\b\u0007\t\u0208";
+              "\u0000\n\u0000\u0001\u0001\n\n\u0000\u0001\u0000\u0001\u0208\u0002\u0208\u0003\u021a" +
+              "\u0004\u0007\u0005\u1009\u0000\u0006\u1009\u0001\u0007\u0003\b\u0007\t\u0208\n\u0208" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

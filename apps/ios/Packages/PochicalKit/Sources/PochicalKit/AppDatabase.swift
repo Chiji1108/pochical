@@ -93,5 +93,6 @@ var migrator: DatabaseMigrator {
   migrator.registerPreferences()
   migrator.registerChatDrafts()
   migrator.registerSupportDraft()
+  migrator.registerChatAlbums()
   return migrator
 }
