@@ -1479,14 +1479,14 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
       photo.album = "a1"
       try Chats.edit(.send(photo), in: "g", now: 1, db: db)
     }
-    let frame = try Chats.frames(of: "g", after: 0, in: db).frames[0]
-    let sent = try Chats.goOut(frame.chatEdits.edits, in: db)
+    let frame = try Chats.frames(of: "g", after: 0, now: 1, in: db).frames[0]
+    let sent = try Chats.goOut(frame.chatEdits.edits, now: 1, in: db)
 
     for edit in sent.reversed() {
       try Chats.takeBack(edit.opID, in: db)
     }
     // The group deletes each photo with its line, or at once without it.
-    let recalls = try Chats.frames(of: "g", after: 0, in: db).frames.flatMap(\.chatEdits.edits)
+    let recalls = try Chats.frames(of: "g", after: 0, now: 1, in: db).frames.flatMap(\.chatEdits.edits)
     #expect(recalls.map(\.recall.sendOpID) == sent.reversed().map(\.opID))
     #expect(recalls.map(\.recall.photoID) == ["p2", "p1"])
   }
