@@ -28,6 +28,7 @@ import m0025 from './0025_support_relay.sql';
 import m0026 from './0026_chat_photos_index.sql';
 import m0027 from './0027_chat-albums.sql';
 import m0028 from './0028_support_relay_failures.sql';
+import m0029 from './0029_support_relay_posting.sql';
 
   export default {
     journal,
@@ -60,7 +61,8 @@ m0024,
 m0025,
 m0026,
 m0027,
-m0028
+m0028,
+m0029
     }
   }
   
