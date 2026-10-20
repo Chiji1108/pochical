@@ -6,6 +6,8 @@
       "name": "pochical",
       "devDependencies": {
         "@anthropic-ai/sdk": "^0.128.0",
+        "@bufbuild/protobuf": "2.15.0",
+        "@pochical/design": "workspace:*",
         "@types/bun": "^1.4.2",
         "lefthook": "^2.1.6",
         "oxfmt": "^0.70.0",
@@ -106,6 +108,7 @@
         "@holiday-jp/holiday_jp": "^2.5.2",
         "@phosphor-icons/react": "^2.1.10",
         "@types/bun": "^1.4.2",
+        "@types/react": "~19.3.0",
         "budoux": "^0.9.3",
         "react": "19.3.0",
         "svgpath": "^2.6.0",
