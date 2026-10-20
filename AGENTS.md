@@ -1,144 +1,31 @@
 # Repository Guide
 
-Pochical is a multi-language monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/android`) apps, a Cloudflare Workers backend (`apps/server`), and a web site (`apps/web`). `apps/mobile-legacy` is the old Expo app, kept for reference only; do not lint, test or extend it.
+Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/android`) apps, a Cloudflare Workers backend (`apps/server`), the web site and its /design prototype (`apps/web`), and the admin site (`apps/admin`). `apps/mobile-legacy` is the old Expo app, kept for reference only; do not lint, test or extend it.
 
-- Tool versions and tasks live in `mise.toml` (`mise run gen`, `mise run server:test`, ...).
-- SQL schemas are Drizzle, and their migrations are generated, never written or edited by hand:
-  - D1 in `apps/server/src/db/schema.ts` (`mise run db:generate -- --name <what>`, into `apps/server/migrations`). better-auth's own tables are in `apps/server/src/db/auth-schema.ts`, written by `mise run auth:schema` from the options in `apps/server/src/auth.ts`; run `db:generate` after it.
-  - Each Durable Object's own SQLite: the Group DO in `apps/server/src/group-do-schema.ts` (`mise run group-do:generate -- --name <what>`) and the User DO in `apps/server/src/user-do-schema.ts` (`mise run user-do:generate -- --name <what>`), each applied by the object as it starts.
-- Wire types live in `proto/`. Never edit generated code (`apps/server/src/gen`, `apps/web/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`); change the `.proto` files and run `mise run gen`.
-- Numbers every platform shares live in `design/src/` and are written out by `mise run gen` like the design tokens: limits (`limits.ts`, including how much one synced value may hold), the chat's (`chat.ts`), what a day's values mean (`days.ts`), invitation codes (`invite.ts`), when to ask for a store review (`review.ts`), how the apps keep their sync sockets (`socket.ts`) and the widgets' (`widgets.ts`). Specs and code refer to them by name rather than repeating the numbers.
-- Design tokens (colors and テーマ, text styles, sizes) live in `design/` (TypeScript). apps/web imports them directly; `mise run gen` writes them out to `spec/design-tokens.json`, `apps/ios/Packages/PochicalDesign/Sources` and `apps/android/design/src/main`, which are never edited by hand. The marks' icons are there too: `design/src/mark-icons.ts` names each icon's Phosphor glyph, `bun run --cwd design icon:marks` writes their paths from Phosphor (`mark-icon-paths.ts`), `mark-icon-names.ts` gives each its name, the words it is searched by and its kind in ほかのアイコンを選ぶ, and `mise run gen` writes them all out for Swift and Kotlin. Components are not generated: each platform builds its own, with apps/web's /design as the reference.
-- Behavior shared across platforms is specified in `spec/`. Pure logic every platform writes again (repeating orders and what they take back from days, a person's own days under them, entering a day and its next day, the blanks 完了 asks about, deleting patterns, changing jobs and copying ready-made ones, days everyone in a group is off, what a widget says of a day and when its next day off is, a day's time changes, counting text, chat links and mentions, a chat's pins, an edit's link page and the line it opens on, which unread lines a count stands for, hybrid logical clocks (their order, a device's ticks and correction by the server's time, and the server's limit on clocks ahead), what a device shows while its edits wait, how long to wait before reconnecting, when to ask for a review) is pinned by `spec/vectors/*.json`: inputs and the expected answers, which each platform's tests read (`apps/web/tests/vectors.test.ts`, `apps/server/test/vectors.test.ts`, `apps/ios/Packages/PochicalKit/Tests`). A new case goes in the JSON, not in one platform's test.
-- The iOS app is `apps/ios/Pochical/Pochical.xcodeproj` (the app and its widget extension, in the App Group `group.app.pochical`). What they share that is written by hand, the logic `spec/` describes and the database, goes in the local package `apps/ios/Packages/PochicalKit`, tested on the Mac with `mise run ios:test`. `xcodebuild` needs `-skipMacroValidation` for SQLiteData's macros, which Xcode asks to trust once. The app's icons in the asset catalog (`AppIcon*`, `AppIconPreview-*`), and the poodle 次の休み's widget peeks with (`PeekingPoodle` in the widgets' catalog), are written by `bun run --cwd apps/web icon:ios` from the poodle drawing, painted as /design paints them. A Debug build in the simulator talks to `mise run server` at `http://localhost:8787` (on an iPhone, to `https://api.pochical.app`, with APNs' sandbox), which needs `apps/server/.dev.vars` (`BETTER_AUTH_SECRET`, any random value, and `BETTER_AUTH_URL=http://localhost:8787`; the `SLACK_*` secrets only to post to Pochical's people's Slack from this computer, and wrangler warns while they are not there) and the D1 migrations applied locally (`bunx wrangler d1 migrations apply pochical --local` in `apps/server`).
-- The admin site for Pochical's people (spec/admin.md) is `apps/admin`, TanStack Start at `admin.pochical.app` behind Cloudflare Access. It reads and writes only through the server's `AdminEntrypoint` (`apps/server/src/admin-entrypoint.ts`), a Workers RPC entrypoint bound to it as `SERVER`, which nothing on the internet can reach. Pochical's people also answer support chats from Slack, its events coming to the server's `/slack/events`. `mise run admin` serves it at `http://localhost:3100` beside `mise run server`, open to anyone there; its binding's types come from the server's source (`bun run --cwd apps/admin cf-typegen`).
-- National holidays are written out by `mise run gen` from `design/scripts/holidays.ts`, keyed by country code ("JP"), for the web and the native apps alike.
-- Plumbing comes from a maintained library before it is written by hand: look for one first (its license, recent releases, and whether it fits) and say which in the plan or PR. The iOS chat's list is ChatLayout for this reason, after a hand-written one kept breaking. MIT, Apache and BSD libraries may be added; GPL and AGPL code (Signal, Telegram) is read for ideas only, never copied. What Pochical looks like and does stays its own, from /design and `spec/`.
-- What does the same thing in two places is one piece, not two copies: before building or changing something, find where else the app does it and build on that, making what differs an input rather than a fork. A change to one carries to the others in the same PR: the group chats and the support chat, for one, are both a chat's lines, composer and menus.
+## Where things live
 
-# TypeScript: Ultracite Code Standards
+- Tool versions and tasks are in `mise.toml` (`mise run gen`, `mise run server:test`, `mise run ios:test`, ...).
+- Generated files are never edited by hand; change their source and regenerate:
+  - Wire types: `proto/` → `mise run gen` (into `apps/server/src/gen`, `apps/web/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`).
+  - Numbers every platform shares (limits, the chat's, days', invites', sockets', widgets'), design tokens, mark icons and holidays: `design/` → `mise run gen` (into `spec/design-tokens.json`, `apps/ios/Packages/PochicalDesign/Sources`, `apps/android/design/src/main`). Specs and code refer to them by name, never by value.
+  - Icons: the marks' paths from Phosphor via `bun run --cwd design icon:marks`; the iOS app icons and the widgets' `PeekingPoodle` via `bun run --cwd apps/web icon:ios`.
+  - SQL schemas are Drizzle and their migrations are generated, never written: D1 `apps/server/src/db/schema.ts` (`mise run db:generate -- --name <what>`; better-auth's tables via `mise run auth:schema` first), the Group DO `group-do-schema.ts` (`mise run group-do:generate`), the User DO `user-do-schema.ts` (`mise run user-do:generate`). CI runs `mise run db:check`.
+- Behavior shared across platforms is specified in `spec/`. Logic every platform writes again is pinned by `spec/vectors/*.json`, read by `apps/web/tests/vectors.test.ts`, `apps/server/test/vectors.test.ts` and PochicalKit's tests; a new case goes in the JSON, not in one platform's test. Components are not generated: each platform builds its own, with /design as the reference.
+- iOS: `apps/ios/Pochical/Pochical.xcodeproj` (app and widgets, App Group `group.app.pochical`). Hand-written shared code goes in `apps/ios/Packages/PochicalKit` (`mise run ios:test`). `xcodebuild` needs `-skipMacroValidation`. A Debug build in the simulator talks to `mise run server` at `http://localhost:8787`, which needs `apps/server/.dev.vars` (`BETTER_AUTH_SECRET`, any random value, and `BETTER_AUTH_URL=http://localhost:8787`; the `SLACK_*` secrets only to post to Slack from this computer, and wrangler warns while they are absent) and the D1 migrations applied locally (`bunx wrangler d1 migrations apply pochical --local` in `apps/server`).
+- Admin (spec/admin.md): `apps/admin` reaches the server only through `AdminEntrypoint` (`apps/server/src/admin-entrypoint.ts`), bound as `SERVER`, whose types come from the server's source (`bun run --cwd apps/admin cf-typegen`); `mise run admin` serves it at `http://localhost:3100`.
 
-The TypeScript apps (`apps/web`, `apps/server`) use **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+## How to build
 
-## Quick Reference
+- Plumbing comes from a maintained library before it is hand-written (check license, activity, fit; name it in the PR). MIT/Apache/BSD may be added; GPL/AGPL code (Signal, Telegram) is read for ideas only.
+- What does the same thing in two places is one piece, not two copies: build on the existing one and make the difference an input. A change to one carries to the others in the same PR.
+- Fix the root cause the way the platform or library intends; no timing hacks, sleeps or patches over symptoms. If the conventional answer is to leave a review finding, say so instead of adding special handling.
+- The apps are unreleased: change stored shapes directly, with no hand-written data migration, fallback or compatibility code for old saved data. Server SQL schemas still get their generated Drizzle migrations, as above.
+- Update `spec/` (and its vectors) in the same PR as any behavior change; fix spec drift when you see it.
+- UI follows the platform first (iOS 26 / Material 3 conventions, system controls and buttons sized by the OS). When /design and a platform differ, judge on the merits and say which side changes. Motion the OS provides is left to the OS.
+- TypeScript (`apps/web`, `apps/server`, `apps/admin`) is checked by Ultracite: run `bun x ultracite fix`, and avoid `as` assertions other than `as const`.
 
-- **Format code**: `bun x ultracite fix`
-- **Check for issues**: `bun x ultracite check`
-- **Diagnose setup**: `bun x ultracite doctor`
+## How to ship
 
-Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
-
----
-
-## Core Principles
-
-Write code that is **accessible, performant, type-safe, and maintainable**. Focus on clarity and explicit intent over brevity.
-
-### Type Safety & Explicitness
-
-- Use explicit types for function parameters and return values when they enhance clarity
-- Prefer `unknown` over `any` when the type is genuinely unknown
-- Use const assertions (`as const`) for immutable values and literal types
-- Leverage TypeScript's type narrowing instead of type assertions
-- Use meaningful variable names instead of magic numbers - extract constants with descriptive names
-
-### Modern JavaScript/TypeScript
-
-- Use arrow functions for callbacks and short functions
-- Prefer `for...of` loops over `.forEach()` and indexed `for` loops
-- Use optional chaining (`?.`) and nullish coalescing (`??`) for safer property access
-- Prefer template literals over string concatenation
-- Use destructuring for object and array assignments
-- Use `const` by default, `let` only when reassignment is needed, never `var`
-
-### Async & Promises
-
-- Always `await` promises in async functions - don't forget to use the return value
-- Use `async/await` syntax instead of promise chains for better readability
-- Handle errors appropriately in async code with try-catch blocks
-- Don't use async functions as Promise executors
-
-### React & JSX
-
-- Use function components over class components
-- Call hooks at the top level only, never conditionally
-- Specify all dependencies in hook dependency arrays correctly
-- Use the `key` prop for elements in iterables (prefer unique IDs over array indices)
-- Nest children between opening and closing tags instead of passing as props
-- Don't define components inside other components
-- Use semantic HTML and ARIA attributes for accessibility:
-  - Provide meaningful alt text for images
-  - Use proper heading hierarchy
-  - Add labels for form inputs
-  - Include keyboard event handlers alongside mouse events
-  - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
-
-### Error Handling & Debugging
-
-- Remove `console.log`, `debugger`, and `alert` statements from production code
-- Throw `Error` objects with descriptive messages, not strings or other values
-- Use `try-catch` blocks meaningfully - don't catch errors just to rethrow them
-- Prefer early returns over nested conditionals for error cases
-
-### Code Organization
-
-- Keep functions focused and under reasonable cognitive complexity limits
-- Extract complex conditions into well-named boolean variables
-- Use early returns to reduce nesting
-- Prefer simple conditionals over nested ternary operators
-- Group related code together and separate concerns
-
-### Security
-
-- Add `rel="noopener"` when using `target="_blank"` on links
-- Avoid `dangerouslySetInnerHTML` unless absolutely necessary
-- Don't use `eval()` or assign directly to `document.cookie`
-- Validate and sanitize user input
-
-### Performance
-
-- Avoid spread syntax in accumulators within loops
-- Use top-level regex literals instead of creating them in loops
-- Prefer specific imports over namespace imports
-- Avoid barrel files (index files that re-export everything)
-- Use proper image components (e.g., Next.js `<Image>`) over `<img>` tags
-
-### Framework-Specific Guidance
-
-**Next.js:**
-
-- Use Next.js `<Image>` component for images
-- Use `next/head` or App Router metadata API for head elements
-- Use Server Components for async data fetching instead of async Client Components
-
-**React 19+:**
-
-- Use ref as a prop instead of `React.forwardRef`
-
-**Solid/Svelte/Vue/Qwik:**
-
-- Use `class` and `for` attributes (not `className` or `htmlFor`)
-
----
-
-## Testing
-
-- Write assertions inside `it()` or `test()` blocks
-- Avoid done callbacks in async tests - use async/await instead
-- Don't use `.only` or `.skip` in committed code
-- Keep test suites reasonably flat - avoid excessive `describe` nesting
-
-## When Oxlint + Oxfmt Can't Help
-
-Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attention on:
-
-1. **Business logic correctness** - Oxlint + Oxfmt can't validate your algorithms
-2. **Meaningful naming** - Use descriptive names for functions, variables, and types
-3. **Architecture decisions** - Component structure, data flow, and API design
-4. **Edge cases** - Handle boundary conditions and error states
-5. **User experience** - Accessibility, performance, and usability considerations
-6. **Documentation** - Add comments for complex logic, but prefer self-documenting code
-
----
-
-Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `bun x ultracite fix` before committing to ensure compliance.
+- main takes pull requests only; name the Linear issue (team POC) in the PR, and file skipped findings or follow-ups there.
+- Before merging: run `/code-review` and address it, CI must be green (Xcode Cloud included for iOS), and review threads resolved. Merge main into the branch first when other PRs landed. Never merge on red.
+- Deploys happen through Cloudflare Workers Builds on merge; never deploy by hand.
