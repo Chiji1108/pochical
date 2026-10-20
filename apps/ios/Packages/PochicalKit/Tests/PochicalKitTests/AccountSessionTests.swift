@@ -113,8 +113,12 @@ private final class FakeAccountServer: AccountServer {
     let url = try await sockets.start()
     keychain = SessionKeychain(own: MemoryStore(kept), leftBehind: MemoryStore())
     database = try appDatabase()
+    // Left by another user: a coworker of theirs, still waiting to go.
     if let owner {
-      _ = try await database.write { try SyncState.claim(for: owner, in: $0) }
+      _ = try await database.write { db in
+        _ = try SyncState.claim(for: owner, in: db)
+        return try OwnValues.addCoworker(named: "佐藤", now: 1_000, in: db)
+      }
     }
     shared = try #require(UserDefaults(suiteName: "app.pochical.tests.\(UUID().uuidString)"))
     session = AccountSession(
@@ -313,13 +317,49 @@ private final class FakeAccountServer: AccountServer {
   #expect(await asking.value == nil)
 }
 
-@MainActor @Test func noSocketOpensOnAnotherUsersData() async throws {
+
+@MainActor @Test func dataAnotherUserLeftIsErasedBeforeAnySocketOpens() async throws {
   let made = try await Made(
     kept: JSONEncoder().encode(StoredSession(token: "a", userID: "A")), owner: "Z")
   made.session.cameToFront()
-  _ = await made.session.hold("g1")
-  await made.session.catchUp(within: .milliseconds(50))
+  #expect(await eventually { made.sockets.asked > 0 })
+  #expect(made.owner == "A")
+  #expect(made.coworkers == 0)
+  let waiting = try await made.database.read { try Sync.lastWaiting(in: $0) }
+  #expect(waiting == nil)
+  #expect(made.socketTokens == ["a"])
+}
+
+@MainActor @Test func aSignOutWhoseEraseFailsStillStartsAfreshAndErasesOnceItCan() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  #expect(await eventually { made.owner == "A" })
+  try await made.addCoworker()
+  try await made.database.write { db in
+    try db.execute(
+      sql: #"CREATE TRIGGER "keep" BEFORE DELETE ON "coworkers" BEGIN SELECT RAISE(ABORT, 'kept'); END"#)
+  }
+
+  // The session ended on the server: there is no going back to it.
+  await #expect(throws: (any Error).self) { try await made.session.signOut() }
+  #expect(made.server.asked.withLock(\.signedOut) == ["a"])
+  #expect(made.session.phase == .starting)
+  #expect(try made.keychain.kept() == nil)
+  #expect(made.coworkers == 1)
+
+  try await made.database.write { try $0.execute(sql: #"DROP TRIGGER "keep""#) }
+  made.session.cameToFront()
+  #expect(await eventually { made.owner == "anon-1" })
+  #expect(made.coworkers == 0)
+  #expect(await eventually { made.socketTokens.last == "anon-token-1" })
+}
+
+@MainActor @Test func signingOutAfterTheSessionWasRefusedDoesNotWaitForever() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  made.session.cameToFront()
+  #expect(await eventually { made.sockets.asked > 0 })
+  // Refused (401), the socket stops; an edit made since waits for good.
   try await Task.sleep(for: .milliseconds(200))
-  #expect(made.sockets.asked == 0)
-  #expect(made.owner == "Z")
+  try await made.addCoworker()
+  try await made.session.signOut()
+  #expect(made.session.phase == .starting)
 }

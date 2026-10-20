@@ -225,7 +225,8 @@ public actor SyncClient {
     if running == nil {
       start(as: credentials)
     }
-    guard running != nil else {
+    // Stopped for good in this stretch: nothing it waits for would go.
+    guard running != nil, stopped == nil else {
       stop()
       return Task {}
     }

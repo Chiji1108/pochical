@@ -114,7 +114,8 @@ import SQLiteData
   /// sent (spec/sync-protocol.md, Sockets).
   public func wentToBack() async {
     inFront = false
-    guard let credentials = await claimed() else { return }
+    // Come back to the front meanwhile, the sockets stay as the front has them.
+    guard let credentials = await claimed(), !inFront else { return }
     await userSocket.finishSending(as: credentials)
     await places.finishSending()
   }
@@ -205,38 +206,53 @@ import SQLiteData
   }
 
   /// Changes who the device is, in an order a failure or the app ending at
-  /// any step leaves safe: every socket closed and every stretch's
-  /// credentials ended first; then the server; then the database erased,
-  /// no one's until claimed; then the Keychain, which a failure before
-  /// leaves as it was, the device going back to the user it was.
+  /// any step leaves safe, every socket closed and every stretch's
+  /// credentials ended first. A switch erases before the Keychain changes,
+  /// so one that fails or is cut off before that leaves the device as the
+  /// user it was, whose session still holds. Once the server has ended the
+  /// session (signed out, deleted) there is no going back: the Keychain
+  /// forgets it first, and an erase that fails, or never ran, is done again
+  /// before the next user's sockets open (`claimed`).
   private func change(_ onServer: (Credentials) async throws -> Changed) async throws {
     guard case .signedIn(let before) = state else { throw NotSignedIn() }
     await leave(before)
+    let changed: Changed
     do {
-      let changed = try await onServer(before)
-      try await database.write { try LocalData.erase(in: $0) }
-      LocalData.eraseFiles()
-      userID = nil
-      shared?.removeObject(forKey: SignedInUser.key)
-      await onErase()
-      switch changed {
-      case .switched(let after):
+      changed = try await onServer(before)
+      if case .switched(let after) = changed {
+        try await erase()
         try keychain.keepLeftBehind(before.token)
         try keychain.keep(after)
-        enter(after)
-        Task { await deleteLeftBehind() }
-      case .left:
-        try keychain.forget()
-        state = .starting
-        if inFront {
-          signInAnew()
-        }
       }
     } catch {
       Logger.account.error("Changing the account failed: \(error)")
       enter(StoredSession(token: before.token, userID: before.userID))
       throw error
     }
+    switch changed {
+    case .switched(let after):
+      enter(after)
+      Task { await deleteLeftBehind() }
+    case .left:
+      // Signed in afresh, never as the session that ended.
+      let forgotten = Result { try keychain.forget() }
+      let erased = await Result { try await erase() }
+      state = .starting
+      if inFront {
+        signInAnew()
+      }
+      try forgotten.get()
+      try erased.get()
+    }
+  }
+
+  /// Everything the device holds of the user gone, the database no one's.
+  private func erase() async throws {
+    try await database.write { try LocalData.erase(in: $0) }
+    LocalData.eraseFiles()
+    userID = nil
+    shared?.removeObject(forKey: SignedInUser.key)
+    await onErase()
   }
 
   /// Ends the stretch signed in as `before`: nothing it handed out is
@@ -271,24 +287,40 @@ import SQLiteData
   }
 
   /// The credentials now, once the database is the user's: claimed if it
-  /// is no one's; nil while not signed in, or when it holds another user's
-  /// data, which no socket then sends or takes into.
+  /// is no one's; nil while not signed in. One another user left (a sign
+  /// out or deletion whose erase failed or was cut off, or a session the
+  /// Keychain no longer has) is erased first, as no session on the device
+  /// can send what it holds any more and the server keeps the rest.
   private func claimed() async -> Credentials? {
     guard case .signedIn(let credentials) = state else { return nil }
     // Claimed only in the stretch it is for: a claim coming after the
     // account changed, and its data was erased, would give the next
     // user's database to the one before.
-    let theirs =
-      (try? await database.write { db in
-        try credentials.isCurrent && SyncState.claim(for: credentials.userID, in: db)
-      }) ?? false
-    guard theirs else {
-      if credentials.isCurrent {
-        Logger.account.error("The device's data is not the user's: not syncing")
-      }
+    let claim = try? await database.write { db -> Claim in
+      guard credentials.isCurrent else { return .stale }
+      if try SyncState.claim(for: credentials.userID, in: db) { return .theirs }
+      Logger.account.notice("Erasing the data another user left on the device")
+      try LocalData.erase(in: db)
+      return try SyncState.claim(for: credentials.userID, in: db) ? .erased : .stale
+    }
+    switch claim {
+    case .theirs?:
+      return credentials
+    case .erased?:
+      LocalData.eraseFiles()
+      await onErase()
+      return credentials.isCurrent ? credentials : nil
+    case .stale?, nil:
       return nil
     }
-    return credentials
+  }
+
+  private enum Claim {
+    case theirs
+    /// Another user's, erased and claimed.
+    case erased
+    /// The account changed meanwhile.
+    case stale
   }
 
   /// Signs in anonymously, or with a token kept before its user was, once
