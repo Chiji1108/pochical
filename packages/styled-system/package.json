@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./base.css": "./base.css",
     "./config": "./config.ts",
     "./*": {
       "types": "./dist/*/index.d.ts",

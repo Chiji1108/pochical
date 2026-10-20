@@ -16,10 +16,10 @@ export default defineConfig({
       files: ["apps/server/test/**/*.test.ts"],
     })),
     {
-      // Existing findings in apps/web and the prototype it shows, downgraded
-      // until the /design prototype settles. Fix a rule's findings, then
-      // delete it from this list.
-      files: ["apps/web/**", "packages/prototype/**"],
+      // Existing findings in the web apps and the prototype they show,
+      // downgraded until the /design prototype settles. Fix a rule's
+      // findings, then delete it from this list.
+      files: ["apps/web/**", "apps/catalog/**", "packages/prototype/**"],
       rules: {
         complexity: "warn",
         "import/newline-after-import": "warn",

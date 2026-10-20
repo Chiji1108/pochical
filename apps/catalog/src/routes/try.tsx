@@ -10,8 +10,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { appSplashScreens } from "../lib/app-splash-screens";
+import { pageMeta } from "../lib/page-meta";
 import { screenColor } from "../lib/screen-color";
-import { pageMeta } from "../lib/site";
 
 const title = "ポチカル";
 
@@ -57,9 +57,8 @@ const launchScript = `(() => {
 export const Route = createFileRoute("/try")({
   component: TryPage,
   head: () => {
-    const meta = pageMeta("試す", "スマホで触れるポチカルの試作", "/try", true);
+    const meta = pageMeta("試す", "スマホで触れるポチカルの試作");
     return {
-      ...meta,
       links: [
         // Its name, icons and launch images on the home screen.
         { href: "/app/manifest.webmanifest", rel: "manifest" },

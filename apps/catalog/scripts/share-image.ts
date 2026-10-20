@@ -1,12 +1,12 @@
-import { SHARE_IMAGE } from "@pochical/prototype/lib/brand";
-// Takes the picture a shared link shows (public/share.png) from
-// /design/share-image, drawn by the site's own components, on a dev server
+// Takes the picture a link to the site shows (apps/web/public/share.png)
+// from /design/share-image, drawn by the prototype's components, on a dev server
 // of its own. Run again after changing it: bun run image:share
 // It drives the installed Google Chrome.
+import { SHARE_IMAGE } from "@pochical/prototype/lib/brand";
 import { chromium } from "playwright-core";
 import { createServer } from "vite";
 
-const OUTPUT = new URL("../public/share.png", import.meta.url).pathname;
+const OUTPUT = new URL("../../web/public/share.png", import.meta.url).pathname;
 
 const ROOT = new URL("..", import.meta.url).pathname;
 

@@ -64,10 +64,9 @@ export const config = defineConfig({
       wide: "@media (min-width: 960px)",
     },
   },
-  // The design pages, /demo and /try (marked .design-page), and the phone
-  // wherever it is shown, as on the top page (.dc-phone): buttons take the
-  // text color and focus ring around them unless a piece sets its own. On
-  // the design pages, the site's header and footer give way to the phone.
+  // The catalog's pages (marked .design-page), and the phone wherever it is
+  // shown, as on the site's top page (.dc-phone): buttons take the text
+  // color and focus ring around them unless a piece sets its own.
   globalCss: {
     ":is(.design-page, .dc-phone) :is(button, a):focus-visible": {
       outline: "3px solid var(--accent-focus)",
@@ -77,11 +76,8 @@ export const config = defineConfig({
     "@media (prefers-contrast: more)": {
       ':where(:root, [style*="--accent"]) > *': contrastedRoles,
     },
-    "body:has(.design-page) > :is(.site-header, .site-footer)": {
-      display: "none",
-    },
   },
-  // The site and the prototype bring their own base styles.
+  // The apps bring their own base styles (base.css).
   preflight: false,
   theme: {
     extend: {
@@ -185,4 +181,14 @@ export const config = defineConfig({
       },
     },
   },
+});
+
+// What an app (apps/*) makes its CSS from: its own pieces and the
+// prototype's it shows.
+export const appConfig = defineConfig({
+  ...config,
+  include: [
+    "./src/**/*.{ts,tsx}",
+    "../../packages/prototype/src/**/*.{ts,tsx}",
+  ],
 });

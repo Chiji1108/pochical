@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The design catalog: /design's documents, and the prototype to try at
+  // /try and /demo. Kept out of search (src/routes/__root.tsx).
+  "name": "pochical-catalog",
+  "main": "@tanstack/react-start/server-entry",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // Branches other than main are uploaded as Worker Previews by Workers
+  // Builds (`wrangler preview`), which needs this block, even empty.
+  "previews": {},
+}

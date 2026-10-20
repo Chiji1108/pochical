@@ -11,21 +11,20 @@ import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { pageMeta } from "../lib/site";
+import siteIcon from "../../../web/public/icon.png";
+import { pageMeta } from "../lib/page-meta";
 
 export const Route = createFileRoute("/design_/share-image")({
   component: ShareImage,
   head: () =>
     pageMeta(
       "共有したときの画像",
-      "リンクを共有したときに出る、ポチカルの画像",
-      "/design/share-image",
-      true
+      "リンクを共有したときに出る、ポチカルの画像"
     ),
 });
 
 // The picture a link to the site shows where it is shared (og:image), which
-// bun run image:share takes from /design/share-image into public/share.png:
+// bun run image:share takes from /design/share-image into apps/web/public/share.png:
 // the top page's hero in one frame, its words on the app's ポチカル sky and
 // the calendar's phone rising from the bottom edge. Under it, an invitation
 // link's picture for a sample group, which the site's Worker draws for each
@@ -133,7 +132,7 @@ function SiteShareImage({ person }: { person: UserStore }) {
       />
       <div className={styles.copy}>
         <p className={styles.brand}>
-          <img alt="" height={52} src="/icon.png" width={52} />
+          <img alt="" height={52} src={siteIcon} width={52} />
           ポチカル
         </p>
         <h1 className={styles.title}>

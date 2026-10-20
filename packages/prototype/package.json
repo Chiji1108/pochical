@@ -8,6 +8,7 @@
     "./lib/*": "./src/lib/*.ts"
   },
   "scripts": {
+    "icon:ios": "bun scripts/ios-app-icons.ts",
     "typecheck": "bun run --cwd ../styled-system codegen && tsc --noEmit",
     "test": "bun test"
   },
@@ -36,6 +37,7 @@
     "@types/bun": "^1.4.2",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
+    "sharp": "0.35.4",
     "typescript": "~6.0.3",
     "vite": "^8.0.0"
   }

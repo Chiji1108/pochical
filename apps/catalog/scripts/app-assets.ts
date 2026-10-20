@@ -1,8 +1,9 @@
 // Makes what /try needs to open from the home screen as an app of its own:
 // the icons, the manifest, and iOS's launch images in light and dark, all
-// from the site icon (public/icon.png).
+// from the site icon (apps/web/public/icon.png). The site's own pages take
+// the home screen icon and the small one its invite image is drawn with.
 // Run again after changing the icon: bun run icon:app
-import { writeFile } from "node:fs/promises";
+import { copyFile, writeFile } from "node:fs/promises";
 
 import { iconColorOptions } from "@pochical/prototype/components/design-app-icon";
 import { site } from "@pochical/prototype/lib/brand";
@@ -16,7 +17,9 @@ import sharp from "sharp";
 
 import { screenColor } from "../src/lib/screen-color";
 
-const SOURCE = new URL("../public/icon.png", import.meta.url).pathname;
+const SOURCE = new URL("../../web/public/icon.png", import.meta.url).pathname;
+const SITE_FOLDER = new URL("../../web/public/app/", import.meta.url).pathname;
+const SITE_ICONS = ["apple-touch-icon-180x180.png", "pwa-192x192.png"];
 const FOLDER = new URL("../public/app/", import.meta.url).pathname;
 const SPLASH_LINKS = new URL(
   "../src/lib/app-splash-screens.ts",
@@ -95,6 +98,11 @@ const splash = await instructions(
 
 await generateAssets(icons, true, FOLDER);
 await generateAssets(splash, true, FOLDER);
+await Promise.all(
+  SITE_ICONS.map(async (name) => {
+    await copyFile(`${FOLDER}${name}`, `${SITE_FOLDER}${name}`);
+  })
+);
 
 const light = screenColor("pochical", "light");
 const manifest = {

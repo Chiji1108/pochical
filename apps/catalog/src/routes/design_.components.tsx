@@ -127,7 +127,7 @@ import {
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import { pageMeta } from "../lib/site";
+import { pageMeta } from "../lib/page-meta";
 
 // The sample person the tab bar counts unread for: their groups' chats
 // and an answer from support, so both counts show.
@@ -146,9 +146,7 @@ export const Route = createFileRoute("/design_/components")({
   head: () => ({
     ...pageMeta(
       "部品の棚卸し",
-      "ポチカルの画面にある部品を、役割ごとに並べたもの",
-      "/design/components",
-      true
+      "ポチカルの画面にある部品を、役割ごとに並べたもの"
     ),
   }),
 });
@@ -162,7 +160,7 @@ function ComponentsPage() {
   const theme = useDesignTheme();
   return (
     <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar back="documents" />
+      <DesignToolbar />
       <DesignIntro eyebrow="POCHICAL / COMPONENTS" title="部品の棚卸し">
         画面で使う共通の部品を、役割ごとにすべて並べています。それぞれに、iOS と
         Android

@@ -12,6 +12,16 @@
       "autoPort": true
     },
     {
+      "name": "catalog",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "bun run --cwd packages/styled-system codegen && cd apps/catalog && exec bun x vite dev --port \"$PORT\" --strictPort"
+      ],
+      "port": 3200,
+      "autoPort": true
+    },
+    {
       "name": "server",
       "runtimeExecutable": "sh",
       "runtimeArgs": [

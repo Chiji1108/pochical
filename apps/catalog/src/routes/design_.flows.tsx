@@ -50,17 +50,12 @@ import {
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import { pageMeta } from "../lib/site";
+import { pageMeta } from "../lib/page-meta";
 
 export const Route = createFileRoute("/design_/flows")({
   component: FlowsPage,
   head: () => ({
-    ...pageMeta(
-      "画面遷移図",
-      "ポチカルの画面の流れと分かれ道",
-      "/design/flows",
-      true
-    ),
+    ...pageMeta("画面遷移図", "ポチカルの画面の流れと分かれ道"),
   }),
 });
 
@@ -105,7 +100,7 @@ function FlowsPage() {
   const theme = useDesignTheme();
   return (
     <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar back="documents" />
+      <DesignToolbar />
       <DesignIntro eyebrow="POCHICAL / FLOWS" title="画面遷移図">
         実際の画面を小さく並べています。触って試すときは、デモから。
       </DesignIntro>
