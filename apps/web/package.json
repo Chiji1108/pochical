@@ -4,10 +4,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 3000",
-    "icon:site": "bun scripts/site-icon.ts",
-    "icon:app": "bun scripts/app-assets.ts",
-    "icon:ios": "bun scripts/ios-app-icons.ts",
-    "image:share": "bun scripts/share-image.ts",
     "build": "vite build",
     "bundle:budget": "bun scripts/bundle-budget.ts",
     "preview": "vite preview --port 3000",
@@ -43,10 +39,7 @@
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "@types/react-test-renderer": "^19.1.0",
-    "@vite-pwa/assets-generator": "^2.0.0",
-    "@vitejs/plugin-react": "^6.0.1",
     "react-test-renderer": "19.3.0",
-    "sharp": "0.35.4",
     "typescript": "~6.0.3",
     "vite": "^8.0.0",
     "wrangler": "^4.137.0"

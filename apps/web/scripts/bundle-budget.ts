@@ -19,10 +19,6 @@ const budgets: Record<string, number> = {
   "/privacy": 140,
   "/support": 140,
   "/terms": 140,
-  // /try has none. It is the app itself, a prototype nothing links to, and
-  // its budget was only ever raised as the app grew (450, 470, 475); counted
-  // with its imports it was 484 (2026-10). The top page's phones run the
-  // same app, but after its words, so its budget above is what people see.
 };
 
 const DIST = new URL("../dist/", import.meta.url).pathname;

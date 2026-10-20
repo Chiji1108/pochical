@@ -23,8 +23,8 @@ import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
 import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
 import { css } from "@pochical/styled-system/css";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, RotateCcw } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { HomeScreen } from "../components/design-home-screen";
@@ -35,12 +35,12 @@ import {
   toolbarAction,
 } from "../components/design-page";
 import { VariantPanel } from "../components/design-variant-panel";
-import { pageMeta } from "../lib/site";
+import { pageMeta } from "../lib/page-meta";
 
 export const Route = createFileRoute("/demo")({
   component: DemoPage,
   head: () => ({
-    ...pageMeta("デモ", "ブラウザで触れるポチカルの試作", "/demo", true),
+    ...pageMeta("デモ", "ブラウザで触れるポチカルの試作"),
   }),
   validateSearch: parseDesignVariants,
 });
@@ -146,10 +146,7 @@ function DemoPage() {
   };
   return (
     <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar back="site">
-        <Link className={toolbarAction} to="/design">
-          <BookOpen aria-hidden="true" size={14} /> デザイン資料
-        </Link>
+      <DesignToolbar>
         <button
           className={toolbarAction}
           onClick={() => {

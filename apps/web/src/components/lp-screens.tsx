@@ -47,7 +47,8 @@ import { WhenNear } from "./when-near";
 // (routes/index.tsx takes them lazily), so its words need not wait for
 // the app; until then the server's drawing of them stands.
 
-// The current proposal for each open design choice, as on /try.
+// The current proposal for each open design choice, as on the catalog's
+// /try (apps/catalog).
 const variants = parseDesignVariants({});
 
 // The app's own ポチカル sky (おたのしみ), drawn as the app draws it: its
@@ -171,7 +172,8 @@ const heroSchedule = Object.fromEntries(
   )
 );
 
-// The app itself, the same one /try runs, to tap right on the page.
+// The app itself, the same one the catalog's /try runs, to tap right on
+// the page.
 export function HeroPhone() {
   const [person] = useState(() =>
     createUserStore({

@@ -37,16 +37,14 @@ import {
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import { pageMeta } from "../lib/site";
+import { pageMeta } from "../lib/page-meta";
 
 export const Route = createFileRoute("/design_/states")({
   component: StatesPage,
   head: () => ({
     ...pageMeta(
       "状態の一覧",
-      "ポチカルのカレンダーの、月の埋まり方や見た目ごとの状態",
-      "/design/states",
-      true
+      "ポチカルのカレンダーの、月の埋まり方や見た目ごとの状態"
     ),
   }),
 });
@@ -77,7 +75,7 @@ function StatesPage() {
   const theme = useDesignTheme();
   return (
     <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar back="documents" />
+      <DesignToolbar />
       <DesignIntro eyebrow="POCHICAL / STATES" title="状態の一覧">
         カレンダーがなりうる状態を並べています。直したら、ここで全部を見比べます。
       </DesignIntro>

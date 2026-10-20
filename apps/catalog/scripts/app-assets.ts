@@ -1,8 +1,9 @@
 // Makes what /try needs to open from the home screen as an app of its own:
 // the icons, the manifest, and iOS's launch images in light and dark, all
-// from the site icon (public/icon.png).
+// from the site icon (@pochical/prototype's assets/icon.png).
 // Run again after changing the icon: bun run icon:app
 import { writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
 import { iconColorOptions } from "@pochical/prototype/components/design-app-icon";
 import { site } from "@pochical/prototype/lib/brand";
@@ -16,7 +17,9 @@ import sharp from "sharp";
 
 import { screenColor } from "../src/lib/screen-color";
 
-const SOURCE = new URL("../public/icon.png", import.meta.url).pathname;
+const SOURCE = fileURLToPath(
+  import.meta.resolve("@pochical/prototype/assets/icon.png")
+);
 const FOLDER = new URL("../public/app/", import.meta.url).pathname;
 const SPLASH_LINKS = new URL(
   "../src/lib/app-splash-screens.ts",

@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "apps/admin",
+    "apps/catalog",
     "apps/server",
     "apps/web",
     "design",
@@ -10,14 +11,15 @@
   ],
   "type": "module",
   "scripts": {
-    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck",
-    "test": "bun run --cwd packages/jsx test && bun run --cwd packages/prototype test && bun run --cwd apps/web test && bun run --cwd apps/server test",
+    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/catalog typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck",
+    "test": "bun run --cwd packages/jsx test && bun run --cwd packages/prototype test && bun run --cwd apps/web test && bun run --cwd apps/catalog test && bun run --cwd apps/server test",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "prepare": "lefthook install",
     "web": "bun run --cwd apps/web dev",
     "build:web": "bun run --cwd apps/web build",
     "preview:web": "bun run --cwd apps/web preview",
+    "catalog": "bun run --cwd apps/catalog dev",
     "server": "bun run --cwd apps/server dev",
     "admin": "bun run --cwd apps/admin dev"
   },

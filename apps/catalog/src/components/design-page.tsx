@@ -68,20 +68,13 @@ export const toolbarAction = css({
   padding: "10px 14px",
 });
 
-// Back to the site or to the design documents on the left, and the
-// page's actions on the right.
-export function DesignToolbar({
-  back,
-  children,
-}: {
-  back: "site" | "documents";
-  children?: ReactNode;
-}) {
+// Back to the design documents on the left, and the page's actions on the
+// right.
+export function DesignToolbar({ children }: { children?: ReactNode }) {
   return (
     <div className={toolbar.root}>
-      <Link to={back === "site" ? "/" : "/design"}>
-        <ArrowLeft aria-hidden="true" size={16} />{" "}
-        {back === "site" ? "ポチカル" : "デザイン資料"}
+      <Link to="/design">
+        <ArrowLeft aria-hidden="true" size={16} /> デザイン資料
       </Link>
       {children && <div className={toolbar.actions}>{children}</div>}
     </div>
