@@ -165,7 +165,7 @@ struct CalendarScreen: View {
           }
           .onEnded(pullEnded),
         including: opened == nil ? .none : .all)
-      if opened != nil {
+      if shownOpen != nil {
         // The day's detail is a sheet over the week (below).
         Spacer(minLength: 0)
       } else {
@@ -201,7 +201,7 @@ struct CalendarScreen: View {
       .ignoresSafeArea()
     }
     // The tabs give way to entering and to a day's week, as /design's do.
-    .toolbarVisibility(entering == nil && opened == nil ? .visible : .hidden, for: .tabBar)
+    .toolbarVisibility(entering == nil && shownOpen == nil ? .visible : .hidden, for: .tabBar)
     // A month turned to while entering starts on its first blank day; a
     // day picked in a month around it turns to that month.
     .onChange(of: shownMonth) { _, month in
@@ -228,8 +228,9 @@ struct CalendarScreen: View {
       }
     }
     .onChange(of: opened) { _, day in
+      // Whatever closed or changed the day, its sheet's going is over.
+      leaving = false
       guard let day else {
-        leaving = false
         // A swipe left unsettled as the week closed goes with it.
         swipedWeek = nil
         landing = nil
@@ -378,11 +379,16 @@ struct CalendarScreen: View {
     day.adding(days: -(((day.weekday - weekStart) % 7 + 7) % 7))
   }
 
+  /// The day open as the screen shows it: none once its sheet starts to
+  /// go, so the month, the tabs and the heading close with it.
+  private var shownOpen: Day? {
+    leaving ? nil : opened
+  }
+
   /// How far the month is folded into the opened week, 0 to 1: moved by
-  /// opening and closing the week (closing as its sheet starts to go), or
-  /// by a finger pulling it open.
+  /// opening and closing the week, or by a finger pulling it open.
   private var fold: CGFloat {
-    opened == nil || leaving ? 0 : 1 - pull
+    shownOpen == nil ? 0 : 1 - pull
   }
 
   /// How far a pull unfolds the month: the month's foot comes down with
@@ -482,7 +488,7 @@ struct CalendarScreen: View {
   /// in a day's week, where they are what is being looked at (休みの見せ方
   /// 空白).
   private var offShown: OffShown {
-    entering != nil || opened != nil ? .faint : .hidden
+    entering != nil || shownOpen != nil ? .faint : .hidden
   }
 
   /// While the gap sheet asks, its days drawn faint as the pattern picked
@@ -498,7 +504,7 @@ struct CalendarScreen: View {
   private func pageDays(_ calendar: OwnCalendar) -> PageDays {
     PageDays(
       today: today, calendar: calendar, colorsHolidays: settings.device.week.holiday,
-      offShown: offShown, selected: entering ?? opened, isEntering: entering != nil,
+      offShown: offShown, selected: entering ?? shownOpen, isEntering: entering != nil,
       preview: gapPreview(calendar),
       onSelect: selectDay)
   }
@@ -666,7 +672,7 @@ struct CalendarScreen: View {
   /// month, 完了 while entering, and in a day's week 今週 away from this
   /// week (spec/calendar.md).
   @ViewBuilder private var actions: some View {
-    if opened != nil {
+    if shownOpen != nil {
       // The detail's sheet closes the day, with its own ×.
       TodayFade(position: position, todayPage: todayPage) {
         TodayButton(unit: "週") { go(to: today) }
@@ -707,7 +713,7 @@ struct CalendarScreen: View {
     HStack(alignment: .bottom) {
       // Only the month on its own opens 月を選ぶ; entering and a day's week
       // keep to the days around (/design's calendar heading).
-      if entering == nil, opened == nil, settings.device.heading.surprise {
+      if entering == nil, shownOpen == nil, settings.device.heading.surprise {
         // おたのしみ: the name drifts the sky to another.
         Button {
           settings.device.heading.sky = SurpriseSky.next(
@@ -717,7 +723,7 @@ struct CalendarScreen: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint("空の色を変えます")
-      } else if entering == nil, opened == nil {
+      } else if entering == nil, shownOpen == nil {
         MonthTitleButton(
           month: shownMonth ?? thisMonth, first: thisMonth.addingMonths(-Self.monthsAround),
           last: thisMonth.addingMonths(Self.monthsAround), chevron: false

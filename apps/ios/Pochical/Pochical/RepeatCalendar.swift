@@ -61,7 +61,7 @@ struct RepeatCalendar: View {
   init(
     sequence: Binding<[PatternID]>, anchor: Binding<Day>, cover: OrderCover, patterns: [Pattern],
     before: OwnCalendar? = nil, holidayShift: PatternID? = nil,
-    holidayCountry: String = HolidayCountry.current
+    holidayCountry: String
   ) {
     _sequence = sequence
     _anchor = anchor
@@ -95,7 +95,7 @@ struct RepeatCalendar: View {
   }
 
   var body: some View {
-    let shown = month ?? anchor.firstOfMonth
+    let shown = month ?? origin
     VStack(spacing: Self.gap) {
       HStack {
         MonthTitleButton(
@@ -178,7 +178,8 @@ struct RepeatCalendar: View {
       .scrollTargetLayout()
     }
     .scrollTargetBehavior(.paging)
-    // Opens on the middle page, `origin`'s, which `month` starts on.
+    // Opens on the middle page, `origin`'s, which `month` starts on: the
+    // first layout does not scroll to `month` itself.
     .defaultScrollAnchor(.center, for: .initialOffset)
     .scrollPosition(id: $month)
     .onScrollGeometryChange(for: CGFloat.self) { geometry in
@@ -253,7 +254,7 @@ struct RepeatCalendar: View {
     let next = (framed ?? sequence.count) + 1
     framed = next < sequence.count ? next : nil
     let day = anchor.adding(days: framed ?? sequence.count)
-    let shown = month ?? anchor.firstOfMonth
+    let shown = month ?? origin
     if !monthWeeks(shown, weekStart: settings.device.week.start).contains(where: { $0.contains(day) }) {
       withAnimation(Springs.standard) { month = day.firstOfMonth }
     }
