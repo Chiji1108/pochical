@@ -10,7 +10,7 @@ import SwiftUI
 /// does, so its latest line is current.
 struct SupportRow: View {
   @Environment(\.rootNavigator) private var navigator
-  @State private var meID = GroupCalls.knownUserID
+  @Environment(\.meID) private var meID
 
   var body: some View {
     ChatRow(

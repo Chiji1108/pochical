@@ -54,7 +54,7 @@ extension GroupCalls {
     var request = Pochical_V1_SetBlockedRequest()
     request.userID = userID
     request.blocked = blocked
-    _ = try await users.setBlocked(request: request, headers: account.headers()).result.get()
+    _ = try await users.setBlocked(request: request, headers: headers()).result.get()
   }
 
   /// Why something is reported.
@@ -91,7 +91,7 @@ extension GroupCalls {
     request.reason = reason.wire
     request.line.threadID = threadID
     request.line.seq = UInt64(seq)
-    _ = try await chats.report(request: request, headers: account.headers()).result.get()
+    _ = try await chats.report(request: request, headers: headers()).result.get()
   }
 
   /// Reports a member, sent with their name in the group.
@@ -102,7 +102,7 @@ extension GroupCalls {
     request.groupID = groupID
     request.reason = reason.wire
     request.userID = userID
-    _ = try await chats.report(request: request, headers: account.headers()).result.get()
+    _ = try await chats.report(request: request, headers: headers()).result.get()
   }
 }
 
@@ -115,7 +115,7 @@ extension GroupCalls {
     #if DEBUG
       request.sandbox = true
     #endif
-    _ = try await users.registerPushToken(request: request, headers: account.headers()).result
+    _ = try await users.registerPushToken(request: request, headers: headers()).result
       .get()
   }
 }

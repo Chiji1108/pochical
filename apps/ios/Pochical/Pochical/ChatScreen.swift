@@ -24,7 +24,8 @@ struct ChatScreen: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.displayScale) private var displayScale
   @Environment(\.groupSockets) private var groupSockets
-  @Environment(\.account) private var account
+  /// The reader as the session keeps them.
+  @Environment(\.meID) private var signedIn
   /// The socket said under the title, once it has stayed not current for
   /// a moment (spec/chat.md): the lines shown may not be all there is.
   @State private var syncSaid = SyncStatus.current
@@ -128,7 +129,7 @@ struct ChatScreen: View {
     self.threadID = threadID
     self.otherID = otherID
     self.sharing = sharing
-    let me = GroupCalls.knownUserID
+    let me = widgetMeID()
     _meID = State(initialValue: me)
     _feed = State(
       initialValue: ChatFeed(
@@ -325,15 +326,15 @@ struct ChatScreen: View {
       // Once: shown again, after a photo opened large over it or a page
       // pushed over it, the chat stays where it was.
       guard !opened else { return }
-      // The reader is asked of the server before the chat opens only when
-      // not yet heard of; else after, in case the account changed.
-      if meID == nil {
-        await hearReader()
-      }
       // Opens at once on the lines the device holds, as the messaging apps
       // do; lines the group's catch-up still brings come in under them.
       await open()
-      await hearReader()
+    }
+    // Read again for the reader the session says, should it change.
+    .onChange(of: signedIn) { _, reader in
+      guard reader != meID else { return }
+      meID = reader
+      Task { await reload() }
     }
     // The chat is read while the screen is shown, and stops as it goes.
     .task { await feed.follow() }
@@ -1199,15 +1200,6 @@ struct ChatScreen: View {
   }
 
   // MARK: Doing
-
-  /// The reader as the server knows them, the lines read again by them
-  /// when that is not who they were taken to be.
-  private func hearReader() async {
-    let heard = await groupCalls.userID()
-    guard heard != meID else { return }
-    meID = heard
-    await reload()
-  }
 
   /// Reads the chat again for the reader and the lines laid out.
   private func reload() async {

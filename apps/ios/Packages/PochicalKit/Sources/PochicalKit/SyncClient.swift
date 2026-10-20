@@ -16,7 +16,14 @@ import SQLiteData
 /// keeps its socket alive and reconnects after a random wait that doubles
 /// with each failed try, at once when the network comes back; never after
 /// a 401 or an update the server asks for, nor, until a group's is started
-/// again, once the user is not in the group.
+/// again, once the user is not in the group (`mayStart`).
+///
+/// AccountSession alone starts it, as whoever the device is signed in as
+/// then (`Credentials`), and it sends and takes only while the database is
+/// that user's (`SyncState.claim`) and the account has not changed since:
+/// checked in the same transaction as each read it sends from and each
+/// write it takes into, so no order of calls can carry one user's data to
+/// another.
 public actor SyncClient {
   /// Whose DO the socket reaches.
   public enum Peer: Sendable, Equatable {
@@ -42,8 +49,8 @@ public actor SyncClient {
     }
   }
 
-  /// Why it stopped trying: for good until the app is signed in again or
-  /// updated, or, not in the group, until it is started again.
+  /// Why it stopped trying: until the account changes, or, not in the
+  /// group, until it is started again (`mayStart`).
   public enum Stop: Error, Sendable {
     /// The server does not know the session: the user signed out or their
     /// account was deleted elsewhere. Nothing is cleared and no new user
@@ -51,6 +58,10 @@ public actor SyncClient {
     case signedOut
     /// The server needs a newer app.
     case protocolTooOld
+    /// The database is not the user's it was started as: another user's,
+    /// or the account changed since. It neither sends nor takes anything
+    /// until started again as whoever the device is then.
+    case notTheOwner
     /// The user is not in the group: taken out, left on another device, or
     /// the group gone (403, or closed with `SyncSocket.notMemberCloseCode`).
     /// Their own socket tells the device so; opening the group again tries
@@ -65,7 +76,6 @@ public actor SyncClient {
   /// The socket protocol this build speaks (apps/server/src/protocol.ts).
   static let protocolVersion: UInt32 = 1
 
-  private let account: Account
   private let database: any DatabaseWriter
   private let peer: Peer
   private let server: URL
@@ -80,6 +90,10 @@ public actor SyncClient {
   /// that breaks right after it, again and again, still waits longer.
   private var tries = 0
   private var connected = false
+  /// The OS said the network went away, and has not said it came back.
+  private var offline = false
+  /// Between tries, waiting before the next.
+  private var waitingToRetry = false
   /// When the server last answered the keepalive.
   private var lastReplyMs: Int64 = 0
   /// The server refused a frame's clocks: the outbox takes new ones once
@@ -90,7 +104,12 @@ public actor SyncClient {
   private var sending: (socket: URLSessionWebSocketTask, task: Task<Void, Never>)?
   /// Waiting for the outbox to empty before closing, in the background.
   private var finishing: Task<Void, Never>?
+  /// Whom it connects as, from `start` until `stop`.
+  private var credentials: Credentials?
   public private(set) var stopped: Stop?
+  /// The stretch of the account `stopped` came in: a start in a later one
+  /// tries again, as the device is someone else then, or signed in again.
+  private var stoppedIn: Int?
   /// Everything the DO had for this device at Welcome has been taken: the
   /// Pong to the Ping sent after it has come (Keepalive).
   private var caughtUp = false
@@ -112,10 +131,7 @@ public actor SyncClient {
   private var typingWatchers: [UUID: AsyncStream<Pochical_V1_Typing>.Continuation] = [:]
   private var photoPageWatchers: [UUID: AsyncStream<ChatPhotosPage>.Continuation] = [:]
 
-  public init(
-    account: Account, database: any DatabaseWriter, peer: Peer = .user, server: URL = Server.url
-  ) {
-    self.account = account
+  init(database: any DatabaseWriter, peer: Peer = .user, server: URL = Server.url) {
     self.database = database
     self.peer = peer
     self.server = server
@@ -134,16 +150,42 @@ public actor SyncClient {
     paths.cancel()
   }
 
-  /// Connects, or tries again at once with the count started again, as the
-  /// person is waiting: the app came to the foreground. An open socket
-  /// stays.
-  public func start() {
+  /// Connects as `credentials`, or tries again at once with the count
+  /// started again, as the person is waiting: the app came to the
+  /// foreground. An open socket stays. Nothing once the account has changed
+  /// since `credentials` were given out.
+  func start(as credentials: Credentials) {
     finishing?.cancel()
     finishing = nil
-    if stopped == .notMember {
-      stopped = nil
+    guard mayStart(as: credentials) else { return }
+    stopped = nil
+    reconnect(as: credentials)
+  }
+
+  /// Whether a socket stopped may start again as `credentials`, the one
+  /// rule for it: never once the account has changed since they were given
+  /// out; after any stop, in a later stretch of the account (the device is
+  /// someone else then, or signed in again); and, not in the group, at the
+  /// next start in the same one, as after joining again, though never by
+  /// itself, as the network coming back.
+  private func mayStart(as credentials: Credentials) -> Bool {
+    guard credentials.isCurrent else { return false }
+    switch stopped {
+    case nil, .notMember: return true
+    case .signedOut, .protocolTooOld, .notTheOwner: return stoppedIn != credentials.generation
     }
-    guard stopped == nil, !(running != nil && connected) else { return }
+  }
+
+  /// Connects as `start` does, a closing under way going on: the network
+  /// coming back does not take back a socket closing once sent.
+  private func reconnect(as credentials: Credentials) {
+    // In the same stretch, a socket open or opening stays: only one waiting
+    // to try again is tried at once. Two asked for together (the session
+    // signing in as the app comes to the front) open one socket.
+    let same = self.credentials?.generation == credentials.generation
+    guard credentials.isCurrent, stopped == nil, !(same && running != nil && !waitingToRetry)
+    else { return }
+    self.credentials = credentials
     // A socket still opening is closed too: cancelling its task does not
     // end a send or receive waiting on it, and it would stay open beside
     // the new one.
@@ -151,7 +193,8 @@ public actor SyncClient {
     socket?.cancel(with: .goingAway, reason: nil)
     socket = nil
     tries = 0
-    running = Task { await run() }
+    waitingToRetry = false
+    running = Task { await run(as: credentials) }
     paths.pathUpdateHandler = { [weak self] path in
       guard let self else { return }
       if path.status == .satisfied {
@@ -165,25 +208,12 @@ public actor SyncClient {
     }
   }
 
-  /// Connects as whoever the account is now, after it changed: stopped
-  /// for good before (a 401) or not.
-  public func startAfresh() {
-    forgetStop()
-    start()
-  }
-
-  /// Closes the socket and forgets why it stopped for good, without
-  /// connecting: the account changed, and the next `start` connects as
-  /// whoever it is then.
-  public func forgetStop() {
-    stop()
-    stopped = nil
-  }
-
-  /// Closes the socket: the app went to the background.
-  public func stop() {
+  /// Closes the socket: the app went to the background, or the account is
+  /// changing.
+  func stop() {
     finishing?.cancel()
     finishing = nil
+    credentials = nil
     running?.cancel()
     running = nil
     socket?.cancel(with: .goingAway, reason: nil)
@@ -201,25 +231,31 @@ public actor SyncClient {
   /// until its outbox (the user's, or the group's chat outbox) is sent and
   /// acknowledged, or `stop` (the time the OS gave runs out), so an edit
   /// made just before reaches the user's other devices and groups without
-  /// waiting for the app to be opened again (Sockets).
-  public func finishSending() async {
-    await closeOnceSent().value
+  /// waiting for the app to be opened again (Sockets). Connected as
+  /// `credentials` if it is not yet, else as it was started.
+  func finishSending(as credentials: Credentials? = nil) async {
+    await closeOnceSent(as: credentials).value
   }
 
   /// Closes the socket once its outbox is sent, as `finishSending` does,
   /// without waiting for it: the task ends as the socket closes, or as
   /// `start` takes it back, the socket then staying open.
   @discardableResult
-  public func closeOnceSent() -> Task<Void, Never> {
+  func closeOnceSent(as given: Credentials? = nil) -> Task<Void, Never> {
     let waiting =
       (try? database.read { [peer] in try Self.lastToSend(to: peer, now: Self.nowMs(), in: $0) })
       ?? nil
-    guard waiting != nil, stopped == nil else {
+    guard waiting != nil, let credentials = given ?? credentials else {
       stop()
       return Task {}
     }
     if running == nil {
-      start()
+      start(as: credentials)
+    }
+    // Stopped for good in this stretch: nothing it waits for would go.
+    guard running != nil, stopped == nil else {
+      stop()
+      return Task {}
     }
     let emptied = Task { [database, peer] in
       await waitUntil(in: database) { db, now in
@@ -249,17 +285,22 @@ public actor SyncClient {
   /// a while to find it so: closed at once, so the screens say 接続中…,
   /// and opened again as the network comes back.
   private func networkWentAway() {
+    offline = true
     guard connected else { return }
     socket?.cancel(with: .goingAway, reason: nil)
   }
 
+  /// Only after it went away: the OS also says so as it starts watching,
+  /// which would open a second socket beside the one opening.
   private func networkCameBack() {
-    if stopped == nil, running != nil, !connected {
-      start()
+    guard offline else { return }
+    offline = false
+    if let credentials, running != nil, !connected {
+      reconnect(as: credentials)
     }
   }
 
-  private func run() async {
+  private func run(as credentials: Credentials) async {
     while !Task.isCancelled {
       // Closed before the wait, so the network coming back meanwhile tries
       // again at once rather than after it.
@@ -269,15 +310,24 @@ public actor SyncClient {
       if tries > 0 {
         let most = reconnectWaitMost(
           tries: tries, firstMs: SyncSocket.reconnectFirstMs, mostMs: SyncSocket.reconnectMostMs)
+        waitingToRetry = true
         try? await Task.sleep(for: .milliseconds(Int.random(in: 0...most)))
         if Task.isCancelled { return }
+        waitingToRetry = false
       }
       tries += 1
       do {
-        try await connect()
+        try await connect(as: credentials)
       } catch let stop as Stop {
+        // A run replaced meanwhile says nothing of the one after it.
+        guard !Task.isCancelled else { return }
         stopped = stop
+        stoppedIn = credentials.generation
+        // Nothing more goes on it: what waits for its outbox to empty
+        // waits no longer.
+        finishing?.cancel()
         Logger.sync.error("Stopped syncing: \(String(describing: stop))")
+        running = nil
         return
       } catch is ClockAhead {
         // Reconnected at once; the outbox's clocks are put right then.
@@ -291,9 +341,18 @@ public actor SyncClient {
     }
   }
 
-  private func connect() async throws {
+  private func connect(as credentials: Credentials) async throws {
+    var hello = Pochical_V1_Hello()
+    hello.protocolVersion = Self.protocolVersion
+    // Read before the socket opens, so none opens on a database that is
+    // not the user's.
+    hello.cursor = try await database.read { [peer] db in
+      try Self.owned(by: credentials, db)
+      guard let placeID = peer.placeID else { return try Sync.cursor(in: db) }
+      return try GroupSync.cursor(of: placeID, in: db)
+    }
     var request = URLRequest(url: socketURL)
-    for (name, values) in try await account.headers() {
+    for (name, values) in credentials.headers {
       request.setValue(values.joined(separator: ","), forHTTPHeaderField: name)
     }
     // Started again meanwhile: the new try opens its own.
@@ -302,12 +361,6 @@ public actor SyncClient {
     self.socket = socket
     socket.resume()
     defer { socket.cancel(with: .goingAway, reason: nil) }
-    var hello = Pochical_V1_Hello()
-    hello.protocolVersion = Self.protocolVersion
-    hello.cursor = try await database.read { [peer] db in
-      guard let placeID = peer.placeID else { return try Sync.cursor(in: db) }
-      return try GroupSync.cursor(of: placeID, in: db)
-    }
     var frame = Pochical_V1_ClientFrame()
     frame.hello = hello
     let sentMs = Self.nowMs()
@@ -338,7 +391,9 @@ public actor SyncClient {
       case .string(SyncSocket.keepaliveReply):
         lastReplyMs = Self.nowMs()
       case .data(let data):
-        try await take(Pochical_V1_ServerFrame(serializedBytes: data), on: socket, sentMs: sentMs)
+        try await take(
+          Pochical_V1_ServerFrame(serializedBytes: data), on: socket, sentMs: sentMs,
+          as: credentials)
       default:
         break
       }
@@ -346,7 +401,8 @@ public actor SyncClient {
   }
 
   private func take(
-    _ frame: Pochical_V1_ServerFrame, on socket: URLSessionWebSocketTask, sentMs: Int64
+    _ frame: Pochical_V1_ServerFrame, on socket: URLSessionWebSocketTask, sentMs: Int64,
+    as credentials: Credentials
   ) async throws {
     switch frame.kind {
     case .welcome(let welcome):
@@ -360,35 +416,44 @@ public actor SyncClient {
       guard peer == .user else {
         sending?.task.cancel()
         if let placeID = peer.placeID {
-          sending = (socket, Task { await sendChatOutbox(of: placeID, on: socket) })
+          sending = (
+            socket, Task { await sendChatOutbox(of: placeID, on: socket, as: credentials) }
+          )
         }
         return
       }
       try await database.write { db in
+        try Self.owned(by: credentials, db)
         try Sync.welcome(
           sentMs: sentMs, receivedMs: receivedMs, serverMs: welcome.serverMs, in: db)
       }
       Logger.sync.info("Welcome at cursor \(welcome.cursor)")
       if clockWasAhead {
         let now = Self.nowMs()
-        try await database.write { db in try Sync.restamp(now: now, in: db) }
+        try await database.write { db in
+          try Self.owned(by: credentials, db)
+          try Sync.restamp(now: now, in: db)
+        }
         clockWasAhead = false
       }
       sending?.task.cancel()
-      sending = (socket, Task { await sendOutbox(socket) })
+      sending = (socket, Task { await sendOutbox(socket, as: credentials) })
     case .changes(let changes):
       try await database.write { [peer] db in
+        try Self.owned(by: credentials, db)
         guard let placeID = peer.placeID else { return try Sync.take(changes.changes, in: db) }
         try GroupSync.take(changes.changes, of: placeID, in: db)
       }
       Logger.sync.info("Took \(changes.changes.count) changes")
     case .reset:
       try await database.write { [peer] db in
+        try Self.owned(by: credentials, db)
         guard let placeID = peer.placeID else { return try Sync.reset(in: db) }
         try GroupSync.reset(placeID, in: db)
       }
     case .acked(let acked):
       try await database.write { [peer] db in
+        try Self.owned(by: credentials, db)
         if peer.placeID == nil {
           try OwnValues.acknowledge(acked.opIds, in: db)
         } else {
@@ -404,7 +469,10 @@ public actor SyncClient {
       }
     case .chatPage(let page):
       if let placeID = peer.placeID {
-        try await database.write { db in try Chats.take(page, of: placeID, in: db) }
+        try await database.write { db in
+          try Self.owned(by: credentials, db)
+          try Chats.take(page, of: placeID, in: db)
+        }
       }
     case .chatPhotos(let photos):
       let page = ChatPhotosPage(photos)
@@ -433,14 +501,15 @@ public actor SyncClient {
   /// Sends the outbox's edits in order, all of them on a new socket and
   /// then each as it is written; an edit is sent again only on the next
   /// socket, until its Acked takes it out.
-  private func sendOutbox(_ socket: URLSessionWebSocketTask) async {
+  private func sendOutbox(_ socket: URLSessionWebSocketTask, as credentials: Credentials) async {
     var sent = 0
     let outbox = ValueObservation.tracking { try Sync.lastWaiting(in: $0) }
     do {
       for try await last in outbox.values(in: database) {
         guard let last, last > sent else { continue }
         let (frames, through) = try await database.read { [sent] db in
-          try Sync.frames(after: sent, in: db)
+          try Self.owned(by: credentials, db)
+          return try Sync.frames(after: sent, in: db)
         }
         for frame in frames {
           try await socket.send(.data(frame.serializedData()))
@@ -579,7 +648,9 @@ public actor SyncClient {
   /// Sends the group's chat outbox as `sendOutbox` does the user's, a
   /// photo's line only once the photo is uploaded, so the edits after it
   /// wait their turn, and none that waited past `Chat.unsentAfterMs`.
-  private func sendChatOutbox(of groupID: String, on socket: URLSessionWebSocketTask) async {
+  private func sendChatOutbox(
+    of groupID: String, on socket: URLSessionWebSocketTask, as credentials: Credentials
+  ) async {
     var sent = 0
     let outbox = ValueObservation.tracking { try Chats.lastWaiting(of: groupID, in: $0) }
     do {
@@ -588,12 +659,15 @@ public actor SyncClient {
         // Lines that waited too long, as after a long time offline, wait
         // for the member instead (spec/chat.md, Lines on their way).
         let (frames, through) = try await database.read { [sent] db in
-          try Chats.frames(of: groupID, after: sent, now: Self.nowMs(), in: db)
+          try Self.owned(by: credentials, db)
+          return try Chats.frames(of: groupID, after: sent, now: Self.nowMs(), in: db)
         }
         for var frame in frames {
-          let uploaded = try await uploadingPhotos(of: frame.chatEdits.edits, in: groupID)
-          frame.chatEdits.edits = try await database.write {
-            try Chats.goOut(uploaded, now: Self.nowMs(), in: $0)
+          let uploaded = try await uploadingPhotos(
+            of: frame.chatEdits.edits, in: groupID, as: credentials)
+          frame.chatEdits.edits = try await database.write { db in
+            try Self.owned(by: credentials, db)
+            return try Chats.goOut(uploaded, now: Self.nowMs(), in: db)
           }
           guard !frame.chatEdits.edits.isEmpty else { continue }
           try await socket.send(.data(frame.serializedData()))
@@ -611,9 +685,9 @@ public actor SyncClient {
   /// waiting, marked, for the member to send again or delete, and the
   /// edits after it go on. One the member stopped, or took back, while it
   /// went up or waited to is left, its line as they left it.
-  private func uploadingPhotos(of edits: [Pochical_V1_ChatEdit], in groupID: String)
-    async throws -> [Pochical_V1_ChatEdit]
-  {
+  private func uploadingPhotos(
+    of edits: [Pochical_V1_ChatEdit], in groupID: String, as credentials: Credentials
+  ) async throws -> [Pochical_V1_ChatEdit] {
     var kept: [Pochical_V1_ChatEdit] = []
     for edit in edits {
       guard case .send(let send) = edit.kind, send.hasPhoto else {
@@ -626,7 +700,7 @@ public actor SyncClient {
         guard try await stillGoing(edit.opID) else { break }
         do {
           try await ChatPhotos.upload(
-            send.photo.id, in: groupID, account: account, server: server)
+            send.photo.id, in: groupID, as: credentials, server: server)
           // Stopped as its last bytes went: left as the member left it.
           // Past here × does nothing, so the line is sent as it shows.
           let going = await PhotoUploads.shared.sending(send.photo.id) { [database] in
@@ -638,7 +712,8 @@ public actor SyncClient {
         } catch {
           try Task.checkCancellation()
           guard try await stillGoing(edit.opID) else { break }
-          guard try await uploadFailed(edit, with: error, tried: tried) else { break }
+          guard try await uploadFailed(edit, with: error, tried: tried, as: credentials)
+          else { break }
           try await Task.sleep(for: .milliseconds(waitMs))
           waitMs *= 2
         }
@@ -649,9 +724,9 @@ public actor SyncClient {
 
   /// Marks the edit's line not sent when its photo cannot go, now or after
   /// `tried` tries; true for one to try again.
-  private func uploadFailed(_ edit: Pochical_V1_ChatEdit, with error: Error, tried: Int)
-    async throws -> Bool
-  {
+  private func uploadFailed(
+    _ edit: Pochical_V1_ChatEdit, with error: Error, tried: Int, as credentials: Credentials
+  ) async throws -> Bool {
     switch error {
     case ChatPhotos.UploadError.refused(let status) where (400..<500).contains(status):
       Logger.sync.error("A photo was refused: \(status)")
@@ -660,8 +735,22 @@ public actor SyncClient {
     default:
       guard tried >= Self.photoTries else { return true }
     }
-    try await database.write { try Chats.fail(edit.opID, in: $0) }
+    try await database.write { db in
+      try Self.owned(by: credentials, db)
+      try Chats.fail(edit.opID, in: db)
+    }
     return false
+  }
+
+  /// Throws unless the database is the user's `credentials` are of and the
+  /// account has not changed since they were given out: inside the
+  /// transaction of each read sent from and each write taken into, so the
+  /// account changing (which erases the database in a later transaction)
+  /// comes wholly before or after it.
+  private static func owned(by credentials: Credentials, _ db: Database) throws {
+    guard credentials.isCurrent, try SyncState.current(in: db).owner == credentials.userID else {
+      throw Stop.notTheOwner
+    }
   }
 
   private func stillGoing(_ opID: String) async throws -> Bool {

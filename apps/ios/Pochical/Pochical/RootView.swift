@@ -13,9 +13,7 @@ struct RootView: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.account) private var account
-  @Environment(\.userSocket) private var userSocket
-  @Environment(\.groupSockets) private var groupSockets
+  @Environment(AccountSession.self) private var session
   @Environment(\.scenePhase) private var scenePhase
   @Environment(OpenPlaceSocket.self) private var openPlace
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
@@ -23,7 +21,6 @@ struct RootView: View {
   @Fetch private var unread: [String: Int] = [:]
   /// What is read in each chat, for the notifications of lines read to go.
   @Fetch private var read = ReadState()
-  @State private var meID: String?
   @State private var tab = RootTab.calendar
   @State private var openGroupID: String?
   /// The グループ tab's pages over the open group.
@@ -54,6 +51,11 @@ struct RootView: View {
     }
   }
 
+  /// The signed-in user, as the session says.
+  private var meID: String? {
+    session.userID
+  }
+
   /// The groups' unread lines, without the chat with Pochical's people.
   private var groupsUnread: Int {
     unread.filter { $0.key != ChatPlace.supportID }.values.reduce(0, +)
@@ -73,11 +75,6 @@ struct RootView: View {
     .modifier(WidgetReloads())
     // The shape the user's groups draw their marks in.
     .modifier(MarkLookSync())
-    .task { meID = await groupCalls.userID() }
-    // Another user from now: switched to an account, signed out or deleted.
-    .onReceive(NotificationCenter.default.publisher(for: .accountChanged)) { _ in
-      Task { meID = await groupCalls.userID() }
-    }
     .task(id: meID) {
       guard let meID else { return }
       _ = try? await $unread.load(UnreadRequest(me: meID))
@@ -196,8 +193,7 @@ struct RootView: View {
       content
         .modifier(
           AppEnvironment(
-            settings: settings, groupCalls: groupCalls, account: account,
-            userSocket: userSocket, groupSockets: groupSockets, openPlace: openPlace)
+            settings: settings, groupCalls: groupCalls, session: session, openPlace: openPlace)
         )
         .tint(colors.accentDefault)
         .toggleStyle(ThemedSwitch())

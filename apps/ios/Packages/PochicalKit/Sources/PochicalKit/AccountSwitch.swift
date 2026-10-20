@@ -43,7 +43,7 @@ extension GroupCalls {
     var request = Pochical_V1_PeekAccountRequest()
     request.appleIDToken = appleIDToken
     request.nonce = nonce
-    let answer = try await users.peekAccount(request: request, headers: account.headers())
+    let answer = try await users.peekAccount(request: request, headers: headers())
       .result.get()
     return Holdings(
       shiftDays: Int(answer.shiftDays), repeating: answer.repeating,
@@ -56,74 +56,6 @@ extension GroupCalls {
     var request = Pochical_V1_TakeAccountRequest()
     request.appleIDToken = appleIDToken
     request.nonce = nonce
-    _ = try await users.takeAccount(request: request, headers: account.headers()).result.get()
-  }
-
-  /// Deletes the user the device left behind as it switched to an account
-  /// in use, its session kept in the Keychain until that is done: at the
-  /// switch, and again each time the app comes to the front while it
-  /// failed, as a connection lost meanwhile would otherwise leave that
-  /// user, their name and lines in the groups with them (POC-15).
-  public func deleteLeftBehind(_ token: String? = nil) async {
-    let store = KeychainTokenStore.leftBehind
-    if let token {
-      try? store.forget()
-      try? store.keep(token)
-    }
-    guard let kept = try? store.token() else { return }
-    let answer = await users.deleteAccount(
-      request: Pochical_V1_DeleteAccountRequest(), headers: ["Authorization": ["Bearer \(kept)"]])
-    // Gone, or its session no longer signing in as that user is gone
-    // already; forgotten unless a later switch left another behind meanwhile.
-    let gone: Bool
-    switch answer.result {
-    case .success: gone = true
-    case .failure(let error): gone = error.code == .unauthenticated
-    }
-    if gone, (try? store.token()) == kept {
-      try? store.forget()
-    }
-  }
-}
-
-extension Account {
-  /// Signs in to the user the Apple account is linked to, with its ID token
-  /// (better-auth's `/api/auth/sign-in/social`), keeping that user's
-  /// session from now on. The session it was, for deleting its user.
-  public func signInApple(idToken: String, nonce: String) async throws -> String {
-    let before = try await token()
-    var request = URLRequest(url: server.appending(path: "api/auth/sign-in/social"))
-    request.httpMethod = "POST"
-    request.httpShouldHandleCookies = false
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.setValue("Bearer \(before)", forHTTPHeaderField: "Authorization")
-    request.httpBody = try JSONSerialization.data(withJSONObject: [
-      "idToken": ["nonce": nonce, "token": idToken], "provider": "apple",
-    ])
-    let (_, response) = try await send(request)
-    guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-      let token = http.value(forHTTPHeaderField: "set-auth-token"), !token.isEmpty
-    else {
-      throw SignInError(status: (response as? HTTPURLResponse)?.statusCode)
-    }
-    try store.forget()
-    try store.keep(token)
-    return before
-  }
-
-  /// Signs out (better-auth's `/api/auth/sign-out`): the session ends on the
-  /// server, its sockets with it, and the device forgets it.
-  public func signOut() async throws {
-    var request = URLRequest(url: server.appending(path: "api/auth/sign-out"))
-    request.httpMethod = "POST"
-    request.httpShouldHandleCookies = false
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.setValue("Bearer \(try await token())", forHTTPHeaderField: "Authorization")
-    request.httpBody = Data("{}".utf8)
-    let (_, response) = try await send(request)
-    guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-      throw SignInError(status: (response as? HTTPURLResponse)?.statusCode)
-    }
-    try store.forget()
+    _ = try await users.takeAccount(request: request, headers: headers()).result.get()
   }
 }

@@ -161,12 +161,14 @@ public enum ChatPhotos {
       name: forgotten, object: nil, userInfo: ["photoID": photoID, "groupID": groupID])
   }
 
-  /// Every photo kept on the device, to send or to show, gone.
+  /// Every photo kept on the device, to send or to show, and links'
+  /// pictures, gone.
   static func eraseAll() {
     try? FileManager.default.removeItem(
       at: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appending(path: "PendingPhotos"))
     try? FileManager.default.removeItem(at: caches("ChatPhotos"))
+    try? FileManager.default.removeItem(at: previews)
     NotificationCenter.default.post(name: erased, object: nil)
   }
 
@@ -217,8 +219,8 @@ public enum ChatPhotos {
   /// line still goes.
   /// `send` stands in for the network, telling nothing of how far.
   static func upload(
-    _ photoID: String, in groupID: String, account: Account, server: URL = Server.url,
-    send: Account.Send? = nil
+    _ photoID: String, in groupID: String, as credentials: Credentials,
+    server: URL = Server.url, send: Account.Send? = nil
   ) async throws {
     // Uploaded before, from another socket, it goes up again from the copy
     // kept to show: the group lets a photo no line carries go once its
@@ -235,7 +237,7 @@ public enum ChatPhotos {
     let going = Task {
       if let small {
         try await put(
-          small, as: photoID, in: groupID, small: true, account: account, server: server,
+          small, as: photoID, in: groupID, small: true, as: credentials, server: server,
           send: send
         ) { sent in
           Task { @MainActor in
@@ -244,7 +246,9 @@ public enum ChatPhotos {
         }
       }
       let before = small?.count ?? 0
-      try await put(jpeg, as: photoID, in: groupID, account: account, server: server, send: send) {
+      try await put(
+        jpeg, as: photoID, in: groupID, as: credentials, server: server, send: send
+      ) {
         sent in
         Task { @MainActor in
           PhotoUploads.shared.moved(
@@ -269,29 +273,33 @@ public enum ChatPhotos {
 
   /// Uploads a photo held to send later (`hold`); `gone` once the device
   /// has let it go.
-  static func uploadHeld(_ photoID: String, in groupID: String, account: Account) async throws {
+  static func uploadHeld(_ photoID: String, in groupID: String, as credentials: Credentials)
+    async throws
+  {
     guard let jpeg = try? Data(contentsOf: cached(photoID, in: groupID)) else {
       throw UploadError.gone
     }
-    try await put(jpeg, as: photoID, in: groupID, account: account, server: Server.url, send: nil)
+    try await put(
+      jpeg, as: photoID, in: groupID, as: credentials, server: Server.url, send: nil)
   }
 
   /// Puts a photo's bytes on the server, through `send` when given, else
   /// telling `onSent` how many bytes have gone.
   private static func put(
-    _ jpeg: Data, as photoID: String, in groupID: String, small: Bool = false, account: Account,
-    server: URL, send: Account.Send?, onSent: @escaping @Sendable (Int64) -> Void = { _ in }
+    _ jpeg: Data, as photoID: String, in groupID: String, small: Bool = false,
+    as credentials: Credentials, server: URL, send: Account.Send?,
+    onSent: @escaping @Sendable (Int64) -> Void = { _ in }
   ) async throws {
     var request = URLRequest(url: photoURL(photoID, in: groupID, small: small, server: server))
     request.httpMethod = "PUT"
     request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-    request.setValue("Bearer \(try await account.token())", forHTTPHeaderField: "Authorization")
+    request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
     let response: URLResponse
     if let send {
       request.httpBody = jpeg
       (_, response) = try await send(request)
     } else {
-      (_, response) = try await URLSession.shared.upload(
+      (_, response) = try await credentials.content.upload(
         for: request, from: jpeg, delegate: UploadProgress(onSent: onSent))
     }
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -303,49 +311,50 @@ public enum ChatPhotos {
   /// photo itself when the device holds it, and when it has none. Kept
   /// once fetched (`keep`) for the faces the widgets show; the chat's
   /// photos are kept by the app's image cache instead, within its limit.
-  public static func fetch(
+  /// One that comes after the account changed is dropped, kept nowhere.
+  static func fetch(
     _ photoID: String, in groupID: String, small: Bool = false, keep: Bool = true,
-    account: Account, server: URL = Server.url
+    as credentials: Credentials, server: URL = Server.url
   ) async throws -> Data {
     if let held = held(photoID, in: groupID) {
       return held
     }
     var request = URLRequest(url: photoURL(photoID, in: groupID, small: small, server: server))
-    request.setValue("Bearer \(try await account.token())", forHTTPHeaderField: "Authorization")
-    let (data, response) = try await (keep ? URLSession.shared : uncached).data(for: request)
+    request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
+    let (data, response) = try await credentials.content.data(for: request)
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
     guard status == 200 else { throw UploadError.refused(status) }
-    if keep, !small {
-      try? data.write(to: cached(photoID, in: groupID), options: .atomic)
+    return try credentials.whileCurrent {
+      if keep, !small {
+        try? data.write(to: cached(photoID, in: groupID), options: .atomic)
+      }
+      return data
     }
-    return data
   }
 
-  /// Fetches what the app's image cache keeps instead, so the system's
-  /// URL cache, which has no limit of the chat's, holds no second copy.
-  private static let uncached: URLSession = {
-    let configuration = URLSessionConfiguration.default
-    configuration.urlCache = nil
-    configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-    return URLSession(configuration: configuration)
-  }()
-
   /// A link preview's picture, from the device or else the server, kept
-  /// once fetched.
+  /// once fetched, as `fetch` keeps a photo.
   static func fetchPreviewImage(
-    _ imageID: String, account: Account, server: URL = Server.url
+    _ imageID: String, as credentials: Credentials, server: URL = Server.url
   ) async throws -> Data {
-    let kept = directory(.cachesDirectory, "LinkPreviews").appending(path: imageID)
+    let kept = previews.appending(path: imageID)
     if let held = try? Data(contentsOf: kept) {
       return held
     }
     var request = URLRequest(url: server.appending(path: "v1/previews/\(imageID)"))
-    request.setValue("Bearer \(try await account.token())", forHTTPHeaderField: "Authorization")
-    let (data, response) = try await URLSession.shared.data(for: request)
+    request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
+    let (data, response) = try await credentials.content.data(for: request)
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
     guard status == 200 else { throw UploadError.refused(status) }
-    try? data.write(to: kept, options: .atomic)
-    return data
+    return try credentials.whileCurrent {
+      try? data.write(to: kept, options: .atomic)
+      return data
+    }
+  }
+
+  /// Where links' pictures are kept.
+  private static var previews: URL {
+    directory(.cachesDirectory, "LinkPreviews")
   }
 
   /// Where the user's own photos are kept, in place of a group's id: their
@@ -361,11 +370,11 @@ public enum ChatPhotos {
 
   /// Keeps a photo of the user's and sends it up at once, to the group's
   /// photos or their own (`mine`), for a profile to name it after.
-  public static func send(
-    _ jpeg: Data, as photoID: String, in groupID: String, account: Account
+  static func send(
+    _ jpeg: Data, as photoID: String, in groupID: String, as credentials: Credentials
   ) async throws {
     try keep(jpeg, as: photoID, in: groupID)
-    try await upload(photoID, in: groupID, account: account)
+    try await upload(photoID, in: groupID, as: credentials)
   }
 
   private static func photoURL(

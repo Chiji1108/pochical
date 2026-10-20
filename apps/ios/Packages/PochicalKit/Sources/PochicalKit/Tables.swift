@@ -109,6 +109,9 @@ struct SyncState: Hashable, Sendable {
   var offsetMs: Int64
   /// The cursor of the last change taken, 0 before any.
   var cursor: Int64 = 0
+  /// The user whose data the database holds, empty while it is no one's:
+  /// a new install's, or once erased (`SyncState.claim`).
+  var owner = ""
 
   /// The row, or a new device's: a new id, no clock, no offset, no cursor.
   static func current(in db: Database) throws -> SyncState {
@@ -126,6 +129,20 @@ struct SyncState: Hashable, Sendable {
   /// The device's time `now` corrected to the server's as last heard.
   static func corrected(_ now: Int64, in db: Database) throws -> Int64 {
     try current(in: db).corrected(now)
+  }
+
+  /// Takes the database for `userID`'s: one that is no one's becomes
+  /// theirs, with what was entered before signing in. True when it is
+  /// theirs now; false when it is another user's, which a socket as
+  /// `userID` neither sends from nor takes into (spec/sync-protocol.md,
+  /// Sockets).
+  static func claim(for userID: String, in db: Database) throws -> Bool {
+    var state = try current(in: db)
+    if state.owner.isEmpty {
+      state.owner = userID
+      try upsert { state }.execute(db)
+    }
+    return state.owner == userID
   }
 }
 
@@ -248,6 +265,14 @@ extension DatabaseMigrator {
       try #sql(
         """
         ALTER TABLE "patterns" ADD COLUMN "archived" INTEGER NOT NULL DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
+    registerMigration("Keep whose the device's data is") { db in
+      try #sql(
+        """
+        ALTER TABLE "syncState" ADD COLUMN "owner" TEXT NOT NULL DEFAULT ''
         """
       )
       .execute(db)

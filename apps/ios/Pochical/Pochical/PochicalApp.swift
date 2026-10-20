@@ -3,21 +3,19 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 import UIKit
+import WidgetKit
 
 @main
 struct PochicalApp: App {
   @UIApplicationDelegateAdaptor private var delegate: AppDelegate
   @Environment(\.scenePhase) private var scenePhase
-  /// The user's socket, open while the app is in the foreground. It signs
-  /// in on its first try, anonymously at first (spec/sync-protocol.md,
-  /// Signing in); offline, the calendar works and it tries again.
-  private let sync: SyncClient
-  /// The signed-in user, whom groups' calls and sockets go as too.
-  private let account: Account
+  /// Who the device is, and every socket and call that goes as them. It
+  /// signs in as the app first comes to the front, anonymously at first
+  /// (spec/sync-protocol.md, Signing in); offline, the calendar works and
+  /// it tries again.
+  private let session: AccountSession
   /// The calls that make and join groups, as the same user.
   private let groupCalls: GroupCalls
-  /// The groups' sockets, closed once their chat outbox is sent.
-  private let groupSockets: GroupSockets
   /// The socket of the place open on screen, which RootView moves.
   private let openPlace: OpenPlaceSocket
   @State private var settings = Settings()
@@ -34,14 +32,13 @@ struct PochicalApp: App {
     }
     @Dependency(\.defaultDatabase) var database
     self.database = database
-    account = Account()
-    sync = SyncClient(account: account, database: database)
-    groupCalls = GroupCalls(account: account)
-    groupSockets = GroupSockets(account: account, database: database)
-    openPlace = OpenPlaceSocket(sockets: groupSockets)
+    session = AccountSession(database: database)
+    groupCalls = GroupCalls(current: session.current)
+    openPlace = OpenPlaceSocket(session: session)
+    // The notifications shown and the badge were the user before's.
+    session.onErase = { await Notifications.shared.forgetAccount() }
     Notifications.shared.groupCalls = groupCalls
-    Notifications.shared.replies = Replies(
-      database: database, sockets: groupSockets, userSocket: sync)
+    Notifications.shared.replies = Replies(database: database, session: session)
   }
 
   var body: some Scene {
@@ -49,10 +46,15 @@ struct PochicalApp: App {
       AppRoot()
         .modifier(
           AppEnvironment(
-            settings: settings, groupCalls: groupCalls, account: account, userSocket: sync,
-            groupSockets: groupSockets, openPlace: openPlace))
+            settings: settings, groupCalls: groupCalls, session: session, openPlace: openPlace))
         // The person's preferences, kept with the account from launch.
         .task { settings.sync(with: database) }
+        // Someone else from now, or signed in at last: the widgets show
+        // them, and the push token goes under their session.
+        .onChange(of: session.userID) {
+          WidgetCenter.shared.reloadAllTimelines()
+          Notifications.shared.sendToken()
+        }
     }
     // The socket is open only in the foreground (spec/sync-protocol.md,
     // Sockets), and the shared database lets go of its locks before iOS
@@ -66,12 +68,10 @@ struct PochicalApp: App {
         let time = BackgroundTime()
         time.begin {
           time.end()
-          Task { await sync.stop() }
-          Task { await groupSockets.stop() }
+          Task { await session.stopSending() }
         }
         Task {
-          await sync.finishSending()
-          await groupSockets.finishSending()
+          await session.wentToBack()
           time.end()
         }
       case .active:
@@ -81,9 +81,7 @@ struct PochicalApp: App {
         // Notifications may have been allowed or refused in the system's
         // settings meanwhile.
         Task { await Notifications.shared.readPermission() }
-        Task { await sync.start() }
-        // A user left behind by a switch whose deleting failed.
-        Task { await groupCalls.deleteLeftBehind() }
+        session.cameToFront()
       default:
         break
       }
@@ -96,9 +94,7 @@ struct PochicalApp: App {
 struct AppEnvironment: ViewModifier {
   let settings: Settings
   let groupCalls: GroupCalls
-  let account: Account
-  let userSocket: SyncClient?
-  let groupSockets: GroupSockets
+  let session: AccountSession
   let openPlace: OpenPlaceSocket
 
   func body(content: Content) -> some View {
@@ -106,9 +102,8 @@ struct AppEnvironment: ViewModifier {
       .modifier(Themed(theme: settings.device.theme, appearance: settings.device.appearance))
       .environment(settings)
       .environment(\.groupCalls, groupCalls)
-      .environment(\.account, account)
-      .environment(\.userSocket, userSocket)
-      .environment(\.groupSockets, groupSockets)
+      .environment(session)
+      .environment(\.groupSockets, session.places)
       .environment(openPlace)
   }
 }

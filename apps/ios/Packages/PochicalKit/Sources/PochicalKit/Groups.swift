@@ -153,17 +153,18 @@ enum Groups {
 }
 
 /// The server's GroupService (proto/pochical/v1/group.proto), called as
-/// the signed-in user.
+/// the signed-in user: whoever AccountSession says the device is now, and
+/// no one while it is signing in or its account is changing.
 public struct GroupCalls: Sendable {
-  let account: Account
+  let current: CurrentAccount
   let client: Pochical_V1_GroupServiceClient
   let users: Pochical_V1_UserServiceClient
   let chats: Pochical_V1_ChatServiceClient
 
-  public init(account: Account, server: URL = Server.url) {
-    self.account = account
+  public init(current: CurrentAccount, server: URL = Server.url) {
+    self.current = current
     let protocolClient = ProtocolClient(
-      httpClient: URLSessionHTTPClient(),
+      httpClient: URLSessionHTTPClient(configuration: uncachedConfiguration),
       config: ProtocolClientConfig(
         host: server.absoluteString, networkProtocol: .connect, codec: ProtoCodec()))
     client = Pochical_V1_GroupServiceClient(client: protocolClient)
@@ -171,19 +172,25 @@ public struct GroupCalls: Sendable {
     chats = Pochical_V1_ChatServiceClient(client: protocolClient)
   }
 
+  /// The headers that say who is calling, once the device is signed in
+  /// (`CurrentAccount.signedIn`).
+  func headers() async throws -> [String: [String]] {
+    try await current.signedIn().headers
+  }
+
   /// A link's page as the server reads it (spec/chat.md, Reading a page),
   /// nil when no page was found.
   public func linkPreview(_ url: String) async throws -> LinePreview? {
     var request = Pochical_V1_GetLinkPreviewRequest()
     request.url = url
-    let answer = try await chats.getLinkPreview(request: request, headers: account.headers())
+    let answer = try await chats.getLinkPreview(request: request, headers: headers())
       .result.get()
     return answer.hasPreview ? LinePreview(answer.preview) : nil
   }
 
   /// A link preview's picture, from the device or else the server.
   public func previewImage(_ imageID: String) async throws -> Data {
-    try await ChatPhotos.fetchPreviewImage(imageID, account: account)
+    try await ChatPhotos.fetchPreviewImage(imageID, as: current.signedIn())
   }
 
   /// One of the group's chat photos, from the device or else the server;
@@ -192,28 +199,8 @@ public struct GroupCalls: Sendable {
   public func photo(
     _ photoID: String, in groupID: String, small: Bool = false, keep: Bool = true
   ) async throws -> Data {
-    try await ChatPhotos.fetch(photoID, in: groupID, small: small, keep: keep, account: account)
-  }
-
-  /// The signed-in user's id, as groups know them among their members:
-  /// the server's, kept on the device, so the screens still know who is
-  /// who offline. Nil only before it was ever heard.
-  public func userID() async -> String? {
-    let store = UserDefaults(suiteName: appGroup) ?? .standard
-    let key = "userID"
-    let answer = await users.getMe(
-      request: Pochical_V1_GetMeRequest(), headers: (try? await account.headers()) ?? [:])
-    if case .success(let me) = answer.result {
-      store.set(me.userID, forKey: key)
-      return me.userID
-    }
-    return store.string(forKey: key)
-  }
-
-  /// The user's id as last heard, read at once, with no call to the
-  /// server: for a screen that needs it on its first frame.
-  public nonisolated static var knownUserID: String? {
-    (UserDefaults(suiteName: appGroup) ?? .standard).string(forKey: "userID")
+    try await ChatPhotos.fetch(
+      photoID, in: groupID, small: small, keep: keep, as: current.signedIn())
   }
 
   /// Makes a group with the user in it, as `displayName`. `requestID` is
@@ -228,7 +215,7 @@ public struct GroupCalls: Sendable {
     request.mark = mark.wire
     request.displayName = displayName
     request.requestID = requestID
-    return try await client.createGroup(request: request, headers: account.headers()).result
+    return try await client.createGroup(request: request, headers: headers()).result
       .get().groupID
   }
 
@@ -236,7 +223,7 @@ public struct GroupCalls: Sendable {
   public func inviteCode(of groupID: String) async throws -> String {
     var request = Pochical_V1_GetInviteLinkRequest()
     request.groupID = groupID
-    return try await client.getInviteLink(request: request, headers: account.headers()).result
+    return try await client.getInviteLink(request: request, headers: headers()).result
       .get().inviteCode
   }
 
@@ -246,7 +233,7 @@ public struct GroupCalls: Sendable {
     request.groupID = groupID
     request.name = name
     request.mark = mark.wire
-    _ = try await client.renameGroup(request: request, headers: account.headers()).result.get()
+    _ = try await client.renameGroup(request: request, headers: headers()).result.get()
   }
 
   /// How the user appears in the group from now on.
@@ -254,7 +241,7 @@ public struct GroupCalls: Sendable {
     var request = Pochical_V1_SetDisplayNameRequest()
     request.groupID = groupID
     request.displayName = displayName
-    _ = try await client.setDisplayName(request: request, headers: account.headers()).result
+    _ = try await client.setDisplayName(request: request, headers: headers()).result
       .get()
   }
 
@@ -262,7 +249,7 @@ public struct GroupCalls: Sendable {
   public func leave(_ groupID: String) async throws {
     var request = Pochical_V1_LeaveGroupRequest()
     request.groupID = groupID
-    _ = try await client.leaveGroup(request: request, headers: account.headers()).result.get()
+    _ = try await client.leaveGroup(request: request, headers: headers()).result.get()
   }
 
   /// Takes another member out of the group, as leaving takes the caller;
@@ -271,7 +258,7 @@ public struct GroupCalls: Sendable {
     var request = Pochical_V1_RemoveMemberRequest()
     request.groupID = groupID
     request.userID = userID
-    _ = try await client.removeMember(request: request, headers: account.headers()).result.get()
+    _ = try await client.removeMember(request: request, headers: headers()).result.get()
   }
 
   /// A new invitation code for the group: the old link and QR code stop
@@ -279,7 +266,7 @@ public struct GroupCalls: Sendable {
   public func remakeInviteCode(of groupID: String) async throws -> String {
     var request = Pochical_V1_RemakeInviteLinkRequest()
     request.groupID = groupID
-    return try await client.remakeInviteLink(request: request, headers: account.headers()).result
+    return try await client.remakeInviteLink(request: request, headers: headers()).result
       .get().inviteCode
   }
 }

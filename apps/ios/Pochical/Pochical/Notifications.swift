@@ -101,16 +101,17 @@ nonisolated struct OpenedChat: Hashable, Sendable {
 
   /// The device going on as another user (spec/sync-protocol.md,
   /// Sockets): the notifications shown and the badge, the user before's,
-  /// taken away, and the token sent under the session the device has now,
-  /// for the user it is now to hear at once.
+  /// taken away as their data is erased. The token goes under the next
+  /// session as it signs in (PochicalApp).
   func forgetAccount() async {
     let center = UNUserNotificationCenter.current()
     center.removeAllDeliveredNotifications()
     try? await center.setBadgeCount(0)
-    sendToken()
   }
 
-  private func sendToken() {
+  /// The token sent under the session the device has now, for the user it
+  /// is now to hear at once; nothing while it has none.
+  func sendToken() {
     guard let token, let groupCalls else { return }
     Task { try? await groupCalls.registerPushToken(token) }
   }
@@ -164,7 +165,7 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     time.begin {
       sending?.cancel()
       time.end()
-      Task { await replies.sockets.stop() }
+      Task { await replies.session.stopSending() }
     }
     NotificationCenter.default.post(name: Database.resumeNotification, object: nil)
     let edits: [Pochical_V1_ChatEdit.OneOf_Kind] = [
@@ -253,22 +254,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
 /// What an answer written on a notification goes through: the chat outbox
 /// the app keeps, sent on the group's socket as a chat's screen sends it.
-struct Replies {
+@MainActor struct Replies {
   let database: any DatabaseWriter
-  let sockets: GroupSockets
-  /// The user's socket, for the counts after the read.
-  let userSocket: SyncClient
+  /// Whose sockets they go on: the group's, and the user's for the counts
+  /// after the read.
+  let session: AccountSession
 
   /// Sends what waits in the group's outbox on the group's socket, held
   /// open until it is sent or the task is cancelled (the time iOS gives
   /// runs out), then let go of; in the background, closed once sent, as
   /// the app's going to the background closes the others.
   func send(_ groupID: String) async {
-    let hold = await sockets.open(groupID)
+    let hold = await session.hold(groupID)
     await Chats.untilSent(of: groupID, in: database)
-    await sockets.close(hold, of: groupID)
+    await session.release(hold, of: groupID)
     guard UIApplication.shared.applicationState == .background else { return }
-    await sockets.finishSending()
+    await session.wentToBack()
     // Not once the time iOS gives has run out, the database let go of.
     guard !Task.isCancelled else { return }
     await badgeAfterRead()
@@ -276,15 +277,11 @@ struct Replies {
 
   /// The app icon's badge as the read leaves it: the user's socket, closed
   /// in the background, brings the counts the read changed, as the app
-  /// in front shows them (RootView).
+  /// in front shows them (RootView), and closes again unless the app came
+  /// to the front meanwhile.
   private func badgeAfterRead() async {
-    await userSocket.start()
-    await userSocket.catchUp(within: .seconds(Self.catchUpMost))
-    // Come to the front meanwhile, the socket stays open as the app's is.
-    if UIApplication.shared.applicationState == .background {
-      await userSocket.finishSending()
-    }
-    guard let me = widgetMeID(),
+    await session.catchUp(within: .seconds(Self.catchUpMost))
+    guard let me = session.userID,
       let counts = try? await database.read({ db in try Chats.unreadByGroup(me: me, db: db) })
     else { return }
     try? await UNUserNotificationCenter.current().setBadgeCount(counts.values.reduce(0, +))

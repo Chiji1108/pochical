@@ -35,10 +35,13 @@ enum FirstRun {
 /// はじめの設定 while it is not done and the device holds no pattern, else
 /// the app's tabs. Patterns arriving, from the questions or from an
 /// account signed in to, end it. An invitation opened meanwhile waits for
-/// the tabs, and is asked about there as any other time.
+/// the tabs, and is asked about there as any other time. While the device
+/// is still erasing after signing out or deleting, neither: nothing of the
+/// user before shows.
 struct AppRoot: View {
   @AppStorage(FirstRun.doneKey) private var done = false
   @Environment(OpenPlaceSocket.self) private var openPlace
+  @Environment(AccountSession.self) private var session
   @Fetch private var hasPatterns: Bool
   @State private var invite: OpenedInvite?
 
@@ -53,8 +56,14 @@ struct AppRoot: View {
 
   var body: some View {
     Group {
-      if showsTabs {
+      if let erasing = session.erasing {
+        ErasingScreen(erasing: erasing) { session.eraseAgain() }
+      } else if showsTabs {
+        // Made anew for each stretch of the account, so no page of the
+        // user before stays open, whatever page it is, and the place it
+        // holds is held anew (OpenPlaceSocket).
         RootView(invite: $invite)
+          .id(session.generation)
       } else {
         Onboarding()
       }
@@ -68,6 +77,7 @@ struct AppRoot: View {
     .onChange(of: showsTabs) { _, tabs in
       if !tabs { openPlace.want(nil) }
     }
+
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)
@@ -221,7 +231,7 @@ private struct WelcomeStep: View {
 /// instead of answering the questions again.
 private struct LoginStep: View {
   @Environment(\.themeColors) private var colors
-  @Environment(\.userSocket) private var userSocket
+  @Environment(AccountSession.self) private var session
   @Dependency(\.defaultDatabase) private var database
   /// Told when the account signed in to holds nothing yet.
   let onEmpty: () -> Void
@@ -236,7 +246,7 @@ private struct LoginStep: View {
         // The account's data comes in, and its patterns end the first
         // run; one that brought none goes on with the questions.
         if how == .switched {
-          await userSocket?.catchUp(within: .seconds(10))
+          await session.catchUp(within: .seconds(10))
         }
         let has = (try? await database.read { try HasPatternsRequest().fetch($0) }) ?? false
         if !has { onEmpty() }

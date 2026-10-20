@@ -19,7 +19,7 @@ struct GroupSettingsPage: View {
   let onInvite: () -> Void
   /// Called once the person has left the group.
   let onLeft: () -> Void
-  @State private var meID: String?
+  @Environment(\.meID) private var meID
   @State private var confirmingLeave = false
   @State private var leaving = false
   @State private var failed: String?
@@ -146,7 +146,6 @@ struct GroupSettingsPage: View {
       let today = Day.today
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
     }
-    .task { meID = await groupCalls.userID() }
     .environment(\.photoGroupID, group.id)
     .modifier(
       ReportAndBlock(

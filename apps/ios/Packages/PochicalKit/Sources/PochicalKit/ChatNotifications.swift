@@ -139,14 +139,14 @@ extension GroupCalls {
     request.groupID = groupID
     request.threadID = threadID
     request.muted = muted
-    _ = try await users.setChatMuted(request: request, headers: account.headers()).result.get()
+    _ = try await users.setChatMuted(request: request, headers: headers()).result.get()
   }
 
   /// Sets メンションはいつも通知 for the account.
   public func setMentionsWhenMuted(_ on: Bool) async throws {
     var request = Pochical_V1_SetChatNotificationsRequest()
     request.mentionsWhenMuted = on
-    _ = try await users.setChatNotifications(request: request, headers: account.headers())
+    _ = try await users.setChatNotifications(request: request, headers: headers())
       .result.get()
   }
 }

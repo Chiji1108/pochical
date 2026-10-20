@@ -1,4 +1,6 @@
+import Connect
 import Foundation
+import PochicalProto
 import Security
 
 /// Where the apps reach the server: `mise run server` on the Mac while
@@ -13,79 +15,80 @@ public enum Server {
   #endif
 }
 
-/// Where the session token is kept.
-public protocol TokenStore: Sendable {
-  func token() throws -> String?
-  func keep(_ token: String) throws
-  /// No token kept, as after the account is deleted.
+/// A session the device keeps: its token, and the user it signs in as,
+/// kept as one so the two never part.
+public struct StoredSession: Codable, Equatable, Sendable {
+  public let token: String
+  public let userID: String
+
+  public init(token: String, userID: String) {
+    self.token = token
+    self.userID = userID
+  }
+}
+
+/// Where a session's bytes are kept.
+protocol TokenStore: Sendable {
+  func data() throws -> Data?
+  /// What is kept from now on, in place of what was, in one step.
+  func replace(with data: Data) throws
+  /// Nothing kept, as after the account is deleted.
   func forget() throws
 }
 
-/// The session token in the Keychain, which outlives the app, so a
-/// reinstall comes back as the same user, and goes with the phone's
-/// encrypted backups and Quick Start, so a new phone does too
-/// (spec/sync-protocol.md, Signing in). Not synced through iCloud
-/// Keychain: the person's other devices come in by linking Apple or
-/// Google. Readable after the phone's first unlock, as the app syncs in
-/// the background.
-public struct KeychainTokenStore: TokenStore {
-  let service = "app.pochical.session"
+/// The session in the Keychain, which outlives the app, so a reinstall
+/// comes back as the same user, and goes with the phone's encrypted
+/// backups and Quick Start, so a new phone does too (spec/sync-protocol.md,
+/// Signing in). Not synced through iCloud Keychain: the person's other
+/// devices come in by linking Apple or Google. Readable after the phone's
+/// first unlock, as the app syncs in the background.
+struct KeychainTokenStore: TokenStore {
+  let service: String
   let account: String
 
-  public init() {
-    account = "token"
-  }
-
-  private init(account: String) {
+  init(service: String = "app.pochical.session", account: String = "token") {
+    self.service = service
     self.account = account
   }
 
-  /// The session of a user the device left behind when it switched to an
-  /// account in use, kept until that user is deleted (spec/sync-protocol.md, Switching to
-  /// an account in use).
-  public static let leftBehind = KeychainTokenStore(account: "leftBehind")
+  private var query: [CFString: Any] {
+    [kSecClass: kSecClassGenericPassword, kSecAttrService: service, kSecAttrAccount: account]
+  }
 
-  public func token() throws -> String? {
+  func data() throws -> Data? {
     var found: CFTypeRef?
-    let status = SecItemCopyMatching(
-      [
-        kSecClass: kSecClassGenericPassword,
-        kSecAttrService: service,
-        kSecAttrAccount: account,
-        kSecReturnData: true,
-      ] as CFDictionary, &found)
+    var asking = query
+    asking[kSecReturnData] = true
+    let status = SecItemCopyMatching(asking as CFDictionary, &found)
     if status == errSecItemNotFound {
       return nil
     }
     guard status == errSecSuccess, let data = found as? Data else {
       throw KeychainError(status: status)
     }
-    return String(decoding: data, as: UTF8.self)
+    return data
   }
 
-  public func keep(_ token: String) throws {
-    let status = SecItemAdd(
-      [
-        kSecClass: kSecClassGenericPassword,
-        kSecAttrService: service,
-        kSecAttrAccount: account,
-        kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlock,
-        kSecValueData: Data(token.utf8),
-      ] as CFDictionary, nil)
-    guard status == errSecSuccess else {
-      throw KeychainError(status: status)
+  /// Updated in place, else added: never a moment with nothing kept.
+  func replace(with data: Data) throws {
+    let updated = SecItemUpdate(query as CFDictionary, [kSecValueData: data] as CFDictionary)
+    if updated == errSecSuccess {
+      return
+    }
+    guard updated == errSecItemNotFound else {
+      throw KeychainError(status: updated)
+    }
+    var adding = query
+    adding[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlock
+    adding[kSecValueData] = data
+    let added = SecItemAdd(adding as CFDictionary, nil)
+    guard added == errSecSuccess else {
+      throw KeychainError(status: added)
     }
   }
-}
 
-extension KeychainTokenStore {
-  public func forget() throws {
-    let status = SecItemDelete(
-      [
-        kSecClass: kSecClassGenericPassword,
-        kSecAttrService: service,
-        kSecAttrAccount: account,
-      ] as CFDictionary)
+  func forget() throws {
+    let status = SecItemDelete(query as CFDictionary)
     guard status == errSecSuccess || status == errSecItemNotFound else {
       throw KeychainError(status: status)
     }
@@ -96,78 +99,203 @@ public struct KeychainError: Error {
   public let status: OSStatus
 }
 
-/// The signed-in user's session. Every user is signed in from the first
-/// launch, anonymously at first; the token is kept and sent as
-/// `Authorization: Bearer …` on every call and socket. A kept token is
-/// never replaced by a new sign-in, which would be a new user without
-/// their data (spec/sync-protocol.md, Reconnecting).
-public actor Account {
-  public typealias Send = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+/// The sessions the device keeps: its own, and that of a user a switch
+/// left behind, until that user is deleted (spec/sync-protocol.md,
+/// Switching to an account in use).
+struct SessionKeychain: Sendable {
+  let own: TokenStore
+  let leftBehind: TokenStore
 
-  let server: URL
-  let store: TokenStore
-  let send: Send
-  /// A sign-in under way, which callers at the same time wait on rather
-  /// than each making a user.
-  private var signingIn: Task<String, Error>?
-
-  public init(
-    server: URL = Server.url, store: TokenStore = KeychainTokenStore(),
-    send: @escaping Send = { try await URLSession.shared.data(for: $0) }
+  init(
+    own: TokenStore = KeychainTokenStore(),
+    leftBehind: TokenStore = KeychainTokenStore(account: "leftBehind")
   ) {
-    self.server = server
-    self.store = store
-    self.send = send
+    self.own = own
+    self.leftBehind = leftBehind
   }
 
-  /// The kept token, or one from signing in anonymously now.
-  public func token() async throws -> String {
-    if let kept = try store.token() {
-      return kept
-    }
-    if let signingIn {
-      return try await signingIn.value
-    }
-    let signing = Task { try await signInAnonymously() }
-    signingIn = signing
-    defer { signingIn = nil }
-    let token = try await signing.value
-    try store.keep(token)
-    return token
+  func kept() throws -> StoredSession? {
+    try own.data().map { try JSONDecoder().decode(StoredSession.self, from: $0) }
   }
 
-  /// The session forgotten, as its user's account is deleted: the next
-  /// call signs in anonymously as a new user.
-  public func forget() throws {
-    try store.forget()
+  /// Keeps `session` from now on, in place of any other.
+  func keep(_ session: StoredSession) throws {
+    try own.replace(with: JSONEncoder().encode(session))
   }
 
-  /// The headers that say who is calling, as Connect's calls and the
-  /// sockets take them.
-  public func headers() async throws -> [String: [String]] {
-    ["Authorization": ["Bearer \(try await token())"]]
+  func forget() throws {
+    try own.forget()
   }
 
-  /// better-auth's anonymous sign-in, which answers 415 without the JSON
-  /// type and body; the token comes back in `set-auth-token`. Its cookie is
-  /// not kept: the app calls with the token alone (`linkApple`).
-  private func signInAnonymously() async throws -> String {
-    var request = URLRequest(url: server.appending(path: "api/auth/sign-in/anonymous"))
-    request.httpMethod = "POST"
-    request.httpShouldHandleCookies = false
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.httpBody = Data("{}".utf8)
-    let (_, response) = try await send(request)
-    guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-      let token = http.value(forHTTPHeaderField: "set-auth-token"), !token.isEmpty
-    else {
-      throw SignInError(status: (response as? HTTPURLResponse)?.statusCode)
-    }
-    return token
+  func leftBehindToken() -> String? {
+    (try? leftBehind.data()).flatMap { $0 }.map { String(decoding: $0, as: UTF8.self) }
+  }
+
+  func keepLeftBehind(_ token: String) throws {
+    try leftBehind.replace(with: Data(token.utf8))
+  }
+
+  func forgetLeftBehind() {
+    try? leftBehind.forget()
   }
 }
 
-/// Signing in was refused or answered without a token; `status` is the
+/// What AccountSession asks the server, each on the session it names.
+protocol AccountServer: Sendable {
+  func signInAnonymously() async throws -> StoredSession
+  func signInApple(idToken: String, nonce: String, on token: String) async throws
+    -> StoredSession
+  func signOut(_ token: String) async throws
+  func linkApple(idToken: String, nonce: String, on token: String) async throws -> LinkResult
+  /// Whose the session is, and whether they are still anonymous.
+  func me(_ token: String) async throws -> (userID: String, anonymous: Bool)
+  /// `SessionUnknown` when the server does not know the session.
+  func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws
+}
+
+/// The server does not know the session: its user is gone, or signed out.
+struct SessionUnknown: Error {}
+
+/// The server's account calls: better-auth's (`/api/auth/*`), and
+/// UserService's that say whose a session is and delete its user.
+struct Account: AccountServer {
+  typealias Send = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+
+  let server: URL
+  let send: Send
+  let users: Pochical_V1_UserServiceClient
+
+  init(server: URL = Server.url, send: @escaping Send = { try await uncached.data(for: $0) }) {
+    self.server = server
+    self.send = send
+    users = Pochical_V1_UserServiceClient(
+      client: ProtocolClient(
+        httpClient: URLSessionHTTPClient(configuration: uncachedConfiguration),
+        config: ProtocolClientConfig(
+          host: server.absoluteString, networkProtocol: .connect, codec: ProtoCodec())))
+  }
+
+  /// better-auth's anonymous sign-in, which answers 415 without the JSON
+  /// type and body; the token comes back in `set-auth-token`, the user in
+  /// the body. Its cookie is not kept: the app calls with the token alone.
+  func signInAnonymously() async throws -> StoredSession {
+    var request = authRequest("api/auth/sign-in/anonymous", token: nil)
+    request.httpBody = Data("{}".utf8)
+    return try await signedIn(by: request)
+  }
+
+  /// Signs in to the user the Apple account is linked to, with its ID token
+  /// (better-auth's `/api/auth/sign-in/social`), on the session `token`.
+  func signInApple(idToken: String, nonce: String, on token: String) async throws
+    -> StoredSession
+  {
+    var request = authRequest("api/auth/sign-in/social", token: token)
+    request.httpBody = try JSONSerialization.data(withJSONObject: [
+      "idToken": ["nonce": nonce, "token": idToken], "provider": "apple",
+    ])
+    return try await signedIn(by: request)
+  }
+
+  /// Ends the session `token` on the server (better-auth's
+  /// `/api/auth/sign-out`), its sockets with it.
+  func signOut(_ token: String) async throws {
+    var request = authRequest("api/auth/sign-out", token: token)
+    request.httpBody = Data("{}".utf8)
+    let (_, response) = try await send(request)
+    guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+      throw SignInError(status: (response as? HTTPURLResponse)?.statusCode)
+    }
+  }
+
+  /// Links Sign in with Apple's account to the user of the session
+  /// `token`, with its ID token and the nonce it was asked with
+  /// (better-auth's `/api/auth/link-social`).
+  func linkApple(idToken: String, nonce: String, on token: String) async throws -> LinkResult {
+    var request = authRequest("api/auth/link-social", token: token)
+    request.httpBody = try JSONSerialization.data(withJSONObject: [
+      "idToken": ["nonce": nonce, "token": idToken], "provider": "apple",
+    ])
+    let (_, response) = try await send(request)
+    switch (response as? HTTPURLResponse)?.statusCode {
+    case 200: return .linked
+    case 409: return .inUse
+    case let status: throw LinkError(status: status)
+    }
+  }
+
+  func me(_ token: String) async throws -> (userID: String, anonymous: Bool) {
+    let me = try await users.getMe(request: Pochical_V1_GetMeRequest(), headers: bearer(token))
+      .result.get()
+    return (me.userID, me.anonymous)
+  }
+
+  /// Deletes the user of the session `token` and everything of theirs
+  /// (spec/sync-protocol.md, Deleting an account), with Sign in with
+  /// Apple's fresh authorization code when the user is linked to Apple.
+  func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws {
+    var request = Pochical_V1_DeleteAccountRequest()
+    request.appleAuthorizationCode = appleAuthorizationCode
+    let answer = await users.deleteAccount(request: request, headers: bearer(token))
+    if case .failure(let error) = answer.result {
+      throw error.code == .unauthenticated ? SessionUnknown() : error
+    }
+  }
+
+  private func bearer(_ token: String) -> [String: [String]] {
+    ["Authorization": ["Bearer \(token)"]]
+  }
+
+  /// A POST to better-auth, as the session `token` when given. The token
+  /// says who calls, not better-auth's cookie, which URLSession would keep
+  /// and send: with a cookie and no Origin, better-auth takes the call for
+  /// a browser's from another site and refuses it (403).
+  private func authRequest(_ path: String, token: String?) -> URLRequest {
+    var request = URLRequest(url: server.appending(path: path))
+    request.httpMethod = "POST"
+    request.httpShouldHandleCookies = false
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    if let token {
+      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    }
+    return request
+  }
+
+  /// The session a sign-in answered with: its token in `set-auth-token`,
+  /// its user's id in the body.
+  private func signedIn(by request: URLRequest) async throws -> StoredSession {
+    let (body, response) = try await send(request)
+    let status = (response as? HTTPURLResponse)?.statusCode
+    guard status == 200,
+      let token = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "set-auth-token"),
+      !token.isEmpty,
+      let user = try? JSONDecoder().decode(SignedInBody.self, from: body).user
+    else {
+      throw SignInError(status: status)
+    }
+    return StoredSession(token: token, userID: user.id)
+  }
+
+  private struct SignedInBody: Decodable {
+    struct User: Decodable {
+      let id: String
+    }
+    let user: User
+  }
+}
+
+/// What calls to the server go through: kept nowhere, as their answers are
+/// the user's (a sign-in's carries the session's token), which the system's
+/// URL cache would otherwise keep on the disk past the account.
+var uncachedConfiguration: URLSessionConfiguration {
+  let configuration = URLSessionConfiguration.default
+  configuration.urlCache = nil
+  configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+  return configuration
+}
+
+private let uncached = URLSession(configuration: uncachedConfiguration)
+
+/// Signing in was refused or answered without a session; `status` is the
 /// HTTP status, as 429 when too many sign-ins came from one address.
 public struct SignInError: Error {
   public let status: Int?
