@@ -623,7 +623,9 @@ private struct GroupHeading: View {
   @ObservationIgnored private let session: AccountSession
   /// The place whose socket is wanted now; nil for none.
   @ObservationIgnored private var wanted: String?
-  @ObservationIgnored private var held: (placeID: String, hold: UUID)?
+  /// The hold, with the stretch of the account it was taken in: one of an
+  /// earlier stretch went with the user before's places (GroupSockets).
+  @ObservationIgnored private var held: (placeID: String, hold: UUID, generation: Int)?
   @ObservationIgnored private var moving = false
 
   init(session: AccountSession) {
@@ -631,37 +633,31 @@ private struct GroupHeading: View {
   }
 
   /// Holds `placeID`'s socket from now, letting go of any other; none for
-  /// nil. Wanting the same again changes nothing, and wishes made while
-  /// one is under way end at the latest.
+  /// nil. Wanting the same again in the same stretch of the account changes
+  /// nothing, and wishes made while one is under way end at the latest.
   func want(_ placeID: String?) {
     wanted = placeID
-    guard !moving, held?.placeID != placeID else { return }
+    guard !moving, !holdsWanted else { return }
     moving = true
     Task {
-      while held?.placeID != wanted {
+      while !holdsWanted {
         if let held {
           self.held = nil
           await session.release(held.hold, of: held.placeID)
         }
         if let placeID = wanted {
-          held = (placeID, await session.hold(placeID))
+          let generation = session.generation
+          held = (placeID, await session.hold(placeID), generation)
         }
       }
       moving = false
     }
   }
 
-  /// The device is someone else now: the hold went with the user before's
-  /// places (GroupSockets), so the place wanted is held again, as whoever
-  /// the device is now. One taken since the account changed is let go of.
-  func accountChanged() {
-    if let held {
-      Task { await session.release(held.hold, of: held.placeID) }
-    }
-    held = nil
-    let place = wanted
-    wanted = nil
-    want(place)
+  /// Whether what is held is what is wanted, in this stretch.
+  private var holdsWanted: Bool {
+    guard let held else { return wanted == nil }
+    return held.placeID == wanted && held.generation == session.generation
   }
 }
 

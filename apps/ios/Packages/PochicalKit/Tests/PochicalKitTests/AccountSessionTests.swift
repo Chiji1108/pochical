@@ -426,3 +426,39 @@ private final class FakeAccountServer: AccountServer {
   current.begin(StoredSession(token: "t", userID: "u"))
   #expect(try await current.signedIn(within: .zero).userID == "u")
 }
+
+@Test func aCallFailsAtOnceWhileTheAccountChangesOrIsErased() async throws {
+  let current = CurrentAccount()
+  // Waiting while signing in, and failed as the account closes.
+  let waiting = Task { try await current.signedIn(within: .seconds(10)) }
+  try await Task.sleep(for: .milliseconds(50))
+  current.begin(nil)
+  await #expect(throws: NotSignedIn.self) { try await waiting.value }
+
+  // Closed: no wait at all, however long it was given.
+  let clock = ContinuousClock()
+  let started = clock.now
+  await #expect(throws: NotSignedIn.self) { try await current.signedIn(within: .seconds(10)) }
+  #expect(clock.now - started < .seconds(1))
+
+  // Signing in again: calls wait for it once more.
+  current.signingIn()
+  let again = Task { try await current.signedIn(within: .seconds(10)) }
+  try await Task.sleep(for: .milliseconds(50))
+  current.begin(StoredSession(token: "t", userID: "u"))
+  #expect(try await again.value.userID == "u")
+}
+
+@MainActor @Test func callsFailAtOnceWhileErasingAfterSigningOut() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  #expect(await eventually { made.owner == "A" })
+  let own = try #require(made.keychain.own as? MemoryStore)
+  own.refusesToForget.withLock { $0 = true }
+  try await made.session.signOut()
+  #expect(made.session.phase == .erasing)
+  let calls = GroupCalls(current: made.session.current)
+  let clock = ContinuousClock()
+  let started = clock.now
+  await #expect(throws: NotSignedIn.self) { try await calls.headers() }
+  #expect(clock.now - started < .seconds(1))
+}

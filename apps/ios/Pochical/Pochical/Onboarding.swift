@@ -59,7 +59,11 @@ struct AppRoot: View {
       if let erasing = session.erasing {
         ErasingScreen(erasing: erasing) { session.eraseAgain() }
       } else if showsTabs {
+        // Made anew for each stretch of the account, so no page of the
+        // user before stays open, whatever page it is, and the place it
+        // holds is held anew (OpenPlaceSocket).
         RootView(invite: $invite)
+          .id(session.generation)
       } else {
         Onboarding()
       }
@@ -73,11 +77,7 @@ struct AppRoot: View {
     .onChange(of: showsTabs) { _, tabs in
       if !tabs { openPlace.want(nil) }
     }
-    .onChange(of: session.erasing != nil) { _, erasing in
-      if erasing { openPlace.want(nil) }
-    }
-    // The open place's hold went with the user before's.
-    .onChange(of: session.userID) { openPlace.accountChanged() }
+
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)

@@ -65,6 +65,11 @@ import SQLiteData
   /// failed so far, for the app to say so.
   public private(set) var erasing: Erasing?
 
+  /// Which stretch of the account this is, moving on as the device signs
+  /// in as someone, and as their account changes or is erased: what the
+  /// screens of one stretch showed is not the next one's (AppRoot).
+  public private(set) var generation = 0
+
   /// The signed-in user's id, as their groups know them: known offline,
   /// as the session keeps it with its token. Nil until signed in, and from
   /// the moment the account's data is erased.
@@ -279,7 +284,7 @@ import SQLiteData
   /// are, and only then a new session signed in, as a new install's.
   private func beginErasing(_ why: Erasing.Why) {
     shared?.set(why.rawValue, forKey: Self.erasingKey)
-    current.begin(nil)
+    begin(nil)
     state = .erasing
     erasing = Erasing(why: why)
     userID = nil
@@ -303,6 +308,7 @@ import SQLiteData
       shared?.removeObject(forKey: Self.erasingKey)
       erasing = nil
       state = .starting
+      current.signingIn()
       if inFront {
         signInAnew()
       }
@@ -325,11 +331,18 @@ import SQLiteData
     await onErase()
   }
 
+  /// A new stretch of the account, signed in as `session` or as no one.
+  @discardableResult
+  private func begin(_ session: StoredSession?) -> Credentials? {
+    defer { generation += 1 }
+    return current.begin(session)
+  }
+
   /// Ends the stretch signed in as `before`: nothing it handed out is
   /// current from here, and every socket closes.
   private func leave(_ before: Credentials) async {
     state = .changing
-    current.begin(nil)
+    begin(nil)
     before.content.invalidateAndCancel()
     await userSocket.stop()
     await places.forgetAccount()
@@ -339,7 +352,7 @@ import SQLiteData
 
   /// A new stretch, signed in as `session`, its sockets connecting.
   private func enter(_ session: StoredSession) {
-    guard let credentials = current.begin(session) else { return }
+    guard let credentials = begin(session) else { return }
     state = .signedIn(credentials)
     userID = session.userID
     shared?.set(session.userID, forKey: SignedInUser.key)

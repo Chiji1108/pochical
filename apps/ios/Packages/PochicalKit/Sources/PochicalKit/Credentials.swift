@@ -44,11 +44,32 @@ struct AccountChanged: Error {}
 /// The credentials current now, read from any thread: the part of
 /// AccountSession the calls and sockets hold.
 public final class CurrentAccount: Sendable {
+  /// What a call can have now.
+  private enum Access {
+    /// Signing in (a first launch, or after signing out or deleting): a
+    /// call waits for it.
+    case signingIn
+    case signedIn(Credentials)
+    /// The account changing or its data being erased: no credentials come
+    /// meanwhile, so a call fails at once.
+    case closed
+  }
+
   private struct Now {
     var generation = 0
-    var credentials: Credentials?
+    var access = Access.signingIn
     /// Calls waiting for the device to be signed in.
     var waiting: [UUID: CheckedContinuation<Credentials, any Error>] = [:]
+
+    var credentials: Credentials? {
+      if case .signedIn(let credentials) = access { credentials } else { nil }
+    }
+
+    /// The waiting calls, let go of.
+    mutating func takeWaiting() -> [CheckedContinuation<Credentials, any Error>] {
+      defer { waiting = [:] }
+      return Array(waiting.values)
+    }
   }
 
   private let now = Mutex(Now())
@@ -64,9 +85,10 @@ public final class CurrentAccount: Sendable {
     return credentials
   }
 
-  /// The credentials once the device is signed in: at once if it is, else
-  /// as soon as it is, for `limit` at most, or until the task is
-  /// cancelled. A call never goes as no one.
+  /// The credentials once the device is signed in: at once if it is; while
+  /// it is signing in, as soon as it is, for `limit` at most, or until the
+  /// task is cancelled; and never while the account is changing or being
+  /// erased. A call never goes as no one.
   func signedIn(within limit: Duration = signInWait) async throws -> Credentials {
     let id = UUID()
     let timer = Task { [weak self] in
@@ -76,13 +98,17 @@ public final class CurrentAccount: Sendable {
     defer { timer.cancel() }
     return try await withTaskCancellationHandler {
       try await withCheckedThrowingContinuation { continuation in
-        let ready = now.withLock { now in
-          if now.credentials == nil { now.waiting[id] = continuation }
-          return now.credentials
+        let access = now.withLock { now in
+          if case .signingIn = now.access { now.waiting[id] = continuation }
+          return now.access
         }
-        if let ready { continuation.resume(returning: ready) }
-        // Cancelled before it began waiting, when onCancel found nothing.
-        if Task.isCancelled { stopWaiting(id, with: CancellationError()) }
+        switch access {
+        case .signedIn(let credentials): continuation.resume(returning: credentials)
+        case .closed: continuation.resume(throwing: NotSignedIn())
+        case .signingIn:
+          // Cancelled before it began waiting, when onCancel found nothing.
+          if Task.isCancelled { stopWaiting(id, with: CancellationError()) }
+        }
       }
     } onCancel: {
       stopWaiting(id, with: CancellationError())
@@ -104,26 +130,37 @@ public final class CurrentAccount: Sendable {
     }
   }
 
-  /// A new stretch, signed in as `session`, or none for nil: what the one
-  /// before handed out is no longer current.
+  /// A new stretch, signed in as `session`, or none for nil, closed while
+  /// the account changes or is erased: what the one before handed out is
+  /// no longer current, and the calls waiting get the new credentials, or
+  /// fail.
   @discardableResult
   func begin(_ session: StoredSession?) -> Credentials? {
-    let (credentials, waiting): (Credentials?, [CheckedContinuation<Credentials, any Error>]) =
-      now.withLock { now in
-        now.generation += 1
-        now.credentials = session.map {
+    let (credentials, waiting) = now.withLock { now in
+      now.generation += 1
+      if let session {
+        now.access = .signedIn(
           Credentials(
-            generation: now.generation, token: $0.token, userID: $0.userID,
-            content: Self.contentSession(), current: self)
-        }
-        guard now.credentials != nil else { return (now.credentials, []) }
-        defer { now.waiting = [:] }
-        return (now.credentials, Array(now.waiting.values))
+            generation: now.generation, token: session.token, userID: session.userID,
+            content: Self.contentSession(), current: self))
+      } else {
+        now.access = .closed
       }
-    if let credentials {
-      for continuation in waiting { continuation.resume(returning: credentials) }
+      return (now.credentials, now.takeWaiting())
+    }
+    for continuation in waiting {
+      if let credentials {
+        continuation.resume(returning: credentials)
+      } else {
+        continuation.resume(throwing: NotSignedIn())
+      }
     }
     return credentials
+  }
+
+  /// Signing in afresh, as after the erasing: calls wait for it again.
+  func signingIn() {
+    now.withLock { $0.access = .signingIn }
   }
 
   /// No cache: a stretch's photos are kept as the app's own files, erased
