@@ -58,7 +58,7 @@ struct SwipePages<Page: View>: View {
     .scrollTargetBehavior(.paging)
     // Opens on `current`: the page's share of the way along the pages.
     .defaultScrollAnchor(
-      UnitPoint(x: count > 1 ? CGFloat(current) / CGFloat(count - 1) : 0, y: 0),
+      UnitPoint(x: count > 1 ? CGFloat(min(current, count - 1)) / CGFloat(count - 1) : 0, y: 0),
       for: .initialOffset)
     .scrollPosition(id: Binding { current } set: { if let shown = $0 { current = shown } })
     .scrollIndicators(.hidden)
