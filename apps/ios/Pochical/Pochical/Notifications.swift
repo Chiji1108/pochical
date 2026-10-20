@@ -176,14 +176,14 @@ nonisolated struct OpenedChat: Hashable, Sendable {
       .read(read), AppDevice.stamped(.send(send), in: line.groupID),
     ]
     let groupID = line.groupID
-    do {
-      try await replies.database.write { db in
-        for edit in edits {
-          try Chats.edit(edit, in: groupID, now: now, db: db)
-        }
+    // Said by the notification coming back rather than by an alert.
+    let write = WriteAction {}
+    let kept = write { db in
+      for edit in edits {
+        try Chats.edit(edit, in: groupID, now: now, db: db)
       }
-    } catch {
-      Logger.edits.error("Could not keep an answer from a notification: \(error)")
+    }
+    guard kept else {
       await notifyUnkept(words, on: notification)
       time.end()
       return
@@ -201,6 +201,8 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     guard let content = notification.request.content.mutableCopy() as? UNMutableNotificationContent
     else { return }
     content.subtitle = "返信を送れませんでした：\(words)"
+    // Back as it was, not as a new line come in.
+    content.sound = nil
     let request = UNNotificationRequest(
       identifier: notification.request.identifier, content: content, trigger: nil)
     do {

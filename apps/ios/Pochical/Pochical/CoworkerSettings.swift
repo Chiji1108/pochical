@@ -110,14 +110,20 @@ struct CoworkersPage: View {
   private func add(to list: [Coworker]) {
     let name = String(
       newName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(TextLimits.personName))
-    newName = ""
-    guard !name.isEmpty, !list.contains(where: { $0.name == name }) else { return }
+    guard !name.isEmpty, !list.contains(where: { $0.name == name }) else {
+      newName = ""
+      return
+    }
     // Counted again: the list may have grown while the name was typed.
     guard list.count < coworkersMax else {
+      newName = ""
       say(coworkersFull)
       return
     }
-    write { _ = try OwnValues.addCoworker(named: name, now: nowMs(), in: $0) }
+    // One not kept stays typed, for 人を追加 to open with again.
+    if write({ _ = try OwnValues.addCoworker(named: name, now: nowMs(), in: $0) }) {
+      newName = ""
+    }
   }
 }
 
@@ -194,12 +200,15 @@ private struct CoworkerEditor: View {
   }
 
   /// Keeps the name typed; an empty one or another's is not kept, and
-  /// the person keeps theirs.
+  /// the person keeps theirs. One that cannot be kept goes back to the
+  /// name kept, so leaving does not try it again.
   private func keep() {
     let name = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !deleted, !name.isEmpty, !taken.contains(name), name != kept else { return }
     if write({ try OwnValues.renameCoworker(person.id, to: name, now: nowMs(), in: $0) }) {
       kept = name
+    } else {
+      draft = kept
     }
   }
 

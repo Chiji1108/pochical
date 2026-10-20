@@ -38,7 +38,7 @@ struct KeepsEdits: ViewModifier {
       .alert("保存できませんでした", isPresented: $failed) {
         Button("OK", role: .cancel) {}
       } message: {
-        Text("端末の空き容量を確かめて、もう一度お試しください。")
+        Text("もう一度お試しください。続くときは、端末の空き容量を確かめてください。")
       }
   }
 }
