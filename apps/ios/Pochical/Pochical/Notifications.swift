@@ -1,3 +1,4 @@
+import OSLog
 import PochicalDesign
 import PochicalKit
 import PochicalProto
@@ -136,7 +137,7 @@ nonisolated struct OpenedChat: Hashable, Sendable {
       let request = response.notification.request
       guard let line = NotifiedLine(id: request.identifier, payload: request.content.userInfo)
       else { return }
-      await reply(answer.userText, to: line)
+      await reply(answer.userText, to: line, on: response.notification)
       return
     }
     opening = chat
@@ -146,8 +147,11 @@ nonisolated struct OpenedChat: Hashable, Sendable {
 
   /// Sends an answer written on a line's notification, as the chat's
   /// composer would, the line and those before it read, and waits until it
-  /// is sent while iOS gives the time (spec/chat.md, Notifications).
-  private func reply(_ text: String, to line: NotifiedLine) async {
+  /// is sent while iOS gives the time (spec/chat.md, Notifications). One
+  /// the device cannot keep brings the notification back, to answer again.
+  private func reply(
+    _ text: String, to line: NotifiedLine, on notification: UNNotification
+  ) async {
     let words = sentWords(text)
     guard !words.isEmpty, let replies else { return }
     var read = Pochical_V1_ChatRead()
@@ -172,16 +176,38 @@ nonisolated struct OpenedChat: Hashable, Sendable {
       .read(read), AppDevice.stamped(.send(send), in: line.groupID),
     ]
     let groupID = line.groupID
-    try? await replies.database.write { db in
-      for edit in edits {
-        try Chats.edit(edit, in: groupID, now: now, db: db)
+    do {
+      try await replies.database.write { db in
+        for edit in edits {
+          try Chats.edit(edit, in: groupID, now: now, db: db)
+        }
       }
+    } catch {
+      Logger.edits.error("Could not keep an answer from a notification: \(error)")
+      await notifyUnkept(words, on: notification)
+      time.end()
+      return
     }
     await withdraw(in: line.groupID, line.threadID, readTo: line.seq)
     let sent = Task { await replies.send(line.groupID) }
     sending = sent
     await sent.value
     time.end()
+  }
+
+  /// The line's notification again, saying the answer written on it was
+  /// not sent, with its words, so it can be answered again.
+  private func notifyUnkept(_ words: String, on notification: UNNotification) async {
+    guard let content = notification.request.content.mutableCopy() as? UNMutableNotificationContent
+    else { return }
+    content.subtitle = "返信を送れませんでした：\(words)"
+    let request = UNNotificationRequest(
+      identifier: notification.request.identifier, content: content, trigger: nil)
+    do {
+      try await UNUserNotificationCenter.current().add(request)
+    } catch {
+      Logger.edits.error("Could not bring back the notification: \(error)")
+    }
   }
 
   /// Takes back the notifications shown of a chat's lines read up to
