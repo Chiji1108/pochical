@@ -90,6 +90,8 @@ public actor SyncClient {
   /// that breaks right after it, again and again, still waits longer.
   private var tries = 0
   private var connected = false
+  /// The OS said the network went away, and has not said it came back.
+  private var offline = false
   /// When the server last answered the keepalive.
   private var lastReplyMs: Int64 = 0
   /// The server refused a frame's clocks: the outbox takes new ones once
@@ -278,11 +280,16 @@ public actor SyncClient {
   /// a while to find it so: closed at once, so the screens say 接続中…,
   /// and opened again as the network comes back.
   private func networkWentAway() {
+    offline = true
     guard connected else { return }
     socket?.cancel(with: .goingAway, reason: nil)
   }
 
+  /// Only after it went away: the OS also says so as it starts watching,
+  /// which would open a second socket beside the one opening.
   private func networkCameBack() {
+    guard offline else { return }
+    offline = false
     if let credentials, running != nil, !connected {
       reconnect(as: credentials)
     }
