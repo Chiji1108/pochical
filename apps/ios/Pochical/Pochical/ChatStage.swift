@@ -3,6 +3,7 @@ import PochicalDesign
 import PochicalKit
 import SwiftUI
 import UIKit
+import UIKit.UIGestureRecognizerSubclass
 
 // A chat's room: its lines as a collection view laid out by ChatLayout,
 // and over them the pins at the top, the ↓ and the composer at the foot,
@@ -67,51 +68,35 @@ enum ReplySwipe {
   case leftward
 }
 
-/// A line's cell: where what it draws is measured, and how that is put on
-/// the screen, which the line's own SwiftUI cannot tell as the lines
-/// scroll under it. A held line's menu follows its bubble by it.
-@MainActor final class LineSpace {
-  static let name = "chat-line"
-  fileprivate weak var view: UIView?
-  /// The open menus' spots, with their bubble's frame in the cell.
-  private var followed: [(spot: LineSpot, frame: CGRect)] = []
+/// What a line's cell knows of the bubbles it draws, for the chat's long
+/// press to find which one a finger is on and for the menu to lift it
+/// from: told by each bubble as it is laid out, and read as stored values,
+/// so the press never reads SwiftUI's geometry as it goes.
+@MainActor @Observable final class LineSpace {
+  nonisolated static let name = "chat-line"
+  /// The bubble a finger is down on, which gives under it.
+  var pressed: String?
+  /// Each bubble's frame in the cell, by its line's op_id, and its links.
+  @ObservationIgnored private(set) var bubbles: [String: HeldSpot] = [:]
 
-  func onScreen(_ rect: CGRect) -> CGRect {
-    view?.convert(rect, to: nil) ?? rect
+  func note(_ lineID: String, at frame: CGRect, links: LinkSpots) {
+    bubbles[lineID] = HeldSpot(frame: frame, links: links)
   }
 
-  func onScreen(_ point: CGPoint) -> CGPoint {
-    view?.convert(point, to: nil) ?? point
+  func forget(_ lineID: String) {
+    bubbles[lineID] = nil
   }
 
-  /// Keeps `spot` on the bubble at `frame` in the cell, wherever the cell
-  /// goes.
-  func follow(_ spot: LineSpot, at frame: CGRect) {
-    followed.removeAll { $0.spot === spot }
-    followed.append((spot, frame))
-    spot.frame = onScreen(frame)
+  /// The line whose bubble is under `point` in the cell.
+  func bubble(at point: CGPoint) -> String? {
+    bubbles.first { $0.value.frame.contains(point) }?.key
   }
+}
 
-  func unfollow(_ spot: LineSpot) {
-    followed.removeAll { $0.spot === spot }
-  }
-
-  /// The cell no longer draws its line, given another or gone from the
-  /// screen with the chat: its open menus' bubbles are back, as far as
-  /// they go, whatever SwiftUI still tells the line.
-  fileprivate func letGo() {
-    let spots = followed.map(\.spot)
-    followed = []
-    for spot in spots { spot.back() }
-  }
-
-  /// The cell has moved on the screen.
-  fileprivate func moved() {
-    for (spot, frame) in followed {
-      let now = onScreen(frame)
-      if now != spot.frame { spot.frame = now }
-    }
-  }
+/// A bubble in its cell: its frame, and where its words' links are.
+struct HeldSpot {
+  let frame: CGRect
+  let links: LinkSpots
 }
 
 extension EnvironmentValues {
@@ -262,6 +247,14 @@ struct ChatStage: UIViewControllerRepresentable {
   let replySwipe: (String) -> ReplySwipe?
   /// The item `id` was dragged far enough to reply to it.
   let onReply: (String) -> Void
+  /// The line whose reactions and menu are open over the chat, which the
+  /// stage lifts from where its bubble is; none closes it.
+  let menu: MessageActionsRequest?
+  /// The bubble of the line with this op_id was held, on the link given,
+  /// for its menu.
+  let onHold: (String, URL?) -> Void
+  /// The menu has gone, its line's bubble to be drawn in the chat again.
+  let onMenuClosed: () -> Void
   /// The items within Chat.photoPrefetchScreens of those in sight, told
   /// as they change while the lines scroll, for their photos to be fetched
   /// ahead. UICollectionView's own prefetching stays off (ChatLayout's).
@@ -351,6 +344,19 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       systemName: "arrowshape.turn.up.left.circle.fill",
       withConfiguration: UIImage.SymbolConfiguration(pointSize: 28)))
   private let replyFeel = UIImpactFeedbackGenerator(style: .light)
+  /// Holds a line's bubble for its reactions and menu.
+  private lazy var press = TouchedPress(target: self, action: #selector(pressed))
+  /// The line whose bubble the press is on, and the cell's space it was
+  /// found in, which gives under the finger.
+  private var pressing: (lineID: String, space: LineSpace)?
+  /// Where the finger was on the window as the press was held, while it
+  /// stays down.
+  private var heldAt: CGPoint?
+  /// The open line's reactions and menu, over the chat's window.
+  private var menuLayer: MenuLayer?
+  /// Where the open menu's line is: its item, and its bubble's frame in
+  /// the item's cell.
+  private var menuAnchor: (item: String, inCell: CGRect)?
 
   init(scroll: ChatScroll) {
     self.scroll = scroll
@@ -384,6 +390,11 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     lines.delegate = self
     let model = model
     let registration = UICollectionView.CellRegistration<LineCell, String> { cell, _, id in
+      // A cell given another item knows only that one's bubbles.
+      if cell.item != id {
+        cell.item = id
+        cell.space = LineSpace()
+      }
       let content = model.row(id)
       let environment = model.environment
       let space = cell.space
@@ -410,6 +421,19 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     swipe.delegate = self
     lines.addGestureRecognizer(swipe)
     lines.panGestureRecognizer.require(toFail: swipe)
+    // A bubble held opens its line's reactions and menu, the finger then
+    // picking one as it lifts. On the lines themselves, not on the line's
+    // SwiftUI, so a line's cell drawn anew meanwhile never cancels it; it
+    // takes only touches on a bubble (gestureRecognizer(_:shouldReceive:)),
+    // and never alongside the lines' scrolling, a drag to reply, or a
+    // bubble's own tap, which it fails as it is held.
+    press.minimumPressDuration = Double(Chat.longPressMs) / 1000
+    press.delegate = self
+    press.onTouched = { [weak self] down in self?.give(down) }
+    lines.addGestureRecognizer(press)
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(leftScreen), name: UIApplication.didEnterBackgroundNotification,
+      object: nil)
     replyArrow.alpha = 0
     lines.addSubview(replyArrow)
     view.addSubview(lines)
@@ -509,6 +533,20 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     if width.value != view.bounds.width { width.value = view.bounds.width }
     fitRoom()
     place()
+    layoutMenu()
+    makeRoomForMenu()
+  }
+
+  override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    closeMenuNow()
+  }
+
+  override func viewWillTransition(
+    to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator
+  ) {
+    super.viewWillTransition(to: size, with: coordinator)
+    closeMenuNow()
   }
 
   func update(_ settings: ChatStage, environment: EnvironmentValues) {
@@ -536,6 +574,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       Rows(
         rows: settings.holds ? keeping(settings.rows) : settings.rows, restyled: restyled,
         reduceMotion: environment.accessibilityReduceMotion))
+    showMenu(settings.menu)
   }
 
   /// `rows` without the lines coming or going, which wait while a line's
@@ -619,6 +658,9 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
         fadeIn(fading)
       }
       keep(held)
+      // An open or closing menu's line moved by the update, its bubble
+      // with it, in the same animation.
+      layoutMenu()
     }
     // In one animation of the lines' own, however they changed: lines
     // coming in, and lines growing or shrinking in place (a reaction, an
@@ -1062,9 +1104,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       .compactMap { $0.indexPath.item < ids.count ? ids[$0.indexPath.item] : nil }
       .filter(ChatItemID.isLine)
     if seen != scroll.seen { scroll.seen = seen }
-    for case let cell as LineCell in lines.visibleCells {
-      cell.space.moved()
-    }
+    layoutMenu()
   }
 
   /// The item `id` is laid out, its top below the top of the lines seen.
@@ -1078,6 +1118,10 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   }
 
   @objc private func tapped() {
+    putKeyboardAway()
+  }
+
+  private func putKeyboardAway() {
     UIApplication.shared.sendAction(
       #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
   }
@@ -1085,6 +1129,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch)
     -> Bool
   {
+    if gestureRecognizer === press { return pressable(touch) }
     guard gestureRecognizer === swipe else { return true }
     swipeStart = touch.location(in: view)
     // On a line dragged rightward to reply, going back by a drag
@@ -1217,6 +1262,163 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     } else {
       UIView.animate(springDuration: 0.3, bounce: 0.2, options: .allowUserInteraction, animations: back)
     }
+  }
+
+  // MARK: Holding a line for its menu
+
+  /// The press takes a touch only on a bubble, as its cell last told
+  /// where its bubbles are.
+  private func pressable(_ touch: UITouch) -> Bool {
+    pressing = nil
+    guard let path = lines.indexPathForItem(at: touch.location(in: lines)),
+      let cell = lines.cellForItem(at: path) as? LineCell,
+      let lineID = cell.space.bubble(at: touch.location(in: cell))
+    else { return false }
+    pressing = (lineID, cell.space)
+    return true
+  }
+
+  /// The bubble pressed gives under the finger from the moment it goes
+  /// down, until the press is held or over.
+  private func give(_ down: Bool) {
+    guard let pressing else { return }
+    let pressed = down ? pressing.lineID : nil
+    if pressing.space.pressed != pressed { pressing.space.pressed = pressed }
+  }
+
+  @objc private func pressed() {
+    switch press.state {
+    case .began:
+      guard let lineID = pressing?.lineID else { return }
+      give(false)
+      heldAt = press.location(in: nil)
+      // The menu opens and a light haptic marks it, the two together.
+      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      settings?.onHold(lineID, link(held: lineID))
+    case .changed:
+      menuLayer?.fingerMoved(to: press.location(in: nil))
+    case .ended:
+      heldAt = nil
+      menuLayer?.fingerLifted(at: press.location(in: nil))
+    default:
+      // Cancelled, it picks nothing, as a system menu's press does.
+      heldAt = nil
+      menuLayer?.fingerLifted(at: nil)
+    }
+  }
+
+  /// The link under the press on the bubble of `lineID`, which opens its
+  /// own menu instead.
+  private func link(held lineID: String) -> URL? {
+    guard let (cell, spot) = bubble(of: lineID) else { return nil }
+    return spot.links.link(at: press.location(in: cell))
+  }
+
+  /// The cell showing the bubble of `lineID`, and where it is in it.
+  private func bubble(of lineID: String) -> (LineCell, HeldSpot)? {
+    for case let cell as LineCell in lines.visibleCells {
+      if let spot = cell.space.bubbles[lineID] { return (cell, spot) }
+    }
+    return nil
+  }
+
+  // MARK: The menu
+
+  /// Opens the menu `request` asks for, lifting its line's bubble from
+  /// where it is; closes the one open, its line gone, when none asks.
+  private func showMenu(_ request: MessageActionsRequest?) {
+    if let menuLayer {
+      if request?.id != menuLayer.request.id { menuLayer.close(fade: true) }
+      return
+    }
+    guard let request else { return }
+    guard let window = view.window, let (cell, spot) = bubble(of: request.lineID),
+      let path = lines.indexPath(for: cell), path.item < ids.count
+    else {
+      // Its line no longer on the screen: nothing to lift.
+      let closed = settings?.onMenuClosed
+      DispatchQueue.main.async { closed?() }
+      return
+    }
+    let layer = MenuLayer(
+      request: request, size: spot.frame.size, environment: model.environment,
+      width: window.bounds.width)
+    layer.frame = window.bounds
+    layer.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    layer.onClosed = { [weak self, weak layer] in
+      if let self, let layer { menuClosed(layer) }
+    }
+    window.addSubview(layer)
+    menuLayer = layer
+    menuAnchor = (ids[path.item], spot.frame)
+    UIView.performWithoutAnimation { layoutMenu() }
+    if let heldAt, press.state == .began || press.state == .changed {
+      layer.hold(at: heldAt)
+    }
+    layer.open()
+    makeRoomForMenu()
+  }
+
+  /// Puts the open or closing menu round its line's bubble where the lines
+  /// are laid out now, in whatever animation laid them out (the keyboard's,
+  /// the composer's, the lines' own), so it moves with them; within the
+  /// room over the keyboard. From the layout's attributes, which every
+  /// item has whether its cell is on the screen or not.
+  private func layoutMenu() {
+    guard let menuLayer, let menuAnchor, let window = view.window else { return }
+    var bubble: CGRect?
+    if let index = ids.firstIndex(of: menuAnchor.item),
+      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
+    {
+      bubble = lines.convert(
+        menuAnchor.inCell.offsetBy(dx: frame.minX, dy: frame.minY), to: window)
+    }
+    let bottom = window.bounds.maxY - window.safeAreaInsets.bottom
+    let keyboard = view.convert(view.keyboardLayoutGuide.layoutFrame, to: window).minY
+    menuLayer.place(
+      bubble: bubble, top: window.safeAreaInsets.top, bottom: bottom,
+      keyboardTop: keyboard < bottom - 1 ? keyboard : nil)
+  }
+
+  /// A keyboard up goes down when the bubble, the bar and the menu do not
+  /// fit over it where the bubble is (MenuPlacement), and they go down
+  /// with the line as it does. Asked again as the keyboard changes while
+  /// the menu is open.
+  private func makeRoomForMenu() {
+    guard let menuLayer, menuLayer.isOpen, menuLayer.placement?.putsKeyboardAway == true
+    else { return }
+    putKeyboardAway()
+  }
+
+  /// The menu has gone: its line draws its bubble again as the layer goes,
+  /// both in this pass, so they reach the screen in the same frame and the
+  /// bubble is never missing between the two.
+  private func menuClosed(_ layer: MenuLayer) {
+    guard menuLayer === layer else { return }
+    let item = menuAnchor?.item
+    menuLayer = nil
+    menuAnchor = nil
+    settings?.onMenuClosed()
+    layer.removeFromSuperview()
+    // VoiceOver back on the line.
+    if UIAccessibility.isVoiceOverRunning,
+      let index = item.flatMap({ ids.firstIndex(of: $0) })
+    {
+      UIAccessibility.post(
+        notification: .screenChanged,
+        argument: lines.cellForItem(at: IndexPath(item: index, section: 0)))
+    }
+  }
+
+  /// Takes the menu away at once, as the chat leaves the screen.
+  func closeMenuNow() {
+    guard let menuLayer else { return }
+    menuLayer.close(fade: true)
+    menuClosed(menuLayer)
+  }
+
+  @objc private func leftScreen() {
+    closeMenuNow()
   }
 
   // MARK: Scrolling
@@ -1378,18 +1580,33 @@ private final class SwipePan: UIPanGestureRecognizer {
   }
 }
 
-/// A cell of the lines, knowing where it is on the screen for the line it
-/// draws.
+/// The long press that holds a line's bubble, telling also when a finger
+/// goes down on it and when the press is over, held or not: what UIKit's
+/// long press keeps to itself until it is held.
+private final class TouchedPress: UILongPressGestureRecognizer {
+  var onTouched: (Bool) -> Void = { _ in }
+
+  override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    super.touchesBegan(touches, with: event)
+    if state == .possible { onTouched(true) }
+  }
+
+  override func reset() {
+    super.reset()
+    onTouched(false)
+  }
+}
+
+/// A cell of the lines, knowing the bubbles of the item it draws.
 private final class LineCell: UICollectionViewCell {
-  let space = LineSpace()
+  /// The item it draws, and what its bubbles tell of themselves.
+  var item: String?
+  var space = LineSpace()
   /// The height of the item it draws, at a width.
   var measure: ((CGFloat) -> CGFloat)?
 
   override init(frame: CGRect) {
     super.init(frame: frame)
-    // The cell itself: a content configuration puts in a content view of
-    // its own, filling the cell.
-    space.view = self
     // Its line drawn again taller is laid out at once at its new height,
     // the cell growing to it in the lines' animation: what the line gains
     // (a reaction, a link's page, the words past 続きを読む) shows as the
@@ -1405,16 +1622,6 @@ private final class LineCell: UICollectionViewCell {
   /// in which its hosted line is laid out apart from how it was measured,
   /// shifted in the cell, over the lines next to it.
   override var safeAreaInsets: UIEdgeInsets { .zero }
-
-  override func prepareForReuse() {
-    super.prepareForReuse()
-    space.letGo()
-  }
-
-  override func didMoveToWindow() {
-    super.didMoveToWindow()
-    if window == nil { space.letGo() }
-  }
 
   /// Its item's height at the width the layout gives it, measured apart
   /// from the cell (ChatLinesModel.height).

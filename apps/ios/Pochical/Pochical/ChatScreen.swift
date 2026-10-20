@@ -205,13 +205,19 @@ struct ChatScreen: View {
       onReply: { id in
         if let line = answered(byID[id]) { reply(to: line) }
       },
+      menu: acting, onHold: { act(.hold(link: $1), on: $0) }, onMenuClosed: menuClosed,
       onNear: { prefetchPhotos(of: $0.compactMap { byID[$0] }) }
     )
     // A line gone from the chat (taken back by its writer) takes its
-    // open menu with it; the lines laid out keep it meanwhile (`holds`).
-    .onChange(of: acting.map { acting in state.lines.contains { $0.opID == acting.lineID } }) {
+    // open menu with it, the stage fading its bubble as it goes; the
+    // lines laid out keep it meanwhile (`holds`).
+    .onChange(
+      of: acting.map { acting in
+        state.lines.contains { $0.opID == acting.lineID && !$0.unsent }
+      }
+    ) {
       _, there in
-      if there == false { closeActions() }
+      if there == false { acting = nil }
     }
     .background {
       ReadsSeen(
@@ -413,7 +419,7 @@ struct ChatScreen: View {
     }
     .onDisappear {
       announcer.stop()
-      closeActions()
+      menuClosed()
       keepDraft()
       photoPrefetch.stop()
       draft.stopTyping(in: threadID, socket: socket)
@@ -927,22 +933,22 @@ struct ChatScreen: View {
     switch (action, photo) {
     case (.react(let emoji), _):
       if let first { react(emoji, on: first) }
-    case (.hold(let spot, let finger, _), .line(let line, _)):
+    case (.hold, .line(let line, _)):
       let mine = line.authorID == meID
       openActions(
         MessageActionsRequest(
-          lineID: line.opID, spot: spot, mine: mine,
+          lineID: line.opID, mine: mine,
           bubble: albumBubble(line.photo, at: index, of: photos.count, waiting: false),
-          finger: finger, reactions: first?.reactions, meID: meID,
+          reactions: first?.reactions, meID: meID,
           onReact: { emoji in first.map { react(emoji, on: $0) } },
           onMoreReactions: { reactingTo = first }, actions: actions(for: line, mine: mine)))
-    case (.hold(let spot, let finger, _), .waiting(let line, _)):
+    case (.hold, .waiting(let line, _)):
       openActions(
         MessageActionsRequest(
-          lineID: line.opID, spot: spot, mine: true,
+          lineID: line.opID, mine: true,
           bubble: albumBubble(
             line.photo, at: index, of: photos.count, waiting: !line.failed),
-          finger: finger, actions: actions(forWaiting: line)))
+          actions: actions(forWaiting: line)))
     case (_, .line(let line, _)):
       act(action, on: line, startsRun: false)
     case (_, .waiting(let line, _)):
@@ -996,20 +1002,20 @@ struct ChatScreen: View {
       deciding = line
     case .menu(let title):
       actions(for: line, mine: line.authorID == meID).first { $0.title == title }?.run()
-    case .hold(let spot, let finger, let link):
+    case .hold(let link):
       let mine = line.authorID == meID
       let bubble = AnyView(lineView(line, startsRun: startsRun, names: names).bubble)
       // A link held has its own menu, without the reactions.
       if let link {
         openActions(
           MessageActionsRequest(
-            lineID: line.opID, spot: spot, mine: mine, bubble: bubble, finger: finger,
+            lineID: line.opID, mine: mine, bubble: bubble,
             actions: linkActions(link, open: { _ = open(link) }, copied: { sayDone("コピーしました") })))
       } else {
         openActions(
           MessageActionsRequest(
-            lineID: line.opID, spot: spot, mine: mine, bubble: bubble,
-            finger: finger, reactions: line.reactions, meID: meID,
+            lineID: line.opID, mine: mine, bubble: bubble,
+            reactions: line.reactions, meID: meID,
             onReact: { react($0, on: line) },
             onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
       }
@@ -1026,12 +1032,12 @@ struct ChatScreen: View {
       stopSending(line)
     case .menu(let title):
       actions(forWaiting: line).first { $0.title == title }?.run()
-    case .hold(let spot, let finger, _):
+    case .hold:
       openActions(
         MessageActionsRequest(
-          lineID: line.opID, spot: spot, mine: true,
+          lineID: line.opID, mine: true,
           bubble: AnyView(lineView(waiting: line, startsRun: startsRun, names: names).bubble),
-          finger: finger, actions: actions(forWaiting: line)))
+          actions: actions(forWaiting: line)))
     default:
       break
     }
@@ -1861,25 +1867,17 @@ struct ChatScreen: View {
     }
   }
 
-  /// Opens a line's reactions and menu over everything, at once: the
-  /// overlay draws its own coming in.
+  /// Opens a line's reactions and menu over the chat, its bubble lifted
+  /// from its place, which stands empty meanwhile.
   private func openActions(_ request: MessageActionsRequest) {
     acting = request
     marks.lifted = request.lineID
-    OverlayWindow.shared.show(
-      MessageActionsOverlay(request: request) { closeActions() }
-      .environment(\.themeColors, colors)
-      .environment(settings)
-      .environment(\.look, look))
   }
 
-  /// Gives the line back its bubble in the chat, and takes the overlay
-  /// away as the chat draws it.
-  private func closeActions() {
-    let spot = acting?.spot
+  /// The menu has gone: the line draws its bubble again.
+  private func menuClosed() {
     acting = nil
     marks.lifted = nil
-    OverlayWindow.shared.hide(once: spot)
   }
 
   /// Puts the reader's `emoji` on the line, or takes it back if it was

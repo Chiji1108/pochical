@@ -15,13 +15,10 @@ struct LinkMark: TextAttribute {
 nonisolated final class LinkSpots: @unchecked Sendable {
   /// Each link's runs, in the words' own space.
   fileprivate var spots: [(rect: CGRect, url: URL)] = []
-  /// The words on the screen.
+  /// The words in the chat line's cell.
   var frame = CGRect.zero
-  /// The bubble is held, or was a moment ago: a link's tap as the finger
-  /// lifts opens nothing.
-  var held = false
 
-  /// The link under `point`, on the screen.
+  /// The link under `point`, in the chat line's cell.
   func link(at point: CGPoint) -> URL? {
     let inWords = CGPoint(x: point.x - frame.minX, y: point.y - frame.minY)
     // A little round each run, as a finger is wider than the line.
@@ -44,41 +41,6 @@ struct LinkFinder: TextRenderer {
       context.draw(line)
     }
     spots.spots = found
-  }
-}
-
-/// The words' links opening as the chat opens them, except as the bubble
-/// is held for a menu.
-struct HeldLinksOpenNothing: ViewModifier {
-  @Environment(\.openURL) private var openURL
-  let spots: LinkSpots
-
-  func body(content: Content) -> some View {
-    content.environment(
-      \.openURL,
-      OpenURLAction { url in
-        if spots.held { return .handled }
-        openURL(url)
-        return .handled
-      })
-  }
-}
-
-/// A tap on a part of a bubble with its own (a reply's quote, a link's
-/// page), but for the finger lifting from the press that opened the
-/// bubble's menu, as a link's.
-struct TapUnlessHeld: ViewModifier {
-  @Environment(\.linkSpots) private var spots
-  let action: () -> Void
-
-  func body(content: Content) -> some View {
-    content.onTapGesture { if spots?.held != true { action() } }
-  }
-}
-
-extension View {
-  func onTapUnlessHeld(perform action: @escaping () -> Void) -> some View {
-    modifier(TapUnlessHeld(action: action))
   }
 }
 

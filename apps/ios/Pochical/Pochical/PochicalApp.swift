@@ -42,7 +42,6 @@ struct PochicalApp: App {
     Notifications.shared.groupCalls = groupCalls
     Notifications.shared.replies = Replies(
       database: database, sockets: groupSockets, userSocket: sync)
-    KeyboardTop.shared.watch()
   }
 
   var body: some Scene {
