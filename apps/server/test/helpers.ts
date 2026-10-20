@@ -68,23 +68,21 @@ export const memberOf = async (groupId: string): Promise<string> => {
 };
 
 /**
- * Has the group's telling of `userId`'s own DO of their membership fail,
- * as an unreachable DO would, until the function it gives back is called.
+ * Has the group's telling of `userId`'s own DO of their membership go
+ * through `takeMembership` instead, failing as an unreachable DO would
+ * unless given another, until the function it gives back is called.
  */
 export const failTelling = async (
   groupId: string,
-  userId: string
+  userId: string,
+  takeMembership: (...news: unknown[]) => Promise<void> = () => {
+    throw new Error("unreachable");
+  }
 ): Promise<() => Promise<void>> => {
   const group = env.GROUPS.getByName(groupId);
   const users = {
     getByName: (name: string) =>
-      name === userId
-        ? {
-            takeMembership: () => {
-              throw new Error("unreachable");
-            },
-          }
-        : env.USERS.getByName(name),
+      name === userId ? { takeMembership } : env.USERS.getByName(name),
   };
   await runInDurableObject(group, (instance) => {
     Reflect.set(

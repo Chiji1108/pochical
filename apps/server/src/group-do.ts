@@ -3,17 +3,7 @@ import { chatPlaces, chatRules } from "@pochical/design/chat";
 import type { ChatPlaceKind, ChatPlaceRules } from "@pochical/design/chat";
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
-import {
-  and,
-  asc,
-  count,
-  eq,
-  gt,
-  inArray,
-  isNull,
-  lte,
-  min,
-} from "drizzle-orm";
+import { and, asc, count, eq, gt, isNull, lte, min } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
@@ -250,7 +240,7 @@ export class GroupDO extends DurableObject<Env> {
         this.queueNews(creator.userId, true);
       });
     }
-    await this.tellMemberships([creator.userId]);
+    await this.tellMemberships(creator.userId);
     return made;
   }
 
@@ -261,7 +251,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   async addMember(member: NewMember): Promise<JoinResult> {
     const result = this.admit(member);
-    await this.tellMemberships([member.userId]);
+    await this.tellMemberships(member.userId);
     return result;
   }
 
@@ -401,7 +391,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   async removeMember(userId: string, by?: string): Promise<void> {
     this.takeOut(userId, by);
-    await this.tellMemberships([userId]);
+    await this.tellMemberships(userId);
   }
 
   private takeOut(userId: string, by?: string): void {
@@ -674,7 +664,8 @@ export class GroupDO extends DurableObject<Env> {
     });
     broadcastChanges(this.ctx, changes);
     this.dropPhotos(gone);
-    await this.tellMemberships(this.memberList().map(({ userId }) => userId));
+    // The renamer waits on their own list; the others' come by the alarm.
+    await this.tellMemberships(by);
   }
 
   /**
@@ -697,14 +688,14 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * Tells the users' DOs the news of their place in the group still to
-   * tell them, at once, as someone waits on it, whenever it was due; then
-   * has the alarm come back for any not taken. Others' news waits for its
-   * time, so a call for someone else neither repeats it before then nor
-   * waits on it.
+   * Tells the user's DO the news of their place in the group still to
+   * tell them, at once, as they wait on it, whenever it was due; then has
+   * the alarm come for the rest when due, at once for news just queued.
+   * Others' news waits for the alarm, so a call for one user neither
+   * repeats theirs before its time nor waits on it.
    */
-  private async tellMemberships(userIds: string[]): Promise<void> {
-    await this.deliverNews(inArray(membershipOutbox.userId, userIds));
+  private async tellMemberships(userId: string): Promise<void> {
+    await this.deliverNews(eq(membershipOutbox.userId, userId));
     const due = this.newsDue();
     if (due !== undefined) {
       await this.wakeBy(due);

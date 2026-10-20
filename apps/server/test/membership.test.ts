@@ -5,7 +5,7 @@ import {
   runInDurableObject,
 } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { NEWS_RETRY_FIRST_MS } from "../src/group-do";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
@@ -21,6 +21,9 @@ import { changesIn, device, pair, sendFrame, syncSocket } from "./sync-helpers";
 
 // Who is in a group, decided by its Group DO and told to each member's own
 // DO until it takes it (spec/sync-protocol.md, Groups).
+
+// Longer than any call here takes, shorter than a test may.
+const SLOW_MS = 1500;
 
 const MARK = { color: 0, emoji: "🍉", icon: "", letter: "", photoId: "" };
 
@@ -210,16 +213,18 @@ describe("telling a member's own DO", () => {
     ).resolves.toBeFalsy();
   });
 
-  it("tells each member's DO of a new name, one unreachable once it can be", async () => {
+  it("answers a rename once the renamer's list has it, the others' coming by the alarm at once", async () => {
     const { groupId, guest, maker } = await pair();
     const guestId = await userIdOf(guest);
-    const restore = await failTelling(groupId, guestId);
-    const renamed = await call(
-      "GroupService/RenameGroup",
-      { groupId, mark: { emoji: "🍉" }, name: "はとこ会" },
-      maker
-    );
-    expect(renamed.status).toBe(200);
+    // The guest's DO is slow to take it.
+    const restore = await failTelling(groupId, guestId, async (...news) => {
+      await scheduler.wait(SLOW_MS);
+      await Reflect.apply(
+        env.USERS.getByName(guestId).takeMembership,
+        undefined,
+        news
+      );
+    });
     const nameIn = async (userId: string) =>
       await runInDurableObject(
         env.USERS.getByName(userId),
@@ -230,12 +235,25 @@ describe("telling a member's own DO", () => {
             }>("select name from memberships where group_id = ?", groupId)
             .one().name
       );
+    const started = Date.now();
+    const renamed = await call(
+      "GroupService/RenameGroup",
+      { groupId, mark: { emoji: "🍉" }, name: "はとこ会" },
+      maker
+    );
+    expect([renamed.status, Date.now() - started < SLOW_MS]).toStrictEqual([
+      200,
+      true,
+    ]);
     await expect(nameIn(await userIdOf(maker))).resolves.toBe("はとこ会");
-    await expect(nameIn(guestId)).resolves.toBe("いとこ会");
-
+    // No alarm run here: it comes by itself.
+    await vi.waitFor(
+      async () => {
+        await expect(nameIn(guestId)).resolves.toBe("はとこ会");
+      },
+      { timeout: SLOW_MS * 2 }
+    );
     await restore();
-    await alarmComes(groupId);
-    await expect(nameIn(guestId)).resolves.toBe("はとこ会");
   });
 
   it("tells failed news again only in its time, not with someone else's", async () => {
