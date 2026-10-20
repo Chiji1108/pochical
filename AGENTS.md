@@ -1,6 +1,6 @@
 # Repository Guide
 
-Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/android`) apps, a Cloudflare Workers backend (`apps/server`), the web site and its /design prototype (`apps/web`), and the admin site (`apps/admin`). `apps/mobile-legacy` is the old Expo app, kept for reference only; do not lint, test or extend it.
+Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/android`) apps, a Cloudflare Workers backend (`apps/server`), the web site and its /design prototype (`apps/web`), and the admin site (`apps/admin`).
 
 ## Where things live
 

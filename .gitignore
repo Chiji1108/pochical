@@ -3,11 +3,8 @@
 # dependencies
 node_modules/
 
-# Expo
-.expo/
+# Builds
 dist/
-web-build/
-expo-env.d.ts
 
 # Native
 .kotlin/
@@ -21,9 +18,6 @@ expo-env.d.ts
 # Swift Package Manager
 .build/
 .swiftpm/
-
-# Metro
-.metro-health-check*
 
 # debug
 npm-debug.*
@@ -40,12 +34,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-
-app-example
-
-# generated native folders
-/apps/mobile-legacy/ios
-/apps/mobile-legacy/android
 
 # Web / Workers
 .wrangler/
