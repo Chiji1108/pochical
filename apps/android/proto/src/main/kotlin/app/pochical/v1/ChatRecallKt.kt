@@ -73,34 +73,117 @@ public object ChatRecallKt {
     }
 
     /**
-     * ```
-     * The photo the send carries, uploaded before it went out: deleted with
-     * the line, or at once when the group does not have the line, as no
-     * line will ever carry it. Empty for a send of anything else.
-     * ```
-     *
-     * `string photo_id = 3 [json_name = "photoId"];`
+     * An uninstantiable, behaviorless type to represent the field in
+     * generics.
      */
-    public var photoId: kotlin.String
-      @kotlin.jvm.JvmName("getPhotoId")
-        get() = _builder.photoId
-      @kotlin.jvm.JvmName("setPhotoId")
-        set(value) {
-        _builder.photoId = value
-      }
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+    public class PhotoIdsProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
     /**
      * ```
-     * The photo the send carries, uploaded before it went out: deleted with
+     * The photos the send carries, uploaded before it went out: deleted with
      * the line, or at once when the group does not have the line, as no
-     * line will ever carry it. Empty for a send of anything else.
+     * line will ever carry them. None for a send of anything else.
      * ```
      *
-     * `string photo_id = 3 [json_name = "photoId"];`
+     * `repeated string photo_ids = 4 [json_name = "photoIds"];`
+     * @return A list containing the photoIds.
      */
-    public fun clearPhotoId() {
-      _builder.clearPhotoId()
+    public val photoIds: com.google.protobuf.kotlin.DslList<kotlin.String, PhotoIdsProxy>
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+      get() = com.google.protobuf.kotlin.DslList(
+        _builder.photoIdsList
+      )
+    /**
+     * ```
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * ```
+     *
+     * `repeated string photo_ids = 4 [json_name = "photoIds"];`
+     * @param value The photoIds to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addPhotoIds")
+    public fun com.google.protobuf.kotlin.DslList<kotlin.String, PhotoIdsProxy>.add(value: kotlin.String) {
+      _builder.addPhotoIds(value)
     }
-  }
+    /**
+     * ```
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * ```
+     *
+     * `repeated string photo_ids = 4 [json_name = "photoIds"];`
+     * @param value The photoIds to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignPhotoIds")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<kotlin.String, PhotoIdsProxy>.plusAssign(value: kotlin.String) {
+      add(value)
+    }
+    /**
+     * ```
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * ```
+     *
+     * `repeated string photo_ids = 4 [json_name = "photoIds"];`
+     * @param values The photoIds to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addAllPhotoIds")
+    public fun com.google.protobuf.kotlin.DslList<kotlin.String, PhotoIdsProxy>.addAll(values: kotlin.collections.Iterable<kotlin.String>) {
+      _builder.addAllPhotoIds(values)
+    }
+    /**
+     * ```
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * ```
+     *
+     * `repeated string photo_ids = 4 [json_name = "photoIds"];`
+     * @param values The photoIds to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignAllPhotoIds")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<kotlin.String, PhotoIdsProxy>.plusAssign(values: kotlin.collections.Iterable<kotlin.String>) {
+      addAll(values)
+    }
+    /**
+     * ```
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * ```
+     *
+     * `repeated string photo_ids = 4 [json_name = "photoIds"];`
+     * @param index The index to set the value at.
+     * @param value The photoIds to set.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setPhotoIds")
+    public operator fun com.google.protobuf.kotlin.DslList<kotlin.String, PhotoIdsProxy>.set(index: kotlin.Int, value: kotlin.String) {
+      _builder.setPhotoIds(index, value)
+    }/**
+     * ```
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * ```
+     *
+     * `repeated string photo_ids = 4 [json_name = "photoIds"];`
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setPhotoIds")
+    public fun com.google.protobuf.kotlin.DslList<kotlin.String, PhotoIdsProxy>.clear() {
+      _builder.clearPhotoIds()
+    }}
 }
 public inline fun app.pochical.v1.ChatRecall.copy(block: `app.pochical.v1`.ChatRecallKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatRecall =
   `app.pochical.v1`.ChatRecallKt.Dsl._create(this.toBuilder()).apply { block() }._build()

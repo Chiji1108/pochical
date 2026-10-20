@@ -626,45 +626,6 @@ public object ChatLineKt {
 
     /**
      * ```
-     * A photo sent as the line, with no words; none once unsent.
-     * ```
-     *
-     * `.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];`
-     */
-    public var photo: app.pochical.v1.ChatPhoto
-      @kotlin.jvm.JvmName("getPhoto")
-        get() = _builder.photo
-      @kotlin.jvm.JvmName("setPhoto")
-        set(value) {
-        _builder.photo = value
-      }
-    /**
-     * ```
-     * A photo sent as the line, with no words; none once unsent.
-     * ```
-     *
-     * `.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];`
-     */
-    public fun clearPhoto() {
-      _builder.clearPhoto()
-    }
-    /**
-     * ```
-     * A photo sent as the line, with no words; none once unsent.
-     * ```
-     *
-     * `.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];`
-     * @return Whether the photo field is set.
-     */
-    public fun hasPhoto(): kotlin.Boolean {
-      return _builder.hasPhoto()
-    }
-
-    public val ChatLineKt.Dsl.photoOrNull: app.pochical.v1.ChatPhoto?
-      get() = _builder.photoOrNull
-
-    /**
-     * ```
      * Its first link's page, under its words; none once unsent.
      * ```
      *
@@ -802,40 +763,121 @@ public object ChatLineKt {
       get() = _builder.noticeOrNull
 
     /**
-     * ```
-     * The photos sent together with this one (spec/chat.md, Albums), as
-     * ChatSend.album named them; empty for a photo sent alone, and for
-     * anything else.
-     * ```
-     *
-     * `string album = 20 [json_name = "album"];`
+     * An uninstantiable, behaviorless type to represent the field in
+     * generics.
      */
-    public var album: kotlin.String
-      @kotlin.jvm.JvmName("getAlbum")
-        get() = _builder.album
-      @kotlin.jvm.JvmName("setAlbum")
-        set(value) {
-        _builder.album = value
-      }
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+    public class PhotosProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
     /**
      * ```
-     * The photos sent together with this one (spec/chat.md, Albums), as
-     * ChatSend.album named them; empty for a photo sent alone, and for
-     * anything else.
+     * The photos sent as the line, with no words: one, or several sent at
+     * once, drawn as one album (spec/chat.md, Albums). None for anything
+     * else, and once unsent.
      * ```
      *
-     * `string album = 20 [json_name = "album"];`
+     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
      */
-    public fun clearAlbum() {
-      _builder.clearAlbum()
+     public val photos: com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>
+      @kotlin.jvm.JvmSynthetic
+  get() = com.google.protobuf.kotlin.DslList(
+        _builder.photosList
+      )
+    /**
+     * ```
+     * The photos sent as the line, with no words: one, or several sent at
+     * once, drawn as one album (spec/chat.md, Albums). None for anything
+     * else, and once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
+     * @param value The photos to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addPhotos")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.add(value: app.pochical.v1.ChatPhoto) {
+      _builder.addPhotos(value)
+    }
+    /**
+     * ```
+     * The photos sent as the line, with no words: one, or several sent at
+     * once, drawn as one album (spec/chat.md, Albums). None for anything
+     * else, and once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
+     * @param value The photos to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignPhotos")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.plusAssign(value: app.pochical.v1.ChatPhoto) {
+      add(value)
+    }
+    /**
+     * ```
+     * The photos sent as the line, with no words: one, or several sent at
+     * once, drawn as one album (spec/chat.md, Albums). None for anything
+     * else, and once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
+     * @param values The photos to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addAllPhotos")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.ChatPhoto>) {
+      _builder.addAllPhotos(values)
+    }
+    /**
+     * ```
+     * The photos sent as the line, with no words: one, or several sent at
+     * once, drawn as one album (spec/chat.md, Albums). None for anything
+     * else, and once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
+     * @param values The photos to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignAllPhotos")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.ChatPhoto>) {
+      addAll(values)
+    }
+    /**
+     * ```
+     * The photos sent as the line, with no words: one, or several sent at
+     * once, drawn as one album (spec/chat.md, Albums). None for anything
+     * else, and once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
+     * @param index The index to set the value at.
+     * @param value The photos to set.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setPhotos")
+    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.set(index: kotlin.Int, value: app.pochical.v1.ChatPhoto) {
+      _builder.setPhotos(index, value)
+    }
+    /**
+     * ```
+     * The photos sent as the line, with no words: one, or several sent at
+     * once, drawn as one album (spec/chat.md, Albums). None for anything
+     * else, and once unsent.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("clearPhotos")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.clear() {
+      _builder.clearPhotos()
     }
   }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =
   `app.pochical.v1`.ChatLineKt.Dsl._create(this.toBuilder()).apply { block() }._build()
-
-public val app.pochical.v1.ChatLineOrBuilder.photoOrNull: app.pochical.v1.ChatPhoto?
-  get() = if (hasPhoto()) getPhoto() else null
 
 public val app.pochical.v1.ChatLineOrBuilder.previewOrNull: app.pochical.v1.LinkPreview?
   get() = if (hasPreview()) getPreview() else null

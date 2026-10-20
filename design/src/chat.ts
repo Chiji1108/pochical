@@ -109,8 +109,8 @@ export const chatRules = {
   // most (an opaque photo's take 24 at most); the server refuses a longer
   // one.
   photoThumbHashMaxBytes: 25,
-  // The most photos sent at once, each as its own line, drawn together
-  // as one album (spec/chat.md, Albums), as Telegram's album holds ten.
+  // The most photos sent at once, one line holding them all, drawn as
+  // one album (spec/chat.md, Albums), as Telegram's and Signal's hold ten.
   photosPerSend: 10,
   // A face or a group's photo mark is shrunk further, as it only ever
   // shows small: past three times its largest place on screen (88pt).

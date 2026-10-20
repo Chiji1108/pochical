@@ -1,5 +1,5 @@
 {
-  "about": "A chat's photos alone, as the photo opened large pages through them (spec/chat.md, Photos; spec/sync-protocol.md, Chat). seen: whether a reader sees a line's photo among the chat's: `photo` (it is one), `unsent` (taken back), `hidden` (sent in a one-to-one chat while the reader had blocked its writer), `ownChat` (the place's own chat, thread \"group\", not a one-to-one one) and `writerBlocked` (the reader has blocked its writer, whose lines fold away in the place's own chat). page: the chat's photos the reader sees by their lines' `seqs` in order, and a ChatPhotosRequest for those before `seq` (or after it, with `after`; 0 for the latest, or after from the first), `size` a page; `expected` is the page's seqs, how many photos come before it (`offset`) and how many the chat holds (`total`). run: the photos a device holds open large, or listed (写真), as steps, each photo's writer `w` and its seq: `open` with the `held` photos among the lines laid out and the `tapped` one; `latest`, the list opened with none held; `lines`, the chat's photos on the device, read at the group's `cursor`: the lines whose photo the reader sees (`photos`), those taken back or hidden (`gone`) and, in the place's own chat, whose photos fold away (`blocked`); the first time, or changed since, those out, the next shown in place of one gone, and where they are among all of them forgotten, the same photos at a later cursor changing nothing; `page`, a ChatPhotos answering an ask, made at the group's `cursor`, its photos taking the place of those held over the lines it covers (dropped when its cursor is older than the last `lines`, or its `seq` is past those held); `show`, swiped to a photo; `reconnected`, the socket open again, the asks not yet answered asked again. After each step `expected` is the photos held (`seqs`), the one shown (null once none is left, which closes it), its `place` among all the chat's as the group last said it (how many come before it, plus one, and in all; null while unknown) and the pages newly asked for (`asks`), each once until the chat's photos change and none before they are first followed: the latest with none held, both sides of the one shown while its place is unknown, else an end's next once the one shown is fewer than `ahead` (chatRules.photoPageAhead) from it.",
+  "about": "A chat's photos alone, as the photo opened large pages through them (spec/chat.md, Photos; spec/sync-protocol.md, Chat). A photo is named by its line's seq and a letter for its place in the line, `a` its first (`5a`, `5b`, `5c` for a line of three). seen: whether a reader sees a line's photo among the chat's: `photo` (it is one), `unsent` (taken back), `hidden` (sent in a one-to-one chat while the reader had blocked its writer), `ownChat` (the place's own chat, thread \"group\", not a one-to-one one) and `writerBlocked` (the reader has blocked its writer, whose lines fold away in the place's own chat). page: the chat's photos the reader sees (`photos`) in order, and a ChatPhotosRequest for those before `seq` (or after it, with `after`; 0 for the latest, or after from the first), `size` a page in photos, of whole lines, a line never split and at least one when there is one; `expected` is the page's `photos`, how many photos come before it (`offset`) and how many the chat holds (`total`). run: the photos a device holds open large, or listed (写真), as steps: `open` with the `held` photos among the lines laid out and the `tapped` one; `latest`, the list opened with none held; `lines`, the chat's photos on the device, read at the group's `cursor`: the photos the reader sees (`photos`), those taken back or hidden (`gone`) and, in the place's own chat, whose photos fold away (`blocked`); the first time, or changed since, those out, the next shown in place of one gone, and where they are among all of them forgotten, the same photos at a later cursor changing nothing; `page`, a ChatPhotos answering an ask, made at the group's `cursor`, its `photos` taking the place of those held over the lines it covers (dropped when its cursor is older than the last `lines`, or its `seq` is past those held); `show`, swiped to a photo; `reconnected`, the socket open again, the asks not yet answered asked again. After each step `expected` is the photos held (`photos`), the one shown (null once none is left, which closes it), its `place` among all the chat's as the group last said it (how many come before it, plus one, and in all; null while unknown) and the pages newly asked for (`asks`), each once until the chat's photos change and none before they are first followed: the latest with none held, both sides of the one shown while its place is unknown, else an end's next once the one shown is fewer than `ahead` (chatRules.photoPageAhead) from it.",
   "seen": [
     {
       "name": "a photo in the place's own chat",
@@ -82,134 +82,182 @@
   "page": [
     {
       "name": "the latest",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 0,
       "after": false,
       "size": 3,
       "expected": {
-        "seqs": [10, 12, 14],
+        "photos": ["10a", "12a", "14a"],
         "offset": 4,
         "total": 7
       }
     },
     {
       "name": "before a photo",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 10,
       "after": false,
       "size": 3,
       "expected": {
-        "seqs": [4, 6, 8],
+        "photos": ["4a", "6a", "8a"],
         "offset": 1,
         "total": 7
       }
     },
     {
       "name": "before, reaching the first",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 6,
       "after": false,
       "size": 3,
       "expected": {
-        "seqs": [2, 4],
+        "photos": ["2a", "4a"],
         "offset": 0,
         "total": 7
       }
     },
     {
       "name": "before the first",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 2,
       "after": false,
       "size": 3,
       "expected": {
-        "seqs": [],
+        "photos": [],
         "offset": 0,
         "total": 7
       }
     },
     {
       "name": "from the first",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 0,
       "after": true,
       "size": 3,
       "expected": {
-        "seqs": [2, 4, 6],
+        "photos": ["2a", "4a", "6a"],
         "offset": 0,
         "total": 7
       }
     },
     {
       "name": "after a photo",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 6,
       "after": true,
       "size": 3,
       "expected": {
-        "seqs": [8, 10, 12],
+        "photos": ["8a", "10a", "12a"],
         "offset": 3,
         "total": 7
       }
     },
     {
       "name": "after, reaching the last",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 12,
       "after": true,
       "size": 3,
       "expected": {
-        "seqs": [14],
+        "photos": ["14a"],
         "offset": 6,
         "total": 7
       }
     },
     {
       "name": "after the last",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 14,
       "after": true,
       "size": 3,
       "expected": {
-        "seqs": [],
+        "photos": [],
         "offset": 7,
         "total": 7
       }
     },
     {
       "name": "before a line of words",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 7,
       "after": false,
       "size": 3,
       "expected": {
-        "seqs": [2, 4, 6],
+        "photos": ["2a", "4a", "6a"],
         "offset": 0,
         "total": 7
       }
     },
     {
       "name": "after a line of words",
-      "seqs": [2, 4, 6, 8, 10, 12, 14],
+      "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
       "seq": 7,
       "after": true,
       "size": 3,
       "expected": {
-        "seqs": [8, 10, 12],
+        "photos": ["8a", "10a", "12a"],
         "offset": 3,
         "total": 7
       }
     },
     {
       "name": "a chat without photos",
-      "seqs": [],
+      "photos": [],
       "seq": 0,
       "after": false,
       "size": 3,
       "expected": {
-        "seqs": [],
+        "photos": [],
         "offset": 0,
         "total": 0
+      }
+    },
+    {
+      "name": "a line's photos each count",
+      "photos": ["2a", "4a", "4b", "4c", "6a", "8a", "8b"],
+      "seq": 0,
+      "after": false,
+      "size": 4,
+      "expected": {
+        "photos": ["6a", "8a", "8b"],
+        "offset": 4,
+        "total": 7
+      }
+    },
+    {
+      "name": "a page stops before a line it cannot hold whole",
+      "photos": ["2a", "4a", "4b", "4c", "6a", "8a", "8b"],
+      "seq": 8,
+      "after": false,
+      "size": 3,
+      "expected": {
+        "photos": ["6a"],
+        "offset": 4,
+        "total": 7
+      }
+    },
+    {
+      "name": "a line bigger than a page comes whole",
+      "photos": ["2a", "4a", "4b", "4c", "6a", "8a", "8b"],
+      "seq": 6,
+      "after": false,
+      "size": 2,
+      "expected": {
+        "photos": ["4a", "4b", "4c"],
+        "offset": 1,
+        "total": 7
+      }
+    },
+    {
+      "name": "after, whole lines",
+      "photos": ["2a", "4a", "4b", "4c", "6a", "8a", "8b"],
+      "seq": 2,
+      "after": true,
+      "size": 4,
+      "expected": {
+        "photos": ["4a", "4b", "4c", "6a"],
+        "offset": 1,
+        "total": 7
       }
     }
   ],
@@ -221,13 +269,13 @@
         {
           "step": {
             "open": {
-              "held": [7, 9],
-              "tapped": 9
+              "held": ["7a", "9a"],
+              "tapped": "9a"
             }
           },
           "expected": {
-            "seqs": [7, 9],
-            "shown": 9,
+            "photos": ["7a", "9a"],
+            "shown": "9a",
             "place": null,
             "asks": []
           }
@@ -236,12 +284,12 @@
           "step": {
             "lines": {
               "cursor": 20,
-              "photos": [7, 9]
+              "photos": ["7a", "9a"]
             }
           },
           "expected": {
-            "seqs": [7, 9],
-            "shown": 9,
+            "photos": ["7a", "9a"],
+            "shown": "9a",
             "place": null,
             "asks": [
               {
@@ -260,15 +308,15 @@
             "page": {
               "seq": 9,
               "after": false,
-              "seqs": [3, 5, 7],
+              "photos": ["3a", "5a", "7a"],
               "offset": 2,
               "total": 9,
               "cursor": 20
             }
           },
           "expected": {
-            "seqs": [3, 5, 7, 9],
-            "shown": 9,
+            "photos": ["3a", "5a", "7a", "9a"],
+            "shown": "9a",
             "place": [6, 9],
             "asks": []
           }
@@ -278,15 +326,15 @@
             "page": {
               "seq": 9,
               "after": true,
-              "seqs": [12, 15, 18],
+              "photos": ["12a", "15a", "18a"],
               "offset": 6,
               "total": 9,
               "cursor": 21
             }
           },
           "expected": {
-            "seqs": [3, 5, 7, 9, 12, 15, 18],
-            "shown": 9,
+            "photos": ["3a", "5a", "7a", "9a", "12a", "15a", "18a"],
+            "shown": "9a",
             "place": [6, 9],
             "asks": []
           }
@@ -295,23 +343,23 @@
           "step": {
             "lines": {
               "cursor": 21,
-              "photos": [7, 9]
+              "photos": ["7a", "9a"]
             }
           },
           "expected": {
-            "seqs": [3, 5, 7, 9, 12, 15, 18],
-            "shown": 9,
+            "photos": ["3a", "5a", "7a", "9a", "12a", "15a", "18a"],
+            "shown": "9a",
             "place": [6, 9],
             "asks": []
           }
         },
         {
           "step": {
-            "show": 3
+            "show": "3a"
           },
           "expected": {
-            "seqs": [3, 5, 7, 9, 12, 15, 18],
-            "shown": 3,
+            "photos": ["3a", "5a", "7a", "9a", "12a", "15a", "18a"],
+            "shown": "3a",
             "place": [3, 9],
             "asks": [
               {
@@ -326,15 +374,15 @@
             "page": {
               "seq": 3,
               "after": false,
-              "seqs": [1, 2],
+              "photos": ["1a", "2a"],
               "offset": 0,
               "total": 9,
               "cursor": 21
             }
           },
           "expected": {
-            "seqs": [1, 2, 3, 5, 7, 9, 12, 15, 18],
-            "shown": 3,
+            "photos": ["1a", "2a", "3a", "5a", "7a", "9a", "12a", "15a", "18a"],
+            "shown": "3a",
             "place": [3, 9],
             "asks": []
           }
@@ -343,13 +391,13 @@
           "step": {
             "lines": {
               "cursor": 22,
-              "photos": [7, 9],
+              "photos": ["7a", "9a"],
               "gone": [5]
             }
           },
           "expected": {
-            "seqs": [1, 2, 3, 7, 9, 12, 15, 18],
-            "shown": 3,
+            "photos": ["1a", "2a", "3a", "7a", "9a", "12a", "15a", "18a"],
+            "shown": "3a",
             "place": null,
             "asks": [
               {
@@ -368,15 +416,15 @@
             "page": {
               "seq": 3,
               "after": false,
-              "seqs": [1, 2],
+              "photos": ["1a", "2a"],
               "offset": 0,
               "total": 8,
               "cursor": 22
             }
           },
           "expected": {
-            "seqs": [1, 2, 3, 7, 9, 12, 15, 18],
-            "shown": 3,
+            "photos": ["1a", "2a", "3a", "7a", "9a", "12a", "15a", "18a"],
+            "shown": "3a",
             "place": [3, 8],
             "asks": []
           }
@@ -385,13 +433,13 @@
           "step": {
             "lines": {
               "cursor": 23,
-              "photos": [7, 9],
+              "photos": ["7a", "9a"],
               "gone": [3, 5]
             }
           },
           "expected": {
-            "seqs": [1, 2, 7, 9, 12, 15, 18],
-            "shown": 7,
+            "photos": ["1a", "2a", "7a", "9a", "12a", "15a", "18a"],
+            "shown": "7a",
             "place": null,
             "asks": [
               {
@@ -416,7 +464,7 @@
             "latest": true
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": []
@@ -426,11 +474,11 @@
           "step": {
             "lines": {
               "cursor": 10,
-              "photos": [3, 5, 7]
+              "photos": ["3a", "5a", "7a"]
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": [
@@ -445,11 +493,11 @@
           "step": {
             "lines": {
               "cursor": 11,
-              "photos": [3, 5, 7, 9]
+              "photos": ["3a", "5a", "7a", "9a"]
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": [
@@ -465,14 +513,14 @@
             "page": {
               "seq": 0,
               "after": false,
-              "seqs": [3, 5, 7],
+              "photos": ["3a", "5a", "7a"],
               "offset": 0,
               "total": 3,
               "cursor": 10
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": []
@@ -483,15 +531,15 @@
             "page": {
               "seq": 0,
               "after": false,
-              "seqs": [3, 5, 7, 9],
+              "photos": ["3a", "5a", "7a", "9a"],
               "offset": 0,
               "total": 4,
               "cursor": 11
             }
           },
           "expected": {
-            "seqs": [3, 5, 7, 9],
-            "shown": 9,
+            "photos": ["3a", "5a", "7a", "9a"],
+            "shown": "9a",
             "place": [4, 4],
             "asks": []
           }
@@ -505,13 +553,13 @@
         {
           "step": {
             "open": {
-              "held": [5, 7],
-              "tapped": 7
+              "held": ["5a", "7a"],
+              "tapped": "7a"
             }
           },
           "expected": {
-            "seqs": [5, 7],
-            "shown": 7,
+            "photos": ["5a", "7a"],
+            "shown": "7a",
             "place": null,
             "asks": []
           }
@@ -520,12 +568,12 @@
           "step": {
             "lines": {
               "cursor": 1,
-              "photos": [5, 7]
+              "photos": ["5a", "7a"]
             }
           },
           "expected": {
-            "seqs": [5, 7],
-            "shown": 7,
+            "photos": ["5a", "7a"],
+            "shown": "7a",
             "place": null,
             "asks": [
               {
@@ -543,13 +591,13 @@
           "step": {
             "lines": {
               "cursor": 2,
-              "photos": [7],
+              "photos": ["7a"],
               "gone": [5]
             }
           },
           "expected": {
-            "seqs": [7],
-            "shown": 7,
+            "photos": ["7a"],
+            "shown": "7a",
             "place": null,
             "asks": [
               {
@@ -568,15 +616,15 @@
             "page": {
               "seq": 7,
               "after": false,
-              "seqs": [1, 3, 5],
+              "photos": ["1a", "3a", "5a"],
               "offset": 0,
               "total": 5,
               "cursor": 1
             }
           },
           "expected": {
-            "seqs": [7],
-            "shown": 7,
+            "photos": ["7a"],
+            "shown": "7a",
             "place": null,
             "asks": []
           }
@@ -586,15 +634,15 @@
             "page": {
               "seq": 7,
               "after": false,
-              "seqs": [1, 3],
+              "photos": ["1a", "3a"],
               "offset": 0,
               "total": 4,
               "cursor": 2
             }
           },
           "expected": {
-            "seqs": [1, 3, 7],
-            "shown": 7,
+            "photos": ["1a", "3a", "7a"],
+            "shown": "7a",
             "place": [3, 4],
             "asks": []
           }
@@ -608,13 +656,13 @@
         {
           "step": {
             "open": {
-              "held": [3, 5, 7],
-              "tapped": 7
+              "held": ["3a", "5a", "7a"],
+              "tapped": "7a"
             }
           },
           "expected": {
-            "seqs": [3, 5, 7],
-            "shown": 7,
+            "photos": ["3a", "5a", "7a"],
+            "shown": "7a",
             "place": null,
             "asks": []
           }
@@ -623,12 +671,12 @@
           "step": {
             "lines": {
               "cursor": 30,
-              "photos": [3, 5, 7]
+              "photos": ["3a", "5a", "7a"]
             }
           },
           "expected": {
-            "seqs": [3, 5, 7],
-            "shown": 7,
+            "photos": ["3a", "5a", "7a"],
+            "shown": "7a",
             "place": null,
             "asks": [
               {
@@ -647,15 +695,15 @@
             "page": {
               "seq": 7,
               "after": true,
-              "seqs": [],
+              "photos": [],
               "offset": 3,
               "total": 3,
               "cursor": 30
             }
           },
           "expected": {
-            "seqs": [3, 5, 7],
-            "shown": 7,
+            "photos": ["3a", "5a", "7a"],
+            "shown": "7a",
             "place": null,
             "asks": []
           }
@@ -665,26 +713,26 @@
             "page": {
               "seq": 7,
               "after": false,
-              "seqs": [1, 3],
+              "photos": ["1a", "3a"],
               "offset": 0,
               "total": 3,
               "cursor": 30
             }
           },
           "expected": {
-            "seqs": [1, 3, 7],
-            "shown": 7,
+            "photos": ["1a", "3a", "7a"],
+            "shown": "7a",
             "place": [3, 3],
             "asks": []
           }
         },
         {
           "step": {
-            "show": 1
+            "show": "1a"
           },
           "expected": {
-            "seqs": [1, 3, 7],
-            "shown": 1,
+            "photos": ["1a", "3a", "7a"],
+            "shown": "1a",
             "place": [1, 3],
             "asks": []
           }
@@ -693,13 +741,13 @@
           "step": {
             "lines": {
               "cursor": 30,
-              "photos": [3, 7],
+              "photos": ["3a", "7a"],
               "blocked": ["w5"]
             }
           },
           "expected": {
-            "seqs": [1, 3, 7],
-            "shown": 1,
+            "photos": ["1a", "3a", "7a"],
+            "shown": "1a",
             "place": null,
             "asks": [
               {
@@ -722,13 +770,13 @@
         {
           "step": {
             "open": {
-              "held": [3, 5, 7],
-              "tapped": 5
+              "held": ["3a", "5a", "7a"],
+              "tapped": "5a"
             }
           },
           "expected": {
-            "seqs": [3, 5, 7],
-            "shown": 5,
+            "photos": ["3a", "5a", "7a"],
+            "shown": "5a",
             "place": null,
             "asks": []
           }
@@ -737,12 +785,12 @@
           "step": {
             "lines": {
               "cursor": 4,
-              "photos": [3, 5, 7]
+              "photos": ["3a", "5a", "7a"]
             }
           },
           "expected": {
-            "seqs": [3, 5, 7],
-            "shown": 5,
+            "photos": ["3a", "5a", "7a"],
+            "shown": "5a",
             "place": null,
             "asks": [
               {
@@ -760,13 +808,13 @@
           "step": {
             "lines": {
               "cursor": 4,
-              "photos": [3, 7],
+              "photos": ["3a", "7a"],
               "blocked": ["w5"]
             }
           },
           "expected": {
-            "seqs": [3, 7],
-            "shown": 7,
+            "photos": ["3a", "7a"],
+            "shown": "7a",
             "place": null,
             "asks": [
               {
@@ -785,15 +833,15 @@
             "page": {
               "seq": 5,
               "after": false,
-              "seqs": [3],
+              "photos": ["3a"],
               "offset": 0,
               "total": 3,
               "cursor": 4
             }
           },
           "expected": {
-            "seqs": [3, 7],
-            "shown": 7,
+            "photos": ["3a", "7a"],
+            "shown": "7a",
             "place": null,
             "asks": []
           }
@@ -803,15 +851,15 @@
             "page": {
               "seq": 7,
               "after": false,
-              "seqs": [3],
+              "photos": ["3a"],
               "offset": 0,
               "total": 2,
               "cursor": 4
             }
           },
           "expected": {
-            "seqs": [3, 7],
-            "shown": 7,
+            "photos": ["3a", "7a"],
+            "shown": "7a",
             "place": [2, 2],
             "asks": []
           }
@@ -825,13 +873,13 @@
         {
           "step": {
             "open": {
-              "held": [5, 7],
-              "tapped": 7
+              "held": ["5a", "7a"],
+              "tapped": "7a"
             }
           },
           "expected": {
-            "seqs": [5, 7],
-            "shown": 7,
+            "photos": ["5a", "7a"],
+            "shown": "7a",
             "place": null,
             "asks": []
           }
@@ -840,12 +888,12 @@
           "step": {
             "lines": {
               "cursor": 1,
-              "photos": [5, 7]
+              "photos": ["5a", "7a"]
             }
           },
           "expected": {
-            "seqs": [5, 7],
-            "shown": 7,
+            "photos": ["5a", "7a"],
+            "shown": "7a",
             "place": null,
             "asks": [
               {
@@ -864,15 +912,15 @@
             "page": {
               "seq": 7,
               "after": false,
-              "seqs": [1, 3, 5],
+              "photos": ["1a", "3a", "5a"],
               "offset": 0,
               "total": 5,
               "cursor": 1
             }
           },
           "expected": {
-            "seqs": [1, 3, 5, 7],
-            "shown": 7,
+            "photos": ["1a", "3a", "5a", "7a"],
+            "shown": "7a",
             "place": [4, 5],
             "asks": []
           }
@@ -881,13 +929,13 @@
           "step": {
             "lines": {
               "cursor": 2,
-              "photos": [5],
+              "photos": ["5a"],
               "gone": [7]
             }
           },
           "expected": {
-            "seqs": [1, 3, 5],
-            "shown": 5,
+            "photos": ["1a", "3a", "5a"],
+            "shown": "5a",
             "place": null,
             "asks": [
               {
@@ -906,15 +954,15 @@
             "page": {
               "seq": 7,
               "after": true,
-              "seqs": [9],
+              "photos": ["9a"],
               "offset": 3,
               "total": 4,
               "cursor": 2
             }
           },
           "expected": {
-            "seqs": [1, 3, 5],
-            "shown": 5,
+            "photos": ["1a", "3a", "5a"],
+            "shown": "5a",
             "place": null,
             "asks": []
           }
@@ -924,15 +972,15 @@
             "page": {
               "seq": 5,
               "after": true,
-              "seqs": [9],
+              "photos": ["9a"],
               "offset": 3,
               "total": 4,
               "cursor": 2
             }
           },
           "expected": {
-            "seqs": [1, 3, 5, 9],
-            "shown": 5,
+            "photos": ["1a", "3a", "5a", "9a"],
+            "shown": "5a",
             "place": null,
             "asks": []
           }
@@ -942,15 +990,15 @@
             "page": {
               "seq": 5,
               "after": false,
-              "seqs": [1, 3],
+              "photos": ["1a", "3a"],
               "offset": 0,
               "total": 4,
               "cursor": 2
             }
           },
           "expected": {
-            "seqs": [1, 3, 5, 9],
-            "shown": 5,
+            "photos": ["1a", "3a", "5a", "9a"],
+            "shown": "5a",
             "place": [3, 4],
             "asks": []
           }
@@ -964,13 +1012,13 @@
         {
           "step": {
             "open": {
-              "held": [4],
-              "tapped": 4
+              "held": ["4a"],
+              "tapped": "4a"
             }
           },
           "expected": {
-            "seqs": [4],
-            "shown": 4,
+            "photos": ["4a"],
+            "shown": "4a",
             "place": null,
             "asks": []
           }
@@ -979,12 +1027,12 @@
           "step": {
             "lines": {
               "cursor": 1,
-              "photos": [4]
+              "photos": ["4a"]
             }
           },
           "expected": {
-            "seqs": [4],
-            "shown": 4,
+            "photos": ["4a"],
+            "shown": "4a",
             "place": null,
             "asks": [
               {
@@ -1007,7 +1055,7 @@
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": [
@@ -1027,13 +1075,13 @@
         {
           "step": {
             "open": {
-              "held": [3, 5],
-              "tapped": 5
+              "held": ["3a", "5a"],
+              "tapped": "5a"
             }
           },
           "expected": {
-            "seqs": [3, 5],
-            "shown": 5,
+            "photos": ["3a", "5a"],
+            "shown": "5a",
             "place": null,
             "asks": []
           }
@@ -1042,12 +1090,12 @@
           "step": {
             "lines": {
               "cursor": 1,
-              "photos": [3, 5]
+              "photos": ["3a", "5a"]
             }
           },
           "expected": {
-            "seqs": [3, 5],
-            "shown": 5,
+            "photos": ["3a", "5a"],
+            "shown": "5a",
             "place": null,
             "asks": [
               {
@@ -1066,8 +1114,8 @@
             "reconnected": true
           },
           "expected": {
-            "seqs": [3, 5],
-            "shown": 5,
+            "photos": ["3a", "5a"],
+            "shown": "5a",
             "place": null,
             "asks": [
               {
@@ -1086,15 +1134,15 @@
             "page": {
               "seq": 5,
               "after": true,
-              "seqs": [],
+              "photos": [],
               "offset": 2,
               "total": 2,
               "cursor": 1
             }
           },
           "expected": {
-            "seqs": [3, 5],
-            "shown": 5,
+            "photos": ["3a", "5a"],
+            "shown": "5a",
             "place": null,
             "asks": []
           }
@@ -1104,15 +1152,15 @@
             "page": {
               "seq": 5,
               "after": false,
-              "seqs": [3],
+              "photos": ["3a"],
               "offset": 0,
               "total": 2,
               "cursor": 1
             }
           },
           "expected": {
-            "seqs": [3, 5],
-            "shown": 5,
+            "photos": ["3a", "5a"],
+            "shown": "5a",
             "place": [2, 2],
             "asks": []
           }
@@ -1128,7 +1176,7 @@
             "latest": true
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": []
@@ -1138,11 +1186,11 @@
           "step": {
             "lines": {
               "cursor": 5,
-              "photos": [10, 12]
+              "photos": ["10a", "12a"]
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": [
@@ -1158,26 +1206,26 @@
             "page": {
               "seq": 0,
               "after": false,
-              "seqs": [8, 10, 12],
+              "photos": ["8a", "10a", "12a"],
               "offset": 4,
               "total": 7,
               "cursor": 5
             }
           },
           "expected": {
-            "seqs": [8, 10, 12],
-            "shown": 12,
+            "photos": ["8a", "10a", "12a"],
+            "shown": "12a",
             "place": [7, 7],
             "asks": []
           }
         },
         {
           "step": {
-            "show": 10
+            "show": "10a"
           },
           "expected": {
-            "seqs": [8, 10, 12],
-            "shown": 10,
+            "photos": ["8a", "10a", "12a"],
+            "shown": "10a",
             "place": [6, 7],
             "asks": [
               {
@@ -1192,15 +1240,15 @@
             "page": {
               "seq": 8,
               "after": false,
-              "seqs": [2, 4, 6],
+              "photos": ["2a", "4a", "6a"],
               "offset": 1,
               "total": 7,
               "cursor": 5
             }
           },
           "expected": {
-            "seqs": [2, 4, 6, 8, 10, 12],
-            "shown": 10,
+            "photos": ["2a", "4a", "6a", "8a", "10a", "12a"],
+            "shown": "10a",
             "place": [6, 7],
             "asks": []
           }
@@ -1209,12 +1257,12 @@
           "step": {
             "lines": {
               "cursor": 6,
-              "photos": [10, 12, 14]
+              "photos": ["10a", "12a", "14a"]
             }
           },
           "expected": {
-            "seqs": [2, 4, 6, 8, 10, 12],
-            "shown": 10,
+            "photos": ["2a", "4a", "6a", "8a", "10a", "12a"],
+            "shown": "10a",
             "place": null,
             "asks": [
               {
@@ -1233,15 +1281,15 @@
             "page": {
               "seq": 10,
               "after": true,
-              "seqs": [12, 14],
+              "photos": ["12a", "14a"],
               "offset": 6,
               "total": 8,
               "cursor": 6
             }
           },
           "expected": {
-            "seqs": [2, 4, 6, 8, 10, 12, 14],
-            "shown": 10,
+            "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
+            "shown": "10a",
             "place": null,
             "asks": []
           }
@@ -1251,26 +1299,26 @@
             "page": {
               "seq": 10,
               "after": false,
-              "seqs": [4, 6, 8],
+              "photos": ["4a", "6a", "8a"],
               "offset": 1,
               "total": 8,
               "cursor": 6
             }
           },
           "expected": {
-            "seqs": [2, 4, 6, 8, 10, 12, 14],
-            "shown": 10,
+            "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
+            "shown": "10a",
             "place": [5, 8],
             "asks": []
           }
         },
         {
           "step": {
-            "show": 4
+            "show": "4a"
           },
           "expected": {
-            "seqs": [2, 4, 6, 8, 10, 12, 14],
-            "shown": 4,
+            "photos": ["2a", "4a", "6a", "8a", "10a", "12a", "14a"],
+            "shown": "4a",
             "place": [2, 8],
             "asks": [
               {
@@ -1285,15 +1333,15 @@
             "page": {
               "seq": 2,
               "after": false,
-              "seqs": [1],
+              "photos": ["1a"],
               "offset": 0,
               "total": 8,
               "cursor": 6
             }
           },
           "expected": {
-            "seqs": [1, 2, 4, 6, 8, 10, 12, 14],
-            "shown": 4,
+            "photos": ["1a", "2a", "4a", "6a", "8a", "10a", "12a", "14a"],
+            "shown": "4a",
             "place": [2, 8],
             "asks": []
           }
@@ -1309,7 +1357,7 @@
             "latest": true
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": []
@@ -1323,7 +1371,7 @@
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": [
@@ -1339,14 +1387,14 @@
             "page": {
               "seq": 0,
               "after": false,
-              "seqs": [],
+              "photos": [],
               "offset": 0,
               "total": 0,
               "cursor": 1
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": []
@@ -1356,11 +1404,11 @@
           "step": {
             "lines": {
               "cursor": 2,
-              "photos": [5]
+              "photos": ["5a"]
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": [
@@ -1376,15 +1424,15 @@
             "page": {
               "seq": 0,
               "after": false,
-              "seqs": [5],
+              "photos": ["5a"],
               "offset": 0,
               "total": 1,
               "cursor": 2
             }
           },
           "expected": {
-            "seqs": [5],
-            "shown": 5,
+            "photos": ["5a"],
+            "shown": "5a",
             "place": [1, 1],
             "asks": []
           }
@@ -1400,7 +1448,7 @@
             "latest": true
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": []
@@ -1410,11 +1458,11 @@
           "step": {
             "lines": {
               "cursor": 1,
-              "photos": [9]
+              "photos": ["9a"]
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": [
@@ -1430,7 +1478,7 @@
             "reconnected": true
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": [
@@ -1446,15 +1494,15 @@
             "page": {
               "seq": 0,
               "after": false,
-              "seqs": [9],
+              "photos": ["9a"],
               "offset": 3,
               "total": 4,
               "cursor": 1
             }
           },
           "expected": {
-            "seqs": [9],
-            "shown": 9,
+            "photos": ["9a"],
+            "shown": "9a",
             "place": [4, 4],
             "asks": [
               {
@@ -1473,7 +1521,7 @@
             }
           },
           "expected": {
-            "seqs": [],
+            "photos": [],
             "shown": null,
             "place": null,
             "asks": [
