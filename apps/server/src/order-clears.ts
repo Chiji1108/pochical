@@ -4,7 +4,7 @@ import type { Clock } from "./hlc";
 
 // What a repeating order takes back from a user's own days
 // (spec/sync-protocol.md, Repeating orders; spec/vectors/order-clears.json).
-// Devices apply givesWay when they start or correct an order themselves.
+// Devices apply givesWay while a new job's order they started waits.
 
 /** The fields a day gives back to a new or corrected order. */
 export const ORDER_FIELDS: readonly DayField[] = [

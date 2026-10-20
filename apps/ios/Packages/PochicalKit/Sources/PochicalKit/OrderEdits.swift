@@ -52,8 +52,9 @@ extension OwnValues {
   }
 
   /// The orders as one value; from `clearFrom`, the days give their own
-  /// pattern and times back to the orders, here at once as the server
-  /// does (spec/vectors/own-days.json, givenToOrder).
+  /// pattern and times set before back to the orders, hidden at once while
+  /// the edit waits as the server clears them (OwnValues.edit;
+  /// spec/vectors/order-clears.json).
   private static func setOrders(
     _ orders: [RepeatOrder], clearFrom: Day?, now: Int64, in db: Database
   ) throws {
@@ -63,18 +64,6 @@ extension OwnValues {
     var change = Pochical_V1_Change()
     change.repeatOrders = value
     try edit(change, opID: UUID().uuidString.lowercased(), clearFrom: clearFrom, in: db)
-    guard let clearFrom else { return }
-    let rows = try DayRow.where { $0.date >= clearFrom.key }.fetchAll(db)
-    for var row in rows {
-      row.pattern = nil
-      row.start = nil
-      row.end = nil
-      if row == DayRow(date: row.date) {
-        try DayRow.find(row.date).delete().execute(db)
-      } else {
-        try DayRow.upsert { row }.execute(db)
-      }
-    }
   }
 }
 

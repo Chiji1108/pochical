@@ -26,7 +26,7 @@ import type { SQL } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import type { Alert } from "./apns";
-import { MENTION, mentionOf, previewLinkOf } from "./chat-links";
+import { MENTION, mentionOf, mentions, previewLinkOf } from "./chat-links";
 import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
 import { isDate } from "./day-values";
@@ -692,26 +692,25 @@ export const unreadCount = (
   userId: string,
   threadId: string
 ): { count: number; mentions: number } => {
-  const read = readMarkOf(db, userId, threadId);
-  const counted = db
-    .select({
-      mentions: sql<number>`coalesce(sum(instr(${chatLines.text}, ${mentionOf(userId)}) > 0), 0)`,
-      n: count(),
-    })
+  const unread = and(
+    eq(chatLines.threadId, threadId),
+    gt(chatLines.seq, readMarkOf(db, userId, threadId)),
+    ne(chatLines.authorId, userId),
+    // Lines from the app are told, not counted.
+    isNull(chatLines.notice),
+    // Lines kept from them, from someone they blocked, never count.
+    notHiddenFrom(userId)
+  );
+  const counted =
+    db.select({ n: count() }).from(chatLines).where(unread).get()?.n ?? 0;
+  // The lines holding the mention's token, read as the apps read them.
+  const mentioned = db
+    .select({ text: chatLines.text })
     .from(chatLines)
-    .where(
-      and(
-        eq(chatLines.threadId, threadId),
-        gt(chatLines.seq, read),
-        ne(chatLines.authorId, userId),
-        // Lines from the app are told, not counted.
-        isNull(chatLines.notice),
-        // Lines kept from them, from someone they blocked, never count.
-        notHiddenFrom(userId)
-      )
-    )
-    .get();
-  return { count: counted?.n ?? 0, mentions: counted?.mentions ?? 0 };
+    .where(and(unread, sql`instr(${chatLines.text}, ${mentionOf(userId)})`))
+    .all()
+    .filter(({ text }) => mentions(text, userId)).length;
+  return { count: counted, mentions: mentioned };
 };
 
 /**

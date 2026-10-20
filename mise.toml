@@ -50,6 +50,31 @@ run = "bun run --cwd apps/server group-do:generate"
 description = "Generate a User DO migration from apps/server/src/user-do-schema.ts (pass --name <what>)"
 run = "bun run --cwd apps/server user-do:generate"
 
+[tasks."db:check"]
+description = "Fail if a Drizzle schema (D1, Group DO, User DO) has changes its migrations lack, or its migrations disagree"
+dir = "{{config_root}}/apps/server"
+# Without a terminal, drizzle-kit cannot ask whether a change is a rename:
+# it prints the error and still exits 0. So only its "nothing to migrate"
+# passes, and so does nothing written to the migrations' folders.
+run = '''
+set -eu
+folders="migrations src/group-do-migrations src/user-do-migrations"
+before=$(git status --porcelain -- $folders)
+for config in drizzle.config.ts drizzle.group-do.config.ts drizzle.user-do.config.ts; do
+  out=$(bunx drizzle-kit generate --config "$config" < /dev/null 2>&1)
+  case "$out" in
+    *"No schema changes, nothing to migrate"*) ;;
+    *) printf '%s\n' "$out"; echo "$config: the schema has changes no migration holds; run its generate task (AGENTS.md)."; exit 1 ;;
+  esac
+  bunx drizzle-kit check --config "$config" < /dev/null
+done
+if [ "$(git status --porcelain -- $folders)" != "$before" ]; then
+  git status --porcelain -- $folders
+  echo "drizzle-kit wrote migrations the branch lacks."
+  exit 1
+fi
+'''
+
 [tasks."auth:schema"]
 description = "Rewrite apps/server/src/db/auth-schema.ts from better-auth's options; then run db:generate"
 run = "bun run --cwd apps/server auth:schema"

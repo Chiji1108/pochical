@@ -77,6 +77,9 @@ jobs:
       - run: bun run --cwd apps/web bundle:budget
       # The tokens the native apps are generated from design/.
       - run: bun design/scripts/gen.ts --check
+      # The migrations drizzle-kit gives from each SQL schema (D1, Group DO,
+      # User DO) are all in the branch, and agree with each other.
+      - run: mise run db:check
 
   proto:
     needs: changes

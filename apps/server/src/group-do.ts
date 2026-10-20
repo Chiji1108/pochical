@@ -10,7 +10,7 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import type { Alert } from "./apns";
-import { mentionOf } from "./chat-links";
+import { mentions } from "./chat-links";
 import {
   ChangeSchema,
   ChangesSchema,
@@ -1234,7 +1234,7 @@ export class GroupDO extends DurableObject<Env> {
                 if (!blockers.has(reader)) {
                   alerts.set(readerKey(threadId, reader), {
                     alert,
-                    mentioned: line.text.includes(mentionOf(reader)),
+                    mentioned: mentions(line.text, reader),
                   });
                 }
               }
