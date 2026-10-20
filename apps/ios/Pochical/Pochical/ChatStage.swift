@@ -579,6 +579,9 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     snapshot.appendSections([0])
     snapshot.appendItems(new, toSection: 0)
     snapshot.reconfigureItems(redrawn)
+    // Where the item the lines are on stands, read by the lines laid out
+    // now, before the update's own order replaces theirs.
+    let held = heldTop(among: redrawn)
     let old = ids
     ids = new
     model.looks = Dictionary(rows.rows.map { ($0.id, $0.look) }) { first, _ in first }
@@ -602,7 +605,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     let animated = !earlier && !rows.restyled && !rows.reduceMotion && !userScrolling
     let fading = new != old && !earlier && rows.reduceMotion ? cameBelow(old, in: new) : []
     updating = Updating(risingIn: animated ? cameBelow(old, in: new) : [])
-    let held = heldTop(among: redrawn)
     let update = { [weak self] in
       guard let self else { return }
       source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
