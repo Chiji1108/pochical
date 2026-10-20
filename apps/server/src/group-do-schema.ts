@@ -292,23 +292,33 @@ export const chatRecalls = sqliteTable(
   (table) => [primaryKey({ columns: [table.userId, table.opId] })]
 );
 
-// Photos members have uploaded to the group's chats (the Worker notes each
-// as it stores it in R2), so a line can send only its uploader's own photo,
-// and only once. One no line carries, nor a member's own photo in the group,
-// goes chatRules.unsentAfterMs after its uploader last uploaded to the group
-// (GroupDO.sweepPhotos): a device uploads a line's photo again each time it
-// sends the line, so a send comes moments after that upload.
-export const chatPhotos = sqliteTable("chat_photos", {
+// Every photo the group keeps (groups/{groupId}/photos/{id} in R2), each
+// noted before it is stored, so no id is ever stored twice: a photo never
+// changes. `state` says what holds it:
+// - unsent: a member uploaded it to the group (PUT), and nothing carries
+//   it yet. Only its uploader may upload it again, which stores nothing
+//   but keeps it, or send it as a line, once. Once its uploader has
+//   uploaded nothing to the group for chatRules.unsentAfterMs it goes
+//   (GroupDO.sweepPhotos): a device uploads a line's photo again each
+//   time it sends the line, so a send comes moments after that upload.
+// - sent: a line carries it, until the line is taken back.
+// - shown: the group shows it, as someone's face (their usual photo, which
+//   the server copies in, or one of the group's they uploaded and set as
+//   their own) or as the group's mark (copied in). No upload or sweep
+//   touches it; it goes once neither the mark nor anyone in the group
+//   names it.
+export const photoStates = ["unsent", "sent", "shown"] as const;
+
+export const groupPhotos = sqliteTable("group_photos", {
   id: text().primaryKey(),
-  // Sent as a line already.
-  sent: integer({ mode: "boolean" }).notNull().default(false),
-  // When its uploader last uploaded to the group while it was not sent:
-  // each upload sets it on all of theirs not sent, so the photos of a
-  // frame stay while the rest of the frame goes up. Those kept before the
-  // time was are past it already.
+  state: text({ enum: photoStates }).notNull().default("unsent"),
+  // While unsent, when its uploader last uploaded to the group: each
+  // upload sets it on all of theirs not sent, so the photos of a frame
+  // stay while the rest of the frame goes up.
   uploadedAt: integer("uploaded_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`0`),
+  // Its uploader, or whose usual photo or mark it was copied in for.
   userId: text("user_id").notNull(),
 });
 

@@ -13,7 +13,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
 import { GROUP_THREAD } from "./group-chat";
-import { photoKey } from "./photos";
+import { CREATE_ONLY, photoKey } from "./photos";
 import {
   emojiOfSlackName,
   fromSlackText,
@@ -64,12 +64,18 @@ const keepSlackPhoto = async (
   }
   const id = `slack-${fileId}`;
   const place = env.GROUPS.getByName(supportPlace(userId));
-  if (!(await place.notePhoto(id, chatRules.pochicalMember))) {
+  const note = await place.notePhoto(id, chatRules.pochicalMember);
+  if (note === "refused") {
     return null;
   }
-  await env.PHOTOS.put(photoKey(supportPlace(userId), id), image.bytes, {
-    httpMetadata: { contentType: image.type },
-  });
+  // Sent already, as Slack tells an event again: its line, by the same
+  // op_id, is dropped as sent.
+  if (note === "noted") {
+    await env.PHOTOS.put(photoKey(supportPlace(userId), id), image.bytes, {
+      httpMetadata: { contentType: image.type },
+      onlyIf: CREATE_ONLY,
+    });
+  }
   return { height, id, width };
 };
 

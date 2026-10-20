@@ -44,10 +44,6 @@ import {
   takeChatEdit,
   readMarkOf,
   unreadCount,
-  notePhoto,
-  forgetUnclaimedPhotos,
-  oldestUnclaimedPhoto,
-  unclaimedPhotos,
   reportContext,
   setMemberBlocks,
   readerView,
@@ -67,6 +63,16 @@ import {
 } from "./group-do-schema";
 import { markColumns, markOfRow, sameMark } from "./group-marks";
 import type { MarkValue } from "./group-marks";
+import {
+  forgetUnsentPhotos,
+  forgetUnshown,
+  notePhoto,
+  noteSharedPhoto,
+  oldestUnsentPhoto,
+  showOwnPhoto,
+  unsentPhotos,
+} from "./group-photos";
+import type { PhotoNote } from "./group-photos";
 import {
   memberDayChange,
   memberPatternChange,
@@ -312,8 +318,9 @@ export class GroupDO extends DurableObject<Env> {
 
   /**
    * The member's photo in the group from now on: their usual one, one of
-   * the group's photos they uploaded, or none (empty); false when they are
-   * not in it or the photo is not theirs. The one it replaces goes.
+   * the group's photos they uploaded and have not sent, or none (empty);
+   * false when they are not in it or the photo is not theirs. The one it
+   * replaces goes, unless something else in the group shows it.
    */
   setGroupPhoto(
     userId: string,
@@ -328,7 +335,7 @@ export class GroupDO extends DurableObject<Env> {
       if (
         ownPhoto !== null &&
         ownPhoto !== "" &&
-        !notePhoto(this.db, ownPhoto, userId)
+        !showOwnPhoto(this.db, ownPhoto, userId)
       ) {
         return undefined;
       }
@@ -338,20 +345,13 @@ export class GroupDO extends DurableObject<Env> {
         .where(eq(members.userId, userId))
         .returning()
         .get();
-      return { known, row };
+      return { gone: forgetUnshown(this.db, [known.ownPhoto]), row };
     });
     if (changed?.row === undefined) {
       return false;
     }
-    const { known, row } = changed;
-    if (
-      known.ownPhoto !== null &&
-      known.ownPhoto !== "" &&
-      known.ownPhoto !== ownPhoto
-    ) {
-      this.forgetPhoto(known.ownPhoto, known.usualPhoto);
-    }
-    broadcastChanges(this.ctx, [memberChange(row)]);
+    this.dropPhotos(changed.gone);
+    broadcastChanges(this.ctx, [memberChange(changed.row)]);
     return true;
   }
 
@@ -399,16 +399,14 @@ export class GroupDO extends DurableObject<Env> {
           : { kind: "removed", subjectId: userId },
         this.nextCursor()
       );
-      return row === undefined ? undefined : { known, notice, row };
+      // The photos the group showed of them, unless it shows them still.
+      const gone = forgetUnshown(this.db, [known.usualPhoto, known.ownPhoto]);
+      return row === undefined ? undefined : { gone, notice, row };
     });
     if (left === undefined) {
       return;
     }
-    for (const photoId of [left.known.usualPhoto, left.known.ownPhoto ?? ""]) {
-      if (photoId !== "") {
-        this.forgetPhoto(photoId, null);
-      }
-    }
+    this.dropPhotos(left.gone);
     closeUserSockets(this.ctx, userId);
     broadcastChanges(this.ctx, [memberChange(left.row), left.notice]);
   }
@@ -461,12 +459,12 @@ export class GroupDO extends DurableObject<Env> {
           writeNotice(this.db, userId, { kind: "left" }, this.nextCursor())
         );
       }
-      // Their lines' photos, and the photos the group showed of them.
+      // Their lines' photos, and the photos the group showed of them
+      // unless it shows them still.
       const photosGone = [
         ...chat.photosGone,
-        known.usualPhoto,
-        known.ownPhoto ?? "",
-      ].filter((id) => id !== "");
+        ...forgetUnshown(this.db, [known.usualPhoto, known.ownPhoto]),
+      ];
       return { ...chat, photosGone, row };
     });
     if (taken !== undefined) {
@@ -588,18 +586,18 @@ export class GroupDO extends DurableObject<Env> {
 
   /**
    * Written when the group is created, and later when it is renamed. A
-   * photo mark it replaces goes.
+   * photo mark it replaces goes, unless someone in the group shows it.
    */
   setProfile(group: GroupProfile, by: string): void {
     const known = this.getProfile();
-    const before = known?.mark.photoId ?? "";
     const nameChanged = known?.name !== group.name;
     const markChanged = !sameMark(known?.mark, group.mark);
-    const changes = this.ctx.storage.transactionSync(() => {
+    const { changes, gone } = this.ctx.storage.transactionSync(() => {
       const written = this.writeProfile(group);
+      const unshown = forgetUnshown(this.db, [known?.mark.photoId ?? null]);
       // A new name or icon is said in the chat, as LINE's groups say it.
       if (!(nameChanged || markChanged)) {
-        return [written];
+        return { changes: [written], gone: unshown };
       }
       const notice = writeNotice(
         this.db,
@@ -611,12 +609,10 @@ export class GroupDO extends DurableObject<Env> {
         },
         this.nextCursor()
       );
-      return [written, notice];
+      return { changes: [written, notice], gone: unshown };
     });
     broadcastChanges(this.ctx, changes);
-    if (before !== "" && before !== group.mark.photoId) {
-      this.forgetPhoto(before, null);
-    }
+    this.dropPhotos(gone);
   }
 
   /**
@@ -649,7 +645,7 @@ export class GroupDO extends DurableObject<Env> {
    * A member's usual name and photo as their User DO pushes them, at
    * `cursor`: shown unless they gave the group their own. Nothing when they
    * are the ones known. A usual photo replaced goes from the group's
-   * photos, unless it is their own for the group too.
+   * photos, unless the group shows it still.
    */
   private takeUsualProfile(
     userId: string,
@@ -682,19 +678,17 @@ export class GroupDO extends DurableObject<Env> {
       .where(eq(members.userId, userId))
       .returning()
       .get();
-    if (known.usualPhoto !== "" && known.usualPhoto !== photoId) {
-      this.forgetPhoto(known.usualPhoto, known.ownPhoto);
-    }
+    this.dropPhotos(forgetUnshown(this.db, [known.usualPhoto]));
     return row === undefined ? undefined : memberChange(row);
   }
 
-  /** A member's photo no longer shown goes, unless still in use as `kept`. */
-  private forgetPhoto(photoId: string, kept: string | null): void {
+  /** Photos the group no longer has deleted from storage, with their small versions. */
+  private dropPhotos(photoIds: string[]): void {
     const groupId = this.ctx.id.name;
-    if (groupId === undefined || photoId === kept) {
+    if (groupId === undefined || photoIds.length === 0) {
       return;
     }
-    this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, [photoId]));
+    this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, photoIds));
   }
 
   /** A new member at the next cursor, or one who left coming back, as a change. */
@@ -814,27 +808,41 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * Notes a photo a member has uploaded, which the Worker asks before it
-   * stores it: false when the id is someone else's photo already, or the
-   * user is not in the group.
+   * Notes a photo a member uploads, which the Worker asks before it stores
+   * it (group-photos.ts, notePhoto); refused when the user is not in the
+   * group.
    */
-  async notePhoto(photoId: string, userId: string): Promise<boolean> {
-    if (!(this.isMember(userId) && notePhoto(this.db, photoId, userId))) {
-      return false;
+  async notePhoto(photoId: string, userId: string): Promise<PhotoNote> {
+    if (!this.isMember(userId)) {
+      return "refused";
+    }
+    const note = notePhoto(this.db, photoId, userId);
+    if (note !== "noted") {
+      return note;
     }
     const due = Date.now() + chatRules.unsentAfterMs;
     const set = await this.ctx.storage.getAlarm();
     if (set === null || set > due) {
       await this.ctx.storage.setAlarm(due);
     }
-    return true;
+    return "noted";
+  }
+
+  /**
+   * Notes a copy of someone's own photo the Worker makes into the group's
+   * photos, before the group shows it as their face or its mark; false
+   * when the id is an upload's, which is then not copied over.
+   */
+  noteSharedPhoto(photoId: string, userId: string): boolean {
+    return noteSharedPhoto(this.db, photoId, userId);
   }
 
   /**
    * The photos uploaded that nothing came to carry (spec/sync-protocol.md,
    * Chat), deleted once their uploader has uploaded nothing to the group
    * for chatRules.unsentAfterMs: from storage first, then from the group,
-   * but those uploaded again meanwhile. When the next are due, if any.
+   * but those uploaded again meanwhile. Only uploads not sent: a line's
+   * photo, a face or the mark is never one. When the next are due, if any.
    */
   private async sweepPhotos(): Promise<number | undefined> {
     const groupId = this.ctx.id.name;
@@ -842,12 +850,12 @@ export class GroupDO extends DurableObject<Env> {
       return undefined;
     }
     const before = new Date(Date.now() - chatRules.unsentAfterMs);
-    const stale = unclaimedPhotos(this.db, before);
+    const stale = unsentPhotos(this.db, before);
     if (stale.length > 0) {
       await deleteGroupPhotos(this.env, groupId, stale);
-      forgetUnclaimedPhotos(this.db, before);
+      forgetUnsentPhotos(this.db, before);
     }
-    const oldest = oldestUnclaimedPhoto(this.db);
+    const oldest = oldestUnsentPhoto(this.db);
     return oldest === undefined
       ? undefined
       : oldest.getTime() + chatRules.unsentAfterMs;

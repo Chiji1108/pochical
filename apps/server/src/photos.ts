@@ -19,6 +19,12 @@ export const photoKey = (groupId: string, photoId: string): string =>
  */
 export const smallKey = (key: string): string => `${key}/small`;
 
+/**
+ * Stores only where nothing is stored yet: R2 answers null instead when
+ * the key holds an object, so a photo, once stored, never changes.
+ */
+export const CREATE_ONLY = { etagDoesNotMatch: "*" } as const;
+
 /** A chat photo's keys, the photo's and its small version's, to delete both. */
 export const withSmall = (key: string): string[] => [key, smallKey(key)];
 
@@ -87,8 +93,10 @@ const jpegOf = async (
 };
 
 /**
- * A member's photo stored, once the group has noted it as theirs. Sending
- * it again (a retry after a lost answer) stores it again.
+ * A member's photo stored, once the group has noted it as theirs
+ * (group-photos.ts, notePhoto). Sending their own again before it is sent
+ * (a retry after a lost answer, or the upload each send of its line makes)
+ * stores nothing: the bytes first stored stay.
  */
 export const putPhoto = async (
   request: Request,
@@ -101,13 +109,15 @@ export const putPhoto = async (
   if (bytes instanceof Response) {
     return bytes;
   }
-  if (!(await env.GROUPS.getByName(groupId).notePhoto(photoId, userId))) {
-    return new Response("Not your photo", { status: 409 });
+  const note = await env.GROUPS.getByName(groupId).notePhoto(photoId, userId);
+  if (note !== "noted") {
+    return new Response("Not a photo of yours to upload", { status: 409 });
   }
   const key = photoKey(groupId, photoId);
   await env.PHOTOS.put(wantsSmall(request) ? smallKey(key) : key, bytes, {
     customMetadata: { userId },
     httpMetadata: { contentType: "image/jpeg" },
+    onlyIf: CREATE_ONLY,
   });
   return new Response(null, { status: 204 });
 };
@@ -228,8 +238,11 @@ export const hasPersonPhoto = async (
   (await env.PHOTOS.head(personPhotoKey(userId, photoId))) !== null;
 
 /**
- * The user's usual photo copied into a group's photos, for its members to
- * read as they read the rest; once, as a photo never changes.
+ * The user's own photo (their usual one, or a group mark they picked)
+ * copied into a group's photos, for its members to read as they read the
+ * rest; noted by the group as one it shows first, so no upload takes it,
+ * and copied once, as a photo never changes. Nothing when the id is an
+ * upload's.
  */
 export const sharePersonPhoto = async (
   env: Env,
@@ -238,7 +251,10 @@ export const sharePersonPhoto = async (
   groupId: string
 ): Promise<void> => {
   const key = photoKey(groupId, photoId);
-  if ((await env.PHOTOS.head(key)) !== null) {
+  if (
+    !(await env.GROUPS.getByName(groupId).noteSharedPhoto(photoId, userId)) ||
+    (await env.PHOTOS.head(key)) !== null
+  ) {
     return;
   }
   const photo = await env.PHOTOS.get(personPhotoKey(userId, photoId));
@@ -248,6 +264,7 @@ export const sharePersonPhoto = async (
   await env.PHOTOS.put(key, photo.body, {
     customMetadata: { userId },
     httpMetadata: { contentType: "image/jpeg" },
+    onlyIf: CREATE_ONLY,
   });
 };
 
