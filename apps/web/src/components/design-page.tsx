@@ -1,7 +1,7 @@
+import { css, cx } from "@pochical/styled-system/css";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
-import { css, cx } from "styled-system/css";
 
 // The pages the phones are shown on, /demo and the design documents under
 // /design: their ground, the toolbar at the top, the heading, and the

@@ -4,13 +4,8 @@
   "compilerOptions": {
     "target": "ES2024",
     "jsx": "react-jsx",
-    "jsxImportSource": "#/jsx",
+    "jsxImportSource": "@pochical/jsx",
     "module": "ESNext",
-    "paths": {
-      "#/*": ["./src/*"],
-      "@/*": ["./src/*"],
-      "styled-system/*": ["./styled-system/*"]
-    },
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["./worker-configuration.d.ts", "node", "vite/client"],
 

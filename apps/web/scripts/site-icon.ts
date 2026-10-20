@@ -1,7 +1,7 @@
 // Paints the site icon (public/icon.png) from the poodle drawing, in the
 // app icon's モス colors, the way /design/assets paints the app icons.
 // Run again after changing the drawing: bun run icon:site
-import sharp from "sharp";
+import { fileURLToPath } from "node:url";
 
 import {
   DRAWING_SHARE,
@@ -10,9 +10,12 @@ import {
   inkBounds,
   outsideOf,
   rgbOf,
-} from "../src/components/design-app-icon";
+} from "@pochical/prototype/components/design-app-icon";
+import sharp from "sharp";
 
-const SOURCE = new URL("../public/design/poodle.png", import.meta.url).pathname;
+const SOURCE = fileURLToPath(
+  import.meta.resolve("@pochical/prototype/assets/poodle.png")
+);
 const OUTPUT = new URL("../public/icon.png", import.meta.url).pathname;
 const CHANNELS = 3;
 

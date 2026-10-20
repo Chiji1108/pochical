@@ -7,7 +7,14 @@ import { colorRoleNames } from "@pochical/design/themes";
 // The app's pieces take their colors from the color tokens (design/), by
 // name, so a テーマ reaches every one and the native apps have the same
 // roles to draw them with. What is not the app's own keeps its colors.
-const components = path.join(import.meta.dir, "../src/components");
+// The site's design pages and the prototype's pieces they show.
+const folders = [
+  path.join(import.meta.dir, "../src/components"),
+  path.join(import.meta.dir, "../../../packages/prototype/src/components"),
+];
+const componentFiles = folders.flatMap((folder) =>
+  readdirSync(folder).map((file) => ({ file, full: path.join(folder, file) }))
+);
 
 // The design pages and the device's stand-ins draw with their own colors.
 const outside = new Set([
@@ -62,15 +69,12 @@ const roleVariable = new RegExp(
   "gu"
 );
 
-const sources = readdirSync(components)
-  .filter((file) => file.endsWith(".tsx") && !outside.has(file))
-  .map((file) => ({
+const sources = componentFiles
+  .filter(({ file }) => file.endsWith(".tsx") && !outside.has(file))
+  .map(({ file, full }) => ({
     file,
     // Comments may name colors freely.
-    source: readFileSync(path.join(components, file), "utf-8").replaceAll(
-      /^\s*\/\/.*$/gmu,
-      ""
-    ),
+    source: readFileSync(full, "utf-8").replaceAll(/^\s*\/\/.*$/gmu, ""),
   }));
 
 test("colors come from the color tokens", () => {

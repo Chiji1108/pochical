@@ -6,7 +6,10 @@ import path from "node:path";
 // is, with the SwiftUI and Compose piece it becomes (Item requires both).
 // A piece added to the shared files without a place there fails here, so
 // the page never falls behind the code.
-const components = path.join(import.meta.dir, "../src/components");
+const components = path.join(
+  import.meta.dir,
+  "../../../packages/prototype/src/components"
+);
 const shared = [
   "design-ui.tsx",
   "design-fields.tsx",

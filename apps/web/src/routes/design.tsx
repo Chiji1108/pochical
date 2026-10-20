@@ -1,14 +1,14 @@
+import { useDesignTheme } from "@pochical/prototype/components/design-providers";
+import { pageStyle } from "@pochical/prototype/components/design-theme";
+import { css } from "@pochical/styled-system/css";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-import { css } from "styled-system/css";
 
 import {
   DesignIntro,
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import { useDesignTheme } from "../components/design-providers";
-import { pageStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design")({

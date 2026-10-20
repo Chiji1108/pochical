@@ -1,10 +1,32 @@
+import { DesignApp } from "@pochical/prototype/components/design-app";
+import {
+  DesignProviders,
+  useDesignTheme,
+} from "@pochical/prototype/components/design-providers";
+import { pageStyle } from "@pochical/prototype/components/design-theme";
+import {
+  initialDesignSchedule,
+  patternSets,
+} from "@pochical/prototype/lib/design-days";
+import type { RepeatRule } from "@pochical/prototype/lib/design-days";
+import { useDevice } from "@pochical/prototype/lib/design-device";
+import { sampleGroups } from "@pochical/prototype/lib/design-group-samples";
+import { presetList } from "@pochical/prototype/lib/design-patterns";
+import { supportChatOf } from "@pochical/prototype/lib/design-support";
+import {
+  createUserStore,
+  sampleProfile,
+  sampleCoworkers,
+  UserStoreContext,
+} from "@pochical/prototype/lib/design-user-store";
+import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
+import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
+import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
+import { css } from "@pochical/styled-system/css";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, RotateCcw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { css } from "styled-system/css";
 
-import { DesignApp } from "../components/design-app";
-import { sampleGroups } from "../components/design-group-samples";
 import { HomeScreen } from "../components/design-home-screen";
 import {
   designCaption,
@@ -12,26 +34,7 @@ import {
   DesignToolbar,
   toolbarAction,
 } from "../components/design-page";
-import {
-  DesignProviders,
-  useDesignTheme,
-} from "../components/design-providers";
-import { pageStyle } from "../components/design-theme";
 import { VariantPanel } from "../components/design-variant-panel";
-import { initialDesignSchedule, patternSets } from "../lib/design-days";
-import type { RepeatRule } from "../lib/design-days";
-import { useDevice } from "../lib/design-device";
-import { presetList } from "../lib/design-patterns";
-import { supportChatOf } from "../lib/design-support";
-import {
-  createUserStore,
-  sampleProfile,
-  sampleCoworkers,
-  UserStoreContext,
-} from "../lib/design-user-store";
-import { parseDesignVariants } from "../lib/design-variants";
-import type { DesignVariants } from "../lib/design-variants";
-import { wallpaperSamples } from "../lib/material-you";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/demo")({

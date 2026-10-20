@@ -2,7 +2,7 @@ import Foundation
 import PochicalDesign
 
 // What the home and lock screen widgets show, worked out ahead of time
-// (spec/widgets.md; /design's widgetEntry in apps/web/src/lib/design-widgets.ts):
+// (spec/widgets.md; /design's widgetEntry in packages/prototype/src/lib/design-widgets.ts):
 // WidgetKit's TimelineEntry draws only from this, never from the person's
 // database. How each field is worked out is pinned by spec/vectors/widgets.json.
 

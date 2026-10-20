@@ -1,9 +1,8 @@
-import { css } from "styled-system/css";
-
 import {
   designVariantKeys,
   designVariantOptions,
-} from "../lib/design-variants";
+} from "@pochical/prototype/lib/design-variants";
+import { css } from "@pochical/styled-system/css";
 
 // Beside the demo's phone, on a translucent ground; one choice under
 // another on a phone, and kept in view where it fits on one line.

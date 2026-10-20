@@ -1,24 +1,43 @@
 import { rotationTemplates } from "@pochical/design/patterns";
+import poodle from "@pochical/prototype/assets/poodle.png";
+import {
+  ProviderButtons,
+  signInMilliseconds,
+} from "@pochical/prototype/components/design-account";
+import type { AccountProvider } from "@pochical/prototype/components/design-account";
+import { DesignApp } from "@pochical/prototype/components/design-app";
+import {
+  DARK_DRAWING,
+  useAppIcons,
+} from "@pochical/prototype/components/design-app-icon";
+import { Phone } from "@pochical/prototype/components/design-phone";
+import {
+  ColorSchemeContext,
+  useThemeStyle,
+} from "@pochical/prototype/components/design-theme";
+import { Button, pushToBottom } from "@pochical/prototype/components/design-ui";
+import {
+  onboarding,
+  StepHeader,
+  WorkSetupSteps,
+} from "@pochical/prototype/components/design-work-setup";
+import type {
+  Step,
+  WorkSetup,
+} from "@pochical/prototype/components/design-work-setup";
+import type { RepeatRule } from "@pochical/prototype/lib/design-days";
+import { monthAfter } from "@pochical/prototype/lib/design-days";
+import { useDevice } from "@pochical/prototype/lib/design-device";
+import { presetList } from "@pochical/prototype/lib/design-patterns";
+import type { Shift } from "@pochical/prototype/lib/design-patterns";
+import { designMonth } from "@pochical/prototype/lib/design-today";
+import {
+  createUserStore,
+  UserStoreContext,
+} from "@pochical/prototype/lib/design-user-store";
+import type { UserStore } from "@pochical/prototype/lib/design-user-store";
+import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
 import { useContext, useState } from "react";
-
-import type { RepeatRule } from "../lib/design-days";
-import { monthAfter } from "../lib/design-days";
-import { useDevice } from "../lib/design-device";
-import { presetList } from "../lib/design-patterns";
-import type { Shift } from "../lib/design-patterns";
-import { designMonth } from "../lib/design-today";
-import { createUserStore, UserStoreContext } from "../lib/design-user-store";
-import type { UserStore } from "../lib/design-user-store";
-import type { DesignVariants } from "../lib/design-variants";
-import { ProviderButtons, signInMilliseconds } from "./design-account";
-import type { AccountProvider } from "./design-account";
-import { DesignApp } from "./design-app";
-import { DARK_DRAWING, useAppIcons } from "./design-app-icon";
-import { Phone } from "./design-phone";
-import { ColorSchemeContext, useThemeStyle } from "./design-theme";
-import { Button, pushToBottom } from "./design-ui";
-import { onboarding, StepHeader, WorkSetupSteps } from "./design-work-setup";
-import type { Step, WorkSetup } from "./design-work-setup";
 
 // The order a new person starts on: from the month before the one shown,
 // or from its first day when that is earlier, counted from its first day.
@@ -195,7 +214,7 @@ function WelcomeStep({
             alt=""
             className={onboarding.poodle()}
             height={200}
-            src="/design/poodle.png"
+            src={poodle}
             width={200}
           />
         )}

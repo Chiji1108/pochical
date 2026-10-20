@@ -8,11 +8,10 @@ import {
 import { hexToOklch } from "@pochical/design/oklch";
 import { presets, themeColors, themeRoleTokens } from "@pochical/design/themes";
 import type { Preset } from "@pochical/design/themes";
+import { themeStyle } from "@pochical/prototype/components/design-theme";
+import { firstCharacter } from "@pochical/prototype/lib/text-limits";
+import { css, cva, cx } from "@pochical/styled-system/css";
 import type { ReactNode } from "react";
-import { css, cva, cx } from "styled-system/css";
-
-import { firstCharacter } from "../lib/text-limits";
-import { themeStyle } from "./design-theme";
 
 const schemeLabels: Record<ColorScheme, string> = {
   dark: "ダーク",
