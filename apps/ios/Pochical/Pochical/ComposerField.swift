@@ -92,6 +92,7 @@ struct ComposerField: UIViewRepresentable {
     (view as? PastingTextView)?.onPasteImages = onPasteImages
     if view.markedTextRange == nil, view.text != text {
       view.text = text
+      view.setNeedsLayout()
     }
   }
 
@@ -158,9 +159,21 @@ struct ComposerField: UIViewRepresentable {
 private final class PastingTextView: UITextView {
   var onPasteImages: (([NSItemProvider]) -> Void)?
 
+  /// What scrolling was last decided for: a scroll view lays out again on
+  /// every move, and its words need not be measured for each.
+  private var decided: Decided?
+  private struct Decided: Equatable {
+    let text: String
+    let width: CGFloat
+    let size: CGFloat
+  }
+
   override func layoutSubviews() {
     super.layoutSubviews()
-    let scrolls = ComposerField.fitting(self, width: bounds.width).scrolls
+    let now = Decided(text: text ?? "", width: bounds.width, size: font?.pointSize ?? 0)
+    guard now.width > 0, now != decided else { return }
+    decided = now
+    let scrolls = ComposerField.fitting(self, width: now.width).scrolls
     if isScrollEnabled != scrolls { isScrollEnabled = scrolls }
   }
 

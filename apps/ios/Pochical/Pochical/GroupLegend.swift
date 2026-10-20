@@ -59,19 +59,9 @@ struct LegendSheet: View {
   @Environment(\.themeColors) private var colors
   let members: [GroupMember]
   let groupID: String
-  @State private var picked: String
-  /// Where along the chips the row opens: at the one pressed, its share of
-  /// the way along them, so someone far along starts in sight.
-  private let opening: UnitPoint
-
-  init(members: [GroupMember], groupID: String, picked: String) {
-    self.members = members
-    self.groupID = groupID
-    _picked = State(initialValue: picked)
-    let index = members.firstIndex { $0.userID == picked } ?? 0
-    opening = UnitPoint(
-      x: members.count > 1 ? CGFloat(index) / CGFloat(members.count - 1) : 0, y: 0.5)
-  }
+  @State var picked: String
+  /// The chip scrolled to as the sheet opens.
+  @State private var chipInSight: String?
 
   var body: some View {
     let member = members.first { $0.userID == picked } ?? members.first
@@ -107,13 +97,19 @@ struct LegendSheet: View {
                   name: candidate.name, photoID: candidate.photoID, groupID: groupID,
                   size: 24, userID: candidate.userID)
               }
+              .id(candidate.userID)
             }
           }
           // From the list's card's edge.
           .padding(.horizontal, 20)
+          .scrollTargetLayout()
         }
         .scrollIndicators(.hidden)
-        .defaultScrollAnchor(opening, for: .initialOffset)
+        // Opened on someone far along the row, it starts with them in
+        // sight.
+        .defaultScrollAnchor(.leading)
+        .scrollPosition(id: $chipInSight, anchor: .center)
+        .onAppear { chipInSight = picked }
         .padding(.bottom, 8)
       }
       .overlay {
