@@ -9,6 +9,7 @@ import SwiftUI
 /// yet. The chat's socket is open while 設定 shows, as a group's while it
 /// does, so its latest line is current.
 struct SupportRow: View {
+  @Environment(\.rootNavigator) private var navigator
   @State private var meID = GroupCalls.knownUserID
 
   var body: some View {
@@ -18,8 +19,8 @@ struct SupportRow: View {
     ) {
       AppIconChoice.current.image(size: 28)
     } onOpen: {
-      // 設定 opens it, as it does for a tapped answer's notification.
-      Notifications.shared.openingSupport = true
+      // Over the tabs, as a tapped answer's notification opens it.
+      navigator?.open(.support)
     }
     .listRowInsets(EdgeInsets())
   }

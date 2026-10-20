@@ -122,8 +122,9 @@ struct ChatComposer: View {
 
   var body: some View {
     let editing = draft.editing
+    let mentioning = mentioned
     VStack(spacing: 8) {
-      mentionList
+      mentionList(mentioning)
       GlassEffectContainer(spacing: 8) {
         HStack(alignment: .bottom, spacing: 8) {
           // A message being changed keeps what it carries: only its words
@@ -137,10 +138,11 @@ struct ChatComposer: View {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 8)
-    // The composer rises with the keyboard as one: whatever comes or
-    // changes in it as the keyboard rises, a quote being answered, would
-    // otherwise be drawn where the composer ends up.
-    .geometryGroup()
+    // Whatever changes its shape, from wherever (a tap on ×, 返信 from a
+    // line's menu, a link's page coming, the words wrapping), it changes by
+    // one animation, the one the chat's room makes room for it by
+    // (ChatStage).
+    .animation(Chat.composerMotion, value: shape(mentioning: mentioning.count))
     .photosPicker(
       isPresented: $choosingPhotos, selection: $photoItems,
       maxSelectionCount: max(draft.photoRoom, 1), matching: .images,
@@ -192,19 +194,19 @@ struct ChatComposer: View {
       }
       if editing == nil, let replyTo = draft.replyTo {
         ReplyBar(quote: quoteOf(replyTo), groupID: groupID) {
-          withAnimation { draft.replyTo = nil }
+          draft.replyTo = nil
         }
       }
       if editing == nil, let attachedDays = draft.attachedDays {
         ComposerBar(
           title: "共有する日", words: daysSummary(attachedDays), stop: "共有をやめる"
         ) {
-          withAnimation { draft.attachedDays = nil }
+          draft.attachedDays = nil
         }
       }
       if let preview = draft.preview, !preview.none, preview.url != draft.previewRemoved {
         ComposerPreviewBar(state: preview) {
-          withAnimation { draft.previewRemoved = preview.url }
+          draft.previewRemoved = preview.url
         }
       }
       if editing == nil, !draft.photos.isEmpty {
@@ -302,14 +304,31 @@ struct ChatComposer: View {
     }
   }
 
-  /// The others to mention, over the composer, while an @ is being
-  /// written at the end of the message: those in it now whose name has
-  /// what follows the @.
-  @ViewBuilder private var mentionList: some View {
-    let others =
-      mentionQuery(draft.text).map { query in
-        mentionable.filter { query.isEmpty || $0.displayName.contains(query) }
-      } ?? []
+  /// The others to mention while an @ is being written at the end of the
+  /// message: those in it now whose name has what follows the @.
+  private var mentioned: [GroupMemberRow] {
+    mentionQuery(draft.text).map { query in
+      mentionable.filter { query.isEmpty || $0.displayName.contains(query) }
+    } ?? []
+  }
+
+  /// What the composer's height is made of now.
+  private func shape(mentioning: Int) -> ComposerShape {
+    let editing = draft.editing != nil
+    let preview = draft.preview.flatMap { $0.none || $0.url == draft.previewRemoved ? nil : $0 }
+    return ComposerShape(
+      editing: editing,
+      replying: !editing && draft.replyTo != nil,
+      sharing: !editing && draft.attachedDays != nil,
+      preview: preview,
+      photos: editing ? 0 : draft.photos.count,
+      mentioning: mentioning,
+      fieldHeight: draft.field.height(for: draft.text),
+      counted: TextLimits.chatMessage - draft.text.count <= TextFields.countWhenLeft)
+  }
+
+  /// The others to mention, over the composer.
+  @ViewBuilder private func mentionList(_ others: [GroupMemberRow]) -> some View {
     if !others.isEmpty {
       ScrollView {
         VStack(spacing: 0) {
@@ -384,7 +403,7 @@ struct ChatComposer: View {
       let thumbnail = await UIImage(data: shrunk.jpeg)?.byPreparingThumbnail(
         ofSize: CGSize(width: 128, height: 128))
       if draft.photos.count < Chat.photosPerSend {
-        withAnimation { draft.photos.append(PickedPhoto(shrunk: shrunk, thumbnail: thumbnail)) }
+        draft.photos.append(PickedPhoto(shrunk: shrunk, thumbnail: thumbnail))
       }
     }
     if unreadable {
@@ -402,13 +421,39 @@ struct ChatComposer: View {
     if draft.preview?.url == link { return }
     try? await Task.sleep(for: .milliseconds(Chat.linkPreviewSettleMs))
     guard !Task.isCancelled else { return }
-    withAnimation { draft.preview = ComposerPreview(url: link) }
+    draft.preview = ComposerPreview(url: link)
     let preview = try? await groupCalls.linkPreview(link)
     guard !Task.isCancelled, draft.preview?.url == link else { return }
-    withAnimation {
-      draft.preview = ComposerPreview(url: link, preview: preview, none: preview == nil)
-    }
+    draft.preview = ComposerPreview(url: link, preview: preview, none: preview == nil)
   }
+}
+
+/// What a chat's composer's height is made of: what it carries over the
+/// field, the names to mention over it, and the field's height. As it
+/// changes, the composer changes shape by one animation.
+private struct ComposerShape: Equatable {
+  let editing: Bool
+  let replying: Bool
+  let sharing: Bool
+  let preview: ComposerPreview?
+  let photos: Int
+  let mentioning: Int
+  let fieldHeight: CGFloat
+  let counted: Bool
+}
+
+extension Chat {
+  /// How a chat's composer changes shape, and the lines and ↓ make room
+  /// for it: one spring, SwiftUI's within the composer (composerMotion)
+  /// and UIKit's for its frame and the lines (ChatStage), so they move as
+  /// one. UIKit's own spring rather than SwiftUI's animation handed to
+  /// UIKit: that one sets the frame itself each frame, over the keyboard
+  /// moving the same frame meanwhile (返信 brings the quote and the
+  /// keyboard together), and the composer stayed behind the keyboard until
+  /// it ended; UIKit's springs add up with the keyboard's.
+  static let composerSpring = (duration: 0.5, bounce: 0.0)
+  static let composerMotion = Animation.spring(
+    duration: composerSpring.duration, bounce: composerSpring.bounce)
 }
 
 /// Where a photo for the tray comes from: the photo picker, or pasted.

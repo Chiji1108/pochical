@@ -4,17 +4,21 @@ import PochicalKit
 import SwiftUI
 import UIKit
 
-// A chat's lines as a collection view laid out by ChatLayout, going on
-// under the composer and the keyboard, which SwiftUI keeps at the chat's
-// foot (spec/chat.md, Unread lines and typing). ChatLayout keeps the
-// lines seen where they are as lines come in or grow above them, in the
-// same layout pass, before the frame is drawn; each line is still the
-// chat's own SwiftUI view.
+// A chat's room: its lines as a collection view laid out by ChatLayout,
+// and over them the pins at the top, the ↓ and the composer at the foot,
+// the composer standing on the keyboard (spec/chat.md, Unread lines and
+// typing). All of them are laid out in one view controller's layout, so
+// the keyboard, the composer changing shape and the lines making room for
+// them move in the same pass, by the same animation, as ChatLayout's
+// Example and Signal stand their input bar on the keyboard's layout
+// guide. ChatLayout keeps the lines seen where they are as lines come in
+// or grow above them, in the same layout pass, before the frame is drawn;
+// each line, the composer and the pins are still the chat's own SwiftUI.
 
 /// Moves a chat's lines at the moments the chat does, as a scroll view's
 /// proxy would.
 @MainActor final class ChatLinesProxy {
-  fileprivate weak var controller: ChatLinesController?
+  fileprivate weak var controller: ChatController?
 
   /// To the latest line's foot, instead of an item asked for before.
   func toLatest(animated: Bool = false) {
@@ -226,13 +230,23 @@ private struct LinesLook: Equatable {
   }
 }
 
-/// The chat's lines, kept clear of the composer and the keyboard under them.
-struct ChatLinesView: UIViewControllerRepresentable {
+/// The chat's room: its lines, the pins over them, and the ↓ and the
+/// composer on the keyboard at its foot, the lines kept clear of them.
+struct ChatStage: UIViewControllerRepresentable {
   /// Every item, oldest first, by its ChatItemID.
   let rows: [LinesRow]
   let row: (String) -> AnyView
+  /// Over the lines' top, under the header: the pins, and hanging under
+  /// them the floating day and a notice, which the lines go on under.
+  let top: AnyView
   /// The ↓ to the latest, over the composer's right.
   let latest: AnyView
+  /// On the keyboard, or the screen's foot: the composer, or what stands
+  /// in its place.
+  let composer: AnyView
+  /// In the middle of the lines' room, between the pins and the composer:
+  /// what it says while there are no lines.
+  let empty: AnyView
   let scroll: ChatScroll
   let proxy: ChatLinesProxy
   @Binding var following: Bool
@@ -253,29 +267,49 @@ struct ChatLinesView: UIViewControllerRepresentable {
   /// ahead. UICollectionView's own prefetching stays off (ChatLayout's).
   var onNear: ([String]) -> Void = { _ in }
 
-  func makeUIViewController(context: Context) -> ChatLinesController {
-    let controller = ChatLinesController(scroll: scroll)
+  func makeUIViewController(context: Context) -> ChatController {
+    let controller = ChatController(scroll: scroll)
     proxy.controller = controller
     return controller
   }
 
-  func updateUIViewController(_ controller: ChatLinesController, context: Context) {
+  func updateUIViewController(_ controller: ChatController, context: Context) {
     proxy.controller = controller
     controller.update(self, environment: context.environment)
-    // The composer and the keyboard under the lines: as it changes, the
-    // lines and the ↓ make room by the change's own animation.
-    controller.topRoom(scroll.topRoom)
-    controller.bottomRoom(scroll.bottomRoom) { context.animate(changes: $0) }
   }
 
   /// The chat has gone: whatever waits to be told the lines are in place
   /// is told now, rather than never.
-  static func dismantleUIViewController(_ controller: ChatLinesController, coordinator: ()) {
+  static func dismantleUIViewController(_ controller: ChatController, coordinator: ()) {
     controller.letGo()
   }
 }
 
-final class ChatLinesController: UIViewController, UICollectionViewDelegate,
+/// The width the SwiftUI over the lines is laid out at, the controller's.
+@MainActor @Observable private final class StageWidth {
+  var value: CGFloat?
+}
+
+/// SwiftUI over the lines, laid out at the controller's width and from
+/// its host's top. Its host's preferred size is then its height at that
+/// width: with none given, a hosting controller's preferred size is the
+/// content's ideal size at no width, which does not wrap words. From the
+/// top, as its host's height changes by a UIKit animation while the
+/// content's does by SwiftUI's, the two keep their top together: a host
+/// centers content of another height, which would set the content apart
+/// from the host by half the change until both settle.
+private struct Hosted: View {
+  let width: StageWidth
+  let content: AnyView
+
+  var body: some View {
+    content
+      .frame(width: width.value)
+      .frame(minHeight: 0, maxHeight: .infinity, alignment: .top)
+  }
+}
+
+final class ChatController: UIViewController, UICollectionViewDelegate,
   UIGestureRecognizerDelegate, ChatLayoutDelegate, UIScrollViewAccessibilityDelegate
 {
   private let scroll: ChatScroll
@@ -283,11 +317,19 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
   private lazy var lines = UICollectionView(frame: .zero, collectionViewLayout: layout)
   private var source: ChatLayoutDiffableDataSource<Int, String>?
   private let model = ChatLinesModel()
+  private let width = StageWidth()
+  /// The pins, at the top of the lines under the header.
+  private let top = UIHostingController(rootView: AnyView(EmptyView()))
   private let latest = UIHostingController(rootView: AnyView(EmptyView()))
-  /// The ↓ on the lines' room, over the composer: moved with the lines'
-  /// inset.
-  private lazy var latestFoot = latest.view.bottomAnchor.constraint(equalTo: lines.bottomAnchor)
-  private(set) var settings: ChatLinesView?
+  private let composer = UIHostingController(rootView: AnyView(EmptyView()))
+  private let empty = UIHostingController(rootView: AnyView(EmptyView()))
+  /// Where the lines are seen: between the pins and the composer.
+  private let room = UILayoutGuide()
+  /// The pins' height, as they say it.
+  private lazy var topHeight = top.view.heightAnchor.constraint(equalToConstant: 0)
+  /// The composer's height, as it says it, changed by its own animation.
+  private lazy var composerHeight = composer.view.heightAnchor.constraint(equalToConstant: 0)
+  private(set) var settings: ChatStage?
   private var ids: [String] = []
   private var linesLook: LinesLook?
   /// Motion is reduced: the lines are put where they go, never glided.
@@ -372,43 +414,84 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     lines.addSubview(replyArrow)
     view.addSubview(lines)
 
-    addChild(latest)
-    latest.sizingOptions = .intrinsicContentSize
-    latest.safeAreaRegions = .container
-    latest.view.backgroundColor = .clear
-    latest.view.translatesAutoresizingMaskIntoConstraints = false
-    view.addSubview(latest.view)
-    latest.didMove(toParent: self)
+    host(empty, sizing: .intrinsicContentSize)
+    host(top, sizing: .preferredContentSize)
+    host(latest, sizing: .intrinsicContentSize)
+    host(composer, sizing: .preferredContentSize)
+    // The lines go on under the composer as iOS 26's bars have them: its
+    // glass sets off the lines under it by the scroll edge's effect.
+    let edge = UIScrollEdgeElementContainerInteraction()
+    edge.scrollView = lines
+    edge.edge = .bottom
+    composer.view.addInteraction(edge)
+    view.addLayoutGuide(room)
     NSLayoutConstraint.activate([
       lines.topAnchor.constraint(equalTo: view.topAnchor),
       // Going on under the composer and the keyboard to the screen's foot,
       // kept clear of them by the lines' inset (fitRoom), as ChatLayout's
       // Example keeps them over its input bar: their height stays as the
-      // keyboard comes and goes (keepingLinesStill).
+      // keyboard comes and goes, so no cell is made again for it.
       lines.bottomAnchor.constraint(equalTo: view.bottomAnchor),
       lines.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       lines.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      top.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      top.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      top.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      topHeight,
+      // On the keyboard, as it comes, goes and follows a finger pulling it
+      // down; on the home indicator without it.
+      composer.view.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor),
+      composer.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      composer.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      composerHeight,
       latest.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      latestFoot,
+      latest.view.bottomAnchor.constraint(equalTo: composer.view.topAnchor),
+      room.topAnchor.constraint(equalTo: top.view.bottomAnchor),
+      room.bottomAnchor.constraint(equalTo: composer.view.topAnchor),
+      empty.view.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+      empty.view.centerYAnchor.constraint(equalTo: room.centerYAnchor),
     ])
   }
 
-  /// The lines seen as the room they are seen in last was, and its height.
-  private var room: (height: CGFloat, kept: ChatLayoutPositionSnapshot?)?
-
-  /// The lines' room: over the composer, and the keyboard under it.
-  private var roomHeight: CGFloat { lines.bounds.height - lines.contentInset.bottom }
-
-  override func viewWillLayoutSubviews() {
-    super.viewWillLayoutSubviews()
-    keepRoom()
+  /// Puts `hosted`'s SwiftUI over the lines, its safe area the screen's
+  /// edges alone: it stands clear of the keyboard by its place, not by
+  /// SwiftUI's avoiding it.
+  private func host(_ hosted: UIHostingController<AnyView>, sizing: UIHostingControllerSizingOptions) {
+    addChild(hosted)
+    hosted.sizingOptions = sizing
+    hosted.safeAreaRegions = .container
+    hosted.view.backgroundColor = .clear
+    hosted.view.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(hosted.view)
+    hosted.didMove(toParent: self)
   }
 
-  /// The lines seen, taken before the room changes (the lines' own size,
-  /// the composer and the keyboard under them).
-  private func keepRoom() {
-    let kept = following ? footSnapshot() : layout.getContentOffsetSnapshot(from: .bottom)
-    room = (roomHeight, kept)
+  /// The pins or the composer have another height: the composer changes
+  /// to it by its own spring (Chat.composerSpring), the one SwiftUI changes
+  /// it by within (ChatComposer), and the lines and the ↓ make room in the
+  /// same layout, by the same spring, never apart from it. The
+  /// pins float over the lines, which stay where they are as they open.
+  override func preferredContentSizeDidChange(
+    forChildContentContainer container: any UIContentContainer
+  ) {
+    super.preferredContentSizeDidChange(forChildContentContainer: container)
+    if container === top {
+      topHeight.constant = top.preferredContentSize.height
+      return
+    }
+    guard container === composer else { return }
+    let height = composer.preferredContentSize.height
+    guard height != composerHeight.constant else { return }
+    guard view.window != nil, composerHeight.constant > 0 else {
+      composerHeight.constant = height
+      return
+    }
+    UIView.animate(
+      springDuration: Chat.composerSpring.duration, bounce: Chat.composerSpring.bounce
+    ) {
+      self.composerHeight.constant = height
+      self.view.layoutIfNeeded()
+    }
   }
 
   /// The lines are the screen's scroll view for its header, as a list's
@@ -423,15 +506,21 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
 
   override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
+    if width.value != view.bounds.width { width.value = view.bounds.width }
     fitRoom()
     place()
   }
 
-  func update(_ settings: ChatLinesView, environment: EnvironmentValues) {
+  func update(_ settings: ChatStage, environment: EnvironmentValues) {
     self.settings = settings
     model.environment = environment
     model.row = settings.row
+    top.rootView = AnyView(
+      Hosted(width: width, content: settings.top).environment(\.self, environment))
     latest.rootView = AnyView(settings.latest.environment(\.self, environment))
+    empty.rootView = AnyView(settings.empty.environment(\.self, environment))
+    composer.rootView = AnyView(
+      Hosted(width: width, content: settings.composer).environment(\.self, environment))
     replyArrow.tintColor = UIColor(environment.themeColors.textTertiary)
     let alpha: CGFloat = settings.shown ? 1 : 0
     if lines.alpha != alpha {
@@ -623,106 +712,50 @@ final class ChatLinesController: UIViewController, UICollectionViewDelegate,
     }
   }
 
-  /// What is under the lines at the chat's foot: the composer, and the
-  /// keyboard or the home indicator.
-  private var under: CGFloat = 0
-  /// What is over the lines at the chat's top: the header, and the pins.
-  private var over: CGFloat = 0
-
-  /// What is over the lines is `height` now (the pins come or go, or
-  /// open): the lines stay where they are on the screen, going on under
-  /// them and the header.
-  func topRoom(_ height: CGFloat) {
-    guard height != over else { return }
-    over = height
-    guard view.window != nil else { return }
-    fitRoom()
-  }
-
-  /// What is under the lines is `height` now (the keyboard, a bar over
-  /// the composer's field), changed by `animate` (the change's own
-  /// animation): the lines and the ↓ make room by the same animation, as in
-  /// Messages, with motion reduced too, never standing apart from what
-  /// moves under them (spec/chat.md, Reduced motion).
-  func bottomRoom(_ height: CGFloat, animate: (() -> Void) -> Void) {
-    guard height != under else { return }
-    guard view.window != nil else {
-      under = height
-      return
-    }
-    keepRoom()
-    under = height
-    let makeRoom = {
-      self.fitRoom()
-      self.view.layoutIfNeeded()
-    }
-    // The first change after the keyboard sets off is the keyboard's,
-    // coming up or going down however it was asked to: the lines go by
-    // its own animation, as UIKit's keyboard guides do, rather than by
-    // whichever SwiftUI hands over (none, as it goes on a tap off them).
-    // A drag pulling it down moves the room under the finger, frame by
-    // frame, before its release sets it off.
-    let now = CACurrentMediaTime()
-    if let move = KeyboardTop.shared.move, move != keyboardMoveTaken, now < move.ends {
-      keyboardMoveTaken = move
-      UIView.animate(
-        withDuration: move.ends - now, delay: 0, options: [move.curve, .beginFromCurrentState],
-        animations: makeRoom)
-    } else {
-      animate(makeRoom)
-    }
-  }
-
-  /// The keyboard's move the lines last went along with.
-  private var keyboardMoveTaken: KeyboardMove?
-
-  /// The lines seen kept at the foot of the room they are seen in as it
-  /// changes (the keyboard, the composer growing), as ChatLayout's Example
-  /// keeps them; not under the finger pulling the keyboard down. While the
-  /// chat opens, before the lines show, the item they are on is kept
-  /// instead, as the room settles.
+  /// Keeps the lines clear of what is over and under them, as it changes:
+  /// the pins at their top, and at their foot the composer and the keyboard
+  /// or the home indicator. Called in each layout, so in the animation that
+  /// moved them (the keyboard's, the composer's); the lines then move in it
+  /// too.
+  ///
+  /// Under them, the lines seen keep their foot where it is over the
+  /// composer, as ChatLayout's Example keeps them, by the scroll alone: the
+  /// scroll goes by the change in the animation, and the inset changes
+  /// outside it, which no longer moves them. Never by restoring a snapshot
+  /// (restoreContentOffset), which lays the lines out with no cells and
+  /// takes every cell from the screen and back, the SwiftUI of a line under
+  /// a finger made anew and its long press cancelled (the build 467 crash).
+  /// The scroll first, then the inset, so the inset growing smaller never
+  /// cuts a scroll past its new end at once, unanimated. Not while the
+  /// person scrolls them, as when their drag pulls the keyboard down: the
+  /// scroll is theirs (ChatLayout's Example leaves it to them too). Over
+  /// them, the pins float, and the lines stay where they are.
   private func fitRoom() {
-    let top = over
-    if lines.contentInset.top != top {
-      lines.contentInset.top = top
-      lines.verticalScrollIndicatorInsets.top = top
+    let over = top.view.frame.maxY
+    if lines.contentInset.top != over {
+      lines.contentInset.top = over
+      lines.verticalScrollIndicatorInsets.top = over
     }
-    let bottom = under
-    if lines.contentInset.bottom != bottom {
-      keepingLinesStill {
-        lines.contentInset.bottom = bottom
-        lines.verticalScrollIndicatorInsets.bottom = bottom
-      }
-      latestFoot.constant = -bottom
+    let under = max(0, view.bounds.maxY - composer.view.frame.minY)
+    view.keyboardLayoutGuide.keyboardDismissPadding = composer.view.bounds.height
+    let change = under - lines.contentInset.bottom
+    guard change != 0 else { return }
+    if !userScrolling, !hold.opening {
+      let end = max(lowest, layout.collectionViewContentSize.height - lines.bounds.height + under)
+      lines.contentOffset.y = min(end, max(lowest, lines.contentOffset.y + change))
     }
-    guard let room, room.height != roomHeight else { return }
-    if !userScrolling {
-      if case .on(let anchor) = hold, settings?.shown == false {
-        put(anchor)
-      } else if let kept = room.kept {
-        layout.restoreContentOffset(with: kept)
-      }
+    UIView.performWithoutAnimation {
+      lines.contentInset.bottom = under
+      lines.verticalScrollIndicatorInsets.bottom = under
+    }
+    // Laid out again for the room the lines are seen in, as a scroll
+    // would have it: lines too few to fill it stand at its foot.
+    layout.invalidateLayout(with: layout.invalidationContext(forBoundsChange: lines.bounds))
+    lines.layoutIfNeeded()
+    if !userScrolling, case .on(let anchor) = hold, settings?.shown == false {
+      put(anchor)
     }
     seePlace()
-  }
-
-  /// Changes the lines' room with every line left where it is on the
-  /// screen, outside any animation: they then move to their new place by
-  /// the scroll alone, in the animation of the change (the keyboard's).
-  /// Changed in it, the room would be laid out anew in it, and UIKit draw
-  /// every line again, fading in at its new place over the one fading out
-  /// at the old, as lines too few to fill the room stand at its foot.
-  /// Not while the person scrolls them, as when their drag pulls the
-  /// keyboard down: the scroll is theirs, and their drag would set it
-  /// back each frame from where it began, the lines going to and fro and
-  /// their cells made anew, faces and all (ChatLayout's Example leaves it
-  /// to them too).
-  private func keepingLinesStill(_ change: () -> Void) {
-    UIView.performWithoutAnimation {
-      let seen = layout.getContentOffsetSnapshot(from: .top)
-      change()
-      if let seen, !userScrolling { layout.restoreContentOffset(with: seen) }
-    }
   }
 
   private func footSnapshot() -> ChatLayoutPositionSnapshot? {

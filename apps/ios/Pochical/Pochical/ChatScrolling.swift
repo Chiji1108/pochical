@@ -25,15 +25,6 @@ final class ChatScroll {
   /// laid out or asked for. By item id, as the chat's own lines may be
   /// ahead of those in place.
   var near = NearEnds()
-  /// What is under the lines at the chat's foot, the composer and the
-  /// keyboard: read by the lines alone, so the chat is not drawn again for
-  /// every step of the keyboard pulled down.
-  var bottomRoom: CGFloat = 0
-  /// What is over the lines at the chat's top, read by the lines alone as
-  /// the bottom's is: the header, and the pins floating under it.
-  var headerRoom: CGFloat = 0
-  var pinsRoom: CGFloat = 0
-  var topRoom: CGFloat { headerRoom + pinsRoom }
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
@@ -90,6 +81,32 @@ struct LatestButton: View {
   }
 }
 
+/// What a pin or a copy did, said over a chat's lines for a moment.
+/// Observed where it shows, in the host of the chat's pins (ChatStage):
+/// the chat's own state reaches that host only as a new root, which
+/// takes no animation with it.
+@MainActor @Observable final class ChatNotice {
+  var words: String?
+}
+
+/// Hanging under a chat's pins: the day of the lines at the top, and a
+/// notice in its place while one is said.
+struct UnderPins: View {
+  let scroll: ChatScroll
+  let notice: ChatNotice
+
+  var body: some View {
+    ZStack(alignment: .top) {
+      FloatingDay(scroll: scroll, covered: notice.words != nil)
+      if let words = notice.words {
+        NoticeCapsule(words: words)
+          .comesAsNotice()
+      }
+    }
+    .animation(.default, value: notice.words)
+  }
+}
+
 /// The day of the lines at the top, floating over them while the chat
 /// scrolls and a moment after (chatRules.floatingDayMs); not over a notice.
 struct FloatingDay: View {
@@ -127,7 +144,7 @@ struct FloatingDay: View {
 
 /// The top of the lines while the next earlier page is on its way from
 /// the server: pages the device holds come in before the top is reached
-/// (ChatLinesView asks Chat.prefetchScreens ahead).
+/// (ChatStage asks Chat.prefetchScreens ahead).
 struct EarlierLines: View {
   var body: some View {
     ProgressView()

@@ -31,6 +31,7 @@ struct ChatScreen: View {
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.openGroupRoute) private var openGroupRoute
+  @Environment(\.rootNavigator) private var navigator
   @Dependency(\.defaultDatabase) private var database
   /// The chat, read by this screen alone while it is there.
   @State private var feed: ChatFeed
@@ -114,8 +115,6 @@ struct ChatScreen: View {
   @State private var unsending: Unsending?
   /// A link tapped in a line, open in the browser sheet.
   @State private var browsing: OpenedLink?
-  /// 写真 from ⋯: the chat's photos alone, pushed over it.
-  @State private var listingPhotos = false
 
   /// The lines read as the screen first draws, by the reader last heard
   /// of, so they are there through the push that brings it in rather than
@@ -143,7 +142,7 @@ struct ChatScreen: View {
   /// menu is open.
   @State private var marks = LineMarks()
   /// What a pin did, said for a moment over the lines.
-  @State private var notice: String?
+  @State private var notice = ChatNotice()
   /// Saves and copies done, each felt as it is (spec/haptics.md).
   @State private var done = 0
   /// How many notices have been said, so only the latest one's time
@@ -183,7 +182,7 @@ struct ChatScreen: View {
     let byID = Dictionary(listed.map { ($0.id, $0) }) { first, _ in first }
     // Who is writing now, under the latest line; not someone blocked.
     let writers = typers.keys.filter { !blocked.contains($0) }.sorted()
-    ChatLinesView(
+    ChatStage(
       rows: rows(listed, writers: writers, timeless: timeless, names: names),
       row: { id in
         AnyView(
@@ -191,12 +190,15 @@ struct ChatScreen: View {
             id, item: byID[id], first: listed.first?.id, names: names,
             showsTime: !timeless.contains(id)))
       },
+      top: AnyView(top),
       latest: AnyView(
         LatestButton(
           scroll: scroll, unread: meID.map { state.unread(by: $0) } ?? 0, atEnd: state.atEnd
         ) {
           toLatestOrUnread()
         }),
+      composer: AnyView(composer),
+      empty: AnyView(empty),
       scroll: scroll, proxy: scroller, following: $following,
       shown: placed, holds: acting != nil, dayOver: { dayOver($0, in: listed) },
       replySwipe: { replySwipe(byID[$0]) },
@@ -224,50 +226,12 @@ struct ChatScreen: View {
         if let foot = near.foot { askLater(laidOut: foot) }
       }
     }
-    // Going on under the composer and the keyboard, which SwiftUI keeps
-    // at the chat's foot, and under the header at its top, as iOS 26's
-    // lists go under their bars (its edge effect setting it off), the
-    // lines told how much of them is under each.
-    .ignoresSafeArea(edges: [.top, .bottom])
-    .onGeometryChange(for: EdgeInsets.self, of: \.safeAreaInsets) { insets in
-      scroll.headerRoom = insets.top
-      scroll.bottomRoom = insets.bottom
-    }
-    .safeAreaBar(edge: .bottom) { composer }
-    .overlay {
-      // A place's head says what the chat is for in its place.
-      if state.lines.isEmpty, state.waiting.isEmpty, head == nil {
-        Text("まだメッセージはありません")
-          .font(.footnote)
-          .foregroundStyle(colors.textQuaternary)
-      }
-    }
+    // The whole screen, the keyboard's room too: the lines go on under the
+    // header, as iOS 26's lists go under their bars (its edge effect
+    // setting it off), and the stage itself stands the composer on the
+    // keyboard.
+    .ignoresSafeArea()
     .sensoryFeedback(.success, trigger: done)
-    .overlay(alignment: .top) {
-      VStack(spacing: 0) {
-        // The pins float over the lines' top, the lines going on under
-        // them and told how much of them is under there: never resized as
-        // the pins come, go or open, which would draw every line again for
-        // each step.
-        VStack(spacing: 0) {
-          if place.rules.pins {
-            PinBar(
-              pins: chat.state.pins, open: $pinsOpen, nameOf: nameOf,
-              onJump: jump(to:), onUnpin: { pin($0, on: false) })
-          }
-        }
-        .frame(maxWidth: .infinity)
-        .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { scroll.pinsRoom = $0 }
-        // Under the pins, over the lines.
-        ZStack(alignment: .top) {
-          FloatingDay(scroll: scroll, covered: notice != nil)
-          if let notice {
-            NoticeCapsule(words: notice)
-              .comesAsNotice()
-          }
-        }
-      }
-    }
     .task(
       id: JumpKey(
         target: jumpTarget, first: chat.state.lines.first?.seq, held: chat.state.heldFrom)
@@ -295,7 +259,6 @@ struct ChatScreen: View {
     .navigationTitle(title)
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.visible, for: .navigationBar)
-    .toolbarVisibility(.hidden, for: .tabBar)
     .toolbar {
       // The title drawn here to carry 通知オフ's bell after it, which the
       // bar's own title does not draw, and to open what the chat is of:
@@ -338,7 +301,8 @@ struct ChatScreen: View {
             }
           }
           Button("写真", systemImage: "photo.on.rectangle") {
-            listingPhotos = true
+            navigator?.open(
+              .photos(PhotosOfChat(placeID: place.id, threadID: threadID, names: names)))
           }
           Divider()
           let muted = isMuted
@@ -408,7 +372,7 @@ struct ChatScreen: View {
       withAnimation { typers = typers.filter { $0.value > .now } }
     }
     // A following chat keeps to its foot as lines come in and someone
-    // writes, in the update they come in by (ChatLinesView's `landed`), as
+    // writes, in the update they come in by (ChatStage's `landed`), as
     // it does for anything else changing the lines' height or the room
     // they are seen in (a link's page drawn, the composer growing, the
     // keyboard). Others' lines the reader has not read stop at ここから新着
@@ -475,9 +439,6 @@ struct ChatScreen: View {
     .photoViewer($viewing, groupID: place.id) { photo in
       await savePhoto(photo, in: place.id, calls: groupCalls)
     }
-    .navigationDestination(isPresented: $listingPhotos) {
-      ChatPhotosScreen(pager: photoPager, names: names)
-    }
     .modifier(
       ReportAndBlock(
         groupID: place.id, groupName: place.name, groupMark: place.group?.mark ?? GroupMarkValue(),
@@ -516,6 +477,35 @@ struct ChatScreen: View {
       }
     }
     .handles(lineActions) { act($0.action, on: $0.lineID) }
+  }
+
+  /// Over the lines' top, under the header: the pins, floating over the
+  /// lines, which go on under them and stay where they are as the pins
+  /// come, go or open; and hanging under the pins, the day of the lines at
+  /// the top and what a pin did, not taking any room of their own.
+  private var top: some View {
+    VStack(spacing: 0) {
+      if place.rules.pins {
+        PinBar(
+          pins: chat.state.pins, open: $pinsOpen, nameOf: nameOf,
+          onJump: jump(to:), onUnpin: { pin($0, on: false) })
+      }
+    }
+    .frame(maxWidth: .infinity)
+    .overlay(alignment: .bottom) {
+      UnderPins(scroll: scroll, notice: notice)
+        .frame(height: 0, alignment: .top)
+    }
+  }
+
+  /// What the lines' room says while there are none yet; a place's head
+  /// says what the chat is for in its place instead.
+  @ViewBuilder private var empty: some View {
+    if chat.state.lines.isEmpty, chat.state.waiting.isEmpty, head == nil {
+      Text("まだメッセージはありません")
+        .font(.footnote)
+        .foregroundStyle(colors.textQuaternary)
+    }
   }
 
   /// Under the lines: the composer, or what a one-to-one chat with
@@ -1078,7 +1068,7 @@ struct ChatScreen: View {
       send.album = album
       write(.send(send), as: index == 0 && !album.isEmpty ? album : nil)
     }
-    withAnimation { draft.photos = [] }
+    draft.photos = []
   }
 
   /// Stops a line's photo going up: the line is not sent, its ! offering
@@ -1317,7 +1307,7 @@ struct ChatScreen: View {
           withAnimation(.easeOut(duration: 0.15)) { placed = true }
         }
       } else {
-        // Laid out anew, at their foot (ChatLinesView), following them.
+        // Laid out anew, at their foot (ChatStage), following them.
         following = true
         placed = true
       }
@@ -1676,7 +1666,7 @@ struct ChatScreen: View {
   /// Answers a line (返信): quoted over the composer until sent or ×.
   private func reply(to line: ChatLineRow) {
     if draft.editing != nil { stopEditing() }
-    withAnimation { draft.replyTo = line.seq }
+    draft.replyTo = line.seq
     draft.field.focus()
   }
 
@@ -1818,11 +1808,11 @@ struct ChatScreen: View {
   private func say(_ words: String) {
     notices += 1
     let said = notices
-    withAnimation { notice = words }
+    notice.words = words
     Task { @MainActor in
       try? await Task.sleep(for: .seconds(2.5))
       if notices == said {
-        withAnimation { notice = nil }
+        notice.words = nil
       }
     }
   }

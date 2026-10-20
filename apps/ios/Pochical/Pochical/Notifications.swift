@@ -30,10 +30,9 @@ nonisolated struct OpenedChat: Hashable, Sendable {
   var replies: Replies?
   /// The chat on screen, whose notifications are not shown.
   var openChat: OpenedChat?
-  /// A chat a tapped notification asks to open.
+  /// A chat a tapped notification asks to open, the chat with Pochical's
+  /// people among them.
   var opening: OpenedChat?
-  /// A tapped answer from Pochical's people asks to open their chat.
-  var openingSupport = false
   /// Whether the person has let Pochical notify, as the system last said.
   private(set) var permission = Permission.notAsked
   private var token: Data?
@@ -128,12 +127,7 @@ nonisolated struct OpenedChat: Hashable, Sendable {
       await reply(answer.userText, to: line)
       return
     }
-    // The chat with Pochical's people is under 設定, not a group.
-    if chat.groupID == ChatPlace.supportID {
-      openingSupport = true
-    } else {
-      opening = chat
-    }
+    opening = chat
   }
 
   private static let replyAction = "REPLY"
