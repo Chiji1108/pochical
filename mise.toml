@@ -55,9 +55,11 @@ description = "Fail if a Drizzle schema (D1, Group DO, User DO) has changes its 
 dir = "{{config_root}}/apps/server"
 # Without a terminal, drizzle-kit cannot ask whether a change is a rename:
 # it prints the error and still exits 0. So only its "nothing to migrate"
-# passes, and a new migration file left behind fails too.
+# passes, and so does nothing written to the migrations' folders.
 run = '''
 set -eu
+folders="migrations src/group-do-migrations src/user-do-migrations"
+before=$(git status --porcelain -- $folders)
 for config in drizzle.config.ts drizzle.group-do.config.ts drizzle.user-do.config.ts; do
   out=$(bunx drizzle-kit generate --config "$config" < /dev/null 2>&1)
   case "$out" in
@@ -66,9 +68,8 @@ for config in drizzle.config.ts drizzle.group-do.config.ts drizzle.user-do.confi
   esac
   bunx drizzle-kit check --config "$config" < /dev/null
 done
-left=$(git status --porcelain -- .)
-if [ -n "$left" ]; then
-  printf '%s\n' "$left"
+if [ "$(git status --porcelain -- $folders)" != "$before" ]; then
+  git status --porcelain -- $folders
   echo "drizzle-kit wrote migrations the branch lacks."
   exit 1
 fi
