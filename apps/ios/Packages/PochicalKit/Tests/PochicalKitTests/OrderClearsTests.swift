@@ -70,5 +70,34 @@ private func serverPattern(_ pattern: String, on date: String, ms: Int64, device
     try OwnValues.acknowledge(waiting, in: db)
     #expect(try DayRow.find("2026-11-03").fetchOne(db)?.pattern == "night")
     #expect(try DayRow.find("2026-11-04").fetchOne(db)?.pattern == "off")
+    #expect(try DayRow.find("2026-11-05").fetchOne(db)?.pattern == "night")
+  }
+}
+
+@Test func afterItsAckedADayNewerThanTheOrderKeptByTheServerShows() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    try OwnValues.start(
+      RepeatOrder(sequence: ["day", "off"], start: Day("2026-11-01")!, holidayCountry: "JP"),
+      now: 5_000, in: db)
+    try OwnValues.take(serverPattern("night", on: "2026-11-05", ms: 9_000, device: "ipad"), in: db)
+    try OwnValues.acknowledge(try OutboxEdit.all.fetchAll(db).map(\.opID), in: db)
+    #expect(try OutboxEdit.all.fetchCount(db) == 0)
+    #expect(try DayRow.find("2026-11-05").fetchOne(db)?.pattern == "night")
+  }
+}
+
+@Test func aRestampedOrderTakesBackWhatItsNewClockComesAfter() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    try OwnValues.start(
+      RepeatOrder(sequence: ["day", "off"], start: Day("2026-11-01")!, holidayCountry: "JP"),
+      now: 5_000, in: db)
+    try OwnValues.take(serverPattern("night", on: "2026-11-05", ms: 9_000, device: "ipad"), in: db)
+    #expect(try DayRow.find("2026-11-05").fetchOne(db)?.pattern == "night")
+
+    // CODE_CLOCK_AHEAD: the waiting order takes a clock after the 9_000 day.
+    try Sync.restamp(now: 20_000, in: db)
+    #expect(try DayRow.find("2026-11-05").fetchOne(db)?.pattern == nil)
   }
 }
