@@ -83,8 +83,11 @@ enum ReplySwipe {
     bubbles[lineID] = HeldSpot(frame: frame, links: links)
   }
 
-  func forget(_ lineID: String) {
-    bubbles[lineID] = nil
+  /// Forgets the bubble of `lineID` that noted these `links`, its own: a
+  /// line drawn anew (one's photo once sent, its line waiting no more) has
+  /// its new bubble noted before the old one goes.
+  func forget(_ lineID: String, links: LinkSpots) {
+    if bubbles[lineID]?.links === links { bubbles[lineID] = nil }
   }
 
   /// The line whose bubble is under `point` in the cell.
