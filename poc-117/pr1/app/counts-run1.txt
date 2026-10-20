@@ -1,0 +1,31 @@
+rec                                          reuse=  0 configured=  0 redequeued= 0  no motion
+keyboard up (tap the field)                  reuse=  0 configured=  0 redequeued= 0  composer  483.7.. 773.5  gap   12.0..  12.0  biggest gap step   0.0  frames 23
+keyboard down (tap beside the lines)         reuse=  2 configured=  2 redequeued= 0  composer  491.4.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 24
+quote on from the menu (keyboard comes up)   reuse=  0 configured=  0 redequeued= 0  composer  435.7.. 766.9  gap   12.0..  12.0  biggest gap step   0.0  frames 26
+quote off, keyboard up                       reuse=  0 configured=  0 redequeued= 0  composer  436.4.. 483.7  gap   12.0..  12.0  biggest gap step   0.0  frames 37
+keyboard down                                reuse=  2 configured=  2 redequeued= 0  composer  487.1.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 24
+quote on again                               reuse=  0 configured=  0 redequeued= 0  composer  435.7.. 762.5  gap   12.0..  12.0  biggest gap step   0.0  frames 28
+keyboard down under the quote                reuse=  1 configured=  1 redequeued= 0  composer  442.9.. 737.7  gap   12.0..  12.0  biggest gap step   0.0  frames 24
+quote off, keyboard down                     reuse=  1 configured=  1 redequeued= 0  composer  738.1.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 37
+keyboard up for the words                    reuse=  0 configured=  0 redequeued= 0  composer  483.7.. 784.8  gap   12.0..  12.0  biggest gap step   0.0  frames 24
+composer grows to 5 lines                    reuse=  2 configured=  2 redequeued= 0  composer  404.3.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 164
+composer shrinks to 1 line                   reuse=  2 configured=  2 redequeued= 0  composer  461.3.. 763.3  gap   12.0..  12.0  biggest gap step   0.0  frames 40
+@ list comes                                 reuse=  2 configured=  2 redequeued= 0  composer  461.3.. 763.3  gap   12.0..  12.0  biggest gap step   0.0  frames 42
+@ list goes                                  reuse=  2 configured=  2 redequeued= 0  composer  483.7.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 35
+link preview arrives                         reuse=  2 configured=  2 redequeued= 0  composer  435.7.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 77
+link preview x                               reuse=  0 configured=  0 redequeued= 0  composer  436.4.. 483.7  gap   12.0..  12.0  biggest gap step   0.0  frames 37
+words cleared                                reuse=  2 configured=  2 redequeued= 0  composer  483.7.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 28
+keyboard down before 編集                      reuse=  2 configured=  2 redequeued= 0  composer  486.2.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 24
+edit bar from the menu                       reuse=  0 configured=  0 redequeued= 0  composer  435.7.. 756.5  gap   12.0..  12.0  biggest gap step   0.0  frames 25
+edit stopped                                 reuse=  0 configured=  0 redequeued= 0  composer  436.4.. 483.7  gap   12.0..  12.0  biggest gap step   0.0  frames 36
+keyboard down after 編集                       reuse=  2 configured=  2 redequeued= 0  composer  505.3.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 23
+keyboard up before the drag                  reuse=  0 configured=  0 redequeued= 0  composer  483.7.. 784.7  gap   12.0..  12.0  biggest gap step   0.0  frames 24
+drag the keyboard down, let go part way (can reuse=  3 configured=  3 redequeued= 0  composer  483.7.. 785.7  gap  -41.3..   9.3  biggest gap step   6.7  frames 34
+drag the keyboard down all the way (dismisse reuse=  4 configured=  4 redequeued= 0  composer  785.7.. 785.7  gap -374.7.. -48.3  biggest gap step 285.4  frames 151
+scroll up for the arrow                      reuse=  6 configured=  6 redequeued= 0  composer  785.7.. 785.7  gap -374.0.. -85.3  biggest gap step 288.7  frames 147
+arrow tapped                                 reuse=  9 configured=  9 redequeued= 0  composer  785.7.. 785.7  gap -355.0..  12.0  biggest gap step 249.7  frames 14
+pin from the menu                            reuse=  0 configured=  2 redequeued= 0  no motion
+keyboard up under the pin                    reuse=  0 configured=  0 redequeued= 0  composer  483.7.. 785.0  gap   12.0..  12.0  biggest gap step   0.0  frames 24
+keyboard down under the pin                  reuse=  2 configured=  2 redequeued= 0  composer  484.8.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 24
+end                                          reuse=  0 configured=  0 redequeued= 0  no motion
+visible lines re-dequeued in all: 0

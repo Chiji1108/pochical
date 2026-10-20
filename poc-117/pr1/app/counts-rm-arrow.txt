@@ -1,0 +1,5 @@
+rec                                          reuse=  0 configured=  0 redequeued= 0  no motion
+scroll up                                    reuse=  5 configured=  5 redequeued= 0  composer  785.7.. 785.7  gap -372.0..  -0.7  biggest gap step 283.3  frames 144
+arrow tapped                                 reuse=  3 configured=  3 redequeued= 0  composer  785.7.. 785.7  gap -779.0..  12.0  biggest gap step 791.0  frames 2
+end                                          reuse=  0 configured=  0 redequeued= 0  no motion
+visible lines re-dequeued in all: 0
