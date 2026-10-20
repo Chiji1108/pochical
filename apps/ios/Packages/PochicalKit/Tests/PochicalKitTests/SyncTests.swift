@@ -65,7 +65,13 @@ private func synced(in db: Database) throws {
   member.cursor = 5
   member.member.userID = "u1"
   member.member.displayName = "さくら"
-  try GroupSync.take([member], of: "g1", in: db)
+  var line = Pochical_V1_Change()
+  line.cursor = 5
+  line.chatLine.threadID = "group"
+  line.chatLine.seq = 1
+  line.chatLine.authorID = "u1"
+  line.chatLine.text = "おはよう"
+  try GroupSync.take([member, line], of: "g1", in: db)
   try GroupSync.take([member], of: "support", in: db)
   try OwnValues.edit(dayChange("night"), opID: "a", in: db)
   var words = Pochical_V1_ChatSend()
@@ -74,7 +80,7 @@ private func synced(in db: Database) throws {
   try Chats.edit(.send(words), in: "g1", now: 1, db: db)
 }
 
-@Test func aDeviceSyncedUnderAnOlderSchemaTakesEverythingAgainKeepingWhatItHolds() throws {
+@Test func aDeviceSyncedUnderAnOlderSchemaTakesEverythingAgainKeepingItsValuesAndOutboxes() throws {
   let database = try appDatabase()
   try database.write { db in
     try synced(in: db)
@@ -88,6 +94,8 @@ private func synced(in db: Database) throws {
     #expect(try GroupMemberRow.where { $0.groupID.eq("g1") }.fetchCount(db) == 1)
     #expect(try OutboxEdit.all.fetchAll(db).map(\.opID) == ["a"])
     #expect(try Chats.lastWaiting(of: "g1", in: db) != nil)
+    // Lines come again as pages: a catch-up brings each chat's latest alone.
+    #expect(try ChatLineRow.where { $0.groupID.eq("g1") }.fetchCount(db) == 0)
 
     // Once taken again under the app's schema, its cursors move on as usual.
     try Sync.take([change("day", cursor: 6, ms: 9_000)], in: db)
@@ -105,6 +113,7 @@ private func synced(in db: Database) throws {
     #expect(try Sync.cursor(in: db) == 4)
     #expect(try GroupSync.cursor(of: "g1", in: db) == 5)
     #expect(try GroupSync.cursor(of: "support", in: db) == 5)
+    #expect(try ChatLineRow.where { $0.groupID.eq("g1") }.fetchCount(db) == 1)
   }
 }
 

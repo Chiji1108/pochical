@@ -631,12 +631,10 @@ public enum Chats {
   /// way). The group does not have them, so deleting one takes nothing
   /// back from it.
   static func acknowledge(_ opIDs: [String], refused: [String], in db: Database) throws {
-    try ChatOutboxRow.where { $0.opID.in(refused) }
-      .update {
-        $0.failed = true
-        $0.wentOut = false
-      }
-      .execute(db)
+    for opID in refused {
+      try fail(opID, in: db)
+    }
+    try ChatOutboxRow.where { $0.opID.in(refused) }.update { $0.wentOut = false }.execute(db)
     let refused = Set(refused)
     try ChatOutboxRow.where { $0.opID.in(opIDs.filter { !refused.contains($0) }) }
       .delete().execute(db)

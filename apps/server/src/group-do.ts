@@ -1,4 +1,5 @@
 import { create, fromBinary } from "@bufbuild/protobuf";
+import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatPlaces, chatRules } from "@pochical/design/chat";
 import type { ChatPlaceKind, ChatPlaceRules } from "@pochical/design/chat";
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
@@ -23,7 +24,7 @@ import type {
   ChatEdits,
   ChatLine,
   Profile as UsualProfile,
-  RefusedSend_Reason,
+  RefusedSendSchema,
 } from "./gen/pochical/v1/sync_pb";
 import {
   addPreview,
@@ -67,13 +68,13 @@ import {
 import { markColumns, markOfRow, sameMark } from "./group-marks";
 import type { MarkValue } from "./group-marks";
 import {
-  forgetDeletedPhotos,
   forgetUnshown,
   markStalePhotos,
   notePhoto,
   noteSharedPhoto,
   oldestStalePhoto,
   revivedPhotos,
+  settleSwept,
   showOwnPhoto,
 } from "./group-photos";
 import type { PhotoNote } from "./group-photos";
@@ -206,6 +207,8 @@ type MemberLog = {
 };
 
 /** One Durable Object per group, named by the group's id. */
+type RefusedSendInit = MessageInitShape<typeof RefusedSendSchema>;
+
 export class GroupDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
   // Set when a support chat's change asks for its relay, so a relay
@@ -1019,12 +1022,12 @@ export class GroupDO extends DurableObject<Env> {
     const going = markStalePhotos(this.db, before);
     if (going.length > 0) {
       await deleteGroupPhotos(this.env, groupId, going);
-      forgetDeletedPhotos(this.db, going);
       await Promise.all(
-        revivedPhotos(this.db, going).map(async ({ id, userId }) => {
+        revivedPhotos(this.db, going, before).map(async ({ id, userId }) => {
           await copyPersonPhoto(this.env, userId, id, groupId);
         })
       );
+      settleSwept(this.db, going, before);
     }
     const oldest = oldestStalePhoto(this.db);
     return oldest === undefined
@@ -1173,10 +1176,10 @@ export class GroupDO extends DurableObject<Env> {
     edits: ChatEdit[]
   ): {
     refused: Change[];
-    refusedSends: { opId: string; reason: RefusedSend_Reason }[];
+    refusedSends: RefusedSendInit[];
     sent: ChatLine[];
   } {
-    const refusedSends: { opId: string; reason: RefusedSend_Reason }[] = [];
+    const refusedSends: RefusedSendInit[] = [];
     // Whose unread lines changed, by chat: everyone else's with a new
     // line, the reader's with a read.
     const counted = new Map<string, Set<string>>();

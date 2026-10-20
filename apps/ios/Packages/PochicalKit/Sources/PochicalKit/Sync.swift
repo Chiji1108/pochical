@@ -17,13 +17,19 @@ public enum Sync {
   /// cursor back to the start, its User DO's and every place's, so its
   /// next Hellos bring everything again, read as the app reads now. Its
   /// values stay until overwritten, so its calendar still shows offline,
-  /// and its outboxes stay to send.
+  /// and its outboxes stay to send. Its chats' lines go, as at a Reset: a
+  /// catch-up from the start brings only each chat's latest page, so a
+  /// change to an earlier line held would never come; they come again as
+  /// pages.
   static func takeAllAgainIfOlder(in db: Database) throws {
     var state = try SyncState.current(in: db)
     guard state.schema < schema else { return }
     state.cursor = 0
     state.schema = schema
     try SyncState.upsert { state }.execute(db)
+    for place in try GroupCursorRow.fetchAll(db) {
+      try Chats.reset(place.groupID, in: db)
+    }
     try GroupCursorRow.update { $0.cursor = Int64(0) }.execute(db)
   }
 

@@ -613,6 +613,46 @@ describe("a group's photo once stored", () => {
     ).resolves.toStrictEqual([{ id: stray, state: "shown" }]);
   });
 
+  it("is copied in anew by the next sweep when the copy after the delete fails", async () => {
+    const { runInDurableObject } = await import("cloudflare:test");
+    const { groupId, maker, makerId } = await pair();
+    const group = env.GROUPS.getByName(groupId);
+    const stray = await ownPhoto(maker);
+    await sharePersonPhoto(env, makerId, stray, groupId);
+    await runInDurableObject(group, (_, state) => {
+      state.storage.sql.exec(
+        "update group_photos set uploaded_at = ?",
+        Date.now() - chatRules.unsentAfterMs
+      );
+    });
+    const get = vi
+      .spyOn(env.PHOTOS, "get")
+      .mockRejectedValueOnce(new Error("R2 out of reach"));
+    const first = await runInDurableObject(group, async (instance) => {
+      const sweeping = instance.alarm();
+      await instance.noteSharedPhoto(stray, makerId);
+      return await sweeping.then(
+        () => "swept",
+        () => "failed"
+      );
+    });
+    get.mockRestore();
+    expect(first).toBe("failed");
+    await runInDurableObject(group, async (instance) => {
+      await instance.alarm();
+    });
+    await expect(storedBytes(groupId, stray)).resolves.toStrictEqual(JPEG);
+    await expect(
+      runInDurableObject(group, (_, state) =>
+        state.storage.sql
+          .exec<{ id: string; state: string }>(
+            "select id, state from group_photos"
+          )
+          .toArray()
+      )
+    ).resolves.toStrictEqual([{ id: stray, state: "shown" }]);
+  });
+
   it("makes its uploader wait while the sweep deletes it, then stores it anew", async () => {
     const { runInDurableObject } = await import("cloudflare:test");
     const { groupId, maker, makerId } = await pair();
