@@ -3268,6 +3268,7 @@
     "keepaliveReply": "pong",
     "keepaliveText": "ping",
     "keepaliveWithinMs": 10000,
+    "notMemberCloseCode": 4403,
     "reconnectFirstMs": 1000,
     "reconnectMostMs": 60000,
     "statusShownAfterMs": 1000

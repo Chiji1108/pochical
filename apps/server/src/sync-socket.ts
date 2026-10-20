@@ -80,6 +80,9 @@ type ChatHandlers = {
 /** What a DO does with a socket once it is past the handshake. */
 type SyncHandlers = EditHandlers &
   ChatHandlers & {
+    // Whether the socket's user may still use it: a Group DO's members
+    // alone. Every frame asks, Hello first, before anything is sent.
+    admits?: (userId: string) => boolean;
     // Hello was accepted: send Welcome and every change after `cursor`
     // that the socket's user may see.
     welcome: (ws: WebSocket, cursor: bigint, userId: string) => void;
@@ -297,7 +300,10 @@ export const answerKeepalive = (ctx: DurableObjectState): void => {
  */
 export const acceptSyncSocket = (
   ctx: DurableObjectState,
-  request: Request
+  request: Request,
+  // Whether the user may open it: a Group DO's members alone, asked as it
+  // is accepted, so no one taken out before then gets in.
+  admits: (userId: string) => boolean = () => true
 ): Response => {
   if (request.headers.get("Upgrade") !== "websocket") {
     return new Response("Expected a WebSocket upgrade", { status: 426 });
@@ -306,6 +312,9 @@ export const acceptSyncSocket = (
   const sessionId = request.headers.get(SESSION_HEADER);
   if (userId === null || sessionId === null) {
     return new Response("Sign in first", { status: 401 });
+  }
+  if (!admits(userId)) {
+    return new Response("Not a member of this group", { status: 403 });
   }
   const { 0: client, 1: server } = new WebSocketPair();
   ctx.acceptWebSocket(server);
@@ -332,14 +341,25 @@ export const closeSessionSockets = (
   }
 };
 
-/** Closes a user's sockets on a DO they no longer reach, as a group they left. */
+/**
+ * Closes a socket whose user is not in the group, with the code that has
+ * the device stop trying (socketRules.notMemberCloseCode).
+ */
+const closeAsNotMember = (ws: WebSocket): void => {
+  ws.close(socketRules.notMemberCloseCode, "Not in the group");
+};
+
+/**
+ * Closes the sockets of a user the group no longer has, taken out or
+ * gone; with none named, everyone's, as the group goes.
+ */
 export const closeUserSockets = (
   ctx: DurableObjectState,
-  userId: string
+  userId?: string
 ): void => {
   for (const socket of ctx.getWebSockets()) {
-    if (attachmentOf(socket)?.userId === userId) {
-      socket.close(NORMAL_CLOSURE, "Left the group");
+    if (userId === undefined || attachmentOf(socket)?.userId === userId) {
+      closeAsNotMember(socket);
     }
   }
 };
@@ -359,12 +379,15 @@ const handleEdits = <Kind extends keyof EditFrames>(
   }
 };
 
-/** One frame from a client: Hello first, then the rest. */
-export const handleSyncMessage = (
+/**
+ * A client's frame and its socket's state, when the frame decodes and the
+ * socket's user may still use it; else none, the socket closed.
+ */
+const takeFrame = (
   ws: WebSocket,
   message: ArrayBuffer | string,
   handlers: SyncHandlers
-): void => {
+): { frame: ClientFrame; attachment: SocketAttachment } | undefined => {
   const frame = decodeClientFrame(message);
   const attachment = attachmentOf(ws);
   if (!(frame && attachment)) {
@@ -373,9 +396,26 @@ export const handleSyncMessage = (
       ServerError_Code.BAD_FRAME,
       "Expected a binary ClientFrame"
     );
+    return undefined;
+  }
+  if (handlers.admits && !handlers.admits(attachment.userId)) {
+    closeAsNotMember(ws);
+    return undefined;
+  }
+  return { attachment, frame };
+};
+
+/** One frame from a client: Hello first, then the rest. */
+export const handleSyncMessage = (
+  ws: WebSocket,
+  message: ArrayBuffer | string,
+  handlers: SyncHandlers
+): void => {
+  const taken = takeFrame(ws, message, handlers);
+  if (taken === undefined) {
     return;
   }
-
+  const { attachment, frame } = taken;
   const { kind } = frame;
   if (kind.case === "hello") {
     handleHello(ws, attachment, kind.value, handlers);

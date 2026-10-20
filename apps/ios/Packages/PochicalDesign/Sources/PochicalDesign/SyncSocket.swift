@@ -6,6 +6,7 @@ public enum SyncSocket {
   public static let keepaliveReply = "pong"
   public static let keepaliveText = "ping"
   public static let keepaliveWithinMs = 10000
+  public static let notMemberCloseCode = 4403
   public static let reconnectFirstMs = 1000
   public static let reconnectMostMs = 60000
   public static let statusShownAfterMs = 1000

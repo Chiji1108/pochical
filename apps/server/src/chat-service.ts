@@ -12,6 +12,7 @@ import {
   ReportResponseSchema,
 } from "./gen/pochical/v1/chat_pb";
 import { linkPreview, mayFetch } from "./link-preview";
+import { isMemberOf } from "./membership";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
 import { tellStaffOfReport } from "./slack";
@@ -47,7 +48,10 @@ export const registerChatService = (router: ConnectRouter): void => {
       if (why === undefined || target.case === undefined) {
         throw new ConnectError("Say why and what", Code.InvalidArgument);
       }
-      // Null as well for someone not in the group.
+      // Only a member reports, and an id that is not theirs wakes no Group DO.
+      if (!(await isMemberOf(env, user.id, groupId))) {
+        throw new ConnectError("Nothing to report", Code.NotFound);
+      }
       const reported = await env.GROUPS.getByName(groupId).reportContext(
         user.id,
         target.case === "line"

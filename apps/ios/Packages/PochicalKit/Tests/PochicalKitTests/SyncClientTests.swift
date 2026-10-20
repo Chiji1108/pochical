@@ -1,24 +1,26 @@
 import Foundation
 import Network
+import PochicalDesign
 import SQLiteData
 import Synchronization
 import Testing
 
 @testable import PochicalKit
 
-/// A server on this Mac that refuses every socket with 401, as the server
-/// does a session it does not know, counting the sockets asked for.
+/// A server on this Mac that refuses every socket with `status`: 401, as
+/// the server does a session it does not know, or 403, a group the user is
+/// not in; counting the sockets asked for.
 private final class RefusingServer: Sendable {
   let listener: NWListener
   let asked = Mutex(0)
 
-  init() throws {
+  init(status: String = "401 Unauthorized") throws {
     listener = try NWListener(using: .tcp, on: .any)
     listener.newConnectionHandler = { [weak self] connection in
       connection.start(queue: .global())
       connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { _, _, _, _ in
         self?.asked.withLock { $0 += 1 }
-        let refusal = "HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        let refusal = "HTTP/1.1 \(status)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
         connection.send(
           content: Data(refusal.utf8),
           completion: .contentProcessed { _ in connection.cancel() })
@@ -85,5 +87,26 @@ private func eventually(_ done: () async -> Bool) async -> Bool {
   await client.start()
   #expect(await eventually { server.asked.withLock { $0 } == 2 })
   #expect(await eventually { await client.stopped == .signedOut })
+  await client.stop()
+}
+
+@Test func aGroupsSocketRefusedWith403StopsUntilTheGroupIsOpenedAgain() async throws {
+  let server = try RefusingServer(status: "403 Forbidden")
+  defer { server.listener.cancel() }
+  let url = try await server.start()
+  let account = Account(server: url, store: SignedIn())
+  let client = SyncClient(
+    account: account, database: try appDatabase(), peer: .group("g"), server: url)
+
+  await client.start()
+  #expect(await eventually { await client.stopped == .notMember })
+  // No retry of its own, past the first wait it would take.
+  try await Task.sleep(for: .milliseconds(SyncSocket.reconnectFirstMs + 200))
+  #expect(server.asked.withLock { $0 } == 1)
+
+  // Opened again, as after joining again: one more try.
+  await client.start()
+  #expect(await eventually { server.asked.withLock { $0 } == 2 })
+  #expect(await eventually { await client.stopped == .notMember })
   await client.stop()
 }

@@ -578,7 +578,11 @@ describe("an answer from Pochical's people", () => {
     await vi.waitFor(() => {
       expect(alerts()).toHaveLength(1);
     });
-    await exports.AdminEntrypoint.answerSupport(userId, "ほかにもありますか");
+    await exports.AdminEntrypoint.answerSupport(
+      userId,
+      "ほかにもありますか",
+      crypto.randomUUID()
+    );
     await vi.waitFor(() => {
       expect(alerts()).toHaveLength(2);
     });
