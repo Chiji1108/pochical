@@ -110,8 +110,10 @@ describe("sockets", () => {
     const token = await memberOf("signing-out");
     const own = await openSocket("/v1/me/socket", token);
     const group = await openSocket("/v1/groups/signing-out/socket", token);
+    const support = await openSocket("/v1/me/support/socket", token);
     const ownClosed = closeCodeOf(own);
     const groupClosed = closeCodeOf(group);
+    const supportClosed = closeCodeOf(support);
 
     const response = await exports.default.fetch(
       `${ORIGIN}/api/auth/sign-out`,
@@ -127,6 +129,7 @@ describe("sockets", () => {
     expect(response.status).toBe(200);
     await expect(ownClosed).resolves.toBe(1000);
     await expect(groupClosed).resolves.toBe(1000);
+    await expect(supportClosed).resolves.toBe(1000);
     // And the session lets nothing in again.
     const again = await upgrade("/v1/me/socket", {
       Authorization: `Bearer ${token}`,
