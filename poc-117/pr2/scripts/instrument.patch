@@ -1,0 +1,107 @@
+diff --git a/apps/ios/Packages/PochicalKit/Sources/PochicalKit/Account.swift b/apps/ios/Packages/PochicalKit/Sources/PochicalKit/Account.swift
+index 61cc861d..90ef4cd3 100644
+--- a/apps/ios/Packages/PochicalKit/Sources/PochicalKit/Account.swift
++++ b/apps/ios/Packages/PochicalKit/Sources/PochicalKit/Account.swift
+@@ -7,7 +7,7 @@ import Security
+ /// one that can send its notifications.
+ public enum Server {
+   #if DEBUG && targetEnvironment(simulator)
+-    public static let url = URL(string: "http://localhost:8787")!
++    public static let url = URL(string: "http://localhost:8788")!
+   #else
+     public static let url = URL(string: "https://api.pochical.app")!
+   #endif
+diff --git a/apps/ios/Pochical/Pochical/ChatStage.swift b/apps/ios/Pochical/Pochical/ChatStage.swift
+index 406e5f4f..e520f563 100644
+--- a/apps/ios/Pochical/Pochical/ChatStage.swift
++++ b/apps/ios/Pochical/Pochical/ChatStage.swift
+@@ -388,6 +388,8 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
+       let environment = model.environment
+       let space = cell.space
+       let drawing = model.drawing(of: id)
++      cell.probeID = id
++      probe("configure \(id)")
+       cell.measure = { width in model.height(of: id, width: width) }
+       cell.contentConfiguration = UIHostingConfiguration {
+         LineCellContent(
+@@ -413,6 +415,8 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
+     replyArrow.alpha = 0
+     lines.addSubview(replyArrow)
+     view.addSubview(lines)
++    probeLink = CADisplayLink(target: self, selector: #selector(probeTick))
++    probeLink?.add(to: .main, forMode: .common)
+ 
+     host(empty, sizing: .intrinsicContentSize)
+     host(top, sizing: .preferredContentSize)
+@@ -601,6 +605,19 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
+     let animated = new != old && !earlier && !rows.reduceMotion && !userScrolling
+     let fading = new != old && !earlier && rows.reduceMotion ? cameBelow(old, in: new) : []
+     updating = Updating(risingIn: animated ? cameBelow(old, in: new) : [])
++    probe("APPLY animated=\(animated) redrawn=\(redrawn.map { $0.suffix(10) }) added=\(new.count - old.count) earlier=\(earlier) restyled=\(rows.restyled) reduce=\(rows.reduceMotion) scrolling=\(userScrolling) hold=\(hold)")
++    defer {
++      for cell in lines.visibleCells {
++        for key in cell.layer.animationKeys() ?? [] {
++          if let a = cell.layer.animation(forKey: key) {
++            probe("ANIM \((cell as? LineCell)?.probeID.suffix(10) ?? "") \(key) \(type(of: a)) dur=\(a.duration) settle=\((a as? CASpringAnimation)?.settlingDuration ?? -1)")
++          }
++        }
++      }
++      for key in lines.layer.animationKeys() ?? [] {
++        if let a = lines.layer.animation(forKey: key) { probe("ANIM lines \(key) \(type(of: a)) dur=\(a.duration)") }
++      }
++    }
+     source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
+       [weak self] in
+       guard let self else { return }
+@@ -1184,6 +1201,32 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
+     return scroll.topDay.map(ChatTime.day)
+   }
+ 
++  func collectionView(
++    _ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell,
++    forItemAt indexPath: IndexPath
++  ) {
++    probe("ended \((cell as? LineCell)?.probeID ?? "")")
++  }
++
++  private var probeLink: CADisplayLink?
++  private var probeLast = ""
++  @objc private func probeTick() {
++    let bounds = lines.layer.presentation()?.bounds ?? lines.bounds
++    var parts: [String] = []
++    for case let cell as LineCell in lines.visibleCells {
++      let f = cell.layer.presentation()?.frame ?? cell.frame
++      let y = f.minY - bounds.minY
++      guard y + f.height > 0, y < lines.bounds.height else { continue }
++      parts.append("\(cell.probeID.suffix(10))@\(String(format: "%.1f", y)),\(String(format: "%.1f", f.height)),a\(String(format: "%.2f", cell.contentView.layer.presentation()?.opacity ?? 1))")
++    }
++    parts.sort { $0.split(separator: "@")[1].split(separator: ",")[0].description.compare($1.split(separator: "@")[1].split(separator: ",")[0].description, options: .numeric) == .orderedAscending }
++    let line = "off=\(String(format: "%.1f", bounds.minY)) " + parts.joined(separator: " ")
++    if line != probeLast {
++      probeLast = line
++      probe("F \(line)")
++    }
++  }
++
+   func scrollViewDidScroll(_ scrollView: UIScrollView) {
+     seePlace()
+   }
+@@ -1356,8 +1399,10 @@ private final class LineCell: UICollectionViewCell {
+   /// shifted in the cell, over the lines next to it.
+   override var safeAreaInsets: UIEdgeInsets { .zero }
+ 
++  var probeID = ""
+   override func prepareForReuse() {
+     super.prepareForReuse()
++    probe("prepareForReuse \(probeID)")
+     space.letGo()
+   }
+ 
+@@ -1404,3 +1449,7 @@ private struct LineCellContent: View {
+       .environment(\.self, environment)
+   }
+ }
++
++func probe(_ text: String) {
++  print(String(format: "%.4f", Date().timeIntervalSince1970), "POC117DBG", text)
++}

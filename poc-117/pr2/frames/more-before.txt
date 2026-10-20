@@ -1,0 +1,3 @@
+== tap 続きを読む: visibleRedequeued=0 prepareForReuse=0
+    0.850 APPLY animated=false redrawn=["e0de1b6cea"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=on(Pochical.(unknown context at $107e1a878).Anchor(id: "line-81deb680-47e7-47fc-902b-03e0de1b6cea", spot: Pochical.(unknown context at $107e1a850).Spot.below(-126.33333333333337)))
+    0.899 off=  576.3 line y=   1.7 h=549.0 bottom= 550.7 a=1.00 gapAbove=  none gapBelow=   4.0 aboveY=  none belowY= 554.7

@@ -1,0 +1,26 @@
+== other sends a link: visibleRedequeued=0 prepareForReuse=1
+    0.626 APPLY animated=true redrawn=[] added=1 earlier=false restyled=false reduce=false scrolling=false hold=free
+    1.185 APPLY animated=false redrawn=["787dd472bc"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=on(Pochical.(unknown context at $107e1a878).Anchor(id: "line-c0159999-58bf-4900-b878-8e787dd472bc", spot: Pochical.(unknown context at $107e1a850).Spot.below(0.0)))
+    0.688 off=  306.3 line y= 777.7 h= 85.0 bottom= 862.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 736.7 belowY=  none
+    0.742 off=  316.6 line y= 763.9 h= 85.0 bottom= 848.9 a=1.00 gapAbove=   0.5 gapBelow=  none aboveY= 726.4 belowY=  none
+    0.757 off=  326.6 line y= 754.3 h= 85.0 bottom= 839.3 a=1.00 gapAbove=   0.9 gapBelow=  none aboveY= 716.4 belowY=  none
+    0.774 off=  338.0 line y= 743.4 h= 85.0 bottom= 828.4 a=1.00 gapAbove=   1.4 gapBelow=  none aboveY= 705.0 belowY=  none
+    0.793 off=  350.3 line y= 731.7 h= 85.0 bottom= 816.7 a=1.00 gapAbove=   2.0 gapBelow=  none aboveY= 692.7 belowY=  none
+    0.869 off=  380.6 line y= 702.7 h= 85.0 bottom= 787.7 a=1.00 gapAbove=   3.3 gapBelow=  none aboveY= 662.4 belowY=  none
+    0.891 off=  384.9 line y= 698.6 h= 85.0 bottom= 783.6 a=1.00 gapAbove=   3.5 gapBelow=  none aboveY= 658.1 belowY=  none
+    0.907 off=  387.4 line y= 696.2 h= 85.0 bottom= 781.2 a=1.00 gapAbove=   3.6 gapBelow=  none aboveY= 655.6 belowY=  none
+    0.924 off=  389.4 line y= 694.4 h= 85.0 bottom= 779.4 a=1.00 gapAbove=   3.8 gapBelow=  none aboveY= 653.6 belowY=  none
+    0.941 off=  390.9 line y= 692.9 h= 85.0 bottom= 777.9 a=1.00 gapAbove=   3.8 gapBelow=  none aboveY= 652.1 belowY=  none
+    0.957 off=  392.0 line y= 691.9 h= 85.0 bottom= 776.9 a=1.00 gapAbove=   3.9 gapBelow=  none aboveY= 651.0 belowY=  none
+    0.974 off=  392.8 line y= 691.0 h= 85.0 bottom= 776.0 a=1.00 gapAbove=   3.8 gapBelow=  none aboveY= 650.2 belowY=  none
+    0.991 off=  393.5 line y= 690.4 h= 85.0 bottom= 775.4 a=1.00 gapAbove=   3.9 gapBelow=  none aboveY= 649.5 belowY=  none
+    1.007 off=  394.0 line y= 690.0 h= 85.0 bottom= 775.0 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 649.0 belowY=  none
+    1.024 off=  394.3 line y= 689.6 h= 85.0 bottom= 774.6 a=1.00 gapAbove=   3.9 gapBelow=  none aboveY= 648.7 belowY=  none
+    1.041 off=  394.6 line y= 689.4 h= 85.0 bottom= 774.4 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 648.4 belowY=  none
+    1.057 off=  394.8 line y= 689.2 h= 85.0 bottom= 774.2 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 648.2 belowY=  none
+    1.074 off=  394.9 line y= 689.1 h= 85.0 bottom= 774.1 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 648.1 belowY=  none
+    1.091 off=  395.0 line y= 689.0 h= 85.0 bottom= 774.0 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 648.0 belowY=  none
+    1.107 off=  395.1 line y= 688.9 h= 85.0 bottom= 773.9 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 647.9 belowY=  none
+    1.124 off=  395.2 line y= 688.8 h= 85.0 bottom= 773.8 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 647.8 belowY=  none
+    1.160 off=  395.3 line y= 688.7 h= 85.0 bottom= 773.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 647.7 belowY=  none
+    1.224 off=  576.3 line y= 507.7 h=266.0 bottom= 773.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 466.7 belowY=  none

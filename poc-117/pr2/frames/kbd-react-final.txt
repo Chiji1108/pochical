@@ -1,0 +1,60 @@
+== keyboard up: visibleRedequeued=0 prepareForReuse=0
+== other adds ❤️: visibleRedequeued=0 prepareForReuse=0
+    0.610 APPLY animated=true redrawn=["efa05585a9"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=free
+    0.645 off= 3132.7 line y= 230.3 h=241.3 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.7 belowY=  none
+    0.663 off= 3134.9 line y= 228.1 h=243.6 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -41.9 belowY=  none
+    0.680 off= 3137.8 line y= 225.2 h=246.5 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -44.8 belowY=  none
+    0.697 off= 3141.0 line y= 222.0 h=249.6 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -48.0 belowY=  none
+    0.713 off= 3144.0 line y= 219.0 h=252.7 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -51.0 belowY=  none
+    0.730 off= 3146.8 line y= 216.2 h=255.4 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -53.8 belowY=  none
+    0.747 off= 3149.3 line y= 213.7 h=258.0 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -56.3 belowY=  none
+    0.763 off= 3151.4 line y= 211.6 h=260.1 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -58.4 belowY=  none
+    0.780 off= 3153.2 line y= 209.8 h=261.8 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -60.2 belowY=  none
+    0.797 off= 3154.6 line y= 208.4 h=263.3 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -61.6 belowY=  none
+    0.814 off= 3155.8 line y= 207.2 h=264.5 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -62.8 belowY=  none
+    0.830 off= 3156.8 line y= 206.2 h=265.4 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -63.8 belowY=  none
+    0.847 off= 3157.5 line y= 205.5 h=266.2 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -64.5 belowY=  none
+    0.864 off= 3158.2 line y= 204.8 h=266.8 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -65.2 belowY=  none
+    0.881 off= 3158.6 line y= 204.4 h=267.3 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -65.6 belowY=  none
+    0.897 off= 3159.0 line y= 204.0 h=267.7 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -66.0 belowY=  none
+    0.912 off= 3159.3 line y= 203.7 h=268.0 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -66.3 belowY=  none
+    0.929 off= 3159.5 line y= 203.5 h=268.2 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -66.5 belowY=  none
+    0.946 off= 3159.7 line y= 203.3 h=268.4 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -66.7 belowY=  none
+    0.962 off= 3159.9 line y= 203.1 h=268.5 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -66.9 belowY=  none
+    0.980 off= 3160.0 line y= 203.0 h=268.6 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -67.0 belowY=  none
+    0.997 off= 3160.1 line y= 202.9 h=268.7 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -67.1 belowY=  none
+    1.013 off= 3160.1 line y= 202.9 h=268.8 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -67.1 belowY=  none
+    1.030 off= 3160.2 line y= 202.8 h=268.8 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -67.2 belowY=  none
+    1.047 off= 3160.2 line y= 202.8 h=268.9 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -67.2 belowY=  none
+    1.080 off= 3160.3 line y= 202.7 h=268.9 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -67.3 belowY=  none
+    1.113 off= 3160.3 line y= 202.7 h=269.0 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -67.3 belowY=  none
+== other removes ❤️: visibleRedequeued=0 prepareForReuse=0
+    0.597 APPLY animated=true redrawn=["efa05585a9"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=free
+    0.630 off= 3159.9 line y= 203.1 h=268.5 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -66.9 belowY=  none
+    0.646 off= 3157.8 line y= 205.2 h=266.5 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -64.8 belowY=  none
+    0.663 off= 3154.9 line y= 208.1 h=263.5 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -61.9 belowY=  none
+    0.680 off= 3151.7 line y= 211.3 h=260.4 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -58.7 belowY=  none
+    0.696 off= 3148.7 line y= 214.3 h=257.3 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -55.7 belowY=  none
+    0.713 off= 3145.9 line y= 217.1 h=254.5 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -52.9 belowY=  none
+    0.730 off= 3143.4 line y= 219.6 h=252.0 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -50.4 belowY=  none
+    0.747 off= 3141.3 line y= 221.7 h=249.9 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -48.3 belowY=  none
+    0.763 off= 3139.5 line y= 223.5 h=248.2 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -46.5 belowY=  none
+    0.780 off= 3138.0 line y= 225.0 h=246.7 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -45.0 belowY=  none
+    0.797 off= 3136.9 line y= 226.1 h=245.5 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -43.9 belowY=  none
+    0.814 off= 3135.9 line y= 227.1 h=244.6 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -42.9 belowY=  none
+    0.830 off= 3135.1 line y= 227.9 h=243.8 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -42.1 belowY=  none
+    0.847 off= 3134.5 line y= 228.5 h=243.2 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -41.5 belowY=  none
+    0.863 off= 3134.0 line y= 229.0 h=242.7 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -41.0 belowY=  none
+    0.880 off= 3133.7 line y= 229.3 h=242.3 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -40.7 belowY=  none
+    0.897 off= 3133.4 line y= 229.6 h=242.0 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -40.4 belowY=  none
+    0.913 off= 3133.1 line y= 229.9 h=241.8 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -40.1 belowY=  none
+    0.930 off= 3132.9 line y= 230.1 h=241.6 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.9 belowY=  none
+    0.947 off= 3132.8 line y= 230.2 h=241.5 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.8 belowY=  none
+    0.964 off= 3132.7 line y= 230.3 h=241.4 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.7 belowY=  none
+    0.980 off= 3132.6 line y= 230.4 h=241.3 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.6 belowY=  none
+    0.997 off= 3132.5 line y= 230.5 h=241.2 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.5 belowY=  none
+    1.030 off= 3132.5 line y= 230.5 h=241.1 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.5 belowY=  none
+    1.047 off= 3132.4 line y= 230.6 h=241.1 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.4 belowY=  none
+    1.097 off= 3132.4 line y= 230.6 h=241.0 bottom= 471.6 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.4 belowY=  none
+    1.146 off= 3132.3 line y= 230.7 h=241.0 bottom= 471.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= -39.3 belowY=  none
+== keyboard down: visibleRedequeued=0 prepareForReuse=2

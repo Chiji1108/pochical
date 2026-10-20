@@ -1,0 +1,78 @@
+Per step: frames the line's top or height changed over, its height and top (pt on the lines' screen) from first to last frame,
+the range of its bottom, and of the gaps to the lines above and below (constant = they move together).
+visibleRedequeued: items whose cell left and was configured again within 0.1 s while on screen.
+
+## before (main)
+react-other-before
+  other adds ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=1 over 0.000s h 65.0->65.0 top 708.7->708.7 bottom 773.7..773.7 gapAbove 4.0..4.0 gapBelow none
+  other adds 😂: visibleRedequeued=0 prepareForReuse=0 [animated=false]: (line not moving on screen)
+  other removes ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=false]: (line not moving on screen)
+  other removes 😂: visibleRedequeued=0 prepareForReuse=1 [animated=false]: frames=17 over 0.283s h 37.0->37.0 top 709.0->736.7 bottom 746.0..773.7 gapAbove 4.0..4.0 gapBelow none
+react-self-before
+  long press: visibleRedequeued=0 prepareForReuse=0: (line not moving on screen)
+  self adds 👍: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=1 over 0.000s h 65.0->65.0 top 708.7->708.7 bottom 773.7..773.7 gapAbove 4.0..4.0 gapBelow none
+  long press again: visibleRedequeued=0 prepareForReuse=0: (line not moving on screen)
+  self removes 👍: visibleRedequeued=0 prepareForReuse=1 [animated=false]: frames=17 over 0.300s h 37.0->37.0 top 708.7->736.7 bottom 745.7..773.7 gapAbove 4.0..4.0 gapBelow none
+edit-other-before
+  other edits longer: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=1 over 0.000s h 130.0->130.0 top 553.7->553.7 bottom 683.7..683.7 gapAbove 4.0..4.0 gapBelow 4.0..4.0
+  other edits shorter: visibleRedequeued=0 prepareForReuse=2 [animated=false]: frames=17 over 0.283s h 37.0->37.0 top 554.3->646.7 bottom 591.3..683.7 gapAbove 4.0..4.0 gapBelow 4.0..4.0
+link-before
+  other sends a link: visibleRedequeued=0 prepareForReuse=1 [animated=true] [animated=false]: frames=23 over 0.536s h 85.0->266.0 top 777.7->507.7 bottom 773.7..862.7 gapAbove 0.5..4.0 gapBelow none
+more-before
+  tap 続きを読む: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=1 over 0.000s h 549.0->549.0 top 1.7->1.7 bottom 550.7..550.7 gapAbove none gapBelow 4.0..4.0
+album-other-before
+  other adds ❤️ to a photo: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=1 over 0.000s h 269.0->269.0 top 504.7->504.7 bottom 773.7..773.7 gapAbove 4.0..4.0 gapBelow none
+  other removes ❤️ from a photo: visibleRedequeued=0 prepareForReuse=1 [animated=false]: frames=15 over 0.284s h 241.0->241.0 top 505.0->532.7 bottom 746.0..773.7 gapAbove 4.0..4.0 gapBelow none
+kbd-react-before
+  keyboard up: visibleRedequeued=0 prepareForReuse=0: (line not moving on screen)
+  other adds ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=1 over 0.000s h 269.0->269.0 top 202.7->202.7 bottom 471.7..471.7 gapAbove 4.0..4.0 gapBelow none
+  other removes ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=17 over 0.284s h 241.0->241.0 top 203.0->230.7 bottom 444.0..471.7 gapAbove 4.0..4.0 gapBelow none
+  keyboard down: visibleRedequeued=0 prepareForReuse=6: (line not moving on screen)
+
+## after
+react-other-final
+  other adds ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=true]: frames=27 over 0.468s h 45.7->73.0 top 728.0->700.7 bottom 773.6..773.7 gapAbove 4.0..4.0 gapBelow none
+  other adds 😂: visibleRedequeued=0 prepareForReuse=0 [animated=true]: (line not moving on screen)
+  other removes ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=true]: (line not moving on screen)
+  other removes 😂: visibleRedequeued=0 prepareForReuse=0 [animated=true]: frames=27 over 0.516s h 72.7->45.0 top 700.9->728.7 bottom 773.6..773.7 gapAbove 4.0..4.0 gapBelow none
+react-self-final
+  long press: visibleRedequeued=0 prepareForReuse=0: (line not moving on screen)
+  self adds 👍: visibleRedequeued=0 prepareForReuse=0 [animated=true] [animated=true]: frames=24 over 0.467s h 45.5->73.0 top 728.2->700.7 bottom 773.6..773.7 gapAbove 4.0..4.0 gapBelow none
+  long press again: visibleRedequeued=0 prepareForReuse=0: (line not moving on screen)
+  self removes 👍: visibleRedequeued=0 prepareForReuse=0 [animated=true]: frames=24 over 0.511s h 71.9->45.0 top 701.8->728.7 bottom 773.6..773.7 gapAbove 4.0..4.0 gapBelow none
+react-self-albumfinal
+  long press: visibleRedequeued=0 prepareForReuse=0: (line not moving on screen)
+  self adds 👍: visibleRedequeued=0 prepareForReuse=0 [animated=true] [animated=true]: frames=25 over 0.460s h 242.3->269.0 top 531.4->504.7 bottom 773.6..773.7 gapAbove 4.0..4.0 gapBelow none
+  long press again: visibleRedequeued=0 prepareForReuse=0: (line not moving on screen)
+  self removes 👍: visibleRedequeued=0 prepareForReuse=0 [animated=true] [animated=true]: frames=25 over 0.512s h 268.7->241.0 top 505.0->532.7 bottom 773.6..773.7 gapAbove 4.0..4.0 gapBelow none
+edit-other-final
+  other edits longer: visibleRedequeued=0 prepareForReuse=0 [animated=true]: frames=30 over 0.502s h 63.2->155.0 top 391.5->299.7 bottom 454.6..454.7 gapAbove 4.0..4.0 gapBelow 4.0..4.1
+  other edits shorter: visibleRedequeued=0 prepareForReuse=2 [animated=true]: frames=31 over 0.517s h 154.3->62.0 top 300.4->392.7 bottom 454.6..454.7 gapAbove 4.0..4.0 gapBelow 4.0..4.1
+link-final
+  other sends a link: visibleRedequeued=0 prepareForReuse=1 [animated=true] [animated=true]: frames=54 over 3.939s h 85.0->266.0 top 777.7->507.7 bottom 773.6..862.7 gapAbove 0.9..4.0 gapBelow none
+more-final
+  tap 続きを読む: visibleRedequeued=0 prepareForReuse=0 [animated=true]: frames=31 over 0.516s h 269.7->549.0 top 188.7->188.7 bottom 458.4..737.7 gapAbove 4.0..4.0 gapBelow 3.9..4.0
+album-other-final
+  other adds ❤️ to a photo: visibleRedequeued=0 prepareForReuse=0 [animated=true]: frames=27 over 0.467s h 241.4->269.0 top 532.2->504.7 bottom 773.6..773.7 gapAbove 4.0..4.0 gapBelow none
+  other removes ❤️ from a photo: visibleRedequeued=0 prepareForReuse=0 [animated=true]: frames=27 over 0.483s h 267.5->241.0 top 506.1->532.7 bottom 773.6..773.7 gapAbove 4.0..4.0 gapBelow none
+kbd-react-final
+  keyboard up: visibleRedequeued=0 prepareForReuse=0: (line not moving on screen)
+  other adds ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=true]: frames=27 over 0.468s h 241.3->269.0 top 230.3->202.7 bottom 471.6..471.7 gapAbove 4.0..4.0 gapBelow none
+  other removes ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=true]: frames=27 over 0.516s h 268.5->241.0 top 203.1->230.7 bottom 471.6..471.7 gapAbove 4.0..4.0 gapBelow none
+  keyboard down: visibleRedequeued=0 prepareForReuse=2: (line not moving on screen)
+
+## after, Reduce Motion on
+react-other-reduce3
+  other adds ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=1 over 0.000s h 65.0->65.0 top 708.8->708.8 bottom 773.8..773.8 gapAbove 4.0..4.0 gapBelow none
+  other adds 😂: visibleRedequeued=0 prepareForReuse=0 [animated=false]: (line not moving on screen)
+  other removes ❤️: visibleRedequeued=0 prepareForReuse=0 [animated=false]: (line not moving on screen)
+  other removes 😂: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=1 over 0.000s h 37.0->37.0 top 736.8->736.8 bottom 773.8..773.8 gapAbove 4.0..4.0 gapBelow none
+more-reduce3
+  tap 続きを読む: visibleRedequeued=0 prepareForReuse=0 [animated=false]: frames=1 over 0.000s h 549.0->549.0 top 508.1->508.1 bottom 1057.1..1057.1 gapAbove 4.0..4.0 gapBelow none
+
+## after, page coming in above while flinging
+   per-frame moves of a line seen, 3 frames before to 3 after: +11.0 +11.0 | +10.2 | +6.0 +19.4 +9.3
+  2.850 page in above (added 50): 17 lines seen before and after, moved +10.2..+10.2 pt
+   per-frame moves of a line seen, 3 frames before to 3 after: +16.4 +15.8 | +15.0 | +22.7 +14.1 +26.3
+  8.250 page in above (added 28): 22 lines seen before and after, moved +15.0..+15.0 pt
+visibleRedequeued over the run: 0

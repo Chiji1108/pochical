@@ -1,0 +1,22 @@
+== other edits longer: visibleRedequeued=0 prepareForReuse=0
+    0.727 APPLY animated=false redrawn=["b1f655b6f2"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=free
+    0.789 off=  399.3 line y= 553.7 h=130.0 bottom= 683.7 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 489.7 belowY= 687.7
+== other edits shorter: visibleRedequeued=0 prepareForReuse=2
+    0.606 APPLY animated=false redrawn=["b1f655b6f2"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=free
+    0.646 off=  398.7 line y= 554.3 h= 37.0 bottom= 591.3 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 490.3 belowY= 595.3
+    0.679 off=  393.0 line y= 560.0 h= 37.0 bottom= 597.0 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 496.0 belowY= 601.0
+    0.696 off=  388.3 line y= 564.7 h= 37.0 bottom= 601.7 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 500.7 belowY= 605.7
+    0.713 off=  382.7 line y= 570.3 h= 37.0 bottom= 607.3 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 506.3 belowY= 611.3
+    0.729 off=  376.0 line y= 577.0 h= 37.0 bottom= 614.0 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 513.0 belowY= 618.0
+    0.746 off=  368.7 line y= 584.3 h= 37.0 bottom= 621.3 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 520.3 belowY= 625.3
+    0.763 off=  361.0 line y= 592.0 h= 37.0 bottom= 629.0 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 528.0 belowY= 633.0
+    0.779 off=  353.0 line y= 600.0 h= 37.0 bottom= 637.0 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 536.0 belowY= 641.0
+    0.796 off=  344.7 line y= 608.3 h= 37.0 bottom= 645.3 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 544.3 belowY= 649.3
+    0.813 off=  337.0 line y= 616.0 h= 37.0 bottom= 653.0 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 552.0 belowY= 657.0
+    0.829 off=  329.7 line y= 623.3 h= 37.0 bottom= 660.3 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 559.3 belowY= 664.3
+    0.846 off=  323.0 line y= 630.0 h= 37.0 bottom= 667.0 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 566.0 belowY= 671.0
+    0.863 off=  317.3 line y= 635.7 h= 37.0 bottom= 672.7 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 571.7 belowY= 676.7
+    0.879 off=  312.7 line y= 640.3 h= 37.0 bottom= 677.3 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 576.3 belowY= 681.3
+    0.896 off=  309.0 line y= 644.0 h= 37.0 bottom= 681.0 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 580.0 belowY= 685.0
+    0.913 off=  307.0 line y= 646.0 h= 37.0 bottom= 683.0 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 582.0 belowY= 687.0
+    0.929 off=  306.3 line y= 646.7 h= 37.0 bottom= 683.7 a=1.00 gapAbove=   4.0 gapBelow=   4.0 aboveY= 582.7 belowY= 687.7

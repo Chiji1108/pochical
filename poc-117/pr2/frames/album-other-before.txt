@@ -1,0 +1,20 @@
+== other adds ❤️ to a photo: visibleRedequeued=0 prepareForReuse=0
+    0.603 APPLY animated=false redrawn=["4c6a9eaacd"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=free
+    0.648 off= 1132.3 line y= 504.7 h=269.0 bottom= 773.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 234.7 belowY=  none
+== other removes ❤️ from a photo: visibleRedequeued=0 prepareForReuse=1
+    0.611 APPLY animated=false redrawn=["4c6a9eaacd"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=free
+    0.640 off= 1132.0 line y= 505.0 h=241.0 bottom= 746.0 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 235.0 belowY=  none
+    0.674 off= 1130.3 line y= 506.7 h=241.0 bottom= 747.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 236.7 belowY=  none
+    0.690 off= 1129.0 line y= 508.0 h=241.0 bottom= 749.0 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 238.0 belowY=  none
+    0.707 off= 1127.3 line y= 509.7 h=241.0 bottom= 750.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 239.7 belowY=  none
+    0.740 off= 1123.0 line y= 514.0 h=241.0 bottom= 755.0 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 244.0 belowY=  none
+    0.774 off= 1118.3 line y= 518.7 h=241.0 bottom= 759.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 248.7 belowY=  none
+    0.790 off= 1116.0 line y= 521.0 h=241.0 bottom= 762.0 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 251.0 belowY=  none
+    0.807 off= 1113.7 line y= 523.3 h=241.0 bottom= 764.3 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 253.3 belowY=  none
+    0.824 off= 1111.3 line y= 525.7 h=241.0 bottom= 766.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 255.7 belowY=  none
+    0.840 off= 1109.3 line y= 527.7 h=241.0 bottom= 768.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 257.7 belowY=  none
+    0.857 off= 1107.7 line y= 529.3 h=241.0 bottom= 770.3 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 259.3 belowY=  none
+    0.874 off= 1106.3 line y= 530.7 h=241.0 bottom= 771.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 260.7 belowY=  none
+    0.890 off= 1105.3 line y= 531.7 h=241.0 bottom= 772.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 261.7 belowY=  none
+    0.907 off= 1104.7 line y= 532.3 h=241.0 bottom= 773.3 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 262.3 belowY=  none
+    0.924 off= 1104.3 line y= 532.7 h=241.0 bottom= 773.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 262.7 belowY=  none

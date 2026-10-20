@@ -1,0 +1,24 @@
+== long press: visibleRedequeued=0 prepareForReuse=0
+== self adds 👍: visibleRedequeued=0 prepareForReuse=0
+    0.627 APPLY animated=false redrawn=["296ecf5141"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=free
+    0.666 off=  334.3 line y= 708.7 h= 65.0 bottom= 773.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 659.7 belowY=  none
+== long press again: visibleRedequeued=0 prepareForReuse=0
+== self removes 👍: visibleRedequeued=0 prepareForReuse=1
+    0.636 APPLY animated=false redrawn=["296ecf5141"] added=0 earlier=false restyled=false reduce=false scrolling=false hold=free
+    0.656 off=  334.3 line y= 708.7 h= 37.0 bottom= 745.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 659.7 belowY=  none
+    0.688 off=  333.3 line y= 709.7 h= 37.0 bottom= 746.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 660.7 belowY=  none
+    0.705 off=  332.3 line y= 710.7 h= 37.0 bottom= 747.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 661.7 belowY=  none
+    0.721 off=  331.0 line y= 712.0 h= 37.0 bottom= 749.0 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 663.0 belowY=  none
+    0.738 off=  329.3 line y= 713.7 h= 37.0 bottom= 750.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 664.7 belowY=  none
+    0.754 off=  327.3 line y= 715.7 h= 37.0 bottom= 752.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 666.7 belowY=  none
+    0.771 off=  325.0 line y= 718.0 h= 37.0 bottom= 755.0 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 669.0 belowY=  none
+    0.788 off=  322.7 line y= 720.3 h= 37.0 bottom= 757.3 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 671.3 belowY=  none
+    0.805 off=  320.3 line y= 722.7 h= 37.0 bottom= 759.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 673.7 belowY=  none
+    0.821 off=  318.0 line y= 725.0 h= 37.0 bottom= 762.0 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 676.0 belowY=  none
+    0.838 off=  315.7 line y= 727.3 h= 37.0 bottom= 764.3 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 678.3 belowY=  none
+    0.855 off=  313.3 line y= 729.7 h= 37.0 bottom= 766.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 680.7 belowY=  none
+    0.871 off=  311.3 line y= 731.7 h= 37.0 bottom= 768.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 682.7 belowY=  none
+    0.888 off=  309.7 line y= 733.3 h= 37.0 bottom= 770.3 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 684.3 belowY=  none
+    0.905 off=  308.3 line y= 734.7 h= 37.0 bottom= 771.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 685.7 belowY=  none
+    0.938 off=  306.7 line y= 736.3 h= 37.0 bottom= 773.3 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 687.3 belowY=  none
+    0.956 off=  306.3 line y= 736.7 h= 37.0 bottom= 773.7 a=1.00 gapAbove=   4.0 gapBelow=  none aboveY= 687.7 belowY=  none
