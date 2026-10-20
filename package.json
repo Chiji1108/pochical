@@ -3,7 +3,6 @@
   "private": true,
   "workspaces": [
     "apps/admin",
-    "apps/mobile-legacy",
     "apps/server",
     "apps/web",
     "design"
@@ -32,18 +31,5 @@
     "sharp": "0.35.4",
     "ultracite": "7.12.0"
   },
-  "packageManager": "bun@1.4.2",
-  "patchedDependencies": {
-    "react-native-view-shot@6.0.1": "patches/react-native-view-shot@6.0.1.patch",
-    "@convex-dev/auth@0.0.95": "patches/@convex-dev%2Fauth@0.0.95.patch",
-    "react-native@0.88.0-rc.1": "patches/react-native@0.88.0-rc.1.patch",
-    "@trestleinc/replicate@2.0.0-preview.0": "patches/@trestleinc%2Freplicate@2.0.0-preview.0.patch",
-    "convex-unread-tracking@1.1.0": "patches/convex-unread-tracking@1.1.0.patch",
-    "@kesha-antonov/react-native-chat@5.0.1": "patches/@kesha-antonov%2Freact-native-chat@5.0.1.patch"
-  },
-  "trustedDependencies": [
-    "@shopify/react-native-skia",
-    "protobufjs",
-    "uniwind"
-  ]
+  "packageManager": "bun@1.4.2"
 }

@@ -10,8 +10,6 @@ apps/
   ios/           SwiftUIアプリ
   android/       Jetpack Composeアプリ
   web/           TanStack Start製の専用サイト。LP・招待・アカウント削除など
-  mobile-legacy/ 旧Expoアプリ。参照用で、ビルド・テストの対象外
-patches/         Bunが適用する依存パッケージのパッチ
 ```
 
 ## 開発

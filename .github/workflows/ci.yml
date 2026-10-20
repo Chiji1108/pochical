@@ -42,7 +42,6 @@ jobs:
               - "tools/**"
               - "package.json"
               - "bun.lock"
-              - "patches/**"
               - "*.config.ts"
               - "lint-ignores.ts"
               - "mise.toml"
@@ -67,8 +66,7 @@ jobs:
       - uses: jdx/mise-action@v3
         with:
           install_args: bun
-      # The reference-only Expo app's dependencies are left out.
-      - run: bun install --frozen-lockfile --filter '!@pochical/mobile-legacy'
+      - run: bun install --frozen-lockfile
       - run: bun run check
       - run: bun run typecheck
       - run: bun run test
@@ -97,7 +95,7 @@ jobs:
       # The code generated from proto/ is what proto/ gives now: none edited
       # by hand, none left behind by a .proto change. protoc-gen-es comes
       # from the workspace's dependencies.
-      - run: bun install --frozen-lockfile --filter '!@pochical/mobile-legacy'
+      - run: bun install --frozen-lockfile
       # buf's remote plugins (Swift, Kotlin) are fetched signed in, clear
       # of the Buf Schema Registry's limits on anonymous use.
       - env:
