@@ -15,7 +15,8 @@ export const getAuth = (): Auth => {
   auth ??= createAuth(env.DB, {
     appleAppId: env.APPLE_APP_ID,
     baseURL: env.BETTER_AUTH_URL,
-    // Its sockets close on the user's DO and their groups'.
+    // Its sockets close on the user's DO, their groups' and their chat
+    // with Pochical's people's; its push tokens go with its row in D1.
     onSessionEnd: async ({ id, userId }) => {
       await env.USERS.getByName(userId).endSession(id);
     },

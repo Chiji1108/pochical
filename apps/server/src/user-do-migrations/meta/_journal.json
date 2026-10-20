@@ -141,6 +141,13 @@
       "when": 1792214704869,
       "tag": "0019_chat_notified",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1792470148836,
+      "tag": "0020_drop_push_tokens",
+      "breakpoints": true
     }
   ]
 }

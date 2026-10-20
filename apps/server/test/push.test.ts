@@ -1,4 +1,4 @@
-import { exports } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { appleKeys, idToken, link } from "./apple-helpers";
@@ -338,6 +338,13 @@ describe("a device's push token", () => {
     // Time for a notification to the signed-out device that should not come.
     await scheduler.wait(100);
     expect(reached(calls)).toStrictEqual([OTHER_TOKEN]);
+    // Nor is the signed-out device's token kept.
+    const kept = await env.DB.prepare(
+      "select token from push_tokens where token in (?, ?)"
+    )
+      .bind(TOKEN, OTHER_TOKEN)
+      .all<{ token: string }>();
+    expect(kept.results).toStrictEqual([{ token: OTHER_TOKEN }]);
   });
 
   it("is one user's at a time: registered by another, the user before hears nothing at it", async () => {

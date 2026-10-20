@@ -32,6 +32,12 @@ export type Alert = {
   collapseId?: string;
 };
 
+/**
+ * Whom a notification is sent to: the user, whose device shows it only
+ * while signed in as them, and the app icon's badge at their unread lines.
+ */
+export type Recipient = { recipientId: string; badge: number };
+
 /** The category of a chat line's notification, which the app answers from. */
 export const CHAT_LINE = "CHAT_LINE";
 
@@ -59,12 +65,16 @@ const providerToken = async (
 };
 
 /**
- * The APNs payload: words from the app's strings, the badge and the chat.
- * A chat's line also goes through the app's Notification Service Extension
- * (`mutable-content`), which puts the writer's face on it, and can be
- * answered from (`category`).
+ * The APNs payload: words from the app's strings, the badge, the chat and
+ * whom it is for. Every one goes through the app's Notification Service
+ * Extension (`mutable-content`), which shows nothing for anyone but the
+ * user signed in, and puts a chat line's writer's face on it; a line's can
+ * be answered from (`category`).
  */
-export const payloadOf = (alert: Alert, badge: number): string =>
+export const payloadOf = (
+  alert: Alert,
+  { badge, recipientId }: Recipient
+): string =>
   JSON.stringify({
     aps: {
       alert: {
@@ -74,11 +84,13 @@ export const payloadOf = (alert: Alert, badge: number): string =>
         "title-loc-key": alert.title.key,
       },
       badge,
+      "mutable-content": 1,
       sound: "default",
       "thread-id": `${alert.groupId}/${alert.threadId}`,
-      ...(alert.line && { category: CHAT_LINE, "mutable-content": 1 }),
+      ...(alert.line && { category: CHAT_LINE }),
     },
     groupId: alert.groupId,
+    recipientId,
     threadId: alert.threadId,
     ...(alert.line && { authorId: alert.line.authorId, seq: alert.line.seq }),
   });
@@ -143,9 +155,15 @@ export const sendAlert = async (
   env: Env,
   device: { token: string; sandbox: boolean },
   alert: Alert,
-  badge: number
+  recipient: Recipient
 ): Promise<Sent> =>
-  await post(env, device, payloadOf(alert, badge), "alert", alert.collapseId);
+  await post(
+    env,
+    device,
+    payloadOf(alert, recipient),
+    "alert",
+    alert.collapseId
+  );
 
 /** Sends a withdrawal to one device, as `sendAlert` sends a notification. */
 export const sendWithdrawal = async (
