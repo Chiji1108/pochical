@@ -1,6 +1,29 @@
+/// A clock as an edit carries it, ordered by physical time, then counter,
+/// then device, which only breaks exact ties (spec/vectors/hlc.json). A
+/// device shows what the server has decided (spec/vectors/local-edits.json)
+/// and compares clocks only for what a waiting order takes back
+/// (spec/vectors/order-clears.json).
+public struct Clock: Hashable, Sendable, Decodable, Comparable {
+  public var ms: Int64
+  public var counter: UInt32
+  /// Compared by its characters' codes, as plain ASCII.
+  public var device: String
+
+  public init(ms: Int64, counter: UInt32, device: String) {
+    self.ms = ms
+    self.counter = counter
+    self.device = device
+  }
+
+  public static func < (a: Clock, b: Clock) -> Bool {
+    (a.ms, a.counter) != (b.ms, b.counter)
+      ? (a.ms, a.counter) < (b.ms, b.counter)
+      : Array(a.device.utf8).lexicographicallyPrecedes(b.device.utf8)
+  }
+}
+
 /// A device's last hybrid logical clock (spec/sync-protocol.md, HLC); its
-/// edits add the device's id. Only the server compares clocks: a device
-/// shows what the server has decided (spec/vectors/local-edits.json).
+/// edits add the device's id.
 public struct HlcTime: Hashable, Sendable, Codable {
   public var ms: Int64
   public var counter: UInt32

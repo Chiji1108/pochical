@@ -10,6 +10,7 @@ import chatMessages from "../../../spec/vectors/chat.json";
 import entering from "../../../spec/vectors/entering.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
+import orderClears from "../../../spec/vectors/order-clears.json";
 import ownDays from "../../../spec/vectors/own-days.json";
 import patternChanges from "../../../spec/vectors/patterns.json";
 import reconnect from "../../../spec/vectors/reconnect.json";
@@ -99,9 +100,10 @@ import type {
   WidgetPerson,
   WidgetPersonDay,
 } from "../src/lib/design-widgets";
-import { clockOffset, receive, tick } from "../src/lib/hlc";
+import { clockOffset, compareClocks, receive, tick } from "../src/lib/hlc";
 import { noValue, shownValue, takeEvent } from "../src/lib/local-edits";
 import type { LocalEvent } from "../src/lib/local-edits";
+import { givesWay } from "../src/lib/order-clears";
 import { reconnectWaitMost } from "../src/lib/reconnect";
 import { mayAskForReview, openedOn } from "../src/lib/review";
 import type { ReviewHistory } from "../src/lib/review";
@@ -830,6 +832,11 @@ describe("spec/vectors/widgets.json いまのシフト", () => {
 });
 
 describe("spec/vectors/hlc.json", () => {
+  for (const { name, a, b, expected } of hlc.compare) {
+    test(name, () => {
+      expect(Math.sign(compareClocks(a, b))).toBe(expected);
+    });
+  }
   for (const { name, last, now, expected } of hlc.tick) {
     test(name, () => {
       expect(tick(last, now)).toEqual(expected);
@@ -855,6 +862,21 @@ describe("spec/vectors/local-edits.json", () => {
         state = takeEvent(state, event as LocalEvent);
         expect(shownValue(state)).toBe(shows);
       }
+    });
+  }
+});
+
+describe("spec/vectors/order-clears.json", () => {
+  for (const {
+    name,
+    date,
+    field,
+    set,
+    floor,
+    expected,
+  } of orderClears.givesWay) {
+    test(name, () => {
+      expect(givesWay(date, field, set, floor)).toBe(expected);
     });
   }
 });

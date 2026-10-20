@@ -7,7 +7,9 @@ import SQLiteData
 /// own edits of it still waiting, and the tables of Tables.swift showing
 /// the latest waiting edit's value, else the server's. The device never
 /// compares clocks to choose: the server has, and its Changes come before
-/// the Acked that ends a wait (spec/vectors/local-edits.json).
+/// the Acked that ends a wait (spec/vectors/local-edits.json). A new job's
+/// order waiting hides the days' shifts and times it takes back
+/// (spec/vectors/order-clears.json), until its Acked.
 public enum OwnValues {
   /// A local edit, stamped with its clock: it shows at once and waits in
   /// the outbox until the server acknowledges it. `clearFrom` is a
@@ -24,6 +26,9 @@ public enum OwnValues {
     }
     .execute(db)
     try show(change, in: db)
+    if let clearFrom {
+      try showDays(from: clearFrom.key, in: db)
+    }
   }
 
   /// A change from the server: the value's from now on, shown unless an
@@ -54,6 +59,9 @@ public enum OwnValues {
       let change = try Pochical_V1_Change(serializedBytes: server?.change ?? edit.change)
       try show(server == nil ? change.cleared : change, in: db)
     }
+    for from in Set(acked.compactMap(\.clearFrom)) {
+      try showDays(from: from, in: db)
+    }
   }
 
   /// A Reset: the server's values go, and the outbox stays.
@@ -75,12 +83,47 @@ public enum OwnValues {
     try OutboxEdit.where { $0.key.eq(key) }.fetchCount(db) > 0
   }
 
+  /// Shows again each day value from `from`, "YYYY-MM-DD", as a new job's
+  /// order starts or stops waiting: the latest waiting edit's, else the
+  /// server's.
+  private static func showDays(from: String, in db: Database) throws {
+    // Keys of day values run "day/YYYY-MM-DD/field"; "0" comes after "/".
+    let first = "day/\(from)"
+    var keys = Set(
+      try ServerValue.where { $0.key >= first && $0.key < "day0" }.select(\.key).fetchAll(db))
+    keys.formUnion(
+      try OutboxEdit.where { $0.key >= first && $0.key < "day0" }.select(\.key).fetchAll(db))
+    for key in keys {
+      let waiting = try OutboxEdit.where { $0.key.eq(key) }.order { $0.id.desc() }.fetchOne(db)
+      guard let data = try waiting?.change ?? ServerValue.find(key).fetchOne(db)?.change else {
+        continue
+      }
+      try show(Pochical_V1_Change(serializedBytes: data), in: db)
+    }
+  }
+
+  /// Whether a new job's order waiting in the outbox takes the day's value
+  /// back (givesWay): it shows cleared until the server settles it.
+  private static func isTakenBack(_ value: Pochical_V1_DayValue, in db: Database) throws -> Bool {
+    guard value.hasValue, value.hasHlc else { return false }
+    for edit in try OutboxEdit.where({ $0.clearFrom.isNot(nil) }).fetchAll(db) {
+      guard let from = edit.clearFrom,
+        let hlc = try Pochical_V1_Change(serializedBytes: edit.change).hlc
+      else { continue }
+      let floor = OrderFloor(from: from, clock: Clock(hlc))
+      if givesWay(date: value.date, field: value.field, set: Clock(value.hlc), floor: floor) {
+        return true
+      }
+    }
+    return false
+  }
+
   /// Writes a value into the tables that show it.
   private static func show(_ change: Pochical_V1_Change, in db: Database) throws {
     switch change.kind {
     case .day(let value):
       var row = try DayRow.find(value.date).fetchOne(db) ?? DayRow(date: value.date)
-      let field = value.hasValue ? value.value : nil
+      let field = try isTakenBack(value, in: db) || !value.hasValue ? nil : value.value
       switch value.field {
       case .pattern: row.pattern = field
       case .start: row.start = field
