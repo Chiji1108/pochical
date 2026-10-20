@@ -2,7 +2,6 @@ import PochicalDesign
 import PochicalKit
 import SwiftUI
 import UIKit
-import UIKit.UIGestureRecognizerSubclass
 
 /// One item of a line's menu.
 struct MessageAction: Identifiable {
@@ -16,202 +15,16 @@ struct MessageAction: Identifiable {
   var id: String { title }
 }
 
-/// The finger still on the screen from the long press that opened a
-/// line's menu, as a system menu follows it: what it is over is picked
-/// when it lifts. It belongs to the chat's window, where the press began,
-/// so the line follows it there and tells the overlay.
-@MainActor @Observable final class HeldFinger {
-  /// How far it slides before it picks what it is over, as far as UIKit's
-  /// long press lets a finger wander: the menu can come to it rather than
-  /// it to the menu, as the lines move under a still finger.
-  static let slop: CGFloat = 10
-
-  /// Where it was as the menu opened.
-  private let start: CGPoint
-  /// Where it is on the screen, once it has moved.
-  var point: CGPoint? {
-    didSet {
-      if let point, hypot(point.x - start.x, point.y - start.y) >= Self.slop { slid = true }
-    }
-  }
-  /// Slid since the menu opened, and so picks what it is over.
-  private(set) var slid = false
-  /// Lifted from the screen.
-  var lifted = false
-
-  init(at start: CGPoint) {
-    self.start = start
-  }
-}
-
-/// Where the keyboard's top is on the screen while it is up, for a line's
-/// menu to stay over it: the keyboard stays as the menu opens, as LINE
-/// keeps it, and its window stands over the menu's. Watched from the
-/// app's start, as the keyboard may be up before any menu opens.
-@MainActor @Observable final class KeyboardTop {
-  static let shared = KeyboardTop()
-  private(set) var y: CGFloat?
-  private var watching = false
-
-  func watch() {
-    guard !watching else { return }
-    watching = true
-    let center = NotificationCenter.default
-    center.addObserver(
-      forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: .main
-    ) { note in
-      let info = note.userInfo
-      let end = info?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-      MainActor.assumeIsolated { self.take(end) }
-    }
-    center.addObserver(
-      forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main
-    ) { _ in
-      MainActor.assumeIsolated { self.y = nil }
-    }
-  }
-
-  private func take(_ end: CGRect?) {
-    guard let end, end.height > 0 else {
-      y = nil
-      return
-    }
-    y = end.minY
-  }
-}
-
-/// Where a held line's bubble is on the screen, kept while its menu is
-/// open: the chat can move under the overlay, as when the keyboard goes
-/// down for a menu that has no room over it, or lines come in, and the
-/// bubble and menu go along.
-@MainActor @Observable final class LineSpot {
-  var frame: CGRect
-  /// Its bubble is lifted out of its line, which draws it again as the
-  /// menu closes; or no longer, its line gone from the chat meanwhile.
-  private(set) var lifted = true
-  @ObservationIgnored private var onBack: (() -> Void)?
-
-  init(frame: CGRect) {
-    self.frame = frame
-  }
-
-  /// Its line draws its bubble again, or no longer can, gone from the chat.
-  func back() {
-    guard lifted else { return }
-    lifted = false
-    let onBack = onBack
-    self.onBack = nil
-    onBack?()
-  }
-
-  /// Does `action` once its line draws its bubble again, in the same
-  /// update: at once when it is no longer lifted out of it.
-  func whenBack(_ action: @escaping () -> Void) {
-    if lifted {
-      onBack = action
-    } else {
-      action()
-    }
-  }
-}
-
-/// The long press that opens a line's menu, UIKit's: it counts from the
-/// finger going down and says where it is, which SwiftUI's long press in
-/// the chat's scroll view, beside the bubble's taps, does neither of (it
-/// was seen to open past 0.6s for 0.15). It goes on past the opening:
-/// where the finger moves, and where it lifts. It sees the press alongside
-/// the bubble's taps, but never alongside the chat's scrolling, which
-/// would carry the lines away under the open menu.
-struct HeldPress: UIGestureRecognizerRepresentable {
-  /// How long a line is held before its menu opens (chatRules.longPressMs).
-  static let duration = Double(Chat.longPressMs) / 1000
-  /// Says where the finger is in its chat line's cell rather than on the
-  /// screen, which a line's SwiftUI in a cell cannot tell.
-  var inLine = false
-  /// The finger is down and not yet held, for the press's give.
-  let onPressing: (Bool) -> Void
-  /// Where the finger is as the press is held.
-  let onHold: (CGPoint) -> Void
-  let onMove: (CGPoint) -> Void
-  /// Where the finger lifted; none when the press was cancelled instead
-  /// (the system took the touch, or the bubble went from the screen), with
-  /// no place to tell.
-  let onLift: (CGPoint?) -> Void
-
-  func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
-
-  func makeUIGestureRecognizer(context: Context) -> TouchedPress {
-    let press = TouchedPress()
-    press.minimumPressDuration = Self.duration
-    press.delegate = context.coordinator
-    let coordinator = context.coordinator
-    coordinator.onPressing = onPressing
-    press.onTouched = { coordinator.onPressing($0) }
-    return press
-  }
-
-  func updateUIGestureRecognizer(_ recognizer: TouchedPress, context: Context) {
-    context.coordinator.onPressing = onPressing
-  }
-
-  func handleUIGestureRecognizerAction(_ recognizer: TouchedPress, context: Context) {
-    // A press cancelled as its view leaves the screen comes while SwiftUI
-    // takes that view down, where its geometry is no longer to be read.
-    func point() -> CGPoint {
-      inLine
-        ? context.converter.location(in: .named(LineSpace.name))
-        : context.converter.location(in: .global)
-    }
-    switch recognizer.state {
-    case .began: onHold(point())
-    case .changed: onMove(point())
-    case .ended: onLift(point())
-    case .cancelled: onLift(nil)
-    default: break
-    }
-  }
-
-  final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-    var onPressing: (Bool) -> Void = { _ in }
-
-    func gestureRecognizer(
-      _ gestureRecognizer: UIGestureRecognizer,
-      shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
-    ) -> Bool { !(other is UIPanGestureRecognizer) }
-  }
-}
-
-/// A long press that also tells when a finger goes down on it and when
-/// the press is over, held or not: what UIKit's long press keeps to
-/// itself until it is held.
-final class TouchedPress: UILongPressGestureRecognizer {
-  var onTouched: (Bool) -> Void = { _ in }
-
-  override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
-    super.touchesBegan(touches, with: event)
-    if state == .possible { onTouched(true) }
-  }
-
-  override func reset() {
-    super.reset()
-    onTouched(false)
-  }
-}
-
 /// What a line's long press opens: the line lifted where it was, the
-/// reactions over it and the menu under it or over them.
+/// reactions over it and the menu under it or over them. Where the line
+/// is, the chat's lines know (ChatController).
 struct MessageActionsRequest: Identifiable {
   let id = UUID()
   /// The line's op_id, so its bubble in the chat stands empty meanwhile.
   let lineID: String
-  /// Where the bubble is on the screen.
-  let spot: LineSpot
   let mine: Bool
   /// The bubble itself, drawn again over the dimming.
   let bubble: AnyView
-  /// The finger that opened it, while it is still down; none when opened
-  /// otherwise.
-  var finger: HeldFinger?
   /// The line's reactions and the reader, for the bar; none for a line
   /// that takes none yet, like one still on its way.
   var reactions: [LineReaction]?
@@ -219,152 +32,425 @@ struct MessageActionsRequest: Identifiable {
   var onReact: (String) -> Void = { _ in }
   var onMoreReactions: () -> Void = {}
   let actions: [MessageAction]
+}
 
-  var frame: CGRect { spot.frame }
+extension Chat {
+  /// How a line's menu opens and closes: UIKit's springs, as the
+  /// composer's (composerSpring), so they add up with whatever moves the
+  /// line meanwhile (the keyboard, the composer, the line growing).
+  static let menuOpenSpring = (duration: 0.28, bounce: 0.2)
+  static let menuCloseSpring = (duration: 0.25, bounce: 0.0)
+}
+
+/// One of a line's menu's choices.
+enum MenuTarget: Hashable {
+  case reaction(String)
+  case moreReactions
+  case action(String)
+
+  /// In the reactions' bar, else in the menu.
+  var inBar: Bool {
+    if case .action = self { false } else { true }
+  }
+}
+
+/// What the menu's SwiftUI and its layer share: the choice under the held
+/// finger, and where each choice is in its own part, for the layer to
+/// find what the finger is over.
+@MainActor @Observable final class MenuState {
+  nonisolated static let space = "line-menu"
+  var underFinger: MenuTarget?
+  @ObservationIgnored var targets: [MenuTarget: CGRect] = [:]
+}
+
+/// The menu's sizes, as the reader's text size makes them, within the
+/// screen's width: worked out once here, for the layer to place the parts
+/// and for their SwiftUI to draw at.
+struct MenuMetrics {
+  /// A reaction's round: as large as the text says, but the bar, the
+  /// first reactions and +, within the screen's width.
+  let cell: CGFloat
+  let bar: CGSize
+  let rowHeight: CGFloat
+  let menuWidth: CGFloat
+  static let groupGap: CGFloat = 9
+  static let menuInset: CGFloat = 6
+  /// The menu's corners, and how far in from them its rows are lit.
+  static let menuCorner = Radius.xxl
+
+  init(type: DynamicTypeSize, width: CGFloat) {
+    let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(type))
+    let body = UIFontMetrics(forTextStyle: .body)
+    func scaled(_ value: CGFloat) -> CGFloat { body.scaledValue(for: value, compatibleWith: traits) }
+    let margin = MenuPlacement.margin
+    let count = CGFloat(reactionChoices.count + 1)
+    cell = min(scaled(40), (width - 2 * margin - 8 - 2 * (count - 1)) / count)
+    bar = CGSize(width: count * cell + 2 * (count - 1) + 8, height: cell + 8)
+    rowHeight = scaled(Metrics.touch)
+    menuWidth = min(scaled(250), width - 2 * margin)
+  }
+
+  /// The menu with all its items.
+  func menuHeight(_ actions: [MessageAction]) -> CGFloat {
+    actions.enumerated().reduce(2 * Self.menuInset) { height, item in
+      let gap = item.offset > 0 && item.element.startsGroup ? Self.groupGap : 0
+      return height + gap + rowHeight
+    }
+  }
 }
 
 /// A line's long press (/design's MessageActions), as Messages and LINE
 /// draw one: the rest of the screen dims while the line stays bright, the
 /// first reactions in a bar over it with + for any other, and the menu
-/// under it or, with no room there, over the bar (placement(in:)), all
+/// under it or, with no room there, over the bar (MenuPlacement), all
 /// over the keyboard when it is up and they fit there, as LINE keeps it.
-/// A tap elsewhere closes it; a pick, by a tap or by the finger that
-/// opened it sliding onto one and lifting there, acts as it closes, as
-/// the system's menu does: what it opens comes in as the menu goes.
-struct MessageActionsOverlay: View {
-  @Environment(\.themeColors) private var colors
+/// Over everything in the chat's window, bars included, as Signal's
+/// context menu is: its parts are views of the window's own, placed by the
+/// chat's layout (ChatController) in the same pass and the same animation
+/// that moves the line under them, so they never stand apart from it. A
+/// tap elsewhere closes it; a pick, by a tap or by the finger that opened
+/// it sliding onto one and lifting there, acts as it closes, as the
+/// system's menu does: what it opens comes in as the menu goes.
+@MainActor final class MenuLayer: UIView {
+  private enum Phase {
+    /// Put where it opens from, not yet shown.
+    case rising
+    case open
+    /// Going: the bubble back to its line, the bar and the menu going along
+    /// with it from where they stood.
+    case closing(fade: Bool, from: CGRect, bar: CGPoint?, menu: CGPoint)
+  }
+
+  let request: MessageActionsRequest
+  /// Its pick made, or its line gone: told once it has gone, for the line
+  /// to draw its bubble again.
+  var onClosed: () -> Void = {}
+  /// Where it puts the bubble, the bar and the menu, as last laid out.
+  private(set) var placement: MenuPlacement?
   /// Motion reduced, it fades in and out where it is, nothing growing or
-  /// lifting (spec/chat.md, Opening a message's menu).
+  /// lifting (spec/chat.md, Reduced motion).
+  private let reduceMotion: Bool
+  private let metrics: MenuMetrics
+  private let state = MenuState()
+  private let scrim = UIView()
+  /// The bubble, cut at its foot to the room, lifted about its middle.
+  private let lift = UIView()
+  /// The bubble drawn smaller when too tall, about its top corner.
+  private let scaled = UIView()
+  /// The parts as UIKit moves and grows them, each holding its SwiftUI
+  /// at its own size: a hosting view transformed itself lays its SwiftUI
+  /// out at the transformed size, its words breaking anew.
+  private let barPart = UIView()
+  private let menuPart = UIView()
+  private let bubble: UIHostingController<AnyView>
+  private let bar: UIHostingController<AnyView>?
+  private let menu: UIHostingController<AnyView>
+  private var phase = Phase.rising
+  /// Where the line's bubble is.
+  private var anchor = CGRect.zero
+  /// The finger that opened it, while it is still down: where it went
+  /// down, and whether it has slid since, past which it picks what it is
+  /// over as it lifts.
+  private var finger: (start: CGPoint, slid: Bool)?
+  /// How far a finger slides before it picks what it is over, as far as
+  /// UIKit's long press lets a finger wander: the menu can come to it
+  /// rather than it to the menu.
+  private static let slop: CGFloat = 10
+
+  /// The menu `request` asks for, its bubble `size` as the chat draws it,
+  /// on a screen `width` wide.
+  init(
+    request: MessageActionsRequest, size: CGSize, environment: EnvironmentValues, width: CGFloat
+  ) {
+    self.request = request
+    reduceMotion = environment.accessibilityReduceMotion
+    metrics = MenuMetrics(type: environment.dynamicTypeSize, width: width)
+    // At its size in the chat, so its words break where they do there.
+    bubble = Self.host(
+      request.bubble.frame(width: size.width, height: size.height), environment: environment)
+    bar = request.reactions == nil ? nil : Self.host(EmptyView(), environment: environment)
+    menu = Self.host(EmptyView(), environment: environment)
+    super.init(frame: .zero)
+    // The parts' SwiftUI picks through the layer, which closes first.
+    let pick: (MenuTarget) -> Void = { [weak self] in self?.pick($0) }
+    bar?.rootView = Self.content(
+      ReactionBar(request: request, metrics: metrics, state: state, pick: pick), environment)
+    menu.rootView = Self.content(
+      MenuItems(request: request, metrics: metrics, state: state, pick: pick), environment)
+
+    scrim.backgroundColor = UIColor(environment.themeColors.scrim)
+    scrim.alpha = 0
+    scrim.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tappedOff)))
+    addSubview(scrim)
+    if let bar {
+      hold(bar, in: barPart)
+      addSubview(barPart)
+    }
+    lift.clipsToBounds = true
+    // A tap on the lifted bubble is a tap off the menu.
+    lift.isUserInteractionEnabled = false
+    bubble.view.frame = CGRect(origin: .zero, size: size)
+    scaled.addSubview(bubble.view)
+    lift.addSubview(scaled)
+    addSubview(lift)
+    hold(menu, in: menuPart)
+    addSubview(menuPart)
+    barPart.alpha = 0
+    menuPart.alpha = 0
+    // VoiceOver goes into it, over the chat, and out of it by its escape.
+    accessibilityViewIsModal = true
+    accessibilityElements = bar == nil ? [menuPart] : [barPart, menuPart]
+    lift.accessibilityElementsHidden = true
+    // The keyboard stays up over it: typing there goes back to the chat.
+    NotificationCenter.default.addObserver(
+      self, selector: #selector(typed), name: UITextView.textDidChangeNotification, object: nil)
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+  private static func host(_ view: some View, environment: EnvironmentValues)
+    -> UIHostingController<AnyView>
+  {
+    let host = UIHostingController(rootView: content(view, environment))
+    host.sizingOptions = []
+    // Placed by the layer, its SwiftUI laid out in its bounds alone.
+    host.safeAreaRegions = []
+    host.view.backgroundColor = .clear
+    return host
+  }
+
+  private func hold(_ host: UIHostingController<AnyView>, in part: UIView) {
+    host.view.frame = part.bounds
+    host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    part.addSubview(host.view)
+  }
+
+  private static func content(_ view: some View, _ environment: EnvironmentValues) -> AnyView {
+    AnyView(
+      view
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .coordinateSpace(.named(MenuState.space))
+        .environment(\.self, environment))
+  }
+
+  var isOpen: Bool {
+    if case .open = phase { true } else { false }
+  }
+
+  // MARK: Placing
+
+  /// Puts the parts round the line's bubble at `bubble` (where it was last
+  /// when none, its line gone), within the screen's safe `top` and
+  /// `bottom` and over the keyboard's top while it is up, in whatever
+  /// animation the chat's layout is in.
+  func place(bubble: CGRect?, top: CGFloat, bottom: CGFloat, keyboardTop: CGFloat?) {
+    if let bubble { anchor = bubble }
+    placement = MenuPlacement(
+      bubble: anchor, top: top, bottom: bottom, keyboardTop: keyboardTop, width: bounds.width,
+      bar: bar == nil ? nil : metrics.bar,
+      menu: CGSize(width: metrics.menuWidth, height: metrics.menuHeight(request.actions)),
+      leastMenu: metrics.rowHeight, mine: request.mine)
+    apply()
+  }
+
+  /// Every part where the phase has it.
+  private func apply() {
+    guard let placement else { return }
+    scrim.frame = bounds
+    switch phase {
+    case .rising:
+      scrim.alpha = 0
+      // With motion reduced, a bubble the menu moves or draws smaller is put
+      // there at once, not slid.
+      if reduceMotion {
+        put(placement.bubble, scale: placement.scale)
+      } else {
+        put(anchor, scale: 1)
+      }
+      lift.transform = .identity
+      putParts(bar: placement.bar.map(middle), menu: middle(placement.menu), shown: false)
+    case .open:
+      scrim.alpha = 1
+      put(placement.bubble, scale: placement.scale)
+      // Grown about its own middle, as it rises from where it was.
+      lift.transform = reduceMotion ? .identity : CGAffineTransform(scaleX: 1.02, y: 1.02)
+      putParts(bar: placement.bar.map(middle), menu: middle(placement.menu), shown: true)
+    case .closing(let fade, let from, let barCenter, let menuCenter):
+      scrim.alpha = 0
+      put(anchor, scale: 1)
+      lift.transform = .identity
+      lift.alpha = fade ? 0 : 1
+      let dx = anchor.minX - from.minX
+      let dy = anchor.minY - from.minY
+      putParts(
+        bar: barCenter.map { CGPoint(x: $0.x + dx, y: $0.y + dy) },
+        menu: CGPoint(x: menuCenter.x + dx, y: menuCenter.y + dy), shown: false)
+    }
+  }
+
+  private func middle(_ frame: CGRect) -> CGPoint {
+    CGPoint(x: frame.midX, y: frame.midY)
+  }
+
+  /// The bubble drawn as `frame` shows it: `scale` times its size, about
+  /// its top corner by the writer, cut at its foot to the frame's height.
+  /// Cut at its foot only, so a run's first bubble keeps its tail.
+  private func put(_ frame: CGRect, scale: CGFloat) {
+    let reach = BubbleShape.tailReach
+    lift.bounds = CGRect(x: 0, y: 0, width: frame.width + 2 * reach, height: frame.height)
+    lift.center = CGPoint(x: frame.midX, y: frame.midY)
+    let size = anchor.size
+    scaled.bounds = CGRect(origin: .zero, size: size)
+    scaled.transform = CGAffineTransform(scaleX: scale, y: scale)
+    let half = size.width * scale / 2
+    scaled.center = CGPoint(
+      x: request.mine ? lift.bounds.width - reach - half : reach + half,
+      y: size.height * scale / 2)
+  }
+
+  /// The bar and the menu centered at `bar` and `menu`, at their size, or
+  /// as they come and go: smaller from their corner by the bubble, faded.
+  private func putParts(bar barCenter: CGPoint?, menu menuCenter: CGPoint, shown: Bool) {
+    guard let placement else { return }
+    if bar != nil, let barCenter, let frame = placement.bar {
+      barPart.bounds = CGRect(origin: .zero, size: frame.size)
+      barPart.center = barCenter
+      barPart.transform = grown(barPart, from: CGPoint(x: request.mine ? 1 : 0, y: 1), shown)
+      barPart.alpha = shown ? 1 : 0
+    }
+    menuPart.bounds = CGRect(origin: .zero, size: placement.menu.size)
+    menuPart.center = menuCenter
+    let corner = CGPoint(x: request.mine ? 1 : 0, y: placement.menuUnder ? 0 : 1)
+    menuPart.transform = grown(menuPart, from: corner, shown)
+    menuPart.alpha = shown ? 1 : 0
+  }
+
+  /// At its size when `shown` or with motion reduced, else smaller about
+  /// `corner` (in its own unit square).
+  private func grown(_ view: UIView, from corner: CGPoint, _ shown: Bool) -> CGAffineTransform {
+    guard !shown, !reduceMotion else { return .identity }
+    let dx = (corner.x - 0.5) * view.bounds.width
+    let dy = (corner.y - 0.5) * view.bounds.height
+    return CGAffineTransform(translationX: dx, y: dy).scaledBy(x: 0.85, y: 0.85)
+      .translatedBy(x: -dx, y: -dy)
+  }
+
+  // MARK: Coming and going
+
+  /// Shows it, from where it was placed rising.
+  func open() {
+    guard case .rising = phase else { return }
+    phase = .open
+    animate(Chat.menuOpenSpring) { self.apply() }
+    UIAccessibility.post(notification: .screenChanged, argument: nil)
+  }
+
+  /// Goes, quick at first and settling, then tells `onClosed`; acts
+  /// meanwhile, as the system's menu does. `fade` takes the bubble away
+  /// too, its line gone from the chat.
+  func close(fade: Bool = false, then action: (() -> Void)? = nil) {
+    if case .closing = phase { return }
+    phase = .closing(
+      fade: fade, from: anchor, bar: bar == nil ? nil : barPart.center, menu: menuPart.center)
+    finger = nil
+    state.underFinger = nil
+    animate(Chat.menuCloseSpring, animations: apply) { [weak self] in self?.onClosed() }
+    action?()
+  }
+
+  private func animate(
+    _ spring: (duration: Double, bounce: Double), animations: @escaping () -> Void,
+    completion: (() -> Void)? = nil
+  ) {
+    if reduceMotion {
+      UIView.animate(
+        withDuration: 0.2, delay: 0, options: [.curveEaseOut, .allowUserInteraction],
+        animations: animations
+      ) { _ in completion?() }
+    } else {
+      UIView.animate(
+        springDuration: spring.duration, bounce: spring.bounce, options: .allowUserInteraction,
+        animations: animations
+      ) { _ in completion?() }
+    }
+  }
+
+  @objc private func tappedOff() { close() }
+
+  @objc private func typed() { close() }
+
+  override func accessibilityPerformEscape() -> Bool {
+    close()
+    return true
+  }
+
+  // MARK: The held finger
+
+  /// The finger that opened it is still down, at `point` on the window.
+  func hold(at point: CGPoint) {
+    finger = (point, false)
+  }
+
+  func fingerMoved(to point: CGPoint) {
+    guard var finger, isOpen else { return }
+    if hypot(point.x - finger.start.x, point.y - finger.start.y) >= Self.slop { finger.slid = true }
+    self.finger = finger
+    let under = finger.slid ? target(at: point) : nil
+    if state.underFinger != under { state.underFinger = under }
+  }
+
+  /// Lifted at `point`, or cancelled with none: what it slid onto is
+  /// picked; lifted over nothing, or held still where the menu came to it,
+  /// it stays open for a tap, as a system menu does.
+  func fingerLifted(at point: CGPoint?) {
+    let slid = finger?.slid == true
+    finger = nil
+    guard isOpen, slid, let point, let target = target(at: point) else {
+      state.underFinger = nil
+      return
+    }
+    pick(target)
+  }
+
+  /// The choice under `point` on the window, where its part is now.
+  private func target(at point: CGPoint) -> MenuTarget? {
+    state.targets.first { target, frame in
+      guard let part = target.inBar ? bar?.view : menu.view else { return false }
+      return frame.contains(part.convert(point, from: nil))
+    }?.key
+  }
+
+  /// Closes, then does what `target` stands for.
+  private func pick(_ target: MenuTarget) {
+    switch target {
+    case .reaction(let emoji):
+      close { [request] in request.onReact(emoji) }
+    case .moreReactions:
+      close(then: request.onMoreReactions)
+    case .action(let id):
+      close(then: request.actions.first { $0.id == id }?.run)
+    }
+  }
+}
+
+/// The first reactions over a held line, and + for any other.
+private struct ReactionBar: View {
+  @Environment(\.themeColors) private var colors
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   let request: MessageActionsRequest
-  /// Takes the overlay away, once it has gone.
-  let onClose: () -> Void
-  @State private var shown = false
-  /// A choice was made: the menu goes, and leaves the keyboard to it (返信
-  /// brings it up as the menu goes).
-  @State private var closing = false
-  /// Where each choice is on the screen, for the held finger.
-  @State private var targets: [Target: CGRect] = [:]
-
-  private static var gap: CGFloat { 8 }
-  /// A reaction's round, its rows and its width grow with the reader's
-  /// text size, as the words in them do; within the screen's width.
-  @ScaledMetric(relativeTo: .body) private var reactionSize: CGFloat = 40
-  @ScaledMetric(relativeTo: .body) private var rowHeight: CGFloat = Metrics.touch
-  @ScaledMetric(relativeTo: .body) private var menuSize: CGFloat = 250
-  private var menuWidth: CGFloat { min(menuSize, Self.screenWidth - 2 * Self.margin) }
-  /// A reaction's round: as large as the text says, but the bar, the
-  /// first reactions and +, within the screen's width.
-  private var cell: CGFloat {
-    let count = CGFloat(reactionChoices.count + 1)
-    return min(reactionSize, (Self.screenWidth - 2 * Self.margin - 8 - 2 * (count - 1)) / count)
-  }
-  private var barHeight: CGFloat { cell + 8 }
-  private static var groupGap: CGFloat { 9 }
-  /// The menu's corners, and how far in from them its rows are lit.
-  private static var menuCorner: CGFloat { Radius.xxl }
-  private static var menuInset: CGFloat { 6 }
-  private static var margin: CGFloat { 12 }
-  /// How small a tall bubble is drawn at least; past that its end is cut
-  /// off.
-  private static var leastScale: CGFloat { 0.5 }
+  let metrics: MenuMetrics
+  let state: MenuState
+  let pick: (MenuTarget) -> Void
 
   var body: some View {
-    GeometryReader { proxy in
-      let place = placement(in: proxy.size)
-      let (top, bottom) = room(in: proxy.size)
-      ZStack(alignment: .topLeading) {
-        colors.scrim
-          .opacity(shown ? 1 : 0)
-          .onTapGesture { close(nil) }
-          .accessibilityHidden(true)
-        if request.reactions != nil {
-          reactionBar
-            .modifier(Placed(edge: place.edge, x: place.x, y: place.barY, width: proxy.size.width))
-            .scaleEffect(grown ? 1 : 0.85, anchor: request.mine ? .bottomTrailing : .bottomLeading)
-            .opacity(shown ? 1 : 0)
-        }
-        request.bubble
-          .frame(width: request.frame.width, height: request.frame.height)
-          // Drawn smaller about its top corner by the writer when too tall,
-          // then cut to the room.
-          .scaleEffect(placed ? place.scale : 1, anchor: request.mine ? .topTrailing : .topLeading)
-          .frame(
-            width: request.frame.width, height: placed ? place.bubbleHeight : request.frame.height,
-            alignment: .top
-          )
-          // Cut at its foot only, so a run's first bubble keeps its tail.
-          .clipShape(CutsHeight())
-          // Grown about its own middle, before it is put in place; it
-          // rises from where it was and goes back there.
-          .scaleEffect(shown && !reduceMotion ? 1.02 : 1)
-          .offset(x: request.frame.minX, y: placed ? place.bubbleY : request.frame.minY)
-          .accessibilityHidden(true)
-        menu(height: menuShown(top, bottom))
-          .frame(width: menuWidth)
-          .modifier(Placed(edge: place.edge, x: place.x, y: place.menuY, width: proxy.size.width))
-          .scaleEffect(grown ? 1 : 0.85, anchor: menuAnchor(under: place.menuUnder))
-          .opacity(shown ? 1 : 0)
-      }
-      .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
-      // A keyboard up stays, as LINE keeps it, when all three fit over it
-      // where the bubble is; else it goes for the room it took, and they
-      // go along with the chat as it comes down (a small screen, a tall
-      // line). Asked again as the keyboard changes (another keyboard
-      // picked, taller) while the menu is open.
-      .onAppear { makeRoom(in: proxy.size) }
-      .onChange(of: KeyboardTop.shared.y) { makeRoom(in: proxy.size) }
-      // Going along with the chat as it moves under it.
-      .animation(.smooth(duration: 0.3), value: request.frame)
-    }
-    .ignoresSafeArea()
-    .accessibilityAddTraits(.isModal)
-    .accessibilityAction(.escape) { close(nil) }
-    .sensoryFeedback(.selection, trigger: underFinger) { _, now in now != nil }
-    // The keyboard stays up over it: typing there goes back to the chat.
-    .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidChangeNotification)) {
-      _ in close(nil)
-    }
-    // Its line gone from the chat (taken back, its cell let go, the chat
-    // closed), it goes too, as it does when the app leaves the screen, as
-    // the system's menus do.
-    .onChange(of: request.spot.lifted) { _, lifted in
-      if !lifted { close(nil) }
-    }
-    .onReceive(
-      NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)
-    ) { _ in close(nil) }
-    .onChange(of: request.finger?.lifted) { _, lifted in
-      // Lifted over nothing, or held still where the menu came to it, it
-      // stays open for a tap, as a system menu does.
-      if lifted == true, let target = underFinger {
-        pick(target)
-      }
-    }
-    .onAppear {
-      withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.28, bounce: 0.2)) {
-        shown = true
-      }
-      // VoiceOver goes into it, over the chat.
-      AccessibilityNotification.ScreenChanged().post()
-    }
-  }
-
-  /// The bar and the menu at their size: grown from their corner by the
-  /// bubble as they come, unless motion is reduced.
-  private var grown: Bool { shown || reduceMotion }
-  /// The bubble where the menu puts it, drawn smaller when too tall: from
-  /// the start with motion reduced, rather than moving there.
-  private var placed: Bool { shown || reduceMotion }
-
-  // MARK: Parts
-
-  private var reactionBar: some View {
+    let cell = metrics.cell
     HStack(spacing: 2) {
       ForEach(reactionChoices, id: \.self) { emoji in
         let chosen = (request.reactions ?? []).contains {
           $0.emoji == emoji && $0.userIDs.contains(request.meID ?? "")
         }
+        let held = state.underFinger == .reaction(emoji)
         Button {
           pick(.reaction(emoji))
         } label: {
@@ -372,16 +458,16 @@ struct MessageActionsOverlay: View {
             .font(.system(size: cell * 0.65))
             .frame(width: cell, height: cell)
             .background(
-              chosen ? colors.accentContainer
-                : underFinger == .reaction(emoji) && reduceMotion ? colors.fillSecondary : .clear,
+              chosen ? colors.accentContainer : held && reduceMotion ? colors.fillSecondary : .clear,
               in: Circle())
-            .scaleEffect(underFinger == .reaction(emoji) && !reduceMotion ? 1.3 : 1)
-            .animation(.spring(duration: 0.2), value: underFinger)
+            .scaleEffect(held && !reduceMotion ? 1.3 : 1)
+            .animation(.spring(duration: 0.2), value: held)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(chosen ? "\(emoji)のリアクションを外す" : "\(emoji)でリアクション")
-        .modifier(Tracked(target: .reaction(emoji), targets: $targets))
+        .modifier(Tracked(target: .reaction(emoji), state: state))
       }
+      let held = state.underFinger == .moreReactions
       Button {
         pick(.moreReactions)
       } label: {
@@ -390,266 +476,84 @@ struct MessageActionsOverlay: View {
           .foregroundStyle(colors.textSecondary)
           .frame(width: cell, height: cell)
           .background(colors.fillTertiary, in: Circle())
-          .scaleEffect(underFinger == .moreReactions && !reduceMotion ? 1.3 : 1)
-          .animation(.spring(duration: 0.2), value: underFinger)
+          .scaleEffect(held && !reduceMotion ? 1.3 : 1)
+          .animation(.spring(duration: 0.2), value: held)
       }
       .buttonStyle(.plain)
       .accessibilityLabel("ほかの絵文字でリアクション")
-      .modifier(Tracked(target: .moreReactions, targets: $targets))
+      .modifier(Tracked(target: .moreReactions, state: state))
     }
     .padding(4)
-    .frame(height: barHeight)
+    .frame(width: metrics.bar.width, height: metrics.bar.height)
     // Glass over the dimming, as Messages' tapbacks are.
     .glassEffect(.regular, in: .capsule)
   }
+}
 
-  /// The menu, `height` tall: scrolled through when its items, grown with
-  /// a large text size, are taller than the room.
-  private func menu(height: CGFloat) -> some View {
+/// A held line's menu, as tall as its layer gives it: scrolled through
+/// when its items, grown with a large text size, are taller than the room.
+private struct MenuItems: View {
+  @Environment(\.themeColors) private var colors
+  let request: MessageActionsRequest
+  let metrics: MenuMetrics
+  let state: MenuState
+  let pick: (MenuTarget) -> Void
+
+  var body: some View {
+    let corner = RoundedRectangle(cornerRadius: MenuMetrics.menuCorner)
     ScrollView {
-      menuItems
+      VStack(spacing: 0) {
+        ForEach(Array(request.actions.enumerated()), id: \.element.id) { index, action in
+          // Its groups apart by a rule, its items by nothing, as iOS 26's
+          // menus are.
+          if index > 0, action.startsGroup {
+            Rectangle()
+              .fill(colors.separator)
+              .frame(height: 0.5)
+              .padding(.horizontal, 16)
+              .frame(height: MenuMetrics.groupGap)
+          }
+          Button {
+            pick(.action(action.id))
+          } label: {
+            HStack {
+              Text(action.title)
+                // One line in its row, however large the text.
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+              Spacer(minLength: 12)
+              Image(systemName: action.systemImage)
+            }
+            .font(.body)
+            .foregroundStyle(action.destructive ? colors.dangerDefault : colors.textPrimary)
+            .padding(.horizontal, 12)
+            .frame(height: metrics.rowHeight)
+            .contentShape(.rect)
+          }
+          .buttonStyle(MenuRowStyle(held: state.underFinger == .action(action.id)))
+          .accessibilityLabel(action.title)
+          .modifier(Tracked(target: .action(action.id), state: state))
+        }
+      }
+      .padding(MenuMetrics.menuInset)
     }
     .scrollBounceBehavior(.basedOnSize)
-    .frame(height: height)
-    .clipShape(RoundedRectangle(cornerRadius: Self.menuCorner))
+    .clipShape(corner)
     // The system's menu glass, as iOS 26 draws a context menu.
-    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Self.menuCorner))
-  }
-
-  private var menuItems: some View {
-    VStack(spacing: 0) {
-      ForEach(Array(request.actions.enumerated()), id: \.element.id) { index, action in
-        // Its groups apart by a rule, its items by nothing, as iOS 26's
-        // menus are.
-        if index > 0, action.startsGroup {
-          Rectangle()
-            .fill(colors.separator)
-            .frame(height: 0.5)
-            .padding(.horizontal, 16)
-            .frame(height: Self.groupGap)
-        }
-        Button {
-          pick(.action(action.id))
-        } label: {
-          HStack {
-            Text(action.title)
-              // One line in its row, however large the text.
-              .lineLimit(1)
-              .minimumScaleFactor(0.6)
-            Spacer(minLength: 12)
-            Image(systemName: action.systemImage)
-          }
-          .font(.body)
-          .foregroundStyle(action.destructive ? colors.dangerDefault : colors.textPrimary)
-          .padding(.horizontal, 12)
-          .frame(height: rowHeight)
-          .contentShape(.rect)
-        }
-        .buttonStyle(MenuRowStyle(held: underFinger == .action(action.id)))
-        .accessibilityLabel(action.title)
-        .modifier(Tracked(target: .action(action.id), targets: $targets))
-      }
-    }
-    .padding(Self.menuInset)
-  }
-
-  // MARK: Placing
-
-  /// Where the bar, the bubble and the menu go: the bubble where it was,
-  /// the bar over it and the menu under it, or over the bar when there is
-  /// no room under it, as LINE turns it. Only when neither fits are the
-  /// three moved together to stay between the screen's edges, the bubble
-  /// drawn smaller when they cannot fit, and cut short at its end past
-  /// that.
-  private func placement(in size: CGSize) -> Placement {
-    let (top, bottom) = room(in: size)
-    let frame = request.frame
-    if fitsInPlace(top: top, bottom: bottom) {
-      let under = frame.maxY + menuSpace(top, bottom) <= bottom
-      return Placement(
-        edge: request.mine ? .trailing : .leading,
-        x: request.mine ? frame.maxX : frame.minX,
-        barY: frame.minY - barSpace,
-        bubbleY: frame.minY,
-        bubbleHeight: frame.height,
-        scale: 1,
-        menuY: under ? frame.maxY + Self.gap : frame.minY - barSpace - menuSpace(top, bottom),
-        menuUnder: under)
-    }
-    let space = max(bottom - top - barSpace - menuSpace(top, bottom), Self.leastBubble)
-    let scale = min(1, max(space / frame.height, Self.leastScale))
-    let bubbleHeight = min(frame.height * scale, space)
-    var bubbleY = frame.minY
-    if bubbleY - barSpace < top {
-      bubbleY = top + barSpace
-    }
-    if bubbleY + bubbleHeight + menuSpace(top, bottom) > bottom {
-      bubbleY = bottom - menuSpace(top, bottom) - bubbleHeight
-    }
-    return Placement(
-      edge: request.mine ? .trailing : .leading,
-      x: request.mine ? request.frame.maxX : request.frame.minX,
-      barY: bubbleY - barSpace,
-      bubbleY: bubbleY,
-      bubbleHeight: bubbleHeight,
-      scale: scale,
-      menuY: bubbleY + bubbleHeight + Self.gap,
-      menuUnder: true)
-  }
-
-  /// What the three may take of the screen: within its safe edges, and
-  /// over the keyboard while it is up.
-  private func room(in size: CGSize) -> (top: CGFloat, bottom: CGFloat) {
-    let insets = Self.safeInsets
-    let bottom = min(size.height - insets.bottom, KeyboardTop.shared.y ?? .infinity)
-    return (insets.top + Self.margin, bottom - Self.margin)
-  }
-
-  /// Puts the keyboard down when the three do not fit over it in place.
-  private func makeRoom(in size: CGSize) {
-    guard !closing else { return }
-    let (top, bottom) = room(in: size)
-    if KeyboardTop.shared.y != nil, !fitsInPlace(top: top, bottom: bottom) {
-      UIApplication.shared.sendAction(
-        #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-    }
-  }
-
-  /// The bubble stays where it is, with the bar over it and the menu under
-  /// it or over the bar, between `top` and `bottom`.
-  private func fitsInPlace(top: CGFloat, bottom: CGFloat) -> Bool {
-    let frame = request.frame
-    let stays = frame.minY - barSpace >= top && frame.maxY <= bottom
-    let menu = menuSpace(top, bottom)
-    return stays && (frame.maxY + menu <= bottom || frame.minY - barSpace - menu >= top)
-  }
-
-  private var barSpace: CGFloat { request.reactions == nil ? 0 : barHeight + Self.gap }
-  private func menuSpace(_ top: CGFloat, _ bottom: CGFloat) -> CGFloat {
-    Self.gap + menuShown(top, bottom)
-  }
-
-  /// How tall the menu is drawn between `top` and `bottom`: all its items,
-  /// or with a large text size as much as leaves the bar and the bubble at
-  /// its least their room, the rest scrolled to.
-  private func menuShown(_ top: CGFloat, _ bottom: CGFloat) -> CGFloat {
-    let room = bottom - top - barSpace - Self.leastBubble - 2 * Self.gap
-    return min(menuHeight, max(rowHeight, room))
-  }
-
-  /// The least height a bubble is drawn at beside its menu.
-  private static var leastBubble: CGFloat { 60 }
-
-  /// Where the menu grows from: its corner by the bubble.
-  private func menuAnchor(under: Bool) -> UnitPoint {
-    switch (under, request.mine) {
-    case (true, true): .topTrailing
-    case (true, false): .topLeading
-    case (false, true): .bottomTrailing
-    case (false, false): .bottomLeading
-    }
-  }
-
-  private var menuHeight: CGFloat {
-    request.actions.enumerated().reduce(2 * Self.menuInset) { height, item in
-      let gap = item.offset > 0 && item.element.startsGroup ? Self.groupGap : 0
-      return height + gap + rowHeight
-    }
-  }
-
-  private static var screenWidth: CGFloat {
-    UIApplication.shared.connectedScenes
-      .compactMap { ($0 as? UIWindowScene)?.keyWindow }
-      .first?.bounds.width ?? 390
-  }
-
-  private static var safeInsets: UIEdgeInsets {
-    UIApplication.shared.connectedScenes
-      .compactMap { ($0 as? UIWindowScene)?.keyWindow }
-      .first?.safeAreaInsets ?? .zero
-  }
-
-  /// The choice under the held finger, if any.
-  private var underFinger: Target? {
-    guard let finger = request.finger, finger.slid, let point = finger.point else { return nil }
-    return targets.first { $0.value.contains(point) }?.key
-  }
-
-  /// Closes, then does what `target` stands for.
-  private func pick(_ target: Target) {
-    switch target {
-    case .reaction(let emoji):
-      close { request.onReact(emoji) }
-    case .moreReactions:
-      close(request.onMoreReactions)
-    case .action(let id):
-      close(request.actions.first { $0.id == id }?.run)
-    }
-  }
-
-  /// Goes, quick at first and settling, and acts meanwhile.
-  private func close(_ action: (() -> Void)?) {
-    guard shown else { return }
-    closing = true
-    withAnimation(.smooth(duration: 0.25)) {
-      shown = false
-    } completion: {
-      onClose()
-    }
-    action?()
+    .glassEffect(.regular, in: corner)
+    .sensoryFeedback(.selection, trigger: state.underFinger) { _, now in now != nil }
   }
 }
 
-private struct Placement {
-  let edge: HorizontalEdge
-  /// The bubble's edge by its writer's side, the bar and menu lined up
-  /// with it.
-  let x: CGFloat
-  let barY: CGFloat
-  let bubbleY: CGFloat
-  let bubbleHeight: CGFloat
-  /// How large the bubble is drawn: below 1 when too tall for the room.
-  let scale: CGFloat
-  let menuY: CGFloat
-  /// The menu under the bubble; else over the bar.
-  let menuUnder: Bool
-}
-
-/// One of the overlay's choices.
-private enum Target: Hashable {
-  case reaction(String)
-  case moreReactions
-  case action(String)
-}
-
-/// Keeps where a choice is on the screen, for the held finger.
+/// Keeps where a choice is in its part, for the held finger.
 private struct Tracked: ViewModifier {
-  let target: Target
-  @Binding var targets: [Target: CGRect]
+  let target: MenuTarget
+  let state: MenuState
 
   func body(content: Content) -> some View {
-    content.onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
-      targets[target] = $0
+    content.onGeometryChange(for: CGRect.self) { $0.frame(in: .named(MenuState.space)) } action: {
+      state.targets[target] = $0
     }
-  }
-}
-
-/// A view put at `y`, its leading or trailing edge at `x`, kept inside
-/// the screen's sides.
-private struct Placed: ViewModifier {
-  let edge: HorizontalEdge
-  let x: CGFloat
-  let y: CGFloat
-  let width: CGFloat
-
-  func body(content: Content) -> some View {
-    content
-      .fixedSize()
-      .alignmentGuide(.leading) { size in
-        let left = edge == .leading ? x : x - size.width
-        return -min(max(left, 12), width - size.width - 12)
-      }
-      .alignmentGuide(.top) { _ in -y }
   }
 }
 
@@ -667,181 +571,52 @@ private struct MenuRowStyle: ButtonStyle {
   }
 }
 
-/// A window never made the key one, though tapped: the chat's window
-/// keeps the keyboard's field, so the keyboard stays up under a tap on
-/// the menu, and a pick that opens it (返信) brings it up as the menu
-/// goes rather than once its window is away.
-private final class KeylessWindow: UIWindow {
-  override var canBecomeKey: Bool { false }
-}
-
-/// A window over the app's own, for what must cover everything at once,
-/// bars included, with no presentation of its own: a line's reactions
-/// and menu draw their coming in themselves, where a full-screen cover
-/// would slide in first.
-@MainActor final class OverlayWindow {
-  static let shared = OverlayWindow()
-  private var window: UIWindow?
-
-  func show(_ view: some View) {
-    guard
-      let scene = UIApplication.shared.connectedScenes
-        .compactMap({ $0 as? UIWindowScene })
-        .first(where: { $0.activationState == .foregroundActive })
-    else { return }
-    let host = UIHostingController(rootView: AnyView(view))
-    host.view.backgroundColor = .clear
-    let window = KeylessWindow(windowScene: scene)
-    window.windowLevel = .alert
-    window.backgroundColor = .clear
-    window.rootViewController = host
-    window.isHidden = false
-    self.window = window
-  }
-
-  /// Takes the window shown now away once the line under it draws its
-  /// bubble again, so the bubble never blinks out between the two; one
-  /// shown meanwhile, for another line, stays.
-  func hide(once spot: LineSpot?) {
-    guard let closing = window else { return }
-    window = nil
-    guard let spot else {
-      closing.isHidden = true
-      return
-    }
-    spot.whenBack { closing.isHidden = true }
-  }
-}
-
-/// A bubble held for its reactions and menu: it gives a little under the
-/// finger, as Messages' bubble does, and opens them once held; the finger
-/// then picks one by lifting over it, as a system menu's does.
+/// A bubble held for its reactions and menu, by the chat's lines' long
+/// press (ChatController): it tells its cell where it is, for the press
+/// to find what it is on and the menu where to lift it from, and gives a
+/// little while a finger is down on it, as Messages' bubble does.
 private struct HeldBubble: ViewModifier {
+  /// The line it is, by its op_id.
+  let lineID: String
   /// Its bubble is lifted over the chat, its place standing empty.
   let lifted: Bool
-  /// VoiceOver asking to open them without the press.
-  let asked: MenuAsk?
-  /// Opens the reactions and menu, from where the bubble is, with the
-  /// finger that opened them while it stays down, and the link held, for
-  /// its own menu instead.
-  let onActions: (LineSpot, HeldFinger?, URL?) -> Void
   /// A tap on it, not on a part with its own.
   let onTap: () -> Void
-  /// Where the bubble is on the screen, for its menu.
-  @State private var frame = CGRect.zero
-  /// Where it is told to its open menu, kept while it is open.
-  @State private var spot: LineSpot?
   /// Where its words' links are drawn.
   @State private var links = LinkSpots()
-  @State private var pressing = false
-  /// The finger that opened the menu, followed until it lifts.
-  @State private var held: HeldFinger?
-  /// The chat line's cell it is in, from which its place on the screen
-  /// is told; none elsewhere.
-  @Environment(\.lineSpace) private var lineSpace
+  /// The chat line's cell it is in.
+  @Environment(\.lineSpace) private var space
 
   func body(content: Content) -> some View {
-    let inLine = lineSpace != nil
+    let pressed = space?.pressed == lineID
     content
       .environment(\.linkSpots, links)
       // Its own size and where its middle is: the press's give shrinks
-      // its frame on the screen, not its size.
+      // its frame in the cell, not its size.
       .onGeometryChange(for: CGRect.self) { proxy in
-        let seen = inLine ? proxy.frame(in: .named(LineSpace.name)) : proxy.frame(in: .global)
+        let seen = proxy.frame(in: .named(LineSpace.name))
         return CGRect(
           x: seen.midX - proxy.size.width / 2, y: seen.midY - proxy.size.height / 2,
           width: proxy.size.width, height: proxy.size.height)
-      } action: {
-        frame = $0
-        if let spot { place(spot) }
+      } action: { [links] in
+        space?.note(lineID, at: $0, links: links)
       }
-      .scaleEffect(pressing ? 0.96 : 1)
+      .scaleEffect(pressed ? 0.96 : 1)
       .opacity(lifted ? 0 : 1)
-      .animation(.easeOut(duration: 0.2), value: pressing)
-      // A tap is the bubble's own (a photo opens large), but for the
-      // finger lifting from the press that opened its menu.
-      .onTapGesture { if !links.held { onTap() } }
-      .gesture(
-        HeldPress(inLine: inLine) { pressing = $0 } onHold: {
-          pressing = false
-          // A link held opens its own menu instead.
-          open(link: links.link(at: $0), at: onScreen($0))
-        } onMove: {
-          held?.point = onScreen($0)
-        } onLift: { point in
-          // Cancelled, it picks nothing, as a system menu's press does.
-          held?.point = point.map(onScreen)
-          held?.lifted = true
-          held = nil
-          // Past the tap a link takes as the finger lifts.
-          Task {
-            try? await Task.sleep(for: .milliseconds(300))
-            links.held = false
-          }
-        })
-      .onChange(of: asked) { _, asked in
-        if asked != nil { onActions(newSpot(), nil, nil) }
-      }
-      .onChange(of: lifted) { _, lifted in
-        if !lifted, let spot {
-          lineSpace?.unfollow(spot)
-          self.spot = nil
-          spot.back()
-        }
-      }
-      .onDisappear { spot?.back() }
-  }
-
-  /// Where the bubble is now, kept from here on for the menu opening.
-  private func newSpot() -> LineSpot {
-    let spot = LineSpot(frame: frame)
-    self.spot = spot
-    place(spot)
-    return spot
-  }
-
-  /// Puts `spot` where the bubble is on the screen, kept there as its
-  /// chat line's cell moves.
-  private func place(_ spot: LineSpot) {
-    if let lineSpace {
-      lineSpace.follow(spot, at: frame)
-    } else {
-      spot.frame = frame
-    }
-  }
-
-  private func onScreen(_ point: CGPoint) -> CGPoint {
-    lineSpace?.onScreen(point) ?? point
-  }
-
-  /// Opens the menu, the link's when one is held, with the finger that
-  /// opened it, at `point`.
-  private func open(link: URL?, at point: CGPoint) {
-    // Only once a menu opens: a tap lifted before it, on a link or a
-    // reply's quote, is still that tap's.
-    links.held = true
-    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    let finger = HeldFinger(at: point)
-    held = finger
-    onActions(newSpot(), finger, link)
+      .animation(.easeOut(duration: 0.2), value: pressed)
+      // A tap is the bubble's own (a photo opens large); a press held past
+      // it is the menu's, and the tap then never is.
+      .onTapGesture(perform: onTap)
+      .onDisappear { space?.forget(lineID) }
   }
 }
 
 extension View {
-  /// Held, opens the bubble's reactions and menu (HeldBubble); a tap on
-  /// it does `onTap`.
-  func heldForActions(
-    lifted: Bool, asked: MenuAsk? = nil, onTap: @escaping () -> Void = {},
-    onActions: @escaping (LineSpot, HeldFinger?, URL?) -> Void
-  ) -> some View {
-    modifier(HeldBubble(lifted: lifted, asked: asked, onActions: onActions, onTap: onTap))
-  }
-}
-
-/// Its frame cut at the top and the foot only, the sides left open as far
-/// as a bubble's tail reaches.
-private struct CutsHeight: Shape {
-  nonisolated func path(in rect: CGRect) -> Path {
-    Path(rect.insetBy(dx: -BubbleShape.tailReach, dy: 0))
+  /// The bubble of the line `lineID`, held for its reactions and menu
+  /// (HeldBubble); a tap on it does `onTap`.
+  func heldForActions(lineID: String, lifted: Bool, onTap: @escaping () -> Void = {})
+    -> some View
+  {
+    modifier(HeldBubble(lineID: lineID, lifted: lifted, onTap: onTap))
   }
 }

@@ -108,9 +108,9 @@ enum LineAction {
   case vote(Day, Bool)
   /// 日にちを決める.
   case decide
-  /// Held: its reactions and menu, from where its bubble is, with the
-  /// finger that opened them while it stays down, and the link held.
-  case hold(spot: LineSpot, finger: HeldFinger?, link: URL?)
+  /// Held, or asked by VoiceOver: its reactions and menu, or the link's
+  /// own menu for a link held.
+  case hold(link: URL?)
   /// An item of its menu by name, from VoiceOver, without the menu.
   case menu(String)
 }
@@ -194,9 +194,6 @@ struct LineView: View {
   @Environment(\.openURL) private var openURL
   /// What its words take to draw, kept while its row looks the same.
   @Environment(\.keptDrawing) private var kept
-  /// The menu VoiceOver asked last to open: the line's, or one of its
-  /// album's photos'.
-  @State private var menuAsk: MenuAsk?
 
   private static var avatar: CGFloat { 32 }
 
@@ -218,12 +215,6 @@ struct LineView: View {
     let drawing = LineDrawing(text: text, names: names)
     kept.drawing = drawing
     return drawing
-  }
-
-  /// VoiceOver's ask to open the menu of `lineID`, the line or one of its
-  /// album's photos, for that one's bubble alone.
-  private func asked(_ lineID: String) -> MenuAsk? {
-    menuAsk?.lineID == lineID ? menuAsk : nil
   }
 
   private func act(_ action: LineAction, on lineID: String? = nil) {
@@ -271,10 +262,8 @@ struct LineView: View {
                   .opacity(seq != nil && marks?.ringed == seq ? 1 : 0)
               }
               // A photo opens large at a tap; its menu is the long press's.
-              .heldForActions(lifted: marks?.lifted == lineID, asked: asked(lineID)) {
+              .heldForActions(lineID: lineID, lifted: marks?.lifted == lineID) {
                 if photo != nil, !waiting { act(.openPhoto) }
-              } onActions: {
-                act(.hold(spot: $0, finger: $1, link: $2))
               }
           } else {
             albumBubble
@@ -356,10 +345,8 @@ struct LineView: View {
         .opacity(cell.seq != nil && marks?.ringed == cell.seq ? 1 : 0)
         .allowsHitTesting(false)
     }
-    .heldForActions(lifted: marks?.lifted == cell.lineID, asked: asked(cell.lineID)) {
+    .heldForActions(lineID: cell.lineID, lifted: marks?.lifted == cell.lineID) {
       if !cell.waiting { act(.openPhoto, on: cell.lineID) }
-    } onActions: {
-      act(.hold(spot: $0, finger: $1, link: $2), on: cell.lineID)
     }
     .modifier(OptionalVoice(voice: voice(of: voiced(cell, at: index))))
   }
@@ -445,7 +432,7 @@ struct LineView: View {
     return LineVoice(
       label: voiceLabel(of: line), people: people, isImage: line.photo != nil,
       activate: opensPhoto
-        ? { act(.openPhoto, on: line.lineID) } : { menuAsk = MenuAsk(line.lineID) },
+        ? { act(.openPhoto, on: line.lineID) } : { act(.hold(link: nil), on: line.lineID) },
       actions: voiceActions(of: line))
   }
 
@@ -509,7 +496,7 @@ struct LineView: View {
       actions.append(VoiceAction(title: title) { act(.menu(title), on: id) })
     }
     if !line.waiting {
-      actions.append(VoiceAction(title: "リアクション") { menuAsk = MenuAsk(id) })
+      actions.append(VoiceAction(title: "リアクション") { act(.hold(link: nil), on: id) })
       for reaction in line.reactions {
         let on = reaction.userIDs.contains(meID ?? "")
         actions.append(
@@ -1077,20 +1064,16 @@ struct BubbleShape: Shape {
 }
 
 /// A held bubble's words drawn noting where their links are, and where
-/// they are on the screen.
+/// they are in the chat line's cell.
 private struct FindsLinks: ViewModifier {
-  /// Measured where the held finger is told: in a chat line's cell.
-  @Environment(\.lineSpace) private var lineSpace
   let spots: LinkSpots?
 
   func body(content: Content) -> some View {
     if let spots {
-      let inLine = lineSpace != nil
       content
         .textRenderer(LinkFinder(spots: spots))
-        .modifier(HeldLinksOpenNothing(spots: spots))
         .onGeometryChange(for: CGRect.self) {
-          inLine ? $0.frame(in: .named(LineSpace.name)) : $0.frame(in: .global)
+          $0.frame(in: .named(LineSpace.name))
         } action: {
           spots.frame = $0
         }

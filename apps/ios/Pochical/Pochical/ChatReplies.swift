@@ -52,7 +52,7 @@ struct BubbleQuote: View {
     }
     .multilineTextAlignment(.leading)
     .contentShape(.rect)
-    .onTapUnlessHeld(perform: onOpen)
+    .onTapGesture(perform: onOpen)
     .accessibilityElement(children: .ignore)
     .accessibilityAddTraits(.isButton)
     .accessibilityLabel("\(quote.writer ?? "")「\(quote.words)」への返信")
