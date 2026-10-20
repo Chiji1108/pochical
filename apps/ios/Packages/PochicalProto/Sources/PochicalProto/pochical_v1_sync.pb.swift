@@ -593,9 +593,76 @@ public nonisolated struct Pochical_V1_Acked: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// Every edit of the frame, taken or not: the client deletes them from
+  /// its outbox.
   public var opIds: [String] = []
 
+  /// Of those, the chat sends the group did not take, each with why; the
+  /// device keeps their lines as not sent (spec/chat.md, Lines on their
+  /// way). Group DO socket only. A send to someone who blocked the sender is
+  /// taken as any other, so none tells a block.
+  public var refused: [Pochical_V1_RefusedSend] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pochical_V1_RefusedSend: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var opID: String = String()
+
+  public var reason: Pochical_V1_RefusedSend.Reason = .unspecified
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum Reason: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+
+    /// What it sends does not fit (spec/sync-protocol.md, Chat): its words
+    /// or days, its photo not the sender's own one not sent, an op_id that
+    /// is no id, a chat the sender cannot read, or what the place does not
+    /// take. An app sends none of these, so it tells of a bug.
+    case doesNotFit // = 1
+
+    /// The other of a one-to-one chat is no longer in the group.
+    case notInGroup // = 2
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .doesNotFit
+      case 2: self = .notInGroup
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .doesNotFit: return 1
+      case .notInGroup: return 2
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [Pochical_V1_RefusedSend.Reason] = [
+      .unspecified,
+      .doesNotFit,
+      .notInGroup,
+    ]
+
+  }
 
   public init() {}
 }
@@ -3251,7 +3318,7 @@ nonisolated extension Pochical_V1_DayEdit: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pochical_V1_Acked: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Acked"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_ids\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_ids\0\u{1}refused\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3260,6 +3327,7 @@ nonisolated extension Pochical_V1_Acked: SwiftProtobuf.Message, SwiftProtobuf._M
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedStringField(value: &self.opIds) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.refused) }()
       default: break
       }
     }
@@ -3269,14 +3337,57 @@ nonisolated extension Pochical_V1_Acked: SwiftProtobuf.Message, SwiftProtobuf._M
     if !self.opIds.isEmpty {
       try visitor.visitRepeatedStringField(value: self.opIds, fieldNumber: 1)
     }
+    if !self.refused.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.refused, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_Acked, rhs: Pochical_V1_Acked) -> Bool {
     if lhs.opIds != rhs.opIds {return false}
+    if lhs.refused != rhs.refused {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
+}
+
+nonisolated extension Pochical_V1_RefusedSend: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RefusedSend"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_id\0\u{1}reason\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.opID) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.reason) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.opID.isEmpty {
+      try visitor.visitSingularStringField(value: self.opID, fieldNumber: 1)
+    }
+    if self.reason != .unspecified {
+      try visitor.visitSingularEnumField(value: self.reason, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_RefusedSend, rhs: Pochical_V1_RefusedSend) -> Bool {
+    if lhs.opID != rhs.opID {return false}
+    if lhs.reason != rhs.reason {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_RefusedSend.Reason: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0REASON_UNSPECIFIED\0\u{1}REASON_DOES_NOT_FIT\0\u{1}REASON_NOT_IN_GROUP\0")
 }
 
 nonisolated extension Pochical_V1_Changes: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
