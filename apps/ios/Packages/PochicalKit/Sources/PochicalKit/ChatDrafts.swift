@@ -34,6 +34,27 @@ public enum DraftTarget<Edited: Hashable & Sendable>: Hashable, Sendable {
   }
 }
 
+extension DraftTarget where Edited == Int64 {
+  /// The target as two seqs are kept apart (the drafts table, the
+  /// vectors), at most one of them set; none for neither.
+  init?(replyTo: Int64?, editing: Int64?) {
+    if let editing {
+      self = .edit(editing)
+    } else if let replyTo {
+      self = .reply(replyTo)
+    } else {
+      return nil
+    }
+  }
+
+  /// The line answered or changed.
+  var seq: Int64 {
+    switch self {
+    case .reply(let seq), .edit(let seq): seq
+    }
+  }
+}
+
 /// What was being written in a chat: its words as they would be sent (its
 /// mentions as <@id>), and the line it answers or changes, by seq.
 public struct KeptDraft: Hashable, Sendable {
@@ -88,7 +109,7 @@ struct ChatDraftRow: Hashable, Sendable {
   var savedAtMs: Int64
 
   var target: DraftTarget<Int64>? {
-    editing.map(DraftTarget.edit) ?? replyTo.map(DraftTarget.reply)
+    DraftTarget(replyTo: replyTo, editing: editing)
   }
 }
 
@@ -230,10 +251,12 @@ extension Chats {
   private static func keptDraft(
     _ draft: KeptDraft, of threadID: String, in groupID: String, db: Database
   ) throws -> KeptDraft? {
-    let seq = draft.target?.replyTo ?? draft.target?.editing
-    let line = try seq.flatMap { try line(kept: $0, of: threadID, in: groupID, db: db) }
-    return PochicalKit.keptDraft(draft) { asked in
-      line.flatMap { $0.seq == asked ? DraftLine(text: $0.text, unsent: $0.unsent) : nil }
+    let line = try draft.target.flatMap {
+      try line(kept: $0.seq, of: threadID, in: groupID, db: db)
+    }
+    // The target's line is the one asked for.
+    return PochicalKit.keptDraft(draft) { _ in
+      line.map { DraftLine(text: $0.text, unsent: $0.unsent) }
     }
   }
 

@@ -83,8 +83,7 @@ struct ChatVectors: Decodable, Sendable {
       var editing: Int64?
 
       var kept: KeptDraft {
-        KeptDraft(
-          text: text, target: editing.map(DraftTarget.edit) ?? replyTo.map(DraftTarget.reply))
+        KeptDraft(text: text, target: DraftTarget(replyTo: replyTo, editing: editing))
       }
     }
     struct Line: Decodable, Sendable {
@@ -742,9 +741,13 @@ struct PinVectors: Decodable, Sendable {
     let step: Step
     let expected: Expected
 
-    /// The named line's seq; none for a name not among the lines.
+    /// The named line's seq.
     func seq(_ name: String) -> Int64 {
-      lines.firstIndex(of: name).map { Int64($0) + 1 } ?? 0
+      guard let index = lines.firstIndex(of: name) else {
+        Issue.record("\(name) is not among the lines of \(self.name)")
+        return 0
+      }
+      return Int64(index) + 1
     }
   }
 

@@ -81,8 +81,9 @@ struct ChatComposer: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.groupSockets) private var groupSockets
   @Bindable var draft: ChatDraft
-  /// Where the chat's photos are kept: the group's, or the support chat's.
-  let groupID: String
+  /// Where the chat is: a group, or the support chat, whose socket and
+  /// photos it uses.
+  let place: ChatPlace
   /// The chat others are told the member is writing in; none for the
   /// support chat, which has no one watching.
   var threadID: String?
@@ -158,9 +159,9 @@ struct ChatComposer: View {
     .onChange(of: draft.text) { _, words in
       guard let threadID else { return }
       if words.isEmpty {
-        draft.stopTyping(in: threadID, socket: groupSockets.client(groupID))
+        draft.stopTyping(in: threadID, socket: groupSockets.client(place.id))
       } else {
-        draft.typed(in: threadID, socket: groupSockets.client(groupID))
+        draft.typed(in: threadID, socket: groupSockets.client(place.id))
       }
     }
     .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }
@@ -193,7 +194,7 @@ struct ChatComposer: View {
           stop: "編集をやめる", onStop: onStopEditing)
       }
       if let replyTo = draft.replyTo {
-        ReplyBar(quote: quoteOf(replyTo), shelf: PhotoShelf(place: groupID)) {
+        ReplyBar(quote: quoteOf(replyTo), shelf: place.shelf) {
           draft.target = nil
         }
       }
@@ -343,7 +344,7 @@ struct ChatComposer: View {
               HStack(spacing: 12) {
                 MemberAvatar(
                   name: member.displayName, photoID: member.photoID,
-                  shelf: PhotoShelf(place: groupID), size: 28)
+                  shelf: place.shelf, size: 28)
                 Text(member.displayName)
                   .foregroundStyle(colors.textPrimary)
                   .lineLimit(1)

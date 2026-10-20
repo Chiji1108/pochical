@@ -140,9 +140,8 @@ struct ReportSheet: View {
 struct MemberProfileSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.photoShelf) private var shelf
   let name: String
-  /// Where the group keeps their photo and its mark's.
-  let shelf: PhotoShelf
   /// Their photo as the group shows it; empty for none.
   var photoID = ""
   let groupName: String
@@ -163,7 +162,8 @@ struct MemberProfileSheet: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 12) {
-        if photoID.isEmpty {
+        // Opened large only from where the group keeps it.
+        if photoID.isEmpty || shelf == nil {
           MemberAvatar(name: name, photoID: photoID, size: Self.face)
         } else {
           Button {

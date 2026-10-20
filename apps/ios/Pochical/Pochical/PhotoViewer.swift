@@ -125,14 +125,16 @@ extension View {
   /// each photo shown, for the screen to keep its place in sight, as
   /// Photos' grid follows the photo opened from it. `onSave` saves a
   /// photo, true once saved; none for someone's face, which is theirs to
-  /// keep, nor shared.
+  /// keep, nor shared. With no `shelf`, nothing opens.
   func photoViewer(
-    _ viewing: Binding<PhotoViewing?>, shelf: PhotoShelf,
+    _ viewing: Binding<PhotoViewing?>, shelf: PhotoShelf?,
     onShow: ((String) -> Void)? = nil,
     onSave: ((LinePhoto) async -> Bool)? = nil
   ) -> some View {
     background(
-      PhotoViewerPresenter(viewing: viewing, shelf: shelf, onShow: onShow, onSave: onSave))
+      shelf.map {
+        PhotoViewerPresenter(viewing: viewing, shelf: $0, onShow: onShow, onSave: onSave)
+      })
   }
 }
 

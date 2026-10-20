@@ -533,7 +533,7 @@ struct ChatScreen: View {
         .padding(8)
     } else {
       ChatComposer(
-        draft: draft, groupID: place.id, threadID: threadID,
+        draft: draft, place: place, threadID: threadID,
         mentionable: otherID != nil || !place.rules.mentions
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
         nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
