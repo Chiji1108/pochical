@@ -1,0 +1,30 @@
+Page: app.pochical
+App: app.pochical
+Snapshot: 27 nodes
+Simulator AX snapshot inapplicable (system-surface-host-lingering); used XCTest, which read app content: the system surface host process was still running but no longer presenting.
+@e1 [application] "ポチカル"
+  @e2 [other] "👍のリアクションを外す"
+    @e3 [other] "👍のリアクションを外す"
+      @e4 [other] "👍のリアクションを外す"
+        @e5 [button] "👍のリアクションを外す"
+        @e6 [button] "❤️でリアクション"
+        @e7 [button] "😂でリアクション"
+        @e8 [button] "👀でリアクション"
+        @e9 [button] "🙏でリアクション"
+        @e10 [button] "🎉でリアクション"
+        @e11 [button] "ほかの絵文字でリアクション"
+    @e12 [other] "垂直スクロールバー, 1ページ"
+      @e13 [other] "返信"
+        @e14 [scroll-area] "返信" [scrollable]
+          @e15 [button] "返信"
+            @e16 [text] "返信"
+            @e17 [image] "返信"
+          @e18 [button] "コピー"
+            @e19 [text] "コピー"
+            @e20 [image] "コピー"
+          @e21 [button] "ピン留め"
+            @e22 [text] "ピン留め"
+            @e23 [image] "ピン"
+          @e24 [button] "通報"
+            @e25 [text] "通報"
+            @e26 [image] "通知"

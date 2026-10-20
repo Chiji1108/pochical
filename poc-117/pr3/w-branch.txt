@@ -1,0 +1,6 @@
+    |                `- warning: call to main actor-isolated static method 'key(_:in:small:)' in a synchronous nonisolated context [#ActorIsolatedCall]
+    |         `- warning: main actor-isolated static property 'pipeline' can not be referenced from a Sendable closure
+    |       `- warning: main actor-isolated static property 'pipeline' can not be referenced from a Sendable closure
+apps/ios/Pochical/Pochical/ChatPhotoLoading.swift:115:9: warning: main actor-isolated static property 'pipeline' can not be referenced from a Sendable closure
+apps/ios/Pochical/Pochical/ChatPhotoLoading.swift:116:16: warning: call to main actor-isolated static method 'key(_:in:small:)' in a synchronous nonisolated context [#ActorIsolatedCall]
+apps/ios/Pochical/Pochical/ChatPhotoLoading.swift:120:7: warning: main actor-isolated static property 'pipeline' can not be referenced from a Sendable closure

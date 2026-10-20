@@ -1,0 +1,11 @@
+== start: visibleRedequeued=0 prepareForReuse=0
+== w:0.3: visibleRedequeued=0 prepareForReuse=0
+== tap:100,601: visibleRedequeued=0 prepareForReuse=0
+== w:2: visibleRedequeued=0 prepareForReuse=0
+    0.094 kb=538.0 lift=529.4,125.8 s=1.000 a=1.00 scrim=0.11 line=529.4,125.8 dy=   0.0 dx=   0.0
+    0.124 kb=538.0 lift=498.9,125.8 s=1.000 a=1.00 scrim=0.03 line=498.9,125.8 dy=   0.0 dx=   0.0
+    0.141 kb=538.0 lift=455.8,125.8 s=1.000 a=1.00 scrim=0.00 line=455.8,125.8 dy=   0.0 dx=   0.0
+    0.158 kb=538.0 lift=409.7,125.8 s=1.000 a=1.00 scrim=0.00 line=409.7,125.8 dy=   0.0 dx=   0.0
+    0.185 kb=538.0 (no layer)
+== shot:after: visibleRedequeued=0 prepareForReuse=0
+== end: visibleRedequeued=0 prepareForReuse=0

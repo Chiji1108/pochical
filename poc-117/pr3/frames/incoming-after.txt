@@ -1,0 +1,68 @@
+== start: visibleRedequeued=0 prepareForReuse=0
+== lp:125,627: visibleRedequeued=0 prepareForReuse=0
+    0.991 kb=840.0 lift=625.8,125.8 s=1.000 a=1.00 scrim=0.01 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.024 kb=840.0 lift=625.8,125.8 s=1.005 a=1.00 scrim=0.26 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.040 kb=840.0 lift=625.8,125.8 s=1.008 a=1.00 scrim=0.42 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.057 kb=840.0 lift=625.8,125.8 s=1.011 a=1.00 scrim=0.57 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.074 kb=840.0 lift=625.8,125.8 s=1.014 a=1.00 scrim=0.69 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.091 kb=840.0 lift=625.8,125.8 s=1.016 a=1.00 scrim=0.79 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.107 kb=840.0 lift=625.8,125.8 s=1.017 a=1.00 scrim=0.87 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.124 kb=840.0 lift=625.8,125.8 s=1.019 a=1.00 scrim=0.93 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.141 kb=840.0 lift=625.8,125.8 s=1.019 a=1.00 scrim=0.96 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.157 kb=840.0 lift=625.8,125.8 s=1.020 a=1.00 scrim=0.99 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.174 kb=840.0 lift=625.8,125.8 s=1.020 a=1.00 scrim=1.00 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.191 kb=840.0 lift=625.8,125.8 s=1.020 a=1.00 scrim=1.01 line=625.8,125.8 dy=   0.0 dx=   0.0
+    1.307 kb=840.0 lift=625.8,125.8 s=1.020 a=1.00 scrim=1.00 line=625.8,125.8 dy=   0.0 dx=   0.0
+== w:0.8: visibleRedequeued=0 prepareForReuse=0
+== o:send,開いている間に来た行: visibleRedequeued=0 prepareForReuse=0
+== w:1.5: visibleRedequeued=0 prepareForReuse=0
+== shot:open: visibleRedequeued=0 prepareForReuse=0
+== tap:200,150: visibleRedequeued=0 prepareForReuse=0
+    0.577 kb=840.0 lift=625.8,125.8 s=1.019 a=1.00 scrim=0.94 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.594 kb=840.0 lift=625.8,125.8 s=1.016 a=1.00 scrim=0.81 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.610 kb=840.0 lift=625.8,125.8 s=1.013 a=1.00 scrim=0.66 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.627 kb=840.0 lift=625.8,125.8 s=1.010 a=1.00 scrim=0.51 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.644 kb=840.0 lift=625.8,125.8 s=1.008 a=1.00 scrim=0.39 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.660 kb=840.0 lift=625.8,125.8 s=1.006 a=1.00 scrim=0.29 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.677 kb=840.0 lift=625.8,125.8 s=1.004 a=1.00 scrim=0.22 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.694 kb=840.0 lift=625.8,125.8 s=1.003 a=1.00 scrim=0.16 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.710 kb=840.0 lift=625.8,125.8 s=1.002 a=1.00 scrim=0.11 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.727 kb=840.0 lift=625.8,125.8 s=1.002 a=1.00 scrim=0.08 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.745 kb=840.0 lift=625.8,125.8 s=1.001 a=1.00 scrim=0.06 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.761 kb=840.0 lift=625.8,125.8 s=1.001 a=1.00 scrim=0.04 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.777 kb=840.0 lift=625.8,125.8 s=1.001 a=1.00 scrim=0.03 line=625.8,125.8 dy=   0.0 dx=   0.0
+== w:2.5: visibleRedequeued=0 prepareForReuse=1
+    0.015 kb=840.0 lift=625.8,125.8 s=1.000 a=1.00 scrim=0.02 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.032 kb=840.0 lift=625.8,125.8 s=1.000 a=1.00 scrim=0.01 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.082 kb=840.0 lift=625.8,125.8 s=1.000 a=1.00 scrim=0.00 line=625.8,125.8 dy=   0.0 dx=   0.0
+    0.240 kb=840.0 (no layer)
+== shot:after: visibleRedequeued=0 prepareForReuse=0
+== end: visibleRedequeued=0 prepareForReuse=0
+   15.041 kb=840.0 lift=714.2,133.7 s=1.001 a=1.00 scrim=0.06 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.057 kb=840.0 lift=714.2,133.7 s=1.004 a=1.00 scrim=0.20 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.074 kb=840.0 lift=714.2,133.7 s=1.007 a=1.00 scrim=0.35 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.091 kb=840.0 lift=714.2,133.7 s=1.010 a=1.00 scrim=0.51 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.107 kb=840.0 lift=714.2,133.7 s=1.013 a=1.00 scrim=0.64 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.124 kb=840.0 lift=714.2,133.7 s=1.015 a=1.00 scrim=0.76 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.141 kb=840.0 lift=714.2,133.7 s=1.017 a=1.00 scrim=0.84 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.157 kb=840.0 lift=714.2,133.7 s=1.018 a=1.00 scrim=0.91 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.174 kb=840.0 lift=714.2,133.7 s=1.019 a=1.00 scrim=0.95 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.191 kb=840.0 lift=714.2,133.7 s=1.020 a=1.00 scrim=0.98 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.208 kb=840.0 lift=714.2,133.7 s=1.020 a=1.00 scrim=1.00 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.224 kb=840.0 lift=714.2,133.7 s=1.020 a=1.00 scrim=1.01 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.258 kb=840.0 lift=714.2,133.7 s=1.020 a=1.00 scrim=1.02 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.274 kb=840.0 lift=714.2,133.7 s=1.020 a=1.00 scrim=1.01 line=714.2,133.7 dy=   0.0 dx=   0.0
+   15.358 kb=840.0 lift=714.2,133.7 s=1.020 a=1.00 scrim=1.00 line=714.2,133.7 dy=   0.0 dx=   0.0
+   17.824 kb=840.0 lift=714.1,133.7 s=1.020 a=1.00 scrim=1.00 line=714.1,133.7 dy=   0.0 dx=   0.0
+   17.841 kb=840.0 lift=713.9,133.7 s=1.020 a=1.00 scrim=1.00 line=713.9,133.7 dy=   0.0 dx=   0.0
+   17.857 kb=840.0 lift=713.7,133.7 s=1.020 a=1.00 scrim=1.00 line=713.7,133.7 dy=   0.0 dx=   0.0
+   17.874 kb=840.0 lift=713.4,133.7 s=1.020 a=1.00 scrim=1.00 line=713.4,133.7 dy=   0.0 dx=   0.0
+   17.891 kb=840.0 lift=713.2,133.7 s=1.020 a=1.00 scrim=1.00 line=713.2,133.7 dy=   0.0 dx=   0.0
+   17.907 kb=840.0 lift=713.0,133.7 s=1.020 a=1.00 scrim=1.00 line=713.0,133.7 dy=   0.0 dx=   0.0
+   17.924 kb=840.0 lift=712.9,133.7 s=1.020 a=1.00 scrim=1.00 line=712.9,133.7 dy=   0.0 dx=   0.0
+   17.941 kb=840.0 lift=712.7,133.7 s=1.020 a=1.00 scrim=1.00 line=712.7,133.7 dy=   0.0 dx=   0.0
+   17.958 kb=840.0 lift=712.6,133.7 s=1.020 a=1.00 scrim=1.00 line=712.6,133.7 dy=   0.0 dx=   0.0
+   17.975 kb=840.0 lift=712.5,133.7 s=1.020 a=1.00 scrim=1.00 line=712.5,133.7 dy=   0.0 dx=   0.0
+   17.991 kb=840.0 lift=712.4,133.7 s=1.020 a=1.00 scrim=1.00 line=712.4,133.7 dy=   0.0 dx=   0.0
+   18.024 kb=840.0 lift=712.3,133.7 s=1.020 a=1.00 scrim=1.00 line=712.3,133.7 dy=   0.0 dx=   0.0
+   18.074 kb=840.0 lift=712.2,133.7 s=1.020 a=1.00 scrim=1.00 line=712.2,133.7 dy=   0.0 dx=   0.0

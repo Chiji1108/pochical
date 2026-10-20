@@ -1,0 +1,27 @@
+== start: visibleRedequeued=0 prepareForReuse=0
+== lp:200,290: visibleRedequeued=0 prepareForReuse=1
+    1.075 kb=840.0 lift=256.6,198.2 s=1.001 a=1.00 scrim=0.06 line=256.6,198.2 dy=   0.0 dx=   0.0
+    1.108 kb=840.0 lift=347.4,198.2 s=1.007 a=1.00 scrim=0.34 line=347.4,198.2 dy=   0.0 dx=   0.0
+    1.125 kb=840.0 lift=393.0,198.2 s=1.010 a=1.00 scrim=0.50 line=393.0,198.2 dy=   0.0 dx=   0.0
+    1.141 kb=840.0 lift=432.8,198.2 s=1.013 a=1.00 scrim=0.63 line=432.8,198.2 dy=   0.0 dx=   0.0
+    1.158 kb=840.0 lift=465.6,198.2 s=1.015 a=1.00 scrim=0.75 line=465.6,198.2 dy=   0.0 dx=   0.0
+    1.175 kb=840.0 lift=491.9,198.2 s=1.017 a=1.00 scrim=0.84 line=491.9,198.2 dy=   0.0 dx=   0.0
+    1.191 kb=840.0 lift=512.3,198.2 s=1.018 a=1.00 scrim=0.90 line=512.3,198.2 dy=   0.0 dx=   0.0
+    1.208 kb=840.0 lift=527.9,198.2 s=1.019 a=1.00 scrim=0.95 line=527.9,198.2 dy=   0.0 dx=   0.0
+    1.225 kb=840.0 lift=539.8,198.2 s=1.020 a=1.00 scrim=0.98 line=539.8,198.2 dy=   0.0 dx=   0.0
+    1.242 kb=840.0 lift=548.8,198.2 s=1.020 a=1.00 scrim=1.00 line=548.8,198.2 dy=   0.0 dx=   0.0
+    1.258 kb=840.0 lift=555.1,198.2 s=1.020 a=1.00 scrim=1.01 line=555.1,198.2 dy=   0.0 dx=   0.0
+    1.275 kb=840.0 lift=559.9,198.2 s=1.020 a=1.00 scrim=1.01 line=559.9,198.2 dy=   0.0 dx=   0.0
+    1.291 kb=840.0 lift=563.4,198.2 s=1.020 a=1.00 scrim=1.02 line=563.4,198.2 dy=   0.0 dx=   0.0
+    1.308 kb=840.0 lift=565.9,198.2 s=1.020 a=1.00 scrim=1.01 line=565.9,198.2 dy=   0.0 dx=   0.0
+    1.325 kb=840.0 lift=567.8,198.2 s=1.020 a=1.00 scrim=1.01 line=567.8,198.2 dy=   0.0 dx=   0.0
+    1.341 kb=840.0 lift=569.1,198.2 s=1.020 a=1.00 scrim=1.01 line=569.1,198.2 dy=   0.0 dx=   0.0
+    1.358 kb=840.0 lift=570.0,198.2 s=1.020 a=1.00 scrim=1.01 line=570.0,198.2 dy=   0.0 dx=   0.0
+    1.375 kb=840.0 lift=570.7,198.2 s=1.020 a=1.00 scrim=1.01 line=570.7,198.2 dy=   0.0 dx=   0.0
+    1.391 kb=840.0 lift=571.2,198.2 s=1.020 a=1.00 scrim=1.00 line=571.2,198.2 dy=   0.0 dx=   0.0
+    1.408 kb=840.0 lift=571.5,198.2 s=1.020 a=1.00 scrim=1.00 line=571.5,198.2 dy=   0.0 dx=   0.0
+    1.425 kb=840.0 lift=571.8,198.2 s=1.020 a=1.00 scrim=1.00 line=571.8,198.2 dy=   0.0 dx=   0.0
+    1.441 kb=840.0 lift=572.3,198.2 s=1.020 a=1.00 scrim=1.00 line=572.3,198.2 dy=   0.0 dx=   0.0
+== w:2: visibleRedequeued=0 prepareForReuse=0
+== shot:open: visibleRedequeued=0 prepareForReuse=0
+== end: visibleRedequeued=0 prepareForReuse=0

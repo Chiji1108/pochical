@@ -1,0 +1,38 @@
+== start: visibleRedequeued=0 prepareForReuse=0
+== lp:125,190: visibleRedequeued=0 prepareForReuse=0
+    0.930 kb=840.0 lift=190.3,125.5 s=1.001 a=1.00 scrim=0.04 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.963 kb=840.0 lift=190.3,125.5 s=1.006 a=1.00 scrim=0.31 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.980 kb=840.0 lift=190.3,125.5 s=1.009 a=1.00 scrim=0.47 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.996 kb=840.0 lift=190.3,125.5 s=1.012 a=1.00 scrim=0.61 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.013 kb=840.0 lift=190.3,125.5 s=1.015 a=1.00 scrim=0.73 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.030 kb=840.0 lift=190.3,125.5 s=1.016 a=1.00 scrim=0.82 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.047 kb=840.0 lift=190.3,125.5 s=1.018 a=1.00 scrim=0.89 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.063 kb=840.0 lift=190.3,125.5 s=1.019 a=1.00 scrim=0.94 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.080 kb=840.0 lift=190.3,125.5 s=1.019 a=1.00 scrim=0.97 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.097 kb=840.0 lift=190.3,125.5 s=1.020 a=1.00 scrim=1.00 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.113 kb=840.0 lift=190.3,125.5 s=1.020 a=1.00 scrim=1.01 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.147 kb=840.0 lift=190.3,125.5 s=1.020 a=1.00 scrim=1.02 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.164 kb=840.0 lift=190.3,125.5 s=1.020 a=1.00 scrim=1.01 line=190.3,125.5 dy=   0.0 dx=   0.0
+    1.247 kb=840.0 lift=190.3,125.5 s=1.020 a=1.00 scrim=1.00 line=190.3,125.5 dy=   0.0 dx=   0.0
+== w:1.2: visibleRedequeued=0 prepareForReuse=0
+== shot:open: visibleRedequeued=0 prepareForReuse=0
+== tap:200,820: visibleRedequeued=0 prepareForReuse=0
+    0.580 kb=840.0 lift=190.3,125.5 s=1.019 a=1.00 scrim=0.94 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.597 kb=840.0 lift=190.3,125.5 s=1.016 a=1.00 scrim=0.81 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.613 kb=840.0 lift=190.3,125.5 s=1.013 a=1.00 scrim=0.65 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.630 kb=840.0 lift=190.3,125.5 s=1.010 a=1.00 scrim=0.51 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.647 kb=840.0 lift=190.3,125.5 s=1.008 a=1.00 scrim=0.39 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.663 kb=840.0 lift=190.3,125.5 s=1.006 a=1.00 scrim=0.29 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.680 kb=840.0 lift=190.3,125.5 s=1.004 a=1.00 scrim=0.21 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.697 kb=840.0 lift=190.3,125.5 s=1.003 a=1.00 scrim=0.16 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.713 kb=840.0 lift=190.3,125.5 s=1.002 a=1.00 scrim=0.11 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.730 kb=840.0 lift=190.3,125.5 s=1.002 a=1.00 scrim=0.08 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.748 kb=840.0 lift=190.3,125.5 s=1.001 a=1.00 scrim=0.06 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.764 kb=840.0 lift=190.3,125.5 s=1.001 a=1.00 scrim=0.04 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.781 kb=840.0 lift=190.3,125.5 s=1.001 a=1.00 scrim=0.03 line=190.3,125.5 dy=   0.0 dx=   0.0
+== w:1.5: visibleRedequeued=0 prepareForReuse=0
+    0.015 kb=840.0 lift=190.3,125.5 s=1.000 a=1.00 scrim=0.02 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.031 kb=840.0 lift=190.3,125.5 s=1.000 a=1.00 scrim=0.01 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.082 kb=840.0 lift=190.3,125.5 s=1.000 a=1.00 scrim=0.00 line=190.3,125.5 dy=   0.0 dx=   0.0
+    0.192 kb=840.0 (no layer)
+== end: visibleRedequeued=0 prepareForReuse=1
