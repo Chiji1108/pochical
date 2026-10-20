@@ -209,6 +209,16 @@ func aReadTakesBackItsNotifications(_ vector: ChatVectors.Withdrawn) {
       == vector.expected)
 }
 
+@Test func aNotificationShowsOnlyForTheUserSignedIn() {
+  let payload: [AnyHashable: Any] = ["groupId": "g", "threadId": groupThread, "recipientId": "me"]
+  #expect(isForSignedIn(payload, me: "me"))
+  // The device went on as someone else since, or knows no one yet.
+  #expect(!isForSignedIn(payload, me: "someone"))
+  #expect(!isForSignedIn(payload, me: nil))
+  // Sent with no recipient named.
+  #expect(!isForSignedIn(["groupId": "g", "threadId": groupThread], me: "me"))
+}
+
 @Test(arguments: try vectors("chat", as: ChatVectors.self).draft)
 func draftKept(_ vector: ChatVectors.Draft) {
   let lines = Dictionary(

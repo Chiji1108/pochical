@@ -1,0 +1,46 @@
+// The devices' push tokens (spec/sync-protocol.md, Push), kept in D1 with
+// the session each was registered under, where the sessions are: a
+// session's tokens go with it, and a token is one user's at a time.
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/d1";
+
+import { session } from "./db/auth-schema";
+import { pushTokens } from "./db/schema";
+
+/** A device notifications go to. */
+export type Device = { token: string; sandbox: boolean };
+
+/**
+ * Keeps the device's token under the session, moved from whichever
+ * session, of this user or another, had it before.
+ */
+export const registerPushToken = async (
+  db: D1Database,
+  sessionId: string,
+  device: Device
+): Promise<void> => {
+  const row = { ...device, sessionId, updatedAt: new Date() };
+  await drizzle(db)
+    .insert(pushTokens)
+    .values(row)
+    .onConflictDoUpdate({ set: row, target: pushTokens.token });
+};
+
+/** The devices of every session of the user's. */
+export const devicesOf = async (
+  db: D1Database,
+  userId: string
+): Promise<Device[]> =>
+  await drizzle(db)
+    .select({ sandbox: pushTokens.sandbox, token: pushTokens.token })
+    .from(pushTokens)
+    .innerJoin(session, eq(session.id, pushTokens.sessionId))
+    .where(eq(session.userId, userId));
+
+/** Drops a token APNs says is no longer the app's. */
+export const dropPushToken = async (
+  db: D1Database,
+  token: string
+): Promise<void> => {
+  await drizzle(db).delete(pushTokens).where(eq(pushTokens.token, token));
+};

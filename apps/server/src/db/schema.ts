@@ -8,6 +8,8 @@ import {
   text,
 } from "drizzle-orm/sqlite-core";
 
+import { session } from "./auth-schema";
+
 // Which group each live invite code opens. The Group DO owns the group
 // itself; this index exists because a link carries only the code. A group
 // has one live code: remaking the link replaces its row, so the old code
@@ -83,4 +85,24 @@ export const supportSlack = sqliteTable(
     userId: text("user_id").notNull(),
   },
   (table) => [primaryKey({ columns: [table.ts, table.seq] })]
+);
+
+// The devices' push tokens (spec/sync-protocol.md, Push), each kept with
+// the session it was registered under. A token is one row, so a device is
+// one session's, and one user's, at a time: registered under another
+// session, it moves there. A session's tokens go with its row as it ends
+// or its user is deleted, in the same database, so no call that failed
+// can leave one behind.
+export const pushTokens = sqliteTable(
+  "push_tokens",
+  {
+    // From a development build: through APNs' sandbox.
+    sandbox: integer({ mode: "boolean" }).notNull(),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => session.id, { onDelete: "cascade" }),
+    token: text().primaryKey(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [index("push_tokens_session").on(table.sessionId)]
 );

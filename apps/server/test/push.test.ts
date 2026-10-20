@@ -1,10 +1,14 @@
+import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { call, userIdOf } from "./helpers";
+import { appleKeys, idToken, link } from "./apple-helpers";
+import { call, ORIGIN, userIdOf } from "./helpers";
 import { changesIn, device, pair, sendFrame, syncSocket } from "./sync-helpers";
 
 // An APNs token as a device gives it.
 const TOKEN = "a1".repeat(32);
+// Another device's.
+const OTHER_TOKEN = "c3".repeat(32);
 
 const say = (socket: WebSocket, opId: string, text: string): void => {
   sendFrame(socket, {
@@ -97,6 +101,8 @@ describe("a chat's notifications", () => {
         },
         authorId: await userIdOf(maker),
         groupId,
+        // Whom it is for, which the device checks against who is signed in.
+        recipientId: await userIdOf(guest),
         // After the line saying the guest joined.
         seq: 2,
         threadId: "group",
@@ -262,5 +268,105 @@ describe("a chat's notifications", () => {
     // Time for a withdrawal that should not come: its line was not notified.
     await scheduler.wait(100);
     expect(calls).toHaveLength(6);
+  });
+});
+
+/** A second session of the user, as signing in with Apple on another device. */
+const secondSession = async (token: string, subject: string) => {
+  appleKeys();
+  await expect(link(token, await idToken(subject, "p1"), "p1")).resolves.toBe(
+    200
+  );
+  const signedIn = await exports.default.fetch(
+    `${ORIGIN}/api/auth/sign-in/social`,
+    {
+      body: JSON.stringify({
+        idToken: { nonce: "p2", token: await idToken(subject, "p2") },
+        provider: "apple",
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    }
+  );
+  vi.restoreAllMocks();
+  const second = signedIn.headers.get("set-auth-token") ?? "";
+  await expect(userIdOf(second)).resolves.toBe(await userIdOf(token));
+  return second;
+};
+
+const signOut = async (token: string): Promise<void> => {
+  const response = await exports.default.fetch(`${ORIGIN}/api/auth/sign-out`, {
+    body: "{}",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+  expect(response.status).toBe(200);
+};
+
+const registerToken = async (token: string, session: string) => {
+  const response = await call(
+    "UserService/RegisterPushToken",
+    { sandbox: true, token },
+    session
+  );
+  expect(response.status).toBe(200);
+};
+
+/** The device each notification went to, by its token. */
+const reached = (calls: { url: string }[]): string[] =>
+  calls.map(({ url }) => url.slice(url.lastIndexOf("/") + 1));
+
+describe("a device's push token", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("goes with the session it was registered under, the user's other sessions keeping theirs", async () => {
+    const { groupId, guest, maker } = await pair();
+    const otherDevice = await secondSession(guest, "apple-push1");
+    await registerToken(TOKEN, guest);
+    await registerToken(OTHER_TOKEN, otherDevice);
+    await signOut(guest);
+
+    const calls = apnsCalls();
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(() => calls.length).toBe(1);
+    // Time for a notification to the signed-out device that should not come.
+    await scheduler.wait(100);
+    expect(reached(calls)).toStrictEqual([OTHER_TOKEN]);
+    // Nor is the signed-out device's token kept.
+    const kept = await env.DB.prepare(
+      "select token from push_tokens where token in (?, ?)"
+    )
+      .bind(TOKEN, OTHER_TOKEN)
+      .all<{ token: string }>();
+    expect(kept.results).toStrictEqual([{ token: OTHER_TOKEN }]);
+  });
+
+  it("is one user's at a time: registered by another, the user before hears nothing at it", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(TOKEN, guest);
+    // The device goes on as the maker.
+    await registerToken(TOKEN, maker);
+
+    const calls = apnsCalls();
+    const makers = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(makers.socket, "a", "ゆうきさんへ");
+    await makers.frames.next();
+    // Time for a notification to the guest that should not come.
+    await scheduler.wait(100);
+    expect(calls).toHaveLength(0);
+
+    const guests = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    say(guests.socket, "b", "さくらさんへ");
+    await expect.poll(() => calls.length).toBe(1);
+    expect(reached(calls)).toStrictEqual([TOKEN]);
+    expect(calls[0]?.body).toMatchObject({
+      recipientId: await userIdOf(maker),
+    });
   });
 });

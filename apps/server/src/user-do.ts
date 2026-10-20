@@ -39,7 +39,10 @@ import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
 import { sharePersonPhoto } from "./photos";
+import { devicesOf, dropPushToken } from "./push-tokens";
+import type { Device } from "./push-tokens";
 import { retryWait } from "./retry-wait";
+import { supportPlace } from "./support-lines";
 import {
   acceptSyncSocket,
   answerKeepalive,
@@ -77,7 +80,6 @@ import {
   chatNotified,
   chatSettings,
   profile,
-  pushTokens,
   unreadCounts,
 } from "./user-do-schema";
 import {
@@ -160,19 +162,24 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Closes the sockets the session opened, here and in the user's groups,
-   * once it has ended.
+   * Closes the sockets the session opened, here, in the user's groups and
+   * in their chat with Pochical's people, once it has ended.
    */
   async endSession(sessionId: string): Promise<void> {
     closeSessionSockets(this.ctx, sessionId);
-    const groups = this.db
+    const userId = this.ctx.id.name;
+    const places = this.db
       .select({ groupId: memberships.groupId })
       .from(memberships)
       .where(isNull(memberships.leftAt))
-      .all();
+      .all()
+      .map(({ groupId }) => groupId);
+    if (userId !== undefined) {
+      places.push(supportPlace(userId));
+    }
     await Promise.all(
-      groups.map(async ({ groupId }) => {
-        await this.env.GROUPS.getByName(groupId).endSession(sessionId);
+      places.map(async (placeId) => {
+        await this.env.GROUPS.getByName(placeId).endSession(sessionId);
       })
     );
   }
@@ -701,19 +708,6 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Keeps a device's push token, sent each launch as iOS may change it
-   * (spec/sync-protocol.md, Push).
-   */
-  registerPushToken(token: string, sandbox: boolean): void {
-    const row = { sandbox, token, updatedAt: new Date() };
-    this.db
-      .insert(pushTokens)
-      .values(row)
-      .onConflictDoUpdate({ set: row, target: pushTokens.token })
-      .run();
-  }
-
-  /**
    * Tells each of the user's devices of `alert`, the app icon's badge at
    * the user's unread lines in every group, keeping a chat's line as
    * notified for a read to take back.
@@ -724,28 +718,31 @@ export class UserDO extends DurableObject<Env> {
     }
     const badge = this.badge();
     await this.toDevices(
-      async (device) => await sendAlert(this.env, device, alert, badge)
+      async (device, recipientId) =>
+        await sendAlert(this.env, device, alert, { badge, recipientId })
     );
   }
 
-  /** Sends to each of the user's devices; a token APNs says is gone is dropped. */
+  /**
+   * Sends to each of the user's devices, those of their sessions now; a
+   * token APNs says is gone is dropped.
+   */
   private async toDevices(
-    push: (device: { token: string; sandbox: boolean }) => Promise<Sent>
+    push: (device: Device, userId: string) => Promise<Sent>
   ): Promise<void> {
-    const devices = this.db.select().from(pushTokens).all();
-    const sent = await Promise.all(
-      devices.map(async (device) => ({
-        device,
-        sent: await push(device).catch((): Sent => "failed"),
-      }))
-    );
-    const gone = sent.filter((each) => each.sent === "gone");
-    for (const { device } of gone) {
-      this.db
-        .delete(pushTokens)
-        .where(eq(pushTokens.token, device.token))
-        .run();
+    const userId = this.ctx.id.name;
+    if (userId === undefined) {
+      return;
     }
+    const devices = await devicesOf(this.env.DB, userId);
+    await Promise.all(
+      devices.map(async (device) => {
+        const sent = await push(device, userId).catch((): Sent => "failed");
+        if (sent === "gone") {
+          await dropPushToken(this.env.DB, device.token);
+        }
+      })
+    );
   }
 
   /**

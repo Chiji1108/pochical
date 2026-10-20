@@ -18,6 +18,16 @@ final class NotificationService: UNNotificationServiceExtension {
     _ request: UNNotificationRequest,
     withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
   ) {
+    // Not for the user signed in: the device went on as someone else after
+    // its token was sent. Nothing of it is shown, neither who wrote nor
+    // what: only that something came. Delivering no notification at all
+    // takes the filtering entitlement Apple grants on request.
+    guard isForSignedIn(request.content.userInfo, me: widgetMeID()) else {
+      let blank = UNMutableNotificationContent()
+      blank.body = "別のアカウントへの通知です"
+      contentHandler(blank)
+      return
+    }
     nonisolated(unsafe) let show = contentHandler
     nonisolated(unsafe) let request = request
     let once = Once()

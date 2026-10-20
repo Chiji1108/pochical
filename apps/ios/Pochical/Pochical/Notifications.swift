@@ -99,6 +99,17 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     sendToken()
   }
 
+  /// The device going on as another user (spec/sync-protocol.md,
+  /// Sockets): the notifications shown and the badge, the user before's,
+  /// taken away, and the token sent under the session the device has now,
+  /// for the user it is now to hear at once.
+  func forgetAccount() async {
+    let center = UNUserNotificationCenter.current()
+    center.removeAllDeliveredNotifications()
+    try? await center.setBadgeCount(0)
+    sendToken()
+  }
+
   private func sendToken() {
     guard let token, let groupCalls else { return }
     Task { try? await groupCalls.registerPushToken(token) }

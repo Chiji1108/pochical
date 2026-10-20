@@ -22,6 +22,7 @@ import {
 import { GROUP_THREAD, otherIn } from "./group-chat";
 import { isId } from "./ids";
 import { hasPersonPhoto, personPhotoKey } from "./photos";
+import { registerPushToken } from "./push-tokens";
 import { requireUser } from "./session";
 import { requireText } from "./text-limits";
 
@@ -54,7 +55,7 @@ export const registerUserService = (router: ConnectRouter): void => {
       if (!PUSH_TOKEN.test(token)) {
         throw new ConnectError("Not a push token", Code.InvalidArgument);
       }
-      await env.USERS.getByName(user.id).registerPushToken(token, sandbox);
+      await registerPushToken(env.DB, user.sessionId, { sandbox, token });
       return create(RegisterPushTokenResponseSchema, {});
     },
     setBlocked: async ({ userId, blocked }, context) => {

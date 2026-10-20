@@ -36,6 +36,15 @@ public struct NotifiedLine: Hashable, Sendable {
   }
 }
 
+/// Whether a notification the server sent is for `me`, the user the device
+/// is signed in as (spec/sync-protocol.md, Push): one for anyone else, or
+/// sent while the device knows no one, shows nothing, as the device may
+/// have gone on as another user since its token was sent.
+public func isForSignedIn(_ payload: [AnyHashable: Any], me: String?) -> Bool {
+  guard let me, let recipient = payload["recipientId"] as? String else { return false }
+  return recipient == me
+}
+
 /// A chat read up to `readTo`, from a withdrawal the server sent; nil for
 /// any other payload.
 public struct ChatWithdrawal: Hashable, Sendable {
