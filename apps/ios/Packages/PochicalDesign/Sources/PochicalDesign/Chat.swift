@@ -13,6 +13,7 @@ public enum Chat {
   public static let largeEmojiMax = 3
   public static let largeEmojiSize = 48
   public static let lineGap = 4
+  public static let lineMoveMs = 500
   public static let linkPreviewAspect = 1.91
   public static let linkPreviewSettleMs = 400
   public static let longPressMs = 250

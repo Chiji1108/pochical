@@ -15,6 +15,7 @@ object Chat {
   const val largeEmojiMax = 3
   const val largeEmojiSize = 48
   const val lineGap = 4
+  const val lineMoveMs = 500
   const val linkPreviewAspect = 1.91f
   const val linkPreviewSettleMs = 400
   const val longPressMs = 250
