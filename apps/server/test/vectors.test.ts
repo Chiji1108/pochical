@@ -1,4 +1,7 @@
 import { syncLimits } from "@pochical/design/limits";
+import { runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
+import { drizzle } from "drizzle-orm/durable-sqlite";
 import { describe, expect, test } from "vitest";
 
 // The cases every platform checks its own code against (spec/vectors).
@@ -8,13 +11,16 @@ import chat from "../../../spec/vectors/chat.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import orderClears from "../../../spec/vectors/order-clears.json";
 import text from "../../../spec/vectors/text.json";
+import unread from "../../../spec/vectors/unread.json";
 import { inviteCodeOf, textParts } from "../src/chat-links";
 import { pinStep } from "../src/chat-pins";
 import { DayField } from "../src/gen/pochical/v1/sync_pb";
-import { directThread, plainText } from "../src/group-chat";
+import { directThread, plainText, unreadCount } from "../src/group-chat";
+import { chatLines, readMarks } from "../src/group-do-schema";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
 import { characterCount, fitsText, isEmoji } from "../src/text-limits";
+import { notifyingCount } from "../src/user-do-values";
 import { photosAmong } from "./helpers";
 
 // Which thread two members' one-to-one chat is, as their apps name it.
@@ -144,6 +150,57 @@ describe("spec/vectors/chat-photos.json", () => {
       await expect(
         photosAmong({ after, lines, seq, size, userId: "reader" })
       ).resolves.toStrictEqual(expected);
+    }
+  );
+});
+
+describe("spec/vectors/unread.json", () => {
+  type Chat = { muted: boolean; read: string[]; unread: string[] };
+
+  // A chat's unread lines and their mentions of `me`, as its group counts
+  // them from its database.
+  const countedIn = async ({ read, unread: lines }: Chat) =>
+    await runInDurableObject(
+      env.GROUPS.getByName(crypto.randomUUID()),
+      (_, state) => {
+        const db = drizzle(state.storage);
+        for (const [index, words] of [...read, ...lines].entries()) {
+          db.insert(chatLines)
+            .values({
+              authorId: "yuki",
+              createdCursor: index + 1,
+              cursor: index + 1,
+              opId: `op-${index}`,
+              sentAt: new Date(index),
+              seq: index + 1,
+              text: words,
+              threadId: "group",
+            })
+            .run();
+        }
+        db.insert(readMarks)
+          .values({
+            cursor: read.length + lines.length + 1,
+            lastReadSeq: read.length,
+            threadId: "group",
+            userId: "me",
+          })
+          .run();
+        return unreadCount(db, "me", "group");
+      }
+    );
+
+  test.each(unread.notifying)(
+    "$name",
+    async ({ expected, groups, mentionsWhenMuted }) => {
+      const counts = await Promise.all(
+        groups
+          .flatMap((group) => group.chats)
+          .map(async (one) =>
+            notifyingCount(await countedIn(one), one.muted, mentionsWhenMuted)
+          )
+      );
+      expect(counts.reduce((sum, count) => sum + count, 0)).toBe(expected);
     }
   );
 });

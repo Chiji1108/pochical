@@ -1,5 +1,5 @@
 {
-  "about": "Which unread lines a count stands for (spec/chat.md, Unread lines): what notifies. A chat that is on counts every unread line; a chat turned off counts only its unread lines that mention the reader, and those only while メンションはいつも通知 (`mentionsWhenMuted`) is on. A group's count adds up its chats', and the グループ tab's adds up its groups'. Each chat lists its lines oldest first: `read` ones, then `unread` ones, as their words; a mention is kept as <@id>, and the reader is `me`.",
+  "about": "Which unread lines a count stands for (spec/chat.md, Unread lines): what notifies. A chat that is on counts every unread line; a chat turned off counts only its unread lines that mention the reader, and those only while メンションはいつも通知 (`mentionsWhenMuted`) is on. A group's count adds up its chats', and the グループ tab's adds up its groups'. Each chat lists its lines oldest first: `read` ones, then `unread` ones, as their words; a mention is kept as <@id>, and the reader is `me`. A line mentions the reader when the chat's words, cut as spec/vectors/chat-text.json cuts them, hold a mention of them: a link never holds one, as < ends an address.",
   "notifying": [
     {
       "name": "a chat that is on counts every unread line",
@@ -110,6 +110,27 @@
         }
       ],
       "expected": 3
+    },
+    {
+      "name": "a mention right after a link's address counts, and an @ inside an address is no mention",
+      "mentionsWhenMuted": true,
+      "groups": [
+        {
+          "chats": [
+            {
+              "muted": true,
+              "read": [],
+              "unread": [
+                "https://example.jp/?to=<@me>",
+                "https://example.jp/@me",
+                "<@me2> どう？",
+                "https://example.jp/<@me>/"
+              ]
+            }
+          ]
+        }
+      ],
+      "expected": 2
     }
   ]
 }

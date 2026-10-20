@@ -73,6 +73,13 @@ export const textParts = (text: string): TextPart[] => {
   return parts;
 };
 
+/**
+ * Whether the message mentions `userId`, as the apps read it
+ * (spec/vectors/unread.json).
+ */
+export const mentions = (text: string, userId: string): boolean =>
+  textParts(text).some((part) => part.mention === userId);
+
 const INVITE_PATH = new RegExp(
   `^/invite/(?<code>[${inviteRules.codeAlphabet}]{${inviteRules.codeLength}})/?$`,
   "u"
