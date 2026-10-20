@@ -41,6 +41,9 @@ struct CalendarScreen: View {
   @State private var offeringReminders: String?
   /// The day opened from the month, its week alone left above its detail.
   @State private var opened: Day?
+  /// The day's sheet is going: the month unfolds as it goes, not once it
+  /// has gone, and folds again if a swipe is taken back.
+  @State private var leaving = false
   /// The week swiped to beside an opened one, until the swipe settles and
   /// opens the same weekday there.
   @State private var swipedWeek: Day?
@@ -226,6 +229,7 @@ struct CalendarScreen: View {
     }
     .onChange(of: opened) { _, day in
       guard let day else {
+        leaving = false
         // A swipe left unsettled as the week closed goes with it.
         swipedWeek = nil
         landing = nil
@@ -279,6 +283,10 @@ struct CalendarScreen: View {
           .id(day)
         }
         .animation(folding, value: day)
+        // Closed by its × or in code, the day has closed already.
+        .onSheetLeaving { going in
+          if opened != nil { withAnimation(folding) { leaving = going } }
+        }
         .presentationDetents([underWeek, .large])
         .presentationBackgroundInteraction(.enabled(upThrough: underWeek))
         .presentationDragIndicator(.visible)
@@ -371,9 +379,10 @@ struct CalendarScreen: View {
   }
 
   /// How far the month is folded into the opened week, 0 to 1: moved by
-  /// opening and closing the week, or by a finger pulling it open.
+  /// opening and closing the week (closing as its sheet starts to go), or
+  /// by a finger pulling it open.
   private var fold: CGFloat {
-    opened == nil ? 0 : 1 - pull
+    opened == nil || leaving ? 0 : 1 - pull
   }
 
   /// How far a pull unfolds the month: the month's foot comes down with
