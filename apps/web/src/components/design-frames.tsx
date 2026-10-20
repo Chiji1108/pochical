@@ -1,17 +1,20 @@
+import { DesignApp } from "@pochical/prototype/components/design-app";
+import type { GroupStart } from "@pochical/prototype/components/design-group";
+import type { SettingsPage } from "@pochical/prototype/components/design-settings";
+import type { Tab } from "@pochical/prototype/components/design-tab-bar";
+import { initialDesignSchedule } from "@pochical/prototype/lib/design-days";
+import {
+  createUserStore,
+  UserStoreContext,
+} from "@pochical/prototype/lib/design-user-store";
+import type { OwnData } from "@pochical/prototype/lib/design-user-store";
+import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
+import { css, cva } from "@pochical/styled-system/css";
 import { ArrowRight, CornerDownRight } from "lucide-react";
 import { Fragment, useState } from "react";
 import type { ReactNode } from "react";
-import { css, cva } from "styled-system/css";
 
-import { initialDesignSchedule } from "../lib/design-days";
-import { createUserStore, UserStoreContext } from "../lib/design-user-store";
-import type { OwnData } from "../lib/design-user-store";
-import { parseDesignVariants } from "../lib/design-variants";
-import { DesignApp } from "./design-app";
-import type { GroupStart } from "./design-group";
 import { HomeScreen } from "./design-home-screen";
-import type { SettingsPage } from "./design-settings";
-import type { Tab } from "./design-tab-bar";
 
 // Real screens drawn small and not touchable, for /design/flows and
 // /design/states, so the documents never drift from the app. Frames open

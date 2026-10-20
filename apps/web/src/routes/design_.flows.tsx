@@ -1,3 +1,37 @@
+import { GapSheetPreview } from "@pochical/prototype/components/design-gap-sheet";
+import type { GapSheetProps } from "@pochical/prototype/components/design-gap-sheet";
+import {
+  DesignProviders,
+  useDesignTheme,
+} from "@pochical/prototype/components/design-providers";
+import { pageStyle } from "@pochical/prototype/components/design-theme";
+import {
+  blankOffs,
+  OffLooksContext,
+} from "@pochical/prototype/components/shift-mark";
+import {
+  addDays,
+  gapDaysIn,
+  dateKey,
+  initialDesignSchedule,
+} from "@pochical/prototype/lib/design-days";
+import type { Schedule } from "@pochical/prototype/lib/design-days";
+import { chatKey, groupChat } from "@pochical/prototype/lib/design-group-data";
+import {
+  sampleChats,
+  sampleOthers,
+} from "@pochical/prototype/lib/design-group-samples";
+import {
+  isDayOff,
+  presetPatterns,
+} from "@pochical/prototype/lib/design-patterns";
+import type { PatternBook } from "@pochical/prototype/lib/design-patterns";
+import {
+  defaultReminders,
+  notificationText,
+} from "@pochical/prototype/lib/design-reminders";
+import { designToday } from "@pochical/prototype/lib/design-today";
+import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { createFileRoute } from "@tanstack/react-router";
 
 import {
@@ -8,10 +42,6 @@ import {
   frameSections,
   HomeFrame,
 } from "../components/design-frames";
-import { GapSheetPreview } from "../components/design-gap-sheet";
-import type { GapSheetProps } from "../components/design-gap-sheet";
-import { chatKey, groupChat } from "../components/design-group-data";
-import { sampleChats, sampleOthers } from "../components/design-group-samples";
 import { LockScreen } from "../components/design-home-screen";
 import { DesignOnboarding } from "../components/design-onboarding";
 import type { OnboardingScreen } from "../components/design-onboarding";
@@ -20,24 +50,6 @@ import {
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import {
-  DesignProviders,
-  useDesignTheme,
-} from "../components/design-providers";
-import { pageStyle } from "../components/design-theme";
-import { blankOffs, OffLooksContext } from "../components/shift-mark";
-import {
-  addDays,
-  gapDaysIn,
-  dateKey,
-  initialDesignSchedule,
-} from "../lib/design-days";
-import type { Schedule } from "../lib/design-days";
-import { isDayOff, presetPatterns } from "../lib/design-patterns";
-import type { PatternBook } from "../lib/design-patterns";
-import { defaultReminders, notificationText } from "../lib/design-reminders";
-import { designToday } from "../lib/design-today";
-import { parseDesignVariants } from "../lib/design-variants";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design_/flows")({

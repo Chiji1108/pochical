@@ -725,14 +725,10 @@ public actor SyncClient {
     for tried in 1...Self.photoTries {
       try Task.checkCancellation()
       guard try await stillGoing(edit.opID) else { return false }
+      let began = Self.nowMs()
       do {
         try await ChatPhotos.upload(
           photoID, of: edit.opID, in: groupID, as: credentials, server: server)
-        try await database.write { db in
-          try Self.owned(by: credentials, db)
-          try Chats.photoUp(photoID, of: edit.opID, now: Self.nowMs(), in: db)
-        }
-        return try await stillGoing(edit.opID)
       } catch {
         try Task.checkCancellation()
         guard try await stillGoing(edit.opID),
@@ -740,7 +736,15 @@ public actor SyncClient {
         else { return false }
         try await Task.sleep(for: .milliseconds(waitMs))
         waitMs *= 2
+        continue
       }
+      // Kept outside the upload's tries: the photo is up, and a write that
+      // fails here (the device gone on as someone else) is no failed upload.
+      try await database.write { db in
+        try Self.owned(by: credentials, db)
+        try Chats.photoUp(photoID, of: edit.opID, began: began, in: db)
+      }
+      return try await stillGoing(edit.opID)
     }
     return false
   }

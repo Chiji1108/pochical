@@ -1,4 +1,7 @@
-import { chosenVariants, wallpaperVariant } from "./design-variants";
+import {
+  chosenVariants,
+  wallpaperVariant,
+} from "@pochical/prototype/lib/design-variants";
 
 // What /design/widgets switches between, as /demo's choices do: each kept
 // in the URL, the first of each the one shown when the URL leaves it out.

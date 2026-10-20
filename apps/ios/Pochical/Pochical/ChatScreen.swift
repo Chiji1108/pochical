@@ -1380,18 +1380,20 @@ struct ChatScreen: View {
     PhotoPager(placeID: place.id, threadID: threadID, client: socket, database: database)
   }
 
-  /// Saves a line's photos to the person's library, each in turn, and
-  /// says so.
+  /// Saves a line's photos to the person's library, each in turn, one
+  /// that fails not stopping the rest, and says how it went.
   private func save(_ photos: [LinePhoto]) {
     Task {
-      var saved = true
-      for photo in photos where saved {
-        saved = await savePhoto(photo, in: place.id, calls: groupCalls)
+      var saved = 0
+      for photo in photos {
+        if await savePhoto(photo, in: place.id, calls: groupCalls) { saved += 1 }
       }
-      if saved {
+      if saved == photos.count {
         sayDone("写真を保存しました")
-      } else {
+      } else if saved == 0 {
         say("保存できませんでした")
+      } else {
+        say("一部の写真を保存できませんでした")
       }
     }
   }

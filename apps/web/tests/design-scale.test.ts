@@ -7,7 +7,14 @@ import { HAIRLINE_MAX, SPACING_STEP } from "@pochical/design/metrics";
 // The app's spacing sits on a 4px grid and its corners take the radius
 // tokens (design/src/metrics.ts), so pieces line up and the native apps
 // share the same steps. 1 and 2px are left for hairlines and nudges.
-const components = path.join(import.meta.dir, "../src/components");
+// The site's design pages and the prototype's pieces they show.
+const folders = [
+  path.join(import.meta.dir, "../src/components"),
+  path.join(import.meta.dir, "../../../packages/prototype/src/components"),
+];
+const componentFiles = folders.flatMap((folder) =>
+  readdirSync(folder).map((file) => ({ file, full: path.join(folder, file) }))
+);
 
 // The design pages and the device's stand-ins draw to their own measure.
 const outside = new Set([
@@ -30,10 +37,10 @@ const radiusProperty = /\bborder\w*Radius:\s*"(?<value>[^"]+)"/gu;
 const pixels = /(?<number>-?\d+(?:\.\d+)?)px/gu;
 
 const offGrid = (property: RegExp, allowed: (px: number) => boolean) =>
-  readdirSync(components)
-    .filter((file) => file.endsWith(".tsx") && !outside.has(file))
-    .flatMap((file) => {
-      const source = readFileSync(path.join(components, file), "utf-8");
+  componentFiles
+    .filter(({ file }) => file.endsWith(".tsx") && !outside.has(file))
+    .flatMap(({ file, full }) => {
+      const source = readFileSync(full, "utf-8");
       return [...source.matchAll(property)].flatMap((match) => {
         const value = match.groups?.value ?? "";
         return value.includes("calc(")

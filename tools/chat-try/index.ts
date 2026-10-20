@@ -234,6 +234,11 @@ const jpegsIn = async (dir: string): Promise<string[]> => {
 };
 
 const files = photoDir === undefined ? [] : await jpegsIn(photoDir);
+if (album && files.length > chatRules.photosPerSend) {
+  fail(
+    `--album: ${files.length} JPEGs, more than one line holds (chatRules.photosPerSend, ${chatRules.photosPerSend})`
+  );
+}
 const jpegs = await Promise.all(files.map(readPhoto));
 
 const { token, userId } = await signIn();

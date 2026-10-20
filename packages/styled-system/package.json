@@ -1,0 +1,26 @@
+{
+  "name": "@pochical/styled-system",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./config": "./config.ts",
+    "./*": {
+      "types": "./dist/*/index.d.ts",
+      "default": "./dist/*/index.mjs"
+    }
+  },
+  "scripts": {
+    "codegen": "panda codegen",
+    "prepare": "bun run codegen",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pochical/design": "workspace:*"
+  },
+  "devDependencies": {
+    "@pandacss/dev": "^1.12.1",
+    "@types/react": "~19.3.0",
+    "react": "19.3.0",
+    "typescript": "~6.0.3"
+  }
+}
