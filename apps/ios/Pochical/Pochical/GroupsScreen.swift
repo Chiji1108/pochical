@@ -138,9 +138,11 @@ struct GroupsScreen: View {
           openID = nil
           path.removeAll()
         } onMade: { made in
+          // グループを作る turns into メンバーを招待 in one change, once
+          // the group has come: popped first, the invitation pushed as the
+          // pop still goes would be taken back by the stack as it ends.
           openID = made
           inviting = made
-          path.removeAll()
           inviteMade()
         }
       }
@@ -197,7 +199,8 @@ struct GroupsScreen: View {
     openingChat = nil
   }
 
-  /// Opens メンバーを招待 for the group just made, once it is here.
+  /// Opens メンバーを招待 for the group just made, once it is here, in
+  /// place of every page over the hub.
   private func inviteMade() {
     guard let id = inviting, let made = groups.first(where: { $0.id == id }) else { return }
     inviting = nil
