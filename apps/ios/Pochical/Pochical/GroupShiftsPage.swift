@@ -127,8 +127,11 @@ struct GroupShiftsPage: View {
       }
       switch layout {
       case .days:
-        GroupDayHeader(members: tableMembers, groupID: group.id, offset: wide ? sidewaysOffset : nil)
-          .padding(.horizontal, 16)
+        GroupDayHeader(
+          members: tableMembers, groupID: group.id, offset: wide ? sidewaysOffset : nil,
+          edged: scrolledSideways
+        )
+        .padding(.horizontal, 16)
       // Over the blocks' columns, which keep room at their trailing end.
       case .weeks:
         GroupWeekdays().padding(.leading, 16).padding(.trailing, 20).padding(.bottom, 6)
@@ -146,6 +149,12 @@ struct GroupShiftsPage: View {
       }
     }
     .background(colors.backgroundBase)
+    // A list laid out anew, as on coming back from 1人ずつ, rests at its
+    // left edge.
+    .onChange(of: layout) {
+      sidewaysOffset.x = 0
+      scrolledSideways = false
+    }
     .navigationTitle(group.name)
     .navigationBarTitleDisplayMode(.inline)
     .toolbarVisibility(.visible, for: .navigationBar)
@@ -278,7 +287,10 @@ struct GroupShiftsPage: View {
               // As wide as the view, kept at its left as the rows scroll
               // sideways.
               .frame(width: sideways ? max(viewWidth - 32, 0) : nil, alignment: .leading)
-              .pinnedSideways()
+              .pinnedSideways(sideways)
+              // Each with its own margins, not the list's, so a month or day
+              // gone to lies at the left edge, not a margin past it.
+              .padding(.horizontal, 16)
               // Not a day: the month in sight is read off the days.
               .id("heading-\(month.key)")
             if layout == .days {
@@ -289,6 +301,7 @@ struct GroupShiftsPage: View {
                   sideways: pinning, drawing: drawing
                 )
                 .equatable()
+                .padding(.horizontal, 16)
                 .id(day)
               }
             } else {
@@ -309,6 +322,7 @@ struct GroupShiftsPage: View {
                 )
                 .overlay(
                   RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
+                .padding(.horizontal, 16)
                 .id(week[0])
               }
             }
@@ -319,16 +333,22 @@ struct GroupShiftsPage: View {
         // out at its own width otherwise, leaving nothing to scroll.
         .frame(
           width: sideways
-            ? max(dayRowsWidth(members: members.count, english: english), viewWidth - 32) : nil,
+            ? max(dayRowsWidth(members: members.count, english: english) + 32, viewWidth) : nil,
           alignment: .leading)
-        .padding(.horizontal, 16)
         .padding(.bottom, 24)
       }
-      // A big group's 一覧: how far it is scrolled sideways, read by the
-      // faces alone, so each frame of a scroll makes only them again;
-      // whether it is, and its width, which change seldom.
-      .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x } action: {
+      // A big group's 一覧: how far it is scrolled sideways from where it
+      // rests, read by the faces alone, so each frame of a scroll makes
+      // only them again; then what changes seldom: the safe area at its
+      // leading edge (in landscape), which the pinned columns cross before
+      // they stop, whether they have stopped, and its width.
+      .onScrollGeometryChange(for: CGFloat.self) {
+        $0.contentOffset.x + $0.contentInsets.leading
+      } action: {
         sidewaysOffset.x = $1
+      }
+      .onScrollGeometryChange(for: CGFloat.self) { $0.contentInsets.leading } action: {
+        sidewaysOffset.inset = $1
       }
       .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.x > 0 } action: {
         scrolledSideways = $1
@@ -344,10 +364,15 @@ struct GroupShiftsPage: View {
         }
         todayInSight = shown.contains(anchor(of: Day.today))
       }
+      // At the leading edge too: .top alone would center a big group's
+      // wide rows sideways.
       .onChange(of: goal) { _, goal in
         switch goal {
-        case .month(let month): scroll.scrollTo("heading-\(month.key)", anchor: .top)
-        case .today: withAnimation(Springs.standard) { scroll.scrollTo(anchor(of: Day.today), anchor: .top) }
+        case .month(let month): scroll.scrollTo("heading-\(month.key)", anchor: .topLeading)
+        case .today:
+          withAnimation(Springs.standard) {
+            scroll.scrollTo(anchor(of: Day.today), anchor: .topLeading)
+          }
         case nil: return
         }
         self.goal = nil
@@ -355,14 +380,14 @@ struct GroupShiftsPage: View {
       // Opening at the top, the day's month named in the pinned row, and
       // its sheet up once there: a sheet coming up as the list appears
       // keeps it from scrolling.
-      .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .top) }
+      .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .topLeading) }
       .task {
         if let openingDay, !openedDay {
           openedDay = true
           picked = openingDay
         }
       }
-      .onChange(of: layout) { scroll.scrollTo(anchor(of: picked ?? Day.today), anchor: .top) }
+      .onChange(of: layout) { scroll.scrollTo(anchor(of: picked ?? Day.today), anchor: .topLeading) }
       // As /design's: the table stays where it is when a day is picked;
       // room under it while the sheet is up lets a row near the bottom be
       // scrolled above the sheet.

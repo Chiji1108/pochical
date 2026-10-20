@@ -48,24 +48,28 @@ enum Sideways: Equatable {
 }
 
 extension View {
-  /// Kept at the left of a sideways scroll view, its margin clear, as
-  /// what is after it scrolls under; a view at the content's leading
-  /// edge. Moved in drawing, as the scroll view's offset changes, so
-  /// nothing is laid out again; at the left edge's bounce it goes with
-  /// the rest.
-  func pinnedSideways() -> some View {
+  /// While `pinned`, kept at the left of a sideways scroll view, its
+  /// margin clear, as what is after it scrolls under; a view at the
+  /// content's leading edge. Moved in drawing, as the scroll view's offset
+  /// changes, so nothing is laid out again; at the left edge's bounce it
+  /// goes with the rest.
+  func pinnedSideways(_ pinned: Bool = true) -> some View {
     visualEffect { content, proxy in
       content.offset(
-        x: max(pinnedMargin - proxy.frame(in: .scrollView(axis: .horizontal)).minX, 0))
+        x: pinned
+          ? max(pinnedMargin - proxy.frame(in: .scrollView(axis: .horizontal)).minX, 0) : 0)
     }
   }
 }
 
-/// How far a big group's 一覧 is scrolled sideways, read by its faces
-/// alone: they sit over the scroll view, outside it, so they follow it as
-/// it moves, and nothing else is made again with each frame of a scroll.
+/// How far a big group's 一覧 is scrolled sideways from where it rests,
+/// and the safe area at its leading edge (in landscape), which the pinned
+/// columns cross before they stop, read by its faces alone: they sit
+/// over the scroll view, outside it, so they follow it as it moves, and
+/// nothing else is made again with each frame of a scroll.
 @Observable final class SidewaysOffset {
   var x: CGFloat = 0
+  var inset: CGFloat = 0
 }
 
 /// 一覧's heading (/design's DayRowsTable): a column per member, their
@@ -79,6 +83,9 @@ struct GroupDayHeader: View {
   let groupID: String
   /// How far the rows are scrolled sideways; nil while everyone fits.
   var offset: SidewaysOffset?
+  /// An edge beside the viewer's face while others pass under, as beside
+  /// the rows' pinned columns.
+  var edged = false
 
   var body: some View {
     let density = DayRowsDensity(members: members.count)
@@ -87,6 +94,11 @@ struct GroupDayHeader: View {
         HStack(spacing: 0) {
           dateRoom
           if let first = members.first { face(first, density: density) }
+        }
+        .overlay(alignment: .trailing) {
+          if edged {
+            Rectangle().fill(colors.separator).frame(width: 1)
+          }
         }
         .modifier(FollowsRows(offset: offset, pinned: true))
         .zIndex(1)
@@ -141,26 +153,37 @@ struct GroupDayHeader: View {
 }
 
 /// A part of 一覧's heading moved as the rows under it scroll sideways.
-/// Pinned, the viewer's face: kept at the left, an edge beside it while
-/// others pass under, and pulled right with the rows past the left edge.
+/// Pinned, the viewer's face: it goes with the rows until their pinned
+/// columns stop at the scroll view's edge, and stays over them there, and
+/// is pulled right with them past the left edge.
 private struct FollowsRows: ViewModifier {
-  @Environment(\.themeColors) private var colors
   let offset: SidewaysOffset
   let pinned: Bool
 
   func body(content: Content) -> some View {
-    let x = offset.x
-    if pinned {
-      content
-        .overlay(alignment: .trailing) {
-          if x > 0 {
-            Rectangle().fill(colors.separator).frame(width: 1)
-          }
-        }
-        .offset(x: max(-x, 0))
-    } else {
-      content.offset(x: -x)
-    }
+    content.offset(x: pinned ? max(-offset.x, -offset.inset) : -offset.x)
+  }
+}
+
+/// Which part of a day's row its band or frame is drawn over: all of it,
+/// or, scrolling sideways, the pinned columns' part or the others'.
+private enum RowPart {
+  case whole, pinned, others
+
+  /// `shape` set in from this part's edges, the end where the other part
+  /// goes on run a corner's radius past it and cut there: the two parts
+  /// meet square, and the others' end slides under the pinned columns.
+  func fit(_ shape: some View) -> some View {
+    let open = -Radius.sm
+    let insets =
+      switch self {
+      case .whole: rowInset
+      case .pinned:
+        EdgeInsets(top: rowInset.top, leading: rowInset.leading, bottom: rowInset.bottom, trailing: open)
+      case .others:
+        EdgeInsets(top: rowInset.top, leading: open, bottom: rowInset.bottom, trailing: rowInset.trailing)
+      }
+    return Color.clear.overlay { shape.padding(insets) }.clipped()
   }
 }
 
@@ -241,25 +264,11 @@ struct GroupDayRow: View, @MainActor Equatable {
             if !members.isEmpty { column(0) }
           }
           .background {
-            if together {
-              UnevenRoundedRectangle(
-                topLeadingRadius: Radius.sm, bottomLeadingRadius: Radius.sm, style: .continuous
-              )
-              .fill(colors.accentContainer)
-              .padding(.vertical, rowInset.top)
-              .padding(.leading, rowInset.leading)
-            }
+            if together { band(.pinned) }
           }
-          // The frame open at its end, where the others' part goes on.
           .overlay {
-            if picked {
-              RoundedRectangle(cornerRadius: Radius.sm)
-                .strokeBorder(colors.accentDefault, lineWidth: 1.5)
-                .padding(rowInset)
-                .padding(.trailing, -Radius.sm - rowInset.trailing)
-            }
+            if picked { pickedFrame(.pinned) }
           }
-          .clipped()
           // The page's ground, out over its margin too, so nothing passing
           // under shows beside the dates.
           .background(colors.backgroundBase.padding(.leading, -pinnedMargin))
@@ -276,31 +285,16 @@ struct GroupDayRow: View, @MainActor Equatable {
           }
           .pinnedSideways()
           .zIndex(1)
-          // The others' part of the band and frame starts under the pinned
-          // columns, so the two meet whole.
           HStack(spacing: 0) {
             ForEach(1..<max(members.count, 1), id: \.self) { index in
               column(index)
             }
           }
           .background {
-            if together {
-              UnevenRoundedRectangle(
-                bottomTrailingRadius: Radius.sm, topTrailingRadius: Radius.sm, style: .continuous
-              )
-              .fill(colors.accentContainer)
-              .padding(.vertical, rowInset.top)
-              .padding(.trailing, rowInset.trailing)
-              .padding(.leading, -Radius.sm)
-            }
+            if together { band(.others) }
           }
           .overlay {
-            if picked {
-              RoundedRectangle(cornerRadius: Radius.sm)
-                .strokeBorder(colors.accentDefault, lineWidth: 1.5)
-                .padding(rowInset)
-                .padding(.leading, -Radius.sm - rowInset.leading)
-            }
+            if picked { pickedFrame(.others) }
           }
         } else {
           date()
@@ -312,18 +306,10 @@ struct GroupDayRow: View, @MainActor Equatable {
       .frame(minHeight: 36)
       // みんな休み: the day's tiles joined along the row.
       .background {
-        if together, sideways == .fits {
-          RoundedRectangle(cornerRadius: Radius.sm)
-            .fill(colors.accentContainer)
-            .padding(rowInset)
-        }
+        if together, sideways == .fits { band(.whole) }
       }
       .overlay {
-        if picked, sideways == .fits {
-          RoundedRectangle(cornerRadius: Radius.sm)
-            .strokeBorder(colors.accentDefault, lineWidth: 1.5)
-            .padding(rowInset)
-        }
+        if picked, sideways == .fits { pickedFrame(.whole) }
       }
       // Today: a bar down the row's start, its whole height, as /design's
       // border; the band and frame start inside it. Pinned, the pinned
@@ -343,6 +329,17 @@ struct GroupDayRow: View, @MainActor Equatable {
     .accessibilityLabel(
       "\(day.monthDayText)\(together ? "、みんな休み" : "")")
     .accessibilityAddTraits(picked ? .isSelected : [])
+  }
+
+  /// みんな休み's band behind `part` of the row.
+  private func band(_ part: RowPart) -> some View {
+    part.fit(RoundedRectangle(cornerRadius: Radius.sm).fill(colors.accentContainer))
+  }
+
+  /// The picked day's frame over `part` of the row.
+  private func pickedFrame(_ part: RowPart) -> some View {
+    part.fit(
+      RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(colors.accentDefault, lineWidth: 1.5))
   }
 
   private func date() -> some View {
