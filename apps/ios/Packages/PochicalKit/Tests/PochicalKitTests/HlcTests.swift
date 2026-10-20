@@ -2,8 +2,15 @@ import Testing
 
 @testable import PochicalKit
 
-// compare and ahead are the server's to check.
+// ahead is the server's to check.
 struct HlcVectors: Decodable, Sendable {
+  struct Compare: VectorCase {
+    let name: String
+    let a: Clock
+    let b: Clock
+    let expected: Int
+  }
+
   struct Tick: VectorCase {
     let name: String
     let last: HlcTime
@@ -26,9 +33,16 @@ struct HlcVectors: Decodable, Sendable {
     let expected: Int64
   }
 
+  let compare: [Compare]
   let tick: [Tick]
   let receive: [Receive]
   let offset: [Offset]
+}
+
+@Test(arguments: try vectors("hlc", as: HlcVectors.self).compare)
+func compare(_ vector: HlcVectors.Compare) {
+  let order = vector.a < vector.b ? -1 : vector.b < vector.a ? 1 : 0
+  #expect(order == vector.expected)
 }
 
 @Test(arguments: try vectors("hlc", as: HlcVectors.self).tick)

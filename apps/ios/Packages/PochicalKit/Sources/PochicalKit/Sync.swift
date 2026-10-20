@@ -95,7 +95,8 @@ extension Sync {
         last = last.receiving(HlcTime(ms: hlc.physicalMs, counter: hlc.counter))
       }
     }
-    for var edit in try OutboxEdit.order(by: \.id).fetchAll(db) {
+    let edits = try OutboxEdit.order(by: \.id).fetchAll(db)
+    for var edit in edits {
       last = last.tick(now: state.corrected(now))
       var hlc = Pochical_V1_Hlc()
       hlc.physicalMs = last.ms
@@ -109,6 +110,8 @@ extension Sync {
     state.lastMs = last.ms
     state.lastCounter = Int64(last.counter)
     try SyncState.upsert { state }.execute(db)
+    // A waiting new job's order with its new clock may take back more.
+    try OwnValues.showDays(from: edits.compactMap(\.clearFrom), in: db)
   }
 }
 

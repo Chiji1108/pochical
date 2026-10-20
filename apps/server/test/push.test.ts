@@ -369,4 +369,90 @@ describe("a device's push token", () => {
       recipientId: await userIdOf(maker),
     });
   });
+
+  it("is dropped when APNs says it is dead, kept when APNs fails, and each refusal logged and counted", async () => {
+    const { groupId, guest, maker } = await pair();
+    const otherDevice = await secondSession(guest, "apple-push2");
+    await registerToken(TOKEN, guest);
+    await registerToken(OTHER_TOKEN, otherDevice);
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const { url } = new Request(input);
+      return await Promise.resolve(
+        url.endsWith(TOKEN)
+          ? Response.json({ reason: "BadDeviceToken" }, { status: 400 })
+          : Response.json({ reason: "InternalServerError" }, { status: 500 })
+      );
+    });
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const counted = vi.spyOn(env.PUSH_OUTCOMES, "writeDataPoint");
+
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(() => warned.mock.calls.length).toBe(2);
+    expect(warned).toHaveBeenCalledWith({
+      apns: {
+        reason: "BadDeviceToken",
+        sandbox: true,
+        sent: "gone",
+        status: 400,
+        type: "alert",
+      },
+    });
+    expect(warned).toHaveBeenCalledWith({
+      apns: {
+        reason: "InternalServerError",
+        sandbox: true,
+        sent: "failed",
+        status: 500,
+        type: "alert",
+      },
+    });
+    expect(counted.mock.calls.map(([point]) => point?.indexes)).toStrictEqual(
+      expect.arrayContaining([["gone"], ["failed"]])
+    );
+
+    await expect
+      .poll(async () => {
+        const kept = await env.DB.prepare(
+          "select token from push_tokens where token in (?, ?)"
+        )
+          .bind(TOKEN, OTHER_TOKEN)
+          .all<{ token: string }>();
+        return kept.results;
+      })
+      .toStrictEqual([{ token: OTHER_TOKEN }]);
+  });
+
+  it("is kept when APNs cannot be reached, and left out of what is logged and counted", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(TOKEN, guest);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const { url } = new Request(input);
+      return await Promise.reject(new TypeError(`fetch to ${url} failed`));
+    });
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const counted = vi.spyOn(env.PUSH_OUTCOMES, "writeDataPoint");
+
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(() => warned.mock.calls.length).toBe(1);
+    expect(warned).toHaveBeenCalledWith({
+      apns: {
+        reason:
+          "TypeError: fetch to https://api.sandbox.push.apple.com/3/device/{token} failed",
+        sandbox: true,
+        sent: "failed",
+        status: 0,
+        type: "alert",
+      },
+    });
+    expect(JSON.stringify(counted.mock.calls)).not.toContain(TOKEN);
+    const kept = await env.DB.prepare(
+      "select token from push_tokens where token = ?"
+    )
+      .bind(TOKEN)
+      .all<{ token: string }>();
+    expect(kept.results).toStrictEqual([{ token: TOKEN }]);
+  });
 });

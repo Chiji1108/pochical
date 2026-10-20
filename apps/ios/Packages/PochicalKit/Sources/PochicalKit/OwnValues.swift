@@ -7,7 +7,9 @@ import SQLiteData
 /// own edits of it still waiting, and the tables of Tables.swift showing
 /// the latest waiting edit's value, else the server's. The device never
 /// compares clocks to choose: the server has, and its Changes come before
-/// the Acked that ends a wait (spec/vectors/local-edits.json).
+/// the Acked that ends a wait (spec/vectors/local-edits.json). A new job's
+/// order waiting hides the days' shifts and times it takes back
+/// (spec/vectors/order-clears.json), until its Acked.
 public enum OwnValues {
   /// A local edit, stamped with its clock: it shows at once and waits in
   /// the outbox until the server acknowledges it. `clearFrom` is a
@@ -23,7 +25,10 @@ public enum OwnValues {
       OutboxEdit.Draft(opID: opID, key: key, change: data, clearFrom: clearFrom?.key)
     }
     .execute(db)
-    try show(change, in: db)
+    try show(change, floors: try waitingFloors(in: db), in: db)
+    if let clearFrom {
+      try showDays(from: [clearFrom.key], in: db)
+    }
   }
 
   /// A change from the server: the value's from now on, shown unless an
@@ -35,7 +40,7 @@ public enum OwnValues {
     let data = try change.serializedData()
     try ServerValue.upsert { ServerValue(key: key, change: data) }.execute(db)
     if try !isWaiting(key, in: db) {
-      try show(change, in: db)
+      try show(change, floors: try waitingFloors(in: db), in: db)
     }
   }
 
@@ -45,6 +50,8 @@ public enum OwnValues {
   public static func acknowledge(_ opIDs: [String], in db: Database) throws {
     let acked = try OutboxEdit.where { $0.opID.in(opIDs) }.fetchAll(db)
     try OutboxEdit.where { $0.opID.in(opIDs) }.delete().execute(db)
+    // Read once the acked edits are gone: an acked order hides nothing.
+    let floors = try waitingFloors(in: db)
     var shown: Set<String> = []
     for edit in acked where shown.insert(edit.key).inserted {
       if try isWaiting(edit.key, in: db) {
@@ -52,8 +59,9 @@ public enum OwnValues {
       }
       let server = try ServerValue.find(edit.key).fetchOne(db)
       let change = try Pochical_V1_Change(serializedBytes: server?.change ?? edit.change)
-      try show(server == nil ? change.cleared : change, in: db)
+      try show(server == nil ? change.cleared : change, floors: floors, in: db)
     }
+    try showDays(from: acked.compactMap(\.clearFrom), in: db)
   }
 
   /// A Reset: the server's values go, and the outbox stays.
@@ -66,8 +74,9 @@ public enum OwnValues {
     try CoworkerRow.delete().execute(db)
     try CoworkerOrderRow.delete().execute(db)
     try PreferenceRow.delete().execute(db)
+    let floors = try waitingFloors(in: db)
     for edit in try OutboxEdit.order(by: \.id).fetchAll(db) {
-      try show(Pochical_V1_Change(serializedBytes: edit.change), in: db)
+      try show(Pochical_V1_Change(serializedBytes: edit.change), floors: floors, in: db)
     }
   }
 
@@ -75,12 +84,57 @@ public enum OwnValues {
     try OutboxEdit.where { $0.key.eq(key) }.fetchCount(db) > 0
   }
 
-  /// Writes a value into the tables that show it.
-  private static func show(_ change: Pochical_V1_Change, in db: Database) throws {
+  /// Shows again each day value from the earliest of `starts`,
+  /// "YYYY-MM-DD", the latest waiting edit's, else the server's: what a
+  /// new job's order waiting takes back changes there as it starts or
+  /// stops waiting, or as its clock moves (Sync.restamp).
+  static func showDays(from starts: [String], in db: Database) throws {
+    guard let from = starts.min() else { return }
+    let floors = try waitingFloors(in: db)
+    // Keys of day values run "day/YYYY-MM-DD/field"; "0" comes after "/".
+    let first = "day/\(from)"
+    var shown: [String: Data] = [:]
+    for value in try ServerValue.where({ $0.key >= first && $0.key < "day0" }).fetchAll(db) {
+      shown[value.key] = value.change
+    }
+    // In outbox order, so each value ends at its latest waiting edit.
+    for edit in try OutboxEdit.where({ $0.key >= first && $0.key < "day0" }).order(by: \.id)
+      .fetchAll(db)
+    {
+      shown[edit.key] = edit.change
+    }
+    for data in shown.values {
+      try show(Pochical_V1_Change(serializedBytes: data), floors: floors, in: db)
+    }
+  }
+
+  /// The new job's orders waiting in the outbox, each taking back the days
+  /// from its start set before it (givesWay); read once for the values
+  /// shown together.
+  private static func waitingFloors(in db: Database) throws -> [OrderFloor] {
+    try OutboxEdit.where { $0.clearFrom.isNot(nil) }.fetchAll(db).compactMap { edit in
+      guard let from = edit.clearFrom,
+        let hlc = try Pochical_V1_Change(serializedBytes: edit.change).hlc
+      else { return nil }
+      return OrderFloor(from: from, clock: Clock(hlc))
+    }
+  }
+
+  /// Writes a value into the tables that show it; a day's shift or time
+  /// that gives way to one of `floors` shows cleared until the server
+  /// settles it.
+  private static func show(
+    _ change: Pochical_V1_Change, floors: [OrderFloor], in db: Database
+  ) throws {
     switch change.kind {
     case .day(let value):
       var row = try DayRow.find(value.date).fetchOne(db) ?? DayRow(date: value.date)
-      let field = value.hasValue ? value.value : nil
+      let takenBack =
+        value.hasHlc
+        && floors.contains {
+          givesWay(date: value.date, field: value.field, set: Clock(value.hlc), floor: $0)
+        }
+      let field = value.hasValue && !takenBack ? value.value : nil
       switch value.field {
       case .pattern: row.pattern = field
       case .start: row.start = field
