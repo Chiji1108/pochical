@@ -44,17 +44,21 @@ function SupportChat() {
   const { userId } = Route.useParams();
   const router = useRouter();
   const [draft, setDraft] = useState("");
+  // The answer's own id, made again as the words change (but while it is
+  // being sent) and once it is kept, so sending it again is one line.
+  const [opId, setOpId] = useState(() => crypto.randomUUID());
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
   const send = async () => {
     setSending(true);
-    const kept = await answerSupport({ data: { text: draft, userId } }).catch(
-      () => false
-    );
+    const kept = await answerSupport({
+      data: { opId, text: draft, userId },
+    }).catch(() => false);
     setSending(false);
     setFailed(!kept);
     if (kept) {
       setDraft("");
+      setOpId(crypto.randomUUID());
       await router.invalidate();
     }
   };
@@ -130,6 +134,11 @@ function SupportChat() {
           maxLength={textLimits.chatMessage}
           onChange={(event) => {
             setDraft(event.target.value);
+            // Kept while a send is on its way: it may have arrived, and its
+            // retry must be the same answer.
+            if (!sending) {
+              setOpId(crypto.randomUUID());
+            }
           }}
           rows={4}
           value={draft}

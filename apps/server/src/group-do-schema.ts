@@ -53,7 +53,8 @@ export const logHead = sqliteTable(
 
 // Who is in the group, as they appear in it, each at the cursor it got
 // when it last changed. The Group DO is where membership is decided; each
-// member's User DO keeps a copy of their own groups for checking sockets.
+// member's User DO keeps a copy of their own groups, told by
+// membership_outbox, for listing them and keeping out ids not theirs.
 export const members = sqliteTable("members", {
   cursor: integer().notNull().default(0),
   // Their account is deleted: left, with no name, their lines taken back.
@@ -377,4 +378,21 @@ export const supportSlackLines = sqliteTable("support_slack_lines", {
   toldUnsent: integer("told_unsent", { mode: "boolean" })
     .notNull()
     .default(false),
+});
+
+// What each user's own DO is still to hear of their place in the group
+// (spec/sync-protocol.md, Groups): the latest news of it, one row a user,
+// written in the transaction that changed it and told by the alarm until
+// their DO takes it. Their DO keeps only news newer than it has, by
+// `cursor`, so news told twice or late changes nothing.
+export const membershipOutbox = sqliteTable("membership_outbox", {
+  // The group's head as it changed.
+  cursor: integer().notNull(),
+  // When to tell it next.
+  dueAt: integer("due_at", { mode: "timestamp_ms" }).notNull(),
+  // The tries in a row that failed, for how long the next waits.
+  failures: integer().notNull().default(0),
+  // In the group, with its name and mark as they are when told; else out.
+  inGroup: integer("in_group", { mode: "boolean" }).notNull(),
+  userId: text("user_id").primaryKey(),
 });

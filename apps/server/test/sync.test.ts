@@ -306,6 +306,8 @@ describe("syncing a user's own days", () => {
       case: "hello",
       value: { cursor: 0n, protocolVersion: CURRENT_PROTOCOL_VERSION },
     });
+    // Welcome, and the catch-up: the group's name and its one member.
+    await frames.next();
     await frames.next();
     sendFrame(socket, {
       case: "dayEdits",

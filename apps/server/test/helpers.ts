@@ -44,14 +44,61 @@ export const userIdOf = async (token: string): Promise<string> => {
   return userId;
 };
 
-/** A signed-in member of the group, as their session token. */
+/**
+ * A signed-in member of the group, as their session token: its maker when
+ * the group is new, else someone added to it.
+ */
 export const memberOf = async (groupId: string): Promise<string> => {
   const token = await signInAnonymously();
-  await env.USERS.getByName(await userIdOf(token)).addMembership(groupId, {
-    mark: { color: 0, emoji: "🍉", icon: "", letter: "", photoId: "" },
-    name: "テスト",
-  });
+  const userId = await userIdOf(token);
+  const member = { ownName: null, userId, usualName: "テスト", usualPhoto: "" };
+  const group = env.GROUPS.getByName(groupId);
+  await env.USERS.getByName(userId).noteGroup(groupId);
+  const made = await group.create(
+    {
+      mark: { color: 0, emoji: "🍉", icon: "", letter: "", photoId: "" },
+      name: "テスト",
+    },
+    member
+  );
+  if (!made) {
+    await group.addMember(member);
+  }
   return token;
+};
+
+/**
+ * Has the group's telling of `userId`'s own DO of their membership go
+ * through `takeMembership` instead, failing as an unreachable DO would
+ * unless given another, until the function it gives back is called.
+ */
+export const failTelling = async (
+  groupId: string,
+  userId: string,
+  takeMembership: (...news: unknown[]) => Promise<void> = () => {
+    throw new Error("unreachable");
+  }
+): Promise<() => Promise<void>> => {
+  const group = env.GROUPS.getByName(groupId);
+  const users = {
+    getByName: (name: string) =>
+      name === userId ? { takeMembership } : env.USERS.getByName(name),
+  };
+  await runInDurableObject(group, (instance) => {
+    Reflect.set(
+      instance,
+      "env",
+      new Proxy(env, {
+        get: (target, key): unknown =>
+          key === "USERS" ? users : Reflect.get(target, key),
+      })
+    );
+  });
+  return async () => {
+    await runInDurableObject(group, (instance) => {
+      Reflect.set(instance, "env", env);
+    });
+  };
 };
 
 /** Opens a socket at the path, expecting it to be accepted. */

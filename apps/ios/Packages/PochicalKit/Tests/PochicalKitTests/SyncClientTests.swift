@@ -1,5 +1,8 @@
 import Foundation
+import Network
+import PochicalDesign
 import SQLiteData
+import Synchronization
 import Testing
 
 @testable import PochicalKit
@@ -70,4 +73,83 @@ private func database(ownedBy owner: String) throws -> any DatabaseWriter {
   #expect(server.asked == 0)
   #expect(!before.isCurrent)
   #expect(throws: AccountChanged.self) { try before.whileCurrent {} }
+}
+
+/// A server on this Mac that takes every socket and, at its first message
+/// (the Hello), closes it with `code`, as a group closes the socket of
+/// someone taken out of it; counting the sockets opened.
+private final class ClosingServer: Sendable {
+  let listener: NWListener
+  let opened = Mutex(0)
+
+  init(code: UInt16) throws {
+    let parameters = NWParameters.tcp
+    parameters.defaultProtocolStack.applicationProtocols.insert(
+      NWProtocolWebSocket.Options(), at: 0)
+    listener = try NWListener(using: parameters, on: .any)
+    listener.newConnectionHandler = { [weak self] connection in
+      self?.opened.withLock { $0 += 1 }
+      connection.start(queue: .global())
+      connection.receiveMessage { _, _, _, _ in
+        let close = NWProtocolWebSocket.Metadata(opcode: .close)
+        close.closeCode = .privateCode(code)
+        connection.send(
+          content: nil,
+          contentContext: NWConnection.ContentContext(identifier: "close", metadata: [close]),
+          isComplete: true,
+          completion: .contentProcessed { _ in })
+      }
+    }
+  }
+
+  func start() async throws -> URL {
+    let ready = AsyncStream<UInt16> { continuation in
+      listener.stateUpdateHandler = { [listener] state in
+        if case .ready = state, let port = listener.port?.rawValue {
+          continuation.yield(port)
+          continuation.finish()
+        }
+      }
+    }
+    listener.start(queue: .global())
+    for await port in ready {
+      return URL(string: "http://127.0.0.1:\(port)")!
+    }
+    throw CancellationError()
+  }
+}
+
+@Test func aGroupsSocketRefusedWith403StopsUntilTheGroupIsOpenedAgain() async throws {
+  let server = try RefusingServer(status: "403 Forbidden")
+  defer { server.listener.cancel() }
+  let url = try await server.start()
+  let credentials = try #require(CurrentAccount().begin(StoredSession(token: "t", userID: "me")))
+  let client = SyncClient(database: try database(ownedBy: "me"), peer: .group("g"), server: url)
+
+  await client.start(as: credentials)
+  #expect(await eventually { await client.stopped == .notMember })
+  // No retry of its own, past the first wait it would take.
+  try await Task.sleep(for: .milliseconds(SyncSocket.reconnectFirstMs + 200))
+  #expect(server.asked == 1)
+
+  // Opened again, as after joining again: one more try.
+  await client.start(as: credentials)
+  #expect(await eventually { server.asked == 2 })
+  #expect(await eventually { await client.stopped == .notMember })
+  await client.stop()
+}
+
+@Test func aGroupsSocketClosedAsNotAMemberStopsUntilTheGroupIsOpenedAgain() async throws {
+  let server = try ClosingServer(code: UInt16(SyncSocket.notMemberCloseCode))
+  defer { server.listener.cancel() }
+  let url = try await server.start()
+  let credentials = try #require(CurrentAccount().begin(StoredSession(token: "t", userID: "me")))
+  let client = SyncClient(database: try database(ownedBy: "me"), peer: .group("g"), server: url)
+
+  await client.start(as: credentials)
+  #expect(await eventually { await client.stopped == .notMember })
+  // No retry of its own, past the first wait it would take.
+  try await Task.sleep(for: .milliseconds(SyncSocket.reconnectFirstMs + 200))
+  #expect(server.opened.withLock { $0 } == 1)
+  await client.stop()
 }

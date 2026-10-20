@@ -3,7 +3,8 @@ import { chatPlaces, chatRules } from "@pochical/design/chat";
 import type { ChatPlaceKind, ChatPlaceRules } from "@pochical/design/chat";
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
-import { and, asc, count, eq, gt, isNull } from "drizzle-orm";
+import { and, asc, count, eq, gt, isNull, lte, min } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
@@ -58,6 +59,7 @@ import {
   memberPatterns,
   memberRepeatOrders,
   members,
+  membershipOutbox,
   profile,
   supportSlackLines,
 } from "./group-do-schema";
@@ -84,6 +86,7 @@ import {
 import { linkPreview } from "./link-preview";
 import { deleteGroupPhotos } from "./photos";
 import { overLimit } from "./rate-limits";
+import { retryWait } from "./retry-wait";
 import { supportPlace } from "./support-lines";
 import { relaySupport, supportPage } from "./support-place";
 import {
@@ -99,6 +102,7 @@ import {
   relayTyping,
   welcome,
 } from "./sync-socket";
+import type { MembershipNews } from "./user-do";
 
 /** What the group shows of itself to members and to invite links. */
 export type GroupProfile = {
@@ -132,8 +136,17 @@ const shownName = (ownName: string | null, usualName: string, before = "") =>
 const readerKey = (threadId: string, userId: string): string =>
   `${threadId}\n${userId}`;
 
-/** How a join went: in now, in already, or kept out of a full group. */
-type JoinResult = "added" | "already" | "full";
+// After telling a user's DO of their membership fails, the alarm tells it
+// again after this long, twice as long each time it fails in a row, up to
+// the most; it never stops, as the two must come to agree.
+export const NEWS_RETRY_FIRST_MS = 10_000;
+const NEWS_RETRY_MOST_MS = 3_600_000;
+
+/**
+ * How a join went: in now, in already, kept out of a full group, or of
+ * one not set up (gone as its last member's account was).
+ */
+type JoinResult = "added" | "already" | "full" | "gone";
 
 type ProfileRow = { cursor: number } & GroupProfile;
 type MemberRow = typeof members.$inferSelect;
@@ -214,27 +227,39 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * Sets the group up with its first member. False when it already is, so
-   * a group id is never set up twice.
+   * Sets the group up with its first member, and tells their DO. False
+   * when it already is, so a group id is never set up twice; what is still
+   * to be told is told again.
    */
-  create(group: GroupProfile, creator: NewMember): boolean {
-    if (this.getProfile() !== null) {
-      return false;
+  async create(group: GroupProfile, creator: NewMember): Promise<boolean> {
+    const made = this.getProfile() === null;
+    if (made) {
+      this.ctx.storage.transactionSync(() => {
+        this.writeProfile(group);
+        this.writeMember(creator);
+        this.queueNews(creator.userId, true);
+      });
     }
-    this.ctx.storage.transactionSync(() => {
-      this.writeProfile(group);
-      this.writeMember(creator);
-    });
-    return true;
+    await this.tellMemberships(creator.userId);
+    return made;
   }
 
   /**
-   * Adds a member unless they are in already or the group is full. The
-   * object takes one call at a time, so two joins cannot both take the
-   * last place.
+   * Adds a member unless they are in already or the group is full, and
+   * tells their DO. The object takes one call at a time, so two joins
+   * cannot both take the last place.
    */
-  addMember(member: NewMember): JoinResult {
+  async addMember(member: NewMember): Promise<JoinResult> {
+    const result = this.admit(member);
+    await this.tellMemberships(member.userId);
+    return result;
+  }
+
+  private admit(member: NewMember): JoinResult {
     const { userId } = member;
+    if (this.placeKind() !== "group") {
+      return "gone";
+    }
     if (this.isMember(userId)) {
       return "already";
     }
@@ -256,6 +281,7 @@ export class GroupDO extends DurableObject<Env> {
       if (mark) {
         this.setHead(cursor);
       }
+      this.queueNews(userId, true);
       return mark ? [written, notice, mark] : [written, notice];
     });
     broadcastChanges(this.ctx, joined);
@@ -359,10 +385,16 @@ export class GroupDO extends DurableObject<Env> {
    * Takes the member out: their row stays as left, at the next cursor, so
    * devices catching up hear of it, and their shifts go, and the photos the
    * group showed of them, as it hears of them no more. Their sockets here
-   * close. Leaving when not in it changes nothing. `by` is the member who
-   * took them out, none when they left themselves.
+   * close, and their DO is told. Leaving when not in it changes nothing
+   * but telling what is still to be told. `by` is the member who took
+   * them out, none when they left themselves.
    */
-  removeMember(userId: string, by?: string): void {
+  async removeMember(userId: string, by?: string): Promise<void> {
+    this.takeOut(userId, by);
+    await this.tellMemberships(userId);
+  }
+
+  private takeOut(userId: string, by?: string): void {
     const left = this.ctx.storage.transactionSync(() => {
       const known = this.db.select().from(members).where(inGroup(userId)).get();
       if (known === undefined) {
@@ -401,6 +433,7 @@ export class GroupDO extends DurableObject<Env> {
       );
       // The photos the group showed of them, unless it shows them still.
       const gone = forgetUnshown(this.db, [known.usualPhoto, known.ownPhoto]);
+      this.queueNews(userId, false);
       return row === undefined ? undefined : { gone, notice, row };
     });
     if (left === undefined) {
@@ -436,6 +469,11 @@ export class GroupDO extends DurableObject<Env> {
       this.db
         .delete(memberRepeatOrders)
         .where(eq(memberRepeatOrders.userId, userId))
+        .run();
+      // Their DO goes with the account: nothing is to be told it.
+      this.db
+        .delete(membershipOutbox)
+        .where(eq(membershipOutbox.userId, userId))
         .run();
       const chat = eraseMemberChat(this.db, userId, () => this.nextCursor());
       const row = this.db
@@ -486,15 +524,24 @@ export class GroupDO extends DurableObject<Env> {
     return this.memberList().length === 0;
   }
 
-  /** Everything the group holds gone, as its last member's account is. */
+  /**
+   * Everything the group holds gone, as its last member's account is, but
+   * what those who left before are still to be told of it, which the
+   * alarm goes on telling. Nothing reaches it until its tables are back.
+   */
   async erase(): Promise<void> {
-    for (const socket of this.ctx.getWebSockets()) {
-      socket.close(1000, "The group is gone");
-    }
-    await this.ctx.storage.deleteAlarm();
-    await this.ctx.storage.deleteAll();
-    // Empty, not broken: its tables again, for whatever still asks.
-    await migrate(this.db, migrations);
+    await this.ctx.blockConcurrencyWhile(async () => {
+      closeUserSockets(this.ctx);
+      const untold = this.db.select().from(membershipOutbox).all();
+      await this.ctx.storage.deleteAlarm();
+      await this.ctx.storage.deleteAll();
+      // Empty, not broken: its tables again, for whatever still asks.
+      await migrate(this.db, migrations);
+      if (untold.length > 0) {
+        this.db.insert(membershipOutbox).values(untold).run();
+        await this.wakeBy(Date.now());
+      }
+    });
   }
 
   /** Closes a member's sockets opened with a session that has ended. */
@@ -585,15 +632,19 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * Written when the group is created, and later when it is renamed. A
-   * photo mark it replaces goes, unless someone in the group shows it.
+   * The group's new name and mark, told to each member's DO for their
+   * list of groups. A photo mark it replaces goes, unless someone in the
+   * group shows it.
    */
-  setProfile(group: GroupProfile, by: string): void {
+  async setProfile(group: GroupProfile, by: string): Promise<void> {
     const known = this.getProfile();
     const nameChanged = known?.name !== group.name;
     const markChanged = !sameMark(known?.mark, group.mark);
     const { changes, gone } = this.ctx.storage.transactionSync(() => {
       const written = this.writeProfile(group);
+      for (const { userId } of this.memberList()) {
+        this.queueNews(userId, true);
+      }
       const unshown = forgetUnshown(this.db, [known?.mark.photoId ?? null]);
       // A new name or icon is said in the chat, as LINE's groups say it.
       if (!(nameChanged || markChanged)) {
@@ -613,6 +664,96 @@ export class GroupDO extends DurableObject<Env> {
     });
     broadcastChanges(this.ctx, changes);
     this.dropPhotos(gone);
+    // The renamer waits on their own list; the others' come by the alarm.
+    await this.tellMemberships(by);
+  }
+
+  /**
+   * Notes what the user's DO is to hear of their place in the group, in
+   * the transaction that changed it: in it, or out of it, as of the
+   * group's head. It replaces any news of them not yet told.
+   */
+  private queueNews(userId: string, member: boolean): void {
+    const row = {
+      cursor: this.head(),
+      dueAt: new Date(),
+      failures: 0,
+      inGroup: member,
+    };
+    this.db
+      .insert(membershipOutbox)
+      .values({ userId, ...row })
+      .onConflictDoUpdate({ set: row, target: membershipOutbox.userId })
+      .run();
+  }
+
+  /**
+   * Tells the user's DO the news of their place in the group still to
+   * tell them, at once, as they wait on it, whenever it was due; then has
+   * the alarm come for the rest when due, at once for news just queued.
+   * Others' news waits for the alarm, so a call for one user neither
+   * repeats theirs before its time nor waits on it.
+   */
+  private async tellMemberships(userId: string): Promise<void> {
+    await this.deliverNews(eq(membershipOutbox.userId, userId));
+    const due = this.newsDue();
+    if (due !== undefined) {
+      await this.wakeBy(due);
+    }
+  }
+
+  /**
+   * Tells each user's DO the news of their place in the group in `which`
+   * of the news still to tell, the group's name and mark with it while
+   * they are in it (takeMembership). News taken goes, unless newer came
+   * meanwhile; news not taken is due again twice as long after each time
+   * it fails in a row.
+   */
+  private async deliverNews(which: SQL): Promise<void> {
+    const groupId = this.ctx.id.name;
+    const untold = this.db.select().from(membershipOutbox).where(which).all();
+    if (groupId === undefined || untold.length === 0) {
+      return;
+    }
+    const group = this.getProfile();
+    await Promise.all(
+      untold.map(async ({ userId, cursor, inGroup: member, failures }) => {
+        const news: MembershipNews = {
+          cursor,
+          group: member ? group : null,
+        };
+        const sent = and(
+          eq(membershipOutbox.userId, userId),
+          eq(membershipOutbox.cursor, cursor)
+        );
+        try {
+          await this.env.USERS.getByName(userId).takeMembership(groupId, news);
+        } catch (error) {
+          console.error(`Telling ${userId} of group ${groupId} failed`, error);
+          const wait = retryWait(
+            failures + 1,
+            NEWS_RETRY_FIRST_MS,
+            NEWS_RETRY_MOST_MS
+          );
+          this.db
+            .update(membershipOutbox)
+            .set({ dueAt: new Date(Date.now() + wait), failures: failures + 1 })
+            .where(sent)
+            .run();
+          return;
+        }
+        this.db.delete(membershipOutbox).where(sent).run();
+      })
+    );
+  }
+
+  /** When the next news of a membership is due, if any is still to tell. */
+  private newsDue(): number | undefined {
+    return this.db
+      .select({ dueAt: min(membershipOutbox.dueAt) })
+      .from(membershipOutbox)
+      .get()
+      ?.dueAt?.getTime();
   }
 
   /**
@@ -818,7 +959,7 @@ export class GroupDO extends DurableObject<Env> {
     }
     const note = notePhoto(this.db, photoId, userId);
     if (note === "noted") {
-      await this.sweepLater();
+      await this.wakeBy(Date.now() + chatRules.unsentAfterMs);
     }
     return note;
   }
@@ -833,13 +974,15 @@ export class GroupDO extends DurableObject<Env> {
     if (!noteSharedPhoto(this.db, photoId, userId)) {
       return false;
     }
-    await this.sweepLater();
+    await this.wakeBy(Date.now() + chatRules.unsentAfterMs);
     return true;
   }
 
-  /** The alarm set for when a photo noted now is past chatRules.unsentAfterMs. */
-  private async sweepLater(): Promise<void> {
-    const due = Date.now() + chatRules.unsentAfterMs;
+  /**
+   * The alarm set for `due` at the latest: for a photo noted now once it
+   * is past chatRules.unsentAfterMs, or news of a membership still to tell.
+   */
+  private async wakeBy(due: number): Promise<void> {
     const set = await this.ctx.storage.getAlarm();
     if (set === null || set > due) {
       await this.ctx.storage.setAlarm(due);
@@ -871,13 +1014,20 @@ export class GroupDO extends DurableObject<Env> {
       : oldest.getTime() + chatRules.unsentAfterMs;
   }
 
-  /** A member's socket, forwarded once the Worker has checked them. */
+  /**
+   * A member's socket, forwarded by the Worker once their own DO lists the
+   * group; the group decides, and lets in members alone, as it accepts it
+   * and at each frame after. Taking someone out closes theirs.
+   */
   fetch(request: Request): Response {
-    return acceptSyncSocket(this.ctx, request);
+    return acceptSyncSocket(this.ctx, request, (userId) =>
+      this.isMember(userId)
+    );
   }
 
   webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): void {
     handleSyncMessage(ws, message, {
+      admits: (userId) => this.isMember(userId),
       chatEdits: (socket, userId, edits) => {
         this.takeChatEdits(socket, userId, edits);
       },
@@ -906,8 +1056,8 @@ export class GroupDO extends DurableObject<Env> {
         });
       },
       typing: (_socket, userId, { threadId, on }) => {
-        // Only a member writing in a chat they may write in is relayed.
-        if (this.isMember(userId) && mayRead(threadId, userId)) {
+        // Only writing in a chat they may write in is relayed.
+        if (mayRead(threadId, userId)) {
           relayTyping(
             this.ctx,
             create(TypingSchema, { on, threadId, userId }),
@@ -975,7 +1125,7 @@ export class GroupDO extends DurableObject<Env> {
    * cursor; sends what changed to everyone with the group open, the lines
    * a refused edit concerned back to the sender, then acknowledges every
    * edit to the sender, as the User DO does its owner's (spec/sync-protocol.md,
-   * Outbox). Someone not in the group is refused.
+   * Outbox). Someone not in the group never gets this far (`admits`).
    */
   private takeChatEdits(
     ws: WebSocket,
@@ -988,10 +1138,6 @@ export class GroupDO extends DurableObject<Env> {
         ServerError_Code.BAD_FRAME,
         `At most ${syncLimits.editsPerFrame} edits a frame`
       );
-      return;
-    }
-    if (!this.isMember(userId)) {
-      rejectAndClose(ws, ServerError_Code.BAD_FRAME, "Not in the group");
       return;
     }
     const { refused } = this.takeEdits(userId, edits);
@@ -1138,7 +1284,8 @@ export class GroupDO extends DurableObject<Env> {
    * after the wait the relay gives, the relayed cursor kept; a change
    * made while it runs has set the next alarm already, which is kept. The
    * photos nothing carries are swept, and the alarm comes back for the
-   * next (`sweepPhotos`).
+   * next (`sweepPhotos`). News of a membership due is told, and the alarm
+   * comes back for any not taken, until it is.
    */
   async alarm(): Promise<void> {
     this.relayRequested = false;
@@ -1148,12 +1295,15 @@ export class GroupDO extends DurableObject<Env> {
         ? null
         : await relaySupport(this.env, this.db, userId);
     const photosDue = await this.sweepPhotos();
+    await this.deliverNews(lte(membershipOutbox.dueAt, new Date()));
     if (this.relayRequested) {
       return;
     }
+    const newsDue = this.newsDue();
     const dues = [
       ...(waitMs === null ? [] : [Date.now() + waitMs]),
       ...(photosDue === undefined ? [] : [photosDue]),
+      ...(newsDue === undefined ? [] : [newsDue]),
     ];
     if (dues.length > 0) {
       await this.ctx.storage.setAlarm(Math.min(...dues));
@@ -1174,15 +1324,32 @@ export class GroupDO extends DurableObject<Env> {
    * Pochical's people's edits of the chat with them, from the admin pages
    * or Slack, taken as a member's are (chatRules.pochicalMember): new
    * lines, reactions, lines taken back. A line written in Slack keeps its
-   * message there (`slackTs`), so it is not posted again. The new lines'
-   * seqs; none outside a support place.
+   * message there (`slackTs`), so it is not posted again. The seqs of the
+   * sends' lines, taken now or before by their op_id, so a send repeated
+   * is one line and answers as the first did; none outside a support
+   * place.
    */
   answerAsPochical(edits: ChatEdit[], slackTs?: string): number[] {
     if (this.placeKind() !== "support") {
       return [];
     }
-    const { sent } = this.takeEdits(chatRules.pochicalMember, edits);
-    const seqs = sent.map((line) => Number(line.seq));
+    this.takeEdits(chatRules.pochicalMember, edits);
+    const seqs = edits.flatMap(({ kind, opId }) => {
+      const line =
+        kind.case === "send"
+          ? this.db
+              .select({ seq: chatLines.seq })
+              .from(chatLines)
+              .where(
+                and(
+                  eq(chatLines.opId, opId),
+                  eq(chatLines.authorId, chatRules.pochicalMember)
+                )
+              )
+              .get()
+          : undefined;
+      return line === undefined ? [] : [line.seq];
+    });
     if (slackTs !== undefined) {
       for (const seq of seqs) {
         this.db

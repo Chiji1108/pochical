@@ -25,6 +25,7 @@ import {
   noGroupOfCode,
   requireGroupOfCode,
 } from "./invite-codes";
+import { isMemberOf } from "./membership";
 import { sharePersonPhoto } from "./photos";
 import { overLimit } from "./rate-limits";
 import { requireUser } from "./session";
@@ -98,11 +99,26 @@ const requireMember = async (
   groupId: string
 ): Promise<string> => {
   const user = await requireUser(context);
-  // The user's own DO, so an id that is not theirs wakes no Group DO.
-  if (!(await env.USERS.getByName(user.id).isMember(groupId))) {
+  if (!(await isMemberOf(env, user.id, groupId))) {
     throw new ConnectError("Not a member of this group", Code.PermissionDenied);
   }
   return user.id;
+};
+
+/**
+ * The group's news of the caller has reached their own DO, which lists the
+ * group (`listed`) or not, so their devices show it and its socket lets
+ * them in as the call answers. UNAVAILABLE while not, for the app to try
+ * again; the group tells it again meanwhile, until it is taken.
+ */
+const requireTold = async (
+  userId: string,
+  groupId: string,
+  listed: boolean
+): Promise<void> => {
+  if ((await env.USERS.getByName(userId).isMember(groupId)) !== listed) {
+    throw new ConnectError("Try again", Code.Unavailable);
+  }
 };
 
 export const registerGroupService = (router: ConnectRouter): void => {
@@ -127,6 +143,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
         );
       }
       const names = await namesFor(user.id, request.displayName, true);
+      // Noted by the user's DO before the group is made (noteGroup).
       const groupId = await users.groupIdFor(request.requestId);
       await shareUsualPhoto(user.id, names.usualPhoto, groupId);
       const group = env.GROUPS.getByName(groupId);
@@ -143,8 +160,8 @@ export const registerGroupService = (router: ConnectRouter): void => {
         }
       );
       await adoptName(user.id, names);
-      await users.addMembership(groupId, { mark, name });
       await dropPickedPhoto(env, user.id, mark, names.usualPhoto);
+      await requireTold(user.id, groupId, true);
       const inviteCode = await liveInviteCode(env.DB, groupId);
       return create(CreateGroupResponseSchema, { groupId, inviteCode });
     },
@@ -186,8 +203,10 @@ export const registerGroupService = (router: ConnectRouter): void => {
       const groupId = await requireGroupOfCode(env.DB, inviteCode);
       const names = await namesFor(user.id, displayName, true);
       await shareUsualPhoto(user.id, names.usualPhoto, groupId);
-      // The Group DO decides; the user's DO then keeps its copy. Both are
-      // idempotent, so a retry after a failure in between completes it.
+      // Noted by the user's DO before the group hears of them, so deleting
+      // the account reaches the group whatever happens after; the Group DO
+      // then decides, and tells the user's DO (takeMembership).
+      await env.USERS.getByName(user.id).noteGroup(groupId);
       const group = env.GROUPS.getByName(groupId);
       const result = await group.addMember({
         ownName: names.ownName,
@@ -195,6 +214,9 @@ export const registerGroupService = (router: ConnectRouter): void => {
         usualName: names.usualName,
         usualPhoto: names.usualPhoto,
       });
+      if (result === "gone") {
+        throw noGroupOfCode();
+      }
       if (result === "full") {
         throw new ConnectError(
           `The group has its most members (${GROUP_MAX_MEMBERS})`,
@@ -202,11 +224,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
         );
       }
       await adoptName(user.id, names);
-      const profile = await group.getProfile();
-      if (profile === null) {
-        throw noGroupOfCode();
-      }
-      await env.USERS.getByName(user.id).addMembership(groupId, profile);
+      await requireTold(user.id, groupId, true);
       return create(JoinGroupResponseSchema, {
         alreadyMember: result === "already",
         groupId,
@@ -215,13 +233,11 @@ export const registerGroupService = (router: ConnectRouter): void => {
 
     leaveGroup: async ({ groupId }, context) => {
       const user = await requireUser(context);
-      // The user's DO first, so their devices stop opening the group even
-      // if the group's own step fails; both can be repeated.
-      // A group the user was never in wakes no Group DO.
-      const users = env.USERS.getByName(user.id);
-      if (await users.wasMember(groupId)) {
-        await users.removeMembership(groupId);
+      // The Group DO decides, closes their sockets there and tells their
+      // DO; a group the user never asked to join wakes none.
+      if (await env.USERS.getByName(user.id).knowsGroup(groupId)) {
         await env.GROUPS.getByName(groupId).removeMember(user.id);
+        await requireTold(user.id, groupId, false);
       }
       return create(LeaveGroupResponseSchema, {});
     },
@@ -246,9 +262,7 @@ export const registerGroupService = (router: ConnectRouter): void => {
       if (!(await group.isMember(userId))) {
         throw new ConnectError("No such member", Code.NotFound);
       }
-      // Their own DO first, as on leaving, so their devices stop opening
-      // the group even if the group's own step fails; both can be repeated.
-      await env.USERS.getByName(userId).removeMembership(groupId);
+      // As on leaving: the group tells their DO, until it is taken.
       await group.removeMember(userId, by);
       return create(RemoveMemberResponseSchema, {});
     },
@@ -266,23 +280,13 @@ export const registerGroupService = (router: ConnectRouter): void => {
         request.groupId,
         current?.mark.photoId
       );
+      // Each member's list of groups shows it as the group tells their DO.
       await group.setProfile({ mark, name }, userId);
       if (mark.photoId !== "") {
         const { photoId: usualPhoto } =
           await env.USERS.getByName(userId).profileOf();
         await dropPickedPhoto(env, userId, mark, usualPhoto);
       }
-      // Each member's list of groups shows the new name; one that cannot be
-      // reached now hears it from the group's socket when they open it.
-      const memberList = await group.memberList();
-      await Promise.allSettled(
-        memberList.map(async (member) => {
-          await env.USERS.getByName(member.userId).renameMembership(
-            request.groupId,
-            { mark, name }
-          );
-        })
-      );
       return create(RenameGroupResponseSchema, {});
     },
 

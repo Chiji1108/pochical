@@ -90,10 +90,17 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
 
   /**
    * An answer from Pochical's people, taken as theirs in the user's chat,
-   * which tells the user and the chat's Slack thread. False, keeping
-   * nothing, for no words or more than textLimits.chatMessage.
+   * which tells the user and the chat's Slack thread. `opId` is the
+   * answer's own, made once by the page for what it sends, so sending it
+   * again (twice pressed, or after an answer lost) is one line and true
+   * as the first. False, keeping nothing, for no words, more than
+   * textLimits.chatMessage, or an op id that is not an id.
    */
-  async answerSupport(userId: string, text: string): Promise<boolean> {
+  async answerSupport(
+    userId: string,
+    text: string,
+    opId: string
+  ): Promise<boolean> {
     // Only a chat the user opened: one never set up takes nothing.
     const place = this.env.GROUPS.getByName(supportPlace(userId));
     const seqs = await place.answerAsPochical([
@@ -102,7 +109,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
           case: "send",
           value: { text: text.trim(), threadId: GROUP_THREAD },
         },
-        opId: crypto.randomUUID(),
+        opId,
       }),
     ]);
     return seqs.length > 0;

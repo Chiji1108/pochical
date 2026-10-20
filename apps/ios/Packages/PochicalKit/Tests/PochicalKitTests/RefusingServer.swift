@@ -2,9 +2,9 @@ import Foundation
 import Network
 import Synchronization
 
-/// A server on this Mac that refuses every socket with 401, as the server
-/// does a session it does not know, keeping the token each socket was
-/// asked with.
+/// A server on this Mac that refuses every socket with `status`: 401, as
+/// the server does a session it does not know, or 403, a group the user is
+/// not in; keeping the token each socket was asked with.
 final class RefusingServer: Sendable {
   let listener: NWListener
   /// The bearer token of each socket asked for, in order.
@@ -14,7 +14,7 @@ final class RefusingServer: Sendable {
     tokens.withLock(\.count)
   }
 
-  init() throws {
+  init(status: String = "401 Unauthorized") throws {
     listener = try NWListener(using: .tcp, on: .any)
     listener.newConnectionHandler = { [weak self] connection in
       connection.start(queue: .global())
@@ -26,7 +26,7 @@ final class RefusingServer: Sendable {
           .first { $0.lowercased().hasPrefix("authorization: bearer ") }
           .map { String($0.dropFirst("authorization: bearer ".count)) } ?? ""
         self?.tokens.withLock { $0.append(token) }
-        let refusal = "HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        let refusal = "HTTP/1.1 \(status)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
         connection.send(
           content: Data(refusal.utf8),
           completion: .contentProcessed { _ in connection.cancel() })

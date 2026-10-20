@@ -11,10 +11,10 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-// The groups the user is in, so their sockets can be let in without
-// waking a Group DO for an id that is not theirs, and their devices list
-// them with the group's name and mark as last heard. Written as they make
-// or join a group, as it is renamed, and as they leave.
+// The groups the user is in, so an id that is not theirs never wakes a
+// Group DO, and their devices list them with the group's name and mark as
+// last heard. Written as the group tells of their joining, a new name or
+// mark, and their leaving (takeMembership); the Group DO decides.
 // Cursors are shared with day_fields.
 export const memberships = sqliteTable("memberships", {
   // The color slot of an icon or letters mark.
@@ -38,6 +38,16 @@ export const memberships = sqliteTable("memberships", {
   // up to which they were pushed and taken (spec/sync-protocol.md, Group
   // projection). Everything after it is still to go.
   pushedCursor: integer("pushed_cursor").notNull().default(0),
+});
+
+// Every group the user asked to make or join, written before the group
+// hears of them, so deleting the account reaches each one
+// (spec/sync-protocol.md, Deleting an account); and the group's cursor of
+// the latest news of their place in it taken here (membership_outbox in
+// the Group DO), so news told twice or late changes nothing.
+export const knownGroups = sqliteTable("known_groups", {
+  groupId: text("group_id").primaryKey(),
+  newsCursor: integer("news_cursor").notNull().default(0),
 });
 
 // The groups the user made, by the request id their app sent, so a

@@ -29,10 +29,13 @@ const appleAccountOf = async (
   return linked?.accountId;
 };
 
-/** A group whose last member's account went, gone whole. */
+/**
+ * A group whose last member's account went, gone whole: its invitation
+ * first, so no one joins it as it goes.
+ */
 const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
-  await env.GROUPS.getByName(groupId).erase();
   await drizzle(env.DB).delete(invites).where(eq(invites.groupId, groupId));
+  await env.GROUPS.getByName(groupId).erase();
   await deletePhotosUnder(env, `groups/${groupId}/`);
 };
 
@@ -45,6 +48,8 @@ const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
  */
 export const eraseUser = async (env: Env, userId: string): Promise<void> => {
   const user = env.USERS.getByName(userId);
+  // Every group they asked to make or join, noted before the group heard
+  // of them, so none they are in is missed.
   for (const groupId of await user.groupsEver()) {
     // oxlint-disable-next-line no-await-in-loop -- one group at a time
     if (await env.GROUPS.getByName(groupId).deleteMember(userId)) {

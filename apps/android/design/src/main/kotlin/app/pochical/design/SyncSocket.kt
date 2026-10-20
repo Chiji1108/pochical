@@ -8,6 +8,7 @@ object SyncSocket {
   const val keepaliveReply = "pong"
   const val keepaliveText = "ping"
   const val keepaliveWithinMs = 10000
+  const val notMemberCloseCode = 4403
   const val reconnectFirstMs = 1000
   const val reconnectMostMs = 60000
   const val statusShownAfterMs = 1000

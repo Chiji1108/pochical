@@ -22,7 +22,7 @@ describe("what the admin site asks of the server", () => {
     });
 
     await expect(
-      admin.answerSupport(userId, "設定から変えられます")
+      admin.answerSupport(userId, "設定から変えられます", crypto.randomUUID())
     ).resolves.toBeTruthy();
     // The open chat hears of the answer as a group's chat hears a line.
     await expect(frames.next()).resolves.toMatchObject({
@@ -81,8 +81,36 @@ describe("what the admin site asks of the server", () => {
     const token = await signInAnonymously();
     const { userId } = await supportChat(token);
     const admin = exports.AdminEntrypoint;
-    await expect(admin.answerSupport(userId, "  ")).resolves.toBeFalsy();
-    await expect(admin.answerSupport("someone", "やあ")).resolves.toBeFalsy();
+    await expect(
+      admin.answerSupport(userId, "  ", crypto.randomUUID())
+    ).resolves.toBeFalsy();
+    await expect(
+      admin.answerSupport("someone", "やあ", crypto.randomUUID())
+    ).resolves.toBeFalsy();
+  });
+
+  it("keeps one line of an answer sent twice, as pressed twice or after its answer was lost", async () => {
+    const token = await signInAnonymously();
+    const { userId } = await supportChat(token);
+    const admin = exports.AdminEntrypoint;
+    const opId = crypto.randomUUID();
+    const sent = await Promise.all([
+      admin.answerSupport(userId, "確認します", opId),
+      admin.answerSupport(userId, "確認します", opId),
+    ]);
+    await expect(
+      admin.answerSupport(userId, "確認します", opId)
+    ).resolves.toBeTruthy();
+    expect(sent).toStrictEqual([true, true]);
+    const { lines } = await admin.supportChat(userId);
+    expect(lines.map((line) => line.text)).toStrictEqual(["確認します"]);
+    // New words are a new answer.
+    await admin.answerSupport(userId, "確認しました", crypto.randomUUID());
+    const after = await admin.supportChat(userId);
+    expect(after.lines.map((line) => line.text)).toStrictEqual([
+      "確認します",
+      "確認しました",
+    ]);
   });
 
   it("lists the reports", async () => {

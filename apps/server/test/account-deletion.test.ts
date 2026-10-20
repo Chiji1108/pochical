@@ -4,7 +4,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { supportPlace } from "../src/support-lines";
 import { appleKeys, idToken, link } from "./apple-helpers";
-import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
+import {
+  call,
+  failTelling,
+  ORIGIN,
+  signInAnonymously,
+  userIdOf,
+} from "./helpers";
 import {
   pair,
   sendFrame,
@@ -125,6 +131,48 @@ describe("deleting an account", () => {
       support: [0, 0],
       theirs: [{ deleted: 1, display_name: "", gone: 1 }],
     });
+  });
+
+  it("leaves no name or photo in a group their own DO never heard they joined", async () => {
+    const { groupId, inviteCode } = await pair();
+    const guest = await signInAnonymously();
+    const guestId = await userIdOf(guest);
+    const restore = await failTelling(groupId, guestId);
+    const joined = await call(
+      "GroupService/JoinGroup",
+      { displayName: "ひかる", inviteCode },
+      guest
+    );
+    expect(joined.status).toBe(503);
+    // Their face, as their DO would have pushed it.
+    await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
+      state.storage.sql.exec(
+        "update members set usual_photo = 'face' where user_id = ?",
+        guestId
+      );
+    });
+
+    await expect(deleteAccount(guest)).resolves.toBe(200);
+    await restore();
+    await expect(
+      inGroup(
+        groupId,
+        `select deleted, display_name, usual_name, usual_photo, own_name, own_photo, left_at is not null as gone from members where user_id = '${guestId}'`
+      )
+    ).resolves.toStrictEqual([
+      {
+        deleted: 1,
+        display_name: "",
+        gone: 1,
+        own_name: null,
+        own_photo: null,
+        usual_name: "",
+        usual_photo: "",
+      },
+    ]);
+    await expect(
+      inGroup(groupId, "select * from membership_outbox")
+    ).resolves.toStrictEqual([]);
   });
 
   it("deletes a group whole when no one else is left in it", async () => {

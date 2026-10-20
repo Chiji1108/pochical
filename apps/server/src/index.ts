@@ -4,6 +4,7 @@ import { createFetchHandler } from "@connectrpc/connect/protocol";
 import { registerChatService } from "./chat-service";
 import { registerGroupService } from "./group-service";
 import { registerInviteService } from "./invite-service";
+import { isMemberOf } from "./membership";
 import {
   getPhoto,
   getInviteMark,
@@ -78,7 +79,7 @@ const photoRequest = async (
   if (!user) {
     return signInFirst();
   }
-  if (!(await env.USERS.getByName(user.id).isMember(groupId))) {
+  if (!(await isMemberOf(env, user.id, groupId))) {
     return new Response("Not a member of this group", { status: 403 });
   }
   switch (request.method) {
@@ -177,7 +178,7 @@ const pictureRequest = async (
   if (own) {
     return own;
   }
-  // A group's photos, as its socket: its members alone, by their own DO.
+  // A group's photos: its members alone, as the group says.
   const photo = PHOTO_PATH.exec(pathname)?.groups;
   if (photo?.groupId !== undefined && photo.photoId !== undefined) {
     return await photoRequest(request, env, photo.groupId, photo.photoId);
@@ -242,8 +243,9 @@ export default {
       return await place.fetch(forUser(request, user));
     }
 
-    // Only members reach a group, and the check asks the user's own DO, so
-    // an id that is not theirs never wakes (or creates) a Group DO.
+    // Only groups the user's own DO lists reach a Group DO, so an id that
+    // is not theirs never wakes (or creates) one; the group then decides,
+    // letting in its members alone (GroupDO.fetch).
     const groupId = GROUP_SOCKET_PATH.exec(pathname)?.groups?.groupId;
     if (groupId !== undefined) {
       const user = await sessionUser(request.headers);

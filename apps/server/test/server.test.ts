@@ -12,15 +12,16 @@ import { framesOf, sendFrame } from "./sync-helpers";
 const openGroupSocket = async (groupId: string): Promise<WebSocket> =>
   await openSocket(`/v1/groups/${groupId}/socket`, await memberOf(groupId));
 
+// The next text message, past any frame.
 const nextText = async (socket: WebSocket): Promise<unknown> => {
   const { promise, resolve } = Promise.withResolvers<unknown>();
-  socket.addEventListener(
-    "message",
-    (event) => {
+  const listener = (event: MessageEvent) => {
+    if (typeof event.data === "string") {
+      socket.removeEventListener("message", listener);
       resolve(event.data);
-    },
-    { once: true }
-  );
+    }
+  };
+  socket.addEventListener("message", listener);
   return await promise;
 };
 
@@ -45,9 +46,13 @@ describe("group socket", () => {
       value: { protocolVersion: CURRENT_PROTOCOL_VERSION },
     });
     const { kind: welcomeKind } = await frames.next();
+    // At the group's head: its name and its one member.
     expect(welcomeKind).toMatchObject({
       case: "welcome",
-      value: { cursor: 0n },
+      value: { cursor: 2n },
+    });
+    await expect(frames.next()).resolves.toMatchObject({
+      kind: { case: "changes" },
     });
 
     sendFrame(socket, { case: "ping", value: { nonce: 42 } });

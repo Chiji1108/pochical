@@ -73,6 +73,7 @@ const failPushesTo = async (
         getByName: (name: string) =>
           groupIds.includes(name)
             ? {
+                setBlocks: () => undefined,
                 takeMemberShifts: () => {
                   meanwhile?.(instance);
                   throw new Error("unreachable");
@@ -337,9 +338,14 @@ describe("a member's shifts in their groups", () => {
     await failPushesTo(user, ["!unreachable"], (instance) => {
       if (changing) {
         changing = false;
-        instance.addMembership("!unreachable", {
-          mark: { color: 0, emoji: "🍉", icon: "", letter: "", photoId: "" },
-          name: "届かない",
+        // Out of the group and in again, which pushes to it whole.
+        instance.takeMembership("!unreachable", { cursor: 1, group: null });
+        instance.takeMembership("!unreachable", {
+          cursor: 2,
+          group: {
+            mark: { color: 0, emoji: "🍉", icon: "", letter: "", photoId: "" },
+            name: "届かない",
+          },
         });
       }
     });
