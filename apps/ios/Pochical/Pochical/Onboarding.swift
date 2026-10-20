@@ -221,7 +221,7 @@ private struct WelcomeStep: View {
 /// instead of answering the questions again.
 private struct LoginStep: View {
   @Environment(\.themeColors) private var colors
-  @Environment(\.userSocket) private var userSocket
+  @Environment(AccountSession.self) private var session
   @Dependency(\.defaultDatabase) private var database
   /// Told when the account signed in to holds nothing yet.
   let onEmpty: () -> Void
@@ -236,7 +236,7 @@ private struct LoginStep: View {
         // The account's data comes in, and its patterns end the first
         // run; one that brought none goes on with the questions.
         if how == .switched {
-          await userSocket?.catchUp(within: .seconds(10))
+          await session.catchUp(within: .seconds(10))
         }
         let has = (try? await database.read { try HasPatternsRequest().fetch($0) }) ?? false
         if !has { onEmpty() }

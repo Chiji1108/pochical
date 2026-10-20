@@ -25,7 +25,7 @@ struct ChatNotificationsPage: View {
   @FetchAll private var members: [GroupMemberRow]
   @Fetch(ChatNotificationsRequest()) private var notifications = ChatNotificationState()
   @Fetch(BlocksRequest()) private var blocked: Set<String> = []
-  @State private var meID: String?
+  @Environment(\.meID) private var meID
   /// The one-to-one chats turned off as the page opened: one turned on
   /// again stays, so it can be turned off again here.
   @State private var directOff: [ChatKey]?
@@ -107,10 +107,7 @@ struct ChatNotificationsPage: View {
     .settingsList()
     .navigationTitle("チャット")
     .navigationBarTitleDisplayMode(.inline)
-    .task {
-      meID = await groupCalls.userID()
-      await Notifications.shared.readPermission()
-    }
+    .task { await Notifications.shared.readPermission() }
     .onAppear {
       if directOff == nil {
         directOff = notifications.muted.filter { $0.threadID != groupThread }

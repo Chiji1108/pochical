@@ -4,7 +4,6 @@ import PochicalKit
 import SQLiteData
 import SwiftUI
 import SwiftUINavigation
-import WidgetKit
 
 /// How signing in ended: Apple's account linked to this user, keeping what
 /// the device holds, or the device switched to the account's user, whose
@@ -20,10 +19,8 @@ enum SignedIn {
 /// something.
 struct AppleSignInButton: View {
   @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.account) private var account
+  @Environment(AccountSession.self) private var session
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.userSocket) private var userSocket
-  @Environment(\.groupSockets) private var groupSockets
   @Dependency(\.defaultDatabase) private var database
   /// Told once signed in, the button busy until it returns.
   let onSignedIn: (LinkedAccount, SignedIn) async -> Void
@@ -101,7 +98,7 @@ struct AppleSignInButton: View {
     busy = true
     defer { busy = false }
     let email = LinkedAccount.email(in: idToken)
-    switch try? await account.linkApple(idToken: idToken, nonce: nonce.raw) {
+    switch try? await session.linkApple(idToken: idToken, nonce: nonce.raw) {
     case .linked:
       await keep(email: email, .linked)
     case .inUse:
@@ -138,24 +135,17 @@ struct AppleSignInButton: View {
   }
 
   /// アカウントのデータを使う: signed in to the account's user, the device's
-  /// own deleted, and the device catching up from the account.
+  /// own deleted, and the device catching up from the account; one that
+  /// fails at any step leaves the device as it was, and says so.
   private func useAccount(_ choice: Choice) async {
     busy = true
     defer { busy = false }
-    // Not to connect as the account's user meanwhile, and send it what
-    // the device's own outbox holds.
-    await userSocket?.stop()
-    guard
-      let before = try? await account.signInApple(idToken: choice.idToken, nonce: choice.nonce)
-    else {
+    do {
+      try await session.useAccount(appleIDToken: choice.idToken, nonce: choice.nonce)
+    } catch {
       failed = true
-      await userSocket?.start()
       return
     }
-    // The device's user, left behind: everything of it goes, tried again
-    // as the app comes back should the connection be lost meanwhile.
-    await groupCalls.deleteLeftBehind(before)
-    await forgetDevice(database: database, userSocket: userSocket, groupSockets: groupSockets)
     await keep(email: choice.email, .switched)
   }
 
@@ -184,27 +174,3 @@ struct AppleSignInButton: View {
   }
 }
 
-extension Notification.Name {
-  /// The device goes on as another user: switched to an account, signed
-  /// out or deleted. Who the screens' \.meID is is read again.
-  static let accountChanged = Notification.Name("app.pochical.accountChanged")
-}
-
-/// The device holding nothing of the user, as a new install does: its own
-/// settings stay, the notifications shown going with the rest and the
-/// push token sent again. Told to the app, as the user is someone else from now,
-/// and every socket, the user's and the places' kept ones, closed first
-/// and connected again after as whoever the account is now.
-@MainActor func forgetDevice(
-  database: any DatabaseWriter, userSocket: SyncClient?, groupSockets: GroupSockets
-) async {
-  await userSocket?.stop()
-  await groupSockets.forgetAccount()
-  try? await database.write { try LocalData.erase(in: $0) }
-  LocalData.eraseFiles()
-  WidgetCenter.shared.reloadAllTimelines()
-  NotificationCenter.default.post(name: .accountChanged, object: nil)
-  await Notifications.shared.forgetAccount()
-  await userSocket?.startAfresh()
-  await groupSockets.startHeld()
-}

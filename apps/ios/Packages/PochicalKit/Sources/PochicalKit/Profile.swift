@@ -146,7 +146,7 @@ extension GroupCalls {
     var request = Pochical_V1_SetProfileRequest()
     request.name = profile.name
     request.photoID = profile.photoID
-    _ = try await users.setProfile(request: request, headers: account.headers()).result.get()
+    _ = try await users.setProfile(request: request, headers: headers()).result.get()
   }
 
   /// Sets the shape the user's marks are drawn in, for their groups to
@@ -155,7 +155,7 @@ extension GroupCalls {
     var request = Pochical_V1_SetMarkLookRequest()
     request.look.style = look.style.rawValue
     request.look.fill = look.fill
-    _ = try await users.setMarkLook(request: request, headers: account.headers()).result.get()
+    _ = try await users.setMarkLook(request: request, headers: headers()).result.get()
   }
 
   /// The caller's photo in the group: their usual one, one of the group's
@@ -165,7 +165,7 @@ extension GroupCalls {
     request.groupID = groupID
     request.usual = usual
     request.photoID = photoID
-    _ = try await client.setGroupPhoto(request: request, headers: account.headers()).result.get()
+    _ = try await client.setGroupPhoto(request: request, headers: headers()).result.get()
   }
 
   /// Keeps a photo picked for a group's mark on the device, to send up
@@ -182,7 +182,8 @@ extension GroupCalls {
   /// `MarkPhotoGone` once the device has let it go, to be picked again.
   public func sendMarkPhoto(_ photoID: String) async throws {
     do {
-      try await ChatPhotos.uploadHeld(photoID, in: ChatPhotos.mine, account: account)
+      try await ChatPhotos.uploadHeld(
+        photoID, in: ChatPhotos.mine, as: current.credentials())
     } catch ChatPhotos.UploadError.gone {
       throw MarkPhotoGone()
     }
@@ -192,7 +193,7 @@ extension GroupCalls {
   /// (`ChatPhotos.mine`), and gives the id to name it by.
   public func sendPhoto(_ jpeg: Data, to groupID: String) async throws -> String {
     let photoID = UUID().uuidString.lowercased()
-    try await ChatPhotos.send(jpeg, as: photoID, in: groupID, account: account)
+    try await ChatPhotos.send(jpeg, as: photoID, in: groupID, as: current.credentials())
     return photoID
   }
 }

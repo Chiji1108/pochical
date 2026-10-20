@@ -43,7 +43,7 @@ struct GroupShiftsPage: View {
   /// シフトパターン asked for from a face while the day's sheet was up.
   @State private var legendAfterDay: LegendOf?
   /// The viewer's id among the members, for 1人ずつ.
-  @State private var meID: String?
+  @Environment(\.meID) private var meID
   let group: GroupRow
   @State private var picked: Day?
   /// What a tap on a day does, for every row and week of the table.
@@ -186,9 +186,6 @@ struct GroupShiftsPage: View {
     .sheet(item: $legendOf) { legend in
       LegendSheet(members: members, groupID: group.id, picked: legend.userID)
         .presentationDetents([.medium, .large])
-    }
-    .task {
-      meID = await groupCalls.userID()
     }
     .task(id: settings.device.week.start) {
       let first = thisMonth.addingMonths(-monthSpan).adding(days: -6)

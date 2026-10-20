@@ -1,13 +1,12 @@
 import AuthenticationServices
 import PochicalDesign
 import PochicalKit
-import SQLiteData
 import SwiftUI
 
 /// 設定's アカウント row (/design's AccountRow): the provider signed in
 /// with, or ログインしていません.
 struct AccountRow: View {
-  @Environment(\.groupCalls) private var groupCalls
+  @Environment(AccountSession.self) private var session
   @State private var linked = LinkedAccount.kept
 
   var body: some View {
@@ -25,7 +24,7 @@ struct AccountRow: View {
     // As the server says: linked here, or on another of the person's
     // devices, or no longer.
     .task {
-      guard let isLinked = await groupCalls.linked() else { return }
+      guard let isLinked = await session.linked() else { return }
       if !isLinked {
         linked = nil
       } else if linked == nil {
@@ -52,11 +51,7 @@ private struct ProviderName: View {
 /// page never pushes it beyond saying what it keeps safe.
 struct AccountPage: View {
   @Environment(\.themeColors) private var colors
-  @Environment(\.account) private var account
-  @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.userSocket) private var userSocket
-  @Environment(\.groupSockets) private var groupSockets
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(AccountSession.self) private var session
   @Binding var linked: LinkedAccount?
   @State private var confirmingDelete = false
   @State private var confirmingSignOut = false
@@ -170,17 +165,12 @@ struct AccountPage: View {
   private func signOut() async {
     busy = true
     defer { busy = false }
-    // What waits to be sent goes first, so signing in again finds it.
-    await userSocket?.finishSending()
-    await userSocket?.stop()
     do {
-      try await account.signOut()
+      try await session.signOut()
     } catch {
       problem = .notSignedOut
-      await userSocket?.start()
       return
     }
-    await forgetDevice(database: database, userSocket: userSocket, groupSockets: groupSockets)
     withAnimation { linked = nil }
     // The device starts over as a new one does, with はじめの設定.
     FirstRun.again()
@@ -203,13 +193,11 @@ struct AccountPage: View {
       return
     }
     do {
-      try await groupCalls.deleteAccount(appleAuthorizationCode: code)
+      try await session.deleteAccount(appleAuthorizationCode: code)
     } catch {
       problem = .notDeleted
       return
     }
-    try? await account.forget()
-    await forgetDevice(database: database, userSocket: userSocket, groupSockets: groupSockets)
     withAnimation { linked = nil }
     // The device starts over as a new one does, with はじめの設定, which
     // says the account was deleted.

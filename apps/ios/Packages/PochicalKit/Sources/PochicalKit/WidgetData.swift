@@ -36,12 +36,18 @@ extension DeviceSettings {
   }
 }
 
-/// The signed-in user's id as their groups know them, as the app last
-/// heard it.
+/// The signed-in user's id as their groups know them, for the widgets and
+/// the notification service, which have no session of their own:
+/// AccountSession's, kept in the App Group by it alone as it changes.
 public func widgetMeID(
   store: UserDefaults = UserDefaults(suiteName: appGroup) ?? .standard
 ) -> String? {
-  store.string(forKey: "userID")
+  store.string(forKey: SignedInUser.key)
+}
+
+/// Where AccountSession keeps the signed-in user's id for the widgets.
+enum SignedInUser {
+  static let key = "userID"
 }
 
 /// Who a widget can be set to (spec/widgets.md, 次の休み with someone or a

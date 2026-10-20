@@ -7,19 +7,20 @@ import Testing
 @testable import PochicalKit
 
 /// A token store in memory, for tests.
-private final class MemoryStore: TokenStore {
-  private let kept = Mutex<String?>(nil)
+final class MemoryStore: TokenStore {
+  private let kept = Mutex<Data?>(nil)
 
-  init(_ token: String? = nil) {
-    kept.withLock { $0 = token }
+  init(_ data: Data? = nil) {
+    kept.withLock { $0 = data }
   }
 
-  func token() -> String? { kept.withLock { $0 } }
-  func keep(_ token: String) { kept.withLock { $0 = token } }
+  func data() -> Data? { kept.withLock { $0 } }
+  func replace(with data: Data) { kept.withLock { $0 = data } }
   func forget() { kept.withLock { $0 = nil } }
 }
 
-/// What a fake server was asked, and answers sign-ins with `token`.
+/// What a fake server was asked, and answers sign-ins with `token` for
+/// the user `userID`.
 private final class FakeServer: Sendable {
   let requests = Mutex<[URLRequest]>([])
   let status: Int
@@ -33,61 +34,42 @@ private final class FakeServer: Sendable {
   var send: Account.Send {
     { request in
       self.requests.withLock { $0.append(request) }
-      // Long enough for callers at the same time to meet one sign-in.
-      try await Task.sleep(for: .milliseconds(20))
       let headers = self.token.map { ["set-auth-token": $0] } ?? [:]
       let response = HTTPURLResponse(
         url: request.url!, statusCode: self.status, httpVersion: nil, headerFields: headers)!
-      return (Data("{}".utf8), response)
+      let body = #"{"token":"short","user":{"id":"user-\#(self.token ?? "")","isAnonymous":true}}"#
+      return (Data(body.utf8), response)
     }
   }
 }
 
 private let server = URL(string: "http://localhost:8787")!
 
-@Test func signsInAnonymouslyAndKeepsTheToken() async throws {
-  let store = MemoryStore()
+@Test func signsInAnonymouslyAsTheUserTheServerMade() async throws {
   let fake = FakeServer()
-  let account = Account(server: server, store: store, send: fake.send)
-  #expect(try await account.token() == "made")
-  #expect(store.token() == "made")
+  let account = Account(server: server, send: fake.send)
+  #expect(try await account.signInAnonymously() == StoredSession(token: "made", userID: "user-made"))
   let request = try #require(fake.requests.withLock { $0.first })
   #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/sign-in/anonymous")
   #expect(request.httpMethod == "POST")
   #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+  #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
   #expect(request.httpBody == Data("{}".utf8))
   #expect(!request.httpShouldHandleCookies)
-  #expect(try await account.headers() == ["Authorization": ["Bearer made"]])
 }
 
-@Test func aKeptTokenIsNeverReplaced() async throws {
-  let fake = FakeServer()
-  let account = Account(server: server, store: MemoryStore("kept"), send: fake.send)
-  #expect(try await account.token() == "kept")
-  #expect(fake.requests.withLock { $0.isEmpty })
-}
-
-@Test func callersAtTheSameTimeMakeOneUser() async throws {
-  let fake = FakeServer()
-  let account = Account(server: server, store: MemoryStore(), send: fake.send)
-  async let first = account.token()
-  async let second = account.token()
-  #expect(try await [first, second] == ["made", "made"])
-  #expect(fake.requests.withLock { $0.count } == 1)
-}
-
-@Test func aRefusedSignInKeepsNothing() async throws {
-  let store = MemoryStore()
-  let account = Account(server: server, store: store, send: FakeServer(status: 429).send)
-  await #expect(throws: SignInError.self) { try await account.token() }
-  #expect(store.token() == nil)
+@Test func aRefusedSignInIsNoSession() async throws {
+  for fake in [FakeServer(status: 429), FakeServer(token: nil)] {
+    let account = Account(server: server, send: fake.send)
+    await #expect(throws: SignInError.self) { try await account.signInAnonymously() }
+  }
 }
 
 @Test func linksAppleOnTheSessionAndSaysWhenTheAccountIsInUse() async throws {
   for (status, said) in [(200, LinkResult.linked), (409, .inUse)] {
     let fake = FakeServer(status: status)
-    let account = Account(server: server, store: MemoryStore("kept"), send: fake.send)
-    #expect(try await account.linkApple(idToken: "id-token", nonce: "raw") == said)
+    let account = Account(server: server, send: fake.send)
+    #expect(try await account.linkApple(idToken: "id-token", nonce: "raw", on: "kept") == said)
     let request = try #require(fake.requests.withLock { $0.first })
     #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/link-social")
     #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer kept")
@@ -97,9 +79,9 @@ private let server = URL(string: "http://localhost:8787")!
     #expect(body["provider"] as? String == "apple")
     #expect(body["idToken"] as? [String: String] == ["nonce": "raw", "token": "id-token"])
   }
-  let refused = Account(server: server, store: MemoryStore("kept"), send: FakeServer(status: 401).send)
+  let refused = Account(server: server, send: FakeServer(status: 401).send)
   await #expect(throws: LinkError.self) {
-    try await refused.linkApple(idToken: "id-token", nonce: "raw")
+    try await refused.linkApple(idToken: "id-token", nonce: "raw", on: "kept")
   }
 }
 
@@ -120,27 +102,49 @@ private let server = URL(string: "http://localhost:8787")!
   #expect(SignInNonce().raw != nonce.raw)
 }
 
-@Test func signsInToTheAccountsUserKeepingItsSessionFromNowOn() async throws {
-  let store = MemoryStore("anonymous")
+@Test func signsInToTheAccountsUserOnTheDevicesSession() async throws {
   let fake = FakeServer(token: "theirs")
-  let account = Account(server: server, store: store, send: fake.send)
-  #expect(try await account.signInApple(idToken: "id-token", nonce: "raw") == "anonymous")
-  #expect(store.token() == "theirs")
+  let account = Account(server: server, send: fake.send)
+  #expect(
+    try await account.signInApple(idToken: "id-token", nonce: "raw", on: "anonymous")
+      == StoredSession(token: "theirs", userID: "user-theirs"))
   let request = try #require(fake.requests.withLock { $0.first })
   #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/sign-in/social")
   #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer anonymous")
   #expect(!request.httpShouldHandleCookies)
 }
 
-@Test func signingOutEndsTheSessionAndForgetsIt() async throws {
-  let store = MemoryStore("kept")
+@Test func signingOutEndsTheSessionOnTheServer() async throws {
   let fake = FakeServer()
-  let account = Account(server: server, store: store, send: fake.send)
-  try await account.signOut()
-  #expect(store.token() == nil)
+  try await Account(server: server, send: fake.send).signOut("kept")
   let request = try #require(fake.requests.withLock { $0.first })
   #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/sign-out")
   #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer kept")
+  await #expect(throws: SignInError.self) {
+    try await Account(server: server, send: FakeServer(status: 401).send).signOut("kept")
+  }
+}
+
+@Test func theSessionIsKeptWithItsUserAndATokenAloneIsToldApart() throws {
+  let keychain = SessionKeychain(own: MemoryStore(), leftBehind: MemoryStore())
+  #expect(try keychain.kept() == nil)
+  try keychain.keep(StoredSession(token: "t1", userID: "u1"))
+  try keychain.keep(StoredSession(token: "t2", userID: "u2"))
+  #expect(try keychain.kept() == .session(StoredSession(token: "t2", userID: "u2")))
+  let before = SessionKeychain(own: MemoryStore(Data("bare".utf8)), leftBehind: MemoryStore())
+  #expect(try before.kept() == .bareToken("bare"))
+}
+
+@Test func keepingInTheKeychainReplacesWhatWasKeptInOneStep() throws {
+  let store = KeychainTokenStore(service: "app.pochical.tests.\(UUID().uuidString)")
+  defer { try? store.forget() }
+  #expect(try store.data() == nil)
+  try store.replace(with: Data("first".utf8))
+  try store.replace(with: Data("second".utf8))
+  #expect(try store.data() == Data("second".utf8))
+  try store.forget()
+  #expect(try store.data() == nil)
+  try store.forget()
 }
 
 @Test func theUsualNameComesFromTheUsersSocketAndGoesWithTheirData() throws {
@@ -155,5 +159,32 @@ private let server = URL(string: "http://localhost:8787")!
     #expect(try Profile.usual(in: db) == UsualProfile(name: "さくら", photoID: "p1"))
     try LocalData.erase(in: db)
     #expect(try Profile.name(in: db) == "")
+  }
+}
+
+/// Every table the database has, each decided: erased with the account,
+/// or kept as the device's own. A table added fails this until it is put
+/// in one list or the other (`LocalData.deviceTables`).
+@Test func erasingTakesEveryTableButTheDevicesOwn() throws {
+  let usersTables: Set = [
+    "blocks", "chatDrafts", "chatLines", "chatMutes", "chatNotificationSettings", "chatOutbox",
+    "coworkerOrder", "coworkers", "days", "groupCursors", "groupMembers", "groups", "memberDays",
+    "memberOrders", "memberPatterns", "outbox", "patternOrder", "patterns", "preferences",
+    "profile", "readMarks", "repeatOrders", "serverValues", "syncState", "unreadCounts",
+  ]
+  #expect(LocalData.deviceTables == ["grdb_migrations"])
+  let database = try appDatabase()
+  try database.write { db in
+    #expect(Set(try LocalData.userTables(in: db)) == usersTables)
+    #expect(try SyncState.claim(for: "u1", in: db))
+    _ = try OwnValues.addCoworker(named: "佐藤", now: 1_000, in: db)
+    try LocalData.erase(in: db)
+    for table in usersTables {
+      #expect(try Int.fetchOne(db, sql: "SELECT count(*) FROM \"\(table)\"") == 0, "\(table)")
+    }
+    #expect(try Int.fetchOne(db, sql: #"SELECT count(*) FROM "grdb_migrations""#) ?? 0 > 0)
+    // No one's now: the next user claims it.
+    #expect(try SyncState.claim(for: "u2", in: db))
+    #expect(try !SyncState.claim(for: "u1", in: db))
   }
 }

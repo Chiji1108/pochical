@@ -79,39 +79,3 @@ public enum LinkResult: Sendable, Equatable {
 public struct LinkError: Error {
   public let status: Int?
 }
-
-extension Account {
-  /// Links Sign in with Apple's account to the signed-in user, with its ID
-  /// token and the nonce it was asked with (better-auth's
-  /// `/api/auth/link-social`).
-  public func linkApple(idToken: String, nonce: String) async throws -> LinkResult {
-    var request = URLRequest(url: server.appending(path: "api/auth/link-social"))
-    request.httpMethod = "POST"
-    // The token says who calls, not better-auth's cookie, which URLSession
-    // would keep and send: with a cookie and no Origin, better-auth takes
-    // the call for a browser's from another site and refuses it (403).
-    request.httpShouldHandleCookies = false
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.setValue("Bearer \(try await token())", forHTTPHeaderField: "Authorization")
-    request.httpBody = try JSONSerialization.data(withJSONObject: [
-      "idToken": ["nonce": nonce, "token": idToken], "provider": "apple",
-    ])
-    let (_, response) = try await send(request)
-    switch (response as? HTTPURLResponse)?.statusCode {
-    case 200: return .linked
-    case 409: return .inUse
-    case let status: throw LinkError(status: status)
-    }
-  }
-}
-
-extension GroupCalls {
-  /// Whether the signed-in user is linked to Apple or Google, as the server
-  /// says; nil when it cannot be asked now.
-  public func linked() async -> Bool? {
-    let answer = await users.getMe(
-      request: Pochical_V1_GetMeRequest(), headers: (try? await account.headers()) ?? [:])
-    guard case .success(let me) = answer.result else { return nil }
-    return !me.anonymous
-  }
-}

@@ -4,14 +4,9 @@ import SQLiteData
 import SwiftUI
 import Synchronization
 
-/// The account the environment holds until the app puts its own: one,
-/// made once, so reading the default makes no new one each time.
-private let placeholderAccount = Account()
-
 /// The places' sockets the environment holds until the app puts its own,
-/// none of them ever opened.
-private let placeholderSockets = GroupSockets(
-  account: placeholderAccount, database: try! DatabaseQueue())
+/// none of them ever opened, as no session gives them anyone to connect as.
+private let placeholderSockets = GroupSockets(database: try! DatabaseQueue())
 
 /// Opens one of Pochical's invitations on its join screen, as an action
 /// the environment carries, as SwiftUI's OpenURLAction is.
@@ -35,13 +30,9 @@ struct OpenGroupRouteAction {
 }
 
 extension EnvironmentValues {
-  /// The signed-in user, whom the calls and sockets go as.
-  @Entry var account = placeholderAccount
-  /// The server's GroupService, as the signed-in user.
-  @Entry var groupCalls = GroupCalls(account: placeholderAccount)
-  /// The user's own socket, connected again as someone else once the
-  /// account is deleted.
-  @Entry var userSocket: SyncClient?
+  /// The server's GroupService, as the signed-in user: as no one until
+  /// the app puts its own.
+  @Entry var groupCalls = GroupCalls(current: CurrentAccount())
   /// The chats' places' sockets, each place's client for its screens.
   @Entry var groupSockets = placeholderSockets
   /// Opens one of Pochical's invitations on its join screen, as reading
@@ -621,155 +612,22 @@ private struct GroupHeading: View {
   }
 }
 
-/// The chats' places' sockets (the groups', and the chat with Pochical's
-/// people's), one client for each, made the first time it is asked for and
-/// kept for good, so a client handed out stays the place's whether its
-/// socket is open or not: open while something holds it, then closing
-/// once its chat outbox is sent and acknowledged (spec/sync-protocol.md,
-/// Sockets), and opened again by the next hold. The app waits for them in
-/// the background as for its own socket, those still held too, so a
-/// socket its screen has not let go of yet is not missed. A group opened
-/// again takes back the socket it has, closing or not yet let go of,
-/// rather than opening a second, which would send the same outbox beside
-/// it, a reaction's on then perhaps arriving after its off.
-actor GroupSockets {
-  private struct Socket {
-    /// The screens' holds on it, each let go of once.
-    var holds: Set<UUID> = []
-    /// Which closing is under way, the socket perhaps taken back and
-    /// closed again meanwhile.
-    var closing: UUID?
-    var closed: Task<Void, Never>?
-  }
-
-  private let account: Account
-  private let database: any DatabaseWriter
-  /// Each place's client, handed out at once to screens on the main actor.
-  private let clients = Mutex<[String: SyncClient]>([:])
-  private var sockets: [String: Socket] = [:]
-
-  init(account: Account, database: any DatabaseWriter) {
-    self.account = account
-    self.database = database
-  }
-
-  /// The place's client, the same one each time, its socket open or not.
-  nonisolated func client(_ placeID: String) -> SyncClient {
-    clients.withLock { clients in
-      if let client = clients[placeID] { return client }
-      let client = SyncClient(account: account, database: database, peer: .place(placeID))
-      clients[placeID] = client
-      return client
-    }
-  }
-
-  /// A hold on the place's socket, kept open until `close` lets go of it:
-  /// taken back if it was closing, opened again if closed.
-  func open(_ placeID: String) async -> UUID {
-    let hold = UUID()
-    var socket = sockets[placeID] ?? Socket()
-    let starting = socket.holds.isEmpty
-    socket.holds.insert(hold)
-    socket.closing = nil
-    sockets[placeID] = socket
-    if starting {
-      await client(placeID).start()
-    }
-    return hold
-  }
-
-  /// Lets go of a hold; the last one let go of closes the socket once what
-  /// it has to send is sent. A hold the background let go of already is
-  /// nothing.
-  func close(_ hold: UUID, of placeID: String) {
-    guard var socket = sockets[placeID], socket.holds.remove(hold) != nil else { return }
-    sockets[placeID] = socket
-    if socket.holds.isEmpty {
-      beginClosing(placeID)
-    }
-  }
-
-  private func beginClosing(_ placeID: String) {
-    guard var socket = sockets[placeID] else { return }
-    let id = UUID()
-    let client = client(placeID)
-    socket.holds = []
-    socket.closing = id
-    socket.closed = Task {
-      let sent = await client.closeOnceSent()
-      guard self.sockets[placeID]?.closing == id else {
-        // Taken back before it began closing: open as it was.
-        if self.sockets[placeID]?.holds.isEmpty == false {
-          await client.start()
-        }
-        return
-      }
-      await sent.value
-      if self.sockets[placeID]?.closing == id {
-        self.sockets[placeID]?.closing = nil
-        self.sockets[placeID]?.closed = nil
-      }
-    }
-    sockets[placeID] = socket
-  }
-
-  /// Closes every one once sent, those held too, and waits until they all
-  /// have, those left meanwhile too.
-  func finishSending() async {
-    for (placeID, socket) in sockets where !socket.holds.isEmpty {
-      beginClosing(placeID)
-    }
-    while let next = sockets.values.first(where: { $0.closing != nil })?.closed {
-      await next.value
-    }
-  }
-
-  /// Closes those closing at once: the time the OS gave runs out.
-  func stop() async {
-    for (placeID, socket) in sockets where socket.closing != nil {
-      await client(placeID).stop()
-    }
-  }
-
-  /// Closes every socket at once and forgets any 401, as the account is
-  /// changing: nothing more of the account before is taken in, nor is its
-  /// chat outbox sent, before the device's data is erased. The holds stay,
-  /// for `startHeld` once it is.
-  func forgetAccount() async {
-    for placeID in sockets.keys {
-      sockets[placeID]?.closing = nil
-      sockets[placeID]?.closed = nil
-    }
-    for client in clients.withLock({ Array($0.values) }) {
-      await client.forgetStop()
-    }
-  }
-
-  /// Opens again the sockets held, as whoever the account is now; the
-  /// others open as they are next held.
-  func startHeld() async {
-    for (placeID, socket) in sockets where !socket.holds.isEmpty {
-      await client(placeID).start()
-    }
-  }
-}
-
 /// The socket of the place open on screen, held while it shows and the app
 /// is in front (spec/sync-protocol.md, Sockets): the open group's in グループ,
 /// the chat with Pochical's people's in 設定. One hold at a time, moved as
 /// the place changes, whatever covers the screen meanwhile, so the screens
 /// over a place (its chat, its photos open large) share it rather than
 /// each holding it. They take the place's client from GroupSockets, held
-/// yet or not.
+/// yet or not. The session opens the socket held only while signed in.
 @MainActor @Observable final class OpenPlaceSocket {
-  @ObservationIgnored private let sockets: GroupSockets
+  @ObservationIgnored private let session: AccountSession
   /// The place whose socket is wanted now; nil for none.
   @ObservationIgnored private var wanted: String?
   @ObservationIgnored private var held: (placeID: String, hold: UUID)?
   @ObservationIgnored private var moving = false
 
-  init(sockets: GroupSockets) {
-    self.sockets = sockets
+  init(session: AccountSession) {
+    self.session = session
   }
 
   /// Holds `placeID`'s socket from now, letting go of any other; none for
@@ -783,10 +641,10 @@ actor GroupSockets {
       while held?.placeID != wanted {
         if let held {
           self.held = nil
-          await sockets.close(held.hold, of: held.placeID)
+          await session.release(held.hold, of: held.placeID)
         }
         if let placeID = wanted {
-          held = (placeID, await sockets.open(placeID))
+          held = (placeID, await session.hold(placeID))
         }
       }
       moving = false

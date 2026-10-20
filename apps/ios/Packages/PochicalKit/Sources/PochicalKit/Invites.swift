@@ -68,7 +68,7 @@ extension GroupCalls {
   public func invite(code: String) async throws(InviteError) -> InviteDetails {
     var request = Pochical_V1_GetInviteRequest()
     request.inviteCode = code
-    let answer = await client.getInvite(request: request, headers: (try? await account.headers()) ?? [:])
+    let answer = await client.getInvite(request: request, headers: (try? headers()) ?? [:])
     switch answer.result {
     case .success(let invite):
       return InviteDetails(
@@ -87,7 +87,7 @@ extension GroupCalls {
     var request = Pochical_V1_JoinGroupRequest()
     request.inviteCode = code
     request.displayName = displayName
-    let answer = await client.joinGroup(request: request, headers: (try? await account.headers()) ?? [:])
+    let answer = await client.joinGroup(request: request, headers: (try? headers()) ?? [:])
     switch answer.result {
     case .success(let joined): return joined.groupID
     case .failure(let error): throw InviteError(error)

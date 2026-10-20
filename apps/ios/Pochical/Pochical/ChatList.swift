@@ -38,9 +38,8 @@ struct ChatList: View {
   let members: [GroupMember]
   /// Opens a chat: its thread, and the other member of a one-to-one chat.
   let onOpen: (String, String?) -> Void
-  /// The reader last heard of at first, so the rows are there on the
-  /// first frame rather than after the server answers.
-  @State private var meID = GroupCalls.knownUserID
+  /// The reader, as the session keeps them, known on the first frame.
+  @Environment(\.meID) private var meID
   @State private var starting = false
 
   init(group: GroupRow, members: [GroupMember], onOpen: @escaping (String, String?) -> Void) {
@@ -121,7 +120,6 @@ struct ChatList: View {
           .padding(.horizontal, 16)
       }
     }
-    .task { meID = await groupCalls.userID() }
     .task(id: group.id) {
       _ = try? await $chats.load(ChatThreadsRequest(groupID: group.id))
     }
