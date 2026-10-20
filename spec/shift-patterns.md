@@ -1,6 +1,6 @@
 # Shift patterns
 
-What a person's shift patterns are and how entering them behaves. The web prototype (`apps/web/src/lib/design-patterns.ts`) follows this; the native apps and `proto/` will too.
+What a person's shift patterns are and how entering them behaves. The web prototype (`packages/prototype/src/lib/design-patterns.ts`) follows this; the native apps and `proto/` will too.
 
 ## A pattern
 

@@ -1,6 +1,6 @@
 # Calendar
 
-How カレンダー, the person's own month, behaves on screen: what each part shows, when, and what a tap does. The logic it runs on is spec/shift-patterns.md's, pinned by spec/vectors; this is what a screen adds around it, so every platform's screen does the same. /design's calendar (`apps/web/src/components/design-calendar.tsx` and its parts) shows it.
+How カレンダー, the person's own month, behaves on screen: what each part shows, when, and what a tap does. The logic it runs on is spec/shift-patterns.md's, pinned by spec/vectors; this is what a screen adds around it, so every platform's screen does the same. /design's calendar (`packages/prototype/src/components/design-calendar.tsx` and its parts) shows it.
 
 ## The month
 

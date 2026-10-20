@@ -10,36 +10,16 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DemoRouteImport } from './routes/demo'
-import { Route as DesignRouteImport } from './routes/design'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
-import { Route as TryRouteImport } from './routes/try'
 import { Route as AccountDeleteRouteImport } from './routes/account.delete'
-import { Route as DesignAssetsRouteImport } from './routes/design_.assets'
-import { Route as DesignColorsRouteImport } from './routes/design_.colors'
-import { Route as DesignComponentsRouteImport } from './routes/design_.components'
-import { Route as DesignFlowsRouteImport } from './routes/design_.flows'
-import { Route as DesignShareImageRouteImport } from './routes/design_.share-image'
-import { Route as DesignStatesRouteImport } from './routes/design_.states'
-import { Route as DesignWidgetsRouteImport } from './routes/design_.widgets'
 import { Route as InviteInviteCodeRouteImport } from './routes/invite.$inviteCode'
 import { Route as SupportGoogleCalendarRouteImport } from './routes/support_.google-calendar'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoRoute = DemoRouteImport.update({
-  id: '/demo',
-  path: '/demo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignRoute = DesignRouteImport.update({
-  id: '/design',
-  path: '/design',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -57,49 +37,9 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TryRoute = TryRouteImport.update({
-  id: '/try',
-  path: '/try',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AccountDeleteRoute = AccountDeleteRouteImport.update({
   id: '/account/delete',
   path: '/account/delete',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignAssetsRoute = DesignAssetsRouteImport.update({
-  id: '/design_/assets',
-  path: '/design/assets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignColorsRoute = DesignColorsRouteImport.update({
-  id: '/design_/colors',
-  path: '/design/colors',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignComponentsRoute = DesignComponentsRouteImport.update({
-  id: '/design_/components',
-  path: '/design/components',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignFlowsRoute = DesignFlowsRouteImport.update({
-  id: '/design_/flows',
-  path: '/design/flows',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignShareImageRoute = DesignShareImageRouteImport.update({
-  id: '/design_/share-image',
-  path: '/design/share-image',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignStatesRoute = DesignStatesRouteImport.update({
-  id: '/design_/states',
-  path: '/design/states',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignWidgetsRoute = DesignWidgetsRouteImport.update({
-  id: '/design_/widgets',
-  path: '/design/widgets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteInviteCodeRoute = InviteInviteCodeRouteImport.update({
@@ -115,59 +55,29 @@ const SupportGoogleCalendarRoute = SupportGoogleCalendarRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/demo': typeof DemoRoute
-  '/design': typeof DesignRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
-  '/try': typeof TryRoute
   '/account/delete': typeof AccountDeleteRoute
-  '/design/assets': typeof DesignAssetsRoute
-  '/design/colors': typeof DesignColorsRoute
-  '/design/components': typeof DesignComponentsRoute
-  '/design/flows': typeof DesignFlowsRoute
-  '/design/share-image': typeof DesignShareImageRoute
-  '/design/states': typeof DesignStatesRoute
-  '/design/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
   '/support/google-calendar': typeof SupportGoogleCalendarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/demo': typeof DemoRoute
-  '/design': typeof DesignRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
-  '/try': typeof TryRoute
   '/account/delete': typeof AccountDeleteRoute
-  '/design/assets': typeof DesignAssetsRoute
-  '/design/colors': typeof DesignColorsRoute
-  '/design/components': typeof DesignComponentsRoute
-  '/design/flows': typeof DesignFlowsRoute
-  '/design/share-image': typeof DesignShareImageRoute
-  '/design/states': typeof DesignStatesRoute
-  '/design/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
   '/support/google-calendar': typeof SupportGoogleCalendarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/demo': typeof DemoRoute
-  '/design': typeof DesignRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
-  '/try': typeof TryRoute
   '/account/delete': typeof AccountDeleteRoute
-  '/design_/assets': typeof DesignAssetsRoute
-  '/design_/colors': typeof DesignColorsRoute
-  '/design_/components': typeof DesignComponentsRoute
-  '/design_/flows': typeof DesignFlowsRoute
-  '/design_/share-image': typeof DesignShareImageRoute
-  '/design_/states': typeof DesignStatesRoute
-  '/design_/widgets': typeof DesignWidgetsRoute
   '/invite/$inviteCode': typeof InviteInviteCodeRoute
   '/support_/google-calendar': typeof SupportGoogleCalendarRoute
 }
@@ -175,78 +85,38 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/demo'
-    | '/design'
     | '/privacy'
     | '/support'
     | '/terms'
-    | '/try'
     | '/account/delete'
-    | '/design/assets'
-    | '/design/colors'
-    | '/design/components'
-    | '/design/flows'
-    | '/design/share-image'
-    | '/design/states'
-    | '/design/widgets'
     | '/invite/$inviteCode'
     | '/support/google-calendar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/demo'
-    | '/design'
     | '/privacy'
     | '/support'
     | '/terms'
-    | '/try'
     | '/account/delete'
-    | '/design/assets'
-    | '/design/colors'
-    | '/design/components'
-    | '/design/flows'
-    | '/design/share-image'
-    | '/design/states'
-    | '/design/widgets'
     | '/invite/$inviteCode'
     | '/support/google-calendar'
   id:
     | '__root__'
     | '/'
-    | '/demo'
-    | '/design'
     | '/privacy'
     | '/support'
     | '/terms'
-    | '/try'
     | '/account/delete'
-    | '/design_/assets'
-    | '/design_/colors'
-    | '/design_/components'
-    | '/design_/flows'
-    | '/design_/share-image'
-    | '/design_/states'
-    | '/design_/widgets'
     | '/invite/$inviteCode'
     | '/support_/google-calendar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DemoRoute: typeof DemoRoute
-  DesignRoute: typeof DesignRoute
   PrivacyRoute: typeof PrivacyRoute
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
-  TryRoute: typeof TryRoute
   AccountDeleteRoute: typeof AccountDeleteRoute
-  DesignAssetsRoute: typeof DesignAssetsRoute
-  DesignColorsRoute: typeof DesignColorsRoute
-  DesignComponentsRoute: typeof DesignComponentsRoute
-  DesignFlowsRoute: typeof DesignFlowsRoute
-  DesignShareImageRoute: typeof DesignShareImageRoute
-  DesignStatesRoute: typeof DesignStatesRoute
-  DesignWidgetsRoute: typeof DesignWidgetsRoute
   InviteInviteCodeRoute: typeof InviteInviteCodeRoute
   SupportGoogleCalendarRoute: typeof SupportGoogleCalendarRoute
 }
@@ -258,20 +128,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo': {
-      id: '/demo'
-      path: '/demo'
-      fullPath: '/demo'
-      preLoaderRoute: typeof DemoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design': {
-      id: '/design'
-      path: '/design'
-      fullPath: '/design'
-      preLoaderRoute: typeof DesignRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -295,67 +151,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/try': {
-      id: '/try'
-      path: '/try'
-      fullPath: '/try'
-      preLoaderRoute: typeof TryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/account/delete': {
       id: '/account/delete'
       path: '/account/delete'
       fullPath: '/account/delete'
       preLoaderRoute: typeof AccountDeleteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/assets': {
-      id: '/design_/assets'
-      path: '/design/assets'
-      fullPath: '/design/assets'
-      preLoaderRoute: typeof DesignAssetsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/colors': {
-      id: '/design_/colors'
-      path: '/design/colors'
-      fullPath: '/design/colors'
-      preLoaderRoute: typeof DesignColorsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/components': {
-      id: '/design_/components'
-      path: '/design/components'
-      fullPath: '/design/components'
-      preLoaderRoute: typeof DesignComponentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/flows': {
-      id: '/design_/flows'
-      path: '/design/flows'
-      fullPath: '/design/flows'
-      preLoaderRoute: typeof DesignFlowsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/share-image': {
-      id: '/design_/share-image'
-      path: '/design/share-image'
-      fullPath: '/design/share-image'
-      preLoaderRoute: typeof DesignShareImageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/states': {
-      id: '/design_/states'
-      path: '/design/states'
-      fullPath: '/design/states'
-      preLoaderRoute: typeof DesignStatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/widgets': {
-      id: '/design_/widgets'
-      path: '/design/widgets'
-      fullPath: '/design/widgets'
-      preLoaderRoute: typeof DesignWidgetsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite/$inviteCode': {
@@ -377,20 +177,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DemoRoute: DemoRoute,
-  DesignRoute: DesignRoute,
   PrivacyRoute: PrivacyRoute,
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
-  TryRoute: TryRoute,
   AccountDeleteRoute: AccountDeleteRoute,
-  DesignAssetsRoute: DesignAssetsRoute,
-  DesignColorsRoute: DesignColorsRoute,
-  DesignComponentsRoute: DesignComponentsRoute,
-  DesignFlowsRoute: DesignFlowsRoute,
-  DesignShareImageRoute: DesignShareImageRoute,
-  DesignStatesRoute: DesignStatesRoute,
-  DesignWidgetsRoute: DesignWidgetsRoute,
   InviteInviteCodeRoute: InviteInviteCodeRoute,
   SupportGoogleCalendarRoute: SupportGoogleCalendarRoute,
 }

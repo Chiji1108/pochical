@@ -1,0 +1,29 @@
+import { themeStyle } from "@pochical/prototype/components/design-theme";
+import { createFileRoute } from "@tanstack/react-router";
+
+import { DesignColors } from "../components/design-colors";
+import {
+  DesignIntro,
+  DesignPage,
+  DesignToolbar,
+} from "../components/design-page";
+import { pageMeta } from "../lib/page-meta";
+
+function ColorsPage() {
+  return (
+    <DesignPage style={themeStyle("pochical", "light")}>
+      <DesignToolbar />
+      <DesignIntro eyebrow="POCHICAL / COLOR PALETTE" title="カラーパレット">
+        画面の色はすべて、ここにある役割の名前で決まります。ライトとダークを並べています。
+      </DesignIntro>
+      <DesignColors />
+    </DesignPage>
+  );
+}
+
+export const Route = createFileRoute("/design_/colors")({
+  component: ColorsPage,
+  head: () => ({
+    ...pageMeta("カラーパレット", "ポチカルの色の役割と、ライト・ダークの値"),
+  }),
+});

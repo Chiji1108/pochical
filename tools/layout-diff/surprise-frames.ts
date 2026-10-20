@@ -14,7 +14,7 @@ import { chromium } from "playwright-core";
 const appearance = process.argv[2] ?? "light";
 const taps = Number(process.argv[3] ?? "8");
 const out = process.argv[4] ?? "tools/layout-diff/out/surprise";
-const base = process.env.BASE_URL ?? "http://localhost:3000";
+const base = process.env.BASE_URL ?? "http://localhost:3200";
 const FRAMES_AT = [400, 1200, 3000, 5200];
 const ROUND_MS = 6500;
 const SETTLE_MS = 1000;

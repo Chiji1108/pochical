@@ -1,12 +1,14 @@
+import siteIcon from "@pochical/prototype/assets/icon.png";
+import { site } from "@pochical/prototype/lib/brand";
+import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 import { lazy, Suspense, useState } from "react";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
-import { css } from "styled-system/css";
 
 // Its types only: the code itself loads after the page shows (below).
 import type * as LpScreens from "../components/lp-screens";
 import { StoreLinks } from "../components/store-links";
-import { pageMeta, site } from "../lib/site";
+import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -348,7 +350,7 @@ function Closing() {
           alt=""
           className={closing.icon}
           height={64}
-          src="/icon.png"
+          src={siteIcon}
           width={64}
         />
         <h2 className={closing.title} id="closing-title">

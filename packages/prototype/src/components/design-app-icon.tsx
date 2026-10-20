@@ -1,0 +1,587 @@
+import { css, cva, cx } from "@pochical/styled-system/css";
+import { useEffect, useState } from "react";
+
+import poodle from "../assets/poodle.png";
+import { Choice, ChoiceGrid } from "./design-choices";
+
+// The app icon from the poodle drawing: black lines on white. The outside
+// of the dog is found by flooding in from the edges, so the ground can take
+// a color while the dog stays white.
+
+export type IconColors = {
+  id: string;
+  name: string;
+  ground: string;
+  dog: string;
+  line: string;
+  // A band of the dog's color around the whole drawing, in source pixels,
+  // for grounds as dark as the lines.
+  rim?: number;
+};
+
+export const iconColorOptions: IconColors[] = [
+  {
+    dog: "#ffffff",
+    ground: "#486444",
+    id: "moss",
+    line: "#1d261b",
+    name: "モス",
+  },
+  {
+    dog: "#fffdf8",
+    ground: "#efe4cf",
+    id: "paper",
+    line: "#2b2823",
+    name: "紙",
+  },
+  {
+    dog: "#ffffff",
+    ground: "#ffffff",
+    id: "white",
+    line: "#252823",
+    name: "白",
+  },
+  // A dark ground and a light dog. The lines stay dark on a light rim, so
+  // the nose, which sits outside the outline, still shows.
+  {
+    dog: "#ece8df",
+    ground: "#1f231e",
+    id: "dark",
+    line: "#1f231e",
+    name: "ダーク",
+    rim: 17,
+  },
+];
+
+// What iOS shows on a home screen set to dark icons: each icon darkened
+// but still itself, so choosing モス never turns into a black icon.
+export const darkTwins: IconColors[] = [
+  {
+    dog: "#ece8df",
+    ground: "#2b3a29",
+    id: "moss-dark",
+    line: "#1a2219",
+    name: "モス（暗い見た目）",
+    rim: 17,
+  },
+  {
+    dog: "#efe6d6",
+    ground: "#3a342b",
+    id: "paper-dark",
+    line: "#201c17",
+    name: "紙（暗い見た目）",
+    rim: 17,
+  },
+];
+
+// The dark-home-screen version of each pickable icon. White has no dark
+// of its own, so it borrows ダーク, which is already dark.
+export const darkTwinOf: Record<string, string> = {
+  dark: "dark",
+  moss: "moss-dark",
+  paper: "paper-dark",
+  white: "dark",
+};
+
+export const ICON_SIZE = 1024;
+// Share of the icon's width the drawing's lines take, leaving room for the
+// rounded corners the system cuts.
+export const DRAWING_SHARE = 0.74;
+// Brighter than this counts as paper when finding the outside.
+const PAPER_LIGHTNESS = 128;
+// Darker than this counts as a line when measuring the drawing's bounds.
+const INK_LIGHTNESS = 100;
+
+type Rgb = [number, number, number];
+
+export function rgbOf(hex: string): Rgb {
+  const channel = (start: number) =>
+    Number.parseInt(hex.slice(start, start + 2), 16);
+  return [channel(1), channel(3), channel(5)];
+}
+
+// Marks every paper pixel reachable from the image's edges.
+export function outsideOf(
+  lightness: Uint8Array,
+  width: number,
+  height: number
+) {
+  const outside = new Uint8Array(width * height);
+  const stack: number[] = [];
+  const push = (index: number) => {
+    if (outside[index] === 0 && (lightness[index] ?? 0) > PAPER_LIGHTNESS) {
+      outside[index] = 1;
+      stack.push(index);
+    }
+  };
+  for (let x = 0; x < width; x += 1) {
+    push(x);
+    push((height - 1) * width + x);
+  }
+  for (let y = 0; y < height; y += 1) {
+    push(y * width);
+    push(y * width + width - 1);
+  }
+  while (stack.length > 0) {
+    const index = stack.pop() ?? 0;
+    const x = index % width;
+    if (x > 0) {
+      push(index - 1);
+    }
+    if (x < width - 1) {
+      push(index + 1);
+    }
+    if (index >= width) {
+      push(index - width);
+    }
+    if (index < width * (height - 1)) {
+      push(index + width);
+    }
+  }
+  return outside;
+}
+
+// Chamfer steps: 3 across, 4 diagonally, about 3 per pixel.
+const STRAIGHT = 3;
+const DIAGONAL = 4;
+
+// Each outside pixel's distance in pixels to the drawing (lines and the
+// dog inside them), by a two-pass chamfer transform.
+export function distanceToDrawing(
+  outside: Uint8Array,
+  width: number,
+  height: number
+) {
+  const far = 1_000_000;
+  const distance = new Float32Array(width * height);
+  for (let index = 0; index < distance.length; index += 1) {
+    distance[index] = outside[index] ? far : 0;
+  }
+  const relax = (index: number, from: number, step: number) => {
+    const through = (distance[from] ?? far) + step;
+    if (through < (distance[index] ?? far)) {
+      distance[index] = through;
+    }
+  };
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = y * width + x;
+      if (x > 0) {
+        relax(index, index - 1, STRAIGHT);
+      }
+      if (y > 0) {
+        relax(index, index - width, STRAIGHT);
+        if (x > 0) {
+          relax(index, index - width - 1, DIAGONAL);
+        }
+        if (x < width - 1) {
+          relax(index, index - width + 1, DIAGONAL);
+        }
+      }
+    }
+  }
+  for (let y = height - 1; y >= 0; y -= 1) {
+    for (let x = width - 1; x >= 0; x -= 1) {
+      const index = y * width + x;
+      if (x < width - 1) {
+        relax(index, index + 1, STRAIGHT);
+      }
+      if (y < height - 1) {
+        relax(index, index + width, STRAIGHT);
+        if (x < width - 1) {
+          relax(index, index + width + 1, DIAGONAL);
+        }
+        if (x > 0) {
+          relax(index, index + width - 1, DIAGONAL);
+        }
+      }
+    }
+  }
+  for (let index = 0; index < distance.length; index += 1) {
+    distance[index] = (distance[index] ?? 0) / STRAIGHT;
+  }
+  return distance;
+}
+
+// The drawing's lines, as a box in source pixels.
+export function inkBounds(
+  lightness: Uint8Array,
+  width: number,
+  height: number
+) {
+  let [left, top, right, bottom] = [width, height, 0, 0];
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if ((lightness[y * width + x] ?? 255) < INK_LIGHTNESS) {
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }
+    }
+  }
+  return { bottom, left, right, top };
+}
+
+// The drawing's pixels in the icon's colors, RGBA at the source's size,
+// from the source's lightness: what the page paints on its canvas and the
+// scripts (scripts/ios-app-icons.ts) write out. With a clear ground, only
+// the dog and its rim are painted and the rest is see-through.
+export function paintedPixels(
+  lightness: Uint8Array,
+  width: number,
+  height: number,
+  colors: IconColors,
+  clearGround = false
+) {
+  const pixels = new Uint8ClampedArray(width * height * 4);
+  const outside = outsideOf(lightness, width, height);
+  const ground = rgbOf(colors.ground);
+  const dog = rgbOf(colors.dog);
+  const line = rgbOf(colors.line);
+  const { rim } = colors;
+  const distance =
+    rim === undefined ? undefined : distanceToDrawing(outside, width, height);
+  // The rim's share of an outside pixel, softened over its last pixel.
+  const rimShare = (index: number) =>
+    rim === undefined || !distance
+      ? 0
+      : Math.min(1, Math.max(0, rim - (distance[index] ?? rim)));
+  // Each pixel is its region's color darkened toward the line color by how
+  // dark the drawing is there, so the lines keep their soft edges.
+  for (let index = 0; index < lightness.length; index += 1) {
+    const share = outside[index] ? rimShare(index) : 1;
+    // A clear ground fades the rim out by opacity rather than into a color.
+    const tint = clearGround ? 1 : share;
+    const base = [0, 1, 2].map(
+      (channel) =>
+        (ground[channel] ?? 0) * (1 - tint) + (dog[channel] ?? 0) * tint
+    );
+    const ink = 1 - (lightness[index] ?? 255) / 255;
+    const offset = index * 4;
+    for (let channel = 0; channel < 3; channel += 1) {
+      pixels[offset + channel] = Math.round(
+        (base[channel] ?? 0) * (1 - ink) + (line[channel] ?? 0) * ink
+      );
+    }
+    pixels[offset + 3] = clearGround ? Math.round(share * 255) : 255;
+  }
+  return pixels;
+}
+
+// The drawing in the icon's colors, at the source's size, on a canvas.
+function paintDrawing(
+  image: HTMLImageElement,
+  colors: IconColors,
+  clearGround = false
+) {
+  const { naturalWidth: width, naturalHeight: height } = image;
+  const source = document.createElement("canvas");
+  source.width = width;
+  source.height = height;
+  const sourceContext = source.getContext("2d");
+  if (!sourceContext) {
+    return;
+  }
+  sourceContext.drawImage(image, 0, 0);
+  const pixels = sourceContext.getImageData(0, 0, width, height);
+  const lightness = new Uint8Array(width * height);
+  for (let index = 0; index < lightness.length; index += 1) {
+    const offset = index * 4;
+    lightness[index] = Math.round(
+      ((pixels.data[offset] ?? 0) +
+        (pixels.data[offset + 1] ?? 0) +
+        (pixels.data[offset + 2] ?? 0)) /
+        3
+    );
+  }
+  pixels.data.set(paintedPixels(lightness, width, height, colors, clearGround));
+  sourceContext.putImageData(pixels, 0, 0);
+  return { lightness, source };
+}
+
+function paintIcon(image: HTMLImageElement, colors: IconColors) {
+  const drawing = paintDrawing(image, colors);
+  if (!drawing) {
+    return "";
+  }
+  const { lightness, source } = drawing;
+  const { naturalWidth: width, naturalHeight: height } = image;
+  const bounds = inkBounds(lightness, width, height);
+  const drawn = Math.max(
+    bounds.right - bounds.left,
+    bounds.bottom - bounds.top
+  );
+  const scale = (ICON_SIZE * DRAWING_SHARE) / drawn;
+  const icon = document.createElement("canvas");
+  icon.width = ICON_SIZE;
+  icon.height = ICON_SIZE;
+  const context = icon.getContext("2d");
+  if (!context) {
+    return "";
+  }
+  context.fillStyle = colors.ground;
+  context.fillRect(0, 0, ICON_SIZE, ICON_SIZE);
+  const centerX = (bounds.left + bounds.right) / 2;
+  const centerY = (bounds.top + bounds.bottom) / 2;
+  context.drawImage(
+    source,
+    ICON_SIZE / 2 - centerX * scale,
+    ICON_SIZE / 2 - centerY * scale,
+    width * scale,
+    height * scale
+  );
+  return icon.toDataURL("image/png");
+}
+
+// The key of the dog alone in the default icon's dark look.
+export const DARK_DRAWING = "drawing-dark";
+// The dog alone in its light look, white in dark lines, for light grounds.
+export const LIGHT_DRAWING = "drawing-light";
+export const lightDrawing: IconColors = {
+  dog: "#ffffff",
+  ground: "#ffffff",
+  id: LIGHT_DRAWING,
+  line: "#1d261b",
+  name: "白",
+  rim: 17,
+};
+
+// Painted once for the whole page, since each color walks every pixel.
+let paintedIcons: Promise<Record<string, string>> | undefined;
+
+async function paintAll() {
+  const image = new Image();
+  image.src = poodle;
+  await image.decode();
+  const icons: Record<string, string> = Object.fromEntries(
+    [...iconColorOptions, ...darkTwins].map((colors) => [
+      colors.id,
+      paintIcon(image, colors),
+    ])
+  );
+  // The default icon's dark look without its ground, for drawing the dog
+  // straight onto a dark screen.
+  const mossDark = darkTwins.find((colors) => colors.id === "moss-dark");
+  if (mossDark) {
+    icons[DARK_DRAWING] =
+      paintDrawing(image, mossDark, true)?.source.toDataURL("image/png") ?? "";
+  }
+  icons[LIGHT_DRAWING] =
+    paintDrawing(image, lightDrawing, true)?.source.toDataURL("image/png") ??
+    "";
+  return icons;
+}
+
+async function loadIcons(): Promise<Record<string, string>> {
+  paintedIcons ??= paintAll();
+  return await paintedIcons;
+}
+
+// Every color's icon, as image URLs by id, once the drawing has loaded.
+export function useAppIcons() {
+  const [icons, setIcons] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let current = true;
+    void loadIcons().then((loaded) => {
+      if (current) {
+        setIcons(loaded);
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, []);
+  return icons;
+}
+
+// The icons someone can pick in settings, ダーク among them.
+export const pickableIcons = iconColorOptions;
+
+// An icon as the system shows it: cut to a rounded square, close to the
+// system's continuous corner at icon sizes.
+const appIcon = css({
+  "& img": { display: "block", height: "100%", width: "100%" },
+  bg: "fill.tertiary",
+  borderRadius: "22.5%",
+  boxShadow: "0 0 0 0.5px rgb(0 0 0 / 0.12)",
+  display: "inline-block",
+  flexShrink: 0,
+  overflow: "hidden",
+});
+
+export function AppIcon({ src, size }: { src?: string; size: number }) {
+  return (
+    <span className={appIcon} style={{ height: size, width: size }}>
+      {src ? <img alt="" height={size} src={src} width={size} /> : null}
+    </span>
+  );
+}
+
+const homeSizes = [
+  { label: "ホーム画面", size: 60 },
+  { label: "Spotlight", size: 40 },
+  { label: "設定・通知", size: 29 },
+];
+
+// Neighbors on the home screen, so the icon is judged among others.
+const neighbors = ["#f2b233", "#4c8ef7", "#34c759", "#ff5b5b", "#8e8e93"];
+
+// The colors to pick from, each with its dark twin; the icon at the
+// system's sizes; and two home screens, light and dark, with neighbors.
+const study = {
+  // A neighbor's icon: a plain color in the icon's shape, a little faded
+  // so the icon stands out.
+  neighbor: css({ height: "60px", opacity: 0.85, width: "60px" }),
+  app: css({
+    "& > small": {
+      color: "#ffffff",
+      fontSize: "10px",
+      textShadow: "0 1px 2px rgb(0 0 0 / 0.35)",
+    },
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "5px",
+  }),
+  choice: css({
+    _checked: { borderColor: "var(--border-strong)", color: "text.primary" },
+    alignItems: "center",
+    bg: "transparent",
+    border: "1px solid transparent",
+    borderRadius: "20px",
+    color: "text.secondary",
+    display: "flex",
+    flexDirection: "column",
+    fontSize: "12px",
+    gap: "8px",
+    padding: "10px",
+  }),
+  choices: css({
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "14px",
+    justifyContent: "center",
+  }),
+  home: cva({
+    base: {
+      borderRadius: "28px",
+      display: "grid",
+      gap: "18px 22px",
+      gridTemplateColumns: "repeat(3, 60px)",
+      padding: "26px 24px",
+    },
+    variants: {
+      scheme: {
+        dark: { background: "linear-gradient(160deg, #1b2230, #2d2420)" },
+        light: { background: "linear-gradient(160deg, #7f9cc0, #c49a80)" },
+      },
+    },
+  }),
+  homes: css({
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "16px",
+    justifyContent: "center",
+  }),
+  root: css({
+    alignItems: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
+    width: "min(100%, 520px)",
+  }),
+  sizes: css({
+    "& > figure": {
+      alignItems: "center",
+      display: "flex",
+      flexDirection: "column",
+      gap: "6px",
+      margin: 0,
+    },
+    "& > figure > figcaption": {
+      alignItems: "center",
+      color: "text.tertiary",
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "11px",
+    },
+    alignItems: "flex-end",
+    display: "flex",
+    gap: "28px",
+  }),
+  twin: css({
+    alignItems: "center",
+    color: "text.tertiary",
+    display: "flex",
+    fontSize: "10px",
+    gap: "6px",
+  }),
+};
+
+export function DesignAppIcon() {
+  const icons = useAppIcons();
+  const [picked, setPicked] = useState(iconColorOptions[0]?.id ?? "moss");
+  const src = icons[picked];
+  return (
+    <div className={study.root}>
+      <ChoiceGrid
+        className={study.choices}
+        label="アイコンの色"
+        onValueChange={setPicked}
+        value={picked}
+      >
+        {pickableIcons.map((option) => (
+          <Choice className={study.choice} key={option.id} value={option.id}>
+            <AppIcon size={96} src={icons[option.id]} />
+            <span>{option.name}</span>
+            {/* On a home screen set to dark icons. */}
+            <span className={study.twin}>
+              <AppIcon
+                size={32}
+                src={icons[darkTwinOf[option.id] ?? option.id]}
+              />
+              暗い見た目
+            </span>
+          </Choice>
+        ))}
+      </ChoiceGrid>
+      <div className={study.sizes}>
+        {homeSizes.map(({ label, size }) => (
+          <figure key={label}>
+            <AppIcon size={size} src={src} />
+            <figcaption>
+              {label}
+              <small>{size}pt</small>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+      <div className={study.homes}>
+        {(["light", "dark"] as const).map((scheme) => (
+          <div className={study.home({ scheme })} key={scheme}>
+            {neighbors.map((color, index) => (
+              <span className={study.app} key={color}>
+                <span
+                  aria-hidden="true"
+                  className={cx(appIcon, study.neighbor)}
+                  style={{ background: color }}
+                />
+                <small>アプリ{index + 1}</small>
+              </span>
+            ))}
+            <span className={study.app}>
+              <AppIcon
+                size={60}
+                src={
+                  scheme === "dark" ? icons[darkTwinOf[picked] ?? picked] : src
+                }
+              />
+              <small>ポチカル</small>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

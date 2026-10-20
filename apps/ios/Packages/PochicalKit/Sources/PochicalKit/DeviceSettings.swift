@@ -4,7 +4,7 @@ import PochicalDesign
 import SQLiteData
 
 /// What the person set for their own screen, as /design's device settings
-/// are (apps/web/src/lib/design-settings-store.ts). Kept in the App Group,
+/// are (packages/prototype/src/lib/design-settings-store.ts). Kept in the App Group,
 /// so the widgets draw the same week; the parts that are the person's own
 /// liking are kept with the account too (Preferences.swift), and 外観,
 /// the reminders and a picture's light or dark stay with the device.
