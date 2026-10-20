@@ -4,9 +4,9 @@
 # photo line (POC-130). It starts the server itself, so nothing else may be
 # on :8787, and erases the simulator it is given.
 #
-#   tools/photo-line-touches/run.sh "<simulator name>" [derived data]
+#   mise run ios:photo-touches -- "<simulator name>" [derived data]
 #
-# The app and its tests are built first (build-for-testing) into the
+# It builds the app and its tests first (build-for-testing) into the
 # derived data, `.build/DerivedData` by default. Between the tests it
 # stops the server, for a photo to stay going up, and takes a photo out of
 # the local bucket, for its fetch to fail, putting it back once ↻ shows.
@@ -50,12 +50,16 @@ put_back() {
 }
 trap 'put_back; stop_server' EXIT
 
+xcodebuild_for() {
+  xcodebuild "$1" -project "$root/apps/ios/Pochical/Pochical.xcodeproj" -scheme Pochical \
+    -destination "platform=iOS Simulator,name=$device" -derivedDataPath "$derived" \
+    -skipMacroValidation "${@:2}"
+}
+
 failed=0
 run_test() {
-  TEST_RUNNER_PHOTO_TOUCH_DIR=$shared xcodebuild test-without-building \
-    -project "$root/apps/ios/Pochical/Pochical.xcodeproj" -scheme Pochical \
-    -destination "platform=iOS Simulator,name=$device" -derivedDataPath "$derived" -parallel-testing-enabled NO \
-    -resultBundlePath "$shared/$1.xcresult" \
+  TEST_RUNNER_PHOTO_TOUCH_DIR=$shared xcodebuild_for test-without-building \
+    -parallel-testing-enabled NO -resultBundlePath "$shared/$1.xcresult" \
     -only-testing:"PochicalUITests/PhotoLineTouchTests/$1"
 }
 
@@ -64,6 +68,7 @@ photo() {
     -annotate 0 "$2" "$3"
 }
 
+xcodebuild_for build-for-testing -quiet
 xcrun simctl shutdown "$device" 2>/dev/null || true
 xcrun simctl erase "$device"
 xcrun simctl boot "$device"

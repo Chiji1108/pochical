@@ -2,7 +2,7 @@ import XCTest
 
 /// Who takes which touch on a chat's photo line (POC-130): the line's long
 /// press opens its reactions and menu, and the photo's own × and ↻ still
-/// take their taps. Run by `tools/photo-line-touches/run.sh`, against
+/// take their taps. Run by `mise run ios:photo-touches`, against
 /// the local server it starts: it makes the group, sends the photos, and
 /// between the steps stops and starts the server and hides a photo;
 /// skipped without it.
@@ -15,7 +15,7 @@ final class PhotoLineTouchTests: XCTestCase {
   override func setUpWithError() throws {
     continueAfterFailure = false
     guard let dir = ProcessInfo.processInfo.environment["PHOTO_TOUCH_DIR"] else {
-      throw XCTSkip("run by tools/photo-line-touches/run.sh")
+      throw XCTSkip("run by mise run ios:photo-touches")
     }
     shared = URL(filePath: dir)
     app = XCUIApplication()
