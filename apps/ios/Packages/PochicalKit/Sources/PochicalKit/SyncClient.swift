@@ -679,47 +679,70 @@ public actor SyncClient {
     }
   }
 
-  /// The edits once their photos are uploaded, trying again after a wait
-  /// that doubles, `photoTries` times in all; a photo that cannot go
-  /// (gone from the device, refused, or failing every try) leaves its line
-  /// waiting, marked, for the member to send again or delete, and the
-  /// edits after it go on. One the member stopped, or took back, while it
-  /// went up or waited to is left, its line as they left it.
+  /// The edits once their lines' photos are all uploaded; a line with a
+  /// photo that cannot go leaves the line waiting, marked, for the member
+  /// to send again or delete, and the edits after it go on. One the member
+  /// stopped, or took back, while its photos went up or waited to is left,
+  /// as they left it.
   private func uploadingPhotos(
     of edits: [Pochical_V1_ChatEdit], in groupID: String, as credentials: Credentials
   ) async throws -> [Pochical_V1_ChatEdit] {
     var kept: [Pochical_V1_ChatEdit] = []
     for edit in edits {
-      guard case .send(let send) = edit.kind, send.hasPhoto else {
+      guard case .send(let send) = edit.kind, !send.photos.isEmpty else {
         kept.append(edit)
         continue
       }
-      var waitMs = 1000
-      for tried in 1...Self.photoTries {
-        try Task.checkCancellation()
-        guard try await stillGoing(edit.opID) else { break }
-        do {
-          try await ChatPhotos.upload(
-            send.photo.id, in: groupID, as: credentials, server: server)
-          // Stopped as its last bytes went: left as the member left it.
-          // Past here × does nothing, so the line is sent as it shows.
-          let going = await PhotoUploads.shared.sending(send.photo.id) { [database] in
-            (try? database.read { try Chats.stillGoing(edit.opID, now: Self.nowMs(), in: $0) })
-              ?? false
-          }
-          if going { kept.append(edit) }
-          break
-        } catch {
-          try Task.checkCancellation()
-          guard try await stillGoing(edit.opID) else { break }
-          guard try await uploadFailed(edit, with: error, tried: tried, as: credentials)
-          else { break }
-          try await Task.sleep(for: .milliseconds(waitMs))
-          waitMs *= 2
-        }
+      let photoIDs = try await database.read {
+        try Chats.photosToUpload(edit.opID, now: Self.nowMs(), in: $0)
       }
+      var allUp = true
+      for photoID in photoIDs where allUp {
+        allUp = try await upload(photoID, of: edit, in: groupID, as: credentials)
+      }
+      guard allUp else { continue }
+      // Stopped as the last bytes went: left as the member left it. Past
+      // here × does nothing, so the line is sent as it shows.
+      let going = await PhotoUploads.shared.send(edit.opID) { [database] in
+        (try? database.read { try Chats.stillGoing(edit.opID, now: Self.nowMs(), in: $0) })
+          ?? false
+      }
+      if going { kept.append(edit) }
     }
     return kept
+  }
+
+  /// Uploads one of the photos of the edit's line, trying again after a
+  /// wait that doubles, `photoTries` times in all, and keeps it as up;
+  /// true once up with the line still going. A photo that cannot go (gone
+  /// from the device, refused, or failing every try) marks the line not
+  /// sent.
+  private func upload(
+    _ photoID: String, of edit: Pochical_V1_ChatEdit, in groupID: String,
+    as credentials: Credentials
+  ) async throws -> Bool {
+    var waitMs = 1000
+    for tried in 1...Self.photoTries {
+      try Task.checkCancellation()
+      guard try await stillGoing(edit.opID) else { return false }
+      do {
+        try await ChatPhotos.upload(
+          photoID, of: edit.opID, in: groupID, as: credentials, server: server)
+        try await database.write { db in
+          try Self.owned(by: credentials, db)
+          try Chats.photoUp(photoID, of: edit.opID, now: Self.nowMs(), in: db)
+        }
+        return try await stillGoing(edit.opID)
+      } catch {
+        try Task.checkCancellation()
+        guard try await stillGoing(edit.opID),
+          try await uploadFailed(edit, with: error, tried: tried, as: credentials)
+        else { return false }
+        try await Task.sleep(for: .milliseconds(waitMs))
+        waitMs *= 2
+      }
+    }
+    return false
   }
 
   /// Marks the edit's line not sent when its photo cannot go, now or after

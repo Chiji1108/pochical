@@ -1533,6 +1533,309 @@
           }
         }
       ]
+    },
+    {
+      "name": "opens on a line of three and swipes within it, each photo counted by its place in the line",
+      "ahead": 2,
+      "steps": [
+        {
+          "step": {
+            "open": {
+              "held": ["2a", "5a", "5b", "5c", "8a"],
+              "tapped": "5b"
+            }
+          },
+          "expected": {
+            "photos": ["2a", "5a", "5b", "5c", "8a"],
+            "shown": "5b",
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 10,
+              "photos": ["2a", "5a", "5b", "5c", "8a"]
+            }
+          },
+          "expected": {
+            "photos": ["2a", "5a", "5b", "5c", "8a"],
+            "shown": "5b",
+            "place": null,
+            "asks": [
+              {
+                "seq": 5,
+                "after": false
+              },
+              {
+                "seq": 5,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 5,
+              "after": false,
+              "photos": ["2a"],
+              "offset": 0,
+              "total": 5,
+              "cursor": 10
+            }
+          },
+          "expected": {
+            "photos": ["2a", "5a", "5b", "5c", "8a"],
+            "shown": "5b",
+            "place": [3, 5],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 5,
+              "after": true,
+              "photos": ["8a"],
+              "offset": 4,
+              "total": 5,
+              "cursor": 10
+            }
+          },
+          "expected": {
+            "photos": ["2a", "5a", "5b", "5c", "8a"],
+            "shown": "5b",
+            "place": [3, 5],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "show": "5c"
+          },
+          "expected": {
+            "photos": ["2a", "5a", "5b", "5c", "8a"],
+            "shown": "5c",
+            "place": [4, 5],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "show": "5a"
+          },
+          "expected": {
+            "photos": ["2a", "5a", "5b", "5c", "8a"],
+            "shown": "5a",
+            "place": [2, 5],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "show": "2a"
+          },
+          "expected": {
+            "photos": ["2a", "5a", "5b", "5c", "8a"],
+            "shown": "2a",
+            "place": [1, 5],
+            "asks": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "a page holds a line of several photos whole, and the next page is asked from the line's seq",
+      "ahead": 4,
+      "steps": [
+        {
+          "step": {
+            "latest": true
+          },
+          "expected": {
+            "photos": [],
+            "shown": null,
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 3,
+              "photos": ["4a", "4b", "4c", "6a"]
+            }
+          },
+          "expected": {
+            "photos": [],
+            "shown": null,
+            "place": null,
+            "asks": [
+              {
+                "seq": 0,
+                "after": false
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 0,
+              "after": false,
+              "photos": ["4a", "4b", "4c", "6a"],
+              "offset": 1,
+              "total": 5,
+              "cursor": 3
+            }
+          },
+          "expected": {
+            "photos": ["4a", "4b", "4c", "6a"],
+            "shown": "6a",
+            "place": [5, 5],
+            "asks": [
+              {
+                "seq": 4,
+                "after": false
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 4,
+              "after": false,
+              "photos": ["1a"],
+              "offset": 0,
+              "total": 5,
+              "cursor": 3
+            }
+          },
+          "expected": {
+            "photos": ["1a", "4a", "4b", "4c", "6a"],
+            "shown": "6a",
+            "place": [5, 5],
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "show": "4b"
+          },
+          "expected": {
+            "photos": ["1a", "4a", "4b", "4c", "6a"],
+            "shown": "4b",
+            "place": [3, 5],
+            "asks": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "a line of several taken back drops all its photos, the next line's shown in place",
+      "ahead": 2,
+      "steps": [
+        {
+          "step": {
+            "open": {
+              "held": ["3a", "5a", "5b", "5c", "7a"],
+              "tapped": "5b"
+            }
+          },
+          "expected": {
+            "photos": ["3a", "5a", "5b", "5c", "7a"],
+            "shown": "5b",
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 4,
+              "photos": ["3a", "5a", "5b", "5c", "7a"]
+            }
+          },
+          "expected": {
+            "photos": ["3a", "5a", "5b", "5c", "7a"],
+            "shown": "5b",
+            "place": null,
+            "asks": [
+              {
+                "seq": 5,
+                "after": false
+              },
+              {
+                "seq": 5,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "lines": {
+              "cursor": 5,
+              "photos": ["3a", "7a"],
+              "gone": [5]
+            }
+          },
+          "expected": {
+            "photos": ["3a", "7a"],
+            "shown": "7a",
+            "place": null,
+            "asks": [
+              {
+                "seq": 7,
+                "after": false
+              },
+              {
+                "seq": 7,
+                "after": true
+              }
+            ]
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 5,
+              "after": false,
+              "photos": ["3a"],
+              "offset": 0,
+              "total": 5,
+              "cursor": 4
+            }
+          },
+          "expected": {
+            "photos": ["3a", "7a"],
+            "shown": "7a",
+            "place": null,
+            "asks": []
+          }
+        },
+        {
+          "step": {
+            "page": {
+              "seq": 7,
+              "after": false,
+              "photos": ["3a"],
+              "offset": 0,
+              "total": 2,
+              "cursor": 5
+            }
+          },
+          "expected": {
+            "photos": ["3a", "7a"],
+            "shown": "7a",
+            "place": [2, 2],
+            "asks": []
+          }
+        }
+      ]
     }
   ]
 }
