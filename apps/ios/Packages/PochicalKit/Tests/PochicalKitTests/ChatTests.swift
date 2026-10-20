@@ -879,17 +879,19 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
     #expect(try Chats.photosToUpload(opID, now: 1000, in: db) == ["p1", "p2", "p3"])
 
     // Two up, then the third fails: sent again, only the third goes up.
-    try Chats.photoUp("p1", of: opID, now: 2000, in: db)
-    try Chats.photoUp("p2", of: opID, now: 3000, in: db)
+    try Chats.photoUp("p1", of: opID, began: 2000, in: db)
+    try Chats.photoUp("p2", of: opID, began: 3000, in: db)
     try Chats.fail(opID, in: db)
     try Chats.sendAgain(opID, now: 4000, in: db)
     #expect(try Chats.photosToUpload(opID, now: 4000, in: db) == ["p3"])
     #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].up == ["p1", "p2"])
 
-    // Sent again once the group has let go of those up: all go up again.
-    let lapsed = 3000 + Int64(Chat.unsentAfterMs)
+    // Sent again once those up may have gone from the group, half its
+    // wait after the latest began going up: all go up again.
+    let lapsed = 3000 + Int64(Chat.unsentAfterMs) / 2
+    #expect(try Chats.photosToUpload(opID, now: lapsed - 1, in: db) == ["p3"])
     #expect(try Chats.photosToUpload(opID, now: lapsed, in: db) == ["p1", "p2", "p3"])
-    try Chats.photoUp("p1", of: opID, now: lapsed, in: db)
+    try Chats.photoUp("p1", of: opID, began: lapsed, in: db)
     #expect(try Chats.photosToUpload(opID, now: lapsed, in: db) == ["p2", "p3"])
   }
 }

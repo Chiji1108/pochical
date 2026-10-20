@@ -102,17 +102,22 @@ import SQLiteData
   }
 }
 
-/// Which of a waiting line's photos are up, and when the latest went up,
-/// by the server's time.
+/// Which of a waiting line's photos are up, and when the upload of the
+/// latest began, by the server's time.
 struct PhotosUp: Hashable, Sendable, Codable {
   var ids: Set<String> = []
   var atMs: Int64 = 0
 
-  /// Uploads have stopped long enough by the server's time `now` that the
-  /// group has let go of those up: it lets go of an uploader's photos no
-  /// line carries once they have uploaded nothing for `Chat.unsentAfterMs`.
+  /// The group lets go of an uploader's photos no line carries once they
+  /// have uploaded nothing for `Chat.unsentAfterMs`, timed from when each
+  /// upload reached it. Those up are trusted for half that, from before
+  /// the upload began, so a line sent on them reaches the group well
+  /// before it lets go of them, whatever the corrected clock is off by.
+  static let trustedForMs = Int64(Chat.unsentAfterMs) / 2
+
+  /// Those up may have gone from the group by the server's time `now`.
   func lapsed(at now: Int64) -> Bool {
-    now - atMs >= Int64(Chat.unsentAfterMs)
+    now - atMs >= Self.trustedForMs
   }
 
   /// Of the line's `photos`, those to upload at the server's time `now`:
@@ -121,9 +126,9 @@ struct PhotosUp: Hashable, Sendable, Codable {
     lapsed(at: now) ? photos : photos.filter { !ids.contains($0) }
   }
 
-  /// `photoID` went up at the server's time `now`.
-  func adding(_ photoID: String, at now: Int64) -> PhotosUp {
-    PhotosUp(ids: (lapsed(at: now) ? [] : ids).union([photoID]), atMs: now)
+  /// `photoID` went up, its upload begun at the server's time `began`.
+  func adding(_ photoID: String, began: Int64) -> PhotosUp {
+    PhotosUp(ids: (lapsed(at: began) ? [] : ids).union([photoID]), atMs: began)
   }
 }
 
@@ -137,10 +142,11 @@ extension Chats {
     return row.up.toUpload(send.photos.map(\.id), now: try SyncState.corrected(now, in: db))
   }
 
-  /// The line `opID`'s photo `photoID` went up at the device's time `now`.
-  static func photoUp(_ photoID: String, of opID: String, now: Int64, in db: Database) throws {
+  /// The line `opID`'s photo `photoID` went up, its upload begun at the
+  /// device's time `began`.
+  static func photoUp(_ photoID: String, of opID: String, began: Int64, in db: Database) throws {
     guard var row = try ChatOutboxRow.where({ $0.opID.eq(opID) }).fetchOne(db) else { return }
-    row.up = row.up.adding(photoID, at: try SyncState.corrected(now, in: db))
+    row.up = row.up.adding(photoID, began: try SyncState.corrected(began, in: db))
     let upJSON = row.upJSON
     try ChatOutboxRow.where { $0.opID.eq(opID) }.update { $0.upJSON = upJSON }.execute(db)
   }
