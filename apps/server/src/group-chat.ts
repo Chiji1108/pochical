@@ -17,7 +17,6 @@ import {
   lt,
   lte,
   max,
-  min,
   ne,
   notInArray,
   or,
@@ -53,11 +52,10 @@ import type {
 import {
   chatLines,
   memberBlocks,
-  chatPhotos,
+  groupPhotos,
   chatReactions,
   chatRecalls,
   chatVotes,
-  members,
   readMarks,
 } from "./group-do-schema";
 import { isId } from "./ids";
@@ -499,10 +497,10 @@ const ownUnsentPhoto = (
 ): boolean => {
   const uploaded = db
     .select()
-    .from(chatPhotos)
-    .where(eq(chatPhotos.id, photoId))
+    .from(groupPhotos)
+    .where(eq(groupPhotos.id, photoId))
     .get();
-  return uploaded?.userId === userId && !uploaded.sent;
+  return uploaded?.userId === userId && uploaded.state === "unsent";
 };
 
 /**
@@ -944,7 +942,7 @@ const keepRecall = (
   if (photoId === "" || !ownUnsentPhoto(db, userId, photoId)) {
     return {};
   }
-  db.delete(chatPhotos).where(eq(chatPhotos.id, photoId)).run();
+  db.delete(groupPhotos).where(eq(groupPhotos.id, photoId)).run();
   return { photoGone: photoId };
 };
 
@@ -1166,9 +1164,9 @@ const takeSend = (
     return {};
   }
   if (photo !== undefined) {
-    db.update(chatPhotos)
-      .set({ sent: true })
-      .where(eq(chatPhotos.id, photo.id))
+    db.update(groupPhotos)
+      .set({ state: "sent" })
+      .where(eq(groupPhotos.id, photo.id))
       .run();
   }
   const row = db
@@ -1578,84 +1576,6 @@ export const chatChangesAfter = (
   const answered = asReadBy(db, answeredChanges(db, linesOf(lines)), userId);
   return [...lines, ...answered, ...marks];
 };
-
-/**
- * Notes a photo a member has uploaded to the group's chats, so they alone
- * may send it as a line; false when the id is someone else's already.
- */
-export const notePhoto = (
-  db: DrizzleSqliteDODatabase,
-  photoId: string,
-  userId: string
-): boolean => {
-  const noted = db
-    .select()
-    .from(chatPhotos)
-    .where(eq(chatPhotos.id, photoId))
-    .get();
-  if (noted !== undefined && noted.userId !== userId) {
-    return false;
-  }
-  const now = new Date();
-  if (noted === undefined) {
-    db.insert(chatPhotos)
-      .values({ id: photoId, uploadedAt: now, userId })
-      .run();
-  }
-  db.update(chatPhotos)
-    .set({ uploadedAt: now })
-    .where(and(eq(chatPhotos.userId, userId), eq(chatPhotos.sent, false)))
-    .run();
-  return true;
-};
-
-/** The photos nothing carries: no line, nor a member as theirs in the group. */
-const unclaimed = (db: DrizzleSqliteDODatabase): SQL | undefined =>
-  and(
-    eq(chatPhotos.sent, false),
-    notInArray(
-      chatPhotos.id,
-      db
-        .select({ id: members.ownPhoto })
-        .from(members)
-        .where(isNotNull(members.ownPhoto))
-    )
-  );
-
-/** The photos nothing carries whose uploader last uploaded by `before`. */
-export const unclaimedPhotos = (
-  db: DrizzleSqliteDODatabase,
-  before: Date
-): string[] =>
-  db
-    .select({ id: chatPhotos.id })
-    .from(chatPhotos)
-    .where(and(unclaimed(db), lte(chatPhotos.uploadedAt, before)))
-    .all()
-    .map(({ id }) => id);
-
-/**
- * Forgets the photos `unclaimedPhotos` gave for `before`, but those
- * uploaded again or carried since.
- */
-export const forgetUnclaimedPhotos = (
-  db: DrizzleSqliteDODatabase,
-  before: Date
-): void => {
-  db.delete(chatPhotos)
-    .where(and(unclaimed(db), lte(chatPhotos.uploadedAt, before)))
-    .run();
-};
-
-/** When the photos nothing carries were last uploaded, the earliest; none without any. */
-export const oldestUnclaimedPhoto = (
-  db: DrizzleSqliteDODatabase
-): Date | undefined =>
-  db
-    .select({ at: min(chatPhotos.uploadedAt) })
-    .from(chatPhotos)
-    .where(unclaimed(db))
-    .get()?.at ?? undefined;
 
 /** A message's words with each mention as @ and the name (spec/vectors/chat-text.json, plainText). */
 export const plainText = (

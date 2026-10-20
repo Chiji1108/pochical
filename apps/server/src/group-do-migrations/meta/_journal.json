@@ -232,6 +232,13 @@
       "when": 1792415005155,
       "tag": "0032_chat-photos-uploaded-at",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1792470246099,
+      "tag": "0033_group-photos",
+      "breakpoints": true
     }
   ]
 }
