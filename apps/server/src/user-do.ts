@@ -445,25 +445,26 @@ export class UserDO extends DurableObject<Env> {
 
   /**
    * Every group the user ever asked to make or join, or was told of: the
-   * groups deleting the account goes through.
+   * groups deleting the account goes through. Each of the three keeps
+   * some: a group noted or told of (known_groups), one listed
+   * (memberships, kept from before known_groups too), and one asked to be
+   * made (group_requests).
    */
   groupsEver(): string[] {
-    return this.db
-      .select({ groupId: knownGroups.groupId })
-      .from(knownGroups)
-      .all()
-      .map(({ groupId }) => groupId);
+    const ids = [
+      ...this.db.select({ id: knownGroups.groupId }).from(knownGroups).all(),
+      ...this.db.select({ id: memberships.groupId }).from(memberships).all(),
+      ...this.db
+        .select({ id: groupRequests.groupId })
+        .from(groupRequests)
+        .all(),
+    ].map(({ id }) => id);
+    return [...new Set(ids)];
   }
 
-  /** Whether the user ever asked to make or join the group. */
+  /** Whether the user ever asked to make or join the group (`groupsEver`). */
   knowsGroup(groupId: string): boolean {
-    return (
-      this.db
-        .select({ groupId: knownGroups.groupId })
-        .from(knownGroups)
-        .where(eq(knownGroups.groupId, groupId))
-        .get() !== undefined
-    );
+    return this.groupsEver().includes(groupId);
   }
 
   /**

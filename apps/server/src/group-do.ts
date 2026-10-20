@@ -3,7 +3,18 @@ import { chatPlaces, chatRules } from "@pochical/design/chat";
 import type { ChatPlaceKind, ChatPlaceRules } from "@pochical/design/chat";
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
 import { DurableObject } from "cloudflare:workers";
-import { and, asc, count, eq, gt, isNull, min } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lte,
+  min,
+} from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
@@ -239,7 +250,7 @@ export class GroupDO extends DurableObject<Env> {
         this.queueNews(creator.userId, true);
       });
     }
-    await this.tellMemberships();
+    await this.tellMemberships([creator.userId]);
     return made;
   }
 
@@ -250,7 +261,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   async addMember(member: NewMember): Promise<JoinResult> {
     const result = this.admit(member);
-    await this.tellMemberships();
+    await this.tellMemberships([member.userId]);
     return result;
   }
 
@@ -390,7 +401,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   async removeMember(userId: string, by?: string): Promise<void> {
     this.takeOut(userId, by);
-    await this.tellMemberships();
+    await this.tellMemberships([userId]);
   }
 
   private takeOut(userId: string, by?: string): void {
@@ -663,7 +674,7 @@ export class GroupDO extends DurableObject<Env> {
     });
     broadcastChanges(this.ctx, changes);
     this.dropPhotos(gone);
-    await this.tellMemberships();
+    await this.tellMemberships(this.memberList().map(({ userId }) => userId));
   }
 
   /**
@@ -686,12 +697,14 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * Tells each user's DO the news of their place in the group still to
-   * tell, at once, as someone waits on it, then has the alarm come back
-   * for any not taken.
+   * Tells the users' DOs the news of their place in the group still to
+   * tell them, at once, as someone waits on it, whenever it was due; then
+   * has the alarm come back for any not taken. Others' news waits for its
+   * time, so a call for someone else neither repeats it before then nor
+   * waits on it.
    */
-  private async tellMemberships(): Promise<void> {
-    await this.deliverNews();
+  private async tellMemberships(userIds: string[]): Promise<void> {
+    await this.deliverNews(inArray(membershipOutbox.userId, userIds));
     const due = this.newsDue();
     if (due !== undefined) {
       await this.wakeBy(due);
@@ -699,15 +712,15 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * Tells each user's DO the news of their place in the group still to
-   * tell, the group's name and mark with it while they are in it
-   * (takeMembership). News taken goes, unless newer came meanwhile; news
-   * not taken is due again twice as long after each time it fails in a
-   * row.
+   * Tells each user's DO the news of their place in the group in `which`
+   * of the news still to tell, the group's name and mark with it while
+   * they are in it (takeMembership). News taken goes, unless newer came
+   * meanwhile; news not taken is due again twice as long after each time
+   * it fails in a row.
    */
-  private async deliverNews(): Promise<void> {
+  private async deliverNews(which: SQL): Promise<void> {
     const groupId = this.ctx.id.name;
-    const untold = this.db.select().from(membershipOutbox).all();
+    const untold = this.db.select().from(membershipOutbox).where(which).all();
     if (groupId === undefined || untold.length === 0) {
       return;
     }
@@ -1291,7 +1304,7 @@ export class GroupDO extends DurableObject<Env> {
         ? null
         : await relaySupport(this.env, this.db, userId);
     const photosDue = await this.sweepPhotos();
-    await this.deliverNews();
+    await this.deliverNews(lte(membershipOutbox.dueAt, new Date()));
     if (this.relayRequested) {
       return;
     }

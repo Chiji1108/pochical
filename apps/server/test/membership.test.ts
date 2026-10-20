@@ -58,6 +58,30 @@ const join = async (inviteCode: string, token: string): Promise<Response> =>
     token
   );
 
+/**
+ * Runs the group's alarm as its time comes: the news it waits to tell
+ * due now, as it would be by then.
+ */
+const alarmComes = async (groupId: string): Promise<void> => {
+  const group = env.GROUPS.getByName(groupId);
+  await runInDurableObject(group, (_, state) => {
+    state.storage.sql.exec("update membership_outbox set due_at = 0");
+  });
+  await runDurableObjectAlarm(group);
+};
+
+/** How many tries to tell `userId` of the group have failed in a row. */
+const failuresTelling = async (groupId: string, userId: string) =>
+  await runInDurableObject(
+    env.GROUPS.getByName(groupId),
+    (_, state) =>
+      state.storage.sql
+        .exec<{
+          failures: number;
+        }>("select failures from membership_outbox where user_id = ?", userId)
+        .one().failures
+  );
+
 /** The group's alarm, as set now. */
 const alarmOf = async (groupId: string): Promise<number | null> =>
   await runInDurableObject(
@@ -145,11 +169,11 @@ describe("telling a member's own DO", () => {
     expect(retry).toBeGreaterThanOrEqual(before + NEWS_RETRY_FIRST_MS);
 
     // Still failing, the alarm comes back later each time.
-    await runDurableObjectAlarm(env.GROUPS.getByName(groupId));
+    await alarmComes(groupId);
     await expect(alarmOf(groupId)).resolves.toBeGreaterThan(retry);
 
     await restore();
-    await runDurableObjectAlarm(env.GROUPS.getByName(groupId));
+    await alarmComes(groupId);
     expect(changesIn(await phone.frames.next())).toMatchObject([
       { kind: { case: "membership", value: { groupId, left: false } } },
     ]);
@@ -210,8 +234,62 @@ describe("telling a member's own DO", () => {
     await expect(nameIn(guestId)).resolves.toBe("いとこ会");
 
     await restore();
-    await runDurableObjectAlarm(env.GROUPS.getByName(groupId));
+    await alarmComes(groupId);
     await expect(nameIn(guestId)).resolves.toBe("はとこ会");
+  });
+
+  it("tells failed news again only in its time, not with someone else's", async () => {
+    const maker = await signInAnonymously();
+    const { groupId, inviteCode } = await createGroup(maker);
+    const guest = await signInAnonymously();
+    const guestId = await userIdOf(guest);
+    const restore = await failTelling(groupId, guestId);
+    await join(inviteCode, guest);
+
+    // Someone else joins: the guest's news is not due yet.
+    await join(inviteCode, await signInAnonymously());
+    await expect(failuresTelling(groupId, guestId)).resolves.toBe(1);
+    await alarmComes(groupId);
+    await expect(failuresTelling(groupId, guestId)).resolves.toBe(2);
+    await restore();
+  });
+
+  it("reaches a group the user's DO lists from before it noted groups, to leave it or delete the account", async () => {
+    const { groupId, guest, inviteCode } = await pair();
+    const guestId = await userIdOf(guest);
+    const forgetNoted = async () => {
+      await runInDurableObject(env.USERS.getByName(guestId), (_, state) => {
+        state.storage.sql.exec("delete from known_groups");
+      });
+    };
+    await forgetNoted();
+    const left = await call("GroupService/LeaveGroup", { groupId }, guest);
+    const preview = await call("InviteService/GetInvitePreview", {
+      inviteCode,
+    });
+    expect(left.status).toBe(200);
+    await expect(preview.json()).resolves.toMatchObject({ memberCount: 1 });
+
+    // Joined again, and deleted with the group listed alone.
+    await join(inviteCode, guest);
+    await forgetNoted();
+    const deleted = await call(
+      "UserService/DeleteAccount",
+      { appleAuthorizationCode: "" },
+      guest
+    );
+    expect(deleted.status).toBe(200);
+    const theirs = await runInDurableObject(
+      env.GROUPS.getByName(groupId),
+      (_, state) =>
+        state.storage.sql
+          .exec(
+            "select deleted, display_name from members where user_id = ?",
+            guestId
+          )
+          .toArray()
+    );
+    expect(theirs).toStrictEqual([{ deleted: 1, display_name: "" }]);
   });
 
   it("takes only news newer than it has, however late it comes", async () => {
