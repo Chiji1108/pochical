@@ -9,9 +9,17 @@
 // ends with it) and sends `count` lines (10 by default) to the group chat,
 // one at a time `--every` ms apart (0 by default: all at once). With
 // `--rich` the lines are a long chat's, for measuring how it scrolls:
-// long words cut at 続きを読む, links, mentions and large emoji. Local only
-// (http://localhost:8787); the user it made stays in the group, to be
-// removed from the app.
+// long words cut at 続きを読む, links, mentions and large emoji. With
+// `--photos <dir>` it sends the dir's JPEGs instead, each its own line, in
+// the order of their names, or as one album with `--album`; `--face
+// <jpeg>` gives the user that face in the group first. Local only
+// (http://localhost:8787, or CHAT_TRY_API's); the user it made stays in
+// the group, to be removed from the app.
+//
+//   bun tools/chat-try/index.ts <invite code> --photos <dir> [--album] [--face <jpeg>]
+
+import { readdir } from "node:fs/promises";
+import path from "node:path";
 
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 
@@ -20,7 +28,7 @@ import {
   ServerFrameSchema,
 } from "../../apps/server/src/gen/pochical/v1/sync_pb";
 
-const api = "http://localhost:8787";
+const api = process.env.CHAT_TRY_API ?? "http://localhost:8787";
 const GROUP_THREAD = "group";
 const PROTOCOL_VERSION = 1;
 const DEFAULT_COUNT = 10;
@@ -30,17 +38,28 @@ const fail = (message: string): never => {
   process.exit(1);
 };
 
-const args = process.argv.slice(2).filter((arg) => arg !== "--rich");
+const flags = new Set(["--rich", "--album"]);
+const args = process.argv.slice(2).filter((arg) => !flags.has(arg));
 const rich = process.argv.includes("--rich");
-const everyAt = args.indexOf("--every");
-const every = everyAt === -1 ? 0 : Number(args[everyAt + 1]);
+const album = process.argv.includes("--album");
+const valueOf = (flag: string): string | undefined => {
+  const at = args.indexOf(flag);
+  return at === -1 ? undefined : args[at + 1];
+};
+const every = Number(valueOf("--every") ?? 0);
+const photoDir = valueOf("--photos");
+const face = valueOf("--face");
 const [code, countArg] = args.filter(
-  (_, index) => everyAt === -1 || (index !== everyAt && index !== everyAt + 1)
+  (_, index) =>
+    !["--every", "--photos", "--face"].some((flag) => {
+      const at = args.indexOf(flag);
+      return at !== -1 && (index === at || index === at + 1);
+    })
 );
 const count = countArg === undefined ? DEFAULT_COUNT : Number(countArg);
 if (code === undefined || !Number.isInteger(count) || count < 1) {
   fail(
-    "bun tools/chat-try/index.ts <invite code> [count] [--every <ms>] [--rich]"
+    "bun tools/chat-try/index.ts <invite code> [count] [--every <ms>] [--rich] [--photos <dir> [--album]] [--face <jpeg>]"
   );
 }
 
@@ -97,19 +116,85 @@ const richLines = (userId: string): string[] => [
   "了解です、ありがとう！ 店長にも https://pochical.app で共有しておきます。",
 ];
 
-const send = (socket: WebSocket, texts: string[]): void => {
+type Photo = {
+  height: number;
+  id: string;
+  width: number;
+};
+
+type Sending = { photo: Photo } | { text: string };
+
+const send = (socket: WebSocket, lines: Sending[], albumName = ""): void => {
   const frame = create(ClientFrameSchema, {
     kind: {
       case: "chatEdits",
       value: {
-        edits: texts.map((text) => ({
-          kind: { case: "send", value: { text, threadId: GROUP_THREAD } },
+        edits: lines.map((line) => ({
+          kind: {
+            case: "send" as const,
+            value:
+              "text" in line
+                ? { text: line.text, threadId: GROUP_THREAD }
+                : {
+                    album: albumName,
+                    photo: line.photo,
+                    threadId: GROUP_THREAD,
+                  },
+          },
           opId: crypto.randomUUID(),
         })),
       },
     },
   });
   socket.send(toBinary(ClientFrameSchema, frame));
+};
+
+const START_OF_FRAME = new Set([0xc0, 0xc1, 0xc2]);
+
+// A JPEG's size, from its start-of-frame segment.
+const jpegSize = (bytes: Uint8Array): { height: number; width: number } => {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let at = 2;
+  while (at + 9 < bytes.length) {
+    const marker = bytes[at + 1] ?? 0;
+    if (START_OF_FRAME.has(marker)) {
+      return { height: view.getUint16(at + 5), width: view.getUint16(at + 7) };
+    }
+    at += 2 + view.getUint16(at + 2);
+  }
+  return fail("not a JPEG with a size");
+};
+
+// One JPEG uploaded to the group's photos.
+const upload = async (
+  file: string,
+  groupId: string,
+  token: string
+): Promise<Photo> => {
+  const bytes = await Bun.file(file).bytes();
+  const id = crypto.randomUUID();
+  const response = await fetch(`${api}/v1/groups/${groupId}/photos/${id}`, {
+    body: bytes,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "image/jpeg",
+    },
+    method: "PUT",
+  });
+  if (!response.ok) {
+    const answer = await response.text();
+    fail(`upload ${file}: ${response.status} ${answer}`);
+  }
+  return { id, ...jpegSize(bytes) };
+};
+
+// Each JPEG in `dir`, in the order of their names.
+const jpegsIn = async (dir: string): Promise<string[]> => {
+  const names = await readdir(dir);
+  return names
+    .filter((file) => file.toLowerCase().endsWith(".jpg"))
+    .toSorted()
+    .map((file) => path.join(dir, file));
 };
 
 const { token, userId } = await signIn();
@@ -124,8 +209,13 @@ const groupId =
     ? joined.groupId
     : fail(`JoinGroup: no group id in ${JSON.stringify(joined)}`);
 
+if (face !== undefined) {
+  const { id } = await upload(face, groupId, token);
+  await rpc("GroupService/SetGroupPhoto", { groupId, photoId: id }, token);
+}
+
 const socket = new WebSocket(
-  `ws://localhost:8787/v1/groups/${groupId}/socket`,
+  `${api.replace(/^http/u, "ws")}/v1/groups/${groupId}/socket`,
   {
     headers: { Authorization: `Bearer ${token}` },
   }
@@ -157,19 +247,30 @@ socket.addEventListener("error", () => fail("socket: could not connect"));
 await welcomed.promise;
 
 const lines = richLines(userId);
-const texts = Array.from({ length: count }, (_, index) =>
-  rich ? (lines[index % lines.length] ?? "") : `テスト ${index + 1}`
+const files = photoDir === undefined ? [] : await jpegsIn(photoDir);
+const photos = await Promise.all(
+  files.map(async (file) => await upload(file, groupId, token))
 );
-if (every > 0) {
-  for (const text of texts) {
-    send(socket, [text]);
+const sendings: Sending[] =
+  photoDir === undefined
+    ? Array.from({ length: count }, (_, index) => ({
+        text: rich
+          ? (lines[index % lines.length] ?? "")
+          : `テスト ${index + 1}`,
+      }))
+    : photos.map((photo) => ({ photo }));
+if (album) {
+  send(socket, sendings, crypto.randomUUID());
+} else if (every > 0) {
+  for (const sending of sendings) {
+    send(socket, [sending]);
     // oxlint-disable-next-line no-await-in-loop -- one at a time, as a person sends them
     await Bun.sleep(every);
   }
 } else {
-  send(socket, texts);
+  send(socket, sendings);
 }
 // Time for the group to take them before the socket closes.
 await Bun.sleep(1000);
 socket.close();
-console.log(`${name}として${count}行送りました`);
+console.log(`${name}として${sendings.length}行送りました`);
