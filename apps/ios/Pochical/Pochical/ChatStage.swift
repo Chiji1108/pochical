@@ -1176,7 +1176,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
 
   // MARK: Scrolling
 
-
   /// What VoiceOver says as it scrolls the lines by a page: the day of the
   /// lines at the top, as the floating day shows it to the eye.
   func accessibilityScrollStatus(for scrollView: UIScrollView) -> String? {

@@ -81,6 +81,32 @@ struct LatestButton: View {
   }
 }
 
+/// What a pin or a copy did, said over a chat's lines for a moment.
+/// Observed where it shows, in the host of the chat's pins (ChatStage):
+/// the chat's own state reaches that host only as a new root, which
+/// takes no animation with it.
+@MainActor @Observable final class ChatNotice {
+  var words: String?
+}
+
+/// Hanging under a chat's pins: the day of the lines at the top, and a
+/// notice in its place while one is said.
+struct UnderPins: View {
+  let scroll: ChatScroll
+  let notice: ChatNotice
+
+  var body: some View {
+    ZStack(alignment: .top) {
+      FloatingDay(scroll: scroll, covered: notice.words != nil)
+      if let words = notice.words {
+        NoticeCapsule(words: words)
+          .comesAsNotice()
+      }
+    }
+    .animation(.default, value: notice.words)
+  }
+}
+
 /// The day of the lines at the top, floating over them while the chat
 /// scrolls and a moment after (chatRules.floatingDayMs); not over a notice.
 struct FloatingDay: View {

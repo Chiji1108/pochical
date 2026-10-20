@@ -142,7 +142,7 @@ struct ChatScreen: View {
   /// menu is open.
   @State private var marks = LineMarks()
   /// What a pin did, said for a moment over the lines.
-  @State private var notice: String?
+  @State private var notice = ChatNotice()
   /// Saves and copies done, each felt as it is (spec/haptics.md).
   @State private var done = 0
   /// How many notices have been said, so only the latest one's time
@@ -372,7 +372,7 @@ struct ChatScreen: View {
       withAnimation { typers = typers.filter { $0.value > .now } }
     }
     // A following chat keeps to its foot as lines come in and someone
-    // writes, in the update they come in by (ChatLinesView's `landed`), as
+    // writes, in the update they come in by (ChatStage's `landed`), as
     // it does for anything else changing the lines' height or the room
     // they are seen in (a link's page drawn, the composer growing, the
     // keyboard). Others' lines the reader has not read stop at ここから新着
@@ -493,14 +493,8 @@ struct ChatScreen: View {
     }
     .frame(maxWidth: .infinity)
     .overlay(alignment: .bottom) {
-      ZStack(alignment: .top) {
-        FloatingDay(scroll: scroll, covered: notice != nil)
-        if let notice {
-          NoticeCapsule(words: notice)
-            .comesAsNotice()
-        }
-      }
-      .frame(height: 0, alignment: .top)
+      UnderPins(scroll: scroll, notice: notice)
+        .frame(height: 0, alignment: .top)
     }
   }
 
@@ -1313,7 +1307,7 @@ struct ChatScreen: View {
           withAnimation(.easeOut(duration: 0.15)) { placed = true }
         }
       } else {
-        // Laid out anew, at their foot (ChatLinesView), following them.
+        // Laid out anew, at their foot (ChatStage), following them.
         following = true
         placed = true
       }
@@ -1814,11 +1808,11 @@ struct ChatScreen: View {
   private func say(_ words: String) {
     notices += 1
     let said = notices
-    withAnimation { notice = words }
+    notice.words = words
     Task { @MainActor in
       try? await Task.sleep(for: .seconds(2.5))
       if notices == said {
-        withAnimation { notice = nil }
+        notice.words = nil
       }
     }
   }
