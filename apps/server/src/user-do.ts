@@ -773,8 +773,7 @@ export class UserDO extends DurableObject<Env> {
     const devices = await devicesOf(this.env.DB, userId);
     await Promise.all(
       devices.map(async (device) => {
-        const sent = await push(device, userId).catch((): Sent => "failed");
-        if (sent === "gone") {
+        if ((await push(device, userId)) === "gone") {
           await dropPushToken(this.env.DB, device.token);
         }
       })

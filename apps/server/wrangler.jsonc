@@ -64,6 +64,11 @@
       "APPLE_SIGNIN_KEY_ID",
     ],
   },
+  // What came of each push to APNs, counted (src/apns.ts). The dataset is
+  // made by the first write; it is read through Analytics Engine's SQL API.
+  "analytics_engine_datasets": [
+    { "binding": "PUSH_OUTCOMES", "dataset": "pochical_push_outcomes" },
+  ],
   // Cloudflare's rate limiting, counted per location and kept by nobody:
   // anonymous sign-ins by the client's address, groups made, link
   // previews asked for and lines to Pochical's people by the user.
