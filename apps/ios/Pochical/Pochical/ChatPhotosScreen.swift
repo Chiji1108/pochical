@@ -75,7 +75,7 @@ struct ChatPhotosScreen: View {
             // The one last come into sight, for the pages before it to
             // be asked for as it nears the oldest held.
             .onAppear {
-              run.show(item.seq)
+              run.show(item.key)
               ask()
             }
           }

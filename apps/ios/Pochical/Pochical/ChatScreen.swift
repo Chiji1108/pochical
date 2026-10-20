@@ -563,12 +563,10 @@ struct ChatScreen: View {
       rows.append(LinesRow(id: ChatItemID.head, look: AnyHashable(ChatItemID.head)))
     }
     for item in listed {
-      // An album's quote is its first photo's.
-      let first = if case .album(let photos, _) = item { photos.first ?? item } else { item }
       var quote: LineQuote?
-      if case .line(let line, _) = first {
+      if case .line(let line, _) = item {
         quote = line.replyTo.map(self.quote(of:))
-      } else if case .waiting(let line, _) = first {
+      } else if case .waiting(let line, _) = item {
         quote = line.replyTo.map(self.quote(of:))
       }
       // What the line shows of the person's own choices: its writer
@@ -576,14 +574,14 @@ struct ChatScreen: View {
       var blockedWriter = false
       var shownAnyway = false
       var unfoldedLine = false
-      if case .line(let line, _) = first {
+      if case .line(let line, _) = item {
         blockedWriter = blocked.contains(line.authorID)
         shownAnyway = shownBlocked.contains(line.seq)
         unfoldedLine = unfolded.contains(line.opID)
       }
       let look = RowLook(
         item: item, parted: item.startsRun && item.id != listed.first?.id,
-        showsTime: !timeless.contains(item.id), pinned: item.seqs.filter(pins.contains),
+        showsTime: !timeless.contains(item.id), pinned: item.seq.map(pins.contains) ?? false,
         quote: quote,
         blockedWriter: blockedWriter, shownAnyway: shownAnyway, unfolded: unfoldedLine,
         common: common)
@@ -663,19 +661,8 @@ struct ChatScreen: View {
       waiting: waiting.map {
         TimedLine(id: ChatItem.waiting($0, startsRun: false), at: $0.madeAtMs, failed: $0.failed)
       })
-    // Photos sent at once as one item, by its first (spec/chat.md, Albums).
-    var albumOf: [String: [ChatItem]] = [:]
-    var inAlbums: Set<String> = []
-    let byID = Dictionary(lines.map { ($0.id, $0) }) { first, _ in first }
-    for album in albums(lines.compactMap(albumLine(of:))) {
-      albumOf[album[0]] = album.compactMap { byID[$0] }
-      inAlbums.formUnion(album.dropFirst())
-    }
-    for item in lines where !inAlbums.contains(item.id) {
-      let photos = albumOf[item.id]
-      // ここから新着 goes over the album it falls in.
-      let unread = unreadFrom.map { from in (photos ?? [item]).contains { $0.seqs.contains(from) } }
-        ?? false
+    for item in lines {
+      let unread = unreadFrom != nil && item.seq == unreadFrom
       let starts: Bool
       let replies: Bool
       switch item {
@@ -694,7 +681,6 @@ struct ChatScreen: View {
       // A reply starts a run, as its quote begins it.
       let runs = starts || unread || replies
       switch item {
-      case _ where photos != nil: items.append(.album(photos ?? [], startsRun: runs))
       case .line(let line, _): items.append(.line(line, startsRun: runs))
       case .waiting(let line, _): items.append(.waiting(line, startsRun: runs))
       default: break
@@ -703,27 +689,13 @@ struct ChatScreen: View {
     return items
   }
 
-  /// A line as albums are found by: still a photo while it shows one, not
-  /// a line not shown or folded away.
-  private func albumLine(of item: ChatItem) -> AlbumLine<String>? {
-    switch item {
-    case .line(let line, _):
-      let shows = line.photo != nil && !line.unsent && !line.hidden && !folded(line)
-      return AlbumLine(id: item.id, writer: line.authorID, album: line.album, photo: shows)
-    case .waiting(let line, _):
-      return AlbumLine(
-        id: item.id, writer: meID ?? "", album: line.album, photo: line.photo != nil)
-    default: return nil
-    }
-  }
-
   /// The lines whose time is left to the next (spec/chat.md, In a
   /// message): one going on the run of the line after it, sent in the
   /// same minute, as LINE shows one time for them.
   private func linesWithoutTime(_ items: [ChatItem]) -> Set<String> {
     var timeless: Set<String> = []
     for (item, next) in zip(items, items.dropFirst()) {
-      guard let time = sentAt(item, last: true), let after = sentAt(next, last: false),
+      guard let time = sentAt(item), let after = sentAt(next),
         !next.startsRun, ChatTime.clock(time) == ChatTime.clock(after)
       else { continue }
       timeless.insert(item.id)
@@ -732,16 +704,11 @@ struct ChatScreen: View {
   }
 
   /// When a message the group took was sent, for its time to be left to
-  /// the next: an album's by its `last` photo or its first; nil for what
-  /// shows no time of its own (a notice, a line taken back or waiting).
-  private func sentAt(_ item: ChatItem, last: Bool) -> Int64? {
-    switch item {
-    case .line(let line, _):
-      line.unsent || line.notice != nil ? nil : line.sentAtMs
-    case .album(let photos, _):
-      (last ? photos.last : photos.first).flatMap { sentAt($0, last: last) }
-    default: nil
-    }
+  /// the next; nil for what shows no time of its own (a notice, a line
+  /// taken back or waiting).
+  private func sentAt(_ item: ChatItem) -> Int64? {
+    guard case .line(let line, _) = item, !line.unsent, line.notice == nil else { return nil }
+    return line.sentAtMs
   }
 
   @ViewBuilder private func row(
@@ -797,10 +764,6 @@ struct ChatScreen: View {
       }
     case .waiting(let line, let startsRun):
       lineView(waiting: line, startsRun: startsRun, names: names)
-    case .album(let photos, let startsRun):
-      if let album = albumView(photos, startsRun: startsRun, showsTime: showsTime, names: names) {
-        album
-      }
     }
   }
 
@@ -811,7 +774,7 @@ struct ChatScreen: View {
     let mine = line.authorID == meID
     return LineView(
       lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
-      members: cardMembers, poll: pollLine(for: line), photo: line.photo,
+      members: cardMembers, poll: pollLine(for: line), photos: line.photos,
       quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
       groupID: place.id,
       shifts: line.poll ? nil : shifts(on: line.days.first),
@@ -834,7 +797,7 @@ struct ChatScreen: View {
   ) -> LineView {
     LineView(
       lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
-      members: cardMembers, poll: waitingPoll(line), photo: line.photo,
+      members: cardMembers, poll: waitingPoll(line), photos: line.photos, up: line.up,
       quote: line.replyTo.map(quote(of:)), groupID: place.id, time: line.madeAtMs,
       edited: false, mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
       named: false, first: startsRun, waiting: true, failed: line.failed, names: names,
@@ -842,56 +805,9 @@ struct ChatScreen: View {
       actions: lineActions)
   }
 
-  /// Photos sent at once, drawn as one album: the line as its first
-  /// photo's, with its last photo's time, and each photo its own line in
-  /// it (spec/chat.md, Albums).
-  private func albumView(
-    _ photos: [ChatItem], startsRun: Bool, showsTime: Bool, names: [String: String]
-  ) -> LineView?
-  {
-    var album: LineView
-    switch photos.first {
-    case .line(let line, _): album = lineView(line, startsRun: startsRun, names: names)
-    case .waiting(let line, _): album = lineView(waiting: line, startsRun: startsRun, names: names)
-    default: return nil
-    }
-    let pins = Set(chat.state.pins.map(\.seq))
-    album.album = photos.compactMap { item in
-      switch item {
-      case .line(let line, _):
-        line.photo.map { photo in
-          AlbumPhoto(
-            lineID: line.opID, photo: photo, time: line.sentAtMs, pinned: pins.contains(line.seq),
-            seq: line.seq, menu: actions(for: line, mine: line.authorID == meID).map(\.title))
-        }
-      case .waiting(let line, _):
-        line.photo.map { photo in
-          AlbumPhoto(
-            lineID: line.opID, photo: photo, time: line.madeAtMs, waiting: true,
-            failed: line.failed, menu: actions(forWaiting: line).map(\.title))
-        }
-      default: nil
-      }
-    }
-    let last = album.album.last
-    album.photo = nil
-    album.time = last?.time ?? album.time
-    album.waiting = last?.waiting == true && last?.failed == false
-    album.failed = false
-    album.pinned = false
-    album.seq = nil
-    album.showsTime = showsTime
-    album.menu = []
-    return album
-  }
-
-  /// The line an item answers by a swipe: its own, or its album's first.
+  /// The line an item answers by a swipe.
   private func answered(_ item: ChatItem?) -> ChatLineRow? {
-    switch item {
-    case .line(let line, _): line
-    case .album(let photos, _): answered(photos.first)
-    default: nil
-    }
+    if case .line(let line, _) = item { line } else { nil }
   }
 
   /// A line come in as VoiceOver says it: who and what, or the app's
@@ -904,8 +820,11 @@ struct ChatScreen: View {
     }
     guard !writerBlocked(line) else { return nil }
     let words =
-      line.photo.map(photoWords)
-      ?? lineWords(line.text, days: line.days, poll: line.poll, decided: line.decided, nameOf: nameOf)
+      line.photos.count > 1
+      ? "\(line.photos.count)枚の写真"
+      : line.photos.first.map(photoWords)
+        ?? lineWords(
+          line.text, days: line.days, poll: line.poll, decided: line.decided, nameOf: nameOf)
     return "\(name)、\(words)"
   }
 
@@ -917,62 +836,11 @@ struct ChatScreen: View {
   /// Acts on the line `lineID` as the chat is now.
   private func act(_ action: LineAction, on lineID: String) {
     let id = ChatItemID.line(lineID)
-    switch items(chat.state).first(where: { $0.lineIDs.contains(id) }) {
+    switch items(chat.state).first(where: { $0.id == id }) {
     case .line(let line, let startsRun): act(action, on: line, startsRun: startsRun)
     case .waiting(let line, let startsRun): act(action, onWaiting: line, startsRun: startsRun)
-    case .album(let photos, _):
-      if let photo = photos.first(where: { $0.id == id }) {
-        act(action, on: photo, inAlbum: photos)
-      }
     default: break
     }
-  }
-
-  /// Acts on one of an album's photos as its own line, but for reactions,
-  /// which are the album's first line's (spec/chat.md, Albums); held, it
-  /// lifts alone.
-  private func act(_ action: LineAction, on photo: ChatItem, inAlbum photos: [ChatItem]) {
-    let first: ChatLineRow? = if case .line(let line, _) = photos.first { line } else { nil }
-    let index = photos.firstIndex { $0.id == photo.id } ?? 0
-    switch (action, photo) {
-    case (.react(let emoji), _):
-      if let first { react(emoji, on: first) }
-    case (.hold, .line(let line, _)):
-      let mine = line.authorID == meID
-      openActions(
-        MessageActionsRequest(
-          lineID: line.opID, mine: mine,
-          bubble: albumBubble(line.photo, at: index, of: photos.count, waiting: false),
-          reactions: first?.reactions, meID: meID,
-          onReact: { emoji in first.map { react(emoji, on: $0) } },
-          onMoreReactions: { reactingTo = first }, actions: actions(for: line, mine: mine)))
-    case (.hold, .waiting(let line, _)):
-      openActions(
-        MessageActionsRequest(
-          lineID: line.opID, mine: true,
-          bubble: albumBubble(
-            line.photo, at: index, of: photos.count, waiting: !line.failed),
-          actions: actions(forWaiting: line)))
-    case (_, .line(let line, _)):
-      act(action, on: line, startsRun: false)
-    case (_, .waiting(let line, _)):
-      act(action, onWaiting: line, startsRun: false)
-    default:
-      break
-    }
-  }
-
-  /// An album's photo lifted alone over the chat for its menu.
-  private func albumBubble(_ photo: LinePhoto?, at index: Int, of count: Int, waiting: Bool)
-    -> AnyView
-  {
-    guard let photo else { return AnyView(EmptyView()) }
-    return AnyView(
-      PhotoLine(
-        photo: photo, groupID: place.id, waiting: waiting,
-        cell: AlbumBox.size(of: index, in: count)
-      )
-      .clipShape(RoundedRectangle(cornerRadius: Radius.md)))
   }
 
   private func act(_ action: LineAction, on line: ChatLineRow, startsRun: Bool) {
@@ -983,8 +851,8 @@ struct ChatScreen: View {
       following = false
       scroller.growDown(ChatItemID.line(line.opID))
       withAnimation(reduceMotion ? nil : .default) { _ = unfolded.insert(line.opID) }
-    case .openPhoto:
-      openPhoto(of: line)
+    case .openPhoto(let index):
+      openPhoto(PhotoKey(seq: line.seq, index: index), of: line)
     case .openQuote:
       line.replyTo.map(jump(to:))
     case .openProfile:
@@ -1050,7 +918,7 @@ struct ChatScreen: View {
   /// A line still on its way's menu: コピー for words, and 送信取消, which
   /// takes it back before it goes (spec/chat.md, Lines on their way).
   private func actions(forWaiting line: WaitingLine) -> [MessageAction] {
-    let words = line.days.isEmpty && line.photo == nil
+    let words = line.days.isEmpty && line.photos.isEmpty
     var actions = words ? [copy(line.text)] : []
     actions.append(
       MessageAction(
@@ -1062,37 +930,34 @@ struct ChatScreen: View {
 
   // MARK: Composer
 
-  /// Sends the tray's photos, each as its own line, kept on the device to
-  /// upload before its line goes; two or more as one album, named by the
-  /// first's send (spec/chat.md, Albums).
+  /// Sends the tray's photos as one line, kept on the device to upload
+  /// before it goes; two or more drawn as one album (spec/chat.md,
+  /// Albums).
   private func sendPhotos() {
     let kept = draft.photos.filter {
       (try? ChatPhotos.keep($0.shrunk.jpeg, as: $0.id, in: place.id)) != nil
     }
-    let album = kept.count > 1 ? UUID().uuidString.lowercased() : ""
-    for (index, picked) in kept.enumerated() {
-      var send = Pochical_V1_ChatSend()
-      send.threadID = threadID
-      send.photo = picked.shrunk.line(picked.id).wire
-      send.replyTo = takeReply()
-      send.album = album
-      write(.send(send), as: index == 0 && !album.isEmpty ? album : nil)
-    }
     draft.photos = []
+    guard !kept.isEmpty else { return }
+    var send = Pochical_V1_ChatSend()
+    send.threadID = threadID
+    send.photos = kept.map { $0.shrunk.line($0.id).wire }
+    send.replyTo = takeReply()
+    write(.send(send))
   }
 
-  /// Stops a line's photo going up: the line is not sent, its ! offering
+  /// Stops a line's photos going up: the line is not sent, its ! offering
   /// もう一度送る and 削除 (spec/chat.md, Photos).
-  /// Nothing once its photo is up and the line is being sent.
+  /// Nothing once its photos are up and the line is being sent.
   private func stopSending(_ line: WaitingLine) {
-    if let photo = line.photo, !PhotoUploads.shared.stop(photo.id) { return }
+    if !line.photos.isEmpty, !PhotoUploads.shared.stop(line.opID) { return }
     try? database.write { try Chats.fail(line.opID, in: $0) }
   }
 
   /// Sends a line not sent once more, after the rest, as if written now.
-  /// A photo up before goes again from waiting its turn, × stopping it.
+  /// Its photos not up go again from waiting their turn, × stopping it.
   private func sendAgain(_ line: WaitingLine) {
-    if let photo = line.photo { PhotoUploads.shared.forget(photo.id) }
+    PhotoUploads.shared.forget(line.opID, photos: line.photos.map(\.id))
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     sendingAgain[line.opID] = line.madeAtMs
     do {
@@ -1108,8 +973,8 @@ struct ChatScreen: View {
   /// before (spec/chat.md, Lines on their way).
   private func takeBack(_ line: WaitingLine) {
     try? database.write { try Chats.takeBack(line.opID, in: $0) }
-    if let photo = line.photo {
-      PhotoUploads.shared.forget(photo.id)
+    PhotoUploads.shared.forget(line.opID, photos: line.photos.map(\.id))
+    for photo in line.photos {
       ChatPhotos.forget(photo.id, in: place.id)
     }
   }
@@ -1373,7 +1238,7 @@ struct ChatScreen: View {
     following = false
     // Asked to the top with too few lines under it to get there, it stops
     // at the foot.
-    scroller.show(itemID(of: first), at: .top, animated: animated) {
+    scroller.show(ChatItemID.line(first.opID), at: .top, animated: animated) {
       if scroll.place.atLatest {
         following = true
       } else if unreadFrom == nil {
@@ -1406,17 +1271,10 @@ struct ChatScreen: View {
   }
 
   /// The latest of the group's lines among the items `seen` of those
-  /// `listed`, an album's lines all with it, nil for none (lines still
-  /// waiting have no seq).
+  /// `listed`, nil for none (lines still waiting have no seq).
   private func latestSeq(of seen: [String], in listed: [ChatItem]) -> Int64? {
     let ids = Set(seen)
-    return listed.lazy.filter { ids.contains($0.id) }.flatMap(\.seqs).max()
-  }
-
-  /// The item the chat draws `line` in: its own, or its album.
-  private func itemID(of line: ChatLineRow) -> String {
-    let id = ChatItemID.line(line.opID)
-    return items(chat.state).first { $0.lineIDs.contains(id) }?.id ?? id
+    return listed.lazy.filter { ids.contains($0.id) }.compactMap(\.seq).max()
   }
 
   /// Marks the chat read on to `seq`, the latest line whose foot has come
@@ -1483,30 +1341,29 @@ struct ChatScreen: View {
   /// lines draw them, and lets go of the rest: not a blocked member's
   /// folded away.
   private func prefetchPhotos(of near: [ChatItem]) {
-    let lines = near.flatMap { item in
-      if case .album(let photos, _) = item { photos } else { [item] }
-    }
-    let photos = lines.compactMap { item -> LinePhoto? in
+    let photos = near.flatMap { item -> [LinePhoto] in
       switch item {
       case .line(let line, _):
-        return line.hidden || line.unsent || folded(line) ? nil : line.photo
-      case .waiting(let line, _): return line.photo
-      default: return nil
+        return line.hidden || line.unsent || folded(line) ? [] : line.photos
+      case .waiting(let line, _): return line.photos
+      default: return []
       }
     }
     photoPrefetch.near(photos, in: place.id, scale: displayScale, calls: groupCalls)
   }
 
-  /// The line's photo opened large among the chat's: those its lines laid
-  /// out show at once, and the rest a page at a time from the group (not a
-  /// blocked member's folded away, as the group leaves them out too).
-  private func openPhoto(of line: ChatLineRow) {
-    guard let photo = line.photo else { return }
-    guard let tapped = ChatPhotoItem(line, blocked: []) else {
-      viewing = PhotoViewing(photo)
+  /// The line's photo `key` opened large among the chat's, one by one:
+  /// those its lines laid out show at once, and the rest a page at a time
+  /// from the group (not a blocked member's folded away, as the group
+  /// leaves them out too).
+  private func openPhoto(_ key: PhotoKey, of line: ChatLineRow) {
+    guard line.photos.indices.contains(key.index) else { return }
+    guard let tapped = ChatPhotoItem.items(of: line, blocked: []).first(where: { $0.key == key })
+    else {
+      viewing = PhotoViewing(line.photos[key.index])
       return
     }
-    let held = chat.state.lines.compactMap { ChatPhotoItem($0, blocked: blocked) }
+    let held = chat.state.lines.flatMap { ChatPhotoItem.items(of: $0, blocked: blocked) }
     viewing = PhotoViewing(tapped, among: held, pager: photoPager)
     viewing?.names = names
   }
@@ -1523,10 +1380,15 @@ struct ChatScreen: View {
     PhotoPager(placeID: place.id, threadID: threadID, client: socket, database: database)
   }
 
-  /// Saves a photo to the person's library, and says so.
-  private func save(_ photo: LinePhoto) {
+  /// Saves a line's photos to the person's library, each in turn, and
+  /// says so.
+  private func save(_ photos: [LinePhoto]) {
     Task {
-      if await savePhoto(photo, in: place.id, calls: groupCalls) {
+      var saved = true
+      for photo in photos where saved {
+        saved = await savePhoto(photo, in: place.id, calls: groupCalls)
+      }
+      if saved {
         sayDone("写真を保存しました")
       } else {
         say("保存できませんでした")
@@ -1697,8 +1559,8 @@ struct ChatScreen: View {
       seq: seq, writer: writer,
       words: lineWords(
         line.text, days: line.days, poll: line.poll, decided: line.decided,
-        photo: line.photo != nil, nameOf: nameOf),
-      photo: line.photo)
+        photos: line.photos.count, nameOf: nameOf),
+      photo: line.photos.first)
   }
 
   private func edit(_ line: ChatLineRow) {
@@ -1737,7 +1599,7 @@ struct ChatScreen: View {
   private func actions(for line: ChatLineRow, mine: Bool) -> [MessageAction] {
     let pinned = chat.state.pins.contains { $0.seq == line.seq }
     // Shared days, polls and photos have no words to copy or change.
-    let words = line.days.isEmpty && line.photo == nil
+    let words = line.days.isEmpty && line.photos.isEmpty
     // First, for any line (/design's menu).
     var actions = [
       MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") { reply(to: line) }
@@ -1745,9 +1607,9 @@ struct ChatScreen: View {
     if words {
       actions.append(copy(line.text))
     }
-    if let photo = line.photo {
+    if !line.photos.isEmpty {
       actions.append(
-        MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(photo) })
+        MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(line.photos) })
     }
     // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
     if place.rules.pins {
@@ -1836,7 +1698,7 @@ struct ChatScreen: View {
       following = false
       // Rung once there, not on the way; by itself, as this task ends
       // with the line gone to.
-      scroller.show(itemID(of: line), at: .center, animated: true) {
+      scroller.show(ChatItemID.line(line.opID), at: .center, animated: true) {
         marks.ringed = target
         Task { @MainActor in
           try? await Task.sleep(for: .milliseconds(500))
@@ -1895,17 +1757,11 @@ struct ChatScreen: View {
     if draft.editing?.seq == line.seq { stopEditing() }
   }
 
-  /// Puts an edit in the outbox, as `opID` when it names an album.
-  private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind, as opID: String? = nil) {
+  /// Puts an edit in the outbox.
+  private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
     let kind = AppDevice.stamped(kind, in: place.id)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    try? database.write { db in
-      if let opID {
-        try Chats.edit(kind, in: place.id, now: now, opID: opID, db: db)
-      } else {
-        try Chats.edit(kind, in: place.id, now: now, db: db)
-      }
-    }
+    try? database.write { try Chats.edit(kind, in: place.id, now: now, db: $0) }
     if case .send = kind { toOwnLine() }
   }
 }
@@ -1933,7 +1789,7 @@ private struct RowLook: Hashable {
   let parted: Bool
   let showsTime: Bool
   /// Its lines pinned, by seq.
-  let pinned: [Int64]
+  let pinned: Bool
   let quote: LineQuote?
   let blockedWriter: Bool
   let shownAnyway: Bool

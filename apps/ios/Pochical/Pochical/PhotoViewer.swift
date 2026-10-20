@@ -26,7 +26,8 @@ struct PhotoViewing: Identifiable {
   /// `photo` alone, as someone's face.
   init(_ photo: LinePhoto) {
     run = PhotoRun(
-      held: [ChatPhotoItem(seq: 0, photo: photo, authorID: "", sentAt: .now)], tapped: 0)
+      held: [ChatPhotoItem(key: PhotoKey(seq: 0), photo: photo, authorID: "", sentAt: .now)],
+      tapped: PhotoKey(seq: 0))
     pager = nil
     id = photo.id
   }
@@ -35,8 +36,8 @@ struct PhotoViewing: Identifiable {
   /// first and the rest from `pager`; alone when it is not one of them
   /// (a blocked member's shown for once, or one of the reader's on its way).
   init(_ tapped: ChatPhotoItem, among held: [ChatPhotoItem], pager: PhotoPager?) {
-    let among = held.contains { $0.seq == tapped.seq }
-    run = PhotoRun(held: among ? held : [tapped], tapped: tapped.seq)
+    let among = held.contains { $0.key == tapped.key }
+    run = PhotoRun(held: among ? held : [tapped], tapped: tapped.key)
     self.pager = among ? pager : nil
     id = tapped.id
   }
@@ -45,7 +46,7 @@ struct PhotoViewing: Identifiable {
   /// among all the chat's known already, paging on from `pager`.
   init(_ tapped: ChatPhotoItem, listed: PhotoRun, pager: PhotoPager) {
     var run = listed
-    run.show(tapped.seq)
+    run.show(tapped.key)
     self.run = run
     self.pager = pager
     id = tapped.id
@@ -258,7 +259,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   private var following: [Task<Void, Never>] = []
   /// The photo the count is of: kept on it while the group is asked again
   /// where it is, after the chat's photos changed, so it does not blink.
-  private var counted: Int64?
+  private var counted: PhotoKey?
   /// The photos about to be swiped to, fetched ahead.
   private let ahead = PhotoPrefetch()
   private let groupID: String
@@ -303,7 +304,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     self.onSave = onSave
     notice = UIHostingController(rootView: ViewerNotice(words: noticeWords, colors: colors))
     super.init(nibName: nil, bundle: nil)
-    if let start = run.photos.first(where: { $0.seq == run.shown }) {
+    if let start = run.photos.first(where: { $0.key == run.shown }) {
       pages.setViewControllers([page(start)], direction: .forward, animated: false)
     }
     if let source {
@@ -498,8 +499,8 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
       counter.accessibilityLabel = "\(place.of)枚中\(place.number)枚目"
       counterGlass.isHidden = false
       shown.place = counter.accessibilityLabel
-      counted = shown.item.seq
-    } else if run.place != nil || counted != shown.item.seq {
+      counted = shown.item.key
+    } else if run.place != nil || counted != shown.item.key {
       counterGlass.isHidden = true
       shown.place = nil
       counted = nil
@@ -532,15 +533,15 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   /// closed once none is left, and the pages next to it asked for again
   /// once those beside it are others.
   private func changed(_ change: (inout PhotoRun) -> Void) {
-    let held = run.photos.map(\.seq)
+    let held = run.photos.map(\.key)
     change(&run)
-    guard let seq = run.shown, let item = run.photos.first(where: { $0.seq == seq }) else {
+    guard let key = run.shown, let item = run.photos.first(where: { $0.key == key }) else {
       if !isBeingDismissed { dismiss(animated: true) }
       return
     }
-    if shown?.item.seq != seq {
+    if shown?.item.key != key {
       pages.setViewControllers([page(item)], direction: .forward, animated: false)
-    } else if held != run.photos.map(\.seq) {
+    } else if held != run.photos.map(\.key) {
       // The page view asks again for the pages beside the one shown,
       // which it remembers as none at an end.
       pages.dataSource = nil
@@ -573,7 +574,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     viewControllerBefore viewController: UIViewController
   ) -> UIViewController? {
     guard let at = viewController as? PhotoPage,
-      let index = run.photos.firstIndex(where: { $0.seq == at.item.seq }), index > 0
+      let index = run.photos.firstIndex(where: { $0.key == at.item.key }), index > 0
     else { return nil }
     return page(run.photos[index - 1])
   }
@@ -583,7 +584,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     viewControllerAfter viewController: UIViewController
   ) -> UIViewController? {
     guard let at = viewController as? PhotoPage,
-      let index = run.photos.firstIndex(where: { $0.seq == at.item.seq }),
+      let index = run.photos.firstIndex(where: { $0.key == at.item.key }),
       index < run.photos.count - 1
     else { return nil }
     return page(run.photos[index + 1])
@@ -594,7 +595,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     previousViewControllers: [UIViewController], transitionCompleted completed: Bool
   ) {
     guard completed, let shown else { return }
-    run.show(shown.item.seq)
+    run.show(shown.item.key)
     showing()
     // VoiceOver reads the photo swiped to, and where it is among them.
     UIAccessibility.post(
