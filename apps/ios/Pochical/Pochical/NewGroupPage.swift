@@ -104,7 +104,6 @@ struct NewGroupPage: View {
   private func make() {
     making = true
     Task {
-      defer { making = false }
       do {
         // A picked photo goes up first, for the group to take.
         if !mark.photoID.isEmpty {
@@ -112,7 +111,11 @@ struct NewGroupPage: View {
         }
         let made = try await groupCalls.create(
           name: trimmed(name), mark: mark, displayName: trimmed(myName), requestID: requestID)
+        // Still making until the group has come and the page has turned
+        // into メンバーを招待 (GroupsScreen), so 作る is not there to tap
+        // again meanwhile.
         onMade(made)
+        return
       } catch is MarkPhotoGone {
         // Back to following the name, as before a photo was picked.
         picked = false
@@ -122,6 +125,7 @@ struct NewGroupPage: View {
         ReviewPrompt.troubled = true
         failed = true
       }
+      making = false
     }
   }
 }
