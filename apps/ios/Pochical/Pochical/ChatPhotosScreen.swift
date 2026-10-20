@@ -20,6 +20,8 @@ struct ChatPhotosScreen: View {
   private var names: [String: String] { photos.names }
   @State private var run = PhotoRun(latest: Chat.photoPageAhead)
   @State private var viewing: PhotoViewing?
+  /// Where the grid is scrolled, by its photos' ids.
+  @State private var position = ScrollPosition(idType: String.self)
   /// The grid's width, each square a quarter of it less the gaps.
   @State private var width: CGFloat = 0
 
@@ -47,9 +49,12 @@ struct ChatPhotosScreen: View {
           ask()
         }
       }
-      .photoViewer($viewing, groupID: pager.placeID) { photo in
-        await savePhoto(photo, in: pager.placeID, calls: groupCalls)
-      }
+      .photoViewer(
+        $viewing, groupID: pager.placeID,
+        // Its square kept in sight as the photo opened large is swiped,
+        // to close back into, as Photos' grid follows.
+        onShow: { position.scrollTo(id: $0) },
+        onSave: { photo in await savePhoto(photo, in: pager.placeID, calls: groupCalls) })
   }
 
   @ViewBuilder private var content: some View {
@@ -75,7 +80,9 @@ struct ChatPhotosScreen: View {
             }
           }
         }
+        .scrollTargetLayout()
       }
+      .scrollPosition($position)
       .onGeometryChange(for: CGFloat.self) {
         $0.size.width
       } action: {
@@ -118,15 +125,17 @@ private struct PhotoSquare: View {
   let onOpen: () -> Void
 
   var body: some View {
-    ChatPhotoImage(
-      photo: item.photo, groupID: groupID, shown: CGSize(width: side, height: side),
-      whileInSight: true, retries: true
-    )
+    PhotoSpot(id: item.photo.id) {
+      ChatPhotoImage(
+        photo: item.photo, groupID: groupID, shown: CGSize(width: side, height: side),
+        whileInSight: true, retries: true
+      )
+      .frame(width: side, height: side)
+      .clipped()
+    }
     .frame(width: side, height: side)
-    .clipped()
     .contentShape(.rect)
     .onTapGesture(perform: onOpen)
-    .photoSpot(item.photo.id)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(
       "\(writer ?? "")が送った写真、\(Day(item.sentAt, in: .current).monthDayText)"

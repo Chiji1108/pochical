@@ -156,19 +156,23 @@ struct MemberProfileSheet: View {
   var onRemove: (() -> Void)?
   @State private var viewingPhoto: PhotoViewing?
   @State private var confirmingRemove = false
+  /// How large their face is.
+  private static let face: CGFloat = 72
 
   var body: some View {
     NavigationStack {
       VStack(spacing: 12) {
         if photoID.isEmpty {
-          MemberAvatar(name: name, photoID: photoID, size: 72)
+          MemberAvatar(name: name, photoID: photoID, size: Self.face)
         } else {
           Button {
             viewingPhoto = PhotoViewing(LinePhoto(id: photoID, width: 1, height: 1))
           } label: {
-            MemberAvatar(name: name, photoID: photoID, size: 72)
-              // Opened from the face and closed back to it.
-              .background(PhotoSpot(id: photoID))
+            // Opened from the face and closed back to it.
+            PhotoSpot(id: photoID, corner: Self.face / 2) {
+              MemberAvatar(name: name, photoID: photoID, size: Self.face)
+            }
+            .frame(width: Self.face, height: Self.face)
           }
           .buttonStyle(.plain)
           .accessibilityLabel("\(name)の写真を大きく見る")
