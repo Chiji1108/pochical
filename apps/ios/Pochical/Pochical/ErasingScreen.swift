@@ -21,7 +21,10 @@ struct ErasingScreen: View {
       Text(title)
         .font(.title3.bold())
         .foregroundStyle(colors.textPrimary)
-      Text(erasing.failed ? "まだ消せていません。しばらくすると自動でもう一度試します。" : "この端末のデータを消しています。")
+      Text(
+        erasing.failed
+          ? "この端末のデータを消しています。まだ消せていないため、しばらくすると自動でもう一度試します。"
+          : "この端末のデータを消しています。")
         .font(.subheadline)
         .foregroundStyle(colors.textTertiary)
       Spacer()
