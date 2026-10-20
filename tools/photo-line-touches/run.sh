@@ -24,7 +24,10 @@ server=""
 start_server() {
   (cd "$root/apps/server" && exec bunx wrangler dev >>"$server_log" 2>&1) &
   server=$!
-  until curl -s -o /dev/null http://localhost:8787; do sleep 1; done
+  until curl -s -o /dev/null http://localhost:8787; do
+    kill -0 "$server" 2>/dev/null || { echo "the server did not start: $server_log" >&2; exit 1; }
+    sleep 1
+  done
 }
 
 stop_server() {
@@ -35,7 +38,17 @@ stop_server() {
   server=""
   while curl -s -o /dev/null http://localhost:8787; do sleep 1; done
 }
-trap stop_server EXIT
+
+# The photo taken out of the bucket, put back however the run ends.
+hidden=""
+put_back() {
+  [ -n "$hidden" ] || return 0
+  (cd "$root/apps/server" &&
+    bunx wrangler r2 object put "pochical-photos/$hidden" --local --file "$shared/hidden.jpg" \
+      --content-type image/jpeg)
+  hidden=""
+}
+trap 'put_back; stop_server' EXIT
 
 failed=0
 run_test() {
@@ -84,13 +97,12 @@ key=$(sqlite3 "$bucket" \
 (cd "$root/apps/server" &&
   bunx wrangler r2 object get "pochical-photos/$key" --local --file "$shared/hidden.jpg" &&
   bunx wrangler r2 object delete "pochical-photos/$key" --local)
+hidden=$key
 
 run_test test4HoldingAndTappingAPhotoNotFetched &
 tests=$!
 until [ -e "$shared/retry-shown" ] || ! kill -0 "$tests" 2>/dev/null; do sleep 1; done
-(cd "$root/apps/server" &&
-  bunx wrangler r2 object put "pochical-photos/$key" --local --file "$shared/hidden.jpg" \
-    --content-type image/jpeg)
+put_back
 touch "$shared/photo-back"
 wait "$tests" || failed=1
 xcrun simctl shutdown "$device"
