@@ -47,15 +47,50 @@ public final class CurrentAccount: Sendable {
   private struct Now {
     var generation = 0
     var credentials: Credentials?
+    /// Calls waiting for the device to be signed in.
+    var waiting: [UUID: CheckedContinuation<Credentials, any Error>] = [:]
   }
 
   private let now = Mutex(Now())
+
+  /// How long a call waits for the device to be signed in, as at a first
+  /// launch or just after signing out, before it fails as one offline does.
+  static let signInWait = Duration.seconds(15)
 
   public init() {}
 
   func credentials() throws(NotSignedIn) -> Credentials {
     guard let credentials = now.withLock(\.credentials) else { throw NotSignedIn() }
     return credentials
+  }
+
+  /// The credentials once the device is signed in: at once if it is, else
+  /// as soon as it is, for `limit` at most, or until the task is
+  /// cancelled. A call never goes as no one.
+  func signedIn(within limit: Duration = signInWait) async throws -> Credentials {
+    let id = UUID()
+    let timer = Task { [weak self] in
+      try await Task.sleep(for: limit)
+      self?.stopWaiting(id, with: NotSignedIn())
+    }
+    defer { timer.cancel() }
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        let ready = now.withLock { now in
+          if now.credentials == nil { now.waiting[id] = continuation }
+          return now.credentials
+        }
+        if let ready { continuation.resume(returning: ready) }
+        // Cancelled before it began waiting, when onCancel found nothing.
+        if Task.isCancelled { stopWaiting(id, with: CancellationError()) }
+      }
+    } onCancel: {
+      stopWaiting(id, with: CancellationError())
+    }
+  }
+
+  private func stopWaiting(_ id: UUID, with error: any Error) {
+    now.withLock { $0.waiting.removeValue(forKey: id) }?.resume(throwing: error)
   }
 
   func isCurrent(_ generation: Int) -> Bool {
@@ -73,15 +108,22 @@ public final class CurrentAccount: Sendable {
   /// before handed out is no longer current.
   @discardableResult
   func begin(_ session: StoredSession?) -> Credentials? {
-    now.withLock { now in
-      now.generation += 1
-      now.credentials = session.map {
-        Credentials(
-          generation: now.generation, token: $0.token, userID: $0.userID,
-          content: Self.contentSession(), current: self)
+    let (credentials, waiting): (Credentials?, [CheckedContinuation<Credentials, any Error>]) =
+      now.withLock { now in
+        now.generation += 1
+        now.credentials = session.map {
+          Credentials(
+            generation: now.generation, token: $0.token, userID: $0.userID,
+            content: Self.contentSession(), current: self)
+        }
+        guard now.credentials != nil else { return (now.credentials, []) }
+        defer { now.waiting = [:] }
+        return (now.credentials, Array(now.waiting.values))
       }
-      return now.credentials
+    if let credentials {
+      for continuation in waiting { continuation.resume(returning: credentials) }
     }
+    return credentials
   }
 
   /// No cache: a stretch's photos are kept as the app's own files, erased

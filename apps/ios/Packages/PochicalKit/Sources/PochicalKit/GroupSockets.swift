@@ -122,14 +122,12 @@ public actor GroupSockets {
   }
 
   /// Closes every socket at once, as the account is changing: nothing more
-  /// of the account before is taken in, nor is its chat outbox sent. The
-  /// holds stay, for `use` once the device is someone again.
+  /// of the account before is taken in, nor is its chat outbox sent. Its
+  /// holds go too, as the places were the user before's: the screens hold
+  /// again those of whoever the device is next (OpenPlaceSocket).
   func forgetAccount() async {
     credentials = nil
-    for placeID in sockets.keys {
-      sockets[placeID]?.closing = nil
-      sockets[placeID]?.closed = nil
-    }
+    sockets = [:]
     for client in clients.withLock({ Array($0.values) }) {
       await client.stop()
     }

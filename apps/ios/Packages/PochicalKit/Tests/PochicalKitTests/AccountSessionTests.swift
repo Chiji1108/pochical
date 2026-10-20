@@ -173,19 +173,9 @@ private final class FakeAccountServer: AccountServer {
   made.session.cameToFront()
   #expect(await eventually { made.session.phase == .signedIn })
   #expect(made.session.userID == "anon-1")
-  #expect(try made.keychain.kept() == .session(StoredSession(token: "anon-token-1", userID: "anon-1")))
+  #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
   #expect(await eventually { made.socketTokens == ["anon-token-1"] })
   #expect(made.owner == "anon-1")
-}
-
-@MainActor @Test func aTokenKeptAloneIsKeptWithItsUserOnceTheServerSaysWhose() async throws {
-  let made = try await Made(kept: Data("bare".utf8))
-  #expect(made.session.phase == .starting)
-  made.session.cameToFront()
-  #expect(await eventually { made.session.phase == .signedIn })
-  #expect(made.session.userID == "of-bare")
-  #expect(try made.keychain.kept() == .session(StoredSession(token: "bare", userID: "of-bare")))
-  #expect(made.server.made.withLock { $0 } == 0)
 }
 
 @MainActor @Test func nothingConnectsWhileTheAccountSwitchesAndOnlyTheAccountAfter() async throws {
@@ -220,7 +210,7 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.session.userID == "account")
   #expect(made.shared.string(forKey: "userID") == "account")
   #expect(made.coworkers == 0)
-  #expect(try made.keychain.kept() == .session(StoredSession(token: "account-token", userID: "account")))
+  #expect(try made.keychain.kept() == StoredSession(token: "account-token", userID: "account"))
   #expect(await eventually { made.owner == "account" })
   // The place held, and the user's socket in front, open as the account.
   #expect(await eventually { made.sockets.asked >= seen + 2 })
@@ -250,7 +240,7 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.coworkers == 1)
   #expect(made.owner == "A")
   #expect(erased == 0)
-  #expect(try made.keychain.kept() == .session(StoredSession(token: "a", userID: "A")))
+  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A"))
   #expect(made.keychain.leftBehindToken() == nil)
   #expect(made.server.asked.withLock(\.deleted).isEmpty)
   made.session.cameToFront()
@@ -266,7 +256,7 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.session.phase == .signedIn)
   #expect(made.session.userID == "A")
   #expect(made.coworkers == 1)
-  #expect(try made.keychain.kept() == .session(StoredSession(token: "a", userID: "A")))
+  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A"))
 }
 
 @MainActor @Test func signingOutErasesTheDeviceAndStartsAfresh() async throws {
@@ -280,9 +270,9 @@ private final class FakeAccountServer: AccountServer {
   // What waited went first, on the session signing out.
   #expect(made.socketTokens == ["a"])
   #expect(made.server.asked.withLock(\.signedOut) == ["a"])
-  #expect(made.session.phase == .starting)
   #expect(made.session.userID == nil)
   #expect(made.shared.string(forKey: "userID") == nil)
+  #expect(await eventually { made.session.phase == .starting })
   #expect(made.coworkers == 0)
   #expect(erased == 1)
   #expect(try made.keychain.kept() == nil)
@@ -301,8 +291,8 @@ private final class FakeAccountServer: AccountServer {
 
   try await made.session.deleteAccount(appleAuthorizationCode: "code")
   #expect(made.server.asked.withLock(\.deleted) == ["a"])
-  #expect(made.coworkers == 0)
   #expect(await eventually { made.session.userID == "anon-1" })
+  #expect(made.coworkers == 0)
   #expect(await eventually { made.socketTokens == ["a", "anon-token-1"] })
 }
 
@@ -330,7 +320,7 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.socketTokens == ["a"])
 }
 
-@MainActor @Test func aSignOutWhoseEraseFailsStillStartsAfreshAndErasesOnceItCan() async throws {
+@MainActor @Test func aSignOutWhoseEraseFailsShowsNothingAndSignsInOnlyOnceErased() async throws {
   let made = try await Made.signedIn(as: "a", "A")
   #expect(await eventually { made.owner == "A" })
   try await made.addCoworker()
@@ -338,19 +328,69 @@ private final class FakeAccountServer: AccountServer {
     try db.execute(
       sql: #"CREATE TRIGGER "keep" BEFORE DELETE ON "coworkers" BEGIN SELECT RAISE(ABORT, 'kept'); END"#)
   }
+  made.session.cameToFront()
 
-  // The session ended on the server: there is no going back to it.
-  await #expect(throws: (any Error).self) { try await made.session.signOut() }
+  // The session ended on the server: signed out, whatever the device does.
+  try await made.session.signOut()
   #expect(made.server.asked.withLock(\.signedOut) == ["a"])
-  #expect(made.session.phase == .starting)
-  #expect(try made.keychain.kept() == nil)
+  #expect(made.session.phase == .erasing)
+  #expect(made.session.erasing?.why == .signedOut)
+  #expect(made.session.userID == nil)
+  #expect(await eventually { made.session.erasing?.failed == true })
   #expect(made.coworkers == 1)
+  try await Task.sleep(for: .milliseconds(200))
+  #expect(made.server.made.withLock { $0 } == 0)
+  #expect(made.session.phase == .erasing)
 
   try await made.database.write { try $0.execute(sql: #"DROP TRIGGER "keep""#) }
-  made.session.cameToFront()
-  #expect(await eventually { made.owner == "anon-1" })
+  made.session.eraseAgain()
+  #expect(await eventually { made.session.erasing == nil })
   #expect(made.coworkers == 0)
-  #expect(await eventually { made.socketTokens.last == "anon-token-1" })
+  #expect(await eventually { made.session.userID == "anon-1" })
+  #expect(await eventually { made.owner == "anon-1" })
+}
+
+@MainActor @Test func theSessionThatEndedIsNeverSignedInAsAgainEvenAfterARelaunch() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  #expect(await eventually { made.owner == "A" })
+  let own = try #require(made.keychain.own as? MemoryStore)
+  own.refusesToForget.withLock { $0 = true }
+  made.session.cameToFront()
+
+  try await made.session.deleteAccount(appleAuthorizationCode: "code")
+  #expect(made.session.phase == .erasing)
+  #expect(await eventually { made.session.erasing?.failed == true })
+  // The Keychain still has it, but it is not signed in as.
+  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A"))
+
+  // The app ends and starts again meanwhile: still erasing, as no one.
+  let again = AccountSession(
+    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared)
+  #expect(again.phase == .erasing)
+  #expect(again.erasing?.why == .deleted)
+  #expect(again.userID == nil)
+  #expect(throws: NotSignedIn.self) { try again.current.credentials() }
+  again.cameToFront()
+
+  own.refusesToForget.withLock { $0 = false }
+  again.eraseAgain()
+  #expect(await eventually { again.userID == "anon-1" })
+  #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
+}
+
+@MainActor @Test func aPlaceHeldBeforeTheAccountChangedIsNotOpenedAfter() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  made.session.cameToFront()
+  _ = await made.session.hold("theirs")
+  #expect(await eventually { made.sockets.asked >= 2 })
+  let seen = made.sockets.asked
+
+  try await made.session.useAccount(appleIDToken: "id", nonce: "n")
+  // Only the user's own socket, as the account: the place was the user before's.
+  #expect(await eventually { made.sockets.asked > seen })
+  try await Task.sleep(for: .milliseconds(300))
+  #expect(made.sockets.asked == seen + 1)
+  #expect(made.sockets.tokens.withLock { $0.last } == "account-token")
 }
 
 @MainActor @Test func signingOutAfterTheSessionWasRefusedDoesNotWaitForever() async throws {
@@ -361,5 +401,28 @@ private final class FakeAccountServer: AccountServer {
   try await Task.sleep(for: .milliseconds(200))
   try await made.addCoworker()
   try await made.session.signOut()
-  #expect(made.session.phase == .starting)
+  #expect(await eventually { made.session.userID == "anon-1" })
+}
+
+/// An invitation opened from a link as the app first launches: its call
+/// waits for the anonymous sign-in rather than going as no one.
+@MainActor @Test func aCallMadeWhileSigningInGoesOnceSignedIn() async throws {
+  let made = try await Made()
+  let calls = GroupCalls(current: made.session.current)
+  let asking = Task { try await calls.headers() }
+  try await Task.sleep(for: .milliseconds(100))
+  made.session.cameToFront()
+  #expect(try await asking.value == ["Authorization": ["Bearer anon-token-1"]])
+}
+
+@Test func aCallWaitsForSigningInOnlySoLong() async throws {
+  let current = CurrentAccount()
+  await #expect(throws: NotSignedIn.self) {
+    try await current.signedIn(within: .milliseconds(50))
+  }
+  let cancelled = Task { try await current.signedIn(within: .seconds(10)) }
+  cancelled.cancel()
+  await #expect(throws: CancellationError.self) { try await cancelled.value }
+  current.begin(StoredSession(token: "t", userID: "u"))
+  #expect(try await current.signedIn(within: .zero).userID == "u")
 }

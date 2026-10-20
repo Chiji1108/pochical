@@ -650,6 +650,19 @@ private struct GroupHeading: View {
       moving = false
     }
   }
+
+  /// The device is someone else now: the hold went with the user before's
+  /// places (GroupSockets), so the place wanted is held again, as whoever
+  /// the device is now. One taken since the account changed is let go of.
+  func accountChanged() {
+    if let held {
+      Task { await session.release(held.hold, of: held.placeID) }
+    }
+    held = nil
+    let place = wanted
+    wanted = nil
+    want(place)
+  }
 }
 
 /// The group open in グループ: the one picked, the first until one is or

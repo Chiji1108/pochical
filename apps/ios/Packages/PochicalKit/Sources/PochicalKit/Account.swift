@@ -27,14 +27,6 @@ public struct StoredSession: Codable, Equatable, Sendable {
   }
 }
 
-/// What the Keychain holds of the session.
-enum KeptSession: Equatable {
-  case session(StoredSession)
-  /// A token kept before its user was kept with it, whose user the server
-  /// is asked once (`UserService.GetMe`).
-  case bareToken(String)
-}
-
 /// Where a session's bytes are kept.
 protocol TokenStore: Sendable {
   func data() throws -> Data?
@@ -122,12 +114,8 @@ struct SessionKeychain: Sendable {
     self.leftBehind = leftBehind
   }
 
-  func kept() throws -> KeptSession? {
-    guard let data = try own.data() else { return nil }
-    if let session = try? JSONDecoder().decode(StoredSession.self, from: data) {
-      return .session(session)
-    }
-    return .bareToken(String(decoding: data, as: UTF8.self))
+  func kept() throws -> StoredSession? {
+    try own.data().map { try JSONDecoder().decode(StoredSession.self, from: $0) }
   }
 
   /// Keeps `session` from now on, in place of any other.

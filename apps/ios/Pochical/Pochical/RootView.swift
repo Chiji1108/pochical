@@ -83,6 +83,12 @@ struct RootView: View {
     // Here, under any cover over the tabs, rather than on a screen a cover
     // or a tab switch takes away.
     .onChange(of: openPlaceID, initial: true) { _, placeID in openPlace.want(placeID) }
+    // Someone else from now: no page of the user before stays open.
+    .onChange(of: session.userID) {
+      openGroupID = nil
+      groupsPath = []
+      navigator.show([])
+    }
     .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
     .environment(\.say, SayAction(say: say))
     // The app icon's badge follows what is read here too, as the

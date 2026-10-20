@@ -35,10 +35,13 @@ enum FirstRun {
 /// はじめの設定 while it is not done and the device holds no pattern, else
 /// the app's tabs. Patterns arriving, from the questions or from an
 /// account signed in to, end it. An invitation opened meanwhile waits for
-/// the tabs, and is asked about there as any other time.
+/// the tabs, and is asked about there as any other time. While the device
+/// is still erasing after signing out or deleting, neither: nothing of the
+/// user before shows.
 struct AppRoot: View {
   @AppStorage(FirstRun.doneKey) private var done = false
   @Environment(OpenPlaceSocket.self) private var openPlace
+  @Environment(AccountSession.self) private var session
   @Fetch private var hasPatterns: Bool
   @State private var invite: OpenedInvite?
 
@@ -53,7 +56,9 @@ struct AppRoot: View {
 
   var body: some View {
     Group {
-      if showsTabs {
+      if let erasing = session.erasing {
+        ErasingScreen(erasing: erasing) { session.eraseAgain() }
+      } else if showsTabs {
         RootView(invite: $invite)
       } else {
         Onboarding()
@@ -68,6 +73,11 @@ struct AppRoot: View {
     .onChange(of: showsTabs) { _, tabs in
       if !tabs { openPlace.want(nil) }
     }
+    .onChange(of: session.erasing != nil) { _, erasing in
+      if erasing { openPlace.want(nil) }
+    }
+    // The open place's hold went with the user before's.
+    .onChange(of: session.userID) { openPlace.accountChanged() }
     .onOpenURL { url in
       if let code = openedInviteCode(of: url) {
         invite = OpenedInvite(code: code)

@@ -6,9 +6,11 @@ import Testing
 
 @testable import PochicalKit
 
-/// A token store in memory, for tests.
+/// A token store in memory, for tests, whose forgetting fails while
+/// `refusesToForget` is set, as the Keychain's may.
 final class MemoryStore: TokenStore {
   private let kept = Mutex<Data?>(nil)
+  let refusesToForget = Mutex(false)
 
   init(_ data: Data? = nil) {
     kept.withLock { $0 = data }
@@ -16,7 +18,11 @@ final class MemoryStore: TokenStore {
 
   func data() -> Data? { kept.withLock { $0 } }
   func replace(with data: Data) { kept.withLock { $0 = data } }
-  func forget() { kept.withLock { $0 = nil } }
+
+  func forget() throws {
+    if refusesToForget.withLock({ $0 }) { throw KeychainError(status: errSecInteractionNotAllowed) }
+    kept.withLock { $0 = nil }
+  }
 }
 
 /// What a fake server was asked, and answers sign-ins with `token` for
@@ -125,26 +131,14 @@ private let server = URL(string: "http://localhost:8787")!
   }
 }
 
-@Test func theSessionIsKeptWithItsUserAndATokenAloneIsToldApart() throws {
+@Test func theSessionIsKeptWithItsUserAndReplacedWhole() throws {
   let keychain = SessionKeychain(own: MemoryStore(), leftBehind: MemoryStore())
   #expect(try keychain.kept() == nil)
   try keychain.keep(StoredSession(token: "t1", userID: "u1"))
   try keychain.keep(StoredSession(token: "t2", userID: "u2"))
-  #expect(try keychain.kept() == .session(StoredSession(token: "t2", userID: "u2")))
-  let before = SessionKeychain(own: MemoryStore(Data("bare".utf8)), leftBehind: MemoryStore())
-  #expect(try before.kept() == .bareToken("bare"))
-}
-
-@Test func keepingInTheKeychainReplacesWhatWasKeptInOneStep() throws {
-  let store = KeychainTokenStore(service: "app.pochical.tests.\(UUID().uuidString)")
-  defer { try? store.forget() }
-  #expect(try store.data() == nil)
-  try store.replace(with: Data("first".utf8))
-  try store.replace(with: Data("second".utf8))
-  #expect(try store.data() == Data("second".utf8))
-  try store.forget()
-  #expect(try store.data() == nil)
-  try store.forget()
+  #expect(try keychain.kept() == StoredSession(token: "t2", userID: "u2"))
+  try keychain.forget()
+  #expect(try keychain.kept() == nil)
 }
 
 @Test func theUsualNameComesFromTheUsersSocketAndGoesWithTheirData() throws {

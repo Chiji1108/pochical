@@ -172,9 +172,10 @@ public struct GroupCalls: Sendable {
     chats = Pochical_V1_ChatServiceClient(client: protocolClient)
   }
 
-  /// The headers that say who is calling.
-  func headers() throws -> [String: [String]] {
-    try current.credentials().headers
+  /// The headers that say who is calling, once the device is signed in
+  /// (`CurrentAccount.signedIn`).
+  func headers() async throws -> [String: [String]] {
+    try await current.signedIn().headers
   }
 
   /// A link's page as the server reads it (spec/chat.md, Reading a page),
@@ -189,7 +190,7 @@ public struct GroupCalls: Sendable {
 
   /// A link preview's picture, from the device or else the server.
   public func previewImage(_ imageID: String) async throws -> Data {
-    try await ChatPhotos.fetchPreviewImage(imageID, as: current.credentials())
+    try await ChatPhotos.fetchPreviewImage(imageID, as: current.signedIn())
   }
 
   /// One of the group's chat photos, from the device or else the server;
@@ -199,7 +200,7 @@ public struct GroupCalls: Sendable {
     _ photoID: String, in groupID: String, small: Bool = false, keep: Bool = true
   ) async throws -> Data {
     try await ChatPhotos.fetch(
-      photoID, in: groupID, small: small, keep: keep, as: current.credentials())
+      photoID, in: groupID, small: small, keep: keep, as: current.signedIn())
   }
 
   /// Makes a group with the user in it, as `displayName`. `requestID` is

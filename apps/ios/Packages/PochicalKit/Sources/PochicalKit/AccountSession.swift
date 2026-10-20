@@ -27,12 +27,27 @@ import SQLiteData
     /// Switching to an account, signing out or deleting: no socket opens,
     /// and no call goes, until it is done.
     case changing
+    /// Signed out or deleted on the server, the device's data still being
+    /// erased (`erasing`): the app shows none of it, and signs in afresh
+    /// only once it is gone.
+    case erasing
+  }
+
+  /// Why the device's data is being erased, and whether a try failed.
+  public struct Erasing: Equatable, Sendable {
+    public enum Why: String, Sendable {
+      case signedOut, deleted
+    }
+
+    public let why: Why
+    public var failed = false
   }
 
   private enum State {
     case starting
     case signedIn(Credentials)
     case changing
+    case erasing
   }
 
   private var state = State.starting
@@ -42,8 +57,13 @@ import SQLiteData
     case .starting: .starting
     case .signedIn: .signedIn
     case .changing: .changing
+    case .erasing: .erasing
     }
   }
+
+  /// While erasing after signing out or deleting: why, and whether it has
+  /// failed so far, for the app to say so.
+  public private(set) var erasing: Erasing?
 
   /// The signed-in user's id, as their groups know them: known offline,
   /// as the session keeps it with its token. Nil until signed in, and from
@@ -68,6 +88,10 @@ import SQLiteData
   @ObservationIgnored private let shared: UserDefaults?
   @ObservationIgnored private var inFront = false
   @ObservationIgnored private var signingIn: Task<Void, Never>?
+  /// The stretch whose claim on the database is done.
+  @ObservationIgnored private var claimedIn: Int?
+  /// The wait before erasing is tried again, cut short by `eraseAgain`.
+  @ObservationIgnored private var backoff: Task<Void, Never>?
 
   public convenience init(database: any DatabaseWriter, server: URL = Server.url) {
     self.init(
@@ -85,7 +109,11 @@ import SQLiteData
     self.shared = shared
     userSocket = SyncClient(database: database, server: socketServer)
     places = GroupSockets(database: database, server: socketServer)
-    if case .session(let kept) = try? keychain.kept() {
+    // Cut off while erasing: the session kept, if the Keychain still has
+    // it, is the one that ended, and is never signed in as again.
+    if let why = shared?.string(forKey: Self.erasingKey).flatMap(Erasing.Why.init) {
+      beginErasing(why)
+    } else if let kept = try? keychain.kept() {
       enter(kept)
     }
   }
@@ -105,7 +133,7 @@ import SQLiteData
         await connect()
         await deleteLeftBehind()
       }
-    case .changing:
+    case .changing, .erasing:
       break
     }
   }
@@ -115,7 +143,9 @@ import SQLiteData
   public func wentToBack() async {
     inFront = false
     // Come back to the front meanwhile, the sockets stay as the front has them.
-    guard let credentials = await claimed(), !inFront else { return }
+    guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials),
+      !inFront
+    else { return }
     await userSocket.finishSending(as: credentials)
     await places.finishSending()
   }
@@ -139,7 +169,8 @@ import SQLiteData
   /// background too (as for the badge after an answer from a
   /// notification), closing again once sent if it is.
   public func catchUp(within limit: Duration) async {
-    guard let credentials = await claimed() else { return }
+    guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials)
+    else { return }
     await userSocket.start(as: credentials)
     await userSocket.catchUp(within: limit)
     if !inFront {
@@ -179,11 +210,12 @@ import SQLiteData
   /// finds it; the session ends on the server, and the device goes on as
   /// someone new, holding nothing of the user.
   public func signOut() async throws {
-    guard let credentials = await claimed() else { throw NotSignedIn() }
+    guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials)
+    else { throw NotSignedIn() }
     await userSocket.finishSending(as: credentials)
     try await change { [server] before in
       try await server.signOut(before.token)
-      return .left
+      return .left(.signedOut)
     }
   }
 
@@ -193,7 +225,7 @@ import SQLiteData
   public func deleteAccount(appleAuthorizationCode: String) async throws {
     try await change { [server] before in
       try await server.deleteAccount(before.token, appleAuthorizationCode: appleAuthorizationCode)
-      return .left
+      return .left(.deleted)
     }
   }
 
@@ -202,7 +234,7 @@ import SQLiteData
     /// Signed in to another user, the one before left behind.
     case switched(to: StoredSession)
     /// The session is over: signed out, or the account deleted.
-    case left
+    case left(Erasing.Why)
   }
 
   /// Changes who the device is, in an order a failure or the app ending at
@@ -210,9 +242,8 @@ import SQLiteData
   /// credentials ended first. A switch erases before the Keychain changes,
   /// so one that fails or is cut off before that leaves the device as the
   /// user it was, whose session still holds. Once the server has ended the
-  /// session (signed out, deleted) there is no going back: the Keychain
-  /// forgets it first, and an erase that fails, or never ran, is done again
-  /// before the next user's sockets open (`claimed`).
+  /// session (signed out, deleted) there is no going back: the device is
+  /// erasing until both the session and its data are gone (`beginErasing`).
   private func change(_ onServer: (Credentials) async throws -> Changed) async throws {
     guard case .signedIn(let before) = state else { throw NotSignedIn() }
     await leave(before)
@@ -233,18 +264,57 @@ import SQLiteData
     case .switched(let after):
       enter(after)
       Task { await deleteLeftBehind() }
-    case .left:
-      // Signed in afresh, never as the session that ended.
-      let forgotten = Result { try keychain.forget() }
-      let erased = await Result { try await erase() }
+    case .left(let why):
+      beginErasing(why)
+    }
+  }
+
+  /// Where the device notes it is erasing, as soon as the server has ended
+  /// the session and until the erasing is done, so an app cut off meanwhile
+  /// goes on erasing as it starts, never as the session that ended.
+  static let erasingKey = "erasingAfter"
+
+  /// Erasing after the session ended on the server: the session forgotten
+  /// and the data erased, tried again after a wait that doubles until both
+  /// are, and only then a new session signed in, as a new install's.
+  private func beginErasing(_ why: Erasing.Why) {
+    shared?.set(why.rawValue, forKey: Self.erasingKey)
+    current.begin(nil)
+    state = .erasing
+    erasing = Erasing(why: why)
+    userID = nil
+    shared?.removeObject(forKey: SignedInUser.key)
+    Task {
+      var wait = Duration.seconds(1)
+      while true {
+        do {
+          try keychain.forget()
+          try await erase()
+          break
+        } catch {
+          Logger.account.error("Erasing the device failed: \(error)")
+          erasing?.failed = true
+          let waiting = Task { [wait] in _ = try? await Task.sleep(for: wait) }
+          backoff = waiting
+          await waiting.value
+          wait = min(wait * 2, Self.longestEraseWait)
+        }
+      }
+      shared?.removeObject(forKey: Self.erasingKey)
+      erasing = nil
       state = .starting
       if inFront {
         signInAnew()
       }
-      try forgotten.get()
-      try erased.get()
     }
   }
+
+  /// 再試行: erasing is tried again now rather than after the wait.
+  public func eraseAgain() {
+    backoff?.cancel()
+  }
+
+  static let longestEraseWait = Duration.seconds(30)
 
   /// Everything the device holds of the user gone, the database no one's.
   private func erase() async throws {
@@ -279,20 +349,23 @@ import SQLiteData
   /// The sockets connect as the user now: the places' held, and the user's
   /// own while the app is in front.
   private func connect() async {
-    guard let credentials = await claimed() else { return }
+    guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials)
+    else { return }
     await places.use(credentials)
     if inFront {
       await userSocket.start(as: credentials)
     }
   }
 
-  /// The credentials now, once the database is the user's: claimed if it
-  /// is no one's; nil while not signed in. One another user left (a sign
-  /// out or deletion whose erase failed or was cut off, or a session the
-  /// Keychain no longer has) is erased first, as no session on the device
-  /// can send what it holds any more and the server keeps the rest.
-  private func claimed() async -> Credentials? {
-    guard case .signedIn(let credentials) = state else { return nil }
+  /// `credentials` once the database is their user's, claimed once in each
+  /// stretch: if it is no one's, it becomes theirs; one another user left
+  /// (a session the Keychain no longer has, as after a restore without
+  /// it) is erased first, as no session on the device can send what it
+  /// holds any more. Nil once the account has changed.
+  private func claimed(_ credentials: Credentials) async -> Credentials? {
+    if claimedIn == credentials.generation {
+      return credentials.isCurrent ? credentials : nil
+    }
     // Claimed only in the stretch it is for: a claim coming after the
     // account changed, and its data was erased, would give the next
     // user's database to the one before.
@@ -305,14 +378,16 @@ import SQLiteData
     }
     switch claim {
     case .theirs?:
-      return credentials
+      break
     case .erased?:
       LocalData.eraseFiles()
       await onErase()
-      return credentials.isCurrent ? credentials : nil
     case .stale?, nil:
       return nil
     }
+    guard credentials.isCurrent else { return nil }
+    claimedIn = credentials.generation
+    return credentials
   }
 
   private enum Claim {
@@ -323,8 +398,7 @@ import SQLiteData
     case stale
   }
 
-  /// Signs in anonymously, or with a token kept before its user was, once
-  /// at a time, while the device has no session.
+  /// Signs in anonymously, once at a time, while the device has no session.
   private func signInAnew() {
     guard signingIn == nil else { return }
     signingIn = Task {
@@ -340,18 +414,12 @@ import SQLiteData
   }
 
   private func established() async throws -> StoredSession {
-    switch try keychain.kept() {
-    case .session(let kept):
+    if let kept = try keychain.kept() {
       return kept
-    case .bareToken(let token):
-      let kept = StoredSession(token: token, userID: try await server.me(token).userID)
-      try keychain.keep(kept)
-      return kept
-    case nil:
-      let made = try await server.signInAnonymously()
-      try keychain.keep(made)
-      return made
     }
+    let made = try await server.signInAnonymously()
+    try keychain.keep(made)
+    return made
   }
 
   /// Deletes the user a switch left behind, its session kept in the

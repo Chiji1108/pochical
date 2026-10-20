@@ -183,7 +183,7 @@ extension GroupCalls {
   public func sendMarkPhoto(_ photoID: String) async throws {
     do {
       try await ChatPhotos.uploadHeld(
-        photoID, in: ChatPhotos.mine, as: current.credentials())
+        photoID, in: ChatPhotos.mine, as: current.signedIn())
     } catch ChatPhotos.UploadError.gone {
       throw MarkPhotoGone()
     }
@@ -193,7 +193,7 @@ extension GroupCalls {
   /// (`ChatPhotos.mine`), and gives the id to name it by.
   public func sendPhoto(_ jpeg: Data, to groupID: String) async throws -> String {
     let photoID = UUID().uuidString.lowercased()
-    try await ChatPhotos.send(jpeg, as: photoID, in: groupID, as: current.credentials())
+    try await ChatPhotos.send(jpeg, as: photoID, in: groupID, as: current.signedIn())
     return photoID
   }
 }
