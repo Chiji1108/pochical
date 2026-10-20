@@ -58,9 +58,11 @@ struct GroupShiftsPage: View {
   @State private var monthInSight = Day.today.firstOfMonth
   /// Whether today's day or week is in sight; 今日 shows while it isn't.
   @State private var todayInSight = true
-  /// How far a big group's 一覧 is scrolled sideways, and how wide its
-  /// view is, for the pinned columns and the months' headings.
-  @State private var scrollX: CGFloat = 0
+  /// How far a big group's 一覧 is scrolled sideways, for the faces over
+  /// it; whether it is, for the edge beside its pinned columns; and how
+  /// wide its view is, for the months' headings.
+  @State private var sidewaysOffset = SidewaysOffset()
+  @State private var scrolledSideways = false
   @State private var viewWidth: CGFloat = 0
   /// Where 月を選ぶ or 今日 asked the list to go.
   @State private var goal: ListGoal?
@@ -125,10 +127,8 @@ struct GroupShiftsPage: View {
       }
       switch layout {
       case .days:
-        GroupDayHeader(
-          members: tableMembers, groupID: group.id, scrollX: wide ? scrollX : nil
-        )
-        .padding(.horizontal, 16)
+        GroupDayHeader(members: tableMembers, groupID: group.id, offset: wide ? sidewaysOffset : nil)
+          .padding(.horizontal, 16)
       // Over the blocks' columns, which keep room at their trailing end.
       case .weeks:
         GroupWeekdays().padding(.leading, 16).padding(.trailing, 20).padding(.bottom, 6)
@@ -268,6 +268,7 @@ struct GroupShiftsPage: View {
   private func list(months: [Day], opening: Day) -> some View {
     ScrollViewReader { scroll in
       let sideways = wide && layout == .days
+      let pinning: Sideways = sideways ? .scrolls(edged: scrolledSideways) : .fits
       ScrollView(sideways ? [.vertical, .horizontal] : .vertical) {
         LazyVStack(alignment: .leading, spacing: layout == .weeks ? 12 : 0) {
           ForEach(months, id: \.self) { month in
@@ -277,7 +278,7 @@ struct GroupShiftsPage: View {
               // As wide as the view, kept at its left as the rows scroll
               // sideways.
               .frame(width: sideways ? max(viewWidth - 32, 0) : nil, alignment: .leading)
-              .offset(x: sideways ? scrollX : 0)
+              .pinnedSideways()
               // Not a day: the month in sight is read off the days.
               .id("heading-\(month.key)")
             if layout == .days {
@@ -285,7 +286,7 @@ struct GroupShiftsPage: View {
                 GroupDayRow(
                   day: day, members: tableMembers, picked: day == picked,
                   onPick: pickDay,
-                  pinX: sideways ? scrollX : nil, drawing: drawing
+                  sideways: pinning, drawing: drawing
                 )
                 .equatable()
                 .id(day)
@@ -323,12 +324,17 @@ struct GroupShiftsPage: View {
         .padding(.horizontal, 16)
         .padding(.bottom, 24)
       }
-      // A big group's 一覧: how far it is scrolled sideways, and its width.
-      .onScrollGeometryChange(for: CGSize.self) { geometry in
-        CGSize(width: max(geometry.contentOffset.x, 0), height: geometry.containerSize.width)
-      } action: { _, scrolled in
-        scrollX = scrolled.width
-        viewWidth = scrolled.height
+      // A big group's 一覧: how far it is scrolled sideways, read by the
+      // faces alone, so each frame of a scroll makes only them again;
+      // whether it is, and its width, which change seldom.
+      .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x } action: {
+        sidewaysOffset.x = $1
+      }
+      .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.x > 0 } action: {
+        scrolledSideways = $1
+      }
+      .onScrollGeometryChange(for: CGFloat.self) { $0.containerSize.width } action: {
+        viewWidth = $1
       }
       .scrollIndicators(.hidden, axes: .horizontal)
       .onScrollTargetVisibilityChange(idType: Day.self, threshold: 0.5) { shown in
