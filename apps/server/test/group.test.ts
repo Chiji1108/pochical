@@ -344,10 +344,6 @@ describe("who is in a group, on members' devices", () => {
     const maker = await signInAnonymously();
     const phone = await device(maker);
     const { groupId, inviteCode } = await createGroup(maker);
-    // The name they gave, with no usual one yet, becomes their usual one.
-    expect(changesIn(await phone.frames.next())).toMatchObject([
-      { kind: { case: "profile", value: { name: "さくら" } } },
-    ]);
     expect(changesIn(await phone.frames.next())).toMatchObject([
       {
         kind: {
@@ -356,6 +352,10 @@ describe("who is in a group, on members' devices", () => {
         },
       },
     ]);
+    // The name they gave, with no usual one yet, becomes their usual one.
+    expect(changesIn(await phone.frames.next())).toMatchObject([
+      { kind: { case: "profile", value: { name: "さくら" } } },
+    ]);
 
     // A device opened later catches up on it, once however often they join.
     const guest = await signInAnonymously();
@@ -363,8 +363,8 @@ describe("who is in a group, on members' devices", () => {
     await join(inviteCode, guest);
     const tablet = await device(guest);
     expect(changesIn(await tablet.frames.next())).toMatchObject([
-      { kind: { case: "profile" } },
       { kind: { case: "membership", value: { groupId } } },
+      { kind: { case: "profile" } },
     ]);
     await expect(settled(tablet.socket, tablet.frames)).resolves.toMatchObject({
       kind: { case: "pong" },
@@ -526,18 +526,6 @@ describe("changing a group and leaving it", () => {
       { kind: { value: { left: false, userId: makerId } } },
       { kind: { value: { left: false } } },
     ]);
-  });
-});
-
-describe("finishing a leaving", () => {
-  it("takes the member out of the group on a retry after the group's step failed", async () => {
-    const { groupId, guest, inviteCode } = await pair();
-    // As if the first try stopped after the user's own step.
-    await env.USERS.getByName(await userIdOf(guest)).removeMembership(groupId);
-    await call("GroupService/LeaveGroup", { groupId }, guest);
-    await expect(previewOf(inviteCode)).resolves.toMatchObject({
-      memberCount: 1,
-    });
   });
 });
 

@@ -239,6 +239,13 @@
       "when": 1792470246099,
       "tag": "0033_group-photos",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1792481466578,
+      "tag": "0034_membership_outbox",
+      "breakpoints": true
     }
   ]
 }

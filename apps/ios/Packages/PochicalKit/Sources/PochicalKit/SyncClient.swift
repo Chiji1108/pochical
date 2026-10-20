@@ -15,7 +15,8 @@ import SQLiteData
 /// group's values the same way and sends the group's chat outbox. Each
 /// keeps its socket alive and reconnects after a random wait that doubles
 /// with each failed try, at once when the network comes back; never after
-/// a 401 or an update the server asks for.
+/// a 401 or an update the server asks for, nor, until a group's is started
+/// again, once the user is not in the group.
 public actor SyncClient {
   /// Whose DO the socket reaches.
   public enum Peer: Sendable, Equatable {
@@ -41,8 +42,8 @@ public actor SyncClient {
     }
   }
 
-  /// Why it stopped trying, for good until the app is signed in again or
-  /// updated.
+  /// Why it stopped trying: for good until the app is signed in again or
+  /// updated, or, not in the group, until it is started again.
   public enum Stop: Error, Sendable {
     /// The server does not know the session: the user signed out or their
     /// account was deleted elsewhere. Nothing is cleared and no new user
@@ -50,6 +51,11 @@ public actor SyncClient {
     case signedOut
     /// The server needs a newer app.
     case protocolTooOld
+    /// The user is not in the group: taken out, left on another device, or
+    /// the group gone (403, or closed with `SyncSocket.notMemberCloseCode`).
+    /// Their own socket tells the device so; opening the group again tries
+    /// once more, as after joining it again.
+    case notMember
   }
 
   /// How many times a photo is tried before its line is marked unsent:
@@ -134,6 +140,9 @@ public actor SyncClient {
   public func start() {
     finishing?.cancel()
     finishing = nil
+    if stopped == .notMember {
+      stopped = nil
+    }
     guard stopped == nil, !(running != nil && connected) else { return }
     // A socket still opening is closed too: cancelling its task does not
     // end a send or receive waiting on it, and it would stay open beside
@@ -245,7 +254,7 @@ public actor SyncClient {
   }
 
   private func networkCameBack() {
-    if running != nil, !connected {
+    if stopped == nil, running != nil, !connected {
       start()
     }
   }
@@ -675,9 +684,16 @@ public actor SyncClient {
     }
   }
 
-  /// Why the server would not open the socket, when it said.
+  /// Why the server would not open the socket, or closed it, when it said.
   private static func refusal(of socket: URLSessionWebSocketTask) -> Stop? {
-    (socket.response as? HTTPURLResponse)?.statusCode == 401 ? .signedOut : nil
+    if socket.closeCode.rawValue == SyncSocket.notMemberCloseCode {
+      return .notMember
+    }
+    switch (socket.response as? HTTPURLResponse)?.statusCode {
+    case 401: return .signedOut
+    case 403: return .notMember
+    default: return nil
+    }
   }
 
   static func nowMs() -> Int64 {

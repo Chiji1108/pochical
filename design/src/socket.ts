@@ -16,6 +16,11 @@ export const socketRules = {
   // How long, in milliseconds, a device waits for keepaliveReply before it
   // takes the socket for dead, closes it and reconnects.
   keepaliveWithinMs: 10_000,
+  // The close code a group's socket closes with once its user is not in
+  // the group (removed, left on another device, or the group gone), as the
+  // socket asked for by someone not in it is refused with 403: the device
+  // stops trying until it is opened again.
+  notMemberCloseCode: 4403,
   // The most a device waits before its first try to reconnect, in
   // milliseconds; twice as long each try that fails in a row, up to
   // reconnectMostMs. Each wait is drawn at random up to that most, so

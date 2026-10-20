@@ -14,9 +14,10 @@ export const getSupportChat = createServerFn()
   );
 
 export const answerSupport = createServerFn({ method: "POST" })
-  .validator((answer: { userId: string; text: string }) => answer)
+  .validator((answer: { userId: string; text: string; opId: string }) => answer)
   .handler(
-    async ({ data }) => await env.SERVER.answerSupport(data.userId, data.text)
+    async ({ data }) =>
+      await env.SERVER.answerSupport(data.userId, data.text, data.opId)
   );
 
 export const getReports = createServerFn().handler(

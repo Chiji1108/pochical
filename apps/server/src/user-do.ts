@@ -70,6 +70,7 @@ import {
   coworkers,
   dayFields,
   groupRequests,
+  knownGroups,
   memberships,
   patternOrder,
   patterns,
@@ -115,6 +116,22 @@ const PUSH_RETRIES_MOST = 30;
 
 // How many pushes to the group have failed in a row, in the DO's storage.
 const pushFailuresKey = (groupId: string): string => `pushFailures:${groupId}`;
+
+// Set in the DO's storage once the account is deleted, so news a group was
+// still telling it writes nothing.
+const ERASED_KEY = "erased";
+
+/**
+ * What a group tells a user's DO of their place in it (membership_outbox
+ * in the Group DO): in it, with the group's name and mark, or out of it
+ * (null), as of the group's `cursor`.
+ */
+export type MembershipNews = {
+  cursor: number;
+  group: GroupProfile | null;
+};
+
+type MembershipRow = typeof memberships.$inferSelect;
 
 /** A chat's unread lines for the user, and how many mention them. */
 export type Unread = { count: number; mentions: number };
@@ -199,7 +216,8 @@ export class UserDO extends DurableObject<Env> {
    * The id of the group the user's request makes: a new one the first
    * time the request id comes, the same one each time after, so a
    * repeated CreateGroup sets up the same group. The object takes one call
-   * at a time, so two tries at once get the same id.
+   * at a time, so two tries at once get the same id. Known from then on
+   * (`noteGroup`).
    */
   groupIdFor(requestId: string): string {
     const made = this.groupOf(requestId);
@@ -207,8 +225,20 @@ export class UserDO extends DurableObject<Env> {
       return made;
     }
     const groupId = crypto.randomUUID();
-    this.db.insert(groupRequests).values({ groupId, requestId }).run();
+    this.ctx.storage.transactionSync(() => {
+      this.db.insert(groupRequests).values({ groupId, requestId }).run();
+      this.noteGroup(groupId);
+    });
     return groupId;
+  }
+
+  /**
+   * Notes a group the user is about to join, before the group hears of
+   * them, so deleting the account reaches it whatever happens after
+   * (`groupsEver`).
+   */
+  noteGroup(groupId: string): void {
+    this.db.insert(knownGroups).values({ groupId }).onConflictDoNothing().run();
   }
 
   /**
@@ -234,40 +264,73 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Written as the user joins a group or makes one, with its name and mark
-   * for their devices' list of groups, which hear of it at once; their
-   * shared days and patterns then start on their way to it. Joining a
-   * group they are in changes nothing.
+   * What a group tells of the user's place in it, the group deciding: in
+   * it, with its name and mark for their devices' list of groups, or out
+   * of it. Their devices hear of it at once, and joining starts their
+   * shared days and patterns on their way to the group, which also learns
+   * whom they have blocked. News no newer than the latest taken from the
+   * group, by its cursor, changes nothing, so it may come twice or late;
+   * a deleted account takes none.
    */
-  addMembership(groupId: string, group: GroupProfile): void {
-    // None when the user was in the group already.
-    const added = this.ctx.storage.transactionSync(() => {
-      if (this.isMember(groupId)) {
+  takeMembership(groupId: string, news: MembershipNews): void {
+    if (this.ctx.storage.kv.get(ERASED_KEY) === true) {
+      return;
+    }
+    const taken = this.ctx.storage.transactionSync(() => {
+      const known = this.db
+        .select({ newsCursor: knownGroups.newsCursor })
+        .from(knownGroups)
+        .where(eq(knownGroups.groupId, groupId))
+        .get();
+      if (known !== undefined && known.newsCursor >= news.cursor) {
         return undefined;
       }
-      // A group left before starts again, its values pushed whole.
-      const row = {
-        cursor: this.head() + 1,
-        ...markColumns(group.mark),
-        groupId,
-        joinedAt: new Date(),
-        leftAt: null,
-        name: group.name,
-        pushedCursor: 0,
-      };
-      return this.db
-        .insert(memberships)
-        .values(row)
-        .onConflictDoUpdate({ set: row, target: memberships.groupId })
-        .returning()
-        .get();
+      this.db
+        .insert(knownGroups)
+        .values({ groupId, newsCursor: news.cursor })
+        .onConflictDoUpdate({
+          set: { newsCursor: news.cursor },
+          target: knownGroups.groupId,
+        })
+        .run();
+      return news.group === null
+        ? this.leaveGroup(groupId)
+        : this.enterGroup(groupId, news.group);
     });
-    if (added !== undefined) {
-      broadcastChanges(this.ctx, [membershipChange(added)]);
-      // The group learns whom the user has blocked, as the others did.
-      this.ctx.waitUntil(this.tellGroup(groupId));
+    if (taken === undefined) {
+      return;
     }
-    this.schedulePush();
+    broadcastChanges(this.ctx, [membershipChange(taken.row)]);
+    if (taken.joined) {
+      this.ctx.waitUntil(this.tellGroup(groupId));
+      this.schedulePush();
+    }
+  }
+
+  /**
+   * The user in the group with its name and mark as told, at the next
+   * cursor: a group left before starts again, its values pushed whole.
+   */
+  private enterGroup(
+    groupId: string,
+    group: GroupProfile
+  ): { row: MembershipRow; joined: boolean } {
+    const joined = !this.isMember(groupId);
+    const set = {
+      cursor: this.head() + 1,
+      ...markColumns(group.mark),
+      name: group.name,
+      ...(joined
+        ? { joinedAt: new Date(), leftAt: null, pushedCursor: 0 }
+        : {}),
+    };
+    const row = this.db
+      .insert(memberships)
+      .values({ groupId, joinedAt: new Date(), ...set })
+      .onConflictDoUpdate({ set, target: memberships.groupId })
+      .returning()
+      .get();
+    return { joined, row };
   }
 
   /**
@@ -380,101 +443,74 @@ export class UserDO extends DurableObject<Env> {
     return { coworkers: named, groups, repeating, shiftDays };
   }
 
-  /** Every group the user was ever in, left ones too. */
+  /**
+   * Every group the user ever asked to make or join, or was told of: the
+   * groups deleting the account goes through. Each of the three keeps
+   * some: a group noted or told of (known_groups), one listed
+   * (memberships, kept from before known_groups too), and one asked to be
+   * made (group_requests).
+   */
   groupsEver(): string[] {
-    return this.db
-      .select({ groupId: memberships.groupId })
-      .from(memberships)
-      .all()
-      .map(({ groupId }) => groupId);
+    const ids = [
+      ...this.db.select({ id: knownGroups.groupId }).from(knownGroups).all(),
+      ...this.db.select({ id: memberships.groupId }).from(memberships).all(),
+      ...this.db
+        .select({ id: groupRequests.groupId })
+        .from(groupRequests)
+        .all(),
+    ].map(({ id }) => id);
+    return [...new Set(ids)];
+  }
+
+  /** Whether the user ever asked to make or join the group (`groupsEver`). */
+  knowsGroup(groupId: string): boolean {
+    return this.groupsEver().includes(groupId);
   }
 
   /**
    * The user's account deleted (spec/sync-protocol.md, Deleting an
    * account): every socket closed, and everything kept here gone, their
-   * days, patterns, coworkers, groups and push tokens with it.
+   * days, patterns, coworkers, groups and push tokens with it; news a
+   * group still tells of them is taken no more. Nothing reaches it until
+   * its tables are back.
    */
   async erase(): Promise<void> {
-    for (const socket of this.ctx.getWebSockets()) {
-      socket.close(1000, "The account is deleted");
-    }
-    await this.ctx.storage.deleteAlarm();
-    await this.ctx.storage.deleteAll();
-    // Empty, not broken: its tables again, for whatever still asks.
-    await migrate(this.db, migrations);
-  }
-
-  /**
-   * Whether the user is in the group or was once, so a leaving whose
-   * second step failed can be finished.
-   */
-  wasMember(groupId: string): boolean {
-    return (
-      this.db
-        .select({ groupId: memberships.groupId })
-        .from(memberships)
-        .where(eq(memberships.groupId, groupId))
-        .get() !== undefined
-    );
-  }
-
-  /**
-   * The group's new name and mark, for the user's list of groups, which
-   * their devices hear of at once. A group they are not in changes nothing.
-   */
-  renameMembership(groupId: string, group: GroupProfile): void {
-    const renamed = this.ctx.storage.transactionSync(() => {
-      if (!this.isMember(groupId)) {
-        return undefined;
+    await this.ctx.blockConcurrencyWhile(async () => {
+      for (const socket of this.ctx.getWebSockets()) {
+        socket.close(1000, "The account is deleted");
       }
-      return this.db
-        .update(memberships)
-        .set({
-          cursor: this.head() + 1,
-          name: group.name,
-          ...markColumns(group.mark),
-        })
-        .where(eq(memberships.groupId, groupId))
-        .returning()
-        .get();
+      await this.ctx.storage.deleteAlarm();
+      await this.ctx.storage.deleteAll();
+      // Empty, not broken: its tables again, for whatever still asks.
+      await migrate(this.db, migrations);
+      this.ctx.storage.kv.put(ERASED_KEY, true);
     });
-    if (renamed !== undefined) {
-      broadcastChanges(this.ctx, [membershipChange(renamed)]);
-    }
   }
 
   /**
-   * The user left the group: it stays as left, at the next cursor, so
-   * their devices catching up hear of it, and nothing more is pushed to it.
-   * Its unread counts go.
+   * The user out of the group: it stays as left, at the next cursor, so
+   * their devices catching up hear of it, and nothing more is pushed to
+   * it. Its unread counts go. None when they were not in it.
    */
-  removeMembership(groupId: string): void {
-    const left = this.ctx.storage.transactionSync(() => {
-      if (!this.isMember(groupId)) {
-        return undefined;
-      }
-      // Taken before its counts go, so the head never goes back.
-      const cursor = this.head() + 1;
-      // Its counts go with it: devices drop them as they hear of the
-      // leaving, and joining again starts at the chats' end.
-      this.db
-        .delete(unreadCounts)
-        .where(eq(unreadCounts.groupId, groupId))
-        .run();
-      this.db
-        .delete(chatNotified)
-        .where(eq(chatNotified.groupId, groupId))
-        .run();
-      return this.db
-        .update(memberships)
-        .set({ cursor, leftAt: new Date() })
-        .where(eq(memberships.groupId, groupId))
-        .returning()
-        .get();
-    });
-    if (left !== undefined) {
-      broadcastChanges(this.ctx, [membershipChange(left)]);
+  private leaveGroup(
+    groupId: string
+  ): { row: MembershipRow; joined: false } | undefined {
+    if (!this.isMember(groupId)) {
+      return undefined;
     }
+    // Taken before its counts go, so the head never goes back.
+    const cursor = this.head() + 1;
+    // Its counts go with it: devices drop them as they hear of the
+    // leaving, and joining again starts at the chats' end.
+    this.db.delete(unreadCounts).where(eq(unreadCounts.groupId, groupId)).run();
+    this.db.delete(chatNotified).where(eq(chatNotified.groupId, groupId)).run();
+    const row = this.db
+      .update(memberships)
+      .set({ cursor, leftAt: new Date() })
+      .where(eq(memberships.groupId, groupId))
+      .returning()
+      .get();
+    return row === undefined ? undefined : { joined: false, row };
   }
 
   /**

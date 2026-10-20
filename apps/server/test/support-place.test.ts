@@ -267,7 +267,11 @@ describe("the chat with Pochical's people", () => {
     const phone = await syncSocket("/v1/me/socket", token);
     const { frames } = await supportSocket(token);
     await frames.next();
-    await exports.AdminEntrypoint.answerSupport(userId, "どうしましたか");
+    await exports.AdminEntrypoint.answerSupport(
+      userId,
+      "どうしましたか",
+      crypto.randomUUID()
+    );
     const counted = changesIn(await phone.frames.next());
     expect(counted).toMatchObject([
       {
