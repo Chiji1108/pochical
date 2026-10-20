@@ -41,6 +41,12 @@ export const chatRules = {
   // The room between one writer's lines in a run, in points: close, so a
   // run reads as one turn, as iMessage and LINE draw them.
   lineGap: 4,
+  // How long, in milliseconds, the lines take to move as one comes in at
+  // the foot or changes height (a reaction, an edit, a link's page come
+  // later, 続きを読む): a spring without bounce settling in that time, the
+  // system's own for a list's changes (UIKit's collection view settles its
+  // updates in 0.5 s), so the lines move alike whatever changed them.
+  lineMoveMs: 500,
   // The width over height a link preview's picture is cropped to, the
   // size pages give their og:image.
   linkPreviewAspect: 1.91,

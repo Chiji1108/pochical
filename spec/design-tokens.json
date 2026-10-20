@@ -12,6 +12,7 @@
     "largeEmojiMax": 3,
     "largeEmojiSize": 48,
     "lineGap": 4,
+    "lineMoveMs": 500,
     "linkPreviewAspect": 1.91,
     "linkPreviewSettleMs": 400,
     "longPressMs": 250,

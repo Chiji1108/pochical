@@ -595,27 +595,70 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       return true
     }
     // A page coming in above goes in at once, the lines seen held where
-    // they are; lines coming at the foot come in moving, or with motion
-    // reduced fade in where they go, the lines put there at once.
+    // they are; lines coming at the foot or changing height move, or with
+    // motion reduced (lines coming in fading in where they go) are put
+    // there at once, and so are all of them drawn anew in another look.
     let earlier = cameAbove(old, in: new)
-    let animated = new != old && !earlier && !rows.reduceMotion && !userScrolling
+    let animated = !earlier && !rows.restyled && !rows.reduceMotion && !userScrolling
     let fading = new != old && !earlier && rows.reduceMotion ? cameBelow(old, in: new) : []
     updating = Updating(risingIn: animated ? cameBelow(old, in: new) : [])
-    source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
-      [weak self] in
+    let held = heldTop(among: redrawn)
+    let update = { [weak self] in
       guard let self else { return }
-      let next = updating?.next
-      updating = nil
-      if case .on(let anchor) = hold, redrawn.contains(anchor.id), !userScrolling {
-        put(anchor)
+      source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
+        [weak self] in
+        guard let self else { return }
+        let next = updating?.next
+        updating = nil
+        // The lines waiting go in next; changing none, these have landed.
+        if let next, setLines(next) { return }
+        landed()
+        // Once at the foot, where they are seen.
+        fadeIn(fading)
       }
-      // The lines waiting go in next; changing none, these have landed.
-      if let next, setLines(next) { return }
-      landed()
-      // Once at the foot, where they are seen.
-      fadeIn(fading)
+      keep(held)
+    }
+    // In one animation of the lines' own, however they changed: lines
+    // coming in, and lines growing or shrinking in place (a reaction, an
+    // edit, a link's page, 続きを読む), the lines over them moving with
+    // them (keepContentOffsetAtBottomOnBatchUpdates). The batch update takes
+    // its timing from an animation by duration around it; around a spring
+    // by perceived duration (springDuration:) it keeps UIKit's own.
+    if animated {
+      UIView.animate(
+        withDuration: Double(Chat.lineMoveMs) / 1000, delay: 0, usingSpringWithDamping: 1,
+        initialSpringVelocity: 0, options: .allowUserInteraction, animations: update)
+    } else {
+      update()
     }
     return true
+  }
+
+  /// The item the lines are on, where its top stands among the lines seen,
+  /// as it is drawn again: unless they follow the latest, whose foot they
+  /// keep instead (keepContentOffsetAtBottomOnBatchUpdates).
+  private func heldTop(among redrawn: [String]) -> (id: String, top: CGFloat)? {
+    guard case .on(let anchor) = hold, !following, !userScrolling, redrawn.contains(anchor.id),
+      let index = ids.firstIndex(of: anchor.id),
+      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
+    else { return nil }
+    return (anchor.id, frame.minY - lines.contentOffset.y)
+  }
+
+  /// Puts the lines where the update leaves them, in its own animation if
+  /// it has one: the item they are on back where its top stood, as it grows
+  /// or shrinks, by the scroll's difference alone; else no further than
+  /// their end. Shrunk at their foot with no animation (motion reduced),
+  /// they would stand past it, and the scroll view glide them back.
+  private func keep(_ held: (id: String, top: CGFloat)?) {
+    guard !userScrolling else { return }
+    guard let held, let index = ids.firstIndex(of: held.id),
+      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
+    else {
+      if lines.contentOffset.y > highest { lines.contentOffset.y = highest }
+      return
+    }
+    lines.contentOffset.y = min(highest, max(lowest, frame.minY - held.top))
   }
 
   /// Lines new to `new` stand above the first line it keeps from `old`:
@@ -1345,6 +1388,11 @@ private final class LineCell: UICollectionViewCell {
     // The cell itself: a content configuration puts in a content view of
     // its own, filling the cell.
     space.view = self
+    // Its line drawn again taller is laid out at once at its new height,
+    // the cell growing to it in the lines' animation: what the line gains
+    // (a reaction, a link's page, the words past 続きを読む) shows as the
+    // cell grows, never over the line next to it first.
+    clipsToBounds = true
   }
 
   @available(*, unavailable)
