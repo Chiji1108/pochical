@@ -177,12 +177,12 @@ struct Account: AccountServer {
   let send: Send
   let users: Pochical_V1_UserServiceClient
 
-  init(server: URL = Server.url, send: @escaping Send = { try await URLSession.shared.data(for: $0) }) {
+  init(server: URL = Server.url, send: @escaping Send = { try await uncached.data(for: $0) }) {
     self.server = server
     self.send = send
     users = Pochical_V1_UserServiceClient(
       client: ProtocolClient(
-        httpClient: URLSessionHTTPClient(),
+        httpClient: URLSessionHTTPClient(configuration: uncachedConfiguration),
         config: ProtocolClientConfig(
           host: server.absoluteString, networkProtocol: .connect, codec: ProtoCodec())))
   }
@@ -294,6 +294,18 @@ struct Account: AccountServer {
     let user: User
   }
 }
+
+/// What calls to the server go through: kept nowhere, as their answers are
+/// the user's (a sign-in's carries the session's token), which the system's
+/// URL cache would otherwise keep on the disk past the account.
+var uncachedConfiguration: URLSessionConfiguration {
+  let configuration = URLSessionConfiguration.default
+  configuration.urlCache = nil
+  configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+  return configuration
+}
+
+private let uncached = URLSession(configuration: uncachedConfiguration)
 
 /// Signing in was refused or answered without a session; `status` is the
 /// HTTP status, as 429 when too many sign-ins came from one address.

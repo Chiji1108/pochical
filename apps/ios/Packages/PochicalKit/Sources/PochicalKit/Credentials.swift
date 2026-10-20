@@ -88,9 +88,6 @@ public final class CurrentAccount: Sendable {
   /// with the account, and the system's cache would keep another copy of
   /// them beyond it.
   private static func contentSession() -> URLSession {
-    let configuration = URLSessionConfiguration.default
-    configuration.urlCache = nil
-    configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-    return URLSession(configuration: configuration)
+    URLSession(configuration: uncachedConfiguration)
   }
 }

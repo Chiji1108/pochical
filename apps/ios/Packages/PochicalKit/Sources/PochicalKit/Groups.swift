@@ -164,7 +164,7 @@ public struct GroupCalls: Sendable {
   public init(current: CurrentAccount, server: URL = Server.url) {
     self.current = current
     let protocolClient = ProtocolClient(
-      httpClient: URLSessionHTTPClient(),
+      httpClient: URLSessionHTTPClient(configuration: uncachedConfiguration),
       config: ProtocolClientConfig(
         host: server.absoluteString, networkProtocol: .connect, codec: ProtoCodec()))
     client = Pochical_V1_GroupServiceClient(client: protocolClient)
