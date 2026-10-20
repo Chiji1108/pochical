@@ -1649,8 +1649,7 @@ struct ChatScreen: View {
   /// Pins a line for everyone, or takes its pin off, and says what
   /// happened, the oldest pin making room for a new one by name.
   private func pin(_ seq: Int64, on: Bool) {
-    let current = chat.state.pins.map { String($0.seq) }
-    let dropped = on ? pinStep(current, pin: String(seq)).dropped : nil
+    let dropped = on ? pinStep(chat.state.pins.map(\.seq), pin: seq).dropped : nil
     var pin = Pochical_V1_ChatPin()
     pin.threadID = threadID
     pin.seq = UInt64(seq)

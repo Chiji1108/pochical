@@ -912,7 +912,7 @@ extension Chats {
     let thread = ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
     let unpinned: Int64 = 0
     var pinned = try thread.where { $0.pinnedOrder > unpinned && !$0.unsent }
-      .order { $0.pinnedOrder.desc() }.select(\.seq).fetchAll(db).map { String($0) }
+      .order { $0.pinnedOrder.desc() }.select(\.seq).fetchAll(db)
     let (waiting, failsAt) = try waitingLines(of: threadID, in: groupID, now: now, db: db)
     var ownRead: Int64 = 0
     // The member's waiting edits to each line, in the order made.
@@ -923,23 +923,23 @@ extension Chats {
         edits[Int64(change.seq), default: []].append(.change(change))
       case .unsend(let unsend) where unsend.threadID == threadID:
         edits[Int64(unsend.seq), default: []].append(.unsend(unsend))
-        pinned = pinStep(pinned, unsend: String(unsend.seq)).pins
+        pinned = pinStep(pinned, unsend: Int64(unsend.seq)).pins
       case .recall(let recall) where recall.threadID == threadID:
         // Taken back by its send's op_id, should the line have come.
         guard
           let seq = try thread.where({ $0.opID.eq(recall.sendOpID) }).select(\.seq).fetchOne(db)
         else { break }
         edits[seq, default: []].append(.recall(recall))
-        pinned = pinStep(pinned, unsend: String(seq)).pins
+        pinned = pinStep(pinned, unsend: seq).pins
       case .pin(let pin) where pin.threadID == threadID:
-        let id = String(pin.seq)
-        pinned = (pin.on ? pinStep(pinned, pin: id) : pinStep(pinned, unpin: id)).pins
+        let seq = Int64(pin.seq)
+        pinned = (pin.on ? pinStep(pinned, pin: seq) : pinStep(pinned, unpin: seq)).pins
       case .vote(let vote) where vote.threadID == threadID:
         edits[Int64(vote.seq), default: []].append(.vote(vote))
       case .decide(let decide) where decide.threadID == threadID:
         edits[Int64(decide.seq), default: []].append(.decide(decide))
         // Settling pins the poll (spec/vectors/chat.json, pins).
-        pinned = pinStep(pinned, pin: String(decide.seq)).pins
+        pinned = pinStep(pinned, pin: Int64(decide.seq)).pins
       case .react(let react) where react.threadID == threadID:
         edits[Int64(react.seq), default: []].append(.react(react))
       case .read(let read) where read.threadID == threadID:
@@ -1023,17 +1023,16 @@ extension Chats {
     }
     state.failsAt = failsAt
 
-    let pinnedSeqs = pinned.compactMap { Int64($0) }
     var held: [Int64: ChatLineRow] = Dictionary(uniqueKeysWithValues: lines.map { ($0.seq, $0) })
     let replies: [Int64] = lines.compactMap(\.replyTo) + waiting.compactMap(\.replyTo)
     let answered = Set(replies.filter { held[$0] == nil })
-    let elsewhere = Array(Set(pinnedSeqs).union(answered).filter { held[$0] == nil })
+    let elsewhere = Array(Set(pinned).union(answered).filter { held[$0] == nil })
     if !elsewhere.isEmpty {
       for row in try thread.where({ $0.seq.in(elsewhere) }).fetchAll(db) {
         held[row.seq] = shown(row)
       }
     }
-    state.pins = pinnedSeqs.compactMap { held[$0] }.filter { !$0.unsent }
+    state.pins = pinned.compactMap { held[$0] }.filter { !$0.unsent }
     for seq in answered {
       state.quoted[seq] = held[seq]
     }

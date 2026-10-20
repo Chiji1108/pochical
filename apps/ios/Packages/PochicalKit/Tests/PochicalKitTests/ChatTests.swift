@@ -736,9 +736,16 @@ struct PinVectors: Decodable, Sendable {
 
   struct Case: VectorCase {
     let name: String
+    /// The chat's lines by name, the first at seq 1.
+    let lines: [String]
     let pins: [String]
     let step: Step
     let expected: Expected
+
+    /// The named line's seq; none for a name not among the lines.
+    func seq(_ name: String) -> Int64 {
+      lines.firstIndex(of: name).map { Int64($0) + 1 } ?? 0
+    }
   }
 
   let pins: [Case]
@@ -747,16 +754,17 @@ struct PinVectors: Decodable, Sendable {
 @Test(arguments: try vectors("chat", as: PinVectors.self).pins)
 func pinsAfterAStep(_ vector: PinVectors.Case) {
   let step = vector.step
+  let pins = vector.pins.map(vector.seq)
   let after =
-    if let id = step.pin ?? step.settle {
-      pinStep(vector.pins, pin: id)
-    } else if let id = step.unpin {
-      pinStep(vector.pins, unpin: id)
+    if let name = step.pin ?? step.settle {
+      pinStep(pins, pin: vector.seq(name))
+    } else if let name = step.unpin {
+      pinStep(pins, unpin: vector.seq(name))
     } else {
-      pinStep(vector.pins, unsend: step.unsend ?? "")
+      pinStep(pins, unsend: vector.seq(step.unsend ?? ""))
     }
-  #expect(after.pins == vector.expected.pins)
-  #expect(after.dropped == vector.expected.dropped)
+  #expect(after.pins == vector.expected.pins.map(vector.seq))
+  #expect(after.dropped == vector.expected.dropped.map(vector.seq))
 }
 
 @Test func aChatsPinsHoldLinesFarBackAndTheMembersShowAtOnce() throws {
