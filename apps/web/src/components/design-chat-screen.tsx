@@ -15,6 +15,7 @@ import {
   useEffect,
   useEffectEvent,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -33,8 +34,8 @@ import { useUser } from "../lib/design-user-store";
 import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
 import { BubbleOutline } from "./design-chat-bubble";
-import { uploadMilliseconds } from "./design-chat-cards";
-import type { InviteLook, Upload } from "./design-chat-cards";
+import { uploadMilliseconds, uploadOfLine } from "./design-chat-cards";
+import type { InviteLook, PhotoUpload, Upload } from "./design-chat-cards";
 import {
   ChatEdge,
   Composer,
@@ -43,13 +44,7 @@ import {
   useComposer,
 } from "./design-chat-composer";
 import { useChatEdits } from "./design-chat-edits";
-import {
-  albumOf,
-  ChatContext,
-  drawnLines,
-  MessageLine,
-  photosOf,
-} from "./design-chat-line";
+import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
 import { LineFrame, MutedMark, chatGaps } from "./design-chat-parts";
 import { ChatPhotoList } from "./design-chat-photo-list";
@@ -224,10 +219,17 @@ export function ChatScreen({
   const [revealed, setRevealed] = useState<string[]>([]);
   const folded = (message: Message) =>
     blocked.includes(message.from) && !revealed.includes(message.id);
-  const { failedCount, stop, upload, uploads } = usePhotoUploads(photoSend);
-  // A line's upload as this screen has it, else as the chat kept it.
-  const uploadOf = (message: Message): Upload | undefined =>
-    uploads[message.id] ?? (message.failed ? "failed" : undefined);
+  const { failedCount, lines, stop, upload, uploads } =
+    usePhotoUploads(photoSend);
+  // A line's photos' uploads as this screen has them, else as the chat
+  // kept the line: not sent, none of them up.
+  const photosUpOf = (message: Message): PhotoUpload[] | undefined =>
+    uploads[message.id] ??
+    (message.failed ? message.photos?.map(() => "failed" as const) : undefined);
+  const uploadOf = (message: Message): Upload | undefined => {
+    const photos = photosUpOf(message);
+    return photos && uploadOfLine(photos);
+  };
   // The lines in the chat's order (spec/chat.md, Lines on their way): a
   // photo going up last, as the newest, and one not sent where it was
   // written. The prototype keeps a chat's lines in the order written, so
@@ -306,14 +308,18 @@ export function ChatScreen({
     mentionName,
     messages: chat.messages,
     onChange,
-    // Someone may write back, and photos start going up.
+    // Someone may write back, and photos start going up: those of a line
+    // sent again that are not up yet.
     onSent: (sent) => {
       if (writesBack) {
         answerSoon();
       }
-      const photoIds = sent.flatMap((line) => (line.photo ? [line.id] : []));
-      if (photoIds.length > 0) {
-        upload(photoIds);
+      for (const line of sent) {
+        const photos =
+          photosUpOf(line) ?? line.photos?.map(() => "sending" as const);
+        if (photos) {
+          upload(line.id, photos);
+        }
       }
     },
     rules,
@@ -369,8 +375,8 @@ export function ChatScreen({
     }
   });
   useEffect(() => {
-    keepFailed(uploads);
-  }, [uploads]);
+    keepFailed(lines);
+  }, [lines]);
   const openUrl = (url: string) => {
     const code = onInvite && inviteCodeOf(url);
     if (code) {
@@ -520,62 +526,45 @@ export function ChatScreen({
                     まだメッセージはありません
                   </li>
                 ))}
-              {drawnLines(shown, folded).map(
-                ({ message, previous, next, album }) => {
-                  const lines = album ?? [message];
-                  return (
-                    <Fragment key={message.id}>
-                      {/* Over the album an unread photo of it is in. */}
-                      {lines.some((line) => line.id === firstUnreadId) && (
-                        <li className={chatStyle.unread} id="unread-line">
-                          <span>ここから新着</span>
-                        </li>
-                      )}
-                      <MessageLine
-                        actions={actionsOf(message)}
-                        album={albumOf(album, (line) => ({
-                          actions: actionsOf(line),
-                          lifted: selected === line.id,
-                          onFailed: () => {
-                            setFailedOpen(line.id);
-                          },
-                          onStop: () => {
-                            stop(line.id);
-                          },
-                          upload: uploadOf(line),
-                        }))}
-                        flash={lines.some((line) => line.id === flash)}
-                        hidden={folded(message)}
-                        lifted={selected === message.id}
-                        message={message}
-                        onDecide={() => {
-                          setDeciding(message.id);
-                        }}
-                        onFailed={() => {
-                          setFailedOpen(message.id);
-                        }}
-                        onStopUpload={() => {
-                          stop(message.id);
-                        }}
-                        onFolded={keepPlace}
-                        onReveal={() => {
-                          setRevealed((before) => [...before, message.id]);
-                        }}
-                        onSelect={() => {
-                          setSelected(message.id);
-                        }}
-                        onVote={(key) => {
-                          vote(message.id, key);
-                        }}
-                        next={next}
-                        previous={previous}
-                        quoted={byId(message.replyTo)}
-                        upload={uploadOf(message)}
-                      />
-                    </Fragment>
-                  );
-                }
-              )}
+              {shown.map((message, index) => (
+                <Fragment key={message.id}>
+                  {message.id === firstUnreadId && (
+                    <li className={chatStyle.unread} id="unread-line">
+                      <span>ここから新着</span>
+                    </li>
+                  )}
+                  <MessageLine
+                    actions={actionsOf(message)}
+                    flash={message.id === flash}
+                    hidden={folded(message)}
+                    lifted={selected === message.id}
+                    message={message}
+                    onDecide={() => {
+                      setDeciding(message.id);
+                    }}
+                    onFailed={() => {
+                      setFailedOpen(message.id);
+                    }}
+                    onStopUpload={() => {
+                      stop(message.id);
+                    }}
+                    onFolded={keepPlace}
+                    onReveal={() => {
+                      setRevealed((before) => [...before, message.id]);
+                    }}
+                    onSelect={() => {
+                      setSelected(message.id);
+                    }}
+                    onVote={(key) => {
+                      vote(message.id, key);
+                    }}
+                    next={shown[index + 1]}
+                    previous={shown[index - 1]}
+                    quoted={byId(message.replyTo)}
+                    upload={photosUpOf(message)}
+                  />
+                </Fragment>
+              ))}
               {typingMember && (
                 <LineFrame
                   avatar={
@@ -786,49 +775,110 @@ export function ChatScreen({
   );
 }
 
-// Photos of yours still uploading, or that could not be sent, by line.
-// Only this phone knows them, as the apps keep them in their outbox; the
-// group sees a photo once it is up.
+// Your photo lines still going up, or that could not be sent, each
+// photo's way up by its place in its line. Only this phone knows them, as
+// the apps keep them in their outbox; the group sees a line once all its
+// photos are up.
 function usePhotoUploads(photoSend: PhotoSend) {
-  const [uploads, setUploads] = useState<Record<string, Upload>>({});
-  // Each photo's upload, by its line, which × stops.
-  const timers = useRef(new Map<string, number>());
+  const [uploads, setUploads] = useState<Record<string, PhotoUpload[]>>({});
+  // Each line's photos going up, which × stops.
+  const timers = useRef(new Map<string, number[]>());
+  // When a line's latest photo went up.
+  const upAt = useRef(new Map<string, number>());
   useEffect(() => {
     const going = timers.current;
     return () => {
-      for (const timer of going.values()) {
-        window.clearTimeout(timer);
+      for (const line of going.values()) {
+        for (const timer of line) {
+          window.clearTimeout(timer);
+        }
       }
     };
   }, []);
-  const set = (id: string, status?: Upload) => {
+  // Each photo of a line from what it was.
+  const change = (
+    id: string,
+    next: (photos: PhotoUpload[]) => PhotoUpload[]
+  ) => {
     setUploads((before) => {
-      const others = Object.entries(before).filter(([other]) => other !== id);
-      return Object.fromEntries(status ? [...others, [id, status]] : others);
+      const line = before[id];
+      return line ? withLine(before, id, next(line)) : before;
     });
   };
-  const upload = (ids: string[]) => {
-    for (const id of ids) {
-      set(id, "sending");
-      timers.current.set(
-        id,
-        window.setTimeout(() => {
-          timers.current.delete(id);
-          set(id, photoSend === "fails" ? "failed" : undefined);
-        }, uploadMilliseconds)
-      );
+  const settle = (id: string, index: number, result: PhotoUpload) => {
+    if (result === "up") {
+      upAt.current.set(id, Date.now());
     }
+    change(id, (photos) =>
+      photos.map((photo, at) => (at === index ? result : photo))
+    );
   };
-  // Stopped with ×: not sent, its ! offering もう一度送る and 削除.
+  // Uploads a line's photos not up yet; all of them once the server has
+  // let go of those up (chatRules.unsentAfterMs). Where uploads fail, its
+  // last photo fails, so sending it again sends only that one.
+  const upload = (id: string, photos: PhotoUpload[]) => {
+    const latest = upAt.current.get(id);
+    const kept =
+      latest !== undefined && Date.now() - latest < chatRules.unsentAfterMs;
+    const going = photos.map((photo): PhotoUpload =>
+      kept && photo === "up" ? "up" : "sending"
+    );
+    const last = going.lastIndexOf("sending");
+    setUploads((before) => withLine(before, id, going));
+    timers.current.set(
+      id,
+      going.flatMap((photo, index) =>
+        photo === "up"
+          ? []
+          : [
+              window.setTimeout(() => {
+                settle(
+                  id,
+                  index,
+                  photoSend === "fails" && index === last ? "failed" : "up"
+                );
+              }, uploadMilliseconds),
+            ]
+      )
+    );
+  };
+  // Stopped with ×: the line is not sent, its ! offering もう一度送る and
+  // 削除.
   const stop = (id: string) => {
-    window.clearTimeout(timers.current.get(id));
+    for (const timer of timers.current.get(id) ?? []) {
+      window.clearTimeout(timer);
+    }
     timers.current.delete(id);
-    set(id, "failed");
+    change(id, (photos) =>
+      photos.map((photo) => (photo === "up" ? "up" : "failed"))
+    );
   };
-  const failedCount = Object.values(uploads).filter(
-    (status) => status === "failed"
+  const lines = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(uploads).flatMap(([id, photos]) => {
+          const line = uploadOfLine(photos);
+          return line ? [[id, line] as const] : [];
+        })
+      ),
+    [uploads]
+  );
+  const failedCount = Object.values(lines).filter(
+    (line) => line === "failed"
   ).length;
-  return { failedCount, stop, upload, uploads };
+  return { failedCount, lines, stop, upload, uploads };
+}
+
+// The uploads with a line's photos as they are now: gone from them once
+// all are up, as the line is then sent.
+function withLine(
+  uploads: Record<string, PhotoUpload[]>,
+  id: string,
+  photos: PhotoUpload[]
+) {
+  const others = Object.entries(uploads).filter(([other]) => other !== id);
+  const sent = photos.every((photo) => photo === "up");
+  return Object.fromEntries(sent ? others : [...others, [id, photos]]);
 }
 
 // Someone writing back, shown under the latest line: in the prototype,

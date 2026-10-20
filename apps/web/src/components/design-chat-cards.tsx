@@ -1,5 +1,5 @@
 import { chatRules } from "@pochical/design/chat";
-import { CircleAlert, Link2Off, RotateCw, X } from "lucide-react";
+import { Link2Off, RotateCw, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { css, cva, cx } from "styled-system/css";
@@ -7,11 +7,7 @@ import { css, cva, cx } from "styled-system/css";
 import { albumRows } from "../lib/chat-messages";
 import { dateKey, formatDay } from "../lib/design-days";
 import type { Photo } from "../lib/design-sample-photos";
-import {
-  MessageActions,
-  messageActions,
-  useLongPress,
-} from "./design-chat-actions";
+import { MessageActions, useLongPress } from "./design-chat-actions";
 import type { LineActions } from "./design-chat-actions";
 import { BubbleOutline } from "./design-chat-bubble";
 import { blurOf, photoSize } from "./design-chat-photos";
@@ -51,8 +47,20 @@ export type InviteLook = {
   joined: boolean;
 };
 
-// A photo of yours on its way up, or one that could not be sent.
+// A photo of a line of yours going out: on its way up, up, or not, as
+// the line could not be sent.
+export type PhotoUpload = "sending" | "up" | "failed";
+
+// A line of yours going out, from its photos: still going while any goes
+// up, not sent once any could not, and sent (undefined) once all are up.
 export type Upload = "sending" | "failed";
+
+export function uploadOfLine(photos: PhotoUpload[]): Upload | undefined {
+  if (photos.includes("sending")) {
+    return "sending";
+  }
+  return photos.includes("failed") ? "failed" : undefined;
+}
 
 // How long a photo takes to go up in the prototype.
 export const uploadMilliseconds = 1600;
@@ -305,13 +313,22 @@ const noPhotos: ChatPhoto[] = [];
 // How far in from a reply's bubble its photo sits (chatStyle.photoInBubble).
 const photoInset = 4;
 
-// A photo in a chat, as the messaging apps show one: in its own shape
-// with no bubble, unless it answers a line, when the quote's bubble holds
-// it. A tap opens it large, with 保存 and 共有, swiped through the chat's
-// photos; its reactions and menu (with 保存 too) open from a long press,
+// As wide as a line with a link's page, and an album's photos this far
+// apart.
+const albumWidth = 240;
+const albumGap = 2;
+
+// A photo line in a chat, as the messaging apps show one: one photo in
+// its own shape with no bubble, or several as an album, one grid of rows
+// (albumRows) as Telegram, WhatsApp and Messages draw one, each photo
+// cropped to its cell; a row of several is as tall as a cell is wide, the
+// one over two half the grid's width. Answering a line, the quote's
+// bubble holds it. A tap on a photo opens it large, with 保存 and 共有,
+// swiped through the chat's photos; the line's reactions and menu (with
+// 保存 of all its photos) open from a long press, the whole line lifted,
 // as on a photo in LINE.
 export function PhotoLine({
-  photo,
+  photos,
   among = noPhotos,
   mine,
   label,
@@ -321,32 +338,167 @@ export function PhotoLine({
   onStop,
   upload,
   fetchFails = false,
-  cell = false,
-  album,
 }: {
-  photo: Photo;
-  // The chat's photos in the order of its lines, this one among them.
+  photos: Photo[];
+  // The chat's photos in the order of its lines, these among them.
   among?: ChatPhoto[];
   mine: boolean;
-  // Still going up, or not sent; neither takes reactions yet.
-  upload?: Upload;
-  // × on it while it goes up, stopping it.
+  // Each photo's way up, by its place in the line, while the line is
+  // yours going out or not sent; it takes no reactions until sent.
+  upload?: PhotoUpload[];
+  // × on any of its photos going up, stopping the line.
   onStop?: () => void;
   // Someone else's photo cannot be fetched the first time it comes,
   // showing ↻ to fetch it again, which brings it.
   fetchFails?: boolean;
-  // Whose photo it is, for a screen reader and the large view.
+  // Whose photos they are, for a screen reader and the large view.
   label: string;
   quote?: ReactNode;
   // Its reactions and menu, from a long press.
   actions: LineActions;
+  // 保存 in its menu saves every photo of the line, in the large view
+  // the one shown.
   onSave?: () => void;
-  // One of an album's photos, filling its cell of the grid (PhotoAlbum).
-  cell?: boolean;
-  // How many photos its album holds, said by its first.
-  album?: number;
 }) {
-  const [viewing, setViewing] = useState(false);
+  const quoted = quote !== undefined;
+  // The photo opened large, by its place in the line.
+  const [viewing, setViewing] = useState<number>();
+  const [single] = photos;
+  const alone = single !== undefined && photos.length === 1;
+  const tile = (photo: Photo, index: number) => (
+    <PhotoTile
+      cell={!alone}
+      fetchFails={fetchFails}
+      inBubble={alone && quoted}
+      label={
+        alone
+          ? `${label}。押すと大きく表示、長押しでリアクションと返信`
+          : `${index + 1}枚目を大きく表示`
+      }
+      mine={mine}
+      onOpen={() => {
+        setViewing(index);
+      }}
+      onStop={onStop}
+      photo={photo}
+      upload={upload?.[index]}
+    />
+  );
+  const rows = albumRows(photos.length);
+  const drawn = alone ? (
+    tile(single, 0)
+  ) : (
+    <span
+      aria-label={`${photos.length}枚の写真。${label}。長押しでリアクションと返信`}
+      className={cx(chatStyle.album, quoted && chatStyle.photoInBubble)}
+      role="group"
+      style={{ width: albumWidth }}
+    >
+      {rows.map((count, row) => {
+        const start = rows.slice(0, row).reduce((sum, one) => sum + one, 0);
+        const width = (albumWidth - albumGap * (count - 1)) / count;
+        return (
+          <span
+            className={chatStyle.albumRow}
+            key={start}
+            style={{ height: count === 1 ? albumWidth / 2 : width }}
+          >
+            {photos.slice(start, start + count).map((photo, at) => (
+              <span className={chatStyle.albumCell} key={photo.src}>
+                {tile(photo, start + at)}
+              </span>
+            ))}
+          </span>
+        );
+      })}
+    </span>
+  );
+  const width = alone ? photoSize(single).width : albumWidth;
+  const shown = viewing === undefined ? undefined : photos[viewing];
+  const listed =
+    shown && !among.some((entry) => entry.photo.src === shown.src)
+      ? [{ label, mine, photo: shown, when: "" }]
+      : among;
+  // Apart from the line's long press, which a press in it would reach.
+  const viewer = (
+    <PhotoViewer
+      onOpenChange={(open) => {
+        if (!open) {
+          setViewing(undefined);
+        }
+      }}
+      onSave={onSave}
+      onShare={(one) => {
+        sharePhoto(one).catch(() => undefined);
+      }}
+      open={shown !== undefined}
+      photos={listed.map(viewerPhotoOf)}
+      start={Math.max(
+        listed.findIndex((entry) => entry.photo.src === shown?.src),
+        0
+      )}
+      whole
+    />
+  );
+  const held = (
+    <MessageActions
+      {...actions}
+      disabled={upload !== undefined}
+      keyboardOpens={false}
+      onSave={onSave}
+    >
+      {/* The quote is held with the photos, a tap on it its own. */}
+      <>
+        {quote}
+        {drawn}
+      </>
+    </MessageActions>
+  );
+  return (
+    <>
+      {quoted ? (
+        // A reply always starts a run.
+        <BubbleOutline
+          first
+          mine={mine}
+          style={{ width: width + photoInset * 2 }}
+        >
+          {held}
+        </BubbleOutline>
+      ) : (
+        <span className={chatStyle.photo} data-part="bubble" style={{ width }}>
+          {held}
+        </span>
+      )}
+      {viewer}
+    </>
+  );
+}
+
+// One photo of a line: the button opening it large, over it ↻ for one
+// that could not be fetched, or the ring of one going up with × to stop
+// its line; in an album, filling its cell of the grid.
+function PhotoTile({
+  photo,
+  mine,
+  label,
+  onOpen,
+  onStop,
+  upload,
+  fetchFails,
+  cell,
+  inBubble,
+}: {
+  photo: Photo;
+  mine: boolean;
+  label: string;
+  onOpen: () => void;
+  onStop?: () => void;
+  upload?: PhotoUpload;
+  fetchFails: boolean;
+  cell: boolean;
+  inBubble: boolean;
+}) {
   // Someone else's photo comes over the network the first time it shows;
   // your own is already on the device.
   const [here, setHere] = useState(() => mine || arrivedPhotos.has(photo.src));
@@ -378,76 +530,65 @@ export function PhotoLine({
     };
   }, [here, photo.src, fetchFails, tries]);
   const size = photoSize(photo);
-  const quoted = quote !== undefined;
-  const listed = among.some((entry) => entry.photo.src === photo.src)
-    ? among
-    : [{ label, mine, photo, when: "" }];
-  const open = (
-    <button
-      aria-label={`${album === undefined ? "" : `${album}枚の写真。`}${label}。押すと大きく表示、長押しでリアクションと返信`}
-      className={chatStyle.photoButton({ cell })}
-      onClick={() => {
-        setViewing(true);
-      }}
-      type="button"
-    >
-      <span
-        // Its blur while it comes, else its grey breathing.
-        className={cx(
-          chatStyle.photoPlace({ cell }),
-          !drawn && !missing && blur === undefined && chatStyle.photoLoading
-        )}
-        // Its own width, so its place is kept before the photo is drawn;
-        // in an album, its cell's.
-        style={{
-          aspectRatio: cell ? undefined : `${size.width} / ${size.height}`,
-          backgroundImage: blur === undefined ? undefined : `url(${blur})`,
-          width: cell ? undefined : size.width,
-        }}
-      >
-        {here && (
-          <img
-            alt=""
-            className={chatStyle.photoImage}
-            draggable={false}
-            height={size.height}
-            onError={() => {
-              setMissing(true);
-            }}
-            onLoad={() => {
-              setDrawn(true);
-            }}
-            ref={(image) => {
-              if (heldBefore && image?.complete === true) {
-                setDrawn(true);
-              }
-            }}
-            src={photo.src}
-            style={{
-              // Over its blur it comes in, as the chat apps fade a photo
-              // in over its placeholder.
-              animation:
-                drawn && blur !== undefined && !heldBefore
-                  ? `fadeIn ${chatRules.photoFadeMs}ms ease-out`
-                  : undefined,
-              visibility: drawn ? "visible" : "hidden",
-            }}
-            width={size.width}
-          />
-        )}
-      </span>
-    </button>
-  );
-  // Over the photo, apart from its button: ↻ for one that could not be
-  // fetched, and the ring of one going up with × to stop it.
-  const framed = (
+  return (
     <span
       className={cx(
         chatStyle.photoFrame({ cell }),
-        quoted && chatStyle.photoInBubble
+        inBubble && chatStyle.photoInBubble
       )}
     >
-      {open}
+      <button
+        aria-label={label}
+        className={chatStyle.photoButton({ cell })}
+        onClick={onOpen}
+        type="button"
+      >
+        <span
+          // Its blur while it comes, else its grey breathing.
+          className={cx(
+            chatStyle.photoPlace({ cell }),
+            !drawn && !missing && blur === undefined && chatStyle.photoLoading
+          )}
+          // Its own width, so its place is kept before the photo is drawn;
+          // in an album, its cell's.
+          style={{
+            aspectRatio: cell ? undefined : `${size.width} / ${size.height}`,
+            backgroundImage: blur === undefined ? undefined : `url(${blur})`,
+            width: cell ? undefined : size.width,
+          }}
+        >
+          {here && (
+            <img
+              alt=""
+              className={chatStyle.photoImage}
+              draggable={false}
+              height={size.height}
+              onError={() => {
+                setMissing(true);
+              }}
+              onLoad={() => {
+                setDrawn(true);
+              }}
+              ref={(image) => {
+                if (heldBefore && image?.complete === true) {
+                  setDrawn(true);
+                }
+              }}
+              src={photo.src}
+              style={{
+                // Over its blur it comes in, as the chat apps fade a photo
+                // in over its placeholder.
+                animation:
+                  drawn && blur !== undefined && !heldBefore
+                    ? `fadeIn ${chatRules.photoFadeMs}ms ease-out`
+                    : undefined,
+                visibility: drawn ? "visible" : "hidden",
+              }}
+              width={size.width}
+            />
+          )}
+        </span>
+      </button>
       {missing && !drawn && (
         <button
           aria-label="写真をもう一度読み込む"
@@ -494,215 +635,6 @@ export function PhotoLine({
             )}
           </span>
         </span>
-      )}
-    </span>
-  );
-  const held = (
-    <MessageActions
-      {...actions}
-      disabled={upload !== undefined}
-      keyboardOpens={false}
-      onSave={onSave}
-    >
-      {/* The quote is held with the photo, a tap on it its own. */}
-      <>
-        {quote}
-        {framed}
-      </>
-    </MessageActions>
-  );
-  const viewer = (
-    <PhotoViewer
-      onOpenChange={setViewing}
-      onSave={onSave}
-      onShare={(shown) => {
-        sharePhoto(shown).catch(() => undefined);
-      }}
-      open={viewing}
-      photos={listed.map(viewerPhotoOf)}
-      start={Math.max(
-        listed.findIndex((entry) => entry.photo.src === photo.src),
-        0
-      )}
-      whole
-    />
-  );
-  if (cell) {
-    return (
-      <>
-        {held}
-        {viewer}
-      </>
-    );
-  }
-  return (
-    <>
-      {quoted ? (
-        // A reply always starts a run.
-        <BubbleOutline
-          first
-          mine={mine}
-          style={{ width: size.width + photoInset * 2 }}
-        >
-          {held}
-        </BubbleOutline>
-      ) : (
-        <span
-          className={chatStyle.photo}
-          data-part="bubble"
-          style={{ width: size.width }}
-        >
-          {held}
-        </span>
-      )}
-      {viewer}
-    </>
-  );
-}
-
-// One photo of an album, its own line: its menu, whether that is open
-// over it, and its upload.
-export type AlbumCell = {
-  key: string;
-  photo: Photo;
-  actions: LineActions;
-  lifted: boolean;
-  upload?: Upload;
-  onStop?: () => void;
-  onFailed?: () => void;
-  // Its line's place in the chat, for a jump to it.
-  anchor?: string;
-};
-
-// As wide as a line with a link's page, and its photos this far apart.
-const albumWidth = 240;
-const albumGap = 2;
-
-// Photos sent at once, drawn together as Telegram, WhatsApp and Messages
-// draw an album: one grid of rows (albumRows), each photo cropped to its
-// cell and still its own line, opened large, held for its own menu, and
-// going up with its own ring. A row of several is as tall as a cell is
-// wide; the one over two, half the grid's width. A reply's quote, the
-// first photo's, sits over it in a bubble, as over a photo.
-export function PhotoAlbum({
-  cells,
-  among,
-  mine,
-  label,
-  quote,
-  fetchFails,
-  onSave,
-}: {
-  cells: AlbumCell[];
-  among: ChatPhoto[];
-  mine: boolean;
-  label: string;
-  quote?: ReactNode;
-  fetchFails: boolean;
-  onSave: () => void;
-}) {
-  const rows = albumRows(cells.length);
-  const grid = (
-    <span
-      className={cx(
-        chatStyle.album,
-        quote !== undefined && chatStyle.photoInBubble
-      )}
-      style={{ width: albumWidth }}
-    >
-      {rows.map((count, row) => {
-        const start = rows.slice(0, row).reduce((sum, one) => sum + one, 0);
-        const width = (albumWidth - albumGap * (count - 1)) / count;
-        return (
-          <span
-            className={chatStyle.albumRow}
-            key={start}
-            style={{ height: count === 1 ? albumWidth / 2 : width }}
-          >
-            {cells.slice(start, start + count).map(({ key, ...cell }) => (
-              <AlbumPhoto
-                {...cell}
-                album={key === cells[0]?.key ? cells.length : undefined}
-                among={among}
-                fetchFails={fetchFails}
-                key={key}
-                label={label}
-                mine={mine}
-                onSave={onSave}
-              />
-            ))}
-          </span>
-        );
-      })}
-    </span>
-  );
-  return quote === undefined ? (
-    <span className={chatStyle.photo}>{grid}</span>
-  ) : (
-    <BubbleOutline
-      first
-      mine={mine}
-      style={{ width: albumWidth + photoInset * 2 }}
-    >
-      {quote}
-      {grid}
-    </BubbleOutline>
-  );
-}
-
-// One cell of an album: its photo, and over it its ! once not sent.
-function AlbumPhoto({
-  photo,
-  actions,
-  lifted,
-  upload,
-  onStop,
-  onFailed,
-  anchor,
-  album,
-  among,
-  fetchFails,
-  label,
-  mine,
-  onSave,
-}: Omit<AlbumCell, "key"> & {
-  album?: number;
-  among: ChatPhoto[];
-  fetchFails: boolean;
-  label: string;
-  mine: boolean;
-  onSave: () => void;
-}) {
-  return (
-    <span
-      className={cx(chatStyle.albumCell, lifted && messageActions.lifted)}
-      data-part="bubble"
-      id={anchor}
-    >
-      <PhotoLine
-        actions={actions}
-        album={album}
-        among={among}
-        cell
-        fetchFails={fetchFails}
-        label={label}
-        mine={mine}
-        onSave={onSave}
-        onStop={onStop}
-        photo={photo}
-        upload={upload}
-      />
-      {upload === "failed" && (
-        <button
-          aria-label="送れませんでした。押すと再送か削除"
-          className={chatStyle.albumFailed}
-          onClick={onFailed}
-          type="button"
-        >
-          <span className={chatStyle.albumFailedMark}>
-            <CircleAlert aria-hidden="true" size={32} />
-          </span>
-        </button>
       )}
     </span>
   );

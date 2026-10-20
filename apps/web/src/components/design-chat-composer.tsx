@@ -390,7 +390,7 @@ export function Composer({
               }}
               stopLabel="返信をやめる"
               text={summaryOf(reply.message, mentionName)}
-              thumb={reply.message.photo?.src}
+              thumb={reply.message.photos?.[0]?.src}
             />
           )}
           {attached && (

@@ -2,6 +2,7 @@ import { siteOf } from "../lib/chat-text";
 import { dayMilliseconds } from "../lib/design-days";
 import { presetList } from "../lib/design-patterns";
 import { sampleRosterPhoto } from "../lib/design-sample-photos";
+import type { Photo } from "../lib/design-sample-photos";
 import { firstCharacter } from "../lib/text-limits";
 import { groupChat, memberPatternOf } from "./design-group-data";
 import type {
@@ -10,7 +11,6 @@ import type {
   LinkPreview,
   Member,
   MemberPattern,
-  Message,
 } from "./design-group-data";
 import { holidayName } from "./design-week";
 import { guessLook, sampleLooks } from "./shift-mark";
@@ -315,27 +315,13 @@ export function previewOf(url: string): LinkPreview {
   );
 }
 
-// Photos someone sent at once, each its own line in one album: Unsplash
-// photos from picsum.photos, by id and size.
-function albumPhotos(
-  id: string,
-  from: string,
-  time: string,
-  photos: [number, number, number][]
-): Message[] {
-  return photos.map(([photo, width, height], index) => ({
-    album: `${id}-album`,
-    from,
-    id: `${id}-photo${index + 1}`,
-    photo: {
-      height,
-      src: `https://picsum.photos/id/${photo}/${width}/${height}`,
-      width,
-    },
-    time,
-    when: "昨日",
+// Unsplash photos from picsum.photos, by id and size.
+const picsumPhotos = (photos: [number, number, number][]): Photo[] =>
+  photos.map(([photo, width, height]) => ({
+    height,
+    src: `https://picsum.photos/id/${photo}/${width}/${height}`,
+    width,
   }));
-}
 
 export const sampleChats: Record<string, Chat> = {
   "family:group": {
@@ -387,12 +373,18 @@ export const sampleChats: Record<string, Chat> = {
         when: "昨日",
       },
       // Photos sent at once, drawn as one album (spec/chat.md, Albums).
-      ...albumPhotos("f2", "yuki", "19:11", [
-        [102, 640, 480],
-        [1080, 480, 640],
-        [312, 640, 480],
-        [425, 640, 640],
-      ]),
+      {
+        from: "yuki",
+        id: "f3",
+        photos: picsumPhotos([
+          [102, 640, 480],
+          [1080, 480, 640],
+          [312, 640, 480],
+          [425, 640, 640],
+        ]),
+        time: "19:11",
+        when: "昨日",
+      },
       {
         from: "me",
         id: "f4",
@@ -433,18 +425,14 @@ export const sampleChats: Record<string, Chat> = {
         // the next (spec/chat.md, Photos).
         from: "mother",
         id: "f7p",
-        photo: {
-          height: 480,
-          src: "https://picsum.photos/id/292/640/480",
-          width: 640,
-        },
+        photos: picsumPhotos([[292, 640, 480]]),
         time: "10:04",
         when: "今日",
       },
       {
         from: "yuki",
         id: "f8",
-        photo: sampleRosterPhoto(),
+        photos: [sampleRosterPhoto()],
         time: "10:20",
         when: "今日",
       },
