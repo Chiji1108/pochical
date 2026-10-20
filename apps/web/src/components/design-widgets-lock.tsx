@@ -1,7 +1,4 @@
-import { css } from "styled-system/css";
-
-import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
-import { srOnly } from "./design-ui";
+import { srOnly } from "@pochical/prototype/components/design-ui";
 import {
   firstRunOr,
   DayMark,
@@ -13,7 +10,13 @@ import {
   useOffLook,
   useShiftNames,
   useWords,
-} from "./design-widgets";
+} from "@pochical/prototype/components/design-widgets";
+import type {
+  WidgetDay,
+  WidgetEntry,
+} from "@pochical/prototype/lib/design-widgets";
+import { css } from "@pochical/styled-system/css";
+
 import { FitText, soonestOff, spokenOff } from "./design-widgets-next-off";
 
 // The iPhone lock screen's widgets: circular, rectangular and inline.

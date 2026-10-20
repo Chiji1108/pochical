@@ -1,0 +1,23 @@
+{
+  "name": "@pochical/jsx",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "budoux": "^0.9.3",
+    "react": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "^19.2.0",
+    "react-dom": "19.3.0",
+    "typescript": "~6.0.3"
+  }
+}

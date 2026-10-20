@@ -10,15 +10,16 @@ export default defineConfig({
   ignorePatterns,
   options: { typeAware: true },
   overrides: [
-    // apps/web tests run on bun:test, so Vitest rules apply to the server only.
+    // The web's tests run on bun:test, so Vitest rules apply to the server only.
     ...(vitest.overrides ?? []).map((override) => ({
       ...override,
       files: ["apps/server/test/**/*.test.ts"],
     })),
     {
-      // Existing findings in apps/web, downgraded until the /design prototype
-      // settles. Fix a rule's findings, then delete it from this list.
-      files: ["apps/web/**"],
+      // Existing findings in apps/web and the prototype it shows, downgraded
+      // until the /design prototype settles. Fix a rule's findings, then
+      // delete it from this list.
+      files: ["apps/web/**", "packages/prototype/**"],
       rules: {
         complexity: "warn",
         "import/newline-after-import": "warn",

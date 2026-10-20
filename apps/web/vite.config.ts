@@ -9,13 +9,16 @@ export default defineConfig({
   plugins: [
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     tanstackStart(),
-    // Japanese broken between phrases on every browser (src/jsx).
-    react({ jsxImportSource: "#/jsx" }),
+    // Japanese broken between phrases on every browser (@pochical/jsx).
+    react({ jsxImportSource: "@pochical/jsx" }),
   ],
   resolve: {
-    // Also for the JSX that TanStack Start ships as source, which
-    // package.json's imports do not reach from node_modules.
-    alias: { "#/jsx": fileURLToPath(new URL("src/jsx", import.meta.url)) },
-    tsconfigPaths: true,
+    // Also for the JSX that TanStack Start ships as source, which does not
+    // depend on @pochical/jsx and so cannot reach it from node_modules.
+    alias: {
+      "@pochical/jsx": fileURLToPath(
+        new URL("../../packages/jsx/src", import.meta.url)
+      ),
+    },
   },
 });

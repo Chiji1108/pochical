@@ -5,12 +5,13 @@
     "apps/admin",
     "apps/server",
     "apps/web",
-    "design"
+    "design",
+    "packages/*"
   ],
   "type": "module",
   "scripts": {
-    "typecheck": "bun run --cwd design typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck",
-    "test": "bun run --cwd apps/web test && bun run --cwd apps/server test",
+    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck",
+    "test": "bun run --cwd packages/jsx test && bun run --cwd packages/prototype test && bun run --cwd apps/web test && bun run --cwd apps/server test",
     "check": "ultracite check",
     "fix": "ultracite fix",
     "prepare": "lefthook install",

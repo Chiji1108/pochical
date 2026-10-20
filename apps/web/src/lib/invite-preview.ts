@@ -1,8 +1,8 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { INVITE_CODE } from "@pochical/design/invite";
+import type { InviteGroupMark } from "@pochical/prototype/components/invite-mark";
 
-import type { InviteGroupMark } from "../components/invite-mark";
 import { InviteService } from "../gen/pochical/v1/invite_pb";
 
 export type InvitePreview =

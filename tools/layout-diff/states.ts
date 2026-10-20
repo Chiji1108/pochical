@@ -15,7 +15,7 @@ export type State = {
 const demo = (variants: string) =>
   `/demo?groupSample=some&inviteLink=none&memberSample=some&scanResult=invite&${variants}`;
 
-// Japanese text has a <wbr> between its phrases (apps/web/src/jsx), and
+// Japanese text has a <wbr> between its phrases (packages/jsx), and
 // Playwright reads a space for each one that is not an inline box: hidden
 // in one-line text, or laid out by a flex label. So 月で見る is named
 // 月で 見る, and 一緒に働く人 一緒に 働く 人, though the same words are

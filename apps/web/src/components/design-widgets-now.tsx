@@ -1,10 +1,5 @@
-import { useContext } from "react";
-import { css, cx } from "styled-system/css";
-
-import { presetPatterns } from "../lib/design-patterns";
-import type { WidgetEntry, WidgetSpan } from "../lib/design-widgets";
-import { srOnly } from "./design-ui";
-import { useWeek } from "./design-week";
+import { srOnly } from "@pochical/prototype/components/design-ui";
+import { useWeek } from "@pochical/prototype/components/design-week";
 import {
   DayMark,
   NAME_ROOM,
@@ -14,10 +9,18 @@ import {
   oneLine,
   useShiftNames,
   useWords,
-} from "./design-widgets";
+} from "@pochical/prototype/components/design-widgets";
+import { useDisplayColor } from "@pochical/prototype/components/shift-mark";
+import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
+import type {
+  WidgetEntry,
+  WidgetSpan,
+} from "@pochical/prototype/lib/design-widgets";
+import { css, cx } from "@pochical/styled-system/css";
+import { useContext } from "react";
+
 import { circular } from "./design-widgets-lock";
 import { FitText } from "./design-widgets-next-off";
-import { useDisplayColor } from "./shift-mark";
 
 // いまのシフト: how long the shift on now runs, else how soon the next one
 // with hours starts, for long shifts like 当番 where the hour matters more

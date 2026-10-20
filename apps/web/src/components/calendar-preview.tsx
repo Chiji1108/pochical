@@ -1,3 +1,4 @@
+import { weekdayNames } from "@pochical/prototype/components/design-week";
 import {
   BatteryFull,
   CalendarDays,
@@ -9,8 +10,6 @@ import {
   UsersRound,
   Wifi,
 } from "lucide-react";
-
-import { weekdayNames } from "./design-week";
 
 const shifts = [
   "day",

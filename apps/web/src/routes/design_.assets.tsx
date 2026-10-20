@@ -1,8 +1,14 @@
+import poodle from "@pochical/prototype/assets/poodle.png";
+import { DesignAppIcon } from "@pochical/prototype/components/design-app-icon";
+import {
+  DesignProviders,
+  useDesignTheme,
+} from "@pochical/prototype/components/design-providers";
+import { pageStyle } from "@pochical/prototype/components/design-theme";
+import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
-import { css } from "styled-system/css";
 
 import { CalendarPreview } from "../components/calendar-preview";
-import { DesignAppIcon } from "../components/design-app-icon";
 import {
   designCaption,
   DesignIntro,
@@ -10,11 +16,6 @@ import {
   designScreens,
   DesignToolbar,
 } from "../components/design-page";
-import {
-  DesignProviders,
-  useDesignTheme,
-} from "../components/design-providers";
-import { pageStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
 import previewStyles from "../calendar-preview.css?url";
@@ -41,8 +42,8 @@ const sources = [
   {
     alt: "プードルの線画",
     note: "黒い線と白地、1254px。アプリアイコンはここから作ります。",
-    path: "public/design/poodle.png",
-    src: "/design/poodle.png",
+    path: "packages/prototype/src/assets/poodle.png",
+    src: poodle,
     title: "プードルの絵",
     wide: false,
   },

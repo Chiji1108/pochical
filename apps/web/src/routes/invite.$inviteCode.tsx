@@ -1,8 +1,8 @@
+import { InviteMark } from "@pochical/prototype/components/invite-mark";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { ArrowUpRight, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
-import { InviteMark } from "../components/invite-mark";
 import { StoreLinks } from "../components/store-links";
 import { inviteImageVersion } from "../lib/invite-preview";
 import { getInvite } from "../lib/invites";
