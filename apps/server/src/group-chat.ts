@@ -871,11 +871,15 @@ const unsendLine = (
   if (row === undefined) {
     return {};
   }
-  return {
-    change: chatLineChange(db, row),
-    // Its photos go from the group's photos too, once the change is kept.
-    photosGone: (line.photos ?? []).map(({ id }) => id),
-  };
+  const photosGone = (line.photos ?? []).map(({ id }) => id);
+  if (photosGone.length > 0) {
+    db.update(groupPhotos)
+      .set({ state: "takenBack" })
+      .where(inArray(groupPhotos.id, photosGone))
+      .run();
+  }
+  // Its photos go from storage too, once the change is kept.
+  return { change: chatLineChange(db, row), photosGone };
 };
 
 /** New words for one of the member's own lines at `cursor` (編集). */

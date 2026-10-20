@@ -18,6 +18,23 @@ import {
 // A JPEG's first bytes, as the app sends one.
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 
+/** How the group answers an upload of the photo. */
+const putStatus = async (
+  groupId: string,
+  id: string,
+  token: string
+): Promise<number> => {
+  const put = await exports.default.fetch(
+    `${ORIGIN}/v1/groups/${groupId}/photos/${id}`,
+    {
+      body: JPEG,
+      headers: { Authorization: `Bearer ${token}` },
+      method: "PUT",
+    }
+  );
+  return put.status;
+};
+
 const upload = async (
   groupId: string,
   ids: string[],
@@ -25,15 +42,7 @@ const upload = async (
 ): Promise<void> => {
   for (const id of ids) {
     // oxlint-disable-next-line no-await-in-loop -- one after another
-    const put = await exports.default.fetch(
-      `${ORIGIN}/v1/groups/${groupId}/photos/${id}`,
-      {
-        body: JPEG,
-        headers: { Authorization: `Bearer ${token}` },
-        method: "PUT",
-      }
-    );
-    expect(put.status).toBe(204);
+    await expect(putStatus(groupId, id, token)).resolves.toBe(204);
   }
 };
 
@@ -160,6 +169,15 @@ describe("a line of photos", () => {
     await expect
       .poll(async () => await storedIn(groupId, ["p1", "p2", "kept"]))
       .toStrictEqual([false, false, true]);
+
+    // Its photos' ids are spent: neither uploaded nor sent again.
+    await expect(putStatus(groupId, "p1", maker)).resolves.toBe(409);
+    await edit(mine, [photoLine(["p2"]), photoLine(["kept"])]);
+    await expect(linesOf(groupId, guest)).resolves.toMatchObject([
+      { seq: 2, unsent: true },
+      { photos: ["kept"], seq: 3 },
+    ]);
+    await expect(storedIn(groupId, ["p1"])).resolves.toStrictEqual([false]);
   });
 
   it("taken back before it came deletes every photo it names, the send never coming", async () => {
@@ -182,6 +200,30 @@ describe("a line of photos", () => {
       .toStrictEqual([false, false, true]);
     await edit(mine, [photoLine(["r1", "r2"])], ["late"]);
     await expect(linesOf(groupId, guest)).resolves.toStrictEqual([]);
+  });
+
+  it("taken back before it came naming more photos than a send holds deletes none", async () => {
+    const { groupId, maker } = await pair();
+    const many = Array.from(
+      { length: chatRules.photosPerSend + 1 },
+      (_, at) => `m${at}`
+    );
+    await upload(groupId, many, maker);
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    await edit(mine, [
+      {
+        case: "recall",
+        value: { photoIds: many, sendOpId: "late", threadId: "group" },
+      },
+      // Taken after it, a recall within the most deletes its photo.
+      {
+        case: "recall",
+        value: { photoIds: ["m0"], sendOpId: "later", threadId: "group" },
+      },
+    ]);
+    await expect
+      .poll(async () => await storedIn(groupId, many))
+      .toStrictEqual(many.map((id) => id !== "m0"));
   });
 
   it("is dropped unless its photos are the sender's own, unsent, each once, as many as one send holds, without words", async () => {
