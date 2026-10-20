@@ -26,7 +26,7 @@ export const Route = createFileRoute("/support/$userId")({
 
 /** The line a reply is to, as its quote shows it. */
 function quoteOf(
-  line: { text: string; photo: unknown; unsent: boolean } | undefined
+  line: { text: string; photos: unknown[]; unsent: boolean } | undefined
 ): string {
   if (line === undefined) {
     return "以前のメッセージ";
@@ -34,7 +34,7 @@ function quoteOf(
   if (line.unsent) {
     return "取り消されたメッセージ";
   }
-  return line.photo === null ? line.text.slice(0, 80) : "📷 写真";
+  return line.photos.length === 0 ? line.text.slice(0, 80) : "📷 写真";
 }
 
 function SupportChat() {
@@ -88,20 +88,25 @@ function SupportChat() {
             <div className="quote">{quoteOf(bySeq.get(line.replyTo))}</div>
           )}
           {line.unsent && <span className="meta">送信が取り消されました</span>}
-          {line.photo !== null && (
-            <a
-              href={`/photos/${userId}/${line.photo.id}`}
-              rel="noopener"
-              target="_blank"
-            >
-              <img
-                alt="写真"
-                className="photo"
-                height={line.photo.height}
-                src={`/photos/${userId}/${line.photo.id}`}
-                width={line.photo.width}
-              />
-            </a>
+          {line.photos.length > 0 && (
+            <div className="photos">
+              {line.photos.map((photo) => (
+                <a
+                  href={`/photos/${userId}/${photo.id}`}
+                  key={photo.id}
+                  rel="noopener"
+                  target="_blank"
+                >
+                  <img
+                    alt="写真"
+                    className="photo"
+                    height={photo.height}
+                    src={`/photos/${userId}/${photo.id}`}
+                    width={photo.width}
+                  />
+                </a>
+              ))}
+            </div>
           )}
           {line.text}
           {line.preview !== null && (

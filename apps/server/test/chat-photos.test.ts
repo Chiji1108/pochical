@@ -49,7 +49,7 @@ const send = async (
                 value:
                   "photo" in line
                     ? {
-                        photo: { height: 10, id: line.photo, width: 10 },
+                        photos: [{ height: 10, id: line.photo, width: 10 }],
                         threadId: "group",
                       }
                     : { text: line.text, threadId: "group" },
@@ -172,26 +172,26 @@ describe("a chat's photos alone", () => {
   // The place's own chat: words at 3, m's photo taken back at 4, and the
   // photos of b, whom r blocked, at 6 and 8. r sees 1, 2, 5, 7, 9 and 10.
   const ownChat = [
-    { authorId: "m", photo: true, seq: 1 },
-    { authorId: "m", photo: true, seq: 2 },
-    { authorId: "m", photo: false, seq: 3 },
-    { authorId: "m", photo: true, seq: 4, unsent: true },
-    { authorId: "m", photo: true, seq: 5 },
-    { authorId: "b", photo: true, seq: 6 },
-    { authorId: "m", photo: true, seq: 7 },
-    { authorId: "b", photo: true, seq: 8 },
-    { authorId: "m", photo: true, seq: 9 },
-    { authorId: "m", photo: true, seq: 10 },
+    { authorId: "m", photos: 1, seq: 1 },
+    { authorId: "m", photos: 1, seq: 2 },
+    { authorId: "m", photos: 0, seq: 3 },
+    { authorId: "m", photos: 1, seq: 4, unsent: true },
+    { authorId: "m", photos: 1, seq: 5 },
+    { authorId: "b", photos: 1, seq: 6 },
+    { authorId: "m", photos: 1, seq: 7 },
+    { authorId: "b", photos: 1, seq: 8 },
+    { authorId: "m", photos: 1, seq: 9 },
+    { authorId: "m", photos: 1, seq: 10 },
   ];
 
   it.each([
-    { after: false, expected: { offset: 4, seqs: [9, 10] }, seq: 0 },
-    { after: false, expected: { offset: 2, seqs: [5, 7] }, seq: 9 },
-    { after: false, expected: { offset: 0, seqs: [1, 2] }, seq: 5 },
-    { after: true, expected: { offset: 0, seqs: [1, 2] }, seq: 0 },
+    { after: false, expected: { offset: 4, photos: ["9a", "10a"] }, seq: 0 },
+    { after: false, expected: { offset: 2, photos: ["5a", "7a"] }, seq: 9 },
+    { after: false, expected: { offset: 0, photos: ["1a", "2a"] }, seq: 5 },
+    { after: true, expected: { offset: 0, photos: ["1a", "2a"] }, seq: 0 },
     // From a line r does not see, those up to it come before.
-    { after: true, expected: { offset: 3, seqs: [7, 9] }, seq: 6 },
-    { after: true, expected: { offset: 6, seqs: [] }, seq: 10 },
+    { after: true, expected: { offset: 3, photos: ["7a", "9a"] }, seq: 6 },
+    { after: true, expected: { offset: 6, photos: [] }, seq: 10 },
   ])(
     "page past those taken back or of someone blocked, counting the rest (seq $seq, after $after)",
     async ({ after, expected, seq }) => {
@@ -217,7 +217,7 @@ describe("a chat's photos alone", () => {
         size: 2,
         userId: "s",
       })
-    ).resolves.toStrictEqual({ offset: 6, seqs: [9, 10], total: 8 });
+    ).resolves.toStrictEqual({ offset: 6, photos: ["9a", "10a"], total: 8 });
   });
 
   it("leave out in a one-to-one chat those kept from the reader alone", async () => {
@@ -227,7 +227,7 @@ describe("a chat's photos alone", () => {
     const direct = [1, 2, 3, 4].map((seq) => ({
       authorId: "w",
       hiddenFrom: seq === 2 ? "r" : undefined,
-      photo: true,
+      photos: 1,
       seq,
       threadId,
       unsent: seq === 3,
@@ -241,7 +241,7 @@ describe("a chat's photos alone", () => {
         threadId,
         userId: "r",
       })
-    ).resolves.toStrictEqual({ offset: 0, seqs: [1, 4], total: 2 });
+    ).resolves.toStrictEqual({ offset: 0, photos: ["1a", "4a"], total: 2 });
     await expect(
       photosAmong({
         after: true,
@@ -250,7 +250,7 @@ describe("a chat's photos alone", () => {
         threadId,
         userId: "w",
       })
-    ).resolves.toStrictEqual({ offset: 1, seqs: [2, 4], total: 3 });
+    ).resolves.toStrictEqual({ offset: 1, photos: ["2a", "4a"], total: 3 });
   });
 
   it("come the same way in the chat with Pochical's people", async () => {

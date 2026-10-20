@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   fromSlackText,
+  isRecord,
   signedBySlack,
   slackRefusal,
   toSlackText,
@@ -42,7 +43,7 @@ const slackAnswer = (
   switch (method) {
     case "files.getUploadURLExternal": {
       return {
-        file_id: "F-UP",
+        file_id: `F-UP-${String(args.filename)}`,
         ok: true,
         upload_url: "https://files.slack.com/upload/v1/up",
       };
@@ -123,7 +124,8 @@ const slackCalls = (
 ) => {
   const calls: { method: string; args: Record<string, unknown> }[] = [];
   const messages: SlackMessage[] = [];
-  let filename = "";
+  // Each file uploaded, by its id, its name.
+  const uploaded = new Map<string, string>();
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const request = new Request(input, init);
     const url = new URL(request.url);
@@ -144,14 +146,17 @@ const slackCalls = (
       messages.push({ ...args, ts: String(answer.ts) });
     }
     if (taken && method === "files.getUploadURLExternal") {
-      filename = String(args.filename);
+      uploaded.set(String(answer.file_id), String(args.filename));
     }
     if (taken && method === "files.completeUploadExternal") {
       posts += 1;
+      const files: unknown[] = Array.isArray(args.files) ? args.files : [];
       messages.push({
-        // As Slack gives a file the app shared.
+        // As Slack gives the files the app shared at once.
         bot_id: "B0",
-        files: [{ name: filename }],
+        files: files.map((file) => ({
+          name: isRecord(file) ? uploaded.get(String(file.id)) : undefined,
+        })),
         thread_ts: args.thread_ts,
         ts: `${SHARED_PREFIX}${String(posts).padStart(6, "0")}`,
       });
@@ -217,7 +222,7 @@ type Kept = {
   author_id: string;
   text: string;
   unsent: number;
-  photo: string | null;
+  photos: string | null;
 };
 
 /** The chat's lines as its Group DO keeps them. */
@@ -227,7 +232,7 @@ const linesOf = async (userId: string): Promise<Kept[]> =>
     (_, state) =>
       state.storage.sql
         .exec<Kept>(
-          "select seq, author_id, text, unsent, photo from chat_lines order by seq"
+          "select seq, author_id, text, unsent, photos from chat_lines order by seq"
         )
         .toArray()
   );
@@ -509,12 +514,16 @@ describe("a support chat in Slack", () => {
     });
   });
 
-  it("sends a reply's images as photos before its words, and says why not to other files", async () => {
+  it("sends a reply's images as one photo line before its words, and says why not to other files", async () => {
     const calls = slackCalls();
     const { thread, userId } = await startedChat();
     await postEvent(
       replyIn(thread, {
-        files: [slackImage("F1"), { id: "F2", mimetype: "application/pdf" }],
+        files: [
+          slackImage("F1"),
+          { id: "F2", mimetype: "application/pdf" },
+          slackImage("F3"),
+        ],
         subtype: "file_share",
         text: "設定画面です",
       })
@@ -534,15 +543,18 @@ describe("a support chat in Slack", () => {
       `groups/${supportPlace(userId)}/photos/slack-F1`
     );
     expect([
-      answers.map(({ text, photo }) => [text, photo === null]),
-      JSON.parse(answers[0]?.photo ?? "{}"),
+      answers.map(({ text, photos }) => [text, photos === null]),
+      JSON.parse(answers[0]?.photos ?? "[]"),
       kept?.httpMetadata?.contentType,
     ]).toMatchObject([
       [
         ["", false],
         ["設定画面です", true],
       ],
-      { height: 768, id: "slack-F1", width: 1024 },
+      [
+        { height: 768, id: "slack-F1", width: 1024 },
+        { height: 768, id: "slack-F3", width: 1024 },
+      ],
       "image/png",
     ]);
   });
@@ -713,32 +725,39 @@ describe("reactions and lines taken back, in Slack", () => {
   });
 });
 
-/** A photo the user sends in their chat, uploaded first as the app does. */
+/**
+ * A line of `count` photos the user sends in their chat, each uploaded
+ * first as the app does.
+ */
 const sendPhoto = async (
   token: string,
-  edit: Awaited<ReturnType<typeof supportChat>>["edit"]
+  edit: Awaited<ReturnType<typeof supportChat>>["edit"],
+  count = 1
 ): Promise<void> => {
-  const photoId = crypto.randomUUID();
-  const put = await exports.default.fetch(
-    `${ORIGIN}/v1/support/photos/${photoId}`,
-    {
-      body: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]),
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "image/jpeg",
-      },
-      method: "PUT",
+  const photoIds = Array.from({ length: count }, () => crypto.randomUUID());
+  for (const photoId of photoIds) {
+    // oxlint-disable-next-line no-await-in-loop -- one after another
+    const put = await exports.default.fetch(
+      `${ORIGIN}/v1/support/photos/${photoId}`,
+      {
+        body: new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]),
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "image/jpeg",
+        },
+        method: "PUT",
+      }
+    );
+    if (!put.ok) {
+      throw new Error(`The photo was not uploaded: ${put.status}`);
     }
-  );
-  if (!put.ok) {
-    throw new Error(`The photo was not uploaded: ${put.status}`);
   }
   await edit([
     {
       kind: {
         case: "send",
         value: {
-          photo: { height: 3, id: photoId, width: 4 },
+          photos: photoIds.map((id) => ({ height: 3, id, width: 4 })),
           text: "",
           threadId: "group",
         },
@@ -767,6 +786,31 @@ describe("a user's photo, in Slack", () => {
       "files.info",
     ]);
     expect(calls[2]?.args.thread_ts).toBe(thread);
+  });
+
+  it("of several is one message holding them all, in the line's order", async () => {
+    const calls = slackCalls();
+    const token = await signInAnonymously();
+    const { edit } = await supportChat(token);
+    await sendPhoto(token, edit, 3);
+    const shared = calls.filter(
+      ({ method }) => method === "files.completeUploadExternal"
+    );
+    expect([
+      calls
+        .filter(({ method }) => method === "files.getUploadURLExternal")
+        .map(({ args }) => args.filename),
+      shared.map(({ args }) => args.files),
+    ]).toStrictEqual([
+      ["photo-1-1.jpg", "photo-1-2.jpg", "photo-1-3.jpg"],
+      [
+        [
+          { id: "F-UP-photo-1-1.jpg", title: "写真" },
+          { id: "F-UP-photo-1-2.jpg", title: "写真" },
+          { id: "F-UP-photo-1-3.jpg", title: "写真" },
+        ],
+      ],
+    ]);
   });
 
   it("is looked for and uploaded again while Slack does not take it, but not once shared", async () => {
@@ -898,7 +942,7 @@ describe("a line Slack took with its answer lost", () => {
       "files.completeUploadExternal",
       "conversations.replies",
     ]);
-    expect(calls[1]?.args.filename).toBe("photo-1.jpg");
+    expect(calls[1]?.args.filename).toBe("photo-1-1.jpg");
     const ts = await slackTsOf(userId, 1);
     expect(ts?.slice(0, SHARED_PREFIX.length)).toBe(SHARED_PREFIX);
   });

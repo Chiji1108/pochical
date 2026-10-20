@@ -51,7 +51,7 @@ const sendPhoto = (
           kind: {
             case: "send",
             value: {
-              photo: { height: size, id, thumbHash, width: size },
+              photos: [{ height: size, id, thumbHash, width: size }],
               threadId: "group",
             },
           },
@@ -137,12 +137,14 @@ describe("a group's photos", () => {
       {
         kind: {
           value: {
-            photo: {
-              height: 100,
-              id: "mine",
-              thumbHash: THUMB_HASH,
-              width: 100,
-            },
+            photos: [
+              {
+                height: 100,
+                id: "mine",
+                thumbHash: THUMB_HASH,
+                width: 100,
+              },
+            ],
             seq: 2n,
           },
         },
@@ -187,7 +189,7 @@ describe("a group's photos", () => {
             {
               kind: {
                 case: "recall",
-                value: { photoId, sendOpId, threadId: "group" },
+                value: { photoIds: [photoId], sendOpId, threadId: "group" },
               },
               opId,
             },
@@ -571,7 +573,7 @@ describe("a group's photo once stored", () => {
       );
     }
     expect(sent).toMatchObject([
-      { kind: { value: { photo: { id: "again" } } } },
+      { kind: { value: { photos: [{ id: "again" }] } } },
     ]);
   });
 });

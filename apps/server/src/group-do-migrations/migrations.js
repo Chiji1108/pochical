@@ -34,6 +34,7 @@ import m0031 from './0031_chat-recalls-taken-at.sql';
 import m0032 from './0032_chat-photos-uploaded-at.sql';
 import m0033 from './0033_group-photos.sql';
 import m0034 from './0034_membership_outbox.sql';
+import m0035 from './0035_chat-line-photos.sql';
 
   export default {
     journal,
@@ -72,7 +73,8 @@ m0030,
 m0031,
 m0032,
 m0033,
-m0034
+m0034,
+m0035
     }
   }
   

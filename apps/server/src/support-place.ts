@@ -52,14 +52,11 @@ const linesOfRows = (
   return rows.map((row) => ({
     device: row.device,
     fromPochical: row.authorId === chatRules.pochicalMember,
-    photo:
-      row.photo === null
-        ? null
-        : {
-            height: row.photo.height,
-            id: row.photo.id,
-            width: row.photo.width,
-          },
+    photos: (row.photos ?? []).map(({ height, id, width }) => ({
+      height,
+      id,
+      width,
+    })),
     preview:
       row.preview === null
         ? null

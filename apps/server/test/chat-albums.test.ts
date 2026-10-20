@@ -1,6 +1,10 @@
-import { exports } from "cloudflare:workers";
+import type { MessageInitShape } from "@bufbuild/protobuf";
+import { chatRules } from "@pochical/design/chat";
+import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { ChatEditSchema } from "../src/gen/pochical/v1/sync_pb";
+import { photoKey } from "../src/photos";
 import { call, ORIGIN } from "./helpers";
 import {
   changesIn,
@@ -14,38 +18,49 @@ import {
 // A JPEG's first bytes, as the app sends one.
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 
-const upload = async (path: string, token: string): Promise<void> => {
-  const put = await exports.default.fetch(`${ORIGIN}${path}`, {
-    body: JPEG,
-    headers: { Authorization: `Bearer ${token}` },
-    method: "PUT",
-  });
-  expect(put.status).toBe(204);
+const upload = async (
+  groupId: string,
+  ids: string[],
+  token: string
+): Promise<void> => {
+  for (const id of ids) {
+    // oxlint-disable-next-line no-await-in-loop -- one after another
+    const put = await exports.default.fetch(
+      `${ORIGIN}/v1/groups/${groupId}/photos/${id}`,
+      {
+        body: JPEG,
+        headers: { Authorization: `Bearer ${token}` },
+        method: "PUT",
+      }
+    );
+    expect(put.status).toBe(204);
+  }
 };
 
-type Sent = { photo: string; album: string } | { text: string; album: string };
+type Kind = MessageInitShape<typeof ChatEditSchema>["kind"];
 
-// Sends lines at once, as the composer sends an album, once taken.
-const send = async (
+/** A send of the photos as one line, as the composer sends them. */
+const photoLine = (ids: string[], text = ""): Kind => ({
+  case: "send",
+  value: {
+    photos: ids.map((id) => ({ height: 10, id, width: 10 })),
+    text,
+    threadId: "group",
+  },
+});
+
+/** Edits of the chat in one frame, once taken; each its own op_id. */
+const edit = async (
   { socket, frames }: Awaited<ReturnType<typeof syncSocket>>,
-  lines: Sent[]
+  kinds: Kind[],
+  opIds: string[] = []
 ): Promise<void> => {
   sendFrame(socket, {
     case: "chatEdits",
     value: {
-      edits: lines.map((line) => ({
-        kind: {
-          case: "send" as const,
-          value:
-            "photo" in line
-              ? {
-                  album: line.album,
-                  photo: { height: 10, id: line.photo, width: 10 },
-                  threadId: "group",
-                }
-              : { album: line.album, text: line.text, threadId: "group" },
-        },
-        opId: crypto.randomUUID(),
+      edits: kinds.map((kind, at) => ({
+        kind,
+        opId: opIds[at] ?? crypto.randomUUID(),
       })),
     },
   });
@@ -59,79 +74,161 @@ const linesOf = async (groupId: string, token: string) => {
     `/v1/groups/${groupId}/socket`,
     token
   );
-  const lines: { seq: number; album: string; photo?: string; text: string }[] =
-    [];
+  const lines = new Map<
+    number,
+    {
+      photos: string[];
+      pinned: boolean;
+      reactions: string[];
+      seq: number;
+      unsent: boolean;
+    }
+  >();
   for (;;) {
     // oxlint-disable-next-line no-await-in-loop -- frames come in order
     const frame = await settled(socket, frames);
     if (frame.kind.case === "pong") {
-      return lines;
+      return [...lines.values()].toSorted((a, b) => a.seq - b.seq);
     }
     for (const { kind } of changesIn(frame)) {
       if (kind.case === "chatLine" && kind.value.notice === undefined) {
-        lines.push({
-          album: kind.value.album,
-          photo: kind.value.photo?.id,
-          seq: Number(kind.value.seq),
-          text: kind.value.text,
+        const { photos, pinnedOrder, reactions, seq, unsent } = kind.value;
+        lines.set(Number(seq), {
+          photos: photos.map(({ id }) => id),
+          pinned: pinnedOrder > 0n,
+          reactions: reactions.map(({ emoji }) => emoji),
+          seq: Number(seq),
+          unsent,
         });
       }
     }
   }
 };
 
-describe("an album", () => {
+const storedIn = async (groupId: string, ids: string[]) =>
+  await Promise.all(
+    ids.map(
+      async (id) => (await env.PHOTOS.head(photoKey(groupId, id))) !== null
+    )
+  );
+
+describe("a line of photos", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("is photos sent at once under one name, which words cannot take", async () => {
+  it("holds the photos sent at once, in the order sent, none of them to send again", async () => {
     const { groupId, guest, maker } = await pair();
-    for (const id of ["a1", "a2", "b1"]) {
-      // oxlint-disable-next-line no-await-in-loop -- one after another
-      await upload(`/v1/groups/${groupId}/photos/${id}`, maker);
-    }
+    await upload(groupId, ["c", "a", "b"], maker);
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
-    await send(mine, [
-      { album: "x", photo: "a1" },
-      { album: "x", photo: "a2" },
-      // Words never go in an album.
-      { album: "x", text: "見て" },
-      // A name past 64 characters, or past ASCII, is refused.
-      { album: "y".repeat(65), photo: "b1" },
-      { album: "アルバム", photo: "b1" },
-    ]);
-    await expect(linesOf(groupId, guest)).resolves.toStrictEqual([
-      { album: "x", photo: "a1", seq: 2, text: "" },
-      { album: "x", photo: "a2", seq: 3, text: "" },
+    await edit(mine, [photoLine(["b", "c", "a"])]);
+    await edit(mine, [photoLine(["a"]), photoLine(["c"])]);
+    await expect(linesOf(groupId, guest)).resolves.toMatchObject([
+      { photos: ["b", "c", "a"], seq: 2 },
     ]);
   });
 
-  it("comes as one notification, each photo in the last one's place", async () => {
+  it("takes reactions and a pin as one line, and taken back deletes all its photos", async () => {
+    const { groupId, guest, maker } = await pair();
+    await upload(groupId, ["p1", "p2", "kept"], maker);
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    const theirs = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
+    await edit(mine, [photoLine(["p1", "p2"])]);
+    await edit(theirs, [
+      {
+        case: "react",
+        value: { emoji: "👍", on: true, seq: 2n, threadId: "group" },
+      },
+      { case: "pin", value: { on: true, seq: 2n, threadId: "group" } },
+    ]);
+    await expect(linesOf(groupId, guest)).resolves.toStrictEqual([
+      {
+        photos: ["p1", "p2"],
+        pinned: true,
+        reactions: ["👍"],
+        seq: 2,
+        unsent: false,
+      },
+    ]);
+
+    await edit(mine, [
+      { case: "unsend", value: { seq: 2n, threadId: "group" } },
+    ]);
+    await expect(linesOf(groupId, guest)).resolves.toStrictEqual([
+      { photos: [], pinned: false, reactions: [], seq: 2, unsent: true },
+    ]);
+    await expect
+      .poll(async () => await storedIn(groupId, ["p1", "p2", "kept"]))
+      .toStrictEqual([false, false, true]);
+  });
+
+  it("taken back before it came deletes every photo it names, the send never coming", async () => {
+    const { groupId, guest, maker } = await pair();
+    await upload(groupId, ["r1", "r2"], maker);
+    await upload(groupId, ["theirs"], guest);
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    await edit(mine, [
+      {
+        case: "recall",
+        value: {
+          photoIds: ["r1", "r2", "theirs"],
+          sendOpId: "late",
+          threadId: "group",
+        },
+      },
+    ]);
+    await expect
+      .poll(async () => await storedIn(groupId, ["r1", "r2", "theirs"]))
+      .toStrictEqual([false, false, true]);
+    await edit(mine, [photoLine(["r1", "r2"])], ["late"]);
+    await expect(linesOf(groupId, guest)).resolves.toStrictEqual([]);
+  });
+
+  it("is dropped unless its photos are the sender's own, unsent, each once, as many as one send holds, without words", async () => {
+    const { groupId, guest, maker } = await pair();
+    const many = Array.from(
+      { length: chatRules.photosPerSend + 1 },
+      (_, at) => `m${at}`
+    );
+    await upload(groupId, [...many, "sent"], maker);
+    await upload(groupId, ["theirs"], guest);
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    await edit(mine, [photoLine(["sent"])]);
+    await edit(mine, [
+      photoLine(["m0", "m0"]),
+      photoLine(many),
+      photoLine(["m0", "theirs"]),
+      photoLine(["m0", "sent"]),
+      photoLine(["m0"], "見て"),
+      photoLine([]),
+    ]);
+    // None of those took m0 and m1, which still go.
+    await edit(mine, [photoLine(["m0", "m1"])]);
+    await expect(linesOf(groupId, guest)).resolves.toMatchObject([
+      { photos: ["sent"], seq: 2 },
+      { photos: ["m0", "m1"], seq: 3 },
+    ]);
+  });
+
+  it("comes as one notification, which nothing collapses", async () => {
     const { groupId, guest, maker } = await pair();
     await call(
       "UserService/RegisterPushToken",
       { sandbox: true, token: "a1".repeat(32) },
       guest
     );
-    for (const id of ["a1", "a2", "solo"]) {
-      // oxlint-disable-next-line no-await-in-loop -- one after another
-      await upload(`/v1/groups/${groupId}/photos/${id}`, maker);
-    }
-    const collapse: (string | null)[] = [];
+    await upload(groupId, ["n1", "n2", "n3"], maker);
+    const pushes: (string | null)[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const request = new Request(input, init);
-      collapse.push(request.headers.get("apns-collapse-id"));
+      pushes.push(request.headers.get("apns-collapse-id"));
       // Read through, as APNs reads the payload.
       await request.text();
       return new Response(null, { status: 200 });
     });
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
-    // Each as its upload ends, as the outbox sends them.
-    await send(mine, [{ album: "x", photo: "a1" }]);
-    await send(mine, [{ album: "x", photo: "a2" }]);
-    await send(mine, [{ album: "", photo: "solo" }]);
-    await expect.poll(() => collapse.length).toBe(3);
-    expect(collapse).toStrictEqual(["x", "x", null]);
+    await edit(mine, [photoLine(["n1", "n2", "n3"])]);
+    await expect.poll(() => pushes.length).toBe(1);
+    expect(pushes).toStrictEqual([null]);
   });
 });

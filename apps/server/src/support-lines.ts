@@ -27,8 +27,8 @@ export type SupportLine = {
   text: string;
   /** The app's version and the device a user's line came from. */
   device: string | null;
-  /** Its photo, as the line instead of words; none once taken back. */
-  photo: { id: string; width: number; height: number } | null;
+  /** Its photos, as the line instead of words; none once taken back. */
+  photos: { id: string; width: number; height: number }[];
   /** The line it answers, by seq. */
   replyTo: number | null;
   unsent: boolean;
@@ -38,6 +38,6 @@ export type SupportLine = {
   preview: { site: string; title: string; url: string } | null;
 };
 
-/** A line's words, or what a photo is called. */
+/** A line's words, or what photos are called. */
 export const wordsOf = (line: SupportLine): string =>
-  line.photo === null ? line.text : PHOTO_WORDS;
+  line.photos.length === 0 ? line.text : PHOTO_WORDS;

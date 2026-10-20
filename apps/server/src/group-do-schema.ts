@@ -150,9 +150,6 @@ export const memberRepeatOrders = sqliteTable(
 export const chatLines = sqliteTable(
   "chat_lines",
   {
-    // The photos sent together with it (pochical.v1.ChatLine.album); none
-    // for a photo sent alone, and for anything else.
-    album: text(),
     authorId: text("author_id").notNull(),
     createdCursor: integer("created_cursor").notNull(),
     cursor: integer().notNull(),
@@ -178,15 +175,17 @@ export const chatLines = sqliteTable(
     }>(),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),
-    // The photo sent as the line, as pochical.v1.ChatPhoto's fields, its
-    // ThumbHash as base64 when it came with one; none for words or days,
-    // and once unsent.
-    photo: text({ mode: "json" }).$type<{
-      id: string;
-      height: number;
-      thumbHash?: string;
-      width: number;
-    }>(),
+    // The photos sent as the line, in the order sent, each as
+    // pochical.v1.ChatPhoto's fields, its ThumbHash as base64 when it came
+    // with one; none for anything else, and once unsent.
+    photos: text({ mode: "json" }).$type<
+      {
+        id: string;
+        height: number;
+        thumbHash?: string;
+        width: number;
+      }[]
+    >(),
     // The cursor it was last pinned at, while pinned for everyone.
     pinnedAt: integer("pinned_at"),
     // Its days are put to the vote.
@@ -217,7 +216,7 @@ export const chatLines = sqliteTable(
     // A chat's photos alone, paged without the lines between them.
     index("chat_lines_photos")
       .on(table.threadId, table.seq)
-      .where(sql`${table.photo} is not null`),
+      .where(sql`${table.photos} is not null`),
   ]
 );
 
