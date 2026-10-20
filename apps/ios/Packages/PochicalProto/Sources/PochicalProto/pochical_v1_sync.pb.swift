@@ -268,9 +268,9 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     set {kind = .changes(newValue)}
   }
 
-  /// The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-  /// CoworkerEdits the server has taken, sent after the Changes they made;
-  /// the client deletes them from its outbox.
+  /// The edits of a frame of edits the server is done with, sent after the
+  /// Changes they made; the client deletes them from its outbox, keeping
+  /// the chat sends Acked.refused names as lines not sent.
   public var acked: Pochical_V1_Acked {
     get {
       if case .acked(let v)? = kind {return v}
@@ -325,9 +325,9 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     /// Changes to the DO's data in cursor order, after Welcome and as they
     /// happen.
     case changes(Pochical_V1_Changes)
-    /// The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-    /// CoworkerEdits the server has taken, sent after the Changes they made;
-    /// the client deletes them from its outbox.
+    /// The edits of a frame of edits the server is done with, sent after the
+    /// Changes they made; the client deletes them from its outbox, keeping
+    /// the chat sends Acked.refused names as lines not sent.
     case acked(Pochical_V1_Acked)
     /// The client's cursor is ahead of the server's: drop this DO's cache.
     /// A Changes with everything the DO holds follows.

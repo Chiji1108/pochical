@@ -43,9 +43,9 @@ message ServerFrame {
     // Changes to the DO's data in cursor order, after Welcome and as they
     // happen.
     Changes changes = 4;
-    // The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-    // CoworkerEdits the server has taken, sent after the Changes they made;
-    // the client deletes them from its outbox.
+    // The edits of a frame of edits the server is done with, sent after the
+    // Changes they made; the client deletes them from its outbox, keeping
+    // the chat sends Acked.refused names as lines not sent.
     Acked acked = 5;
     // The client's cursor is ahead of the server's: drop this DO's cache.
     // A Changes with everything the DO holds follows.
