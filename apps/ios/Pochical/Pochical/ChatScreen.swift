@@ -990,9 +990,8 @@ struct ChatScreen: View {
     let nameOf = { (id: String) in memberName(id, in: names) }
     draft.text = plainText(kept.text, nameOf: nameOf)
     draft.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }
-    draft.editing = kept.editing
-    draft.replyTo = kept.editing == nil ? kept.replyTo : nil
-    keptDraft = KeptDraft(text: kept.text, replyTo: kept.replyTo, editing: kept.editing?.seq)
+    draft.target = kept.target
+    keptDraft = KeptDraft(text: kept.text, target: kept.target?.map(\.seq))
     openedDraft = (shown: draft.text, sent: kept.text)
   }
 
@@ -1531,14 +1530,15 @@ struct ChatScreen: View {
   /// Answers a line (返信): quoted over the composer until sent or ×.
   private func reply(to line: ChatLineRow) {
     if draft.editing != nil { stopEditing() }
-    draft.replyTo = line.seq
+    draft.target = .reply(line.seq)
     draft.field.focus()
   }
 
   /// The line being answered, for the first line sent: then no more.
   private func takeReply() -> UInt64 {
-    defer { draft.replyTo = nil }
-    return draft.replyTo.map(UInt64.init) ?? 0
+    guard let seq = draft.replyTo else { return 0 }
+    draft.target = nil
+    return UInt64(seq)
   }
 
   /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):
@@ -1566,8 +1566,7 @@ struct ChatScreen: View {
   }
 
   private func edit(_ line: ChatLineRow) {
-    draft.replyTo = nil
-    draft.editing = line
+    draft.target = .edit(line)
     // Its mentions as @name again, still picked.
     draft.text = plainText(line.text, nameOf: nameOf)
     draft.picked = mentions(in: line.text).map { PickedMember(id: $0, name: nameOf($0)) }
@@ -1575,7 +1574,7 @@ struct ChatScreen: View {
   }
 
   private func stopEditing() {
-    draft.editing = nil
+    draft.target = nil
     draft.text = ""
     draft.picked = []
   }
