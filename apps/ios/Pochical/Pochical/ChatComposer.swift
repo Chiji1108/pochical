@@ -323,7 +323,7 @@ struct ChatComposer: View {
       preview: preview,
       photos: editing ? 0 : draft.photos.count,
       mentioning: mentioning,
-      lines: draft.field.lines(for: draft.text),
+      fieldHeight: draft.field.height(for: draft.text),
       counted: TextLimits.chatMessage - draft.text.count <= TextFields.countWhenLeft)
   }
 
@@ -429,7 +429,7 @@ struct ChatComposer: View {
 }
 
 /// What a chat's composer's height is made of: what it carries over the
-/// field, the names to mention over it, and the field's lines. As it
+/// field, the names to mention over it, and the field's height. As it
 /// changes, the composer changes shape by one animation.
 private struct ComposerShape: Equatable {
   let editing: Bool
@@ -438,7 +438,7 @@ private struct ComposerShape: Equatable {
   let preview: ComposerPreview?
   let photos: Int
   let mentioning: Int
-  let lines: Int
+  let fieldHeight: CGFloat
   let counted: Bool
 }
 

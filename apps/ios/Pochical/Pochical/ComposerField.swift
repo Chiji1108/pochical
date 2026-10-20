@@ -21,20 +21,20 @@ import UniformTypeIdentifiers
     view?.becomeFirstResponder()
   }
 
-  /// How many lines `text` takes in the field, up to ComposerField.maxLines,
-  /// told from the words, however they came there (typed, put in for 編集,
-  /// emptied as they are sent), so the composer grows and shrinks with
-  /// them in the update that changed them, by its one animation.
-  func lines(for text: String) -> Int {
-    guard let view, let font = view.font, view.bounds.width > 0 else { return 1 }
-    // A last line ending in a newline is a line too, as the field has it.
-    let words = (text.hasSuffix("\n") || text.isEmpty ? text + " " : text) as NSString
-    let height = words.boundingRect(
-      with: CGSize(width: view.bounds.width, height: .greatestFiniteMagnitude),
-      options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font], context: nil
-    ).height
-    return min(ComposerField.maxLines, max(1, Int((height / font.lineHeight).rounded())))
+  /// The field's height for `text`, told from the words, however they came
+  /// there (typed, put in for 編集, emptied as they are sent), so the
+  /// composer grows and shrinks with them in the update that changed them,
+  /// by its one animation. Laid out as the field lays out its own words,
+  /// by a text view set up as it is: the field may not hold `text` yet.
+  func height(for text: String) -> CGFloat {
+    guard let view, view.bounds.width > 0 else { return 0 }
+    measuring.font = view.font
+    measuring.text = text
+    return ComposerField.fitting(measuring, width: view.bounds.width).height
   }
+
+  /// A text view set up as the field, to lay out words it does not hold.
+  private let measuring = ComposerField.setUp(UITextView())
 }
 
 /// The chat's field, from one line growing to `maxLines` and then
@@ -55,15 +55,30 @@ struct ComposerField: UIViewRepresentable {
 
   static let maxLines = 5
 
-  func makeUIView(context: Context) -> UITextView {
-    let view = PastingTextView()
-    view.onPasteImages = onPasteImages
+  /// `view` laid out as the field's words are.
+  fileprivate static func setUp<View: UITextView>(_ view: View) -> View {
     view.font = .preferredFont(forTextStyle: .body)
     view.adjustsFontForContentSizeCategory = true
     view.backgroundColor = .clear
     view.textContainerInset = .zero
     view.textContainer.lineFragmentPadding = 0
     view.isScrollEnabled = false
+    return view
+  }
+
+  /// The field's height for the words `view` holds at `width`: theirs up
+  /// to `maxLines`, past which it scrolls.
+  fileprivate static func fitting(_ view: UITextView, width: CGFloat) -> (
+    height: CGFloat, scrolls: Bool
+  ) {
+    let fitting = view.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+    let most = (view.font?.lineHeight ?? 22) * CGFloat(maxLines)
+    return (min(fitting.height, most), fitting.height > most)
+  }
+
+  func makeUIView(context: Context) -> UITextView {
+    let view = Self.setUp(PastingTextView())
+    view.onPasteImages = onPasteImages
     view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     view.delegate = context.coordinator
     view.accessibilityLabel = placeholder
@@ -85,14 +100,12 @@ struct ComposerField: UIViewRepresentable {
   {
     // Only as wide as offered; asked for its own width, it has none.
     guard let width = proposal.width, width.isFinite else { return nil }
-    let fitting = view.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-    let most = (view.font?.lineHeight ?? 22) * CGFloat(Self.maxLines)
-    let scrolls = fitting.height > most
-    if view.isScrollEnabled != scrolls {
+    let fitting = Self.fitting(view, width: width)
+    if view.isScrollEnabled != fitting.scrolls {
       // Changed after this layout pass, not during it.
-      DispatchQueue.main.async { view.isScrollEnabled = scrolls }
+      DispatchQueue.main.async { view.isScrollEnabled = fitting.scrolls }
     }
-    return CGSize(width: width, height: min(fitting.height, most))
+    return CGSize(width: width, height: fitting.height)
   }
 
   func makeCoordinator() -> Coordinator {
