@@ -1,6 +1,6 @@
 import { chatRules } from "@pochical/design/chat";
 import { Images } from "lucide-react";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
 import { css, cx } from "styled-system/css";
 
 import { sharePhoto, viewerPhotoOf } from "./design-chat-cards";
@@ -64,9 +64,11 @@ const list = {
 // or its grey breathing without one.
 function Thumbnail({
   entry,
+  index,
   onOpen,
 }: {
   entry: ChatPhoto;
+  index: number;
   onOpen: () => void;
 }) {
   const { photo } = entry;
@@ -82,6 +84,7 @@ function Thumbnail({
         list.square,
         !drawn && blur === undefined && chatStyle.photoLoading
       )}
+      data-photo-index={index}
       onClick={onOpen}
       style={{
         backgroundImage: blur === undefined ? undefined : `url(${blur})`,
@@ -120,7 +123,16 @@ export function ChatPhotoList({
   onBack: () => void;
 }) {
   const toast = useContext(ToastContext);
-  const [viewing, setViewing] = useState<number>();
+  const [viewing, setViewing] = useState(false);
+  // The photo opened, kept as it closes so the viewer is not turned back
+  // to the first on its way out.
+  const [opened, setOpened] = useState(0);
+  const grid = useRef<HTMLUListElement>(null);
+  const squareOf = (index: number) =>
+    grid.current?.querySelector<HTMLElement>(`[data-photo-index="${index}"]`) ??
+    null;
+  // The photo shown large now, swiped to from the one opened.
+  const shown = useRef(0);
   // The latest at the top left, each knowing its place among them all.
   const latestFirst = photos
     .map((entry, index) => ({ entry, index }))
@@ -137,13 +149,16 @@ export function ChatPhotoList({
         </div>
       ) : (
         <div className={list.scroll}>
-          <ul aria-label="写真" className={list.grid}>
+          <ul aria-label="写真" className={list.grid} ref={grid}>
             {latestFirst.map(({ entry, index }) => (
               <li key={entry.photo.src}>
                 <Thumbnail
                   entry={entry}
+                  index={index}
                   onOpen={() => {
-                    setViewing(index);
+                    shown.current = index;
+                    setOpened(index);
+                    setViewing(true);
                   }}
                 />
               </li>
@@ -152,20 +167,23 @@ export function ChatPhotoList({
         </div>
       )}
       <PhotoViewer
-        onOpenChange={(open) => {
-          if (!open) {
-            setViewing(undefined);
-          }
-        }}
+        // Closes into the square of the photo then shown, as Photos does.
+        finalFocusEl={() => squareOf(shown.current)}
+        onOpenChange={setViewing}
         onSave={() => {
           toast("写真を保存しました");
         }}
-        onShare={(shown) => {
-          sharePhoto(shown).catch(() => undefined);
+        onShare={(photo) => {
+          sharePhoto(photo).catch(() => undefined);
         }}
-        open={viewing !== undefined}
+        // The grid follows under it, the square shown kept in sight.
+        onShow={(index) => {
+          shown.current = index;
+          squareOf(index)?.scrollIntoView({ block: "nearest" });
+        }}
+        open={viewing}
         photos={photos.map(viewerPhotoOf)}
-        start={viewing ?? 0}
+        start={opened}
         whole
       />
     </Screen>

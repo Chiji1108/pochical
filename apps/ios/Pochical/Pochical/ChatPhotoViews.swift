@@ -187,28 +187,30 @@ struct PhotoLine: View {
   var body: some View {
     let size = cell ?? PhotoBox.size(of: photo)
     let corner = cell == nil ? Radius.lg : 0
-    // Read as a photo alone would be, so a photo is fetched and kept once
-    // for its line, its cell, its quote and the photo opened large.
-    ChatPhotoImage(
-      photo: photo, groupID: groupID, shown: PhotoBox.size(of: photo),
-      whileInSight: lineSpace == nil, retries: !waiting)
-      .frame(width: size.width, height: size.height)
-      .clipShape(RoundedRectangle(cornerRadius: corner))
-      .overlay {
-        if cell == nil {
-          RoundedRectangle(cornerRadius: corner).strokeBorder(colors.borderDefault, lineWidth: 1)
+    PhotoSpot(id: photo.id, corner: corner) {
+      // Read as a photo alone would be, so a photo is fetched and kept
+      // once for its line, its cell, its quote and the photo opened large.
+      ChatPhotoImage(
+        photo: photo, groupID: groupID, shown: PhotoBox.size(of: photo),
+        whileInSight: lineSpace == nil, retries: !waiting)
+        .frame(width: size.width, height: size.height)
+        .clipShape(RoundedRectangle(cornerRadius: corner))
+        .overlay {
+          if cell == nil {
+            RoundedRectangle(cornerRadius: corner).strokeBorder(colors.borderDefault, lineWidth: 1)
+          }
         }
-      }
-      .overlay {
-        if waiting {
-          PhotoGoingUp(photoID: photo.id, onStop: onStop)
-            .clipShape(RoundedRectangle(cornerRadius: corner))
+        .overlay {
+          if waiting {
+            PhotoGoingUp(photoID: photo.id, onStop: onStop)
+              .clipShape(RoundedRectangle(cornerRadius: corner))
+          }
         }
-      }
-      .photoSpot(photo.id)
-      .accessibilityElement(children: waiting ? .contain : .ignore)
-      .accessibilityLabel(waiting ? "送信中の写真" : "写真")
-      .accessibilityAddTraits(.isImage)
+    }
+    .frame(width: size.width, height: size.height)
+    .accessibilityElement(children: waiting ? .contain : .ignore)
+    .accessibilityLabel(waiting ? "送信中の写真" : "写真")
+    .accessibilityAddTraits(.isImage)
   }
 }
 

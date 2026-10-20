@@ -119,85 +119,92 @@ struct PhotoPager {
 
 extension View {
   /// Opens `viewing` large over everything while it is set, back to nil
-  /// once closed. `onSave` saves a photo, true once saved; none for
-  /// someone's face, which is theirs to keep, nor shared.
+  /// once closed: out of the photo's place on this screen (PhotoSpot),
+  /// and back into the place of the photo then shown. `onShow` is told of
+  /// each photo shown, for the screen to keep its place in sight, as
+  /// Photos' grid follows the photo opened from it. `onSave` saves a
+  /// photo, true once saved; none for someone's face, which is theirs to
+  /// keep, nor shared.
   func photoViewer(
     _ viewing: Binding<PhotoViewing?>, groupID: String,
+    onShow: ((String) -> Void)? = nil,
     onSave: ((LinePhoto) async -> Bool)? = nil
   ) -> some View {
-    background(PhotoViewerPresenter(viewing: viewing, groupID: groupID, onSave: onSave))
+    background(
+      PhotoViewerPresenter(viewing: viewing, groupID: groupID, onShow: onShow, onSave: onSave))
   }
 }
 
-/// Where the chat's photos are, by id, each opened from and closed back to
-/// there; and the one open large from its place, left empty meanwhile.
-@MainActor final class PhotoSpots {
-  static let shared = PhotoSpots()
-  /// Said as `open` changes, to the photo lines in the chat's cells,
-  /// which observation reaches only as the cell is configured again.
-  static let opened = Notification.Name("PhotoSpots.opened")
-  var open: String? {
-    didSet {
-      if open != oldValue { NotificationCenter.default.post(name: Self.opened, object: nil) }
-    }
-  }
-  private let views = NSMapTable<NSString, UIView>.strongToWeakObjects()
-
-  fileprivate func put(_ view: UIView, for id: String) {
-    views.setObject(view, forKey: id as NSString)
-  }
-
-  /// The place of the photo `id` while it is in a window, partly off the
-  /// screen too; none once its line is gone from the chat's cells.
-  func view(of id: String) -> UIView? {
-    guard let view = views.object(forKey: id as NSString), view.window != nil else { return nil }
-    return view
-  }
-}
-
-/// A photo's place in the chat: a plain view the size of the photo, for
-/// the zoom to open from and close to.
-struct PhotoSpot: UIViewRepresentable {
+/// A photo's place, which it opens large from and closes back to: the
+/// photo drawn in a view of its own, so the system's zoom lifts the photo
+/// itself out of its place and puts it back, the place left empty
+/// meanwhile, as Photos leaves it.
+struct PhotoSpot<Content: View>: UIViewRepresentable {
   let id: String
+  /// The photo's corners, which the zoom keeps as it lands.
+  var corner: CGFloat = 0
+  @ViewBuilder let content: Content
 
-  func makeUIView(context: Context) -> UIView {
-    let view = UIView()
-    view.isUserInteractionEnabled = false
-    return view
+  func makeUIView(context: Context) -> PhotoSpotView {
+    PhotoSpotView()
   }
 
-  func updateUIView(_ view: UIView, context: Context) {
-    PhotoSpots.shared.put(view, for: id)
+  func updateUIView(_ view: PhotoSpotView, context: Context) {
+    view.photoID = id
+    view.layer.cornerRadius = corner
+    view.host.rootView = AnyView(content.environment(\.self, context.environment))
+  }
+
+  func sizeThatFits(
+    _ proposal: ProposedViewSize, uiView: PhotoSpotView, context: Context
+  ) -> CGSize? {
+    proposal.replacingUnspecifiedDimensions()
   }
 }
 
-extension View {
-  /// The photo `id`'s place, where it opens large from and closes back to,
-  /// left empty while it is open, as Photos leaves a photo's place.
-  func photoSpot(_ id: String) -> some View {
-    modifier(PhotoSpotted(id: id))
+/// The photo's own view, hosting what draws it.
+final class PhotoSpotView: UIView {
+  fileprivate(set) var photoID = ""
+  fileprivate let host = UIHostingController(rootView: AnyView(EmptyView()))
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    layer.cornerCurve = .continuous
+    clipsToBounds = true
+    host.safeAreaRegions = []
+    host.view.backgroundColor = .clear
+    host.view.frame = bounds
+    host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    addSubview(host.view)
   }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 }
 
-private struct PhotoSpotted: ViewModifier {
-  let id: String
-  /// It is open large from here.
-  @State private var open = false
-
-  func body(content: Content) -> some View {
-    content
-      .opacity(open ? 0 : 1)
-      .background(PhotoSpot(id: id))
-      .onAppear { open = PhotoSpots.shared.open == id }
-      .onReceive(NotificationCenter.default.publisher(for: PhotoSpots.opened)) { _ in
-        open = PhotoSpots.shared.open == id
+extension UIView {
+  /// The place of the photo `id` among this view's, as laid out now, on
+  /// the screen, partly off it too; none once it is scrolled away.
+  fileprivate func photoSpot(_ id: String) -> PhotoSpotView? {
+    guard let window else { return nil }
+    layoutIfNeeded()
+    var views: [UIView] = [self]
+    while let view = views.popLast() {
+      if let spot = view as? PhotoSpotView, spot.photoID == id,
+        spot.convert(spot.bounds, to: window).intersects(window.bounds)
+      {
+        return spot
       }
+      if !view.isHidden { views += view.subviews }
+    }
+    return nil
   }
 }
 
 private struct PhotoViewerPresenter: UIViewControllerRepresentable {
   @Binding var viewing: PhotoViewing?
   let groupID: String
+  let onShow: ((String) -> Void)?
   let onSave: ((LinePhoto) async -> Bool)?
 
   final class Coordinator {
@@ -224,9 +231,12 @@ private struct PhotoViewerPresenter: UIViewControllerRepresentable {
     guard coordinator.viewer == nil, host.presentedViewController == nil else { return }
     let environment = context.environment
     let binding = $viewing
+    // The places are those of the screen it opens over.
+    let source: (String) -> UIView? = { [weak host] id in host?.parent?.view.photoSpot(id) }
     let viewer = PhotoViewerController(
       viewing, groupID: groupID, calls: environment.groupCalls, colors: environment.themeColors,
-      zooms: !environment.accessibilityReduceMotion, onSave: onSave)
+      source: environment.accessibilityReduceMotion ? nil : source, onShow: onShow,
+      onSave: onSave)
     viewer.onClosed = { [weak coordinator] in
       coordinator?.viewer = nil
       binding.wrappedValue = nil
@@ -254,6 +264,8 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   private let groupID: String
   private let calls: GroupCalls
   private let onSave: ((LinePhoto) async -> Bool)?
+  /// Told of each photo shown.
+  private let onShow: ((String) -> Void)?
   /// Opened from the photo's place and closed back to it; with motion
   /// reduced, it fades in and out instead.
   private let zooms: Bool
@@ -274,8 +286,11 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   private static let closeAt: CGFloat = 120
   private static let closeSpeed: CGFloat = 800
 
+  /// `source` gives the place of a photo, by its id, to open from and
+  /// close back to; none fades it in and out.
   init(
-    _ viewing: PhotoViewing, groupID: String, calls: GroupCalls, colors: ThemeColors, zooms: Bool,
+    _ viewing: PhotoViewing, groupID: String, calls: GroupCalls, colors: ThemeColors,
+    source: ((String) -> UIView?)?, onShow: ((String) -> Void)?,
     onSave: ((LinePhoto) async -> Bool)?
   ) {
     run = viewing.run
@@ -283,14 +298,15 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     names = viewing.names
     self.groupID = groupID
     self.calls = calls
-    self.zooms = zooms
+    zooms = source != nil
+    self.onShow = onShow
     self.onSave = onSave
     notice = UIHostingController(rootView: ViewerNotice(words: noticeWords, colors: colors))
     super.init(nibName: nil, bundle: nil)
     if let start = run.photos.first(where: { $0.seq == run.shown }) {
       pages.setViewControllers([page(start)], direction: .forward, animated: false)
     }
-    if zooms {
+    if let source {
       let options = UIViewController.Transition.ZoomOptions()
       // Pulled down, as Photos closes one: not swiped sideways, which
       // goes to the next photo, nor while zoomed in, which a drag pans.
@@ -302,8 +318,10 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
         guard let self, let shown else { return context.zoomedViewController.view.bounds }
         return shown.photoFrame(in: context.zoomedViewController.view)
       }
+      // Asked as it opens and again as it closes: the place of the photo
+      // shown then.
       preferredTransition = .zoom(options: options) { [weak self] _ in
-        self?.shown.flatMap { PhotoSpots.shared.view(of: $0.photo.id) }
+        self?.shown.flatMap { source($0.photo.id) }
       }
     } else {
       modalPresentationStyle = .overFullScreen
@@ -424,27 +442,11 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
 
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
-    if isBeingDismissed { leaving() }
     guard zooms, let coordinator = transitionCoordinator else { return }
     UIView.animate(withDuration: 0.15) { self.showChrome(false) }
     coordinator.animate(alongsideTransition: nil) { context in
       // The pull let go of: open again.
       if context.isCancelled { UIView.animate(withDuration: 0.15) { self.showChrome(true) } }
-    }
-  }
-
-  /// Its place shown again as soon as it is sure to close, not once it is
-  /// gone: the zoom fades into the photo there as it lands, then settles
-  /// for a second more before it is gone, the place left empty all that
-  /// while. Pulled down, only once let go of to close, not while it
-  /// follows the finger away from its place.
-  private func leaving() {
-    guard let coordinator = transitionCoordinator, coordinator.isInteractive else {
-      PhotoSpots.shared.open = nil
-      return
-    }
-    coordinator.notifyWhenInteractionChanges { context in
-      if !context.isCancelled { PhotoSpots.shared.open = nil }
     }
   }
 
@@ -457,7 +459,6 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     guard isBeingDismissed else { return }
     for task in following { task.cancel() }
     ahead.stop()
-    PhotoSpots.shared.open = nil
     onClosed?()
   }
 
@@ -488,7 +489,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   }
 
   /// The page shown has changed, or where it is among the chat's photos:
-  /// its count, its place left empty, the next pages asked for and the
+  /// its count, the screen told of it, the next pages asked for and the
   /// photos about to be swiped to fetched ahead.
   private func showing() {
     guard let shown else { return }
@@ -503,8 +504,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
       shown.place = nil
       counted = nil
     }
-    // Faded in too, so pulled down it leaves no second of it behind.
-    PhotoSpots.shared.open = shown.photo.id
+    onShow?(shown.photo.id)
     guard let index = run.index else { return }
     let near = run.photos[max(index - 2, 0)...min(index + 2, run.photos.count - 1)]
     ahead.whole(near.map(\.photo), in: groupID, calls: calls)

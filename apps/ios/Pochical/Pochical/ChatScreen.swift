@@ -322,6 +322,9 @@ struct ChatScreen: View {
       }
     }
     .task {
+      // Once: shown again, after a photo opened large over it or a page
+      // pushed over it, the chat stays where it was.
+      guard !opened else { return }
       // The reader is asked of the server before the chat opens only when
       // not yet heard of; else after, in case the account changed.
       if meID == nil {
@@ -442,9 +445,9 @@ struct ChatScreen: View {
     .onChange(of: scenePhase) { _, phase in
       if phase != .active { keepDraft() }
     }
-    .photoViewer($viewing, groupID: place.id) { photo in
+    .photoViewer($viewing, groupID: place.id, onSave: { photo in
       await savePhoto(photo, in: place.id, calls: groupCalls)
-    }
+    })
     .modifier(
       ReportAndBlock(
         groupID: place.id, groupName: place.name, groupMark: place.group?.mark ?? GroupMarkValue(),

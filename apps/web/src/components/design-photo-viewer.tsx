@@ -257,6 +257,7 @@ function ViewerBody({
   onShare,
   onClose,
   onPull,
+  onShow,
 }: {
   photos: ViewerPhoto[];
   start: number;
@@ -265,6 +266,7 @@ function ViewerBody({
   onShare?: (photo: ViewerPhoto) => void;
   onClose: () => void;
   onPull: (by: number) => void;
+  onShow?: (index: number) => void;
 }) {
   const reduceMotion = useReducedMotion() ?? false;
   const [index, setIndex] = useState(start);
@@ -471,6 +473,7 @@ function ViewerBody({
     if (at !== index) {
       setIndex(at);
       setZoom(unzoomed);
+      onShow?.(at);
     }
   };
 
@@ -586,6 +589,8 @@ export function PhotoViewer({
   onOpenChange,
   onSave,
   onShare,
+  onShow,
+  finalFocusEl,
 }: {
   // The chat's photos in the order of its lines, or one alone.
   photos: ViewerPhoto[];
@@ -599,12 +604,17 @@ export function PhotoViewer({
   onShare?: (photo: ViewerPhoto) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // Swiped to another of the photos, by its place among them.
+  onShow?: (index: number) => void;
+  // Where it closes back to, when not the place it was opened from.
+  finalFocusEl?: () => HTMLElement | null;
 }) {
   const phone = useContext(PhoneContext);
   // How far the photo is pulled down, the ground fading as it goes.
   const [pull, setPull] = useState(0);
   return (
     <Dialog.Root
+      finalFocusEl={finalFocusEl}
       lazyMount
       onExitComplete={() => {
         setPull(0);
@@ -629,6 +639,7 @@ export function PhotoViewer({
             onPull={setPull}
             onSave={onSave}
             onShare={onShare}
+            onShow={onShow}
             photos={photos}
             start={start}
             whole={whole}
