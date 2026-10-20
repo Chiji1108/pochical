@@ -12,4 +12,9 @@
   // Builds (`wrangler preview`), which needs this block, even empty.
   "previews": {},
   "routes": [{ "pattern": "catalog.pochical.app", "custom_domain": true }],
+  // Kept beside the custom domain, behind the same Access, for each pull
+  // request's preview: with routes set, Wrangler turns workers.dev off
+  // unless told.
+  "workers_dev": true,
+  "preview_urls": true,
 }
