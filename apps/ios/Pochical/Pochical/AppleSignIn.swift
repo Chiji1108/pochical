@@ -191,7 +191,8 @@ extension Notification.Name {
 }
 
 /// The device holding nothing of the user, as a new install does: its own
-/// settings stay. Told to the app, as the user is someone else from now,
+/// settings stay, the notifications shown going with the rest and the
+/// push token sent again. Told to the app, as the user is someone else from now,
 /// and every socket, the user's and the places' kept ones, closed first
 /// and connected again after as whoever the account is now.
 @MainActor func forgetDevice(
@@ -203,6 +204,7 @@ extension Notification.Name {
   LocalData.eraseFiles()
   WidgetCenter.shared.reloadAllTimelines()
   NotificationCenter.default.post(name: .accountChanged, object: nil)
+  await Notifications.shared.forgetAccount()
   await userSocket?.startAfresh()
   await groupSockets.startHeld()
 }

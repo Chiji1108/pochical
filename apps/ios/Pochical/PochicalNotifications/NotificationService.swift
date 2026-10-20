@@ -18,6 +18,12 @@ final class NotificationService: UNNotificationServiceExtension {
     _ request: UNNotificationRequest,
     withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
   ) {
+    // Not for the user signed in: the device went on as someone else after
+    // its token was sent. Nothing of it is shown.
+    guard isForSignedIn(request.content.userInfo, me: widgetMeID()) else {
+      contentHandler(UNNotificationContent())
+      return
+    }
     nonisolated(unsafe) let show = contentHandler
     nonisolated(unsafe) let request = request
     let once = Once()
