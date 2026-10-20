@@ -2,7 +2,7 @@ import { chatRules } from "@pochical/design/chat";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 
-import { photoKey, smallKey } from "../src/photos";
+import { photoKey, sharePersonPhoto, smallKey } from "../src/photos";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
@@ -458,27 +458,81 @@ describe("a group's photo once stored", () => {
     });
   });
 
-  it("is never replaced once a line carries it, even by its sender", async () => {
-    const { groupId, maker } = await pair();
+  it("is never replaced once a line carries it, its sender's send tried again still going through", async () => {
+    const { groupId, guest, maker } = await pair();
     await photo("PUT", groupId, "sent", maker, JPEG);
-    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
-    sendPhoto(mine.socket, "a", "sent");
+    const first = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    sendPhoto(first.socket, "a", "sent");
     let acked = false;
     while (!acked) {
       // oxlint-disable-next-line no-await-in-loop -- frames come in order
-      const frame = await mine.frames.next();
+      const frame = await first.frames.next();
       acked = frame.kind.case === "acked";
     }
+    // Its answer lost, the device uploads the photo again before sending
+    // the line again: taken, storing nothing. Anyone else is refused.
     const answers = [
       await putStatus(groupId, "sent", maker, OTHER_JPEG),
       await putStatus(groupId, "sent", maker, OTHER_JPEG, "small"),
+      await putStatus(groupId, "sent", guest, OTHER_JPEG),
     ];
-    expect(answers).toStrictEqual([409, 409]);
+    expect(answers).toStrictEqual([204, 204, 409]);
     const stored = {
       photo: await storedBytes(groupId, "sent"),
       small: await storedBytes(groupId, "sent", true),
     };
     expect(stored).toStrictEqual({ photo: JPEG, small: null });
+    // The send again is the line sent already, so only the next one comes.
+    const again = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    // The catch-up, the line sent already in it.
+    await again.frames.next();
+    sendPhoto(again.socket, "a", "sent");
+    sendFrame(again.socket, {
+      case: "chatEdits",
+      value: {
+        edits: [
+          {
+            kind: { case: "send", value: { text: "次", threadId: "group" } },
+            opId: "n",
+          },
+        ],
+      },
+    });
+    const lines: string[] = [];
+    while (!lines.includes("n")) {
+      // oxlint-disable-next-line no-await-in-loop -- frames come in order
+      const frame = await again.frames.next();
+      for (const { kind } of changesBesidesNotices(frame)) {
+        if (kind.case === "chatLine") {
+          lines.push(kind.value.opId);
+        }
+      }
+    }
+    expect(lines).toStrictEqual(["n"]);
+  });
+
+  it("goes as a copy of someone's photo the group never came to name", async () => {
+    const { runInDurableObject } = await import("cloudflare:test");
+    const { groupId, maker, makerId } = await pair();
+    const face = await usualFace(maker, groupId);
+    // Copied in, then the push or group that would name it failed.
+    const stray = await ownPhoto(maker);
+    await sharePersonPhoto(env, makerId, stray, groupId);
+    await expect(storedBytes(groupId, stray)).resolves.toStrictEqual(JPEG);
+    await expect(sweepAll(groupId)).resolves.toBeTruthy();
+    const kept = {
+      face: await storedBytes(groupId, face),
+      stray: await storedBytes(groupId, stray),
+    };
+    expect(kept).toStrictEqual({ face: JPEG, stray: null });
+    await expect(
+      runInDurableObject(env.GROUPS.getByName(groupId), (_, state) =>
+        state.storage.sql
+          .exec<{ id: string }>("select id from group_photos")
+          .toArray()
+          .map(({ id }) => id)
+      )
+    ).resolves.toStrictEqual([face]);
   });
 
   it("is uploaded again by its uploader until sent, kept longer with its first bytes", async () => {

@@ -301,12 +301,13 @@ export const chatRecalls = sqliteTable(
 //   uploaded nothing to the group for chatRules.unsentAfterMs it goes
 //   (GroupDO.sweepPhotos): a device uploads a line's photo again each
 //   time it sends the line, so a send comes moments after that upload.
-// - sent: a line carries it, until the line is taken back.
+// - sent: a line carries it, until the line is taken back. Its uploader
+//   uploading it again, as a send tried again does, stores nothing.
 // - shown: the group shows it, as someone's face (their usual photo, which
 //   the server copies in, or one of the group's they uploaded and set as
-//   their own) or as the group's mark (copied in). No upload or sweep
-//   touches it; it goes once neither the mark nor anyone in the group
-//   names it.
+//   their own) or as the group's mark (copied in). No upload touches it;
+//   it goes once neither the mark nor anyone in the group names it, and a
+//   copy nothing came to name goes as an unsent one does.
 export const photoStates = ["unsent", "sent", "shown"] as const;
 
 export const groupPhotos = sqliteTable("group_photos", {
@@ -314,7 +315,8 @@ export const groupPhotos = sqliteTable("group_photos", {
   state: text({ enum: photoStates }).notNull().default("unsent"),
   // While unsent, when its uploader last uploaded to the group: each
   // upload sets it on all of theirs not sent, so the photos of a frame
-  // stay while the rest of the frame goes up.
+  // stay while the rest of the frame goes up. For a copy shown, when it
+  // was last copied in.
   uploadedAt: integer("uploaded_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`0`),

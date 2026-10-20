@@ -94,9 +94,9 @@ const jpegOf = async (
 
 /**
  * A member's photo stored, once the group has noted it as theirs
- * (group-photos.ts, notePhoto). Sending their own again before it is sent
- * (a retry after a lost answer, or the upload each send of its line makes)
- * stores nothing: the bytes first stored stay.
+ * (group-photos.ts, notePhoto). Sending their own again (a retry after a
+ * lost answer, or the upload each send of its line makes, sent already or
+ * not) stores nothing: the bytes first stored stay.
  */
 export const putPhoto = async (
   request: Request,
@@ -110,8 +110,11 @@ export const putPhoto = async (
     return bytes;
   }
   const note = await env.GROUPS.getByName(groupId).notePhoto(photoId, userId);
-  if (note !== "noted") {
+  if (note === "refused") {
     return new Response("Not a photo of yours to upload", { status: 409 });
+  }
+  if (note === "sent") {
+    return new Response(null, { status: 204 });
   }
   const key = photoKey(groupId, photoId);
   await env.PHOTOS.put(wantsSmall(request) ? smallKey(key) : key, bytes, {

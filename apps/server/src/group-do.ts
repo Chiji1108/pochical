@@ -64,13 +64,13 @@ import {
 import { markColumns, markOfRow, sameMark } from "./group-marks";
 import type { MarkValue } from "./group-marks";
 import {
-  forgetUnsentPhotos,
+  forgetStalePhotos,
   forgetUnshown,
   notePhoto,
   noteSharedPhoto,
-  oldestUnsentPhoto,
+  oldestStalePhoto,
   showOwnPhoto,
-  unsentPhotos,
+  stalePhotos,
 } from "./group-photos";
 import type { PhotoNote } from "./group-photos";
 import {
@@ -817,32 +817,42 @@ export class GroupDO extends DurableObject<Env> {
       return "refused";
     }
     const note = notePhoto(this.db, photoId, userId);
-    if (note !== "noted") {
-      return note;
+    if (note === "noted") {
+      await this.sweepLater();
     }
-    const due = Date.now() + chatRules.unsentAfterMs;
-    const set = await this.ctx.storage.getAlarm();
-    if (set === null || set > due) {
-      await this.ctx.storage.setAlarm(due);
-    }
-    return "noted";
+    return note;
   }
 
   /**
    * Notes a copy of someone's own photo the Worker makes into the group's
    * photos, before the group shows it as their face or its mark; false
-   * when the id is an upload's, which is then not copied over.
+   * when the id is an upload's, which is then not copied over. One the
+   * group never comes to name goes as an upload not sent does.
    */
-  noteSharedPhoto(photoId: string, userId: string): boolean {
-    return noteSharedPhoto(this.db, photoId, userId);
+  async noteSharedPhoto(photoId: string, userId: string): Promise<boolean> {
+    if (!noteSharedPhoto(this.db, photoId, userId)) {
+      return false;
+    }
+    await this.sweepLater();
+    return true;
+  }
+
+  /** The alarm set for when a photo noted now is past chatRules.unsentAfterMs. */
+  private async sweepLater(): Promise<void> {
+    const due = Date.now() + chatRules.unsentAfterMs;
+    const set = await this.ctx.storage.getAlarm();
+    if (set === null || set > due) {
+      await this.ctx.storage.setAlarm(due);
+    }
   }
 
   /**
-   * The photos uploaded that nothing came to carry (spec/sync-protocol.md,
-   * Chat), deleted once their uploader has uploaded nothing to the group
-   * for chatRules.unsentAfterMs: from storage first, then from the group,
-   * but those uploaded again meanwhile. Only uploads not sent: a line's
-   * photo, a face or the mark is never one. When the next are due, if any.
+   * The photos nothing came to hold (spec/sync-protocol.md, Chat), deleted
+   * chatRules.unsentAfterMs after they were last noted: uploads not sent,
+   * and copies of someone's photo the group never came to name. From
+   * storage first, then from the group, but those noted or named again
+   * meanwhile. A line's photo, a face or the mark is never one. When the
+   * next are due, if any.
    */
   private async sweepPhotos(): Promise<number | undefined> {
     const groupId = this.ctx.id.name;
@@ -850,12 +860,12 @@ export class GroupDO extends DurableObject<Env> {
       return undefined;
     }
     const before = new Date(Date.now() - chatRules.unsentAfterMs);
-    const stale = unsentPhotos(this.db, before);
+    const stale = stalePhotos(this.db, before);
     if (stale.length > 0) {
       await deleteGroupPhotos(this.env, groupId, stale);
-      forgetUnsentPhotos(this.db, before);
+      forgetStalePhotos(this.db, before);
     }
-    const oldest = oldestUnsentPhoto(this.db);
+    const oldest = oldestStalePhoto(this.db);
     return oldest === undefined
       ? undefined
       : oldest.getTime() + chatRules.unsentAfterMs;
