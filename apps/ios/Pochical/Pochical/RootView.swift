@@ -16,7 +16,6 @@ struct RootView: View {
   @Environment(\.account) private var account
   @Environment(\.userSocket) private var userSocket
   @Environment(\.groupSockets) private var groupSockets
-  @Dependency(\.defaultDatabase) private var database
   @Environment(\.scenePhase) private var scenePhase
   @Environment(OpenPlaceSocket.self) private var openPlace
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
@@ -31,8 +30,6 @@ struct RootView: View {
   @State private var groupsPath: [GroupRoute] = []
   /// The chats, and what they open, over the tabs.
   @State private var navigator = RootNavigator()
-  /// A chat a notification opened, for the groups to show.
-  @State private var openingChat: OpenedChat?
   /// An invitation opened, its join screen shown over the tabs.
   @Binding var invite: OpenedInvite?
   @State private var scanning = false
@@ -106,21 +103,12 @@ struct RootView: View {
       Task { await Notifications.shared.withdrawRead(read, before: known) }
     }
     // A tapped notification opens its chat, the one that launched the
-    // app too.
-    .onChange(of: Notifications.shared.opening, initial: true) { _, chat in
-      guard let chat else { return }
-      tab = .groups
-      openGroupID = chat.groupID
-      openingChat = chat
-      Notifications.shared.opening = nil
-    }
-    // An answer from Pochical's people opens their chat, under 設定.
-    .onChange(of: Notifications.shared.openingSupport, initial: true) { _, opening in
-      guard opening else { return }
-      tab = .settings
-      navigator.show([.support])
-      Notifications.shared.openingSupport = false
-    }
+    // app too: a group's once the group has come, at launch.
+    .onChange(
+      of: OpeningKey(
+        chat: Notifications.shared.opening, groupIDs: groups.map(\.id), meID: meID),
+      initial: true
+    ) { openNotified() }
     // A widget's day opens on the calendar (spec/widgets.md).
     .onChange(of: OpenedDay.shared.day, initial: true) { _, day in
       guard day != nil else { return }
@@ -168,7 +156,7 @@ struct RootView: View {
       }
       Tab("グループ", systemImage: "person.2", value: .groups) {
         GroupsScreen(
-          openID: $openGroupID, path: $groupsPath, openingChat: $openingChat, unread: unread
+          openID: $openGroupID, path: $groupsPath, unread: unread
         ) {
           scanning = true
         }
@@ -197,11 +185,7 @@ struct RootView: View {
     case .support:
       SupportChatScreen()
     case .photos(let photos):
-      ChatPhotosScreen(
-        pager: PhotoPager(
-          placeID: photos.placeID, threadID: photos.threadID,
-          client: groupSockets.client(photos.placeID), database: database),
-        names: photos.names)
+      ChatPhotosScreen(photos: photos)
     }
   }
 
@@ -223,6 +207,32 @@ struct RootView: View {
         .environment(\.rootNavigator, navigator)
         .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
         .environment(\.say, SayAction(say: say)))
+  }
+
+  /// A chat a notification opened, and what it is opened with.
+  private struct OpeningKey: Equatable {
+    let chat: OpenedChat?
+    let groupIDs: [String]
+    let meID: String?
+  }
+
+  /// Shows the chat a tapped notification opened over its tab and nothing
+  /// else: the chat with Pochical's people over 設定, a group's over its
+  /// group in グループ.
+  private func openNotified() {
+    guard let chat = Notifications.shared.opening else { return }
+    if chat.groupID == ChatPlace.supportID {
+      tab = .settings
+      navigator.show([.support])
+    } else {
+      guard let group = groups.first(where: { $0.id == chat.groupID }), let meID else { return }
+      tab = .groups
+      openGroupID = group.id
+      groupsPath = []
+      navigator.show(
+        [.group(.chat(group, thread: chat.threadID, with: otherIn(chat.threadID, me: meID)))])
+    }
+    Notifications.shared.opening = nil
   }
 
   /// The group an invitation led to, its join screen gone.

@@ -63,7 +63,6 @@ extension EnvironmentValues {
 /// /design's rail, and the one open beside them.
 struct GroupsScreen: View {
   @Environment(\.themeColors) private var colors
-  @Environment(\.groupCalls) private var groupCalls
   @Environment(\.rootNavigator) private var navigator
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// The group open beside the rail, the first until one is picked.
@@ -71,8 +70,6 @@ struct GroupsScreen: View {
   /// The tab's pages over the group, never a chat: chats open over the
   /// tabs.
   @Binding var path: [GroupRoute]
-  /// A chat a notification opened, shown once its group is.
-  @Binding var openingChat: OpenedChat?
   /// Each group's unread lines that count.
   let unread: [String: Int]
   /// Opens the camera to read a group's QR code.
@@ -155,10 +152,6 @@ struct GroupsScreen: View {
       if !path.isEmpty { inviting = nil }
     }
     .environment(\.photoGroupID, openGroupID ?? "")
-    // Once its group has come, at launch.
-    .task(id: OpeningKey(chat: openingChat, groupIDs: groups.map(\.id))) {
-      await showOpeningChat()
-    }
     // A widget's group: its table at the day, else its top. One the person
     // has left themselves leaves them on their first group.
     .onChange(of: OpenedGroupKey(link: OpenedGroup.shared.link, groupIDs: groups.map(\.id)), initial: true) {
@@ -178,25 +171,6 @@ struct GroupsScreen: View {
   private struct OpenedGroupKey: Equatable {
     let link: GroupLink?
     let groupIDs: [String]
-  }
-
-  /// A chat a notification opened, and the groups there are to show it in.
-  private struct OpeningKey: Hashable {
-    let chat: OpenedChat?
-    let groupIDs: [String]
-  }
-
-  /// Shows the chat a notification opened, over its group and nothing
-  /// else.
-  private func showOpeningChat() async {
-    guard let chat = openingChat,
-      let group = groups.first(where: { $0.id == chat.groupID })
-    else { return }
-    let me = await groupCalls.userID()
-    let other = me.flatMap { otherIn(chat.threadID, me: $0) }
-    path = []
-    navigator?.show([.group(.chat(group, thread: chat.threadID, with: other))])
-    openingChat = nil
   }
 
   /// Opens メンバーを招待 for the group just made, once it is here, in

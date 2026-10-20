@@ -1,5 +1,6 @@
 import PochicalDesign
 import PochicalKit
+import SQLiteData
 import SwiftUI
 
 // A chat's photos alone (spec/chat.md, Photos; /design's ChatPhotoList),
@@ -12,10 +13,11 @@ import SwiftUI
 struct ChatPhotosScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
-  /// Where the chat's photos come from.
-  let pager: PhotoPager
-  /// Who wrote each photo's line, by id, for VoiceOver to say whose it is.
-  let names: [String: String]
+  @Environment(\.groupSockets) private var groupSockets
+  @Dependency(\.defaultDatabase) private var database
+  /// The chat, and who wrote each photo's line.
+  let photos: PhotosOfChat
+  private var names: [String: String] { photos.names }
   @State private var run = PhotoRun(latest: Chat.photoPageAhead)
   @State private var viewing: PhotoViewing?
   /// The grid's width, each square a quarter of it less the gaps.
@@ -24,6 +26,14 @@ struct ChatPhotosScreen: View {
   private static let across = 4
   /// A hairline apart, as the platforms' photo grids.
   private static let gap: CGFloat = 2
+
+  /// Where the chat's photos come from, over its place's socket, as the
+  /// chat's own (ChatScreen).
+  private var pager: PhotoPager {
+    PhotoPager(
+      placeID: photos.placeID, threadID: photos.threadID,
+      client: groupSockets.client(photos.placeID), database: database)
+  }
 
   var body: some View {
     content
