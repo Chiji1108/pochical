@@ -32,9 +32,8 @@ import {
   LinkCard,
   PhotoLine,
   ReactionPill,
-  uploadOfLine,
 } from "./design-chat-cards";
-import type { ChatPhoto, InviteLook, PhotoUpload } from "./design-chat-cards";
+import type { ChatPhoto, InviteLook, LineUpload } from "./design-chat-cards";
 import { Bubble, ChatItem, LargeEmoji, LineFrame } from "./design-chat-parts";
 import { PollCard } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
@@ -93,8 +92,10 @@ export const photosOf = (
 ): ChatPhoto[] =>
   messages.flatMap((message) =>
     message.photos && !message.unsent && shown(message)
-      ? message.photos.map((photo) => ({
+      ? message.photos.map((photo, at) => ({
+          at,
           label: photoLabel(writerOf(message.from)),
+          line: message.id,
           mine: message.from === "me",
           photo,
           when: message.when,
@@ -166,7 +167,7 @@ export function MessageLine({
   // Its actions are open over it.
   lifted: boolean;
   // Its photos' way up, while it is yours going out or not sent.
-  upload?: PhotoUpload[];
+  upload?: LineUpload;
   actions: LineActions;
   // Opens its actions, from a card's long press.
   onSelect: () => void;
@@ -258,7 +259,7 @@ export function MessageLine({
   }
   // Its time held back while its photos go up; its ! beside it, by the
   // last photo, once not sent.
-  const status = upload && uploadOfLine(upload);
+  const status = upload?.line;
   const notSent = status === "failed";
   const pinned = message.pinned !== undefined;
   const face =
@@ -308,6 +309,7 @@ export function MessageLine({
             actions={actions}
             among={photos}
             fetchFails={fetchFails}
+            id={message.id}
             label={photoLabel(member)}
             mine={actions.mine}
             onSave={() => {

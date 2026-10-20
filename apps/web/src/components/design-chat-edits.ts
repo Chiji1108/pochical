@@ -29,6 +29,7 @@ export function useChatEdits({
   composer,
   mentionName,
   onSent,
+  onGone,
 }: {
   // What the chat's place takes: 編集, ピン留め and 通報 in a line's long
   // press only where it does.
@@ -42,6 +43,8 @@ export function useChatEdits({
   // Lines just sent, for what follows a send: a photo's upload, someone
   // writing back.
   onSent: (sent: Message[]) => void;
+  // A line deleted or taken back, which no longer goes out.
+  onGone: (id: string) => void;
 }) {
   const toast = useContext(ToastContext);
   // The line whose actions are open, and the one being answered.
@@ -111,6 +114,7 @@ export function useChatEdits({
   };
   const unsend = (id: string) => {
     onChange(unsendMessage(messages, id));
+    onGone(id);
     setUnsending(undefined);
     if (editing === id) {
       composer.stopEditing();
@@ -119,6 +123,7 @@ export function useChatEdits({
   // A photo line that could not be sent, taken out of the chat.
   const remove = (id: string) => {
     onChange(messages.filter((message) => message.id !== id));
+    onGone(id);
   };
   // A photo line that could not be sent, sent again after the rest, as if
   // written then (spec/chat.md, Lines on their way).

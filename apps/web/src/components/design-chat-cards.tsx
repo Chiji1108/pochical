@@ -55,11 +55,13 @@ export type PhotoUpload = "sending" | "up" | "failed";
 // up, not sent once any could not, and sent (undefined) once all are up.
 export type Upload = "sending" | "failed";
 
-export function uploadOfLine(photos: PhotoUpload[]): Upload | undefined {
+export type LineUpload = { line: Upload; photos: PhotoUpload[] };
+
+export function uploadOfLine(photos: PhotoUpload[]): LineUpload | undefined {
   if (photos.includes("sending")) {
-    return "sending";
+    return { line: "sending", photos };
   }
-  return photos.includes("failed") ? "failed" : undefined;
+  return photos.includes("failed") ? { line: "failed", photos } : undefined;
 }
 
 // How long a photo takes to go up in the prototype.
@@ -263,6 +265,9 @@ export function InviteCard({
 // One of a chat's photos, swiped through opened large.
 // `when` is the day it was sent, as its line says it (今日, 昨日).
 export type ChatPhoto = {
+  // Its line, and its place in it.
+  line: string;
+  at: number;
   photo: Photo;
   label: string;
   mine: boolean;
@@ -328,6 +333,7 @@ const albumGap = 2;
 // 保存 of all its photos) open from a long press, the whole line lifted,
 // as on a photo in LINE.
 export function PhotoLine({
+  id,
   photos,
   among = noPhotos,
   mine,
@@ -339,13 +345,15 @@ export function PhotoLine({
   upload,
   fetchFails = false,
 }: {
+  // The line's own id.
+  id: string;
   photos: Photo[];
   // The chat's photos in the order of its lines, these among them.
   among?: ChatPhoto[];
   mine: boolean;
-  // Each photo's way up, by its place in the line, while the line is
-  // yours going out or not sent; it takes no reactions until sent.
-  upload?: PhotoUpload[];
+  // Its photos' way up while the line is yours going out or not sent; it
+  // takes no reactions until sent.
+  upload?: LineUpload;
   // × on any of its photos going up, stopping the line.
   onStop?: () => void;
   // Someone else's photo cannot be fetched the first time it comes,
@@ -377,11 +385,13 @@ export function PhotoLine({
       }
       mine={mine}
       onOpen={() => {
-        setViewing(index);
+        if (upload?.line !== "sending") {
+          setViewing(index);
+        }
       }}
       onStop={onStop}
       photo={photo}
-      upload={upload?.[index]}
+      upload={upload?.line === "sending" ? upload.photos[index] : undefined}
     />
   );
   const rows = albumRows(photos.length);
@@ -415,9 +425,11 @@ export function PhotoLine({
   );
   const width = alone ? photoSize(single).width : albumWidth;
   const shown = viewing === undefined ? undefined : photos[viewing];
+  const isShown = (entry: ChatPhoto) =>
+    entry.line === id && entry.at === viewing;
   const listed =
-    shown && !among.some((entry) => entry.photo.src === shown.src)
-      ? [{ label, mine, photo: shown, when: "" }]
+    shown && viewing !== undefined && !among.some(isShown)
+      ? [{ at: viewing, label, line: id, mine, photo: shown, when: "" }]
       : among;
   // Apart from the line's long press, which a press in it would reach.
   const viewer = (
@@ -433,10 +445,7 @@ export function PhotoLine({
       }}
       open={shown !== undefined}
       photos={listed.map(viewerPhotoOf)}
-      start={Math.max(
-        listed.findIndex((entry) => entry.photo.src === shown?.src),
-        0
-      )}
+      start={Math.max(listed.findIndex(isShown), 0)}
       whole
     />
   );
@@ -476,8 +485,9 @@ export function PhotoLine({
 }
 
 // One photo of a line: the button opening it large, over it ↻ for one
-// that could not be fetched, or the ring of one going up with × to stop
-// its line; in an album, filling its cell of the grid.
+// that could not be fetched, or while its line goes up its ring (full
+// once it is up) with × to stop the line; in an album, filling its cell
+// of the grid.
 function PhotoTile({
   photo,
   mine,
@@ -605,7 +615,7 @@ function PhotoTile({
           </span>
         </button>
       )}
-      {upload === "sending" && (
+      {(upload === "sending" || upload === "up") && (
         <span className={chatStyle.uploading({ cell })}>
           <span className={chatStyle.photoMark} role="status">
             <svg
@@ -619,7 +629,11 @@ function PhotoTile({
                 cy="18"
                 pathLength="100"
                 r="15"
-                style={{ animationDuration: `${uploadMilliseconds}ms` }}
+                style={
+                  upload === "up"
+                    ? { animation: "none", strokeDashoffset: 0 }
+                    : { animationDuration: `${uploadMilliseconds}ms` }
+                }
               />
             </svg>
             <span className={srOnly}>送信中</span>

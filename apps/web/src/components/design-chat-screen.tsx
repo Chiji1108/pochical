@@ -35,7 +35,12 @@ import { LinkMenu, openLink } from "./design-chat-actions";
 import type { LinkMenuAt } from "./design-chat-actions";
 import { BubbleOutline } from "./design-chat-bubble";
 import { uploadMilliseconds, uploadOfLine } from "./design-chat-cards";
-import type { InviteLook, PhotoUpload, Upload } from "./design-chat-cards";
+import type {
+  InviteLook,
+  LineUpload,
+  PhotoUpload,
+  Upload,
+} from "./design-chat-cards";
 import {
   ChatEdge,
   Composer,
@@ -219,14 +224,14 @@ export function ChatScreen({
   const [revealed, setRevealed] = useState<string[]>([]);
   const folded = (message: Message) =>
     blocked.includes(message.from) && !revealed.includes(message.id);
-  const { failedCount, lines, stop, upload, uploads } =
+  const { failedCount, forget, lines, stop, upload, uploads } =
     usePhotoUploads(photoSend);
   // A line's photos' uploads as this screen has them, else as the chat
   // kept the line: not sent, none of them up.
   const photosUpOf = (message: Message): PhotoUpload[] | undefined =>
     uploads[message.id] ??
     (message.failed ? message.photos?.map(() => "failed" as const) : undefined);
-  const uploadOf = (message: Message): Upload | undefined => {
+  const uploadOf = (message: Message): LineUpload | undefined => {
     const photos = photosUpOf(message);
     return photos && uploadOfLine(photos);
   };
@@ -235,7 +240,7 @@ export function ChatScreen({
   // written. The prototype keeps a chat's lines in the order written, so
   // each one's place stands for its time.
   const timed = chat.messages.map((message, at) => {
-    const going = uploadOf(message);
+    const going = uploadOf(message)?.line;
     return { at, failed: going === "failed", going, id: message };
   });
   const shown = chatOrder(
@@ -308,6 +313,7 @@ export function ChatScreen({
     mentionName,
     messages: chat.messages,
     onChange,
+    onGone: forget,
     // Someone may write back, and photos start going up: those of a line
     // sent again that are not up yet.
     onSent: (sent) => {
@@ -561,7 +567,7 @@ export function ChatScreen({
                     next={shown[index + 1]}
                     previous={shown[index - 1]}
                     quoted={byId(message.replyTo)}
-                    upload={photosUpOf(message)}
+                    upload={uploadOf(message)}
                   />
                 </Fragment>
               ))}
@@ -775,6 +781,11 @@ export function ChatScreen({
   );
 }
 
+// The server lets go of an uploader's unsent photos once they have
+// uploaded nothing for chatRules.unsentAfterMs; those up are trusted for
+// half that from when the latest upload began, as the apps trust them.
+const trustedUpMs = chatRules.unsentAfterMs / 2;
+
 // Your photo lines still going up, or that could not be sent, each
 // photo's way up by its place in its line. Only this phone knows them, as
 // the apps keep them in their outbox; the group sees a line once all its
@@ -782,8 +793,8 @@ export function ChatScreen({
 function usePhotoUploads(photoSend: PhotoSend) {
   const [uploads, setUploads] = useState<Record<string, PhotoUpload[]>>({});
   // Each line's photos going up, which × stops.
-  const timers = useRef(new Map<string, number[]>());
-  // When a line's latest photo went up.
+  const timers = useRef(new Map<string, Set<number>>());
+  // When the upload of a line's latest photo up began.
   const upAt = useRef(new Map<string, number>());
   useEffect(() => {
     const going = timers.current;
@@ -795,6 +806,12 @@ function usePhotoUploads(photoSend: PhotoSend) {
       }
     };
   }, []);
+  const clearTimers = (id: string) => {
+    for (const timer of timers.current.get(id) ?? []) {
+      window.clearTimeout(timer);
+    }
+    timers.current.delete(id);
+  };
   // Each photo of a line from what it was.
   const change = (
     id: string,
@@ -805,59 +822,59 @@ function usePhotoUploads(photoSend: PhotoSend) {
       return line ? withLine(before, id, next(line)) : before;
     });
   };
-  const settle = (id: string, index: number, result: PhotoUpload) => {
-    if (result === "up") {
-      upAt.current.set(id, Date.now());
-    }
-    change(id, (photos) =>
-      photos.map((photo, at) => (at === index ? result : photo))
-    );
-  };
-  // Uploads a line's photos not up yet; all of them once the server has
-  // let go of those up (chatRules.unsentAfterMs). Where uploads fail, its
-  // last photo fails, so sending it again sends only that one.
+  // Uploads a line's photos not up yet; all of them once those up may
+  // have gone from the server (trustedUpMs). Where uploads fail, its last
+  // photo fails, so sending it again sends only that one.
   const upload = (id: string, photos: PhotoUpload[]) => {
+    clearTimers(id);
+    const began = Date.now();
     const latest = upAt.current.get(id);
-    const kept =
-      latest !== undefined && Date.now() - latest < chatRules.unsentAfterMs;
+    const kept = latest !== undefined && began - latest < trustedUpMs;
     const going = photos.map((photo): PhotoUpload =>
       kept && photo === "up" ? "up" : "sending"
     );
     const last = going.lastIndexOf("sending");
     setUploads((before) => withLine(before, id, going));
-    timers.current.set(
-      id,
-      going.flatMap((photo, index) =>
-        photo === "up"
-          ? []
-          : [
-              window.setTimeout(() => {
-                settle(
-                  id,
-                  index,
-                  photoSend === "fails" && index === last ? "failed" : "up"
-                );
-              }, uploadMilliseconds),
-            ]
-      )
-    );
+    const line = new Set<number>();
+    timers.current.set(id, line);
+    for (const [index, photo] of going.entries()) {
+      if (photo === "sending") {
+        const timer = window.setTimeout(() => {
+          line.delete(timer);
+          const result =
+            photoSend === "fails" && index === last ? "failed" : "up";
+          if (result === "up") {
+            upAt.current.set(id, began);
+          }
+          change(id, (before) =>
+            before.map((one, at) => (at === index ? result : one))
+          );
+        }, uploadMilliseconds);
+        line.add(timer);
+      }
+    }
   };
   // Stopped with ×: the line is not sent, its ! offering もう一度送る and
   // 削除.
   const stop = (id: string) => {
-    for (const timer of timers.current.get(id) ?? []) {
-      window.clearTimeout(timer);
-    }
-    timers.current.delete(id);
+    clearTimers(id);
     change(id, (photos) =>
       photos.map((photo) => (photo === "up" ? "up" : "failed"))
+    );
+  };
+  // Deleted or taken back: no longer going out.
+  const forget = (id: string) => {
+    clearTimers(id);
+    upAt.current.delete(id);
+    setUploads((before) =>
+      Object.fromEntries(Object.entries(before).filter(([one]) => one !== id))
     );
   };
   const lines = useMemo(
     () =>
       Object.fromEntries(
         Object.entries(uploads).flatMap(([id, photos]) => {
-          const line = uploadOfLine(photos);
+          const line = uploadOfLine(photos)?.line;
           return line ? [[id, line] as const] : [];
         })
       ),
@@ -866,7 +883,7 @@ function usePhotoUploads(photoSend: PhotoSend) {
   const failedCount = Object.values(lines).filter(
     (line) => line === "failed"
   ).length;
-  return { failedCount, lines, stop, upload, uploads };
+  return { failedCount, forget, lines, stop, upload, uploads };
 }
 
 // The uploads with a line's photos as they are now: gone from them once
