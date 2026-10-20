@@ -58,6 +58,56 @@ private func change(_ value: String, cursor: UInt64, ms: Int64) -> Pochical_V1_C
   }
 }
 
+/// A database with values, waiting edits and cursors from both sockets.
+private func synced(in db: Database) throws {
+  try Sync.take([change("day", cursor: 4, ms: 9_000)], in: db)
+  var member = Pochical_V1_Change()
+  member.cursor = 5
+  member.member.userID = "u1"
+  member.member.displayName = "さくら"
+  try GroupSync.take([member], of: "g1", in: db)
+  try GroupSync.take([member], of: "support", in: db)
+  try OwnValues.edit(dayChange("night"), opID: "a", in: db)
+  var words = Pochical_V1_ChatSend()
+  words.threadID = "t"
+  words.text = "行けそう"
+  try Chats.edit(.send(words), in: "g1", now: 1, db: db)
+}
+
+@Test func aDeviceSyncedUnderAnOlderSchemaTakesEverythingAgainKeepingWhatItHolds() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try synced(in: db)
+    try SyncState.update { $0.schema = Sync.schema - 1 }.execute(db)
+
+    try Sync.takeAllAgainIfOlder(in: db)
+    #expect(try Sync.cursor(in: db) == 0)
+    #expect(try GroupSync.cursor(of: "g1", in: db) == 0)
+    #expect(try GroupSync.cursor(of: "support", in: db) == 0)
+    #expect(try DayRow.find("2026-10-01").fetchOne(db)?.pattern == "night")
+    #expect(try GroupMemberRow.where { $0.groupID.eq("g1") }.fetchCount(db) == 1)
+    #expect(try OutboxEdit.all.fetchAll(db).map(\.opID) == ["a"])
+    #expect(try Chats.lastWaiting(of: "g1", in: db) != nil)
+
+    // Once taken again under the app's schema, its cursors move on as usual.
+    try Sync.take([change("day", cursor: 6, ms: 9_000)], in: db)
+    try Sync.takeAllAgainIfOlder(in: db)
+    #expect(try Sync.cursor(in: db) == 6)
+  }
+}
+
+@Test func aDeviceSyncedUnderTheAppsSchemaKeepsItsCursors() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try synced(in: db)
+
+    try Sync.takeAllAgainIfOlder(in: db)
+    #expect(try Sync.cursor(in: db) == 4)
+    #expect(try GroupSync.cursor(of: "g1", in: db) == 5)
+    #expect(try GroupSync.cursor(of: "support", in: db) == 5)
+  }
+}
+
 @Test func welcomeCorrectsTheDevicesTime() throws {
   let database = try appDatabase()
   try database.write { db in

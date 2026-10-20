@@ -112,6 +112,9 @@ struct SyncState: Hashable, Sendable {
   /// The user whose data the database holds, empty while it is no one's:
   /// a new install's, or once erased (`SyncState.claim`).
   var owner = ""
+  /// The sync schema the device took its values under (`Sync.schema`). A
+  /// new device's cursors are at the start, so it is the app's.
+  var schema = Sync.schema
 
   /// The row, or a new device's: a new id, no clock, no offset, no cursor.
   static func current(in db: Database) throws -> SyncState {
@@ -273,6 +276,19 @@ extension DatabaseMigrator {
       try #sql(
         """
         ALTER TABLE "syncState" ADD COLUMN "owner" TEXT NOT NULL DEFAULT ''
+        """
+      )
+      .execute(db)
+    }
+  }
+
+  mutating func registerSyncSchema() {
+    // 0 is older than any schema, so a device synced before takes
+    // everything again (`Sync.takeAllAgainIfOlder`).
+    registerMigration("Keep the sync schema the device took its values under") { db in
+      try #sql(
+        """
+        ALTER TABLE "syncState" ADD COLUMN "schema" INTEGER NOT NULL DEFAULT 0
         """
       )
       .execute(db)
