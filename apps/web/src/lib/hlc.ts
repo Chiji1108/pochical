@@ -5,25 +5,6 @@
 // A device's last clock: its edits add their device id.
 export type HlcTime = { ms: number; counter: number };
 
-// A clock as an edit carries it.
-export type Clock = HlcTime & { device: string };
-
-// Negative when `a` is older than `b`, positive when newer, 0 when equal:
-// by physical time, then counter, then device, which only breaks exact
-// ties.
-export function compareClocks(a: Clock, b: Clock): number {
-  if (a.ms !== b.ms) {
-    return a.ms - b.ms;
-  }
-  if (a.counter !== b.counter) {
-    return a.counter - b.counter;
-  }
-  if (a.device === b.device) {
-    return 0;
-  }
-  return a.device < b.device ? -1 : 1;
-}
-
 // A clock's counter is a uint32 on the wire.
 const MAX_COUNTER = 0xff_ff_ff_ff;
 

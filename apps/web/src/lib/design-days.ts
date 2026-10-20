@@ -385,8 +385,6 @@ export function editedOwnDays(
 
 // Starting an order, or correcting the one in use, gives the days from its
 // start back to it: their own shifts and times go, memos and people stay.
-// The prototype keeps no clocks, and everything it holds was set before
-// the order, so all of it gives way (givesWay in order-clears.ts).
 export function giveDaysToOrder(own: OwnDays, start: Date): OwnDays {
   const from = dateKey(start);
   return Object.fromEntries(
