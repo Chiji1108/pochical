@@ -1,5 +1,28 @@
 import type { ColorScheme } from "@pochical/design/colors";
 import { presets } from "@pochical/design/themes";
+import {
+  DesignProviders,
+  PresetContexts,
+  useDesignTheme,
+} from "@pochical/prototype/components/design-providers";
+import { shapeOptions } from "@pochical/prototype/components/design-settings-style";
+import {
+  ColorSchemeContext,
+  pageStyle,
+} from "@pochical/prototype/components/design-theme";
+import type { PresetId } from "@pochical/prototype/components/design-theme";
+import {
+  IconWeightContext,
+  noOffLooks,
+  OffLooksContext,
+  ShiftMarkStyleContext,
+} from "@pochical/prototype/components/shift-mark";
+import type { OffLookId } from "@pochical/prototype/components/shift-mark";
+import {
+  initialDesignSchedule,
+  patternSets,
+} from "@pochical/prototype/lib/design-days";
+import { presetList } from "@pochical/prototype/lib/design-patterns";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
@@ -14,23 +37,6 @@ import {
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import {
-  DesignProviders,
-  PresetContexts,
-  useDesignTheme,
-} from "../components/design-providers";
-import { shapeOptions } from "../components/design-settings-style";
-import { ColorSchemeContext, pageStyle } from "../components/design-theme";
-import type { PresetId } from "../components/design-theme";
-import {
-  IconWeightContext,
-  noOffLooks,
-  OffLooksContext,
-  ShiftMarkStyleContext,
-} from "../components/shift-mark";
-import type { OffLookId } from "../components/shift-mark";
-import { initialDesignSchedule, patternSets } from "../lib/design-days";
-import { presetList } from "../lib/design-patterns";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design_/states")({

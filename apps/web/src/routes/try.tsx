@@ -1,15 +1,15 @@
 import { presets } from "@pochical/design/themes";
+import { DesignApp } from "@pochical/prototype/components/design-app";
+import { DesignProviders } from "@pochical/prototype/components/design-providers";
+import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
+import { deviceSettingsKey } from "@pochical/prototype/lib/design-settings-key";
+import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
+import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
+import { css, cx } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { css, cx } from "styled-system/css";
 
-import { DesignApp } from "../components/design-app";
-import { DesignProviders } from "../components/design-providers";
 import { appSplashScreens } from "../lib/app-splash-screens";
-import { useSamplePerson } from "../lib/design-sample-person";
-import { deviceSettingsKey } from "../lib/design-settings-key";
-import { UserStoreContext } from "../lib/design-user-store";
-import { parseDesignVariants } from "../lib/design-variants";
 import { screenColor } from "../lib/screen-color";
 import { pageMeta } from "../lib/site";
 

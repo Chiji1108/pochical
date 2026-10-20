@@ -72,7 +72,7 @@
   svg {
     flex-shrink: 0;
   }
-  /* Japanese text has a <wbr> between its phrases (src/jsx), so a line
+  /* Japanese text has a <wbr> between its phrases (@pochical/jsx), so a line
      breaks only there, not in the middle of a word, and leaves no short
      phrase alone on its last line. A phrase too long for its line still
      breaks. */

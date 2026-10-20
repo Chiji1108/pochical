@@ -1,41 +1,65 @@
-import { createFileRoute } from "@tanstack/react-router";
-import type { ReactNode, ComponentType } from "react";
-import { css } from "styled-system/css";
-
-import { changeOn, patternOn } from "../components/design-group-data";
-import type { Member } from "../components/design-group-data";
+import {
+  DesignProviders,
+  PresetContexts,
+  useDesignTheme,
+} from "@pochical/prototype/components/design-providers";
+import { pageStyle } from "@pochical/prototype/components/design-theme";
+import { WeekSettingsContext } from "@pochical/prototype/components/design-week";
+import {
+  LabelledWidget,
+  Wallpaper,
+  WidgetFrame,
+  wallpaperFor,
+} from "@pochical/prototype/components/design-widget-frame";
+import type { WidgetFamily } from "@pochical/prototype/components/design-widget-frame";
+import {
+  CalendarLarge,
+  TwoWeeksMedium,
+} from "@pochical/prototype/components/design-widgets-calendar";
+import {
+  CellNamesContext,
+  IconWeightContext,
+  MonochromeContext,
+  noOffLooks,
+  OffLooksContext,
+  ShiftMarkStyleContext,
+} from "@pochical/prototype/components/shift-mark";
+import type { OffLooks } from "@pochical/prototype/components/shift-mark";
+import {
+  addDays,
+  dateKey,
+  initialDesignSchedule,
+} from "@pochical/prototype/lib/design-days";
+import type { DayEntry, Schedule } from "@pochical/prototype/lib/design-days";
+import { changeOn, patternOn } from "@pochical/prototype/lib/design-group-data";
+import type { Member } from "@pochical/prototype/lib/design-group-data";
 import {
   mother,
   partner,
   sampleGroups,
   sampleOthers,
   samplePhoto,
-} from "../components/design-group-samples";
+} from "@pochical/prototype/lib/design-group-samples";
+import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
+import { designToday } from "@pochical/prototype/lib/design-today";
+import { widgetEntry } from "@pochical/prototype/lib/design-widgets";
+import type {
+  WidgetCompanion,
+  WidgetEntry,
+  WidgetPerson,
+} from "@pochical/prototype/lib/design-widgets";
+import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
+import { css } from "@pochical/styled-system/css";
+import { createFileRoute } from "@tanstack/react-router";
+import type { ReactNode, ComponentType } from "react";
+
 import { Fit, LockScreen } from "../components/design-home-screen";
 import {
   DesignIntro,
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import {
-  DesignProviders,
-  PresetContexts,
-  useDesignTheme,
-} from "../components/design-providers";
-import { pageStyle } from "../components/design-theme";
 import { VariantPanel } from "../components/design-variant-panel";
-import { WeekSettingsContext } from "../components/design-week";
-import {
-  LabelledWidget,
-  Wallpaper,
-  WidgetFrame,
-  wallpaperFor,
-} from "../components/design-widget-frame";
-import type { WidgetFamily } from "../components/design-widget-frame";
-import {
-  CalendarLarge,
-  TwoWeeksMedium,
-} from "../components/design-widgets-calendar";
 import {
   NextOffCircular,
   TodayCircular,
@@ -54,31 +78,11 @@ import {
   UpcomingSmall,
 } from "../components/design-widgets-upcoming";
 import {
-  CellNamesContext,
-  IconWeightContext,
-  MonochromeContext,
-  noOffLooks,
-  OffLooksContext,
-  ShiftMarkStyleContext,
-} from "../components/shift-mark";
-import type { OffLooks } from "../components/shift-mark";
-import { addDays, dateKey, initialDesignSchedule } from "../lib/design-days";
-import type { DayEntry, Schedule } from "../lib/design-days";
-import { presetPatterns } from "../lib/design-patterns";
-import { designToday } from "../lib/design-today";
-import {
   parseWidgetVariants,
   widgetVariantKeys,
   widgetVariantOptions,
 } from "../lib/design-widget-variants";
 import type { WidgetVariants } from "../lib/design-widget-variants";
-import { widgetEntry } from "../lib/design-widgets";
-import type {
-  WidgetCompanion,
-  WidgetEntry,
-  WidgetPerson,
-} from "../lib/design-widgets";
-import { wallpaperSamples } from "../lib/material-you";
 import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design_/widgets")({

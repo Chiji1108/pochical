@@ -1,9 +1,5 @@
-import { useContext } from "react";
-import { css, cva } from "styled-system/css";
-
-import type { WidgetDay, WidgetEntry } from "../lib/design-widgets";
-import { dayParts } from "./design-day-cell";
-import { useWeek } from "./design-week";
+import { dayParts } from "@pochical/prototype/components/design-day-cell";
+import { useWeek } from "@pochical/prototype/components/design-week";
 import {
   firstRunOr,
   Change,
@@ -14,7 +10,13 @@ import {
   newsWords,
   useShiftNames,
   useWords,
-} from "./design-widgets";
+} from "@pochical/prototype/components/design-widgets";
+import type {
+  WidgetDay,
+  WidgetEntry,
+} from "@pochical/prototype/lib/design-widgets";
+import { css, cva } from "@pochical/styled-system/css";
+import { useContext } from "react";
 
 // シンプル: today alone, large, and today beside tomorrow.
 

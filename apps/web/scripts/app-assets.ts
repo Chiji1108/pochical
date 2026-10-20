@@ -4,6 +4,8 @@
 // Run again after changing the icon: bun run icon:app
 import { writeFile } from "node:fs/promises";
 
+import { iconColorOptions } from "@pochical/prototype/components/design-app-icon";
+import { site } from "@pochical/prototype/lib/brand";
 import type { ImageAssets } from "@vite-pwa/assets-generator/api";
 import { generateAssets } from "@vite-pwa/assets-generator/api/generate-assets";
 import { generateManifestIconsEntry } from "@vite-pwa/assets-generator/api/generate-manifest-icons-entry";
@@ -12,9 +14,7 @@ import { createAppleSplashScreens } from "@vite-pwa/assets-generator/config";
 import type { Preset } from "@vite-pwa/assets-generator/config";
 import sharp from "sharp";
 
-import { iconColorOptions } from "../src/components/design-app-icon";
 import { screenColor } from "../src/lib/screen-color";
-import { site } from "../src/lib/site";
 
 const SOURCE = new URL("../public/icon.png", import.meta.url).pathname;
 const FOLDER = new URL("../public/app/", import.meta.url).pathname;

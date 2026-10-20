@@ -1,20 +1,11 @@
-import { useContext, useLayoutEffect, useRef, useState } from "react";
-import { css, cva, cx } from "styled-system/css";
-
-import { presetPatterns } from "../lib/design-patterns";
-import { columnHours, withoutWholeHours } from "../lib/design-widgets";
-import type {
-  WidgetDay,
-  WidgetEntry,
-  WidgetPair,
-  WidgetPersonDay,
-} from "../lib/design-widgets";
-import { dayName } from "../lib/text-limits";
-import { dayParts } from "./design-day-cell";
-import { MemberLook, PhotoAvatar } from "./design-group-parts";
-import { shortMonthOf } from "./design-month-name";
-import { srOnly } from "./design-ui";
-import { useWeek } from "./design-week";
+import { dayParts } from "@pochical/prototype/components/design-day-cell";
+import {
+  MemberLook,
+  PhotoAvatar,
+} from "@pochical/prototype/components/design-group-parts";
+import { shortMonthOf } from "@pochical/prototype/components/design-month-name";
+import { srOnly } from "@pochical/prototype/components/design-ui";
+import { useWeek } from "@pochical/prototype/components/design-week";
 import {
   firstRunOr,
   Change,
@@ -31,13 +22,28 @@ import {
   useOffLook,
   useShiftNames,
   useWords,
-} from "./design-widgets";
-import { simple } from "./design-widgets-simple";
+} from "@pochical/prototype/components/design-widgets";
 import {
   MarkGlyph,
   ShiftMarkStyleContext,
   useDisplayColor,
-} from "./shift-mark";
+} from "@pochical/prototype/components/shift-mark";
+import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
+import {
+  columnHours,
+  withoutWholeHours,
+} from "@pochical/prototype/lib/design-widgets";
+import type {
+  WidgetDay,
+  WidgetEntry,
+  WidgetPair,
+  WidgetPersonDay,
+} from "@pochical/prototype/lib/design-widgets";
+import { dayName } from "@pochical/prototype/lib/text-limits";
+import { css, cva, cx } from "@pochical/styled-system/css";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
+
+import { simple } from "./design-widgets-simple";
 
 // これから: today's mark over the next days, and the five days from today
 // a column each, with someone's beside them if picked.

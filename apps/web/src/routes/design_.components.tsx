@@ -1,3 +1,111 @@
+import { MonthSummary } from "@pochical/prototype/components/design-calendar-heading";
+import {
+  Chip,
+  ChipGroup,
+  Choice,
+  ChoiceChip,
+  ChoiceGrid,
+  ChoiceTile,
+  ChoiceList,
+  ChoiceRow,
+  colorGrid,
+  PageDots,
+  Segment,
+  SegmentedControl,
+  Tag,
+} from "@pochical/prototype/components/design-choices";
+import { DayCell } from "@pochical/prototype/components/design-day-cell";
+import {
+  dayGrid,
+  WeekdayRow,
+} from "@pochical/prototype/components/design-day-grid";
+import {
+  LimitedInput,
+  LimitedTextArea,
+  MarkLetterInput,
+  SampleTag,
+  TimeRange,
+} from "@pochical/prototype/components/design-fields";
+import { PhotoAvatar } from "@pochical/prototype/components/design-group-parts";
+import {
+  BackButton,
+  ReturnButton,
+  TodayButton,
+  DoneButton,
+  HeaderAction,
+  PageHeader,
+} from "@pochical/prototype/components/design-header";
+import {
+  AddRow,
+  ListDivider,
+  SummaryRow,
+  List,
+  ListRow,
+  SwitchRow,
+} from "@pochical/prototype/components/design-list";
+import {
+  IconMenu,
+  MenuItem,
+  MenuPicker,
+  MenuSeparator,
+  PullDownMenu,
+} from "@pochical/prototype/components/design-menu";
+import { Pager } from "@pochical/prototype/components/design-pager";
+import { Phone } from "@pochical/prototype/components/design-phone";
+import { PhotoViewer } from "@pochical/prototype/components/design-photo-viewer";
+import {
+  DesignProviders,
+  useDesignTheme,
+} from "@pochical/prototype/components/design-providers";
+import {
+  NameTabs,
+  OffLookTabs,
+} from "@pochical/prototype/components/design-settings-style";
+import {
+  ConfirmDialog,
+  DecideHeading,
+  PhoneContext,
+  Sheet,
+  SheetHeading,
+  SheetPicture,
+  SystemAlert,
+} from "@pochical/prototype/components/design-sheet";
+import { SortableList } from "@pochical/prototype/components/design-sortable-list";
+import { TabBar } from "@pochical/prototype/components/design-tab-bar";
+import {
+  pageStyle,
+  useThemeStyle,
+} from "@pochical/prototype/components/design-theme";
+import { toastLook } from "@pochical/prototype/components/design-toast";
+import {
+  BarGroup,
+  Button,
+  DestructiveButton,
+  OptionCard,
+  IconButton,
+  Note,
+  Screen,
+  ScreenScroll,
+  Section,
+} from "@pochical/prototype/components/design-ui";
+import { useWeek } from "@pochical/prototype/components/design-week";
+import {
+  blankOffs,
+  OffLooksContext,
+  ShiftMark,
+  ShiftMarkStyleContext,
+} from "@pochical/prototype/components/shift-mark";
+import type {
+  OffLookId,
+  ShiftMarkStyle,
+} from "@pochical/prototype/components/shift-mark";
+import { sampleRosterPhoto } from "@pochical/prototype/lib/design-sample-photos";
+import { supportChatOf } from "@pochical/prototype/lib/design-support";
+import {
+  createUserStore,
+  UserStoreContext,
+} from "@pochical/prototype/lib/design-user-store";
+import { css, cva } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   CalendarPlus,
@@ -13,105 +121,12 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { css, cva } from "styled-system/css";
 
-import { MonthSummary } from "../components/design-calendar-heading";
-import {
-  Chip,
-  ChipGroup,
-  Choice,
-  ChoiceChip,
-  ChoiceGrid,
-  ChoiceTile,
-  ChoiceList,
-  ChoiceRow,
-  colorGrid,
-  PageDots,
-  Segment,
-  SegmentedControl,
-  Tag,
-} from "../components/design-choices";
-import { DayCell } from "../components/design-day-cell";
-import { dayGrid, WeekdayRow } from "../components/design-day-grid";
-import {
-  LimitedInput,
-  LimitedTextArea,
-  MarkLetterInput,
-  SampleTag,
-  TimeRange,
-} from "../components/design-fields";
-import { PhotoAvatar } from "../components/design-group-parts";
-import {
-  BackButton,
-  ReturnButton,
-  TodayButton,
-  DoneButton,
-  HeaderAction,
-  PageHeader,
-} from "../components/design-header";
-import {
-  AddRow,
-  ListDivider,
-  SummaryRow,
-  List,
-  ListRow,
-  SwitchRow,
-} from "../components/design-list";
-import {
-  IconMenu,
-  MenuItem,
-  MenuPicker,
-  MenuSeparator,
-  PullDownMenu,
-} from "../components/design-menu";
 import {
   DesignIntro,
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import { Pager } from "../components/design-pager";
-import { Phone } from "../components/design-phone";
-import { PhotoViewer } from "../components/design-photo-viewer";
-import {
-  DesignProviders,
-  useDesignTheme,
-} from "../components/design-providers";
-import { NameTabs, OffLookTabs } from "../components/design-settings-style";
-import {
-  ConfirmDialog,
-  DecideHeading,
-  PhoneContext,
-  Sheet,
-  SheetHeading,
-  SheetPicture,
-  SystemAlert,
-} from "../components/design-sheet";
-import { SortableList } from "../components/design-sortable-list";
-import { TabBar } from "../components/design-tab-bar";
-import { pageStyle, useThemeStyle } from "../components/design-theme";
-import { toastLook } from "../components/design-toast";
-import {
-  BarGroup,
-  Button,
-  DestructiveButton,
-  OptionCard,
-  IconButton,
-  Note,
-  Screen,
-  ScreenScroll,
-  Section,
-} from "../components/design-ui";
-import { useWeek } from "../components/design-week";
-import {
-  blankOffs,
-  OffLooksContext,
-  ShiftMark,
-  ShiftMarkStyleContext,
-} from "../components/shift-mark";
-import type { OffLookId, ShiftMarkStyle } from "../components/shift-mark";
-import { sampleRosterPhoto } from "../lib/design-sample-photos";
-import { supportChatOf } from "../lib/design-support";
-import { createUserStore, UserStoreContext } from "../lib/design-user-store";
 import { pageMeta } from "../lib/site";
 
 // The sample person the tab bar counts unread for: their groups' chats

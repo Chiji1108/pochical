@@ -1,3 +1,4 @@
+import { themeStyle } from "@pochical/prototype/components/design-theme";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DesignColors } from "../components/design-colors";
@@ -6,7 +7,6 @@ import {
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import { themeStyle } from "../components/design-theme";
 import { pageMeta } from "../lib/site";
 
 function ColorsPage() {

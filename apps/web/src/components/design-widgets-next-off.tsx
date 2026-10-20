@@ -1,16 +1,14 @@
-import { useContext, useLayoutEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
-import { css, cx } from "styled-system/css";
-
-import type {
-  WidgetEntry,
-  WidgetNoOff,
-  WidgetOff,
-} from "../lib/design-widgets";
-import { DARK_DRAWING, LIGHT_DRAWING, useAppIcons } from "./design-app-icon";
-import { GroupIcon, PhotoAvatar } from "./design-group-parts";
-import { ColorSchemeContext } from "./design-theme";
-import { srOnly } from "./design-ui";
+import {
+  DARK_DRAWING,
+  LIGHT_DRAWING,
+  useAppIcons,
+} from "@pochical/prototype/components/design-app-icon";
+import {
+  GroupIcon,
+  PhotoAvatar,
+} from "@pochical/prototype/components/design-group-parts";
+import { ColorSchemeContext } from "@pochical/prototype/components/design-theme";
+import { srOnly } from "@pochical/prototype/components/design-ui";
 import {
   firstRunOr,
   DayMark,
@@ -21,7 +19,15 @@ import {
   oneLine,
   useWords,
   waitingNames,
-} from "./design-widgets";
+} from "@pochical/prototype/components/design-widgets";
+import type {
+  WidgetEntry,
+  WidgetNoOff,
+  WidgetOff,
+} from "@pochical/prototype/lib/design-widgets";
+import { css, cx } from "@pochical/styled-system/css";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 // 次の休み: how soon the next day off comes, alone, with someone or with a
 // group.

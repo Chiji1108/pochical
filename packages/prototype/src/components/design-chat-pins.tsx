@@ -1,0 +1,215 @@
+import { css, cx } from "@pochical/styled-system/css";
+import { ChevronDown, ChevronUp, Pin, PinOff } from "lucide-react";
+import { useState } from "react";
+import type { ReactNode } from "react";
+
+import type { Message } from "../lib/design-group-data";
+import { useLongPress } from "./design-chat-actions";
+import { PhonePopover, PopoverMenuItem } from "./design-chat-popover";
+import { summaryOf } from "./design-chat-summary";
+import { floatingGlass, IconButton } from "./design-ui";
+
+// The lines pinned over a chat (spec/chat.md, Pins): the bar under the
+// header, and the list of all of them under it.
+
+const pinBar = {
+  // Under the header, a card of glass with the latest pinned line in it,
+  // as LINE shows its announcement, and all of them under it once opened:
+  // the pin, whose words, and a tap jumps to it.
+  card: css({
+    borderRadius: "2xl",
+    marginBottom: "4px",
+    marginTop: "4px",
+    paddingBottom: "4px",
+    paddingLeft: "8px",
+    paddingRight: "8px",
+    paddingTop: "4px",
+  }),
+  bar: css({
+    alignItems: "center",
+    display: "flex",
+    gap: "4px",
+  }),
+  jump: css({
+    alignItems: "center",
+    bg: "transparent",
+    border: 0,
+    borderRadius: "md",
+    color: "text.primary",
+    display: "flex",
+    flex: 1,
+    gap: "12px",
+    minWidth: 0,
+    padding: "8px",
+    textAlign: "left",
+    // A long press offers ピン留めを外す, not the phone's own callout.
+    userSelect: "none",
+    WebkitTouchCallout: "none",
+    width: "100%",
+  }),
+  icon: css({ color: "accent.default", flexShrink: 0 }),
+  words: css({
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    minWidth: 0,
+  }),
+  label: css({
+    color: "accent.default",
+    fontWeight: 600,
+    textStyle: "caption",
+  }),
+  text: css({
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    textStyle: "subheadline",
+    whiteSpace: "nowrap",
+  }),
+  // All of them, opened from ▾ under the bar.
+  list: css({
+    borderTop: "1px solid token(colors.separator)",
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+  }),
+};
+
+// The pinned lines over a chat: the latest, and with more than one, ▾
+// opening them all, each a tap away from its place in the chat.
+// A pinned line in the bar or its list: a tap goes to it, and a long
+// press (or a right click) offers ピン留めを外す, as a message's long press
+// opens its menu. No × in sight: taking a pin off takes it off for
+// everyone, so it is not left a stray tap away.
+function PinItem({
+  label,
+  onJump,
+  onUnpin,
+  children,
+}: {
+  // For a screen reader: what the pin is.
+  label: string;
+  onJump: () => void;
+  onUnpin: () => void;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const press = useLongPress(() => {
+    setOpen(true);
+  });
+  return (
+    <PhonePopover
+      anchor={
+        <button
+          aria-label={`${label}。押すとメッセージへ、長押しでピン留めを外す`}
+          className={pinBar.jump}
+          onClick={() => {
+            if (!press.consumeLongPress()) {
+              onJump();
+            }
+          }}
+          type="button"
+          {...press.handlers}
+        >
+          {children}
+        </button>
+      }
+      label="ピン留め"
+      onOpenChange={setOpen}
+      open={open}
+      positioning={{ gutter: 4, placement: "bottom-start" }}
+    >
+      <PopoverMenuItem
+        icon={<PinOff aria-hidden="true" size={18} />}
+        onClick={() => {
+          setOpen(false);
+          onUnpin();
+        }}
+      >
+        ピン留めを外す
+      </PopoverMenuItem>
+    </PhonePopover>
+  );
+}
+
+export function PinBar({
+  pins,
+  nameOf,
+  open,
+  onOpenChange,
+  onJump,
+  onUnpin,
+}: {
+  pins: Message[];
+  nameOf: (id: string) => string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onJump: (id: string) => void;
+  onUnpin: (id: string) => void;
+}) {
+  const [latest] = pins;
+  if (!latest) {
+    return null;
+  }
+  const many = pins.length > 1;
+  return (
+    <div className={cx(pinBar.card, floatingGlass)}>
+      <div className={pinBar.bar}>
+        <PinItem
+          label={`ピン留め：${summaryOf(latest, nameOf)}`}
+          onJump={() => {
+            onJump(latest.id);
+          }}
+          onUnpin={() => {
+            onUnpin(latest.id);
+          }}
+        >
+          <Pin aria-hidden="true" className={pinBar.icon} size={18} />
+          <span className={pinBar.words}>
+            <span className={pinBar.label}>
+              {many ? `ピン留め・${pins.length}件` : "ピン留め"}
+            </span>
+            <span className={pinBar.text}>{summaryOf(latest, nameOf)}</span>
+          </span>
+        </PinItem>
+        {many && (
+          <IconButton
+            aria-expanded={open}
+            glass={false}
+            label={open ? "ピン留めを閉じる" : "ピン留めをすべて表示"}
+            onClick={() => {
+              onOpenChange(!open);
+            }}
+          >
+            {open ? (
+              <ChevronUp aria-hidden="true" size={20} />
+            ) : (
+              <ChevronDown aria-hidden="true" size={20} />
+            )}
+          </IconButton>
+        )}
+      </div>
+      {many && open && (
+        <ul aria-label="ピン留め" className={pinBar.list}>
+          {pins.map((line) => (
+            <li key={line.id}>
+              <PinItem
+                label={`${nameOf(line.from)}：${summaryOf(line, nameOf)}`}
+                onJump={() => {
+                  onJump(line.id);
+                }}
+                onUnpin={() => {
+                  onUnpin(line.id);
+                }}
+              >
+                <span className={pinBar.words}>
+                  <span className={pinBar.label}>{nameOf(line.from)}</span>
+                  <span className={pinBar.text}>{summaryOf(line, nameOf)}</span>
+                </span>
+              </PinItem>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

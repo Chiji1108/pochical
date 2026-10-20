@@ -1,12 +1,11 @@
 // Paints the iOS app's icons from the poodle drawing, the way /design
-// paints them (src/components/design-app-icon.tsx): each pickable color as
+// paints them (@pochical/prototype's design-app-icon.tsx): each pickable color as
 // an app icon set, with its dark twin for a home screen set to dark icons,
 // and a small preview of each for 設定 > アプリアイコン to show; and the
 // drawing alone, as the first run's welcome shows it.
 // Run again after changing the drawing or the colors: bun run icon:ios
 import { mkdir, rm, writeFile } from "node:fs/promises";
-
-import sharp from "sharp";
+import { fileURLToPath } from "node:url";
 
 import {
   darkTwinOf,
@@ -17,10 +16,13 @@ import {
   inkBounds,
   lightDrawing,
   paintedPixels,
-} from "../src/components/design-app-icon";
-import type { IconColors } from "../src/components/design-app-icon";
+} from "@pochical/prototype/components/design-app-icon";
+import type { IconColors } from "@pochical/prototype/components/design-app-icon";
+import sharp from "sharp";
 
-const SOURCE = new URL("../public/design/poodle.png", import.meta.url).pathname;
+const SOURCE = fileURLToPath(
+  import.meta.resolve("@pochical/prototype/assets/poodle.png")
+);
 const ASSETS = new URL(
   "../../ios/Pochical/Pochical/Assets.xcassets/",
   import.meta.url
@@ -38,7 +40,7 @@ const WELCOME_SIZE = 600;
 // 次の休み's 92-point dog peeking from the corner, on a 3x screen.
 const PEEKING_SIZE = 276;
 // /design's light welcome brightens the scan before multiplying it into
-// the ground (src/components/design-work-setup.tsx, onboarding.poodle).
+// the ground (@pochical/prototype's design-work-setup.tsx, onboarding.poodle).
 const WELCOME_BRIGHTNESS = 1.12;
 const WELCOME_CONTRAST = 1.2;
 // The app's own icon set; the others are named after it.

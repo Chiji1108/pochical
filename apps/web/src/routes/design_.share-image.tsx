@@ -1,16 +1,17 @@
 import { themeSkyId } from "@pochical/design/skies";
+import { DesignApp } from "@pochical/prototype/components/design-app";
+import { DesignProviders } from "@pochical/prototype/components/design-providers";
+import { paleSkyFromTop } from "@pochical/prototype/components/design-surprise";
+import { InviteShareImage } from "@pochical/prototype/components/invite-share-image";
+import { SHARE_IMAGE } from "@pochical/prototype/lib/brand";
+import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
+import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
+import type { UserStore } from "@pochical/prototype/lib/design-user-store";
+import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
+import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
-import { css } from "styled-system/css";
 
-import { DesignApp } from "../components/design-app";
-import { DesignProviders } from "../components/design-providers";
-import { paleSkyFromTop } from "../components/design-surprise";
-import { InviteShareImage } from "../components/invite-share-image";
-import { useSamplePerson } from "../lib/design-sample-person";
-import { UserStoreContext } from "../lib/design-user-store";
-import type { UserStore } from "../lib/design-user-store";
-import { parseDesignVariants } from "../lib/design-variants";
-import { pageMeta, SHARE_IMAGE } from "../lib/site";
+import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/design_/share-image")({
   component: ShareImage,
