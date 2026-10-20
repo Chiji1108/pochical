@@ -8,7 +8,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
 import { photoKey } from "./photos";
-import { supportPlace, wordsOf } from "./support-lines";
+import { photoWords, supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
 /**
@@ -411,20 +411,26 @@ const isMessageOf =
   };
 
 /**
- * The file a line's photo is uploaded as, the line in its name, by which
- * a retry finds its message: a file's message carries no metadata.
+ * The files a line's photos are uploaded as, the line and each photo's
+ * place in it in their names, by which a retry finds its message: a
+ * file's message carries no metadata.
  */
-const photoName = (line: SupportLine): string => `photo-${line.seq}.jpg`;
+const photoName = (line: SupportLine, at: number): string =>
+  `photo-${line.seq}-${at + 1}.jpg`;
 
 const hasPhotoOf =
   (line: SupportLine) =>
-  (message: Record<string, unknown>): boolean =>
-    // Posted by an app, so not a file of the same name a person shared.
-    typeof message.bot_id === "string" &&
-    Array.isArray(message.files) &&
-    message.files.some(
-      (file: unknown) => isRecord(file) && file.name === photoName(line)
+  (message: Record<string, unknown>): boolean => {
+    const names = new Set(line.photos.map((_, at) => photoName(line, at)));
+    return (
+      // Posted by an app, so not a file of the same name a person shared.
+      typeof message.bot_id === "string" &&
+      Array.isArray(message.files) &&
+      message.files.some(
+        (file: unknown) => isRecord(file) && names.has(String(file.name))
+      )
     );
+  };
 
 /** How much earlier than this server's clock Slack's may say a post was. */
 const CLOCK_SKEW_S = 60;
@@ -593,38 +599,18 @@ const sharedTs = (file: unknown, channel: string): string | undefined => {
 };
 
 /**
- * A user's photo, uploaded into their chat's thread (files:write), a
- * reply's quote over it; the message it was shared in (files:read), for
- * its reactions and its taking back. Null when there is no photo to
- * upload, or Slack shared it without saying where: it is not uploaded
- * again. When an upload since `unsureSince` may have been shared with
- * Slack's answer lost, its message is looked for in the thread first.
+ * A photo's bytes uploaded to Slack (files.getUploadURLExternal) as
+ * `filename`, not yet shared: its file's id.
  */
-const postPhoto = async (
+const uploadPhoto = async (
   env: Env,
-  line: SupportLine,
-  thread: string,
-  quote: string,
-  unsureSince: Date | null
-): Promise<string | null> => {
-  const found =
-    unsureSince === null
-      ? undefined
-      : await findPosted(env, unsureSince, thread, hasPhotoOf(line));
-  if (found !== undefined) {
-    return found;
-  }
-  const photo = await env.PHOTOS.get(
-    photoKey(supportPlace(line.userId), line.photo?.id ?? "")
-  );
-  if (photo === null) {
-    return null;
-  }
-  const bytes = await photo.arrayBuffer();
+  bytes: ArrayBuffer,
+  filename: string
+): Promise<string> => {
   const slot = await slackTake(
     env,
     "files.getUploadURLExternal",
-    { alt_txt: "写真", filename: photoName(line), length: bytes.byteLength },
+    { alt_txt: "写真", filename, length: bytes.byteLength },
     "a photo"
   );
   const url = stringOf(slot.upload_url);
@@ -648,12 +634,53 @@ const postPhoto = async (
       )
     );
   }
+  return fileId;
+};
+
+/**
+ * A user's photo line, its photos uploaded into their chat's thread as
+ * one message (files:write), a reply's quote over it; the message they
+ * were shared in (files:read), for its reactions and its taking back.
+ * Null when there is no photo to upload, or Slack shared them without
+ * saying where: they are not uploaded again. When an upload since
+ * `unsureSince` may have been shared with Slack's answer lost, its
+ * message is looked for in the thread first.
+ */
+const postPhotos = async (
+  env: Env,
+  line: SupportLine,
+  thread: string,
+  quote: string,
+  unsureSince: Date | null
+): Promise<string | null> => {
+  const found =
+    unsureSince === null
+      ? undefined
+      : await findPosted(env, unsureSince, thread, hasPhotoOf(line));
+  if (found !== undefined) {
+    return found;
+  }
+  const fileIds: string[] = [];
+  for (const [at, { id }] of line.photos.entries()) {
+    // oxlint-disable-next-line no-await-in-loop -- the photos go in order
+    const photo = await env.PHOTOS.get(photoKey(supportPlace(line.userId), id));
+    if (photo !== null) {
+      fileIds.push(
+        // oxlint-disable-next-line no-await-in-loop -- the photos go in order
+        await uploadPhoto(env, await photo.arrayBuffer(), photoName(line, at))
+      );
+    }
+  }
+  const [first] = fileIds;
+  if (first === undefined) {
+    return null;
+  }
   await slackTake(
     env,
     "files.completeUploadExternal",
     {
       channel_id: env.SLACK_CHANNEL_ID,
-      files: [{ id: fileId, title: "写真" }],
+      files: fileIds.map((fileId) => ({ id: fileId, title: "写真" })),
       thread_ts: thread,
       ...(quote === "" ? {} : { initial_comment: quote.trim() }),
     },
@@ -661,7 +688,7 @@ const postPhoto = async (
   );
   for (let tries = 0; tries < SHARE_TRIES; tries += 1) {
     // oxlint-disable-next-line no-await-in-loop -- Slack shares it in a moment
-    const info = await slackCall(env, "files.info", { file: fileId });
+    const info = await slackCall(env, "files.info", { file: first });
     const ts = sharedTs(info?.file, env.SLACK_CHANNEL_ID);
     if (ts !== undefined) {
       return ts;
@@ -706,7 +733,7 @@ export const slackFile = async (
  * thread, which Pochical's people follow. A reply
  * quotes what it is to. Its message, for its reactions and its taking
  * back, or null when there is none to keep (Slack not set up here, or a
- * photo shared without its message); throws when Slack did not take it,
+ * photo line shared without its message); throws when Slack did not take it,
  * for the relay to try again. A try after one since `unsureSince` whose
  * answer was lost finds the line's message in Slack before posting it.
  */
@@ -722,13 +749,13 @@ export const tellStaffOfLine = async (
   const quote =
     repliedTo === null
       ? ""
-      : `> ${toSlackText(wordsOf(repliedTo).replaceAll("\n", " ").slice(0, QUOTE_LENGTH))}\n`;
-  const words = `${quote}${toSlackText(wordsOf(line))}`;
+      : `> ${toSlackText(repliedTo.words.replaceAll("\n", " ").slice(0, QUOTE_LENGTH))}\n`;
+  const words = `${quote}${toSlackText(line.words)}`;
   const thread = await threadOf(env, line.userId);
-  if (line.photo !== null) {
-    // A photo is shared in the thread, which a first line starts.
+  if (line.photos.length > 0) {
+    // Photos are shared in the thread, which a first line starts.
     const into = thread ?? (await startThread(env, line, words, unsureSince));
-    return await postPhoto(env, line, into, quote, unsureSince);
+    return await postPhotos(env, line, into, quote, unsureSince);
   }
   if (thread === null) {
     return await startThread(env, line, words, unsureSince);
@@ -739,7 +766,7 @@ export const tellStaffOfLine = async (
 /**
  * The message a try of a line's since `since` may have posted, Slack's
  * answer lost, now that the line is not to be posted (taken back
- * meanwhile, or past the user's limit): its photo's, else its own, as a
+ * meanwhile, or past the user's limit): its photos', else its own, as a
  * post would have kept; one that started the chat's thread is kept as the
  * thread too. Null when Slack has none, or is not set up here.
  */
@@ -785,7 +812,7 @@ export const tellStaffOfAnswer = async (
     line,
     unsureSince,
     thread,
-    `管理サイトから返信しました：\n${toSlackText(wordsOf(line))}`,
+    `管理サイトから返信しました：\n${toSlackText(line.words)}`,
     "an answer"
   );
 };
@@ -822,7 +849,7 @@ export const tellStaffOfReaction = async (
     return undefined;
   }
   const posted = await slackCall(env, "chat.postMessage", {
-    text: `ユーザーが ${emoji} を付けました：「${toSlackText(wordsOf(line).slice(0, QUOTE_LENGTH))}」`,
+    text: `ユーザーが ${emoji} を付けました：「${toSlackText(line.words.slice(0, QUOTE_LENGTH))}」`,
     thread_ts: thread,
   });
   return stringOf(posted?.ts);
@@ -867,8 +894,8 @@ const reportLineOf = (row: unknown): string | undefined => {
   );
   if (row.unsent === true) {
     words = "（取り消されたメッセージ）";
-  } else if (stringOf(row.photo) !== undefined) {
-    words = "📷 写真";
+  } else if (Array.isArray(row.photos) && row.photos.length > 0) {
+    words = photoWords(row.photos.length);
   } else if (Array.isArray(row.days) && row.days.length > 0 && words === "") {
     words = "📅 日にち";
   }

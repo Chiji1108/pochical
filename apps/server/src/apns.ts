@@ -32,9 +32,6 @@ export type Alert = {
   // device to take the notification back once it is read. None for an
   // answer from Pochical's people.
   line?: { authorId: string; seq: number };
-  // Notifications with the same one show as one, the latest in place of
-  // those before (apns-collapse-id): an album's photos.
-  collapseId?: string;
 };
 
 /**
@@ -182,8 +179,7 @@ const attempt = async (
   env: Env,
   { sandbox, token }: Device,
   payload: string,
-  type: Outcome["type"],
-  collapseId?: string
+  type: Outcome["type"]
 ): Promise<Outcome> => {
   const key = env.APNS_KEY;
   if (key === undefined || key === "") {
@@ -198,7 +194,6 @@ const attempt = async (
         "apns-priority": type === "alert" ? "10" : "5",
         "apns-push-type": type,
         "apns-topic": TOPIC,
-        ...(collapseId !== undefined && { "apns-collapse-id": collapseId }),
         authorization: `bearer ${await providerToken(key, env.APNS_KEY_ID, env.APNS_TEAM_ID)}`,
       },
       method: "POST",
@@ -222,10 +217,9 @@ const post = async (
   env: Env,
   device: Device,
   payload: string,
-  type: Outcome["type"],
-  collapseId?: string
+  type: Outcome["type"]
 ): Promise<Sent> => {
-  const outcome = await attempt(env, device, payload, type, collapseId);
+  const outcome = await attempt(env, device, payload, type);
   if (outcome.sent !== "sent") {
     console.warn({ apns: outcome });
   }
@@ -249,13 +243,7 @@ export const sendAlert = async (
   alert: Alert,
   recipient: Recipient
 ): Promise<Sent> =>
-  await post(
-    env,
-    device,
-    payloadOf(alert, recipient),
-    "alert",
-    alert.collapseId
-  );
+  await post(env, device, payloadOf(alert, recipient), "alert");
 
 /** Sends a withdrawal to one device, as `sendAlert` sends a notification. */
 export const sendWithdrawal = async (

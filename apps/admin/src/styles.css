@@ -82,6 +82,12 @@ th {
   background: var(--staff);
 }
 
+.photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 .photo {
   border-radius: 8px;
   display: block;

@@ -1247,13 +1247,11 @@ export class GroupDO extends DurableObject<Env> {
         if (taken.refused) {
           back.push(taken.refused);
         }
-        if (taken.photoGone !== undefined) {
-          photosGone.push(taken.photoGone);
-        }
+        photosGone.push(...(taken.photosGone ?? []));
       }
       return { changed: made, refused: back };
     });
-    // A photo taken back goes from the place's photos for everyone.
+    // Photos taken back go from the place's photos for everyone.
     const groupId = this.ctx.id.name;
     if (groupId !== undefined && photosGone.length > 0) {
       this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, photosGone));

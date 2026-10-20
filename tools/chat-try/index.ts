@@ -11,7 +11,8 @@
 // `--rich` the lines are a long chat's, for measuring how it scrolls:
 // long words cut at 続きを読む, links, mentions and large emoji. With
 // `--photos <dir>` it sends the dir's JPEGs instead, each its own line, in
-// the order of their names, or as one album with `--album`; `--face
+// the order of their names, or all as one line (an album) with `--album`
+// (chatRules.photosPerSend at most); `--face
 // <jpeg>` gives the user that face in the group first. A JPEG longer than
 // `chatRules.photoMaxEdge` on a side is refused before anything goes up,
 // as the group would refuse its line; the apps shrink theirs to it. Lines
@@ -127,7 +128,7 @@ type Photo = {
   width: number;
 };
 
-type Sending = { photo: Photo; file: string } | { text: string };
+type Sending = { photos: Photo[]; files: string[] } | { text: string };
 
 // Each send by its op_id: what it was, to name it if refused, and the
 // group's answer to it.
@@ -136,12 +137,12 @@ const sent = new Map<
   { what: string; answered: PromiseWithResolvers<undefined> }
 >();
 
-const send = (socket: WebSocket, lines: Sending[], albumName = ""): void => {
+const send = (socket: WebSocket, lines: Sending[]): void => {
   const edits = lines.map((line) => {
     const opId = crypto.randomUUID();
     sent.set(opId, {
       answered: Promise.withResolvers<undefined>(),
-      what: "text" in line ? line.text : line.file,
+      what: "text" in line ? line.text : line.files.join(", "),
     });
     return { line, opId };
   });
@@ -155,11 +156,7 @@ const send = (socket: WebSocket, lines: Sending[], albumName = ""): void => {
             value:
               "text" in line
                 ? { text: line.text, threadId: GROUP_THREAD }
-                : {
-                    album: albumName,
-                    photo: line.photo,
-                    threadId: GROUP_THREAD,
-                  },
+                : { photos: line.photos, threadId: GROUP_THREAD },
           },
           opId,
         })),
@@ -301,12 +298,20 @@ socket.addEventListener("error", () => fail("socket: could not connect"));
 await welcomed.promise;
 
 const lines = richLines(userId);
-const photos = await Promise.all(
+const uploaded = await Promise.all(
   jpegs.map(async (jpeg) => ({
     file: jpeg.file,
     photo: await upload(jpeg, groupId, token),
   }))
 );
+const photoLines: Sending[] = album
+  ? [
+      {
+        files: uploaded.map(({ file }) => file),
+        photos: uploaded.map(({ photo }) => photo),
+      },
+    ]
+  : uploaded.map(({ file, photo }) => ({ files: [file], photos: [photo] }));
 const sendings: Sending[] =
   photoDir === undefined
     ? Array.from({ length: count }, (_, index) => ({
@@ -314,10 +319,8 @@ const sendings: Sending[] =
           ? (lines[index % lines.length] ?? "")
           : `テスト ${index + 1}`,
       }))
-    : photos;
-if (album) {
-  send(socket, sendings, crypto.randomUUID());
-} else if (every > 0) {
+    : photoLines;
+if (every > 0) {
   for (const sending of sendings) {
     send(socket, [sending]);
     // oxlint-disable-next-line no-await-in-loop -- one at a time, as a person sends them
