@@ -13,10 +13,11 @@ import UIKit
 /// memory as soon as a view drawing them is made again.
 enum ChatPhotoLoading {
   /// The photos drawn at their size, `Chat.photoMemoryBytes` at most, and
-  /// the blurs their ThumbHashes draw.
-  static let memory = ImageCache(costLimit: Chat.photoMemoryBytes)
+  /// the blurs their ThumbHashes draw. Nuke's caches and pipeline are
+  /// safe from any thread, and read so (followErasing).
+  nonisolated static let memory = ImageCache(costLimit: Chat.photoMemoryBytes)
 
-  static let pipeline: ImagePipeline = {
+  nonisolated static let pipeline: ImagePipeline = {
     var configuration = ImagePipeline.Configuration()
     configuration.imageCache = memory
     // Among the app's own caches, which the system may empty: all fetched
@@ -88,7 +89,7 @@ enum ChatPhotoLoading {
   private struct NoPicture: Error {}
 
   /// What a photo is kept under, small or whole.
-  private static func key(_ photoID: String, in groupID: String, small: Bool) -> String {
+  nonisolated private static func key(_ photoID: String, in groupID: String, small: Bool) -> String {
     "\(groupID)/\(photoID)\(small ? "?size=small" : "")"
   }
 
