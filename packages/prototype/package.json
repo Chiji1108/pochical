@@ -8,7 +8,7 @@
     "./lib/*": "./src/lib/*.ts"
   },
   "scripts": {
-    "typecheck": "bun run --cwd ../styled-system codegen && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
   "dependencies": {

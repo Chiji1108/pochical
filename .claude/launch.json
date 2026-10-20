@@ -6,7 +6,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "bun run --cwd packages/styled-system codegen && cd apps/web && exec bun x vite dev --port \"$PORT\" --strictPort"
+        "cd apps/web && exec bun x vite dev --port \"$PORT\" --strictPort"
       ],
       "port": 3000,
       "autoPort": true

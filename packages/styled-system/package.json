@@ -11,8 +11,8 @@
   },
   "scripts": {
     "codegen": "panda codegen",
-    "typecheck": "panda codegen && tsc --noEmit",
-    "prepare": "panda codegen"
+    "prepare": "bun run codegen",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@pochical/design": "workspace:*"
