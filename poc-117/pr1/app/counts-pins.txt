@@ -1,0 +1,5 @@
+rec                                          reuse=  0 configured=  0 redequeued= 0  no motion
+pins open                                    reuse=  0 configured=  0 redequeued= 0  no motion
+pins closed                                  reuse=  0 configured=  0 redequeued= 0  no motion
+end                                          reuse=  0 configured=  0 redequeued= 0  no motion
+visible lines re-dequeued in all: 0

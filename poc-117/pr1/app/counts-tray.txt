@@ -1,0 +1,6 @@
+rec                                          reuse=  0 configured=  0 redequeued= 0  no motion
+photos picked, tray comes                    reuse=  0 configured=  0 redequeued= 0  composer  709.7.. 784.4  gap   12.0..  12.0  biggest gap step   0.0  frames 38
+one photo off                                reuse=  0 configured=  0 redequeued= 0  no motion
+tray goes                                    reuse=  1 configured=  1 redequeued= 0  composer  710.2.. 785.7  gap   12.0..  12.0  biggest gap step   0.0  frames 40
+end                                          reuse=  0 configured=  0 redequeued= 0  no motion
+visible lines re-dequeued in all: 0

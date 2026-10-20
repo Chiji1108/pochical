@@ -1,0 +1,37 @@
+Page: app.pochical
+App: app.pochical
+Snapshot: 34 nodes
+@e1 [other] "ポチカル"
+@e2 [navigation-bar] "テスト"
+@e3 [button] "戻る"
+@e4 [text] "テスト"
+@e5 [button] "テスト、2人"
+@e6 [button] "チャットのメニュー"
+@e7 [button] "ピン留め、テスト通知の確認"
+@e8 [collection]
+@e9 [cell] "来週の予定をまとめておきます。月曜は早番、火曜は休み、水曜と木曜は遅番で、金曜は研修があるので午後から入ります。来週の予定をまとめておきます。月曜は早番、火曜は休み、水曜と木曜は遅番で、金曜は研修があるので午後から入ります。来週の予定をまとめておきます。月曜は早番、火曜は休み、水曜と木曜は遅番で、金曜は研修があるので午後から入ります。来週の予定をまとめておきます。月曜は早番、火曜は休み、水曜と木曜は遅番で、金曜は研修があるので午後から入ります。よろしくお願いします！"
+@e10 [button] "テスト送信94、来週の予定をまとめておきます。月曜は早番、火曜は休み、水曜と木曜は遅番で、金曜は研修があるので午後から入ります。来週の予定をまとめておきます。月曜は早番、火曜は休み、水曜と木曜は遅番で、金曜は研修があるので午後から入ります。来週の予定をまとめておきます。月曜は早番、火曜は休み、水曜と木曜は遅番で、金曜は研修があるので午後から入ります。来週の予定をまとめておきます。月曜は早番、火曜は休み、水曜と木曜は遅番で、金曜は研修があるので午後から入ります。よろしくお願いします！、8:00"
+@e11 [button] "続きを読む"
+@e12 [cell] "これ見て https://www.apple.com/jp/iphone/ と https://ja.wikipedia.org/wiki/チャット のところ"
+@e13 [button] "テスト送信94、これ見て https://www.apple.com/jp/iphone/ と https://ja.wikipedia.org/wiki/チャット のところ、リンク「iPhone」、8:00"
+@e14 [link] "https://www.apple.com/jp/iphone/"
+@e15 [link] "https://ja.wikipedia.org/wiki/"
+@e16 [link] "iPhone、Apple（日本）"
+@e17 [text] "Apple（日本）"
+@e18 [cell] "8:00"
+@e19 [button] "テスト送信94、@テスト送信94 土曜の夜、代わってもらえたりしますか？ 詳しくは https://example.com/shifts/2026/10/swap?from=sat&to=sun に、8:00"
+@e20 [link] "@テスト送信94"
+@e21 [link] "https://example.com/shifts/2026/10/swap?from=sat&to=sun"
+@e22 [cell] "8:06"
+@e23 [button] "自分、テスト通知の確認、8:06、ピン留め中"
+@e24 [cell] "わたしがテスト送信94をグループから外しました"
+@e25 [other] "垂直スクロールバー, 9ページ" [scrollable]
+@e26 [other] "垂直スクロールバー, 9ページ" [scrollable]
+@e27 [popupbutton] "写真や日にちを送る"
+@e28 [button]
+@e29 [image] "追加"
+@e30 [text-view] "、わ" [editable]
+@e31 [other] "垂直スクロールバー, 1ページ" [scrollable]
+@e32 [other] "水平スクロールバー, 1ページ" [scrollable]
+@e33 [button] "送る"
+@e34 [toolbar] "ツールバー"

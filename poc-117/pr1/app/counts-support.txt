@@ -1,0 +1,10 @@
+rec                                          reuse=  0 configured=  0 redequeued= 0  no motion
+keyboard up                                  reuse=  0 configured=  0 redequeued= 0  composer  483.7.. 757.9  gap   11.7..  11.7  biggest gap step   0.0  frames 22
+a line sent                                  reuse=  1 configured=  3 redequeued= 1  composer  483.7.. 785.7  gap   11.7..  11.7  biggest gap step   0.0  frames 38
+keyboard down                                reuse=  0 configured=  0 redequeued= 0  composer  503.7.. 785.7  gap   11.7..  11.7  biggest gap step   0.0  frames 24
+keyboard up again                            reuse=  0 configured=  0 redequeued= 0  composer  483.7.. 785.1  gap   11.7..  11.7  biggest gap step   0.0  frames 24
+composer grows                               reuse=  0 configured=  0 redequeued= 0  composer  417.7.. 785.7  gap   11.7..  12.3  biggest gap step   0.1  frames 137
+composer shrinks                             reuse=  0 configured=  0 redequeued= 0  composer  483.7.. 785.7  gap   11.7..  12.2  biggest gap step   0.3  frames 53
+keyboard down                                reuse=  0 configured=  0 redequeued= 0  composer  487.7.. 785.7  gap   11.7..  11.7  biggest gap step   0.0  frames 24
+end                                          reuse=  0 configured=  0 redequeued= 0  no motion
+visible lines re-dequeued in all: 1

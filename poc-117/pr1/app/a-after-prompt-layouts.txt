@@ -1,0 +1,3 @@
+layout guide={{0, 538}, {402, 336}} composer={{0, 483.66666666666669}, {402, 54.333333333333336}} inset=390.3 offset=5608.3 content=6092.1 window=1
+layout guide={{0, 840}, {402, 34}} composer={{0, 785.66666666666663}, {402, 54.333333333333336}} inset=88.3 offset=5306.3 content=6092.1 window=1
+layout guide={{0, 538}, {402, 336}} composer={{0, 483.66666666666669}, {402, 54.333333333333336}} inset=390.3 offset=5608.3 content=6092.1 window=1

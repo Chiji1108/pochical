@@ -1,0 +1,12 @@
+490934.7338 OPEN chat root=uikit
+490934.7683 UPDATE phase=active
+490937.0008 STEP focus
+490938.0529 TICK guide=(0.0, 538.0, 402.0, 336.0) composer=(0.0, 491.0, 402.0, 47.0) tabbar=none
+490939.1080 STEP tab -> B underneath
+490940.1358 TICK guide=(0.0, 538.0, 402.0, 336.0) composer=(0.0, 491.0, 402.0, 47.0) tabbar=none
+490941.2003 STEP unfocus
+490942.2539 TICK guide=(0.0, 840.0, 402.0, 34.0) composer=(0.0, 793.0, 402.0, 47.0) tabbar=none
+490943.3018 STEP focus
+490944.3559 TICK guide=(0.0, 538.0, 402.0, 336.0) composer=(0.0, 491.0, 402.0, 47.0) tabbar=none
+490945.4109 STEP tab -> A underneath
+490946.4357 TICK guide=(0.0, 538.0, 402.0, 336.0) composer=(0.0, 491.0, 402.0, 47.0) tabbar=none

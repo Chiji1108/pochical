@@ -1,0 +1,19 @@
+490845.8733 UPDATE phase=inactive
+490846.1292 UPDATE phase=active
+490847.6672 STEP focus
+490848.7218 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490849.7668 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490850.8007 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490851.8674 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490852.5174 UPDATE phase=inactive
+490852.6380 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=1
+490853.3824 UPDATE phase=background
+490853.6241 TICK guide=(0.0, 840.0, 0.0, 0.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 793.0, 402.0, 47.0) state=2
+490855.6926 TICK guide=(0.0, 840.0, 0.0, 0.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 793.0, 402.0, 47.0) state=2
+490855.6928 TICK guide=(0.0, 840.0, 0.0, 0.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 793.0, 402.0, 47.0) state=2
+490855.7407 UPDATE phase=inactive
+490856.1252 UPDATE phase=active
+490856.6244 TICK guide=(0.0, 840.0, 0.0, 0.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 793.0, 402.0, 47.0) state=0
+490858.1696 TICK guide=(0.0, 840.0, 0.0, 0.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 793.0, 402.0, 47.0) state=0
+490859.2019 TICK guide=(0.0, 840.0, 0.0, 0.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 793.0, 402.0, 47.0) state=0
+490860.2675 TICK guide=(0.0, 840.0, 0.0, 0.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 793.0, 402.0, 47.0) state=0

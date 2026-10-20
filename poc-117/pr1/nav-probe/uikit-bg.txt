@@ -1,0 +1,19 @@
+490815.1646 OPEN chat root=uikit
+490815.2148 UPDATE phase=active
+490817.4673 STEP focus
+490818.4228 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490819.5690 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490820.6192 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490820.6828 UPDATE phase=inactive
+490821.6701 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=1
+490822.6692 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=1
+490823.7656 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=1
+490823.9841 UPDATE phase=background
+490824.1227 UPDATE phase=inactive
+490824.3763 UPDATE phase=active
+490824.4795 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490825.8678 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490826.8874 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490827.9687 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490829.0210 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0
+490830.0675 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 windowGuide=(0.0, 0.0, 0.0, 0.0) composer=(0.0, 491.0, 402.0, 47.0) state=0

@@ -1,0 +1,18 @@
+layout guide={{0, 840}, {402, 34}} composer={{0, 840}, {402, 0}} inset=34.0 offset=1648.0 content=5899.0 window=1
+layout guide={{0, 840}, {402, 34}} composer={{0, 840}, {402, 0}} inset=34.0 offset=1648.0 content=5899.0 window=1
+layout guide={{0, 840}, {402, 34}} composer={{0, 785.66666666666663}, {402, 54.333333333333336}} inset=88.3 offset=1702.3 content=5899.0 window=1
+layout guide={{0, 840}, {402, 34}} composer={{0, 785.66666666666663}, {402, 54.333333333333336}} inset=88.3 offset=1702.3 content=5899.0 window=1
+layout guide={{0, 538}, {402, 336}} composer={{0, 483.66666666666669}, {402, 54.333333333333336}} inset=390.3 offset=2004.3 content=5899.0 window=1
+app background
+layout guide={{0, 538}, {402, 336}} composer={{0, 483.66666666666669}, {402, 54.333333333333336}} inset=390.3 offset=2004.3 content=5899.0 window=1
+layout guide={{0, 521}, {402, 353}} composer={{0, 466.66666666666669}, {402, 54.333333333333336}} inset=407.3 offset=2021.3 content=5899.0 window=1
+layout guide={{0, 521}, {402, 353}} composer={{0, 466.66666666666669}, {402, 54.333333333333336}} inset=407.3 offset=2021.3 content=5899.0 window=1
+app foreground
+layout guide={{0, 521}, {402, 353}} composer={{0, 466.66666666666669}, {402, 54.333333333333336}} inset=407.3 offset=1648.0 content=5899.0 window=1
+layout guide={{0, 538}, {402, 336}} composer={{0, 483.66666666666669}, {402, 54.333333333333336}} inset=390.3 offset=1631.0 content=5899.0 window=1
+layout guide={{0, 840}, {402, 34}} composer={{0, 785.66666666666663}, {402, 54.333333333333336}} inset=88.3 offset=1329.3 content=5899.0 window=1
+layout guide={{0, 538}, {402, 336}} composer={{0, 483.66666666666669}, {402, 54.333333333333336}} inset=390.3 offset=1631.3 content=5899.0 window=1
+layout guide={{0, 840}, {402, 34}} composer={{0, 785.66666666666663}, {402, 54.333333333333336}} inset=88.3 offset=1329.3 content=5899.0 window=1
+layout guide={{0, 538}, {402, 336}} composer={{0, 483.66666666666669}, {402, 54.333333333333336}} inset=390.3 offset=1631.3 content=5899.0 window=1
+layout guide={{0, 840}, {402, 34}} composer={{0, 785.66666666666663}, {402, 54.333333333333336}} inset=88.3 offset=1329.3 content=5899.0 window=1
+layout guide={{0, 538}, {402, 336}} composer={{0, 483.66666666666669}, {402, 54.333333333333336}} inset=390.3 offset=1631.3 content=5899.0 window=1

@@ -1,0 +1,13 @@
+490897.4681 OPEN chat root=uikit
+490897.4967 UPDATE phase=active
+490899.6978 STEP focus
+490900.7696 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 composer=(0.0, 491.0, 402.0, 47.0)
+490901.2855 STEP ask for notifications
+490904.9653 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 composer=(0.0, 491.0, 402.0, 47.0)
+490907.5919 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 composer=(0.0, 491.0, 402.0, 47.0)
+490908.8010 STEP unfocus
+490909.2244 TICK guide=(0.0, 840.0, 402.0, 34.0) constraints=0 composer=(0.0, 793.0, 402.0, 47.0)
+490909.3157 UPDATE phase=inactive
+490909.7876 STEP focus
+490911.6475 TICK guide=(0.0, 538.0, 402.0, 336.0) constraints=0 composer=(0.0, 491.0, 402.0, 47.0)
+490911.6539 UPDATE phase=active

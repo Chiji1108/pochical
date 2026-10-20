@@ -1,0 +1,11 @@
+composerTop=483.7 lastBottom=541.7 gap=-58.0
+composerTop=483.7 lastBottom=621.7 gap=-138.0
+composerTop=483.7 lastBottom=701.7 gap=-218.0
+composerTop=620.0 lastBottom=781.7 gap=-161.7
+composerTop=680.0 lastBottom=841.7 gap=-161.7
+composerTop=640.0 lastBottom=801.7 gap=-161.7
+composerTop=580.0 lastBottom=741.7 gap=-161.7
+composerTop=520.0 lastBottom=681.7 gap=-161.7
+composerTop=483.7 lastBottom=621.7 gap=-138.0
+composerTop=483.7 lastBottom=581.7 gap=-98.0
+composerTop=483.7 lastBottom=561.7 gap=-78.0

@@ -1,0 +1,2 @@
+490865.9693 OPEN chat root=swiftui
+SwiftUI/NavigationColumnState.swift:698: Fatal error: 'try!' expression unexpectedly raised an error: SwiftUI.AnyNavigationPath.Error.comparisonTypeMismatch
