@@ -45,8 +45,10 @@ struct StyleSettings: View {
         Text("グループの人にも、この見た目で表示されます。")
       }
       Section("テーマ") {
-        ThemeChoices(samples: samples, scheme: picked ?? colorScheme)
-          .settingsOnPage()
+        ThemeChoices(
+          samples: samples, scheme: picked ?? colorScheme, inUse: settings.device.theme
+        )
+        .settingsOnPage()
       }
       // Emoji keep their own colors, so シフトの色 would change nothing.
       if settings.device.look.style != .emoji {
@@ -250,7 +252,14 @@ private struct ThemeChoices: View {
   let samples: [Pattern]
   /// The light or dark each card shows its テーマ in.
   let scheme: ColorScheme
-  @State private var page = 0
+  /// Opens on the page of the テーマ in use.
+  @State private var page: Int
+
+  init(samples: [Pattern], scheme: ColorScheme, inUse: Theme) {
+    self.samples = samples
+    self.scheme = scheme
+    _page = State(initialValue: Self.pages.firstIndex { $0.contains(inUse) } ?? 0)
+  }
 
   private static let pages = stride(from: 0, to: Theme.allCases.count, by: 3).map {
     Array(Theme.allCases[$0..<min($0 + 3, Theme.allCases.count)])
@@ -258,27 +267,17 @@ private struct ThemeChoices: View {
 
   var body: some View {
     VStack(spacing: 4) {
-      TabView(selection: $page) {
-        ForEach(Self.pages.indices, id: \.self) { index in
-          HStack(alignment: .top, spacing: 8) {
-            ForEach(Self.pages[index], id: \.self) { theme in
-              card(theme)
-            }
+      SwipePages(count: Self.pages.count, current: $page) { index in
+        HStack(alignment: .top, spacing: 8) {
+          ForEach(Self.pages[index], id: \.self) { theme in
+            card(theme)
           }
-          // The page clips what it holds: room for the picked tile's
-          // frame at its edges.
-          .padding(2)
-          .frame(maxHeight: .infinity, alignment: .top)
-          .tag(index)
         }
+        // The page clips what it holds: room for the picked tile's frame
+        // at its edges.
+        .padding(2)
       }
-      .tabViewStyle(.page(indexDisplayMode: .never))
-      .frame(height: 100)
       PageDots(count: Self.pages.count, current: $page, label: "テーマのページ")
-    }
-    .onAppear {
-      // Opens on the page of the テーマ in use.
-      page = Self.pages.firstIndex { $0.contains(settings.device.theme) } ?? 0
     }
   }
 
