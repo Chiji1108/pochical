@@ -19,7 +19,7 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 - Plumbing comes from a maintained library before it is hand-written (check license, activity, fit; name it in the PR). MIT/Apache/BSD may be added; GPL/AGPL code (Signal, Telegram) is read for ideas only.
 - What does the same thing in two places is one piece, not two copies: build on the existing one and make the difference an input. A change to one carries to the others in the same PR.
 - Fix the root cause the way the platform or library intends; no timing hacks, sleeps or patches over symptoms. If the conventional answer is to leave a review finding, say so instead of adding special handling.
-- The apps are unreleased: change stored shapes directly, with no migration, fallback or compatibility code.
+- The apps are unreleased: change stored shapes directly, with no hand-written data migration, fallback or compatibility code for old saved data. Server SQL schemas still get their generated Drizzle migrations, as above.
 - Update `spec/` (and its vectors) in the same PR as any behavior change; fix spec drift when you see it.
 - UI follows the platform first (iOS 26 / Material 3 conventions, system controls and buttons sized by the OS). When /design and a platform differ, judge on the merits and say which side changes. Motion the OS provides is left to the OS.
 - TypeScript (`apps/web`, `apps/server`, `apps/admin`) is checked by Ultracite: run `bun x ultracite fix`, and avoid `as` assertions other than `as const`.
