@@ -17,7 +17,7 @@ struct WidgetFace: View {
 
   var body: some View {
     if !person.photoID.isEmpty,
-      let data = ChatPhotos.held(person.photoID, in: person.groupID),
+      let data = ChatPhotos.held(person.photoID, in: .group(person.groupID)),
       let image = UIImage(data: data)?.preparingThumbnail(of: CGSize(width: size * 3, height: size * 3))
     {
       Image(uiImage: image)
@@ -65,7 +65,7 @@ struct WidgetGroupMark: View {
     let color = colors.mark(mark.color)
     let shape = RoundedRectangle(cornerRadius: size * 0.28)
     Group {
-      if !mark.photoID.isEmpty, let data = ChatPhotos.held(mark.photoID, in: group.groupID),
+      if !mark.photoID.isEmpty, let data = ChatPhotos.held(mark.photoID, in: .group(group.groupID)),
         let image = UIImage(data: data)?.preparingThumbnail(
           of: CGSize(width: size * 3, height: size * 3))
       {

@@ -33,13 +33,13 @@ enum ChatPhotoLoading {
   /// The member's own photos, held on the device, are read from there and
   /// not kept twice (`whole` held: as it is sent).
   static func request(
-    _ photo: LinePhoto, in groupID: String, pixels: Int?, calls: GroupCalls,
+    _ photo: LinePhoto, in shelf: PhotoShelf, pixels: Int?, calls: GroupCalls,
     priority: ImageRequest.Priority = .normal, held: Bool = false
   ) -> ImageRequest {
     let small = pixels != nil
     var request = ImageRequest(
-      id: key(photo.id, in: groupID, small: small),
-      data: { try await calls.photo(photo.id, in: groupID, small: small, keep: false) },
+      id: key(photo.id, in: shelf, small: small),
+      data: { try await calls.photo(photo.id, in: shelf, small: small, keep: false) },
       priority: priority,
       options: held ? [.disableDiskCache] : [])
     if let pixels {
@@ -51,16 +51,17 @@ enum ChatPhotoLoading {
   /// A face or a group's photo mark as the app draws it, `size` points at
   /// `scale`, cut to fill: the member's own picked photo, still waiting on
   /// the device for the group to have it, read from there, else one of
-  /// `groupID`'s photos. `GroupCalls.photo` keeps it on the disk.
+  /// `shelf`'s photos; with no shelf, only the one held. `GroupCalls.photo`
+  /// keeps it on the disk.
   static func picture(
-    _ photoID: String, in groupID: String, size: CGSize, scale: CGFloat, calls: GroupCalls
+    _ photoID: String, in shelf: PhotoShelf?, size: CGSize, scale: CGFloat, calls: GroupCalls
   ) -> ImageRequest {
     var request = ImageRequest(
-      id: "picture/\(groupID)/\(photoID)",
+      id: "picture/\(shelf?.key ?? "")/\(photoID)",
       data: {
-        if let held = ChatPhotos.held(photoID, in: ChatPhotos.mine) { return held }
-        guard !groupID.isEmpty else { throw NoPicture() }
-        return try await calls.photo(photoID, in: groupID)
+        if let held = ChatPhotos.held(photoID, in: .mine) { return held }
+        guard let shelf else { throw NoPicture() }
+        return try await calls.photo(photoID, in: shelf)
       },
       options: [.disableDiskCache])
     request.thumbnail = filling(size, scale: scale)
@@ -89,16 +90,18 @@ enum ChatPhotoLoading {
   private struct NoPicture: Error {}
 
   /// What a photo is kept under, small or whole.
-  nonisolated private static func key(_ photoID: String, in groupID: String, small: Bool) -> String {
-    "\(groupID)/\(photoID)\(small ? "?size=small" : "")"
+  nonisolated private static func key(_ photoID: String, in shelf: PhotoShelf, small: Bool)
+    -> String
+  {
+    "\(shelf.key)/\(photoID)\(small ? "?size=small" : "")"
   }
 
   /// `photo` as a line shows it in its box at `scale`.
   static func lineRequest(
-    _ photo: LinePhoto, in groupID: String, scale: CGFloat, calls: GroupCalls, held: Bool = false
+    _ photo: LinePhoto, in shelf: PhotoShelf, scale: CGFloat, calls: GroupCalls, held: Bool = false
   ) -> ImageRequest? {
     pixels(of: photo, shown: PhotoBox.size(of: photo), scale: scale).map {
-      request(photo, in: groupID, pixels: $0, calls: calls, held: held)
+      request(photo, in: shelf, pixels: $0, calls: calls, held: held)
     }
   }
 
@@ -110,11 +113,11 @@ enum ChatPhotoLoading {
     let center = NotificationCenter.default
     center.addObserver(forName: ChatPhotos.forgotten, object: nil, queue: nil) { note in
       guard let photoID = note.userInfo?["photoID"] as? String,
-        let groupID = note.userInfo?["groupID"] as? String
+        let shelf = note.userInfo?["shelf"] as? PhotoShelf
       else { return }
       for small in [true, false] {
         pipeline.configuration.dataCache?.removeData(
-          for: key(photoID, in: groupID, small: small))
+          for: key(photoID, in: shelf, small: small))
       }
     }
     center.addObserver(forName: ChatPhotos.erased, object: nil, queue: nil) { _ in
@@ -133,10 +136,10 @@ enum ChatPhotoLoading {
 
   /// What the chat drew of `photo` and holds still, shown at once as it
   /// opens large while the photo itself comes: the line's, else its blur.
-  static func held(_ photo: LinePhoto, in groupID: String, scale: CGFloat, calls: GroupCalls)
+  static func held(_ photo: LinePhoto, in shelf: PhotoShelf, scale: CGFloat, calls: GroupCalls)
     -> UIImage?
   {
-    let drawn = lineRequest(photo, in: groupID, scale: scale, calls: calls).flatMap {
+    let drawn = lineRequest(photo, in: shelf, scale: scale, calls: calls).flatMap {
       pipeline.cache[$0]?.image
     }
     return drawn ?? blur(of: photo)
@@ -156,10 +159,10 @@ enum ChatPhotoLoading {
   }
 
   /// The photo itself, as fetched: to save or share.
-  static func whole(_ photo: LinePhoto, in groupID: String, calls: GroupCalls) async -> Data? {
-    let held = ChatPhotos.heldFile(photo.id, in: groupID) != nil
+  static func whole(_ photo: LinePhoto, in shelf: PhotoShelf, calls: GroupCalls) async -> Data? {
+    let held = ChatPhotos.heldFile(photo.id, in: shelf) != nil
     return try? await pipeline.data(
-      for: request(photo, in: groupID, pixels: nil, calls: calls, held: held)
+      for: request(photo, in: shelf, pixels: nil, calls: calls, held: held)
     ).0
   }
 }
@@ -220,14 +223,14 @@ enum PhotoBox {
   private let prefetcher = ImagePrefetcher(pipeline: ChatPhotoLoading.pipeline)
   private var near: [String: ImageRequest] = [:]
 
-  /// The photos near those in sight, in `groupID`'s chat, are now
+  /// The photos near those in sight, on `shelf`, are now
   /// `photos`: each fetched as its line draws it.
-  func near(_ photos: [LinePhoto], in groupID: String, scale: CGFloat, calls: GroupCalls) {
+  func near(_ photos: [LinePhoto], in shelf: PhotoShelf, scale: CGFloat, calls: GroupCalls) {
     var requests: [String: ImageRequest] = [:]
     for photo in photos {
       if let request = ChatPhotoLoading.lineRequest(
-        photo, in: groupID, scale: scale, calls: calls,
-        held: ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+        photo, in: shelf, scale: scale, calls: calls,
+        held: ChatPhotos.heldFile(photo.id, in: shelf) != nil)
       {
         requests[photo.id] = request
       }
@@ -235,14 +238,14 @@ enum PhotoBox {
     near(requests)
   }
 
-  /// The photos about to be swiped to opened large, in `groupID`'s chat,
+  /// The photos about to be swiped to opened large, on `shelf`,
   /// are now `photos`: each fetched whole, as it opens.
-  func whole(_ photos: [LinePhoto], in groupID: String, calls: GroupCalls) {
+  func whole(_ photos: [LinePhoto], in shelf: PhotoShelf, calls: GroupCalls) {
     var requests: [String: ImageRequest] = [:]
     for photo in photos {
       requests[photo.id] = ChatPhotoLoading.request(
-        photo, in: groupID, pixels: nil, calls: calls,
-        held: ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+        photo, in: shelf, pixels: nil, calls: calls,
+        held: ChatPhotos.heldFile(photo.id, in: shelf) != nil)
     }
     near(requests)
   }

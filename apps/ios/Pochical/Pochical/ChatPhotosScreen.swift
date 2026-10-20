@@ -37,6 +37,8 @@ struct ChatPhotosScreen: View {
       client: groupSockets.client(photos.placeID), database: database)
   }
 
+  private var shelf: PhotoShelf { PhotoShelf(place: photos.placeID) }
+
   var body: some View {
     content
       .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -50,11 +52,11 @@ struct ChatPhotosScreen: View {
         }
       }
       .photoViewer(
-        $viewing, groupID: pager.placeID,
+        $viewing, shelf: shelf,
         // Its square kept in sight as the photo opened large is swiped,
         // to close back into, as Photos' grid follows.
         onShow: { position.scrollTo(id: $0) },
-        onSave: { photo in await savePhoto(photo, in: pager.placeID, calls: groupCalls) })
+        onSave: { photo in await savePhoto(photo, in: shelf, calls: groupCalls) })
   }
 
   @ViewBuilder private var content: some View {
@@ -68,7 +70,7 @@ struct ChatPhotosScreen: View {
         ) {
           ForEach(run.photos.reversed()) { item in
             PhotoSquare(
-              item: item, groupID: pager.placeID, side: side, writer: names[item.authorID]
+              item: item, shelf: shelf, side: side, writer: names[item.authorID]
             ) {
               open(item)
             }
@@ -119,7 +121,7 @@ struct ChatPhotosScreen: View {
 /// left empty while it is open large from here.
 private struct PhotoSquare: View {
   let item: ChatPhotoItem
-  let groupID: String
+  let shelf: PhotoShelf
   let side: CGFloat
   let writer: String?
   let onOpen: () -> Void
@@ -127,7 +129,7 @@ private struct PhotoSquare: View {
   var body: some View {
     PhotoSpot(id: item.photo.id) {
       ChatPhotoImage(
-        photo: item.photo, groupID: groupID, shown: CGSize(width: side, height: side),
+        photo: item.photo, shelf: shelf, shown: CGSize(width: side, height: side),
         whileInSight: true, retries: true
       )
       .frame(width: side, height: side)

@@ -127,12 +127,12 @@ extension View {
   /// photo, true once saved; none for someone's face, which is theirs to
   /// keep, nor shared.
   func photoViewer(
-    _ viewing: Binding<PhotoViewing?>, groupID: String,
+    _ viewing: Binding<PhotoViewing?>, shelf: PhotoShelf,
     onShow: ((String) -> Void)? = nil,
     onSave: ((LinePhoto) async -> Bool)? = nil
   ) -> some View {
     background(
-      PhotoViewerPresenter(viewing: viewing, groupID: groupID, onShow: onShow, onSave: onSave))
+      PhotoViewerPresenter(viewing: viewing, shelf: shelf, onShow: onShow, onSave: onSave))
   }
 }
 
@@ -204,7 +204,7 @@ extension UIView {
 
 private struct PhotoViewerPresenter: UIViewControllerRepresentable {
   @Binding var viewing: PhotoViewing?
-  let groupID: String
+  let shelf: PhotoShelf
   let onShow: ((String) -> Void)?
   let onSave: ((LinePhoto) async -> Bool)?
 
@@ -235,7 +235,7 @@ private struct PhotoViewerPresenter: UIViewControllerRepresentable {
     // The places are those of the screen it opens over.
     let source: (String) -> UIView? = { [weak host] id in host?.parent?.view.photoSpot(id) }
     let viewer = PhotoViewerController(
-      viewing, groupID: groupID, calls: environment.groupCalls, colors: environment.themeColors,
+      viewing, shelf: shelf, calls: environment.groupCalls, colors: environment.themeColors,
       source: environment.accessibilityReduceMotion ? nil : source, onShow: onShow,
       onSave: onSave)
     viewer.onClosed = { [weak coordinator] in
@@ -262,7 +262,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   private var counted: PhotoKey?
   /// The photos about to be swiped to, fetched ahead.
   private let ahead = PhotoPrefetch()
-  private let groupID: String
+  private let shelf: PhotoShelf
   private let calls: GroupCalls
   private let onSave: ((LinePhoto) async -> Bool)?
   /// Told of each photo shown.
@@ -290,14 +290,14 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   /// `source` gives the place of a photo, by its id, to open from and
   /// close back to; none fades it in and out.
   init(
-    _ viewing: PhotoViewing, groupID: String, calls: GroupCalls, colors: ThemeColors,
+    _ viewing: PhotoViewing, shelf: PhotoShelf, calls: GroupCalls, colors: ThemeColors,
     source: ((String) -> UIView?)?, onShow: ((String) -> Void)?,
     onSave: ((LinePhoto) async -> Bool)?
   ) {
     run = viewing.run
     pager = viewing.pager
     names = viewing.names
-    self.groupID = groupID
+    self.shelf = shelf
     self.calls = calls
     zooms = source != nil
     self.onShow = onShow
@@ -484,7 +484,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
   }
 
   private func page(_ item: ChatPhotoItem) -> PhotoPage {
-    let page = PhotoPage(item, writer: names[item.authorID], groupID: groupID, calls: calls)
+    let page = PhotoPage(item, writer: names[item.authorID], shelf: shelf, calls: calls)
     page.onTap = { [weak self] in self?.toggleChrome() }
     return page
   }
@@ -508,7 +508,7 @@ final class PhotoViewerController: UIViewController, UIPageViewControllerDataSou
     onShow?(shown.photo.id)
     guard let index = run.index else { return }
     let near = run.photos[max(index - 2, 0)...min(index + 2, run.photos.count - 1)]
-    ahead.whole(near.map(\.photo), in: groupID, calls: calls)
+    ahead.whole(near.map(\.photo), in: shelf, calls: calls)
     guard let pager else { return }
     for ask in run.asks() {
       Task {
@@ -680,7 +680,7 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   var place: String? {
     didSet { picture.accessibilityValue = place }
   }
-  private let groupID: String
+  private let shelf: PhotoShelf
   private let calls: GroupCalls
   private let scroll = UIScrollView()
   private let picture = UIImageView()
@@ -697,10 +697,10 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   private static let deepest: CGFloat = 4
   private static let tapped: CGFloat = 2
 
-  init(_ item: ChatPhotoItem, writer: String?, groupID: String, calls: GroupCalls) {
+  init(_ item: ChatPhotoItem, writer: String?, shelf: PhotoShelf, calls: GroupCalls) {
     self.item = item
     self.writer = writer
-    self.groupID = groupID
+    self.shelf = shelf
     self.calls = calls
     super.init(nibName: nil, bundle: nil)
   }
@@ -729,7 +729,7 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
     picture.contentMode = .scaleAspectFit
     // What the chat holds of it shows at once, sharp or blurred.
     picture.image = ChatPhotoLoading.held(
-      photo, in: groupID, scale: traitCollection.displayScale, calls: calls)
+      photo, in: shelf, scale: traitCollection.displayScale, calls: calls)
     picture.isAccessibilityElement = true
     picture.accessibilityLabel = voiceLabel
     picture.accessibilityTraits = .image
@@ -876,8 +876,8 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   /// blur as it does in the chat; ↻ in its place could it not come.
   private func load() async {
     let request = ChatPhotoLoading.request(
-      photo, in: groupID, pixels: nil, calls: calls, priority: .high,
-      held: ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+      photo, in: shelf, pixels: nil, calls: calls, priority: .high,
+      held: ChatPhotos.heldFile(photo.id, in: shelf) != nil)
     guard let came = try? await ChatPhotoLoading.pipeline.image(for: request) else {
       spinner.stopAnimating()
       retry.isHidden = Task.isCancelled
@@ -903,7 +903,7 @@ private final class PhotoPage: UIViewController, UIScrollViewDelegate {
   /// The photo itself, for sharing: once it has come, else fetched now.
   func wholeImage() async -> UIImage? {
     if let image { return image }
-    return await ChatPhotoLoading.whole(photo, in: groupID, calls: calls).flatMap { UIImage(data: $0) }
+    return await ChatPhotoLoading.whole(photo, in: shelf, calls: calls).flatMap { UIImage(data: $0) }
   }
 }
 

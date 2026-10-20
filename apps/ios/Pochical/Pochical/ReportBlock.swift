@@ -140,8 +140,9 @@ struct ReportSheet: View {
 struct MemberProfileSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
-  @Environment(\.photoGroupID) private var groupID
   let name: String
+  /// Where the group keeps their photo and its mark's.
+  let shelf: PhotoShelf
   /// Their photo as the group shows it; empty for none.
   var photoID = ""
   let groupName: String
@@ -187,7 +188,7 @@ struct MemberProfileSheet: View {
             .background(colors.fillTertiary, in: Capsule())
         }
         HStack(spacing: 8) {
-          GroupMarkView(mark: groupMark, size: 14, shelf: groupID)
+          GroupMarkView(mark: groupMark, size: 14, shelf: shelf)
             .accessibilityHidden(true)
           Text("\(groupName)でのプロフィール")
         }
@@ -259,7 +260,7 @@ struct MemberProfileSheet: View {
       }
     }
     .presentationDetents([.medium])
-    .photoViewer($viewingPhoto, groupID: groupID)
+    .photoViewer($viewingPhoto, shelf: shelf)
   }
 }
 

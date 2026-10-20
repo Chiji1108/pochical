@@ -193,7 +193,7 @@ struct ChatComposer: View {
           stop: "編集をやめる", onStop: onStopEditing)
       }
       if let replyTo = draft.replyTo {
-        ReplyBar(quote: quoteOf(replyTo), groupID: groupID) {
+        ReplyBar(quote: quoteOf(replyTo), shelf: PhotoShelf(place: groupID)) {
           draft.target = nil
         }
       }
@@ -342,7 +342,8 @@ struct ChatComposer: View {
             } label: {
               HStack(spacing: 12) {
                 MemberAvatar(
-                  name: member.displayName, photoID: member.photoID, groupID: groupID, size: 28)
+                  name: member.displayName, photoID: member.photoID,
+                  shelf: PhotoShelf(place: groupID), size: 28)
                 Text(member.displayName)
                   .foregroundStyle(colors.textPrimary)
                   .lineLimit(1)

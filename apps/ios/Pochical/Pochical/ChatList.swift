@@ -84,7 +84,7 @@ struct ChatList: View {
             ) {
               MemberAvatar(
                 name: member.shownName, photoID: member.deleted ? "" : member.photoID,
-                groupID: group.id, size: 28)
+                shelf: .group(group.id), size: 28)
             } onOpen: {
               onOpen(directThread(meID, member.userID), member.userID)
             }
@@ -333,7 +333,8 @@ private struct StartChatSheet: View {
               Label {
                 Text(member.name).lineLimit(1)
               } icon: {
-                MemberAvatar(name: member.name, photoID: member.photoID, groupID: groupID, size: 28)
+                MemberAvatar(
+                  name: member.name, photoID: member.photoID, shelf: .group(groupID), size: 28)
               }
             }
             .tint(.primary)

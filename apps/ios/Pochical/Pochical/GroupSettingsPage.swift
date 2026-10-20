@@ -41,7 +41,7 @@ struct GroupSettingsPage: View {
             Label {
               Text(group.name).lineLimit(1)
             } icon: {
-              GroupMarkBadge(mark: group.mark, shelf: group.id)
+              GroupMarkBadge(mark: group.mark, shelf: .group(group.id))
             }
           }
         }
@@ -66,7 +66,7 @@ struct GroupSettingsPage: View {
               Text(me?.name ?? "").lineLimit(1)
             } icon: {
               MemberAvatar(
-                name: me?.name ?? "", photoID: me?.photoID ?? "", groupID: group.id, size: 28,
+                name: me?.name ?? "", photoID: me?.photoID ?? "", shelf: .group(group.id), size: 28,
                 me: true)
             }
           }
@@ -98,7 +98,7 @@ struct GroupSettingsPage: View {
             Text(member.userID == meID ? "\(member.name)（自分）" : member.name).lineLimit(1)
           } icon: {
             MemberAvatar(
-              name: member.name, photoID: member.photoID, groupID: group.id, size: 28,
+              name: member.name, photoID: member.photoID, shelf: .group(group.id), size: 28,
               userID: member.userID)
           }
           // Someone else opens their profile: メッセージを送る, their photo
@@ -146,7 +146,7 @@ struct GroupSettingsPage: View {
       let today = Day.today
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
     }
-    .environment(\.photoGroupID, group.id)
+    .environment(\.photoShelf, .group(group.id))
     .modifier(
       ReportAndBlock(
         groupID: group.id, groupName: group.name, groupMark: group.mark, blocked: blocked,
@@ -229,10 +229,10 @@ private struct GroupEditPage: View {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
         NavigationLink {
-          GroupMarkPage(name: name, mark: mark, shelf: group.id) { mark = $0 }
+          GroupMarkPage(name: name, mark: mark, shelf: .group(group.id)) { mark = $0 }
         } label: {
           LabeledContent("アイコン") {
-            GroupMarkBadge(mark: mark, shelf: group.id)
+            GroupMarkBadge(mark: mark, shelf: .group(group.id))
           }
         }
       }
@@ -325,10 +325,10 @@ private struct DisplayNamePage: View {
     List {
       Section {
         PhotoEditor(
-          name: me?.name ?? "", photoID: me?.photoID ?? "", groupID: group.id,
+          name: me?.name ?? "", photoID: me?.photoID ?? "", shelf: .group(group.id),
           onPhoto: { jpeg in
             await change {
-              let photoID = try await groupCalls.sendPhoto(jpeg, to: group.id)
+              let photoID = try await groupCalls.sendPhoto(jpeg, to: .group(group.id))
               try await groupCalls.setGroupPhoto(usual: false, photoID: photoID, in: group.id)
             }
           },

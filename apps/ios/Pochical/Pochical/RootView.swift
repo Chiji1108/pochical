@@ -65,7 +65,7 @@ struct RootView: View {
     RootNavigation(navigator: navigator, tabs: hosted(tabs)) { page in
       hosted(
         self.page(page)
-          .environment(\.photoGroupID, page.photoGroupID)
+          .environment(\.photoShelf, page.photoShelf)
           .environment(\.openGroupRoute, OpenGroupRouteAction { navigator.open(.group($0)) }))
     }
     .ignoresSafeArea()

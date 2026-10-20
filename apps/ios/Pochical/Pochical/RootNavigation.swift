@@ -45,9 +45,9 @@ enum RootPage: Hashable {
 
   /// The group whose photos the page's faces are (MemberAvatar): none in
   /// the chat with Pochical's people.
-  var photoGroupID: String {
-    guard let placeID, placeID != ChatPlace.supportID else { return "" }
-    return placeID
+  var photoShelf: PhotoShelf? {
+    guard let placeID, placeID != ChatPlace.supportID else { return nil }
+    return .group(placeID)
   }
 }
 

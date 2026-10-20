@@ -510,7 +510,7 @@ public enum Chats {
     // Photos taken back go from the device too, as from the group.
     if line.unsent {
       for photo in try held.fetchOne(db)?.photos ?? [] {
-        ChatPhotos.forget(photo.id, in: groupID)
+        ChatPhotos.forget(photo.id, in: PhotoShelf(place: groupID))
       }
     }
     try held.delete().execute(db)

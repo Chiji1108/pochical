@@ -37,7 +37,8 @@ struct ReportAndBlock: ViewModifier {
       }
       .sheet(item: $profileOf, onDismiss: runNext) { person in
         MemberProfileSheet(
-          name: person.name, photoID: person.photoID, groupName: groupName,
+          name: person.name, shelf: PhotoShelf(place: groupID), photoID: person.photoID,
+          groupName: groupName,
           groupMark: groupMark, blocked: blocked.contains(person.id),
           onMessage: onMessage(person).map { open in { next = open } },
           onReport: { next = { reporting = .member(id: person.id, name: person.name) } },

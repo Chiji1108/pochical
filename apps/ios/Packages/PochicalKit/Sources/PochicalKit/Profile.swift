@@ -9,7 +9,7 @@ struct ProfileRow: Hashable, Sendable {
   @Column(primaryKey: true)
   var id = 1
   var name: String
-  /// One of the user's own photos (ChatPhotos.mine); empty for none.
+  /// One of the user's own photos (PhotoShelf.mine); empty for none.
   var photoID = ""
   /// The shape the account says the user's marks are drawn in; empty
   /// before any device sent it.
@@ -141,7 +141,7 @@ public struct MarkPhotoGone: Error {}
 extension GroupCalls {
   /// Sets the usual name and photo, each empty for none; the device hears
   /// of them from the user's socket. A photo goes up first
-  /// (`ChatPhotos.send` to `ChatPhotos.mine`).
+  /// (`ChatPhotos.send` to `PhotoShelf.mine`).
   public func setProfile(_ profile: UsualProfile) async throws {
     var request = Pochical_V1_SetProfileRequest()
     request.name = profile.name
@@ -173,7 +173,7 @@ extension GroupCalls {
   /// to name it by.
   public func holdMarkPhoto(_ jpeg: Data) throws -> String {
     let photoID = UUID().uuidString.lowercased()
-    try ChatPhotos.hold(jpeg, as: photoID, in: ChatPhotos.mine)
+    try ChatPhotos.hold(jpeg, as: photoID, in: .mine)
     return photoID
   }
 
@@ -183,17 +183,17 @@ extension GroupCalls {
   public func sendMarkPhoto(_ photoID: String) async throws {
     do {
       try await ChatPhotos.uploadHeld(
-        photoID, in: ChatPhotos.mine, as: current.signedIn())
+        photoID, in: .mine, as: current.signedIn())
     } catch ChatPhotos.UploadError.gone {
       throw MarkPhotoGone()
     }
   }
 
   /// Sends a photo of the user's up, to the group's photos or their own
-  /// (`ChatPhotos.mine`), and gives the id to name it by.
-  public func sendPhoto(_ jpeg: Data, to groupID: String) async throws -> String {
+  /// (`PhotoShelf.mine`), and gives the id to name it by.
+  public func sendPhoto(_ jpeg: Data, to shelf: PhotoShelf) async throws -> String {
     let photoID = UUID().uuidString.lowercased()
-    try await ChatPhotos.send(jpeg, as: photoID, in: groupID, as: current.signedIn())
+    try await ChatPhotos.send(jpeg, as: photoID, in: shelf, as: current.signedIn())
     return photoID
   }
 }

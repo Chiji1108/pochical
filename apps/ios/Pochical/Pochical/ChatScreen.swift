@@ -446,8 +446,8 @@ struct ChatScreen: View {
     .onChange(of: scenePhase) { _, phase in
       if phase != .active { keepDraft() }
     }
-    .photoViewer($viewing, groupID: place.id, onSave: { photo in
-      await savePhoto(photo, in: place.id, calls: groupCalls)
+    .photoViewer($viewing, shelf: place.shelf, onSave: { photo in
+      await savePhoto(photo, in: place.shelf, calls: groupCalls)
     })
     .modifier(
       ReportAndBlock(
@@ -776,7 +776,7 @@ struct ChatScreen: View {
       lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
       members: cardMembers, poll: pollLine(for: line), photos: line.photos,
       quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
-      groupID: place.id,
+      shelf: place.shelf,
       shifts: line.poll ? nil : shifts(on: line.days.first),
       time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
       writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
@@ -798,7 +798,7 @@ struct ChatScreen: View {
     LineView(
       lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
       members: cardMembers, poll: waitingPoll(line), photos: line.photos, up: line.up,
-      quote: line.replyTo.map(quote(of:)), groupID: place.id, time: line.madeAtMs,
+      quote: line.replyTo.map(quote(of:)), shelf: place.shelf, time: line.madeAtMs,
       edited: false, mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
       named: false, first: startsRun, waiting: true, failed: line.failed, names: names,
       marks: marks,
@@ -935,7 +935,7 @@ struct ChatScreen: View {
   /// Albums).
   private func sendPhotos() {
     let kept = draft.photos.filter {
-      (try? ChatPhotos.keep($0.shrunk.jpeg, as: $0.id, in: place.id)) != nil
+      (try? ChatPhotos.keep($0.shrunk.jpeg, as: $0.id, in: place.shelf)) != nil
     }
     draft.photos = []
     guard !kept.isEmpty else { return }
@@ -975,7 +975,7 @@ struct ChatScreen: View {
     try? database.write { try Chats.takeBack(line.opID, in: $0) }
     PhotoUploads.shared.forget(line.opID, photos: line.photos.map(\.id))
     for photo in line.photos {
-      ChatPhotos.forget(photo.id, in: place.id)
+      ChatPhotos.forget(photo.id, in: place.shelf)
     }
   }
 
@@ -1348,7 +1348,7 @@ struct ChatScreen: View {
       default: return []
       }
     }
-    photoPrefetch.near(photos, in: place.id, scale: displayScale, calls: groupCalls)
+    photoPrefetch.near(photos, in: place.shelf, scale: displayScale, calls: groupCalls)
   }
 
   /// The line's photo `key` opened large among the chat's, one by one:
@@ -1385,7 +1385,7 @@ struct ChatScreen: View {
     Task {
       var saved = 0
       for photo in photos {
-        if await savePhoto(photo, in: place.id, calls: groupCalls) { saved += 1 }
+        if await savePhoto(photo, in: place.shelf, calls: groupCalls) { saved += 1 }
       }
       if saved == photos.count {
         sayDone("写真を保存しました")

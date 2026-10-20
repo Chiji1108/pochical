@@ -88,7 +88,7 @@ struct GroupDayHeader: View {
 
   private func face(_ member: GroupMember) -> some View {
     MemberAvatar(
-      name: member.name, photoID: member.photoID, groupID: groupID, size: 24,
+      name: member.name, photoID: member.photoID, shelf: .group(groupID), size: 24,
       userID: member.userID)
       .opensLegend(of: member)
       .padding(.horizontal, 4)
@@ -105,7 +105,7 @@ struct GroupDayHeader: View {
       ForEach(members) { member in
         HStack(spacing: 4) {
           MemberAvatar(
-            name: member.name, photoID: member.photoID, groupID: groupID, size: 24,
+            name: member.name, photoID: member.photoID, shelf: .group(groupID), size: 24,
             userID: member.userID)
           .opensLegend(of: member)
           if density == .names {

@@ -88,7 +88,7 @@ struct GroupPersonView: View {
             personID = member.userID
           } leading: {
             MemberAvatar(
-              name: member.name, photoID: member.photoID, groupID: groupID, size: 24,
+              name: member.name, photoID: member.photoID, shelf: .group(groupID), size: 24,
               userID: member.userID)
           }
         }
