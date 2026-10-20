@@ -1,4 +1,6 @@
+import siteIcon from "@pochical/prototype/assets/icon.png";
 import poodle from "@pochical/prototype/assets/poodle.png";
+import shareImage from "@pochical/prototype/assets/share.png";
 import { DesignAppIcon } from "@pochical/prototype/components/design-app-icon";
 import {
   DesignProviders,
@@ -8,8 +10,6 @@ import { pageStyle } from "@pochical/prototype/components/design-theme";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 
-import siteIcon from "../../../web/public/icon.png";
-import shareImage from "../../../web/public/share.png";
 import { CalendarPreview } from "../components/calendar-preview";
 import {
   designCaption,
@@ -47,7 +47,7 @@ const sources = [
   {
     alt: "モスの地に白いプードルのアイコン",
     note: "ファビコンとサイトのヘッダーで使っています。アプリアイコンのモスと同じ絵です。",
-    path: "apps/web/public/icon.png",
+    path: "packages/prototype/src/assets/icon.png",
     src: siteIcon,
     title: "サイトのアイコン",
     wide: false,
@@ -55,7 +55,7 @@ const sources = [
   {
     alt: "ポチカルのロゴと「シフトを、ポチッと。」、カレンダーの画面",
     note: "リンクを共有したときの画像、1200×630。/design/share-image を bun run image:share で撮っています。",
-    path: "apps/web/public/share.png",
+    path: "packages/prototype/src/assets/share.png",
     src: shareImage,
     title: "共有したときの画像",
     wide: true,

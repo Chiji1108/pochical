@@ -1,3 +1,5 @@
+import homeScreenIcon from "@pochical/prototype/assets/icon-180.png?no-inline";
+import siteIcon from "@pochical/prototype/assets/icon.png";
 import {
   createRootRoute,
   HeadContent,
@@ -27,10 +29,9 @@ export const Route = createRootRoute({
     links: [
       { href: stylesheet, rel: "stylesheet" },
       { href: pandaStyles, rel: "stylesheet" },
-      { href: "/icon.png", rel: "icon", type: "image/png" },
-      // Any page added to an iPhone's home screen, drawn by apps/catalog's
-      // bun run icon:app.
-      { href: "/app/apple-touch-icon-180x180.png", rel: "apple-touch-icon" },
+      { href: siteIcon, rel: "icon", type: "image/png" },
+      // Any page added to an iPhone's home screen.
+      { href: homeScreenIcon, rel: "apple-touch-icon" },
     ],
     meta: [
       { charSet: "utf-8" },

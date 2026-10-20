@@ -9,7 +9,8 @@
   },
   "scripts": {
     "icon:ios": "bun scripts/ios-app-icons.ts",
-    "typecheck": "bun run --cwd ../styled-system codegen && tsc --noEmit",
+    "icon:site": "bun scripts/site-icon.ts",
+    "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
   "dependencies": {

@@ -1,3 +1,4 @@
+import siteIcon from "@pochical/prototype/assets/icon.png";
 import {
   createRootRoute,
   HeadContent,
@@ -6,8 +7,6 @@ import {
 } from "@tanstack/react-router";
 import { MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
-
-import siteIcon from "../../../web/public/icon.png";
 
 import pandaStyles from "../panda.css?url";
 import stylesheet from "../styles.css?url";

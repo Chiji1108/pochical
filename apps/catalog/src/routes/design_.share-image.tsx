@@ -1,4 +1,6 @@
 import { themeSkyId } from "@pochical/design/skies";
+import storeIcon from "@pochical/prototype/assets/icon-192.png";
+import siteIcon from "@pochical/prototype/assets/icon.png";
 import { DesignApp } from "@pochical/prototype/components/design-app";
 import { DesignProviders } from "@pochical/prototype/components/design-providers";
 import { paleSkyFromTop } from "@pochical/prototype/components/design-surprise";
@@ -11,7 +13,6 @@ import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 
-import siteIcon from "../../../web/public/icon.png";
 import { pageMeta } from "../lib/page-meta";
 
 export const Route = createFileRoute("/design_/share-image")({
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/design_/share-image")({
 });
 
 // The picture a link to the site shows where it is shared (og:image), which
-// bun run image:share takes from /design/share-image into apps/web/public/share.png:
+// bun run image:share takes from /design/share-image into @pochical/prototype's assets/share.png:
 // the top page's hero in one frame, its words on the app's ポチカル sky and
 // the calendar's phone rising from the bottom edge. Under it, an invitation
 // link's picture for a sample group, which the site's Worker draws for each
@@ -113,7 +114,7 @@ function ShareImage() {
   return (
     <div className={styles.page}>
       <SiteShareImage person={person} />
-      <InviteShareImage group={sampleInviteGroup} icon="/app/pwa-192x192.png" />
+      <InviteShareImage group={sampleInviteGroup} icon={storeIcon} />
     </div>
   );
 }
