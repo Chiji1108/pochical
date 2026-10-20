@@ -1,3 +1,0 @@
-[install]
-# Preserve the existing flat dependency layout for native tooling and patches.
-linker = "hoisted"

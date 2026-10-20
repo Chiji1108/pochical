@@ -7,13 +7,13 @@ managed:
       value: app
 plugins:
   # Workers (connect-es). Runs the protoc-gen-es version pinned in apps/server.
-  - local: ../node_modules/.bin/protoc-gen-es
+  - local: ../apps/server/node_modules/.bin/protoc-gen-es
     out: ../apps/server/src/gen
     include_imports: false
     opt:
       - target=ts
   # apps/web's server functions call the Workers server with the same types.
-  - local: ../node_modules/.bin/protoc-gen-es
+  - local: ../apps/server/node_modules/.bin/protoc-gen-es
     out: ../apps/web/src/gen
     include_imports: false
     opt:

@@ -1,5 +1,5 @@
 {
-  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pochical-server",
   "main": "src/index.ts",
   // Keep at or below the workerd bundled with @cloudflare/vitest-pool-workers.

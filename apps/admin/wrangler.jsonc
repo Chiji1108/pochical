@@ -1,5 +1,5 @@
 {
-  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "$schema": "node_modules/wrangler/config-schema.json",
   // Pochical's people's admin site (spec/admin.md) at admin.pochical.app,
   // the whole Worker behind Cloudflare Access (its Access tab).
   "name": "pochical-admin",
