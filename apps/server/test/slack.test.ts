@@ -786,9 +786,11 @@ describe("a user's photo, in Slack", () => {
       "files.info",
     ]);
     expect(calls[2]?.args.thread_ts).toBe(thread);
+    // The thread starts with the line in words, as the apps word it.
+    expect(String(calls[0]?.args.text).split("\n")[1]).toBe("📷 写真");
   });
 
-  it("of several is one message holding them all, in the line's order", async () => {
+  it("of several is one message holding them all, in the line's order, worded with how many", async () => {
     const calls = slackCalls();
     const token = await signInAnonymously();
     const { edit } = await supportChat(token);
@@ -797,11 +799,13 @@ describe("a user's photo, in Slack", () => {
       ({ method }) => method === "files.completeUploadExternal"
     );
     expect([
+      String(calls[0]?.args.text).split("\n")[1],
       calls
         .filter(({ method }) => method === "files.getUploadURLExternal")
         .map(({ args }) => args.filename),
       shared.map(({ args }) => args.files),
     ]).toStrictEqual([
+      "📷 写真3枚",
       ["photo-1-1.jpg", "photo-1-2.jpg", "photo-1-3.jpg"],
       [
         [

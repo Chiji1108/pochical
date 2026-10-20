@@ -25,16 +25,14 @@ export const Route = createFileRoute("/support/$userId")({
 });
 
 /** The line a reply is to, as its quote shows it. */
-function quoteOf(
-  line: { text: string; photos: unknown[]; unsent: boolean } | undefined
-): string {
+function quoteOf(line: { words: string; unsent: boolean } | undefined): string {
   if (line === undefined) {
     return "以前のメッセージ";
   }
   if (line.unsent) {
     return "取り消されたメッセージ";
   }
-  return line.photos.length === 0 ? line.text.slice(0, 80) : "📷 写真";
+  return line.words.slice(0, 80);
 }
 
 function SupportChat() {

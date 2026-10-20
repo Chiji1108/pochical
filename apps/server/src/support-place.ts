@@ -34,7 +34,7 @@ import {
   tellStaffOfUnsend,
 } from "./slack";
 import type { SlackRefusal } from "./slack";
-import { wordsOf } from "./support-lines";
+import { photoWords } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
 type LineRow = typeof chatLines.$inferSelect;
@@ -78,6 +78,7 @@ const linesOfRows = (
     text: row.text,
     unsent: row.unsent,
     userId,
+    words: row.photos === null ? row.text : photoWords(row.photos.length),
   }));
 };
 
@@ -162,7 +163,7 @@ const indexRow = (db: DrizzleSqliteDODatabase, userId: string) => {
   return {
     lastAt: new Date(line.sentAtMs),
     lastFromPochical: line.fromPochical,
-    lastText: wordsOf(line),
+    lastText: line.words,
     lastUnsent: line.unsent,
     unanswered,
     userId,

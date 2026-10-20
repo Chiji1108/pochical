@@ -7,8 +7,12 @@
  */
 export const supportPlace = (userId: string): string => `support:${userId}`;
 
-/** How a photo reads in a line of words: the list, a notification. */
-const PHOTO_WORDS = "📷 写真";
+/**
+ * How a line of `count` photos reads in a line of words (a quote, the
+ * list), as the apps say it.
+ */
+export const photoWords = (count: number): string =>
+  count === 1 ? "📷 写真" : `📷 写真${count}枚`;
 
 /** An emoji on a line, and who put it there. */
 export type SupportReaction = {
@@ -29,6 +33,8 @@ export type SupportLine = {
   device: string | null;
   /** Its photos, as the line instead of words; none once taken back. */
   photos: { id: string; width: number; height: number }[];
+  /** Its text, or its photos as photoWords says them: a quote, the list. */
+  words: string;
   /** The line it answers, by seq. */
   replyTo: number | null;
   unsent: boolean;
@@ -37,7 +43,3 @@ export type SupportLine = {
   /** The page of its words' first link. */
   preview: { site: string; title: string; url: string } | null;
 };
-
-/** A line's words, or what photos are called. */
-export const wordsOf = (line: SupportLine): string =>
-  line.photos.length === 0 ? line.text : PHOTO_WORDS;

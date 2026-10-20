@@ -8,7 +8,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import { supportChats } from "./db/schema";
 import { photoKey } from "./photos";
-import { supportPlace, wordsOf } from "./support-lines";
+import { photoWords, supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
 /**
@@ -749,8 +749,8 @@ export const tellStaffOfLine = async (
   const quote =
     repliedTo === null
       ? ""
-      : `> ${toSlackText(wordsOf(repliedTo).replaceAll("\n", " ").slice(0, QUOTE_LENGTH))}\n`;
-  const words = `${quote}${toSlackText(wordsOf(line))}`;
+      : `> ${toSlackText(repliedTo.words.replaceAll("\n", " ").slice(0, QUOTE_LENGTH))}\n`;
+  const words = `${quote}${toSlackText(line.words)}`;
   const thread = await threadOf(env, line.userId);
   if (line.photos.length > 0) {
     // Photos are shared in the thread, which a first line starts.
@@ -812,7 +812,7 @@ export const tellStaffOfAnswer = async (
     line,
     unsureSince,
     thread,
-    `管理サイトから返信しました：\n${toSlackText(wordsOf(line))}`,
+    `管理サイトから返信しました：\n${toSlackText(line.words)}`,
     "an answer"
   );
 };
@@ -849,7 +849,7 @@ export const tellStaffOfReaction = async (
     return undefined;
   }
   const posted = await slackCall(env, "chat.postMessage", {
-    text: `ユーザーが ${emoji} を付けました：「${toSlackText(wordsOf(line).slice(0, QUOTE_LENGTH))}」`,
+    text: `ユーザーが ${emoji} を付けました：「${toSlackText(line.words.slice(0, QUOTE_LENGTH))}」`,
     thread_ts: thread,
   });
   return stringOf(posted?.ts);
@@ -895,7 +895,7 @@ const reportLineOf = (row: unknown): string | undefined => {
   if (row.unsent === true) {
     words = "（取り消されたメッセージ）";
   } else if (Array.isArray(row.photos) && row.photos.length > 0) {
-    words = "📷 写真";
+    words = photoWords(row.photos.length);
   } else if (Array.isArray(row.days) && row.days.length > 0 && words === "") {
     words = "📅 日にち";
   }
