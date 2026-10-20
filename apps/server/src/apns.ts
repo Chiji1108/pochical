@@ -205,7 +205,9 @@ const attempt = async (
     });
     return await outcomeOf(response, type, sandbox);
   } catch (error) {
-    return { reason: String(error), sandbox, sent: "failed", status: 0, type };
+    // The error may name the address, which holds the device's token.
+    const reason = String(error).replaceAll(token, "{token}");
+    return { reason, sandbox, sent: "failed", status: 0, type };
   }
 };
 

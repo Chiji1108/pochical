@@ -423,4 +423,36 @@ describe("a device's push token", () => {
       })
       .toStrictEqual([{ token: OTHER_TOKEN }]);
   });
+
+  it("is kept when APNs cannot be reached, and left out of what is logged and counted", async () => {
+    const { groupId, guest, maker } = await pair();
+    await registerToken(TOKEN, guest);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const { url } = new Request(input);
+      return await Promise.reject(new TypeError(`fetch to ${url} failed`));
+    });
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const counted = vi.spyOn(env.PUSH_OUTCOMES, "writeDataPoint");
+
+    const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
+    say(mine.socket, "a", "今週どう？");
+    await expect.poll(() => warned.mock.calls.length).toBe(1);
+    expect(warned).toHaveBeenCalledWith({
+      apns: {
+        reason:
+          "TypeError: fetch to https://api.sandbox.push.apple.com/3/device/{token} failed",
+        sandbox: true,
+        sent: "failed",
+        status: 0,
+        type: "alert",
+      },
+    });
+    expect(JSON.stringify(counted.mock.calls)).not.toContain(TOKEN);
+    const kept = await env.DB.prepare(
+      "select token from push_tokens where token = ?"
+    )
+      .bind(TOKEN)
+      .all<{ token: string }>();
+    expect(kept.results).toStrictEqual([{ token: TOKEN }]);
+  });
 });
