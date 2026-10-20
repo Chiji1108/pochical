@@ -92,6 +92,8 @@ public actor SyncClient {
   private var connected = false
   /// The OS said the network went away, and has not said it came back.
   private var offline = false
+  /// Between tries, waiting before the next.
+  private var waitingToRetry = false
   /// When the server last answered the keepalive.
   private var lastReplyMs: Int64 = 0
   /// The server refused a frame's clocks: the outbox takes new ones once
@@ -177,10 +179,12 @@ public actor SyncClient {
   /// Connects as `start` does, a closing under way going on: the network
   /// coming back does not take back a socket closing once sent.
   private func reconnect(as credentials: Credentials) {
+    // In the same stretch, a socket open or opening stays: only one waiting
+    // to try again is tried at once. Two asked for together (the session
+    // signing in as the app comes to the front) open one socket.
     let same = self.credentials?.generation == credentials.generation
-    guard credentials.isCurrent, stopped == nil, !(running != nil && connected && same) else {
-      return
-    }
+    guard credentials.isCurrent, stopped == nil, !(same && running != nil && !waitingToRetry)
+    else { return }
     self.credentials = credentials
     // A socket still opening is closed too: cancelling its task does not
     // end a send or receive waiting on it, and it would stay open beside
@@ -189,6 +193,7 @@ public actor SyncClient {
     socket?.cancel(with: .goingAway, reason: nil)
     socket = nil
     tries = 0
+    waitingToRetry = false
     running = Task { await run(as: credentials) }
     paths.pathUpdateHandler = { [weak self] path in
       guard let self else { return }
@@ -305,19 +310,24 @@ public actor SyncClient {
       if tries > 0 {
         let most = reconnectWaitMost(
           tries: tries, firstMs: SyncSocket.reconnectFirstMs, mostMs: SyncSocket.reconnectMostMs)
+        waitingToRetry = true
         try? await Task.sleep(for: .milliseconds(Int.random(in: 0...most)))
         if Task.isCancelled { return }
+        waitingToRetry = false
       }
       tries += 1
       do {
         try await connect(as: credentials)
       } catch let stop as Stop {
+        // A run replaced meanwhile says nothing of the one after it.
+        guard !Task.isCancelled else { return }
         stopped = stop
         stoppedIn = credentials.generation
         // Nothing more goes on it: what waits for its outbox to empty
         // waits no longer.
         finishing?.cancel()
         Logger.sync.error("Stopped syncing: \(String(describing: stop))")
+        running = nil
         return
       } catch is ClockAhead {
         // Reconnected at once; the outbox's clocks are put right then.

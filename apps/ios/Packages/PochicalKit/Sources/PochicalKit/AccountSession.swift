@@ -86,6 +86,9 @@ import SQLiteData
   /// own: the notifications shown, and the app icon's badge.
   @ObservationIgnored public var onErase: @MainActor () async -> Void = {}
 
+  /// Erases what the device keeps of the user outside the database: the
+  /// chats' photos, the linked account and the URL cache.
+  @ObservationIgnored private let eraseFiles: @MainActor () -> Void
   @ObservationIgnored private let server: AccountServer
   @ObservationIgnored private let keychain: SessionKeychain
   @ObservationIgnored private let database: any DatabaseWriter
@@ -101,13 +104,16 @@ import SQLiteData
   public convenience init(database: any DatabaseWriter, server: URL = Server.url) {
     self.init(
       database: database, server: Account(server: server), keychain: SessionKeychain(),
-      shared: UserDefaults(suiteName: appGroup), socketServer: server)
+      shared: UserDefaults(suiteName: appGroup), eraseFiles: LocalData.eraseFiles,
+      socketServer: server)
   }
 
   init(
     database: any DatabaseWriter, server: AccountServer, keychain: SessionKeychain,
-    shared: UserDefaults?, socketServer: URL = Server.url
+    shared: UserDefaults?, eraseFiles: @escaping @MainActor () -> Void,
+    socketServer: URL = Server.url
   ) {
+    self.eraseFiles = eraseFiles
     self.database = database
     self.server = server
     self.keychain = keychain
@@ -325,7 +331,7 @@ import SQLiteData
   /// Everything the device holds of the user gone, the database no one's.
   private func erase() async throws {
     try await database.write { try LocalData.erase(in: $0) }
-    LocalData.eraseFiles()
+    eraseFiles()
     userID = nil
     shared?.removeObject(forKey: SignedInUser.key)
     await onErase()
@@ -393,7 +399,7 @@ import SQLiteData
     case .theirs?:
       break
     case .erased?:
-      LocalData.eraseFiles()
+      eraseFiles()
       await onErase()
     case .stale?, nil:
       return nil

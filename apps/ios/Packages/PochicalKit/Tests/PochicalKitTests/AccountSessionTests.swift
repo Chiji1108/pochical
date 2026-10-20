@@ -122,7 +122,8 @@ private final class FakeAccountServer: AccountServer {
     }
     shared = try #require(UserDefaults(suiteName: "app.pochical.tests.\(UUID().uuidString)"))
     session = AccountSession(
-      database: database, server: server, keychain: keychain, shared: shared, socketServer: url)
+      database: database, server: server, keychain: keychain, shared: shared,
+      eraseFiles: {}, socketServer: url)
   }
 
   static func signedIn(as token: String, _ userID: String) async throws -> Made {
@@ -212,9 +213,14 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.coworkers == 0)
   #expect(try made.keychain.kept() == StoredSession(token: "account-token", userID: "account"))
   #expect(await eventually { made.owner == "account" })
-  // The place held, and the user's socket in front, open as the account.
+  // The user's socket in front, and a place a screen of the account holds
+  // now, open as the account; a hold taken as the account was changing
+  // may have gone with the user before's places, as the screens hold
+  // theirs anew (OpenPlaceSocket).
+  let place = await made.session.hold("g2")
   #expect(await eventually { made.sockets.asked >= seen + 2 })
   #expect(made.sockets.tokens.withLock { $0.dropFirst(seen).allSatisfy { $0 == "account-token" } })
+  await made.session.release(place, of: "g2")
   // The user left behind is deleted, and forgotten.
   #expect(await eventually { made.server.asked.withLock(\.deleted) == ["a"] })
   #expect(await eventually { made.keychain.leftBehindToken() == nil })
@@ -365,7 +371,8 @@ private final class FakeAccountServer: AccountServer {
 
   // The app ends and starts again meanwhile: still erasing, as no one.
   let again = AccountSession(
-    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared)
+    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
+    eraseFiles: {})
   #expect(again.phase == .erasing)
   #expect(again.erasing?.why == .deleted)
   #expect(again.userID == nil)
