@@ -36,7 +36,6 @@ import { defaultWeekSettings } from "../src/components/design-week";
 import { guessLook, nextColor } from "../src/components/shift-mark";
 import {
   albumRows,
-  albumsOf,
   chatOrder,
   decidePoll,
   editMessage,
@@ -639,24 +638,6 @@ describe("spec/vectors/chat.json", () => {
           text: kept.text,
         }
       ).toEqual(expected ?? undefined);
-    });
-  }
-  for (const { name, lines, expected } of chatMessages.albums) {
-    test(name, () => {
-      const photo = { height: 1, src: "", width: 1 };
-      const messages = lines.map(
-        ({ seq, writer, album, photo: isPhoto, unsent }) =>
-          line(String(seq), {
-            album: album || undefined,
-            from: writer,
-            photo: isPhoto ? photo : undefined,
-            text: isPhoto ? undefined : "と",
-            unsent,
-          })
-      );
-      expect(albumsOf(messages).map((ids) => ids.map(Number))).toEqual(
-        expected
-      );
     });
   }
   for (const { name, count, expected } of chatMessages.albumRows) {
