@@ -12,7 +12,10 @@
 // long words cut at 続きを読む, links, mentions and large emoji. With
 // `--photos <dir>` it sends the dir's JPEGs instead, each its own line, in
 // the order of their names, or as one album with `--album`; `--face
-// <jpeg>` gives the user that face in the group first. Local only
+// <jpeg>` gives the user that face in the group first. A JPEG longer than
+// `chatRules.photoMaxEdge` on a side is refused before anything goes up,
+// as the group would refuse its line; the apps shrink theirs to it. Lines
+// the group refuses are named, and the script fails. Local only
 // (http://localhost:8787, or CHAT_TRY_API's); the user it made stays in
 // the group, to be removed from the app.
 //
@@ -22,6 +25,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
+import { chatRules } from "@pochical/design/chat";
 
 import {
   ClientFrameSchema,
@@ -32,6 +36,7 @@ const api = process.env.CHAT_TRY_API ?? "http://localhost:8787";
 const GROUP_THREAD = "group";
 const PROTOCOL_VERSION = 1;
 const DEFAULT_COUNT = 10;
+const ACK_TIMEOUT_MS = 10_000;
 
 const fail = (message: string): never => {
   console.error(message);
@@ -122,14 +127,29 @@ type Photo = {
   width: number;
 };
 
-type Sending = { photo: Photo } | { text: string };
+type Sending = { photo: Photo; file: string } | { text: string };
+
+// Each send by its op_id: what it was, to name it if refused, and the
+// group's answer to it.
+const sent = new Map<
+  string,
+  { what: string; answered: PromiseWithResolvers<undefined> }
+>();
 
 const send = (socket: WebSocket, lines: Sending[], albumName = ""): void => {
+  const edits = lines.map((line) => {
+    const opId = crypto.randomUUID();
+    sent.set(opId, {
+      answered: Promise.withResolvers<undefined>(),
+      what: "text" in line ? line.text : line.file,
+    });
+    return { line, opId };
+  });
   const frame = create(ClientFrameSchema, {
     kind: {
       case: "chatEdits",
       value: {
-        edits: lines.map((line) => ({
+        edits: edits.map(({ line, opId }) => ({
           kind: {
             case: "send" as const,
             value:
@@ -141,7 +161,7 @@ const send = (socket: WebSocket, lines: Sending[], albumName = ""): void => {
                     threadId: GROUP_THREAD,
                   },
           },
-          opId: crypto.randomUUID(),
+          opId,
         })),
       },
     },
@@ -165,13 +185,32 @@ const jpegSize = (bytes: Uint8Array): { height: number; width: number } => {
   return fail("not a JPEG with a size");
 };
 
+type Jpeg = { bytes: Uint8Array<ArrayBuffer>; file: string };
+
+const readJpeg = async (file: string): Promise<Jpeg> => ({
+  bytes: await Bun.file(file).bytes(),
+  file,
+});
+
+// A photo line's JPEG, refused when its longer side is past what the
+// group takes for one.
+const readPhoto = async (file: string): Promise<Jpeg> => {
+  const jpeg = await readJpeg(file);
+  const { height, width } = jpegSize(jpeg.bytes);
+  if (Math.max(height, width) > chatRules.photoMaxEdge) {
+    fail(
+      `${file}: ${width}×${height}, longer than chatRules.photoMaxEdge (${chatRules.photoMaxEdge}px) on a side; shrink it first`
+    );
+  }
+  return jpeg;
+};
+
 // One JPEG uploaded to the group's photos.
 const upload = async (
-  file: string,
+  { bytes, file }: Jpeg,
   groupId: string,
   token: string
 ): Promise<Photo> => {
-  const bytes = await Bun.file(file).bytes();
   const id = crypto.randomUUID();
   const response = await fetch(`${api}/v1/groups/${groupId}/photos/${id}`, {
     body: bytes,
@@ -197,6 +236,9 @@ const jpegsIn = async (dir: string): Promise<string[]> => {
     .map((file) => path.join(dir, file));
 };
 
+const files = photoDir === undefined ? [] : await jpegsIn(photoDir);
+const jpegs = await Promise.all(files.map(readPhoto));
+
 const { token, userId } = await signIn();
 const name = `テスト送信${Math.floor(Math.random() * 100)}`;
 const joined = await rpc(
@@ -210,7 +252,7 @@ const groupId =
     : fail(`JoinGroup: no group id in ${JSON.stringify(joined)}`);
 
 if (face !== undefined) {
-  const { id } = await upload(face, groupId, token);
+  const { id } = await upload(await readJpeg(face), groupId, token);
   await rpc("GroupService/SetGroupPhoto", { groupId, photoId: id }, token);
 }
 
@@ -223,6 +265,8 @@ const socket = new WebSocket(
 socket.binaryType = "arraybuffer";
 
 const welcomed = Promise.withResolvers<undefined>();
+// The sends the group took as lines.
+const taken = new Set<string>();
 socket.addEventListener("open", () => {
   const hello = create(ClientFrameSchema, {
     kind: {
@@ -239,6 +283,16 @@ socket.addEventListener("message", (event) => {
   const frame = fromBinary(ServerFrameSchema, new Uint8Array(event.data));
   if (frame.kind.case === "welcome") {
     welcomed.resolve(undefined);
+  } else if (frame.kind.case === "changes") {
+    for (const { kind } of frame.kind.value.changes) {
+      if (kind.case === "chatLine") {
+        taken.add(kind.value.opId);
+      }
+    }
+  } else if (frame.kind.case === "acked") {
+    for (const opId of frame.kind.value.opIds) {
+      sent.get(opId)?.answered.resolve(undefined);
+    }
   } else if (frame.kind.case === "error") {
     fail(`server: ${JSON.stringify(frame.kind.value)}`);
   }
@@ -247,9 +301,11 @@ socket.addEventListener("error", () => fail("socket: could not connect"));
 await welcomed.promise;
 
 const lines = richLines(userId);
-const files = photoDir === undefined ? [] : await jpegsIn(photoDir);
 const photos = await Promise.all(
-  files.map(async (file) => await upload(file, groupId, token))
+  jpegs.map(async (jpeg) => ({
+    file: jpeg.file,
+    photo: await upload(jpeg, groupId, token),
+  }))
 );
 const sendings: Sending[] =
   photoDir === undefined
@@ -258,7 +314,7 @@ const sendings: Sending[] =
           ? (lines[index % lines.length] ?? "")
           : `テスト ${index + 1}`,
       }))
-    : photos.map((photo) => ({ photo }));
+    : photos;
 if (album) {
   send(socket, sendings, crypto.randomUUID());
 } else if (every > 0) {
@@ -270,7 +326,22 @@ if (album) {
 } else {
   send(socket, sendings);
 }
-// Time for the group to take them before the socket closes.
-await Bun.sleep(1000);
+// Until the group has answered every send: the lines it took come before
+// its Acked, and a send acked with no line was refused.
+const unanswered = setTimeout(() => {
+  fail("no answer from the group");
+}, ACK_TIMEOUT_MS);
+await Promise.all(
+  [...sent.values()].map(async ({ answered }) => {
+    await answered.promise;
+  })
+);
+clearTimeout(unanswered);
 socket.close();
-console.log(`${name}として${sendings.length}行送りました`);
+const refused = [...sent]
+  .filter(([opId]) => !taken.has(opId))
+  .map(([, { what }]) => `  ${what}`);
+console.log(`${name}として${sent.size - refused.length}行送りました`);
+if (refused.length > 0) {
+  fail(`refused by the group:\n${refused.join("\n")}`);
+}
