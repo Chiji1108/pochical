@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pochical-web-astro",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // As apps/web: apps/server reached Worker to Worker for the invite image.
+  "services": [{ "binding": "SERVER", "service": "pochical-server" }],
+}
