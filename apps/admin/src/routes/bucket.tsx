@@ -21,10 +21,14 @@ const VERDICT_NAMES: Record<Verdict, string> = {
   userGone: "アカウントがない",
 };
 
-const sizeOf = (bytes: number): string =>
-  bytes < 1024 * 1024
+const sizeOf = (bytes: number): string => {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  return bytes < 1024 * 1024
     ? `${(bytes / 1024).toFixed(1)} KB`
     : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+};
 
 // The photos bucket held up against what names each object (棚卸し): run
 // as the page opens and again by 再実行. It only reads.
