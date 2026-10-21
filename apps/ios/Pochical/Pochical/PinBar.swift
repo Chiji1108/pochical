@@ -93,9 +93,7 @@ struct PinBar: View {
   /// A pinned line's words on one line, its mentions as names.
   private func words(_ line: ChatLineRow) -> some View {
     Text(
-      lineWords(
-        line.text, days: line.days, poll: line.poll, decided: line.decided,
-        photos: line.photos.count, nameOf: nameOf)
+      lineWords(line.content, nameOf: nameOf)
         .replacingOccurrences(of: "\n", with: " "))
       .font(.subheadline)
       .foregroundStyle(colors.textPrimary)

@@ -191,15 +191,20 @@ export function DayMark({
 // 休みの見せ方 空白, where a day off comes back faint.
 const faintMark = css({ display: "inline-flex", opacity: 0.35 });
 
+// One line, cut with … where it runs out.
+export const oneLine = {
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+} as const;
+
 // A shift's name under its mark, shortened as the calendar's.
 const markName = css({
+  ...oneLine,
   color: "text.secondary",
   fontSize: "9px",
   lineHeight: "11px",
   maxWidth: "100%",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
 });
 
 export function MarkName({ day }: { day: WidgetDay }) {
@@ -376,15 +381,6 @@ export function inDaysWords(inDays: number) {
   }
   return inDays === 1 ? "明日" : `${inDays}日後`;
 }
-
-// One line, cut with … where it runs out. Written out in each style
-// rather than spread from a shared object, which Panda's extraction
-// missed, leaving long memos wrapping.
-export const oneLine = css({
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-});
 
 // Before the person has entered any day: where the widget's days will
 // come from, in the middle of its room. No app icon or name, which the

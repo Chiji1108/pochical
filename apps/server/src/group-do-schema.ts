@@ -13,6 +13,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import type { LineContent } from "./chat-content";
+
 // What the group shows of itself to members and to invite links: one row,
 // at the cursor it got when it last changed.
 export const profile = sqliteTable(
@@ -145,69 +147,31 @@ export const memberRepeatOrders = sqliteTable(
 
 // The lines of the group's chats (spec/sync-protocol.md, Chat): each at
 // its place in its chat (seq, from 1) and at the cursor it got when it was
-// written (created_cursor) and last changed (cursor). Unsent lines keep
-// their row without words, so a quote of one says it was taken back.
+// written (created_cursor) and last changed (cursor). A line taken back
+// keeps its row as one of the unsent kind, so a quote of it says so.
 export const chatLines = sqliteTable(
   "chat_lines",
   {
     authorId: text("author_id").notNull(),
+    // What the line is, one of its kinds (src/chat-content.ts).
+    content: text({ mode: "json" }).$type<LineContent>().notNull(),
     createdCursor: integer("created_cursor").notNull(),
     cursor: integer().notNull(),
-    // The days a line of shared days shares, as a JSON array of
-    // YYYY-MM-DD; none for words, and once unsent.
-    days: text({ mode: "json" }).$type<string[]>(),
-    // The day a poll was settled on, while settled.
-    decided: text(),
     // The app's version and the device it was sent from, kept where the
     // place's rules ask for it (chatPlaces' sendsDevice).
     device: text(),
-    edited: integer({ mode: "boolean" }).notNull().default(false),
     // In a one-to-one chat, the member who had blocked its writer when it
     // was sent: never delivered to them.
     hiddenFrom: text("hidden_from"),
-    // A line from the app (pochical.v1.ChatNotice's fields), none for a
-    // member's message.
-    notice: text({ mode: "json" }).$type<{
-      kind: "joined" | "left" | "removed" | "inviteRemade" | "profileChanged";
-      markChanged?: boolean;
-      name?: string;
-      subjectId?: string;
-    }>(),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),
-    // The photos sent as the line, in the order sent, each as
-    // pochical.v1.ChatPhoto's fields, its ThumbHash as base64 when it came
-    // with one; none for anything else, and once unsent.
-    photos: text({ mode: "json" }).$type<
-      {
-        id: string;
-        height: number;
-        thumbHash?: string;
-        width: number;
-      }[]
-    >(),
     // The cursor it was last pinned at, while pinned for everyone.
     pinnedAt: integer("pinned_at"),
-    // Its days are put to the vote.
-    poll: integer({ mode: "boolean" }).notNull().default(false),
-    // Its first link's page, as pochical.v1.LinkPreview's fields; none
-    // without one, and once unsent.
-    preview: text({ mode: "json" }).$type<{
-      imageHeight: number;
-      imageId: string;
-      imageWidth: number;
-      site: string;
-      title: string;
-      url: string;
-    }>(),
-    // The line it answers (返信), by its seq in the same chat; none once
-    // unsent.
+    // The line it answers (返信), by its seq in the same chat.
     replyTo: integer("reply_to"),
     sentAt: integer("sent_at", { mode: "timestamp_ms" }).notNull(),
     seq: integer().notNull(),
-    text: text().notNull(),
     threadId: text("thread_id").notNull(),
-    unsent: integer({ mode: "boolean" }).notNull().default(false),
   },
   (table) => [
     primaryKey({ columns: [table.threadId, table.seq] }),
@@ -216,7 +180,23 @@ export const chatLines = sqliteTable(
     // A chat's photos alone, paged without the lines between them.
     index("chat_lines_photos")
       .on(table.threadId, table.seq)
-      .where(sql`${table.photos} is not null`),
+      .where(sql`${table.content} ->> '$.kind' = 'photos'`),
+    // Each kind with what it holds; a notice or a line taken back answers
+    // none and is pinned nowhere. Its columns are named bare, as drizzle-kit
+    // names them by the table it makes in place of this one.
+    check(
+      "chat_lines_content",
+      sql`coalesce(CASE content ->> '$.kind'
+        WHEN 'words' THEN content ->> '$.text' <> ''
+          AND json_type(content, '$.edited') IN ('true', 'false')
+        WHEN 'photos' THEN json_array_length(content, '$.photos') > 0
+        WHEN 'days' THEN json_array_length(content, '$.days') > 0
+        WHEN 'poll' THEN json_array_length(content, '$.days') > 0
+        WHEN 'notice' THEN json_type(content, '$.notice') = 'object'
+          AND reply_to IS NULL AND pinned_at IS NULL
+        WHEN 'unsent' THEN reply_to IS NULL AND pinned_at IS NULL
+      END, 0)`
+    ),
   ]
 );
 

@@ -14,6 +14,20 @@ A chat is kept in a place: a group, whose chats are 全体チャット and its o
 
 The server drops an edit its place does not take (one in a one-to-one chat, a line of days or a poll, 編集, a pin, a vote or settling a poll) and refuses a report; the apps leave each out of their menus and tools. Within a group, what a one-to-one chat lacks (polls, mentions) is the thread's, not the place's.
 
+## What a line is
+
+A line is one thing to its reader, so it is one kind of thing in the data: the server, the wire (`ChatLine.content`, a `ChatContent`) and both apps hold a line as exactly one of these, each with only what that kind has, and everything that treats lines differently goes by the kind alone.
+
+- **words** (`ChatWords`): 1 to `textLimits.chatMessage` characters, not blank; 編集済み once changed; its first link's page, if any (Previews). Only words are changed (編集).
+- **photos** (`ChatAlbum`): 1 to `chatRules.photosPerSend` photos sent at once, with no words (Photos, Albums).
+- **days** (`ChatSharedDays`): 1 to `SHARED_DAYS_MAX` days shared with everyone's shifts, with no words (Long messages and shared days).
+- **poll** (`ChatPoll`): two days or more put to the vote, who can come on each, and the day settled on (Polls).
+- **notice** (`ChatNotice`): a line from the app (Notices).
+- **unsent**: taken back by its writer (送信取消). Nothing of what it was is left, whatever its kind was, as Telegram, LINE and iMessage show one line in its place; it answers no line and is pinned nowhere.
+- **hidden**: how a one-to-one line from someone the reader blocked comes to them (Reporting and blocking): it shows nothing. A device that gets a line of a kind it does not know (from an app newer than itself) shows it as hidden, until the app is updated and takes its lines again (spec/sync-protocol.md, Change log and cursor).
+
+What any line has besides is not its kind: who wrote it, when, its place, its reactions, the line it answers and its pin. A notice takes none of the last three, and a line taken back loses them.
+
 ## The chat's page
 
 - A chat opens over the tabs, as LINE's and Telegram's do: pushed from the right with the screen under it, tab bar and all, so the tab bar goes away with that screen and comes back with it as the chat goes, a back swipe followed by the finger. What the chat opens (写真, みんなのシフト, the group's settings, another chat) is pushed over it the same way, and back goes back through them to the tab it was opened from, as that tab left it. A notification's chat opens over its tab alone (グループ for a group's chat, 設定 for the chat with Pochical's people), in place of any chat open; a widget's or a link's day or group goes back to the tabs first.
@@ -100,7 +114,7 @@ A mention names one member of the group in a group chat (全体チャット). On
 
 全体チャット says, as a line from the app, what changes who is in the group, the way in, or what the group is, as LINE's groups do; nothing else. Someone joining (〇〇がグループに参加しました), leaving (〇〇がグループを抜けました, an account deleted while in the group too, named as deleted accounts are), being taken out by a member (〇〇が△△をグループから外しました), the invite link remade (〇〇が招待リンクを作り直しました: a link someone already sent stops working, and this tells them why and to send the new one), and a new name or icon (〇〇がグループ名を「…」に変更しました, 〇〇がグループのアイコンを変更しました, or both: 〇〇がグループ名を「…」にして、アイコンを変更しました). A member's own name or photo, shifts and the table's layout are not said: they show where they are, and would flood the chat.
 
-- The Group DO writes it as the change is made, a `ChatLine` with `notice` (`ChatNotice`: the kind, who was taken out, the new name, whether the icon changed) and no words, its author being who did it, at the chat's next seq. Each device words it with the names the group shows now, those of members who left included.
+- The Group DO writes it as the change is made, a `ChatLine` of the notice kind (`ChatNotice`: what happened, who was taken out, the new name, whether the icon changed), its author being who did it, at the chat's next seq. Each device words it with the names the group shows now, those of members who left included.
 - It sits centered in the tertiary color between the messages, as an unsent line does, and starts the run after it. The chat list says it as its last line.
 - It is never unread and never notified (spec/sync-protocol.md, Unread summary), and takes no reactions, replies, pins, reports, edits or unsending.
 

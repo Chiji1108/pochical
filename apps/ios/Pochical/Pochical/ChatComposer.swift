@@ -13,7 +13,10 @@ final class ChatDraft {
   /// The line being answered (返信), by its seq, quoted over the composer
   /// as the chat has it now; or the line of one's own being changed in it.
   var target: DraftTarget<ChatLineRow>?
-  var editing: ChatLineRow? { target?.editing }
+  /// The line of words being changed: only words are (spec/chat.md, 編集).
+  var editing: ChatLineRow? { target?.editing.flatMap { $0.content.words == nil ? nil : $0 } }
+  /// The words of the line being changed, as it was sent.
+  var editedWords: String? { editing?.content.words?.text }
   var replyTo: Int64? { target?.replyTo }
   /// Days to go with the next message (共有する日), sent first.
   var attachedDays: [Day]?
@@ -180,8 +183,8 @@ struct ChatComposer: View {
   /// last nearest the field, as /design's; the field and send under them.
   private var capsule: some View {
     let trimmed = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
-    let editing = draft.editing
-    let unchanged = editing.map { $0.text == withMentions(draft.text, picked: draft.picked) } ?? false
+    let editing = draft.editedWords
+    let unchanged = editing == withMentions(draft.text, picked: draft.picked)
     let blocked =
       editing == nil
       ? (trimmed.isEmpty && draft.photos.isEmpty && draft.attachedDays == nil) || draft.readingPhotos
@@ -190,7 +193,7 @@ struct ChatComposer: View {
     return VStack(spacing: 0) {
       if let editing {
         ComposerBar(
-          title: "メッセージを編集", words: plainText(editing.text, nameOf: nameOf),
+          title: "メッセージを編集", words: plainText(editing, nameOf: nameOf),
           stop: "編集をやめる", onStop: onStopEditing)
       }
       if let replyTo = draft.replyTo {

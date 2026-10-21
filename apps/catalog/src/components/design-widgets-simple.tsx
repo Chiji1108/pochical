@@ -8,6 +8,7 @@ import {
   SpokenDay,
   WidgetSizeContext,
   newsWords,
+  oneLine,
   useShiftNames,
   useWords,
 } from "@pochical/prototype/components/design-widgets";
@@ -59,14 +60,12 @@ export const simple = {
   pair: css({ display: "flex", gap: "16px", height: "100%" }),
   rule: css({ bg: "separator", flexShrink: 0, width: "1px" }),
   words: css({
+    ...oneLine,
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
     letterSpacing: "0.02em",
     maxWidth: "100%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
     textStyle: "subheadline",
-    whiteSpace: "nowrap",
   }),
 };
 

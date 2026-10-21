@@ -72,27 +72,17 @@ export const dayCell = cva({
         outlineOffset: "-1.5px",
       },
     },
+    // The group's month of one person: a day you are off too, framed. Not
+    // with the picked day's frame, which is on it instead. The frame stays
+    // inside the day, or it would show at the edge of the month beside.
+    together: {
+      true: {
+        outline: "1.5px solid token(colors.accent.border)",
+        outlineOffset: "-1.5px",
+      },
+    },
   },
 });
-
-// A day of the group's month of one person, framed when `framed`: the
-// frame's styles are merged into the day's, as two classes for one property
-// would leave the winner to the stylesheet's order. Merged here, beside
-// dayCell, so Panda can read which of its variants are asked for. The frame
-// stays inside the day, or it would show at the edge of the month beside.
-export const framedDayCell = (
-  variants: Parameters<typeof dayCell.raw>[0],
-  framed: boolean
-) =>
-  css(
-    dayCell.raw(variants),
-    framed
-      ? {
-          outline: "1.5px solid token(colors.accent.border)",
-          outlineOffset: "-1.5px",
-        }
-      : {}
-  );
 
 // Today, wherever a date is shown: the date in the accent, heavier, so
 // it shows on a day off's tile too. Only its color and weight change,

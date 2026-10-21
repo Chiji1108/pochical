@@ -3,7 +3,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { signInAnonymously } from "./helpers";
-import { relayed, supportChat } from "./sync-helpers";
+import { relayed, supportChat, words } from "./sync-helpers";
 
 describe("what the admin site asks of the server", () => {
   it("lists the chats from their index and answers one, the user hearing of it", async () => {
@@ -33,7 +33,10 @@ describe("what the admin site asks of the server", () => {
             {
               kind: {
                 case: "chatLine",
-                value: { authorId: "pochical", text: "設定から変えられます" },
+                value: {
+                  authorId: "pochical",
+                  ...words("設定から変えられます"),
+                },
               },
             },
           ],

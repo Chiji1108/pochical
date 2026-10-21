@@ -73,7 +73,12 @@ import {
   groupsUnread,
   togetherIn,
 } from "../src/lib/design-group-data";
-import type { Chat, Member, Message } from "../src/lib/design-group-data";
+import type {
+  Chat,
+  Member,
+  Message,
+  MessageContent,
+} from "../src/lib/design-group-data";
 import {
   patternsForJob,
   presetList,
@@ -520,9 +525,9 @@ describe("spec/vectors/unread.json", () => {
           }
           chats[chatKey(id, chatId)] = {
             messages: [...chat.read, ...chat.unread].map((words, index) => ({
+              content: { kind: "words", text: words },
               from: "yuki",
               id: `line-${index}`,
-              text: words,
               time: "10:00",
               when: "今日",
             })),
@@ -537,7 +542,12 @@ describe("spec/vectors/unread.json", () => {
 });
 
 // A chat line with only what the logic reads.
-const line = (id: string, more: Partial<Message> = {}): Message => ({
+const line = (
+  id: string,
+  content: MessageContent,
+  more: Partial<Message> = {}
+): Message => ({
+  content,
   from: "yuki",
   id,
   time: "10:00",
@@ -567,13 +577,13 @@ describe("spec/vectors/chat.json", () => {
       const step = pinCase.step as Step;
       const messages = lines.map((id) => {
         const pinnedAt = pins.indexOf(id);
-        return line(id, {
-          pinned: pinnedAt === -1 ? undefined : pins.length - pinnedAt,
-          poll:
-            id === step.settle
-              ? { days: [dayOf("2026-10-03")], votes: {} }
-              : undefined,
-        });
+        return line(
+          id,
+          id === step.settle
+            ? { days: [dayOf("2026-10-03")], kind: "poll", votes: {} }
+            : { kind: "words", text: "" },
+          { pinned: pinnedAt === -1 ? undefined : pins.length - pinnedAt }
+        );
       });
       const after = takeStep(messages, step);
       expect({
@@ -587,12 +597,14 @@ describe("spec/vectors/chat.json", () => {
       const page = { site: "old", title: "old", url: "old" };
       const fresh = { site: "new", title: "new", url: "new" };
       const [edited] = editMessage(
-        [line("a", { link: page, text: words })],
+        [line("a", { kind: "words", link: page, text: words })],
         "a",
         edit,
         fresh
       );
-      expect(edited?.link === page ? "kept" : "new").toBe(expected);
+      const kept =
+        edited?.content.kind === "words" && edited.content.link === page;
+      expect(kept ? "kept" : "new").toBe(expected);
     });
   }
   for (const {
@@ -603,10 +615,13 @@ describe("spec/vectors/chat.json", () => {
   } of chatMessages.firstUnread) {
     test(name, () => {
       const messages = lines.map((who, index) =>
-        line(String(index), {
-          from: who === "others" ? "yuki" : who,
-          notice: who === "app" ? "ゆきが参加しました" : undefined,
-        })
+        line(
+          String(index),
+          who === "app"
+            ? { kind: "notice", text: "ゆきが参加しました" }
+            : { kind: "words", text: "" },
+          { from: who === "others" ? "yuki" : who }
+        )
       );
       const first = firstUnreadOf(messages, count);
       expect(first === undefined ? null : Number(first)).toBe(expected);
@@ -614,8 +629,11 @@ describe("spec/vectors/chat.json", () => {
   }
   for (const { name, draft, lines, expected } of chatMessages.draft) {
     test(name, () => {
-      const messages = lines.map(({ seq, text: words, unsent }) =>
-        line(String(seq), { text: words, unsent })
+      const messages = lines.map((one) =>
+        line(
+          String(one.seq),
+          "text" in one ? { kind: "words", text: one.text } : { kind: "unsent" }
+        )
       );
       const kept = keptDraft(
         {

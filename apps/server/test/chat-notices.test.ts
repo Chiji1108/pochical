@@ -17,13 +17,15 @@ import {
 // The lines the app writes in a group's 全体チャット as the group changes
 // (spec/chat.md, Notices).
 
-// A frame's notice lines.
+// A frame's notice lines, each with what it says beside the line.
 const noticesIn = (frame: ServerFrame) =>
-  changesIn(frame).flatMap(({ kind }) =>
-    kind.case === "chatLine" && kind.value.notice !== undefined
-      ? [kind.value]
-      : []
-  );
+  changesIn(frame).flatMap(({ kind }) => {
+    const content =
+      kind.case === "chatLine" ? kind.value.content?.kind : undefined;
+    return kind.case === "chatLine" && content?.case === "notice"
+      ? [{ ...kind.value, notice: content.value }]
+      : [];
+  });
 
 const groupSocket = async (
   groupId: string,
@@ -42,7 +44,6 @@ describe("a group's notices", () => {
         authorId: guestId,
         notice: { kind: ChatNotice_Kind.JOINED },
         seq: 1n,
-        text: "",
         threadId: "group",
       },
     ]);
@@ -198,7 +199,6 @@ describe("a group's notices", () => {
         notice: { kind: ChatNotice_Kind.JOINED },
         reactions: [],
         seq: 1n,
-        unsent: false,
       },
     ]);
   });

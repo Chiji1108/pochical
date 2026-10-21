@@ -221,7 +221,6 @@ type Kept = {
   seq: number;
   author_id: string;
   text: string;
-  unsent: number;
   photos: string | null;
 };
 
@@ -232,7 +231,7 @@ const linesOf = async (userId: string): Promise<Kept[]> =>
     (_, state) =>
       state.storage.sql
         .exec<Kept>(
-          "select seq, author_id, text, unsent, photos from chat_lines order by seq"
+          "select seq, author_id, coalesce(content ->> '$.text', '') as text, content ->> '$.photos' as photos from chat_lines order by seq"
         )
         .toArray()
   );

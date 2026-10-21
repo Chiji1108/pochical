@@ -18,6 +18,7 @@ import {
   dayMark,
   list,
   newsWords,
+  oneLine,
   toneText,
   useOffLook,
   useShiftNames,
@@ -52,14 +53,12 @@ import { simple } from "./design-widgets-simple";
 
 const upcoming = {
   change: css({
+    ...oneLine,
     color: "text.secondary",
     fontVariantNumeric: "tabular-nums",
     fontWeight: 400,
     maxWidth: "100%",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
     textStyle: "footnote",
-    whiteSpace: "nowrap",
   }),
   head: css({
     alignItems: "center",

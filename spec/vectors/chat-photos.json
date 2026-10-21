@@ -1,11 +1,10 @@
 {
-  "about": "A chat's photos alone, as the photo opened large pages through them (spec/chat.md, Photos; spec/sync-protocol.md, Chat). A photo is named by its line's seq and a letter for its place in the line, `a` its first (`5a`, `5b`, `5c` for a line of three). seen: whether a reader sees a line's photo among the chat's: `photo` (it is one), `unsent` (taken back), `hidden` (sent in a one-to-one chat while the reader had blocked its writer), `ownChat` (the place's own chat, thread \"group\", not a one-to-one one) and `writerBlocked` (the reader has blocked its writer, whose lines fold away in the place's own chat). page: the chat's photos the reader sees (`photos`) in order, and a ChatPhotosRequest for those before `seq` (or after it, with `after`; 0 for the latest, or after from the first), `size` a page in photos, of whole lines, a line never split and at least one when there is one; `expected` is the page's `photos`, how many photos come before it (`offset`) and how many the chat holds (`total`). run: the photos a device holds open large, or listed (写真), as steps: `open` with the `held` photos among the lines laid out and the `tapped` one; `latest`, the list opened with none held; `lines`, the chat's photos on the device, read at the group's `cursor`: the photos the reader sees (`photos`), those taken back or hidden (`gone`) and, in the place's own chat, whose photos fold away (`blocked`); the first time, or changed since, those out, the next shown in place of one gone, and where they are among all of them forgotten, the same photos at a later cursor changing nothing; `page`, a ChatPhotos answering an ask, made at the group's `cursor`, its `photos` taking the place of those held over the lines it covers (dropped when its cursor is older than the last `lines`, or its `seq` is past those held); `show`, swiped to a photo; `reconnected`, the socket open again, the asks not yet answered asked again. After each step `expected` is the photos held (`photos`), the one shown (null once none is left, which closes it), its `place` among all the chat's as the group last said it (how many come before it, plus one, and in all; null while unknown) and the pages newly asked for (`asks`), each once until the chat's photos change and none before they are first followed: the latest with none held, both sides of the one shown while its place is unknown, else an end's next once the one shown is fewer than `ahead` (chatRules.photoPageAhead) from it.",
+  "about": "A chat's photos alone, as the photo opened large pages through them (spec/chat.md, Photos; spec/sync-protocol.md, Chat). A photo is named by its line's seq and a letter for its place in the line, `a` its first (`5a`, `5b`, `5c` for a line of three). seen: whether a reader sees a line's photo among the chat's: its `kind` (`photos`, `words`, or `unsent` for one taken back, spec/chat.md What a line is), `hidden` (sent in a one-to-one chat while the reader had blocked its writer), `ownChat` (the place's own chat, thread \"group\", not a one-to-one one) and `writerBlocked` (the reader has blocked its writer, whose lines fold away in the place's own chat). page: the chat's photos the reader sees (`photos`) in order, and a ChatPhotosRequest for those before `seq` (or after it, with `after`; 0 for the latest, or after from the first), `size` a page in photos, of whole lines, a line never split and at least one when there is one; `expected` is the page's `photos`, how many photos come before it (`offset`) and how many the chat holds (`total`). run: the photos a device holds open large, or listed (写真), as steps: `open` with the `held` photos among the lines laid out and the `tapped` one; `latest`, the list opened with none held; `lines`, the chat's photos on the device, read at the group's `cursor`: the photos the reader sees (`photos`), those taken back or hidden (`gone`) and, in the place's own chat, whose photos fold away (`blocked`); the first time, or changed since, those out, the next shown in place of one gone, and where they are among all of them forgotten, the same photos at a later cursor changing nothing; `page`, a ChatPhotos answering an ask, made at the group's `cursor`, its `photos` taking the place of those held over the lines it covers (dropped when its cursor is older than the last `lines`, or its `seq` is past those held); `show`, swiped to a photo; `reconnected`, the socket open again, the asks not yet answered asked again. After each step `expected` is the photos held (`photos`), the one shown (null once none is left, which closes it), its `place` among all the chat's as the group last said it (how many come before it, plus one, and in all; null while unknown) and the pages newly asked for (`asks`), each once until the chat's photos change and none before they are first followed: the latest with none held, both sides of the one shown while its place is unknown, else an end's next once the one shown is fewer than `ahead` (chatRules.photoPageAhead) from it.",
   "seen": [
     {
       "name": "a photo in the place's own chat",
       "line": {
-        "photo": true,
-        "unsent": false,
+        "kind": "photos",
         "hidden": false,
         "ownChat": true,
         "writerBlocked": false
@@ -15,8 +14,7 @@
     {
       "name": "words, not a photo",
       "line": {
-        "photo": false,
-        "unsent": false,
+        "kind": "words",
         "hidden": false,
         "ownChat": true,
         "writerBlocked": false
@@ -26,8 +24,7 @@
     {
       "name": "a photo taken back",
       "line": {
-        "photo": true,
-        "unsent": true,
+        "kind": "unsent",
         "hidden": false,
         "ownChat": true,
         "writerBlocked": false
@@ -37,8 +34,7 @@
     {
       "name": "a one-to-one photo hidden from the reader",
       "line": {
-        "photo": true,
-        "unsent": false,
+        "kind": "photos",
         "hidden": true,
         "ownChat": false,
         "writerBlocked": true
@@ -48,8 +44,7 @@
     {
       "name": "a blocked writer's photo in the place's own chat",
       "line": {
-        "photo": true,
-        "unsent": false,
+        "kind": "photos",
         "hidden": false,
         "ownChat": true,
         "writerBlocked": true
@@ -59,8 +54,7 @@
     {
       "name": "a one-to-one photo sent before the block",
       "line": {
-        "photo": true,
-        "unsent": false,
+        "kind": "photos",
         "hidden": false,
         "ownChat": false,
         "writerBlocked": true
@@ -70,8 +64,7 @@
     {
       "name": "a one-to-one photo taken back",
       "line": {
-        "photo": true,
-        "unsent": true,
+        "kind": "unsent",
         "hidden": false,
         "ownChat": false,
         "writerBlocked": false

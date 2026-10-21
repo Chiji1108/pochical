@@ -100,14 +100,19 @@ const linesOf = async (groupId: string, token: string) => {
       return [...lines.values()].toSorted((a, b) => a.seq - b.seq);
     }
     for (const { kind } of changesIn(frame)) {
-      if (kind.case === "chatLine" && kind.value.notice === undefined) {
-        const { photos, pinnedOrder, reactions, seq, unsent } = kind.value;
+      const content =
+        kind.case === "chatLine" ? kind.value.content?.kind : undefined;
+      if (kind.case === "chatLine" && content?.case !== "notice") {
+        const { pinnedOrder, reactions, seq } = kind.value;
         lines.set(Number(seq), {
-          photos: photos.map(({ id }) => id),
+          photos:
+            content?.case === "photos"
+              ? content.value.photos.map(({ id }) => id)
+              : [],
           pinned: pinnedOrder > 0n,
           reactions: reactions.map(({ emoji }) => emoji),
           seq: Number(seq),
-          unsent,
+          unsent: content?.case === "unsent",
         });
       }
     }
