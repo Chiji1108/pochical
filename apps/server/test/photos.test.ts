@@ -2,7 +2,12 @@ import { chatRules } from "@pochical/design/chat";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 
-import { photoKey, sharePersonPhoto, smallKey } from "../src/photos";
+import {
+  copyPersonPhoto,
+  photoKey,
+  sharePersonPhoto,
+  smallKey,
+} from "../src/photos";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
@@ -573,5 +578,109 @@ describe("a group's photo once stored", () => {
     expect(sent).toMatchObject([
       { kind: { value: { photo: { id: "again" } } } },
     ]);
+  });
+
+  it("is copied in again when noted again while the sweep deletes it", async () => {
+    const { runInDurableObject } = await import("cloudflare:test");
+    const { groupId, maker, makerId } = await pair();
+    const group = env.GROUPS.getByName(groupId);
+    const stray = await ownPhoto(maker);
+    await sharePersonPhoto(env, makerId, stray, groupId);
+    await runInDurableObject(group, (_, state) => {
+      state.storage.sql.exec(
+        "update group_photos set uploaded_at = ?",
+        Date.now() - chatRules.unsentAfterMs
+      );
+    });
+    await runInDurableObject(group, async (instance) => {
+      // The sweep is waiting on storage's delete once the alarm returns.
+      const sweeping = instance.alarm();
+      // As sharePersonPhoto shares it, its note taken while the sweep waits.
+      if (await instance.noteSharedPhoto(stray, makerId)) {
+        await copyPersonPhoto(env, makerId, stray, groupId);
+      }
+      await sweeping;
+    });
+    await expect(storedBytes(groupId, stray)).resolves.toStrictEqual(JPEG);
+    await expect(
+      runInDurableObject(group, (_, state) =>
+        state.storage.sql
+          .exec<{ id: string; state: string }>(
+            "select id, state from group_photos"
+          )
+          .toArray()
+      )
+    ).resolves.toStrictEqual([{ id: stray, state: "shown" }]);
+  });
+
+  it("is copied in anew by the next sweep when the copy after the delete fails", async () => {
+    const { runInDurableObject } = await import("cloudflare:test");
+    const { groupId, maker, makerId } = await pair();
+    const group = env.GROUPS.getByName(groupId);
+    const stray = await ownPhoto(maker);
+    await sharePersonPhoto(env, makerId, stray, groupId);
+    await runInDurableObject(group, (_, state) => {
+      state.storage.sql.exec(
+        "update group_photos set uploaded_at = ?",
+        Date.now() - chatRules.unsentAfterMs
+      );
+    });
+    const get = vi
+      .spyOn(env.PHOTOS, "get")
+      .mockRejectedValueOnce(new Error("R2 out of reach"));
+    const first = await runInDurableObject(group, async (instance) => {
+      const sweeping = instance.alarm();
+      await instance.noteSharedPhoto(stray, makerId);
+      return await sweeping.then(
+        () => "swept",
+        () => "failed"
+      );
+    });
+    get.mockRestore();
+    expect(first).toBe("failed");
+    await runInDurableObject(group, async (instance) => {
+      await instance.alarm();
+    });
+    await expect(storedBytes(groupId, stray)).resolves.toStrictEqual(JPEG);
+    await expect(
+      runInDurableObject(group, (_, state) =>
+        state.storage.sql
+          .exec<{ id: string; state: string }>(
+            "select id, state from group_photos"
+          )
+          .toArray()
+      )
+    ).resolves.toStrictEqual([{ id: stray, state: "shown" }]);
+  });
+
+  it("makes its uploader wait while the sweep deletes it, then stores it anew", async () => {
+    const { runInDurableObject } = await import("cloudflare:test");
+    const { groupId, maker, makerId } = await pair();
+    const group = env.GROUPS.getByName(groupId);
+    await photo("PUT", groupId, "lost", maker, JPEG);
+    await runInDurableObject(group, (_, state) => {
+      state.storage.sql.exec(
+        "update group_photos set uploaded_at = ?",
+        Date.now() - chatRules.unsentAfterMs
+      );
+    });
+    const noted = await runInDurableObject(group, async (instance) => {
+      // The sweep is waiting on storage's delete once the alarm returns.
+      const sweeping = instance.alarm();
+      const note = await instance.notePhoto("lost", makerId);
+      await sweeping;
+      return note;
+    });
+    expect(noted).toBe("going");
+    await expect(
+      runInDurableObject(group, (_, state) =>
+        state.storage.sql.exec("select id from group_photos").toArray()
+      )
+    ).resolves.toStrictEqual([]);
+    // Its id is free once forgotten: the upload tried again stores it.
+    await expect(putStatus(groupId, "lost", maker, JPEG)).resolves.toBe(204);
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, "lost"))
+    ).resolves.not.toBeNull();
   });
 });

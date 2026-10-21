@@ -309,7 +309,14 @@ export const chatRecalls = sqliteTable(
 //   their own) or as the group's mark (copied in). No upload touches it;
 //   it goes once neither the mark nor anyone in the group names it, and a
 //   copy nothing came to name goes as an unsent one does.
-export const photoStates = ["unsent", "sent", "shown"] as const;
+// - deleting: the sweep (GroupDO.sweepPhotos) is deleting an unsent or
+//   unnamed one from R2, its row going after. Meanwhile its uploader's
+//   upload of it is answered to try again (503) and a send of it does not
+//   fit; a copy noted again keeps going, noted since the sweep began,
+//   and the sweep copies it in anew once R2 has deleted it, then shows it
+//   again. A sweep cut short leaves its rows so, and the next finishes
+//   them. Nothing else is ever marked so.
+export const photoStates = ["unsent", "sent", "shown", "deleting"] as const;
 
 export const groupPhotos = sqliteTable("group_photos", {
   id: text().primaryKey(),

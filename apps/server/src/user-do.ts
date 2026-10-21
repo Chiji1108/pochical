@@ -10,7 +10,6 @@ import {
   inArray,
   isNotNull,
   isNull,
-  max,
   ne,
   sql,
 } from "drizzle-orm";
@@ -71,6 +70,7 @@ import {
   dayFields,
   groupRequests,
   knownGroups,
+  logHead,
   memberships,
   patternOrder,
   patterns,
@@ -140,20 +140,6 @@ export type Unread = { count: number; mentions: number };
 type SyncedLog = {
   after: (cursor: number, sharedOnly: boolean) => Change[];
   shared: boolean;
-  table:
-    | typeof dayFields
-    | typeof patterns
-    | typeof patternOrder
-    | typeof repeatOrders
-    | typeof coworkers
-    | typeof coworkerOrder
-    | typeof preferences
-    | typeof memberships
-    | typeof unreadCounts
-    | typeof blocks
-    | typeof chatMutes
-    | typeof chatSettings
-    | typeof profile;
 };
 
 /**
@@ -317,7 +303,7 @@ export class UserDO extends DurableObject<Env> {
   ): { row: MembershipRow; joined: boolean } {
     const joined = !this.isMember(groupId);
     const set = {
-      cursor: this.head() + 1,
+      cursor: this.nextCursor(),
       ...markColumns(group.mark),
       name: group.name,
       ...(joined
@@ -349,7 +335,7 @@ export class UserDO extends DurableObject<Env> {
       if ((kept?.blocked ?? false) === on) {
         return undefined;
       }
-      const row = { blocked: on, cursor: this.head() + 1, userId: blockedId };
+      const row = { blocked: on, cursor: this.nextCursor(), userId: blockedId };
       return this.db
         .insert(blocks)
         .values(row)
@@ -498,15 +484,13 @@ export class UserDO extends DurableObject<Env> {
     if (!this.isMember(groupId)) {
       return undefined;
     }
-    // Taken before its counts go, so the head never goes back.
-    const cursor = this.head() + 1;
     // Its counts go with it: devices drop them as they hear of the
     // leaving, and joining again starts at the chats' end.
     this.db.delete(unreadCounts).where(eq(unreadCounts.groupId, groupId)).run();
     this.db.delete(chatNotified).where(eq(chatNotified.groupId, groupId)).run();
     const row = this.db
       .update(memberships)
-      .set({ cursor, leftAt: new Date() })
+      .set({ cursor: this.nextCursor(), leftAt: new Date() })
       .where(eq(memberships.groupId, groupId))
       .returning()
       .get();
@@ -653,7 +637,7 @@ export class UserDO extends DurableObject<Env> {
       if (this.isMuted(groupId, threadId) === muted) {
         return undefined;
       }
-      const row = { cursor: this.head() + 1, groupId, muted, threadId };
+      const row = { cursor: this.nextCursor(), groupId, muted, threadId };
       return this.db
         .insert(chatMutes)
         .values(row)
@@ -673,7 +657,7 @@ export class UserDO extends DurableObject<Env> {
   /** Sets メンションはいつも通知, sent to the user's devices. */
   setChatNotifications(mentionsWhenMuted: boolean): void {
     const changed = this.ctx.storage.transactionSync(() => {
-      const row = { cursor: this.head() + 1, id: 1, mentionsWhenMuted };
+      const row = { cursor: this.nextCursor(), id: 1, mentionsWhenMuted };
       return this.db
         .insert(chatSettings)
         .values(row)
@@ -701,7 +685,7 @@ export class UserDO extends DurableObject<Env> {
   setProfile(name: string, photoId: string): string {
     const before = this.profileOf().photoId;
     const changed = this.ctx.storage.transactionSync(() => {
-      const row = { cursor: this.head() + 1, id: 1, name, photoId };
+      const row = { cursor: this.nextCursor(), id: 1, name, photoId };
       return this.db
         .insert(profile)
         .values(row)
@@ -728,7 +712,7 @@ export class UserDO extends DurableObject<Env> {
       return;
     }
     const changed = this.ctx.storage.transactionSync(() => {
-      const cursor = this.head() + 1;
+      const cursor = this.nextCursor();
       return this.db
         .insert(profile)
         .values({ cursor, id: 1, markFill: fill, markStyle: style, name: "" })
@@ -850,7 +834,7 @@ export class UserDO extends DurableObject<Env> {
       }
       const row = {
         count,
-        cursor: this.head() + 1,
+        cursor: this.nextCursor(),
         groupCursor,
         groupId,
         mentions,
@@ -949,10 +933,10 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * Every kind of value the user owns, in one list so catch-up, the cursor
-   * head and the pushes to groups cover the same ones: its table, its rows
-   * changed after a cursor as changes (only what groups see, when asked),
-   * and whether groups see it at all.
+   * Every kind of value the user owns, in one list so catch-up and the
+   * pushes to groups cover the same ones: its rows changed after a cursor
+   * as changes (only what groups see, when asked), and whether groups see
+   * it at all.
    */
   private logs(): SyncedLog[] {
     const { db } = this;
@@ -975,7 +959,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(dayChange),
         shared: true,
-        table: dayFields,
       },
       {
         after: (cursor) =>
@@ -986,7 +969,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(patternChange),
         shared: true,
-        table: patterns,
       },
       {
         after: (cursor) =>
@@ -997,7 +979,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(orderChange),
         shared: false,
-        table: patternOrder,
       },
       {
         after: (cursor) =>
@@ -1008,7 +989,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(repeatOrdersChange),
         shared: true,
-        table: repeatOrders,
       },
       {
         after: (cursor) =>
@@ -1019,7 +999,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(coworkerChange),
         shared: false,
-        table: coworkers,
       },
       {
         after: (cursor) =>
@@ -1030,7 +1009,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(coworkerOrderChange),
         shared: false,
-        table: coworkerOrder,
       },
       {
         after: (cursor) =>
@@ -1041,7 +1019,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(preferenceChange),
         shared: false,
-        table: preferences,
       },
       {
         after: (cursor) =>
@@ -1052,7 +1029,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(membershipChange),
         shared: false,
-        table: memberships,
       },
       {
         after: (cursor) =>
@@ -1063,7 +1039,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(unreadCountChange),
         shared: false,
-        table: unreadCounts,
       },
       {
         after: (cursor) =>
@@ -1074,7 +1049,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(blockChange),
         shared: false,
-        table: blocks,
       },
       {
         after: (cursor) =>
@@ -1085,7 +1059,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(chatMuteChange),
         shared: false,
-        table: chatMutes,
       },
       {
         after: (cursor) =>
@@ -1096,7 +1069,6 @@ export class UserDO extends DurableObject<Env> {
             .all()
             .map(chatSettingsChange),
         shared: false,
-        table: chatSettings,
       },
       {
         after: (cursor) =>
@@ -1108,21 +1080,35 @@ export class UserDO extends DurableObject<Env> {
             .map(profileChange),
         // The groups show it unless the user gave one a name of its own.
         shared: true,
-        table: profile,
       },
     ];
   }
 
-  /** The newest cursor across everything the user owns, 0 before any. */
+  /**
+   * The newest cursor the user's log has given out, 0 before any: kept in
+   * a row of its own, not read off the values, which leaving a group takes
+   * some of away.
+   */
   private head(): number {
-    const heads = this.logs().map(
-      ({ table }) =>
-        this.db
-          .select({ head: max(table.cursor) })
-          .from(table)
-          .get()?.head ?? 0
+    return (
+      this.db.select({ cursor: logHead.cursor }).from(logHead).get()?.cursor ??
+      0
     );
-    return Math.max(0, ...heads);
+  }
+
+  /**
+   * Gives out the cursor after the newest, for a value written now, in
+   * the write's transaction: the only way to a new cursor. One a write
+   * then does not use is a gap, which devices, taking the newest, pass.
+   */
+  private nextCursor(): number {
+    const cursor = this.head() + 1;
+    this.db
+      .insert(logHead)
+      .values({ cursor, id: 1 })
+      .onConflictDoUpdate({ set: { cursor }, target: logHead.id })
+      .run();
+    return cursor;
   }
 
   /** Every value changed after `cursor`, in cursor order. */
@@ -1203,15 +1189,19 @@ export class UserDO extends DurableObject<Env> {
    * Takes a frame of edits in one transaction, each change given the next
    * cursor; sends what changed to every device of the user, then
    * acknowledges every edit to the sender. An edit may change nothing, one value, or several
-   * (an order and the days it takes back), from `cursor` on. A frame with
-   * a clock too far past the server's time is refused whole, so the
-   * device corrects its clock and sends the edits again.
+   * (an order and the days it takes back), each taking its cursor from
+   * `nextCursor`. A frame with a clock too far past the server's time is
+   * refused whole, so the device corrects its clock and sends the edits
+   * again.
    */
   private takeEdits<Edit extends { opId: string }>(
     ws: WebSocket,
     edits: Edit[],
     clockOf: (edit: Edit) => Hlc | undefined,
-    apply: (edit: Edit, cursor: number) => Change | Change[] | undefined
+    apply: (
+      edit: Edit,
+      nextCursor: () => number
+    ) => Change | Change[] | undefined
   ): void {
     if (edits.length > syncLimits.editsPerFrame) {
       rejectAndClose(
@@ -1231,15 +1221,9 @@ export class UserDO extends DurableObject<Env> {
       return;
     }
     const changed = this.ctx.storage.transactionSync(() => {
-      let cursor = this.head();
       const changes: Change[] = [];
       for (const edit of edits) {
-        const made = [apply(edit, cursor + 1) ?? []].flat();
-        const last = made.at(-1);
-        if (last) {
-          cursor = Number(last.cursor);
-          changes.push(...made);
-        }
+        changes.push(...[apply(edit, () => this.nextCursor()) ?? []].flat());
       }
       return changes;
     });
@@ -1268,8 +1252,8 @@ export class UserDO extends DurableObject<Env> {
       ws,
       edits,
       ({ value }) => value?.hlc,
-      ({ value }, cursor) =>
-        hasKey(value) ? applyDay(this.db, value, cursor, floors) : undefined
+      ({ value }, nextCursor) =>
+        hasKey(value) ? applyDay(this.db, value, nextCursor, floors) : undefined
     );
   }
 
@@ -1279,12 +1263,12 @@ export class UserDO extends DurableObject<Env> {
       ws,
       edits,
       ({ kind }) => kind.value?.hlc,
-      ({ kind }, cursor) => {
+      ({ kind }, nextCursor) => {
         if (kind.case === "pattern") {
-          return applyPattern(this.db, kind.value, cursor);
+          return applyPattern(this.db, kind.value, nextCursor);
         }
         if (kind.case === "order") {
-          return applyPatternOrder(this.db, kind.value, cursor);
+          return applyPatternOrder(this.db, kind.value, nextCursor);
         }
         return undefined;
       }
@@ -1300,7 +1284,7 @@ export class UserDO extends DurableObject<Env> {
       ws,
       edits,
       ({ orders }) => orders?.hlc,
-      (edit, cursor) => applyRepeatOrders(this.db, edit, cursor)
+      (edit, nextCursor) => applyRepeatOrders(this.db, edit, nextCursor)
     );
   }
 
@@ -1310,12 +1294,12 @@ export class UserDO extends DurableObject<Env> {
       ws,
       edits,
       ({ kind }) => kind.value?.hlc,
-      ({ kind }, cursor) => {
+      ({ kind }, nextCursor) => {
         if (kind.case === "coworker") {
-          return applyCoworker(this.db, kind.value, cursor);
+          return applyCoworker(this.db, kind.value, nextCursor);
         }
         if (kind.case === "order") {
-          return applyCoworkerOrder(this.db, kind.value, cursor);
+          return applyCoworkerOrder(this.db, kind.value, nextCursor);
         }
         return undefined;
       }
@@ -1328,10 +1312,10 @@ export class UserDO extends DurableObject<Env> {
       ws,
       edits,
       ({ value }) => value?.hlc,
-      ({ value }, cursor) =>
+      ({ value }, nextCursor) =>
         value === undefined
           ? undefined
-          : applyPreference(this.db, value, cursor)
+          : applyPreference(this.db, value, nextCursor)
     );
   }
 }
