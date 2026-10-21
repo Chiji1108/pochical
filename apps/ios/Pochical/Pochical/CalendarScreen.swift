@@ -4,6 +4,7 @@ import SQLiteData
 import StoreKit
 import SwiftUI
 import SwiftUINavigation
+import UIKit
 
 /// カレンダー: the person's month, a page a month, turned by swiping.
 struct CalendarScreen: View {
@@ -56,12 +57,6 @@ struct CalendarScreen: View {
   /// Where the pages are, which the heading follows; on this month's
   /// page until the pages first say.
   @State private var position = PagerPosition(pages: monthsAround)
-  /// Whether a finger is on the week, so a pull the system takes away,
-  /// which never ends, folds back too.
-  @GestureState private var pulling = false
-  /// Pulled since the finger went down, so letting go on a day presses
-  /// nothing, as /design's pull does.
-  @State private var pulled = false
 
   /// How far the pages reach either side of this month. Only the pages in
   /// view are drawn, so they can reach far without a cost.
@@ -156,15 +151,11 @@ struct CalendarScreen: View {
       } action: { weekEnd = $0 + cellHeight }
       // While a day is open, a pull down unfolds the month, following the
       // finger (spec/calendar.md, A day's detail).
-      .simultaneousGesture(
-        DragGesture(minimumDistance: 12)
-          .updating($pulling) { _, pulling, _ in pulling = true }
-          .onChanged { drag in
-            pull = pullShare(drag, from: pull)
-            if pull > 0 { pulled = true }
-          }
-          .onEnded(pullEnded),
-        including: opened == nil ? .none : .all)
+      .gesture(
+        PullDown(
+          isEnabled: opened != nil,
+          onChange: { down in pull = pullShare(down) },
+          onEnd: pullEnded))
       if shownOpen != nil {
         // The day's detail is a sheet over the week (below).
         Spacer(minLength: 0)
@@ -207,11 +198,6 @@ struct CalendarScreen: View {
     .onChange(of: shownMonth) { _, month in
       if let month, let day = entering, day.firstOfMonth != month {
         entering = firstBlankDay(in: month, days: monthDays(month, currentCalendar))
-      }
-    }
-    .onChange(of: pulling) { _, pulling in
-      if !pulling, pull > 0 {
-        withAnimation(Springs.standard) { pull = 0 }
       }
     }
     // A widget's day: its month, the day open in its week; from a day
@@ -395,20 +381,15 @@ struct CalendarScreen: View {
   /// the finger.
   private var unfoldDistance: CGFloat { MonthPage.height(cell: cellHeight) - cellHeight }
 
-  /// How far `drag` pulls the month open, from `pull` so far.
-  private func pullShare(_ drag: DragGesture.Value, from pull: CGFloat) -> CGFloat {
-    let (dx, dy) = (drag.translation.width, drag.translation.height)
-    // A pull starts going down, not sideways, which is the week's swipe.
-    guard pull > 0 || dy > abs(dx) else { return 0 }
-    return min(max(dy / unfoldDistance, 0), 1)
+  /// How far a pull `down` points opens the month.
+  private func pullShare(_ down: CGFloat) -> CGFloat {
+    min(max(down / unfoldDistance, 0), 1)
   }
 
-  private func pullEnded(_ drag: DragGesture.Value) {
-    // A day's button lets go after the pull, in the same touch.
-    Task { @MainActor in pulled = false }
-    let share = pullShare(drag, from: pull)
-    guard share > 0 else { return }
-    let speed = drag.velocity.height
+  /// A pull let go `down` points at `speed`, or taken away by the system
+  /// with neither.
+  private func pullEnded(down: CGFloat, speed: CGFloat) {
+    let share = pullShare(down)
     let unfolds = abs(speed) > Self.unfoldFlick ? speed > 0 : share > Self.unfoldShare
     withAnimation(folding) {
       if unfolds { opened = nil }
@@ -511,9 +492,9 @@ struct CalendarScreen: View {
 
   /// A day tapped: to enter while entering, else to open.
   private func select(_ day: Day) {
-    // Not after a pull, nor while the pages slide to another week, which
-    // opens its own day as they settle.
-    if pulled || swipedWeek != nil { return }
+    // Not while the pages slide to another week, which opens its own day
+    // as they settle.
+    if swipedWeek != nil { return }
     if entering != nil {
       entering = day
     } else {
@@ -909,5 +890,52 @@ struct WeekPage: View {
     let week = (0..<7).map { self.week.adding(days: $0) }
     days.row(week, shown: days.calendar.shown(from: week[0], through: week[6]), fadingOutside: nil)
       .frame(height: cell, alignment: .top)
+  }
+}
+
+/// A pull down on an opened day's week. It is UIKit's pan, which begins
+/// only going down more than sideways, so a sideways swipe stays the
+/// pages'. Once it begins, UIKit fails the day's press under the finger,
+/// as a recognizer that has begun does to the ones still waiting, so
+/// letting go presses nothing; a tap never begins it and presses the day.
+private struct PullDown: UIGestureRecognizerRepresentable {
+  var isEnabled: Bool
+  /// How far down the finger has come, in points.
+  let onChange: (CGFloat) -> Void
+  /// How far down and how fast it was let go; both 0 when the system
+  /// takes the pull away.
+  let onEnd: (_ down: CGFloat, _ speed: CGFloat) -> Void
+
+  func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
+
+  func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+    let pan = UIPanGestureRecognizer()
+    pan.delegate = context.coordinator
+    return pan
+  }
+
+  func updateUIGestureRecognizer(_ pan: UIPanGestureRecognizer, context: Context) {
+    pan.isEnabled = isEnabled
+  }
+
+  func handleUIGestureRecognizerAction(_ pan: UIPanGestureRecognizer, context: Context) {
+    switch pan.state {
+    case .began, .changed:
+      onChange(pan.translation(in: pan.view).y)
+    case .ended:
+      onEnd(pan.translation(in: pan.view).y, pan.velocity(in: pan.view).y)
+    case .cancelled, .failed:
+      onEnd(0, 0)
+    default:
+      break
+    }
+  }
+
+  final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+      guard let pan = recognizer as? UIPanGestureRecognizer else { return false }
+      let velocity = pan.velocity(in: pan.view)
+      return velocity.y > abs(velocity.x)
+    }
   }
 }
