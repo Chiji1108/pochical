@@ -193,6 +193,9 @@ export const config = defineConfig({
 // prototype's it shows.
 export const appConfig = defineConfig({
   ...config,
+  // Panda 2's PostCSS plugin writes css() too: into this package's dist,
+  // where everything imports it from, not a copy in each app.
+  outdir: "../../packages/styled-system/dist",
   include: [
     "./src/**/*.{ts,tsx}",
     "../../packages/prototype/src/**/*.{ts,tsx}",
