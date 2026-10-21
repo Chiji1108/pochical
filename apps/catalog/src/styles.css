@@ -1,0 +1,5 @@
+/* The order of every layer in the catalog: the base styles, then Panda
+   CSS's (src/panda.css), each above the one before. */
+@layer site, reset, base, tokens, recipes, utilities;
+
+@import "@pochical/styled-system/base.css";

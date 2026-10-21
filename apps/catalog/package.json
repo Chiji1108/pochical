@@ -1,0 +1,41 @@
+{
+  "name": "@pochical/catalog",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --port 3200",
+    "icon:app": "bun scripts/app-assets.ts",
+    "image:share": "node scripts/share-image.ts",
+    "build": "vite build",
+    "preview": "vite preview --port 3200",
+    "deploy": "bun run build && wrangler deploy",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@pochical/design": "workspace:*",
+    "@pochical/jsx": "workspace:*",
+    "@pochical/prototype": "workspace:*",
+    "@pochical/styled-system": "workspace:*",
+    "@tanstack/react-router": "1.170.39",
+    "@tanstack/react-start": "1.168.58",
+    "lucide-react": "^0.577.0",
+    "motion": "^13.4.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.26.0",
+    "@pandacss/dev": "^1.12.1",
+    "@types/bun": "^1.4.2",
+    "@types/node": "25.6.0",
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "^19.2.0",
+    "@vite-pwa/assets-generator": "^2.0.0",
+    "playwright-core": "^1.63.0",
+    "sharp": "0.35.4",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.0",
+    "wrangler": "^4.137.0"
+  }
+}

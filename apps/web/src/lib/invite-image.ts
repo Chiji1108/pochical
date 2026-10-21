@@ -1,12 +1,11 @@
+import iconData from "@pochical/prototype/assets/icon-192.png?inline";
+import { InviteShareImage } from "@pochical/prototype/components/invite-share-image";
+import type { InviteImageGroup } from "@pochical/prototype/components/invite-share-image";
+import { SHARE_IMAGE } from "@pochical/prototype/lib/brand";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import resvgWasm from "@resvg/resvg-wasm/index_bg.wasm?module";
 import satori, { init as initSatori } from "satori/standalone";
 import yogaWasm from "satori/yoga.wasm?module";
-
-import iconData from "../../public/app/pwa-192x192.png?inline";
-import { InviteShareImage } from "../components/invite-share-image";
-import type { InviteImageGroup } from "../components/invite-share-image";
-import { SHARE_IMAGE } from "./site";
 
 // Draws an invitation's share image (components/invite-share-image.tsx)
 // as a PNG in the site's Worker: satori lays it out as SVG and resvg paints
