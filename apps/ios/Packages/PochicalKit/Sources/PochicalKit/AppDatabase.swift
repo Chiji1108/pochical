@@ -38,6 +38,11 @@ public func appDatabase() throws -> any DatabaseWriter {
   }
   return try coordinated(writing: true, at: sharedDatabaseURL()) { url in
     let database = try defaultDatabase(path: url.path(), configuration: configuration)
+    // The migrator erases the tables; the photos waiting in their outbox
+    // go with them, as every erase of the device's data takes them.
+    if try database.read(migrator.hasSchemaChanges) {
+      ChatPhotos.eraseAll()
+    }
     try migrator.migrate(database)
     return database
   }
