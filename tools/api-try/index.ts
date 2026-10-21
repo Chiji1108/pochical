@@ -150,7 +150,12 @@ const create = async (state: State): Promise<void> => {
     inviteCode: string;
   }>(
     "GroupService/CreateGroup",
-    { displayName: maker.name, emoji, name, requestId: crypto.randomUUID() },
+    {
+      displayName: maker.name,
+      mark: { emoji },
+      name,
+      requestId: crypto.randomUUID(),
+    },
     maker.token
   );
   await saveState({

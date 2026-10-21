@@ -109,24 +109,26 @@ struct ChatPhotoImage: View {
 }
 
 /// A photo that could not be fetched: ↻ on its blur, as Signal and
-/// Telegram mark one, the whole photo a button fetching it again
-/// (/design's photoRetry).
+/// Telegram mark one, a tap anywhere on the photo fetching it again
+/// (/design's photoRetry). A tap, not a Button: a Button takes the touch
+/// as it goes down, and the line held there would never open its menu.
 private struct PhotoRetry: View {
   @Environment(\.themeColors) private var colors
   let retry: () -> Void
 
   var body: some View {
-    Button(action: retry) {
-      Image(systemName: "arrow.clockwise")
-        .font(.system(size: 20, weight: .semibold))
-        .foregroundStyle(colors.mediaText)
-        .frame(width: 48, height: 48)
-        .background(colors.mediaShade, in: Circle())
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel("写真をもう一度読み込む")
+    Image(systemName: "arrow.clockwise")
+      .font(.system(size: 20, weight: .semibold))
+      .foregroundStyle(colors.mediaText)
+      .frame(width: 48, height: 48)
+      .background(colors.mediaShade, in: Circle())
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .contentShape(Rectangle())
+      .onTapGesture(perform: retry)
+      .accessibilityElement()
+      .accessibilityLabel("写真をもう一度読み込む")
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction(.default, retry)
   }
 }
 

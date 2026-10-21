@@ -607,7 +607,7 @@ private struct HeldBubble: ViewModifier {
       // A tap is the bubble's own (a photo opens large); a press held past
       // it is the menu's, and the tap then never is.
       .onTapGesture(perform: onTap)
-      .onDisappear { space?.forget(lineID) }
+      .onDisappear { space?.forget(lineID, links: links) }
   }
 }
 
