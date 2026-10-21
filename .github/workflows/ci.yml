@@ -32,8 +32,10 @@ jobs:
           filters: |
             typescript:
               - "apps/web/**"
+              - "apps/catalog/**"
               - "apps/server/**"
               - "apps/admin/**"
+              - "packages/**"
               - "design/**"
               - "spec/design-tokens.json"
               - "spec/vectors/**"
@@ -55,7 +57,8 @@ jobs:
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
-  # apps/web, apps/server and apps/admin: lint and format, types, tests.
+  # apps/web, apps/catalog, apps/server, apps/admin and packages/: lint
+  # and format, types, tests.
   typescript:
     needs: changes
     if: needs.changes.outputs.typescript == 'true'
@@ -73,6 +76,7 @@ jobs:
       # What each web page loads before it first shows, against its budget.
       - run: bun run --cwd apps/web build
       - run: bun run --cwd apps/web bundle:budget
+      - run: bun run --cwd apps/catalog build
       # The tokens the native apps are generated from design/.
       - run: bun design/scripts/gen.ts --check
       # The migrations drizzle-kit gives from each SQL schema (D1, Group DO,

@@ -1,0 +1,24 @@
+{
+  "include": ["src", "tests", "vite.ts"],
+  "compilerOptions": {
+    "target": "ES2024",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@pochical/jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@pochical/jsx": ["./src/index.ts"],
+      "@pochical/jsx/*": ["./src/*"]
+    },
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["bun", "node"],
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  }
+}

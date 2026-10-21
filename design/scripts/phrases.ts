@@ -1,5 +1,5 @@
 // Phrases.swift: BudouX, which the site runs on every Japanese string
-// (apps/web/src/jsx), for the iOS app. SwiftUI breaks Japanese in the middle
+// (packages/jsx), for the iOS app. SwiftUI breaks Japanese in the middle
 // of a word (見えるよう／になります), and has nothing like CSS's keep-all, so
 // a phrase's letters are joined by WORD JOINER instead. Android breaks
 // between phrases itself (LineBreak.WordBreak.Phrase in the text styles).

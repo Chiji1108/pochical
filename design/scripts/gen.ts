@@ -667,7 +667,7 @@ const outputs = {
   [`${KOTLIN_DIR}/ReadyPatterns.kt`]: kotlinFile(kotlinReadyPatterns()),
   [`${SWIFT_DIR}/Skies.swift`]: swiftFile(swiftSkies()),
   [`${KOTLIN_DIR}/Skies.kt`]: kotlinFile(kotlinSkies()),
-  "apps/web/src/lib/holiday-names.ts": webHolidays(HEADER),
+  "packages/prototype/src/lib/holiday-names.ts": webHolidays(HEADER),
   ...sharedOutputs,
   [`${SWIFT_DIR}/Chat.swift`]: swiftFile(
     swiftEnum("Chat", CHAT_DOC, chatRules),
