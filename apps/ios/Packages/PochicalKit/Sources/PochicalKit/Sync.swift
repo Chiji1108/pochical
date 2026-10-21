@@ -7,6 +7,33 @@ import SQLiteData
 /// (spec/sync-protocol.md, Sockets; Change log and cursor), each in one
 /// transaction with the cursor it moves.
 public enum Sync {
+  /// The sync schema the app reads Changes by. Raise it whenever the app
+  /// starts reading a Change, or a field of one, it did not read before.
+  /// A device moves its cursors past Changes it cannot read, so after the
+  /// update it takes everything again (`takeAllAgainIfOlder`). 2: a
+  /// chat line's photos (`ChatLine.photos`).
+  static let schema = 2
+
+  /// A device that took its values under an older schema moves every
+  /// cursor back to the start, its User DO's and every place's, so its
+  /// next Hellos bring everything again, read as the app reads now. Its
+  /// values stay until overwritten, so its calendar still shows offline,
+  /// and its outboxes stay to send. Its chats' lines go, as at a Reset: a
+  /// catch-up from the start brings only each chat's latest page, so a
+  /// change to an earlier line held would never come; they come again as
+  /// pages.
+  static func takeAllAgainIfOlder(in db: Database) throws {
+    var state = try SyncState.current(in: db)
+    guard state.schema < schema else { return }
+    state.cursor = 0
+    state.schema = schema
+    try SyncState.upsert { state }.execute(db)
+    for place in try GroupCursorRow.fetchAll(db) {
+      try Chats.reset(place.groupID, in: db)
+    }
+    try GroupCursorRow.update { $0.cursor = Int64(0) }.execute(db)
+  }
+
   /// The cursor to say in Hello: the last change taken, 0 before any.
   public static func cursor(in db: Database) throws -> UInt64 {
     UInt64(max(try SyncState.current(in: db).cursor, 0))

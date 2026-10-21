@@ -113,6 +113,13 @@ export const putPhoto = async (
   if (note === "refused") {
     return new Response("Not a photo of yours to upload", { status: 409 });
   }
+  if (note === "going") {
+    // A moment's wait: once storage has deleted it, the id is free again.
+    return new Response("Being deleted, try again", {
+      headers: { "Retry-After": "1" },
+      status: 503,
+    });
+  }
   if (note === "sent") {
     return new Response(null, { status: 204 });
   }
@@ -241,6 +248,31 @@ export const hasPersonPhoto = async (
   (await env.PHOTOS.head(personPhotoKey(userId, photoId))) !== null;
 
 /**
+ * The user's own photo copied into a group's photos where the group has
+ * none under its id; nothing when the user has no photo of that id.
+ */
+export const copyPersonPhoto = async (
+  env: Env,
+  userId: string,
+  photoId: string,
+  groupId: string
+): Promise<void> => {
+  const key = photoKey(groupId, photoId);
+  if ((await env.PHOTOS.head(key)) !== null) {
+    return;
+  }
+  const photo = await env.PHOTOS.get(personPhotoKey(userId, photoId));
+  if (photo === null) {
+    return;
+  }
+  await env.PHOTOS.put(key, photo.body, {
+    customMetadata: { userId },
+    httpMetadata: { contentType: "image/jpeg" },
+    onlyIf: CREATE_ONLY,
+  });
+};
+
+/**
  * The user's own photo (their usual one, or a group mark they picked)
  * copied into a group's photos, for its members to read as they read the
  * rest; noted by the group as one it shows first, so no upload takes it,
@@ -253,22 +285,9 @@ export const sharePersonPhoto = async (
   photoId: string,
   groupId: string
 ): Promise<void> => {
-  const key = photoKey(groupId, photoId);
-  if (
-    !(await env.GROUPS.getByName(groupId).noteSharedPhoto(photoId, userId)) ||
-    (await env.PHOTOS.head(key)) !== null
-  ) {
-    return;
+  if (await env.GROUPS.getByName(groupId).noteSharedPhoto(photoId, userId)) {
+    await copyPersonPhoto(env, userId, photoId, groupId);
   }
-  const photo = await env.PHOTOS.get(personPhotoKey(userId, photoId));
-  if (photo === null) {
-    return;
-  }
-  await env.PHOTOS.put(key, photo.body, {
-    customMetadata: { userId },
-    httpMetadata: { contentType: "image/jpeg" },
-    onlyIf: CREATE_ONLY,
-  });
 };
 
 /**

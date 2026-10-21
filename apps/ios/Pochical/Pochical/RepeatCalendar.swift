@@ -40,8 +40,8 @@ struct RepeatCalendar: View {
   var before: OwnCalendar?
   /// 祝日は休みにする's pattern, when it is on.
   var holidayShift: PatternID?
-  var holidayCountry = HolidayCountry.current
-  /// The month shown, from the swiped pages; until then the 1st day's.
+  var holidayCountry: String
+  /// The month shown, the 1st day's as it opens, then the swiped pages'.
   @State private var month: Day?
   /// Where the pages are as a finger moves them, for the month's name.
   @State private var position = PagerPosition(pages: span)
@@ -54,9 +54,26 @@ struct RepeatCalendar: View {
   @State private var keys = 0
 
   private static var span: Int { 24 }
-  /// The month the pages count from: the order's as it opened, so an
-  /// order of years ago is among them.
-  @State private var origin: Day?
+  /// The month the pages count from, the middle one: the order's as it
+  /// opened, so an order of years ago is among them.
+  @State private var origin: Day
+
+  init(
+    sequence: Binding<[PatternID]>, anchor: Binding<Day>, cover: OrderCover, patterns: [Pattern],
+    before: OwnCalendar? = nil, holidayShift: PatternID? = nil,
+    holidayCountry: String
+  ) {
+    _sequence = sequence
+    _anchor = anchor
+    self.cover = cover
+    self.patterns = patterns
+    self.before = before
+    self.holidayShift = holidayShift
+    self.holidayCountry = holidayCountry
+    _origin = State(initialValue: anchor.wrappedValue.firstOfMonth)
+    _month = State(initialValue: anchor.wrappedValue.firstOfMonth)
+  }
+
   /// The page's room and what stands around the month, measured, so a
   /// short screen fits its six weeks (MonthPage.cellHeight(fitting:)).
   @State private var room = Room()
@@ -76,19 +93,18 @@ struct RepeatCalendar: View {
     let around = room.heading + room.weekdays + room.tray + 3 * Self.gap + Self.foot
     return MonthPage.cellHeight(fitting: room.total - around - Self.leastSpare)
   }
-  private var base: Day { origin ?? anchor.firstOfMonth }
 
   var body: some View {
-    let shown = month ?? anchor.firstOfMonth
+    let shown = month ?? origin
     VStack(spacing: Self.gap) {
       HStack {
         MonthTitleButton(
-          month: shown, first: base.addingMonths(-Self.span),
-          last: base.addingMonths(Self.span)
+          month: shown, first: origin.addingMonths(-Self.span),
+          last: origin.addingMonths(Self.span)
         ) { picked in
           month = picked
         } label: {
-          RollingMonthTitle(position: position) { base.addingMonths($0 - Self.span) }
+          RollingMonthTitle(position: position) { origin.addingMonths($0 - Self.span) }
             .foregroundStyle(colors.textPrimary)
         }
         Spacer(minLength: 8)
@@ -146,16 +162,12 @@ struct RepeatCalendar: View {
     // Its first day and length under the page's title.
     .navigationSubtitle(
       anchor.fullText + "から" + (sequence.isEmpty ? "" : "・\(sequence.count)日ごとに繰り返し"))
-    .onAppear {
-      origin = origin ?? anchor.firstOfMonth
-      month = month ?? anchor.firstOfMonth
-    }
     .handles(pressDay, by: press)
   }
 
   /// The months side by side, a swipe turning one.
   private var pager: some View {
-    let months = (-Self.span...Self.span).map { base.addingMonths($0) }
+    let months = (-Self.span...Self.span).map { origin.addingMonths($0) }
     return ScrollView(.horizontal) {
       LazyHStack(spacing: 0) {
         ForEach(months, id: \.self) { month in
@@ -166,6 +178,9 @@ struct RepeatCalendar: View {
       .scrollTargetLayout()
     }
     .scrollTargetBehavior(.paging)
+    // Opens on the middle page, `origin`'s, which `month` starts on: the
+    // first layout does not scroll to `month` itself.
+    .defaultScrollAnchor(.center, for: .initialOffset)
     .scrollPosition(id: $month)
     .onScrollGeometryChange(for: CGFloat.self) { geometry in
       geometry.contentOffset.x / max(geometry.containerSize.width, 1)
@@ -239,7 +254,7 @@ struct RepeatCalendar: View {
     let next = (framed ?? sequence.count) + 1
     framed = next < sequence.count ? next : nil
     let day = anchor.adding(days: framed ?? sequence.count)
-    let shown = month ?? anchor.firstOfMonth
+    let shown = month ?? origin
     if !monthWeeks(shown, weekStart: settings.device.week.start).contains(where: { $0.contains(day) }) {
       withAnimation(Springs.standard) { month = day.firstOfMonth }
     }

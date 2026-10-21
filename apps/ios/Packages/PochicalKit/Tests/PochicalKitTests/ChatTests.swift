@@ -1399,6 +1399,29 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   }
 }
 
+@Test func aSendTheGroupRefusedStaysAsNotSentAndIsDeletedWithoutARecall() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "長すぎる"
+    try Chats.edit(.send(words), in: "g", now: 1, db: db)
+    words.text = "届く"
+    try Chats.edit(.send(words), in: "g", now: 2, db: db)
+    let frame = try Chats.frames(of: "g", after: 0, now: early, in: db).frames[0]
+    let opIDs = try Chats.goOut(frame.chatEdits.edits, now: early, in: db).map(\.opID)
+
+    try Chats.acknowledge(opIDs, refused: [opIDs[0]], in: db)
+    let waiting = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting
+    #expect(waiting.map(\.opID) == [opIDs[0]])
+    #expect(waiting.map(\.failed) == [true])
+
+    // The group never had it: nothing is left to take back.
+    try Chats.takeBack(opIDs[0], in: db)
+    #expect(try Chats.lastWaiting(of: "g", in: db) == nil)
+  }
+}
+
 @Test func aLineTakenBackAfterItsFrameWasMadeDoesNotGoOut() throws {
   let database = try appDatabase()
   try database.write { db in
@@ -1595,7 +1618,7 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   }
   // The first acknowledged, the second failed: nothing is left to send.
   try await database.write { db in
-    try Chats.acknowledge([opIDs[0]], in: db)
+    try Chats.acknowledge([opIDs[0]], refused: [], in: db)
     try Chats.fail(opIDs[1], in: db)
   }
   await waiting.value
