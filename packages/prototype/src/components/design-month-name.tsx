@@ -1,10 +1,10 @@
 import { css, cva } from "@pochical/styled-system/css";
-import { useReducedMotion } from "motion/react";
 import type { MotionValue } from "motion/react";
 import { Fragment } from "react";
 
 import { formatMonth, formatYearMonth, monthAfter } from "../lib/design-days";
 import { useSettings } from "../lib/design-settings-store";
+import { useReducedMotion } from "../lib/device-media";
 import { monthIndex, RollingName, useTurn } from "./design-rolling";
 import { srOnly } from "./design-ui";
 
@@ -106,7 +106,7 @@ export function MonthName({
   beside?: { previous: Date; next: Date };
 }) {
   const style = useSettings((state) => state.device.monthName);
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   const turn = useTurn(monthIndex(month), swiped);
   const english = style === "english";
   const previous = besideMonths?.previous ?? monthAfter(month, -1);

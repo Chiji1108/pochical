@@ -2,7 +2,6 @@ import { Dialog, Portal } from "@ark-ui/react";
 import { chatRules } from "@pochical/design/chat";
 import { css, cva } from "@pochical/styled-system/css";
 import { Download, Share, X } from "lucide-react";
-import { useReducedMotion } from "motion/react";
 import {
   useContext,
   useEffect,
@@ -12,6 +11,7 @@ import {
 } from "react";
 import type { CSSProperties, MouseEvent, PointerEvent } from "react";
 
+import { useReducedMotion } from "../lib/device-media";
 import { PhoneContext } from "./design-sheet";
 
 // A photo opened large, as Photos, Signal and Telegram open one
@@ -268,7 +268,7 @@ function ViewerBody({
   onPull: (by: number) => void;
   onShow?: (index: number) => void;
 }) {
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   const [index, setIndex] = useState(start);
   const [zoom, setZoom] = useState(unzoomed);
   const [hold, setHold] = useState<Hold>();

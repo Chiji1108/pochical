@@ -8,10 +8,11 @@ import {
 } from "@pochical/design/skies";
 import type { Sky } from "@pochical/design/skies";
 import { css } from "@pochical/styled-system/css";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useContext } from "react";
 
 import { useSettings } from "../lib/design-settings-store";
+import { useReducedMotion } from "../lib/device-media";
 import {
   ColorSchemeContext,
   ThemeContext,
@@ -88,7 +89,7 @@ export const BREATH_SECONDS = skyMotion.breathSeconds;
 function SkyLight({ sky }: { sky: Sky }) {
   const scheme = useContext(ColorSchemeContext);
   const ground = darkGroundOf(useContext(ThemeContext).theme);
-  const still = useReducedMotion() ?? false;
+  const still = useReducedMotion();
   return (
     <motion.div
       animate={{ opacity: 1 }}

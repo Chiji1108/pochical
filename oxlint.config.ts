@@ -86,6 +86,19 @@ export default defineConfig({
     // Components and helpers are hoisted function declarations placed below
     // their callers; converting them to arrow constants would break hoisting.
     "func-style": "off",
+    "no-restricted-imports": [
+      "error",
+      {
+        paths: [
+          {
+            importNames: ["useReducedMotion"],
+            message:
+              "It reads the device on the first render, which breaks hydration of pages drawn on the server. Use useReducedMotion from @pochical/prototype/lib/device-media.",
+            name: "motion/react",
+          },
+        ],
+      },
+    ],
     "no-use-before-define": ["error", { functions: false }],
     "react/function-component-definition": "off",
     // Match the existing codebase, which declares object shapes with `type`.
