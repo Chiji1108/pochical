@@ -128,7 +128,7 @@ export const showOwnPhoto = (
     .get() !== undefined;
 
 /** The photos the group names: its mark, and the faces of those in it. */
-const namedPhotos = (db: DrizzleSqliteDODatabase): string[] =>
+export const namedPhotos = (db: DrizzleSqliteDODatabase): string[] =>
   [
     db.select({ photo: profile.photo }).from(profile).get()?.photo ?? null,
     ...db
