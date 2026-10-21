@@ -20,8 +20,8 @@ describe("a Group DO with lines that were photos before 0035", () => {
     const path = `/v1/groups/${groupId}/socket`;
     const mine = await syncSocket(path, maker, PAIR_ROSTER);
     const theirs = await syncSocket(path, guest, PAIR_ROSTER);
-    // pair()'s chat starts with a notice at seq 1: the photo's line is at
-    // seq 2, words at 3, and the reply at 4.
+    // pair()'s chat starts with a notice at seq 1: two photos' lines are
+    // at seqs 2 and 3, words at 4, and the reply at 5.
     sendFrame(mine.socket, {
       case: "chatEdits",
       value: {
@@ -29,6 +29,10 @@ describe("a Group DO with lines that were photos before 0035", () => {
           {
             kind: { case: "send", value: { text: "写真", threadId } },
             opId: "a",
+          },
+          {
+            kind: { case: "send", value: { text: "写真2", threadId } },
+            opId: "a2",
           },
           {
             kind: { case: "send", value: { text: "ことば", threadId } },
@@ -65,9 +69,9 @@ describe("a Group DO with lines that were photos before 0035", () => {
       env.GROUPS.getByName(groupId),
       (_, state) => {
         const { sql } = state.storage;
-        // As 0035 left a line that was a photo: nothing in it.
+        // As 0035 left the lines that were photos: nothing in them.
         sql.exec(
-          "update chat_lines set text = '' where thread_id = ? and seq = 2",
+          "update chat_lines set text = '' where thread_id = ? and seq in (2, 3)",
           threadId
         );
         sql.exec(
@@ -88,13 +92,17 @@ describe("a Group DO with lines that were photos before 0035", () => {
 
     const later = await syncSocket(path, guest, BigInt(head));
     const takenBack = changesIn(await later.frames.next());
-    expect(takenBack).toHaveLength(1);
+    expect(takenBack).toHaveLength(2);
     expect(takenBack).toMatchObject([
       {
         cursor: BigInt(head + 1),
         kind: {
           value: { reactions: [], seq: 2n, text: "", unsent: true },
         },
+      },
+      {
+        cursor: BigInt(head + 2),
+        kind: { value: { seq: 3n, text: "", unsent: true } },
       },
     ]);
 
@@ -112,9 +120,10 @@ describe("a Group DO with lines that were photos before 0035", () => {
     ).toStrictEqual([
       { replyTo: 0n, seq: 1n, text: "", unsent: false },
       { replyTo: 0n, seq: 2n, text: "", unsent: true },
-      { replyTo: 0n, seq: 3n, text: "ことば", unsent: false },
+      { replyTo: 0n, seq: 3n, text: "", unsent: true },
+      { replyTo: 0n, seq: 4n, text: "ことば", unsent: false },
       // A reply keeps its line, as it does when the line is taken back.
-      { replyTo: 2n, seq: 4n, text: "いいね", unsent: false },
+      { replyTo: 2n, seq: 5n, text: "いいね", unsent: false },
     ]);
 
     // The next line takes the next cursor and seq.
@@ -130,7 +139,7 @@ describe("a Group DO with lines that were photos before 0035", () => {
       },
     });
     expect(changesIn(await later.frames.next())).toMatchObject([
-      { cursor: BigInt(head + 2), kind: { value: { seq: 5n, text: "つぎ" } } },
+      { cursor: BigInt(head + 3), kind: { value: { seq: 6n, text: "つぎ" } } },
     ]);
   });
 });

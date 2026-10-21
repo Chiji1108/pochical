@@ -21,16 +21,18 @@ DELETE FROM `chat_votes` WHERE EXISTS (
 		AND `l`.`notice` IS NULL AND `l`.`poll` = 0 AND `l`.`unsent` = 0
 );--> statement-breakpoint
 -- Their cursors, one each in (thread_id, seq) order, past the head as it
--- stands; this changes none of the columns that pick them out.
-UPDATE `chat_lines` SET `cursor` = coalesce((SELECT `cursor` FROM `log_head` WHERE `id` = 1), 0) + (
-	SELECT count(*) FROM `chat_lines` AS `l`
-	WHERE `l`.`text` = '' AND `l`.`photos` IS NULL AND `l`.`days` IS NULL
-		AND `l`.`notice` IS NULL AND `l`.`poll` = 0 AND `l`.`unsent` = 0
-		AND (`l`.`thread_id` < `chat_lines`.`thread_id`
-			OR (`l`.`thread_id` = `chat_lines`.`thread_id` AND `l`.`seq` <= `chat_lines`.`seq`))
-)
-WHERE `text` = '' AND `photos` IS NULL AND `days` IS NULL
-	AND `notice` IS NULL AND `poll` = 0 AND `unsent` = 0;--> statement-breakpoint
+-- stands, in one pass; this changes none of the columns that pick them out.
+UPDATE `chat_lines` SET `cursor` = `picked`.`cursor`
+FROM (
+	SELECT `thread_id`, `seq`,
+		coalesce((SELECT `cursor` FROM `log_head` WHERE `id` = 1), 0)
+			+ row_number() OVER (ORDER BY `thread_id`, `seq`) AS `cursor`
+	FROM `chat_lines`
+	WHERE `text` = '' AND `photos` IS NULL AND `days` IS NULL
+		AND `notice` IS NULL AND `poll` = 0 AND `unsent` = 0
+) AS `picked`
+WHERE `chat_lines`.`thread_id` = `picked`.`thread_id`
+	AND `chat_lines`.`seq` = `picked`.`seq`;--> statement-breakpoint
 INSERT INTO `log_head` (`id`, `cursor`)
 SELECT 1, coalesce((SELECT `cursor` FROM `log_head` WHERE `id` = 1), 0) + count(*)
 FROM `chat_lines`
