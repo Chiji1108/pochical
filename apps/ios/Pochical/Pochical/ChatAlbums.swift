@@ -2,24 +2,7 @@ import PochicalDesign
 import PochicalKit
 import SwiftUI
 
-// Photos sent at once, drawn together as one album (spec/chat.md, Albums),
-// each still a line of its own.
-
-/// One photo of an album, its own line in it: what its cell shows, and
-/// what VoiceOver says of it.
-struct AlbumPhoto: Hashable {
-  /// Its line's opID, which its actions name it by.
-  let lineID: String
-  let photo: LinePhoto
-  let time: Int64
-  var waiting = false
-  var failed = false
-  var pinned = false
-  /// Its place in the chat, by which it is ringed; none while on its way.
-  var seq: Int64?
-  /// Its menu's items by name, for VoiceOver.
-  var menu: [String] = []
-}
+// A line of several photos, drawn as one album (spec/chat.md, Albums).
 
 /// Where each of an album's photos goes: rows top first
 /// (spec/vectors/chat.json, albumRows), as wide as a line with a link's
@@ -38,11 +21,6 @@ enum AlbumBox {
       defer { index += across }
       return (index..<index + across).map { AlbumCell(index: $0, size: size) }
     }
-  }
-
-  /// The cell of the album's photo at `index`.
-  static func size(of index: Int, in count: Int) -> CGSize {
-    rows(count).joined().first { $0.index == index }?.size ?? .zero
   }
 }
 

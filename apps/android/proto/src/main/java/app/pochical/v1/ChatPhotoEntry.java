@@ -7,7 +7,8 @@ package app.pochical.v1;
 
 /**
  * <pre>
- * A photo of a chat and the line that sent it.
+ * A photo of a chat and the line that sent it, one entry a photo, a
+ * line's in the order it holds them.
  * </pre>
  *
  * Protobuf type {@code pochical.v1.ChatPhotoEntry}
@@ -253,7 +254,8 @@ public  final class ChatPhotoEntry extends
 
   /**
    * <pre>
-   * A photo of a chat and the line that sent it.
+   * A photo of a chat and the line that sent it, one entry a photo, a
+   * line's in the order it holds them.
    * </pre>
    *
    * Protobuf type {@code pochical.v1.ChatPhotoEntry}

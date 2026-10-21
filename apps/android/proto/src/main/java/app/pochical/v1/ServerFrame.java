@@ -306,9 +306,9 @@ public  final class ServerFrame extends
   public static final int ACKED_FIELD_NUMBER = 5;
   /**
    * <pre>
-   * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-   * CoworkerEdits the server has taken, sent after the Changes they made;
-   * the client deletes them from its outbox.
+   * The edits of a frame of edits the server is done with, sent after the
+   * Changes they made; the client deletes them from its outbox, keeping
+   * the chat sends Acked.refused names as lines not sent.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -319,9 +319,9 @@ public  final class ServerFrame extends
   }
   /**
    * <pre>
-   * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-   * CoworkerEdits the server has taken, sent after the Changes they made;
-   * the client deletes them from its outbox.
+   * The edits of a frame of edits the server is done with, sent after the
+   * Changes they made; the client deletes them from its outbox, keeping
+   * the chat sends Acked.refused names as lines not sent.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -335,9 +335,9 @@ public  final class ServerFrame extends
   }
   /**
    * <pre>
-   * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-   * CoworkerEdits the server has taken, sent after the Changes they made;
-   * the client deletes them from its outbox.
+   * The edits of a frame of edits the server is done with, sent after the
+   * Changes they made; the client deletes them from its outbox, keeping
+   * the chat sends Acked.refused names as lines not sent.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -349,9 +349,9 @@ public  final class ServerFrame extends
   }
   /**
    * <pre>
-   * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-   * CoworkerEdits the server has taken, sent after the Changes they made;
-   * the client deletes them from its outbox.
+   * The edits of a frame of edits the server is done with, sent after the
+   * Changes they made; the client deletes them from its outbox, keeping
+   * the chat sends Acked.refused names as lines not sent.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -369,9 +369,9 @@ public  final class ServerFrame extends
   }
   /**
    * <pre>
-   * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-   * CoworkerEdits the server has taken, sent after the Changes they made;
-   * the client deletes them from its outbox.
+   * The edits of a frame of edits the server is done with, sent after the
+   * Changes they made; the client deletes them from its outbox, keeping
+   * the chat sends Acked.refused names as lines not sent.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -1005,9 +1005,9 @@ public  final class ServerFrame extends
 
     /**
      * <pre>
-     * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-     * CoworkerEdits the server has taken, sent after the Changes they made;
-     * the client deletes them from its outbox.
+     * The edits of a frame of edits the server is done with, sent after the
+     * Changes they made; the client deletes them from its outbox, keeping
+     * the chat sends Acked.refused names as lines not sent.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -1018,9 +1018,9 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-     * CoworkerEdits the server has taken, sent after the Changes they made;
-     * the client deletes them from its outbox.
+     * The edits of a frame of edits the server is done with, sent after the
+     * Changes they made; the client deletes them from its outbox, keeping
+     * the chat sends Acked.refused names as lines not sent.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -1031,9 +1031,9 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-     * CoworkerEdits the server has taken, sent after the Changes they made;
-     * the client deletes them from its outbox.
+     * The edits of a frame of edits the server is done with, sent after the
+     * Changes they made; the client deletes them from its outbox, keeping
+     * the chat sends Acked.refused names as lines not sent.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -1045,9 +1045,9 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-     * CoworkerEdits the server has taken, sent after the Changes they made;
-     * the client deletes them from its outbox.
+     * The edits of a frame of edits the server is done with, sent after the
+     * Changes they made; the client deletes them from its outbox, keeping
+     * the chat sends Acked.refused names as lines not sent.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -1060,9 +1060,9 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-     * CoworkerEdits the server has taken, sent after the Changes they made;
-     * the client deletes them from its outbox.
+     * The edits of a frame of edits the server is done with, sent after the
+     * Changes they made; the client deletes them from its outbox, keeping
+     * the chat sends Acked.refused names as lines not sent.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -1074,9 +1074,9 @@ public  final class ServerFrame extends
     }
     /**
      * <pre>
-     * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-     * CoworkerEdits the server has taken, sent after the Changes they made;
-     * the client deletes them from its outbox.
+     * The edits of a frame of edits the server is done with, sent after the
+     * Changes they made; the client deletes them from its outbox, keeping
+     * the chat sends Acked.refused names as lines not sent.
      * </pre>
      *
      * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>

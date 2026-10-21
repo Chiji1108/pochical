@@ -24,7 +24,7 @@ public  final class ChatSend extends
     text_ = "";
     days_ = emptyProtobufList();
     device_ = "";
-    album_ = "";
+    photos_ = emptyProtobufList();
   }
   private int bitField0_;
   public static final int THREAD_ID_FIELD_NUMBER = 1;
@@ -317,73 +317,6 @@ public  final class ChatSend extends
     poll_ = false;
   }
 
-  public static final int PHOTO_FIELD_NUMBER = 5;
-  private app.pochical.v1.ChatPhoto photo_;
-  /**
-   * <pre>
-   * A photo instead, the sender's own, uploaded first; no words or days.
-   * </pre>
-   *
-   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-   */
-  @java.lang.Override
-  public boolean hasPhoto() {
-    return ((bitField0_ & 0x00000001) != 0);
-  }
-  /**
-   * <pre>
-   * A photo instead, the sender's own, uploaded first; no words or days.
-   * </pre>
-   *
-   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-   */
-  @java.lang.Override
-  public app.pochical.v1.ChatPhoto getPhoto() {
-    return photo_ == null ? app.pochical.v1.ChatPhoto.getDefaultInstance() : photo_;
-  }
-  /**
-   * <pre>
-   * A photo instead, the sender's own, uploaded first; no words or days.
-   * </pre>
-   *
-   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-   */
-  private void setPhoto(app.pochical.v1.ChatPhoto value) {
-    java.util.Objects.requireNonNull(value);
-    photo_ = value;
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <pre>
-   * A photo instead, the sender's own, uploaded first; no words or days.
-   * </pre>
-   *
-   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-   */
-  @java.lang.SuppressWarnings("ReferenceEquality")
-  private void mergePhoto(app.pochical.v1.ChatPhoto value) {
-    java.util.Objects.requireNonNull(value);
-    if (photo_ != null &&
-        photo_ != app.pochical.v1.ChatPhoto.getDefaultInstance()) {
-      photo_ =
-        app.pochical.v1.ChatPhoto.newBuilder(photo_).mergeFrom(value).buildPartial();
-    } else {
-      photo_ = value;
-    }
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <pre>
-   * A photo instead, the sender's own, uploaded first; no words or days.
-   * </pre>
-   *
-   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-   */
-  private void clearPhoto() {
-    photo_ = null;
-    bitField0_ = (bitField0_ & ~0x00000001);
-  }
-
   public static final int PREVIEW_FIELD_NUMBER = 6;
   private app.pochical.v1.LinkPreview preview_;
   /**
@@ -397,7 +330,7 @@ public  final class ChatSend extends
    */
   @java.lang.Override
   public boolean hasPreview() {
-    return ((bitField0_ & 0x00000002) != 0);
+    return ((bitField0_ & 0x00000001) != 0);
   }
   /**
    * <pre>
@@ -424,7 +357,7 @@ public  final class ChatSend extends
   private void setPreview(app.pochical.v1.LinkPreview value) {
     java.util.Objects.requireNonNull(value);
     preview_ = value;
-    bitField0_ |= 0x00000002;
+    bitField0_ |= 0x00000001;
   }
   /**
    * <pre>
@@ -445,7 +378,7 @@ public  final class ChatSend extends
     } else {
       preview_ = value;
     }
-    bitField0_ |= 0x00000002;
+    bitField0_ |= 0x00000001;
   }
   /**
    * <pre>
@@ -458,7 +391,7 @@ public  final class ChatSend extends
    */
   private void clearPreview() {
     preview_ = null;
-    bitField0_ = (bitField0_ & ~0x00000002);
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static final int REPLY_TO_FIELD_NUMBER = 7;
@@ -619,91 +552,153 @@ public  final class ChatSend extends
 
   }
 
-  public static final int ALBUM_FIELD_NUMBER = 10;
-  private java.lang.String album_;
+  public static final int PHOTOS_FIELD_NUMBER = 11;
+  private com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatPhoto> photos_;
   /**
    * <pre>
-   * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-   * random one, as it also collapses their notifications), that their
-   * apps draw them together by (spec/chat.md, Albums); empty for a photo
-   * sent alone. Refused with anything but a photo.
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
    * </pre>
    *
-   * <code>string album = 10 [json_name = "album"];</code>
-   * @return The album.
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
    */
   @java.lang.Override
-  public java.lang.String getAlbum() {
-    return album_;
+  public java.util.List<app.pochical.v1.ChatPhoto> getPhotosList() {
+    return photos_;
   }
   /**
    * <pre>
-   * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-   * random one, as it also collapses their notifications), that their
-   * apps draw them together by (spec/chat.md, Albums); empty for a photo
-   * sent alone. Refused with anything but a photo.
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
    * </pre>
    *
-   * <code>string album = 10 [json_name = "album"];</code>
-   * @return The bytes for album.
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
    */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getAlbumBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(album_);
+  public java.util.List<? extends app.pochical.v1.ChatPhotoOrBuilder> 
+      getPhotosOrBuilderList() {
+    return photos_;
   }
   /**
    * <pre>
-   * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-   * random one, as it also collapses their notifications), that their
-   * apps draw them together by (spec/chat.md, Albums); empty for a photo
-   * sent alone. Refused with anything but a photo.
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
    * </pre>
    *
-   * <code>string album = 10 [json_name = "album"];</code>
-   * @param value The album to set.
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
    */
-  private void setAlbum(
-      java.lang.String value) {
+  @java.lang.Override
+  public int getPhotosCount() {
+    return photos_.size();
+  }
+  /**
+   * <pre>
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.ChatPhoto getPhotos(int index) {
+    return photos_.get(index);
+  }
+  /**
+   * <pre>
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+   */
+  public app.pochical.v1.ChatPhotoOrBuilder getPhotosOrBuilder(
+      int index) {
+    return photos_.get(index);
+  }
+  private void ensurePhotosIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatPhoto> tmp = photos_;
+    if (!tmp.isModifiable()) {
+      photos_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <pre>
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+   */
+  private void setPhotos(
+      int index, app.pochical.v1.ChatPhoto value) {
     java.util.Objects.requireNonNull(value);
-
-    album_ = value;
+    ensurePhotosIsMutable();
+    photos_.set(index, value);
   }
   /**
    * <pre>
-   * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-   * random one, as it also collapses their notifications), that their
-   * apps draw them together by (spec/chat.md, Albums); empty for a photo
-   * sent alone. Refused with anything but a photo.
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
    * </pre>
    *
-   * <code>string album = 10 [json_name = "album"];</code>
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
    */
-  private void clearAlbum() {
-
-    album_ = getDefaultInstance().getAlbum();
+  private void addPhotos(app.pochical.v1.ChatPhoto value) {
+    java.util.Objects.requireNonNull(value);
+    ensurePhotosIsMutable();
+    photos_.add(value);
   }
   /**
    * <pre>
-   * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-   * random one, as it also collapses their notifications), that their
-   * apps draw them together by (spec/chat.md, Albums); empty for a photo
-   * sent alone. Refused with anything but a photo.
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
    * </pre>
    *
-   * <code>string album = 10 [json_name = "album"];</code>
-   * @param value The bytes for album to set.
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
    */
-  private void setAlbumBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    album_ = value.toStringUtf8();
-
+  private void addPhotos(
+      int index, app.pochical.v1.ChatPhoto value) {
+    java.util.Objects.requireNonNull(value);
+    ensurePhotosIsMutable();
+    photos_.add(index, value);
+  }
+  /**
+   * <pre>
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+   */
+  private void addAllPhotos(
+      java.lang.Iterable<? extends app.pochical.v1.ChatPhoto> values) {
+    ensurePhotosIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, photos_);
+  }
+  /**
+   * <pre>
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+   */
+  private void clearPhotos() {
+    photos_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+   */
+  private void removePhotos(int index) {
+    ensurePhotosIsMutable();
+    photos_.remove(index);
   }
 
   public static app.pochical.v1.ChatSend parseFrom(
@@ -1105,77 +1100,6 @@ public  final class ChatSend extends
 
     /**
      * <pre>
-     * A photo instead, the sender's own, uploaded first; no words or days.
-     * </pre>
-     *
-     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-     */
-    @java.lang.Override
-    public boolean hasPhoto() {
-      return instance.hasPhoto();
-    }
-    /**
-     * <pre>
-     * A photo instead, the sender's own, uploaded first; no words or days.
-     * </pre>
-     *
-     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-     */
-    @java.lang.Override
-    public app.pochical.v1.ChatPhoto getPhoto() {
-      return instance.getPhoto();
-    }
-    /**
-     * <pre>
-     * A photo instead, the sender's own, uploaded first; no words or days.
-     * </pre>
-     *
-     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-     */
-    public Builder setPhoto(app.pochical.v1.ChatPhoto value) {
-      copyOnWrite();
-      instance.setPhoto(value);
-      return this;
-      }
-    /**
-     * <pre>
-     * A photo instead, the sender's own, uploaded first; no words or days.
-     * </pre>
-     *
-     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-     */
-    public Builder setPhoto(
-        app.pochical.v1.ChatPhoto.Builder builderForValue) {
-      copyOnWrite();
-      instance.setPhoto(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * A photo instead, the sender's own, uploaded first; no words or days.
-     * </pre>
-     *
-     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-     */
-    public Builder mergePhoto(app.pochical.v1.ChatPhoto value) {
-      copyOnWrite();
-      instance.mergePhoto(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * A photo instead, the sender's own, uploaded first; no words or days.
-     * </pre>
-     *
-     * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-     */
-    public Builder clearPhoto() {  copyOnWrite();
-      instance.clearPhoto();
-      return this;
-    }
-
-    /**
-     * <pre>
      * The page of the words' first link, as GetLinkPreview gave it; none
      * when the sender took it off (×) or it had not come, when the server
      * reads the page itself once the line is taken and adds it to the line.
@@ -1423,90 +1347,163 @@ public  final class ChatSend extends
 
     /**
      * <pre>
-     * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-     * random one, as it also collapses their notifications), that their
-     * apps draw them together by (spec/chat.md, Albums); empty for a photo
-     * sent alone. Refused with anything but a photo.
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
      * </pre>
      *
-     * <code>string album = 10 [json_name = "album"];</code>
-     * @return The album.
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
      */
     @java.lang.Override
-    public java.lang.String getAlbum() {
-      return instance.getAlbum();
+    public java.util.List<app.pochical.v1.ChatPhoto> getPhotosList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getPhotosList());
     }
     /**
      * <pre>
-     * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-     * random one, as it also collapses their notifications), that their
-     * apps draw them together by (spec/chat.md, Albums); empty for a photo
-     * sent alone. Refused with anything but a photo.
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
      * </pre>
      *
-     * <code>string album = 10 [json_name = "album"];</code>
-     * @return The bytes for album.
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
      */
     @java.lang.Override
-    public com.google.protobuf.ByteString
-        getAlbumBytes() {
-      return instance.getAlbumBytes();
+    public int getPhotosCount() {
+      return instance.getPhotosCount();
+    }/**
+     * <pre>
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.ChatPhoto getPhotos(int index) {
+      return instance.getPhotos(index);
     }
     /**
      * <pre>
-     * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-     * random one, as it also collapses their notifications), that their
-     * apps draw them together by (spec/chat.md, Albums); empty for a photo
-     * sent alone. Refused with anything but a photo.
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
      * </pre>
      *
-     * <code>string album = 10 [json_name = "album"];</code>
-     * @param value The album to set.
-     * @return This builder for chaining.
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
      */
-    public Builder setAlbum(
-        java.lang.String value) {
+    public Builder setPhotos(
+        int index, app.pochical.v1.ChatPhoto value) {
       copyOnWrite();
-      instance.setAlbum(value);
+      instance.setPhotos(index, value);
       return this;
     }
     /**
      * <pre>
-     * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-     * random one, as it also collapses their notifications), that their
-     * apps draw them together by (spec/chat.md, Albums); empty for a photo
-     * sent alone. Refused with anything but a photo.
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
      * </pre>
      *
-     * <code>string album = 10 [json_name = "album"];</code>
-     * @return This builder for chaining.
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
      */
-    public Builder clearAlbum() {
+    public Builder setPhotos(
+        int index, app.pochical.v1.ChatPhoto.Builder builderForValue) {
       copyOnWrite();
-      instance.clearAlbum();
+      instance.setPhotos(index,
+          builderForValue.build());
       return this;
     }
     /**
      * <pre>
-     * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-     * random one, as it also collapses their notifications), that their
-     * apps draw them together by (spec/chat.md, Albums); empty for a photo
-     * sent alone. Refused with anything but a photo.
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
      * </pre>
      *
-     * <code>string album = 10 [json_name = "album"];</code>
-     * @param value The bytes for album to set.
-     * @return This builder for chaining.
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
      */
-    public Builder setAlbumBytes(
-        com.google.protobuf.ByteString value) {
+    public Builder addPhotos(app.pochical.v1.ChatPhoto value) {
       copyOnWrite();
-      instance.setAlbumBytes(value);
+      instance.addPhotos(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+     */
+    public Builder addPhotos(
+        int index, app.pochical.v1.ChatPhoto value) {
+      copyOnWrite();
+      instance.addPhotos(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+     */
+    public Builder addPhotos(
+        app.pochical.v1.ChatPhoto.Builder builderForValue) {
+      copyOnWrite();
+      instance.addPhotos(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+     */
+    public Builder addPhotos(
+        int index, app.pochical.v1.ChatPhoto.Builder builderForValue) {
+      copyOnWrite();
+      instance.addPhotos(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+     */
+    public Builder addAllPhotos(
+        java.lang.Iterable<? extends app.pochical.v1.ChatPhoto> values) {
+      copyOnWrite();
+      instance.addAllPhotos(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+     */
+    public Builder clearPhotos() {
+      copyOnWrite();
+      instance.clearPhotos();
+      return this;
+    }
+    /**
+     * <pre>
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+     */
+    public Builder removePhotos(int index) {
+      copyOnWrite();
+      instance.removePhotos(index);
       return this;
     }
 
@@ -1531,17 +1528,16 @@ public  final class ChatSend extends
             "text_",
             "days_",
             "poll_",
-            "photo_",
             "preview_",
             "replyTo_",
             "withoutPreview_",
             "device_",
-            "album_",
+            "photos_",
+            app.pochical.v1.ChatPhoto.class,
           };
           java.lang.String info =
-              "\u0000\n\u0000\u0001\u0001\n\n\u0000\u0001\u0000\u0001\u0208\u0002\u0208\u0003\u021a" +
-              "\u0004\u0007\u0005\u1009\u0000\u0006\u1009\u0001\u0007\u0003\b\u0007\t\u0208\n\u0208" +
-              "";
+              "\u0000\t\u0000\u0001\u0001\u000b\t\u0000\u0002\u0000\u0001\u0208\u0002\u0208\u0003" +
+              "\u021a\u0004\u0007\u0006\u1009\u0000\u0007\u0003\b\u0007\t\u0208\u000b\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

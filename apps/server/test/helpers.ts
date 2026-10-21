@@ -162,20 +162,40 @@ export const inOneLimitWindow = async <T>(
   throw new Error(`No round of ${LIMIT_ROUNDS} fell inside one limit window`);
 };
 
-/** A line of a chat laid straight into a group's database, by what makes its photo seen or not. */
+/**
+ * A line of a chat laid straight into a group's database, by what makes
+ * its photos seen or not: how many it holds, none for words.
+ */
 export type PhotoLine = {
   authorId: string;
   hiddenFrom?: string;
-  photo: boolean;
+  photos: number;
   seq: number;
   threadId?: string;
   unsent?: boolean;
 };
 
 /**
- * What a ChatPhotosRequest answers `userId` (photosPage), the page as its
- * lines' seqs, in a new group whose chats hold `lines` and where `userId`
- * has blocked `blocked`.
+ * A line's photo as spec/vectors/chat-photos.json names it: its line's
+ * seq, and a letter for its place in the line.
+ */
+export const photoName = (seq: number, at: number): string =>
+  `${seq}${String.fromCodePoint(("a".codePointAt(0) ?? 0) + at)}`;
+
+/** A PhotoLine's photos as its row keeps them, none for words. */
+const photosOf = ({ photos, seq }: PhotoLine) =>
+  photos === 0
+    ? null
+    : Array.from({ length: photos }, (_, at) => ({
+        height: 1,
+        id: photoName(seq, at),
+        width: 1,
+      }));
+
+/**
+ * What a ChatPhotosRequest answers `userId` (photosPage), the page's
+ * photos as photoName names them, in a new group whose chats hold `lines`
+ * and where `userId` has blocked `blocked`.
  */
 export const photosAmong = async ({
   after,
@@ -193,7 +213,7 @@ export const photosAmong = async ({
   size?: number;
   threadId?: string;
   userId: string;
-}): Promise<{ offset: number; seqs: number[]; total: number }> =>
+}): Promise<{ offset: number; photos: string[]; total: number }> =>
   await runInDurableObject(
     env.GROUPS.getByName(crypto.randomUUID()),
     (_, state) => {
@@ -206,9 +226,7 @@ export const photosAmong = async ({
             cursor: index + 1,
             hiddenFrom: line.hiddenFrom ?? null,
             opId: `op-${index}`,
-            photo: line.photo
-              ? { height: 1, id: `photo-${index}`, width: 1 }
-              : null,
+            photos: photosOf(line),
             sentAt: new Date(line.seq),
             seq: line.seq,
             text: "",
@@ -223,7 +241,7 @@ export const photosAmong = async ({
       const page = photosPage(db, userId, threadId, BigInt(seq), after, size);
       return {
         offset: page.offset,
-        seqs: page.photos.map((photo) => Number(photo.seq)),
+        photos: page.photos.map((entry) => entry.photo?.id ?? ""),
         total: page.total,
       };
     }

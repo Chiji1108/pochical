@@ -95,7 +95,7 @@ struct PinBar: View {
     Text(
       lineWords(
         line.text, days: line.days, poll: line.poll, decided: line.decided,
-        photo: line.photo != nil, nameOf: nameOf)
+        photos: line.photos.count, nameOf: nameOf)
         .replacingOccurrences(of: "\n", with: " "))
       .font(.subheadline)
       .foregroundStyle(colors.textPrimary)

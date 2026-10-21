@@ -1,3 +1,4 @@
+import Foundation
 import PochicalDesign
 import Testing
 
@@ -21,5 +22,27 @@ import Testing
     #expect(!place.rules.pins && !place.rules.edit && !place.rules.days && !place.rules.polls)
     #expect(!place.rules.mentions && !place.rules.reports && !place.rules.directChats)
     #expect(place.rules.sendsDevice)
+  }
+
+  @Test func eachPlaceKeepsItsPhotosOnItsOwnShelf() {
+    let group = ChatPlace.group(GroupRow(id: "g1", name: "いとこ会", emoji: "🍉", joinedAtMs: 0))
+    #expect(group.shelf == .group("g1"))
+    #expect(ChatPlace.support.shelf == .support)
+    #expect(PhotoShelf(place: "g1") == .group("g1"))
+    #expect(PhotoShelf(place: ChatPlace.supportID) == .support)
+  }
+
+  @Test func aShelfIsAFolderAndAPathOfItsOwn() {
+    let server = URL(string: "https://pochical.test")!
+    let shelves: [(PhotoShelf, key: String, path: String)] = [
+      (.group("g1"), "g1", "/v1/groups/g1/photos/p"),
+      (.support, ChatPlace.supportID, "/v1/support/photos/p"),
+      (.mine, "me", "/v1/me/photos/p"),
+      (.invitation(code: "abc"), "invites/abc", "/v1/invites/abc/photos/p"),
+    ]
+    for (shelf, key, path) in shelves {
+      #expect(shelf.key == key)
+      #expect(shelf.url(of: "p", server: server).path() == path)
+    }
   }
 }

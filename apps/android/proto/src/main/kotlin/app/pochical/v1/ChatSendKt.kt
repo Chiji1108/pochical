@@ -208,45 +208,6 @@ public object ChatSendKt {
 
     /**
      * ```
-     * A photo instead, the sender's own, uploaded first; no words or days.
-     * ```
-     *
-     * `.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];`
-     */
-    public var photo: app.pochical.v1.ChatPhoto
-      @kotlin.jvm.JvmName("getPhoto")
-        get() = _builder.photo
-      @kotlin.jvm.JvmName("setPhoto")
-        set(value) {
-        _builder.photo = value
-      }
-    /**
-     * ```
-     * A photo instead, the sender's own, uploaded first; no words or days.
-     * ```
-     *
-     * `.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];`
-     */
-    public fun clearPhoto() {
-      _builder.clearPhoto()
-    }
-    /**
-     * ```
-     * A photo instead, the sender's own, uploaded first; no words or days.
-     * ```
-     *
-     * `.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];`
-     * @return Whether the photo field is set.
-     */
-    public fun hasPhoto(): kotlin.Boolean {
-      return _builder.hasPhoto()
-    }
-
-    public val ChatSendKt.Dsl.photoOrNull: app.pochical.v1.ChatPhoto?
-      get() = _builder.photoOrNull
-
-    /**
-     * ```
      * The page of the words' first link, as GetLinkPreview gave it; none
      * when the sender took it off (×) or it had not come, when the server
      * reads the page itself once the line is taken and adds it to the line.
@@ -372,44 +333,114 @@ public object ChatSendKt {
     }
 
     /**
-     * ```
-     * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-     * random one, as it also collapses their notifications), that their
-     * apps draw them together by (spec/chat.md, Albums); empty for a photo
-     * sent alone. Refused with anything but a photo.
-     * ```
-     *
-     * `string album = 10 [json_name = "album"];`
+     * An uninstantiable, behaviorless type to represent the field in
+     * generics.
      */
-    public var album: kotlin.String
-      @kotlin.jvm.JvmName("getAlbum")
-        get() = _builder.album
-      @kotlin.jvm.JvmName("setAlbum")
-        set(value) {
-        _builder.album = value
-      }
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+    public class PhotosProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
     /**
      * ```
-     * With a photo: the photos sent at once, each its own line, share one
-     * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-     * random one, as it also collapses their notifications), that their
-     * apps draw them together by (spec/chat.md, Albums); empty for a photo
-     * sent alone. Refused with anything but a photo.
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
      * ```
      *
-     * `string album = 10 [json_name = "album"];`
+     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
      */
-    public fun clearAlbum() {
-      _builder.clearAlbum()
+     public val photos: com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>
+      @kotlin.jvm.JvmSynthetic
+  get() = com.google.protobuf.kotlin.DslList(
+        _builder.photosList
+      )
+    /**
+     * ```
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
+     * @param value The photos to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addPhotos")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.add(value: app.pochical.v1.ChatPhoto) {
+      _builder.addPhotos(value)
+    }
+    /**
+     * ```
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
+     * @param value The photos to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignPhotos")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.plusAssign(value: app.pochical.v1.ChatPhoto) {
+      add(value)
+    }
+    /**
+     * ```
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
+     * @param values The photos to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addAllPhotos")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.ChatPhoto>) {
+      _builder.addAllPhotos(values)
+    }
+    /**
+     * ```
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
+     * @param values The photos to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignAllPhotos")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.ChatPhoto>) {
+      addAll(values)
+    }
+    /**
+     * ```
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
+     * @param index The index to set the value at.
+     * @param value The photos to set.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setPhotos")
+    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.set(index: kotlin.Int, value: app.pochical.v1.ChatPhoto) {
+      _builder.setPhotos(index, value)
+    }
+    /**
+     * ```
+     * Photos instead, 1 to chatRules.photosPerSend, each once: the
+     * sender's own, uploaded first and not sent before. No words or days.
+     * ```
+     *
+     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("clearPhotos")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.clear() {
+      _builder.clearPhotos()
     }
   }
 }
 public inline fun app.pochical.v1.ChatSend.copy(block: `app.pochical.v1`.ChatSendKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatSend =
   `app.pochical.v1`.ChatSendKt.Dsl._create(this.toBuilder()).apply { block() }._build()
-
-public val app.pochical.v1.ChatSendOrBuilder.photoOrNull: app.pochical.v1.ChatPhoto?
-  get() = if (hasPhoto()) getPhoto() else null
 
 public val app.pochical.v1.ChatSendOrBuilder.previewOrNull: app.pochical.v1.LinkPreview?
   get() = if (hasPreview()) getPreview() else null

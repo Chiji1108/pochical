@@ -11,9 +11,6 @@ enum ChatItem: Identifiable, Hashable {
   case unread
   case line(ChatLineRow, startsRun: Bool)
   case waiting(WaitingLine, startsRun: Bool)
-  /// Photos sent at once, each a `.line` or `.waiting` of its own, drawn
-  /// together (spec/chat.md, Albums).
-  case album([ChatItem], startsRun: Bool)
 
   var id: String {
     switch self {
@@ -22,8 +19,6 @@ enum ChatItem: Identifiable, Hashable {
     case .line(let line, _): ChatItemID.line(line.opID)
     // As the group's line will be, so it stays in place once taken.
     case .waiting(let line, _): ChatItemID.line(line.opID)
-    // Its first photo's, so it stays in place as more of it come.
-    case .album(let photos, _): photos.first?.id ?? ""
     }
   }
 
@@ -32,23 +27,13 @@ enum ChatItem: Identifiable, Hashable {
   var startsRun: Bool {
     switch self {
     case .day, .unread: true
-    case .line(_, let startsRun), .waiting(_, let startsRun), .album(_, let startsRun): startsRun
+    case .line(_, let startsRun), .waiting(_, let startsRun): startsRun
     }
   }
 
-  /// The ids of the lines it draws: an album's photos', else its own.
-  var lineIDs: [String] {
-    if case .album(let photos, _) = self { return photos.map(\.id) }
-    return [id]
-  }
-
-  /// The seqs of the group's lines it draws, read as it shows.
-  var seqs: [Int64] {
-    switch self {
-    case .line(let line, _): [line.seq]
-    case .album(let photos, _): photos.flatMap(\.seqs)
-    default: []
-    }
+  /// The seq of the group's line it draws, read as it shows.
+  var seq: Int64? {
+    if case .line(let line, _) = self { line.seq } else { nil }
   }
 }
 
@@ -90,8 +75,8 @@ enum ChatItemID {
 enum LineAction {
   /// 続きを読む.
   case unfold
-  /// Its photo opened large.
-  case openPhoto
+  /// One of its photos opened large, by its place in the line.
+  case openPhoto(Int)
   /// Gone to the line it answers.
   case openQuote
   /// The writer's profile, from their face.
@@ -100,7 +85,7 @@ enum LineAction {
   case sendAgain
   /// A line not sent, 削除 from its !.
   case deleteUnsent
-  /// Its photo stopped going up, with × on it: the line is not sent.
+  /// Its photos stopped going up, with × on one: the line is not sent.
   case stopSending
   /// The reader's reaction put on, or taken back.
   case react(String)
@@ -133,13 +118,16 @@ struct LineView: View {
   var members: [GroupMember] = []
   /// A poll's card, for days put to the vote.
   var poll: PollLine?
-  /// The photo sent as the line, opened large by a tap.
-  var photo: LinePhoto?
+  /// The photos sent as the line, each opened large by a tap: one, or
+  /// several drawn as an album (spec/chat.md, Albums).
+  var photos: [LinePhoto] = []
+  /// Those of its photos up, while it waits.
+  var up: Set<String> = []
   /// The line it answers, inside its bubble.
   var quote: LineQuote?
   /// Its words opened past chatRules.foldLines lines.
   var unfolded = false
-  var groupID = ""
+  var shelf: PhotoShelf
   /// The shift table on its first day, under its card.
   var shifts: GroupRoute?
   var time: Int64
@@ -166,12 +154,8 @@ struct LineView: View {
   /// It starts a run of one writer's lines, its bubble's tail by the writer.
   let first: Bool
   var waiting: Bool
-  /// Its photo could not be sent: marked, its choices a tap away.
+  /// It could not be sent: marked, its choices a tap away.
   var failed = false
-  /// Photos sent at once, drawn as one album in the bubble's place, each
-  /// its own line (spec/chat.md, Albums): the line is then the album's
-  /// first photo's, but for the time, which is its last's.
-  var album: [AlbumPhoto] = []
   /// The group's names as it shows them now, for the line's mentions.
   let names: [String: String]
   var reactions: [LineReaction] = []
@@ -217,8 +201,8 @@ struct LineView: View {
     return drawing
   }
 
-  private func act(_ action: LineAction, on lineID: String? = nil) {
-    actions((lineID ?? self.lineID, action))
+  private func act(_ action: LineAction) {
+    actions((lineID, action))
   }
 
   var body: some View {
@@ -230,7 +214,7 @@ struct LineView: View {
               .accessibilityLabel(writer)
           } else if let writer {
             Button { act(.openProfile) } label: {
-              MemberAvatar(name: writer, photoID: writerPhoto, groupID: groupID, size: Self.avatar)
+              MemberAvatar(name: writer, photoID: writerPhoto, shelf: shelf, size: Self.avatar)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(writer)のプロフィール")
@@ -252,22 +236,19 @@ struct LineView: View {
         }
         HStack(alignment: .bottom, spacing: 8) {
           if mine { voicedMeta }
-          if album.isEmpty {
-            actedBubble
-              // Rung for a moment when gone to from the pins, as /design's
-              // flash: a ring just outside the bubble, held, then fading.
-              .background {
-                ringShape
-                  .stroke(colors.accentBorder, lineWidth: 6)
-                  .opacity(seq != nil && marks?.ringed == seq ? 1 : 0)
-              }
-              // A photo opens large at a tap; its menu is the long press's.
-              .heldForActions(lineID: lineID, lifted: marks?.lifted == lineID) {
-                if photo != nil, !waiting { act(.openPhoto) }
-              }
-          } else {
-            albumBubble
-          }
+          actedBubble
+            // Rung for a moment when gone to from the pins, as /design's
+            // flash: a ring just outside the bubble, held, then fading.
+            .background {
+              ringShape
+                .stroke(colors.accentBorder, lineWidth: 6)
+                .opacity(seq != nil && marks?.ringed == seq ? 1 : 0)
+            }
+            // A photo opens large at a tap (an album's each by its own);
+            // the menu, the whole line's, is the long press's.
+            .heldForActions(lineID: lineID, lifted: marks?.lifted == lineID) {
+              if photos.count == 1, !waiting { act(.openPhoto(0)) }
+            }
           if !mine { voicedMeta }
         }
         if let shifts {
@@ -282,7 +263,7 @@ struct LineView: View {
           }
           .buttonStyle(.plain)
         }
-        if failed || album.contains(where: \.failed) {
+        if failed {
           Text("送れませんでした")
             .font(.caption2)
             .foregroundStyle(colors.dangerDefault)
@@ -303,61 +284,20 @@ struct LineView: View {
       // sizes, where the words need the width more, as Messages gives it.
       .padding(mine ? .leading : .trailing, typeSize.isAccessibilitySize ? 16 : 40)
     }
-    // The line reads as one, everything done on it its actions; a card of
-    // days or a poll keeps its own parts, the line said first by its time,
-    // and an album its photos, each read as its line.
+    // The line reads as one, everything done on it its actions, an
+    // album's photos with it; a card of days or a poll keeps its own
+    // parts, the line said first by its time.
     .accessibilityElement(children: .contain)
-    .modifier(voice(!carded && album.isEmpty))
-  }
-
-  /// An album in the bubble's place, under the first photo's quote in a
-  /// bubble as a photo's is; each photo held, opened and marked as the
-  /// line it is.
-  @ViewBuilder private var albumBubble: some View {
-    let grid = AlbumGrid(count: album.count) { cell in
-      albumPhoto(album[cell.index], at: cell.index, size: cell.size)
-    }
-    if let quote {
-      QuotedMedia(quote: quote, groupID: groupID, mine: mine, first: first) {
-        act(.openQuote)
-      } media: {
-        grid
-      }
-    } else {
-      grid
-    }
-  }
-
-  private func albumPhoto(_ cell: AlbumPhoto, at index: Int, size: CGSize) -> some View {
-    PhotoLine(
-      photo: cell.photo, groupID: groupID, waiting: cell.waiting && !cell.failed,
-      onStop: { act(.stopSending, on: cell.lineID) }, cell: size
-    )
-    .overlay {
-      if cell.failed {
-        failedMark(on: cell.lineID, photo: true)
-          .background(colors.backgroundBase, in: Circle().inset(by: 2))
-      }
-    }
-    .overlay {
-      Rectangle()
-        .strokeBorder(colors.accentBorder, lineWidth: 4)
-        .opacity(cell.seq != nil && marks?.ringed == cell.seq ? 1 : 0)
-        .allowsHitTesting(false)
-    }
-    .heldForActions(lineID: cell.lineID, lifted: marks?.lifted == cell.lineID) {
-      if !cell.waiting { act(.openPhoto, on: cell.lineID) }
-    }
-    .modifier(OptionalVoice(voice: voice(of: voiced(cell, at: index))))
+    .modifier(voice(!carded))
   }
 
   /// What the line is drawn as, alone: its bubble lifted over the chat
   /// while its menu is open, where nothing on it is done.
   var bubble: LineContent {
     LineContent(
-      text: text, preview: preview, days: days, members: members, poll: poll, photo: photo,
-      quote: quote, groupID: groupID, mine: mine, first: first, waiting: waiting && !failed,
-      nameOf: nameOf, unfolded: unfolded)
+      text: text, preview: preview, days: days, members: members, poll: poll, photos: photos,
+      up: up, lineID: lineID, quote: quote, shelf: shelf, mine: mine, first: first,
+      waiting: waiting && !failed, nameOf: nameOf, unfolded: unfolded)
   }
 
   /// The bubble in the chat, its drawing kept and its parts acting.
@@ -365,6 +305,7 @@ struct LineView: View {
     var bubble = bubble
     bubble.drawing = drawing
     bubble.onOpenQuote = { act(.openQuote) }
+    bubble.onOpenPhoto = { act(.openPhoto($0)) }
     bubble.onStopSending = { act(.stopSending) }
     bubble.onUnfold = { act(.unfold) }
     bubble.onVote = { act(.vote($0, $1)) }
@@ -376,76 +317,33 @@ struct LineView: View {
   /// through one by one.
   private var carded: Bool { !days.isEmpty }
 
-  /// The time and state, the line as VoiceOver says it on a card's line;
-  /// an album's photos each say their own.
-  @ViewBuilder private var voicedMeta: some View {
-    if album.isEmpty {
-      meta.modifier(voice(carded)).accessibilitySortPriority(1)
-    } else {
-      meta.accessibilityHidden(true)
-    }
-  }
-
-  /// What VoiceOver says of a line and does on it: the line itself, or one
-  /// of its album's photos.
-  private struct Voiced {
-    let lineID: String
-    let photo: LinePhoto?
-    let time: Int64
-    let waiting: Bool
-    let failed: Bool
-    let pinned: Bool
-    let edited: Bool
-    let menu: [String]
-    let quote: LineQuote?
-    let reactions: [LineReaction]
-    /// How many photos its album holds, said by the album's first.
-    var album: Int?
-  }
-
-  private var voiced: Voiced {
-    Voiced(
-      lineID: lineID, photo: photo, time: time, waiting: waiting, failed: failed, pinned: pinned,
-      edited: edited, menu: menu, quote: quote, reactions: reactions)
-  }
-
-  /// The album's photo at `index` as its line: the first with the quote
-  /// and the reactions, which are its line's.
-  private func voiced(_ cell: AlbumPhoto, at index: Int) -> Voiced {
-    Voiced(
-      lineID: cell.lineID, photo: cell.photo, time: cell.time, waiting: cell.waiting,
-      failed: cell.failed, pinned: cell.pinned, edited: false, menu: cell.menu,
-      quote: index == 0 ? quote : nil, reactions: index == 0 ? reactions : [],
-      album: index == 0 ? album.count : nil)
+  /// The time and state, the line as VoiceOver says it on a card's line.
+  private var voicedMeta: some View {
+    meta.modifier(voice(carded)).accessibilitySortPriority(1)
   }
 
   /// VoiceOver's line, where `here`.
   private func voice(_ here: Bool) -> OptionalVoice {
-    OptionalVoice(voice: here ? voice(of: voiced) : nil)
-  }
-
-  private func voice(of line: Voiced) -> LineVoice {
+    guard here else { return OptionalVoice(voice: nil) }
     let people =
-      countedReactions || line.reactions.isEmpty
-      ? nil : reactionPeople(line.reactions, nameOf: nameOf)
-    let opensPhoto = line.photo != nil && !line.waiting
-    return LineVoice(
-      label: voiceLabel(of: line), people: people, isImage: line.photo != nil,
-      activate: opensPhoto
-        ? { act(.openPhoto, on: line.lineID) } : { act(.hold(link: nil), on: line.lineID) },
-      actions: voiceActions(of: line))
+      countedReactions || reactions.isEmpty ? nil : reactionPeople(reactions, nameOf: nameOf)
+    let opensPhoto = !photos.isEmpty && !waiting
+    return OptionalVoice(
+      voice: LineVoice(
+        label: voiceLabel, people: people, isImage: !photos.isEmpty,
+        activate: opensPhoto ? { act(.openPhoto(0)) } : { act(.hold(link: nil)) },
+        actions: voiceActions))
   }
 
   /// Who wrote it, what, when, and how it stands, as VoiceOver reads it.
-  private func voiceLabel(of line: Voiced) -> String {
+  private var voiceLabel: String {
     var parts = [mine ? "自分" : author ?? writer ?? "メンバー"]
-    if let quote = line.quote {
+    if let quote {
       parts.append(quote.writer.map { "\($0)「\(quote.words)」への返信" } ?? "\(quote.words)への返信")
     }
-    if let count = line.album {
-      parts.append("\(count)枚の写真")
-    }
-    if let photo = line.photo {
+    if photos.count > 1 {
+      parts.append("\(photos.count)枚の写真")
+    } else if let photo = photos.first {
       parts.append(photoWords(photo))
     } else {
       if days.isEmpty, poll == nil {
@@ -462,16 +360,16 @@ struct LineView: View {
         parts.append("リンク「\(preview.title)」")
       }
     }
-    parts.append(ChatTime.clock(line.time))
-    if line.pinned { parts.append("ピン留め中") }
-    if line.edited { parts.append("編集済み") }
-    if line.failed {
+    parts.append(ChatTime.clock(time))
+    if pinned { parts.append("ピン留め中") }
+    if edited { parts.append("編集済み") }
+    if failed {
       parts.append("送れませんでした")
-    } else if line.waiting {
+    } else if waiting {
       parts.append("送信中")
     }
-    if !line.reactions.isEmpty {
-      parts.append(reactionWords(line.reactions, meID: meID))
+    if !reactions.isEmpty {
+      parts.append(reactionWords(reactions, meID: meID))
     }
     return parts.joined(separator: "、")
   }
@@ -480,32 +378,31 @@ struct LineView: View {
   /// VoiceOver's actions: what to do with it not sent first, then its menu
   /// as the long press opens it (返信 first, as the swipe does), and the
   /// rest of its parts.
-  private func voiceActions(of line: Voiced) -> [VoiceAction] {
-    let id = line.lineID
+  private var voiceActions: [VoiceAction] {
     var actions: [VoiceAction] = []
-    if line.failed {
-      actions.append(VoiceAction(title: "もう一度送る") { act(.sendAgain, on: id) })
-      actions.append(VoiceAction(title: "削除") { act(.deleteUnsent, on: id) })
-    } else if line.waiting, let photo = line.photo, PhotoUploads.shared.stoppable(photo.id) {
-      actions.append(VoiceAction(title: "送信をやめる") { act(.stopSending, on: id) })
+    if failed {
+      actions.append(VoiceAction(title: "もう一度送る") { act(.sendAgain) })
+      actions.append(VoiceAction(title: "削除") { act(.deleteUnsent) })
+    } else if waiting, !photos.isEmpty, PhotoUploads.shared.stoppable(lineID) {
+      actions.append(VoiceAction(title: "送信をやめる") { act(.stopSending) })
     }
-    if line.photo != nil, !line.waiting {
-      actions.append(VoiceAction(title: "写真を開く") { act(.openPhoto, on: id) })
+    if !photos.isEmpty, !waiting {
+      actions.append(VoiceAction(title: "写真を開く") { act(.openPhoto(0)) })
     }
-    for title in line.menu {
-      actions.append(VoiceAction(title: title) { act(.menu(title), on: id) })
+    for title in menu {
+      actions.append(VoiceAction(title: title) { act(.menu(title)) })
     }
-    if !line.waiting {
-      actions.append(VoiceAction(title: "リアクション") { act(.hold(link: nil), on: id) })
-      for reaction in line.reactions {
+    if !waiting {
+      actions.append(VoiceAction(title: "リアクション") { act(.hold(link: nil)) })
+      for reaction in reactions {
         let on = reaction.userIDs.contains(meID ?? "")
         actions.append(
           VoiceAction(title: on ? "\(reaction.emoji)を外す" : "\(reaction.emoji)を付ける") {
-            act(.react(reaction.emoji), on: id)
+            act(.react(reaction.emoji))
           })
       }
     }
-    if line.quote != nil {
+    if quote != nil {
       actions.append(VoiceAction(title: "返信元を表示") { act(.openQuote) })
     }
     for part in drawing.parts {
@@ -533,8 +430,8 @@ struct LineView: View {
   /// The ring's shape: the bubble's (a photo answering a line sits in
   /// one), or the card's.
   private var ringShape: AnyShape {
-    days.isEmpty && (photo == nil || quote != nil)
-      && !(photo == nil && quote == nil && preview == nil && drawing.largeEmoji > 0)
+    days.isEmpty && (photos.isEmpty || quote != nil)
+      && !(photos.isEmpty && quote == nil && preview == nil && drawing.largeEmoji > 0)
       ? AnyShape(BubbleShape(mine: mine, first: first))
       : AnyShape(RoundedRectangle(cornerRadius: Radius.lg))
   }
@@ -555,7 +452,7 @@ struct LineView: View {
         }
       }
       if failed {
-        failedMark(on: lineID, photo: photo != nil)
+        failedMark
       } else if waiting {
         // In the time's room, so the bubble stays as wide once sent.
         Text(ChatTime.clock(time))
@@ -579,16 +476,15 @@ struct LineView: View {
     .fixedSize()
   }
 
-  /// The ! of a line not sent, opening what to do with it.
-  private func failedMark(on lineID: String, photo: Bool) -> some View {
+  /// The ! of a line not sent, opening what to do with it; an album's by
+  /// its last photo, the foot of its grid.
+  private var failedMark: some View {
     // A menu rather than an action sheet, whose choice acts only once it
     // has gone: the ! and 送れませんでした go as it closes.
     Menu {
-      Section(photo ? "送れなかった写真" : "送れなかったメッセージ") {
-        Button("もう一度送る", systemImage: "arrow.clockwise") { act(.sendAgain, on: lineID) }
-        Button("削除", systemImage: "trash", role: .destructive) {
-          act(.deleteUnsent, on: lineID)
-        }
+      Section(photos.isEmpty ? "送れなかったメッセージ" : "送れなかった写真") {
+        Button("もう一度送る", systemImage: "arrow.clockwise") { act(.sendAgain) }
+        Button("削除", systemImage: "trash", role: .destructive) { act(.deleteUnsent) }
       }
     } label: {
       Image(systemName: "exclamationmark.circle.fill")
@@ -653,19 +549,26 @@ struct LineContent: View {
   let members: [GroupMember]
   /// Its days are put to the vote, with what the card needs.
   var poll: PollLine?
-  /// The photo sent as the line, from the group's photos.
-  var photo: LinePhoto?
-  /// The line it answers, over its words or photo; shared days and polls
+  /// The photos sent as the line, from the group's photos.
+  var photos: [LinePhoto] = []
+  /// Those of its photos up, while it waits.
+  var up: Set<String> = []
+  /// The line's op_id, which its photos going up are stopped by.
+  var lineID = ""
+  /// The line it answers, over its words or photos; shared days and polls
   /// show none, as /design's cards.
   var quote: LineQuote?
-  var groupID = ""
+  var shelf: PhotoShelf
   let mine: Bool
   let first: Bool
   let waiting: Bool
   let nameOf: (String) -> String
   var onOpenQuote: () -> Void = {}
-  /// Stops its photo going up while it waits; none where it cannot be.
+  /// Stops its photos going up while it waits; none where it cannot be.
   var onStopSending: (() -> Void)?
+  /// Opens an album's photo large, by its place; none where it is not
+  /// opened, as lifted for the menu. A photo alone opens with its line.
+  var onOpenPhoto: ((Int) -> Void)?
   /// Its words opened past chatRules.foldLines lines.
   var unfolded = false
   var onUnfold: () -> Void = {}
@@ -674,12 +577,12 @@ struct LineContent: View {
   @Environment(\.themeColors) private var colors
 
   var body: some View {
-    if let photo, let quote {
-      QuotedMedia(quote: quote, groupID: groupID, mine: mine, first: first, onOpen: onOpenQuote) {
-        PhotoLine(photo: photo, groupID: groupID, waiting: waiting, onStop: onStopSending)
+    if !photos.isEmpty, let quote {
+      QuotedMedia(quote: quote, shelf: shelf, mine: mine, first: first, onOpen: onOpenQuote) {
+        photoMedia
       }
-    } else if let photo {
-      PhotoLine(photo: photo, groupID: groupID, waiting: waiting, onStop: onStopSending)
+    } else if !photos.isEmpty {
+      photoMedia
     } else if let poll {
       PollCard(
         days: days, votes: poll.votes, decided: poll.decided, members: members,
@@ -689,7 +592,7 @@ struct LineContent: View {
       MessageBubble(
         text: text, drawing: drawing, mine: mine, first: first, waiting: waiting, nameOf: nameOf,
         preview: preview,
-        quote: quote, groupID: groupID, onOpenQuote: onOpenQuote, unfolded: unfolded,
+        quote: quote, shelf: shelf, onOpenQuote: onOpenQuote, unfolded: unfolded,
         onUnfold: onUnfold)
     } else {
       DayCard(days: days, members: members)
@@ -698,12 +601,36 @@ struct LineContent: View {
   }
 }
 
+extension LineContent {
+  /// One photo as it was sent, or several as one album, each opened by a
+  /// tap of its own; while the line waits, each ringed with how far it has
+  /// gone up, × on any stopping the whole line.
+  @ViewBuilder private var photoMedia: some View {
+    if photos.count == 1 {
+      photoLine(photos[0])
+    } else {
+      AlbumGrid(count: photos.count) { cell in
+        photoLine(photos[cell.index], cell: cell.size)
+          .gesture(
+            TapGesture().onEnded { onOpenPhoto?(cell.index) },
+            including: onOpenPhoto == nil || waiting ? .none : .all)
+      }
+    }
+  }
+
+  private func photoLine(_ photo: LinePhoto, cell: CGSize? = nil) -> PhotoLine {
+    PhotoLine(
+      photo: photo, shelf: shelf, waiting: waiting, up: up.contains(photo.id),
+      lineID: lineID, onStop: onStopSending, cell: cell)
+  }
+}
+
 /// A photo or an album answering a line: in a bubble under its quote, a
 /// little in from its edge.
 struct QuotedMedia<Media: View>: View {
   @Environment(\.themeColors) private var colors
   let quote: LineQuote
-  let groupID: String
+  let shelf: PhotoShelf
   let mine: Bool
   let first: Bool
   let onOpen: () -> Void
@@ -711,7 +638,7 @@ struct QuotedMedia<Media: View>: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpen)
+      BubbleQuote(quote: quote, shelf: shelf, onOpen: onOpen)
         .padding(.horizontal, 12)
         .padding(.top, 8)
         .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
@@ -744,7 +671,7 @@ struct MessageBubble: View {
   var preview: LinePreview?
   /// The line it answers, over its words.
   var quote: LineQuote?
-  var groupID = ""
+  var shelf: PhotoShelf
   var onOpenQuote: () -> Void = {}
   /// Its words opened past chatRules.foldLines lines.
   var unfolded = false
@@ -773,7 +700,7 @@ struct MessageBubble: View {
     let pieces = pieces(drawing)
     return VStack(alignment: .leading, spacing: 8) {
       if let quote {
-        BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpenQuote)
+        BubbleQuote(quote: quote, shelf: shelf, onOpen: onOpenQuote)
           .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
       }
       if unfolded {

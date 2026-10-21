@@ -1,4 +1,5 @@
 import { create, fromBinary } from "@bufbuild/protobuf";
+import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatPlaces, chatRules } from "@pochical/design/chat";
 import type { ChatPlaceKind, ChatPlaceRules } from "@pochical/design/chat";
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
@@ -23,6 +24,7 @@ import type {
   ChatEdits,
   ChatLine,
   Profile as UsualProfile,
+  RefusedSendSchema,
 } from "./gen/pochical/v1/sync_pb";
 import {
   addPreview,
@@ -66,13 +68,14 @@ import {
 import { markColumns, markOfRow, sameMark } from "./group-marks";
 import type { MarkValue } from "./group-marks";
 import {
-  forgetStalePhotos,
   forgetUnshown,
+  markStalePhotos,
   notePhoto,
   noteSharedPhoto,
   oldestStalePhoto,
+  revivedPhotos,
+  settleSwept,
   showOwnPhoto,
-  stalePhotos,
 } from "./group-photos";
 import type { PhotoNote } from "./group-photos";
 import {
@@ -84,7 +87,7 @@ import {
   takeMemberRepeatOrders,
 } from "./group-shifts";
 import { linkPreview } from "./link-preview";
-import { deleteGroupPhotos } from "./photos";
+import { copyPersonPhoto, deleteGroupPhotos } from "./photos";
 import { overLimit } from "./rate-limits";
 import { retryWait } from "./retry-wait";
 import { supportPlace } from "./support-lines";
@@ -204,6 +207,8 @@ type MemberLog = {
 };
 
 /** One Durable Object per group, named by the group's id. */
+type RefusedSendInit = MessageInitShape<typeof RefusedSendSchema>;
+
 export class GroupDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
   // Set when a support chat's change asks for its relay, so a relay
@@ -276,11 +281,13 @@ export class GroupDO extends DurableObject<Env> {
       );
       // Lines from before they joined are not unread to them.
       const head = chatHead(this.db, GROUP_THREAD);
-      const cursor = this.head() + 1;
-      const mark = moveReadMark(this.db, userId, GROUP_THREAD, head, cursor);
-      if (mark) {
-        this.setHead(cursor);
-      }
+      const mark = moveReadMark(
+        this.db,
+        userId,
+        GROUP_THREAD,
+        head,
+        this.nextCursor()
+      );
       this.queueNews(userId, true);
       return mark ? [written, notice, mark] : [written, notice];
     });
@@ -783,15 +790,14 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * A member's usual name and photo as their User DO pushes them, at
-   * `cursor`: shown unless they gave the group their own. Nothing when they
-   * are the ones known. A usual photo replaced goes from the group's
+   * A member's usual name and photo as their User DO pushes them, at the
+   * next cursor: shown unless they gave the group their own. Nothing when
+   * they are the ones known. A usual photo replaced goes from the group's
    * photos, unless the group shows it still.
    */
   private takeUsualProfile(
     userId: string,
-    { name, photoId, markLook }: UsualProfile,
-    cursor: number
+    { name, photoId, markLook }: UsualProfile
   ): Change | undefined {
     const known = this.db.select().from(members).where(inGroup(userId)).get();
     // A profile from before the look was sent keeps the one known.
@@ -809,7 +815,7 @@ export class GroupDO extends DurableObject<Env> {
     const row = this.db
       .update(members)
       .set({
-        cursor,
+        cursor: this.nextCursor(),
         displayName: shownName(known.ownName, name, known.displayName),
         markFill,
         markStyle,
@@ -863,10 +869,18 @@ export class GroupDO extends DurableObject<Env> {
     return memberChange(written);
   }
 
-  /** Gives out the cursor after the newest, for a value written now. */
+  /**
+   * Gives out the cursor after the newest, for a value written now, in
+   * the write's transaction: the only way to a new cursor. One a write
+   * then does not use is a gap, which devices, taking the newest, pass.
+   */
   private nextCursor(): number {
     const cursor = this.head() + 1;
-    this.setHead(cursor);
+    this.db
+      .insert(logHead)
+      .values({ cursor, id: 1 })
+      .onConflictDoUpdate({ set: { cursor }, target: logHead.id })
+      .run();
     return cursor;
   }
 
@@ -992,10 +1006,12 @@ export class GroupDO extends DurableObject<Env> {
   /**
    * The photos nothing came to hold (spec/sync-protocol.md, Chat), deleted
    * chatRules.unsentAfterMs after they were last noted: uploads not sent,
-   * and copies of someone's photo the group never came to name. From
-   * storage first, then from the group, but those noted or named again
-   * meanwhile. A line's photo, a face or the mark is never one. When the
-   * next are due, if any.
+   * and copies of someone's photo the group never came to name. Marked
+   * as going first, as other requests come in while storage deletes them:
+   * an upload of one waits, and a copy noted again meanwhile is copied in
+   * anew after. Then forgotten; a sweep cut short is finished by the next.
+   * A line's photo, a face or the mark is never one. When the next are
+   * due, if any.
    */
   private async sweepPhotos(): Promise<number | undefined> {
     const groupId = this.ctx.id.name;
@@ -1003,10 +1019,15 @@ export class GroupDO extends DurableObject<Env> {
       return undefined;
     }
     const before = new Date(Date.now() - chatRules.unsentAfterMs);
-    const stale = stalePhotos(this.db, before);
-    if (stale.length > 0) {
-      await deleteGroupPhotos(this.env, groupId, stale);
-      forgetStalePhotos(this.db, before);
+    const going = markStalePhotos(this.db, before);
+    if (going.length > 0) {
+      await deleteGroupPhotos(this.env, groupId, going);
+      await Promise.all(
+        revivedPhotos(this.db, going, before).map(async ({ id, userId }) => {
+          await copyPersonPhoto(this.env, userId, id, groupId);
+        })
+      );
+      settleSwept(this.db, going, before);
     }
     const oldest = oldestStalePhoto(this.db);
     return oldest === undefined
@@ -1084,36 +1105,28 @@ export class GroupDO extends DurableObject<Env> {
       return undefined;
     }
     const { changes } = fromBinary(ChangesSchema, pushed);
+    const nextCursor = () => this.nextCursor();
     const taken = this.ctx.storage.transactionSync(() => {
-      let cursor = this.head();
       const kept: Change[] = [];
       for (const { kind } of changes) {
         let change: Change | undefined;
         if (kind.case === "day") {
-          change = takeMemberDay(this.db, userId, kind.value, cursor + 1);
+          change = takeMemberDay(this.db, userId, kind.value, nextCursor);
         } else if (kind.case === "pattern") {
-          change = takeMemberPattern(this.db, userId, kind.value, cursor + 1);
+          change = takeMemberPattern(this.db, userId, kind.value, nextCursor);
         } else if (kind.case === "repeatOrders") {
           change = takeMemberRepeatOrders(
             this.db,
             userId,
             kind.value,
-            cursor + 1
+            nextCursor
           );
         } else if (kind.case === "profile") {
-          change = this.takeUsualProfile(userId, kind.value, cursor + 1);
+          change = this.takeUsualProfile(userId, kind.value);
         }
         if (change) {
-          cursor = Number(change.cursor);
           kept.push(change);
         }
-      }
-      if (kept.length > 0) {
-        this.db
-          .insert(logHead)
-          .values({ cursor, id: 1 })
-          .onConflictDoUpdate({ set: { cursor }, target: logHead.id })
-          .run();
       }
       return kept;
     });
@@ -1125,7 +1138,8 @@ export class GroupDO extends DurableObject<Env> {
    * cursor; sends what changed to everyone with the group open, the lines
    * a refused edit concerned back to the sender, then acknowledges every
    * edit to the sender, as the User DO does its owner's (spec/sync-protocol.md,
-   * Outbox). Someone not in the group never gets this far (`admits`).
+   * Outbox), with the sends not taken and why. Someone not in the group
+   * never gets this far (`admits`).
    */
   private takeChatEdits(
     ws: WebSocket,
@@ -1140,13 +1154,13 @@ export class GroupDO extends DurableObject<Env> {
       );
       return;
     }
-    const { refused } = this.takeEdits(userId, edits);
+    const { refused, refusedSends } = this.takeEdits(userId, edits);
     if (refused.length > 0) {
       send(ws, { case: "changes", value: { changes: refused } });
     }
     send(ws, {
       case: "acked",
-      value: { opIds: edits.map(({ opId }) => opId) },
+      value: { opIds: edits.map(({ opId }) => opId), refused: refusedSends },
     });
   }
 
@@ -1154,12 +1168,18 @@ export class GroupDO extends DurableObject<Env> {
    * A member's chat edits taken, each change at the next cursor, and sent
    * to everyone with the place open; their counts and notifications told,
    * and in a support place, told outside (support-place.ts). The lines a
-   * refused edit concerned, for the writer, and the new lines.
+   * refused edit concerned and the sends refused, for the writer, and the
+   * new lines.
    */
   private takeEdits(
     userId: string,
     edits: ChatEdit[]
-  ): { refused: Change[]; sent: ChatLine[] } {
+  ): {
+    refused: Change[];
+    refusedSends: RefusedSendInit[];
+    sent: ChatLine[];
+  } {
+    const refusedSends: RefusedSendInit[] = [];
     // Whose unread lines changed, by chat: everyone else's with a new
     // line, the reader's with a read.
     const counted = new Map<string, Set<string>>();
@@ -1195,20 +1215,20 @@ export class GroupDO extends DurableObject<Env> {
       const made: Change[] = [];
       const back: Change[] = [];
       for (const edit of edits) {
-        const cursor = this.head() + 1;
         const taken = takeChatEdit(
           this.db,
           userId,
           edit,
-          cursor,
+          () => this.nextCursor(),
           (id) => this.isMember(id),
           rules
         );
+        if (taken.refusal !== undefined) {
+          refusedSends.push({ opId: edit.opId, reason: taken.refusal });
+        }
         if (taken.change) {
-          this.setHead(cursor);
           made.push(taken.change);
           if (taken.alsoChanged) {
-            this.setHead(cursor + 1);
             made.push(taken.alsoChanged);
           }
           if (edit.kind.case === "send") {
@@ -1247,13 +1267,11 @@ export class GroupDO extends DurableObject<Env> {
         if (taken.refused) {
           back.push(taken.refused);
         }
-        if (taken.photoGone !== undefined) {
-          photosGone.push(taken.photoGone);
-        }
+        photosGone.push(...(taken.photosGone ?? []));
       }
       return { changed: made, refused: back };
     });
-    // A photo taken back goes from the place's photos for everyone.
+    // Photos taken back go from the place's photos for everyone.
     const groupId = this.ctx.id.name;
     if (groupId !== undefined && photosGone.length > 0) {
       this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, photosGone));
@@ -1275,7 +1293,7 @@ export class GroupDO extends DurableObject<Env> {
       this.relayRequested = true;
       this.ctx.waitUntil(this.ctx.storage.setAlarm(Date.now()));
     }
-    return { refused, sent };
+    return { refused, refusedSends, sent };
   }
 
   /**
@@ -1403,14 +1421,9 @@ export class GroupDO extends DurableObject<Env> {
     if (preview === null) {
       return;
     }
-    const added = this.ctx.storage.transactionSync(() => {
-      const cursor = this.head() + 1;
-      const change = addPreview(this.db, page, preview, cursor);
-      if (change !== undefined) {
-        this.setHead(cursor);
-      }
-      return change;
-    });
+    const added = this.ctx.storage.transactionSync(() =>
+      addPreview(this.db, page, preview, this.nextCursor())
+    );
     if (added !== undefined) {
       broadcastChanges(this.ctx, [added], seenBy, readerView(this.db, [added]));
     }
@@ -1453,15 +1466,6 @@ export class GroupDO extends DurableObject<Env> {
         })
     );
     this.ctx.waitUntil(Promise.allSettled(calls));
-  }
-
-  /** Moves the log's head to `cursor`, a value having been written there. */
-  private setHead(cursor: number): void {
-    this.db
-      .insert(logHead)
-      .values({ cursor, id: 1 })
-      .onConflictDoUpdate({ set: { cursor }, target: logHead.id })
-      .run();
   }
 
   /**

@@ -12,7 +12,8 @@ public inline fun chatPhotoEntry(block: app.pochical.v1.ChatPhotoEntryKt.Dsl.() 
   app.pochical.v1.ChatPhotoEntryKt.Dsl._create(app.pochical.v1.ChatPhotoEntry.newBuilder()).apply { block() }._build()
 /**
  * ```
- * A photo of a chat and the line that sent it.
+ * A photo of a chat and the line that sent it, one entry a photo, a
+ * line's in the order it holds them.
  * ```
  *
  * Protobuf type `pochical.v1.ChatPhotoEntry`

@@ -87,8 +87,7 @@ final class NotificationService: UNNotificationServiceExtension {
 
   /// Who the line is from, as the app keeps them in the App Group.
   private static func from(_ line: NotifiedLine, authorID: String) -> NotifiedFrom? {
-    guard let database = try? widgetDatabase() else { return nil }
-    return try? database.read { db in
+    try? readWidgetDatabase { db in
       try notifiedFrom(
         groupID: line.groupID, threadID: line.threadID, authorID: authorID,
         me: widgetMeID(), in: db)

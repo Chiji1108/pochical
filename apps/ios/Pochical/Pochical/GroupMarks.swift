@@ -14,9 +14,9 @@ struct GroupMarkView: View {
   let mark: GroupMarkValue
   let size: CGFloat
   /// Where a photo mark is read from: the group's photos, or an
-  /// invitation's (`ChatPhotos.invitation`). One the user just picked is on
+  /// invitation's (`PhotoShelf.invitation`). One the user just picked is on
   /// the device already.
-  var shelf = ""
+  var shelf: PhotoShelf?
   /// An icon alone, its glyph `size` in its color without the tint round
   /// it, as the choices of one show it.
   var bare = false
@@ -66,7 +66,7 @@ private struct MarkPhoto: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.displayScale) private var displayScale
   let photoID: String
-  let shelf: String
+  let shelf: PhotoShelf?
   let size: CGFloat
 
   var body: some View {
@@ -87,7 +87,7 @@ struct GroupMarkBadge: View {
   let mark: GroupMarkValue
   var size: CGFloat = 28
   /// Where a photo mark is read from (GroupMarkView).
-  var shelf = ""
+  var shelf: PhotoShelf?
 
   var body: some View {
     GroupMarkView(mark: mark, size: size, shelf: shelf)
@@ -139,7 +139,7 @@ struct GroupMarkPage: View {
   let name: String
   @State var mark: GroupMarkValue
   /// Where the group's photo mark is read from (GroupMarkView).
-  var shelf = ""
+  var shelf: PhotoShelf?
   let onPick: (GroupMarkValue) -> Void
   /// The tab shown; none for a photo until one is chosen.
   @State private var kind: MarkKind?

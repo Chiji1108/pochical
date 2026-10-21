@@ -75,14 +75,14 @@ export const memberPatternChange = (row: PatternRow): Change =>
   });
 
 /**
- * A member's day value, written at `cursor` when it is newer. A field
+ * A member's day value, written at the next cursor when it is newer. A field
  * groups do not see is dropped, whatever pushed it.
  */
 export const takeMemberDay = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   day: DayValue,
-  cursor: number
+  nextCursor: () => number
 ): Change | undefined => {
   if (!SHARED_DAY_FIELDS.includes(day.field)) {
     return undefined;
@@ -104,7 +104,7 @@ export const takeMemberDay = (
   }
   const row: DayRow = {
     ...clockColumns(clock),
-    cursor,
+    cursor: nextCursor(),
     date: day.date,
     field: day.field,
     userId,
@@ -120,12 +120,12 @@ export const takeMemberDay = (
   return memberDayChange(row);
 };
 
-/** A member's pattern, written at `cursor` when it is newer. */
+/** A member's pattern, written at the next cursor when it is newer. */
 export const takeMemberPattern = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   value: PatternValue,
-  cursor: number
+  nextCursor: () => number
 ): Change | undefined => {
   const stored = db
     .select()
@@ -143,7 +143,7 @@ export const takeMemberPattern = (
   }
   const row: PatternRow = {
     ...clockColumns(clock),
-    cursor,
+    cursor: nextCursor(),
     data:
       value.pattern === undefined
         ? null
@@ -170,12 +170,12 @@ export const memberRepeatOrdersChange = (row: OrdersRow): Change =>
     },
   });
 
-/** A member's repeating orders, written at `cursor` when they are newer. */
+/** A member's repeating orders, at the next cursor when they are newer. */
 export const takeMemberRepeatOrders = (
   db: DrizzleSqliteDODatabase,
   userId: string,
   orders: RepeatOrders,
-  cursor: number
+  nextCursor: () => number
 ): Change | undefined => {
   const stored = db
     .select()
@@ -188,7 +188,7 @@ export const takeMemberRepeatOrders = (
   }
   const row: OrdersRow = {
     ...clockColumns(clock),
-    cursor,
+    cursor: nextCursor(),
     data: encodeOrders(orders.orders),
     userId,
   };

@@ -81,6 +81,10 @@ struct ChatVectors: Decodable, Sendable {
       let text: String
       var replyTo: Int64?
       var editing: Int64?
+
+      var kept: KeptDraft {
+        KeptDraft(text: text, target: DraftTarget(replyTo: replyTo, editing: editing))
+      }
     }
     struct Line: Decodable, Sendable {
       let seq: Int64
@@ -141,25 +145,11 @@ struct ChatVectors: Decodable, Sendable {
   let withdrawn: [Withdrawn]
   let draft: [Draft]
 
-  struct Albums: VectorCase {
-    struct Line: Decodable, Sendable {
-      let seq: Int64
-      let writer: String
-      let album: String
-      let photo: Bool
-      let unsent: Bool
-    }
-    let name: String
-    let lines: [Line]
-    let expected: [[Int64]]
-  }
-
   struct AlbumRows: VectorCase {
     let name: String
     let count: Int
     let expected: [Int]
   }
-  let albums: [Albums]
   let albumRows: [AlbumRows]
 
   struct Order: VectorCase {
@@ -183,14 +173,6 @@ func aChatsLinesInOrder(_ vector: ChatVectors.Order) {
   }
   #expect(
     chatOrder(sent: vector.sent.map(timed), waiting: vector.waiting.map(timed)) == vector.expected)
-}
-
-@Test(arguments: try vectors("chat", as: ChatVectors.self).albums)
-func photosSentAtOnceAreAnAlbum(_ vector: ChatVectors.Albums) {
-  let lines = vector.lines.map {
-    AlbumLine(id: $0.seq, writer: $0.writer, album: $0.album, photo: $0.photo && !$0.unsent)
-  }
-  #expect(albums(lines) == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).albumRows)
@@ -223,13 +205,8 @@ func aReadTakesBackItsNotifications(_ vector: ChatVectors.Withdrawn) {
 func draftKept(_ vector: ChatVectors.Draft) {
   let lines = Dictionary(
     uniqueKeysWithValues: vector.lines.map { ($0.seq, DraftLine(text: $0.text, unsent: $0.unsent)) })
-  let kept = keptDraft(
-    KeptDraft(text: vector.draft.text, replyTo: vector.draft.replyTo, editing: vector.draft.editing)
-  ) { lines[$0] }
-  let expected = vector.expected.map {
-    KeptDraft(text: $0.text, replyTo: $0.replyTo, editing: $0.editing)
-  }
-  #expect(kept == expected)
+  let kept = keptDraft(vector.draft.kept) { lines[$0] }
+  #expect(kept == vector.expected?.kept)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstComing)
@@ -758,9 +735,20 @@ struct PinVectors: Decodable, Sendable {
 
   struct Case: VectorCase {
     let name: String
+    /// The chat's lines by name, the first at seq 1.
+    let lines: [String]
     let pins: [String]
     let step: Step
     let expected: Expected
+
+    /// The named line's seq.
+    func seq(_ name: String) -> Int64 {
+      guard let index = lines.firstIndex(of: name) else {
+        Issue.record("\(name) is not among the lines of \(self.name)")
+        return 0
+      }
+      return Int64(index) + 1
+    }
   }
 
   let pins: [Case]
@@ -769,16 +757,17 @@ struct PinVectors: Decodable, Sendable {
 @Test(arguments: try vectors("chat", as: PinVectors.self).pins)
 func pinsAfterAStep(_ vector: PinVectors.Case) {
   let step = vector.step
+  let pins = vector.pins.map(vector.seq)
   let after =
-    if let id = step.pin ?? step.settle {
-      pinStep(vector.pins, pin: id)
-    } else if let id = step.unpin {
-      pinStep(vector.pins, unpin: id)
+    if let name = step.pin ?? step.settle {
+      pinStep(pins, pin: vector.seq(name))
+    } else if let name = step.unpin {
+      pinStep(pins, unpin: vector.seq(name))
     } else {
-      pinStep(vector.pins, unsend: step.unsend ?? "")
+      pinStep(pins, unsend: vector.seq(step.unsend ?? ""))
     }
-  #expect(after.pins == vector.expected.pins)
-  #expect(after.dropped == vector.expected.dropped)
+  #expect(after.pins == vector.expected.pins.map(vector.seq))
+  #expect(after.dropped == vector.expected.dropped.map(vector.seq))
 }
 
 @Test func aChatsPinsHoldLinesFarBackAndTheMembersShowAtOnce() throws {
@@ -854,49 +843,67 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   }
 }
 
-@Test func aPhotoLineKeepsItsPhotoWhileWaitingAndLosesItTakenBack() throws {
+/// Photos as the wire carries them, each `id` 1×1.
+private func wirePhotos(_ ids: [String]) -> [Pochical_V1_ChatPhoto] {
+  ids.map { id in
+    var photo = Pochical_V1_ChatPhoto()
+    photo.id = id
+    photo.width = 1
+    photo.height = 1
+    return photo
+  }
+}
+
+/// A send of photos to the place's own chat.
+private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
+  var send = Pochical_V1_ChatSend()
+  send.threadID = groupThread
+  send.photos = wirePhotos(ids)
+  return send
+}
+
+@Test func aPhotoLineKeepsItsPhotosWhileWaitingAndLosesThemTakenBack() throws {
   let database = try appDatabase()
   try database.write { db in
-    var photo = line(1, "")
-    photo.chatLine.photo.id = "p1"
-    photo.chatLine.photo.width = 300
-    photo.chatLine.photo.height = 200
-    try GroupSync.take([photo], of: "g", in: db)
-    var send = Pochical_V1_ChatSend()
-    send.threadID = groupThread
-    send.photo.id = "p2"
-    send.photo.width = 10
-    send.photo.height = 20
-    try Chats.edit(.send(send), in: "g", now: 1, db: db)
+    var photos = line(1, "")
+    photos.chatLine.photos = wirePhotos(["p1", "p2", "p3"])
+    try GroupSync.take([photos], of: "g", in: db)
+    try Chats.edit(.send(photoSend(["p4", "p5"])), in: "g", now: 1, db: db)
     var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
-    #expect(state.lines.map(\.photo) == [LinePhoto(id: "p1", width: 300, height: 200)])
-    #expect(state.waiting.map(\.photo) == [LinePhoto(id: "p2", width: 10, height: 20)])
+    #expect(state.lines.map { $0.photos.map(\.id) } == [["p1", "p2", "p3"]])
+    #expect(state.waiting.map { $0.photos.map(\.id) } == [["p4", "p5"]])
 
     var unsend = Pochical_V1_ChatUnsend()
     unsend.threadID = groupThread
     unsend.seq = 1
     try Chats.edit(.unsend(unsend), in: "g", now: 2, db: db)
     state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
-    #expect(state.lines[0].photo == nil)
+    #expect(state.lines[0].photos.isEmpty)
   }
 }
 
-@Test func anAlbumsPhotosKeepItsNameWaitingAndTaken() throws {
+@Test func aWaitingLineKeepsWhichOfItsPhotosAreUpThroughSendingAgain() throws {
   let database = try appDatabase()
   try database.write { db in
-    var photo = line(1, "")
-    photo.chatLine.photo.id = "p1"
-    photo.chatLine.album = "first"
-    try GroupSync.take([photo], of: "g", in: db)
-    var send = Pochical_V1_ChatSend()
-    send.threadID = groupThread
-    send.photo.id = "p2"
-    send.album = "second"
-    try Chats.edit(.send(send), in: "g", now: 1, opID: "second", db: db)
-    let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
-    #expect(state.lines.map(\.album) == ["first"])
-    #expect(state.waiting.map(\.album) == ["second"])
-    #expect(state.waiting.map(\.opID) == ["second"])
+    try Chats.edit(.send(photoSend(["p1", "p2", "p3"])), in: "g", now: 1000, db: db)
+    let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
+    #expect(try Chats.photosToUpload(opID, now: 1000, in: db) == ["p1", "p2", "p3"])
+
+    // Two up, then the third fails: sent again, only the third goes up.
+    try Chats.photoUp("p1", of: opID, began: 2000, in: db)
+    try Chats.photoUp("p2", of: opID, began: 3000, in: db)
+    try Chats.fail(opID, in: db)
+    try Chats.sendAgain(opID, now: 4000, in: db)
+    #expect(try Chats.photosToUpload(opID, now: 4000, in: db) == ["p3"])
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].up == ["p1", "p2"])
+
+    // Sent again once those up may have gone from the group, half its
+    // wait after the latest began going up: all go up again.
+    let lapsed = 3000 + Int64(Chat.unsentAfterMs) / 2
+    #expect(try Chats.photosToUpload(opID, now: lapsed - 1, in: db) == ["p3"])
+    #expect(try Chats.photosToUpload(opID, now: lapsed, in: db) == ["p1", "p2", "p3"])
+    try Chats.photoUp("p1", of: opID, began: lapsed, in: db)
+    #expect(try Chats.photosToUpload(opID, now: lapsed, in: db) == ["p2", "p3"])
   }
 }
 
@@ -1169,10 +1176,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
 @Test func aPhotoThatCouldNotBeSentWaitsAsideUntilSentAgain() throws {
   let database = try appDatabase()
   try database.write { db in
-    var photo = Pochical_V1_ChatSend()
-    photo.threadID = groupThread
-    photo.photo.id = "p1"
-    try Chats.edit(.send(photo), in: "g", now: 1, db: db)
+    try Chats.edit(.send(photoSend(["p1"])), in: "g", now: 1, db: db)
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
     words.text = "見て"
@@ -1196,10 +1200,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
 @Test func aPhotoStoppedGoingUpIsNotSentUntilSentAgain() throws {
   let database = try appDatabase()
   try database.write { db in
-    var photo = Pochical_V1_ChatSend()
-    photo.threadID = groupThread
-    photo.photo.id = "p1"
-    try Chats.edit(.send(photo), in: "g", now: 1, db: db)
+    try Chats.edit(.send(photoSend(["p1"])), in: "g", now: 1, db: db)
     let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
     #expect(try Chats.stillGoing(opID, now: early, in: db))
 
@@ -1221,10 +1222,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
 @Test func aPhotoThatCouldNotBeSentLeavesNothingToSend() throws {
   let database = try appDatabase()
   try database.write { db in
-    var photo = Pochical_V1_ChatSend()
-    photo.threadID = groupThread
-    photo.photo.id = "p1"
-    try Chats.edit(.send(photo), in: "g", now: 1, db: db)
+    try Chats.edit(.send(photoSend(["p1"])), in: "g", now: 1, db: db)
     let waiting = try Chats.lastWaiting(of: "g", in: db)
     #expect(try Chats.lastToSend(of: "g", now: early, in: db) == waiting)
 
@@ -1240,8 +1238,8 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     try GroupSync.take([line(1, "明日休み？"), line(2, "了解")], of: "g", in: db)
     try Chats.keepDraft(
-      KeptDraft(text: "うん", replyTo: 1), of: groupThread, in: "g", now: 1, db: db)
-    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.replyTo == 1)
+      KeptDraft(text: "うん", target: .reply(1)), of: groupThread, in: "g", now: 1, db: db)
+    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.target == .reply(1))
     #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).draft?.text == "うん")
 
     // The line answered taken back meanwhile: the words stay, alone.
@@ -1252,12 +1250,35 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
 
     // An edit opens with the line it changes.
     try Chats.keepDraft(
-      KeptDraft(text: "了解です", editing: 2), of: groupThread, in: "g", now: 2, db: db)
-    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.editing?.seq == 2)
+      KeptDraft(text: "了解です", target: .edit(2)), of: groupThread, in: "g", now: 2, db: db)
+    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.target?.editing?.seq == 2)
 
     // Emptied, it is gone.
     try Chats.keepDraft(KeptDraft(text: ""), of: groupThread, in: "g", now: 3, db: db)
     #expect(try Chats.draft(of: groupThread, in: "g", db: db) == nil)
+  }
+}
+
+@Test func aDraftNeverAnswersALineAndChangesOneAtOnce() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take([line(1, "明日休み？"), line(2, "了解")], of: "g", in: db)
+    // Turned from a reply to an edit, it is an edit alone.
+    var draft = KeptDraft(text: "了解です", target: .reply(1))
+    draft.target = .edit(2)
+    try Chats.keepDraft(draft, of: groupThread, in: "g", now: 1, db: db)
+    let opened = try Chats.draft(of: groupThread, in: "g", db: db)
+    #expect(opened?.target?.editing?.seq == 2)
+    #expect(opened?.target?.replyTo == nil)
+
+    // Nor does the device keep one that does.
+    #expect(throws: (any Error).self) {
+      try ChatDraftRow.insert {
+        ChatDraftRow(
+          groupID: "g", threadID: "both", text: "x", replyTo: 1, editing: 2, savedAtMs: 1)
+      }
+      .execute(db)
+    }
   }
 }
 
@@ -1302,10 +1323,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
 @Test func theChatListSaysTheLatestLineAsTheChatOrdersItsLines() throws {
   let database = try appDatabase()
   try database.write { db in
-    var photo = Pochical_V1_ChatSend()
-    photo.threadID = groupThread
-    photo.photo.id = "p1"
-    try Chats.edit(.send(photo), in: "g", now: 1000, db: db)
+    try Chats.edit(.send(photoSend(["p1"])), in: "g", now: 1000, db: db)
     let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
     try Chats.fail(opID, in: db)
     // Not sent and the latest: the list says so.
@@ -1415,6 +1433,29 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   }
 }
 
+@Test func aSendTheGroupRefusedStaysAsNotSentAndIsDeletedWithoutARecall() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var words = Pochical_V1_ChatSend()
+    words.threadID = groupThread
+    words.text = "長すぎる"
+    try Chats.edit(.send(words), in: "g", now: 1, db: db)
+    words.text = "届く"
+    try Chats.edit(.send(words), in: "g", now: 2, db: db)
+    let frame = try Chats.frames(of: "g", after: 0, now: early, in: db).frames[0]
+    let opIDs = try Chats.goOut(frame.chatEdits.edits, now: early, in: db).map(\.opID)
+
+    try Chats.acknowledge(opIDs, refused: [opIDs[0]], in: db)
+    let waiting = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting
+    #expect(waiting.map(\.opID) == [opIDs[0]])
+    #expect(waiting.map(\.failed) == [true])
+
+    // The group never had it: nothing is left to take back.
+    try Chats.takeBack(opIDs[0], in: db)
+    #expect(try Chats.lastWaiting(of: "g", in: db) == nil)
+  }
+}
+
 @Test func aLineTakenBackAfterItsFrameWasMadeDoesNotGoOut() throws {
   let database = try appDatabase()
   try database.write { db in
@@ -1472,33 +1513,25 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     #expect(recalls.map(\.recall.sendOpID) == [opID])
     #expect(recalls.map(\.recall.threadID) == [groupThread])
     // A line of words carries no photo to delete.
-    #expect(recalls.map(\.recall.photoID) == [""])
+    #expect(recalls.map(\.recall.photoIds) == [[]])
     // Should it come meanwhile, it shows taken back already.
     try GroupSync.take([line(7, "まちがい", op: opID)], of: "g", in: db)
     #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).lines.map(\.unsent) == [true])
   }
 }
 
-@Test func eachPhotoOfAnAlbumTakenBackAfterItWentOutNamesItsOwnPhoto() throws {
+@Test func aPhotoLineTakenBackAfterItWentOutNamesAllItsPhotos() throws {
   let database = try appDatabase()
   try database.write { db in
-    for id in ["p1", "p2"] {
-      var photo = Pochical_V1_ChatSend()
-      photo.threadID = groupThread
-      photo.photo.id = id
-      photo.album = "a1"
-      try Chats.edit(.send(photo), in: "g", now: 1, db: db)
-    }
+    try Chats.edit(.send(photoSend(["p1", "p2", "p3"])), in: "g", now: 1, db: db)
     let frame = try Chats.frames(of: "g", after: 0, now: 1, in: db).frames[0]
     let sent = try Chats.goOut(frame.chatEdits.edits, now: 1, in: db)
 
-    for edit in sent.reversed() {
-      try Chats.takeBack(edit.opID, in: db)
-    }
-    // The group deletes each photo with its line, or at once without it.
+    try Chats.takeBack(sent[0].opID, in: db)
+    // The group deletes them with the line, or at once without it.
     let recalls = try Chats.frames(of: "g", after: 0, now: 1, in: db).frames.flatMap(\.chatEdits.edits)
-    #expect(recalls.map(\.recall.sendOpID) == sent.reversed().map(\.opID))
-    #expect(recalls.map(\.recall.photoID) == ["p2", "p1"])
+    #expect(recalls.map(\.recall.sendOpID) == [sent[0].opID])
+    #expect(recalls.map(\.recall.photoIds) == [["p1", "p2", "p3"]])
   }
 }
 
@@ -1619,7 +1652,7 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   }
   // The first acknowledged, the second failed: nothing is left to send.
   try await database.write { db in
-    try Chats.acknowledge([opIDs[0]], in: db)
+    try Chats.acknowledge([opIDs[0]], refused: [], in: db)
     try Chats.fail(opIDs[1], in: db)
   }
   await waiting.value
@@ -1641,30 +1674,29 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   #expect(SyncClient.nowMs() >= written + Int64(Chat.unsentAfterMs))
 }
 
-@MainActor @Test func aPhotoUpIsPastStoppingAndAStopFirstKeepsItsLine() {
-  // Up with its line still going: sent, and × then stops nothing.
+@MainActor @Test func aLineBeingSentIsPastStoppingAndAStopFirstKeepsItsLine() {
+  // Its photos up with the line still going: sent, and × then stops
+  // nothing.
   let uploads = PhotoUploads()
-  uploads.began("p1", try: UUID()) {}
-  #expect(uploads.stoppable("p1"))
-  uploads.finished("p1")
+  uploads.began("p1", of: "l1", try: UUID()) {}
+  #expect(uploads.stoppable("l1"))
+  uploads.finished("p1", of: "l1")
   #expect(uploads.sent["p1"] == 1)
-  #expect(uploads.sending("p1") { true })
-  #expect(!uploads.stoppable("p1"))
-  #expect(!uploads.stop("p1"))
+  #expect(uploads.send("l1") { true })
+  #expect(!uploads.stoppable("l1"))
+  #expect(!uploads.stop("l1"))
   #expect(uploads.sent["p1"] == 1)
 
   // Stopped with × just before: the line, marked not sent, does not go.
   var stillGoing = true
-  uploads.began("p2", try: UUID()) {}
-  uploads.finished("p2")
-  if uploads.stop("p2") { stillGoing = false }
-  #expect(!uploads.sending("p2") { stillGoing })
-  #expect(uploads.stoppable("p2"))
-  #expect(uploads.sent["p2"] == nil)
+  uploads.began("p2", of: "l2", try: UUID()) {}
+  if uploads.stop("l2") { stillGoing = false }
+  #expect(!uploads.send("l2") { stillGoing })
+  #expect(uploads.stoppable("l2"))
 
   // Going up again, as when sent again, it can be stopped once more.
-  uploads.began("p1", try: UUID()) {}
-  #expect(uploads.stoppable("p1"))
-  uploads.forget("p1")
+  uploads.began("p1", of: "l1", try: UUID()) {}
+  #expect(uploads.stoppable("l1"))
+  uploads.forget("l1", photos: ["p1"])
   #expect(uploads.sent["p1"] == nil)
 }

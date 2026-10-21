@@ -43,9 +43,9 @@ message ServerFrame {
     // Changes to the DO's data in cursor order, after Welcome and as they
     // happen.
     Changes changes = 4;
-    // The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-    // CoworkerEdits the server has taken, sent after the Changes they made;
-    // the client deletes them from its outbox.
+    // The edits of a frame of edits the server is done with, sent after the
+    // Changes they made; the client deletes them from its outbox, keeping
+    // the chat sends Acked.refused names as lines not sent.
     Acked acked = 5;
     // The client's cursor is ahead of the server's: drop this DO's cache.
     // A Changes with everything the DO holds follows.
@@ -169,7 +169,30 @@ message DayEdit {
 }
 
 message Acked {
+  // Every edit of the frame, taken or not: the client deletes them from
+  // its outbox.
   repeated string op_ids = 1;
+  // Of those, the chat sends the group did not take, each with why; the
+  // device keeps their lines as not sent (spec/chat.md, Lines on their
+  // way). Group DO socket only. A send to someone who blocked the sender is
+  // taken as any other, so none tells a block.
+  repeated RefusedSend refused = 2;
+}
+
+message RefusedSend {
+  string op_id = 1;
+  Reason reason = 2;
+
+  enum Reason {
+    REASON_UNSPECIFIED = 0;
+    // What it sends does not fit (spec/sync-protocol.md, Chat): its words
+    // or days, its photo not the sender's own one not sent, an op_id that
+    // is no id, a chat the sender cannot read, or what the place does not
+    // take. An app sends none of these, so it tells of a bug.
+    REASON_DOES_NOT_FIT = 1;
+    // The other of a one-to-one chat is no longer in the group.
+    REASON_NOT_IN_GROUP = 2;
+  }
 }
 
 message Changes {
@@ -539,8 +562,8 @@ message ChatLine {
   repeated ChatVotes votes = 13;
   // The day a poll was settled on, as YYYY-MM-DD; empty while open.
   string decided = 14;
-  // A photo sent as the line, with no words; none once unsent.
-  ChatPhoto photo = 15;
+  reserved 15, 20;
+  reserved "photo", "album";
   // Its first link's page, under its words; none once unsent.
   LinkPreview preview = 16;
   // Sent in a one-to-one chat by someone the reader had blocked: never
@@ -553,10 +576,10 @@ message ChatLine {
   // Notices): author_id is who did it. It has no words, takes no
   // reactions, replies or pins, and is never unread.
   ChatNotice notice = 19;
-  // The photos sent together with this one (spec/chat.md, Albums), as
-  // ChatSend.album named them; empty for a photo sent alone, and for
-  // anything else.
-  string album = 20;
+  // The photos sent as the line, with no words: one, or several sent at
+  // once, drawn as one album (spec/chat.md, Albums). None for anything
+  // else, and once unsent.
+  repeated ChatPhoto photos = 21;
 }
 
 // What a notice line says happened to the group, its names worded by
@@ -692,8 +715,8 @@ message ChatSend {
   repeated string days = 3;
   // The days put to the vote instead: 2 days at least, in the group chat.
   bool poll = 4;
-  // A photo instead, the sender's own, uploaded first; no words or days.
-  ChatPhoto photo = 5;
+  reserved 5, 10;
+  reserved "photo", "album";
   // The page of the words' first link, as GetLinkPreview gave it; none
   // when the sender took it off (×) or it had not come, when the server
   // reads the page itself once the line is taken and adds it to the line.
@@ -707,12 +730,9 @@ message ChatSend {
   // ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
   // only there, cut short as an app's word on itself.
   string device = 9;
-  // With a photo: the photos sent at once, each its own line, share one
-  // name, 1 to 64 printable ASCII characters of the sender's choosing (a
-  // random one, as it also collapses their notifications), that their
-  // apps draw them together by (spec/chat.md, Albums); empty for a photo
-  // sent alone. Refused with anything but a photo.
-  string album = 10;
+  // Photos instead, 1 to chatRules.photosPerSend, each once: the
+  // sender's own, uploaded first and not sent before. No words or days.
+  repeated ChatPhoto photos = 11;
 }
 
 // New words for one of the member's own lines of words (編集).
@@ -743,10 +763,12 @@ message ChatUnsend {
 message ChatRecall {
   string thread_id = 1;
   string send_op_id = 2;
-  // The photo the send carries, uploaded before it went out: deleted with
+  reserved 3;
+  reserved "photo_id";
+  // The photos the send carries, uploaded before it went out: deleted with
   // the line, or at once when the group does not have the line, as no
-  // line will ever carry it. Empty for a send of anything else.
-  string photo_id = 3;
+  // line will ever carry them. None for a send of anything else.
+  repeated string photo_ids = 4;
 }
 
 // The member has read the chat up to here; the group only moves a mark
@@ -787,7 +809,9 @@ message ChatPhotosRequest {
 }
 
 // Up to chatRules.photoPageSize of a chat's photos nearest the asked line
-// on the asked side, oldest first, with where they are among all of them.
+// on the asked side, oldest first, with where they are among all of them:
+// whole lines' photos, a line's never split across two pages, and at
+// least one line's when there is one.
 // The photos are those the reader sees in the chat: none of a line taken
 // back, nor one hidden from them, nor, in a place's own chat, one whose
 // writer they have blocked (spec/vectors/chat-photos.json, seen).
@@ -808,7 +832,8 @@ message ChatPhotos {
   uint64 cursor = 7;
 }
 
-// A photo of a chat and the line that sent it.
+// A photo of a chat and the line that sent it, one entry a photo, a
+// line's in the order it holds them.
 message ChatPhotoEntry {
   uint64 seq = 1;
   string author_id = 2;

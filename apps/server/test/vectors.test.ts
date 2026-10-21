@@ -124,7 +124,7 @@ describe("spec/vectors/chat-photos.json", () => {
         {
           authorId: "writer",
           hiddenFrom: line.hidden ? "reader" : undefined,
-          photo: line.photo,
+          photos: line.photo ? 1 : 0,
           seq: 1,
           threadId,
           unsent: line.unsent,
@@ -137,14 +137,16 @@ describe("spec/vectors/chat-photos.json", () => {
     expect(total).toBe(expected ? 1 : 0);
   });
 
-  // The chat's lines from the first, words where no photo is.
+  // The chat's lines from the first, each holding the photos its seq
+  // names, words where none is.
   test.each(chatPhotos.page)(
     "page: $name",
-    async ({ seqs, seq, after, size, expected }) => {
+    async ({ photos, seq, after, size, expected }) => {
+      const seqs = photos.map((name) => Number(name.slice(0, -1)));
       const last = Math.max(seq, ...seqs);
       const lines = Array.from({ length: last }, (_, index) => ({
         authorId: "writer",
-        photo: seqs.includes(index + 1),
+        photos: seqs.filter((each) => each === index + 1).length,
         seq: index + 1,
       }));
       await expect(

@@ -39,7 +39,7 @@ public struct GroupMarkValue: Hashable, Sendable {
   public var letter = ""
   public var color = 0
   /// One of the group's photos; a new one is one of the user's own
-  /// (`ChatPhotos.mine`), which the group takes a copy of.
+  /// (`PhotoShelf.mine`), which the group takes a copy of.
   public var photoID = ""
 
   public init(
@@ -79,23 +79,15 @@ extension DatabaseMigrator {
           "id" TEXT PRIMARY KEY NOT NULL,
           "name" TEXT NOT NULL,
           "emoji" TEXT NOT NULL,
-          "joinedAtMs" INTEGER NOT NULL
+          "joinedAtMs" INTEGER NOT NULL,
+          "icon" TEXT NOT NULL DEFAULT '',
+          "letter" TEXT NOT NULL DEFAULT '',
+          "color" INTEGER NOT NULL DEFAULT 0,
+          "photoID" TEXT NOT NULL DEFAULT ''
         ) STRICT
         """
       )
       .execute(db)
-    }
-    registerMigration("Keep groups' icon and letter marks") { db in
-      for column in [
-        #"ALTER TABLE "groups" ADD COLUMN "icon" TEXT NOT NULL DEFAULT ''"#,
-        #"ALTER TABLE "groups" ADD COLUMN "letter" TEXT NOT NULL DEFAULT ''"#,
-        #"ALTER TABLE "groups" ADD COLUMN "color" INTEGER NOT NULL DEFAULT 0"#,
-      ] {
-        try db.execute(sql: column)
-      }
-    }
-    registerMigration("Keep groups' photo marks") { db in
-      try db.execute(sql: #"ALTER TABLE "groups" ADD COLUMN "photoID" TEXT NOT NULL DEFAULT ''"#)
     }
   }
 }
@@ -197,10 +189,10 @@ public struct GroupCalls: Sendable {
   /// `small` for its small version, as a line or a quote shows it. Kept on
   /// the device once fetched unless `keep` is false (`ChatPhotos.fetch`).
   public func photo(
-    _ photoID: String, in groupID: String, small: Bool = false, keep: Bool = true
+    _ photoID: String, in shelf: PhotoShelf, small: Bool = false, keep: Bool = true
   ) async throws -> Data {
     try await ChatPhotos.fetch(
-      photoID, in: groupID, small: small, keep: keep, as: current.signedIn())
+      photoID, in: shelf, small: small, keep: keep, as: current.signedIn())
   }
 
   /// Makes a group with the user in it, as `displayName`. `requestID` is

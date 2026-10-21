@@ -268,9 +268,9 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     set {kind = .changes(newValue)}
   }
 
-  /// The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-  /// CoworkerEdits the server has taken, sent after the Changes they made;
-  /// the client deletes them from its outbox.
+  /// The edits of a frame of edits the server is done with, sent after the
+  /// Changes they made; the client deletes them from its outbox, keeping
+  /// the chat sends Acked.refused names as lines not sent.
   public var acked: Pochical_V1_Acked {
     get {
       if case .acked(let v)? = kind {return v}
@@ -325,9 +325,9 @@ public nonisolated struct Pochical_V1_ServerFrame: Sendable {
     /// Changes to the DO's data in cursor order, after Welcome and as they
     /// happen.
     case changes(Pochical_V1_Changes)
-    /// The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-    /// CoworkerEdits the server has taken, sent after the Changes they made;
-    /// the client deletes them from its outbox.
+    /// The edits of a frame of edits the server is done with, sent after the
+    /// Changes they made; the client deletes them from its outbox, keeping
+    /// the chat sends Acked.refused names as lines not sent.
     case acked(Pochical_V1_Acked)
     /// The client's cursor is ahead of the server's: drop this DO's cache.
     /// A Changes with everything the DO holds follows.
@@ -593,9 +593,76 @@ public nonisolated struct Pochical_V1_Acked: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// Every edit of the frame, taken or not: the client deletes them from
+  /// its outbox.
   public var opIds: [String] = []
 
+  /// Of those, the chat sends the group did not take, each with why; the
+  /// device keeps their lines as not sent (spec/chat.md, Lines on their
+  /// way). Group DO socket only. A send to someone who blocked the sender is
+  /// taken as any other, so none tells a block.
+  public var refused: [Pochical_V1_RefusedSend] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Pochical_V1_RefusedSend: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var opID: String = String()
+
+  public var reason: Pochical_V1_RefusedSend.Reason = .unspecified
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum Reason: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+
+    /// What it sends does not fit (spec/sync-protocol.md, Chat): its words
+    /// or days, its photo not the sender's own one not sent, an op_id that
+    /// is no id, a chat the sender cannot read, or what the place does not
+    /// take. An app sends none of these, so it tells of a bug.
+    case doesNotFit // = 1
+
+    /// The other of a one-to-one chat is no longer in the group.
+    case notInGroup // = 2
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .doesNotFit
+      case 2: self = .notInGroup
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .doesNotFit: return 1
+      case .notInGroup: return 2
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [Pochical_V1_RefusedSend.Reason] = [
+      .unspecified,
+      .doesNotFit,
+      .notInGroup,
+    ]
+
+  }
 
   public init() {}
 }
@@ -1748,16 +1815,6 @@ public nonisolated struct Pochical_V1_ChatLine: @unchecked Sendable {
     set {_uniqueStorage()._decided = newValue}
   }
 
-  /// A photo sent as the line, with no words; none once unsent.
-  public var photo: Pochical_V1_ChatPhoto {
-    get {_storage._photo ?? Pochical_V1_ChatPhoto()}
-    set {_uniqueStorage()._photo = newValue}
-  }
-  /// Returns true if `photo` has been explicitly set.
-  public var hasPhoto: Bool {_storage._photo != nil}
-  /// Clears the value of `photo`. Subsequent reads from it will return its default value.
-  public mutating func clearPhoto() {_uniqueStorage()._photo = nil}
-
   /// Its first link's page, under its words; none once unsent.
   public var preview: Pochical_V1_LinkPreview {
     get {_storage._preview ?? Pochical_V1_LinkPreview()}
@@ -1794,12 +1851,12 @@ public nonisolated struct Pochical_V1_ChatLine: @unchecked Sendable {
   /// Clears the value of `notice`. Subsequent reads from it will return its default value.
   public mutating func clearNotice() {_uniqueStorage()._notice = nil}
 
-  /// The photos sent together with this one (spec/chat.md, Albums), as
-  /// ChatSend.album named them; empty for a photo sent alone, and for
-  /// anything else.
-  public var album: String {
-    get {_storage._album}
-    set {_uniqueStorage()._album = newValue}
+  /// The photos sent as the line, with no words: one, or several sent at
+  /// once, drawn as one album (spec/chat.md, Albums). None for anything
+  /// else, and once unsent.
+  public var photos: [Pochical_V1_ChatPhoto] {
+    get {_storage._photos}
+    set {_uniqueStorage()._photos = newValue}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -2164,93 +2221,56 @@ public nonisolated struct Pochical_V1_ChatReact: Sendable {
 
 /// A new line at the end of the chat: words, or days shared with
 /// everyone's shifts (spec/chat.md, Long messages and shared days).
-public nonisolated struct Pochical_V1_ChatSend: @unchecked Sendable {
+public nonisolated struct Pochical_V1_ChatSend: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var threadID: String {
-    get {_storage._threadID}
-    set {_uniqueStorage()._threadID = newValue}
-  }
+  public var threadID: String = String()
 
   /// 1 to chatMessage characters, not blank; empty for days.
-  public var text: String {
-    get {_storage._text}
-    set {_uniqueStorage()._text = newValue}
-  }
+  public var text: String = String()
 
   /// 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
   /// each once and in order; none for words.
-  public var days: [String] {
-    get {_storage._days}
-    set {_uniqueStorage()._days = newValue}
-  }
+  public var days: [String] = []
 
   /// The days put to the vote instead: 2 days at least, in the group chat.
-  public var poll: Bool {
-    get {_storage._poll}
-    set {_uniqueStorage()._poll = newValue}
-  }
-
-  /// A photo instead, the sender's own, uploaded first; no words or days.
-  public var photo: Pochical_V1_ChatPhoto {
-    get {_storage._photo ?? Pochical_V1_ChatPhoto()}
-    set {_uniqueStorage()._photo = newValue}
-  }
-  /// Returns true if `photo` has been explicitly set.
-  public var hasPhoto: Bool {_storage._photo != nil}
-  /// Clears the value of `photo`. Subsequent reads from it will return its default value.
-  public mutating func clearPhoto() {_uniqueStorage()._photo = nil}
+  public var poll: Bool = false
 
   /// The page of the words' first link, as GetLinkPreview gave it; none
   /// when the sender took it off (×) or it had not come, when the server
   /// reads the page itself once the line is taken and adds it to the line.
   public var preview: Pochical_V1_LinkPreview {
-    get {_storage._preview ?? Pochical_V1_LinkPreview()}
-    set {_uniqueStorage()._preview = newValue}
+    get {_preview ?? Pochical_V1_LinkPreview()}
+    set {_preview = newValue}
   }
   /// Returns true if `preview` has been explicitly set.
-  public var hasPreview: Bool {_storage._preview != nil}
+  public var hasPreview: Bool {self._preview != nil}
   /// Clears the value of `preview`. Subsequent reads from it will return its default value.
-  public mutating func clearPreview() {_uniqueStorage()._preview = nil}
+  public mutating func clearPreview() {self._preview = nil}
 
   /// The line it answers (返信), an earlier one of the same chat; 0 for none.
-  public var replyTo: UInt64 {
-    get {_storage._replyTo}
-    set {_uniqueStorage()._replyTo = newValue}
-  }
+  public var replyTo: UInt64 = 0
 
   /// The sender took the page off (×): the line goes without one.
-  public var withoutPreview: Bool {
-    get {_storage._withoutPreview}
-    set {_uniqueStorage()._withoutPreview = newValue}
-  }
+  public var withoutPreview: Bool = false
 
   /// The app's version and the device, as the chat's head says reach its
   /// readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
   /// ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
   /// only there, cut short as an app's word on itself.
-  public var device: String {
-    get {_storage._device}
-    set {_uniqueStorage()._device = newValue}
-  }
+  public var device: String = String()
 
-  /// With a photo: the photos sent at once, each its own line, share one
-  /// name, 1 to 64 printable ASCII characters of the sender's choosing (a
-  /// random one, as it also collapses their notifications), that their
-  /// apps draw them together by (spec/chat.md, Albums); empty for a photo
-  /// sent alone. Refused with anything but a photo.
-  public var album: String {
-    get {_storage._album}
-    set {_uniqueStorage()._album = newValue}
-  }
+  /// Photos instead, 1 to chatRules.photosPerSend, each once: the
+  /// sender's own, uploaded first and not sent before. No words or days.
+  public var photos: [Pochical_V1_ChatPhoto] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _storage = _StorageClass.defaultInstance
+  fileprivate var _preview: Pochical_V1_LinkPreview? = nil
 }
 
 /// New words for one of the member's own lines of words (編集).
@@ -2317,10 +2337,10 @@ public nonisolated struct Pochical_V1_ChatRecall: Sendable {
 
   public var sendOpID: String = String()
 
-  /// The photo the send carries, uploaded before it went out: deleted with
+  /// The photos the send carries, uploaded before it went out: deleted with
   /// the line, or at once when the group does not have the line, as no
-  /// line will ever carry it. Empty for a send of anything else.
-  public var photoID: String = String()
+  /// line will ever carry them. None for a send of anything else.
+  public var photoIds: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2405,7 +2425,9 @@ public nonisolated struct Pochical_V1_ChatPhotosRequest: Sendable {
 }
 
 /// Up to chatRules.photoPageSize of a chat's photos nearest the asked line
-/// on the asked side, oldest first, with where they are among all of them.
+/// on the asked side, oldest first, with where they are among all of them:
+/// whole lines' photos, a line's never split across two pages, and at
+/// least one line's when there is one.
 /// The photos are those the reader sees in the chat: none of a line taken
 /// back, nor one hidden from them, nor, in a place's own chat, one whose
 /// writer they have blocked (spec/vectors/chat-photos.json, seen).
@@ -2440,7 +2462,8 @@ public nonisolated struct Pochical_V1_ChatPhotos: Sendable {
   public init() {}
 }
 
-/// A photo of a chat and the line that sent it.
+/// A photo of a chat and the line that sent it, one entry a photo, a
+/// line's in the order it holds them.
 public nonisolated struct Pochical_V1_ChatPhotoEntry: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -3251,7 +3274,7 @@ nonisolated extension Pochical_V1_DayEdit: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Pochical_V1_Acked: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Acked"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_ids\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_ids\0\u{1}refused\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3260,6 +3283,7 @@ nonisolated extension Pochical_V1_Acked: SwiftProtobuf.Message, SwiftProtobuf._M
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedStringField(value: &self.opIds) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.refused) }()
       default: break
       }
     }
@@ -3269,14 +3293,57 @@ nonisolated extension Pochical_V1_Acked: SwiftProtobuf.Message, SwiftProtobuf._M
     if !self.opIds.isEmpty {
       try visitor.visitRepeatedStringField(value: self.opIds, fieldNumber: 1)
     }
+    if !self.refused.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.refused, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_Acked, rhs: Pochical_V1_Acked) -> Bool {
     if lhs.opIds != rhs.opIds {return false}
+    if lhs.refused != rhs.refused {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
+}
+
+nonisolated extension Pochical_V1_RefusedSend: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RefusedSend"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}op_id\0\u{1}reason\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.opID) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.reason) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.opID.isEmpty {
+      try visitor.visitSingularStringField(value: self.opID, fieldNumber: 1)
+    }
+    if self.reason != .unspecified {
+      try visitor.visitSingularEnumField(value: self.reason, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_RefusedSend, rhs: Pochical_V1_RefusedSend) -> Bool {
+    if lhs.opID != rhs.opID {return false}
+    if lhs.reason != rhs.reason {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_RefusedSend.Reason: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0REASON_UNSPECIFIED\0\u{1}REASON_DOES_NOT_FIT\0\u{1}REASON_NOT_IN_GROUP\0")
 }
 
 nonisolated extension Pochical_V1_Changes: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -4925,7 +4992,7 @@ nonisolated extension Pochical_V1_Reset: SwiftProtobuf.Message, SwiftProtobuf._M
 
 nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatLine"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{1}photo\0\u{1}preview\0\u{1}hidden\0\u{3}reply_to\0\u{1}notice\0\u{1}album\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}seq\0\u{3}author_id\0\u{1}text\0\u{3}sent_at_ms\0\u{1}edited\0\u{1}unsent\0\u{3}op_id\0\u{1}reactions\0\u{3}pinned_order\0\u{1}days\0\u{1}poll\0\u{1}votes\0\u{1}decided\0\u{2}\u{2}preview\0\u{1}hidden\0\u{3}reply_to\0\u{1}notice\0\u{2}\u{2}photos\0\u{b}photo\0\u{b}album\0\u{c}\u{f}\u{1}\u{c}\u{14}\u{1}")
 
   fileprivate class _StorageClass {
     var _threadID: String = String()
@@ -4942,12 +5009,11 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
     var _poll: Bool = false
     var _votes: [Pochical_V1_ChatVotes] = []
     var _decided: String = String()
-    var _photo: Pochical_V1_ChatPhoto? = nil
     var _preview: Pochical_V1_LinkPreview? = nil
     var _hidden: Bool = false
     var _replyTo: UInt64 = 0
     var _notice: Pochical_V1_ChatNotice? = nil
-    var _album: String = String()
+    var _photos: [Pochical_V1_ChatPhoto] = []
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -4972,12 +5038,11 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       _poll = source._poll
       _votes = source._votes
       _decided = source._decided
-      _photo = source._photo
       _preview = source._preview
       _hidden = source._hidden
       _replyTo = source._replyTo
       _notice = source._notice
-      _album = source._album
+      _photos = source._photos
     }
   }
 
@@ -5010,12 +5075,11 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         case 12: try { try decoder.decodeSingularBoolField(value: &_storage._poll) }()
         case 13: try { try decoder.decodeRepeatedMessageField(value: &_storage._votes) }()
         case 14: try { try decoder.decodeSingularStringField(value: &_storage._decided) }()
-        case 15: try { try decoder.decodeSingularMessageField(value: &_storage._photo) }()
         case 16: try { try decoder.decodeSingularMessageField(value: &_storage._preview) }()
         case 17: try { try decoder.decodeSingularBoolField(value: &_storage._hidden) }()
         case 18: try { try decoder.decodeSingularUInt64Field(value: &_storage._replyTo) }()
         case 19: try { try decoder.decodeSingularMessageField(value: &_storage._notice) }()
-        case 20: try { try decoder.decodeSingularStringField(value: &_storage._album) }()
+        case 21: try { try decoder.decodeRepeatedMessageField(value: &_storage._photos) }()
         default: break
         }
       }
@@ -5070,9 +5134,6 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       if !_storage._decided.isEmpty {
         try visitor.visitSingularStringField(value: _storage._decided, fieldNumber: 14)
       }
-      try { if let v = _storage._photo {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
-      } }()
       try { if let v = _storage._preview {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
       } }()
@@ -5085,8 +5146,8 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
       try { if let v = _storage._notice {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
       } }()
-      if !_storage._album.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._album, fieldNumber: 20)
+      if !_storage._photos.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._photos, fieldNumber: 21)
       }
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -5111,12 +5172,11 @@ nonisolated extension Pochical_V1_ChatLine: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._poll != rhs_storage._poll {return false}
         if _storage._votes != rhs_storage._votes {return false}
         if _storage._decided != rhs_storage._decided {return false}
-        if _storage._photo != rhs_storage._photo {return false}
         if _storage._preview != rhs_storage._preview {return false}
         if _storage._hidden != rhs_storage._hidden {return false}
         if _storage._replyTo != rhs_storage._replyTo {return false}
         if _storage._notice != rhs_storage._notice {return false}
-        if _storage._album != rhs_storage._album {return false}
+        if _storage._photos != rhs_storage._photos {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -5723,132 +5783,73 @@ nonisolated extension Pochical_V1_ChatReact: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatSend"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{1}photo\0\u{1}preview\0\u{3}reply_to\0\u{3}without_preview\0\u{1}device\0\u{1}album\0")
-
-  fileprivate class _StorageClass {
-    var _threadID: String = String()
-    var _text: String = String()
-    var _days: [String] = []
-    var _poll: Bool = false
-    var _photo: Pochical_V1_ChatPhoto? = nil
-    var _preview: Pochical_V1_LinkPreview? = nil
-    var _replyTo: UInt64 = 0
-    var _withoutPreview: Bool = false
-    var _device: String = String()
-    var _album: String = String()
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _threadID = source._threadID
-      _text = source._text
-      _days = source._days
-      _poll = source._poll
-      _photo = source._photo
-      _preview = source._preview
-      _replyTo = source._replyTo
-      _withoutPreview = source._withoutPreview
-      _device = source._device
-      _album = source._album
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{2}\u{2}preview\0\u{3}reply_to\0\u{3}without_preview\0\u{1}device\0\u{2}\u{2}photos\0\u{b}photo\0\u{b}album\0\u{c}\u{5}\u{1}\u{c}\u{a}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._threadID) }()
-        case 2: try { try decoder.decodeSingularStringField(value: &_storage._text) }()
-        case 3: try { try decoder.decodeRepeatedStringField(value: &_storage._days) }()
-        case 4: try { try decoder.decodeSingularBoolField(value: &_storage._poll) }()
-        case 5: try { try decoder.decodeSingularMessageField(value: &_storage._photo) }()
-        case 6: try { try decoder.decodeSingularMessageField(value: &_storage._preview) }()
-        case 7: try { try decoder.decodeSingularUInt64Field(value: &_storage._replyTo) }()
-        case 8: try { try decoder.decodeSingularBoolField(value: &_storage._withoutPreview) }()
-        case 9: try { try decoder.decodeSingularStringField(value: &_storage._device) }()
-        case 10: try { try decoder.decodeSingularStringField(value: &_storage._album) }()
-        default: break
-        }
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      case 3: try { try decoder.decodeRepeatedStringField(value: &self.days) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.poll) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._preview) }()
+      case 7: try { try decoder.decodeSingularUInt64Field(value: &self.replyTo) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.withoutPreview) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.device) }()
+      case 11: try { try decoder.decodeRepeatedMessageField(value: &self.photos) }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if !_storage._threadID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._threadID, fieldNumber: 1)
-      }
-      if !_storage._text.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._text, fieldNumber: 2)
-      }
-      if !_storage._days.isEmpty {
-        try visitor.visitRepeatedStringField(value: _storage._days, fieldNumber: 3)
-      }
-      if _storage._poll != false {
-        try visitor.visitSingularBoolField(value: _storage._poll, fieldNumber: 4)
-      }
-      try { if let v = _storage._photo {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-      } }()
-      try { if let v = _storage._preview {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-      } }()
-      if _storage._replyTo != 0 {
-        try visitor.visitSingularUInt64Field(value: _storage._replyTo, fieldNumber: 7)
-      }
-      if _storage._withoutPreview != false {
-        try visitor.visitSingularBoolField(value: _storage._withoutPreview, fieldNumber: 8)
-      }
-      if !_storage._device.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._device, fieldNumber: 9)
-      }
-      if !_storage._album.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._album, fieldNumber: 10)
-      }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.threadID.isEmpty {
+      try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 1)
+    }
+    if !self.text.isEmpty {
+      try visitor.visitSingularStringField(value: self.text, fieldNumber: 2)
+    }
+    if !self.days.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.days, fieldNumber: 3)
+    }
+    if self.poll != false {
+      try visitor.visitSingularBoolField(value: self.poll, fieldNumber: 4)
+    }
+    try { if let v = self._preview {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
+    if self.replyTo != 0 {
+      try visitor.visitSingularUInt64Field(value: self.replyTo, fieldNumber: 7)
+    }
+    if self.withoutPreview != false {
+      try visitor.visitSingularBoolField(value: self.withoutPreview, fieldNumber: 8)
+    }
+    if !self.device.isEmpty {
+      try visitor.visitSingularStringField(value: self.device, fieldNumber: 9)
+    }
+    if !self.photos.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.photos, fieldNumber: 11)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_ChatSend, rhs: Pochical_V1_ChatSend) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._threadID != rhs_storage._threadID {return false}
-        if _storage._text != rhs_storage._text {return false}
-        if _storage._days != rhs_storage._days {return false}
-        if _storage._poll != rhs_storage._poll {return false}
-        if _storage._photo != rhs_storage._photo {return false}
-        if _storage._preview != rhs_storage._preview {return false}
-        if _storage._replyTo != rhs_storage._replyTo {return false}
-        if _storage._withoutPreview != rhs_storage._withoutPreview {return false}
-        if _storage._device != rhs_storage._device {return false}
-        if _storage._album != rhs_storage._album {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs.threadID != rhs.threadID {return false}
+    if lhs.text != rhs.text {return false}
+    if lhs.days != rhs.days {return false}
+    if lhs.poll != rhs.poll {return false}
+    if lhs._preview != rhs._preview {return false}
+    if lhs.replyTo != rhs.replyTo {return false}
+    if lhs.withoutPreview != rhs.withoutPreview {return false}
+    if lhs.device != rhs.device {return false}
+    if lhs.photos != rhs.photos {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5945,7 +5946,7 @@ nonisolated extension Pochical_V1_ChatUnsend: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Pochical_V1_ChatRecall: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatRecall"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}send_op_id\0\u{3}photo_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{3}send_op_id\0\u{4}\u{2}photo_ids\0\u{b}photo_id\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5955,7 +5956,7 @@ nonisolated extension Pochical_V1_ChatRecall: SwiftProtobuf.Message, SwiftProtob
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.sendOpID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.photoID) }()
+      case 4: try { try decoder.decodeRepeatedStringField(value: &self.photoIds) }()
       default: break
       }
     }
@@ -5968,8 +5969,8 @@ nonisolated extension Pochical_V1_ChatRecall: SwiftProtobuf.Message, SwiftProtob
     if !self.sendOpID.isEmpty {
       try visitor.visitSingularStringField(value: self.sendOpID, fieldNumber: 2)
     }
-    if !self.photoID.isEmpty {
-      try visitor.visitSingularStringField(value: self.photoID, fieldNumber: 3)
+    if !self.photoIds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.photoIds, fieldNumber: 4)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -5977,7 +5978,7 @@ nonisolated extension Pochical_V1_ChatRecall: SwiftProtobuf.Message, SwiftProtob
   public static func ==(lhs: Pochical_V1_ChatRecall, rhs: Pochical_V1_ChatRecall) -> Bool {
     if lhs.threadID != rhs.threadID {return false}
     if lhs.sendOpID != rhs.sendOpID {return false}
-    if lhs.photoID != rhs.photoID {return false}
+    if lhs.photoIds != rhs.photoIds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

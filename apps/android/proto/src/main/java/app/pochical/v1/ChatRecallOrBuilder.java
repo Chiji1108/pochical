@@ -36,25 +36,50 @@ public interface ChatRecallOrBuilder extends
 
   /**
    * <pre>
-   * The photo the send carries, uploaded before it went out: deleted with
+   * The photos the send carries, uploaded before it went out: deleted with
    * the line, or at once when the group does not have the line, as no
-   * line will ever carry it. Empty for a send of anything else.
+   * line will ever carry them. None for a send of anything else.
    * </pre>
    *
-   * <code>string photo_id = 3 [json_name = "photoId"];</code>
-   * @return The photoId.
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @return A list containing the photoIds.
    */
-  java.lang.String getPhotoId();
+  java.util.List<java.lang.String>
+      getPhotoIdsList();
   /**
    * <pre>
-   * The photo the send carries, uploaded before it went out: deleted with
+   * The photos the send carries, uploaded before it went out: deleted with
    * the line, or at once when the group does not have the line, as no
-   * line will ever carry it. Empty for a send of anything else.
+   * line will ever carry them. None for a send of anything else.
    * </pre>
    *
-   * <code>string photo_id = 3 [json_name = "photoId"];</code>
-   * @return The bytes for photoId.
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @return The count of photoIds.
+   */
+  int getPhotoIdsCount();
+  /**
+   * <pre>
+   * The photos the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry them. None for a send of anything else.
+   * </pre>
+   *
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @param index The index of the element to return.
+   * @return The photoIds at the given index.
+   */
+  java.lang.String getPhotoIds(int index);
+  /**
+   * <pre>
+   * The photos the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry them. None for a send of anything else.
+   * </pre>
+   *
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @param index The index of the element to return.
+   * @return The photoIds at the given index.
    */
   com.google.protobuf.ByteString
-      getPhotoIdBytes();
+      getPhotoIdsBytes(int index);
 }

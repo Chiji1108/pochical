@@ -272,25 +272,6 @@ public interface ChatLineOrBuilder extends
 
   /**
    * <pre>
-   * A photo sent as the line, with no words; none once unsent.
-   * </pre>
-   *
-   * <code>.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];</code>
-   * @return Whether the photo field is set.
-   */
-  boolean hasPhoto();
-  /**
-   * <pre>
-   * A photo sent as the line, with no words; none once unsent.
-   * </pre>
-   *
-   * <code>.pochical.v1.ChatPhoto photo = 15 [json_name = "photo"];</code>
-   * @return The photo.
-   */
-  app.pochical.v1.ChatPhoto getPhoto();
-
-  /**
-   * <pre>
    * Its first link's page, under its words; none once unsent.
    * </pre>
    *
@@ -355,25 +336,33 @@ public interface ChatLineOrBuilder extends
 
   /**
    * <pre>
-   * The photos sent together with this one (spec/chat.md, Albums), as
-   * ChatSend.album named them; empty for a photo sent alone, and for
-   * anything else.
+   * The photos sent as the line, with no words: one, or several sent at
+   * once, drawn as one album (spec/chat.md, Albums). None for anything
+   * else, and once unsent.
    * </pre>
    *
-   * <code>string album = 20 [json_name = "album"];</code>
-   * @return The album.
+   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
    */
-  java.lang.String getAlbum();
+  java.util.List<app.pochical.v1.ChatPhoto> 
+      getPhotosList();
   /**
    * <pre>
-   * The photos sent together with this one (spec/chat.md, Albums), as
-   * ChatSend.album named them; empty for a photo sent alone, and for
-   * anything else.
+   * The photos sent as the line, with no words: one, or several sent at
+   * once, drawn as one album (spec/chat.md, Albums). None for anything
+   * else, and once unsent.
    * </pre>
    *
-   * <code>string album = 20 [json_name = "album"];</code>
-   * @return The bytes for album.
+   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
    */
-  com.google.protobuf.ByteString
-      getAlbumBytes();
+  app.pochical.v1.ChatPhoto getPhotos(int index);
+  /**
+   * <pre>
+   * The photos sent as the line, with no words: one, or several sent at
+   * once, drawn as one album (spec/chat.md, Albums). None for anything
+   * else, and once unsent.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
+   */
+  int getPhotosCount();
 }

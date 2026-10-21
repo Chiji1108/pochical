@@ -10,11 +10,11 @@ import SwiftUI
 @Observable
 final class ChatDraft {
   var text = ""
-  /// The line of one's own being changed in the composer.
-  var editing: ChatLineRow?
-  /// The line being answered (返信), by its seq, quoted over
-  /// the composer as the chat has it now.
-  var replyTo: Int64?
+  /// The line being answered (返信), by its seq, quoted over the composer
+  /// as the chat has it now; or the line of one's own being changed in it.
+  var target: DraftTarget<ChatLineRow>?
+  var editing: ChatLineRow? { target?.editing }
+  var replyTo: Int64? { target?.replyTo }
   /// Days to go with the next message (共有する日), sent first.
   var attachedDays: [Day]?
   /// Members picked from the list of names while writing, to be sent as
@@ -41,7 +41,7 @@ final class ChatDraft {
 
   /// What is written as a draft keeps it, its mentions as <@id>.
   var kept: KeptDraft {
-    KeptDraft(text: withMentions(text, picked: picked), replyTo: replyTo, editing: editing?.seq)
+    KeptDraft(text: withMentions(text, picked: picked), target: target?.map(\.seq))
   }
 
   /// The page to send with `text`: its first link's, read and not taken
@@ -81,8 +81,9 @@ struct ChatComposer: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.groupSockets) private var groupSockets
   @Bindable var draft: ChatDraft
-  /// Where the chat's photos are kept: the group's, or the support chat's.
-  let groupID: String
+  /// Where the chat is: a group, or the support chat, whose socket and
+  /// photos it uses.
+  let place: ChatPlace
   /// The chat others are told the member is writing in; none for the
   /// support chat, which has no one watching.
   var threadID: String?
@@ -158,9 +159,9 @@ struct ChatComposer: View {
     .onChange(of: draft.text) { _, words in
       guard let threadID else { return }
       if words.isEmpty {
-        draft.stopTyping(in: threadID, socket: groupSockets.client(groupID))
+        draft.stopTyping(in: threadID, socket: groupSockets.client(place.id))
       } else {
-        draft.typed(in: threadID, socket: groupSockets.client(groupID))
+        draft.typed(in: threadID, socket: groupSockets.client(place.id))
       }
     }
     .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }
@@ -192,9 +193,9 @@ struct ChatComposer: View {
           title: "メッセージを編集", words: plainText(editing.text, nameOf: nameOf),
           stop: "編集をやめる", onStop: onStopEditing)
       }
-      if editing == nil, let replyTo = draft.replyTo {
-        ReplyBar(quote: quoteOf(replyTo), groupID: groupID) {
-          draft.replyTo = nil
+      if let replyTo = draft.replyTo {
+        ReplyBar(quote: quoteOf(replyTo), shelf: place.shelf) {
+          draft.target = nil
         }
       }
       if editing == nil, let attachedDays = draft.attachedDays {
@@ -318,7 +319,7 @@ struct ChatComposer: View {
     let preview = draft.preview.flatMap { $0.none || $0.url == draft.previewRemoved ? nil : $0 }
     return ComposerShape(
       editing: editing,
-      replying: !editing && draft.replyTo != nil,
+      replying: draft.replyTo != nil,
       sharing: !editing && draft.attachedDays != nil,
       preview: preview,
       photos: editing ? 0 : draft.photos.count,
@@ -342,7 +343,8 @@ struct ChatComposer: View {
             } label: {
               HStack(spacing: 12) {
                 MemberAvatar(
-                  name: member.displayName, photoID: member.photoID, groupID: groupID, size: 28)
+                  name: member.displayName, photoID: member.photoID,
+                  shelf: place.shelf, size: 28)
                 Text(member.displayName)
                   .foregroundStyle(colors.textPrimary)
                   .lineLimit(1)

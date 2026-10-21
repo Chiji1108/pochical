@@ -21,7 +21,7 @@ struct ProfileRow: View {
         } else {
           HStack(spacing: 6) {
             MemberAvatar(
-              name: usual.name, photoID: usual.photoID, groupID: ChatPhotos.mine, size: 22,
+              name: usual.name, photoID: usual.photoID, shelf: .mine, size: 22,
               me: true)
             Text(usual.name).lineLimit(1)
           }
@@ -47,10 +47,10 @@ private struct ProfilePage: View {
     List {
       Section {
         PhotoEditor(
-          name: name ?? saved.name, photoID: saved.photoID, groupID: ChatPhotos.mine
+          name: name ?? saved.name, photoID: saved.photoID, shelf: .mine
         ) { jpeg in
           await save {
-            let photoID = try await groupCalls.sendPhoto(jpeg, to: ChatPhotos.mine)
+            let photoID = try await groupCalls.sendPhoto(jpeg, to: .mine)
             try await groupCalls.setProfile(UsualProfile(name: shownName, photoID: photoID))
           }
         } onRemove: {

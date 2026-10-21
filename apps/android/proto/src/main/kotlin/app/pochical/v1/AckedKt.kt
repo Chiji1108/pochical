@@ -36,6 +36,11 @@ public object AckedKt {
     @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
     public class OpIdsProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
     /**
+     * ```
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * ```
+     *
      * `repeated string op_ids = 1 [json_name = "opIds"];`
      * @return A list containing the opIds.
      */
@@ -45,6 +50,11 @@ public object AckedKt {
         _builder.opIdsList
       )
     /**
+     * ```
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * ```
+     *
      * `repeated string op_ids = 1 [json_name = "opIds"];`
      * @param value The opIds to add.
      */
@@ -54,6 +64,11 @@ public object AckedKt {
       _builder.addOpIds(value)
     }
     /**
+     * ```
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * ```
+     *
      * `repeated string op_ids = 1 [json_name = "opIds"];`
      * @param value The opIds to add.
      */
@@ -64,6 +79,11 @@ public object AckedKt {
       add(value)
     }
     /**
+     * ```
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * ```
+     *
      * `repeated string op_ids = 1 [json_name = "opIds"];`
      * @param values The opIds to add.
      */
@@ -73,6 +93,11 @@ public object AckedKt {
       _builder.addAllOpIds(values)
     }
     /**
+     * ```
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * ```
+     *
      * `repeated string op_ids = 1 [json_name = "opIds"];`
      * @param values The opIds to add.
      */
@@ -83,6 +108,11 @@ public object AckedKt {
       addAll(values)
     }
     /**
+     * ```
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * ```
+     *
      * `repeated string op_ids = 1 [json_name = "opIds"];`
      * @param index The index to set the value at.
      * @param value The opIds to set.
@@ -92,13 +122,138 @@ public object AckedKt {
     public operator fun com.google.protobuf.kotlin.DslList<kotlin.String, OpIdsProxy>.set(index: kotlin.Int, value: kotlin.String) {
       _builder.setOpIds(index, value)
     }/**
+     * ```
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * ```
+     *
      * `repeated string op_ids = 1 [json_name = "opIds"];`
      */
     @kotlin.jvm.JvmSynthetic
 @kotlin.jvm.JvmName("setOpIds")
     public fun com.google.protobuf.kotlin.DslList<kotlin.String, OpIdsProxy>.clear() {
       _builder.clearOpIds()
-    }}
+    }
+    /**
+     * An uninstantiable, behaviorless type to represent the field in
+     * generics.
+     */
+    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
+    public class RefusedProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
+    /**
+     * ```
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * ```
+     *
+     * `repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];`
+     */
+     public val refused: com.google.protobuf.kotlin.DslList<app.pochical.v1.RefusedSend, RefusedProxy>
+      @kotlin.jvm.JvmSynthetic
+  get() = com.google.protobuf.kotlin.DslList(
+        _builder.refusedList
+      )
+    /**
+     * ```
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * ```
+     *
+     * `repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];`
+     * @param value The refused to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addRefused")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.RefusedSend, RefusedProxy>.add(value: app.pochical.v1.RefusedSend) {
+      _builder.addRefused(value)
+    }
+    /**
+     * ```
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * ```
+     *
+     * `repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];`
+     * @param value The refused to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignRefused")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.RefusedSend, RefusedProxy>.plusAssign(value: app.pochical.v1.RefusedSend) {
+      add(value)
+    }
+    /**
+     * ```
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * ```
+     *
+     * `repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];`
+     * @param values The refused to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("addAllRefused")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.RefusedSend, RefusedProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.RefusedSend>) {
+      _builder.addAllRefused(values)
+    }
+    /**
+     * ```
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * ```
+     *
+     * `repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];`
+     * @param values The refused to add.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("plusAssignAllRefused")
+    @Suppress("NOTHING_TO_INLINE")
+    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.RefusedSend, RefusedProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.RefusedSend>) {
+      addAll(values)
+    }
+    /**
+     * ```
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * ```
+     *
+     * `repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];`
+     * @param index The index to set the value at.
+     * @param value The refused to set.
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("setRefused")
+    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.RefusedSend, RefusedProxy>.set(index: kotlin.Int, value: app.pochical.v1.RefusedSend) {
+      _builder.setRefused(index, value)
+    }
+    /**
+     * ```
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * ```
+     *
+     * `repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];`
+     */
+    @kotlin.jvm.JvmSynthetic
+@kotlin.jvm.JvmName("clearRefused")
+    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.RefusedSend, RefusedProxy>.clear() {
+      _builder.clearRefused()
+    }
+  }
 }
 public inline fun app.pochical.v1.Acked.copy(block: `app.pochical.v1`.AckedKt.Dsl.() -> kotlin.Unit): app.pochical.v1.Acked =
   `app.pochical.v1`.AckedKt.Dsl._create(this.toBuilder()).apply { block() }._build()

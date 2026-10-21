@@ -82,7 +82,7 @@ struct JoinScreen: View {
       List {
         Section {
           VStack(spacing: 12) {
-            GroupMarkView(mark: details.mark, size: 76, shelf: ChatPhotos.invitation(invite.code))
+            GroupMarkView(mark: details.mark, size: 76, shelf: .invitation(code: invite.code))
               .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.xxl))
               .clipShape(RoundedRectangle(cornerRadius: Radius.xxl))
               .accessibilityHidden(true)
@@ -99,7 +99,7 @@ struct JoinScreen: View {
                 Faces(
                   names: Array(details.members.prefix(5)),
                   photos: Array(details.memberPhotos.prefix(5)),
-                  shelf: ChatPhotos.invitation(invite.code))
+                  shelf: .invitation(code: invite.code))
                 HStack(spacing: 2) {
                   Text(memberLine(details.members)).lineLimit(1)
                   Image(systemName: "chevron.right").imageScale(.small)
@@ -175,7 +175,7 @@ struct JoinScreen: View {
     .sheet(isPresented: $showingMembers) {
       MembersSheet(
         group: details.name, members: details.members, photos: details.memberPhotos,
-        shelf: ChatPhotos.invitation(invite.code))
+        shelf: .invitation(code: invite.code))
     }
   }
 
@@ -287,7 +287,7 @@ struct JoinScreen: View {
       }
     case .usual:
       MemberAvatar(
-        name: myName, photoID: usual.photoID, groupID: ChatPhotos.mine, size: size, me: true)
+        name: myName, photoID: usual.photoID, shelf: .mine, size: size, me: true)
     case .none:
       MemberAvatar(name: myName, photoID: "", size: size, me: true)
     }
@@ -328,7 +328,7 @@ extension JoinScreen {
     do {
       var photoID = ""
       if case .picked(let jpeg) = face {
-        photoID = try await groupCalls.sendPhoto(jpeg, to: ChatPhotos.mine)
+        photoID = try await groupCalls.sendPhoto(jpeg, to: .mine)
       }
       try await groupCalls.setProfile(UsualProfile(name: myName, photoID: photoID))
       return true
@@ -344,7 +344,7 @@ extension JoinScreen {
       switch face {
       case .usual: return
       case .picked(let jpeg):
-        let photoID = try await groupCalls.sendPhoto(jpeg, to: groupID)
+        let photoID = try await groupCalls.sendPhoto(jpeg, to: .group(groupID))
         try await groupCalls.setGroupPhoto(usual: false, photoID: photoID, in: groupID)
       case .none:
         try await groupCalls.setGroupPhoto(usual: false, in: groupID)
@@ -385,14 +385,14 @@ private struct Faces: View {
   let names: [String]
   let photos: [String]
   /// Where the invitation's faces are read from.
-  let shelf: String
+  let shelf: PhotoShelf
 
   var body: some View {
     HStack(spacing: -8) {
       ForEach(Array(names.enumerated()), id: \.offset) { index, name in
         MemberAvatar(
           name: name, photoID: photos.indices.contains(index) ? photos[index] : "",
-          groupID: shelf, size: 32)
+          shelf: shelf, size: 32)
           .overlay(Circle().strokeBorder(colors.backgroundBase, lineWidth: 2).padding(-2))
       }
     }
@@ -426,7 +426,7 @@ private struct MembersSheet: View {
   let group: String
   let members: [String]
   let photos: [String]
-  let shelf: String
+  let shelf: PhotoShelf
 
   var body: some View {
     NavigationStack {
@@ -436,7 +436,7 @@ private struct MembersSheet: View {
         } icon: {
           MemberAvatar(
             name: name, photoID: photos.indices.contains(index) ? photos[index] : "",
-            groupID: shelf, size: 28)
+            shelf: shelf, size: 28)
         }
       }
       .navigationTitle("\(members.count)人のメンバー")

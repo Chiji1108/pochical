@@ -42,7 +42,7 @@ extension EnvironmentValues {
   @Entry var openGroupRoute = OpenGroupRouteAction { _ in }
   /// The group whose photos its screens' faces are, for those that know a
   /// member's photo but not the group (MemberAvatar).
-  @Entry var photoGroupID = ""
+  @Entry var photoShelf: PhotoShelf? = nil
   /// Each member's photo by their id, for faces given only who it is.
   @Entry var memberFaces: [String: String] = [:]
   /// The signed-in user's id, once known, for faces to know their own.
@@ -142,7 +142,7 @@ struct GroupsScreen: View {
     .onChange(of: path) { _, path in
       if !path.isEmpty { inviting = nil }
     }
-    .environment(\.photoGroupID, openGroupID ?? "")
+    .environment(\.photoShelf, openGroupID.map(PhotoShelf.group))
     // A widget's group: its table at the day, else its top. One the person
     // has left themselves leaves them on their first group.
     .onChange(of: OpenedGroupKey(link: OpenedGroup.shared.link, groupIDs: groups.map(\.id)), initial: true) {
@@ -423,7 +423,7 @@ private struct GroupRail: View {
           Button {
             onOpen(group.id)
           } label: {
-            GroupMark(mark: group.mark, shelf: group.id, isOpen: isOpen)
+            GroupMark(mark: group.mark, shelf: .group(group.id), isOpen: isOpen)
               .frame(width: 60, height: 48)
               .overlay(alignment: .leading) {
                 // The flag at the edge, by the open group.
@@ -503,7 +503,7 @@ private struct GroupMark: View {
   @Environment(\.themeColors) private var colors
   let mark: GroupMarkValue
   /// The group's photos, for a photo mark.
-  let shelf: String
+  let shelf: PhotoShelf
   let isOpen: Bool
 
   var body: some View {
@@ -600,7 +600,7 @@ private struct GroupHeading: View {
 
   var body: some View {
     HStack(spacing: 8) {
-      GroupMarkView(mark: group.mark, size: 26, shelf: group.id)
+      GroupMarkView(mark: group.mark, size: 26, shelf: .group(group.id))
         .background(colors.fillQuaternary, in: RoundedRectangle(cornerRadius: Radius.sm))
         .clipShape(RoundedRectangle(cornerRadius: Radius.sm))
         .accessibilityHidden(true)

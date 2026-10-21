@@ -17,7 +17,7 @@ struct ChatPhotoImage: View {
   @Environment(\.displayScale) private var displayScale
   @Environment(\.measuringLine) private var measuring
   let photo: LinePhoto
-  let groupID: String
+  let shelf: PhotoShelf
   /// The size it is drawn at, read no larger.
   let shown: CGSize
   /// Read only while on the screen, and let go once out of it: a line's
@@ -37,7 +37,7 @@ struct ChatPhotoImage: View {
 
   var body: some View {
     let request = ChatPhotoLoading.request(
-      photo, in: groupID, pixels: pixels, calls: groupCalls, held: held ?? false)
+      photo, in: shelf, pixels: pixels, calls: groupCalls, held: held ?? false)
     let wanted = !measuring && (!whileInSight || inSight)
     // Out of sight, nothing is held, not even what memory keeps.
     let kept = wanted ? image ?? ChatPhotoLoading.pipeline.cache[request]?.image : nil
@@ -68,10 +68,10 @@ struct ChatPhotoImage: View {
         image = nil
         return
       }
-      let held = held ?? (ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+      let held = held ?? (ChatPhotos.heldFile(photo.id, in: shelf) != nil)
       self.held = held
       let request = ChatPhotoLoading.request(
-        photo, in: groupID, pixels: pixels, calls: groupCalls, held: held)
+        photo, in: shelf, pixels: pixels, calls: groupCalls, held: held)
       // Held here too, so a photo the memory lets go while the line shows
       // is not lost from it.
       if let kept = ChatPhotoLoading.pipeline.cache[request]?.image {
@@ -169,7 +169,8 @@ private struct PhotoLoad: Equatable {
 
 /// A photo sent as a line: no bubble, rounded, the size it was sent at
 /// within the box, or filling its cell in an album; dimmed while it
-/// uploads, ringed with how far it has gone, × in the ring stopping it.
+/// uploads, ringed with how far it has gone, × in the ring stopping its
+/// line.
 struct PhotoLine: View {
   @Environment(\.themeColors) private var colors
   /// The chat line's cell it is drawn in, there only while near the
@@ -177,10 +178,14 @@ struct PhotoLine: View {
   /// in a cell came and went over and over, the photo with it.
   @Environment(\.lineSpace) private var lineSpace
   let photo: LinePhoto
-  let groupID: String
+  let shelf: PhotoShelf
   let waiting: Bool
-  /// Stops it going up, leaving its line not sent; none where it cannot
-  /// be stopped.
+  /// It is up, its line still waiting.
+  var up = false
+  /// Its line's op_id, by which its line is stopped.
+  var lineID = ""
+  /// Stops its line's photos going up, leaving the line not sent; none
+  /// where it cannot be stopped.
   var onStop: (() -> Void)?
   /// Its cell in an album, cropped to fill it, the album rounding and
   /// edging them all; none for a photo alone.
@@ -193,7 +198,7 @@ struct PhotoLine: View {
       // Read as a photo alone would be, so a photo is fetched and kept
       // once for its line, its cell, its quote and the photo opened large.
       ChatPhotoImage(
-        photo: photo, groupID: groupID, shown: PhotoBox.size(of: photo),
+        photo: photo, shelf: shelf, shown: PhotoBox.size(of: photo),
         whileInSight: lineSpace == nil, retries: !waiting)
         .frame(width: size.width, height: size.height)
         .clipShape(RoundedRectangle(cornerRadius: corner))
@@ -204,7 +209,7 @@ struct PhotoLine: View {
         }
         .overlay {
           if waiting {
-            PhotoGoingUp(photoID: photo.id, onStop: onStop)
+            PhotoGoingUp(photoID: photo.id, up: up, lineID: lineID, onStop: onStop)
               .clipShape(RoundedRectangle(cornerRadius: corner))
           }
         }
@@ -218,19 +223,22 @@ struct PhotoLine: View {
 
 /// A photo going up, dimmed as a photo's controls are: how far it has
 /// gone as a ring filling, turning while it waits its turn or for the
-/// network, × in it stopping it, as Signal and Telegram ring one
-/// (/design's uploading). Once it is up and its line is being sent, the
-/// ring stays full without ×, as stopping it can no longer work; the
-/// line's clock tells it is on its way, as a line of words being sent.
+/// network, full once up, × in it stopping its whole line, as Signal and
+/// Telegram ring one (/design's uploading). Once the line's photos are all
+/// up and it is being sent, the rings stay full without ×, as stopping it
+/// can no longer work; the line's clock tells it is on its way, as a line
+/// of words being sent.
 private struct PhotoGoingUp: View {
   @Environment(\.themeColors) private var colors
   let photoID: String
+  let up: Bool
+  let lineID: String
   let onStop: (() -> Void)?
 
   var body: some View {
     let uploads = PhotoUploads.shared
-    let sent = uploads.sent[photoID]
-    let onStop = uploads.stoppable(photoID) ? onStop : nil
+    let sent = uploads.sent[photoID] ?? (up ? 1 : nil)
+    let onStop = uploads.stoppable(lineID) ? onStop : nil
     ZStack {
       colors.mediaDim
       ZStack {
@@ -298,8 +306,8 @@ private struct TurningArc: View {
 
 /// Saves one of the group's photos to the person's photo library; true
 /// once saved.
-func savePhoto(_ photo: LinePhoto, in groupID: String, calls: GroupCalls) async -> Bool {
-  guard let data = await ChatPhotoLoading.whole(photo, in: groupID, calls: calls) else {
+func savePhoto(_ photo: LinePhoto, in shelf: PhotoShelf, calls: GroupCalls) async -> Bool {
+  guard let data = await ChatPhotoLoading.whole(photo, in: shelf, calls: calls) else {
     return false
   }
   do {

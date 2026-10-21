@@ -3,7 +3,6 @@ import type { ChatPlaceRules } from "@pochical/design/chat";
 import { useContext, useEffect, useRef, useState } from "react";
 
 import {
-  albumsOf,
   decidePoll,
   editMessage,
   pinMessage,
@@ -30,6 +29,7 @@ export function useChatEdits({
   composer,
   mentionName,
   onSent,
+  onGone,
 }: {
   // What the chat's place takes: 編集, ピン留め and 通報 in a line's long
   // press only where it does.
@@ -43,6 +43,8 @@ export function useChatEdits({
   // Lines just sent, for what follows a send: a photo's upload, someone
   // writing back.
   onSent: (sent: Message[]) => void;
+  // A line deleted or taken back, which no longer goes out.
+  onGone: (id: string) => void;
 }) {
   const toast = useContext(ToastContext);
   // The line whose actions are open, and the one being answered.
@@ -69,15 +71,11 @@ export function useChatEdits({
   const byId = (id?: string) => messages.find((message) => message.id === id);
   // Sends one line or several at once, the first answering the line
   // being replied to.
-  // Photos sent together share an album, named for the first one's line.
   const post = (...lines: Omit<Message, "id" | "from" | "when" | "time">[]) => {
-    const named = lines.map((line) => ({ ...line, id: crypto.randomUUID() }));
-    const photoIds = named.flatMap((line) => (line.photo ? [line.id] : []));
-    const album = photoIds.length > 1 ? photoIds[0] : undefined;
-    const sent = named.map((line, index) => ({
+    const sent = lines.map((line, index) => ({
       ...line,
-      album: line.photo ? album : undefined,
       from: "me",
+      id: crypto.randomUUID(),
       replyTo: index === 0 ? replyTo : undefined,
       time: "10:10",
       when: "今日",
@@ -116,16 +114,18 @@ export function useChatEdits({
   };
   const unsend = (id: string) => {
     onChange(unsendMessage(messages, id));
+    onGone(id);
     setUnsending(undefined);
     if (editing === id) {
       composer.stopEditing();
     }
   };
-  // A photo that could not be sent, taken out of the chat.
+  // A photo line that could not be sent, taken out of the chat.
   const remove = (id: string) => {
     onChange(messages.filter((message) => message.id !== id));
+    onGone(id);
   };
-  // A photo that could not be sent, sent again after the rest, as if
+  // A photo line that could not be sent, sent again after the rest, as if
   // written then (spec/chat.md, Lines on their way).
   const sendAgain = (id: string) => {
     const line = byId(id);
@@ -156,11 +156,11 @@ export function useChatEdits({
     if (!composer.sendable) {
       return;
     }
-    // The attached days go first, then each photo as a line of its own,
-    // then what was written, if anything.
+    // The attached days go first, then the photos as one line, then what
+    // was written, if anything.
     post(
       ...(composer.attached ? [{ days: composer.attached }] : []),
-      ...composer.photos.map((photo) => ({ photo })),
+      ...(composer.photos.length > 0 ? [{ photos: composer.photos }] : []),
       ...(text
         ? [
             {
@@ -187,14 +187,6 @@ export function useChatEdits({
       setFlash(undefined);
     }, flashMilliseconds);
   };
-  // An album takes reactions as one, on its first photo's line.
-  const albumFirst = new Map(
-    albumsOf(messages).flatMap((album) =>
-      album.map((id) => [id, album[0] ?? id] as const)
-    )
-  );
-  const reactedOn = (message: Message) =>
-    albumFirst.get(message.id) ?? message.id;
   // The props that turn a message into the opener of its actions.
   const actionsOf = (message: Message): LineActions => ({
     mine: message.from === "me",
@@ -206,7 +198,7 @@ export function useChatEdits({
         : undefined,
     onMore: () => {
       setSelected(undefined);
-      setPickingFor(reactedOn(message));
+      setPickingFor(message.id);
     },
     onOpenChange: (open: boolean) => {
       setSelected(open ? message.id : undefined);
@@ -218,7 +210,7 @@ export function useChatEdits({
             pin(message.id, message.pinned === undefined);
           },
     onReact: (emoji: string) => {
-      react(reactedOn(message), emoji);
+      react(message.id, emoji);
     },
     onReply: () => {
       if (editing !== undefined) {

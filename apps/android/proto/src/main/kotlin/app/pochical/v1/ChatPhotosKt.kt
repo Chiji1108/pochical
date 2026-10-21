@@ -13,7 +13,9 @@ public inline fun chatPhotos(block: app.pochical.v1.ChatPhotosKt.Dsl.() -> kotli
 /**
  * ```
  * Up to chatRules.photoPageSize of a chat's photos nearest the asked line
- * on the asked side, oldest first, with where they are among all of them.
+ * on the asked side, oldest first, with where they are among all of them:
+ * whole lines' photos, a line's never split across two pages, and at
+ * least one line's when there is one.
  * The photos are those the reader sees in the chat: none of a line taken
  * back, nor one hidden from them, nor, in a place's own chat, one whose
  * writer they have blocked (spec/vectors/chat-photos.json, seen).
