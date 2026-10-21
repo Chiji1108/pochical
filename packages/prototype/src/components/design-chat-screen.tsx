@@ -57,7 +57,7 @@ import {
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
-import { LineFrame, MutedMark, chatGaps } from "./design-chat-parts";
+import { LineFrame, MutedMark } from "./design-chat-parts";
 import { ChatPhotoList } from "./design-chat-photo-list";
 import { PinBar } from "./design-chat-pins";
 import { DecidePollSheet } from "./design-chat-poll";
@@ -527,7 +527,6 @@ export function ChatScreen({
             <ol
               aria-label={`${title}のメッセージ`}
               className={chatStyle.messages}
-              style={chatGaps}
               onScroll={handleScroll}
               ref={listRef}
             >

@@ -1,7 +1,6 @@
-import { chatRules } from "@pochical/design/chat";
 import { css, cx } from "@pochical/styled-system/css";
 import { BellOff, CircleAlert } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { BubbleOutline } from "./design-chat-bubble";
 import { chatRow, chatStyle } from "./design-chat-style";
@@ -215,28 +214,11 @@ export function Bubble({
   );
 }
 
-// The room between a chat's lines, set on its list of them (chatRules'
-// lineGap and runGap), as a variable for the same reason as below.
-export const chatGaps: CSSProperties = {
-  "--line-gap": `${chatRules.lineGap}px`,
-  "--run-gap": `${chatRules.runGap}px`,
-};
-
-// The size LargeEmoji draws at. Panda reads styles before the code runs,
-// so it reaches them as a variable rather than from chatRules.
-const largeEmojiSize: CSSProperties = {
-  "--large-emoji-size": `${chatRules.largeEmojiSize}px`,
-};
-
 // A message of nothing but a few emoji (spec/chat.md, Large emoji), drawn
 // large without a bubble in its place, as iMessage does.
 export function LargeEmoji({ children }: { children: ReactNode }) {
   return (
-    <span
-      className={chatStyle.largeEmoji}
-      data-part="bubble"
-      style={largeEmojiSize}
-    >
+    <span className={chatStyle.largeEmoji} data-part="bubble">
       {children}
     </span>
   );
