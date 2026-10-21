@@ -33,14 +33,21 @@ public func appDatabase() throws -> any DatabaseWriter {
   // Tests and previews get a database of their own, in a temporary file.
   guard context == .live else {
     let database = try defaultDatabase(configuration: configuration)
-    try migrator.migrate(database)
+    try setUp(database)
     return database
   }
   return try coordinated(at: sharedDatabaseURL()) { url in
     let database = try defaultDatabase(path: url.path(), configuration: configuration)
-    try migrator.migrate(database)
+    try setUp(database)
     return database
   }
+}
+
+/// The tables, then everything taken again when the app reads more of
+/// sync than when the device took its values.
+private func setUp(_ database: any DatabaseWriter) throws {
+  try migrator.migrate(database)
+  try database.write(Sync.takeAllAgainIfOlder)
 }
 
 /// Where the database lives in the App Group's container.
@@ -96,6 +103,7 @@ var migrator: DatabaseMigrator {
   migrator.registerChatAlbums()
   migrator.registerChatWentOut()
   migrator.registerChatRecalls()
+  migrator.registerSyncSchema()
   migrator.registerChatLinePhotos()
   return migrator
 }

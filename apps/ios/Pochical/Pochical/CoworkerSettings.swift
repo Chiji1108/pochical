@@ -20,7 +20,7 @@ private func nowMs() -> Int64 {
 struct CoworkersPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.say) private var say
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   @FetchAll private var rows: [CoworkerRow]
   @FetchAll private var order: [CoworkerOrderRow]
   /// The days that note anyone, to count each person's.
@@ -55,7 +55,7 @@ struct CoworkersPage: View {
           .onMove { from, to in
             var ids = list.map(\.id)
             ids.move(fromOffsets: from, toOffset: to)
-            try? database.write { try OwnValues.orderCoworkers(ids, now: nowMs(), in: $0) }
+            write { try OwnValues.orderCoworkers(ids, now: nowMs(), in: $0) }
           }
         }
         .settingsRows()
@@ -110,14 +110,20 @@ struct CoworkersPage: View {
   private func add(to list: [Coworker]) {
     let name = String(
       newName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(TextLimits.personName))
-    newName = ""
-    guard !name.isEmpty, !list.contains(where: { $0.name == name }) else { return }
+    guard !name.isEmpty, !list.contains(where: { $0.name == name }) else {
+      newName = ""
+      return
+    }
     // Counted again: the list may have grown while the name was typed.
     guard list.count < coworkersMax else {
+      newName = ""
       say(coworkersFull)
       return
     }
-    _ = try? database.write { try OwnValues.addCoworker(named: name, now: nowMs(), in: $0) }
+    // One not kept stays typed, for 人を追加 to open with again.
+    if write({ _ = try OwnValues.addCoworker(named: name, now: nowMs(), in: $0) }) {
+      newName = ""
+    }
   }
 }
 
@@ -129,7 +135,7 @@ private struct CoworkerEditor: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Environment(\.scenePhase) private var scenePhase
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   let person: Coworker
   let days: Int
   /// The others' names: one of them cannot be taken.
@@ -194,19 +200,21 @@ private struct CoworkerEditor: View {
   }
 
   /// Keeps the name typed; an empty one or another's is not kept, and
-  /// the person keeps theirs.
+  /// the person keeps theirs. One that cannot be kept goes back to the
+  /// name kept, so leaving does not try it again.
   private func keep() {
     let name = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !deleted, !name.isEmpty, !taken.contains(name), name != kept else { return }
-    try? database.write {
-      try OwnValues.renameCoworker(person.id, to: name, now: nowMs(), in: $0)
+    if write({ try OwnValues.renameCoworker(person.id, to: name, now: nowMs(), in: $0) }) {
+      kept = name
+    } else {
+      draft = kept
     }
-    kept = name
   }
 
   private func delete() {
+    guard write({ try OwnValues.deleteCoworker(person.id, now: nowMs(), in: $0) }) else { return }
     deleted = true
-    try? database.write { try OwnValues.deleteCoworker(person.id, now: nowMs(), in: $0) }
     dismiss()
   }
 }

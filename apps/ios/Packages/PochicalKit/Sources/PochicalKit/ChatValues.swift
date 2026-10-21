@@ -665,9 +665,18 @@ public enum Chats {
     return edits.filter { opIDs.contains($0.opID) }
   }
 
-  /// The edits an Acked names stop waiting.
-  static func acknowledge(_ opIDs: [String], in db: Database) throws {
-    try ChatOutboxRow.where { $0.opID.in(opIDs) }.delete().execute(db)
+  /// The edits an Acked names stop waiting, but for the sends the group
+  /// refused: those stay as lines not sent (spec/chat.md, Lines on their
+  /// way). The group does not have them, so deleting one takes nothing
+  /// back from it.
+  static func acknowledge(_ opIDs: [String], refused: [String], in db: Database) throws {
+    for opID in refused {
+      try fail(opID, in: db)
+    }
+    try ChatOutboxRow.where { $0.opID.in(refused) }.update { $0.wentOut = false }.execute(db)
+    let refused = Set(refused)
+    try ChatOutboxRow.where { $0.opID.in(opIDs.filter { !refused.contains($0) }) }
+      .delete().execute(db)
   }
 
   /// The group's newest waiting edit, nil when none waits.
