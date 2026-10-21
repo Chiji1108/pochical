@@ -328,125 +328,144 @@ export const sampleChats: Record<string, Chat> = {
     messages: [
       // An invitation whose link was remade since, so it no longer works.
       {
+        content: {
+          kind: "words",
+          text: "いとこ会のグループ作ったよ！\nhttps://pochical.app/invite/Toko2ab9",
+        },
         from: "yuki",
         id: "f0",
-        text: "いとこ会のグループ作ったよ！\nhttps://pochical.app/invite/Toko2ab9",
         time: "18:40",
         when: "昨日",
       },
       {
+        content: {
+          kind: "words",
+          text: "週末、みんなでご飯行かない？行ける日を押してね",
+        },
         from: "mother",
         id: "f1",
         reactions: [{ by: ["yuki"], emoji: "👍" }],
-        text: "週末、みんなでご飯行かない？行ける日を押してね",
         time: "19:02",
         when: "昨日",
       },
       // The days put to the vote, settled on the one everyone is off and
       // pinned over the chat: what the landing page shows of the chat.
       {
-        from: "mother",
-        id: "f1p",
-        pinned: 1,
-        poll: {
+        content: {
           days: [
             new Date(2026, 8, 26),
             new Date(2026, 8, 27),
             new Date(2026, 9, 3),
           ],
           decided: "2026-09-27",
+          kind: "poll",
           votes: {
             "2026-09-26": ["mother"],
             "2026-09-27": ["mother", "yuki", "me"],
             "2026-10-03": ["yuki"],
           },
         },
+        from: "mother",
+        id: "f1p",
+        pinned: 1,
         reactions: [{ by: ["yuki", "me"], emoji: "🎉" }],
         time: "19:03",
         when: "昨日",
       },
       {
+        content: { kind: "words", text: "いいね！焼肉がいいな" },
         from: "yuki",
         id: "f2",
-        text: "いいね！焼肉がいいな",
         time: "19:10",
         when: "昨日",
       },
       // Photos sent at once, drawn as one album (spec/chat.md, Albums).
       {
+        content: {
+          kind: "photos",
+          photos: picsumPhotos([
+            [102, 640, 480],
+            [1080, 480, 640],
+            [312, 640, 480],
+            [425, 640, 640],
+          ]),
+        },
         from: "yuki",
         id: "f3",
-        photos: picsumPhotos([
-          [102, 640, 480],
-          [1080, 480, 640],
-          [312, 640, 480],
-          [425, 640, 640],
-        ]),
         time: "19:11",
         when: "昨日",
       },
       {
+        content: {
+          kind: "words",
+          text: "27日楽しみ！前の日が明けじゃないから元気なはず",
+        },
         from: "me",
         id: "f4",
         replyTo: "f1p",
-        text: "27日楽しみ！前の日が明けじゃないから元気なはず",
         time: "8:15",
         when: "今日",
       },
       {
+        content: { kind: "words", text: "じゃあお店予約しとくね" },
         from: "mother",
         id: "f5",
         reactions: [
           { by: ["me"], emoji: "🙏" },
           { by: ["yuki"], emoji: "❤️" },
         ],
-        text: "じゃあお店予約しとくね",
         time: "9:40",
         when: "今日",
       },
       {
+        content: { kind: "words", text: "何時にする？" },
         from: "yuki",
         id: "f6",
         replyTo: "f5",
-        text: "何時にする？",
         time: "9:52",
         when: "今日",
       },
       {
+        content: { kind: "words", text: "18時でどう？焼肉にしたよ" },
         from: "mother",
         id: "f7",
         replyTo: "f6",
-        text: "18時でどう？焼肉にしたよ",
         time: "10:03",
         when: "今日",
       },
       {
+        content: { kind: "photos", photos: picsumPhotos([[292, 640, 480]]) },
         // A second photo in the chat, so the one opened large swipes to
         // the next (spec/chat.md, Photos).
         from: "mother",
         id: "f7p",
-        photos: picsumPhotos([[292, 640, 480]]),
         time: "10:04",
         when: "今日",
       },
       {
+        content: { kind: "photos", photos: [sampleRosterPhoto()] },
         from: "yuki",
         id: "f8",
-        photos: [sampleRosterPhoto()],
         time: "10:20",
         when: "今日",
       },
       {
+        content: {
+          kind: "words",
+          text: "10月の勤務表出た！マーカーのとこが私",
+        },
         from: "yuki",
         id: "f9",
-        text: "10月の勤務表出た！マーカーのとこが私",
         time: "10:20",
         when: "今日",
       },
       {
+        content: {
+          kind: "words",
+          text: "いとこ会のリンク作り直したから、こっちから入って〜\nhttps://pochical.app/invite/Toko2345",
+        },
         from: "yuki",
         id: "f10",
-        text: "いとこ会のリンク作り直したから、こっちから入って〜\nhttps://pochical.app/invite/Toko2345",
         time: "10:24",
         when: "今日",
       },
@@ -456,33 +475,33 @@ export const sampleChats: Record<string, Chat> = {
   "family:yuki": {
     messages: [
       {
+        content: { kind: "words", text: "明日って夜勤だっけ？" },
         from: "yuki",
         id: "y1",
-        text: "明日って夜勤だっけ？",
         time: "22:31",
         when: "昨日",
       },
       {
+        content: { kind: "words", text: "ううん、明日は休み。夜ごはん作るね" },
         from: "me",
         id: "y2",
         reactions: [{ by: ["yuki"], emoji: "❤️" }],
         replyTo: "y1",
-        text: "ううん、明日は休み。夜ごはん作るね",
         time: "22:40",
         when: "昨日",
       },
       {
+        content: { kind: "words", text: "🍛🍛😋" },
         from: "yuki",
         id: "y3",
         reactions: [{ by: ["me"], emoji: "😂" }],
-        text: "🍛🍛😋",
         time: "22:41",
         when: "昨日",
       },
       {
+        content: { kind: "words", text: "👌" },
         from: "me",
         id: "y4",
-        text: "👌",
         time: "22:42",
         when: "昨日",
       },
@@ -494,64 +513,78 @@ export const sampleChats: Record<string, Chat> = {
     messages: [
       // A long message, folded past ten lines until 続きを読む.
       {
+        content: {
+          kind: "words",
+          text: "来月の旅行の件、いろいろ調べてみたからまとめるね！\n\n行き先は前に話してた箱根がいいかなと思ってる。新宿からロマンスカーで1時間半くらいだし、夜勤明けでも寝てれば着くのがありがたい。\n\n宿は温泉付きの旅館を2つ見つけたよ。1つ目は駅から近くて、部屋に露天風呂がついてるところ。少し高いけど、せっかくだしアリかなと思ってる。2つ目は山の上のほうで、送迎バスがあるところ。夕ごはんがすごく評判いいみたい。\n\n日程は、みんなの休みが合いそうなところを下に送るから、行けそうな日に返事してほしい！\n\n持ち物は、浴衣は宿で借りられるから、着替えと歩きやすい靴くらいで大丈夫そう。あと美術館にも行きたいから、行きたい人は教えてね。\n\n予算は1人2万円くらいで考えてるけど、もっと抑えたい人がいたら遠慮なく言ってね。",
+        },
         from: "misaki",
         id: "n-1",
-        text: "来月の旅行の件、いろいろ調べてみたからまとめるね！\n\n行き先は前に話してた箱根がいいかなと思ってる。新宿からロマンスカーで1時間半くらいだし、夜勤明けでも寝てれば着くのがありがたい。\n\n宿は温泉付きの旅館を2つ見つけたよ。1つ目は駅から近くて、部屋に露天風呂がついてるところ。少し高いけど、せっかくだしアリかなと思ってる。2つ目は山の上のほうで、送迎バスがあるところ。夕ごはんがすごく評判いいみたい。\n\n日程は、みんなの休みが合いそうなところを下に送るから、行けそうな日に返事してほしい！\n\n持ち物は、浴衣は宿で借りられるから、着替えと歩きやすい靴くらいで大丈夫そう。あと美術館にも行きたいから、行きたい人は教えてね。\n\n予算は1人2万円くらいで考えてるけど、もっと抑えたい人がいたら遠慮なく言ってね。",
         time: "21:40",
         when: "昨日",
       },
       // Ten days shared: the card keeps to a week of rows.
       {
-        days: Array.from(
-          { length: 10 },
-          (_, index) => new Date(2026, 9, 5 + index)
-        ),
+        content: {
+          days: Array.from(
+            { length: 10 },
+            (_, index) => new Date(2026, 9, 5 + index)
+          ),
+          kind: "days",
+        },
         from: "misaki",
         id: "n0",
         time: "21:41",
         when: "昨日",
       },
       {
-        days: [new Date(2026, 8, 14), new Date(2026, 8, 21)],
+        content: {
+          days: [new Date(2026, 8, 14), new Date(2026, 8, 21)],
+          kind: "days",
+        },
         from: "misaki",
         id: "n1",
         time: "12:05",
         when: "今日",
       },
       {
+        content: { kind: "words", text: "14日と21日、みんな休みじゃん！" },
         from: "misaki",
         id: "n2",
         reactions: [{ by: ["aya", "me"], emoji: "😮" }],
-        text: "14日と21日、みんな休みじゃん！",
         time: "12:05",
         when: "今日",
       },
       {
+        content: {
+          kind: "words",
+          text: "21日カフェ行こ〜。14日はレッスンの後ならいける",
+        },
         from: "aya",
         id: "n3",
         replyTo: "n2",
-        text: "21日カフェ行こ〜。14日はレッスンの後ならいける",
         time: "12:20",
         when: "今日",
       },
       {
+        // First 22日, then changed: 21日 is the day everyone is off.
+        content: { edited: true, kind: "words", text: "21日にしよ！" },
         from: "misaki",
         id: "n4",
         reactions: [{ by: ["aya"], emoji: "👍" }],
-        // First 22日, then changed: 21日 is the day everyone is off.
-        edited: true,
         // What was decided, kept over the chat.
         pinned: 1,
         replyTo: "n3",
-        text: "21日にしよ！",
         time: "12:24",
         when: "今日",
       },
       {
+        content: {
+          kind: "words",
+          link: cafePreview,
+          text: `ここ気になってた！\n${cafePreview.url}`,
+        },
         from: "aya",
         id: "n5",
-        link: cafePreview,
-        text: `ここ気になってた！\n${cafePreview.url}`,
         time: "12:31",
         when: "今日",
       },
@@ -563,58 +596,67 @@ export const sampleChats: Record<string, Chat> = {
   "school:group": {
     messages: [
       {
+        content: { kind: "notice", text: "さきこがグループに参加しました" },
         from: "sakiko",
         id: "s0",
-        notice: "さきこがグループに参加しました",
         time: "20:02",
         when: "昨日",
       },
       {
+        content: { kind: "words", text: "10月に一回集まりたいね！" },
         from: "kana",
         id: "s1",
-        text: "10月に一回集まりたいね！",
         time: "20:14",
         when: "昨日",
       },
       {
-        days: [new Date(2026, 9, 3)],
+        content: { days: [new Date(2026, 9, 3)], kind: "days" },
         from: "kana",
         id: "s2",
         time: "20:15",
         when: "昨日",
       },
       {
-        days: [
-          new Date(2026, 9, 10),
-          new Date(2026, 9, 11),
-          new Date(2026, 9, 12),
-        ],
+        content: {
+          days: [
+            new Date(2026, 9, 10),
+            new Date(2026, 9, 11),
+            new Date(2026, 9, 12),
+          ],
+          kind: "days",
+        },
         from: "me",
         id: "s3",
         time: "21:02",
         when: "昨日",
       },
       {
-        days: [
-          new Date(2026, 9, 18),
-          new Date(2026, 9, 24),
-          new Date(2026, 9, 25),
-          new Date(2026, 9, 31),
-          new Date(2026, 10, 1),
-          new Date(2026, 10, 7),
-          new Date(2026, 10, 8),
-          new Date(2026, 10, 14),
-        ],
+        content: {
+          days: [
+            new Date(2026, 9, 18),
+            new Date(2026, 9, 24),
+            new Date(2026, 9, 25),
+            new Date(2026, 9, 31),
+            new Date(2026, 10, 1),
+            new Date(2026, 10, 7),
+            new Date(2026, 10, 8),
+            new Date(2026, 10, 14),
+          ],
+          kind: "days",
+        },
         from: "riku",
         id: "s4",
         time: "8:40",
         when: "今日",
       },
       {
+        content: {
+          kind: "words",
+          text: "<@me> 11日ならみんな来れそう！その日でいい？",
+        },
         from: "kana",
         id: "s5",
         replyTo: "s3",
-        text: "<@me> 11日ならみんな来れそう！その日でいい？",
         time: "9:15",
         when: "今日",
       },
@@ -626,36 +668,40 @@ export const sampleChats: Record<string, Chat> = {
   "ward:group": {
     messages: [
       {
+        content: { kind: "notice", text: "けんたがグループを抜けました" },
         from: "kenta",
         id: "w0",
-        notice: "けんたがグループを抜けました",
         time: "17:12",
         when: "昨日",
       },
       {
+        content: { kind: "words", text: "来月の勤務表出たね！" },
         from: "haruka",
         id: "w1",
         reactions: [{ by: ["ren", "mei", "sota", "yui"], emoji: "👀" }],
-        text: "来月の勤務表出たね！",
         time: "17:30",
         when: "昨日",
       },
       {
+        content: {
+          kind: "words",
+          text: "12日の夜勤、誰か代わってくれる人いないかな…",
+        },
         from: "ren",
         id: "w2",
         reactions: [{ by: ["haruka"], emoji: "🥲" }],
-        text: "12日の夜勤、誰か代わってくれる人いないかな…",
         time: "17:42",
         when: "昨日",
       },
       {
+        content: { kind: "unsent" },
         from: "ren",
         id: "w2u",
         time: "17:43",
-        unsent: true,
         when: "昨日",
       },
       {
+        content: { kind: "words", text: "わたし代われるよ！" },
         from: "me",
         id: "w3",
         reactions: [
@@ -663,36 +709,36 @@ export const sampleChats: Record<string, Chat> = {
           { by: ["haruka", "yui", "mei"], emoji: "🙏" },
         ],
         replyTo: "w2",
-        text: "わたし代われるよ！",
         time: "18:05",
         when: "昨日",
       },
       {
+        content: { kind: "words", text: "久しぶりに同期会しよう！" },
         from: "sota",
         id: "w4",
         reactions: [
           { by: ["haruka", "ren", "mei", "yui", "me"], emoji: "🎉" },
           { by: ["ren", "mei"], emoji: "🍻" },
         ],
-        text: "久しぶりに同期会しよう！",
         time: "12:10",
         when: "今日",
       },
       {
-        from: "sota",
-        id: "w5",
-        poll: {
+        content: {
           days: [
             new Date(2026, 9, 16),
             new Date(2026, 9, 17),
             new Date(2026, 9, 23),
           ],
+          kind: "poll",
           votes: {
             "2026-10-16": ["sota", "haruka", "ren"],
             "2026-10-17": ["sota", "mei"],
             "2026-10-23": ["haruka", "yui"],
           },
         },
+        from: "sota",
+        id: "w5",
         time: "12:12",
         when: "今日",
       },
@@ -702,9 +748,9 @@ export const sampleChats: Record<string, Chat> = {
   "friends:misaki": {
     messages: [
       {
+        content: { kind: "words", text: "来月の希望休、もう出した？" },
         from: "misaki",
         id: "m1",
-        text: "来月の希望休、もう出した？",
         time: "18:12",
         when: "月曜",
       },

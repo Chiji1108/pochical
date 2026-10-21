@@ -10,7 +10,10 @@ import type { ChatDraft, LinkPreview, Message } from "./design-group-data";
 // Pinned lines, the latest first.
 export function pinsOf(messages: Message[]) {
   return messages
-    .filter((message) => message.pinned !== undefined && !message.unsent)
+    .filter(
+      (message) =>
+        message.pinned !== undefined && message.content.kind !== "unsent"
+    )
     .toSorted((a, b) => (b.pinned ?? 0) - (a.pinned ?? 0));
 }
 
@@ -45,16 +48,17 @@ export function pinMessage(
 // Your 行ける on a day of a poll, or taking it back.
 export function votePoll(messages: Message[], id: string, key: string) {
   return messages.map((message) => {
-    if (message.id !== id || !message.poll) {
+    const { content } = message;
+    if (message.id !== id || content.kind !== "poll") {
       return message;
     }
-    const voters = message.poll.votes[key] ?? [];
+    const voters = content.votes[key] ?? [];
     const next = voters.includes("me")
       ? voters.filter((voter) => voter !== "me")
       : [...voters, "me"];
     return {
       ...message,
-      poll: { ...message.poll, votes: { ...message.poll.votes, [key]: next } },
+      content: { ...content, votes: { ...content.votes, [key]: next } },
     };
   });
 }
@@ -66,8 +70,8 @@ export function decidePoll(messages: Message[], id: string, key: string) {
   return {
     dropped: pinned.dropped,
     messages: pinned.messages.map((message) =>
-      message.id === id && message.poll
-        ? { ...message, poll: { ...message.poll, decided: key } }
+      message.id === id && message.content.kind === "poll"
+        ? { ...message, content: { ...message.content, decided: key } }
         : message
     ),
   };
@@ -106,18 +110,21 @@ export function editMessage(
   text: string,
   link: LinkPreview | undefined
 ) {
-  return messages.map((message) => {
-    if (message.id !== id) {
+  return messages.map((message): Message => {
+    const { content } = message;
+    if (message.id !== id || content.kind !== "words") {
       return message;
     }
     const sameLink =
-      message.link !== undefined &&
-      firstLink(text) === firstLink(message.text ?? "");
+      content.link !== undefined && firstLink(text) === firstLink(content.text);
     return {
       ...message,
-      edited: true,
-      link: sameLink ? message.link : link,
-      text,
+      content: {
+        edited: true,
+        kind: "words",
+        link: sameLink ? content.link : link,
+        text,
+      },
     };
   });
 }
@@ -125,13 +132,13 @@ export function editMessage(
 // A line taken back: only who wrote it and when stay, so the chat says it
 // was taken back, a reply still quotes something, and its pin is gone.
 export function unsendMessage(messages: Message[], id: string) {
-  return messages.map((message) =>
+  return messages.map((message): Message =>
     message.id === id
       ? {
+          content: { kind: "unsent" },
           from: message.from,
           id: message.id,
           time: message.time,
-          unsent: true,
           when: message.when,
         }
       : message
@@ -143,7 +150,11 @@ export function unsendMessage(messages: Message[], id: string) {
 export function firstUnreadOf(messages: Message[], unread: number) {
   let left = unread;
   for (const message of messages.toReversed()) {
-    if (left > 0 && message.from !== "me" && !message.notice) {
+    if (
+      left > 0 &&
+      message.from !== "me" &&
+      message.content.kind !== "notice"
+    ) {
       left -= 1;
       if (left === 0) {
         return message.id;
@@ -155,7 +166,10 @@ export function firstUnreadOf(messages: Message[], unread: number) {
 
 // The last line sharing days or putting them to the vote.
 export function lastSharedOf(messages: Message[]) {
-  return messages.findLast((message) => message.days || message.poll)?.id;
+  return messages.findLast(
+    (message) =>
+      message.content.kind === "days" || message.content.kind === "poll"
+  )?.id;
 }
 
 // The draft to keep, or to open again, with the chat's lines as they are
@@ -173,12 +187,15 @@ export function keptDraft(
   const lineOf = (id: string) => messages.find((message) => message.id === id);
   if (draft.editing !== undefined) {
     const line = lineOf(draft.editing);
-    if (!line || line.unsent || (line.text ?? "") === draft.text) {
+    if (line?.content.kind !== "words" || line.content.text === draft.text) {
       return undefined;
     }
     return { editing: draft.editing, text: draft.text };
   }
-  if (draft.replyTo !== undefined && lineOf(draft.replyTo)?.unsent) {
+  if (
+    draft.replyTo !== undefined &&
+    lineOf(draft.replyTo)?.content.kind === "unsent"
+  ) {
     return { text: draft.text };
   }
   return draft;

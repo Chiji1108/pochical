@@ -91,8 +91,8 @@ export const photosOf = (
   shown: (message: Message) => boolean
 ): ChatPhoto[] =>
   messages.flatMap((message) =>
-    message.photos && !message.unsent && shown(message)
-      ? message.photos.map((photo, at) => ({
+    message.content.kind === "photos" && shown(message)
+      ? message.content.photos.map((photo, at) => ({
           at,
           label: photoLabel(writerOf(message.from)),
           line: message.id,
@@ -115,12 +115,16 @@ function useChatScope() {
 
 const nothing = () => undefined;
 
+// A line said in the middle rather than by a writer: the app's own, or one
+// taken back.
+const isAside = (message: Message) =>
+  message.content.kind === "notice" || message.content.kind === "unsent";
+
 // Whether a line starts its writer's run rather than going on the one
 // above it.
 const startsRun = (message: Message, previous: Message | undefined) =>
   previous?.from !== message.from ||
-  previous.notice !== undefined ||
-  previous.unsent === true ||
+  isAside(previous) ||
   message.replyTo !== undefined;
 
 // Whether a line's time shows: not when the line after it goes on its
@@ -128,8 +132,7 @@ const startsRun = (message: Message, previous: Message | undefined) =>
 // (spec/chat.md, In a message).
 const showsTime = (message: Message, next: Message | undefined) =>
   next === undefined ||
-  next.notice !== undefined ||
-  next.unsent === true ||
+  isAside(next) ||
   startsRun(next, message) ||
   next.when !== message.when ||
   next.time !== message.time;
@@ -218,12 +221,13 @@ export function MessageLine({
   const firstOfRun = startsRun(message, previous);
   // A message whose first link is an invitation shows its group instead
   // of a page.
-  const firstUrl = message.text ? firstLink(message.text) : undefined;
+  const { content } = message;
+  const words = content.kind === "words" ? content : undefined;
+  const firstUrl = words?.text ? firstLink(words.text) : undefined;
   const inviteCode = firstUrl && inviteOf ? inviteCodeOf(firstUrl) : undefined;
   // Nothing but a few emoji: drawn large, without a bubble. A reply keeps
   // its bubble, as the line it answers sits inside one.
-  const largeEmoji =
-    !quoted && message.text !== undefined && largeEmojiCount(message.text) > 0;
+  const largeEmoji = !quoted && words && largeEmojiCount(words.text) > 0;
   const quote = quoted && (
     <BubbleQuote
       name={writerOf(quoted.from)?.name ?? ""}
@@ -238,11 +242,11 @@ export function MessageLine({
   // lines do, and keeps its place for a reply that quoted it.
   // The day over the line, when it is the day's first.
   const day = previous?.when === message.when ? undefined : message.when;
-  if (message.notice || message.unsent) {
+  if (content.kind === "notice" || content.kind === "unsent") {
     return (
       <ChatItem day={day} id={`message-${message.id}`}>
         <p className={chatStyle.notice}>
-          {message.notice ?? unsentLine(member)}
+          {content.kind === "notice" ? content.text : unsentLine(member)}
         </p>
       </ChatItem>
     );
@@ -304,158 +308,178 @@ export function MessageLine({
           actions.onReply();
         }}
       >
-        {message.photos && (
-          <PhotoLine
-            actions={actions}
-            among={photos}
-            fetchFails={fetchFails}
-            id={message.id}
-            label={photoLabel(member)}
-            mine={actions.mine}
-            onSave={() => {
-              toast("写真を保存しました");
-            }}
-            onStop={onStopUpload}
-            photos={message.photos}
-            quote={quote}
-            upload={upload}
-          />
-        )}
-        {!message.photos && message.days && (
-          <MessageActions {...actions}>
-            <button
-              aria-label={`${member?.name ?? ""}が共有した日にち。長押しでリアクションと返信`}
-              className={chatStyle.tap({ mine })}
-              type="button"
-            >
-              <DayCard days={message.days} members={people} />
-            </button>
-          </MessageActions>
-        )}
-        {message.poll && (
-          <PollCard
-            // Once settled, 決め直す waits in its long-press menu,
-            // for whoever settles it: rarely wanted, and a button
-            // in sight would make the day look less than decided.
-            actions={{
-              ...actions,
-              onRedecide:
-                message.poll.decided !== undefined && (mine || !current)
-                  ? onDecide
-                  : undefined,
-            }}
-            label={`${member?.name ?? ""}の日にちの投票`}
-            members={people}
-            // Its writer settles it, or, if they have left the group,
-            // anyone: a poll is never left without someone to.
-            canDecide={mine || !current}
-            onDecide={onDecide}
-            onVote={onVote}
-            poll={message.poll}
-            writerOf={writerOf}
-          />
-        )}
-        {largeEmoji && (
-          <LargeEmoji>
-            <MessageActions {...actions}>
-              <button
-                aria-label={`${member?.name ?? ""}のメッセージ：${message.text}。長押しでリアクションと返信`}
-                className={chatStyle.tap({ mine })}
-                type="button"
-              >
-                {message.text}
-              </button>
-            </MessageActions>
-          </LargeEmoji>
-        )}
-        {!message.photos && !message.days && !message.poll && !largeEmoji && (
-          // Like the app: the quoted line sits inside the bubble,
-          // above a thin rule, and jumps to the original.
-          <Bubble
-            first={firstOfRun}
-            linked={inviteCode !== undefined || message.link !== undefined}
-            mine={mine}
-          >
-            <MessageActions
-              {...actions}
-              onPressAt={(target) => {
-                const link = linkElementAt(target);
-                if (link) {
-                  onLinkMenu(link);
-                }
-                return link !== undefined;
-              }}
-            >
-              {/* The quote is held with the words, a tap on it its own. */}
-              <>
-                {quote}
-                <button
-                  aria-label={`${member?.name ?? ""}のメッセージ：${plainText(message.text ?? "", mentionName)}。長押しでリアクションと返信`}
-                  className={chatStyle.bubbleText}
-                  // A tap on a link opens it rather than the
-                  // actions, as in the chat apps.
-                  onClickCapture={(event) => {
-                    const url = linkElementAt(event.target)?.url;
-                    if (url) {
-                      event.preventDefault();
-                      openUrl(url);
-                      return;
-                    }
-                    // A mention opens that member's profile, as
-                    // their picture does.
-                    const mentioned = members.find(
-                      (other) =>
-                        !other.me && other.id === mentionAt(event.target)
-                    );
-                    if (mentioned && onMember) {
-                      event.preventDefault();
-                      onMember(mentioned);
-                    }
+        {(() => {
+          switch (content.kind) {
+            case "photos": {
+              return (
+                <PhotoLine
+                  actions={actions}
+                  among={photos}
+                  fetchFails={fetchFails}
+                  id={message.id}
+                  label={photoLabel(member)}
+                  mine={actions.mine}
+                  onSave={() => {
+                    toast("写真を保存しました");
                   }}
-                  type="button"
-                >
-                  <FoldedText
-                    // A new function each time, so the words are measured
-                    // again as they change, as when edited.
-                    onFolds={(folds) => {
-                      setFolded(folds);
-                    }}
-                    open={unfolded}
+                  onStop={onStopUpload}
+                  photos={content.photos}
+                  quote={quote}
+                  upload={upload}
+                />
+              );
+            }
+            case "days": {
+              return (
+                <MessageActions {...actions}>
+                  <button
+                    aria-label={`${member?.name ?? ""}が共有した日にち。長押しでリアクションと返信`}
+                    className={chatStyle.tap({ mine })}
+                    type="button"
                   >
-                    <MessageText
-                      mine={mine}
-                      nameOf={mentionName}
-                      text={message.text}
+                    <DayCard days={content.days} members={people} />
+                  </button>
+                </MessageActions>
+              );
+            }
+            case "poll": {
+              return (
+                <PollCard
+                  // Once settled, 決め直す waits in its long-press menu,
+                  // for whoever settles it: rarely wanted, and a button
+                  // in sight would make the day look less than decided.
+                  actions={{
+                    ...actions,
+                    onRedecide:
+                      content.decided !== undefined && (mine || !current)
+                        ? onDecide
+                        : undefined,
+                  }}
+                  label={`${member?.name ?? ""}の日にちの投票`}
+                  members={people}
+                  // Its writer settles it, or, if they have left the group,
+                  // anyone: a poll is never left without someone to.
+                  canDecide={mine || !current}
+                  onDecide={onDecide}
+                  onVote={onVote}
+                  poll={content}
+                  writerOf={writerOf}
+                />
+              );
+            }
+            case "words": {
+              if (largeEmoji) {
+                return (
+                  <LargeEmoji>
+                    <MessageActions {...actions}>
+                      <button
+                        aria-label={`${member?.name ?? ""}のメッセージ：${content.text}。長押しでリアクションと返信`}
+                        className={chatStyle.tap({ mine })}
+                        type="button"
+                      >
+                        {content.text}
+                      </button>
+                    </MessageActions>
+                  </LargeEmoji>
+                );
+              }
+              return (
+                // Like the app: the quoted line sits inside the bubble,
+                // above a thin rule, and jumps to the original.
+                <Bubble
+                  first={firstOfRun}
+                  linked={
+                    inviteCode !== undefined || content.link !== undefined
+                  }
+                  mine={mine}
+                >
+                  <MessageActions
+                    {...actions}
+                    onPressAt={(target) => {
+                      const link = linkElementAt(target);
+                      if (link) {
+                        onLinkMenu(link);
+                      }
+                      return link !== undefined;
+                    }}
+                  >
+                    {/* The quote is held with the words, a tap on it its own. */}
+                    <>
+                      {quote}
+                      <button
+                        aria-label={`${member?.name ?? ""}のメッセージ：${plainText(content.text, mentionName)}。長押しでリアクションと返信`}
+                        className={chatStyle.bubbleText}
+                        // A tap on a link opens it rather than the
+                        // actions, as in the chat apps.
+                        onClickCapture={(event) => {
+                          const url = linkElementAt(event.target)?.url;
+                          if (url) {
+                            event.preventDefault();
+                            openUrl(url);
+                            return;
+                          }
+                          // A mention opens that member's profile, as
+                          // their picture does.
+                          const mentioned = members.find(
+                            (other) =>
+                              !other.me && other.id === mentionAt(event.target)
+                          );
+                          if (mentioned && onMember) {
+                            event.preventDefault();
+                            onMember(mentioned);
+                          }
+                        }}
+                        type="button"
+                      >
+                        <FoldedText
+                          // A new function each time, so the words are measured
+                          // again as they change, as when edited.
+                          onFolds={(folds) => {
+                            setFolded(folds);
+                          }}
+                          open={unfolded}
+                        >
+                          <MessageText
+                            mine={mine}
+                            nameOf={mentionName}
+                            text={content.text}
+                          />
+                        </FoldedText>
+                      </button>
+                    </>
+                  </MessageActions>
+                  {folded && !unfolded && (
+                    <button
+                      className={chatStyle.unfold({ mine })}
+                      onClick={() => {
+                        setUnfolded(true);
+                      }}
+                      type="button"
+                    >
+                      続きを読む
+                    </button>
+                  )}
+                  {inviteCode && (
+                    <InviteCard
+                      invite={inviteOf?.(inviteCode)}
+                      onLongPress={onSelect}
+                      onOpen={() => {
+                        onInvite?.(inviteCode);
+                      }}
                     />
-                  </FoldedText>
-                </button>
-              </>
-            </MessageActions>
-            {folded && !unfolded && (
-              <button
-                className={chatStyle.unfold({ mine })}
-                onClick={() => {
-                  setUnfolded(true);
-                }}
-                type="button"
-              >
-                続きを読む
-              </button>
-            )}
-            {inviteCode && (
-              <InviteCard
-                invite={inviteOf?.(inviteCode)}
-                onLongPress={onSelect}
-                onOpen={() => {
-                  onInvite?.(inviteCode);
-                }}
-              />
-            )}
-            {!inviteCode && message.link && (
-              <LinkCard onLongPress={onSelect} preview={message.link} />
-            )}
-          </Bubble>
-        )}
+                  )}
+                  {!inviteCode && content.link && (
+                    <LinkCard onLongPress={onSelect} preview={content.link} />
+                  )}
+                </Bubble>
+              );
+            }
+            default: {
+              const unknown: never = content;
+              return unknown;
+            }
+          }
+        })()}
         {notSent && (
           <button
             aria-label="送れませんでした。押すと再送か削除"
@@ -468,10 +492,10 @@ export function MessageLine({
         )}
         {!notSent && (
           <small className={chatStyle.time}>
-            {(pinned || message.edited) && (
+            {(pinned || words?.edited) && (
               <span className={chatStyle.timeNote({ mine })}>
                 {pinned && <Pin aria-label="ピン留め中" role="img" size={11} />}
-                {message.edited && "編集済み"}
+                {words?.edited && "編集済み"}
               </span>
             )}
             {/* Left to the next line, or while its photo goes up, its
@@ -488,10 +512,12 @@ export function MessageLine({
       {notSent && (
         <small className={chatStyle.failedNote}>送れませんでした</small>
       )}
-      {message.days && (
+      {content.kind === "days" && (
         <button
           className={chatStyle.dayOpen({ mine })}
-          onClick={() => message.days && onOpenDay(message.days[0])}
+          onClick={() => {
+            onOpenDay(content.days[0]);
+          }}
           type="button"
         >
           シフト表で見る
@@ -547,11 +573,11 @@ function BubbleQuote({
             {summaryOf(quoted, nameOf)}
           </span>
         </span>
-        {quoted.photos?.[0] && (
+        {quoted.content.kind === "photos" && quoted.content.photos[0] && (
           <img
             alt=""
             className={chatStyle.quoteThumb}
-            src={quoted.photos[0].src}
+            src={quoted.content.photos[0].src}
           />
         )}
       </span>
@@ -566,11 +592,11 @@ function BubbleQuote({
 // actions; the page under it and リンクをコピー reach a link without that
 // tap.
 function MessageText({
-  text = "",
+  text,
   mine,
   nameOf,
 }: {
-  text?: string;
+  text: string;
   mine: boolean;
   nameOf: (id: string) => string;
 }) {

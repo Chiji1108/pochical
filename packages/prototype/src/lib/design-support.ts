@@ -11,17 +11,23 @@ export type SupportSample = "none" | "answered";
 
 const answeredLines: Message[] = [
   {
+    content: {
+      kind: "words",
+      text: "夜勤と準夜の色が似ていて、月の表だと見分けにくいです。もう少し違う色にできたらうれしいです！",
+    },
     from: "me",
     id: "s1",
     reactions: [{ by: ["support"], emoji: "👀" }],
-    text: "夜勤と準夜の色が似ていて、月の表だと見分けにくいです。もう少し違う色にできたらうれしいです！",
     time: "22:41",
     when: "9月28日(月)",
   },
   {
+    content: {
+      kind: "words",
+      text: "ご連絡ありがとうございます！並べると、たしかに似て見えますね。色の組み合わせを見直してみます。変えたら、ここでお知らせします。",
+    },
     from: "support",
     id: "s2",
-    text: "ご連絡ありがとうございます！並べると、たしかに似て見えますね。色の組み合わせを見直してみます。変えたら、ここでお知らせします。",
     time: "11:05",
     when: "9月30日(水)",
   },
