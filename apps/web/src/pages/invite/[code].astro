@@ -1,0 +1,115 @@
+---
+import { InviteMark } from "@pochical/prototype/components/invite-mark";
+import { ArrowUpRight, RefreshCw } from "lucide-react";
+
+import Link from "../../components/link.astro";
+import StoreLinks from "../../components/store-links.astro";
+import Site from "../../layouts/site.astro";
+import {
+  fetchInvitePreview,
+  inviteImageVersion,
+} from "../../lib/invite-preview";
+import { fromServer } from "../../lib/server";
+
+// Asked of the server on each request: an invitation can be renamed,
+// joined or withdrawn at any time.
+export const prerender = false;
+
+const { code = "" } = Astro.params;
+const invite = await fetchInvitePreview(code, fromServer);
+const path = `/invite/${encodeURIComponent(code)}`;
+const description = "ポチカルでシフトを共有しましょう。";
+// Chat apps build the link's preview card from the page's head, so it
+// names the group as the page does, with its own image, drawn for the
+// group (og.png.ts) at an address of its own for each version of it.
+const group =
+  invite.status === "valid"
+    ? `${invite.groupMark.emoji}「${invite.groupName}」`
+    : undefined;
+---
+
+<Site
+  description={description}
+  image={
+    invite.status === "valid"
+      ? {
+          alt: `${group}への招待`,
+          path: `${path}/og.png?v=${inviteImageVersion(invite)}`,
+        }
+      : undefined
+  }
+  path={path}
+  privatePage
+  title={group === undefined ? "グループへの招待" : `${group}への招待`}
+>
+  <main class="invite-page" id="main">
+    {invite.status === "valid" ? (
+      <>
+        {/* The group is what the page is about, so its mark leads, in a
+           frame like the app's join screen; the header says ポチカル. */}
+        <span aria-hidden="true" class="invite-mark">
+          <InviteMark
+            mark={invite.groupMark}
+            photo={`${path}/mark/${invite.groupMark.photoId}`}
+            size={66}
+          />
+        </span>
+        <p class="eyebrow">YOU'RE INVITED</p>
+        <h1>{invite.groupName}</h1>
+        {invite.memberCount > 0 && (
+          <p class="invite-members">メンバー {invite.memberCount}人</p>
+        )}
+        <a
+          class="button"
+          href={`pochical://invite/${encodeURIComponent(code)}`}
+        >
+          アプリで開く <ArrowUpRight aria-hidden="true" size={18} />
+        </a>
+      </>
+    ) : (
+      <>
+        <p class="eyebrow">GROUP INVITATION</p>
+        <h1>
+          {invite.status === "invalid"
+            ? "この招待リンクは使えません。"
+            : "招待を確認できませんでした。"}
+        </h1>
+        <p>
+          {invite.status === "invalid"
+            ? "招待リンクが変更されたか、グループが削除された可能性があります。送り主に新しいリンクを確認してください。"
+            : "一時的に接続できない可能性があります。少し時間をおいて、もう一度お試しください。"}
+        </p>
+        {invite.status === "unavailable" && (
+          <button class="button" data-retry type="button">
+            <RefreshCw aria-hidden="true" size={16} />
+            もう一度確認する
+          </button>
+        )}
+      </>
+    )}
+    <div class="invite-download">
+      <h2>アプリをまだお持ちでない方へ</h2>
+      <StoreLinks />
+      <Link class="text-link" href="/">
+        ポチカルについて →
+      </Link>
+    </div>
+  </main>
+</Site>
+
+<script>
+  // Asks the server again by loading the page again, which shows whatever
+  // it answers.
+  for (const button of document.querySelectorAll("button[data-retry]")) {
+    button.addEventListener("click", () => {
+      if (button instanceof HTMLButtonElement) {
+        button.disabled = true;
+        button.replaceChildren(
+          button.querySelector("svg") ?? "",
+          "確認しています…"
+        );
+      }
+      location.reload();
+    });
+  }
+</script>

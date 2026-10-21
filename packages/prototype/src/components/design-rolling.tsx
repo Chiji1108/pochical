@@ -4,13 +4,13 @@ import {
   AnimatePresence,
   motion,
   useMotionValue,
-  useReducedMotion,
   useTransform,
 } from "motion/react";
 import type { MotionValue } from "motion/react";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode, Ref } from "react";
 
+import { useReducedMotion } from "../lib/device-media";
 import { spring } from "../lib/motion";
 
 // Names that roll as what they name turns, like a month's over the
@@ -343,7 +343,7 @@ export function TodayCorner({
   className?: string;
   children: ReactNode;
 }) {
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   const rest = useMotionValue(0);
   const drag = progress ?? rest;
   // Where it is by what is shown, apart from any drag.
@@ -404,7 +404,7 @@ export function ShownWithPages({
   className?: string;
   children: ReactNode;
 }) {
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   const rest = useMotionValue(0);
   const drag = progress ?? rest;
   // How much is there by what is shown, apart from any drag.

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { characterCount } from "@pochical/design/text";
 import { widgetRules } from "@pochical/design/widgets";
 import { rgbaToThumbHash, thumbHashToRGBA } from "thumbhash";
 
@@ -75,6 +76,7 @@ import {
 } from "../src/lib/design-group-data";
 import type {
   Chat,
+  DraftTarget,
   Member,
   Message,
   MessageContent,
@@ -106,7 +108,6 @@ import { reconnectWaitMost } from "../src/lib/reconnect";
 import { mayAskForReview, openedOn } from "../src/lib/review";
 import type { ReviewHistory } from "../src/lib/review";
 import {
-  characterCount,
   dayName,
   isEmoji,
   limitText,
@@ -635,20 +636,20 @@ describe("spec/vectors/chat.json", () => {
           "text" in one ? { kind: "words", text: one.text } : { kind: "unsent" }
         )
       );
-      const kept = keptDraft(
-        {
-          editing: "editing" in draft ? String(draft.editing) : undefined,
-          replyTo: "replyTo" in draft ? String(draft.replyTo) : undefined,
-          text: draft.text,
-        },
-        messages
-      );
+      // The vectors keep the target as two seqs, at most one of them set.
+      let target: DraftTarget | undefined;
+      if ("editing" in draft) {
+        target = { id: String(draft.editing), kind: "edit" };
+      } else if ("replyTo" in draft) {
+        target = { id: String(draft.replyTo), kind: "reply" };
+      }
+      const kept = keptDraft({ target, text: draft.text }, messages);
       expect(
         kept && {
           editing:
-            kept.editing === undefined ? undefined : Number(kept.editing),
+            kept.target?.kind === "edit" ? Number(kept.target.id) : undefined,
           replyTo:
-            kept.replyTo === undefined ? undefined : Number(kept.replyTo),
+            kept.target?.kind === "reply" ? Number(kept.target.id) : undefined,
           text: kept.text,
         }
       ).toEqual(expected ?? undefined);

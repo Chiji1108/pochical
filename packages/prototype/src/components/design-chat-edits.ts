@@ -19,11 +19,10 @@ import { ToastContext } from "./design-toast";
 
 // What changes a chat's lines: sending, replying and editing, reactions,
 // pins, votes and settling a poll, taking a line back; and which line is
-// being acted on meanwhile (its actions open, answered, reacted to from
+// being acted on meanwhile (its actions open, reacted to from
 // every emoji, reported, taken back or settled), each asked about first.
 export function useChatEdits({
   rules,
-  answering,
   messages,
   onChange,
   composer,
@@ -34,8 +33,6 @@ export function useChatEdits({
   // What the chat's place takes: 編集, ピン留め and 通報 in a line's long
   // press only where it does.
   rules: ChatPlaceRules;
-  // The line a draft the chat was left with answers.
-  answering?: string;
   messages: Message[];
   onChange: (messages: Message[]) => void;
   composer: ComposerState;
@@ -47,9 +44,8 @@ export function useChatEdits({
   onGone: (id: string) => void;
 }) {
   const toast = useContext(ToastContext);
-  // The line whose actions are open, and the one being answered.
+  // The line whose actions are open.
   const [selected, setSelected] = useState<string>();
-  const [replyTo, setReplyTo] = useState(answering);
   // The line whose reaction is being picked from every emoji.
   const [pickingFor, setPickingFor] = useState<string>();
   // Rung, as a pin or a quote jumped to it.
@@ -67,7 +63,7 @@ export function useChatEdits({
   const [reporting, setReporting] = useState<string>();
   // The poll being settled by its writer.
   const [deciding, setDeciding] = useState<string>();
-  const { editing } = composer;
+  const { editing, replyTo } = composer;
   const byId = (id?: string) => messages.find((message) => message.id === id);
   // Sends one line or several at once, the first answering the line
   // being replied to.
@@ -81,12 +77,10 @@ export function useChatEdits({
       when: "今日",
     }));
     onChange([...messages, ...sent]);
-    setReplyTo(undefined);
+    if (replyTo !== undefined) {
+      composer.stop();
+    }
     onSent(sent);
-  };
-  const startEditing = (message: Message) => {
-    setReplyTo(undefined);
-    composer.startEditing(message);
   };
   const pin = (id: string, pinned: boolean) => {
     const next = pinMessage(messages, id, pinned);
@@ -121,7 +115,7 @@ export function useChatEdits({
     onGone(id);
     setUnsending(undefined);
     if (editing === id) {
-      composer.stopEditing();
+      composer.stop();
     }
   };
   // A photo line that could not be sent, taken out of the chat.
@@ -153,7 +147,7 @@ export function useChatEdits({
             composer.linkPreview.ready
           )
         );
-        composer.stopEditing();
+        composer.stop();
       }
       return;
     }
@@ -204,7 +198,7 @@ export function useChatEdits({
     onEdit:
       rules.edit && message.from === "me" && message.content.kind === "words"
         ? () => {
-            startEditing(message);
+            composer.startEditing(message);
           }
         : undefined,
     onMore: () => {
@@ -226,10 +220,7 @@ export function useChatEdits({
       react(message.id, emoji);
     },
     onReply: () => {
-      if (editing !== undefined) {
-        composer.stopEditing();
-      }
-      setReplyTo(message.id);
+      composer.reply(message.id);
       setSelected(undefined);
     },
     onReport:
@@ -263,14 +254,12 @@ export function useChatEdits({
     post,
     react,
     remove,
-    replyTo,
     reporting,
     selected,
     send,
     sendAgain,
     setDeciding,
     setPickingFor,
-    setReplyTo,
     setReporting,
     setSelected,
     setUnsending,

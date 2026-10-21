@@ -60,7 +60,7 @@ jobs:
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
-  # apps/web, apps/catalog, apps/server, apps/admin and packages/: lint
+  # apps/web, apps/catalog, apps/server, apps/admin, packages/ and tools/: lint
   # and format, types, tests.
   typescript:
     needs: changes
@@ -76,9 +76,9 @@ jobs:
       - run: bun run check
       - run: bun run typecheck
       - run: bun run test
-      # What each web page loads before it first shows, against its budget.
-      - run: bun run --cwd apps/web build
-      - run: bun run --cwd apps/web bundle:budget
+      # The site builds, and its Worker's bundle and config validate.
+      - run: bun run build && bunx wrangler deploy --dry-run
+        working-directory: apps/web
       - run: bun run --cwd apps/catalog build
       # The server and admin Workers bundle and their configs validate, as
       # Workers Builds deploys them on merge. A dry run needs no account.

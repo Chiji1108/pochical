@@ -1,16 +1,11 @@
 import { chatRules } from "@pochical/design/chat";
 import { css, cx } from "@pochical/styled-system/css";
 import { Reply } from "lucide-react";
-import {
-  animate,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-} from "motion/react";
+import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import { useRef } from "react";
 import type { PointerEvent, ReactNode } from "react";
 
+import { useReducedMotion } from "../lib/device-media";
 import { spring } from "../lib/motion";
 
 // A line dragged sideways, toward the middle from its writer's side,
@@ -56,7 +51,7 @@ export function SwipeToReply({
   className?: string;
   children: ReactNode;
 }) {
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   const x = useMotionValue(0);
   const sign = mine ? -1 : 1;
   const shown = useTransform(x, (value) =>

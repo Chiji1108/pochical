@@ -3,24 +3,26 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --port 3100",
-    "build": "vite build",
+    "dev": "react-router dev --port 3100 --strictPort",
+    "build": "react-router build",
     "deploy": "bun run build && wrangler deploy",
     "cf-typegen": "wrangler types --strict-vars=false -c wrangler.jsonc -c ../server/wrangler.jsonc",
-    "typecheck": "tsc --noEmit"
+    "typegen": "react-router typegen",
+    "prepare": "bun run typegen",
+    "typecheck": "bun run typegen && tsc --noEmit"
   },
   "dependencies": {
     "@pochical/design": "workspace:*",
-    "@tanstack/react-router": "1.170.39",
-    "@tanstack/react-start": "1.168.58",
+    "isbot": "^5.1.40",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "react-router": "8.5.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
+    "@react-router/dev": "8.5.0",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^6.0.1",
     "typescript": "~6.0.3",
     "vite": "^8.0.0",
     "wrangler": "^4.137.0"

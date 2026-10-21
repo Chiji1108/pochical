@@ -1,0 +1,109 @@
+---
+import homeScreenIcon from "@pochical/prototype/assets/icon-180.png?no-inline";
+import siteIcon from "@pochical/prototype/assets/icon.png?url";
+import shareImage from "@pochical/prototype/assets/share.png?url";
+import { SHARE_IMAGE, site } from "@pochical/prototype/lib/brand";
+import { ArrowUpRight } from "lucide-react";
+
+import Link from "../components/link.astro";
+import { siteOrigin } from "../lib/site";
+import type { PageImage } from "../lib/site";
+
+import "../styles.css";
+
+// Every page's frame: its head, as search and chat apps read it, and the
+// site's header and footer. A private page has no canonical address and
+// asks search to leave it out; a page for an error has no title of its own.
+type Meta = {
+  title: string;
+  description: string;
+  path: string;
+  privatePage?: boolean;
+  image?: PageImage;
+};
+type Props = Meta | { title?: never };
+
+const meta = Astro.props.title === undefined ? undefined : Astro.props;
+const origin = siteOrigin();
+const image = meta?.image ?? { alt: SHARE_IMAGE.alt, path: shareImage };
+const fullTitle = `${meta?.title} | ポチカル`;
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <meta content="#fbfaf7" name="theme-color" />
+    {meta && (
+      <>
+        <title>{fullTitle}</title>
+        <meta content={meta.description} name="description" />
+        <meta content={fullTitle} property="og:title" />
+        <meta content={meta.description} property="og:description" />
+        <meta content="website" property="og:type" />
+        <meta content="ja_JP" property="og:locale" />
+        <meta content={site.name} property="og:site_name" />
+        <meta content="summary_large_image" name="twitter:card" />
+        {origin && (
+          <>
+            <meta content={`${origin}${meta.path}`} property="og:url" />
+            <meta content={`${origin}${image.path}`} property="og:image" />
+            <meta
+              content={String(SHARE_IMAGE.width)}
+              property="og:image:width"
+            />
+            <meta
+              content={String(SHARE_IMAGE.height)}
+              property="og:image:height"
+            />
+            <meta content={image.alt} property="og:image:alt" />
+          </>
+        )}
+        {meta.privatePage ? (
+          <meta content="noindex, nofollow" name="robots" />
+        ) : (
+          origin && <link href={`${origin}${meta.path}`} rel="canonical" />
+        )}
+      </>
+    )}
+    <link href={siteIcon} rel="icon" type="image/png" />
+    {/* Any page added to an iPhone's home screen. */}
+    <link href={homeScreenIcon} rel="apple-touch-icon" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">
+      本文へスキップ
+    </a>
+    <header class="site-header">
+      <Link aria-label="ポチカル ホーム" class="brand" href="/">
+        <img alt="" height="36" src={siteIcon} width="36" />
+        <span>ポチカル</span>
+      </Link>
+    </header>
+    <slot />
+    <footer class="site-footer">
+      <div class="footer-top">
+        <div>
+          <Link class="brand" href="/">
+            <img alt="" height="30" src={siteIcon} width="30" />
+            <span>ポチカル</span>
+          </Link>
+          <p>はたらく日も、おやすみの日も。</p>
+        </div>
+        <nav aria-label="フッターナビゲーション">
+          <Link href="/support">サポート</Link>
+          <Link href="/privacy">プライバシーポリシー</Link>
+          <Link href="/terms">利用規約</Link>
+          <Link href="/account/delete">アカウント削除</Link>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 ポチカル</span>
+        <a href={`mailto:${site.email}`}>
+          {site.email} <ArrowUpRight aria-hidden="true" size={12} />
+        </a>
+      </div>
+    </footer>
+  </body>
+</html>

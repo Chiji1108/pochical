@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "scripts": {
-    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/catalog typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck",
+    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/catalog typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck && tsc --noEmit -p tools && tsc --noEmit -p tools/layout-diff",
     "test": "bun run --cwd packages/jsx test && bun run --cwd packages/prototype test && bun run --cwd apps/web test && bun run --cwd apps/catalog test && bun run --cwd apps/server test",
     "check": "ultracite check",
     "fix": "ultracite fix",
@@ -25,15 +25,17 @@
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
+    "@astrojs/compiler-rs": "^0.5.2",
     "@bufbuild/protobuf": "2.15.0",
     "@pochical/design": "workspace:*",
     "@types/bun": "^1.4.2",
     "lefthook": "^2.1.6",
-    "oxfmt": "^0.70.0",
+    "oxfmt": "^0.74.0",
     "oxlint": "^1.85.0",
     "oxlint-tsgolint": "^7.0.2003",
     "playwright-core": "^1.63.0",
     "sharp": "0.35.4",
+    "typescript": "~6.0.3",
     "ultracite": "7.12.0"
   },
   "packageManager": "bun@1.4.2"

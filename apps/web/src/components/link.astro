@@ -1,0 +1,20 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+// A link within the site, marked as the current page on the page it names
+// and on the pages under it; the top page only on itself.
+type Props = HTMLAttributes<"a"> & { href: `/${string}` };
+
+const { href, ...props } = Astro.props;
+// A prerendered page is named by its file: /privacy.html, /index.html.
+const path = Astro.url.pathname.replace(/(?:\/index)?\.html$/u, "") || "/";
+const current =
+  href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`);
+// Astro keeps the line breaks around text written directly inside a
+// component, which the formatter adds; in Japanese one renders as a space.
+const children = await Astro.slots.render("default");
+---
+
+<a {...props} aria-current={current ? "page" : undefined} href={href}>
+  <Fragment set:html={children.trim()} />
+</a>

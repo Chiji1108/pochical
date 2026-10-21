@@ -1,0 +1,18 @@
+---
+import Link from "../components/link.astro";
+import Site from "../layouts/site.astro";
+
+// Drawn on request, so it goes out with the pages' headers.
+export const prerender = false;
+---
+
+<Site>
+  <main class="document-page state-page" id="main">
+    <p class="eyebrow">404 / NOT FOUND</p>
+    <h1>ページが見つかりません。</h1>
+    <p>リンクが間違っているか、ページが移動した可能性があります。</p>
+    <Link class="button" href="/">
+      ホームに戻る
+    </Link>
+  </main>
+</Site>

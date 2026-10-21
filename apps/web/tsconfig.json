@@ -1,5 +1,5 @@
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "worker-configuration.d.ts"],
+  "include": [".astro/types.d.ts", "src", "worker-configuration.d.ts"],
   "exclude": ["node_modules", "dist", "tests"],
   "compilerOptions": {
     "target": "ES2024",
@@ -7,7 +7,7 @@
     "jsxImportSource": "@pochical/jsx",
     "module": "ESNext",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "types": ["./worker-configuration.d.ts", "node", "vite/client"],
+    "types": ["./worker-configuration.d.ts", "node", "astro/client"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",

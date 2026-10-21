@@ -6,7 +6,6 @@ import {
   motion,
   useMotionValue,
   useMotionValueEvent,
-  useReducedMotion,
   useTransform,
 } from "motion/react";
 import type { MotionValue } from "motion/react";
@@ -19,6 +18,7 @@ import type {
   Ref,
 } from "react";
 
+import { useReducedMotion } from "../lib/device-media";
 import { spring } from "../lib/motion";
 import { listRow, listStyle } from "./design-list";
 import { srOnly } from "./design-ui";
@@ -302,7 +302,7 @@ export function PageDots({
   // The pager's own, how far it is swiped toward the next page.
   progress?: MotionValue<number>;
 }) {
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   const still = useMotionValue(0);
   const swipe = progress ?? still;
   // Where the bar is, in pages: the page shown, plus how far it is
