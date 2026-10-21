@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // A SvelteKit 3 sketch of apps/admin (spec/admin.md); never deployed.
+  "name": "pochical-admin-svelte",
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
+  "services": [
+    {
+      "binding": "SERVER",
+      "service": "pochical-server",
+      "entrypoint": "AdminEntrypoint",
+    },
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+}

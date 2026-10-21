@@ -3,6 +3,7 @@
   "private": true,
   "workspaces": [
     "apps/admin",
+    "apps/admin-svelte",
     "apps/catalog",
     "apps/server",
     "apps/web",
