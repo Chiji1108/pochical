@@ -66,7 +66,8 @@ export const requireMark = (mark: GroupMark | undefined): MarkValue => {
  * A photo mark into the group's photos before the group shows it: a new
  * one must be one of the caller's own photos, which the group takes a
  * copy of; the group's photo already (`current`) stays as it is.
- * INVALID_ARGUMENT when the caller has no such photo.
+ * INVALID_ARGUMENT when the caller has no such photo, looked for first
+ * and again by the copy, as the bucket's delete may take it between.
  */
 export const shareMarkPhoto = async (
   env: Env,
@@ -79,10 +80,14 @@ export const shareMarkPhoto = async (
   if (photoId === "" || photoId === current) {
     return;
   }
-  if (!(await hasPersonPhoto(env, userId, photoId))) {
+  if (
+    !(
+      (await hasPersonPhoto(env, userId, photoId)) &&
+      (await sharePersonPhoto(env, userId, photoId, groupId))
+    )
+  ) {
     throw invalidMark();
   }
-  await sharePersonPhoto(env, userId, photoId, groupId);
 };
 
 /**

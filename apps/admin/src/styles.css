@@ -130,6 +130,33 @@ button {
   padding: 8px 16px;
 }
 
+button.danger {
+  background: var(--open);
+}
+
+button.quiet {
+  background: var(--staff);
+  color: var(--text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  max-width: 560px;
+  padding: 16px;
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.3);
+}
+
 button:disabled {
   opacity: 0.5;
 }

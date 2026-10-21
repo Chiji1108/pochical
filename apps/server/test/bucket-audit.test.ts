@@ -2,12 +2,17 @@ import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AUDIT_GRACE_MS } from "../src/bucket-audit";
 import type { BucketAudit } from "../src/bucket-audit";
-import { chatLines } from "../src/group-do-schema";
-import { personPhotoKey, photoKey } from "../src/photos";
+import { chatLines, groupPhotos } from "../src/group-do-schema";
+import {
+  deletePhotosUnder,
+  personPhotoKey,
+  photoKey,
+  sharePersonPhoto,
+} from "../src/photos";
 import { call, ORIGIN } from "./helpers";
 import {
   PAIR_ROSTER,
@@ -20,13 +25,13 @@ import {
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 
-const upload = async (path: string, token: string): Promise<void> => {
+const upload = async (path: string, token: string): Promise<number> => {
   const put = await exports.default.fetch(`${ORIGIN}${path}`, {
     body: JPEG,
     headers: { Authorization: `Bearer ${token}` },
     method: "PUT",
   });
-  expect(put.status).toBe(204);
+  return put.status;
 };
 
 /** Each row as `prefix verdict`, with its count and its keys sorted. */
@@ -52,130 +57,166 @@ const photoLine = (id: string) => ({
   opId: crypto.randomUUID(),
 });
 
+/**
+ * A group and its maker's account with an object of every verdict: the
+ * group's photos on lines, one taken back, one 0035 left on no line, one
+ * uploaded and not sent, two stored with no note; the maker's usual photo
+ * and a spare; a group and a user gone; preview pictures named and not; an
+ * expired page; and keys the server never writes.
+ */
+const seedBucket = async () => {
+  const { groupId, maker, makerId } = await pair();
+  const mine = await syncSocket(
+    `/v1/groups/${groupId}/socket`,
+    maker,
+    PAIR_ROSTER
+  );
+  const photosPath = `/v1/groups/${groupId}/photos`;
+  const ids = {
+    kept: crypto.randomUUID(),
+    lost: crypto.randomUUID(),
+    raced: crypto.randomUUID(),
+    spare: crypto.randomUUID(),
+    stray: crypto.randomUUID(),
+    taken: crypto.randomUUID(),
+    usual: crypto.randomUUID(),
+    waiting: crypto.randomUUID(),
+  };
+  for (const id of [ids.kept, ids.lost]) {
+    // oxlint-disable-next-line no-await-in-loop -- one upload at a time
+    await expect(upload(`${photosPath}/${id}`, maker)).resolves.toBe(204);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await expect(upload(`${photosPath}/${id}?size=small`, maker)).resolves.toBe(
+      204
+    );
+  }
+  await expect(upload(`${photosPath}/${ids.taken}`, maker)).resolves.toBe(204);
+  await expect(upload(`${photosPath}/${ids.waiting}`, maker)).resolves.toBe(
+    204
+  );
+  // pair()'s notice is at seq 1: the photos' lines at 2, 3 and 4, and
+  // words at 5.
+  sendFrame(mine.socket, {
+    case: "chatEdits",
+    value: {
+      edits: [
+        photoLine(ids.kept),
+        photoLine(ids.taken),
+        photoLine(ids.lost),
+        {
+          kind: {
+            case: "send",
+            value: { text: "見て", threadId: "group" },
+          },
+          opId: crypto.randomUUID(),
+        },
+      ],
+    },
+  });
+  await untilAcked(mine.frames);
+  sendFrame(mine.socket, {
+    case: "chatEdits",
+    value: {
+      edits: [
+        {
+          kind: { case: "unsend", value: { seq: 3n, threadId: "group" } },
+          opId: crypto.randomUUID(),
+        },
+      ],
+    },
+  });
+  await untilAcked(mine.frames);
+  const linked = crypto.randomUUID();
+  await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
+    const db = drizzle(state.storage);
+    // The line 0035 left without its photo, as 0036 took it back.
+    db.update(chatLines)
+      .set({ content: { kind: "unsent" } })
+      .where(eq(chatLines.seq, 4))
+      .run();
+    db.update(chatLines)
+      .set({
+        content: {
+          edited: false,
+          kind: "words",
+          preview: {
+            imageHeight: 1,
+            imageId: linked,
+            imageWidth: 1,
+            site: "example.com",
+            title: "Example",
+            url: "https://example.com",
+          },
+          text: "見て",
+        },
+      })
+      .where(eq(chatLines.seq, 5))
+      .run();
+  });
+
+  await expect(upload(`/v1/me/photos/${ids.usual}`, maker)).resolves.toBe(204);
+  await expect(upload(`/v1/me/photos/${ids.spare}`, maker)).resolves.toBe(204);
+  await call(
+    "UserService/SetProfile",
+    { name: "さくら", photoId: ids.usual },
+    maker
+  );
+  await push(makerId);
+
+  const keys = {
+    foreign: `groups/${crypto.randomUUID()}/notes`,
+    goneGroup: photoKey(crypto.randomUUID(), crypto.randomUUID()),
+    goneUser: personPhotoKey(crypto.randomUUID(), crypto.randomUUID()),
+    page: `previews/pages/${"0".repeat(64)}.json`,
+  };
+  await Promise.all(
+    [
+      // Taken back, its line's deletion missed.
+      photoKey(groupId, ids.taken),
+      photoKey(groupId, ids.stray),
+      photoKey(groupId, ids.raced),
+      `groups/${groupId}/notes`,
+      // Under a group, but no photo the server stored: its DO is not asked.
+      keys.foreign,
+      "groups/loose",
+      keys.goneGroup,
+      keys.goneUser,
+      `previews/images/${linked}`,
+      `previews/images/${ids.stray}`,
+      keys.page,
+      "misc/thing",
+    ].map(async (key) => {
+      await env.PHOTOS.put(key, JPEG);
+    })
+  );
+  return { groupId, ids, keys, linked, maker, makerId, photosPath };
+};
+
+/** Past the grace, as of the objects just stored. */
+const afterGrace = () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(Date.now() + AUDIT_GRACE_MS + 60_000);
+};
+
+/** Each row of a delete as `verdict`, with what became of its objects. */
+const outcomes = (deleted: number, skipped = 0, failed = 0) => ({
+  deleted: { bytes: deleted * JPEG.byteLength, count: deleted },
+  failed: { bytes: failed * JPEG.byteLength, count: failed },
+  skipped: { bytes: skipped * JPEG.byteLength, count: skipped },
+});
+
 describe("the photos bucket's audit", () => {
+  // The bucket is the file's: each test audits it whole.
+  beforeEach(async () => {
+    await deletePhotosUnder(env, "");
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });
 
   it("reports what nothing names, by prefix and why, and nothing it names", async () => {
-    const { groupId, maker, makerId } = await pair();
-    const mine = await syncSocket(
-      `/v1/groups/${groupId}/socket`,
-      maker,
-      PAIR_ROSTER
-    );
-    const photosPath = `/v1/groups/${groupId}/photos`;
-    const ids = {
-      kept: crypto.randomUUID(),
-      lost: crypto.randomUUID(),
-      spare: crypto.randomUUID(),
-      stray: crypto.randomUUID(),
-      taken: crypto.randomUUID(),
-      usual: crypto.randomUUID(),
-      waiting: crypto.randomUUID(),
-    };
-    for (const id of [ids.kept, ids.lost]) {
-      // oxlint-disable-next-line no-await-in-loop -- one upload at a time
-      await upload(`${photosPath}/${id}`, maker);
-      // oxlint-disable-next-line no-await-in-loop -- as above
-      await upload(`${photosPath}/${id}?size=small`, maker);
-    }
-    await upload(`${photosPath}/${ids.taken}`, maker);
-    await upload(`${photosPath}/${ids.waiting}`, maker);
-    // pair()'s notice is at seq 1: the photos' lines at 2, 3 and 4, and
-    // words at 5.
-    sendFrame(mine.socket, {
-      case: "chatEdits",
-      value: {
-        edits: [
-          photoLine(ids.kept),
-          photoLine(ids.taken),
-          photoLine(ids.lost),
-          {
-            kind: {
-              case: "send",
-              value: { text: "見て", threadId: "group" },
-            },
-            opId: crypto.randomUUID(),
-          },
-        ],
-      },
-    });
-    await untilAcked(mine.frames);
-    sendFrame(mine.socket, {
-      case: "chatEdits",
-      value: {
-        edits: [
-          {
-            kind: { case: "unsend", value: { seq: 3n, threadId: "group" } },
-            opId: crypto.randomUUID(),
-          },
-        ],
-      },
-    });
-    await untilAcked(mine.frames);
-    const linked = crypto.randomUUID();
-    await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
-      const db = drizzle(state.storage);
-      // The line 0035 left without its photo, as 0036 took it back.
-      db.update(chatLines)
-        .set({ content: { kind: "unsent" } })
-        .where(eq(chatLines.seq, 4))
-        .run();
-      db.update(chatLines)
-        .set({
-          content: {
-            edited: false,
-            kind: "words",
-            preview: {
-              imageHeight: 1,
-              imageId: linked,
-              imageWidth: 1,
-              site: "example.com",
-              title: "Example",
-              url: "https://example.com",
-            },
-            text: "見て",
-          },
-        })
-        .where(eq(chatLines.seq, 5))
-        .run();
-    });
-
-    await upload(`/v1/me/photos/${ids.usual}`, maker);
-    await upload(`/v1/me/photos/${ids.spare}`, maker);
-    await call(
-      "UserService/SetProfile",
-      { name: "さくら", photoId: ids.usual },
-      maker
-    );
-    await push(makerId);
-
-    const goneGroup = photoKey(crypto.randomUUID(), crypto.randomUUID());
-    const goneUser = personPhotoKey(crypto.randomUUID(), crypto.randomUUID());
-    // Under a group, but no photo the server stored: its DO is not asked.
-    const foreign = `groups/${crypto.randomUUID()}/notes`;
-    const page = `previews/pages/${"0".repeat(64)}.json`;
-    const leftovers = [
-      // Taken back, its line's deletion missed.
-      photoKey(groupId, ids.taken),
-      photoKey(groupId, ids.stray),
-      `groups/${groupId}/notes`,
-      foreign,
-      "groups/loose",
-      goneGroup,
-      goneUser,
-      `previews/images/${linked}`,
-      `previews/images/${ids.stray}`,
-      page,
-      "misc/thing",
-    ];
-    await Promise.all(
-      leftovers.map(async (key) => {
-        await env.PHOTOS.put(key, JPEG);
-      })
-    );
-
+    const { groupId, ids, keys, linked, makerId } = await seedBucket();
     const admin = exports.AdminEntrypoint;
     // Just stored, each might still come to be named: none is judged but
     // the keys the server never writes.
@@ -184,13 +225,12 @@ describe("the photos bucket's audit", () => {
       new Set(["recent", "unknown"])
     );
 
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(Date.now() + AUDIT_GRACE_MS + 60_000);
+    afterGrace();
     const later = await admin.bucketAudit();
     const group = (id: string) => photoKey(groupId, id);
     expect(rowsOf(later)).toStrictEqual({
       " unknown": keysOf("misc/thing"),
-      "groups/ groupGone": keysOf(goneGroup),
+      "groups/ groupGone": keysOf(keys.goneGroup),
       "groups/ referenced": keysOf(
         group(ids.kept),
         `${group(ids.kept)}/small`,
@@ -205,25 +245,185 @@ describe("the photos bucket's audit", () => {
       "groups/ takenBack": keysOf(group(ids.taken)),
       "groups/ unknown": keysOf(
         `groups/${groupId}/notes`,
-        foreign,
+        keys.foreign,
         "groups/loose"
       ),
-      "groups/ unnoted": keysOf(group(ids.stray)),
+      "groups/ unnoted": keysOf(group(ids.stray), group(ids.raced)),
       "people/ notUsual": keysOf(personPhotoKey(makerId, ids.spare)),
       "people/ referenced": keysOf(personPhotoKey(makerId, ids.usual)),
-      "people/ userGone": keysOf(goneUser),
+      "people/ userGone": keysOf(keys.goneUser),
       "previews/images/ referenced": keysOf(`previews/images/${linked}`),
       "previews/images/ unlinked": keysOf(`previews/images/${ids.stray}`),
-      "previews/pages/ expired": keysOf(page),
+      "previews/pages/ expired": keysOf(keys.page),
     });
     expect([later.groupsAsked, later.usersAsked, later.orphans]).toStrictEqual([
       2,
       1,
-      { bytes: 13 * JPEG.byteLength, count: 13 },
+      { bytes: 14 * JPEG.byteLength, count: 14 },
     ]);
     // Asked again, the same.
     await expect(admin.bucketAudit()).resolves.toMatchObject({
       rows: later.rows,
     });
+  });
+
+  it("deletes what nothing names, never what is named or new, and nothing more run again", async () => {
+    await seedBucket();
+    const admin = exports.AdminEntrypoint;
+    // Just stored: nothing is deleted.
+    await expect(admin.cleanBucket(Date.now())).resolves.toMatchObject({
+      rows: [],
+    });
+
+    afterGrace();
+    const audited = await admin.bucketAudit();
+    const cleanup = await admin.cleanBucket(Date.now());
+    expect(
+      Object.fromEntries(
+        cleanup.rows.map(({ verdict, ...rest }) => [verdict, rest])
+      )
+    ).toStrictEqual({
+      expired: outcomes(1),
+      groupGone: outcomes(1),
+      notUsual: outcomes(1),
+      sentUnnamed: outcomes(2),
+      takenBack: outcomes(1),
+      unlinked: outcomes(1),
+      unnoted: outcomes(2),
+      userGone: outcomes(1),
+    });
+
+    const after = await admin.bucketAudit();
+    expect(after.rows.filter(({ orphan }) => orphan)).toStrictEqual(
+      audited.rows.filter(({ verdict }) => verdict === "unknown")
+    );
+    expect(
+      after.rows.filter(({ verdict }) => verdict === "referenced")
+    ).toStrictEqual(
+      audited.rows.filter(({ verdict }) => verdict === "referenced")
+    );
+    await expect(admin.cleanBucket(Date.now())).resolves.toMatchObject({
+      rows: [],
+    });
+  });
+
+  it("leaves the group's notes saying what the bucket holds", async () => {
+    const { groupId, ids, maker, photosPath } = await seedBucket();
+    afterGrace();
+    await exports.AdminEntrypoint.cleanBucket(Date.now());
+
+    // The photo no line carried is taken back, so its id is never stored
+    // again; one stored with no note has none still.
+    await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
+      const notes = Object.fromEntries(
+        drizzle(state.storage)
+          .select()
+          .from(groupPhotos)
+          .all()
+          .map(({ id, state: held }) => [id, held])
+      );
+      expect(notes).toMatchObject({
+        [ids.kept]: "sent",
+        [ids.lost]: "takenBack",
+        [ids.taken]: "takenBack",
+        [ids.waiting]: "unsent",
+      });
+      expect(notes[ids.stray]).toBeUndefined();
+    });
+    await expect(upload(`${photosPath}/${ids.lost}`, maker)).resolves.toBe(409);
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, ids.lost))
+    ).resolves.toBeNull();
+  });
+
+  it("skips what its owner finds named since the audit", async () => {
+    const { groupId, ids, maker, makerId, photosPath } = await seedBucket();
+    afterGrace();
+    // An upload of an id the audit found unnoted, before the delete
+    // reaches its group: the group notes it, and the bytes stored stay.
+    const raced = photoKey(groupId, ids.raced);
+    await expect(upload(`${photosPath}/${ids.raced}`, maker)).resolves.toBe(
+      204
+    );
+    await expect(
+      env.GROUPS.getByName(groupId).deleteOrphanPhotos([
+        { bytes: JPEG.byteLength, key: raced, verdict: "unnoted" },
+      ])
+    ).resolves.toStrictEqual({
+      deleted: [],
+      failed: [],
+      skipped: [{ bytes: JPEG.byteLength, key: raced, verdict: "unnoted" }],
+    });
+    // The usual photo, should an audit before it was set have found it
+    // spare.
+    const usual = personPhotoKey(makerId, ids.usual);
+    await expect(
+      env.USERS.getByName(makerId).deleteOrphanPhotos([
+        { bytes: JPEG.byteLength, key: usual, verdict: "notUsual" },
+      ])
+    ).resolves.toMatchObject({ deleted: [], skipped: [{ key: usual }] });
+    await expect(
+      Promise.all([env.PHOTOS.head(raced), env.PHOTOS.head(usual)])
+    ).resolves.not.toContain(null);
+  });
+});
+
+/**
+ * A photo of the maker's own, not their usual one, deleted as the audit
+ * found it spare.
+ */
+const deletedSpare = async () => {
+  const { groupId, maker, makerId } = await pair();
+  const photoId = crypto.randomUUID();
+  await expect(upload(`/v1/me/photos/${photoId}`, maker)).resolves.toBe(204);
+  const key = personPhotoKey(makerId, photoId);
+  await env.USERS.getByName(makerId).deleteOrphanPhotos([
+    { bytes: JPEG.byteLength, key, verdict: "notUsual" },
+  ]);
+  return { groupId, key, maker, makerId, photoId };
+};
+
+describe("what comes to name a photo as the delete takes it", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("never sets as the usual photo one the delete took", async () => {
+    const { maker, makerId, photoId } = await deletedSpare();
+    const user = env.USERS.getByName(makerId);
+    // Reached after a look that still found it, the user's DO looks again.
+    await expect(user.setProfile("さくら", photoId)).resolves.toBeNull();
+    const set = await call(
+      "UserService/SetProfile",
+      { name: "さくら", photoId },
+      maker
+    );
+    expect(set.status).toBe(400);
+    await expect(user.profileOf()).resolves.toMatchObject({ photoId: "" });
+  });
+
+  it("never makes a group's mark of one the delete took", async () => {
+    const { groupId, maker, makerId, photoId } = await deletedSpare();
+    // Reached after a look that still found it, the copy finds none.
+    expect({
+      shared: await sharePersonPhoto(env, makerId, photoId, groupId),
+    }).toStrictEqual({ shared: false });
+    const renamed = await call(
+      "GroupService/RenameGroup",
+      { groupId, mark: { photoId }, name: "いとこ会" },
+      maker
+    );
+    expect(renamed.status).toBe(400);
+    const profile = await env.GROUPS.getByName(groupId).getProfile();
+    expect(profile?.mark.photoId).toBe("");
+  });
+
+  it("deletes as of the audit read, not what passed the grace since", async () => {
+    const readAt = Date.now();
+    await seedBucket();
+    afterGrace();
+    await expect(
+      exports.AdminEntrypoint.cleanBucket(readAt)
+    ).resolves.toMatchObject({ rows: [] });
   });
 });

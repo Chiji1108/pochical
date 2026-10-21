@@ -21,7 +21,7 @@ import {
 } from "./gen/pochical/v1/user_pb";
 import { GROUP_THREAD, otherIn } from "./group-chat";
 import { isId } from "./ids";
-import { hasPersonPhoto, personPhotoKey } from "./photos";
+import { personPhotoKey } from "./photos";
 import { registerPushToken } from "./push-tokens";
 import { requireUser } from "./session";
 import { requireText } from "./text-limits";
@@ -103,13 +103,13 @@ export const registerUserService = (router: ConnectRouter): void => {
       const kept = name.trim();
       const shown =
         kept === "" ? "" : requireText(kept, textLimits.personName, "name");
-      if (photoId !== "" && !(await hasPersonPhoto(env, user.id, photoId))) {
-        throw new ConnectError("No such photo of yours", Code.InvalidArgument);
-      }
       const replaced = await env.USERS.getByName(user.id).setProfile(
         shown,
         photoId
       );
+      if (replaced === null) {
+        throw new ConnectError("No such photo of yours", Code.InvalidArgument);
+      }
       // The photo it replaces goes: each group drops its copy as it hears.
       if (replaced !== "") {
         await env.PHOTOS.delete(personPhotoKey(user.id, replaced));

@@ -31,6 +31,12 @@ export const withSmall = (key: string): string[] => [key, smallKey(key)];
 // The most keys R2 deletes in one call.
 const DELETE_BATCH = 1000;
 
+/** `items` in R2's batches of keys to delete at once. */
+export const deleteBatchesOf = <T>(items: T[]): T[][] =>
+  Array.from({ length: Math.ceil(items.length / DELETE_BATCH) }, (_, at) =>
+    items.slice(at * DELETE_BATCH, (at + 1) * DELETE_BATCH)
+  );
+
 /** A group's photos deleted, each with its small version, in R2's batches. */
 export const deleteGroupPhotos = async (
   env: Env,
@@ -38,12 +44,8 @@ export const deleteGroupPhotos = async (
   photoIds: string[]
 ): Promise<void> => {
   const keys = photoIds.flatMap((id) => withSmall(photoKey(groupId, id)));
-  const batches = Array.from(
-    { length: Math.ceil(keys.length / DELETE_BATCH) },
-    (_, at) => keys.slice(at * DELETE_BATCH, (at + 1) * DELETE_BATCH)
-  );
   await Promise.all(
-    batches.map(async (batch) => {
+    deleteBatchesOf(keys).map(async (batch) => {
       await env.PHOTOS.delete(batch);
     })
   );
@@ -261,27 +263,30 @@ export const hasPersonPhoto = async (
 
 /**
  * The user's own photo copied into a group's photos where the group has
- * none under its id; nothing when the user has no photo of that id.
+ * none under its id: whether the group has it now, false when the user
+ * has no photo of that id (gone since it was looked for, as the bucket's
+ * delete may take it).
  */
 export const copyPersonPhoto = async (
   env: Env,
   userId: string,
   photoId: string,
   groupId: string
-): Promise<void> => {
+): Promise<boolean> => {
   const key = photoKey(groupId, photoId);
   if ((await env.PHOTOS.head(key)) !== null) {
-    return;
+    return true;
   }
   const photo = await env.PHOTOS.get(personPhotoKey(userId, photoId));
   if (photo === null) {
-    return;
+    return false;
   }
   await env.PHOTOS.put(key, photo.body, {
     customMetadata: { userId },
     httpMetadata: { contentType: "image/jpeg" },
     onlyIf: CREATE_ONLY,
   });
+  return true;
 };
 
 /**
@@ -289,17 +294,19 @@ export const copyPersonPhoto = async (
  * copied into a group's photos, for its members to read as they read the
  * rest; noted by the group as one it shows first, so no upload takes it,
  * and copied once, as a photo never changes. Nothing when the id is an
- * upload's.
+ * upload's. False when the user has no such photo, so nothing comes to
+ * name it in the group; a note made of it goes as a copy nothing named.
  */
 export const sharePersonPhoto = async (
   env: Env,
   userId: string,
   photoId: string,
   groupId: string
-): Promise<void> => {
+): Promise<boolean> => {
   if (await env.GROUPS.getByName(groupId).noteSharedPhoto(photoId, userId)) {
-    await copyPersonPhoto(env, userId, photoId, groupId);
+    return await copyPersonPhoto(env, userId, photoId, groupId);
   }
+  return true;
 };
 
 /**

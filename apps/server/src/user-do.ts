@@ -19,6 +19,8 @@ import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import { sendAlert, sendWithdrawal } from "./apns";
 import type { Alert, Sent } from "./apns";
+import { deleteOrphans } from "./bucket-audit";
+import type { Orphan, OwnerCleanup } from "./bucket-audit";
 import { hasKey, SHARED_DAY_FIELDS } from "./day-values";
 import {
   ChangesSchema,
@@ -37,7 +39,7 @@ import type {
 import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
-import { sharePersonPhoto } from "./photos";
+import { hasPersonPhoto, personPhotoKey, sharePersonPhoto } from "./photos";
 import { devicesOf, dropPushToken } from "./push-tokens";
 import type { Device } from "./push-tokens";
 import { retryWait } from "./retry-wait";
@@ -678,27 +680,59 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
+   * The orphans the audit found among the user's own photos deleted from
+   * the photos bucket, but the usual photo, should it be one now, skipped.
+   * Nothing else reaches the user meanwhile, so the usual photo cannot
+   * change to one as R2 deletes it.
+   */
+  async deleteOrphanPhotos(orphans: Orphan[]): Promise<OwnerCleanup> {
+    return await this.ctx.blockConcurrencyWhile(async () => {
+      const usual = personPhotoKey(
+        this.ctx.id.name ?? "",
+        this.profileOf().photoId
+      );
+      return await deleteOrphans(
+        this.env.PHOTOS,
+        orphans.filter(({ key }) => key !== usual),
+        orphans.filter(({ key }) => key === usual)
+      );
+    });
+  }
+
+  /**
    * Sets the usual name and photo, each empty for none, sent to the user's
    * devices and pushed to their groups. The photo it replaces, for the
-   * caller to delete; empty when none.
+   * caller to delete; empty when none. Null, setting nothing, for a new
+   * photo the user has not uploaded: looked for in the same turn as the
+   * write, as the bucket's delete (deleteOrphanPhotos) takes the user's
+   * spare photos in a turn of its own, so it never takes the one set.
    */
-  setProfile(name: string, photoId: string): string {
-    const before = this.profileOf().photoId;
-    const changed = this.ctx.storage.transactionSync(() => {
-      const row = { cursor: this.nextCursor(), id: 1, name, photoId };
-      return this.db
-        .insert(profile)
-        .values(row)
-        .onConflictDoUpdate({
-          set: { cursor: row.cursor, name, photoId },
-          target: profile.id,
-        })
-        .returning()
-        .get();
+  async setProfile(name: string, photoId: string): Promise<string | null> {
+    return await this.ctx.blockConcurrencyWhile(async () => {
+      const before = this.profileOf().photoId;
+      if (
+        photoId !== before &&
+        photoId !== "" &&
+        !(await hasPersonPhoto(this.env, this.ctx.id.name ?? "", photoId))
+      ) {
+        return null;
+      }
+      const changed = this.ctx.storage.transactionSync(() => {
+        const row = { cursor: this.nextCursor(), id: 1, name, photoId };
+        return this.db
+          .insert(profile)
+          .values(row)
+          .onConflictDoUpdate({
+            set: { cursor: row.cursor, name, photoId },
+            target: profile.id,
+          })
+          .returning()
+          .get();
+      });
+      broadcastChanges(this.ctx, [profileChange(changed)]);
+      this.schedulePush();
+      return before === photoId ? "" : before;
     });
-    broadcastChanges(this.ctx, [profileChange(changed)]);
-    this.schedulePush();
-    return before === photoId ? "" : before;
   }
 
   /**
