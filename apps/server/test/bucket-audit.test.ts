@@ -148,12 +148,16 @@ describe("the photos bucket's audit", () => {
 
     const goneGroup = photoKey(crypto.randomUUID(), crypto.randomUUID());
     const goneUser = personPhotoKey(crypto.randomUUID(), crypto.randomUUID());
+    // Under a group, but no photo the server stored: its DO is not asked.
+    const foreign = `groups/${crypto.randomUUID()}/notes`;
     const page = `previews/pages/${"0".repeat(64)}.json`;
     const leftovers = [
       // Taken back, its line's deletion missed.
       photoKey(groupId, ids.taken),
       photoKey(groupId, ids.stray),
       `groups/${groupId}/notes`,
+      foreign,
+      "groups/loose",
       goneGroup,
       goneUser,
       `previews/images/${linked}`,
@@ -194,7 +198,11 @@ describe("the photos bucket's audit", () => {
         `${group(ids.lost)}/small`
       ),
       "groups/ takenBack": keysOf(group(ids.taken)),
-      "groups/ unknown": keysOf(`groups/${groupId}/notes`),
+      "groups/ unknown": keysOf(
+        `groups/${groupId}/notes`,
+        foreign,
+        "groups/loose"
+      ),
       "groups/ unnoted": keysOf(group(ids.stray)),
       "people/ notUsual": keysOf(personPhotoKey(makerId, ids.spare)),
       "people/ referenced": keysOf(personPhotoKey(makerId, ids.usual)),
@@ -203,6 +211,11 @@ describe("the photos bucket's audit", () => {
       "previews/images/ unlinked": keysOf(`previews/images/${ids.stray}`),
       "previews/pages/ expired": keysOf(page),
     });
+    expect([later.groupsAsked, later.usersAsked, later.orphans]).toStrictEqual([
+      2,
+      1,
+      { bytes: 13 * JPEG.byteLength, count: 13 },
+    ]);
     // Asked again, the same.
     await expect(admin.bucketAudit()).resolves.toMatchObject({
       rows: later.rows,

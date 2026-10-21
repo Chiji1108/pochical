@@ -3,7 +3,11 @@ import { useState } from "react";
 
 import { getBucketAudit, when } from "../admin";
 
-const VERDICT_NAMES: Record<string, string> = {
+type Verdict = Awaited<
+  ReturnType<typeof getBucketAudit>
+>["rows"][number]["verdict"];
+
+const VERDICT_NAMES: Record<Verdict, string> = {
   expired: "期限切れのキャッシュ",
   groupGone: "グループがない",
   notUsual: "いつもの写真ではない",
@@ -16,8 +20,6 @@ const VERDICT_NAMES: Record<string, string> = {
   unnoted: "グループに記録がない",
   userGone: "アカウントがない",
 };
-
-const KEPT = new Set(["referenced", "recent"]);
 
 const sizeOf = (bytes: number): string =>
   bytes < 1024 * 1024
@@ -35,20 +37,20 @@ function BucketAudit() {
   const audit = Route.useLoaderData();
   const router = useRouter();
   const [running, setRunning] = useState(false);
-  const orphans = audit.rows.filter((row) => !KEPT.has(row.verdict));
   const rerun = async () => {
     setRunning(true);
-    await router.invalidate();
-    setRunning(false);
+    await router.invalidate().finally(() => {
+      setRunning(false);
+    });
   };
   return (
     <main>
       <h1>棚卸し</h1>
       <p className="meta">
-        {`${when(audit.atMs)} 時点。グループ ${audit.groups}、ユーザー ${audit.users}。${audit.graceMs / 3_600_000} 時間以内に置かれたものは判定しません。何も消しません。`}
+        {`${when(audit.atMs)} 時点。Group DO ${audit.groupsAsked}、User DO ${audit.usersAsked} に聞きました。${audit.graceMs / 3_600_000} 時間以内に置かれたものは判定しません。何も消しません。`}
       </p>
       <p>
-        {`どこからも指されないもの：${orphans.reduce((sum, row) => sum + row.count, 0)} 件、${sizeOf(orphans.reduce((sum, row) => sum + row.bytes, 0))}`}
+        {`どこからも指されないもの：${audit.orphans.count} 件、${sizeOf(audit.orphans.bytes)}`}
       </p>
       <button
         disabled={running}
@@ -73,18 +75,18 @@ function BucketAudit() {
           {audit.rows.map((row) => (
             <tr key={`${row.prefix}-${row.verdict}`}>
               <td>{row.prefix === "" ? "その他" : row.prefix}</td>
-              <td className={KEPT.has(row.verdict) ? "" : "open"}>
-                {VERDICT_NAMES[row.verdict] ?? row.verdict}
+              <td className={row.orphan ? "open" : ""}>
+                {VERDICT_NAMES[row.verdict]}
               </td>
               <td>{row.count}</td>
               <td>{sizeOf(row.bytes)}</td>
               <td>
-                {KEPT.has(row.verdict) ? null : (
+                {row.orphan ? (
                   <details>
                     <summary>{row.sample.length} 件</summary>
                     <pre>{row.sample.join("\n")}</pre>
                   </details>
-                )}
+                ) : null}
               </td>
             </tr>
           ))}
