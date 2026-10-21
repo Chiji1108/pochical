@@ -18,7 +18,7 @@ const PAGE_BYTES = 512 * 1024;
 /** The largest picture kept; a larger one is left out. */
 const IMAGE_BYTES = 2_000_000;
 /** How long a page's preview is kept before it is read again. */
-const CACHE_MS = 24 * 60 * 60 * 1000;
+export const PREVIEW_CACHE_MS = 24 * 60 * 60 * 1000;
 /** A title or site name is cut to this many characters. */
 const TEXT_MAX = 300;
 
@@ -327,7 +327,7 @@ export const linkPreview = async (
       at: number;
       preview: LinkPreview | null;
     }>();
-    if (Date.now() - kept.at < CACHE_MS) {
+    if (Date.now() - kept.at < PREVIEW_CACHE_MS) {
       return kept.preview === null
         ? null
         : create(LinkPreviewSchema, kept.preview);

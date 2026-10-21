@@ -146,7 +146,7 @@ type MarkRow = typeof readMarks.$inferSelect;
  * The lines of one kind, its name written into the query, not bound, so
  * the partial index on photo lines (chat_lines_photos) serves it.
  */
-const kindIs = (kind: LineKind): SQL =>
+export const kindIs = (kind: LineKind): SQL =>
   sql`${chatLines.content} ->> '$.kind' = ${sql.raw(`'${kind}'`)}`;
 
 /** The condition for the chat's line at `seq`. */

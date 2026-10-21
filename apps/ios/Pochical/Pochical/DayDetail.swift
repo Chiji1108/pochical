@@ -15,9 +15,9 @@ struct DayDetail: View {
   let patterns: [Pattern]
   let coworkers: [Coworker]
   let onChange: (DayEntry?) -> Void
-  /// "" clears the memo.
-  let onNoteChange: (String) -> Void
-  let onAddCoworker: (String) -> Void
+  /// "" clears the memo; true when kept.
+  let onNoteChange: (String) -> Bool
+  let onAddCoworker: (String) -> Bool
   /// Opens the day before (-1) or after (1).
   let onStep: (Int) -> Void
   /// The memo as it is written, kept when the field is left, the detail
@@ -207,10 +207,10 @@ struct DayDetail: View {
         Button("追加") {
           let name = String(newCoworker.trimmingCharacters(in: .whitespacesAndNewlines)
             .prefix(TextLimits.personName))
-          if !name.isEmpty {
-            onAddCoworker(name)
+          // A name not kept stays for 追加 to be tried again.
+          if name.isEmpty || onAddCoworker(name) {
+            newCoworker = ""
           }
-          newCoworker = ""
         }
         Button("キャンセル", role: .cancel) { newCoworker = "" }
       }
@@ -259,7 +259,7 @@ struct DayDetail: View {
   /// "" clears the memo; an entry without one keeps the day's.
   private func keepNote() {
     if draft != (note ?? "") {
-      onNoteChange(draft)
+      _ = onNoteChange(draft)
     }
   }
 
@@ -282,8 +282,7 @@ struct DayDetail: View {
         }
       if !draft.isEmpty {
         Button("メモを消す", systemImage: "xmark.circle.fill") {
-          draft = ""
-          onNoteChange("")
+          if onNoteChange("") { draft = "" }
         }
         .labelStyle(.iconOnly)
         .buttonStyle(.plain)
