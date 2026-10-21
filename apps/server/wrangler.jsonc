@@ -101,5 +101,5 @@
   ],
   // The apps (and later the site's sign-in) reach the server here; the
   // site's own Worker calls it through a service binding instead.
-  "routes": [{ "pattern": "api.pochical.app/*", "custom_domain": true }],
+  "routes": [{ "pattern": "api.pochical.app", "custom_domain": true }],
 }
