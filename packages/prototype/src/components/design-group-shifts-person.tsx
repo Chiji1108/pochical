@@ -9,7 +9,7 @@ import type { Group, Member } from "../lib/design-group-data";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
 import { ChoiceChip, ChoiceGrid } from "./design-choices";
-import { dayParts, framedDayCell, todayMark } from "./design-day-cell";
+import { dayCell, dayParts, todayMark } from "./design-day-cell";
 import {
   dayGrid,
   dayGridHeight,
@@ -215,10 +215,12 @@ function PersonDay({
   const off = item?.off === true;
   // The calendar's own day, framed when you are off too, unless the picked
   // day's own frame is on it.
-  const className = framedDayCell(
-    { active: picked, off, outside },
-    withMe && !picked
-  );
+  const className = dayCell({
+    active: picked,
+    off,
+    outside,
+    together: withMe && !picked,
+  });
   const style: CSSProperties | undefined = off
     ? { "--off-tint": tint }
     : undefined;
