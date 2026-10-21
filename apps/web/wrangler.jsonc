@@ -1,7 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pochical-web",
-  "main": "src/server.ts",
+  // Astro's Worker: the pages drawn on request, and the prerendered ones
+  // and the other files from its static assets (ASSETS, which the Astro
+  // adapter adds).
+  "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },

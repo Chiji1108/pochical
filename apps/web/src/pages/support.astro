@@ -1,19 +1,11 @@
+---
 import { site } from "@pochical/prototype/lib/brand";
-import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowUpRight, Plus } from "lucide-react";
 
-import { Page } from "../components/site-layout";
-import { pageMeta } from "../lib/site";
+import Link from "../components/link.astro";
+import Page from "../components/page.astro";
+import Site from "../layouts/site.astro";
 
-export const Route = createFileRoute("/support")({
-  component: Support,
-  head: () =>
-    pageMeta(
-      "サポート",
-      "ポチカルのよくある質問とお問い合わせ窓口。",
-      "/support"
-    ),
-});
 const questions = [
   {
     answer:
@@ -34,8 +26,8 @@ const questions = [
     answer:
       "はい。カレンダー右上の保存ボタンから、端末のカレンダーへの追加や、画像での保存ができます。必要なアクセス権限を許可してご利用ください。iPhoneにGoogleアカウントを追加すると、Googleカレンダーにも入れられます。",
     guide: {
+      href: "/support/google-calendar",
       label: "Googleカレンダーに入れる手順",
-      to: "/support/google-calendar",
     } as const,
     question: "シフトを端末のカレンダーに書き出せますか？",
   },
@@ -45,52 +37,53 @@ const questions = [
     question: "アプリを削除すると、アカウントも消えますか？",
   },
 ];
-function Support() {
-  return (
-    <Page
-      eyebrow="SUPPORT"
-      intro="気になること、困ったこと。ここからお手伝いします。"
-      title="サポート"
-    >
-      <section className="faq-section">
-        <h2>よくある質問</h2>
-        {questions.map((item) => (
-          <details className="faq" key={item.question}>
+const contact = `mailto:${site.email}?subject=${encodeURIComponent("ポチカルのお問い合わせ")}`;
+---
+
+<Site
+  description="ポチカルのよくある質問とお問い合わせ窓口。"
+  path="/support"
+  title="サポート"
+>
+  <Page
+    eyebrow="SUPPORT"
+    intro="気になること、困ったこと。ここからお手伝いします。"
+    title="サポート"
+  >
+    <section class="faq-section">
+      <h2>よくある質問</h2>
+      {
+        questions.map((item) => (
+          <details class="faq">
             <summary>
-              {item.question}
-              <Plus aria-hidden="true" size={18} />
+              {item.question}<Plus aria-hidden="true" size={18} />
             </summary>
             <p>{item.answer}</p>
             {item.guide && (
-              <Link className="text-link faq-guide" to={item.guide.to}>
+              <Link class="text-link faq-guide" href={item.guide.href}>
                 {item.guide.label} →
               </Link>
             )}
           </details>
-        ))}
-      </section>
-      <section className="contact-box">
-        <p className="eyebrow">CONTACT</p>
-        <h2>解決しないときは</h2>
-        <p>
-          ご質問、不具合のご報告、ご要望をお寄せください。アプリの設定にある「作っている人とチャット」からなら、チャットで気軽に送れます。
-          <br />
-          メールで送る場合、不具合については、端末の種類・アプリのバージョン・発生した状況を添えていただけると助かります。
-        </p>
-        <a
-          className="text-link"
-          href={`mailto:${site.email}?subject=${encodeURIComponent("ポチカルのお問い合わせ")}`}
-        >
-          {site.email}
-          <ArrowUpRight aria-hidden="true" size={17} />
-        </a>
-        <p className="small-note">
-          パスワードや、勤務先で扱う個人情報は送らないでください。
-        </p>
-      </section>
-      <Link className="text-link" to="/account/delete">
-        アカウント削除の手続きはこちら →
-      </Link>
-    </Page>
-  );
-}
+        ))
+      }
+    </section>
+    <section class="contact-box">
+      <p class="eyebrow">CONTACT</p>
+      <h2>解決しないときは</h2>
+      <p>
+        ご質問、不具合のご報告、ご要望をお寄せください。アプリの設定にある「作っている人とチャット」からなら、チャットで気軽に送れます。<br
+        />メールで送る場合、不具合については、端末の種類・アプリのバージョン・発生した状況を添えていただけると助かります。
+      </p>
+      <a class="text-link" href={contact}
+        >{site.email}<ArrowUpRight aria-hidden="true" size={17} /></a
+      >
+      <p class="small-note">
+        パスワードや、勤務先で扱う個人情報は送らないでください。
+      </p>
+    </section>
+    <Link class="text-link" href="/account/delete"
+      >アカウント削除の手続きはこちら →</Link
+    >
+  </Page>
+</Site>
