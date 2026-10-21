@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // A sketch of the admin site (spec/admin.md) on RedwoodSDK, beside
+  // apps/admin. Not deployed.
+  "name": "pochical-admin-rwsdk",
+  "main": "src/worker.tsx",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "binding": "ASSETS" },
+  "observability": { "enabled": true },
+  "services": [
+    {
+      "binding": "SERVER",
+      "service": "pochical-server",
+      "entrypoint": "AdminEntrypoint",
+    },
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+}
