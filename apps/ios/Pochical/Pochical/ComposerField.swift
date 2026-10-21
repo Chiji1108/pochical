@@ -92,6 +92,7 @@ struct ComposerField: UIViewRepresentable {
     (view as? PastingTextView)?.onPasteImages = onPasteImages
     if view.markedTextRange == nil, view.text != text {
       view.text = text
+      view.setNeedsLayout()
     }
   }
 
@@ -100,12 +101,7 @@ struct ComposerField: UIViewRepresentable {
   {
     // Only as wide as offered; asked for its own width, it has none.
     guard let width = proposal.width, width.isFinite else { return nil }
-    let fitting = Self.fitting(view, width: width)
-    if view.isScrollEnabled != fitting.scrolls {
-      // Changed after this layout pass, not during it.
-      DispatchQueue.main.async { view.isScrollEnabled = fitting.scrolls }
-    }
-    return CGSize(width: width, height: fitting.height)
+    return CGSize(width: width, height: Self.fitting(view, width: width).height)
   }
 
   func makeCoordinator() -> Coordinator {
@@ -151,6 +147,7 @@ struct ComposerField: UIViewRepresentable {
       parent.composing = composing
       parent.text = text
       view.invalidateIntrinsicContentSize()
+      view.setNeedsLayout()
     }
   }
 }
@@ -158,8 +155,27 @@ struct ComposerField: UIViewRepresentable {
 /// A text view that takes images pasted, as Messages' and Signal's fields
 /// do: the system's own paste, so ペースト shows in the edit menu for an
 /// image and pasting asks nothing more. Words paste as any text view's.
+/// It scrolls once its words run past `maxLines`, told as it lays them out.
 private final class PastingTextView: UITextView {
   var onPasteImages: (([NSItemProvider]) -> Void)?
+
+  /// What scrolling was last decided for: a scroll view lays out again on
+  /// every move, and its words need not be measured for each.
+  private var decided: Decided?
+  private struct Decided: Equatable {
+    let text: String
+    let width: CGFloat
+    let size: CGFloat
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    let now = Decided(text: text ?? "", width: bounds.width, size: font?.pointSize ?? 0)
+    guard now.width > 0, now != decided else { return }
+    decided = now
+    let scrolls = ComposerField.fitting(self, width: now.width).scrolls
+    if isScrollEnabled != scrolls { isScrollEnabled = scrolls }
+  }
 
   override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
     if action == #selector(paste(_:)), onPasteImages != nil, UIPasteboard.general.hasImages {

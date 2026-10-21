@@ -186,7 +186,6 @@ private struct EmojiField: UIViewRepresentable {
     let field = EmojiTextField()
     field.addTarget(
       context.coordinator, action: #selector(Coordinator.changed), for: .editingChanged)
-    DispatchQueue.main.async { field.becomeFirstResponder() }
     return field
   }
 
@@ -215,8 +214,14 @@ private struct EmojiField: UIViewRepresentable {
   }
 }
 
-/// A text field whose keyboard is the emoji one, where the system has it.
+/// A text field whose keyboard is the emoji one, where the system has it,
+/// up as the field comes on screen.
 final class EmojiTextField: UITextField {
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    if window != nil { becomeFirstResponder() }
+  }
+
   override var textInputMode: UITextInputMode? {
     UITextInputMode.activeInputModes.first { $0.primaryLanguage == "emoji" } ?? super.textInputMode
   }
