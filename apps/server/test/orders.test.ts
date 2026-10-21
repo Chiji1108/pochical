@@ -573,6 +573,50 @@ describe("catching up on what a user owns", () => {
     ]);
   });
 
+  it("gives each value an edit writes a cursor of its own, past every value before", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [
+          edit("a", "2026-10-05", DayField.PATTERN, "night", 1000),
+          edit("b", "2026-10-05", DayField.START, "08:00", 1000),
+        ],
+      },
+    });
+    await untilAcked(phone.frames);
+    // The orders and the two days they take back, in one edit.
+    sendFrame(
+      phone.socket,
+      ordersEdit("o", [order("2026-10-01", ["day"])], 2000, "2026-10-01")
+    );
+    await untilAcked(phone.frames);
+    sendFrame(phone.socket, {
+      case: "dayEdits",
+      value: {
+        edits: [
+          // Older than the orders' clear, it changes nothing.
+          edit("late", "2026-10-05", DayField.PATTERN, "day", 500),
+          edit("memo", "2026-10-07", DayField.NOTE, "メモ", 3000),
+        ],
+      },
+    });
+    await untilAcked(phone.frames);
+
+    const tablet = await device(token);
+    expect(tablet.welcome.kind).toMatchObject({ value: { cursor: 6n } });
+    const caughtUp = changesIn(await tablet.frames.next());
+    expect(
+      caughtUp.map(({ cursor, kind }) => [cursor, kind.case])
+    ).toStrictEqual([
+      [3n, "repeatOrders"],
+      [4n, "day"],
+      [5n, "day"],
+      [6n, "day"],
+    ]);
+  });
+
   it("brings a member who opens the group later everyone's orders", async () => {
     const { groupId, guest, maker, makerId } = await pair();
     const phone = await device(maker);

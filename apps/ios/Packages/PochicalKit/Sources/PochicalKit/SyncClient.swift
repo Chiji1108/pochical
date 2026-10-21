@@ -457,8 +457,11 @@ public actor SyncClient {
         if peer.placeID == nil {
           try OwnValues.acknowledge(acked.opIds, in: db)
         } else {
-          try Chats.acknowledge(acked.opIds, in: db)
+          try Chats.acknowledge(acked.opIds, refused: acked.refused.map(\.opID), in: db)
         }
+      }
+      for refused in acked.refused {
+        Logger.sync.error("A send was refused: \(refused.opID) \(String(describing: refused.reason))")
       }
       Logger.sync.info("\(acked.opIds.count) edits acknowledged")
     case .error(let error):

@@ -22,8 +22,6 @@ struct ChatPhotosScreen: View {
   @State private var viewing: PhotoViewing?
   /// Where the grid is scrolled, by its photos' ids.
   @State private var position = ScrollPosition(idType: String.self)
-  /// The grid's width, each square a quarter of it less the gaps.
-  @State private var width: CGFloat = 0
 
   private static let across = 4
   /// A hairline apart, as the platforms' photo grids.
@@ -61,7 +59,6 @@ struct ChatPhotosScreen: View {
 
   @ViewBuilder private var content: some View {
     if !run.photos.isEmpty {
-      let side = max((width - Self.gap * CGFloat(Self.across - 1)) / CGFloat(Self.across), 0)
       ScrollView {
         LazyVGrid(
           columns: Array(
@@ -69,9 +66,7 @@ struct ChatPhotosScreen: View {
           spacing: Self.gap
         ) {
           ForEach(run.photos.reversed()) { item in
-            PhotoSquare(
-              item: item, shelf: shelf, side: side, writer: names[item.authorID]
-            ) {
+            PhotoSquare(item: item, shelf: shelf, writer: names[item.authorID]) {
               open(item)
             }
             // The one last come into sight, for the pages before it to
@@ -85,11 +80,6 @@ struct ChatPhotosScreen: View {
         .scrollTargetLayout()
       }
       .scrollPosition($position)
-      .onGeometryChange(for: CGFloat.self) {
-        $0.size.width
-      } action: {
-        width = $0
-      }
     } else if run.total == nil {
       ProgressView()
     } else {
@@ -116,26 +106,27 @@ struct ChatPhotosScreen: View {
   }
 }
 
-/// One square: the photo cut to it, as a line's photo comes (its small
-/// version over its blur, ↻ on one that could not be fetched), its place
-/// left empty while it is open large from here.
+/// One square, its column's width: the photo cut to it, as a line's photo
+/// comes (its small version over its blur, ↻ on one that could not be
+/// fetched), its place left empty while it is open large from here.
 private struct PhotoSquare: View {
   let item: ChatPhotoItem
   let shelf: PhotoShelf
-  let side: CGFloat
   let writer: String?
   let onOpen: () -> Void
 
   var body: some View {
-    PhotoSpot(id: item.photo.id) {
-      ChatPhotoImage(
-        photo: item.photo, shelf: shelf, shown: CGSize(width: side, height: side),
-        whileInSight: true, retries: true
-      )
-      .frame(width: side, height: side)
-      .clipped()
+    GeometryReader { square in
+      PhotoSpot(id: item.photo.id) {
+        ChatPhotoImage(
+          photo: item.photo, shelf: shelf, shown: square.size, whileInSight: true,
+          retries: true
+        )
+        .frame(width: square.size.width, height: square.size.height)
+        .clipped()
+      }
     }
-    .frame(width: side, height: side)
+    .aspectRatio(1, contentMode: .fit)
     .contentShape(.rect)
     .onTapGesture(perform: onOpen)
     .accessibilityElement(children: .ignore)

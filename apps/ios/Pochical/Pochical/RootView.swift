@@ -15,6 +15,7 @@ struct RootView: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(AccountSession.self) private var session
   @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.write) private var write
   @Environment(OpenPlaceSocket.self) private var openPlace
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// Each group's unread lines that count (spec/chat.md, Unread lines).
@@ -202,7 +203,8 @@ struct RootView: View {
         .environment(\.meID, meID)
         .environment(\.rootNavigator, navigator)
         .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
-        .environment(\.say, SayAction(say: say)))
+        .environment(\.say, SayAction(say: say))
+        .environment(\.write, write))
   }
 
   /// A chat a notification opened, and what it is opened with.

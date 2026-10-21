@@ -189,7 +189,7 @@ export const rosterIn = (frame: ServerFrame) =>
   );
 
 /**
- * Waits until the chat is told outside up to its log's head: its alarm
+ * Waits until the chat is told outside up to its newest line: its alarm
  * runs as soon as it is set, and is run here should it not have yet.
  */
 export const relayed = async (userId: string): Promise<void> => {
@@ -199,7 +199,7 @@ export const relayed = async (userId: string): Promise<void> => {
     const behind = await runInDurableObject(place, (_, state) =>
       state.storage.sql
         .exec<{ behind: number }>(
-          "select (select cursor from log_head) - coalesce((select cursor from support_relay), 0) as behind"
+          "select count(*) as behind from chat_lines where cursor > coalesce((select cursor from support_relay), 0)"
         )
         .one()
     );

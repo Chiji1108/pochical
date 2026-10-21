@@ -713,7 +713,7 @@ export const chatStyle = {
     },
     variants: { cell: { true: { borderRadius: 0 } } },
   }),
-  // Photos sent at once, as one grid with no bubble (spec/chat.md,
+  // A line of several photos, as one grid with no bubble (spec/chat.md,
   // Albums): rows 2 apart, its photos 2 apart in them, the whole rounded
   // with a hairline edge as a photo is.
   album: css({
@@ -728,31 +728,11 @@ export const chatStyle = {
     overflow: "hidden",
   }),
   albumRow: css({ display: "flex", gap: "2px" }),
-  // Its ! in red, as Messages marks one not sent, clear on any photo.
-  albumFailedMark: css({
-    bg: "danger.fill",
-    borderRadius: "full",
-    color: "danger.onFill",
-    display: "flex",
-  }),
   albumCell: css({
     display: "block",
     flex: 1,
     minWidth: 0,
     position: "relative",
-  }),
-  // A photo of an album that could not be sent: its ! over it, the whole
-  // of it the button, as its time has no room beside each.
-  albumFailed: css({
-    alignItems: "center",
-    bg: "media.dim",
-    border: 0,
-    cursor: "pointer",
-    display: "flex",
-    inset: 0,
-    justifyContent: "center",
-    padding: 0,
-    position: "absolute",
   }),
   uploadRing: css({
     "& circle": {

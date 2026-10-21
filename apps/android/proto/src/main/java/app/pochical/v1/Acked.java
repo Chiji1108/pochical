@@ -16,10 +16,16 @@ public  final class Acked extends
     AckedOrBuilder {
   private Acked() {
     opIds_ = emptyProtobufList();
+    refused_ = emptyProtobufList();
   }
   public static final int OP_IDS_FIELD_NUMBER = 1;
   private com.google.protobuf.Internal.ProtobufList<java.lang.String> opIds_;
   /**
+   * <pre>
+   * Every edit of the frame, taken or not: the client deletes them from
+   * its outbox.
+   * </pre>
+   *
    * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
    * @return A list containing the opIds.
    */
@@ -28,6 +34,11 @@ public  final class Acked extends
     return opIds_;
   }
   /**
+   * <pre>
+   * Every edit of the frame, taken or not: the client deletes them from
+   * its outbox.
+   * </pre>
+   *
    * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
    * @return The count of opIds.
    */
@@ -36,6 +47,11 @@ public  final class Acked extends
     return opIds_.size();
   }
   /**
+   * <pre>
+   * Every edit of the frame, taken or not: the client deletes them from
+   * its outbox.
+   * </pre>
+   *
    * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
    * @param index The index of the element to return.
    * @return The opIds at the given index.
@@ -45,6 +61,11 @@ public  final class Acked extends
     return opIds_.get(index);
   }
   /**
+   * <pre>
+   * Every edit of the frame, taken or not: the client deletes them from
+   * its outbox.
+   * </pre>
+   *
    * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
    * @param index The index of the value to return.
    * @return The bytes of the opIds at the given index.
@@ -63,6 +84,11 @@ public  final class Acked extends
      }
   }
   /**
+   * <pre>
+   * Every edit of the frame, taken or not: the client deletes them from
+   * its outbox.
+   * </pre>
+   *
    * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
    * @param index The index to set the value at.
    * @param value The opIds to set.
@@ -74,6 +100,11 @@ public  final class Acked extends
     opIds_.set(index, value);
   }
   /**
+   * <pre>
+   * Every edit of the frame, taken or not: the client deletes them from
+   * its outbox.
+   * </pre>
+   *
    * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
    * @param value The opIds to add.
    */
@@ -84,6 +115,11 @@ public  final class Acked extends
     opIds_.add(value);
   }
   /**
+   * <pre>
+   * Every edit of the frame, taken or not: the client deletes them from
+   * its outbox.
+   * </pre>
+   *
    * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
    * @param values The opIds to add.
    */
@@ -94,12 +130,22 @@ public  final class Acked extends
         values, opIds_);
   }
   /**
+   * <pre>
+   * Every edit of the frame, taken or not: the client deletes them from
+   * its outbox.
+   * </pre>
+   *
    * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
    */
   private void clearOpIds() {
     opIds_ = emptyProtobufList();
   }
   /**
+   * <pre>
+   * Every edit of the frame, taken or not: the client deletes them from
+   * its outbox.
+   * </pre>
+   *
    * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
    * @param value The bytes of the opIds to add.
    */
@@ -108,6 +154,177 @@ public  final class Acked extends
     checkByteStringIsUtf8(value);
     ensureOpIdsIsMutable();
     opIds_.add(value.toStringUtf8());
+  }
+
+  public static final int REFUSED_FIELD_NUMBER = 2;
+  private com.google.protobuf.Internal.ProtobufList<app.pochical.v1.RefusedSend> refused_;
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<app.pochical.v1.RefusedSend> getRefusedList() {
+    return refused_;
+  }
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  public java.util.List<? extends app.pochical.v1.RefusedSendOrBuilder> 
+      getRefusedOrBuilderList() {
+    return refused_;
+  }
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  @java.lang.Override
+  public int getRefusedCount() {
+    return refused_.size();
+  }
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  @java.lang.Override
+  public app.pochical.v1.RefusedSend getRefused(int index) {
+    return refused_.get(index);
+  }
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  public app.pochical.v1.RefusedSendOrBuilder getRefusedOrBuilder(
+      int index) {
+    return refused_.get(index);
+  }
+  private void ensureRefusedIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<app.pochical.v1.RefusedSend> tmp = refused_;
+    if (!tmp.isModifiable()) {
+      refused_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  private void setRefused(
+      int index, app.pochical.v1.RefusedSend value) {
+    java.util.Objects.requireNonNull(value);
+    ensureRefusedIsMutable();
+    refused_.set(index, value);
+  }
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  private void addRefused(app.pochical.v1.RefusedSend value) {
+    java.util.Objects.requireNonNull(value);
+    ensureRefusedIsMutable();
+    refused_.add(value);
+  }
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  private void addRefused(
+      int index, app.pochical.v1.RefusedSend value) {
+    java.util.Objects.requireNonNull(value);
+    ensureRefusedIsMutable();
+    refused_.add(index, value);
+  }
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  private void addAllRefused(
+      java.lang.Iterable<? extends app.pochical.v1.RefusedSend> values) {
+    ensureRefusedIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, refused_);
+  }
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  private void clearRefused() {
+    refused_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * Of those, the chat sends the group did not take, each with why; the
+   * device keeps their lines as not sent (spec/chat.md, Lines on their
+   * way). Group DO socket only. A send to someone who blocked the sender is
+   * taken as any other, so none tells a block.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+   */
+  private void removeRefused(int index) {
+    ensureRefusedIsMutable();
+    refused_.remove(index);
   }
 
   public static app.pochical.v1.Acked parseFrom(
@@ -208,6 +425,11 @@ public  final class Acked extends
 
 
     /**
+     * <pre>
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * </pre>
+     *
      * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
      * @return A list containing the opIds.
      */
@@ -218,6 +440,11 @@ public  final class Acked extends
           instance.getOpIdsList());
     }
     /**
+     * <pre>
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * </pre>
+     *
      * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
      * @return The count of opIds.
      */
@@ -226,6 +453,11 @@ public  final class Acked extends
       return instance.getOpIdsCount();
     }
     /**
+     * <pre>
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * </pre>
+     *
      * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
      * @param index The index of the element to return.
      * @return The opIds at the given index.
@@ -235,6 +467,11 @@ public  final class Acked extends
       return instance.getOpIds(index);
     }
     /**
+     * <pre>
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * </pre>
+     *
      * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
      * @param index The index of the value to return.
      * @return The bytes of the opIds at the given index.
@@ -245,6 +482,11 @@ public  final class Acked extends
       return instance.getOpIdsBytes(index);
     }
     /**
+     * <pre>
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * </pre>
+     *
      * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
      * @param index The index to set the value at.
      * @param value The opIds to set.
@@ -257,6 +499,11 @@ public  final class Acked extends
       return this;
     }
     /**
+     * <pre>
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * </pre>
+     *
      * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
      * @param value The opIds to add.
      * @return This builder for chaining.
@@ -268,6 +515,11 @@ public  final class Acked extends
       return this;
     }
     /**
+     * <pre>
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * </pre>
+     *
      * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
      * @param values The opIds to add.
      * @return This builder for chaining.
@@ -279,6 +531,11 @@ public  final class Acked extends
       return this;
     }
     /**
+     * <pre>
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * </pre>
+     *
      * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
      * @return This builder for chaining.
      */
@@ -288,6 +545,11 @@ public  final class Acked extends
       return this;
     }
     /**
+     * <pre>
+     * Every edit of the frame, taken or not: the client deletes them from
+     * its outbox.
+     * </pre>
+     *
      * <code>repeated string op_ids = 1 [json_name = "opIds"];</code>
      * @param value The bytes of the opIds to add.
      * @return This builder for chaining.
@@ -296,6 +558,192 @@ public  final class Acked extends
         com.google.protobuf.ByteString value) {
       copyOnWrite();
       instance.addOpIdsBytes(value);
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    @java.lang.Override
+    public java.util.List<app.pochical.v1.RefusedSend> getRefusedList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getRefusedList());
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    @java.lang.Override
+    public int getRefusedCount() {
+      return instance.getRefusedCount();
+    }/**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    @java.lang.Override
+    public app.pochical.v1.RefusedSend getRefused(int index) {
+      return instance.getRefused(index);
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    public Builder setRefused(
+        int index, app.pochical.v1.RefusedSend value) {
+      copyOnWrite();
+      instance.setRefused(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    public Builder setRefused(
+        int index, app.pochical.v1.RefusedSend.Builder builderForValue) {
+      copyOnWrite();
+      instance.setRefused(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    public Builder addRefused(app.pochical.v1.RefusedSend value) {
+      copyOnWrite();
+      instance.addRefused(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    public Builder addRefused(
+        int index, app.pochical.v1.RefusedSend value) {
+      copyOnWrite();
+      instance.addRefused(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    public Builder addRefused(
+        app.pochical.v1.RefusedSend.Builder builderForValue) {
+      copyOnWrite();
+      instance.addRefused(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    public Builder addRefused(
+        int index, app.pochical.v1.RefusedSend.Builder builderForValue) {
+      copyOnWrite();
+      instance.addRefused(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    public Builder addAllRefused(
+        java.lang.Iterable<? extends app.pochical.v1.RefusedSend> values) {
+      copyOnWrite();
+      instance.addAllRefused(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    public Builder clearRefused() {
+      copyOnWrite();
+      instance.clearRefused();
+      return this;
+    }
+    /**
+     * <pre>
+     * Of those, the chat sends the group did not take, each with why; the
+     * device keeps their lines as not sent (spec/chat.md, Lines on their
+     * way). Group DO socket only. A send to someone who blocked the sender is
+     * taken as any other, so none tells a block.
+     * </pre>
+     *
+     * <code>repeated .pochical.v1.RefusedSend refused = 2 [json_name = "refused"];</code>
+     */
+    public Builder removeRefused(int index) {
+      copyOnWrite();
+      instance.removeRefused(index);
       return this;
     }
 
@@ -316,9 +764,12 @@ public  final class Acked extends
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
             "opIds_",
+            "refused_",
+            app.pochical.v1.RefusedSend.class,
           };
           java.lang.String info =
-              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0001\u0000\u0001\u021a";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0002\u0000\u0001\u021a\u0002\u001b" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

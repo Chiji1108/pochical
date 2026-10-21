@@ -64,8 +64,9 @@ import type {
 } from "./user-do-values";
 
 // The owner's edits as the User DO takes them (spec/sync-protocol.md,
-// Shifts): each value written at `cursor` when its clock is newer than the
-// one stored, checked against what it may hold first.
+// Shifts): each value written at a cursor of its own (`nextCursor`) when its
+// clock is newer than the one stored, checked against what it may hold
+// first.
 
 /**
  * The clock a value is written with: the edit's own when the value fits,
@@ -88,7 +89,7 @@ const writeDay = (db: DrizzleSqliteDODatabase, row: DayRow): Change => {
 export const applyDay = (
   db: DrizzleSqliteDODatabase,
   edit: DayValue,
-  cursor: number,
+  nextCursor: () => number,
   floors: readonly Floor[]
 ): Change | undefined => {
   const key = and(
@@ -107,7 +108,7 @@ export const applyDay = (
   if (floor) {
     return writeDay(db, {
       ...clockColumns(floor.clock),
-      cursor,
+      cursor: nextCursor(),
       date: edit.date,
       field: edit.field,
       value: null,
@@ -116,7 +117,7 @@ export const applyDay = (
   const fits = fitsField(edit.field, edit.value);
   const row: DayRow = {
     ...clockColumns(writtenClock(clock, fits)),
-    cursor,
+    cursor: nextCursor(),
     date: edit.date,
     field: edit.field,
     // A value that does not fit leaves what was stored (or nothing).
@@ -128,7 +129,7 @@ export const applyDay = (
 export const applyPattern = (
   db: DrizzleSqliteDODatabase,
   edit: PatternValue,
-  cursor: number
+  nextCursor: () => number
 ): Change | undefined => {
   if (!(isId(edit.id) && hasDeviceClock(edit))) {
     return undefined;
@@ -149,7 +150,7 @@ export const applyPattern = (
   }
   const row: PatternRow = {
     ...clockColumns(writtenClock(clock, fits)),
-    cursor,
+    cursor: nextCursor(),
     data,
     id: edit.id,
   };
@@ -163,7 +164,7 @@ export const applyPattern = (
 export const applyPatternOrder = (
   db: DrizzleSqliteDODatabase,
   edit: PatternOrder,
-  cursor: number
+  nextCursor: () => number
 ): Change | undefined => {
   if (!hasDeviceClock(edit)) {
     return undefined;
@@ -177,7 +178,7 @@ export const applyPatternOrder = (
   const ids = fits ? edit.ids : parseIds(stored?.ids ?? "[]");
   const row: OrderRow = {
     ...clockColumns(writtenClock(clock, fits)),
-    cursor,
+    cursor: nextCursor(),
     id: 1,
     ids: JSON.stringify(ids),
   };
@@ -198,14 +199,14 @@ export const orderFloors = (db: DrizzleSqliteDODatabase): Floor[] =>
 
 /**
  * Clears the own pattern and times of the days from `from` set before
- * the orders, each at the next cursor, and keeps where they cleared, so
+ * the orders, each at a cursor of its own, and keeps where they cleared, so
  * an edit made before them that arrives later cannot bring them back.
  */
 const giveDaysToOrders = (
   db: DrizzleSqliteDODatabase,
   from: string,
   orders: RepeatOrdersRow,
-  cursor: number
+  nextCursor: () => number
 ): Change[] => {
   const floor: Floor = { clock: clockOfRow(orders), from };
   const stored = db
@@ -233,10 +234,10 @@ const giveDaysToOrders = (
     .orderBy(asc(dayFields.date), asc(dayFields.field))
     .all()
     .filter((row) => givesWay(row.date, row.field, clockOfRow(row), floor));
-  return owned.map((kept, index) => {
+  return owned.map((kept) => {
     const row: DayRow = {
       ...clockColumns(floor.clock),
-      cursor: cursor + index,
+      cursor: nextCursor(),
       date: kept.date,
       field: kept.field,
       value: null,
@@ -258,7 +259,7 @@ const giveDaysToOrders = (
 export const applyRepeatOrders = (
   db: DrizzleSqliteDODatabase,
   { clearFrom, orders: edit }: RepeatOrdersEdit,
-  cursor: number
+  nextCursor: () => number
 ): Change[] => {
   if (!hasDeviceClock(edit)) {
     return [];
@@ -276,7 +277,7 @@ export const applyRepeatOrders = (
   }
   const row: RepeatOrdersRow = {
     ...clockColumns(writtenClock(clock, fits)),
-    cursor,
+    cursor: nextCursor(),
     data: encodeOrders(kept),
     id: 1,
   };
@@ -286,7 +287,7 @@ export const applyRepeatOrders = (
     .run();
   const changes = [repeatOrdersChange(row)];
   if (fits && clearFrom !== undefined) {
-    changes.push(...giveDaysToOrders(db, clearFrom, row, cursor + 1));
+    changes.push(...giveDaysToOrders(db, clearFrom, row, nextCursor));
   }
   return changes;
 };
@@ -305,7 +306,7 @@ const coworkersFull = (db: DrizzleSqliteDODatabase): boolean => {
 export const applyCoworker = (
   db: DrizzleSqliteDODatabase,
   edit: CoworkerValue,
-  cursor: number
+  nextCursor: () => number
 ): Change | undefined => {
   if (!(isId(edit.id) && hasDeviceClock(edit))) {
     return undefined;
@@ -327,7 +328,7 @@ export const applyCoworker = (
     (fitsCoworkerName(edit.name) && !(adding && coworkersFull(db)));
   const row: CoworkerRow = {
     ...clockColumns(writtenClock(clock, fits)),
-    cursor,
+    cursor: nextCursor(),
     id: edit.id,
     name: fits ? (edit.name ?? null) : (stored?.name ?? null),
   };
@@ -341,7 +342,7 @@ export const applyCoworker = (
 export const applyCoworkerOrder = (
   db: DrizzleSqliteDODatabase,
   edit: CoworkerOrder,
-  cursor: number
+  nextCursor: () => number
 ): Change | undefined => {
   if (!hasDeviceClock(edit)) {
     return undefined;
@@ -368,7 +369,7 @@ export const applyCoworkerOrder = (
   }
   const row: CoworkerOrderRow = {
     ...clockColumns(writtenClock(clock, fits)),
-    cursor,
+    cursor: nextCursor(),
     id: 1,
     ids: JSON.stringify(ids),
   };
@@ -382,7 +383,7 @@ export const applyCoworkerOrder = (
 export const applyPreference = (
   db: DrizzleSqliteDODatabase,
   edit: PreferenceValue,
-  cursor: number
+  nextCursor: () => number
 ): Change | undefined => {
   if (!(isId(edit.key) && hasDeviceClock(edit))) {
     return undefined;
@@ -400,7 +401,7 @@ export const applyPreference = (
   const fits = edit.value === undefined || fitsPreference(edit.value);
   const row: PreferenceRow = {
     ...clockColumns(writtenClock(clock, fits)),
-    cursor,
+    cursor: nextCursor(),
     key: edit.key,
     value: fits ? (edit.value ?? null) : (stored?.value ?? null),
   };

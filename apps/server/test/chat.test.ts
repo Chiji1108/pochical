@@ -2,6 +2,7 @@ import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
 import { describe, expect, it, vi } from "vitest";
 
+import { RefusedSend_Reason } from "../src/gen/pochical/v1/sync_pb";
 import type { ChatEditSchema } from "../src/gen/pochical/v1/sync_pb";
 import {
   PAIR_ROSTER,
@@ -11,6 +12,7 @@ import {
   sendFrame,
   settled,
   syncSocket,
+  untilAcked,
 } from "./sync-helpers";
 
 const thread = "group";
@@ -196,7 +198,7 @@ describe("a group's chat", () => {
     };
     expect(changesIn(await mine.frames.next())).toMatchObject([line]);
     await expect(mine.frames.next()).resolves.toMatchObject({
-      kind: { case: "acked", value: { opIds: ["a", "a"] } },
+      kind: { case: "acked", value: { opIds: ["a", "a"], refused: [] } },
     });
     expect(changesIn(await theirs.frames.next())).toMatchObject([line]);
     await expect(settled(theirs.socket, theirs.frames)).resolves.toMatchObject({
@@ -449,7 +451,13 @@ describe("a group's chat", () => {
     });
     chat(later.socket, [{ kind: { send: "割り込み" }, opId: "x" }], direct);
     await expect(later.frames.next()).resolves.toMatchObject({
-      kind: { case: "acked" },
+      kind: {
+        case: "acked",
+        value: {
+          opIds: ["x"],
+          refused: [{ opId: "x", reason: RefusedSend_Reason.DOES_NOT_FIT }],
+        },
+      },
     });
     await expect(settled(theirs.socket, theirs.frames)).resolves.toMatchObject({
       kind: { case: "pong" },
@@ -465,7 +473,13 @@ describe("a group's chat", () => {
     const mine = await groupSocket(groupId, maker, PAIR_ROSTER + 2n);
     chat(mine.socket, [{ kind: { send: "いる？" }, opId: "a" }], direct);
     await expect(mine.frames.next()).resolves.toMatchObject({
-      kind: { case: "acked" },
+      kind: {
+        case: "acked",
+        value: {
+          opIds: ["a"],
+          refused: [{ opId: "a", reason: RefusedSend_Reason.NOT_IN_GROUP }],
+        },
+      },
     });
   });
 
@@ -863,6 +877,10 @@ describe("a group's chat", () => {
       { hidden: false, text: "見て" },
       { hidden: true, text: "" },
     ]);
+    // Acknowledged as any line taken, so nothing tells the block.
+    await expect(theirs.frames.next()).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["a"], refused: [] } },
+    });
   });
 
   it("takes reactions off with a line taken back, and takes no word as one", async () => {
@@ -930,6 +948,36 @@ describe("a group's chat", () => {
     ]);
     await expect(settled(theirs.socket, theirs.frames)).resolves.toMatchObject({
       kind: { case: "pong" },
+    });
+    // Taken back, it is no send that failed.
+    await expect(untilAcked(before.frames)).resolves.toMatchObject({
+      kind: { case: "acked", value: { opIds: ["a", "b"], refused: [] } },
+    });
+  });
+
+  it("refuses a send that does not fit, telling its sender why", async () => {
+    const { textLimits } = await import("@pochical/design/limits");
+    const { groupId, maker } = await pair();
+    const mine = await groupSocket(groupId, maker);
+    chat(mine.socket, [
+      { kind: { send: "" }, opId: "blank" },
+      { kind: { send: "あ".repeat(textLimits.chatMessage + 1) }, opId: "long" },
+      { kind: { send: "とどく" }, opId: "a" },
+    ]);
+    expect(changesIn(await mine.frames.next())).toMatchObject([
+      { kind: { value: { opId: "a", text: "とどく" } } },
+    ]);
+    await expect(mine.frames.next()).resolves.toMatchObject({
+      kind: {
+        case: "acked",
+        value: {
+          opIds: ["blank", "long", "a"],
+          refused: [
+            { opId: "blank", reason: RefusedSend_Reason.DOES_NOT_FIT },
+            { opId: "long", reason: RefusedSend_Reason.DOES_NOT_FIT },
+          ],
+        },
+      },
     });
   });
 
