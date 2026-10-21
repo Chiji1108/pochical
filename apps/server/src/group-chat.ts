@@ -18,6 +18,7 @@ import {
   lte,
   max,
   ne,
+  not,
   notInArray,
   or,
   sql,
@@ -26,6 +27,14 @@ import type { SQL } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
 import type { Alert } from "./apns";
+import { photosOf } from "./chat-content";
+import type {
+  KeptPhoto,
+  LineContent,
+  LineKind,
+  Notice,
+  SentContent,
+} from "./chat-content";
 import { MENTION, mentionOf, mentions, previewLinkOf } from "./chat-links";
 import { pinStep } from "./chat-pins";
 import type { PinStep } from "./chat-pins";
@@ -40,6 +49,8 @@ import {
 import type {
   Change,
   ChatChange,
+  ChatContent,
+  ChatContentSchema,
   ChatEdit,
   ChatPhotoEntrySchema,
   ChatLine,
@@ -130,6 +141,13 @@ export const seenBy = (change: Change, userId: string): boolean => {
 
 type LineRow = typeof chatLines.$inferSelect;
 type MarkRow = typeof readMarks.$inferSelect;
+
+/**
+ * The lines of one kind, its name written into the query, not bound, so
+ * the partial index on photo lines (chat_lines_photos) serves it.
+ */
+export const kindIs = (kind: LineKind): SQL =>
+  sql`${chatLines.content} ->> '$.kind' = ${sql.raw(`'${kind}'`)}`;
 
 /** The condition for the chat's line at `seq`. */
 export const atLine = (threadId: string, seq: number): SQL | undefined =>
@@ -234,16 +252,16 @@ const votesOn = (
   db: DrizzleSqliteDODatabase,
   rows: LineRow[]
 ): Map<string, Map<string, string[]>> => {
-  const said = seqRuns(rows.filter((row) => row.poll)).flatMap(
-    ({ threadId, seqs }) =>
-      db
-        .select()
-        .from(chatVotes)
-        .where(
-          and(eq(chatVotes.threadId, threadId), inArray(chatVotes.seq, seqs))
-        )
-        .orderBy(asc(chatVotes.madeCursor))
-        .all()
+  const polls = rows.filter((row) => row.content.kind === "poll");
+  const said = seqRuns(polls).flatMap(({ threadId, seqs }) =>
+    db
+      .select()
+      .from(chatVotes)
+      .where(
+        and(eq(chatVotes.threadId, threadId), inArray(chatVotes.seq, seqs))
+      )
+      .orderBy(asc(chatVotes.madeCursor))
+      .all()
   );
   return new Map(
     [...byLine(said)].map(([key, votes]) => [
@@ -262,16 +280,15 @@ const onLines = (db: DrizzleSqliteDODatabase, rows: LineRow[]) => {
     const voters = votes.get(key);
     return {
       reactions: reactions.get(key) ?? [],
-      votes: (row.days ?? []).flatMap((day) => {
-        const userIds = voters?.get(day) ?? [];
-        return userIds.length === 0 ? [] : [{ day, userIds }];
-      }),
+      votes: (row.content.kind === "poll" ? row.content.days : []).flatMap(
+        (day) => {
+          const userIds = voters?.get(day) ?? [];
+          return userIds.length === 0 ? [] : [{ day, userIds }];
+        }
+      ),
     };
   };
 };
-
-/** A photo as a line keeps it. */
-type KeptPhoto = NonNullable<LineRow["photos"]>[number];
 
 /** A kept photo as the wire carries it. */
 const sentPhoto = (photo: KeptPhoto) => ({
@@ -288,44 +305,78 @@ const noticeKinds = {
   removed: ChatNotice_Kind.REMOVED,
 } as const;
 
-/** What happened to the group, as a notice line keeps it. */
-type Notice = NonNullable<LineRow["notice"]>;
+type OnLine = ReturnType<ReturnType<typeof onLines>>;
 
-const lineChange = (
-  row: LineRow,
-  { reactions, votes }: ReturnType<ReturnType<typeof onLines>>
-): Change =>
+/** What a line is as the wire carries it, a poll with its votes. */
+const contentWire = (
+  content: LineContent,
+  votes: OnLine["votes"]
+): MessageInitShape<typeof ChatContentSchema> => {
+  switch (content.kind) {
+    case "words": {
+      const { text, edited, preview } = content;
+      return {
+        kind: {
+          case: "words",
+          value: { edited, preview: preview ?? undefined, text },
+        },
+      };
+    }
+    case "photos": {
+      return {
+        kind: {
+          case: "photos",
+          value: { photos: content.photos.map(sentPhoto) },
+        },
+      };
+    }
+    case "days": {
+      return { kind: { case: "days", value: { days: content.days } } };
+    }
+    case "poll": {
+      const { days, decided } = content;
+      return {
+        kind: { case: "poll", value: { days, decided: decided ?? "", votes } },
+      };
+    }
+    case "notice": {
+      const { notice } = content;
+      return {
+        kind: {
+          case: "notice",
+          value: {
+            kind: noticeKinds[notice.kind],
+            markChanged: notice.markChanged ?? false,
+            name: notice.name ?? "",
+            subjectId: notice.subjectId ?? "",
+          },
+        },
+      };
+    }
+    case "unsent": {
+      return { kind: { case: "unsent", value: {} } };
+    }
+    default: {
+      return content satisfies never;
+    }
+  }
+};
+
+const lineChange = (row: LineRow, { reactions, votes }: OnLine): Change =>
   create(ChangeSchema, {
     cursor: BigInt(row.cursor),
     kind: {
       case: "chatLine",
       value: create(ChatLineSchema, {
         authorId: row.authorId,
-        days: row.days ?? [],
-        decided: row.decided ?? "",
-        edited: row.edited,
-        notice:
-          row.notice === null
-            ? undefined
-            : {
-                kind: noticeKinds[row.notice.kind],
-                markChanged: row.notice.markChanged ?? false,
-                name: row.notice.name ?? "",
-                subjectId: row.notice.subjectId ?? "",
-              },
+        content: contentWire(row.content, votes),
         opId: row.opId,
-        photos: (row.photos ?? []).map(sentPhoto),
         pinnedOrder: BigInt(row.pinnedAt ?? 0),
-        poll: row.poll,
-        preview: row.preview ?? undefined,
         reactions,
         replyTo: BigInt(row.replyTo ?? 0),
         sentAtMs: BigInt(row.sentAt.getTime()),
         seq: BigInt(row.seq),
-        text: row.text,
         threadId: row.threadId,
-        unsent: row.unsent,
-        votes,
       }),
     },
   });
@@ -350,7 +401,7 @@ const hiddenChange = (change: Change, line: ChatLine): Change =>
       case: "chatLine",
       value: create(ChatLineSchema, {
         authorId: line.authorId,
-        hidden: true,
+        content: { kind: { case: "hidden", value: {} } },
         opId: line.opId,
         sentAtMs: line.sentAtMs,
         seq: line.seq,
@@ -514,43 +565,63 @@ const ownUnsentPhotos = (
         .map(({ id }) => id);
 
 /**
- * A photo line: 1 to chatRules.photosPerSend photos, each once, each the
- * sender's own, uploaded and not sent before, with no words or days.
+ * What a member's send is as a line, or none when it does not fit: its
+ * words; its days with no words, a poll's two at least and in the group
+ * chat (a one-to-one chat has no polls); or 1 to chatRules.photosPerSend
+ * photos with neither, each once, each the sender's own, uploaded and not
+ * sent before.
  */
-const fitsPhotos = (
+const sentContent = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  { text, days, poll, photos }: ChatSend
-): boolean => {
-  const ids = photos.map(({ id }) => id);
-  return (
-    text === "" &&
-    days.length === 0 &&
-    !poll &&
-    ids.length > 0 &&
-    ids.length <= chatRules.photosPerSend &&
-    new Set(ids).size === ids.length &&
-    photos.every(
-      ({ width, height, thumbHash }) =>
-        fitsPhotoSize(width) &&
-        fitsPhotoSize(height) &&
-        fitsThumbHash(thumbHash)
-    ) &&
-    ownUnsentPhotos(db, userId, ids).length === ids.length
-  );
-};
-
-/**
- * A new line's words, or its days with no words; a poll's days are two
- * at least, in the group chat (a one-to-one chat has no polls).
- */
-const fitsSend = ({ text, days, poll, threadId }: ChatSend): boolean => {
-  if (days.length === 0) {
-    return !poll && fitsLine(text);
+  { text, days, poll, photos, preview, threadId }: ChatSend
+): SentContent | undefined => {
+  if (photos.length > 0) {
+    const ids = photos.map(({ id }) => id);
+    const fits =
+      text === "" &&
+      days.length === 0 &&
+      !poll &&
+      ids.length <= chatRules.photosPerSend &&
+      new Set(ids).size === ids.length &&
+      photos.every(
+        ({ width, height, thumbHash }) =>
+          fitsPhotoSize(width) &&
+          fitsPhotoSize(height) &&
+          fitsThumbHash(thumbHash)
+      ) &&
+      ownUnsentPhotos(db, userId, ids).length === ids.length;
+    return fits
+      ? {
+          kind: "photos",
+          photos: photos.map(({ height, id, thumbHash, width }) => ({
+            height,
+            id,
+            thumbHash: keptThumbHash(thumbHash),
+            width,
+          })),
+        }
+      : undefined;
   }
-  const pollFits =
-    !poll || (threadId === GROUP_THREAD && days.length >= POLL_MIN_DAYS);
-  return text === "" && fitsDays(days) && pollFits;
+  if (days.length === 0) {
+    return !poll && fitsLine(text)
+      ? {
+          edited: false,
+          kind: "words",
+          preview: sentPreview(preview, text),
+          text,
+        }
+      : undefined;
+  }
+  if (text !== "" || !fitsDays(days)) {
+    return undefined;
+  }
+  if (!poll) {
+    return { days, kind: "days" };
+  }
+  return threadId === GROUP_THREAD && days.length >= POLL_MIN_DAYS
+    ? { days, decided: null, kind: "poll" }
+    : undefined;
 };
 
 /** The chat's last seq, 0 before any line. */
@@ -583,7 +654,7 @@ export const lineAt = (
   db
     .select()
     .from(chatLines)
-    .where(and(atLine(threadId, Number(seq)), isNull(chatLines.notice)))
+    .where(and(atLine(threadId, Number(seq)), not(kindIs("notice"))))
     .get();
 
 /**
@@ -600,7 +671,11 @@ const answers = (
     return false;
   }
   const line = lineAt(db, threadId, replyTo);
-  return line !== undefined && !line.unsent && line.hiddenFrom !== userId;
+  return (
+    line !== undefined &&
+    line.content.kind !== "unsent" &&
+    line.hiddenFrom !== userId
+  );
 };
 
 /**
@@ -619,7 +694,7 @@ export const linesAt = (
         and(
           eq(chatLines.threadId, threadId),
           inArray(chatLines.seq, seqs),
-          isNull(chatLines.notice)
+          not(kindIs("notice"))
         )
       )
       .orderBy(asc(chatLines.seq))
@@ -709,19 +784,20 @@ export const unreadCount = (
     gt(chatLines.seq, readMarkOf(db, userId, threadId)),
     ne(chatLines.authorId, userId),
     // Lines from the app are told, not counted.
-    isNull(chatLines.notice),
+    not(kindIs("notice")),
     // Lines kept from them, from someone they blocked, never count.
     notHiddenFrom(userId)
   );
   const counted =
     db.select({ n: count() }).from(chatLines).where(unread).get()?.n ?? 0;
+  const text = sql<string>`${chatLines.content} ->> '$.text'`;
   // The lines holding the mention's token, read as the apps read them.
   const mentioned = db
-    .select({ text: chatLines.text })
+    .select({ text })
     .from(chatLines)
-    .where(and(unread, sql`instr(${chatLines.text}, ${mentionOf(userId)})`))
+    .where(and(unread, sql`instr(${text}, ${mentionOf(userId)})`))
     .all()
-    .filter(({ text }) => mentions(text, userId)).length;
+    .filter((line) => mentions(line.text, userId)).length;
   return { count: counted, mentions: mentioned };
 };
 
@@ -796,7 +872,7 @@ const takeReaction = (
   cursor: number
 ): Taken => {
   const line = lineAt(db, threadId, seq);
-  if (line === undefined || line.unsent || !isEmoji(emoji)) {
+  if (line === undefined || line.content.kind === "unsent" || !isEmoji(emoji)) {
     return {};
   }
   const mine = and(
@@ -840,15 +916,10 @@ const unsendLine = (
   const row = db
     .update(chatLines)
     .set({
+      content: { kind: "unsent" },
       cursor,
-      days: null,
-      decided: null,
-      photos: null,
       pinnedAt: null,
-      preview: null,
       replyTo: null,
-      text: "",
-      unsent: true,
     })
     .where(atLine(threadId, seq))
     .returning()
@@ -856,7 +927,7 @@ const unsendLine = (
   if (row === undefined) {
     return {};
   }
-  const photosGone = (line.photos ?? []).map(({ id }) => id);
+  const photosGone = photosOf(line.content).map(({ id }) => id);
   if (photosGone.length > 0) {
     db.update(groupPhotos)
       .set({ state: "takenBack" })
@@ -870,19 +941,23 @@ const unsendLine = (
 /** New words for one of the member's own lines at `cursor` (編集). */
 const changeWords = (
   db: DrizzleSqliteDODatabase,
-  line: LineRow,
+  line: LinePlace,
+  words: Extract<LineContent, { kind: "words" }>,
   { text, keepsPreview, preview }: ChatChange,
   cursor: number
 ): Taken => {
   const row = db
     .update(chatLines)
     .set({
+      content: {
+        edited: true,
+        kind: "words",
+        // The page stays while the first link does (spec/vectors/chat.json,
+        // edited); else the new link's, or none.
+        preview: keepsPreview ? words.preview : sentPreview(preview, text),
+        text,
+      },
       cursor,
-      edited: true,
-      // The page stays while the first link does (spec/vectors/chat.json,
-      // edited); else the new link's, or none.
-      preview: keepsPreview ? line.preview : sentPreview(preview, text),
-      text,
     })
     .where(atLine(line.threadId, line.seq))
     .returning()
@@ -906,15 +981,17 @@ const takeOwnLine = (
   if (line === undefined) {
     return {};
   }
-  const fits =
-    kind.case === "unsend" ||
-    (line.days === null && line.photos === null && fitsLine(kind.value.text));
-  if (line.authorId !== userId || line.unsent || !fits) {
+  const { content } = line;
+  if (line.authorId !== userId || content.kind === "unsent") {
     return { refused: chatLineChange(db, line) };
   }
-  return kind.case === "unsend"
-    ? unsendLine(db, line, cursor)
-    : changeWords(db, line, kind.value, cursor);
+  if (kind.case === "unsend") {
+    return unsendLine(db, line, cursor);
+  }
+  if (content.kind !== "words" || !fitsLine(kind.value.text)) {
+    return { refused: chatLineChange(db, line) };
+  }
+  return changeWords(db, line, content, kind.value, cursor);
 };
 
 /**
@@ -969,7 +1046,11 @@ const takeRecall = (
   if (line === undefined) {
     return keepRecall(db, userId, recall, new Date());
   }
-  if (line.authorId !== userId || line.threadId !== threadId || line.unsent) {
+  if (
+    line.authorId !== userId ||
+    line.threadId !== threadId ||
+    line.content.kind === "unsent"
+  ) {
     return {};
   }
   return unsendLine(db, line, cursor);
@@ -1033,7 +1114,11 @@ const takePin = (
   const line = lineAt(db, threadId, seq);
   // Taking off a pin that is not there changes nothing; pinning a pinned
   // line moves it up.
-  if (line === undefined || line.unsent || (!on && line.pinnedAt === null)) {
+  if (
+    line === undefined ||
+    line.content.kind === "unsent" ||
+    (!on && line.pinnedAt === null)
+  ) {
     return {};
   }
   const id = String(line.seq);
@@ -1059,12 +1144,13 @@ const takeVote = (
   cursor: number
 ): Taken => {
   const line = lineAt(db, threadId, seq);
-  const open =
-    line?.poll === true &&
-    !line.unsent &&
-    line.decided === null &&
-    (line.days ?? []).includes(day);
-  if (!open) {
+  const poll = line?.content.kind === "poll" ? line.content : undefined;
+  if (
+    line === undefined ||
+    poll === undefined ||
+    poll.decided !== null ||
+    !poll.days.includes(day)
+  ) {
     return {};
   }
   const mine = and(
@@ -1101,20 +1187,21 @@ const takeDecide = (
   isMember: (userId: string) => boolean
 ): Taken => {
   const line = lineAt(db, threadId, seq);
-  const settles =
-    line?.poll === true &&
-    !line.unsent &&
-    line.decided !== day &&
-    (line.days ?? []).includes(day) &&
-    (line.authorId === userId || !isMember(line.authorId));
-  if (!settles) {
+  const poll = line?.content.kind === "poll" ? line.content : undefined;
+  if (
+    line === undefined ||
+    poll === undefined ||
+    poll.decided === day ||
+    !poll.days.includes(day) ||
+    !(line.authorId === userId || !isMember(line.authorId))
+  ) {
     return {};
   }
   return pinning(
     db,
     line,
     { settle: String(line.seq) },
-    { decided: day },
+    { content: { ...poll, decided: day } },
     cursor,
     nextCursor
   );
@@ -1170,9 +1257,6 @@ const takeSend = (
     .from(chatRecalls)
     .where(and(eq(chatRecalls.userId, userId), eq(chatRecalls.opId, opId)))
     .get();
-  const { photos, replyTo } = send;
-  const fits =
-    photos.length === 0 ? fitsSend(send) : fitsPhotos(db, userId, send);
   if (taken !== undefined || recalled !== undefined) {
     return {};
   }
@@ -1180,9 +1264,11 @@ const takeSend = (
   if (other !== undefined && !isMember(other)) {
     return { refusal: RefusedSend_Reason.NOT_IN_GROUP };
   }
-  if (!fits) {
+  const content = sentContent(db, userId, send);
+  if (content === undefined) {
     return { refusal: RefusedSend_Reason.DOES_NOT_FIT };
   }
+  const photos = photosOf(content);
   if (photos.length > 0) {
     db.update(groupPhotos)
       .set({ state: "sent" })
@@ -1194,30 +1280,19 @@ const takeSend = (
       )
       .run();
   }
+  const { replyTo } = send;
   const row = db
     .insert(chatLines)
     .values({
       authorId: userId,
+      content,
       createdCursor: cursor,
       cursor,
-      days: send.days.length === 0 ? null : send.days,
       device: deviceOf(send, rules),
       // Not delivered to the other of a one-to-one chat who blocked
       // its writer.
       hiddenFrom: blockedBy(db, send.threadId, userId),
       opId,
-      photos:
-        photos.length === 0
-          ? null
-          : photos.map(({ height, id, thumbHash, width }) => ({
-              height,
-              id,
-              thumbHash: keptThumbHash(thumbHash),
-              width,
-            })),
-      poll: send.poll,
-      // A page goes with words alone.
-      preview: send.text === "" ? null : sentPreview(send.preview, send.text),
       // A line it cannot answer, as one taken back meanwhile, goes without
       // its quote rather than not at all.
       replyTo: answers(db, userId, send.threadId, replyTo)
@@ -1225,7 +1300,6 @@ const takeSend = (
         : null,
       sentAt: new Date(),
       seq: chatHead(db, send.threadId) + 1,
-      text: send.text,
       threadId: send.threadId,
     })
     .returning()
@@ -1258,20 +1332,23 @@ export const addPreview = (
   preview: LinkPreview,
   cursor: number
 ): Change | undefined => {
-  const line = db.select().from(chatLines).where(atLine(threadId, seq)).get();
+  const content = db
+    .select({ content: chatLines.content })
+    .from(chatLines)
+    .where(atLine(threadId, seq))
+    .get()?.content;
   const kept = keptPreview(preview);
   if (
-    line === undefined ||
-    line.unsent ||
-    line.preview !== null ||
+    content?.kind !== "words" ||
+    content.preview !== null ||
     kept === null ||
-    previewLinkOf(line.text) !== link
+    previewLinkOf(content.text) !== link
   ) {
     return undefined;
   }
   const row = db
     .update(chatLines)
-    .set({ cursor, preview: kept })
+    .set({ content: { ...content, preview: kept }, cursor })
     .where(atLine(threadId, seq))
     .returning()
     .get();
@@ -1369,9 +1446,9 @@ export const eraseMemberChat = (
     .where(
       and(
         eq(chatLines.authorId, userId),
-        eq(chatLines.unsent, false),
+        not(kindIs("unsent")),
         // The app's notices of their joining or leaving stay.
-        isNull(chatLines.notice)
+        not(kindIs("notice"))
       )
     )
     .all();
@@ -1399,7 +1476,7 @@ export const eraseMemberChat = (
       db
         .update(chatLines)
         .set({ cursor: nextCursor() })
-        .where(and(atLine(threadId, seq), eq(chatLines.unsent, false)))
+        .where(and(atLine(threadId, seq), not(kindIs("unsent"))))
         .returning()
         .get() ?? []
   );
@@ -1468,8 +1545,7 @@ const seenPhotos = (
 ): SQL | undefined =>
   and(
     eq(chatLines.threadId, threadId),
-    isNotNull(chatLines.photos),
-    eq(chatLines.unsent, false),
+    kindIs("photos"),
     notHiddenFrom(userId),
     threadId === GROUP_THREAD
       ? notInArray(
@@ -1491,7 +1567,7 @@ const askedSide = (seq: number, after: boolean): SQL | undefined => {
 };
 
 /** How many photos a line holds, in SQL. */
-const photoCount = sql<number>`json_array_length(${chatLines.photos})`;
+const photoCount = sql<number>`json_array_length(${chatLines.content}, '$.photos')`;
 
 /**
  * A page of the chat's photos alone (ChatPhotosRequest): the lines the
@@ -1532,7 +1608,7 @@ export const photosPage = (
   const nearest = db
     .select({
       authorId: chatLines.authorId,
-      photos: chatLines.photos,
+      content: chatLines.content,
       sentAt: chatLines.sentAt,
       seq: chatLines.seq,
     })
@@ -1540,11 +1616,12 @@ export const photosPage = (
     .where(and(seen, side))
     .orderBy(after ? asc(chatLines.seq) : desc(chatLines.seq))
     .limit(size)
-    .all();
+    .all()
+    .map(({ content, ...line }) => ({ ...line, photos: photosOf(content) }));
   const lines: typeof nearest = [];
   let held = 0;
   for (const line of nearest) {
-    const holds = line.photos?.length ?? 0;
+    const holds = line.photos.length;
     if (lines.length > 0 && held + holds > size) {
       break;
     }
@@ -1557,7 +1634,7 @@ export const photosPage = (
     // the page leaves out.
     offset: after ? counted.total - counted.onSide : counted.onSide - held,
     photos: page.flatMap(({ authorId, photos, sentAt, seq: lineSeq }) =>
-      (photos ?? []).map((photo) => ({
+      photos.map((photo) => ({
         authorId,
         photo: sentPhoto(photo),
         sentAtMs: BigInt(sentAt.getTime()),
@@ -1672,17 +1749,25 @@ export const reportContext = (
     .orderBy(asc(chatLines.seq))
     .all()
     // The app's notices are no one's words.
-    .filter((row) => row.hiddenFrom !== reporterId && row.notice === null)
-    .map((row) => ({
-      authorId: row.authorId,
-      days: row.days,
-      name: nameOf(row.authorId),
-      photos: row.photos?.map(({ id }) => id),
-      reported: row.seq === target.seq,
-      seq: row.seq,
-      text: plainText(row.text, nameOf),
-      unsent: row.unsent,
-    }));
+    .filter(
+      (row) => row.hiddenFrom !== reporterId && row.content.kind !== "notice"
+    )
+    .map(({ authorId, content, seq }) => {
+      const photos = photosOf(content);
+      return {
+        authorId,
+        days:
+          content.kind === "days" || content.kind === "poll"
+            ? content.days
+            : null,
+        name: nameOf(authorId),
+        photos: photos.length === 0 ? undefined : photos.map(({ id }) => id),
+        reported: seq === target.seq,
+        seq,
+        text: content.kind === "words" ? plainText(content.text, nameOf) : "",
+        unsent: content.kind === "unsent",
+      };
+    });
   return {
     context: JSON.stringify(around),
     targetId: line.authorId,
@@ -1694,6 +1779,37 @@ const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
 /** The most characters of a message's words a notification carries. */
 const ALERT_TEXT_MAX = 200;
+
+/** A new line's kind, as its notification's key names it. */
+const alertKind = (content: ChatContent["kind"] | undefined): string => {
+  switch (content?.case) {
+    case "photos": {
+      return "PHOTO";
+    }
+    case "poll": {
+      return "POLL";
+    }
+    case "days": {
+      return "DAYS";
+    }
+    case "words":
+    case "notice":
+    case "unsent":
+    case "hidden":
+    case undefined: {
+      return "TEXT";
+    }
+    default: {
+      return content satisfies never;
+    }
+  }
+};
+
+/** A line's words as the wire carries them; none for any other kind. */
+export const wordsOf = (line: ChatLine): string => {
+  const content = line.content?.kind;
+  return content?.case === "words" ? content.value.text : "";
+};
 
 /**
  * A new line as its notification words it (spec/sync-protocol.md, Push):
@@ -1710,16 +1826,9 @@ export const alertOf = (
   direct = line.threadId !== GROUP_THREAD
 ): Alert => {
   const writer = nameOf(line.authorId);
-  let kind = "TEXT";
-  if (line.photos.length > 0) {
-    kind = "PHOTO";
-  } else if (line.poll) {
-    kind = "POLL";
-  } else if (line.days.length > 0) {
-    kind = "DAYS";
-  }
+  const kind = alertKind(line.content?.kind);
   // Cut between characters as people see them, emoji whole.
-  const words = [...graphemes.segment(plainText(line.text, nameOf))]
+  const words = [...graphemes.segment(plainText(wordsOf(line), nameOf))]
     .slice(0, ALERT_TEXT_MAX)
     .map(({ segment }) => segment)
     .join("");
@@ -1767,13 +1876,12 @@ export const writeNotice = (
     .insert(chatLines)
     .values({
       authorId,
+      content: { kind: "notice", notice },
       createdCursor: cursor,
       cursor,
-      notice,
       opId: `notice-${cursor}`,
       sentAt: new Date(),
       seq: chatHead(db, GROUP_THREAD) + 1,
-      text: "",
       threadId: GROUP_THREAD,
     })
     .returning()

@@ -94,7 +94,7 @@ const latest = sampleChats[chatKey("family", groupChat)]?.messages.at(-1);
 const chatLine = `${
   sampleOthers("family").find((member) => member.id === latest?.from)?.name ??
   ""
-}：${latest?.text ?? ""}`;
+}：${latest?.content.kind === "words" ? latest.content.text : ""}`;
 
 function FlowsPage() {
   const theme = useDesignTheme();

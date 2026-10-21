@@ -113,6 +113,13 @@ describe("spec/vectors/order-clears.json", () => {
 });
 
 describe("spec/vectors/chat-photos.json", () => {
+  // A seen line's kind as a line laid in the database holds it.
+  const seenPhotos: Record<string, number | "unsent"> = {
+    photos: 1,
+    unsent: "unsent",
+    words: 0,
+  };
+
   // The group's own answer, from its database: the line alone in its chat,
   // counted among the reader's photos or not.
   test.each(chatPhotos.seen)("seen: $name", async ({ line, expected }) => {
@@ -124,10 +131,9 @@ describe("spec/vectors/chat-photos.json", () => {
         {
           authorId: "writer",
           hiddenFrom: line.hidden ? "reader" : undefined,
-          photos: line.photo ? 1 : 0,
+          photos: seenPhotos[line.kind] ?? 0,
           seq: 1,
           threadId,
-          unsent: line.unsent,
         },
       ],
       seq: 0,
@@ -170,12 +176,17 @@ describe("spec/vectors/unread.json", () => {
           db.insert(chatLines)
             .values({
               authorId: "yuki",
+              content: {
+                edited: false,
+                kind: "words",
+                preview: null,
+                text: words,
+              },
               createdCursor: index + 1,
               cursor: index + 1,
               opId: `op-${index}`,
               sentAt: new Date(index),
               seq: index + 1,
-              text: words,
               threadId: "group",
             })
             .run();

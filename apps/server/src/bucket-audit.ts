@@ -2,12 +2,13 @@
 // (spec/admin.md, 棚卸し): the objects nothing names, counted and weighed
 // by where they are kept and why nothing names them, for Pochical's people
 // to read before anything is deleted. It only reads.
-import { isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
+import { photosOf } from "./chat-content";
 import { user } from "./db/auth-schema";
 import { invites, supportChats } from "./db/schema";
+import { kindIs } from "./group-chat";
 import { chatLines, groupPhotos, profile } from "./group-do-schema";
 import type { photoStates } from "./group-do-schema";
 import { namedPhotos } from "./group-photos";
@@ -94,20 +95,22 @@ const SAMPLE = 20;
 /** The lines' photos, each of them carried by a line not taken back. */
 const linePhotos = (db: DrizzleSqliteDODatabase): string[] =>
   db
-    .select({ photos: chatLines.photos })
+    .select({ content: chatLines.content })
     .from(chatLines)
-    .where(isNotNull(chatLines.photos))
+    .where(kindIs("photos"))
     .all()
-    .flatMap(({ photos }) => (photos ?? []).map(({ id }) => id));
+    .flatMap(({ content }) => photosOf(content).map(({ id }) => id));
 
 /** The pictures of the lines' link previews. */
 const linePreviewImages = (db: DrizzleSqliteDODatabase): string[] =>
   db
-    .select({ preview: chatLines.preview })
+    .select({ content: chatLines.content })
     .from(chatLines)
-    .where(isNotNull(chatLines.preview))
+    .where(kindIs("words"))
     .all()
-    .map(({ preview }) => preview?.imageId ?? "")
+    .map(({ content }) =>
+      content.kind === "words" ? (content.preview?.imageId ?? "") : ""
+    )
     .filter((id) => id !== "");
 
 /**

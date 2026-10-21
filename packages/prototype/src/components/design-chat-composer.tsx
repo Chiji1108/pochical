@@ -104,7 +104,7 @@ export function useComposer({
   // Puts your message's words back in the composer to change them, its
   // mentions as @name again.
   const startEditing = (message: Message) => {
-    const text = message.text ?? "";
+    const text = message.content.kind === "words" ? message.content.text : "";
     setEditing(message.id);
     setDraft(plainText(text, mentionName));
     setPicked(picksOf(text));
@@ -390,7 +390,11 @@ export function Composer({
               }}
               stopLabel="返信をやめる"
               text={summaryOf(reply.message, mentionName)}
-              thumb={reply.message.photos?.[0]?.src}
+              thumb={
+                reply.message.content.kind === "photos"
+                  ? reply.message.content.photos[0]?.src
+                  : undefined
+              }
             />
           )}
           {attached && (

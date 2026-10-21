@@ -3,6 +3,7 @@ import { env, exports } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/durable-sqlite";
 import { expect } from "vitest";
 
+import type { LineContent } from "../src/chat-content";
 import { photosPage } from "../src/group-chat";
 import { chatLines, memberBlocks } from "../src/group-do-schema";
 
@@ -164,15 +165,15 @@ export const inOneLimitWindow = async <T>(
 
 /**
  * A line of a chat laid straight into a group's database, by what makes
- * its photos seen or not: how many it holds, none for words.
+ * its photos seen or not: how many it holds, none for words, or "unsent"
+ * once taken back.
  */
 export type PhotoLine = {
   authorId: string;
   hiddenFrom?: string;
-  photos: number;
+  photos: number | "unsent";
   seq: number;
   threadId?: string;
-  unsent?: boolean;
 };
 
 /**
@@ -182,15 +183,22 @@ export type PhotoLine = {
 export const photoName = (seq: number, at: number): string =>
   `${seq}${String.fromCodePoint(("a".codePointAt(0) ?? 0) + at)}`;
 
-/** A PhotoLine's photos as its row keeps them, none for words. */
-const photosOf = ({ photos, seq }: PhotoLine) =>
-  photos === 0
-    ? null
-    : Array.from({ length: photos }, (_, at) => ({
-        height: 1,
-        id: photoName(seq, at),
-        width: 1,
-      }));
+/** A PhotoLine as its row keeps what it is. */
+const contentOf = ({ photos, seq }: PhotoLine): LineContent => {
+  if (photos === "unsent") {
+    return { kind: "unsent" };
+  }
+  return photos === 0
+    ? { edited: false, kind: "words", preview: null, text: "words" }
+    : {
+        kind: "photos",
+        photos: Array.from({ length: photos }, (_, at) => ({
+          height: 1,
+          id: photoName(seq, at),
+          width: 1,
+        })),
+      };
+};
 
 /**
  * What a ChatPhotosRequest answers `userId` (photosPage), the page's
@@ -222,16 +230,14 @@ export const photosAmong = async ({
         db.insert(chatLines)
           .values({
             authorId: line.authorId,
+            content: contentOf(line),
             createdCursor: index + 1,
             cursor: index + 1,
             hiddenFrom: line.hiddenFrom ?? null,
             opId: `op-${index}`,
-            photos: photosOf(line),
             sentAt: new Date(line.seq),
             seq: line.seq,
-            text: "",
             threadId: line.threadId ?? "group",
-            unsent: line.unsent ?? false,
           })
           .run();
       }

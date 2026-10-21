@@ -3,16 +3,19 @@ import { chatRules } from "@pochical/design/chat";
 import { describe, expect, it, vi } from "vitest";
 
 import { RefusedSend_Reason } from "../src/gen/pochical/v1/sync_pb";
-import type { ChatEditSchema } from "../src/gen/pochical/v1/sync_pb";
+import type { ChatEditSchema, ChatLine } from "../src/gen/pochical/v1/sync_pb";
+import { wordsOf } from "../src/group-chat";
 import {
   PAIR_ROSTER,
   changesIn,
   device,
+  holding,
   pair,
   sendFrame,
   settled,
   syncSocket,
   untilAcked,
+  words,
 } from "./sync-helpers";
 
 const thread = "group";
@@ -133,6 +136,12 @@ function sendChatKind(kind: ChatKind, threadId: string) {
 // A link's page as the app attaches one.
 const page = (url: string) => ({ site: "Cafe", title: "店", url });
 
+// The page under a line's words, none for any other line.
+const previewOf = (line: ChatLine | undefined) =>
+  line?.content?.kind.case === "words"
+    ? line.content.kind.value.preview
+    : undefined;
+
 // pair()'s chat starts with the notice of the guest's joining, at seq 1,
 // so the first line a member writes there is at seq 2.
 const groupSocket = async (
@@ -191,8 +200,8 @@ describe("a group's chat", () => {
           authorId: makerId,
           opId: "a",
           seq: 2n,
-          text: "今週どう？",
           threadId: thread,
+          ...words("今週どう？"),
         },
       },
     };
@@ -218,17 +227,17 @@ describe("a group's chat", () => {
     // Someone else's line comes back as it is.
     chat(theirs.socket, [{ kind: { change: [2, "ちがう"] }, opId: "b" }]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { edited: false, text: "はじめ" } } },
+      { kind: { value: words("はじめ", { edited: false }) } },
     ]);
     await theirs.frames.next();
 
     chat(mine.socket, [{ kind: { change: [2, "なおした"] }, opId: "c" }]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { edited: true, text: "なおした" } } },
+      { kind: { value: words("なおした", { edited: true }) } },
     ]);
     chat(mine.socket, [{ kind: { unsend: 2 }, opId: "d" }]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { text: "", unsent: true } } },
+      { kind: { value: holding("unsent") } },
     ]);
   });
 
@@ -249,13 +258,13 @@ describe("a group's chat", () => {
       { kind: { reply: [2, "なに？"] }, opId: "c" },
     ]);
     expect(changesIn(await mine.frames.next())).toMatchObject([
-      { kind: { value: { replyTo: 0n, seq: 3n, text: "どれ？" } } },
-      { kind: { value: { replyTo: 2n, seq: 4n, text: "なに？" } } },
+      { kind: { value: { replyTo: 0n, seq: 3n, ...words("どれ？") } } },
+      { kind: { value: { replyTo: 2n, seq: 4n, ...words("なに？") } } },
     ]);
 
     chat(theirs.socket, [{ kind: { unsend: 4 }, opId: "d" }]);
     expect(changesIn(await mine.frames.next())).toMatchObject([
-      { kind: { value: { replyTo: 0n, seq: 4n, unsent: true } } },
+      { kind: { value: { replyTo: 0n, seq: 4n, ...holding("unsent") } } },
     ]);
   });
 
@@ -502,7 +511,7 @@ describe("a group's chat", () => {
     // Back, they catch up on what was said before they left…
     const theirs = await groupSocket(groupId, guest, 0n);
     const earlier = changesIn(await theirs.frames.next()).flatMap(({ kind }) =>
-      kind.case === "chatLine" ? [kind.value.text] : []
+      kind.case === "chatLine" ? [wordsOf(kind.value)] : []
     );
     expect(earlier).toContain("またね");
 
@@ -514,7 +523,10 @@ describe("a group's chat", () => {
         value: {
           changes: [
             {
-              kind: { case: "chatLine", value: { seq: 2n, text: "ただいま" } },
+              kind: {
+                case: "chatLine",
+                value: { seq: 2n, ...words("ただいま") },
+              },
             },
           ],
         },
@@ -574,7 +586,10 @@ describe("a group's chat", () => {
     expect(changesIn(await mine.frames.next())).toMatchObject([
       {
         kind: {
-          value: { days: ["2026-10-10", "2026-10-12"], seq: 2n, text: "" },
+          value: {
+            seq: 2n,
+            ...holding("days", { days: ["2026-10-10", "2026-10-12"] }),
+          },
         },
       },
     ]);
@@ -584,13 +599,15 @@ describe("a group's chat", () => {
     chat(mine.socket, [{ kind: { change: [2, "ことば"] }, opId: "b" }]);
     expect(changesIn(await mine.frames.next())).toMatchObject([
       {
-        kind: { value: { days: ["2026-10-10", "2026-10-12"], edited: false } },
+        kind: {
+          value: holding("days", { days: ["2026-10-10", "2026-10-12"] }),
+        },
       },
     ]);
     await mine.frames.next();
     chat(mine.socket, [{ kind: { unsend: 2 }, opId: "c" }]);
     expect(changesIn(await mine.frames.next())).toMatchObject([
-      { kind: { value: { days: [], unsent: true } } },
+      { kind: { value: holding("unsent") } },
     ]);
   });
 
@@ -606,7 +623,7 @@ describe("a group's chat", () => {
       { kind: { poll: days }, opId: "p" },
     ]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { days, poll: true, seq: 2n } } },
+      { kind: { value: { seq: 2n, ...holding("poll", { days }) } } },
     ]);
     await mine.frames.next();
     await mine.frames.next();
@@ -620,7 +637,9 @@ describe("a group's chat", () => {
     expect(changesIn(await mine.frames.next())).toMatchObject([
       {
         kind: {
-          value: { votes: [{ day: "2026-10-11", userIds: [guestId] }] },
+          value: holding("poll", {
+            votes: [{ day: "2026-10-11", userIds: [guestId] }],
+          }),
         },
       },
     ]);
@@ -636,10 +655,10 @@ describe("a group's chat", () => {
     expect(changes).toHaveLength(2);
     expect(changes[1]).toMatchObject({
       kind: {
-        value: {
+        value: holding("poll", {
           decided: "2026-10-11",
           votes: [{ day: "2026-10-11", userIds: [guestId, makerId] }],
-        },
+        }),
       },
     });
     const decided = changes[1]?.kind;
@@ -662,7 +681,7 @@ describe("a group's chat", () => {
     await theirs.frames.next();
     chat(theirs.socket, [{ kind: { decide: [2, "2026-10-10"] }, opId: "d" }]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { decided: "2026-10-10" } } },
+      { kind: { value: holding("poll", { decided: "2026-10-10" }) } },
     ]);
   });
 
@@ -708,9 +727,9 @@ describe("a group's chat", () => {
     });
     const none = await lineAfter();
     expect([
-      sent?.preview?.url,
-      kept?.preview?.url,
-      none?.preview,
+      previewOf(sent)?.url,
+      previewOf(kept)?.url,
+      previewOf(none),
     ]).toStrictEqual([
       "https://cafe.example",
       "https://cafe.example",
@@ -757,10 +776,10 @@ describe("a group's chat", () => {
     const lineOf = (change: typeof sent) =>
       change?.kind.case === "chatLine" ? change.kind.value : undefined;
     expect([
-      lineOf(off)?.preview,
-      lineOf(sent)?.preview,
+      previewOf(lineOf(off)),
+      previewOf(lineOf(sent)),
       lineOf(added)?.seq,
-      lineOf(added)?.preview?.title,
+      previewOf(lineOf(added))?.title,
       fetched,
     ]).toStrictEqual([
       undefined,
@@ -874,8 +893,8 @@ describe("a group's chat", () => {
     const [toWriter] = changesIn(await theirs.frames.next());
     const [toBlocker] = changesIn(await mine.frames.next());
     expect([toWriter?.kind.value, toBlocker?.kind.value]).toMatchObject([
-      { hidden: false, text: "見て" },
-      { hidden: true, text: "" },
+      words("見て"),
+      holding("hidden"),
     ]);
     // Acknowledged as any line taken, so nothing tells the block.
     await expect(theirs.frames.next()).resolves.toMatchObject({
@@ -898,7 +917,10 @@ describe("a group's chat", () => {
     const changes = changesIn(await mine.frames.next());
     expect(changes).toHaveLength(2);
     expect(changes[1]).toMatchObject({
-      kind: { case: "chatLine", value: { reactions: [], unsent: true } },
+      kind: {
+        case: "chatLine",
+        value: { reactions: [], ...holding("unsent") },
+      },
     });
   });
 
@@ -910,7 +932,7 @@ describe("a group's chat", () => {
     await mine.frames.next();
     await mine.frames.next();
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { seq: 2n, unsent: false } } },
+      { kind: { value: { seq: 2n, ...words("まちがい") } } },
     ]);
 
     chat(mine.socket, [
@@ -918,7 +940,7 @@ describe("a group's chat", () => {
       { kind: { recall: "a" }, opId: "r2" },
     ]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { seq: 2n, text: "", unsent: true } } },
+      { kind: { value: { seq: 2n, ...holding("unsent") } } },
     ]);
     await expect(settled(theirs.socket, theirs.frames)).resolves.toMatchObject({
       kind: { case: "pong" },
@@ -944,7 +966,7 @@ describe("a group's chat", () => {
       { kind: { send: "明日休み？" }, opId: "b" },
     ]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { opId: "b", seq: 2n, text: "明日休み？" } } },
+      { kind: { value: { opId: "b", seq: 2n, ...words("明日休み？") } } },
     ]);
     await expect(settled(theirs.socket, theirs.frames)).resolves.toMatchObject({
       kind: { case: "pong" },
@@ -965,7 +987,7 @@ describe("a group's chat", () => {
       { kind: { send: "とどく" }, opId: "a" },
     ]);
     expect(changesIn(await mine.frames.next())).toMatchObject([
-      { kind: { value: { opId: "a", text: "とどく" } } },
+      { kind: { value: { opId: "a", ...words("とどく") } } },
     ]);
     await expect(mine.frames.next()).resolves.toMatchObject({
       kind: {
@@ -1029,7 +1051,7 @@ describe("a group's chat", () => {
     });
     chat(tablet.socket, [{ kind: { recall: "a" }, opId: "r" }]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { opId: "a", seq: 2n, unsent: true } } },
+      { kind: { value: { opId: "a", seq: 2n, ...holding("unsent") } } },
     ]);
   });
 
@@ -1079,7 +1101,10 @@ describe("a group's chat", () => {
     const lines = changesIn(await mine.frames.next());
     expect(lines).toHaveLength(2);
     expect(lines[1]).toMatchObject({
-      kind: { case: "chatLine", value: { pinnedOrder: 0n, unsent: true } },
+      kind: {
+        case: "chatLine",
+        value: { pinnedOrder: 0n, ...holding("unsent") },
+      },
     });
   });
 
@@ -1144,7 +1169,7 @@ describe("a group's chat", () => {
       ({ kind }) => kind.case === "chatLine" && kind.value.seq === 2n
     );
     expect(first).toMatchObject({
-      kind: { value: { text: "1" } },
+      kind: { value: words("1") },
     });
   });
 
@@ -1166,8 +1191,8 @@ describe("a group's chat", () => {
     // Live: the answered line, then the reply.
     chat(mine.socket, [{ kind: { reply: [2, "これ"] }, opId: "r" }]);
     expect(changesIn(await theirs.frames.next())).toMatchObject([
-      { kind: { value: { seq: 2n, text: "1" } } },
-      { kind: { value: { replyTo: 2n, text: "これ" } } },
+      { kind: { value: { seq: 2n, ...words("1") } } },
+      { kind: { value: { replyTo: 2n, ...words("これ") } } },
     ]);
     await mine.frames.next();
     await mine.frames.next();
@@ -1178,7 +1203,9 @@ describe("a group's chat", () => {
       ({ kind }) => kind.case === "chatLine"
     );
     expect(lines).toHaveLength(chatRules.pageSize + 1);
-    expect(lines[0]).toMatchObject({ kind: { value: { seq: 2n, text: "1" } } });
+    expect(lines[0]).toMatchObject({
+      kind: { value: { seq: 2n, ...words("1") } },
+    });
   });
 
   it("gives a page the lines its replies answer from before it", async () => {
@@ -1203,7 +1230,10 @@ describe("a group's chat", () => {
     });
     const frame = await later.frames.next();
     expect(frame).toMatchObject({
-      kind: { case: "chatPage", value: { quoted: [{ seq: 2n, text: "1" }] } },
+      kind: {
+        case: "chatPage",
+        value: { quoted: [{ seq: 2n, ...words("1") }] },
+      },
     });
     expect(
       frame.kind.case === "chatPage" ? frame.kind.value.lines.at(-1) : undefined

@@ -10,6 +10,21 @@ import Testing
 /// A device's time before the wait of any line these tests write is over.
 let early: Int64 = 100_000
 
+extension LineContent {
+  /// Its words, for a line of words.
+  var text: String? {
+    if case .words(let words) = self { words.text } else { nil }
+  }
+}
+
+extension ChatLineRow {
+  var text: String? { content.text }
+}
+
+extension WaitingLine {
+  var text: String? { content.text }
+}
+
 struct ChatVectors: Decodable, Sendable {
   struct FirstUnread: VectorCase {
     let name: String
@@ -40,12 +55,22 @@ struct ChatVectors: Decodable, Sendable {
   }
 
   struct Writer: VectorCase {
+    enum Kind: String, Decodable, Sendable {
+      case words, notice, hidden
+    }
     let name: String
     let author: String
     let me: String
-    let notice: Bool
-    let hidden: Bool
+    let kind: Kind
     let expected: LineWriter
+
+    var content: LineContent {
+      switch kind {
+      case .words: .words(LineContent.Words(text: "了解"))
+      case .notice: .notice(LineNotice(kind: .joined))
+      case .hidden: .hidden
+      }
+    }
   }
 
   let firstUnread: [FirstUnread]
@@ -87,9 +112,19 @@ struct ChatVectors: Decodable, Sendable {
       }
     }
     struct Line: Decodable, Sendable {
+      enum Kind: String, Decodable, Sendable {
+        case words, unsent
+      }
       let seq: Int64
-      let text: String
-      let unsent: Bool
+      let kind: Kind
+      var text: String?
+
+      var content: LineContent {
+        switch kind {
+        case .words: .words(LineContent.Words(text: text ?? ""))
+        case .unsent: .unsent
+        }
+      }
     }
     let name: String
     let draft: Value
@@ -204,7 +239,7 @@ func aReadTakesBackItsNotifications(_ vector: ChatVectors.Withdrawn) {
 @Test(arguments: try vectors("chat", as: ChatVectors.self).draft)
 func draftKept(_ vector: ChatVectors.Draft) {
   let lines = Dictionary(
-    uniqueKeysWithValues: vector.lines.map { ($0.seq, DraftLine(text: $0.text, unsent: $0.unsent)) })
+    uniqueKeysWithValues: vector.lines.map { ($0.seq, $0.content) })
   let kept = keptDraft(vector.draft.kept) { lines[$0] }
   #expect(kept == vector.expected?.kept)
 }
@@ -273,13 +308,9 @@ func directThreadOfTwo(_ vector: ChatVectors.DirectThread) {
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).writer)
 func writerOfALine(_ vector: ChatVectors.Writer) {
-  var row = ChatLineRow(
-    groupID: "g", threadID: groupThread, seq: 1, authorID: vector.author, text: "",
-    sentAtMs: 0, edited: false, unsent: false, opID: "op1")
-  row.hidden = vector.hidden
-  if vector.notice {
-    row.notice = LineNotice(kind: .joined)
-  }
+  let row = ChatLineRow(
+    groupID: "g", threadID: groupThread, seq: 1, authorID: vector.author, sentAtMs: 0,
+    opID: "op1", content: vector.content)
   #expect(row.writer(for: vector.me) == vector.expected)
 }
 
@@ -294,7 +325,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
   change.chatLine.threadID = groupThread
   change.chatLine.seq = seq
   change.chatLine.authorID = "u1"
-  change.chatLine.text = text
+  change.chatLine.content.words.text = text
   change.chatLine.opID = op.isEmpty ? "op\(seq)" : op
   return change
 }
@@ -379,8 +410,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
 
     var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.waiting.map(\.text) == ["まだ届いてない"])
-    #expect(state.lines.first?.text == "なおした")
-    #expect(state.lines.first?.edited == true)
+    #expect(state.lines.first?.content == .words(LineContent.Words(text: "なおした", edited: true)))
 
     // The group's line for the send takes the waiting one's place.
     let opID = try #require(state.waiting.first).opID
@@ -420,7 +450,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
   let database = try appDatabase()
   try database.write { db in
     var blocked = line(2, "")
-    blocked.chatLine.hidden = true
+    blocked.chatLine.content.hidden = Pochical_V1_ChatHidden()
     try GroupSync.take([line(1, "a"), blocked, line(3, "c")], of: "g", in: db)
     var read = Pochical_V1_ChatRead()
     read.threadID = groupThread
@@ -792,7 +822,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   let database = try appDatabase()
   try database.write { db in
     var days = line(1, "")
-    days.chatLine.days = ["2026-10-10", "2026-10-12"]
+    days.chatLine.content.days.days = ["2026-10-10", "2026-10-12"]
     try GroupSync.take([days], of: "g", in: db)
     var send = Pochical_V1_ChatSend()
     send.threadID = groupThread
@@ -802,12 +832,12 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     unsend.threadID = groupThread
     unsend.seq = 1
     var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
-    #expect(state.lines.map(\.days) == [[Day(year: 2026, month: 10, day: 10), Day(year: 2026, month: 10, day: 12)]])
-    #expect(state.waiting.map(\.days) == [[Day(year: 2026, month: 11, day: 3)]])
+    #expect(state.lines.map(\.content) == [.days([Day(year: 2026, month: 10, day: 10), Day(year: 2026, month: 10, day: 12)])])
+    #expect(state.waiting.map(\.content) == [.days([Day(year: 2026, month: 11, day: 3)])])
 
     try Chats.edit(.unsend(unsend), in: "g", now: 11, db: db)
     state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
-    #expect(state.lines.map(\.days) == [[]])
+    #expect(state.lines.map(\.content) == [.unsent])
   }
 }
 
@@ -815,12 +845,11 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   let database = try appDatabase()
   try database.write { db in
     var poll = line(1, "")
-    poll.chatLine.days = ["2026-10-10", "2026-10-11"]
-    poll.chatLine.poll = true
+    poll.chatLine.content.poll.days = ["2026-10-10", "2026-10-11"]
     var others = Pochical_V1_ChatVotes()
     others.day = "2026-10-11"
     others.userIds = ["u2"]
-    poll.chatLine.votes = [others]
+    poll.chatLine.content.poll.votes = [others]
     try GroupSync.take([poll], of: "g", in: db)
     var vote = Pochical_V1_ChatVote()
     vote.threadID = groupThread
@@ -830,7 +859,8 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     try Chats.edit(.vote(vote), in: "g", now: 1, db: db)
     var state = try Chats.state(of: groupThread, in: "g", me: "me", now: early, db: db)
     let tenth = Day(year: 2026, month: 10, day: 11)
-    #expect(state.lines[0].votes.voters(on: tenth) == ["u2", "me"])
+    var shown = try #require(pollShown(state.lines[0]))
+    #expect(shown.votes.voters(on: tenth) == ["u2", "me"])
 
     var decide = Pochical_V1_ChatDecide()
     decide.threadID = groupThread
@@ -838,9 +868,40 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     decide.day = "2026-10-11"
     try Chats.edit(.decide(decide), in: "g", now: 2, db: db)
     state = try Chats.state(of: groupThread, in: "g", me: "me", now: early, db: db)
-    #expect(state.lines[0].decided == tenth)
+    shown = try #require(pollShown(state.lines[0]))
+    #expect(shown.decided == tenth)
     #expect(state.pins.map(\.seq) == [1])
   }
+}
+
+@Test func aNoticeIsKeptAsOneAndALineOfNoKnownKindAsNothing() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var notice = line(1, "")
+    notice.chatLine.content.notice.kind = .removed
+    notice.chatLine.content.notice.subjectID = "u3"
+    var none = line(2, "")
+    none.chatLine.clearContent()
+    try GroupSync.take([notice, none], of: "g", in: db)
+    let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
+    #expect(
+      state.lines.map(\.content) == [
+        .notice(LineNotice(kind: .removed, subjectID: "u3")), .hidden,
+      ])
+    // Nor can a line of no kind be kept.
+    #expect(throws: (any Error).self) {
+      try #sql(
+        """
+        UPDATE "chatLines" SET "content" = '{"kind":"album"}' WHERE "seq" = 1
+        """
+      )
+      .execute(db)
+    }
+  }
+}
+
+private func pollShown(_ line: ChatLineRow) -> LineContent.Poll? {
+  if case .poll(let poll) = line.content { poll } else { nil }
 }
 
 /// Photos as the wire carries them, each `id` 1×1.
@@ -866,19 +927,21 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
   let database = try appDatabase()
   try database.write { db in
     var photos = line(1, "")
-    photos.chatLine.photos = wirePhotos(["p1", "p2", "p3"])
+    photos.chatLine.content.photos.photos = wirePhotos(["p1", "p2", "p3"])
     try GroupSync.take([photos], of: "g", in: db)
     try Chats.edit(.send(photoSend(["p4", "p5"])), in: "g", now: 1, db: db)
     var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
-    #expect(state.lines.map { $0.photos.map(\.id) } == [["p1", "p2", "p3"]])
-    #expect(state.waiting.map { $0.photos.map(\.id) } == [["p4", "p5"]])
+    let sent = ["p1", "p2", "p3"].map { LinePhoto(id: $0, width: 1, height: 1) }
+    #expect(state.lines.map(\.content) == [.photos(sent)])
+    let waiting = ["p4", "p5"].map { LinePhoto(id: $0, width: 1, height: 1) }
+    #expect(state.waiting.map(\.content) == [.photos(waiting)])
 
     var unsend = Pochical_V1_ChatUnsend()
     unsend.threadID = groupThread
     unsend.seq = 1
     try Chats.edit(.unsend(unsend), in: "g", now: 2, db: db)
     state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
-    #expect(state.lines[0].photos.isEmpty)
+    #expect(state.lines[0].content == .unsent)
   }
 }
 
@@ -963,8 +1026,8 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
   let database = try appDatabase()
   try database.write { db in
     var sent = line(1, "ここ https://cafe.example")
-    sent.chatLine.preview.url = "https://cafe.example"
-    sent.chatLine.preview.title = "店"
+    sent.chatLine.content.words.preview.url = "https://cafe.example"
+    sent.chatLine.content.words.preview.title = "店"
     try GroupSync.take([sent], of: "g", in: db)
     var change = Pochical_V1_ChatChange()
     change.threadID = groupThread
@@ -973,14 +1036,19 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
     change.keepsPreview = true
     try Chats.edit(.change(change), in: "g", now: 1, db: db)
     var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
-    #expect(state.lines[0].preview?.title == "店")
+    #expect(preview(of: state.lines[0])?.title == "店")
 
     change.text = "やっぱりいいや"
     change.keepsPreview = false
     try Chats.edit(.change(change), in: "g", now: 2, db: db)
     state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
-    #expect(state.lines[0].preview == nil)
+    #expect(state.lines[0].text == "やっぱりいいや")
+    #expect(preview(of: state.lines[0]) == nil)
   }
+}
+
+private func preview(of line: ChatLineRow) -> LinePreview? {
+  if case .words(let words) = line.content { words.preview } else { nil }
 }
 
 @Test func blocksComeFromTheUsersSocketAndGo() throws {
@@ -997,9 +1065,9 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
     #expect(try Blocks.all(in: db).isEmpty)
 
     var hidden = line(1, "")
-    hidden.chatLine.hidden = true
+    hidden.chatLine.content.hidden = Pochical_V1_ChatHidden()
     try GroupSync.take([hidden], of: "g", in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).lines.map(\.hidden) == [true])
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).lines.map(\.content) == [.hidden])
     // Nor is it the chat's latest line in the list.
     #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).last == nil)
   }
@@ -1123,10 +1191,12 @@ private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
     var state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
     #expect(state.lines.first?.seq == 81)
     #expect(state.pins.map(\.seq) == [20, 2])
-    #expect(state.pins.map(\.text) == ["これもなおした", "なおした"])
-    #expect(state.pins.map(\.edited) == [true, true])
-    #expect(state.quoted.mapValues(\.unsent) == [3: true, 30: true])
-    #expect(state.quoted.mapValues(\.text) == [3: "", 30: ""])
+    #expect(
+      state.pins.map(\.content) == [
+        .words(LineContent.Words(text: "これもなおした", edited: true)),
+        .words(LineContent.Words(text: "なおした", edited: true)),
+      ])
+    #expect(state.quoted.mapValues(\.content) == [3: .unsent, 30: .unsent])
 
     // Asked from past the latest, none held there: laid out as the chat
     // opens, its latest page, the rest of 11–130 held before it.
@@ -1244,7 +1314,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
 
     // The line answered taken back meanwhile: the words stay, alone.
     var unsent = line(1, "")
-    unsent.chatLine.unsent = true
+    unsent.chatLine.content.unsent = Pochical_V1_ChatTakenBack()
     try GroupSync.take([unsent], of: "g", in: db)
     #expect(try Chats.draft(of: groupThread, in: "g", db: db) == OpenedDraft(text: "うん"))
 
@@ -1516,7 +1586,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     #expect(recalls.map(\.recall.photoIds) == [[]])
     // Should it come meanwhile, it shows taken back already.
     try GroupSync.take([line(7, "まちがい", op: opID)], of: "g", in: db)
-    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).lines.map(\.unsent) == [true])
+    #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).lines.map(\.content) == [.unsent])
   }
 }
 

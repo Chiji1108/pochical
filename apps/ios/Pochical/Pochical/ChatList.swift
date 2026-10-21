@@ -275,42 +275,42 @@ struct ChatRow<Icon: View>: View {
   private var preview: String {
     let summary = chat.summary
     let nameOf = { (id: String) in memberName(id, in: chat.names) }
-    if let waiting = summary.waiting, !waiting.photos.isEmpty {
-      return "自分：写真を送りました"
-    }
     if let waiting = summary.waiting {
-      return "自分：\(Self.words(waiting.text, days: waiting.days, poll: waiting.poll, nameOf: nameOf))"
+      return "自分：\(Self.words(waiting.content, nameOf: nameOf))"
     }
     guard let last = summary.last else { return "まだメッセージはありません" }
-    if let notice = last.notice {
+    switch last.content {
+    case .notice(let notice):
       return notice.words(
         by: memberName(last.authorID, in: chat.names),
         subject: memberName(notice.subjectID, in: chat.names))
-    }
-    if last.unsent {
+    case .unsent:
       return unsentLine(
         chat.names[last.authorID], mine: last.authorID == me,
         deleted: chat.deleted.contains(last.authorID))
+    case .hidden:
+      // Never the latest line: not the reader's to see.
+      return "まだメッセージはありません"
+    case .words, .photos, .days, .poll:
+      if blocked.contains(last.authorID) {
+        return "ブロック中のメンバーのメッセージ"
+      }
+      let words = Self.words(last.content, nameOf: nameOf)
+      return last.authorID == me ? "自分：\(words)" : words
     }
-    if blocked.contains(last.authorID) {
-      return "ブロック中のメンバーのメッセージ"
-    }
-    if !last.photos.isEmpty {
-      return last.authorID == me ? "自分：写真を送りました" : "写真を送りました"
-    }
-    let words = Self.words(
-      last.text, days: last.days, poll: last.poll, decided: last.decided, nameOf: nameOf)
-    return last.authorID == me ? "自分：\(words)" : words
   }
 
-  /// A line as the list says it: days shared, or a poll still open, as
-  /// 〜を共有しました (/design's lastLine); a decided poll says its day.
-  private static func words(
-    _ text: String, days: [Day], poll: Bool, decided: Day? = nil, nameOf: (String) -> String
-  ) -> String {
-    let words = lineWords(text, days: days, poll: poll, decided: decided, nameOf: nameOf)
-    let shared = !days.isEmpty && !(poll && decided != nil)
-    return shared ? "\(words)を共有しました" : words
+  /// A line as the list says it: photos as 写真を送りました; days shared,
+  /// or a poll still open, as 〜を共有しました (/design's lastLine); a
+  /// decided poll says its day.
+  private static func words(_ content: LineContent, nameOf: (String) -> String) -> String {
+    let words = lineWords(content, nameOf: nameOf)
+    return switch content {
+    case .photos: "写真を送りました"
+    case .days: "\(words)を共有しました"
+    case .poll(let poll): poll.decided == nil ? "\(words)を共有しました" : words
+    case .words, .notice, .unsent, .hidden: words
+    }
   }
 }
 

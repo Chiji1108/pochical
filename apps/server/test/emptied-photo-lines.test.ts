@@ -1,14 +1,20 @@
 import { env } from "cloudflare:workers";
+import { drizzle } from "drizzle-orm/durable-sqlite";
+import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import { describe, expect, it } from "vitest";
 
-import unsendEmptied from "../src/group-do-migrations/0036_unsend-emptied-photo-lines.sql";
+import { wordsOf } from "../src/group-chat";
+import migrations from "../src/group-do-migrations/migrations.js";
+import { chatLinesBefore } from "./old-chat-lines";
 import {
   PAIR_ROSTER,
   changesIn,
+  holding,
   pair,
   sendFrame,
   syncSocket,
   untilAcked,
+  words,
 } from "./sync-helpers";
 
 const threadId = "group";
@@ -67,13 +73,41 @@ describe("a Group DO with lines that were photos before 0035", () => {
 
     const { head, votes } = await runInDurableObject(
       env.GROUPS.getByName(groupId),
-      (_, state) => {
+      async (_, state) => {
         const { sql } = state.storage;
-        // As 0035 left the lines that were photos: nothing in them.
-        sql.exec(
-          "update chat_lines set text = '' where thread_id = ? and seq in (2, 3)",
-          threadId
-        );
+        // The lines as 0035 left them, those that were photos with
+        // nothing in them.
+        const lines = sql
+          .exec<{
+            author_id: string;
+            cursor: number;
+            notice_kind: string | null;
+            op_id: string;
+            reply_to: number | null;
+            sent_at: number;
+            seq: number;
+            text: string | null;
+          }>(
+            `select author_id, cursor, content ->> '$.notice.kind' as notice_kind, op_id,
+              reply_to, sent_at, seq, content ->> '$.text' as text
+            from chat_lines where thread_id = ?`,
+            threadId
+          )
+          .toArray()
+          .map((line) => ({
+            authorId: line.author_id,
+            cursor: line.cursor,
+            notice:
+              line.notice_kind === null
+                ? undefined
+                : { kind: line.notice_kind },
+            opId: line.op_id,
+            replyTo: line.reply_to ?? undefined,
+            sentAt: line.sent_at,
+            seq: line.seq,
+            text: line.seq === 2 || line.seq === 3 ? "" : (line.text ?? ""),
+          }));
+        chatLinesBefore(sql, 36, lines);
         sql.exec(
           "insert into chat_votes (day, made_cursor, seq, thread_id, user_id) values ('2026-10-05', 1, 2, ?, 'someone')",
           threadId
@@ -81,7 +115,7 @@ describe("a Group DO with lines that were photos before 0035", () => {
         const before = sql
           .exec<{ cursor: number }>("select cursor from log_head")
           .one().cursor;
-        sql.exec(unsendEmptied);
+        await migrate(drizzle(state.storage), migrations);
         return {
           head: before,
           votes: sql.exec("select * from chat_votes").toArray().length,
@@ -97,12 +131,12 @@ describe("a Group DO with lines that were photos before 0035", () => {
       {
         cursor: BigInt(head + 1),
         kind: {
-          value: { reactions: [], seq: 2n, text: "", unsent: true },
+          value: { reactions: [], seq: 2n, ...holding("unsent") },
         },
       },
       {
         cursor: BigInt(head + 2),
-        kind: { value: { seq: 3n, text: "", unsent: true } },
+        kind: { value: { seq: 3n, ...holding("unsent") } },
       },
     ]);
 
@@ -111,19 +145,19 @@ describe("a Group DO with lines that were photos before 0035", () => {
       .flatMap(({ kind }) => (kind.case === "chatLine" ? [kind.value] : []))
       .toSorted((a, b) => Number(a.seq - b.seq));
     expect(
-      lines.map(({ seq, text, unsent, replyTo }) => ({
-        replyTo,
-        seq,
-        text,
-        unsent,
+      lines.map((line) => ({
+        kind: line.content?.kind.case,
+        replyTo: line.replyTo,
+        seq: line.seq,
+        text: wordsOf(line),
       }))
     ).toStrictEqual([
-      { replyTo: 0n, seq: 1n, text: "", unsent: false },
-      { replyTo: 0n, seq: 2n, text: "", unsent: true },
-      { replyTo: 0n, seq: 3n, text: "", unsent: true },
-      { replyTo: 0n, seq: 4n, text: "ことば", unsent: false },
+      { kind: "notice", replyTo: 0n, seq: 1n, text: "" },
+      { kind: "unsent", replyTo: 0n, seq: 2n, text: "" },
+      { kind: "unsent", replyTo: 0n, seq: 3n, text: "" },
+      { kind: "words", replyTo: 0n, seq: 4n, text: "ことば" },
       // A reply keeps its line, as it does when the line is taken back.
-      { replyTo: 2n, seq: 5n, text: "いいね", unsent: false },
+      { kind: "words", replyTo: 2n, seq: 5n, text: "いいね" },
     ]);
 
     // The next line takes the next cursor and seq.
@@ -139,7 +173,10 @@ describe("a Group DO with lines that were photos before 0035", () => {
       },
     });
     expect(changesIn(await later.frames.next())).toMatchObject([
-      { cursor: BigInt(head + 3), kind: { value: { seq: 6n, text: "つぎ" } } },
+      {
+        cursor: BigInt(head + 3),
+        kind: { value: { seq: 6n, ...words("つぎ") } },
+      },
     ]);
   });
 });
