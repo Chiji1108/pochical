@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // A React Router 8 sketch of apps/admin (spec/admin.md); never deployed.
+  "name": "pochical-admin-rr",
+  "main": "./workers/app.ts",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "services": [
+    {
+      "binding": "SERVER",
+      "service": "pochical-server",
+      "entrypoint": "AdminEntrypoint",
+    },
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+}
