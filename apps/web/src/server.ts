@@ -1,3 +1,4 @@
+import shareImage from "@pochical/prototype/assets/share.png";
 import handler from "@tanstack/react-start/server-entry";
 import { env } from "cloudflare:workers";
 
@@ -65,7 +66,7 @@ const inviteImage = async (
 ): Promise<Response> => {
   const invite = await fetchInvitePreview(code, fromServer);
   if (invite.status !== "valid") {
-    return Response.redirect(new URL("/share.png", request.url).href, 302);
+    return Response.redirect(new URL(shareImage, request.url).href, 302);
   }
   // Kept by what it draws, so a group renamed, given a new mark or joined
   // is drawn again; the request's own query, which changes nothing in the
@@ -93,7 +94,7 @@ const inviteImage = async (
     ctx.waitUntil(cache.put(key, response.clone()));
     return response;
   } catch {
-    return Response.redirect(new URL("/share.png", request.url).href, 302);
+    return Response.redirect(new URL(shareImage, request.url).href, 302);
   }
 };
 

@@ -2,7 +2,7 @@ import Testing
 
 @testable import PochicalDesign
 
-// The phrases BudouX finds on the site (apps/web/tests/phrases.test.tsx),
+// The phrases BudouX finds on the site (packages/jsx/tests/phrases.test.tsx),
 // so a sentence breaks in the same places in the app.
 @Test func splitsAsTheSiteDoes() {
   #expect(
