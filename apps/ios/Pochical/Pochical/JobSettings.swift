@@ -28,7 +28,7 @@ private enum JobStep: Hashable {
 struct JobChangePage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   @State private var start = Day.today.firstOfMonth.addingMonths(1)
   @State private var steps: [JobStep] = [.day]
   @State private var sequence: [PatternID] = []
@@ -270,11 +270,12 @@ struct JobChangePage: View {
   private func finish(_ patternIDs: [PatternID], sequence: [PatternID], anchor: Day) {
     let incoming = readyPatterns(patternIDs)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    try? database.write {
+    let kept = write {
       try OwnValues.changeJob(
         to: incoming, sequence: sequence, start: start, anchor: anchor,
         holidayCountry: HolidayCountry.current, now: now, in: $0)
     }
+    guard kept else { return }
     ReminderOffer.setUpOrder(sequence)
     dismiss()
   }
