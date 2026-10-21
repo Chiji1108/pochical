@@ -3,6 +3,8 @@ import { drizzle } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import { describe, expect, it } from "vitest";
 
+import fill from "../src/group-do-migrations/0038_chat-line-content-fill.sql";
+import contentOnly from "../src/group-do-migrations/0039_chat-line-content-only.sql";
 import migrations from "../src/group-do-migrations/migrations.js";
 import { chatLinesBefore } from "./old-chat-lines";
 import type { OldLine } from "./old-chat-lines";
@@ -192,5 +194,75 @@ describe("a Group DO whose chat lines are of the shape before 0037", () => {
       [7, "unsent"],
       [8, "notice"],
     ]);
+  });
+
+  it("takes back the lines 0039's CHECK would refuse, so the group still opens", async () => {
+    const { runInDurableObject } = await import("cloudflare:test");
+    const { changesIn, pair, syncSocket } = await import("./sync-helpers");
+    const { groupId, maker } = await pair();
+    const head = 100;
+    await runInDurableObject(
+      env.GROUPS.getByName(groupId),
+      async (_, state) => {
+        const { sql } = state.storage;
+        chatLinesBefore(sql, 37, [
+          { seq: 1, text: "ことば" },
+          { poll: true, replyTo: 1, seq: 2, text: "" },
+          { days: [], pinnedAt: 9, poll: true, seq: 3, text: "" },
+          { days: [], seq: 4, text: "" },
+          { photos: [], seq: 5, text: "" },
+          { photos: [PHOTO], seq: 6, text: "" },
+          { notice: { kind: "joined" }, seq: 7 },
+          { preview: PREVIEW, seq: 8, text: "ページつき" },
+        ]);
+        sql.exec("UPDATE chat_lines SET photos = '[{' WHERE seq = 6");
+        sql.exec("UPDATE chat_lines SET notice = 'joined' WHERE seq = 7");
+        sql.exec("UPDATE chat_lines SET preview = '{' WHERE seq = 8");
+        sql.exec(
+          "INSERT INTO chat_reactions (emoji, made_cursor, seq, thread_id, user_id) VALUES ('👍', 1, 3, 'group', 'u2')"
+        );
+        sql.exec("UPDATE log_head SET cursor = ?", head);
+        await migrate(drizzle(state.storage), migrations);
+        expect(sql.exec("SELECT * FROM chat_reactions").toArray()).toHaveLength(
+          0
+        );
+      }
+    );
+    const { frames } = await syncSocket(
+      `/v1/groups/${groupId}/socket`,
+      maker,
+      BigInt(head)
+    );
+    const taken = changesIn(await frames.next()).flatMap(({ cursor, kind }) =>
+      kind.case === "chatLine"
+        ? [
+            {
+              case: kind.value.content?.kind.case,
+              cursor: Number(cursor),
+              pinned: kind.value.pinnedOrder,
+              replyTo: kind.value.replyTo,
+              seq: Number(kind.value.seq),
+            },
+          ]
+        : []
+    );
+    expect(taken).toStrictEqual(
+      [2, 3, 4, 5, 6, 7].map((seq, at) => ({
+        case: "unsent",
+        cursor: head + at + 1,
+        pinned: 0n,
+        replyTo: 0n,
+        seq,
+      }))
+    );
+  });
+
+  it("picks out those lines by 0039's CHECK word for word", () => {
+    const start = contentOnly.indexOf("CHECK(") + "CHECK(".length;
+    const check = contentOnly.slice(
+      start,
+      contentOnly.indexOf("\n);", start) - 1
+    );
+    expect(fill.split(`NOT ${check}`)).toHaveLength(6);
   });
 });
