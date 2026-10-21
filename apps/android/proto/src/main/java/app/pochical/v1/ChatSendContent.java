@@ -273,10 +273,11 @@ public  final class ChatSendContent extends
   public static final int POLL_FIELD_NUMBER = 4;
   /**
    * <pre>
-   * Days put to the vote (spec/chat.md, Polls), in the group chat.
+   * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+   * at least.
    * </pre>
    *
-   * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+   * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
    */
   @java.lang.Override
   public boolean hasPoll() {
@@ -284,42 +285,45 @@ public  final class ChatSendContent extends
   }
   /**
    * <pre>
-   * Days put to the vote (spec/chat.md, Polls), in the group chat.
+   * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+   * at least.
    * </pre>
    *
-   * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+   * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
    */
   @java.lang.Override
-  public app.pochical.v1.ChatSendPoll getPoll() {
+  public app.pochical.v1.ChatSharedDays getPoll() {
     if (kindCase_ == 4) {
-       return (app.pochical.v1.ChatSendPoll) kind_;
+       return (app.pochical.v1.ChatSharedDays) kind_;
     }
-    return app.pochical.v1.ChatSendPoll.getDefaultInstance();
+    return app.pochical.v1.ChatSharedDays.getDefaultInstance();
   }
   /**
    * <pre>
-   * Days put to the vote (spec/chat.md, Polls), in the group chat.
+   * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+   * at least.
    * </pre>
    *
-   * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+   * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
    */
-  private void setPoll(app.pochical.v1.ChatSendPoll value) {
+  private void setPoll(app.pochical.v1.ChatSharedDays value) {
     java.util.Objects.requireNonNull(value);
     kind_ = value;
     kindCase_ = 4;
   }
   /**
    * <pre>
-   * Days put to the vote (spec/chat.md, Polls), in the group chat.
+   * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+   * at least.
    * </pre>
    *
-   * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+   * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
    */
-  private void mergePoll(app.pochical.v1.ChatSendPoll value) {
+  private void mergePoll(app.pochical.v1.ChatSharedDays value) {
     java.util.Objects.requireNonNull(value);
     if (kindCase_ == 4 &&
-        kind_ != app.pochical.v1.ChatSendPoll.getDefaultInstance()) {
-      kind_ = app.pochical.v1.ChatSendPoll.newBuilder((app.pochical.v1.ChatSendPoll) kind_)
+        kind_ != app.pochical.v1.ChatSharedDays.getDefaultInstance()) {
+      kind_ = app.pochical.v1.ChatSharedDays.newBuilder((app.pochical.v1.ChatSharedDays) kind_)
           .mergeFrom(value).buildPartial();
     } else {
       kind_ = value;
@@ -328,10 +332,11 @@ public  final class ChatSendContent extends
   }
   /**
    * <pre>
-   * Days put to the vote (spec/chat.md, Polls), in the group chat.
+   * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+   * at least.
    * </pre>
    *
-   * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+   * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
    */
   private void clearPoll() {
     if (kindCase_ == 4) {
@@ -661,10 +666,11 @@ public  final class ChatSendContent extends
 
     /**
      * <pre>
-     * Days put to the vote (spec/chat.md, Polls), in the group chat.
+     * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+     * at least.
      * </pre>
      *
-     * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+     * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
      */
     @java.lang.Override
     public boolean hasPoll() {
@@ -672,58 +678,63 @@ public  final class ChatSendContent extends
     }
     /**
      * <pre>
-     * Days put to the vote (spec/chat.md, Polls), in the group chat.
+     * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+     * at least.
      * </pre>
      *
-     * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+     * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
      */
     @java.lang.Override
-    public app.pochical.v1.ChatSendPoll getPoll() {
+    public app.pochical.v1.ChatSharedDays getPoll() {
       return instance.getPoll();
     }
     /**
      * <pre>
-     * Days put to the vote (spec/chat.md, Polls), in the group chat.
+     * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+     * at least.
      * </pre>
      *
-     * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+     * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
      */
-    public Builder setPoll(app.pochical.v1.ChatSendPoll value) {
+    public Builder setPoll(app.pochical.v1.ChatSharedDays value) {
       copyOnWrite();
       instance.setPoll(value);
       return this;
     }
     /**
      * <pre>
-     * Days put to the vote (spec/chat.md, Polls), in the group chat.
+     * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+     * at least.
      * </pre>
      *
-     * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+     * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
      */
     public Builder setPoll(
-        app.pochical.v1.ChatSendPoll.Builder builderForValue) {
+        app.pochical.v1.ChatSharedDays.Builder builderForValue) {
       copyOnWrite();
       instance.setPoll(builderForValue.build());
       return this;
     }
     /**
      * <pre>
-     * Days put to the vote (spec/chat.md, Polls), in the group chat.
+     * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+     * at least.
      * </pre>
      *
-     * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+     * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
      */
-    public Builder mergePoll(app.pochical.v1.ChatSendPoll value) {
+    public Builder mergePoll(app.pochical.v1.ChatSharedDays value) {
       copyOnWrite();
       instance.mergePoll(value);
       return this;
     }
     /**
      * <pre>
-     * Days put to the vote (spec/chat.md, Polls), in the group chat.
+     * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+     * at least.
      * </pre>
      *
-     * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+     * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
      */
     public Builder clearPoll() {
       copyOnWrite();
@@ -752,7 +763,7 @@ public  final class ChatSendContent extends
             app.pochical.v1.ChatSendWords.class,
             app.pochical.v1.ChatAlbum.class,
             app.pochical.v1.ChatSharedDays.class,
-            app.pochical.v1.ChatSendPoll.class,
+            app.pochical.v1.ChatSharedDays.class,
           };
           java.lang.String info =
               "\u0000\u0004\u0001\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001<\u0000\u0002<" +

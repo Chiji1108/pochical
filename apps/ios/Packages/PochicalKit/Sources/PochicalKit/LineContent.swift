@@ -114,15 +114,17 @@ public enum LineContent: Hashable, Sendable {
   /// changed yet, its poll open; none, or a kind this app does not know,
   /// is nothing to show.
   init(_ wire: Pochical_V1_ChatSendContent) {
+    var line = Pochical_V1_ChatContent()
     switch wire.kind {
     case .words(let words):
-      self = .words(
-        Words(text: words.text, preview: words.hasPreview ? LinePreview(words.preview) : nil))
-    case .photos(let album): self = .photos(album.photos.map(LinePhoto.init))
-    case .days(let days): self = .days(days.days.compactMap(Day.init))
-    case .poll(let poll): self = .poll(Poll(days: poll.days.compactMap(Day.init)))
-    case nil: self = .hidden
+      line.words.text = words.text
+      if words.hasPreview { line.words.preview = words.preview }
+    case .photos(let album): line.photos = album
+    case .days(let days): line.days = days
+    case .poll(let poll): line.poll.days = poll.days
+    case nil: break
     }
+    self.init(line)
   }
 }
 

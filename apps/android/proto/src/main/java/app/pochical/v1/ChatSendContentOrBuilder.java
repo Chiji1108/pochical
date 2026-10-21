@@ -65,22 +65,24 @@ public interface ChatSendContentOrBuilder extends
 
   /**
    * <pre>
-   * Days put to the vote (spec/chat.md, Polls), in the group chat.
+   * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+   * at least.
    * </pre>
    *
-   * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+   * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
    * @return Whether the poll field is set.
    */
   boolean hasPoll();
   /**
    * <pre>
-   * Days put to the vote (spec/chat.md, Polls), in the group chat.
+   * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+   * at least.
    * </pre>
    *
-   * <code>.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];</code>
+   * <code>.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];</code>
    * @return The poll.
    */
-  app.pochical.v1.ChatSendPoll getPoll();
+  app.pochical.v1.ChatSharedDays getPoll();
 
   public app.pochical.v1.ChatSendContent.KindCase getKindCase();
 }

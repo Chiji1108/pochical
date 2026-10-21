@@ -139,7 +139,8 @@ extension Chats {
     guard let row = try ChatOutboxRow.where({ $0.opID.eq(opID) }).fetchOne(db),
       case .send(let send) = try Pochical_V1_ChatEdit(serializedBytes: row.edit).kind
     else { return [] }
-    return row.up.toUpload(LineContent(send.content).photos.map(\.id), now: try SyncState.corrected(now, in: db))
+    return row.up.toUpload(
+      send.content.photos.photos.map(\.id), now: try SyncState.corrected(now, in: db))
   }
 
   /// The line `opID`'s photo `photoID` went up, its upload begun at the

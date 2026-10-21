@@ -139,12 +139,13 @@ public object ChatSendContentKt {
 
     /**
      * ```
-     * Days put to the vote (spec/chat.md, Polls), in the group chat.
+     * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+     * at least.
      * ```
      *
-     * `.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];`
+     * `.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];`
      */
-    public var poll: app.pochical.v1.ChatSendPoll
+    public var poll: app.pochical.v1.ChatSharedDays
       @kotlin.jvm.JvmName("getPoll")
         get() = _builder.poll
       @kotlin.jvm.JvmName("setPoll")
@@ -153,20 +154,22 @@ public object ChatSendContentKt {
       }
     /**
      * ```
-     * Days put to the vote (spec/chat.md, Polls), in the group chat.
+     * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+     * at least.
      * ```
      *
-     * `.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];`
+     * `.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];`
      */
     public fun clearPoll() {
       _builder.clearPoll()
     }
     /**
      * ```
-     * Days put to the vote (spec/chat.md, Polls), in the group chat.
+     * Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+     * at least.
      * ```
      *
-     * `.pochical.v1.ChatSendPoll poll = 4 [json_name = "poll"];`
+     * `.pochical.v1.ChatSharedDays poll = 4 [json_name = "poll"];`
      * @return Whether the poll field is set.
      */
     public fun hasPoll(): kotlin.Boolean {
@@ -193,6 +196,6 @@ public val app.pochical.v1.ChatSendContentOrBuilder.photosOrNull: app.pochical.v
 public val app.pochical.v1.ChatSendContentOrBuilder.daysOrNull: app.pochical.v1.ChatSharedDays?
   get() = if (hasDays()) getDays() else null
 
-public val app.pochical.v1.ChatSendContentOrBuilder.pollOrNull: app.pochical.v1.ChatSendPoll?
+public val app.pochical.v1.ChatSendContentOrBuilder.pollOrNull: app.pochical.v1.ChatSharedDays?
   get() = if (hasPoll()) getPoll() else null
 

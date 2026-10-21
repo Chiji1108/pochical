@@ -2408,11 +2408,12 @@ public nonisolated struct Pochical_V1_ChatSendContent: Sendable {
     set {kind = .days(newValue)}
   }
 
-  /// Days put to the vote (spec/chat.md, Polls), in the group chat.
-  public var poll: Pochical_V1_ChatSendPoll {
+  /// Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+  /// at least.
+  public var poll: Pochical_V1_ChatSharedDays {
     get {
       if case .poll(let v)? = kind {return v}
-      return Pochical_V1_ChatSendPoll()
+      return Pochical_V1_ChatSharedDays()
     }
     set {kind = .poll(newValue)}
   }
@@ -2427,8 +2428,9 @@ public nonisolated struct Pochical_V1_ChatSendContent: Sendable {
     /// Days shared with everyone's shifts (spec/chat.md, Long messages and
     /// shared days).
     case days(Pochical_V1_ChatSharedDays)
-    /// Days put to the vote (spec/chat.md, Polls), in the group chat.
-    case poll(Pochical_V1_ChatSendPoll)
+    /// Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+    /// at least.
+    case poll(Pochical_V1_ChatSharedDays)
 
   }
 
@@ -2463,20 +2465,6 @@ public nonisolated struct Pochical_V1_ChatSendWords: Sendable {
   public init() {}
 
   fileprivate var _preview: Pochical_V1_LinkPreview? = nil
-}
-
-public nonisolated struct Pochical_V1_ChatSendPoll: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  /// 2 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD, each
-  /// once and in order.
-  public var days: [String] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
 }
 
 /// New words for one of the member's own lines of words (編集).
@@ -6336,7 +6324,7 @@ nonisolated extension Pochical_V1_ChatSendContent: SwiftProtobuf.Message, SwiftP
         }
       }()
       case 4: try {
-        var v: Pochical_V1_ChatSendPoll?
+        var v: Pochical_V1_ChatSharedDays?
         var hadOneofValue = false
         if let current = self.kind {
           hadOneofValue = true
@@ -6426,36 +6414,6 @@ nonisolated extension Pochical_V1_ChatSendWords: SwiftProtobuf.Message, SwiftPro
     if lhs.text != rhs.text {return false}
     if lhs._preview != rhs._preview {return false}
     if lhs.withoutPreview != rhs.withoutPreview {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Pochical_V1_ChatSendPoll: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ChatSendPoll"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}days\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedStringField(value: &self.days) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.days.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.days, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Pochical_V1_ChatSendPoll, rhs: Pochical_V1_ChatSendPoll) -> Bool {
-    if lhs.days != rhs.days {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

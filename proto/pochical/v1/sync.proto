@@ -768,8 +768,9 @@ message ChatSendContent {
     // Days shared with everyone's shifts (spec/chat.md, Long messages and
     // shared days).
     ChatSharedDays days = 3;
-    // Days put to the vote (spec/chat.md, Polls), in the group chat.
-    ChatSendPoll poll = 4;
+    // Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+    // at least.
+    ChatSharedDays poll = 4;
   }
 }
 
@@ -782,12 +783,6 @@ message ChatSendWords {
   LinkPreview preview = 2;
   // The sender took the page off (×): the line goes without one.
   bool without_preview = 3;
-}
-
-message ChatSendPoll {
-  // 2 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD, each
-  // once and in order.
-  repeated string days = 1;
 }
 
 // New words for one of the member's own lines of words (編集).
