@@ -34,6 +34,7 @@ struct ChatScreen: View {
   @Environment(\.openGroupRoute) private var openGroupRoute
   @Environment(\.rootNavigator) private var navigator
   @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   /// The chat, read by this screen alone while it is there.
   @State private var feed: ChatFeed
   private var chat: ChatRequest.Value { feed.value }
@@ -437,9 +438,12 @@ struct ChatScreen: View {
         GroupMembersRequest(groupID: place.id, from: span.from, through: span.through))
     }
     .sheet(isPresented: $sharingDays) {
-      ShareDaysSheet(
-        groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) },
-        pollable: otherID == nil && place.rules.polls, onSend: shareDays)
+      KeepingEdits { inSheet in
+        ShareDaysSheet(
+          groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) },
+          pollable: otherID == nil && place.rules.polls,
+          onSend: { shareDays($0, poll: $1, by: inSheet) })
+      }
     }
     // As the app leaves the screen, what is written is kept at once,
     // without waiting for the writing to pause.
@@ -869,7 +873,7 @@ struct ChatScreen: View {
       vote.seq = UInt64(line.seq)
       vote.day = day.key
       vote.on = on
-      write(.vote(vote))
+      keep(.vote(vote))
     case .decide:
       deciding = line
     case .menu(let title):
@@ -933,17 +937,25 @@ struct ChatScreen: View {
   /// Sends the tray's photos as one line, kept on the device to upload
   /// before it goes; two or more drawn as one album (spec/chat.md,
   /// Albums).
-  private func sendPhotos() {
+  private func sendPhotos() -> Bool {
     let kept = draft.photos.filter {
       (try? ChatPhotos.keep($0.shrunk.jpeg, as: $0.id, in: place.shelf)) != nil
     }
-    draft.photos = []
-    guard !kept.isEmpty else { return }
+    guard !kept.isEmpty else {
+      draft.photos = []
+      return true
+    }
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
     send.photos = kept.map { $0.shrunk.line($0.id).wire }
-    send.replyTo = takeReply()
-    write(.send(send))
+    guard sent(send) else {
+      for photo in kept {
+        ChatPhotos.forget(photo.id, in: place.shelf)
+      }
+      return false
+    }
+    draft.photos = []
+    return true
   }
 
   /// Stops a line's photos going up: the line is not sent, its ! offering
@@ -951,7 +963,7 @@ struct ChatScreen: View {
   /// Nothing once its photos are up and the line is being sent.
   private func stopSending(_ line: WaitingLine) {
     if !line.photos.isEmpty, !PhotoUploads.shared.stop(line.opID) { return }
-    try? database.write { try Chats.fail(line.opID, in: $0) }
+    write { try Chats.fail(line.opID, in: $0) }
   }
 
   /// Sends a line not sent once more, after the rest, as if written now.
@@ -960,9 +972,7 @@ struct ChatScreen: View {
     PhotoUploads.shared.forget(line.opID, photos: line.photos.map(\.id))
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     sendingAgain[line.opID] = line.madeAtMs
-    do {
-      try database.write { try Chats.sendAgain(line.opID, now: now, in: $0) }
-    } catch {
+    if !write({ try Chats.sendAgain(line.opID, now: now, in: $0) }) {
       sendingAgain[line.opID] = nil
     }
   }
@@ -972,7 +982,7 @@ struct ChatScreen: View {
   /// outbox, and from the group as it comes should it have gone just
   /// before (spec/chat.md, Lines on their way).
   private func takeBack(_ line: WaitingLine) {
-    try? database.write { try Chats.takeBack(line.opID, in: $0) }
+    guard write({ try Chats.takeBack(line.opID, in: $0) }) else { return }
     PhotoUploads.shared.forget(line.opID, photos: line.photos.map(\.id))
     for photo in line.photos {
       ChatPhotos.forget(photo.id, in: place.shelf)
@@ -998,17 +1008,20 @@ struct ChatScreen: View {
   /// Keeps what is being written with the chat, the one place a chat's
   /// draft is written: as the composer changes, as the chat is left and as
   /// the app leaves the screen; written only as it changed, and not before
-  /// the chat's draft is back in the composer.
+  /// the chat's draft is back in the composer. One not kept is tried again
+  /// as it next changes or the chat is left, and not said, as chat apps do
+  /// not: the composer still holds the words, and an alert asked for as the
+  /// chat or the app leaves the screen is never seen, and holds the screen.
   private func keepDraft() {
     guard tookDraft else { return }
     var kept = draft.kept
     if let opened = openedDraft, opened.shown == draft.text { kept.text = opened.sent }
     guard kept != keptDraft else { return }
-    keptDraft = kept
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    try? database.write { db in
+    let written: Void? = try? database.write { db in
       try Chats.keepDraft(kept, of: threadID, in: place.id, now: now, db: db)
     }
+    if written != nil { keptDraft = kept }
   }
 
   // MARK: Mentions
@@ -1286,7 +1299,9 @@ struct ChatScreen: View {
     var read = Pochical_V1_ChatRead()
     read.threadID = threadID
     read.lastReadSeq = UInt64(mark)
-    write(.read(read))
+    // Not the person's edit: a mark not kept is tried again as the next
+    // line comes into sight.
+    _ = try? database.write(outboxed(.read(read)))
     // The notifications of the lines read go too, as on the user's other
     // devices when the server tells them.
     let groupID = place.id
@@ -1304,8 +1319,7 @@ struct ChatScreen: View {
     // Taken off with ×, so the server does not read it either; a page not
     // come yet the server reads and adds to the line.
     send.withoutPreview = draft.previewRemoved != nil && previewLink(text) == draft.previewRemoved
-    send.replyTo = takeReply()
-    write(.send(send))
+    guard sent(send) else { return }
     draft.text = ""
     draft.picked = []
     draft.previewRemoved = nil
@@ -1326,14 +1340,14 @@ struct ChatScreen: View {
     return dayMembers.filter { $0.userID == otherID || $0.userID == meID }
   }
 
-  /// Shares days with everyone's shifts, as a line of their own.
-  private func shareDays(_ days: [Day], poll: Bool) {
+  /// Shares days with everyone's shifts, as a line of their own; true when
+  /// kept.
+  private func shareDays(_ days: [Day], poll: Bool, by write: WriteAction? = nil) -> Bool {
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
     send.days = days.map(\.key)
     send.poll = poll
-    send.replyTo = takeReply()
-    write(.send(send))
+    return sent(send, by: write)
   }
 
   /// Fetches ahead the photos of the lines near those in sight, as their
@@ -1494,7 +1508,7 @@ struct ChatScreen: View {
     decide.threadID = threadID
     decide.seq = UInt64(line.seq)
     decide.day = day.key
-    write(.decide(decide))
+    guard keep(.decide(decide)) else { return }
     say("\(day.fullText)に決めました")
   }
 
@@ -1508,11 +1522,12 @@ struct ChatScreen: View {
       if !text.isEmpty { save(editing, text: text) }
       return
     }
+    // What is not kept stays in the composer, with all after it.
     if let days = draft.attachedDays {
-      shareDays(days, poll: false)
+      guard shareDays(days, poll: false) else { return }
       draft.attachedDays = nil
     }
-    sendPhotos()
+    guard sendPhotos() else { return }
     if !text.isEmpty { send(text) }
   }
 
@@ -1534,11 +1549,14 @@ struct ChatScreen: View {
     draft.field.focus()
   }
 
-  /// The line being answered, for the first line sent: then no more.
-  private func takeReply() -> UInt64 {
-    guard let seq = draft.replyTo else { return 0 }
-    draft.target = nil
-    return UInt64(seq)
+  /// Sends a line of the composer's, answering the line it replies to, the
+  /// reply let go once the line is kept; true when kept.
+  private func sent(_ line: Pochical_V1_ChatSend, by write: WriteAction? = nil) -> Bool {
+    var line = line
+    line.replyTo = draft.replyTo.map(UInt64.init) ?? 0
+    guard keep(.send(line), by: write) else { return false }
+    if draft.replyTo != nil { draft.target = nil }
+    return true
   }
 
   /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):
@@ -1590,7 +1608,7 @@ struct ChatScreen: View {
     if !change.keepsPreview, let preview = draft.attachedPreview(for: text) {
       change.preview = preview.wire
     }
-    write(.change(change))
+    guard keep(.change(change)) else { return }
     draft.previewRemoved = nil
     stopEditing()
   }
@@ -1653,7 +1671,7 @@ struct ChatScreen: View {
     pin.threadID = threadID
     pin.seq = UInt64(seq)
     pin.on = on
-    write(.pin(pin))
+    guard keep(.pin(pin)) else { return }
     say(
       dropped != nil
         ? "ピン留めは\(Chat.maxPins)件までです。いちばん古いものを外しました"
@@ -1746,23 +1764,32 @@ struct ChatScreen: View {
     react.seq = UInt64(line.seq)
     react.emoji = emoji
     react.on = !current.reactions.contains { $0.emoji == emoji && $0.userIDs.contains(meID ?? "") }
-    write(.react(react))
+    keep(.react(react))
   }
 
   private func unsend(_ line: ChatLineRow) {
     var unsend = Pochical_V1_ChatUnsend()
     unsend.threadID = threadID
     unsend.seq = UInt64(line.seq)
-    write(.unsend(unsend))
+    guard keep(.unsend(unsend)) else { return }
     if draft.editing?.seq == line.seq { stopEditing() }
   }
 
-  /// Puts an edit in the outbox.
-  private func write(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) {
+  /// Puts the person's edit in the outbox (WriteAction), by a sheet's own
+  /// `write` for one sent from it; true when kept.
+  @discardableResult
+  private func keep(_ kind: Pochical_V1_ChatEdit.OneOf_Kind, by write: WriteAction? = nil) -> Bool {
+    guard (write ?? self.write)(outboxed(kind)) else { return false }
+    if case .send = kind { toOwnLine() }
+    return true
+  }
+
+  /// What puts an edit in the outbox.
+  private func outboxed(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) -> (Database) throws -> Void {
     let kind = AppDevice.stamped(kind, in: place.id)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    try? database.write { try Chats.edit(kind, in: place.id, now: now, db: $0) }
-    if case .send = kind { toOwnLine() }
+    let groupID = place.id
+    return { try Chats.edit(kind, in: groupID, now: now, db: $0) }
   }
 }
 

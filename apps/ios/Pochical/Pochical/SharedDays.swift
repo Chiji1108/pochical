@@ -296,7 +296,7 @@ struct ShareDaysSheet: View {
   /// 共有 | 投票 at its top: in the group chat, not a one-to-one chat.
   let pollable: Bool
   /// Sends the days, shared, or put to the vote.
-  let onSend: ([Day], Bool) -> Void
+  let onSend: ([Day], Bool) -> Bool
   /// On 投票: the days are put to the vote instead.
   @State private var poll = false
   @State private var month = Day.today.firstOfMonth
@@ -342,8 +342,7 @@ struct ShareDaysSheet: View {
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("送る", systemImage: "checkmark", role: .confirm) {
-            onSend(picked, poll)
-            dismiss()
+            if onSend(picked, poll) { dismiss() }
           }
           .disabled(picked.count < (poll ? Self.pollLeast : 1))
         }
