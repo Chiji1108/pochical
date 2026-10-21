@@ -42,8 +42,11 @@ yarn-error.*
 .dev.vars*
 !.dev.vars.example
 
-# Panda CSS output, made by `panda codegen`
+# Panda CSS output, made by `panda codegen`. Panda 2's PostCSS plugin also
+# writes a copy in each app, which nothing imports: the apps import the
+# package's.
 packages/styled-system/dist/
+apps/*/styled-system/
 
 # Real roster photos and their answer key: coworkers' names, never commit
 assets/shift-schedule/
