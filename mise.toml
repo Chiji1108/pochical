@@ -30,6 +30,10 @@ description = "Fail on wire-incompatible proto changes against main"
 dir = "{{config_root}}/proto"
 run = "buf breaking --against '../.git#branch=main,subdir=proto'"
 
+[tasks."sync:check"]
+description = "Fail if the Changes the iOS app reads changed without raising Sync.schema (--write records it once raised)"
+run = "bun tools/sync-schema/check.ts"
+
 [tasks.server]
 description = "Run the Workers dev server"
 run = "bun run --cwd apps/server dev"

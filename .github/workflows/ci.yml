@@ -54,6 +54,9 @@ jobs:
               - "apps/web/src/gen/**"
               - "apps/ios/Packages/PochicalProto/**"
               - "apps/android/proto/**"
+              - "apps/ios/Packages/PochicalKit/Sources/PochicalKit/Sync.swift"
+              - "apps/ios/Packages/PochicalKit/sync-wire.json"
+              - "tools/sync-schema/**"
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
@@ -108,6 +111,8 @@ jobs:
           mise run gen:proto
           git status --porcelain
           test -z "$(git status --porcelain)"
+      # The Changes the iOS app reads are those Sync.schema was raised for.
+      - run: mise run sync:check
       # proto:breaking compares with the local main branch.
       - if: github.event_name == 'pull_request'
         run: |
