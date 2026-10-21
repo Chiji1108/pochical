@@ -165,15 +165,9 @@ struct PatternKeys: View {
       Array(patterns[$0..<min($0 + patternsPerPage, patterns.count)])
     }
     if pages.count > 1 {
-      TabView(selection: $page) {
-        ForEach(pages.indices, id: \.self) { index in
-          grid(pages[index], columns: 5, paged: true)
-            .frame(maxHeight: .infinity, alignment: .top)
-            .tag(index)
-        }
+      SwipePages(count: pages.count, current: $page) { index in
+        grid(pages[index], columns: 5, paged: true)
       }
-      .tabViewStyle(.page(indexDisplayMode: .never))
-      .frame(height: 2 * 64 + 8)
     } else {
       grid(patterns, columns: columns, paged: false)
     }
@@ -218,6 +212,13 @@ struct PatternKeys: View {
           )
         }
         .buttonStyle(TrayPress(scale: 0.97))
+        // Keys keep their size as the system keyboard's do; held, the
+        // largest text sizes show the key large, as a tab bar's items.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .accessibilityShowsLargeContentViewer {
+          ShiftMark(pattern: pattern, size: 26)
+          Text(pattern.name)
+        }
       }
     }
     .accessibilityElement(children: .contain)

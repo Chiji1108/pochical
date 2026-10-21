@@ -158,6 +158,8 @@ HLC, not arrival order, decides the winner: an edit made offline at 10:00 and de
 4. The client deletes acknowledged rows. Unsent rows survive app restarts.
 5. If the server rejects an edit (validation), it writes a compensating change with a newer HLC, which reaches every device through the change log.
 
+An edit the device cannot keep (step 1's transaction fails, as on a device out of storage) is kept nowhere, and the app says so at once on 設定's pages and in はじめの設定: 保存できませんでした (もう一度お試しください。続くときは、端末の空き容量を確かめてください。) in an alert. The page stays as it was, its draft and all, so the edit can be made again; a page the edit was made leaving (a name kept as its field is left) is gone, and the alert shows over the page under it. The device does not try the edit again by itself, as the same write fails the same way until something on the device changes. The calendar's own edits and a chat's lines do not say so yet.
+
 Free text is edited once it is written, when its field is left, not on each change (spec/calendar.md, Text fields).
 
 What a device shows of a value while its edits wait (`spec/vectors/local-edits.json`). A value is what one change carries: a field of a day, a pattern, the patterns' order, the repeating orders, a coworker, the coworkers' order or a preference.
