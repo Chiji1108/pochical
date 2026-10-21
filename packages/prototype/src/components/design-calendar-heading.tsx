@@ -7,7 +7,6 @@ import {
   Image as ImageIcon,
   X,
 } from "lucide-react";
-import { useReducedMotion } from "motion/react";
 import type { MotionValue } from "motion/react";
 import type { ReactNode } from "react";
 
@@ -20,6 +19,7 @@ import {
 } from "../lib/design-days";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
+import { useReducedMotion } from "../lib/device-media";
 import { DoneButton, TodayButton } from "./design-header";
 import { SummaryRow } from "./design-list";
 import { IconMenu, MenuItem } from "./design-menu";
@@ -107,7 +107,7 @@ export function MonthSummary({
   beside?: { previous: number; next: number };
 }) {
   const counted = person === undefined ? "のお休み" : `、${person}と一緒`;
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   const turn = useTurn(monthIndex(month), swiped);
   const monthOf = (by: number) => formatMonthFromToday(monthAfter(month, by));
   const dragged = progress && beside;

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { useDevice } from "../lib/design-device";
 import { useLook, useSettings } from "../lib/design-settings-store";
-import { useDeviceScheme } from "../lib/use-device-scheme";
+import { useDeviceScheme } from "../lib/device-media";
 import {
   ColorSchemeContext,
   presetOf,

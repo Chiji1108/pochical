@@ -1,11 +1,5 @@
 import { css } from "@pochical/styled-system/css";
-import {
-  animate,
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useTransform,
-} from "motion/react";
+import { animate, motion, useMotionValue, useTransform } from "motion/react";
 import type { MotionStyle, MotionValue } from "motion/react";
 import {
   useEffect,
@@ -17,6 +11,7 @@ import {
 import type { ReactNode } from "react";
 
 import { addDays, dateKey } from "../lib/design-days";
+import { useReducedMotion } from "../lib/device-media";
 import { spring } from "../lib/motion";
 import {
   DAY_ROW_GAP,
@@ -53,7 +48,7 @@ export function useWeekFold({
   // How far the month is folded into that week, 0 to 1: moved by opening
   // and closing the week, or by the finger pulling the week back open.
   const folded = useMotionValue(initialDetail ? 1 : 0);
-  const reduceFolding = useReducedMotion() ?? false;
+  const reduceFolding = useReducedMotion();
   const detailOpacity = useTransform(folded, [0.5, 1], [0, 1]);
   // The day whose week is open, while not entering, which shows the month.
   const openDate = editing ? undefined : detailDate;

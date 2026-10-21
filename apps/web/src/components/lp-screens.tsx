@@ -35,13 +35,9 @@ import {
   UserStoreContext,
 } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
+import { useReducedMotion } from "@pochical/prototype/lib/device-media";
 import { css, cva } from "@pochical/styled-system/css";
-import {
-  AnimatePresence,
-  motion,
-  MotionConfig,
-  useReducedMotion,
-} from "motion/react";
+import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import { useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 
@@ -143,7 +139,7 @@ export function Sky({
     });
   }
   const { id } = shown;
-  const still = useReducedMotion() ?? false;
+  const still = useReducedMotion();
   return (
     <Motion>
       <div aria-hidden="true" className={sky.root({ place })}>
