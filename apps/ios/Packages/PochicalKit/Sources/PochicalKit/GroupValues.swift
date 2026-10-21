@@ -107,6 +107,13 @@ extension DatabaseMigrator {
           "userID" TEXT NOT NULL,
           "displayName" TEXT NOT NULL,
           "joinedAtMs" INTEGER NOT NULL,
+          "left" INTEGER NOT NULL DEFAULT 0,
+          "deleted" INTEGER NOT NULL DEFAULT 0,
+          "ownName" INTEGER NOT NULL DEFAULT 0,
+          "photoID" TEXT NOT NULL DEFAULT '',
+          "ownPhoto" INTEGER NOT NULL DEFAULT 0,
+          "markStyle" TEXT NOT NULL DEFAULT '',
+          "markFill" INTEGER NOT NULL DEFAULT 1,
           PRIMARY KEY ("groupID", "userID")
         ) STRICT
         """
@@ -169,58 +176,6 @@ extension DatabaseMigrator {
           "groupID" TEXT PRIMARY KEY NOT NULL,
           "cursor" INTEGER NOT NULL
         ) STRICT
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep who left a group") { db in
-      try #sql(
-        """
-        ALTER TABLE "groupMembers" ADD COLUMN "left" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep whose account was deleted") { db in
-      try #sql(
-        """
-        ALTER TABLE "groupMembers" ADD COLUMN "deleted" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep whose name is the group's own") { db in
-      try #sql(
-        """
-        ALTER TABLE "groupMembers" ADD COLUMN "ownName" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep members' photos") { db in
-      try #sql(
-        """
-        ALTER TABLE "groupMembers" ADD COLUMN "photoID" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "groupMembers" ADD COLUMN "ownPhoto" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the shape members draw their marks in") { db in
-      try #sql(
-        """
-        ALTER TABLE "groupMembers" ADD COLUMN "markStyle" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "groupMembers" ADD COLUMN "markFill" INTEGER NOT NULL DEFAULT 1
         """
       )
       .execute(db)

@@ -122,41 +122,7 @@ public struct OpenedDraft: Hashable, Sendable {
 
 extension DatabaseMigrator {
   mutating func registerChatDrafts() {
-    registerMigration("Keep the chats' drafts and lines taken back while waiting") { db in
-      try #sql(
-        """
-        CREATE TABLE "chatDrafts" (
-          "groupID" TEXT NOT NULL,
-          "threadID" TEXT NOT NULL,
-          "text" TEXT NOT NULL,
-          "replyTo" INTEGER,
-          "editing" INTEGER,
-          "savedAtMs" INTEGER NOT NULL,
-          PRIMARY KEY ("groupID", "threadID")
-        ) STRICT
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        CREATE TABLE "chatTakenBack" (
-          "opID" TEXT PRIMARY KEY NOT NULL,
-          "groupID" TEXT NOT NULL
-        ) STRICT
-        """
-      )
-      .execute(db)
-    }
-  }
-
-  mutating func registerDraftTargets() {
-    registerMigration("A draft answers a line or changes one, never both") { db in
-      try #sql(
-        """
-        DROP TABLE "chatDrafts"
-        """
-      )
-      .execute(db)
+    registerMigration("Keep the chats' drafts") { db in
       try #sql(
         """
         CREATE TABLE "chatDrafts" (
@@ -169,17 +135,6 @@ extension DatabaseMigrator {
           PRIMARY KEY ("groupID", "threadID"),
           CHECK ("replyTo" IS NULL OR "editing" IS NULL)
         ) STRICT
-        """
-      )
-      .execute(db)
-    }
-  }
-
-  mutating func registerChatRecalls() {
-    registerMigration("Take back by op_id rather than watch for lines taken back") { db in
-      try #sql(
-        """
-        DROP TABLE "chatTakenBack"
         """
       )
       .execute(db)

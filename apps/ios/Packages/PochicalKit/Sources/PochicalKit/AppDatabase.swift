@@ -84,9 +84,9 @@ func coordinated<T>(
   return try result!.get()
 }
 
-/// The tables, each step once. Nothing is released yet, so any change to
-/// the tables erases the device's database in every build, and it syncs
-/// again from the server.
+/// The tables, one step a group of them. Nothing is released yet, so a
+/// table changes where it is created: any change to the tables erases the
+/// device's database in every build, and it syncs again from the server.
 var migrator: DatabaseMigrator {
   var migrator = DatabaseMigrator()
   migrator.eraseDatabaseOnSchemaChange = true
@@ -96,15 +96,8 @@ var migrator: DatabaseMigrator {
   migrator.registerChats()
   migrator.registerBlocks()
   migrator.registerChatNotifications()
-  migrator.registerChatReplies()
   migrator.registerProfile()
   migrator.registerPreferences()
   migrator.registerChatDrafts()
-  migrator.registerSupportDraft()
-  migrator.registerChatAlbums()
-  migrator.registerChatWentOut()
-  migrator.registerChatRecalls()
-  migrator.registerChatLinePhotos()
-  migrator.registerDraftTargets()
   return migrator
 }

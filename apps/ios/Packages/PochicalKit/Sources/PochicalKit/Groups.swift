@@ -79,23 +79,15 @@ extension DatabaseMigrator {
           "id" TEXT PRIMARY KEY NOT NULL,
           "name" TEXT NOT NULL,
           "emoji" TEXT NOT NULL,
-          "joinedAtMs" INTEGER NOT NULL
+          "joinedAtMs" INTEGER NOT NULL,
+          "icon" TEXT NOT NULL DEFAULT '',
+          "letter" TEXT NOT NULL DEFAULT '',
+          "color" INTEGER NOT NULL DEFAULT 0,
+          "photoID" TEXT NOT NULL DEFAULT ''
         ) STRICT
         """
       )
       .execute(db)
-    }
-    registerMigration("Keep groups' icon and letter marks") { db in
-      for column in [
-        #"ALTER TABLE "groups" ADD COLUMN "icon" TEXT NOT NULL DEFAULT ''"#,
-        #"ALTER TABLE "groups" ADD COLUMN "letter" TEXT NOT NULL DEFAULT ''"#,
-        #"ALTER TABLE "groups" ADD COLUMN "color" INTEGER NOT NULL DEFAULT 0"#,
-      ] {
-        try db.execute(sql: column)
-      }
-    }
-    registerMigration("Keep groups' photo marks") { db in
-      try db.execute(sql: #"ALTER TABLE "groups" ADD COLUMN "photoID" TEXT NOT NULL DEFAULT ''"#)
     }
   }
 }
