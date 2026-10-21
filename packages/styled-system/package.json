@@ -7,7 +7,7 @@
     "./config": "./config.ts",
     "./*": {
       "types": "./dist/*/index.d.ts",
-      "default": "./dist/*/index.mjs"
+      "default": "./dist/*/index.js"
     }
   },
   "scripts": {
@@ -19,7 +19,9 @@
     "@pochical/design": "workspace:*"
   },
   "devDependencies": {
-    "@pandacss/dev": "^1.12.1",
+    "@pandacss/dev": "^2.3.0",
+    "@pandacss/preset-base": "^2.3.0",
+    "@pandacss/preset-panda": "^2.3.0",
     "@types/react": "~19.3.0",
     "react": "19.3.0",
     "typescript": "~6.0.3"
