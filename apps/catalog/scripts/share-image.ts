@@ -1,12 +1,17 @@
+import { fileURLToPath } from "node:url";
+
+// Takes the picture a link to the site shows (@pochical/prototype's
+// assets/share.png) from /design/share-image, drawn by the prototype's
+// components, on a dev server of its own. Run again after changing it: bun run image:share
+// It drives the installed Google Chrome, and runs on Node: the dev server's
+// Workers runtime (Miniflare) fails to start under Bun.
 import { SHARE_IMAGE } from "@pochical/prototype/lib/brand";
-// Takes the picture a shared link shows (public/share.png) from
-// /design/share-image, drawn by the site's own components, on a dev server
-// of its own. Run again after changing it: bun run image:share
-// It drives the installed Google Chrome.
 import { chromium } from "playwright-core";
 import { createServer } from "vite";
 
-const OUTPUT = new URL("../public/share.png", import.meta.url).pathname;
+const OUTPUT = fileURLToPath(
+  import.meta.resolve("@pochical/prototype/assets/share.png")
+);
 
 const ROOT = new URL("..", import.meta.url).pathname;
 

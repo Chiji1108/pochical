@@ -1,3 +1,4 @@
+import shareImage from "@pochical/prototype/assets/share.png";
 import { SHARE_IMAGE, site } from "@pochical/prototype/lib/brand";
 
 const getSiteOrigin = (): string | undefined => {
@@ -15,12 +16,14 @@ const getSiteOrigin = (): string | undefined => {
 // A page's own share image, at SHARE_IMAGE's size, in place of the site's.
 export type PageImage = { path: string; alt: string };
 
+const siteImage: PageImage = { alt: SHARE_IMAGE.alt, path: shareImage };
+
 export const pageMeta = (
   title: string,
   description: string,
   path: string,
   privatePage = false,
-  image: PageImage = SHARE_IMAGE
+  image: PageImage = siteImage
 ) => {
   const origin = getSiteOrigin();
   return {
