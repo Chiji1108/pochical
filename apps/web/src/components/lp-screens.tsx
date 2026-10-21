@@ -35,17 +35,23 @@ import {
   UserStoreContext,
 } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
+import { useReducedMotion } from "@pochical/prototype/lib/device-media";
 import { css, cva } from "@pochical/styled-system/css";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { AnimatePresence, motion, MotionConfig } from "motion/react";
+import { useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 
-import { WhenNear } from "./when-near";
+import { pressesOf, subscribe } from "../lib/presses";
+import type { SkyPlace } from "../lib/presses";
 
 // The top page's pieces drawn by the app's own code: its sky, the hero's
-// phone and the features' screens. They load after the page first shows
-// (routes/index.tsx takes them lazily), so its words need not wait for
-// the app; until then the server's drawing of them stands.
+// phone and the features' screens, each an island of pages/index.astro.
+// The build draws them into the page, which shows that drawing until
+// their code arrives; the page's words never wait for it. Movement
+// follows the device's 視差効果を減らす setting.
+function Motion({ children }: { children: ReactNode }) {
+  return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
+}
 
 // The current proposal for each open design choice, as on the catalog's
 // /try (apps/catalog).
@@ -57,7 +63,6 @@ const variants = parseDesignVariants({});
 // calendar; at its end it comes in from both sides. As in the app,
 // pressing ポチッと。 drifts it to another of the app's skies.
 const HERO_SKY = themeSkyId("pochical");
-type SkyPlace = "top" | "sides";
 function skyBackground(id: string, place: SkyPlace) {
   if (place === "top") {
     return paleSkyFromTop(id);
@@ -107,17 +112,20 @@ const sky = {
 };
 
 // The sky, breathing as slowly as the app's, and giving way to the next
-// as the app's does each time ポチッと。 is pressed (`presses` counts them).
+// as the app's does each time its ポチッと。 is pressed (lib/presses.ts).
 // A bare one has none until the first press brings it.
 export function Sky({
-  presses,
   place,
   bare = false,
 }: {
-  presses: number;
   place: SkyPlace;
   bare?: boolean;
 }) {
+  const presses = useSyncExternalStore(
+    subscribe,
+    () => pressesOf(place),
+    () => 0
+  );
   // It starts as if never pressed: presses made while this code was still
   // on its way change it at once on arrival.
   const [shown, setShown] = useState({
@@ -131,35 +139,37 @@ export function Sky({
     });
   }
   const { id } = shown;
-  const still = useReducedMotion() ?? false;
+  const still = useReducedMotion();
   return (
-    <div aria-hidden="true" className={sky.root({ place })}>
-      <AnimatePresence initial={false}>
-        {id === undefined ? null : (
-          <motion.div
-            animate={{ opacity: 1 }}
-            className={sky.layer}
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            key={id}
-            transition={SKY_CHANGE}
-          >
+    <Motion>
+      <div aria-hidden="true" className={sky.root({ place })}>
+        <AnimatePresence initial={false}>
+          {id === undefined ? null : (
             <motion.div
-              animate={still ? undefined : { scale: 1.08, x: "2%" }}
-              className={sky.light}
-              initial={{ scale: 1, x: "-2%" }}
-              style={{ background: skyBackground(id, place) }}
-              transition={{
-                duration: BREATH_SECONDS,
-                ease: "easeInOut",
-                repeat: Number.POSITIVE_INFINITY,
-                repeatType: "mirror",
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+              animate={{ opacity: 1 }}
+              className={sky.layer}
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              key={id}
+              transition={SKY_CHANGE}
+            >
+              <motion.div
+                animate={still ? undefined : { scale: 1.08, x: "2%" }}
+                className={sky.light}
+                initial={{ scale: 1, x: "-2%" }}
+                style={{ background: skyBackground(id, place) }}
+                transition={{
+                  duration: BREATH_SECONDS,
+                  ease: "easeInOut",
+                  repeat: Number.POSITIVE_INFINITY,
+                  repeatType: "mirror",
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </Motion>
   );
 }
 
@@ -183,15 +193,17 @@ export function HeroPhone() {
     })
   );
   return (
-    <DesignProviders fresh>
-      <UserStoreContext value={person}>
-        <DesignApp
-          initialDay={HERO_FIRST_BLANK}
-          initialEditing
-          variants={variants}
-        />
-      </UserStoreContext>
-    </DesignProviders>
+    <Motion>
+      <DesignProviders fresh>
+        <UserStoreContext value={person}>
+          <DesignApp
+            initialDay={HERO_FIRST_BLANK}
+            initialEditing
+            variants={variants}
+          />
+        </UserStoreContext>
+      </DesignProviders>
+    </Motion>
   );
 }
 
@@ -218,18 +230,20 @@ export function FeatureScreen({
 }) {
   const person = useSamplePerson();
   return (
-    <WhenNear aria-hidden="true" className={screenStyle} inert>
-      <DesignProviders fresh>
-        <UserStoreContext value={person}>
-          <DesignApp
-            initialEditing={false}
-            initialGroupPage={groupPage}
-            initialTab={tab}
-            variants={variants}
-          />
-        </UserStoreContext>
-      </DesignProviders>
-    </WhenNear>
+    <Motion>
+      <div aria-hidden="true" className={screenStyle} inert>
+        <DesignProviders fresh>
+          <UserStoreContext value={person}>
+            <DesignApp
+              initialEditing={false}
+              initialGroupPage={groupPage}
+              initialTab={tab}
+              variants={variants}
+            />
+          </UserStoreContext>
+        </DesignProviders>
+      </div>
+    </Motion>
   );
 }
 
@@ -277,7 +291,7 @@ function PhoneGallery({
   phones: { key: string; screen: ReactNode }[];
 }) {
   return (
-    <WhenNear
+    <div
       aria-hidden="true"
       className={gallery.root}
       inert
@@ -290,7 +304,7 @@ function PhoneGallery({
           </div>
         ))}
       </DesignProviders>
-    </WhenNear>
+    </div>
   );
 }
 
@@ -367,17 +381,19 @@ function LookContexts({
 export function ThemeGallery() {
   const person = useSamplePerson();
   return (
-    <UserStoreContext value={person}>
-      <PhoneGallery
-        phones={galleryLooks.map((look) => ({
-          key: look.id,
-          screen: (
-            <LookContexts look={look}>
-              <DesignApp initialEditing={false} variants={variants} />
-            </LookContexts>
-          ),
-        }))}
-      />
-    </UserStoreContext>
+    <Motion>
+      <UserStoreContext value={person}>
+        <PhoneGallery
+          phones={galleryLooks.map((look) => ({
+            key: look.id,
+            screen: (
+              <LookContexts look={look}>
+                <DesignApp initialEditing={false} variants={variants} />
+              </LookContexts>
+            ),
+          }))}
+        />
+      </UserStoreContext>
+    </Motion>
   );
 }

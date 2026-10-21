@@ -1,34 +1,8 @@
 import { Code, ConnectError } from "@connectrpc/connect";
+import { characterCount, withinLimit } from "@pochical/design/text";
 
 // How the server holds text to the limits in design/src/limits.ts, as
-// spec/text-limits.md has it: counted in characters as a reader sees them
-// (grapheme clusters, as Swift's String.count).
-
-const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-
-/** The number of characters a reader sees in the text. */
-export const characterCount = (text: string): number =>
-  [...graphemes.segment(text)].length;
-
-/**
- * The most UTF-16 code units one character may take on average: more than
- * any emoji sequence or accented letter (Unicode's stream-safe text keeps
- * a run of combining marks to 30), so text counted within its limit is
- * bounded in size too, and one character stacked with thousands of marks
- * is not.
- */
-const UNITS_PER_CHARACTER_MOST = 32;
-
-/** Whether the text is no larger than `limit` characters can be. */
-const withinSize = (text: string, limit: number): boolean =>
-  text.length <= limit * UNITS_PER_CHARACTER_MOST;
-
-/**
- * Whether the text has at most `limit` characters and is no larger than
- * that many characters can be: the limit every limited text is held to.
- */
-export const withinLimit = (text: string, limit: number): boolean =>
-  withinSize(text, limit) && characterCount(text) <= limit;
+// spec/text-limits.md has it; the counting is design/src/text.ts's.
 
 /** Whether the text is within `limit` and not empty or only spaces. */
 export const fitsText = (text: string, limit: number): boolean =>

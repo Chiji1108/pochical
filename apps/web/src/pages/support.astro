@@ -1,0 +1,89 @@
+---
+import { site } from "@pochical/prototype/lib/brand";
+import { ArrowUpRight, Plus } from "lucide-react";
+
+import Link from "../components/link.astro";
+import Page from "../components/page.astro";
+import Site from "../layouts/site.astro";
+
+const questions = [
+  {
+    answer:
+      "現在、App Store・Google Playでの公開を準備しています。公開後は、このサイトからダウンロードできます。",
+    question: "アプリはどこからダウンロードできますか？",
+  },
+  {
+    answer:
+      "入れた休みは消えていません。休みの見せ方が「空白」になっていると、月のカレンダーでは何も入れていない日と同じように見えます。iPhoneでは、アプリの設定の「スタイル」にある「休みの見せ方」で、見えない休み（休みや有休など）の「強調」か「印だけ」を選ぶと、また表示されます。画像で保存するときの見せ方は、「画像で保存」の画面で別に選べます。",
+    question: "休みの日がカレンダーに表示されません",
+  },
+  {
+    answer:
+      "メンバーから届いた招待リンクを開いて「アプリで開く」を選ぶか、メンバーに見せてもらった招待QRコードをアプリで読み取ります。グループで使う名前を確かめて参加してください。使えないリンクと表示された場合は、送り主に新しいリンクを確認してください。",
+    question: "グループに参加するには？",
+  },
+  {
+    answer:
+      "はい。カレンダー右上の保存ボタンから、端末のカレンダーへの追加や、画像での保存ができます。必要なアクセス権限を許可してご利用ください。iPhoneにGoogleアカウントを追加すると、Googleカレンダーにも入れられます。",
+    guide: {
+      href: "/support/google-calendar",
+      label: "Googleカレンダーに入れる手順",
+    } as const,
+    question: "シフトを端末のカレンダーに書き出せますか？",
+  },
+  {
+    answer:
+      "アプリのアンインストールだけでは、サーバー上のアカウントやデータは削除されません。アプリの設定、またはこのサイトのアカウント削除ページから手続きしてください。",
+    question: "アプリを削除すると、アカウントも消えますか？",
+  },
+];
+const contact = `mailto:${site.email}?subject=${encodeURIComponent("ポチカルのお問い合わせ")}`;
+---
+
+<Site
+  description="ポチカルのよくある質問とお問い合わせ窓口。"
+  path="/support"
+  title="サポート"
+>
+  <Page
+    eyebrow="SUPPORT"
+    intro="気になること、困ったこと。ここからお手伝いします。"
+    title="サポート"
+  >
+    <section class="faq-section">
+      <h2>よくある質問</h2>
+      {
+        questions.map((item) => (
+          <details class="faq">
+            <summary>
+              {item.question}<Plus aria-hidden="true" size={18} />
+            </summary>
+            <p>{item.answer}</p>
+            {item.guide && (
+              <Link class="text-link faq-guide" href={item.guide.href}>
+                {item.guide.label} →
+              </Link>
+            )}
+          </details>
+        ))
+      }
+    </section>
+    <section class="contact-box">
+      <p class="eyebrow">CONTACT</p>
+      <h2>解決しないときは</h2>
+      <p>
+        ご質問、不具合のご報告、ご要望をお寄せください。アプリの設定にある「作っている人とチャット」からなら、チャットで気軽に送れます。<br
+        />メールで送る場合、不具合については、端末の種類・アプリのバージョン・発生した状況を添えていただけると助かります。
+      </p>
+      <a class="text-link" href={contact}
+        >{site.email}<ArrowUpRight aria-hidden="true" size={17} /></a
+      >
+      <p class="small-note">
+        パスワードや、勤務先で扱う個人情報は送らないでください。
+      </p>
+    </section>
+    <Link class="text-link" href="/account/delete"
+      >アカウント削除の手続きはこちら →</Link
+    >
+  </Page>
+</Site>

@@ -1,0 +1,23 @@
+---
+import Link from "../components/link.astro";
+import Site from "../layouts/site.astro";
+
+export const prerender = false;
+---
+
+<Site>
+  <main class="document-page state-page" id="main">
+    <h1>ページを読み込めませんでした。</h1>
+    <p>通信状態を確認して、もう一度お試しください。</p>
+    <button class="button" data-reload type="button">再読み込み</button>
+    <Link href="/support">サポートへ</Link>
+  </main>
+</Site>
+
+<script>
+  document
+    .querySelector("button[data-reload]")
+    ?.addEventListener("click", () => {
+      location.reload();
+    });
+</script>

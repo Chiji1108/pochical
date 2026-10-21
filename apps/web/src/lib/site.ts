@@ -1,7 +1,6 @@
-import shareImage from "@pochical/prototype/assets/share.png";
-import { SHARE_IMAGE, site } from "@pochical/prototype/lib/brand";
-
-const getSiteOrigin = (): string | undefined => {
+// The site's own HTTPS origin (VITE_SITE_URL), once it has a domain: the
+// pages' canonical and share addresses name it.
+export const siteOrigin = (): string | undefined => {
   const value = import.meta.env.VITE_SITE_URL;
   if (!value) {
     return;
@@ -15,49 +14,6 @@ const getSiteOrigin = (): string | undefined => {
 
 // A page's own share image, at SHARE_IMAGE's size, in place of the site's.
 export type PageImage = { path: string; alt: string };
-
-const siteImage: PageImage = { alt: SHARE_IMAGE.alt, path: shareImage };
-
-export const pageMeta = (
-  title: string,
-  description: string,
-  path: string,
-  privatePage = false,
-  image: PageImage = siteImage
-) => {
-  const origin = getSiteOrigin();
-  return {
-    links:
-      origin && !privatePage
-        ? [{ href: `${origin}${path}`, rel: "canonical" }]
-        : [],
-    meta: [
-      { title: `${title} | ポチカル` },
-      { content: description, name: "description" },
-      { content: `${title} | ポチカル`, property: "og:title" },
-      { content: description, property: "og:description" },
-      { content: "website", property: "og:type" },
-      { content: "ja_JP", property: "og:locale" },
-      { content: site.name, property: "og:site_name" },
-      { content: "summary_large_image", name: "twitter:card" },
-      ...(origin
-        ? [
-            { content: `${origin}${path}`, property: "og:url" },
-            { content: `${origin}${image.path}`, property: "og:image" },
-            { content: String(SHARE_IMAGE.width), property: "og:image:width" },
-            {
-              content: String(SHARE_IMAGE.height),
-              property: "og:image:height",
-            },
-            { content: image.alt, property: "og:image:alt" },
-          ]
-        : []),
-      ...(privatePage
-        ? [{ content: "noindex, nofollow", name: "robots" }]
-        : []),
-    ],
-  };
-};
 
 export const storeLink = (
   value: string | undefined,

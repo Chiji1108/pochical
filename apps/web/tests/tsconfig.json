@@ -3,6 +3,6 @@
   "include": ["**/*.ts", "**/*.tsx", "../worker-configuration.d.ts"],
   "exclude": [],
   "compilerOptions": {
-    "types": ["../worker-configuration.d.ts", "node", "vite/client", "bun"]
+    "types": ["../worker-configuration.d.ts", "node", "astro/client", "bun"]
   }
 }

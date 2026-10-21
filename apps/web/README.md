@@ -1,6 +1,6 @@
 # ポチカル Web
 
-看護師向けのポチカル専用サイト。TanStack Start / React / Cloudflare Workersで動作します。旧Next.jsサイトには依存せず、旧URLの互換処理もありません。
+看護師向けのポチカル専用サイト。Astro / Cloudflare Workersで動作し、LPのアプリ画面だけをReactのアイランドとして動かします。旧Next.jsサイトには依存せず、旧URLの互換処理もありません。
 
 ## 開発
 
@@ -12,22 +12,23 @@
 - `bun run test`: packages、web、catalog、serverのテスト
 - `bun run check` / `bun run fix`: 共通のUltracite設定でチェック・整形
 
-ルートの `bun.lock` を使います。`routeTree.gen.ts` はTanStack Startのプラグインが `bun run dev` と `bun run build` のたびに書き出します。型チェックはコミットされたものを使うので、ページを足したり消したりしたら、devかbuildを一度動かしてからコミットしてください。`worker-configuration.d.ts` は `bun run --cwd apps/web cf-typegen` で生成します。Workers設定を変更したら型を再生成してください。
+ルートの `bun.lock` を使います。ページは `src/pages` の `.astro` ファイルです。`bun run --cwd apps/web typecheck` は `astro check` で `.astro` も含めて型を確かめます。`worker-configuration.d.ts` は `bun run --cwd apps/web cf-typegen` で生成します。Workers設定を変更したら型を再生成してください。
 
 ## ページ
 
 | パス | 内容 |
 | --- | --- |
 | `/` | LP。勤務例は架空の画面イメージ |
-| `/invite/$inviteCode` | サーバー（`apps/server`）に招待を確認し、アプリへ移動 |
+| `/invite/[code]` | サーバー（`apps/server`）に招待を確認し、アプリへ移動 |
 | `/privacy` | プライバシーポリシー |
 | `/terms` | 利用規約 |
 | `/support` | FAQと問い合わせ窓口 |
+| `/support/google-calendar` | Googleカレンダーにシフトを入れる手順（アプリから開く） |
 | `/account/delete` | 削除される内容と、メールでの削除依頼 |
 
 デザイン資料（`/design`）と試作（`/try`、`/demo`）は `apps/catalog` にあります。
 
-各ページをサーバーで描画します。招待ページ・削除ページはnoindex、動的HTMLはno-storeです。招待ページのタイトルとOGPにはグループ名と絵文字を入れ、チャットに貼ったリンクのカードにも出します。ページを開けば誰でも見られる情報なので、カードに出しても見える範囲は変わりません。
+招待ページ（と招待の画像）以外はビルド時に描画し、静的ファイルとして配信します。招待ページはリクエストごとにWorkerで描画し、no-storeです。招待ページ・削除ページはnoindexです。セキュリティヘッダーは `src/lib/headers.ts` の一覧から、静的ファイルには `_headers`（ビルド時に書き出し）、Workerのページにはmiddlewareで付けます。日本語の改行位置（文節ごとの `<wbr>`）は、`.astro` のHTMLにはmiddlewareが、ReactのアイランドにはJSXランタイムが、同じBudouXの規則（`@pochical/jsx`）で入れます。招待ページのタイトルとOGPにはグループ名と絵文字を入れ、チャットに貼ったリンクのカードにも出します。ページを開けば誰でも見られる情報なので、カードに出しても見える範囲は変わりません。
 
 ## 環境変数
 
@@ -53,4 +54,4 @@
 - Webでの本人確認つき削除（認証ができてから）
 - 規約・プライバシー表記の運用確認。運営名・窓口は旧サイトのCHIJI TECHと連絡先を使用。外部サービスのログ・バックアップの保持期間など、実際の契約・設定で決まる事項を公開前に確認する。
 
-公開作業はまだ行っていません。設定後、`apps/web` で `bun run deploy` を実行します。事前確認には `bun x wrangler deploy --dry-run` を利用できます。
+公開はmainへのマージでWorkers Buildsが行います（ビルドコマンド `bun run build`、デプロイコマンド `bunx wrangler deploy`、ルートディレクトリ `apps/web`）。`wrangler deploy` はビルドが書き出す `dist/server/wrangler.json` を使います。事前確認には `bun run build` のあと `bun x wrangler deploy --dry-run` を利用できます。

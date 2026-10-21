@@ -25,7 +25,7 @@ import {
   useUser,
 } from "@pochical/prototype/lib/design-user-store";
 import { widgetEntry } from "@pochical/prototype/lib/design-widgets";
-import { useDeviceScheme } from "@pochical/prototype/lib/use-device-scheme";
+import { useDeviceScheme } from "@pochical/prototype/lib/device-media";
 import { css } from "@pochical/styled-system/css";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
