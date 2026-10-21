@@ -171,6 +171,26 @@ const idList = (photoIds: string[]) =>
   sql`(select value from json_each(${JSON.stringify(photoIds)}))`;
 
 /**
+ * The sent photos among `photoIds` noted as taken back, before storage
+ * deletes them though no line carries them (the lines Group DO migration
+ * 0035 emptied): the note stays, so no upload stores their ids again.
+ */
+export const takeBackUncarried = (
+  db: DrizzleSqliteDODatabase,
+  photoIds: string[]
+): void => {
+  db.update(groupPhotos)
+    .set({ state: "takenBack" })
+    .where(
+      and(
+        eq(groupPhotos.state, "sent"),
+        inArray(groupPhotos.id, idList(photoIds))
+      )
+    )
+    .run();
+};
+
+/**
  * The photos nothing holds: uploads not sent, and copies noted as shown
  * that nothing names; noted by `before` when given.
  */

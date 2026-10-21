@@ -284,7 +284,9 @@ export const chatRecalls = sqliteTable(
 //   time it sends the line, so a send comes moments after that upload.
 // - sent: a line carries it, until the line is taken back. Its uploader
 //   uploading it again, as a send tried again does, stores nothing.
-// - takenBack: its line was taken back, and R2 holds it no more. Nothing
+// - takenBack: its line was taken back (or no line carried it once sent,
+//   and the bucket's delete took it, spec/admin.md), and R2 holds it no
+//   more. Nothing
 //   holds it, but the note stays for good, so no upload stores its id
 //   again and no line sends it: devices keep a photo by its id.
 // - shown: the group shows it, as someone's face (their usual photo, which

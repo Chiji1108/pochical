@@ -31,6 +31,12 @@ export const withSmall = (key: string): string[] => [key, smallKey(key)];
 // The most keys R2 deletes in one call.
 const DELETE_BATCH = 1000;
 
+/** `items` in R2's batches of keys to delete at once. */
+export const deleteBatchesOf = <T>(items: T[]): T[][] =>
+  Array.from({ length: Math.ceil(items.length / DELETE_BATCH) }, (_, at) =>
+    items.slice(at * DELETE_BATCH, (at + 1) * DELETE_BATCH)
+  );
+
 /** A group's photos deleted, each with its small version, in R2's batches. */
 export const deleteGroupPhotos = async (
   env: Env,
@@ -38,12 +44,8 @@ export const deleteGroupPhotos = async (
   photoIds: string[]
 ): Promise<void> => {
   const keys = photoIds.flatMap((id) => withSmall(photoKey(groupId, id)));
-  const batches = Array.from(
-    { length: Math.ceil(keys.length / DELETE_BATCH) },
-    (_, at) => keys.slice(at * DELETE_BATCH, (at + 1) * DELETE_BATCH)
-  );
   await Promise.all(
-    batches.map(async (batch) => {
+    deleteBatchesOf(keys).map(async (batch) => {
       await env.PHOTOS.delete(batch);
     })
   );

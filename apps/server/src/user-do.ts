@@ -19,6 +19,8 @@ import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import { sendAlert, sendWithdrawal } from "./apns";
 import type { Alert, Sent } from "./apns";
+import { deleteOrphans } from "./bucket-audit";
+import type { Orphan, OwnerCleanup } from "./bucket-audit";
 import { hasKey, SHARED_DAY_FIELDS } from "./day-values";
 import {
   ChangesSchema,
@@ -37,7 +39,7 @@ import type {
 import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
-import { sharePersonPhoto } from "./photos";
+import { personPhotoKey, sharePersonPhoto } from "./photos";
 import { devicesOf, dropPushToken } from "./push-tokens";
 import type { Device } from "./push-tokens";
 import { retryWait } from "./retry-wait";
@@ -675,6 +677,26 @@ export class UserDO extends DurableObject<Env> {
   profileOf(): { name: string; photoId: string } {
     const row = this.db.select().from(profile).get();
     return { name: row?.name ?? "", photoId: row?.photoId ?? "" };
+  }
+
+  /**
+   * The orphans the audit found among the user's own photos deleted from
+   * the photos bucket, but the usual photo, should it be one now, skipped.
+   * Nothing else reaches the user meanwhile, so the usual photo cannot
+   * change to one as R2 deletes it.
+   */
+  async deleteOrphanPhotos(orphans: Orphan[]): Promise<OwnerCleanup> {
+    return await this.ctx.blockConcurrencyWhile(async () => {
+      const usual = personPhotoKey(
+        this.ctx.id.name ?? "",
+        this.profileOf().photoId
+      );
+      return await deleteOrphans(
+        this.env.PHOTOS,
+        orphans,
+        ({ key }) => key === usual
+      );
+    });
   }
 
   /**

@@ -11,8 +11,8 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import type { Alert } from "./apns";
-import { groupReferences } from "./bucket-audit";
-import type { GroupReferences } from "./bucket-audit";
+import { deleteGroupOrphans, groupReferences } from "./bucket-audit";
+import type { GroupReferences, Orphan, OwnerCleanup } from "./bucket-audit";
 import { mentions } from "./chat-links";
 import {
   ChangeSchema,
@@ -231,6 +231,24 @@ export class GroupDO extends DurableObject<Env> {
   /** What the group names in the photos bucket, for its audit. */
   bucketReferences(): GroupReferences {
     return groupReferences(this.db);
+  }
+
+  /**
+   * The orphans the audit found under the group deleted from the photos
+   * bucket, each judged again first (deleteGroupOrphans). Nothing else
+   * reaches the group meanwhile: an upload or a copy of one of their ids
+   * would find it still stored, store nothing, and lose it as R2 deletes.
+   */
+  async deleteOrphanPhotos(orphans: Orphan[]): Promise<OwnerCleanup> {
+    return await this.ctx.blockConcurrencyWhile(
+      async () =>
+        await deleteGroupOrphans(
+          this.db,
+          this.env.PHOTOS,
+          this.ctx.id.name ?? "",
+          orphans
+        )
+    );
   }
 
   /** The group's name and mark, or null before the group is set up. */

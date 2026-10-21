@@ -1,7 +1,9 @@
 // The photos bucket held up against what names each object in it
 // (spec/admin.md, 棚卸し): the objects nothing names, counted and weighed
 // by where they are kept and why nothing names them, for Pochical's people
-// to read before anything is deleted. It only reads.
+// to read; and, once they have, the same walk deleting them, each judged
+// again by its owner first.
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
@@ -11,9 +13,9 @@ import { invites, supportChats } from "./db/schema";
 import { kindIs } from "./group-chat";
 import { chatLines, groupPhotos, profile } from "./group-do-schema";
 import type { photoStates } from "./group-do-schema";
-import { namedPhotos } from "./group-photos";
+import { namedPhotos, takeBackUncarried } from "./group-photos";
 import { PREVIEW_CACHE_MS } from "./link-preview";
-import { bucketPages } from "./photos";
+import { bucketPages, deleteBatchesOf } from "./photos";
 import { supportPlace } from "./support-lines";
 
 /**
@@ -45,6 +47,34 @@ export type OrphanReason =
  * to judge (`recent`), or nothing names it, and why.
  */
 export type Verdict = "referenced" | "recent" | OrphanReason;
+
+/** What the delete takes: a key no part of the server writes is read first. */
+export type DeletableReason = Exclude<OrphanReason, "unknown">;
+
+/** An object nothing names, as its owner is asked to delete it. */
+export type Orphan = { key: string; bytes: number; verdict: DeletableReason };
+
+/**
+ * What became of the orphans an owner was asked to delete: deleted,
+ * skipped as something came to name them since, or left as R2 refused.
+ */
+export type OwnerCleanup = Record<"deleted" | "skipped" | "failed", Orphan[]>;
+
+/** How many objects, and their bytes. */
+export type Weight = { count: number; bytes: number };
+
+/** What the delete did with the orphans of one verdict. */
+export type CleanupRow = { verdict: DeletableReason } & Record<
+  keyof OwnerCleanup,
+  Weight
+>;
+
+export type BucketCleanup = {
+  atMs: number;
+  /** Objects uploaded since `atMs - graceMs` were left as `recent`. */
+  graceMs: number;
+  rows: CleanupRow[];
+};
 
 /** What the group says of each photo it has a note of or names. */
 export type GroupPhotoHold = "referenced" | "takenBack" | "sentUnnamed";
@@ -148,6 +178,22 @@ export const groupReferences = (
 };
 
 /**
+ * What became of a group's photo by what the group names, when asked: one
+ * a line, a face, the mark or the sweep holds is referenced, the group set
+ * up or not, as the sweep deletes those it owns itself.
+ */
+const groupPhotoVerdict = (
+  photoId: string,
+  group: GroupReferences | undefined
+): Verdict => {
+  const hold = group?.photos[photoId];
+  if (hold === "referenced") {
+    return hold;
+  }
+  return group?.setUp === true ? (hold ?? "unnoted") : "groupGone";
+};
+
+/**
  * What an object is held up against: its owner's references, when the
  * key is under a group or a user (none when the group was not asked or
  * the user has no account), and every line's preview pictures.
@@ -174,10 +220,7 @@ const GROUP_PHOTO =
 const KEY_KINDS: KeyKind[] = [
   {
     // A group's or a support chat's photo, and its small version.
-    judge: ({ photoId = "" }, { group }) =>
-      group?.setUp === true
-        ? (group.photos[photoId] ?? "unnoted")
-        : "groupGone",
+    judge: ({ photoId = "" }, { group }) => groupPhotoVerdict(photoId, group),
     pattern: GROUP_PHOTO,
     prefix: "groups/",
   },
@@ -209,27 +252,33 @@ const OTHER_PREFIX = "";
 const GROUPS = "groups/";
 const PEOPLE = "people/";
 
+/** An object, where it is kept, and what became of it. */
+type Judged = { key: string; bytes: number; prefix: string; verdict: Verdict };
+
 /** Where an object is kept, and what became of it. */
 const judgeObject = (
   object: R2Object,
   lookup: Lookup,
   since: number
-): { prefix: string; verdict: Verdict } => {
+): Judged => {
+  const judged = (prefix: string, verdict: Verdict): Judged => ({
+    bytes: object.size,
+    key: object.key,
+    prefix,
+    verdict,
+  });
   const kind = KEY_KINDS.find(({ prefix }) => object.key.startsWith(prefix));
   if (kind === undefined) {
-    return { prefix: OTHER_PREFIX, verdict: "unknown" };
+    return judged(OTHER_PREFIX, "unknown");
   }
   const parts = kind.pattern.exec(object.key);
   if (parts === null) {
-    return { prefix: kind.prefix, verdict: "unknown" };
+    return judged(kind.prefix, "unknown");
   }
   if (object.uploaded.getTime() > since) {
-    return { prefix: kind.prefix, verdict: "recent" };
+    return judged(kind.prefix, "recent");
   }
-  return {
-    prefix: kind.prefix,
-    verdict: kind.judge(parts.groups ?? {}, lookup),
-  };
+  return judged(kind.prefix, kind.judge(parts.groups ?? {}, lookup));
 };
 
 /** The rows' order: by prefix as KEY_KINDS lists them, then by verdict. */
@@ -249,10 +298,9 @@ const VERDICTS: Verdict[] = [
 const PREFIXES = [...KEY_KINDS.map(({ prefix }) => prefix), OTHER_PREFIX];
 
 /** Objects counted and weighed by prefix and verdict, a few keys kept. */
-const tally = (since: number) => {
+const tally = () => {
   const rows = new Map<string, AuditRow>();
-  const add = (object: R2Object, lookup: Lookup) => {
-    const { prefix, verdict } = judgeObject(object, lookup, since);
+  const add = ({ bytes, key, prefix, verdict }: Judged) => {
     const id = `${prefix}\n${verdict}`;
     const row = rows.get(id) ?? {
       bytes: 0,
@@ -263,9 +311,9 @@ const tally = (since: number) => {
       verdict,
     };
     row.count += 1;
-    row.bytes += object.size;
+    row.bytes += bytes;
     if (row.sample.length < SAMPLE) {
-      row.sample.push(object.key);
+      row.sample.push(key);
     }
     rows.set(id, row);
   };
@@ -317,19 +365,27 @@ const eachAtMost = async (
   );
 };
 
+/** Whose the objects are that the walk hands on together. */
+type Owner =
+  | { kind: "group"; groupId: string }
+  | { kind: "user"; userId: string; account: boolean }
+  | { kind: "rest" };
+
 /**
- * The bucket audited as of `atMs`, an owner at a time: each group's
- * objects listed and judged against its Group DO, then each user's
- * against their User DO, then the rest against every line's preview
- * pictures. A Group DO is asked only when it must exist, so none is made
- * by asking: a group with a live invitation or a support chat D1 indexes,
- * or one the server stored a photo under, which its DO noted first. A
- * User DO is asked only for a user with an account.
+ * The bucket walked as of `atMs`, an owner at a time, each owner's objects
+ * judged and handed to `settle` together: each group's objects listed and
+ * judged against its Group DO, then each user's against their User DO,
+ * then the rest against every line's preview pictures. A Group DO is
+ * asked only when it must exist, so none is made by asking: a group with
+ * a live invitation or a support chat D1 indexes, or one the server
+ * stored a photo under, which its DO noted first. A User DO is asked only
+ * for a user with an account.
  */
-export const auditBucket = async (
+const walkBucket = async (
   env: Env,
-  atMs: number
-): Promise<BucketAudit> => {
+  atMs: number,
+  settle: (owner: Owner, objects: Judged[]) => Promise<void> | void
+): Promise<{ groupsAsked: number; usersAsked: number }> => {
   const since = atMs - AUDIT_GRACE_MS;
   const db = drizzle(env.DB);
   const [root, groupsDir, peopleDir, invited, supported, accounts] =
@@ -341,15 +397,16 @@ export const auditBucket = async (
       db.select({ id: supportChats.userId }).from(supportChats).all(),
       db.select({ id: user.id }).from(user).all(),
     ]);
-  const rows = tally(since);
   const nothing: Lookup = { previewImages: new Set() };
-  for (const object of [
-    ...root.objects,
-    ...groupsDir.objects,
-    ...peopleDir.objects,
-  ]) {
-    rows.add(object, nothing);
-  }
+  const judgeAll = (objects: R2Object[], lookup: Lookup) =>
+    objects.map((object) => judgeObject(object, lookup, since));
+  await settle(
+    { kind: "rest" },
+    judgeAll(
+      [...root.objects, ...groupsDir.objects, ...peopleDir.objects],
+      nothing
+    )
+  );
 
   const known = new Set([
     ...invited.map(({ id }) => id),
@@ -378,9 +435,10 @@ export const auditBucket = async (
       for (const id of group?.previewImages ?? []) {
         previewImages.add(id);
       }
-      for (const object of objects) {
-        rows.add(object, { ...nothing, group });
-      }
+      await settle(
+        { groupId, kind: "group" },
+        judgeAll(objects, { ...nothing, group })
+      );
     }
   );
 
@@ -392,11 +450,11 @@ export const auditBucket = async (
     const account = withAccount.has(userId)
       ? await env.USERS.getByName(userId).profileOf()
       : undefined;
-    const usualPhoto = account?.photoId;
-    usersAsked += usualPhoto === undefined ? 0 : 1;
-    for (const object of objects) {
-      rows.add(object, { ...nothing, usualPhoto });
-    }
+    usersAsked += account === undefined ? 0 : 1;
+    await settle(
+      { account: account !== undefined, kind: "user", userId },
+      judgeAll(objects, { ...nothing, usualPhoto: account?.photoId })
+    );
   });
 
   const rest = root.prefixes.filter(
@@ -405,12 +463,28 @@ export const auditBucket = async (
   for (const prefix of rest) {
     // oxlint-disable-next-line no-await-in-loop -- each prefix's pages in turn
     for await (const page of bucketPages(env.PHOTOS, { prefix })) {
-      for (const object of page.objects) {
-        rows.add(object, { previewImages });
-      }
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await settle({ kind: "rest" }, judgeAll(page.objects, { previewImages }));
     }
   }
+  return { groupsAsked, usersAsked };
+};
 
+/** The bucket audited as of `atMs`. It only reads. */
+export const auditBucket = async (
+  env: Env,
+  atMs: number
+): Promise<BucketAudit> => {
+  const rows = tally();
+  const { groupsAsked, usersAsked } = await walkBucket(
+    env,
+    atMs,
+    (_, objects) => {
+      for (const object of objects) {
+        rows.add(object);
+      }
+    }
+  );
   const sorted = rows.sorted();
   const orphans = sorted.filter(({ orphan }) => orphan);
   return {
@@ -423,5 +497,155 @@ export const auditBucket = async (
     },
     rows: sorted,
     usersAsked,
+  };
+};
+
+/**
+ * `orphans` deleted from the bucket in R2's batches, but those `named`
+ * says something names now, skipped. A batch R2 refused is failed. R2
+ * deletes a key it no longer has as it does one it has, so a run cut
+ * short and run again deletes the rest.
+ */
+export const deleteOrphans = async (
+  bucket: R2Bucket,
+  orphans: Orphan[],
+  named: (orphan: Orphan) => boolean = () => false
+): Promise<OwnerCleanup> => {
+  const going = orphans.filter((orphan) => !named(orphan));
+  const done = await Promise.all(
+    deleteBatchesOf(going).map(async (batch) => {
+      try {
+        await bucket.delete(batch.map(({ key }) => key));
+        return { batch, deleted: true };
+      } catch {
+        return { batch, deleted: false };
+      }
+    })
+  );
+  return {
+    deleted: done.flatMap(({ batch, deleted }) => (deleted ? batch : [])),
+    failed: done.flatMap(({ batch, deleted }) => (deleted ? [] : batch)),
+    skipped: orphans.filter(named),
+  };
+};
+
+/**
+ * A group's orphans deleted (GroupDO.deleteOrphanPhotos), each judged
+ * again against what the group names now: one a line, a face, the mark
+ * or the sweep came to hold is skipped. The sent photos among them are
+ * noted as taken back first, as a line taken back leaves its photos, so
+ * the note never says R2 holds what it does not, and no upload stores
+ * their ids again.
+ */
+export const deleteGroupOrphans = async (
+  db: DrizzleSqliteDODatabase,
+  bucket: R2Bucket,
+  groupId: string,
+  orphans: Orphan[]
+): Promise<OwnerCleanup> => {
+  const group = groupReferences(db);
+  const photoOf = ({ key }: Orphan) => GROUP_PHOTO.exec(key)?.groups;
+  const named = (orphan: Orphan) => {
+    const parts = photoOf(orphan);
+    return (
+      parts?.groupId !== groupId ||
+      groupPhotoVerdict(parts.photoId ?? "", group) === "referenced"
+    );
+  };
+  takeBackUncarried(
+    db,
+    orphans
+      .filter((orphan) => !named(orphan))
+      .map((orphan) => photoOf(orphan)?.photoId ?? "")
+  );
+  return await deleteOrphans(bucket, orphans, named);
+};
+
+const isDeletable = (verdict: Verdict): verdict is DeletableReason =>
+  verdict !== "referenced" && verdict !== "recent" && verdict !== "unknown";
+
+/** An owner's orphans deleted, each judged again by what would name it. */
+const cleanUp = async (
+  env: Env,
+  owner: Owner,
+  orphans: Orphan[]
+): Promise<OwnerCleanup> => {
+  switch (owner.kind) {
+    case "group": {
+      return await env.GROUPS.getByName(owner.groupId).deleteOrphanPhotos(
+        orphans
+      );
+    }
+    case "user": {
+      if (owner.account) {
+        return await env.USERS.getByName(owner.userId).deleteOrphanPhotos(
+          orphans
+        );
+      }
+      const made = await drizzle(env.DB)
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.id, owner.userId))
+        .get();
+      return await deleteOrphans(env.PHOTOS, orphans, () => made !== undefined);
+    }
+    case "rest": {
+      return await deleteOrphans(env.PHOTOS, orphans);
+    }
+    default: {
+      return owner satisfies never;
+    }
+  }
+};
+
+const OUTCOMES = ["deleted", "skipped", "failed"] as const;
+
+/**
+ * What the audit as of `atMs` finds nothing names deleted, but the keys no
+ * part of the server writes: each owner's orphans by its owner as the walk
+ * reaches it, judged again there. What became of them, by verdict.
+ */
+export const cleanBucket = async (
+  env: Env,
+  atMs: number
+): Promise<BucketCleanup> => {
+  const rows = new Map<DeletableReason, CleanupRow>();
+  const count = (cleanup: OwnerCleanup) => {
+    for (const outcome of OUTCOMES) {
+      for (const { bytes, verdict } of cleanup[outcome]) {
+        const row = rows.get(verdict) ?? {
+          deleted: { bytes: 0, count: 0 },
+          failed: { bytes: 0, count: 0 },
+          skipped: { bytes: 0, count: 0 },
+          verdict,
+        };
+        row[outcome].count += 1;
+        row[outcome].bytes += bytes;
+        rows.set(verdict, row);
+      }
+    }
+  };
+  await walkBucket(env, atMs, async (owner, objects) => {
+    const orphans = objects.flatMap(({ bytes, key, verdict }) =>
+      isDeletable(verdict) ? [{ bytes, key, verdict }] : []
+    );
+    if (orphans.length === 0) {
+      return;
+    }
+    // An owner that could not be asked leaves its orphans for a run again.
+    count(
+      await cleanUp(env, owner, orphans).catch(() => ({
+        deleted: [],
+        failed: orphans,
+        skipped: [],
+      }))
+    );
+  });
+  return {
+    atMs,
+    graceMs: AUDIT_GRACE_MS,
+    rows: [...rows.values()].toSorted(
+      (a, b) => VERDICTS.indexOf(a.verdict) - VERDICTS.indexOf(b.verdict)
+    ),
   };
 };
