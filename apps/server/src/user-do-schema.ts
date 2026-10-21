@@ -294,3 +294,16 @@ export const profile = sqliteTable(
     uniqueIndex("profile_cursor").on(table.cursor),
   ]
 );
+
+// The newest cursor the user's log has given out: one row. Kept apart
+// from the values, some of whose rows leaving a group takes away, so the
+// cursor never goes back and no two values share one
+// (spec/sync-protocol.md, Change log and cursor).
+export const logHead = sqliteTable(
+  "log_head",
+  {
+    cursor: integer().notNull(),
+    id: integer().primaryKey(),
+  },
+  (table) => [check("log_head_single_row", sql`${table.id} = 1`)]
+);

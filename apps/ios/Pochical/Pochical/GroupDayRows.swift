@@ -39,93 +39,151 @@ private let todayBar: CGFloat = 3
 /// the row's lines.
 private let rowInset = EdgeInsets(top: 3, leading: todayBar + 3, bottom: 3, trailing: 3)
 
-/// 一覧's pinned heading (/design's DayRowsTable): a column per member,
-/// their face, and their name while few.
+/// How a big group's 一覧 sits sideways: everyone fits, or its columns
+/// scroll, the date and the viewer's own column pinned at the left, an
+/// edge beside them while others pass under.
+enum Sideways: Equatable {
+  case fits
+  case scrolls(edged: Bool)
+}
+
+extension View {
+  /// While `pinned`, kept at the left of a sideways scroll view, its
+  /// margin clear, as what is after it scrolls under; a view at the
+  /// content's leading edge. Moved in drawing, as the scroll view's offset
+  /// changes, so nothing is laid out again; at the left edge's bounce it
+  /// goes with the rest.
+  func pinnedSideways(_ pinned: Bool = true) -> some View {
+    visualEffect { content, proxy in
+      content.offset(
+        x: pinned
+          ? max(pinnedMargin - proxy.frame(in: .scrollView(axis: .horizontal)).minX, 0) : 0)
+    }
+  }
+}
+
+/// How far a big group's 一覧 is scrolled sideways from where it rests,
+/// and the safe area at its leading edge (in landscape), which the pinned
+/// columns cross before they stop, read by its faces alone: they sit
+/// over the scroll view, outside it, so they follow it as it moves, and
+/// nothing else is made again with each frame of a scroll.
+@Observable final class SidewaysOffset {
+  var x: CGFloat = 0
+  var inset: CGFloat = 0
+}
+
+/// 一覧's heading (/design's DayRowsTable): a column per member, their
+/// face, and their name while few. A big group's follows the rows under
+/// it as they scroll sideways: the viewer's face kept over their pinned
+/// column, the others moving with theirs, past either edge too.
 struct GroupDayHeader: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.english) private var english
   let members: [GroupMember]
   let groupID: String
-  /// The rows scrolled sideways this far, a big group's: the first face
-  /// (the viewer's) stays over its pinned column, the others follow the
-  /// rows. Nil while everyone fits.
-  var scrollX: CGFloat?
+  /// How far the rows are scrolled sideways; nil while everyone fits.
+  var offset: SidewaysOffset?
+  /// An edge beside the viewer's face while others pass under, as beside
+  /// the rows' pinned columns.
+  var edged = false
 
   var body: some View {
-    if let scrollX {
-      HStack(spacing: 0) {
-        Color.clear.frame(width: english ? englishDateWidth : dateWidth, height: 1)
-        if let first = members.first {
-          face(first)
-            .overlay(alignment: .trailing) {
-              if scrollX > 0 {
-                Rectangle().fill(colors.separator).frame(width: 1)
-              }
-            }
+    let density = DayRowsDensity(members: members.count)
+    HStack(spacing: 0) {
+      if let offset {
+        HStack(spacing: 0) {
+          dateRoom
+          if let first = members.first { face(first, density: density) }
         }
+        .overlay(alignment: .trailing) {
+          if edged {
+            Rectangle().fill(colors.separator).frame(width: 1)
+          }
+        }
+        .modifier(FollowsRows(offset: offset, pinned: true))
+        .zIndex(1)
         // Laid over the room left, so a long row of faces never widens
-        // the page; it moves with the rows under it.
+        // the page.
         Color.clear
           .frame(maxWidth: .infinity)
           .frame(height: 24)
           .overlay(alignment: .leading) {
             HStack(spacing: 0) {
-              ForEach(members.dropFirst()) { face($0) }
+              ForEach(members.dropFirst()) { face($0, density: density) }
             }
             .fixedSize()
-            .offset(x: -scrollX)
+            .modifier(FollowsRows(offset: offset, pinned: false))
           }
           .clipped()
-      }
-      .padding(.vertical, 8)
-      .overlay(alignment: .bottom) {
-        Rectangle().fill(colors.separator).frame(height: 1)
-      }
-    } else {
-      fitting
-    }
-  }
-
-  private func face(_ member: GroupMember) -> some View {
-    MemberAvatar(
-      name: member.name, photoID: member.photoID, shelf: .group(groupID), size: 24,
-      userID: member.userID)
-      .opensLegend(of: member)
-      .padding(.horizontal, 4)
-      .frame(width: DayRowsDensity.scroll.columnWidth)
-      .accessibilityElement(children: .ignore)
-      .accessibilityLabel(member.name)
-  }
-
-  private var fitting: some View {
-    let density = DayRowsDensity(members: members.count)
-    return HStack(spacing: 0) {
-      // Over the rows' dates, as wide as theirs.
-      Color.clear.frame(width: english ? englishDateWidth : dateWidth, height: 1)
-      ForEach(members) { member in
-        HStack(spacing: 4) {
-          MemberAvatar(
-            name: member.name, photoID: member.photoID, shelf: .group(groupID), size: 24,
-            userID: member.userID)
-          .opensLegend(of: member)
-          if density == .names {
-            Text(member.name)
-              .font(.footnote.weight(.semibold))
-              .foregroundStyle(colors.textPrimary)
-              .lineLimit(1)
-          }
-        }
-        .padding(.horizontal, 4)
-        .frame(maxWidth: density.columnWidth == nil ? .infinity : nil)
-        .frame(width: density.columnWidth)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(member.name)
+      } else {
+        dateRoom
+        ForEach(members) { face($0, density: density) }
       }
     }
     .padding(.vertical, 8)
     .overlay(alignment: .bottom) {
       Rectangle().fill(colors.separator).frame(height: 1)
     }
+  }
+
+  /// Over the rows' dates, as wide as theirs.
+  private var dateRoom: some View {
+    Color.clear.frame(width: english ? englishDateWidth : dateWidth, height: 1)
+  }
+
+  private func face(_ member: GroupMember, density: DayRowsDensity) -> some View {
+    HStack(spacing: 4) {
+      MemberAvatar(
+        name: member.name, photoID: member.photoID, shelf: .group(groupID), size: 24,
+        userID: member.userID)
+      .opensLegend(of: member)
+      if density == .names {
+        Text(member.name)
+          .font(.footnote.weight(.semibold))
+          .foregroundStyle(colors.textPrimary)
+          .lineLimit(1)
+      }
+    }
+    .padding(.horizontal, 4)
+    .frame(maxWidth: density.columnWidth == nil ? .infinity : nil)
+    .frame(width: density.columnWidth)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(member.name)
+  }
+}
+
+/// A part of 一覧's heading moved as the rows under it scroll sideways.
+/// Pinned, the viewer's face: it goes with the rows until their pinned
+/// columns stop at the scroll view's edge, and stays over them there, and
+/// is pulled right with them past the left edge.
+private struct FollowsRows: ViewModifier {
+  let offset: SidewaysOffset
+  let pinned: Bool
+
+  func body(content: Content) -> some View {
+    content.offset(x: pinned ? max(-offset.x, -offset.inset) : -offset.x)
+  }
+}
+
+/// Which part of a day's row its band or frame is drawn over: all of it,
+/// or, scrolling sideways, the pinned columns' part or the others'.
+private enum RowPart {
+  case whole, pinned, others
+
+  /// `shape` set in from this part's edges, the end where the other part
+  /// goes on run a corner's radius past it and cut there: the two parts
+  /// meet square, and the others' end slides under the pinned columns.
+  func fit(_ shape: some View) -> some View {
+    let open = -Radius.sm
+    let insets =
+      switch self {
+      case .whole: rowInset
+      case .pinned:
+        EdgeInsets(top: rowInset.top, leading: rowInset.leading, bottom: rowInset.bottom, trailing: open)
+      case .others:
+        EdgeInsets(top: rowInset.top, leading: open, bottom: rowInset.bottom, trailing: rowInset.trailing)
+      }
+    return Color.clear.overlay { shape.padding(insets) }.clipped()
   }
 }
 
@@ -151,10 +209,9 @@ struct GroupDayRow: View, @MainActor Equatable {
   let members: [GroupMember]
   let picked: Bool
   let onPick: Handler<Day>
-  /// A big group's table scrolled sideways this far: the date and the
-  /// first member's column (the viewer's own) stay at the left, over the
-  /// others. Nil while everyone fits.
-  var pinX: CGFloat?
+  /// Scrolling sideways, the date and the first member's column (the
+  /// viewer's own) stay at the left, over the others.
+  var sideways = Sideways.fits
   /// Today as the row is made, so a row left as it was still moves today's
   /// mark once a new day has come and the list is made again.
   var today = Day.today
@@ -165,7 +222,7 @@ struct GroupDayRow: View, @MainActor Equatable {
   /// each time. `onPick` is the page's own, the same throughout.
   static func == (a: GroupDayRow, b: GroupDayRow) -> Bool {
     a.day == b.day && a.members == b.members && a.picked == b.picked && a.onPick === b.onPick
-      && a.pinX == b.pinX && a.today == b.today && a.drawing == b.drawing
+      && a.sideways == b.sideways && a.today == b.today && a.drawing == b.drawing
   }
 
   private var colors: ThemeColors { drawing.colors }
@@ -198,23 +255,19 @@ struct GroupDayRow: View, @MainActor Equatable {
         .accessibilityLabel("\(members[index].name)：\(patterns[index]?.name ?? "未入力")")
       }
       HStack(spacing: 0) {
-        if let pinX {
+        if case .scrolls(let edged) = sideways {
           // The date and the viewer's own column, kept at the left on the
-          // page's ground as the others pass under them; the day's band
-          // and today's bar go with them.
+          // page's ground as the others pass under them, with their part of
+          // the day's band and frame and today's bar.
           HStack(spacing: 0) {
             date()
             if !members.isEmpty { column(0) }
           }
           .background {
-            if together {
-              UnevenRoundedRectangle(
-                topLeadingRadius: Radius.sm, bottomLeadingRadius: Radius.sm, style: .continuous
-              )
-              .fill(colors.accentContainer)
-              .padding(.vertical, rowInset.top)
-              .padding(.leading, rowInset.leading)
-            }
+            if together { band(.pinned) }
+          }
+          .overlay {
+            if picked { pickedFrame(.pinned) }
           }
           // The page's ground, out over its margin too, so nothing passing
           // under shows beside the dates.
@@ -226,14 +279,22 @@ struct GroupDayRow: View, @MainActor Equatable {
           }
           // An edge beside them only while others pass under.
           .overlay(alignment: .trailing) {
-            if pinX > 0 {
+            if edged {
               Rectangle().fill(colors.separator).frame(width: 1)
             }
           }
-          .offset(x: pinX)
+          .pinnedSideways()
           .zIndex(1)
-          ForEach(1..<max(members.count, 1), id: \.self) { index in
-            column(index)
+          HStack(spacing: 0) {
+            ForEach(1..<max(members.count, 1), id: \.self) { index in
+              column(index)
+            }
+          }
+          .background {
+            if together { band(.others) }
+          }
+          .overlay {
+            if picked { pickedFrame(.others) }
           }
         } else {
           date()
@@ -245,27 +306,16 @@ struct GroupDayRow: View, @MainActor Equatable {
       .frame(minHeight: 36)
       // みんな休み: the day's tiles joined along the row.
       .background {
-        if together {
-          RoundedRectangle(cornerRadius: Radius.sm)
-            .fill(colors.accentContainer)
-            .padding(rowInset)
-            // Scrolled sideways, from the pinned date on.
-            .padding(.leading, pinX ?? 0)
-        }
+        if together, sideways == .fits { band(.whole) }
       }
       .overlay {
-        if picked {
-          RoundedRectangle(cornerRadius: Radius.sm)
-            .strokeBorder(colors.accentDefault, lineWidth: 1.5)
-            .padding(rowInset)
-            .padding(.leading, pinX ?? 0)
-        }
+        if picked, sideways == .fits { pickedFrame(.whole) }
       }
       // Today: a bar down the row's start, its whole height, as /design's
       // border; the band and frame start inside it. Pinned, the pinned
       // columns draw it.
       .overlay(alignment: .leading) {
-        if isToday, pinX == nil {
+        if isToday, sideways == .fits {
           Rectangle().fill(colors.accentDefault).frame(width: todayBar)
         }
       }
@@ -279,6 +329,17 @@ struct GroupDayRow: View, @MainActor Equatable {
     .accessibilityLabel(
       "\(day.monthDayText)\(together ? "、みんな休み" : "")")
     .accessibilityAddTraits(picked ? .isSelected : [])
+  }
+
+  /// みんな休み's band behind `part` of the row.
+  private func band(_ part: RowPart) -> some View {
+    part.fit(RoundedRectangle(cornerRadius: Radius.sm).fill(colors.accentContainer))
+  }
+
+  /// The picked day's frame over `part` of the row.
+  private func pickedFrame(_ part: RowPart) -> some View {
+    part.fit(
+      RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(colors.accentDefault, lineWidth: 1.5))
   }
 
   private func date() -> some View {

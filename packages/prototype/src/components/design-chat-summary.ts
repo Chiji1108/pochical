@@ -48,7 +48,7 @@ export function lastLineOf(
   let text = summaryOf(last, nameOf);
   if (last.days || (last.poll && !last.poll.decided)) {
     text = `${text}を共有しました`;
-  } else if (last.photo) {
+  } else if (last.photos) {
     text = "写真を送りました";
   }
   return writer?.me ? `自分：${text}` : text;
@@ -58,8 +58,10 @@ export function summaryOf(message: Message, nameOf: (id: string) => string) {
   if (message.unsent) {
     return "取り消されたメッセージ";
   }
-  if (message.photo) {
-    return "📷 写真";
+  if (message.photos) {
+    return message.photos.length > 1
+      ? `📷 写真${message.photos.length}枚`
+      : "📷 写真";
   }
   if (message.poll) {
     return pollSummary(message.poll);

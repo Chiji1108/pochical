@@ -66,9 +66,9 @@ public interface ServerFrameOrBuilder extends
 
   /**
    * <pre>
-   * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-   * CoworkerEdits the server has taken, sent after the Changes they made;
-   * the client deletes them from its outbox.
+   * The edits of a frame of edits the server is done with, sent after the
+   * Changes they made; the client deletes them from its outbox, keeping
+   * the chat sends Acked.refused names as lines not sent.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
@@ -77,9 +77,9 @@ public interface ServerFrameOrBuilder extends
   boolean hasAcked();
   /**
    * <pre>
-   * The edits of a DayEdits, PatternEdits, RepeatOrdersEdits or
-   * CoworkerEdits the server has taken, sent after the Changes they made;
-   * the client deletes them from its outbox.
+   * The edits of a frame of edits the server is done with, sent after the
+   * Changes they made; the client deletes them from its outbox, keeping
+   * the chat sends Acked.refused names as lines not sent.
    * </pre>
    *
    * <code>.pochical.v1.Acked acked = 5 [json_name = "acked"];</code>
