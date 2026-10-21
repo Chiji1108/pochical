@@ -13,13 +13,12 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 
+import { answering, changing, stopping, writingOf } from "../lib/chat-messages";
 import {
   firstLink,
   inviteCodeOf,
   mentionQuery,
-  mentionsOf,
   pickingMention,
-  plainText,
   siteOf,
 } from "../lib/chat-text";
 import { useDevice } from "../lib/design-device";
@@ -41,8 +40,6 @@ import { floatingGlass, IconButton } from "./design-ui";
 // Writing in a chat: what is being written (useComposer), the page of a
 // link as it is written, and the composer floating at the chat's foot.
 
-type Mention = { id: string; name: string };
-
 // A chat with no one to mention, as the support chat.
 export const noOne: Member[] = [];
 
@@ -50,7 +47,7 @@ export const nameless = () => "";
 
 // What is being written: the words, the members picked from the @ list,
 // days brought from the shift table, photos chosen, the page of its first
-// link, and your message whose words are being changed instead.
+// link, and the line it answers or your line whose words it changes.
 export function useComposer({
   attach,
   kept,
@@ -66,18 +63,15 @@ export function useComposer({
   // A mention's name, for words put back to be changed.
   mentionName?: (id: string) => string;
 }) {
-  const [draft, setDraft] = useState(() =>
-    kept ? plainText(kept.text, mentionName) : ""
+  const [writing, setWriting] = useState(() =>
+    writingOf(kept?.text ?? "", mentionName, kept?.target)
   );
-  // The mentions in words put back in the composer, as if picked.
-  const picksOf = (text: string): Mention[] =>
-    mentionsOf(text).map((id) => ({ id, name: mentionName(id) }));
-  // Members picked from the @ list, made mentions as the message is sent.
-  const [picked, setPicked] = useState(() => picksOf(kept?.text ?? ""));
+  const { words: draft, picked, target } = writing;
+  const editing = target?.kind === "edit" ? target.id : undefined;
+  const replyTo = target?.kind === "reply" ? target.id : undefined;
   const [attached, setAttached] = useState(attach);
   const linkPreview = useLinkPreview(draft);
   const chosen = useChosenPhotos();
-  const [editing, setEditing] = useState(kept?.editing);
   const formRef = useRef<HTMLFormElement>(null);
   // An @ being written at the end of the message lists the others whose
   // name has what follows it, as LINE does; one picked goes in as @name
@@ -87,34 +81,44 @@ export function useComposer({
     query === undefined
       ? []
       : members.filter((member) => !member.me && member.name.includes(query));
+  const setDraft = (words: string) => {
+    setWriting((before) => ({ ...before, words }));
+  };
   const pickMention = (member: Member) => {
-    setDraft(pickingMention(draft, member.name));
-    setPicked((before) => [
-      ...before.filter((other) => other.id !== member.id),
-      { id: member.id, name: member.name },
-    ]);
+    setWriting((before) => ({
+      ...before,
+      picked: [
+        ...before.picked.filter((other) => other.id !== member.id),
+        { id: member.id, name: member.name },
+      ],
+      words: pickingMention(before.words, member.name),
+    }));
   };
   const clear = () => {
-    setDraft("");
-    setPicked([]);
+    setWriting((before) => ({ ...before, picked: [], words: "" }));
     linkPreview.reset();
     setAttached(undefined);
     chosen.clear();
   };
-  // Puts your message's words back in the composer to change them, its
-  // mentions as @name again.
+  // Puts your message's words back in the composer to change them.
   const startEditing = (message: Message) => {
-    const text = message.content.kind === "words" ? message.content.text : "";
-    setEditing(message.id);
-    setDraft(plainText(text, mentionName));
-    setPicked(picksOf(text));
+    setWriting(changing(message, mentionName));
     formRef.current?.querySelector("textarea")?.focus();
   };
-  const stopEditing = () => {
-    setEditing(undefined);
-    setDraft("");
-    setPicked([]);
-    linkPreview.reset();
+  // Answers a line; an edit it replaces takes its words and their link's
+  // page with it.
+  const reply = (id: string) => {
+    if (editing !== undefined) {
+      linkPreview.reset();
+    }
+    setWriting((before) => answering(before, id));
+  };
+  // × on the bar of the line answered or changed.
+  const stop = () => {
+    if (editing !== undefined) {
+      linkPreview.reset();
+    }
+    setWriting(stopping);
   };
   // Something to send, once every photo chosen has been read.
   const sendable =
@@ -134,11 +138,14 @@ export function useComposer({
     photos: chosen.photos,
     pickMention,
     picked,
+    reply,
+    replyTo,
     sendable,
     setAttached,
     setDraft,
     startEditing,
-    stopEditing,
+    stop,
+    target,
   };
 }
 
@@ -376,7 +383,7 @@ export function Composer({
             <ComposerStrip
               name="メッセージを編集"
               onStop={() => {
-                composer.stopEditing();
+                composer.stop();
               }}
               stopLabel="編集をやめる"
               text={summaryOf(editingMessage, mentionName)}
