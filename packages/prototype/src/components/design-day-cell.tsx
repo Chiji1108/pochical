@@ -56,15 +56,6 @@ export const dayCell = cva({
         outlineOffset: "-2px",
       },
     },
-    // The group's month of one person: a day you are off too, framed. Not
-    // with the picked day's frame, which is on it instead. The frame stays
-    // inside the day, or it would show at the edge of the month beside.
-    together: {
-      true: {
-        outline: "1.5px solid token(colors.accent.border)",
-        outlineOffset: "-1.5px",
-      },
-    },
     // A day off in its own pattern's tint, set as --off-tint.
     off: { true: { bg: "var(--off-tint, token(colors.calendar.offTint))" } },
     // A day of the month before or after: the same day, faded whole, as on
@@ -78,6 +69,15 @@ export const dayCell = cva({
     today: {
       true: {
         outline: "1.5px solid token(colors.accent.focus)",
+        outlineOffset: "-1.5px",
+      },
+    },
+    // The group's month of one person: a day you are off too, framed. Not
+    // with the picked day's frame, which is on it instead. The frame stays
+    // inside the day, or it would show at the edge of the month beside.
+    together: {
+      true: {
+        outline: "1.5px solid token(colors.accent.border)",
         outlineOffset: "-1.5px",
       },
     },
