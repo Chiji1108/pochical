@@ -201,7 +201,7 @@ private struct RepeatPeriodPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Environment(\.say) private var say
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   @Fetch(WorkValues()) private var values = WorkValues.Value()
   @State var start: Day
   @State private var removing = false
@@ -292,19 +292,18 @@ private struct RepeatPeriodPage: View {
     var moved = order
     moved.anchor = order.anchor ?? order.start
     moved.start = day
-    try? database.write { try OwnValues.put(moved, replacing: order.start, now: nowMs(), in: $0) }
+    guard write({ try OwnValues.put(moved, replacing: order.start, now: nowMs(), in: $0) }) else {
+      return
+    }
     start = day
   }
 
   private func setHolidaysOff(_ on: Bool, picking: PatternID? = nil) {
-    try? database.write {
-      try OwnValues.setHolidaysOff(on, picking: picking, from: start, now: nowMs(), in: $0)
-    }
+    write { try OwnValues.setHolidaysOff(on, picking: picking, from: start, now: nowMs(), in: $0) }
   }
 
   private func remove() {
-    try? database.write { try OwnValues.remove(start, now: nowMs(), in: $0) }
-    dismiss()
+    if write({ try OwnValues.remove(start, now: nowMs(), in: $0) }) { dismiss() }
   }
 }
 
@@ -473,7 +472,7 @@ enum RepeatMode: Hashable {
 private struct RepeatEditor: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   @Fetch(WorkValues()) private var values = WorkValues.Value()
   /// The days as they show now, for those the order leaves.
   @FetchAll private var days: [DayRow]
@@ -585,8 +584,7 @@ private struct RepeatEditor: View {
       sequence: steps, start: start, anchor: anchor, holidaysOff: holidays,
       holidayShift: holidays ? shift : nil,
       holidayCountry: fixing?.holidayCountry ?? HolidayCountry.current)
-    try? database.write { try OwnValues.put(order, now: nowMs(), in: $0) }
-    dismiss()
+    if write({ try OwnValues.put(order, now: nowMs(), in: $0) }) { dismiss() }
   }
 }
 
@@ -594,7 +592,7 @@ private struct RepeatEditor: View {
 /// by hand until the next period; the others, and days entered, stay.
 private struct StopRepeatPage: View {
   @Environment(\.dismiss) private var dismiss
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   @Fetch(WorkValues()) private var values = WorkValues.Value()
   @State private var day = nextMonthStart
 
@@ -621,8 +619,7 @@ private struct StopRepeatPage: View {
         Button {
           let order = RepeatOrder(
             sequence: [], start: day, holidayCountry: HolidayCountry.current)
-          try? database.write { try OwnValues.put(order, now: nowMs(), in: $0) }
-          dismiss()
+          if write({ try OwnValues.put(order, now: nowMs(), in: $0) }) { dismiss() }
         } label: {
           HStack(spacing: 6) {
             Text("\(day.slashText)から繰り返しをやめる")
