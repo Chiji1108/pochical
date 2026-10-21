@@ -123,6 +123,9 @@ const content = cva({
       },
       true: { maxHeight: "85%" },
     },
+    // A picture of a sheet on its own (SheetPicture): round corners all
+    // around and its whole height.
+    alone: { true: { borderRadius: "xl", maxHeight: "none" } },
   },
 });
 
@@ -151,15 +154,7 @@ export function SheetPicture({
   handle?: boolean;
   children: ReactNode;
 }) {
-  // Alone it has round corners all around and its whole height. The
-  // styles are merged rather than joined: two classes for one property
-  // would leave the winner to the stylesheet's order.
-  const look = over
-    ? content({ modal: true })
-    : css(content.raw({ modal: true }), {
-        borderRadius: "xl",
-        maxHeight: "none",
-      });
+  const look = over ? content({ modal: true }) : content({ alone: true });
   const drawn = (
     <section className={look}>
       {handle && (

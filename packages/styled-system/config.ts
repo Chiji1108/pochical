@@ -54,7 +54,6 @@ export const config = defineConfig({
   // and not from each app that loads the config.
   presets: [presetBase, presetPanda],
   importMap: "@pochical/styled-system",
-  jsxFramework: "react",
   // The token variables point at the theme's, which themeStyle() sets on
   // each phone and preview, not on the page: declared again wherever a
   // theme is set, they resolve against that theme rather than the page's.
