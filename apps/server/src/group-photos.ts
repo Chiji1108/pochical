@@ -23,9 +23,10 @@ import { groupPhotos, members, profile } from "./group-do-schema";
  * is stored yet (`noted`: a new id, or the uploader's own not sent yet,
  * whose first bytes stay); nothing, as the uploader's line carries it
  * already (`sent`: a send tried again after its answer was lost uploads
- * it again); nothing, as it is someone else's or one the group shows
- * (`refused`); nothing yet, as the sweep is deleting the uploader's own
- * from storage, after which the same upload stores it anew (`going`).
+ * it again); nothing, as it is someone else's, one the group shows, or
+ * one whose line was taken back (`refused`); nothing yet, as the sweep is
+ * deleting the uploader's own from storage, after which the same upload
+ * stores it anew (`going`).
  */
 export type PhotoNote = "noted" | "sent" | "refused" | "going";
 

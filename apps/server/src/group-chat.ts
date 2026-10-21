@@ -270,6 +270,15 @@ const onLines = (db: DrizzleSqliteDODatabase, rows: LineRow[]) => {
   };
 };
 
+/** A photo as a line keeps it. */
+type KeptPhoto = NonNullable<LineRow["photos"]>[number];
+
+/** A kept photo as the wire carries it. */
+const sentPhoto = (photo: KeptPhoto) => ({
+  ...photo,
+  thumbHash: sentThumbHash(photo.thumbHash),
+});
+
 /** The wire's kind of each notice kept. */
 const noticeKinds = {
   inviteRemade: ChatNotice_Kind.INVITE_REMADE,
@@ -291,7 +300,6 @@ const lineChange = (
     kind: {
       case: "chatLine",
       value: create(ChatLineSchema, {
-        album: row.album ?? "",
         authorId: row.authorId,
         days: row.days ?? [],
         decided: row.decided ?? "",
@@ -306,10 +314,7 @@ const lineChange = (
                 subjectId: row.notice.subjectId ?? "",
               },
         opId: row.opId,
-        photo:
-          row.photo === null
-            ? undefined
-            : { ...row.photo, thumbHash: sentThumbHash(row.photo.thumbHash) },
+        photos: (row.photos ?? []).map(sentPhoto),
         pinnedOrder: BigInt(row.pinnedAt ?? 0),
         poll: row.poll,
         preview: row.preview ?? undefined,
@@ -480,48 +485,58 @@ const fitsDays = (days: readonly string[]): boolean =>
 /** The fewest days a poll puts to the vote. */
 const POLL_MIN_DAYS = 2;
 
-/**
- * An album's name (ChatSend.album): printable ASCII, 64 at most, as it is
- * the notifications' apns-collapse-id, which APNs takes up to 64 bytes.
- */
-const ALBUM_NAME = /^[\u0021-\u007E]{1,64}$/u;
-
 /** A photo's size, as the sender read it while shrinking it to send. */
 const fitsPhotoSize = (side: number): boolean =>
   side >= 1 && side <= chatRules.photoMaxEdge;
 
-/** Whether `photoId` is one `userId` uploaded and has not sent. */
-const ownUnsentPhoto = (
+/**
+ * Those of `photoIds` that `userId` uploaded and has not sent; none past
+ * the most one send holds, as no send names more.
+ */
+const ownUnsentPhotos = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  photoId: string
-): boolean => {
-  const uploaded = db
-    .select()
-    .from(groupPhotos)
-    .where(eq(groupPhotos.id, photoId))
-    .get();
-  return uploaded?.userId === userId && uploaded.state === "unsent";
-};
+  photoIds: string[]
+): string[] =>
+  photoIds.length === 0 || photoIds.length > chatRules.photosPerSend
+    ? []
+    : db
+        .select({ id: groupPhotos.id })
+        .from(groupPhotos)
+        .where(
+          and(
+            inArray(groupPhotos.id, photoIds),
+            eq(groupPhotos.userId, userId),
+            eq(groupPhotos.state, "unsent")
+          )
+        )
+        .all()
+        .map(({ id }) => id);
 
 /**
- * A photo line: the sender's own photo, uploaded and not sent before,
- * with no words or days.
+ * A photo line: 1 to chatRules.photosPerSend photos, each once, each the
+ * sender's own, uploaded and not sent before, with no words or days.
  */
-const fitsPhoto = (
+const fitsPhotos = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  { text, days, poll, photo, album }: ChatSend
+  { text, days, poll, photos }: ChatSend
 ): boolean => {
-  if (photo === undefined || text !== "" || days.length > 0 || poll) {
-    return false;
-  }
+  const ids = photos.map(({ id }) => id);
   return (
-    ownUnsentPhoto(db, userId, photo.id) &&
-    fitsPhotoSize(photo.width) &&
-    fitsPhotoSize(photo.height) &&
-    fitsThumbHash(photo.thumbHash) &&
-    (album === "" || ALBUM_NAME.test(album))
+    text === "" &&
+    days.length === 0 &&
+    !poll &&
+    ids.length > 0 &&
+    ids.length <= chatRules.photosPerSend &&
+    new Set(ids).size === ids.length &&
+    photos.every(
+      ({ width, height, thumbHash }) =>
+        fitsPhotoSize(width) &&
+        fitsPhotoSize(height) &&
+        fitsThumbHash(thumbHash)
+    ) &&
+    ownUnsentPhotos(db, userId, ids).length === ids.length
   );
 };
 
@@ -529,11 +544,7 @@ const fitsPhoto = (
  * A new line's words, or its days with no words; a poll's days are two
  * at least, in the group chat (a one-to-one chat has no polls).
  */
-const fitsSend = ({ text, days, poll, threadId, album }: ChatSend): boolean => {
-  // An album is photos'.
-  if (album !== "") {
-    return false;
-  }
+const fitsSend = ({ text, days, poll, threadId }: ChatSend): boolean => {
   if (days.length === 0) {
     return !poll && fitsLine(text);
   }
@@ -810,7 +821,7 @@ const takeReaction = (
 
 /**
  * One of the member's lines taken back (送信取消) at `cursor`, with its
- * words, days, photo, reactions, votes and pin.
+ * words, days, photos, reactions, votes and pin.
  */
 const unsendLine = (
   db: DrizzleSqliteDODatabase,
@@ -829,11 +840,10 @@ const unsendLine = (
   const row = db
     .update(chatLines)
     .set({
-      album: null,
       cursor,
       days: null,
       decided: null,
-      photo: null,
+      photos: null,
       pinnedAt: null,
       preview: null,
       replyTo: null,
@@ -846,11 +856,15 @@ const unsendLine = (
   if (row === undefined) {
     return {};
   }
-  const change = chatLineChange(db, row);
-  // Its photo goes from the group's photos too, once the change is kept.
-  return line.photo === null
-    ? { change }
-    : { change, photoGone: line.photo.id };
+  const photosGone = (line.photos ?? []).map(({ id }) => id);
+  if (photosGone.length > 0) {
+    db.update(groupPhotos)
+      .set({ state: "takenBack" })
+      .where(inArray(groupPhotos.id, photosGone))
+      .run();
+  }
+  // Its photos go from storage too, once the change is kept.
+  return { change: chatLineChange(db, row), photosGone };
 };
 
 /** New words for one of the member's own lines at `cursor` (編集). */
@@ -894,7 +908,7 @@ const takeOwnLine = (
   }
   const fits =
     kind.case === "unsend" ||
-    (line.days === null && line.photo === null && fitsLine(kind.value.text));
+    (line.days === null && line.photos === null && fitsLine(kind.value.text));
   if (line.authorId !== userId || line.unsent || !fits) {
     return { refused: chatLineChange(db, line) };
   }
@@ -906,12 +920,12 @@ const takeOwnLine = (
 /**
  * A send kept from coming after all, as its recall is taken at `now`;
  * those kept chatRules.unsentAfterMs ago go, no send being on its way
- * that long. Its photo goes at once, as no line will ever carry it.
+ * that long. Its photos go at once, as no line will ever carry them.
  */
 const keepRecall = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  { sendOpId, photoId }: ChatRecall,
+  { sendOpId, photoIds }: ChatRecall,
   now: Date
 ): Taken => {
   db.delete(chatRecalls)
@@ -923,11 +937,11 @@ const keepRecall = (
     .values({ opId: sendOpId, takenAt: now, userId })
     .onConflictDoNothing()
     .run();
-  if (photoId === "" || !ownUnsentPhoto(db, userId, photoId)) {
-    return {};
+  const photosGone = ownUnsentPhotos(db, userId, photoIds);
+  if (photosGone.length > 0) {
+    db.delete(groupPhotos).where(inArray(groupPhotos.id, photosGone)).run();
   }
-  db.delete(groupPhotos).where(eq(groupPhotos.id, photoId)).run();
-  return { photoGone: photoId };
+  return { photosGone };
 };
 
 /**
@@ -1125,8 +1139,8 @@ type Taken = {
   // A second line it changed, at a cursor of its own: the pin a new pin
   // took the place of.
   alsoChanged?: Change;
-  // The photo of a line taken back, to delete from the group's photos.
-  photoGone?: string;
+  // The photos of a line taken back, to delete from the group's photos.
+  photosGone?: string[];
   refused?: Change;
   // Why a send was not taken, for its ack to tell the sender.
   refusal?: RefusedSend_Reason;
@@ -1156,9 +1170,9 @@ const takeSend = (
     .from(chatRecalls)
     .where(and(eq(chatRecalls.userId, userId), eq(chatRecalls.opId, opId)))
     .get();
-  const { photo, replyTo } = send;
+  const { photos, replyTo } = send;
   const fits =
-    photo === undefined ? fitsSend(send) : fitsPhoto(db, userId, send);
+    photos.length === 0 ? fitsSend(send) : fitsPhotos(db, userId, send);
   if (taken !== undefined || recalled !== undefined) {
     return {};
   }
@@ -1169,16 +1183,20 @@ const takeSend = (
   if (!fits) {
     return { refusal: RefusedSend_Reason.DOES_NOT_FIT };
   }
-  if (photo !== undefined) {
+  if (photos.length > 0) {
     db.update(groupPhotos)
       .set({ state: "sent" })
-      .where(eq(groupPhotos.id, photo.id))
+      .where(
+        inArray(
+          groupPhotos.id,
+          photos.map(({ id }) => id)
+        )
+      )
       .run();
   }
   const row = db
     .insert(chatLines)
     .values({
-      album: send.album === "" ? null : send.album,
       authorId: userId,
       createdCursor: cursor,
       cursor,
@@ -1188,15 +1206,15 @@ const takeSend = (
       // its writer.
       hiddenFrom: blockedBy(db, send.threadId, userId),
       opId,
-      photo:
-        photo === undefined
+      photos:
+        photos.length === 0
           ? null
-          : {
-              height: photo.height,
-              id: photo.id,
-              thumbHash: keptThumbHash(photo.thumbHash),
-              width: photo.width,
-            },
+          : photos.map(({ height, id, thumbHash, width }) => ({
+              height,
+              id,
+              thumbHash: keptThumbHash(thumbHash),
+              width,
+            })),
       poll: send.poll,
       // A page goes with words alone.
       preview: send.text === "" ? null : sentPreview(send.preview, send.text),
@@ -1362,9 +1380,7 @@ export const eraseMemberChat = (
     if (taken.change !== undefined) {
       changes.push(taken.change);
     }
-    if (taken.photoGone !== undefined) {
-      photosGone.push(taken.photoGone);
-    }
+    photosGone.push(...(taken.photosGone ?? []));
   }
   // The lines others wrote that their reactions or votes were on.
   const touched = new Map<string, { seq: number; threadId: string }>();
@@ -1452,7 +1468,7 @@ const seenPhotos = (
 ): SQL | undefined =>
   and(
     eq(chatLines.threadId, threadId),
-    isNotNull(chatLines.photo),
+    isNotNull(chatLines.photos),
     eq(chatLines.unsent, false),
     notHiddenFrom(userId),
     threadId === GROUP_THREAD
@@ -1474,10 +1490,14 @@ const askedSide = (seq: number, after: boolean): SQL | undefined => {
   return seq === 0 ? undefined : lt(chatLines.seq, seq);
 };
 
+/** How many photos a line holds, in SQL. */
+const photoCount = sql<number>`json_array_length(${chatLines.photos})`;
+
 /**
- * A page of the chat's photos alone (ChatPhotosRequest): up to `size` of
- * those the reader sees nearest `seq`, before it or after it, oldest first;
- * how many come before them, and how many the chat holds for the reader
+ * A page of the chat's photos alone (ChatPhotosRequest): the lines the
+ * reader sees nearest `seq`, before it or after it, as many as fit whole
+ * in `size` photos and one at least, their photos oldest first; how many
+ * photos come before them, and how many the chat holds for the reader
  * (spec/vectors/chat-photos.json, page).
  */
 export const photosPage = (
@@ -1500,16 +1520,19 @@ export const photosPage = (
   const counted = db
     .select({
       onSide:
-        side === undefined ? count() : sql<number>`coalesce(sum(${side}), 0)`,
-      total: count(),
+        side === undefined
+          ? sql<number>`coalesce(sum(${photoCount}), 0)`
+          : sql<number>`coalesce(sum((${side}) * ${photoCount}), 0)`,
+      total: sql<number>`coalesce(sum(${photoCount}), 0)`,
     })
     .from(chatLines)
     .where(seen)
     .get() ?? { onSide: 0, total: 0 };
+  // Each line holds one photo at least, so `size` lines are enough.
   const nearest = db
     .select({
       authorId: chatLines.authorId,
-      photo: chatLines.photo,
+      photos: chatLines.photos,
       sentAt: chatLines.sentAt,
       seq: chatLines.seq,
     })
@@ -1518,24 +1541,28 @@ export const photosPage = (
     .orderBy(after ? asc(chatLines.seq) : desc(chatLines.seq))
     .limit(size)
     .all();
-  const page = after ? nearest : nearest.toReversed();
+  const lines: typeof nearest = [];
+  let held = 0;
+  for (const line of nearest) {
+    const holds = line.photos?.length ?? 0;
+    if (lines.length > 0 && held + holds > size) {
+      break;
+    }
+    lines.push(line);
+    held += holds;
+  }
+  const page = after ? lines : lines.toReversed();
   return {
     // After `seq`, those up to it come before; before it, those before it
     // the page leaves out.
-    offset: after
-      ? counted.total - counted.onSide
-      : counted.onSide - page.length,
-    photos: page.flatMap(({ authorId, photo, sentAt, seq: lineSeq }) =>
-      photo === null
-        ? []
-        : [
-            {
-              authorId,
-              photo: { ...photo, thumbHash: sentThumbHash(photo.thumbHash) },
-              sentAtMs: BigInt(sentAt.getTime()),
-              seq: BigInt(lineSeq),
-            },
-          ]
+    offset: after ? counted.total - counted.onSide : counted.onSide - held,
+    photos: page.flatMap(({ authorId, photos, sentAt, seq: lineSeq }) =>
+      (photos ?? []).map((photo) => ({
+        authorId,
+        photo: sentPhoto(photo),
+        sentAtMs: BigInt(sentAt.getTime()),
+        seq: BigInt(lineSeq),
+      }))
     ),
     total: counted.total,
   };
@@ -1650,7 +1677,7 @@ export const reportContext = (
       authorId: row.authorId,
       days: row.days,
       name: nameOf(row.authorId),
-      photo: row.photo?.id,
+      photos: row.photos?.map(({ id }) => id),
       reported: row.seq === target.seq,
       seq: row.seq,
       text: plainText(row.text, nameOf),
@@ -1684,7 +1711,7 @@ export const alertOf = (
 ): Alert => {
   const writer = nameOf(line.authorId);
   let kind = "TEXT";
-  if (line.photo !== undefined) {
+  if (line.photos.length > 0) {
     kind = "PHOTO";
   } else if (line.poll) {
     kind = "POLL";
@@ -1701,9 +1728,6 @@ export const alertOf = (
     body: direct
       ? { args: said, key: `CHAT_${kind}` }
       : { args: [writer, ...said], key: `CHAT_GROUP_${kind}` },
-    // An album's photos come as one notification, each new one in its
-    // place, as Messages and Telegram show them.
-    collapseId: line.album === "" ? undefined : line.album,
     groupId: group.id,
     line: { authorId: line.authorId, seq: Number(line.seq) },
     threadId: line.threadId,

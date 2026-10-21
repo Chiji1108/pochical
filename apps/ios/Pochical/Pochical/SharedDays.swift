@@ -14,13 +14,15 @@ func daysSummary(_ days: [Day]) -> String {
   return "📅 \(first.fullText)\(days.count > 1 ? "ほか" : "")"
 }
 
-/// A line in a line of words: its days as daysSummary, else its words
-/// with its mentions as names.
+/// A line in a line of words: its photos (`photos` of them) as 📷 写真, or
+/// 📷 写真3枚 for several; its days as daysSummary; else its words with its
+/// mentions as names.
 func lineWords(
-  _ text: String, days: [Day], poll: Bool = false, decided: Day? = nil, photo: Bool = false,
+  _ text: String, days: [Day], poll: Bool = false, decided: Day? = nil, photos: Int = 0,
   nameOf: (String) -> String
 ) -> String {
-  if photo { return "📷 写真" }
+  if photos == 1 { return "📷 写真" }
+  if photos > 1 { return "📷 写真\(photos)枚" }
   if poll { return pollSummary(days, decided: decided) }
   return days.isEmpty ? plainText(text, nameOf: nameOf) : daysSummary(days)
 }

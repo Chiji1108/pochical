@@ -112,26 +112,25 @@ const answerFromSlack = async (
   if (images.length < files.length) {
     missed.push("写真のほかのファイルや、一度に送れる枚数を超えた写真");
   }
-  const edits: ReturnType<typeof editOf>[] = [];
-  for (const [index, image] of images.entries()) {
+  const photos: { id: string; width: number; height: number }[] = [];
+  for (const image of images) {
     // oxlint-disable-next-line no-await-in-loop -- the photos go in order
     const photo = await keepSlackPhoto(env, chat.userId, image);
     if (photo === null) {
       missed.push("読めなかった写真");
     } else {
-      edits.push(
-        editOf(`${base}-photo-${index}`, {
-          case: "send",
-          value: {
-            // Photos posted at once are one album, as the app sends them.
-            album: images.length > 1 ? base : "",
-            photo,
-            text: "",
-            threadId: GROUP_THREAD,
-          },
-        })
-      );
+      photos.push(photo);
     }
+  }
+  const edits: ReturnType<typeof editOf>[] = [];
+  // Photos posted at once are one line, as the app sends them.
+  if (photos.length > 0) {
+    edits.push(
+      editOf(`${base}-photos`, {
+        case: "send",
+        value: { photos, text: "", threadId: GROUP_THREAD },
+      })
+    );
   }
   const words = fromSlackText(stringOf(event.text) ?? "", event.blocks).trim();
   if (words !== "" || images.length === 0) {

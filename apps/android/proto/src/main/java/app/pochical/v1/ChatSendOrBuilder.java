@@ -99,25 +99,6 @@ public interface ChatSendOrBuilder extends
 
   /**
    * <pre>
-   * A photo instead, the sender's own, uploaded first; no words or days.
-   * </pre>
-   *
-   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-   * @return Whether the photo field is set.
-   */
-  boolean hasPhoto();
-  /**
-   * <pre>
-   * A photo instead, the sender's own, uploaded first; no words or days.
-   * </pre>
-   *
-   * <code>.pochical.v1.ChatPhoto photo = 5 [json_name = "photo"];</code>
-   * @return The photo.
-   */
-  app.pochical.v1.ChatPhoto getPhoto();
-
-  /**
-   * <pre>
    * The page of the words' first link, as GetLinkPreview gave it; none
    * when the sender took it off (×) or it had not come, when the server
    * reads the page itself once the line is taken and adds it to the line.
@@ -187,29 +168,30 @@ public interface ChatSendOrBuilder extends
 
   /**
    * <pre>
-   * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-   * random one, as it also collapses their notifications), that their
-   * apps draw them together by (spec/chat.md, Albums); empty for a photo
-   * sent alone. Refused with anything but a photo.
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
    * </pre>
    *
-   * <code>string album = 10 [json_name = "album"];</code>
-   * @return The album.
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
    */
-  java.lang.String getAlbum();
+  java.util.List<app.pochical.v1.ChatPhoto> 
+      getPhotosList();
   /**
    * <pre>
-   * With a photo: the photos sent at once, each its own line, share one
-   * name, 1 to 64 printable ASCII characters of the sender's choosing (a
-   * random one, as it also collapses their notifications), that their
-   * apps draw them together by (spec/chat.md, Albums); empty for a photo
-   * sent alone. Refused with anything but a photo.
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
    * </pre>
    *
-   * <code>string album = 10 [json_name = "album"];</code>
-   * @return The bytes for album.
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
    */
-  com.google.protobuf.ByteString
-      getAlbumBytes();
+  app.pochical.v1.ChatPhoto getPhotos(int index);
+  /**
+   * <pre>
+   * Photos instead, 1 to chatRules.photosPerSend, each once: the
+   * sender's own, uploaded first and not sent before. No words or days.
+   * </pre>
+   *
+   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
+   */
+  int getPhotosCount();
 }

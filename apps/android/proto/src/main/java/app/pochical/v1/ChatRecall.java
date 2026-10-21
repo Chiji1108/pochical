@@ -26,7 +26,7 @@ public  final class ChatRecall extends
   private ChatRecall() {
     threadId_ = "";
     sendOpId_ = "";
-    photoId_ = "";
+    photoIds_ = emptyProtobufList();
   }
   public static final int THREAD_ID_FIELD_NUMBER = 1;
   private java.lang.String threadId_;
@@ -122,81 +122,151 @@ public  final class ChatRecall extends
 
   }
 
-  public static final int PHOTO_ID_FIELD_NUMBER = 3;
-  private java.lang.String photoId_;
+  public static final int PHOTO_IDS_FIELD_NUMBER = 4;
+  private com.google.protobuf.Internal.ProtobufList<java.lang.String> photoIds_;
   /**
    * <pre>
-   * The photo the send carries, uploaded before it went out: deleted with
+   * The photos the send carries, uploaded before it went out: deleted with
    * the line, or at once when the group does not have the line, as no
-   * line will ever carry it. Empty for a send of anything else.
+   * line will ever carry them. None for a send of anything else.
    * </pre>
    *
-   * <code>string photo_id = 3 [json_name = "photoId"];</code>
-   * @return The photoId.
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @return A list containing the photoIds.
    */
   @java.lang.Override
-  public java.lang.String getPhotoId() {
-    return photoId_;
+  public java.util.List<java.lang.String> getPhotoIdsList() {
+    return photoIds_;
   }
   /**
    * <pre>
-   * The photo the send carries, uploaded before it went out: deleted with
+   * The photos the send carries, uploaded before it went out: deleted with
    * the line, or at once when the group does not have the line, as no
-   * line will ever carry it. Empty for a send of anything else.
+   * line will ever carry them. None for a send of anything else.
    * </pre>
    *
-   * <code>string photo_id = 3 [json_name = "photoId"];</code>
-   * @return The bytes for photoId.
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @return The count of photoIds.
+   */
+  @java.lang.Override
+  public int getPhotoIdsCount() {
+    return photoIds_.size();
+  }
+  /**
+   * <pre>
+   * The photos the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry them. None for a send of anything else.
+   * </pre>
+   *
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @param index The index of the element to return.
+   * @return The photoIds at the given index.
+   */
+  @java.lang.Override
+  public java.lang.String getPhotoIds(int index) {
+    return photoIds_.get(index);
+  }
+  /**
+   * <pre>
+   * The photos the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry them. None for a send of anything else.
+   * </pre>
+   *
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the photoIds at the given index.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getPhotoIdBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(photoId_);
+      getPhotoIdsBytes(int index) {
+    return com.google.protobuf.ByteString.copyFromUtf8(
+        photoIds_.get(index));
+  }
+  private void ensurePhotoIdsIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<java.lang.String> tmp =
+        photoIds_;  if (!tmp.isModifiable()) {
+      photoIds_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
   }
   /**
    * <pre>
-   * The photo the send carries, uploaded before it went out: deleted with
+   * The photos the send carries, uploaded before it went out: deleted with
    * the line, or at once when the group does not have the line, as no
-   * line will ever carry it. Empty for a send of anything else.
+   * line will ever carry them. None for a send of anything else.
    * </pre>
    *
-   * <code>string photo_id = 3 [json_name = "photoId"];</code>
-   * @param value The photoId to set.
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @param index The index to set the value at.
+   * @param value The photoIds to set.
    */
-  private void setPhotoId(
+  private void setPhotoIds(
+      int index, java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+    ensurePhotoIdsIsMutable();
+    photoIds_.set(index, value);
+  }
+  /**
+   * <pre>
+   * The photos the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry them. None for a send of anything else.
+   * </pre>
+   *
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @param value The photoIds to add.
+   */
+  private void addPhotoIds(
       java.lang.String value) {
     java.util.Objects.requireNonNull(value);
-
-    photoId_ = value;
+    ensurePhotoIdsIsMutable();
+    photoIds_.add(value);
   }
   /**
    * <pre>
-   * The photo the send carries, uploaded before it went out: deleted with
+   * The photos the send carries, uploaded before it went out: deleted with
    * the line, or at once when the group does not have the line, as no
-   * line will ever carry it. Empty for a send of anything else.
+   * line will ever carry them. None for a send of anything else.
    * </pre>
    *
-   * <code>string photo_id = 3 [json_name = "photoId"];</code>
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @param values The photoIds to add.
    */
-  private void clearPhotoId() {
-
-    photoId_ = getDefaultInstance().getPhotoId();
+  private void addAllPhotoIds(
+      java.lang.Iterable<java.lang.String> values) {
+    ensurePhotoIdsIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, photoIds_);
   }
   /**
    * <pre>
-   * The photo the send carries, uploaded before it went out: deleted with
+   * The photos the send carries, uploaded before it went out: deleted with
    * the line, or at once when the group does not have the line, as no
-   * line will ever carry it. Empty for a send of anything else.
+   * line will ever carry them. None for a send of anything else.
    * </pre>
    *
-   * <code>string photo_id = 3 [json_name = "photoId"];</code>
-   * @param value The bytes for photoId to set.
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
    */
-  private void setPhotoIdBytes(
+  private void clearPhotoIds() {
+    photoIds_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * The photos the send carries, uploaded before it went out: deleted with
+   * the line, or at once when the group does not have the line, as no
+   * line will ever carry them. None for a send of anything else.
+   * </pre>
+   *
+   * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+   * @param value The bytes of the photoIds to add.
+   */
+  private void addPhotoIdsBytes(
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
-    photoId_ = value.toStringUtf8();
-
+    ensurePhotoIdsIsMutable();
+    photoIds_.add(value.toStringUtf8());
   }
 
   public static app.pochical.v1.ChatRecall parseFrom(
@@ -405,80 +475,147 @@ public  final class ChatRecall extends
 
     /**
      * <pre>
-     * The photo the send carries, uploaded before it went out: deleted with
+     * The photos the send carries, uploaded before it went out: deleted with
      * the line, or at once when the group does not have the line, as no
-     * line will ever carry it. Empty for a send of anything else.
+     * line will ever carry them. None for a send of anything else.
      * </pre>
      *
-     * <code>string photo_id = 3 [json_name = "photoId"];</code>
-     * @return The photoId.
+     * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+     * @return A list containing the photoIds.
      */
     @java.lang.Override
-    public java.lang.String getPhotoId() {
-      return instance.getPhotoId();
+    public java.util.List<java.lang.String>
+        getPhotoIdsList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getPhotoIdsList());
     }
     /**
      * <pre>
-     * The photo the send carries, uploaded before it went out: deleted with
+     * The photos the send carries, uploaded before it went out: deleted with
      * the line, or at once when the group does not have the line, as no
-     * line will ever carry it. Empty for a send of anything else.
+     * line will ever carry them. None for a send of anything else.
      * </pre>
      *
-     * <code>string photo_id = 3 [json_name = "photoId"];</code>
-     * @return The bytes for photoId.
+     * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+     * @return The count of photoIds.
+     */
+    @java.lang.Override
+    public int getPhotoIdsCount() {
+      return instance.getPhotoIdsCount();
+    }
+    /**
+     * <pre>
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * </pre>
+     *
+     * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+     * @param index The index of the element to return.
+     * @return The photoIds at the given index.
+     */
+    @java.lang.Override
+    public java.lang.String getPhotoIds(int index) {
+      return instance.getPhotoIds(index);
+    }
+    /**
+     * <pre>
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * </pre>
+     *
+     * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the photoIds at the given index.
      */
     @java.lang.Override
     public com.google.protobuf.ByteString
-        getPhotoIdBytes() {
-      return instance.getPhotoIdBytes();
+        getPhotoIdsBytes(int index) {
+      return instance.getPhotoIdsBytes(index);
     }
     /**
      * <pre>
-     * The photo the send carries, uploaded before it went out: deleted with
+     * The photos the send carries, uploaded before it went out: deleted with
      * the line, or at once when the group does not have the line, as no
-     * line will ever carry it. Empty for a send of anything else.
+     * line will ever carry them. None for a send of anything else.
      * </pre>
      *
-     * <code>string photo_id = 3 [json_name = "photoId"];</code>
-     * @param value The photoId to set.
+     * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+     * @param index The index to set the value at.
+     * @param value The photoIds to set.
      * @return This builder for chaining.
      */
-    public Builder setPhotoId(
+    public Builder setPhotoIds(
+        int index, java.lang.String value) {
+      copyOnWrite();
+      instance.setPhotoIds(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * </pre>
+     *
+     * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+     * @param value The photoIds to add.
+     * @return This builder for chaining.
+     */
+    public Builder addPhotoIds(
         java.lang.String value) {
       copyOnWrite();
-      instance.setPhotoId(value);
+      instance.addPhotoIds(value);
       return this;
     }
     /**
      * <pre>
-     * The photo the send carries, uploaded before it went out: deleted with
+     * The photos the send carries, uploaded before it went out: deleted with
      * the line, or at once when the group does not have the line, as no
-     * line will ever carry it. Empty for a send of anything else.
+     * line will ever carry them. None for a send of anything else.
      * </pre>
      *
-     * <code>string photo_id = 3 [json_name = "photoId"];</code>
+     * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+     * @param values The photoIds to add.
      * @return This builder for chaining.
      */
-    public Builder clearPhotoId() {
+    public Builder addAllPhotoIds(
+        java.lang.Iterable<java.lang.String> values) {
       copyOnWrite();
-      instance.clearPhotoId();
+      instance.addAllPhotoIds(values);
       return this;
     }
     /**
      * <pre>
-     * The photo the send carries, uploaded before it went out: deleted with
+     * The photos the send carries, uploaded before it went out: deleted with
      * the line, or at once when the group does not have the line, as no
-     * line will ever carry it. Empty for a send of anything else.
+     * line will ever carry them. None for a send of anything else.
      * </pre>
      *
-     * <code>string photo_id = 3 [json_name = "photoId"];</code>
-     * @param value The bytes for photoId to set.
+     * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
      * @return This builder for chaining.
      */
-    public Builder setPhotoIdBytes(
+    public Builder clearPhotoIds() {
+      copyOnWrite();
+      instance.clearPhotoIds();
+      return this;
+    }
+    /**
+     * <pre>
+     * The photos the send carries, uploaded before it went out: deleted with
+     * the line, or at once when the group does not have the line, as no
+     * line will ever carry them. None for a send of anything else.
+     * </pre>
+     *
+     * <code>repeated string photo_ids = 4 [json_name = "photoIds"];</code>
+     * @param value The bytes of the photoIds to add.
+     * @return This builder for chaining.
+     */
+    public Builder addPhotoIdsBytes(
         com.google.protobuf.ByteString value) {
       copyOnWrite();
-      instance.setPhotoIdBytes(value);
+      instance.addPhotoIdsBytes(value);
       return this;
     }
 
@@ -500,11 +637,11 @@ public  final class ChatRecall extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "threadId_",
             "sendOpId_",
-            "photoId_",
+            "photoIds_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208";
+              "\u0000\u0003\u0000\u0000\u0001\u0004\u0003\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
+              "\u0004\u021a";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

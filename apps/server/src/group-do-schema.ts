@@ -150,9 +150,6 @@ export const memberRepeatOrders = sqliteTable(
 export const chatLines = sqliteTable(
   "chat_lines",
   {
-    // The photos sent together with it (pochical.v1.ChatLine.album); none
-    // for a photo sent alone, and for anything else.
-    album: text(),
     authorId: text("author_id").notNull(),
     createdCursor: integer("created_cursor").notNull(),
     cursor: integer().notNull(),
@@ -178,15 +175,17 @@ export const chatLines = sqliteTable(
     }>(),
     // The sending edit's op_id: a send taken twice is one line.
     opId: text("op_id").notNull(),
-    // The photo sent as the line, as pochical.v1.ChatPhoto's fields, its
-    // ThumbHash as base64 when it came with one; none for words or days,
-    // and once unsent.
-    photo: text({ mode: "json" }).$type<{
-      id: string;
-      height: number;
-      thumbHash?: string;
-      width: number;
-    }>(),
+    // The photos sent as the line, in the order sent, each as
+    // pochical.v1.ChatPhoto's fields, its ThumbHash as base64 when it came
+    // with one; none for anything else, and once unsent.
+    photos: text({ mode: "json" }).$type<
+      {
+        id: string;
+        height: number;
+        thumbHash?: string;
+        width: number;
+      }[]
+    >(),
     // The cursor it was last pinned at, while pinned for everyone.
     pinnedAt: integer("pinned_at"),
     // Its days are put to the vote.
@@ -217,7 +216,7 @@ export const chatLines = sqliteTable(
     // A chat's photos alone, paged without the lines between them.
     index("chat_lines_photos")
       .on(table.threadId, table.seq)
-      .where(sql`${table.photo} is not null`),
+      .where(sql`${table.photos} is not null`),
   ]
 );
 
@@ -295,7 +294,8 @@ export const chatRecalls = sqliteTable(
 
 // Every photo the group keeps (groups/{groupId}/photos/{id} in R2), each
 // noted before it is stored, so no id is ever stored twice: a photo never
-// changes. `state` says what holds it:
+// changes. `state` says what holds it, and R2 holds it in all but
+// takenBack:
 // - unsent: a member uploaded it to the group (PUT), and nothing carries
 //   it yet. Only its uploader may upload it again, which stores nothing
 //   but keeps it, or send it as a line, once. Once its uploader has
@@ -304,6 +304,9 @@ export const chatRecalls = sqliteTable(
 //   time it sends the line, so a send comes moments after that upload.
 // - sent: a line carries it, until the line is taken back. Its uploader
 //   uploading it again, as a send tried again does, stores nothing.
+// - takenBack: its line was taken back, and R2 holds it no more. Nothing
+//   holds it, but the note stays for good, so no upload stores its id
+//   again and no line sends it: devices keep a photo by its id.
 // - shown: the group shows it, as someone's face (their usual photo, which
 //   the server copies in, or one of the group's they uploaded and set as
 //   their own) or as the group's mark (copied in). No upload touches it;
@@ -316,7 +319,13 @@ export const chatRecalls = sqliteTable(
 //   and the sweep copies it in anew once R2 has deleted it, then shows it
 //   again. A sweep cut short leaves its rows so, and the next finishes
 //   them. Nothing else is ever marked so.
-export const photoStates = ["unsent", "sent", "shown", "deleting"] as const;
+export const photoStates = [
+  "unsent",
+  "sent",
+  "takenBack",
+  "shown",
+  "deleting",
+] as const;
 
 export const groupPhotos = sqliteTable("group_photos", {
   id: text().primaryKey(),

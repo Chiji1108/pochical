@@ -214,13 +214,13 @@ public enum ChatPhotos {
   /// stores it again. A chat's photo goes with its small version, first,
   /// so the lines find it as soon as they are sent; the user's own photos
   /// (`mine`) are small already. How far it has gone is told in
-  /// `PhotoUploads`, where it may be stopped: then it throws as cancelled.
-  /// Once it returns, the caller asks `PhotoUploads.sending` whether its
-  /// line still goes.
+  /// `PhotoUploads`, where the chat line `opID` it goes with may be
+  /// stopped: then it throws as cancelled. Once the line's photos are all
+  /// up, the caller asks `PhotoUploads.send` whether the line still goes.
   /// `send` stands in for the network, telling nothing of how far.
   static func upload(
-    _ photoID: String, in groupID: String, as credentials: Credentials,
-    server: URL = Server.url, send: Account.Send? = nil
+    _ photoID: String, of opID: String? = nil, in groupID: String,
+    as credentials: Credentials, server: URL = Server.url, send: Account.Send? = nil
   ) async throws {
     // Uploaded before, from another socket, it goes up again from the copy
     // kept to show: the group lets a photo no line carries go once its
@@ -256,16 +256,16 @@ public enum ChatPhotos {
         }
       }
     }
-    await PhotoUploads.shared.began(photoID, try: attempt) { going.cancel() }
+    await PhotoUploads.shared.began(photoID, of: opID, try: attempt) { going.cancel() }
     do {
       try await withTaskCancellationHandler {
         try await going.value
       } onCancel: {
         going.cancel()
       }
-      await PhotoUploads.shared.finished(photoID)
+      await PhotoUploads.shared.finished(photoID, of: opID)
     } catch {
-      await PhotoUploads.shared.ended(photoID)
+      await PhotoUploads.shared.ended(photoID, of: opID)
       throw error
     }
     try? FileManager.default.removeItem(at: pending(photoID, in: groupID))

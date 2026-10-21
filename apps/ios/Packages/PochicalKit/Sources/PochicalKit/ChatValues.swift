@@ -53,8 +53,9 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   var votesJSON = "[]"
   /// The day a poll was settled on, as YYYY-MM-DD; empty while open.
   var decidedKey = ""
-  /// The photo sent as the line, as JSON, `LinePhoto`; empty for none.
-  var photoJSON = ""
+  /// The photos sent as the line, as JSON, `[LinePhoto]`; none for
+  /// anything else, and once unsent.
+  var photosJSON = "[]"
   /// Its first link's page, as JSON, `LinePreview`; empty for none.
   var previewJSON = ""
   /// Sent in a one-to-one chat by someone the reader had blocked: never
@@ -64,9 +65,6 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   public var replyTo: Int64?
   /// A line from the app, as JSON, `LineNotice`; empty for a message.
   var noticeJSON = ""
-  /// The album a photo was sent in with others (spec/chat.md, Albums);
-  /// empty for none.
-  public var album = ""
   public var id: Int64 { seq }
 
   /// Whose line it is to `me`, for what is unread: the app's notices and
@@ -98,13 +96,14 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
     }
   }
 
-  /// The photo sent as the line.
-  public var photo: LinePhoto? {
-    get { try? JSONDecoder().decode(LinePhoto.self, from: Data(photoJSON.utf8)) }
+  /// The photos sent as the line, in the order sent: one, or several
+  /// drawn as an album (spec/chat.md, Albums).
+  public var photos: [LinePhoto] {
+    get { (try? JSONDecoder().decode([LinePhoto].self, from: Data(photosJSON.utf8))) ?? [] }
     set {
-      photoJSON =
-        newValue.flatMap { try? JSONEncoder().encode($0) }
-        .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+      photosJSON =
+        (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) }
+        ?? "[]"
     }
   }
 
@@ -227,14 +226,25 @@ struct ChatOutboxRow: Hashable, Sendable {
   var edit: Data
   /// When it was written, or sent again, by the server's time.
   var madeAtMs: Int64
-  /// A line not sent (spec/chat.md, Lines on their way): its photo could
-  /// not be uploaded, or the member stopped it going up. It waits for the
-  /// member to send it again or delete it. One that waited too long is not
-  /// sent by its time alone (`notSent`).
+  /// A line not sent (spec/chat.md, Lines on their way): one of its
+  /// photos could not be uploaded, or the member stopped them going up. It
+  /// waits for the member to send it again or delete it. One that waited
+  /// too long is not sent by its time alone (`notSent`).
   var failed = false
   /// It has gone out on a socket, so the group may have taken it though
   /// no answer came; one that never went, the group cannot have.
   var wentOut = false
+  /// Which of its line's photos are up, as JSON, `PhotosUp`.
+  var upJSON = "{}"
+
+  /// Which of its line's photos are up, and when the latest went up.
+  var up: PhotosUp {
+    get { (try? JSONDecoder().decode(PhotosUp.self, from: Data(upJSON.utf8))) ?? PhotosUp() }
+    set {
+      upJSON =
+        (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+    }
+  }
 
   /// When the line `edit` sends stops going by itself, by the server's
   /// time: once it has waited `Chat.unsentAfterMs` since it was written.
@@ -430,6 +440,35 @@ extension DatabaseMigrator {
     }
   }
 
+  mutating func registerChatLinePhotos() {
+    registerMigration("Keep a line's photos together") { db in
+      try #sql(
+        """
+        ALTER TABLE "chatLines" DROP COLUMN "photoJSON"
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "chatLines" DROP COLUMN "album"
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "chatLines" ADD COLUMN "photosJSON" TEXT NOT NULL DEFAULT '[]'
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "chatOutbox" ADD COLUMN "upJSON" TEXT NOT NULL DEFAULT '{}'
+        """
+      )
+      .execute(db)
+    }
+  }
+
   mutating func registerChatWentOut() {
     registerMigration("Keep which waiting chat edits went out") { db in
       try #sql(
@@ -468,9 +507,11 @@ public enum Chats {
     let held = ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(line.threadID) && $0.seq.eq(seq)
     }
-    // A photo taken back goes from the device too, as from the group.
-    if line.unsent, let photo = try held.fetchOne(db)?.photo {
-      ChatPhotos.forget(photo.id, in: groupID)
+    // Photos taken back go from the device too, as from the group.
+    if line.unsent {
+      for photo in try held.fetchOne(db)?.photos ?? [] {
+        ChatPhotos.forget(photo.id, in: groupID)
+      }
     }
     try held.delete().execute(db)
     var row = ChatLineRow(
@@ -485,12 +526,11 @@ public enum Chats {
       Day(votes.day).map { DayVotes(day: $0, userIDs: votes.userIds) }
     }
     row.decidedKey = line.decided
-    row.photo = line.hasPhoto ? LinePhoto(line.photo) : nil
+    row.photos = line.photos.map(LinePhoto.init)
     row.preview = line.hasPreview ? LinePreview(line.preview) : nil
     row.hidden = line.hidden
     row.replyTo = line.replyTo == 0 ? nil : Int64(line.replyTo)
     row.notice = line.hasNotice ? LineNotice(line.notice) : nil
-    row.album = line.album
     try ChatLineRow.insert { row }.execute(db)
     try tookBack(line, of: groupID, in: db)
   }
@@ -512,14 +552,12 @@ public enum Chats {
   }
 
   /// Puts the member's edit in the group's chat outbox, to be sent and
-  /// shown at once, made at the device's time `now`, as `opID` when it
-  /// is named before (an album's first photo, which names the album).
+  /// shown at once, made at the device's time `now`.
   public static func edit(
-    _ kind: Pochical_V1_ChatEdit.OneOf_Kind, in groupID: String, now: Int64,
-    opID: String = UUID().uuidString.lowercased(), db: Database
+    _ kind: Pochical_V1_ChatEdit.OneOf_Kind, in groupID: String, now: Int64, db: Database
   ) throws {
     var edit = Pochical_V1_ChatEdit()
-    edit.opID = opID
+    edit.opID = UUID().uuidString.lowercased()
     edit.kind = kind
     let data = try edit.serializedData()
     let madeAt = try SyncState.corrected(now, in: db)
@@ -565,9 +603,10 @@ public enum Chats {
     try ChatOutboxRow.where { $0.groupID.eq(groupID) }.delete().execute(db)
   }
 
-  /// A line not sent (spec/chat.md, Lines on their way): its photo could
-  /// not be uploaded, or the member stopped it going up (Photos). It
-  /// stays, marked, to send again or delete, and the edits after it go on.
+  /// A line not sent (spec/chat.md, Lines on their way): one of its photos
+  /// could not be uploaded, or the member stopped them going up (Photos).
+  /// It stays, marked, to send again or delete, and the edits after it go
+  /// on.
   public static func fail(_ opID: String, in db: Database) throws {
     try ChatOutboxRow.where { $0.opID.eq(opID) }.update { $0.failed = true }.execute(db)
   }
@@ -605,7 +644,7 @@ public enum Chats {
     try ChatOutboxRow.insert {
       ChatOutboxRow.Draft(
         groupID: row.groupID, opID: row.opID, edit: row.edit, madeAtMs: madeAt,
-        wentOut: row.wentOut)
+        wentOut: row.wentOut, upJSON: row.upJSON)
     }
     .execute(db)
   }
@@ -792,15 +831,15 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   public var days: [Day] = []
   /// Its days are put to the vote.
   public var poll = false
-  /// The photo it sends.
-  public var photo: LinePhoto?
+  /// The photos it sends, in order; none for anything else.
+  public var photos: [LinePhoto] = []
+  /// Those of its photos already up, by id.
+  public var up: Set<String> = []
   /// Its first link's page.
   public var preview: LinePreview?
   /// The line it answers (返信), by its seq.
   public var replyTo: Int64?
-  /// The album its photo goes in with others; empty for none.
-  public var album = ""
-  /// Not sent (its photo could not be uploaded, or it waited too long):
+  /// Not sent (a photo could not be uploaded, or it waited too long):
   /// to send again or delete.
   public var failed = false
   public var id: String { opID }
@@ -813,10 +852,10 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
     madeAtMs = row.madeAtMs
     days = send.days.compactMap(Day.init)
     poll = send.poll
-    photo = send.hasPhoto ? LinePhoto(send.photo) : nil
+    photos = send.photos.map(LinePhoto.init)
+    up = row.up.ids
     preview = send.hasPreview ? LinePreview(send.preview) : nil
     replyTo = send.replyTo == 0 ? nil : Int64(send.replyTo)
-    album = send.album
     self.failed = failed
   }
 }
@@ -1031,7 +1070,7 @@ extension Chats {
         row.days = []
         row.votes = []
         row.decided = nil
-        row.photo = nil
+        row.photos = []
         row.preview = nil
       case .vote(let vote):
         if let me, let day = Day(vote.day), row.decided == nil {
@@ -1113,46 +1152,7 @@ public func readTo(shown: [Int64], read: Int64) -> Int64 {
   max(read, shown.max() ?? read)
 }
 
-/// A line as albums are found by: who wrote it, the album it was sent in
-/// (empty for none), and whether it is still a photo, not taken back.
-public struct AlbumLine<ID: Hashable>: Hashable {
-  public let id: ID
-  public let writer: String
-  public let album: String
-  public let photo: Bool
-
-  public init(id: ID, writer: String, album: String, photo: Bool) {
-    self.id = id
-    self.writer = writer
-    self.album = album
-    self.photo = photo
-  }
-}
-
-/// The albums a chat draws of its lines in order, each as its lines' ids:
-/// lines one after another by the same writer with the same album that
-/// are still photos, two or more (spec/vectors/chat.json, albums).
-public func albums<ID>(_ lines: [AlbumLine<ID>]) -> [[ID]] {
-  var albums: [[ID]] = []
-  var run: [ID] = []
-  var last: AlbumLine<ID>?
-  for line in lines {
-    let goesOn =
-      line.photo && !line.album.isEmpty && last.map {
-        $0.photo && $0.album == line.album && $0.writer == line.writer
-      } == true
-    if !goesOn {
-      if run.count > 1 { albums.append(run) }
-      run = []
-    }
-    if line.photo, !line.album.isEmpty { run.append(line.id) }
-    last = line
-  }
-  if run.count > 1 { albums.append(run) }
-  return albums
-}
-
-/// How many of an album's `count` photos go in each of its rows, top
+/// How many of a line's `count` photos go in each of its album's rows, top
 /// first: two side by side, three as one over two, and past that rows of
 /// two and three, as few as can be, the twos first (spec/vectors/chat.json,
 /// albumRows).

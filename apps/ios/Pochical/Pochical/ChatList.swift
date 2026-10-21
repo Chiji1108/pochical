@@ -275,7 +275,7 @@ struct ChatRow<Icon: View>: View {
   private var preview: String {
     let summary = chat.summary
     let nameOf = { (id: String) in memberName(id, in: chat.names) }
-    if let waiting = summary.waiting, waiting.photo != nil {
+    if let waiting = summary.waiting, !waiting.photos.isEmpty {
       return "自分：写真を送りました"
     }
     if let waiting = summary.waiting {
@@ -295,7 +295,7 @@ struct ChatRow<Icon: View>: View {
     if blocked.contains(last.authorID) {
       return "ブロック中のメンバーのメッセージ"
     }
-    if last.photo != nil {
+    if !last.photos.isEmpty {
       return last.authorID == me ? "自分：写真を送りました" : "写真を送りました"
     }
     let words = Self.words(
