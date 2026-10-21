@@ -1,6 +1,6 @@
 # Text limits
 
-How the free text people type is held to its limit and how a long value is shown. Both native apps and the server follow it. The web prototype's `LimitedInput` in `packages/prototype/src/components/design-fields.tsx` and `packages/prototype/src/lib/text-limits.ts` follow this spec.
+How the free text people type is held to its limit and how a long value is shown. Both native apps and the server follow it. The TypeScript code counts with `characterCount` and `withinLimit` in `design/src/text.ts` (`@pochical/design/text`), shared by the server, the admin site and the web prototype, whose `LimitedInput` in `packages/prototype/src/components/design-fields.tsx` and `packages/prototype/src/lib/text-limits.ts` follow this spec.
 
 ## Limits
 

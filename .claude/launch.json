@@ -35,7 +35,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd apps/admin && exec bun x vite dev --port 3100 --strictPort"
+        "cd apps/admin && exec bun x react-router dev --port 3100 --strictPort"
       ],
       "port": 3100
     }
