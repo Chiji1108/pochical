@@ -12,8 +12,8 @@ import type { Route } from "./+types/support-chat";
 // and the emoji on it; and a form to answer as ポチカル. Each load hands
 // out a fresh op id, so an answer sent twice, with or without JavaScript,
 // is one line.
-export const loader = async ({ params, request }: Route.LoaderArgs) => {
-  const before = Number(new URL(request.url).searchParams.get("before"));
+export const loader = async ({ params, url }: Route.LoaderArgs) => {
+  const before = Number(url.searchParams.get("before"));
   const page = await env.SERVER.supportChat(
     params.userId,
     Number.isInteger(before) && before > 0 ? before : 0
@@ -23,7 +23,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
 
-export const action = async ({ params, request }: Route.ActionArgs) => {
+export const action = async ({ params, request, url }: Route.ActionArgs) => {
   const form = await request.formData();
   const field = (name: string) => {
     const value = form.get(name);
@@ -52,7 +52,7 @@ export const action = async ({ params, request }: Route.ActionArgs) => {
     return refuse(502, "返信できませんでした。");
   }
   // Post/Redirect/Get: reloading the page does not send it again.
-  return redirect(new URL(request.url).pathname);
+  return redirect(url.pathname);
 };
 
 /** The line a reply is to, as its quote shows it. */

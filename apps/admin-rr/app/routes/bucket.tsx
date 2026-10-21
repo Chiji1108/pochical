@@ -12,7 +12,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
   // As of the audit shown, so what passed the grace since stays.
   const form = await request.formData();
   const asOfMs = Number(form.get("asOfMs"));
-  if (!Number.isInteger(asOfMs)) {
+  if (!Number.isInteger(asOfMs) || asOfMs <= 0) {
     return data({ failed: true as const }, { status: 400 });
   }
   return await env.SERVER.cleanBucket(asOfMs).then(
