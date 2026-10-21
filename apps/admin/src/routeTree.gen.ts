@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BucketRouteImport } from './routes/bucket'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as SupportUserIdRouteImport } from './routes/support.$userId'
 import { Route as PhotosUserIdPhotoIdRouteImport } from './routes/photos.$userId.$photoId'
@@ -17,6 +18,11 @@ import { Route as PhotosUserIdPhotoIdRouteImport } from './routes/photos.$userId
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BucketRoute = BucketRouteImport.update({
+  id: '/bucket',
+  path: '/bucket',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportsRoute = ReportsRouteImport.update({
@@ -37,12 +43,14 @@ const PhotosUserIdPhotoIdRoute = PhotosUserIdPhotoIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bucket': typeof BucketRoute
   '/reports': typeof ReportsRoute
   '/support/$userId': typeof SupportUserIdRoute
   '/photos/$userId/$photoId': typeof PhotosUserIdPhotoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bucket': typeof BucketRoute
   '/reports': typeof ReportsRoute
   '/support/$userId': typeof SupportUserIdRoute
   '/photos/$userId/$photoId': typeof PhotosUserIdPhotoIdRoute
@@ -50,18 +58,30 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bucket': typeof BucketRoute
   '/reports': typeof ReportsRoute
   '/support/$userId': typeof SupportUserIdRoute
   '/photos/$userId/$photoId': typeof PhotosUserIdPhotoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/reports' | '/support/$userId' | '/photos/$userId/$photoId'
+  fullPaths:
+    | '/'
+    | '/bucket'
+    | '/reports'
+    | '/support/$userId'
+    | '/photos/$userId/$photoId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/reports' | '/support/$userId' | '/photos/$userId/$photoId'
+  to:
+    | '/'
+    | '/bucket'
+    | '/reports'
+    | '/support/$userId'
+    | '/photos/$userId/$photoId'
   id:
     | '__root__'
     | '/'
+    | '/bucket'
     | '/reports'
     | '/support/$userId'
     | '/photos/$userId/$photoId'
@@ -69,6 +89,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BucketRoute: typeof BucketRoute
   ReportsRoute: typeof ReportsRoute
   SupportUserIdRoute: typeof SupportUserIdRoute
   PhotosUserIdPhotoIdRoute: typeof PhotosUserIdPhotoIdRoute
@@ -81,6 +102,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bucket': {
+      id: '/bucket'
+      path: '/bucket'
+      fullPath: '/bucket'
+      preLoaderRoute: typeof BucketRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reports': {
@@ -109,6 +137,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BucketRoute: BucketRoute,
   ReportsRoute: ReportsRoute,
   SupportUserIdRoute: SupportUserIdRoute,
   PhotosUserIdPhotoIdRoute: PhotosUserIdPhotoIdRoute,

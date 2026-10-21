@@ -36,6 +36,7 @@ function Document({ children }: { children: ReactNode }) {
             サポート
           </Link>
           <Link to="/reports">通報</Link>
+          <Link to="/bucket">棚卸し</Link>
         </nav>
         {children}
         <Scripts />

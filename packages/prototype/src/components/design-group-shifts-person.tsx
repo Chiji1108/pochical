@@ -1,4 +1,4 @@
-import { css, cx } from "@pochical/styled-system/css";
+import { cx } from "@pochical/styled-system/css";
 import type { MotionValue } from "motion/react";
 import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
@@ -9,7 +9,7 @@ import type { Group, Member } from "../lib/design-group-data";
 import { designToday } from "../lib/design-today";
 import { dayName } from "../lib/text-limits";
 import { ChoiceChip, ChoiceGrid } from "./design-choices";
-import { dayCell, dayParts, todayMark } from "./design-day-cell";
+import { dayParts, framedDayCell, todayMark } from "./design-day-cell";
 import {
   dayGrid,
   dayGridHeight,
@@ -213,19 +213,11 @@ function PersonDay({
     me !== undefined &&
     everyoneOff([me, member], date);
   const off = item?.off === true;
-  // The calendar's own day, with a frame when you are off too.
-  // Framed when you are off too, unless the picked day's own frame is on
-  // it: the styles are merged, as two classes for one property would leave
-  // the winner to the stylesheet's order. The frame stays inside the day,
-  // or it would show at the edge of the month beside.
-  const className = css(
-    dayCell.raw({ active: picked, off, outside }),
+  // The calendar's own day, framed when you are off too, unless the picked
+  // day's own frame is on it.
+  const className = framedDayCell(
+    { active: picked, off, outside },
     withMe && !picked
-      ? {
-          outline: "1.5px solid token(colors.accent.border)",
-          outlineOffset: "-1.5px",
-        }
-      : {}
   );
   const style: CSSProperties | undefined = off
     ? { "--off-tint": tint }
