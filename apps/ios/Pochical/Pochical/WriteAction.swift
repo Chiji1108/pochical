@@ -1,6 +1,7 @@
 import OSLog
 import SQLiteData
 import SwiftUI
+import UIKit
 
 /// Writes the person's own edit to the device at once, where it waits in
 /// the outbox for sync (spec/sync-protocol.md, Outbox), and says when that
@@ -12,8 +13,15 @@ struct WriteAction {
   @MainActor @discardableResult
   func callAsFunction(_ edit: (Database) throws -> Void) -> Bool {
     @Dependency(\.defaultDatabase) var database
+    return keeping { try database.write(edit) }
+  }
+
+  /// Keeps what goes with an edit outside the database (a photo of a line
+  /// on the device's disk) the same way.
+  @MainActor @discardableResult
+  func keeping(_ keep: () throws -> Void) -> Bool {
     do {
-      try database.write(edit)
+      try keep()
       return true
     } catch {
       Logger.edits.error("Could not keep an edit: \(error)")
@@ -25,32 +33,58 @@ struct WriteAction {
 }
 
 extension EnvironmentValues {
-  @Entry var write = WriteAction {}
+  @Entry var write = WriteAction { NotKeptAlert.show() }
 }
 
-/// Gives the screens under it `write`, and its alert when a write fails.
-struct KeepsEdits: ViewModifier {
-  func body(content: Content) -> some View {
-    KeepingEdits { _ in content }
+/// 保存できませんでした, over whatever shows when an edit was not kept: a
+/// sheet stays under it, and one going, a page being left or an alert
+/// closing is let finish first, as an alert presented from under a sheet
+/// takes the sheet down, and one presented while another presentation
+/// moves, or while the app is not on the screen, is never seen and holds
+/// the screen.
+@MainActor
+enum NotKeptAlert {
+  private static var shown = false
+  private static var waiting: NSObjectProtocol?
+
+  static func show() {
+    guard !shown, waiting == nil else { return }
+    let scene = UIApplication.shared.connectedScenes.lazy
+      .compactMap { $0 as? UIWindowScene }.first { $0.activationState == .foregroundActive }
+    guard var top = scene?.keyWindow?.rootViewController else {
+      waiting = NotificationCenter.default.addObserver(
+        forName: UIScene.didActivateNotification, object: nil, queue: .main
+      ) { _ in
+        MainActor.assumeIsolated {
+          if let waiting { NotificationCenter.default.removeObserver(waiting) }
+          waiting = nil
+          show()
+        }
+      }
+      return
+    }
+    while let presented = top.presentedViewController { top = presented }
+    if let moving = top.transitionCoordinator ?? top.navigationControllers.lazy
+      .compactMap(\.transitionCoordinator).first
+    {
+      moving.animate(alongsideTransition: nil) { _ in show() }
+      return
+    }
+    let alert = UIAlertController(
+      title: "保存できませんでした",
+      message: "もう一度お試しください。続くときは、端末の空き容量を確かめてください。",
+      preferredStyle: .alert)
+    alert.addAction(UIAlertAction(title: "OK", style: .cancel) { _ in shown = false })
+    top.present(alert, animated: true)
+    shown = alert.presentingViewController != nil
   }
 }
 
-/// Gives `content` a `write` of its own, its alert shown over it, for a
-/// sheet whose edits are written as it stays open: an alert from under a
-/// sheet takes the sheet down to show, and what was being written with it.
-struct KeepingEdits<Content: View>: View {
-  @State private var failed = false
-  @ViewBuilder let content: (WriteAction) -> Content
-
-  var body: some View {
-    let write = WriteAction { failed = true }
-    content(write)
-      .environment(\.write, write)
-      .alert("保存できませんでした", isPresented: $failed) {
-        Button("OK", role: .cancel) {}
-      } message: {
-        Text("もう一度お試しください。続くときは、端末の空き容量を確かめてください。")
-      }
+extension UIViewController {
+  /// The navigation stacks within, a page of which may be on its way.
+  fileprivate var navigationControllers: [UINavigationController] {
+    let here = (self as? UINavigationController).map { [$0] } ?? []
+    return here + children.flatMap(\.navigationControllers)
   }
 }
 

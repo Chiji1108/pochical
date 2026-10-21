@@ -15,8 +15,8 @@ struct DayDetail: View {
   let patterns: [Pattern]
   let coworkers: [Coworker]
   let onChange: (DayEntry?) -> Void
-  /// "" clears the memo.
-  let onNoteChange: (String) -> Void
+  /// "" clears the memo; true when kept.
+  let onNoteChange: (String) -> Bool
   let onAddCoworker: (String) -> Bool
   /// Opens the day before (-1) or after (1).
   let onStep: (Int) -> Void
@@ -259,7 +259,7 @@ struct DayDetail: View {
   /// "" clears the memo; an entry without one keeps the day's.
   private func keepNote() {
     if draft != (note ?? "") {
-      onNoteChange(draft)
+      _ = onNoteChange(draft)
     }
   }
 
@@ -282,8 +282,7 @@ struct DayDetail: View {
         }
       if !draft.isEmpty {
         Button("メモを消す", systemImage: "xmark.circle.fill") {
-          draft = ""
-          onNoteChange("")
+          if onNoteChange("") { draft = "" }
         }
         .labelStyle(.iconOnly)
         .buttonStyle(.plain)

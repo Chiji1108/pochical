@@ -88,11 +88,12 @@ struct GapSheet: View {
       // The answer stays at the foot, whatever scrolls above it.
       .safeAreaInset(edge: .bottom) {
         Button {
+          guard onFill(offPattern) else { return }
           if blank && !blankAtOpen.contains(offPattern.id) {
             settings.device.look.setOffLook(
               .blank, of: offPattern.id, offPatterns: offPatterns.map(\.id))
           }
-          if onFill(offPattern) { dismiss() }
+          dismiss()
         } label: {
           Text("\(offPattern.name)にする")
             .font(.headline)

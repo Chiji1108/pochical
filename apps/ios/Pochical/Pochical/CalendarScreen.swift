@@ -259,35 +259,31 @@ struct CalendarScreen: View {
         let entry = calendar.shown(from: day, through: day)[day]
         // One day gives way to the next however it is opened, by a tap,
         // ‹ ›, 今週 or a swipe.
-        KeepingEdits { inSheet in
-          ZStack {
-            DayDetail(
-              day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-              coworkers: ordered(coworkerRows, by: coworkerOrder),
-              onChange: { entry in
-                keep(by: inSheet) { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
-              },
-              onNoteChange: { note in
-                keep(by: inSheet) { db, now in
-                  try OwnValues.setNote(day, to: note, now: now, in: db)
+        ZStack {
+          DayDetail(
+            day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+            coworkers: ordered(coworkerRows, by: coworkerOrder),
+            onChange: { entry in
+              keep { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+            },
+            onNoteChange: { note in
+              keep { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
+            },
+            // Someone added from a day is on that day too.
+            onAddCoworker: { name in
+              keep { db, now in
+                let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+                if var entry {
+                  entry.people = (entry.people ?? []) + [id]
+                  try OwnValues.set(day, to: entry, now: now, in: db)
                 }
-              },
-              // Someone added from a day is on that day too.
-              onAddCoworker: { name in
-                keep(by: inSheet) { db, now in
-                  let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-                  if var entry {
-                    entry.people = (entry.people ?? []) + [id]
-                    try OwnValues.set(day, to: entry, now: now, in: db)
-                  }
-                }
-              },
-              onStep: { step in go(to: day.adding(days: step)) }
-            )
-            .id(day)
-          }
-          .animation(folding, value: day)
+              }
+            },
+            onStep: { step in go(to: day.adding(days: step)) }
+          )
+          .id(day)
         }
+        .animation(folding, value: day)
         // Closed by its × or in code, the day has closed already.
         .onSheetLeaving { going in
           if opened != nil { withAnimation(folding) { leaving = going } }
@@ -322,7 +318,7 @@ struct CalendarScreen: View {
       }
     }
     .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
-      KeepingEdits { inSheet in gapSheet(calendar, keptBy: inSheet) }
+      gapSheet(calendar)
     }
     // Shifts first entered: what the reminders are for, then the system's
     // question only if wanted (spec/calendar.md, Reminders).
@@ -610,14 +606,14 @@ struct CalendarScreen: View {
 
   /// What 完了 asks about the month's blank days, while there are some
   /// and a pattern that counts as off to fill them with.
-  private func gapSheet(_ calendar: OwnCalendar, keptBy write: WriteAction) -> GapSheet? {
+  private func gapSheet(_ calendar: OwnCalendar) -> GapSheet? {
     let offPatterns = calendar.patterns.inUse.filter(\.countsAsOff)
     guard !offPatterns.isEmpty, !gaps.isEmpty else { return nil }
     return GapSheet(
       days: gaps, offPatterns: offPatterns, picked: $gapFill,
       openedLook: settings.device.look.options
     ) { off in
-      keep(by: write) { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
+      keep { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
     }
   }
 
@@ -639,14 +635,11 @@ struct CalendarScreen: View {
     ReviewPrompt.asked()
   }
 
-  /// Keeps the person's edit (WriteAction), by a sheet's own `write` for
-  /// one written in it; true when kept.
+  /// Keeps the person's edit (WriteAction); true when kept.
   @discardableResult
-  private func keep(by write: WriteAction? = nil, _ edit: (Database, Int64) throws -> Void)
-    -> Bool
-  {
+  private func keep(_ edit: (Database, Int64) throws -> Void) -> Bool {
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    guard (write ?? self.write)({ try edit($0, now) }) else { return false }
+    guard write({ try edit($0, now) }) else { return false }
     changed = true
     // A memo kept as its day closes comes after the day has gone.
     askForReviewIfDue()

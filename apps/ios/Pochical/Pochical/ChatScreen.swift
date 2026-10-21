@@ -425,7 +425,7 @@ struct ChatScreen: View {
     .onDisappear {
       announcer.stop()
       menuClosed()
-      keepDraft()
+      keepDraft(leaving: true)
       photoPrefetch.stop()
       draft.stopTyping(in: threadID, socket: socket)
       if Notifications.shared.openChat?.threadID == threadID {
@@ -438,17 +438,14 @@ struct ChatScreen: View {
         GroupMembersRequest(groupID: place.id, from: span.from, through: span.through))
     }
     .sheet(isPresented: $sharingDays) {
-      KeepingEdits { inSheet in
-        ShareDaysSheet(
-          groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) },
-          pollable: otherID == nil && place.rules.polls,
-          onSend: { shareDays($0, poll: $1, by: inSheet) })
-      }
+      ShareDaysSheet(
+        groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) },
+        pollable: otherID == nil && place.rules.polls, onSend: shareDays)
     }
     // As the app leaves the screen, what is written is kept at once,
     // without waiting for the writing to pause.
     .onChange(of: scenePhase) { _, phase in
-      if phase != .active { keepDraft() }
+      if phase != .active { keepDraft(leaving: true) }
     }
     .photoViewer($viewing, shelf: place.shelf, onSave: { photo in
       await savePhoto(photo, in: place.shelf, calls: groupCalls)
@@ -541,7 +538,7 @@ struct ChatScreen: View {
         mentionable: otherID != nil || !place.rules.mentions
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
         nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
-        onStopEditing: stopEditing, keepDraft: keepDraft,
+        onStopEditing: stopEditing, keepDraft: { keepDraft() },
         onShareDays: place.rules.days ? { sharingDays = true } : nil, say: say)
     }
   }
@@ -938,19 +935,21 @@ struct ChatScreen: View {
   /// before it goes; two or more drawn as one album (spec/chat.md,
   /// Albums).
   private func sendPhotos() -> Bool {
-    let kept = draft.photos.filter {
-      (try? ChatPhotos.keep($0.shrunk.jpeg, as: $0.id, in: place.shelf)) != nil
-    }
-    guard !kept.isEmpty else {
-      draft.photos = []
-      return true
-    }
+    let photos = draft.photos
+    guard !photos.isEmpty else { return true }
+    let shelf = place.shelf
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
-    send.photos = kept.map { $0.shrunk.line($0.id).wire }
-    guard sent(send) else {
-      for photo in kept {
-        ChatPhotos.forget(photo.id, in: place.shelf)
+    send.photos = photos.map { $0.shrunk.line($0.id).wire }
+    guard
+      write.keeping({
+        for photo in photos {
+          try ChatPhotos.keep(photo.shrunk.jpeg, as: photo.id, in: shelf)
+        }
+      }), sent(send)
+    else {
+      for photo in photos {
+        ChatPhotos.forget(photo.id, in: shelf)
       }
       return false
     }
@@ -1008,20 +1007,19 @@ struct ChatScreen: View {
   /// Keeps what is being written with the chat, the one place a chat's
   /// draft is written: as the composer changes, as the chat is left and as
   /// the app leaves the screen; written only as it changed, and not before
-  /// the chat's draft is back in the composer. One not kept is tried again
-  /// as it next changes or the chat is left, and not said, as chat apps do
-  /// not: the composer still holds the words, and an alert asked for as the
-  /// chat or the app leaves the screen is never seen, and holds the screen.
-  private func keepDraft() {
+  /// the chat's draft is back in the composer. One not kept while the
+  /// composer still holds it is tried again as it next changes, quietly;
+  /// said as the chat or the app is left, when the words would go.
+  private func keepDraft(leaving: Bool = false) {
     guard tookDraft else { return }
     var kept = draft.kept
     if let opened = openedDraft, opened.shown == draft.text { kept.text = opened.sent }
     guard kept != keptDraft else { return }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    let written: Void? = try? database.write { db in
-      try Chats.keepDraft(kept, of: threadID, in: place.id, now: now, db: db)
+    let keeping = leaving ? write : WriteAction {}
+    if keeping({ try Chats.keepDraft(kept, of: threadID, in: place.id, now: now, db: $0) }) {
+      keptDraft = kept
     }
-    if written != nil { keptDraft = kept }
   }
 
   // MARK: Mentions
@@ -1299,9 +1297,10 @@ struct ChatScreen: View {
     var read = Pochical_V1_ChatRead()
     read.threadID = threadID
     read.lastReadSeq = UInt64(mark)
-    // Not the person's edit: a mark not kept is tried again as the next
-    // line comes into sight.
-    _ = try? database.write(outboxed(.read(read)))
+    // Not the person's edit: a mark not kept is tried again as a line
+    // next comes into sight.
+    let quietly = WriteAction {}
+    guard quietly(outboxed(.read(read))) else { return }
     // The notifications of the lines read go too, as on the user's other
     // devices when the server tells them.
     let groupID = place.id
@@ -1342,12 +1341,12 @@ struct ChatScreen: View {
 
   /// Shares days with everyone's shifts, as a line of their own; true when
   /// kept.
-  private func shareDays(_ days: [Day], poll: Bool, by write: WriteAction? = nil) -> Bool {
+  private func shareDays(_ days: [Day], poll: Bool) -> Bool {
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
     send.days = days.map(\.key)
     send.poll = poll
-    return sent(send, by: write)
+    return sent(send)
   }
 
   /// Fetches ahead the photos of the lines near those in sight, as their
@@ -1551,10 +1550,10 @@ struct ChatScreen: View {
 
   /// Sends a line of the composer's, answering the line it replies to, the
   /// reply let go once the line is kept; true when kept.
-  private func sent(_ line: Pochical_V1_ChatSend, by write: WriteAction? = nil) -> Bool {
+  private func sent(_ line: Pochical_V1_ChatSend) -> Bool {
     var line = line
     line.replyTo = draft.replyTo.map(UInt64.init) ?? 0
-    guard keep(.send(line), by: write) else { return false }
+    guard keep(.send(line)) else { return false }
     if draft.replyTo != nil { draft.target = nil }
     return true
   }
@@ -1775,11 +1774,10 @@ struct ChatScreen: View {
     if draft.editing?.seq == line.seq { stopEditing() }
   }
 
-  /// Puts the person's edit in the outbox (WriteAction), by a sheet's own
-  /// `write` for one sent from it; true when kept.
+  /// Puts the person's edit in the outbox (WriteAction); true when kept.
   @discardableResult
-  private func keep(_ kind: Pochical_V1_ChatEdit.OneOf_Kind, by write: WriteAction? = nil) -> Bool {
-    guard (write ?? self.write)(outboxed(kind)) else { return false }
+  private func keep(_ kind: Pochical_V1_ChatEdit.OneOf_Kind) -> Bool {
+    guard write(outboxed(kind)) else { return false }
     if case .send = kind { toOwnLine() }
     return true
   }
