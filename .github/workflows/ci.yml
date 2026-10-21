@@ -77,6 +77,12 @@ jobs:
       - run: bun run --cwd apps/web build
       - run: bun run --cwd apps/web bundle:budget
       - run: bun run --cwd apps/catalog build
+      # The server and admin Workers bundle and their configs validate, as
+      # Workers Builds deploys them on merge. A dry run needs no account.
+      - run: bunx wrangler deploy --dry-run
+        working-directory: apps/server
+      - run: bun run build && bunx wrangler deploy --dry-run
+        working-directory: apps/admin
       # The tokens the native apps are generated from design/.
       - run: bun design/scripts/gen.ts --check
       # The migrations drizzle-kit gives from each SQL schema (D1, Group DO,
