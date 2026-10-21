@@ -1,7 +1,9 @@
 import { textLimits } from "@pochical/design/limits";
 import { env } from "cloudflare:workers";
+import { useState } from "react";
 import { data, Form, Link, redirect, useNavigation } from "react-router";
 
+import { characterCount, withinLimit } from "../../../server/src/text-limits";
 import { when } from "../when";
 import type { Route } from "./+types/support-chat";
 
@@ -18,17 +20,15 @@ export const loader = async ({ params, url }: Route.LoaderArgs) => {
   return { ...page, draftId: crypto.randomUUID() };
 };
 
-const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-
 /**
- * An answer's op id: the form's draft id with its words, so the same words
- * sent again from the same form are one line, with or without JavaScript,
- * and other words are an answer of their own.
+ * An answer's op id: the form's draft id with its words as the chat keeps
+ * them, so the same words sent again from the same draft are one line,
+ * with or without JavaScript, and other words are an answer of their own.
  */
-const opIdOf = async (draftId: string, text: string): Promise<string> => {
+const opIdOf = async (draftId: string, words: string): Promise<string> => {
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(`${draftId}\n${text.trim()}`)
+    new TextEncoder().encode(`${draftId}\n${words}`)
   );
   return Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0")
@@ -47,22 +47,21 @@ export const action = async ({ params, request, url }: Route.ActionArgs) => {
   // is the same answer.
   const refuse = (status: number, error: string) =>
     data({ draftId, error, text }, { status });
-  if (text.trim() === "") {
+  // The server keeps the words trimmed, and holds them to the limit so.
+  const words = text.trim();
+  if (words === "") {
     return refuse(400, "返信を書いてください。");
   }
-  // Counted as the server counts it (spec/text-limits.md): characters as a
-  // reader sees them.
-  const count = [...graphemes.segment(text)].length;
-  if (count > textLimits.chatMessage) {
+  if (!withinLimit(words, textLimits.chatMessage)) {
     return refuse(
       400,
-      `${textLimits.chatMessage}文字までです（${count}文字）。`
+      `返信が長すぎます（${characterCount(words)}/${textLimits.chatMessage}文字）。`
     );
   }
   const kept = await env.SERVER.answerSupport(
     params.userId,
     text,
-    await opIdOf(draftId, text)
+    await opIdOf(draftId, words)
   ).catch(() => false);
   if (!kept) {
     return refuse(502, "返信できませんでした。");
@@ -92,7 +91,22 @@ export default function SupportChat({
   const { lines, quoted, atStart } = loaderData;
   const bySeq = new Map([...quoted, ...lines].map((line) => [line.seq, line]));
   const earliest = lines[0]?.seq;
-  const sending = useNavigation().state === "submitting";
+  const navigation = useNavigation();
+  const sending = navigation.state === "submitting";
+  // Loading after the answer's POST is its redirect: the answer was kept.
+  // One refused comes back without loading the page again.
+  const keeping =
+    navigation.state === "loading" && navigation.formMethod === "POST";
+  // The draft outlives 前のメッセージ, which loads the page again, and
+  // takes the page's new one once a kept answer has loaded it.
+  const [draft, setDraft] = useState(() => ({
+    id: actionData?.draftId ?? loaderData.draftId,
+    keeping,
+  }));
+  if (draft.keeping !== keeping) {
+    setDraft({ id: keeping ? draft.id : loaderData.draftId, keeping });
+  }
+  const draftId = draft.id;
   return (
     <main>
       <h1>サポート・{userId.slice(0, 8)}</h1>
@@ -153,16 +167,15 @@ export default function SupportChat({
           )}
         </div>
       ))}
-      {/* A kept answer loads the page again, and a new draft with it. */}
-      <Form key={loaderData.draftId} method="post">
-        <input
-          defaultValue={actionData?.draftId ?? loaderData.draftId}
-          name="draftId"
-          type="hidden"
-        />
+      <Form method="post">
+        <input name="draftId" type="hidden" value={draftId} />
+        {/* A new draft starts empty. */}
         <textarea
           aria-label="返信"
-          defaultValue={actionData?.text}
+          defaultValue={
+            actionData?.draftId === draftId ? actionData.text : undefined
+          }
+          key={draftId}
           name="text"
           required
           rows={4}

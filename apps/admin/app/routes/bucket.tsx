@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { data, Form, useNavigation } from "react-router";
+import type { ShouldRevalidateFunctionArgs } from "react-router";
 
 import { when } from "../when";
 import type { Route } from "./+types/bucket";
@@ -21,8 +22,13 @@ export const action = async ({ request }: Route.ActionArgs) => {
   );
 };
 
-// The audit runs again after 消す, whether it deleted or failed.
-export const shouldRevalidate = () => true;
+// The audit runs again after 消す, whether it deleted or failed part way;
+// not after an asOfMs refused before anything ran.
+export const shouldRevalidate = ({
+  actionStatus,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) =>
+  actionStatus === 502 || defaultShouldRevalidate;
 
 type Verdict = Route.ComponentProps["loaderData"]["rows"][number]["verdict"];
 
