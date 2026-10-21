@@ -731,7 +731,7 @@ public actor SyncClient {
       let began = Self.nowMs()
       do {
         try await ChatPhotos.upload(
-          photoID, of: edit.opID, in: groupID, as: credentials, server: server)
+          photoID, of: edit.opID, in: PhotoShelf(place: groupID), as: credentials, server: server)
       } catch {
         try Task.checkCancellation()
         guard try await stillGoing(edit.opID),

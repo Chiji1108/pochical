@@ -23,7 +23,7 @@ struct LineQuote: Hashable {
 /// press from the bubble.
 struct BubbleQuote: View {
   let quote: LineQuote
-  let groupID: String
+  let shelf: PhotoShelf
   let onOpen: () -> Void
 
   var body: some View {
@@ -41,7 +41,7 @@ struct BubbleQuote: View {
             .lineLimit(1)
         }
         if let photo = quote.photo {
-          QuoteThumbnail(photo: photo, groupID: groupID)
+          QuoteThumbnail(photo: photo, shelf: shelf)
         }
       }
       Rectangle()
@@ -64,10 +64,10 @@ struct BubbleQuote: View {
 /// A quoted photo, small and square.
 private struct QuoteThumbnail: View {
   let photo: LinePhoto
-  let groupID: String
+  let shelf: PhotoShelf
 
   var body: some View {
-    ChatPhotoImage(photo: photo, groupID: groupID, shown: CGSize(width: 32, height: 32))
+    ChatPhotoImage(photo: photo, shelf: shelf, shown: CGSize(width: 32, height: 32))
       .frame(width: 32, height: 32)
       .clipShape(RoundedRectangle(cornerRadius: Radius.xs))
       .accessibilityHidden(true)
@@ -129,7 +129,7 @@ extension ComposerBar where Picture == EmptyView {
 /// Over the composer while answering a line: whom, what, and × to stop.
 struct ReplyBar: View {
   let quote: LineQuote
-  let groupID: String
+  let shelf: PhotoShelf
   let onStop: () -> Void
 
   var body: some View {
@@ -138,7 +138,7 @@ struct ReplyBar: View {
       onStop: onStop
     ) {
       if let photo = quote.photo {
-        QuoteThumbnail(photo: photo, groupID: groupID)
+        QuoteThumbnail(photo: photo, shelf: shelf)
       }
     }
   }

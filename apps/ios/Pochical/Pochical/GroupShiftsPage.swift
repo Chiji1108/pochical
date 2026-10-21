@@ -479,7 +479,7 @@ private struct DaySheet: View {
         // On one line, as /design's: the mark, the pattern and its hours.
         HStack(spacing: 8) {
           MemberAvatar(
-            name: member.name, photoID: member.photoID, groupID: groupID, size: 28,
+            name: member.name, photoID: member.photoID, shelf: .group(groupID), size: 28,
             userID: member.userID)
           Text(member.name).lineLimit(1)
           Spacer(minLength: 8)

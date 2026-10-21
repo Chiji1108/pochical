@@ -446,8 +446,8 @@ struct ChatScreen: View {
     .onChange(of: scenePhase) { _, phase in
       if phase != .active { keepDraft() }
     }
-    .photoViewer($viewing, groupID: place.id, onSave: { photo in
-      await savePhoto(photo, in: place.id, calls: groupCalls)
+    .photoViewer($viewing, shelf: place.shelf, onSave: { photo in
+      await savePhoto(photo, in: place.shelf, calls: groupCalls)
     })
     .modifier(
       ReportAndBlock(
@@ -533,7 +533,7 @@ struct ChatScreen: View {
         .padding(8)
     } else {
       ChatComposer(
-        draft: draft, groupID: place.id, threadID: threadID,
+        draft: draft, place: place, threadID: threadID,
         mentionable: otherID != nil || !place.rules.mentions
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
         nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
@@ -776,7 +776,7 @@ struct ChatScreen: View {
       lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
       members: cardMembers, poll: pollLine(for: line), photos: line.photos,
       quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
-      groupID: place.id,
+      shelf: place.shelf,
       shifts: line.poll ? nil : shifts(on: line.days.first),
       time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
       writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
@@ -798,7 +798,7 @@ struct ChatScreen: View {
     LineView(
       lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
       members: cardMembers, poll: waitingPoll(line), photos: line.photos, up: line.up,
-      quote: line.replyTo.map(quote(of:)), groupID: place.id, time: line.madeAtMs,
+      quote: line.replyTo.map(quote(of:)), shelf: place.shelf, time: line.madeAtMs,
       edited: false, mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
       named: false, first: startsRun, waiting: true, failed: line.failed, names: names,
       marks: marks,
@@ -935,7 +935,7 @@ struct ChatScreen: View {
   /// Albums).
   private func sendPhotos() {
     let kept = draft.photos.filter {
-      (try? ChatPhotos.keep($0.shrunk.jpeg, as: $0.id, in: place.id)) != nil
+      (try? ChatPhotos.keep($0.shrunk.jpeg, as: $0.id, in: place.shelf)) != nil
     }
     draft.photos = []
     guard !kept.isEmpty else { return }
@@ -975,7 +975,7 @@ struct ChatScreen: View {
     try? database.write { try Chats.takeBack(line.opID, in: $0) }
     PhotoUploads.shared.forget(line.opID, photos: line.photos.map(\.id))
     for photo in line.photos {
-      ChatPhotos.forget(photo.id, in: place.id)
+      ChatPhotos.forget(photo.id, in: place.shelf)
     }
   }
 
@@ -990,9 +990,8 @@ struct ChatScreen: View {
     let nameOf = { (id: String) in memberName(id, in: names) }
     draft.text = plainText(kept.text, nameOf: nameOf)
     draft.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }
-    draft.editing = kept.editing
-    draft.replyTo = kept.editing == nil ? kept.replyTo : nil
-    keptDraft = KeptDraft(text: kept.text, replyTo: kept.replyTo, editing: kept.editing?.seq)
+    draft.target = kept.target
+    keptDraft = KeptDraft(text: kept.text, target: kept.target?.map(\.seq))
     openedDraft = (shown: draft.text, sent: kept.text)
   }
 
@@ -1349,7 +1348,7 @@ struct ChatScreen: View {
       default: return []
       }
     }
-    photoPrefetch.near(photos, in: place.id, scale: displayScale, calls: groupCalls)
+    photoPrefetch.near(photos, in: place.shelf, scale: displayScale, calls: groupCalls)
   }
 
   /// The line's photo `key` opened large among the chat's, one by one:
@@ -1386,7 +1385,7 @@ struct ChatScreen: View {
     Task {
       var saved = 0
       for photo in photos {
-        if await savePhoto(photo, in: place.id, calls: groupCalls) { saved += 1 }
+        if await savePhoto(photo, in: place.shelf, calls: groupCalls) { saved += 1 }
       }
       if saved == photos.count {
         sayDone("写真を保存しました")
@@ -1531,14 +1530,15 @@ struct ChatScreen: View {
   /// Answers a line (返信): quoted over the composer until sent or ×.
   private func reply(to line: ChatLineRow) {
     if draft.editing != nil { stopEditing() }
-    draft.replyTo = line.seq
+    draft.target = .reply(line.seq)
     draft.field.focus()
   }
 
   /// The line being answered, for the first line sent: then no more.
   private func takeReply() -> UInt64 {
-    defer { draft.replyTo = nil }
-    return draft.replyTo.map(UInt64.init) ?? 0
+    guard let seq = draft.replyTo else { return 0 }
+    draft.target = nil
+    return UInt64(seq)
   }
 
   /// The line a reply answers, as its quote shows it (spec/chat.md, Replies):
@@ -1566,8 +1566,7 @@ struct ChatScreen: View {
   }
 
   private func edit(_ line: ChatLineRow) {
-    draft.replyTo = nil
-    draft.editing = line
+    draft.target = .edit(line)
     // Its mentions as @name again, still picked.
     draft.text = plainText(line.text, nameOf: nameOf)
     draft.picked = mentions(in: line.text).map { PickedMember(id: $0, name: nameOf($0)) }
@@ -1575,7 +1574,7 @@ struct ChatScreen: View {
   }
 
   private func stopEditing() {
-    draft.editing = nil
+    draft.target = nil
     draft.text = ""
     draft.picked = []
   }
@@ -1649,8 +1648,7 @@ struct ChatScreen: View {
   /// Pins a line for everyone, or takes its pin off, and says what
   /// happened, the oldest pin making room for a new one by name.
   private func pin(_ seq: Int64, on: Bool) {
-    let current = chat.state.pins.map { String($0.seq) }
-    let dropped = on ? pinStep(current, pin: String(seq)).dropped : nil
+    let dropped = on ? pinStep(chat.state.pins.map(\.seq), pin: seq).dropped : nil
     var pin = Pochical_V1_ChatPin()
     pin.threadID = threadID
     pin.seq = UInt64(seq)

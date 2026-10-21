@@ -123,42 +123,42 @@ public enum ChatPhotos {
 
   /// Where a group's photo is kept on the device once seen or sent: among
   /// the App Group's caches, so the widgets show the faces too.
-  static func cached(_ photoID: String, in groupID: String) -> URL {
-    caches("ChatPhotos/\(groupID)").appending(path: "\(photoID).jpg")
+  static func cached(_ photoID: String, in shelf: PhotoShelf) -> URL {
+    caches("ChatPhotos/\(shelf.key)").appending(path: "\(photoID).jpg")
   }
 
   /// Where the member's own photo waits until uploaded, out of the caches
   /// the system may empty.
-  static func pending(_ photoID: String, in groupID: String) -> URL {
-    directory(.applicationSupportDirectory, "PendingPhotos/\(groupID)")
+  static func pending(_ photoID: String, in shelf: PhotoShelf) -> URL {
+    directory(.applicationSupportDirectory, "PendingPhotos/\(shelf.key)")
       .appending(path: "\(photoID).jpg")
   }
 
   /// Keeps the member's own photo to send: until uploaded, and to show.
-  public static func keep(_ jpeg: Data, as photoID: String, in groupID: String) throws {
-    try jpeg.write(to: pending(photoID, in: groupID), options: .atomic)
-    try jpeg.write(to: cached(photoID, in: groupID), options: .atomic)
+  public static func keep(_ jpeg: Data, as photoID: String, in shelf: PhotoShelf) throws {
+    try jpeg.write(to: pending(photoID, in: shelf), options: .atomic)
+    try jpeg.write(to: cached(photoID, in: shelf), options: .atomic)
   }
 
   /// Keeps a photo picked to send later among the device's caches, so one
   /// never sent leaves nothing for long.
-  static func hold(_ jpeg: Data, as photoID: String, in groupID: String) throws {
-    try jpeg.write(to: cached(photoID, in: groupID), options: .atomic)
+  static func hold(_ jpeg: Data, as photoID: String, in shelf: PhotoShelf) throws {
+    try jpeg.write(to: cached(photoID, in: shelf), options: .atomic)
   }
 
   /// Told as a photo is taken off the device, with its `photoID` and
-  /// `groupID` in the user info, for the app's image cache to let go of it
+  /// `shelf` in the user info, for the app's image cache to let go of it
   /// too.
   public static let forgotten = Notification.Name("ChatPhotos.forgotten")
   /// Told as every photo is taken off the device.
   public static let erased = Notification.Name("ChatPhotos.erased")
 
   /// Takes a photo off the device, as when its line is taken back.
-  public static func forget(_ photoID: String, in groupID: String) {
-    try? FileManager.default.removeItem(at: cached(photoID, in: groupID))
-    try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
+  public static func forget(_ photoID: String, in shelf: PhotoShelf) {
+    try? FileManager.default.removeItem(at: cached(photoID, in: shelf))
+    try? FileManager.default.removeItem(at: pending(photoID, in: shelf))
     NotificationCenter.default.post(
-      name: forgotten, object: nil, userInfo: ["photoID": photoID, "groupID": groupID])
+      name: forgotten, object: nil, userInfo: ["photoID": photoID, "shelf": shelf])
   }
 
   /// Every photo kept on the device, to send or to show, and links'
@@ -173,14 +173,14 @@ public enum ChatPhotos {
   }
 
   /// The photo's bytes held on the device, if any.
-  public static func held(_ photoID: String, in groupID: String) -> Data? {
-    heldFile(photoID, in: groupID).flatMap { try? Data(contentsOf: $0) }
+  public static func held(_ photoID: String, in shelf: PhotoShelf) -> Data? {
+    heldFile(photoID, in: shelf).flatMap { try? Data(contentsOf: $0) }
   }
 
   /// Where the photo is held on the device, if it is: the member's own,
   /// sent or waiting to go, and the faces kept for the widgets.
-  public static func heldFile(_ photoID: String, in groupID: String) -> URL? {
-    [cached(photoID, in: groupID), pending(photoID, in: groupID)].first {
+  public static func heldFile(_ photoID: String, in shelf: PhotoShelf) -> URL? {
+    [cached(photoID, in: shelf), pending(photoID, in: shelf)].first {
       FileManager.default.fileExists(atPath: $0.path())
     }
   }
@@ -213,13 +213,13 @@ public enum ChatPhotos {
   /// Uploads the member's own photo to the group's photos, once; a retry
   /// stores it again. A chat's photo goes with its small version, first,
   /// so the lines find it as soon as they are sent; the user's own photos
-  /// (`mine`) are small already. How far it has gone is told in
+  /// (`PhotoShelf.mine`) are small already. How far it has gone is told in
   /// `PhotoUploads`, where the chat line `opID` it goes with may be
   /// stopped: then it throws as cancelled. Once the line's photos are all
   /// up, the caller asks `PhotoUploads.send` whether the line still goes.
   /// `send` stands in for the network, telling nothing of how far.
   static func upload(
-    _ photoID: String, of opID: String? = nil, in groupID: String,
+    _ photoID: String, of opID: String? = nil, in shelf: PhotoShelf,
     as credentials: Credentials, server: URL = Server.url, send: Account.Send? = nil
   ) async throws {
     // Uploaded before, from another socket, it goes up again from the copy
@@ -227,17 +227,17 @@ public enum ChatPhotos {
     // uploader has uploaded nothing for a while, so a line sent again,
     // or long after, finds it there.
     guard
-      let jpeg = (try? Data(contentsOf: pending(photoID, in: groupID)))
-        ?? (try? Data(contentsOf: cached(photoID, in: groupID)))
+      let jpeg = (try? Data(contentsOf: pending(photoID, in: shelf)))
+        ?? (try? Data(contentsOf: cached(photoID, in: shelf)))
     else { throw UploadError.gone }
-    let small = groupID == mine ? nil : small(jpeg)
+    let small = shelf == .mine ? nil : small(jpeg)
     // Told as one, the small version's bytes first.
     let total = Double((small?.count ?? 0) + jpeg.count)
     let attempt = UUID()
     let going = Task {
       if let small {
         try await put(
-          small, as: photoID, in: groupID, small: true, as: credentials, server: server,
+          small, as: photoID, in: shelf, small: true, as: credentials, server: server,
           send: send
         ) { sent in
           Task { @MainActor in
@@ -247,7 +247,7 @@ public enum ChatPhotos {
       }
       let before = small?.count ?? 0
       try await put(
-        jpeg, as: photoID, in: groupID, as: credentials, server: server, send: send
+        jpeg, as: photoID, in: shelf, as: credentials, server: server, send: send
       ) {
         sent in
         Task { @MainActor in
@@ -268,29 +268,29 @@ public enum ChatPhotos {
       await PhotoUploads.shared.ended(photoID, of: opID)
       throw error
     }
-    try? FileManager.default.removeItem(at: pending(photoID, in: groupID))
+    try? FileManager.default.removeItem(at: pending(photoID, in: shelf))
   }
 
   /// Uploads a photo held to send later (`hold`); `gone` once the device
   /// has let it go.
-  static func uploadHeld(_ photoID: String, in groupID: String, as credentials: Credentials)
+  static func uploadHeld(_ photoID: String, in shelf: PhotoShelf, as credentials: Credentials)
     async throws
   {
-    guard let jpeg = try? Data(contentsOf: cached(photoID, in: groupID)) else {
+    guard let jpeg = try? Data(contentsOf: cached(photoID, in: shelf)) else {
       throw UploadError.gone
     }
     try await put(
-      jpeg, as: photoID, in: groupID, as: credentials, server: Server.url, send: nil)
+      jpeg, as: photoID, in: shelf, as: credentials, server: Server.url, send: nil)
   }
 
   /// Puts a photo's bytes on the server, through `send` when given, else
   /// telling `onSent` how many bytes have gone.
   private static func put(
-    _ jpeg: Data, as photoID: String, in groupID: String, small: Bool = false,
+    _ jpeg: Data, as photoID: String, in shelf: PhotoShelf, small: Bool = false,
     as credentials: Credentials, server: URL, send: Account.Send?,
     onSent: @escaping @Sendable (Int64) -> Void = { _ in }
   ) async throws {
-    var request = URLRequest(url: photoURL(photoID, in: groupID, small: small, server: server))
+    var request = URLRequest(url: photoURL(photoID, in: shelf, small: small, server: server))
     request.httpMethod = "PUT"
     request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
     request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
@@ -313,20 +313,20 @@ public enum ChatPhotos {
   /// photos are kept by the app's image cache instead, within its limit.
   /// One that comes after the account changed is dropped, kept nowhere.
   static func fetch(
-    _ photoID: String, in groupID: String, small: Bool = false, keep: Bool = true,
+    _ photoID: String, in shelf: PhotoShelf, small: Bool = false, keep: Bool = true,
     as credentials: Credentials, server: URL = Server.url
   ) async throws -> Data {
-    if let held = held(photoID, in: groupID) {
+    if let held = held(photoID, in: shelf) {
       return held
     }
-    var request = URLRequest(url: photoURL(photoID, in: groupID, small: small, server: server))
+    var request = URLRequest(url: photoURL(photoID, in: shelf, small: small, server: server))
     request.setValue("Bearer \(credentials.token)", forHTTPHeaderField: "Authorization")
     let (data, response) = try await credentials.content.data(for: request)
     let status = (response as? HTTPURLResponse)?.statusCode ?? 0
     guard status == 200 else { throw UploadError.refused(status) }
     return try credentials.whileCurrent {
       if keep, !small {
-        try? data.write(to: cached(photoID, in: groupID), options: .atomic)
+        try? data.write(to: cached(photoID, in: shelf), options: .atomic)
       }
       return data
     }
@@ -357,40 +357,19 @@ public enum ChatPhotos {
     directory(.cachesDirectory, "LinkPreviews")
   }
 
-  /// Where the user's own photos are kept, in place of a group's id: their
-  /// usual photo, on the server for them alone (spec/sync-protocol.md,
-  /// Profile). A group's id is never this.
-  public static let mine = "me"
-
-  /// Where the faces on an invitation's join screen are kept, in place of
-  /// a group's id: read by the code's holder before joining.
-  public static func invitation(_ code: String) -> String {
-    "invites/\(code)"
-  }
-
   /// Keeps a photo of the user's and sends it up at once, to the group's
-  /// photos or their own (`mine`), for a profile to name it after.
+  /// photos or their own (`PhotoShelf.mine`), for a profile to name it after.
   static func send(
-    _ jpeg: Data, as photoID: String, in groupID: String, as credentials: Credentials
+    _ jpeg: Data, as photoID: String, in shelf: PhotoShelf, as credentials: Credentials
   ) async throws {
-    try keep(jpeg, as: photoID, in: groupID)
-    try await upload(photoID, in: groupID, as: credentials)
+    try keep(jpeg, as: photoID, in: shelf)
+    try await upload(photoID, in: shelf, as: credentials)
   }
 
   private static func photoURL(
-    _ photoID: String, in groupID: String, small: Bool = false, server: URL
+    _ photoID: String, in shelf: PhotoShelf, small: Bool = false, server: URL
   ) -> URL {
-    let url = photoURL(photoID, in: groupID, server: server)
+    let url = shelf.url(of: photoID, server: server)
     return small ? url.appending(queryItems: [URLQueryItem(name: "size", value: "small")]) : url
-  }
-
-  private static func photoURL(_ photoID: String, in groupID: String, server: URL) -> URL {
-    switch groupID {
-    case ChatPlace.supportID: server.appending(path: "v1/support/photos/\(photoID)")
-    case mine: server.appending(path: "v1/me/photos/\(photoID)")
-    case let shelf where shelf.hasPrefix("invites/"):
-      server.appending(path: "v1/\(shelf)/photos/\(photoID)")
-    default: server.appending(path: "v1/groups/\(groupID)/photos/\(photoID)")
-    }
   }
 }

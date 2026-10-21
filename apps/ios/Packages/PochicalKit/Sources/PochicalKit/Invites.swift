@@ -45,7 +45,7 @@ public struct InviteDetails: Hashable, Sendable {
   /// Everyone in the group as they appear in it, in the order they joined.
   public var members: [String]
   /// Their photos, as members, read by the code's holder
-  /// (`ChatPhotos.invitation`); empty for none.
+  /// (`PhotoShelf.invitation`); empty for none.
   public var memberPhotos: [String] = []
   /// The user is in the group already.
   public var alreadyMember: Bool

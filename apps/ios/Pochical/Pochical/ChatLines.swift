@@ -127,7 +127,7 @@ struct LineView: View {
   var quote: LineQuote?
   /// Its words opened past chatRules.foldLines lines.
   var unfolded = false
-  var groupID = ""
+  var shelf: PhotoShelf
   /// The shift table on its first day, under its card.
   var shifts: GroupRoute?
   var time: Int64
@@ -214,7 +214,7 @@ struct LineView: View {
               .accessibilityLabel(writer)
           } else if let writer {
             Button { act(.openProfile) } label: {
-              MemberAvatar(name: writer, photoID: writerPhoto, groupID: groupID, size: Self.avatar)
+              MemberAvatar(name: writer, photoID: writerPhoto, shelf: shelf, size: Self.avatar)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(writer)のプロフィール")
@@ -296,7 +296,7 @@ struct LineView: View {
   var bubble: LineContent {
     LineContent(
       text: text, preview: preview, days: days, members: members, poll: poll, photos: photos,
-      up: up, lineID: lineID, quote: quote, groupID: groupID, mine: mine, first: first,
+      up: up, lineID: lineID, quote: quote, shelf: shelf, mine: mine, first: first,
       waiting: waiting && !failed, nameOf: nameOf, unfolded: unfolded)
   }
 
@@ -558,7 +558,7 @@ struct LineContent: View {
   /// The line it answers, over its words or photos; shared days and polls
   /// show none, as /design's cards.
   var quote: LineQuote?
-  var groupID = ""
+  var shelf: PhotoShelf
   let mine: Bool
   let first: Bool
   let waiting: Bool
@@ -578,7 +578,7 @@ struct LineContent: View {
 
   var body: some View {
     if !photos.isEmpty, let quote {
-      QuotedMedia(quote: quote, groupID: groupID, mine: mine, first: first, onOpen: onOpenQuote) {
+      QuotedMedia(quote: quote, shelf: shelf, mine: mine, first: first, onOpen: onOpenQuote) {
         photoMedia
       }
     } else if !photos.isEmpty {
@@ -592,7 +592,7 @@ struct LineContent: View {
       MessageBubble(
         text: text, drawing: drawing, mine: mine, first: first, waiting: waiting, nameOf: nameOf,
         preview: preview,
-        quote: quote, groupID: groupID, onOpenQuote: onOpenQuote, unfolded: unfolded,
+        quote: quote, shelf: shelf, onOpenQuote: onOpenQuote, unfolded: unfolded,
         onUnfold: onUnfold)
     } else {
       DayCard(days: days, members: members)
@@ -620,7 +620,7 @@ extension LineContent {
 
   private func photoLine(_ photo: LinePhoto, cell: CGSize? = nil) -> PhotoLine {
     PhotoLine(
-      photo: photo, groupID: groupID, waiting: waiting, up: up.contains(photo.id),
+      photo: photo, shelf: shelf, waiting: waiting, up: up.contains(photo.id),
       lineID: lineID, onStop: onStopSending, cell: cell)
   }
 }
@@ -630,7 +630,7 @@ extension LineContent {
 struct QuotedMedia<Media: View>: View {
   @Environment(\.themeColors) private var colors
   let quote: LineQuote
-  let groupID: String
+  let shelf: PhotoShelf
   let mine: Bool
   let first: Bool
   let onOpen: () -> Void
@@ -638,7 +638,7 @@ struct QuotedMedia<Media: View>: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpen)
+      BubbleQuote(quote: quote, shelf: shelf, onOpen: onOpen)
         .padding(.horizontal, 12)
         .padding(.top, 8)
         .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
@@ -671,7 +671,7 @@ struct MessageBubble: View {
   var preview: LinePreview?
   /// The line it answers, over its words.
   var quote: LineQuote?
-  var groupID = ""
+  var shelf: PhotoShelf
   var onOpenQuote: () -> Void = {}
   /// Its words opened past chatRules.foldLines lines.
   var unfolded = false
@@ -700,7 +700,7 @@ struct MessageBubble: View {
     let pieces = pieces(drawing)
     return VStack(alignment: .leading, spacing: 8) {
       if let quote {
-        BubbleQuote(quote: quote, groupID: groupID, onOpen: onOpenQuote)
+        BubbleQuote(quote: quote, shelf: shelf, onOpen: onOpenQuote)
           .foregroundStyle(mine ? colors.accentOnFill : colors.textPrimary)
       }
       if unfolded {

@@ -140,7 +140,7 @@ struct ReportSheet: View {
 struct MemberProfileSheet: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
-  @Environment(\.photoGroupID) private var groupID
+  @Environment(\.photoShelf) private var shelf
   let name: String
   /// Their photo as the group shows it; empty for none.
   var photoID = ""
@@ -162,7 +162,8 @@ struct MemberProfileSheet: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 12) {
-        if photoID.isEmpty {
+        // Opened large only from where the group keeps it.
+        if photoID.isEmpty || shelf == nil {
           MemberAvatar(name: name, photoID: photoID, size: Self.face)
         } else {
           Button {
@@ -187,7 +188,7 @@ struct MemberProfileSheet: View {
             .background(colors.fillTertiary, in: Capsule())
         }
         HStack(spacing: 8) {
-          GroupMarkView(mark: groupMark, size: 14, shelf: groupID)
+          GroupMarkView(mark: groupMark, size: 14, shelf: shelf)
             .accessibilityHidden(true)
           Text("\(groupName)でのプロフィール")
         }
@@ -259,7 +260,7 @@ struct MemberProfileSheet: View {
       }
     }
     .presentationDetents([.medium])
-    .photoViewer($viewingPhoto, groupID: groupID)
+    .photoViewer($viewingPhoto, shelf: shelf)
   }
 }
 

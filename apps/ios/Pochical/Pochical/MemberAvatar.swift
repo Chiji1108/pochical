@@ -4,17 +4,17 @@ import PochicalKit
 import SwiftUI
 
 /// Someone's face (/design's PhotoAvatar): their photo, one of the group's
-/// photos or the user's own (`ChatPhotos.mine`), else the first letter of
+/// photos or the user's own (`PhotoShelf.mine`), else the first letter of
 /// their name, which also shows while the photo first loads.
 struct MemberAvatar: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.displayScale) private var displayScale
-  @Environment(\.photoGroupID) private var openGroupID
+  @Environment(\.photoShelf) private var openShelf
   @Environment(\.meID) private var meID
   let name: String
   let photoID: String
   /// Whose photos it is among; the open group's when not given.
-  var groupID: String?
+  var shelf: PhotoShelf?
   let size: CGFloat
   /// Whose face it is, for the viewer's own to show as theirs.
   var userID: String?
@@ -31,7 +31,7 @@ struct MemberAvatar: View {
           request: photoID.isEmpty
             ? nil
             : ChatPhotoLoading.picture(
-              photoID, in: groupID ?? openGroupID, size: CGSize(width: size, height: size),
+              photoID, in: shelf ?? openShelf, size: CGSize(width: size, height: size),
               scale: displayScale, calls: groupCalls)
         ) {
           letter
@@ -209,12 +209,12 @@ struct PhotoEditor<Picture: View>: View {
 extension PhotoEditor where Picture == MemberAvatar {
   /// A face to change: the person's own, 写真を編集 under it.
   init(
-    name: String, photoID: String, groupID: String, onPhoto: @escaping (Data) async -> Void,
+    name: String, photoID: String, shelf: PhotoShelf, onPhoto: @escaping (Data) async -> Void,
     onUsual: (() async -> Void)? = nil, onRemove: (() async -> Void)? = nil
   ) {
     self.init(
       label: "写真を編集", hasPhoto: !photoID.isEmpty,
-      picture: { MemberAvatar(name: name, photoID: photoID, groupID: groupID, size: 88, me: true) },
+      picture: { MemberAvatar(name: name, photoID: photoID, shelf: shelf, size: 88, me: true) },
       onPhoto: onPhoto, onUsual: onUsual, onRemove: onRemove)
   }
 }

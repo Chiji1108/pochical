@@ -105,5 +105,6 @@ var migrator: DatabaseMigrator {
   migrator.registerChatRecalls()
   migrator.registerSyncSchema()
   migrator.registerChatLinePhotos()
+  migrator.registerDraftTargets()
   return migrator
 }

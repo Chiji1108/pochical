@@ -7,17 +7,63 @@ import SQLiteData
 // (spec/chat.md, Drafts), and the member's lines that could not be sent
 // or were taken back while they waited (Lines on their way).
 
+/// The line a draft answers (返信), by seq, or the line of one's own it
+/// changes (編集), as `Edited`: one or the other, never both, as the
+/// composer shows one bar for it (spec/chat.md, Replies; Editing and
+/// unsending).
+public enum DraftTarget<Edited: Hashable & Sendable>: Hashable, Sendable {
+  case reply(Int64)
+  case edit(Edited)
+
+  /// The line answered, if it answers one.
+  public var replyTo: Int64? {
+    if case .reply(let seq) = self { seq } else { nil }
+  }
+
+  /// The line changed, if it changes one.
+  public var editing: Edited? {
+    if case .edit(let line) = self { line } else { nil }
+  }
+
+  /// The same target, the line changed as `transform` makes it.
+  public func map<Other>(_ transform: (Edited) -> Other) -> DraftTarget<Other> {
+    switch self {
+    case .reply(let seq): .reply(seq)
+    case .edit(let line): .edit(transform(line))
+    }
+  }
+}
+
+extension DraftTarget where Edited == Int64 {
+  /// The target as two seqs are kept apart (the drafts table, the
+  /// vectors), at most one of them set; none for neither.
+  init?(replyTo: Int64?, editing: Int64?) {
+    if let editing {
+      self = .edit(editing)
+    } else if let replyTo {
+      self = .reply(replyTo)
+    } else {
+      return nil
+    }
+  }
+
+  /// The line answered or changed.
+  var seq: Int64 {
+    switch self {
+    case .reply(let seq), .edit(let seq): seq
+    }
+  }
+}
+
 /// What was being written in a chat: its words as they would be sent (its
 /// mentions as <@id>), and the line it answers or changes, by seq.
 public struct KeptDraft: Hashable, Sendable {
   public var text: String
-  public var replyTo: Int64?
-  public var editing: Int64?
+  public var target: DraftTarget<Int64>?
 
-  public init(text: String, replyTo: Int64? = nil, editing: Int64? = nil) {
+  public init(text: String, target: DraftTarget<Int64>? = nil) {
     self.text = text
-    self.replyTo = replyTo
-    self.editing = editing
+    self.target = target
   }
 }
 
@@ -40,18 +86,19 @@ public struct DraftLine: Hashable, Sendable {
 /// (spec/vectors/chat.json, draft).
 public func keptDraft(_ draft: KeptDraft, lineOf: (Int64) -> DraftLine?) -> KeptDraft? {
   guard !draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-  if let editing = draft.editing {
-    guard let line = lineOf(editing), !line.unsent, line.text != draft.text else { return nil }
-    return KeptDraft(text: draft.text, editing: editing)
+  switch draft.target {
+  case .edit(let seq):
+    guard let line = lineOf(seq), !line.unsent, line.text != draft.text else { return nil }
+    return draft
+  case .reply(let seq) where lineOf(seq)?.unsent == true:
+    return KeptDraft(text: draft.text)
+  case .reply, nil:
+    return draft
   }
-  var kept = draft
-  if let replyTo = draft.replyTo, lineOf(replyTo)?.unsent == true {
-    kept.replyTo = nil
-  }
-  return kept
 }
 
-/// A chat's draft on the device.
+/// A chat's draft on the device: its target as two columns, at most one
+/// of them set.
 @Table("chatDrafts")
 struct ChatDraftRow: Hashable, Sendable {
   var groupID: String
@@ -60,14 +107,17 @@ struct ChatDraftRow: Hashable, Sendable {
   var replyTo: Int64?
   var editing: Int64?
   var savedAtMs: Int64
+
+  var target: DraftTarget<Int64>? {
+    DraftTarget(replyTo: replyTo, editing: editing)
+  }
 }
 
 /// A draft as a chat opens with it: the line being changed whole, for the
 /// composer to change.
 public struct OpenedDraft: Hashable, Sendable {
   public var text: String
-  public var replyTo: Int64?
-  public var editing: ChatLineRow?
+  public var target: DraftTarget<ChatLineRow>?
 }
 
 extension DatabaseMigrator {
@@ -92,6 +142,32 @@ extension DatabaseMigrator {
         CREATE TABLE "chatTakenBack" (
           "opID" TEXT PRIMARY KEY NOT NULL,
           "groupID" TEXT NOT NULL
+        ) STRICT
+        """
+      )
+      .execute(db)
+    }
+  }
+
+  mutating func registerDraftTargets() {
+    registerMigration("A draft answers a line or changes one, never both") { db in
+      try #sql(
+        """
+        DROP TABLE "chatDrafts"
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        CREATE TABLE "chatDrafts" (
+          "groupID" TEXT NOT NULL,
+          "threadID" TEXT NOT NULL,
+          "text" TEXT NOT NULL,
+          "replyTo" INTEGER,
+          "editing" INTEGER,
+          "savedAtMs" INTEGER NOT NULL,
+          PRIMARY KEY ("groupID", "threadID"),
+          CHECK ("replyTo" IS NULL OR "editing" IS NULL)
         ) STRICT
         """
       )
@@ -127,8 +203,8 @@ extension Chats {
     else { return }
     try ChatDraftRow.insert {
       ChatDraftRow(
-        groupID: groupID, threadID: threadID, text: kept.text, replyTo: kept.replyTo,
-        editing: kept.editing, savedAtMs: now)
+        groupID: groupID, threadID: threadID, text: kept.text, replyTo: kept.target?.replyTo,
+        editing: kept.target?.editing, savedAtMs: now)
     }
     .execute(db)
   }
@@ -138,8 +214,16 @@ extension Chats {
     -> OpenedDraft?
   {
     guard let kept = try keptDraft(of: threadID, in: groupID, db: db) else { return nil }
-    let editing = try kept.editing.flatMap { try line(kept: $0, of: threadID, in: groupID, db: db) }
-    return OpenedDraft(text: kept.text, replyTo: kept.replyTo, editing: editing)
+    switch kept.target {
+    case .edit(let seq):
+      // Kept only while the device holds the line (`keptDraft`).
+      let line = try line(kept: seq, of: threadID, in: groupID, db: db)
+      return OpenedDraft(text: kept.text, target: line.map(DraftTarget.edit))
+    case .reply(let seq):
+      return OpenedDraft(text: kept.text, target: .reply(seq))
+    case nil:
+      return OpenedDraft(text: kept.text)
+    }
   }
 
   /// The chat's draft as kept, with its lines as they are now.
@@ -151,8 +235,7 @@ extension Chats {
         .fetchOne(db)
     else { return nil }
     return try keptDraft(
-      KeptDraft(text: row.text, replyTo: row.replyTo, editing: row.editing), of: threadID,
-      in: groupID, db: db)
+      KeptDraft(text: row.text, target: row.target), of: threadID, in: groupID, db: db)
   }
 
   /// The group's chats with a draft.
@@ -168,13 +251,13 @@ extension Chats {
   private static func keptDraft(
     _ draft: KeptDraft, of threadID: String, in groupID: String, db: Database
   ) throws -> KeptDraft? {
-    var lines: [Int64: DraftLine] = [:]
-    for seq in [draft.replyTo, draft.editing].compactMap(\.self) {
-      if let line = try line(kept: seq, of: threadID, in: groupID, db: db) {
-        lines[seq] = DraftLine(text: line.text, unsent: line.unsent)
-      }
+    let line = try draft.target.flatMap {
+      try line(kept: $0.seq, of: threadID, in: groupID, db: db)
     }
-    return PochicalKit.keptDraft(draft) { lines[$0] }
+    // The target's line is the one asked for.
+    return PochicalKit.keptDraft(draft) { _ in
+      line.map { DraftLine(text: $0.text, unsent: $0.unsent) }
+    }
   }
 
   private static func line(kept seq: Int64, of threadID: String, in groupID: String, db: Database)

@@ -135,7 +135,7 @@ struct InviteCard: View {
       // used, a link's sign in its place.
       Group {
         if let invite, !unusable {
-          GroupMarkView(mark: invite.mark, size: 42, shelf: ChatPhotos.invitation(code))
+          GroupMarkView(mark: invite.mark, size: 42, shelf: .invitation(code: code))
         } else {
           Image(systemName: "link")
             .font(.system(size: 18))

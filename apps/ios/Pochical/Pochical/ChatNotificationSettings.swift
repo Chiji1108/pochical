@@ -45,7 +45,7 @@ struct ChatNotificationsPage: View {
             Label {
               Text(group.name).lineLimit(1)
             } icon: {
-              GroupMarkBadge(mark: group.mark, shelf: group.id)
+              GroupMarkBadge(mark: group.mark, shelf: .group(group.id))
             }
           }
         }
@@ -69,7 +69,7 @@ struct ChatNotificationsPage: View {
             let member = memberOf(other, in: chat.groupID)
             PersonLabel(
               name: member?.shownName ?? "メンバー", group: group?.name ?? "",
-              photoID: member?.photoID ?? "", groupID: chat.groupID)
+              photoID: member?.photoID ?? "", shelf: PhotoShelf(place: chat.groupID))
           }
         }
       } header: {
@@ -95,7 +95,7 @@ struct ChatNotificationsPage: View {
               } label: {
                 PersonLabel(
                   name: person.name, group: person.group, photoID: person.photoID,
-                  groupID: person.groupID)
+                  shelf: person.shelf)
               }
             }
             .buttonStyle(.plain)
@@ -138,7 +138,7 @@ struct ChatNotificationsPage: View {
     let group: String
     /// Their photo in that group, for their face.
     let photoID: String
-    let groupID: String
+    let shelf: PhotoShelf?
   }
 
   private var blockedPeople: [Person] {
@@ -147,7 +147,7 @@ struct ChatNotificationsPage: View {
       return Person(
         id: id, name: member?.shownName ?? "メンバー",
         group: member.flatMap { member in groups.first { $0.id == member.groupID }?.name } ?? "",
-        photoID: member?.photoID ?? "", groupID: member?.groupID ?? "")
+        photoID: member?.photoID ?? "", shelf: member.map { .group($0.groupID) })
     }
   }
 
@@ -250,7 +250,7 @@ private struct PersonLabel: View {
   let name: String
   let group: String
   let photoID: String
-  let groupID: String
+  let shelf: PhotoShelf?
 
   var body: some View {
     Label {
@@ -259,7 +259,7 @@ private struct PersonLabel: View {
         Text(group).lineLimit(1)
       }
     } icon: {
-      MemberAvatar(name: name, photoID: photoID, groupID: groupID, size: 28)
+      MemberAvatar(name: name, photoID: photoID, shelf: shelf, size: 28)
     }
   }
 }

@@ -81,6 +81,10 @@ struct ChatVectors: Decodable, Sendable {
       let text: String
       var replyTo: Int64?
       var editing: Int64?
+
+      var kept: KeptDraft {
+        KeptDraft(text: text, target: DraftTarget(replyTo: replyTo, editing: editing))
+      }
     }
     struct Line: Decodable, Sendable {
       let seq: Int64
@@ -201,13 +205,8 @@ func aReadTakesBackItsNotifications(_ vector: ChatVectors.Withdrawn) {
 func draftKept(_ vector: ChatVectors.Draft) {
   let lines = Dictionary(
     uniqueKeysWithValues: vector.lines.map { ($0.seq, DraftLine(text: $0.text, unsent: $0.unsent)) })
-  let kept = keptDraft(
-    KeptDraft(text: vector.draft.text, replyTo: vector.draft.replyTo, editing: vector.draft.editing)
-  ) { lines[$0] }
-  let expected = vector.expected.map {
-    KeptDraft(text: $0.text, replyTo: $0.replyTo, editing: $0.editing)
-  }
-  #expect(kept == expected)
+  let kept = keptDraft(vector.draft.kept) { lines[$0] }
+  #expect(kept == vector.expected?.kept)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstComing)
@@ -736,9 +735,20 @@ struct PinVectors: Decodable, Sendable {
 
   struct Case: VectorCase {
     let name: String
+    /// The chat's lines by name, the first at seq 1.
+    let lines: [String]
     let pins: [String]
     let step: Step
     let expected: Expected
+
+    /// The named line's seq.
+    func seq(_ name: String) -> Int64 {
+      guard let index = lines.firstIndex(of: name) else {
+        Issue.record("\(name) is not among the lines of \(self.name)")
+        return 0
+      }
+      return Int64(index) + 1
+    }
   }
 
   let pins: [Case]
@@ -747,16 +757,17 @@ struct PinVectors: Decodable, Sendable {
 @Test(arguments: try vectors("chat", as: PinVectors.self).pins)
 func pinsAfterAStep(_ vector: PinVectors.Case) {
   let step = vector.step
+  let pins = vector.pins.map(vector.seq)
   let after =
-    if let id = step.pin ?? step.settle {
-      pinStep(vector.pins, pin: id)
-    } else if let id = step.unpin {
-      pinStep(vector.pins, unpin: id)
+    if let name = step.pin ?? step.settle {
+      pinStep(pins, pin: vector.seq(name))
+    } else if let name = step.unpin {
+      pinStep(pins, unpin: vector.seq(name))
     } else {
-      pinStep(vector.pins, unsend: step.unsend ?? "")
+      pinStep(pins, unsend: vector.seq(step.unsend ?? ""))
     }
-  #expect(after.pins == vector.expected.pins)
-  #expect(after.dropped == vector.expected.dropped)
+  #expect(after.pins == vector.expected.pins.map(vector.seq))
+  #expect(after.dropped == vector.expected.dropped.map(vector.seq))
 }
 
 @Test func aChatsPinsHoldLinesFarBackAndTheMembersShowAtOnce() throws {
@@ -1227,8 +1238,8 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     try GroupSync.take([line(1, "明日休み？"), line(2, "了解")], of: "g", in: db)
     try Chats.keepDraft(
-      KeptDraft(text: "うん", replyTo: 1), of: groupThread, in: "g", now: 1, db: db)
-    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.replyTo == 1)
+      KeptDraft(text: "うん", target: .reply(1)), of: groupThread, in: "g", now: 1, db: db)
+    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.target == .reply(1))
     #expect(try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).draft?.text == "うん")
 
     // The line answered taken back meanwhile: the words stay, alone.
@@ -1239,12 +1250,35 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
 
     // An edit opens with the line it changes.
     try Chats.keepDraft(
-      KeptDraft(text: "了解です", editing: 2), of: groupThread, in: "g", now: 2, db: db)
-    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.editing?.seq == 2)
+      KeptDraft(text: "了解です", target: .edit(2)), of: groupThread, in: "g", now: 2, db: db)
+    #expect(try Chats.draft(of: groupThread, in: "g", db: db)?.target?.editing?.seq == 2)
 
     // Emptied, it is gone.
     try Chats.keepDraft(KeptDraft(text: ""), of: groupThread, in: "g", now: 3, db: db)
     #expect(try Chats.draft(of: groupThread, in: "g", db: db) == nil)
+  }
+}
+
+@Test func aDraftNeverAnswersALineAndChangesOneAtOnce() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    try GroupSync.take([line(1, "明日休み？"), line(2, "了解")], of: "g", in: db)
+    // Turned from a reply to an edit, it is an edit alone.
+    var draft = KeptDraft(text: "了解です", target: .reply(1))
+    draft.target = .edit(2)
+    try Chats.keepDraft(draft, of: groupThread, in: "g", now: 1, db: db)
+    let opened = try Chats.draft(of: groupThread, in: "g", db: db)
+    #expect(opened?.target?.editing?.seq == 2)
+    #expect(opened?.target?.replyTo == nil)
+
+    // Nor does the device keep one that does.
+    #expect(throws: (any Error).self) {
+      try ChatDraftRow.insert {
+        ChatDraftRow(
+          groupID: "g", threadID: "both", text: "x", replyTo: 1, editing: 2, savedAtMs: 1)
+      }
+      .execute(db)
+    }
   }
 }
 

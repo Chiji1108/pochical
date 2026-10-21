@@ -17,7 +17,7 @@ struct ChatPhotoImage: View {
   @Environment(\.displayScale) private var displayScale
   @Environment(\.measuringLine) private var measuring
   let photo: LinePhoto
-  let groupID: String
+  let shelf: PhotoShelf
   /// The size it is drawn at, read no larger.
   let shown: CGSize
   /// Read only while on the screen, and let go once out of it: a line's
@@ -37,7 +37,7 @@ struct ChatPhotoImage: View {
 
   var body: some View {
     let request = ChatPhotoLoading.request(
-      photo, in: groupID, pixels: pixels, calls: groupCalls, held: held ?? false)
+      photo, in: shelf, pixels: pixels, calls: groupCalls, held: held ?? false)
     let wanted = !measuring && (!whileInSight || inSight)
     // Out of sight, nothing is held, not even what memory keeps.
     let kept = wanted ? image ?? ChatPhotoLoading.pipeline.cache[request]?.image : nil
@@ -68,10 +68,10 @@ struct ChatPhotoImage: View {
         image = nil
         return
       }
-      let held = held ?? (ChatPhotos.heldFile(photo.id, in: groupID) != nil)
+      let held = held ?? (ChatPhotos.heldFile(photo.id, in: shelf) != nil)
       self.held = held
       let request = ChatPhotoLoading.request(
-        photo, in: groupID, pixels: pixels, calls: groupCalls, held: held)
+        photo, in: shelf, pixels: pixels, calls: groupCalls, held: held)
       // Held here too, so a photo the memory lets go while the line shows
       // is not lost from it.
       if let kept = ChatPhotoLoading.pipeline.cache[request]?.image {
@@ -176,7 +176,7 @@ struct PhotoLine: View {
   /// in a cell came and went over and over, the photo with it.
   @Environment(\.lineSpace) private var lineSpace
   let photo: LinePhoto
-  let groupID: String
+  let shelf: PhotoShelf
   let waiting: Bool
   /// It is up, its line still waiting.
   var up = false
@@ -196,7 +196,7 @@ struct PhotoLine: View {
       // Read as a photo alone would be, so a photo is fetched and kept
       // once for its line, its cell, its quote and the photo opened large.
       ChatPhotoImage(
-        photo: photo, groupID: groupID, shown: PhotoBox.size(of: photo),
+        photo: photo, shelf: shelf, shown: PhotoBox.size(of: photo),
         whileInSight: lineSpace == nil, retries: !waiting)
         .frame(width: size.width, height: size.height)
         .clipShape(RoundedRectangle(cornerRadius: corner))
@@ -304,8 +304,8 @@ private struct TurningArc: View {
 
 /// Saves one of the group's photos to the person's photo library; true
 /// once saved.
-func savePhoto(_ photo: LinePhoto, in groupID: String, calls: GroupCalls) async -> Bool {
-  guard let data = await ChatPhotoLoading.whole(photo, in: groupID, calls: calls) else {
+func savePhoto(_ photo: LinePhoto, in shelf: PhotoShelf, calls: GroupCalls) async -> Bool {
+  guard let data = await ChatPhotoLoading.whole(photo, in: shelf, calls: calls) else {
     return false
   }
   do {

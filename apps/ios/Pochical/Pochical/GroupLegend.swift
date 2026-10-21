@@ -94,7 +94,7 @@ struct LegendSheet: View {
                 picked = candidate.userID
               } leading: {
                 MemberAvatar(
-                  name: candidate.name, photoID: candidate.photoID, groupID: groupID,
+                  name: candidate.name, photoID: candidate.photoID, shelf: .group(groupID),
                   size: 24, userID: candidate.userID)
               }
               .id(candidate.userID)
