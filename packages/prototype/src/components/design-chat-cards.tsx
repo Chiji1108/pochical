@@ -93,7 +93,7 @@ const linkCard = {
   }),
   // Pages give their picture at 1.91:1, the size previews are made for.
   image: css({
-    aspectRatio: String(chatRules.linkPreviewAspect),
+    aspectRatio: chatRules.linkPreviewAspect,
     bg: "fill.tertiary",
     display: "block",
     objectFit: "cover",
