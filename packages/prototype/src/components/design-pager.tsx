@@ -4,13 +4,13 @@ import {
   motion,
   useMotionValue,
   useMotionValueEvent,
-  useReducedMotion,
 } from "motion/react";
 import type { MotionValue } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { flushSync } from "react-dom";
 
+import { useReducedMotion } from "../lib/device-media";
 import { spring } from "../lib/motion";
 
 // Pages turned by a swipe, a flick or the wheel.
@@ -90,7 +90,7 @@ export function Pager({
     const share = pageWidth > 0 ? -at / (pageWidth + gap) : 0;
     progress?.set(Math.min(Math.max(share, -1), 1));
   });
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   // A page's width, only to keep a drag within the pages beside; the
   // pages are placed without it.
   const [width, setWidth] = useState(0);
