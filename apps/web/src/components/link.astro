@@ -1,17 +1,17 @@
 ---
 import type { HTMLAttributes } from "astro/types";
 
-// A link within the site, marked as the current page on the page it names
-// and on the pages under it; the top page only on itself.
+// A link within the site, marked as the current page on the page it names.
 type Props = HTMLAttributes<"a"> & { href: `/${string}` };
 
 const { href, ...props } = Astro.props;
-// A prerendered page is named by its file: /privacy.html, /index.html.
-const path = Astro.url.pathname.replace(/(?:\/index)?\.html$/u, "") || "/";
-const current =
-  href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`);
+// A prerendered page is named by its file: /privacy.html, /index.html; one
+// on request may be asked for with a trailing slash.
+const path = Astro.url.pathname.replace(/(?:\/index)?\.html$|\/$/u, "") || "/";
+const current = path === href;
 // Astro keeps the line breaks around text written directly inside a
 // component, which the formatter adds; in Japanese one renders as a space.
+// https://github.com/withastro/prettier-plugin-astro/issues/498
 const children = await Astro.slots.render("default");
 ---
 

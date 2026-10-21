@@ -1,3 +1,6 @@
+# Globs match by doublestar, so "**/*.ts" takes files at the root too.
+glob_matcher: doublestar
+
 pre-commit:
   jobs:
     - name: ultracite fix
@@ -25,5 +28,5 @@ pre-commit:
       run: |
         export PATH="$HOME/.local/share/mise/shims:$PATH"
         buf format -w && buf lint
-      glob: "*.proto"
+      glob: "**/*.proto"
       stage_fixed: true
