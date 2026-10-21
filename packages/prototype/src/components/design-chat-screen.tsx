@@ -303,14 +303,12 @@ export function ChatScreen({
     post,
     react,
     remove,
-    replyTo,
     reporting,
     selected,
     send,
     sendAgain,
     setDeciding,
     setPickingFor,
-    setReplyTo,
     setReporting,
     setSelected,
     setUnsending,
@@ -318,7 +316,6 @@ export function ChatScreen({
     unsending,
     vote,
   } = useChatEdits({
-    answering: opened?.replyTo,
     composer,
     mentionName,
     messages: chat.messages,
@@ -346,8 +343,7 @@ export function ChatScreen({
     onDraft(
       keptDraft(
         {
-          editing: composer.editing,
-          replyTo: composer.editing === undefined ? replyTo : undefined,
+          target: composer.target,
           text: withMentions(composer.draft, composer.picked),
         },
         chat.messages
@@ -405,7 +401,7 @@ export function ChatScreen({
   // 写真 from ⋯: the chat's photos alone, over the chat, which keeps
   // where it was and what is being written under it.
   const [listingPhotos, setListingPhotos] = useState(false);
-  const replying = byId(replyTo);
+  const replying = byId(composer.replyTo);
   const decidingContent = byId(deciding)?.content;
   const decidingPoll =
     decidingContent?.kind === "poll" ? decidingContent : undefined;
@@ -653,9 +649,7 @@ export function ChatScreen({
                 reply={
                   replying && {
                     message: replying,
-                    onStop: () => {
-                      setReplyTo(undefined);
-                    },
+                    onStop: composer.stop,
                     writer: nameOf(replying.from),
                   }
                 }
