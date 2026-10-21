@@ -78,33 +78,40 @@ export function paleSkyFromTop(id: string) {
 }
 
 // How one sky gives way to the next: at once from the tap, so the tap is
-// seen to change it, and settling softly. And how slowly the light
-// breathes while it stays.
-export const SKY_CHANGE = {
+// seen to change it, and settling softly.
+const SKY_CHANGE = {
   duration: skyMotion.changeSeconds,
   ease: "easeOut",
 } as const;
-export const BREATH_SECONDS = skyMotion.breathSeconds;
 
-function SkyLight({ sky }: { sky: Sky }) {
-  const scheme = useContext(ColorSchemeContext);
-  const ground = darkGroundOf(useContext(ThemeContext).theme);
+// One sky fading in over the one before (key it by the sky), its light
+// breathing slowly while it stays: the calendar's おたのしみ and the
+// site's sky, each placing it with its own classes.
+export function SkyLight({
+  background,
+  className,
+  lightClassName,
+}: {
+  background: string | undefined;
+  className: string;
+  lightClassName: string;
+}) {
   const still = useReducedMotion();
   return (
     <motion.div
       animate={{ opacity: 1 }}
-      className={surpriseStyles.sky}
+      className={className}
       exit={{ opacity: 0 }}
       initial={{ opacity: 0 }}
       transition={SKY_CHANGE}
     >
       <motion.div
         animate={still ? undefined : { scale: 1.08, x: "2%" }}
-        className={surpriseStyles.light}
+        className={lightClassName}
         initial={{ scale: 1, x: "-2%" }}
-        style={{ background: skyBackground(sky, scheme, ground) }}
+        style={{ background }}
         transition={{
-          duration: BREATH_SECONDS,
+          duration: skyMotion.breathSeconds,
           ease: "easeInOut",
           repeat: Number.POSITIVE_INFINITY,
           repeatType: "mirror",
@@ -138,6 +145,7 @@ export function useSurprise() {
   const id = useSettings((state) => state.device.sky);
   const setSky = useSettings((state) => state.setSky);
   const { theme, wallpaperHue } = useContext(ThemeContext);
+  const scheme = useContext(ColorSchemeContext);
   function play() {
     setSky(id === undefined ? themeSkyId(theme) : nextSkyId(id, theme));
   }
@@ -145,7 +153,14 @@ export function useSurprise() {
   const layer = (
     <div aria-hidden="true" className={surpriseStyles.layer}>
       <AnimatePresence initial={false}>
-        {on && sky !== undefined ? <SkyLight key={id} sky={sky} /> : null}
+        {on && sky !== undefined ? (
+          <SkyLight
+            background={skyBackground(sky, scheme, darkGroundOf(theme))}
+            className={surpriseStyles.sky}
+            key={id}
+            lightClassName={surpriseStyles.light}
+          />
+        ) : null}
       </AnimatePresence>
     </div>
   );
