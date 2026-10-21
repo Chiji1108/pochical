@@ -390,7 +390,9 @@ struct CalendarScreen: View {
   /// with neither.
   private func pullEnded(down: CGFloat, speed: CGFloat) {
     let share = pullShare(down)
-    let unfolds = abs(speed) > Self.unfoldFlick ? speed > 0 : share > Self.unfoldShare
+    // Let go with nothing pulled, the week stays however it is flicked.
+    let unfolds =
+      share > 0 && (abs(speed) > Self.unfoldFlick ? speed > 0 : share > Self.unfoldShare)
     withAnimation(folding) {
       if unfolds { opened = nil }
       pull = 0
@@ -934,8 +936,8 @@ private struct PullDown: UIGestureRecognizerRepresentable {
   final class Coordinator: NSObject, UIGestureRecognizerDelegate {
     func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
       guard let pan = recognizer as? UIPanGestureRecognizer else { return false }
-      let velocity = pan.velocity(in: pan.view)
-      return velocity.y > abs(velocity.x)
+      let moved = pan.translation(in: pan.view)
+      return moved.y > abs(moved.x)
     }
   }
 }
