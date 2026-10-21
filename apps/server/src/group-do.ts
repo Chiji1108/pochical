@@ -11,6 +11,8 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 
 import type { Alert } from "./apns";
+import { groupReferences } from "./bucket-audit";
+import type { GroupReferences } from "./bucket-audit";
 import { mentions } from "./chat-links";
 import {
   ChangeSchema,
@@ -48,6 +50,7 @@ import {
   readMarkOf,
   unreadCount,
   reportContext,
+  wordsOf,
   setMemberBlocks,
   readerView,
   writeNotice,
@@ -223,6 +226,11 @@ export class GroupDO extends DurableObject<Env> {
     void ctx.blockConcurrencyWhile(async () => {
       await migrate(this.db, migrations);
     });
+  }
+
+  /** What the group names in the photos bucket, for its audit. */
+  bucketReferences(): GroupReferences {
+    return groupReferences(this.db);
   }
 
   /** The group's name and mark, or null before the group is set up. */
@@ -1254,7 +1262,7 @@ export class GroupDO extends DurableObject<Env> {
                 if (!blockers.has(reader)) {
                   alerts.set(readerKey(threadId, reader), {
                     alert,
-                    mentioned: mentions(line.text, reader),
+                    mentioned: mentions(wordsOf(line), reader),
                   });
                 }
               }

@@ -101,7 +101,11 @@ export function useChatEdits({
     const next = decidePoll(messages, id, key);
     onChange(next.messages);
     setDeciding(undefined);
-    const day = byId(id)?.poll?.days.find((date) => dateKey(date) === key);
+    const content = byId(id)?.content;
+    const day =
+      content?.kind === "poll"
+        ? content.days.find((date) => dateKey(date) === key)
+        : undefined;
     const decided = day ? `${formatDay(day)}に決めました` : undefined;
     if (next.dropped) {
       toast(decided ? `${decided}。${droppedPinLine}` : droppedPinLine);
@@ -159,13 +163,20 @@ export function useChatEdits({
     // The attached days go first, then the photos as one line, then what
     // was written, if anything.
     post(
-      ...(composer.attached ? [{ days: composer.attached }] : []),
-      ...(composer.photos.length > 0 ? [{ photos: composer.photos }] : []),
+      ...(composer.attached
+        ? [{ content: { days: composer.attached, kind: "days" } as const }]
+        : []),
+      ...(composer.photos.length > 0
+        ? [{ content: { kind: "photos", photos: composer.photos } as const }]
+        : []),
       ...(text
         ? [
             {
-              link: composer.linkPreview.ready,
-              text: withMentions(text, composer.picked),
+              content: {
+                kind: "words",
+                link: composer.linkPreview.ready,
+                text: withMentions(text, composer.picked),
+              } as const,
             },
           ]
         : [])
@@ -191,7 +202,7 @@ export function useChatEdits({
   const actionsOf = (message: Message): LineActions => ({
     mine: message.from === "me",
     onEdit:
-      rules.edit && message.from === "me" && message.text !== undefined
+      rules.edit && message.from === "me" && message.content.kind === "words"
         ? () => {
             startEditing(message);
           }
@@ -204,7 +215,9 @@ export function useChatEdits({
       setSelected(open ? message.id : undefined);
     },
     onPin:
-      !rules.pins || message.notice || message.unsent
+      !rules.pins ||
+      message.content.kind === "notice" ||
+      message.content.kind === "unsent"
         ? undefined
         : () => {
             pin(message.id, message.pinned === undefined);
@@ -234,9 +247,9 @@ export function useChatEdits({
     open: selected === message.id,
     pinned: message.pinned !== undefined,
     text:
-      message.text === undefined
-        ? undefined
-        : plainText(message.text, mentionName),
+      message.content.kind === "words"
+        ? plainText(message.content.text, mentionName)
+        : undefined,
   });
   return {
     actionsOf,

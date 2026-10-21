@@ -7,6 +7,8 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
+import { auditBucket } from "./bucket-audit";
+import type { BucketAudit } from "./bucket-audit";
 import { supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
 import { GROUP_THREAD } from "./group-chat";
@@ -130,6 +132,15 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       bytes: await photo.arrayBuffer(),
       type: photo.httpMetadata?.contentType ?? "image/jpeg",
     };
+  }
+
+  /**
+   * The photos bucket audited now (棚卸し): its objects nothing names, by
+   * prefix and why, with their count, bytes and a few keys. Only reads,
+   * so it may be run again at any time.
+   */
+  async bucketAudit(): Promise<BucketAudit> {
+    return await auditBucket(this.env, Date.now());
   }
 
   /** What members reported, the latest first. */

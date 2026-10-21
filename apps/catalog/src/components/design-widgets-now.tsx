@@ -294,7 +294,7 @@ function NowSmallView({ entry }: { entry: WidgetEntry }) {
       <span className={srOnly}>{spoken}</span>
       <span aria-hidden="true" className={now.head}>
         <DayMark day={span.day} size={18} />
-        <span className={oneLine}>{said.next(name)}</span>
+        <span className={css(oneLine)}>{said.next(name)}</span>
       </span>
       <span aria-hidden="true">
         {far === undefined ? (
@@ -501,7 +501,7 @@ function NowRectangularView({ entry }: { entry: WidgetEntry }) {
       <span className={srOnly}>{spoken}</span>
       <span aria-hidden="true" className={lock.rectHead}>
         <DayMark day={span.day} size={14} />
-        <span className={oneLine}>
+        <span className={css(oneLine)}>
           {state.kind === "on" ? said.on(name) : said.next(name)}
         </span>
       </span>

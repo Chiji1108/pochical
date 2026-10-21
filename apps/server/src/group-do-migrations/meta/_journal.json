@@ -260,6 +260,27 @@
       "when": 1792568393736,
       "tag": "0036_unsend-emptied-photo-lines",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1792573008025,
+      "tag": "0037_chat-line-content",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1792573019428,
+      "tag": "0038_chat-line-content-fill",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "6",
+      "when": 1792573052541,
+      "tag": "0039_chat-line-content-only",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,7 @@ import { and, asc, count, desc, eq, gt, max } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 
+import type { LineContent } from "./chat-content";
 import { supportChats, supportSlack } from "./db/schema";
 import {
   GROUP_THREAD,
@@ -39,6 +40,52 @@ import type { SupportLine } from "./support-lines";
 
 type LineRow = typeof chatLines.$inferSelect;
 
+/** What a line holds, as the admin pages and Slack show it. */
+const contentView = (
+  content: LineContent
+): Pick<SupportLine, "photos" | "preview" | "text" | "unsent" | "words"> => {
+  const none = {
+    photos: [],
+    preview: null,
+    text: "",
+    unsent: false,
+    words: "",
+  };
+  switch (content.kind) {
+    case "words": {
+      const { text, preview } = content;
+      return {
+        ...none,
+        preview:
+          preview === null
+            ? null
+            : { site: preview.site, title: preview.title, url: preview.url },
+        text,
+        words: text,
+      };
+    }
+    case "photos": {
+      const { photos } = content;
+      return {
+        ...none,
+        photos: photos.map(({ height, id, width }) => ({ height, id, width })),
+        words: photoWords(photos.length),
+      };
+    }
+    case "unsent": {
+      return { ...none, unsent: true };
+    }
+    case "days":
+    case "poll":
+    case "notice": {
+      return none;
+    }
+    default: {
+      return content satisfies never;
+    }
+  }
+};
+
 /**
  * The rows as the admin pages and Slack read them, their reactions read
  * for all of them at once.
@@ -50,21 +97,9 @@ const linesOfRows = (
 ): SupportLine[] => {
   const reactions = reactionsOn(db, rows);
   return rows.map((row) => ({
+    ...contentView(row.content),
     device: row.device,
     fromPochical: row.authorId === chatRules.pochicalMember,
-    photos: (row.photos ?? []).map(({ height, id, width }) => ({
-      height,
-      id,
-      width,
-    })),
-    preview:
-      row.preview === null
-        ? null
-        : {
-            site: row.preview.site,
-            title: row.preview.title,
-            url: row.preview.url,
-          },
     reactions: (reactions.get(lineKey(row.threadId, row.seq)) ?? []).map(
       ({ emoji, userIds }) => ({
         emoji,
@@ -75,10 +110,7 @@ const linesOfRows = (
     replyTo: row.replyTo,
     sentAtMs: row.sentAt.getTime(),
     seq: row.seq,
-    text: row.text,
-    unsent: row.unsent,
     userId,
-    words: row.photos === null ? row.text : photoWords(row.photos.length),
   }));
 };
 

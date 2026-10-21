@@ -72,6 +72,15 @@ export const dayCell = cva({
         outlineOffset: "-1.5px",
       },
     },
+    // The group's month of one person: a day you are off too, framed. Not
+    // with the picked day's frame, which is on it instead. The frame stays
+    // inside the day, or it would show at the edge of the month beside.
+    together: {
+      true: {
+        outline: "1.5px solid token(colors.accent.border)",
+        outlineOffset: "-1.5px",
+      },
+    },
   },
 });
 

@@ -12,6 +12,7 @@ import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
   changesIn,
+  holding,
   pair,
   push,
   sendFrame,
@@ -142,15 +143,17 @@ describe("a group's photos", () => {
       {
         kind: {
           value: {
-            photos: [
-              {
-                height: 100,
-                id: "mine",
-                thumbHash: THUMB_HASH,
-                width: 100,
-              },
-            ],
             seq: 2n,
+            ...holding("photos", {
+              photos: [
+                {
+                  height: 100,
+                  id: "mine",
+                  thumbHash: THUMB_HASH,
+                  width: 100,
+                },
+              ],
+            }),
           },
         },
       },
@@ -168,7 +171,7 @@ describe("a group's photos", () => {
       },
     });
     expect(changesIn(await mine.frames.next())).toMatchObject([
-      { kind: { value: { unsent: true } } },
+      { kind: { value: holding("unsent") } },
     ]);
     await expect
       .poll(async () => await env.PHOTOS.head(photoKey(groupId, "mine")))
@@ -578,7 +581,7 @@ describe("a group's photo once stored", () => {
       );
     }
     expect(sent).toMatchObject([
-      { kind: { value: { photos: [{ id: "again" }] } } },
+      { kind: { value: holding("photos", { photos: [{ id: "again" }] }) } },
     ]);
   });
 

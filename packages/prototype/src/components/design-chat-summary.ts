@@ -36,39 +36,53 @@ export function lastLineOf(
   if (last.failed) {
     return failedLine;
   }
-  if (last.notice) {
-    return last.notice;
+  const { content } = last;
+  if (content.kind === "notice") {
+    return content.text;
   }
-  if (last.unsent) {
+  if (content.kind === "unsent") {
     return unsentLine(writer);
   }
   if (blocked) {
     return blockedLine;
   }
   let text = summaryOf(last, nameOf);
-  if (last.days || (last.poll && !last.poll.decided)) {
+  if (
+    content.kind === "days" ||
+    (content.kind === "poll" && !content.decided)
+  ) {
     text = `${text}を共有しました`;
-  } else if (last.photos) {
+  } else if (content.kind === "photos") {
     text = "写真を送りました";
   }
   return writer?.me ? `自分：${text}` : text;
 }
 
 export function summaryOf(message: Message, nameOf: (id: string) => string) {
-  if (message.unsent) {
-    return "取り消されたメッセージ";
+  const { content } = message;
+  switch (content.kind) {
+    case "unsent": {
+      return "取り消されたメッセージ";
+    }
+    case "photos": {
+      return content.photos.length > 1
+        ? `📷 写真${content.photos.length}枚`
+        : "📷 写真";
+    }
+    case "poll": {
+      return pollSummary(content);
+    }
+    case "days": {
+      return daysSummary(content.days);
+    }
+    case "words":
+    case "notice": {
+      return plainText(content.text, nameOf);
+    }
+    default: {
+      return content satisfies never;
+    }
   }
-  if (message.photos) {
-    return message.photos.length > 1
-      ? `📷 写真${message.photos.length}枚`
-      : "📷 写真";
-  }
-  if (message.poll) {
-    return pollSummary(message.poll);
-  }
-  return message.days
-    ? daysSummary(message.days)
-    : plainText(message.text ?? "", nameOf);
 }
 
 // A poll in a line of words: what was settled, or that it is open.

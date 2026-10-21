@@ -14,17 +14,17 @@ func daysSummary(_ days: [Day]) -> String {
   return "📅 \(first.fullText)\(days.count > 1 ? "ほか" : "")"
 }
 
-/// A line in a line of words: its photos (`photos` of them) as 📷 写真, or
-/// 📷 写真3枚 for several; its days as daysSummary; else its words with its
-/// mentions as names.
-func lineWords(
-  _ text: String, days: [Day], poll: Bool = false, decided: Day? = nil, photos: Int = 0,
-  nameOf: (String) -> String
-) -> String {
-  if photos == 1 { return "📷 写真" }
-  if photos > 1 { return "📷 写真\(photos)枚" }
-  if poll { return pollSummary(days, decided: decided) }
-  return days.isEmpty ? plainText(text, nameOf: nameOf) : daysSummary(days)
+/// A line in a line of words: its photos as 📷 写真, or 📷 写真3枚 for
+/// several; its days as daysSummary, a poll as pollSummary; its words with
+/// their mentions as names; nothing for what is not a message.
+func lineWords(_ content: LineContent, nameOf: (String) -> String) -> String {
+  switch content {
+  case .words(let words): plainText(words.text, nameOf: nameOf)
+  case .photos(let photos): photos.count == 1 ? "📷 写真" : "📷 写真\(photos.count)枚"
+  case .days(let days): daysSummary(days)
+  case .poll(let poll): pollSummary(poll.days, decided: poll.decided)
+  case .notice, .unsent, .hidden: ""
+  }
 }
 
 /// The date's color by the week's: Sundays and holidays in red, Saturdays
@@ -296,7 +296,7 @@ struct ShareDaysSheet: View {
   /// 共有 | 投票 at its top: in the group chat, not a one-to-one chat.
   let pollable: Bool
   /// Sends the days, shared, or put to the vote.
-  let onSend: ([Day], Bool) -> Void
+  let onSend: ([Day], Bool) -> Bool
   /// On 投票: the days are put to the vote instead.
   @State private var poll = false
   @State private var month = Day.today.firstOfMonth
@@ -342,8 +342,7 @@ struct ShareDaysSheet: View {
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("送る", systemImage: "checkmark", role: .confirm) {
-            onSend(picked, poll)
-            dismiss()
+            if onSend(picked, poll) { dismiss() }
           }
           .disabled(picked.count < (poll ? Self.pollLeast : 1))
         }

@@ -93,7 +93,7 @@ function OffsHead({ entry }: { entry: WidgetEntry }) {
   }
   return (
     <span className={offs.head}>
-      <span className={oneLine}>{title}</span>
+      <span className={css(oneLine)}>{title}</span>
       <CompanionFace entry={entry} />
     </span>
   );
@@ -306,7 +306,7 @@ function RestToday({ entry }: { entry: WidgetEntry }) {
       <span className={srOnly}>{spokenOff(entry, { day, inDays: 0 })}</span>
       <PeekingDog />
       <span aria-hidden="true" className={offs.head}>
-        <span className={oneLine}>{words.date(day.date)}</span>
+        <span className={css(oneLine)}>{words.date(day.date)}</span>
         <CompanionFace entry={entry} />
       </span>
       <span aria-hidden="true" className={rest.title}>

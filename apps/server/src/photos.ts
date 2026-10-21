@@ -177,21 +177,33 @@ export const getPhoto = async (
 ): Promise<Response> =>
   await serveChatPhoto(request, env, photoKey(groupId, photoId));
 
+/**
+ * The photos bucket's listing, page by page.
+ * @yields {R2Objects} Each page, the next asked for by its cursor.
+ */
+export async function* bucketPages(
+  bucket: R2Bucket,
+  options: { prefix?: string; delimiter?: string }
+): AsyncGenerator<R2Objects> {
+  let cursor: string | undefined;
+  do {
+    // oxlint-disable-next-line no-await-in-loop -- each page names the next
+    const page = await bucket.list({ ...options, cursor });
+    yield page;
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor !== undefined);
+}
+
 /** Every object under `prefix` in the photos bucket deleted, page by page. */
 export const deletePhotosUnder = async (
   env: Env,
   prefix: string
 ): Promise<void> => {
-  let cursor: string | undefined;
-  do {
-    // oxlint-disable-next-line no-await-in-loop -- each page names the next
-    const page = await env.PHOTOS.list({ cursor, prefix });
+  for await (const page of bucketPages(env.PHOTOS, { prefix })) {
     if (page.objects.length > 0) {
-      // oxlint-disable-next-line no-await-in-loop -- as above
       await env.PHOTOS.delete(page.objects.map(({ key }) => key));
     }
-    cursor = page.truncated ? page.cursor : undefined;
-  } while (cursor !== undefined);
+  }
 };
 
 /**

@@ -134,34 +134,41 @@ export function sameMonth(date: Date, month: Date) {
   return date.getMonth() === month.getMonth();
 }
 
-// A chat line. `days` shares dates, drawn with everyone's shifts;
-// `photos` are pictures sent at once, in the order sent; `replyTo` quotes
-// an earlier line;
-// `text` keeps a mention as <@id> (spec/chat.md); `link` is the
-// preview of the first link in `text`, made as it was
-// written and sent with it; `notice` is a line from the app about who is
-// in the group, how to get in or what it is called, shown between the
-// messages.
+// What a chat line says, one kind of them (spec/chat.md): words, with
+// `text` keeping a mention as <@id> and `link` the preview of its first
+// link, made as it was written and sent with it; pictures sent at once,
+// in the order sent (1 to chatRules.photosPerSend; two or more are drawn
+// as an album, spec/chat.md, Albums); days shared, drawn with everyone's
+// shifts; days put to the vote, who can come on each (member ids, by
+// dateKey) and the day its writer settled on, which ends the voting; a
+// line from the app about who is in the group, how to get in or what it
+// is called, shown between the messages; or a line taken back by its
+// writer, of which only the fact stays, for everyone.
+export type MessageContent =
+  | { kind: "words"; text: string; edited?: boolean; link?: LinkPreview }
+  | { kind: "photos"; photos: Photo[] }
+  | { kind: "days"; days: Date[] }
+  | {
+      kind: "poll";
+      days: Date[];
+      votes: Record<string, string[]>;
+      decided?: string;
+    }
+  | { kind: "notice"; text: string }
+  | { kind: "unsent" };
+
+export type Poll = Extract<MessageContent, { kind: "poll" }>;
+
+// A chat line: who sent it and when around its content. `replyTo` quotes
+// an earlier line.
 export type Message = {
   id: string;
   from: string;
   when: string;
   time: string;
-  // Changed by its writer after it was sent; the chat says 編集済み.
-  edited?: boolean;
-  // Taken back by its writer: only a line saying so stays, for everyone.
-  unsent?: boolean;
+  content: MessageContent;
   // Pinned over the chat, for everyone; the larger, the later it was.
   pinned?: number;
-  // Days put to the vote, in place of `days` shared as they are.
-  poll?: Poll;
-  text?: string;
-  link?: LinkPreview;
-  notice?: string;
-  days?: Date[];
-  // 1 to chatRules.photosPerSend; two or more are drawn as an album
-  // (spec/chat.md, Albums).
-  photos?: Photo[];
   replyTo?: string;
   reactions?: Reaction[];
   // Yours, not sent (a photo could not be uploaded): only this phone
@@ -171,14 +178,6 @@ export type Message = {
 };
 
 export type Reaction = { emoji: string; by: string[] };
-
-// Days put to the vote: who can come on each (member ids, by dateKey), and
-// the day its writer settled on, which ends the voting.
-export type Poll = {
-  days: Date[];
-  votes: Record<string, string[]>;
-  decided?: string;
-};
 
 // A link's page as its preview shows it: its title, the site's name and
 // its picture, read from the page by the server (spec/chat.md).
@@ -213,9 +212,9 @@ export function withNotice(
   const chat = chats[key] ?? { messages: [], unread: 0 };
   const now = new Date();
   const line: Message = {
+    content: { kind: "notice", text: notice },
     from: "me",
     id: `notice-${chat.messages.length}`,
-    notice,
     time: `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`,
     when: "今日",
   };
@@ -268,7 +267,10 @@ export function unreadMentions(chat: Chat) {
   }
   return chat.messages
     .slice(-chat.unread)
-    .filter((message) => mentionsOf(message.text ?? "").includes("me")).length;
+    .filter(
+      ({ content }) =>
+        content.kind === "words" && mentionsOf(content.text).includes("me")
+    ).length;
 }
 
 // What notifies unread in one group's chats, for its icon in the list of

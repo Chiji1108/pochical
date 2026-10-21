@@ -8,10 +8,12 @@ import { supportPlace } from "../src/support-lines";
 import { call, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesIn,
+  holding,
   pair,
   sendFrame,
   settled,
   syncSocket,
+  words,
 } from "./sync-helpers";
 
 // A user's chat with Pochical's people, kept as a group's chats are and
@@ -81,7 +83,7 @@ describe("the chat with Pochical's people", () => {
       {
         kind: {
           case: "chatLine",
-          value: { authorId: userId, seq: 1n, text: "アプリが落ちます" },
+          value: { authorId: userId, seq: 1n, ...words("アプリが落ちます") },
         },
       },
     ]);
@@ -202,8 +204,8 @@ describe("the chat with Pochical's people", () => {
     );
     expect(lines).toMatchObject([
       { reactions: [{ emoji: "🙏" }], seq: 1n },
-      { replyTo: 1n, seq: 2n, text: "つづき" },
-      { seq: 2n, unsent: true },
+      { replyTo: 1n, seq: 2n, ...words("つづき") },
+      { seq: 2n, ...holding("unsent") },
     ]);
   });
 
@@ -230,7 +232,7 @@ describe("the chat with Pochical's people", () => {
     };
     recall("a", "r1");
     expect(changesIn(await frames.next())).toMatchObject([
-      { kind: { value: { opId: "a", seq: 1n, unsent: true } } },
+      { kind: { value: { opId: "a", seq: 1n, ...holding("unsent") } } },
     ]);
     await frames.next();
 
