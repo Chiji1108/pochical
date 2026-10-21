@@ -118,8 +118,7 @@ enum DayMoments {
 
   /// Nil until the app has made its database.
   private static func read(choice: WidgetChoice?) -> Read? {
-    guard let database = try? widgetDatabase() else { return nil }
-    return try? database.read { db in
+    try? readWidgetDatabase { db in
       let calendar = try OwnCalendar(db)
       let companion = try choice.flatMap {
         try widgetCompanion($0, me: widgetMeID(), around: Day(.now, in: .current), in: db)

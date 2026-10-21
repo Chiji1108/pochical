@@ -36,7 +36,7 @@ public func appDatabase() throws -> any DatabaseWriter {
     try migrator.migrate(database)
     return database
   }
-  return try coordinated(at: sharedDatabaseURL()) { url in
+  return try coordinated(writing: true, at: sharedDatabaseURL()) { url in
     let database = try defaultDatabase(path: url.path(), configuration: configuration)
     try migrator.migrate(database)
     return database
@@ -56,17 +56,27 @@ func sharedDatabaseURL() throws -> URL {
 
 struct MissingAppGroup: Error {}
 
-/// Opens and sets up the database while no other process is opening it,
-/// so a widget never reads one half set up.
-private func coordinated(
-  at url: URL, open: (URL) throws -> any DatabaseWriter
-) throws -> any DatabaseWriter {
+/// Runs `body` on the database's file while no other process writes it:
+/// the app opens and sets the database up writing, and a widget reads
+/// it, so a widget never reads one half set up or half erased.
+func coordinated<T>(
+  writing: Bool, at url: URL, _ body: (URL) throws -> T
+) throws -> T {
   var coordinatorError: NSError?
-  var result: Result<any DatabaseWriter, any Error>?
-  NSFileCoordinator(filePresenter: nil).coordinate(
-    writingItemAt: url, options: .forMerging, error: &coordinatorError
-  ) { url in
-    result = Result { try open(url) }
+  var result: Result<T, any Error>?
+  let coordinator = NSFileCoordinator(filePresenter: nil)
+  if writing {
+    coordinator.coordinate(
+      writingItemAt: url, options: .forMerging, error: &coordinatorError
+    ) { url in
+      result = Result { try body(url) }
+    }
+  } else {
+    coordinator.coordinate(
+      readingItemAt: url, options: [], error: &coordinatorError
+    ) { url in
+      result = Result { try body(url) }
+    }
   }
   if let coordinatorError {
     throw coordinatorError
@@ -74,14 +84,12 @@ private func coordinated(
   return try result!.get()
 }
 
-/// The tables, each step once.
+/// The tables, each step once. Nothing is released yet, so any change to
+/// the tables erases the device's database in every build, and it syncs
+/// again from the server.
 var migrator: DatabaseMigrator {
   var migrator = DatabaseMigrator()
-  #if DEBUG
-    // Nothing is released yet, so a changed table starts a debug build's
-    // database afresh rather than needing a migration of its own.
-    migrator.eraseDatabaseOnSchemaChange = true
-  #endif
+  migrator.eraseDatabaseOnSchemaChange = true
   migrator.registerOwnValues()
   migrator.registerGroups()
   migrator.registerGroupValues()

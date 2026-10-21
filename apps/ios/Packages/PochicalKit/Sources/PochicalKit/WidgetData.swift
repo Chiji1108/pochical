@@ -6,14 +6,16 @@ import SQLiteData
 // App Group, opened read-only, as only the app writes, and the device's
 // settings the app keeps there too.
 
-/// The app's database, read-only, as the widgets open it; nil until the
-/// app has made it.
-public func widgetDatabase() throws -> (any DatabaseReader)? {
-  let url = try sharedDatabaseURL()
-  guard FileManager.default.fileExists(atPath: url.path()) else { return nil }
-  var configuration = Configuration()
-  configuration.readonly = true
-  return try DatabasePool(path: url.path(), configuration: configuration)
+/// Reads the app's database, read-only, as the widgets do; nil until the
+/// app has made it. The read waits while the app opens it, as opening may
+/// erase it and set it up again (appDatabase).
+public func readWidgetDatabase<T>(_ read: (Database) throws -> T?) throws -> T? {
+  try coordinated(writing: false, at: sharedDatabaseURL()) { url in
+    guard FileManager.default.fileExists(atPath: url.path()) else { return nil }
+    var configuration = Configuration()
+    configuration.readonly = true
+    return try DatabasePool(path: url.path(), configuration: configuration).read(read)
+  }
 }
 
 extension OwnCalendar {
