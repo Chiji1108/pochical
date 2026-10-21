@@ -1,11 +1,36 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { env } from "cloudflare:workers";
+import { data, Form, useNavigation } from "react-router";
+import type { ShouldRevalidateFunctionArgs } from "react-router";
 
-import { cleanBucket, getBucketAudit, when } from "../admin";
+import { when } from "../when";
+import type { Route } from "./+types/bucket";
 
-type Verdict = Awaited<
-  ReturnType<typeof getBucketAudit>
->["rows"][number]["verdict"];
+// The photos bucket held up against what names each object (棚卸し): run
+// as the page loads, so again after 消す and on 再実行. Only 消す deletes.
+export const loader = async () => await env.SERVER.bucketAudit();
+
+export const action = async ({ request }: Route.ActionArgs) => {
+  // As of the audit shown, so what passed the grace since stays.
+  const form = await request.formData();
+  const asOfMs = Number(form.get("asOfMs"));
+  if (!Number.isInteger(asOfMs) || asOfMs <= 0) {
+    return data({ failed: true as const }, { status: 400 });
+  }
+  return await env.SERVER.cleanBucket(asOfMs).then(
+    (cleanup) => ({ cleanup }),
+    () => data({ failed: true as const }, { status: 502 })
+  );
+};
+
+// The audit runs again after 消す, whether it deleted or failed part way;
+// not after an asOfMs refused before anything ran.
+export const shouldRevalidate = ({
+  actionStatus,
+  defaultShouldRevalidate,
+}: ShouldRevalidateFunctionArgs) =>
+  actionStatus === 502 || defaultShouldRevalidate;
+
+type Verdict = Route.ComponentProps["loaderData"]["rows"][number]["verdict"];
 
 const VERDICT_NAMES: Record<Verdict, string> = {
   expired: "期限切れのキャッシュ",
@@ -30,46 +55,22 @@ const sizeOf = (bytes: number): string => {
     : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 };
 
-type Cleanup = Awaited<ReturnType<typeof cleanBucket>>;
-
-type Weight = Cleanup["rows"][number]["deleted"];
-
-// The photos bucket held up against what names each object (棚卸し): run
-// as the page opens and again by 再実行. Only 消す deletes.
-export const Route = createFileRoute("/bucket")({
-  component: BucketAudit,
-  loader: async () => await getBucketAudit(),
-});
-
-function BucketAudit() {
-  const audit = Route.useLoaderData();
-  const router = useRouter();
-  const [running, setRunning] = useState(false);
-  const [cleaning, setCleaning] = useState(false);
-  const [cleanup, setCleanup] = useState<Cleanup | "failed" | null>(null);
-  const confirm = useRef<HTMLDialogElement>(null);
-  const total: Weight = { bytes: 0, count: 0 };
+export default function BucketAudit({
+  actionData,
+  loaderData: audit,
+}: Route.ComponentProps) {
+  const navigation = useNavigation();
+  const busy = navigation.state !== "idle";
+  const cleaning = navigation.formMethod === "POST";
+  const total = { bytes: 0, count: 0 };
   for (const { bytes, count } of audit.deletable) {
     total.bytes += bytes;
     total.count += count;
   }
-  const rerun = async () => {
-    setRunning(true);
-    await router.invalidate().finally(() => {
-      setRunning(false);
-    });
-  };
-  const clean = async () => {
-    setCleaning(true);
-    // As of the audit shown, so what passed the grace since stays.
-    const result = await cleanBucket({ data: audit.atMs }).catch(
-      () => "failed" as const
-    );
-    setCleaning(false);
-    confirm.current?.close();
-    setCleanup(result);
-    await rerun();
-  };
+  const cleanup =
+    actionData !== undefined && "cleanup" in actionData
+      ? actionData.cleanup
+      : null;
   return (
     <main>
       <h1>棚卸し</h1>
@@ -80,33 +81,31 @@ function BucketAudit() {
         {`どこからも指されないもの：${audit.orphans.count} 件、${sizeOf(audit.orphans.bytes)}`}
       </p>
       <div className="actions">
-        <button
-          disabled={running || cleaning}
-          onClick={() => {
-            void rerun();
-          }}
-          type="button"
-        >
-          再実行
-        </button>
+        {/* A GET of the page is the audit again, with or without JavaScript. */}
+        <Form method="get">
+          <button disabled={busy} type="submit">
+            再実行
+          </button>
+        </Form>
         <button
           className="danger"
-          disabled={running || cleaning || total.count === 0}
-          onClick={() => {
-            confirm.current?.showModal();
-          }}
+          command="show-modal"
+          commandfor="confirm"
+          disabled={busy || total.count === 0}
           type="button"
         >
           {`どこからも指されない ${total.count} 件（${sizeOf(total.bytes)}）を消す`}
         </button>
       </div>
+      {/* Each audit closes the dialog: a new one starts closed. */}
       <dialog
+        id="confirm"
+        key={audit.atMs}
         onCancel={(event) => {
           if (cleaning) {
             event.preventDefault();
           }
         }}
-        ref={confirm}
       >
         <p>{`${total.count} 件（${sizeOf(total.bytes)}）を消します。元に戻せません。`}</p>
         <table>
@@ -130,31 +129,26 @@ function BucketAudit() {
         <p className="meta">
           {`${VERDICT_NAMES.unknown}と、${audit.graceMs / 3_600_000} 時間以内に置かれたものは残します。グループの写真と自分の写真は、消す前に持ち主にもう一度聞き、その間に使われたものは飛ばします。`}
         </p>
-        <div className="actions">
+        <Form className="actions" method="post">
+          <input name="asOfMs" type="hidden" value={audit.atMs} />
           <button
             className="quiet"
+            command="close"
+            commandfor="confirm"
             disabled={cleaning}
-            onClick={() => {
-              confirm.current?.close();
-            }}
             type="button"
           >
             キャンセル
           </button>
-          <button
-            className="danger"
-            disabled={cleaning}
-            onClick={() => {
-              void clean();
-            }}
-            type="button"
-          >
+          <button className="danger" disabled={cleaning} type="submit">
             消す
           </button>
-        </div>
+        </Form>
       </dialog>
-      {cleanup === "failed" && <p className="open">消せませんでした。</p>}
-      {cleanup !== null && cleanup !== "failed" && (
+      {actionData !== undefined && "failed" in actionData && (
+        <p className="open">消せませんでした。</p>
+      )}
+      {cleanup !== null && (
         <section>
           <h2>削除</h2>
           <p className="meta">{`${when(cleanup.atMs)} に消しました。失敗したものは、もう一度消すと消せます。`}</p>

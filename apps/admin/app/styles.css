@@ -32,7 +32,7 @@ nav a {
   color: var(--accent);
 }
 
-nav a[data-status="active"] {
+nav a[aria-current="page"] {
   font-weight: 600;
 }
 

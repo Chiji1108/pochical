@@ -1,4 +1,5 @@
 import { syncLimits } from "@pochical/design/limits";
+import { characterCount } from "@pochical/design/text";
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/durable-sqlite";
@@ -19,7 +20,7 @@ import { directThread, plainText, unreadCount } from "../src/group-chat";
 import { chatLines, readMarks } from "../src/group-do-schema";
 import { compareClocks, isAhead } from "../src/hlc";
 import { givesWay, heldBackBy } from "../src/order-clears";
-import { characterCount, fitsText, isEmoji } from "../src/text-limits";
+import { fitsText, isEmoji } from "../src/text-limits";
 import { notifyingCount } from "../src/user-do-values";
 import { photosAmong } from "./helpers";
 

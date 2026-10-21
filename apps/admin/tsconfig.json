@@ -1,6 +1,10 @@
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "worker-configuration.d.ts"],
-  "exclude": ["node_modules", "dist"],
+  "include": [
+    "app/**/*",
+    "workers/**/*",
+    ".react-router/types/**/*",
+    "worker-configuration.d.ts"
+  ],
   "compilerOptions": {
     "target": "ES2024",
     "jsx": "react-jsx",
@@ -11,6 +15,9 @@
       "../server/worker-configuration.d.ts",
       "vite/client"
     ],
+    // React Router's typegen writes each route's types beside it, as
+    // ./+types/<route>.
+    "rootDirs": [".", "./.react-router/types"],
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,

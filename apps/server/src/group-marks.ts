@@ -2,11 +2,12 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import { markColors } from "@pochical/design/colors";
 import { textLimits } from "@pochical/design/limits";
 import { markIconGlyphs } from "@pochical/design/mark-icons";
+import { withinLimit } from "@pochical/design/text";
 
 import type { GroupMark } from "./gen/pochical/v1/marks_pb";
 import { isId } from "./ids";
 import { hasPersonPhoto, personPhotoKey, sharePersonPhoto } from "./photos";
-import { isEmoji, withinLimit } from "./text-limits";
+import { isEmoji } from "./text-limits";
 
 /**
  * A group's mark as the server keeps and sends it (proto GroupMark): one

@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { env } from "cloudflare:workers";
 
-import { getReports, when } from "../admin";
+import { when } from "../when";
+import type { Route } from "./+types/reports";
 
 const REASON_NAMES: Record<string, string> = {
   explicit: "性的・暴力的",
@@ -11,13 +12,9 @@ const REASON_NAMES: Record<string, string> = {
 };
 
 // What members reported, the latest first, with what they saw.
-export const Route = createFileRoute("/reports")({
-  component: Reports,
-  loader: async () => await getReports(),
-});
+export const loader = async () => await env.SERVER.reports();
 
-function Reports() {
-  const reports = Route.useLoaderData();
+export default function Reports({ loaderData: reports }: Route.ComponentProps) {
   return (
     <main>
       <h1>通報</h1>

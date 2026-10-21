@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { characterCount } from "@pochical/design/text";
 import { widgetRules } from "@pochical/design/widgets";
 import { rgbaToThumbHash, thumbHashToRGBA } from "thumbhash";
 
@@ -107,7 +108,6 @@ import { reconnectWaitMost } from "../src/lib/reconnect";
 import { mayAskForReview, openedOn } from "../src/lib/review";
 import type { ReviewHistory } from "../src/lib/review";
 import {
-  characterCount,
   dayName,
   isEmoji,
   limitText,
