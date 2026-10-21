@@ -46,6 +46,8 @@ struct GroupShiftsPage: View {
   @Environment(\.meID) private var meID
   let group: GroupRow
   @State private var picked: Day?
+  /// The day's sheet as tall as its bar and rows, told by the sheet.
+  @State private var daySheetHeight: CGFloat = 0
   /// What a tap on a day does, for every row and week of the table.
   @State private var pickDay = Handler<Day>()
   @State private var togetherSheet: TogetherList?
@@ -198,9 +200,10 @@ struct GroupShiftsPage: View {
         legendOf = legend
       }
     } content: { day in
-      // As tall as its rows, as /design's.
-      let fitted = PresentationDetent.height(daySheetHeight)
-      DaySheet(day: day, members: members, groupID: group.id) {
+      // As tall as its rows, as /design's; half the screen until it has
+      // said, as a sheet of no height lays out no rows to measure.
+      let fitted = daySheetHeight > 0 ? PresentationDetent.height(daySheetHeight) : .medium
+      DaySheet(day: day, members: members, groupID: group.id, height: $daySheetHeight) {
         picked = nil
         openGroupRoute(.chat(group, thread: groupThread, with: nil, sharing: day))
       }
@@ -364,11 +367,6 @@ struct GroupShiftsPage: View {
     }
   }
 
-  /// The day's sheet: its bar and a row a member.
-  private var daySheetHeight: CGFloat {
-    CGFloat(120 + members.count * 52)
-  }
-
   /// What the days are drawn with, for the rows and weeks to compare.
   private var drawing: DayDrawing {
     DayDrawing(colors: colors, look: look, english: english, week: settings.device.week)
@@ -436,6 +434,8 @@ private struct DaySheet: View {
   let day: Day
   let members: [GroupMember]
   let groupID: String
+  /// As tall as its bar and rows are, at the text size they are in.
+  @Binding var height: CGFloat
   /// Opens 全体チャット with the day set over its composer, to send.
   let onShare: () -> Void
 
@@ -466,6 +466,11 @@ private struct DaySheet: View {
         }
         .lineLimit(1)
         .accessibilityElement(children: .combine)
+      }
+      .onScrollGeometryChange(for: CGFloat.self) { geometry in
+        geometry.contentSize.height + geometry.contentInsets.top
+      } action: { _, fitted in
+        height = fitted
       }
       .navigationTitle(day.fullText)
       .navigationBarTitleDisplayMode(.inline)
