@@ -1,5 +1,6 @@
 /* The order of every layer on the site: the site's own styles, then Panda
-   CSS's (src/panda.css), each above the one before. */
+   CSS's, each above the one before. Panda's PostCSS plugin adds its styles
+   to the stylesheet with this line, so it names Panda's layers only here. */
 @layer site, reset, base, tokens, recipes, utilities;
 
 @import "@pochical/styled-system/base.css";

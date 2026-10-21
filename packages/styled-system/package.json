@@ -11,7 +11,7 @@
     }
   },
   "scripts": {
-    "codegen": "panda codegen",
+    "codegen": "panda codegen --clean",
     "prepare": "bun run codegen",
     "typecheck": "tsc --noEmit"
   },

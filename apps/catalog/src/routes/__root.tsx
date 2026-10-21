@@ -8,7 +8,6 @@ import {
 import { MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
 
-import pandaStyles from "../panda.css?url";
 import stylesheet from "../styles.css?url";
 
 export const Route = createRootRoute({
@@ -23,7 +22,6 @@ export const Route = createRootRoute({
   head: () => ({
     links: [
       { href: stylesheet, rel: "stylesheet" },
-      { href: pandaStyles, rel: "stylesheet" },
       { href: siteIcon, rel: "icon", type: "image/png" },
       // /try added to an iPhone's home screen, drawn by bun run icon:app.
       { href: "/app/apple-touch-icon-180x180.png", rel: "apple-touch-icon" },
