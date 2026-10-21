@@ -64,9 +64,8 @@ export const config = defineConfig({
   conditions: {
     extend: {
       hover: { "@media (hover: hover)": { "&:is(:hover, [data-hover])": "@slot" } },
-      // Where the top page sets its words and phones side by side. A
-      // condition, not a shared constant: Panda reads styles before the
-      // code runs, so it cannot follow a key imported from another file.
+      // Where the top page sets its words and phones side by side, as
+      // _wide: a condition, so its styles are typed like Panda's own.
       wide: "@media (min-width: 960px)",
     },
   },
