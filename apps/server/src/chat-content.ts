@@ -3,15 +3,7 @@
 // that kind holds, so a line with nothing in it, or with words and days
 // at once, cannot be written.
 
-/** A link's page, under a line's words. */
-export type KeptPreview = {
-  imageHeight: number;
-  imageId: string;
-  imageWidth: number;
-  site: string;
-  title: string;
-  url: string;
-};
+import type { KeptPreview } from "./link-preview";
 
 /** A photo as a line keeps it: pochical.v1.ChatPhoto's fields, its ThumbHash as base64. */
 export type KeptPhoto = {
@@ -46,3 +38,7 @@ export type LineKind = LineContent["kind"];
 
 /** What a member sends: neither a notice nor a line taken back. */
 export type SentContent = Exclude<LineContent, { kind: "notice" | "unsent" }>;
+
+/** The line's photos: an album's, none for any other kind. */
+export const photosOf = (content: LineContent): KeptPhoto[] =>
+  content.kind === "photos" ? content.photos : [];

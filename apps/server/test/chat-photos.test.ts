@@ -175,7 +175,7 @@ describe("a chat's photos alone", () => {
     { authorId: "m", photos: 1, seq: 1 },
     { authorId: "m", photos: 1, seq: 2 },
     { authorId: "m", photos: 0, seq: 3 },
-    { authorId: "m", photos: 1, seq: 4, unsent: true },
+    { authorId: "m", photos: "unsent" as const, seq: 4 },
     { authorId: "m", photos: 1, seq: 5 },
     { authorId: "b", photos: 1, seq: 6 },
     { authorId: "m", photos: 1, seq: 7 },
@@ -227,10 +227,9 @@ describe("a chat's photos alone", () => {
     const direct = [1, 2, 3, 4].map((seq) => ({
       authorId: "w",
       hiddenFrom: seq === 2 ? "r" : undefined,
-      photos: 1,
+      photos: seq === 3 ? ("unsent" as const) : 1,
       seq,
       threadId,
-      unsent: seq === 3,
     }));
     await expect(
       photosAmong({

@@ -78,11 +78,11 @@ describe("deleting an account", () => {
     // The app's notices of their joining and leaving stay, as the group's.
     const lines = await inGroup(
       groupId,
-      "select text, unsent from chat_lines where notice is null order by seq"
+      "select content ->> '$.kind' as kind, content ->> '$.text' as text from chat_lines where content ->> '$.kind' <> 'notice' order by seq"
     );
     const notices = await inGroup(
       groupId,
-      `select author_id, notice ->> '$.kind' as kind from chat_lines where notice is not null and author_id = '${guestId}' order by seq`
+      `select author_id, content ->> '$.notice.kind' as kind from chat_lines where content ->> '$.kind' = 'notice' and author_id = '${guestId}' order by seq`
     );
     const theirs = await inGroup(
       groupId,
@@ -119,8 +119,8 @@ describe("deleting an account", () => {
     }).toStrictEqual({
       groups: [],
       lines: [
-        { text: "やあ", unsent: 0 },
-        { text: "", unsent: 1 },
+        { kind: "words", text: "やあ" },
+        { kind: "unsent", text: null },
       ],
       notices: [
         { author_id: guestId, kind: "joined" },
