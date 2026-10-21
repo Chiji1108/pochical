@@ -1,6 +1,6 @@
 # Chat
 
-How chat messages behave beyond sync (spec/sync-protocol.md): which words are links and mentions, how a link's preview is made, when a mention notifies, editing and unsending, and reporting and blocking. Both native apps and the server follow it. The web prototype's `textParts` in `apps/web/src/lib/chat-text.ts` (tested in `apps/web/tests/chat-text.test.ts`) and the chat in `/design` follow this spec.
+How chat messages behave beyond sync (spec/sync-protocol.md): which words are links and mentions, how a link's preview is made, when a mention notifies, editing and unsending, and reporting and blocking. Both native apps and the server follow it. The web prototype's `textParts` in `packages/prototype/src/lib/chat-text.ts` (pinned by `spec/vectors/chat-text.json`) and the chat in `/design` follow this spec.
 
 The numbers named `chatRules.*` here are in `design/src/chat.ts`, the one place they are written; `mise run gen` gives the apps the same values.
 
@@ -59,7 +59,7 @@ A message carries at most one preview, for its first link. It is made while the 
 
 ## Pochical's invitation links
 
-A link to `https://pochical.app/invite/{code}` (the host in any case, an optional trailing `/`, query and fragment ignored; `inviteCodeOf` in `apps/web/src/lib/chat-text.ts`) is one of Pochical's own invitations. The chat treats it as part of the app, not as a page:
+A link to `https://pochical.app/invite/{code}` (the host in any case, an optional trailing `/`, query and fragment ignored; `inviteCodeOf` in `packages/prototype/src/lib/chat-text.ts`) is one of Pochical's own invitations. The chat treats it as part of the app, not as a page:
 
 - A tap on it, in the words or on its card, opens the group's join screen in the app, as reading its QR code does; when you are in the group already, it opens the group. Nothing opens in the browser, and nothing joins until you confirm on the join screen.
 - Its card shows the group instead of a page: the group's mark at the hub's size on a tint, its name, and グループへの招待・{n}人 (参加中のグループ once you are in it). A long press opens the message's actions, as on a page's card.

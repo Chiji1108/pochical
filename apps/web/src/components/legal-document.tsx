@@ -1,6 +1,6 @@
+import { site } from "@pochical/prototype/lib/brand";
 import { Link } from "@tanstack/react-router";
 
-import { site } from "../lib/site";
 import { Page } from "./site-layout";
 
 const privacySections = [

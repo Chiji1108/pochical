@@ -1,14 +1,14 @@
+import siteIcon from "@pochical/prototype/assets/icon.png";
+import { site } from "@pochical/prototype/lib/brand";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import type { ReactNode } from "react";
-
-import { site } from "../lib/site";
 
 export function Header() {
   return (
     <header className="site-header">
       <Link aria-label="ポチカル ホーム" className="brand" to="/">
-        <img alt="" height={36} src="/icon.png" width={36} />
+        <img alt="" height={36} src={siteIcon} width={36} />
         <span>ポチカル</span>
       </Link>
     </header>
@@ -21,7 +21,7 @@ export function Footer() {
       <div className="footer-top">
         <div>
           <Link className="brand" to="/">
-            <img alt="" height={30} src="/icon.png" width={30} />
+            <img alt="" height={30} src={siteIcon} width={30} />
             <span>ポチカル</span>
           </Link>
           <p>はたらく日も、おやすみの日も。</p>
