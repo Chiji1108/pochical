@@ -1,7 +1,11 @@
+---
 import { site } from "@pochical/prototype/lib/brand";
-import { Link } from "@tanstack/react-router";
 
-import { Page } from "./site-layout";
+import Link from "./link.astro";
+import Page from "./page.astro";
+
+// The privacy policy or the terms, numbered section by section.
+type Props = { kind: "privacy" | "terms" };
 
 const privacySections = [
   {
@@ -80,49 +84,42 @@ const termsSections = [
   },
 ];
 
-export function LegalDocument({ kind }: { kind: "privacy" | "terms" }) {
-  const isPrivacy = kind === "privacy";
-  const sections = isPrivacy ? privacySections : termsSections;
-  return (
-    <Page
-      eyebrow={isPrivacy ? "PRIVACY POLICY" : "TERMS OF SERVICE"}
-      intro={
-        isPrivacy
-          ? "あなたの情報を、どのように扱うか。"
-          : "気持ちよく使っていただくために。"
-      }
-      title={isPrivacy ? "プライバシーポリシー" : "利用規約"}
-    >
-      <div className="legal-content">
-        <p className="updated">
-          最終更新日：{isPrivacy ? "2026年10月12日" : "2026年10月1日"}
-        </p>
-        {sections.map((section, index) => (
-          <section key={section.title}>
-            <h2>
-              <span className="legal-index">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              {section.title}
-            </h2>
-            <p>{section.text}</p>
-          </section>
-        ))}
+const isPrivacy = Astro.props.kind === "privacy";
+const sections = isPrivacy ? privacySections : termsSections;
+---
+
+<Page
+  eyebrow={isPrivacy ? "PRIVACY POLICY" : "TERMS OF SERVICE"}
+  intro={isPrivacy
+    ? "あなたの情報を、どのように扱うか。"
+    : "気持ちよく使っていただくために。"}
+  title={isPrivacy ? "プライバシーポリシー" : "利用規約"}
+>
+  <div class="legal-content">
+    <p class="updated">
+      最終更新日：{isPrivacy ? "2026年10月12日" : "2026年10月1日"}
+    </p>
+    {
+      sections.map((section, index) => (
         <section>
-          <h2>お問い合わせ窓口</h2>
-          <p>
-            運営：CHIJI TECH（ポチカル）
-            <br />
-            <a href={`mailto:${site.email}`}>{site.email}</a>
-          </p>
+          <h2><span class="legal-index">{String(index + 1).padStart(2, "0")}</span>{section.title}</h2>
+          <p>{section.text}</p>
         </section>
-        <div className="document-links">
-          <Link to="/account/delete">アカウント削除へ →</Link>
-          <Link to={isPrivacy ? "/terms" : "/privacy"}>
-            {isPrivacy ? "利用規約" : "プライバシーポリシー"} →
-          </Link>
-        </div>
-      </div>
-    </Page>
-  );
-}
+      ))
+    }
+    <section>
+      <h2>お問い合わせ窓口</h2>
+      <p>
+        運営：CHIJI TECH（ポチカル）<br /><a href={`mailto:${site.email}`}
+          >{site.email}</a
+        >
+      </p>
+    </section>
+    <div class="document-links">
+      <Link href="/account/delete">アカウント削除へ →</Link>
+      <Link href={isPrivacy ? "/terms" : "/privacy"}
+        >{isPrivacy ? "利用規約" : "プライバシーポリシー"} →</Link
+      >
+    </div>
+  </div>
+</Page>

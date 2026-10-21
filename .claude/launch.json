@@ -6,7 +6,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd apps/web && exec bun x vite dev --port \"$PORT\" --strictPort"
+        "cd apps/web && exec bun x astro dev --port \"$PORT\" --ignore-lock"
       ],
       "port": 3000,
       "autoPort": true
