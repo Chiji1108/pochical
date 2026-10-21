@@ -10,8 +10,9 @@ public enum Sync {
   /// The sync schema the app reads Changes by. Raise it whenever the app
   /// starts reading a Change, or a field of one, it did not read before.
   /// A device moves its cursors past Changes it cannot read, so after the
-  /// update it takes everything again (`takeAllAgainIfOlder`).
-  static let schema = 1
+  /// update it takes everything again (`takeAllAgainIfOlder`). 2: a
+  /// chat line's photos (`ChatLine.photos`).
+  static let schema = 2
 
   /// A device that took its values under an older schema moves every
   /// cursor back to the start, its User DO's and every place's, so its
