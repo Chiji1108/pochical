@@ -33,100 +33,28 @@ public struct ChatLineRow: Hashable, Sendable, Identifiable {
   public var threadID: String
   public var seq: Int64
   public var authorID: String
-  public var text: String
   public var sentAtMs: Int64
-  public var edited: Bool
-  public var unsent: Bool
   /// The sending edit's op_id, to swap the line shown while it waited.
   public var opID: String
+  @Column(as: LineContent.JSONRepresentation.self)
+  public var content: LineContent
   /// Its reactions as JSON, `[LineReaction]`.
   var reactionsJSON = "[]"
   /// Pinned for everyone: the group's cursor when it was last pinned, the
   /// latest the greatest; 0 when not pinned.
   public var pinnedOrder: Int64 = 0
-  /// The days a line of shared days shares, as JSON, `["YYYY-MM-DD"]`;
-  /// none for words, and once unsent.
-  var daysJSON = "[]"
-  /// Its days are put to the vote.
-  public var poll = false
-  /// A poll's votes as JSON, `[DayVotes]`.
-  var votesJSON = "[]"
-  /// The day a poll was settled on, as YYYY-MM-DD; empty while open.
-  var decidedKey = ""
-  /// The photos sent as the line, as JSON, `[LinePhoto]`; none for
-  /// anything else, and once unsent.
-  var photosJSON = "[]"
-  /// Its first link's page, as JSON, `LinePreview`; empty for none.
-  var previewJSON = ""
-  /// Sent in a one-to-one chat by someone the reader had blocked: never
-  /// delivered, and shown as nothing.
-  public var hidden = false
   /// The line it answers (返信), by its seq in the same chat.
   public var replyTo: Int64?
-  /// A line from the app, as JSON, `LineNotice`; empty for a message.
-  var noticeJSON = ""
   public var id: Int64 { seq }
 
   /// Whose line it is to `me`, for what is unread: the app's notices and
   /// a line never delivered to the reader are neither the reader's nor
   /// others' to count (`spec/vectors/chat.json`, writer).
   public func writer(for me: String) -> LineWriter {
-    if !noticeJSON.isEmpty || hidden { return .app }
-    return authorID == me ? .me : .others
-  }
-
-  /// What happened to the group, for a line from the app (spec/chat.md,
-  /// Notices).
-  public var notice: LineNotice? {
-    get { try? JSONDecoder().decode(LineNotice.self, from: Data(noticeJSON.utf8)) }
-    set {
-      noticeJSON =
-        newValue.flatMap { try? JSONEncoder().encode($0) }
-        .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+    switch content {
+    case .notice, .hidden: .app
+    case .words, .photos, .days, .poll, .unsent: authorID == me ? .me : .others
     }
-  }
-
-  /// Its first link's page, under its words.
-  public var preview: LinePreview? {
-    get { try? JSONDecoder().decode(LinePreview.self, from: Data(previewJSON.utf8)) }
-    set {
-      previewJSON =
-        newValue.flatMap { try? JSONEncoder().encode($0) }
-        .flatMap { String(data: $0, encoding: .utf8) } ?? ""
-    }
-  }
-
-  /// The photos sent as the line, in the order sent: one, or several
-  /// drawn as an album (spec/chat.md, Albums).
-  public var photos: [LinePhoto] {
-    get { (try? JSONDecoder().decode([LinePhoto].self, from: Data(photosJSON.utf8))) ?? [] }
-    set {
-      photosJSON =
-        (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) }
-        ?? "[]"
-    }
-  }
-
-  /// Who can come on each of a poll's days, in the order they said so.
-  public var votes: [DayVotes] {
-    get { (try? JSONDecoder().decode([DayVotes].self, from: Data(votesJSON.utf8))) ?? [] }
-    set {
-      votesJSON =
-        (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) }
-        ?? "[]"
-    }
-  }
-
-  /// The day a poll was settled on.
-  public var decided: Day? {
-    get { Day(decidedKey) }
-    set { decidedKey = newValue?.key ?? "" }
-  }
-
-  /// The days it shares with everyone's shifts, in order.
-  public var days: [Day] {
-    get { sharedDays(from: daysJSON) }
-    set { daysJSON = sharedDaysJSON(newValue) }
   }
 
   /// Each emoji on the line, in the order first chosen, with who chose it.
@@ -167,17 +95,6 @@ extension [DayVotes] {
   public func voters(on day: Day) -> [String] {
     first { $0.day == day }?.userIDs ?? []
   }
-}
-
-/// Shared days as a line keeps them, from their JSON.
-func sharedDays(from json: String) -> [Day] {
-  ((try? JSONDecoder().decode([String].self, from: Data(json.utf8))) ?? []).compactMap(Day.init)
-}
-
-/// Shared days as JSON, for a line to keep.
-func sharedDaysJSON(_ days: [Day]) -> String {
-  (try? JSONEncoder().encode(days.map(\.key))).flatMap { String(data: $0, encoding: .utf8) }
-    ?? "[]"
 }
 
 /// One emoji on a line and the members who chose it, in the order they did.
@@ -284,22 +201,15 @@ extension DatabaseMigrator {
           "threadID" TEXT NOT NULL,
           "seq" INTEGER NOT NULL,
           "authorID" TEXT NOT NULL,
-          "text" TEXT NOT NULL,
           "sentAtMs" INTEGER NOT NULL,
-          "edited" INTEGER NOT NULL,
-          "unsent" INTEGER NOT NULL,
           "opID" TEXT NOT NULL,
+          "content" TEXT NOT NULL CHECK (
+            json_extract("content", '$.kind')
+              IN ('words', 'photos', 'days', 'poll', 'notice', 'unsent', 'hidden')
+          ),
           "reactionsJSON" TEXT NOT NULL DEFAULT '[]',
           "pinnedOrder" INTEGER NOT NULL DEFAULT 0,
-          "daysJSON" TEXT NOT NULL DEFAULT '[]',
-          "poll" INTEGER NOT NULL DEFAULT 0,
-          "votesJSON" TEXT NOT NULL DEFAULT '[]',
-          "decidedKey" TEXT NOT NULL DEFAULT '',
-          "previewJSON" TEXT NOT NULL DEFAULT '',
-          "hidden" INTEGER NOT NULL DEFAULT 0,
           "replyTo" INTEGER,
-          "noticeJSON" TEXT NOT NULL DEFAULT '',
-          "photosJSON" TEXT NOT NULL DEFAULT '[]',
           PRIMARY KEY ("groupID", "threadID", "seq")
         ) STRICT
         """
@@ -374,30 +284,20 @@ public enum Chats {
     let held = ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(line.threadID) && $0.seq.eq(seq)
     }
+    let content = LineContent(line.content)
     // Photos taken back go from the device too, as from the group.
-    if line.unsent {
-      for photo in try held.fetchOne(db)?.photos ?? [] {
+    if content == .unsent, case .photos(let photos) = try held.fetchOne(db)?.content {
+      for photo in photos {
         ChatPhotos.forget(photo.id, in: PhotoShelf(place: groupID))
       }
     }
     try held.delete().execute(db)
     var row = ChatLineRow(
       groupID: groupID, threadID: line.threadID, seq: seq, authorID: line.authorID,
-      text: line.text, sentAtMs: line.sentAtMs, edited: line.edited, unsent: line.unsent,
-      opID: line.opID)
+      sentAtMs: line.sentAtMs, opID: line.opID, content: content)
     row.reactions = line.reactions.map { LineReaction(emoji: $0.emoji, userIDs: $0.userIds) }
     row.pinnedOrder = Int64(line.pinnedOrder)
-    row.days = line.days.compactMap(Day.init)
-    row.poll = line.poll
-    row.votes = line.votes.compactMap { votes in
-      Day(votes.day).map { DayVotes(day: $0, userIDs: votes.userIds) }
-    }
-    row.decidedKey = line.decided
-    row.photos = line.photos.map(LinePhoto.init)
-    row.preview = line.hasPreview ? LinePreview(line.preview) : nil
-    row.hidden = line.hidden
     row.replyTo = line.replyTo == 0 ? nil : Int64(line.replyTo)
-    row.notice = line.hasNotice ? LineNotice(line.notice) : nil
     try ChatLineRow.insert { row }.execute(db)
     try tookBack(line, of: groupID, in: db)
   }
@@ -692,18 +592,11 @@ public struct ChatState: Hashable, Sendable {
 /// A line of the member's not yet taken by the group.
 public struct WaitingLine: Hashable, Sendable, Identifiable {
   public let opID: String
-  public let text: String
   public let madeAtMs: Int64
-  /// The days it shares, for a line of shared days.
-  public var days: [Day] = []
-  /// Its days are put to the vote.
-  public var poll = false
-  /// The photos it sends, in order; none for anything else.
-  public var photos: [LinePhoto] = []
+  /// The line it sends, as the group will hold it.
+  public let content: LineContent
   /// Those of its photos already up, by id.
   public var up: Set<String> = []
-  /// Its first link's page.
-  public var preview: LinePreview?
   /// The line it answers (返信), by its seq.
   public var replyTo: Int64?
   /// Not sent (a photo could not be uploaded, or it waited too long):
@@ -715,13 +608,22 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   /// not (`failed`).
   init(_ send: Pochical_V1_ChatSend, opID: String, row: ChatOutboxRow, failed: Bool) {
     self.opID = opID
-    text = send.text
     madeAtMs = row.madeAtMs
-    days = send.days.compactMap(Day.init)
-    poll = send.poll
-    photos = send.photos.map(LinePhoto.init)
+    let days = send.days.compactMap(Day.init)
+    // The kind the group makes of the send (spec/chat.md, What a line is).
+    content =
+      if !send.photos.isEmpty {
+        .photos(send.photos.map(LinePhoto.init))
+      } else if days.isEmpty {
+        .words(
+          LineContent.Words(
+            text: send.text, preview: send.hasPreview ? LinePreview(send.preview) : nil))
+      } else if send.poll {
+        .poll(LineContent.Poll(days: days))
+      } else {
+        .days(days)
+      }
     up = row.up.ids
-    preview = send.hasPreview ? LinePreview(send.preview) : nil
     replyTo = send.replyTo == 0 ? nil : Int64(send.replyTo)
     self.failed = failed
   }
@@ -787,8 +689,10 @@ extension Chats {
   ) throws -> ChatState {
     let thread = ChatLineRow.where { $0.groupID.eq(groupID) && $0.threadID.eq(threadID) }
     let unpinned: Int64 = 0
-    var pinned = try thread.where { $0.pinnedOrder > unpinned && !$0.unsent }
-      .order { $0.pinnedOrder.desc() }.select(\.seq).fetchAll(db)
+    var pinned = try thread.where {
+      $0.pinnedOrder > unpinned && $0.kind.neq(LineContent.Kind.unsent)
+    }
+    .order { $0.pinnedOrder.desc() }.select(\.seq).fetchAll(db)
     let (waiting, failsAt) = try waitingLines(of: threadID, in: groupID, now: now, db: db)
     var ownRead: Int64 = 0
     // The member's waiting edits to each line, in the order made.
@@ -908,7 +812,7 @@ extension Chats {
         held[row.seq] = shown(row)
       }
     }
-    state.pins = pinned.compactMap { held[$0] }.filter { !$0.unsent }
+    state.pins = pinned.compactMap { held[$0] }.filter { $0.content != .unsent }
     for seq in answered {
       state.quoted[seq] = held[seq]
     }
@@ -924,26 +828,27 @@ extension Chats {
     for edit in edits {
       switch edit {
       case .change(let change):
-        row.text = change.text
-        row.edited = true
+        guard case .words(var words) = row.content else { break }
+        words.text = change.text
+        words.edited = true
         if !change.keepsPreview {
-          row.preview = change.hasPreview ? LinePreview(change.preview) : nil
+          words.preview = change.hasPreview ? LinePreview(change.preview) : nil
         }
+        row.content = .words(words)
       case .unsend, .recall:
-        row.text = ""
-        row.unsent = true
+        row.content = .unsent
         row.reactions = []
-        row.days = []
-        row.votes = []
-        row.decided = nil
-        row.photos = []
-        row.preview = nil
+        row.replyTo = nil
       case .vote(let vote):
-        if let me, let day = Day(vote.day), row.decided == nil {
-          row.votes = row.votes.voting(day, by: me, on: vote.on, order: row.days)
-        }
+        guard case .poll(var poll) = row.content, poll.decided == nil, let me,
+          let day = Day(vote.day)
+        else { break }
+        poll.votes = poll.votes.voting(day, by: me, on: vote.on, order: poll.days)
+        row.content = .poll(poll)
       case .decide(let decide):
-        row.decided = Day(decide.day)
+        guard case .poll(var poll) = row.content else { break }
+        poll.decided = Day(decide.day)
+        row.content = .poll(poll)
       case .react(let react):
         if let me {
           row.reactions = row.reactions.toggling(react.emoji, by: me, on: react.on)
@@ -1095,7 +1000,7 @@ extension Chats {
     }
     // Lines never delivered to the reader are not theirs to see.
     let last = try ChatLineRow.where {
-      $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && !$0.hidden
+      $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.kind.neq(LineContent.Kind.hidden)
     }
     .order { $0.seq.desc() }.fetchOne(db)
     let (waiting, failsAt) = try waitingLines(of: threadID, in: groupID, now: now, db: db)
@@ -1163,7 +1068,8 @@ extension Chats {
       lines, muted: muted, mentionsWhenMuted: notifications.mentionsWhenMuted, me: me)
   }
 
-  /// The words of others' lines the device holds past the reader's read.
+  /// The words of others' lines the device holds past the reader's read,
+  /// none for a line without words.
   private static func unreadLines(
     of threadID: String, in groupID: String, me: String, ownRead: Int64, db: Database
   ) throws -> [String] {
@@ -1176,7 +1082,12 @@ extension Chats {
     return try ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq > read
     }
-    .fetchAll(db).filter { $0.writer(for: me) == .others }.map(\.text)
+    .fetchAll(db).filter { $0.writer(for: me) == .others }.map { line in
+      switch line.content {
+      case .words(let words): words.text
+      case .photos, .days, .poll, .notice, .unsent, .hidden: ""
+      }
+    }
   }
 
   /// The member's newest read waiting to be sent in each of the group's

@@ -70,7 +70,7 @@ private func synced(in db: Database) throws {
   line.chatLine.threadID = "group"
   line.chatLine.seq = 1
   line.chatLine.authorID = "u1"
-  line.chatLine.text = "おはよう"
+  line.chatLine.content.words.text = "おはよう"
   try GroupSync.take([member, line], of: "g1", in: db)
   try GroupSync.take([member], of: "support", in: db)
   try OwnValues.edit(dayChange("night"), opID: "a", in: db)

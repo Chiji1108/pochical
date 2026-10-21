@@ -15,7 +15,7 @@ private func longChat(_ count: Int, in db: Database) throws {
     change.chatLine.threadID = groupThread
     change.chatLine.seq = UInt64(seq)
     change.chatLine.authorID = seq.isMultiple(of: 3) ? "me" : "u1"
-    change.chatLine.text = "line \(seq) " + String(repeating: "あ", count: seq % 40)
+    change.chatLine.content.words.text = "line \(seq) " + String(repeating: "あ", count: seq % 40)
     change.chatLine.sentAtMs = Int64(seq) * 60_000
     change.chatLine.opID = "op\(seq)"
     if seq > 1, seq.isMultiple(of: 10) {

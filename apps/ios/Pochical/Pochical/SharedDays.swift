@@ -14,17 +14,17 @@ func daysSummary(_ days: [Day]) -> String {
   return "📅 \(first.fullText)\(days.count > 1 ? "ほか" : "")"
 }
 
-/// A line in a line of words: its photos (`photos` of them) as 📷 写真, or
-/// 📷 写真3枚 for several; its days as daysSummary; else its words with its
-/// mentions as names.
-func lineWords(
-  _ text: String, days: [Day], poll: Bool = false, decided: Day? = nil, photos: Int = 0,
-  nameOf: (String) -> String
-) -> String {
-  if photos == 1 { return "📷 写真" }
-  if photos > 1 { return "📷 写真\(photos)枚" }
-  if poll { return pollSummary(days, decided: decided) }
-  return days.isEmpty ? plainText(text, nameOf: nameOf) : daysSummary(days)
+/// A line in a line of words: its photos as 📷 写真, or 📷 写真3枚 for
+/// several; its days as daysSummary, a poll as pollSummary; its words with
+/// their mentions as names; nothing for what is not a message.
+func lineWords(_ content: LineContent, nameOf: (String) -> String) -> String {
+  switch content {
+  case .words(let words): plainText(words.text, nameOf: nameOf)
+  case .photos(let photos): photos.count == 1 ? "📷 写真" : "📷 写真\(photos.count)枚"
+  case .days(let days): daysSummary(days)
+  case .poll(let poll): pollSummary(poll.days, decided: poll.decided)
+  case .notice, .unsent, .hidden: ""
+  }
 }
 
 /// The date's color by the week's: Sundays and holidays in red, Saturdays
