@@ -1,15 +1,7 @@
-import {
-  getFormProps,
-  getInputProps,
-  getTextareaProps,
-  useForm,
-} from "@conform-to/react";
-import { parseWithValibot } from "@conform-to/valibot";
 import { textLimits } from "@pochical/design/limits";
 import { env } from "cloudflare:workers";
 import { useRef } from "react";
 import { data, Form, Link, redirect, useNavigation } from "react-router";
-import * as v from "valibot";
 
 import { when } from "../when";
 import type { Route } from "./+types/support-chat";
@@ -30,40 +22,34 @@ export const loader = async ({ params, url }: Route.LoaderArgs) => {
 };
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-const countOf = (text: string) => [...graphemes.segment(text)].length;
-
-// The answer as the form sends it, checked in the browser as it is typed
-// and again here.
-const answerSchema = v.object({
-  opId: v.pipe(v.string(), v.uuid()),
-  text: v.pipe(
-    v.string("返信を書いてください。"),
-    v.check((text) => text.trim() !== "", "返信を書いてください。"),
-    v.check(
-      (text) => countOf(text) <= textLimits.chatMessage,
-      (issue) =>
-        `${textLimits.chatMessage}文字までです（${countOf(issue.input)}文字）。`
-    )
-  ),
-});
 
 export const action = async ({ params, request, url }: Route.ActionArgs) => {
-  const submission = parseWithValibot(await request.formData(), {
-    schema: answerSchema,
-  });
+  const form = await request.formData();
+  const field = (name: string) => {
+    const value = form.get(name);
+    return typeof value === "string" ? value : "";
+  };
+  const text = field("text");
+  const opId = field("opId");
   // Words and op id go back with the error, so sending again is the same
   // answer; a 4xx/5xx answer leaves the page's data as it is.
-  if (submission.status !== "success") {
-    return data(submission.reply(), { status: 400 });
+  const refuse = (status: number, error: string) =>
+    data({ error, opId, text }, { status });
+  if (text.trim() === "") {
+    return refuse(400, "返信を書いてください。");
   }
-  const { opId, text } = submission.value;
+  const count = [...graphemes.segment(text)].length;
+  if (count > textLimits.chatMessage) {
+    return refuse(
+      400,
+      `${textLimits.chatMessage}文字までです（${count}文字）。`
+    );
+  }
   const kept = await env.SERVER.answerSupport(params.userId, text, opId).catch(
     () => false
   );
   if (!kept) {
-    return data(submission.reply({ formErrors: ["返信できませんでした。"] }), {
-      status: 502,
-    });
+    return refuse(502, "返信できませんでした。");
   }
   // Post/Redirect/Get: reloading the page does not send it again.
   return redirect(url.pathname);
@@ -90,17 +76,6 @@ export default function SupportChat({
   const earliest = lines[0]?.seq;
   const sending = useNavigation().state === "submitting";
   const opId = useRef<HTMLInputElement>(null);
-  const [form, fields] = useForm({
-    defaultValue: { opId: loaderData.opId },
-    lastResult: actionData,
-    onValidate: ({ formData }) =>
-      parseWithValibot(formData, { schema: answerSchema }),
-    shouldRevalidate: "onInput",
-  });
-  const { key: _opIdKey, ...opIdProps } = getInputProps(fields.opId, {
-    type: "hidden",
-  });
-  const { key: _textKey, ...textProps } = getTextareaProps(fields.text);
   return (
     <main>
       <h1>サポート・{userId.slice(0, 8)}</h1>
@@ -162,12 +137,18 @@ export default function SupportChat({
         </div>
       ))}
       {/* A new op id from the loader (an answer kept) starts a new form. */}
-      <Form key={loaderData.opId} method="post" {...getFormProps(form)}>
-        <input {...opIdProps} ref={opId} />
+      <Form key={loaderData.opId} method="post">
+        <input
+          defaultValue={actionData?.opId ?? loaderData.opId}
+          name="opId"
+          ref={opId}
+          type="hidden"
+        />
         <textarea
-          {...textProps}
           aria-label="返信"
+          defaultValue={actionData?.text}
           maxLength={textLimits.chatMessage}
+          name="text"
           onChange={() => {
             // Kept while a send is on its way: it may have arrived, and its
             // retry must be the same answer.
@@ -180,12 +161,10 @@ export default function SupportChat({
         <button disabled={sending} type="submit">
           ポチカルとして返信
         </button>
-        {[...(fields.text.errors ?? []), ...(form.errors ?? [])].map(
-          (error) => (
-            <p className="open" key={error} role="alert">
-              {error}
-            </p>
-          )
+        {actionData?.error !== undefined && (
+          <p className="open" role="alert">
+            {actionData.error}
+          </p>
         )}
       </Form>
     </main>
