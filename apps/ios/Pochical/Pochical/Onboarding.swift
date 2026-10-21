@@ -68,7 +68,6 @@ struct AppRoot: View {
         Onboarding()
       }
     }
-    .modifier(KeepsEdits())
     .onChange(of: hasPatterns, initial: true) { _, has in
       if has { done = true }
     }
