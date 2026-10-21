@@ -1,4 +1,6 @@
+import siteIcon from "@pochical/prototype/assets/icon.png";
 import poodle from "@pochical/prototype/assets/poodle.png";
+import shareImage from "@pochical/prototype/assets/share.png";
 import { DesignAppIcon } from "@pochical/prototype/components/design-app-icon";
 import {
   DesignProviders,
@@ -16,23 +18,18 @@ import {
   designScreens,
   DesignToolbar,
 } from "../components/design-page";
-import { pageMeta } from "../lib/site";
+import { pageMeta } from "../lib/page-meta";
 
 import previewStyles from "../calendar-preview.css?url";
 
 export const Route = createFileRoute("/design_/assets")({
   component: AssetsPage,
   head: () => {
-    const meta = pageMeta(
-      "素材",
-      "ポチカルのアプリアイコンと、元になる絵",
-      "/design/assets",
-      true
-    );
+    const meta = pageMeta("素材", "ポチカルのアプリアイコンと、元になる絵");
     // The first key visual's own styles, needed on this page only.
     return {
       ...meta,
-      links: [...meta.links, { href: previewStyles, rel: "stylesheet" }],
+      links: [{ href: previewStyles, rel: "stylesheet" }],
     };
   },
 });
@@ -50,16 +47,16 @@ const sources = [
   {
     alt: "モスの地に白いプードルのアイコン",
     note: "ファビコンとサイトのヘッダーで使っています。アプリアイコンのモスと同じ絵です。",
-    path: "public/icon.png",
-    src: "/icon.png",
+    path: "packages/prototype/src/assets/icon.png",
+    src: siteIcon,
     title: "サイトのアイコン",
     wide: false,
   },
   {
     alt: "ポチカルのロゴと「シフトを、ポチッと。」、カレンダーの画面",
     note: "リンクを共有したときの画像、1200×630。/design/share-image を bun run image:share で撮っています。",
-    path: "public/share.png",
-    src: "/share.png",
+    path: "packages/prototype/src/assets/share.png",
+    src: shareImage,
     title: "共有したときの画像",
     wide: true,
   },
@@ -118,7 +115,7 @@ function AssetsPage() {
   const theme = useDesignTheme();
   return (
     <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar back="documents" />
+      <DesignToolbar />
       <DesignIntro eyebrow="POCHICAL / ASSETS" title="素材">
         アプリやサイトで使う画像と、その元になる絵。
       </DesignIntro>

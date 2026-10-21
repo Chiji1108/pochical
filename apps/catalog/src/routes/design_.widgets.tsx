@@ -83,16 +83,14 @@ import {
   widgetVariantOptions,
 } from "../lib/design-widget-variants";
 import type { WidgetVariants } from "../lib/design-widget-variants";
-import { pageMeta } from "../lib/site";
+import { pageMeta } from "../lib/page-meta";
 
 export const Route = createFileRoute("/design_/widgets")({
   component: WidgetsPage,
   head: () => ({
     ...pageMeta(
       "ウィジェット",
-      "ポチカルのホーム画面とロック画面のウィジェット",
-      "/design/widgets",
-      true
+      "ポチカルのホーム画面とロック画面のウィジェット"
     ),
   }),
   validateSearch: parseWidgetVariants,
@@ -512,7 +510,7 @@ function WidgetsPage() {
   const theme = useDesignTheme();
   return (
     <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar back="documents" />
+      <DesignToolbar />
       <DesignIntro eyebrow="POCHICAL / WIDGETS" title="ウィジェット">
         iPhone（390×844pt）と Pixel 9a
         での実寸です。下の切り替えで、種類、今日の状態、端末と見た目、アプリの設定を変えて見られます。選んだ状態は

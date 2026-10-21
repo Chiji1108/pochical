@@ -9,7 +9,7 @@
 //   ...change the styles...
 //   bun tools/layout-diff check before   (measures again and compares)
 //
-// --url is the dev server (http://localhost:3000), --only keeps the states
+// --url is the dev server (http://localhost:3200), --only keeps the states
 // whose names contain it, --dark measures in dark mode, --width sets the
 // window's width (800), --workers how many screens load at once (4). Runs are kept in
 // tools/layout-diff/out. It drives the installed Google Chrome, or without
@@ -225,7 +225,7 @@ async function main() {
     options: {
       dark: { default: false, type: "boolean" },
       only: { type: "string" },
-      url: { default: "http://localhost:3000", type: "string" },
+      url: { default: "http://localhost:3200", type: "string" },
       width: { default: String(VIEWPORT.width), type: "string" },
       workers: { default: String(WORKERS), type: "string" },
     },

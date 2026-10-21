@@ -1,7 +1,11 @@
-// Paints the site icon (public/icon.png) from the poodle drawing, in the
-// app icon's モス colors, the way /design/assets paints the app icons.
+// Paints the site icon (src/assets/icon.png) from the poodle drawing, in the
+// app icon's モス colors, the way /design/assets paints the app icons, and
+// the small ones made from it: the home screen's (180) and the one an
+// invitation's share image and the save sheet draw (192).
 // Run again after changing the drawing: bun run icon:site
-import { fileURLToPath } from "node:url";
+import { writeFile } from "node:fs/promises";
+
+import sharp from "sharp";
 
 import {
   DRAWING_SHARE,
@@ -10,13 +14,11 @@ import {
   inkBounds,
   outsideOf,
   rgbOf,
-} from "@pochical/prototype/components/design-app-icon";
-import sharp from "sharp";
+} from "../src/components/design-app-icon";
 
-const SOURCE = fileURLToPath(
-  import.meta.resolve("@pochical/prototype/assets/poodle.png")
-);
-const OUTPUT = new URL("../public/icon.png", import.meta.url).pathname;
+const SOURCE = new URL("../src/assets/poodle.png", import.meta.url).pathname;
+const ASSETS = new URL("../src/assets/", import.meta.url).pathname;
+const SMALL_SIZES = [180, 192];
 const CHANNELS = 3;
 
 const moss = iconColorOptions.find((option) => option.id === "moss");
@@ -74,7 +76,7 @@ const padded = await sharp(painted, {
   })
   .raw()
   .toBuffer({ resolveWithObject: true });
-await sharp(padded.data, { raw: padded.info })
+const icon = await sharp(padded.data, { raw: padded.info })
   .extract({
     height: crop,
     left: Math.round((bounds.left + bounds.right - crop) / 2 + crop),
@@ -83,4 +85,14 @@ await sharp(padded.data, { raw: padded.info })
   })
   .resize(ICON_SIZE, ICON_SIZE, { kernel: "lanczos3" })
   .png({ compressionLevel: 9 })
-  .toFile(OUTPUT);
+  .toBuffer();
+await writeFile(`${ASSETS}icon.png`, icon);
+await Promise.all(
+  SMALL_SIZES.map(async (size) => {
+    await sharp(icon)
+      .resize(size, size, { kernel: "lanczos3" })
+      // As @vite-pwa/assets-generator writes its icons: a palette PNG.
+      .png({ compressionLevel: 9, quality: 60 })
+      .toFile(`${ASSETS}icon-${size}.png`);
+  })
+);

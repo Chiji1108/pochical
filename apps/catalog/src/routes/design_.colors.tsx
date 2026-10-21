@@ -7,12 +7,12 @@ import {
   DesignPage,
   DesignToolbar,
 } from "../components/design-page";
-import { pageMeta } from "../lib/site";
+import { pageMeta } from "../lib/page-meta";
 
 function ColorsPage() {
   return (
     <DesignPage style={themeStyle("pochical", "light")}>
-      <DesignToolbar back="documents" />
+      <DesignToolbar />
       <DesignIntro eyebrow="POCHICAL / COLOR PALETTE" title="カラーパレット">
         画面の色はすべて、ここにある役割の名前で決まります。ライトとダークを並べています。
       </DesignIntro>
@@ -24,11 +24,6 @@ function ColorsPage() {
 export const Route = createFileRoute("/design_/colors")({
   component: ColorsPage,
   head: () => ({
-    ...pageMeta(
-      "カラーパレット",
-      "ポチカルの色の役割と、ライト・ダークの値",
-      "/design/colors",
-      true
-    ),
+    ...pageMeta("カラーパレット", "ポチカルの色の役割と、ライト・ダークの値"),
   }),
 });

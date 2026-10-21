@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useContext, useState } from "react";
 
+import storeIcon from "../assets/icon-192.png";
 import { dateKey, formatMonth } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { isDayOff } from "../lib/design-patterns";
@@ -217,10 +218,6 @@ const save = {
     width: "10px",
   }),
 };
-
-// The icon the store shows, in light and dark alike, whichever one this
-// device picked: the one someone who gets the picture will look for.
-const STORE_ICON = "/app/pwa-192x192.png";
 
 // The picture as it will be saved: the month in the calendar screen's own
 // ground, so it is the calendar as seen (the raised ground would lift it
@@ -726,7 +723,9 @@ export function ImagePreviewPage({
                     ))}
                   </div>
                   <p className={picture.credit}>
-                    <AppIcon size={16} src={STORE_ICON} />
+                    {/* The store's icon, in light and dark alike: the one someone who
+                        gets the picture will look for. */}
+                    <AppIcon size={16} src={storeIcon} />
                     ポチカル
                   </p>
                 </figure>

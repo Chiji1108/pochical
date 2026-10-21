@@ -4,17 +4,13 @@ import { css } from "@pochical/styled-system/css";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 
-import {
-  DesignIntro,
-  DesignPage,
-  DesignToolbar,
-} from "../components/design-page";
-import { pageMeta } from "../lib/site";
+import { DesignIntro, DesignPage } from "../components/design-page";
+import { pageMeta } from "../lib/page-meta";
 
 export const Route = createFileRoute("/design")({
   component: DocumentsPage,
   head: () => ({
-    ...pageMeta("デザイン資料", "ポチカルのデザイン資料", "/design", true),
+    ...pageMeta("デザイン資料", "ポチカルのデザイン資料"),
   }),
 });
 
@@ -94,7 +90,6 @@ function DocumentsPage() {
   const theme = useDesignTheme();
   return (
     <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar back="site" />
       <DesignIntro
         eyebrow="POCHICAL / DESIGN"
         title={
