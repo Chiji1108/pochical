@@ -78,7 +78,8 @@ public object ChatLineKt {
 
     /**
      * ```
-     * Who wrote it; it stays theirs after they leave.
+     * Who wrote it; it stays theirs after they leave. For a notice, who did
+     * what it tells.
      * ```
      *
      * `string author_id = 3 [json_name = "authorId"];`
@@ -92,40 +93,14 @@ public object ChatLineKt {
       }
     /**
      * ```
-     * Who wrote it; it stays theirs after they leave.
+     * Who wrote it; it stays theirs after they leave. For a notice, who did
+     * what it tells.
      * ```
      *
      * `string author_id = 3 [json_name = "authorId"];`
      */
     public fun clearAuthorId() {
       _builder.clearAuthorId()
-    }
-
-    /**
-     * ```
-     * chatMessage characters at most (design/src/limits.ts); empty for a
-     * line of shared days, and once unsent.
-     * ```
-     *
-     * `string text = 4 [json_name = "text"];`
-     */
-    public var text: kotlin.String
-      @kotlin.jvm.JvmName("getText")
-        get() = _builder.text
-      @kotlin.jvm.JvmName("setText")
-        set(value) {
-        _builder.text = value
-      }
-    /**
-     * ```
-     * chatMessage characters at most (design/src/limits.ts); empty for a
-     * line of shared days, and once unsent.
-     * ```
-     *
-     * `string text = 4 [json_name = "text"];`
-     */
-    public fun clearText() {
-      _builder.clearText()
     }
 
     /**
@@ -151,56 +126,6 @@ public object ChatLineKt {
      */
     public fun clearSentAtMs() {
       _builder.clearSentAtMs()
-    }
-
-    /**
-     * ```
-     * Its words were changed after it was sent (編集済み).
-     * ```
-     *
-     * `bool edited = 6 [json_name = "edited"];`
-     */
-    public var edited: kotlin.Boolean
-      @kotlin.jvm.JvmName("getEdited")
-        get() = _builder.edited
-      @kotlin.jvm.JvmName("setEdited")
-        set(value) {
-        _builder.edited = value
-      }
-    /**
-     * ```
-     * Its words were changed after it was sent (編集済み).
-     * ```
-     *
-     * `bool edited = 6 [json_name = "edited"];`
-     */
-    public fun clearEdited() {
-      _builder.clearEdited()
-    }
-
-    /**
-     * ```
-     * Taken back by its writer (送信取消): its words are gone for everyone.
-     * ```
-     *
-     * `bool unsent = 7 [json_name = "unsent"];`
-     */
-    public var unsent: kotlin.Boolean
-      @kotlin.jvm.JvmName("getUnsent")
-        get() = _builder.unsent
-      @kotlin.jvm.JvmName("setUnsent")
-        set(value) {
-        _builder.unsent = value
-      }
-    /**
-     * ```
-     * Taken back by its writer (送信取消): its words are gone for everyone.
-     * ```
-     *
-     * `bool unsent = 7 [json_name = "unsent"];`
-     */
-    public fun clearUnsent() {
-      _builder.clearUnsent()
     }
 
     /**
@@ -239,7 +164,8 @@ public object ChatLineKt {
     /**
      * ```
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * ```
      *
      * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
@@ -252,7 +178,8 @@ public object ChatLineKt {
     /**
      * ```
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * ```
      *
      * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
@@ -266,7 +193,8 @@ public object ChatLineKt {
     /**
      * ```
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * ```
      *
      * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
@@ -281,7 +209,8 @@ public object ChatLineKt {
     /**
      * ```
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * ```
      *
      * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
@@ -295,7 +224,8 @@ public object ChatLineKt {
     /**
      * ```
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * ```
      *
      * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
@@ -310,7 +240,8 @@ public object ChatLineKt {
     /**
      * ```
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * ```
      *
      * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
@@ -325,7 +256,8 @@ public object ChatLineKt {
     /**
      * ```
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * ```
      *
      * `repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];`
@@ -364,336 +296,9 @@ public object ChatLineKt {
     }
 
     /**
-     * An uninstantiable, behaviorless type to represent the field in
-     * generics.
-     */
-    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
-    public class DaysProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
-    /**
-     * ```
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * ```
-     *
-     * `repeated string days = 11 [json_name = "days"];`
-     * @return A list containing the days.
-     */
-    public val days: com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>
-    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
-      get() = com.google.protobuf.kotlin.DslList(
-        _builder.daysList
-      )
-    /**
-     * ```
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * ```
-     *
-     * `repeated string days = 11 [json_name = "days"];`
-     * @param value The days to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addDays")
-    public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.add(value: kotlin.String) {
-      _builder.addDays(value)
-    }
-    /**
-     * ```
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * ```
-     *
-     * `repeated string days = 11 [json_name = "days"];`
-     * @param value The days to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignDays")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.plusAssign(value: kotlin.String) {
-      add(value)
-    }
-    /**
-     * ```
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * ```
-     *
-     * `repeated string days = 11 [json_name = "days"];`
-     * @param values The days to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addAllDays")
-    public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.addAll(values: kotlin.collections.Iterable<kotlin.String>) {
-      _builder.addAllDays(values)
-    }
-    /**
-     * ```
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * ```
-     *
-     * `repeated string days = 11 [json_name = "days"];`
-     * @param values The days to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignAllDays")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.plusAssign(values: kotlin.collections.Iterable<kotlin.String>) {
-      addAll(values)
-    }
-    /**
-     * ```
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * ```
-     *
-     * `repeated string days = 11 [json_name = "days"];`
-     * @param index The index to set the value at.
-     * @param value The days to set.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("setDays")
-    public operator fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.set(index: kotlin.Int, value: kotlin.String) {
-      _builder.setDays(index, value)
-    }/**
-     * ```
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * ```
-     *
-     * `repeated string days = 11 [json_name = "days"];`
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("setDays")
-    public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.clear() {
-      _builder.clearDays()
-    }
-    /**
-     * ```
-     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-     * ```
-     *
-     * `bool poll = 12 [json_name = "poll"];`
-     */
-    public var poll: kotlin.Boolean
-      @kotlin.jvm.JvmName("getPoll")
-        get() = _builder.poll
-      @kotlin.jvm.JvmName("setPoll")
-        set(value) {
-        _builder.poll = value
-      }
-    /**
-     * ```
-     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-     * ```
-     *
-     * `bool poll = 12 [json_name = "poll"];`
-     */
-    public fun clearPoll() {
-      _builder.clearPoll()
-    }
-
-    /**
-     * An uninstantiable, behaviorless type to represent the field in
-     * generics.
-     */
-    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
-    public class VotesProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
-    /**
-     * ```
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
-     */
-     public val votes: com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>
-      @kotlin.jvm.JvmSynthetic
-  get() = com.google.protobuf.kotlin.DslList(
-        _builder.votesList
-      )
-    /**
-     * ```
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
-     * @param value The votes to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addVotes")
-    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.add(value: app.pochical.v1.ChatVotes) {
-      _builder.addVotes(value)
-    }
-    /**
-     * ```
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
-     * @param value The votes to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignVotes")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.plusAssign(value: app.pochical.v1.ChatVotes) {
-      add(value)
-    }
-    /**
-     * ```
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
-     * @param values The votes to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addAllVotes")
-    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.ChatVotes>) {
-      _builder.addAllVotes(values)
-    }
-    /**
-     * ```
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
-     * @param values The votes to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignAllVotes")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.ChatVotes>) {
-      addAll(values)
-    }
-    /**
-     * ```
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
-     * @param index The index to set the value at.
-     * @param value The votes to set.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("setVotes")
-    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.set(index: kotlin.Int, value: app.pochical.v1.ChatVotes) {
-      _builder.setVotes(index, value)
-    }
-    /**
-     * ```
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];`
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("clearVotes")
-    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatVotes, VotesProxy>.clear() {
-      _builder.clearVotes()
-    }
-
-    /**
-     * ```
-     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-     * ```
-     *
-     * `string decided = 14 [json_name = "decided"];`
-     */
-    public var decided: kotlin.String
-      @kotlin.jvm.JvmName("getDecided")
-        get() = _builder.decided
-      @kotlin.jvm.JvmName("setDecided")
-        set(value) {
-        _builder.decided = value
-      }
-    /**
-     * ```
-     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-     * ```
-     *
-     * `string decided = 14 [json_name = "decided"];`
-     */
-    public fun clearDecided() {
-      _builder.clearDecided()
-    }
-
-    /**
-     * ```
-     * Its first link's page, under its words; none once unsent.
-     * ```
-     *
-     * `.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];`
-     */
-    public var preview: app.pochical.v1.LinkPreview
-      @kotlin.jvm.JvmName("getPreview")
-        get() = _builder.preview
-      @kotlin.jvm.JvmName("setPreview")
-        set(value) {
-        _builder.preview = value
-      }
-    /**
-     * ```
-     * Its first link's page, under its words; none once unsent.
-     * ```
-     *
-     * `.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];`
-     */
-    public fun clearPreview() {
-      _builder.clearPreview()
-    }
-    /**
-     * ```
-     * Its first link's page, under its words; none once unsent.
-     * ```
-     *
-     * `.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];`
-     * @return Whether the preview field is set.
-     */
-    public fun hasPreview(): kotlin.Boolean {
-      return _builder.hasPreview()
-    }
-
-    public val ChatLineKt.Dsl.previewOrNull: app.pochical.v1.LinkPreview?
-      get() = _builder.previewOrNull
-
-    /**
-     * ```
-     * Sent in a one-to-one chat by someone the reader had blocked: never
-     * delivered to them, so it comes without its content and shows nothing.
-     * ```
-     *
-     * `bool hidden = 17 [json_name = "hidden"];`
-     */
-    public var hidden: kotlin.Boolean
-      @kotlin.jvm.JvmName("getHidden")
-        get() = _builder.hidden
-      @kotlin.jvm.JvmName("setHidden")
-        set(value) {
-        _builder.hidden = value
-      }
-    /**
-     * ```
-     * Sent in a one-to-one chat by someone the reader had blocked: never
-     * delivered to them, so it comes without its content and shows nothing.
-     * ```
-     *
-     * `bool hidden = 17 [json_name = "hidden"];`
-     */
-    public fun clearHidden() {
-      _builder.clearHidden()
-    }
-
-    /**
      * ```
      * The line it answers (返信), by its seq in the same chat; 0 for none,
-     * and none once unsent.
+     * and none for a notice or once unsent.
      * ```
      *
      * `uint64 reply_to = 18 [json_name = "replyTo"];`
@@ -708,7 +313,7 @@ public object ChatLineKt {
     /**
      * ```
      * The line it answers (返信), by its seq in the same chat; 0 for none,
-     * and none once unsent.
+     * and none for a notice or once unsent.
      * ```
      *
      * `uint64 reply_to = 18 [json_name = "replyTo"];`
@@ -719,169 +324,53 @@ public object ChatLineKt {
 
     /**
      * ```
-     * A line from the app in 全体チャット, not a message (spec/chat.md,
-     * Notices): author_id is who did it. It has no words, takes no
-     * reactions, replies or pins, and is never unread.
+     * What the line is: always one of its kinds. A device that gets none,
+     * or one it does not know (from an app newer than itself), shows
+     * nothing in its place.
      * ```
      *
-     * `.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];`
+     * `.pochical.v1.ChatContent content = 22 [json_name = "content"];`
      */
-    public var notice: app.pochical.v1.ChatNotice
-      @kotlin.jvm.JvmName("getNotice")
-        get() = _builder.notice
-      @kotlin.jvm.JvmName("setNotice")
+    public var content: app.pochical.v1.ChatContent
+      @kotlin.jvm.JvmName("getContent")
+        get() = _builder.content
+      @kotlin.jvm.JvmName("setContent")
         set(value) {
-        _builder.notice = value
+        _builder.content = value
       }
     /**
      * ```
-     * A line from the app in 全体チャット, not a message (spec/chat.md,
-     * Notices): author_id is who did it. It has no words, takes no
-     * reactions, replies or pins, and is never unread.
+     * What the line is: always one of its kinds. A device that gets none,
+     * or one it does not know (from an app newer than itself), shows
+     * nothing in its place.
      * ```
      *
-     * `.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];`
+     * `.pochical.v1.ChatContent content = 22 [json_name = "content"];`
      */
-    public fun clearNotice() {
-      _builder.clearNotice()
+    public fun clearContent() {
+      _builder.clearContent()
     }
     /**
      * ```
-     * A line from the app in 全体チャット, not a message (spec/chat.md,
-     * Notices): author_id is who did it. It has no words, takes no
-     * reactions, replies or pins, and is never unread.
+     * What the line is: always one of its kinds. A device that gets none,
+     * or one it does not know (from an app newer than itself), shows
+     * nothing in its place.
      * ```
      *
-     * `.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];`
-     * @return Whether the notice field is set.
+     * `.pochical.v1.ChatContent content = 22 [json_name = "content"];`
+     * @return Whether the content field is set.
      */
-    public fun hasNotice(): kotlin.Boolean {
-      return _builder.hasNotice()
+    public fun hasContent(): kotlin.Boolean {
+      return _builder.hasContent()
     }
 
-    public val ChatLineKt.Dsl.noticeOrNull: app.pochical.v1.ChatNotice?
-      get() = _builder.noticeOrNull
-
-    /**
-     * An uninstantiable, behaviorless type to represent the field in
-     * generics.
-     */
-    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
-    public class PhotosProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
-    /**
-     * ```
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
-     */
-     public val photos: com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>
-      @kotlin.jvm.JvmSynthetic
-  get() = com.google.protobuf.kotlin.DslList(
-        _builder.photosList
-      )
-    /**
-     * ```
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
-     * @param value The photos to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addPhotos")
-    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.add(value: app.pochical.v1.ChatPhoto) {
-      _builder.addPhotos(value)
-    }
-    /**
-     * ```
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
-     * @param value The photos to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignPhotos")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.plusAssign(value: app.pochical.v1.ChatPhoto) {
-      add(value)
-    }
-    /**
-     * ```
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
-     * @param values The photos to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addAllPhotos")
-    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.ChatPhoto>) {
-      _builder.addAllPhotos(values)
-    }
-    /**
-     * ```
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
-     * @param values The photos to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignAllPhotos")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.ChatPhoto>) {
-      addAll(values)
-    }
-    /**
-     * ```
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
-     * @param index The index to set the value at.
-     * @param value The photos to set.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("setPhotos")
-    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.set(index: kotlin.Int, value: app.pochical.v1.ChatPhoto) {
-      _builder.setPhotos(index, value)
-    }
-    /**
-     * ```
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];`
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("clearPhotos")
-    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.clear() {
-      _builder.clearPhotos()
-    }
+    public val ChatLineKt.Dsl.contentOrNull: app.pochical.v1.ChatContent?
+      get() = _builder.contentOrNull
   }
 }
 public inline fun app.pochical.v1.ChatLine.copy(block: `app.pochical.v1`.ChatLineKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatLine =
   `app.pochical.v1`.ChatLineKt.Dsl._create(this.toBuilder()).apply { block() }._build()
 
-public val app.pochical.v1.ChatLineOrBuilder.previewOrNull: app.pochical.v1.LinkPreview?
-  get() = if (hasPreview()) getPreview() else null
-
-public val app.pochical.v1.ChatLineOrBuilder.noticeOrNull: app.pochical.v1.ChatNotice?
-  get() = if (hasNotice()) getNotice() else null
+public val app.pochical.v1.ChatLineOrBuilder.contentOrNull: app.pochical.v1.ChatContent?
+  get() = if (hasContent()) getContent() else null
 

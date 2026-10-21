@@ -532,55 +532,91 @@ message ChatLine {
   string thread_id = 1;
   // Its place in the chat, from 1, given by the group as it takes it.
   uint64 seq = 2;
-  // Who wrote it; it stays theirs after they leave.
+  // Who wrote it; it stays theirs after they leave. For a notice, who did
+  // what it tells.
   string author_id = 3;
-  // chatMessage characters at most (design/src/limits.ts); empty for a
-  // line of shared days, and once unsent.
-  string text = 4;
   // When the group took it, in ms since the epoch.
   int64 sent_at_ms = 5;
-  // Its words were changed after it was sent (編集済み).
-  bool edited = 6;
-  // Taken back by its writer (送信取消): its words are gone for everyone.
-  bool unsent = 7;
   // The op_id of the edit that sent it, so the sending device puts the
   // group's line in place of the one it showed while it waited.
   string op_id = 8;
   // Its reactions, each emoji with who chose it in the order they did,
-  // the emoji in the order first chosen; none once unsent.
+  // the emoji in the order first chosen; none for a notice, and once
+  // unsent.
   repeated ChatReaction reactions = 9;
   // Pinned for everyone in the chat: the group's cursor when it was last
   // pinned, so the latest pin is the greatest; 0 when not pinned.
   uint64 pinned_order = 10;
-  // The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-  // line of days has no words. None once unsent.
-  repeated string days = 11;
-  // Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-  bool poll = 12;
-  // A poll's votes: each day someone can come, with who can, in the
-  // order they said so. None once unsent.
-  repeated ChatVotes votes = 13;
-  // The day a poll was settled on, as YYYY-MM-DD; empty while open.
-  string decided = 14;
-  reserved 15, 20;
-  reserved "photo", "album";
-  // Its first link's page, under its words; none once unsent.
-  LinkPreview preview = 16;
-  // Sent in a one-to-one chat by someone the reader had blocked: never
-  // delivered to them, so it comes without its content and shows nothing.
-  bool hidden = 17;
   // The line it answers (返信), by its seq in the same chat; 0 for none,
-  // and none once unsent.
+  // and none for a notice or once unsent.
   uint64 reply_to = 18;
-  // A line from the app in 全体チャット, not a message (spec/chat.md,
-  // Notices): author_id is who did it. It has no words, takes no
-  // reactions, replies or pins, and is never unread.
-  ChatNotice notice = 19;
-  // The photos sent as the line, with no words: one, or several sent at
-  // once, drawn as one album (spec/chat.md, Albums). None for anything
-  // else, and once unsent.
-  repeated ChatPhoto photos = 21;
+  // What the line is: always one of its kinds. A device that gets none,
+  // or one it does not know (from an app newer than itself), shows
+  // nothing in its place.
+  ChatContent content = 22;
+  reserved 4, 6, 7, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21;
+  reserved "text", "edited", "unsent", "days", "poll", "votes", "decided", "photo", "album", "preview", "hidden", "notice", "photos";
 }
+
+// What a chat line is (spec/chat.md, What a line is): one thing to the
+// reader, so one kind of it.
+message ChatContent {
+  oneof kind {
+    ChatWords words = 1;
+    // The photos sent as the line, with no words: one, or several sent at
+    // once, drawn as one album (spec/chat.md, Albums).
+    ChatAlbum photos = 2;
+    // Days shared with everyone's shifts, with no words (spec/chat.md,
+    // Long messages and shared days).
+    ChatSharedDays days = 3;
+    // Days put to the vote (spec/chat.md, Polls), in a group chat.
+    ChatPoll poll = 4;
+    // A line from the app in 全体チャット, not a message (spec/chat.md,
+    // Notices): it takes no reactions, replies or pins, and is never
+    // unread.
+    ChatNotice notice = 5;
+    // Taken back by its writer (送信取消): nothing of it is left, so a
+    // quote of it says it was taken back.
+    ChatTakenBack unsent = 6;
+    // Sent in a one-to-one chat by someone the reader had blocked: never
+    // delivered to them, so it comes without its content and shows
+    // nothing.
+    ChatHidden hidden = 7;
+  }
+}
+
+message ChatWords {
+  // 1 to chatMessage characters (design/src/limits.ts), not blank.
+  string text = 1;
+  // Changed after it was sent (編集済み).
+  bool edited = 2;
+  // Its first link's page, under its words; none without one.
+  LinkPreview preview = 3;
+}
+
+message ChatAlbum {
+  // 1 to chatRules.photosPerSend, in the order sent.
+  repeated ChatPhoto photos = 1;
+}
+
+message ChatSharedDays {
+  // 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD in
+  // order.
+  repeated string days = 1;
+}
+
+message ChatPoll {
+  // Two days at least, as YYYY-MM-DD in order.
+  repeated string days = 1;
+  // Each day someone can come, with who can, in the order they said so.
+  repeated ChatVotes votes = 2;
+  // The day it was settled on, as YYYY-MM-DD; empty while open.
+  string decided = 3;
+}
+
+message ChatTakenBack {}
+
+message ChatHidden {}
 
 // What a notice line says happened to the group, its names worded by
 // each device as the group shows them now.
