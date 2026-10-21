@@ -57,7 +57,7 @@ import {
 import { useChatEdits } from "./design-chat-edits";
 import { ChatContext, MessageLine, photosOf } from "./design-chat-line";
 import type { ChatScope } from "./design-chat-line";
-import { LineFrame, MutedMark, chatGaps } from "./design-chat-parts";
+import { LineFrame, MutedMark } from "./design-chat-parts";
 import { ChatPhotoList } from "./design-chat-photo-list";
 import { PinBar } from "./design-chat-pins";
 import { DecidePollSheet } from "./design-chat-poll";
@@ -188,6 +188,9 @@ const sharedRoom = 8;
 
 const noDay = () => undefined;
 
+const photosIn = (message: Message) =>
+  message.content.kind === "photos" ? message.content.photos : undefined;
+
 export function ChatScreen({
   rules,
   title,
@@ -235,7 +238,9 @@ export function ChatScreen({
   // kept the line: not sent, none of them up.
   const photosUpOf = (message: Message): PhotoUpload[] | undefined =>
     uploads[message.id] ??
-    (message.failed ? message.photos?.map(() => "failed" as const) : undefined);
+    (message.failed
+      ? photosIn(message)?.map(() => "failed" as const)
+      : undefined);
   const uploadOf = (message: Message): LineUpload | undefined => {
     const photos = photosUpOf(message);
     return photos && uploadOfLine(photos);
@@ -327,7 +332,7 @@ export function ChatScreen({
       }
       for (const line of sent) {
         const photos =
-          photosUpOf(line) ?? line.photos?.map(() => "sending" as const);
+          photosUpOf(line) ?? photosIn(line)?.map(() => "sending" as const);
         if (photos) {
           upload(line.id, photos);
         }
@@ -401,6 +406,9 @@ export function ChatScreen({
   // where it was and what is being written under it.
   const [listingPhotos, setListingPhotos] = useState(false);
   const replying = byId(replyTo);
+  const decidingContent = byId(deciding)?.content;
+  const decidingPoll =
+    decidingContent?.kind === "poll" ? decidingContent : undefined;
   // What every line shares, given once rather than to each.
   const scope: ChatScope = {
     faces,
@@ -527,7 +535,6 @@ export function ChatScreen({
             <ol
               aria-label={`${title}のメッセージ`}
               className={chatStyle.messages}
-              style={chatGaps}
               onScroll={handleScroll}
               ref={listRef}
             >
@@ -751,7 +758,11 @@ export function ChatScreen({
             members={people}
             onOpenChange={setSharing}
             onShare={(days, poll) => {
-              post(poll ? { poll: { days, votes: {} } } : { days });
+              post({
+                content: poll
+                  ? { days, kind: "poll", votes: {} }
+                  : { days, kind: "days" },
+              });
               setSharing(false);
             }}
             open={sharing}
@@ -769,7 +780,7 @@ export function ChatScreen({
                 decide(deciding, key);
               }
             }}
-            poll={byId(deciding)?.poll}
+            poll={decidingPoll}
           />
         )}
       </Screen>
@@ -923,7 +934,10 @@ function useTypingSoon(members: Member[], messages: Message[]) {
   );
   const answerSoon = () => {
     const last = messages.findLast(
-      (message) => message.from !== "me" && !message.notice && !message.unsent
+      (message) =>
+        message.from !== "me" &&
+        message.content.kind !== "notice" &&
+        message.content.kind !== "unsent"
     );
     if (!last || blocked.includes(last.from)) {
       return;
@@ -1020,7 +1034,11 @@ function useChatScroll({
     let count = 0;
     for (const message of messages.slice(start)) {
       const element = list.querySelector(`#message-${message.id}`);
-      if (message.from === "me" || message.notice || !element) {
+      if (
+        message.from === "me" ||
+        message.content.kind === "notice" ||
+        !element
+      ) {
         continue;
       }
       if (element.getBoundingClientRect().top < foot) {

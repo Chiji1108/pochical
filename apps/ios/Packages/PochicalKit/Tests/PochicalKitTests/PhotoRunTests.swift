@@ -7,7 +7,8 @@ import Testing
 private struct PhotoVectors: Decodable {
   struct Seen: VectorCase {
     struct Line: Decodable, Sendable {
-      let photo, unsent, hidden, ownChat, writerBlocked: Bool
+      let kind: LineContent.Kind
+      let hidden, ownChat, writerBlocked: Bool
     }
     let name: String
     let line: Line
@@ -86,10 +87,11 @@ private func item(_ name: String) -> ChatPhotoItem {
 @Test(arguments: try vectors("chat-photos", as: PhotoVectors.self).seen)
 private func seenPhoto(_ test: PhotoVectors.Seen) {
   let line = test.line
+  // A line hidden from the reader comes as hidden, whatever it was.
+  let kind = line.hidden ? .hidden : line.kind
   #expect(
-    PhotoRun.seen(
-      photo: line.photo, unsent: line.unsent, hidden: line.hidden, ownChat: line.ownChat,
-      writerBlocked: line.writerBlocked) == test.expected)
+    PhotoRun.seen(kind, ownChat: line.ownChat, writerBlocked: line.writerBlocked)
+      == test.expected)
 }
 
 @Test(arguments: try vectors("chat-photos", as: PhotoVectors.self).run)
@@ -151,16 +153,18 @@ private func chatLine(
   change.chatLine.seq = seq
   change.chatLine.authorID = author
   change.chatLine.opID = "op\(seq)"
-  change.chatLine.unsent = unsent
-  change.chatLine.photos = photos.map { id in
-    var photo = Pochical_V1_ChatPhoto()
-    photo.id = id
-    photo.width = 1
-    photo.height = 1
-    return photo
-  }
-  if photos.isEmpty, !unsent {
-    change.chatLine.text = "words"
+  if unsent {
+    change.chatLine.content.unsent = Pochical_V1_ChatTakenBack()
+  } else if photos.isEmpty {
+    change.chatLine.content.words.text = "words"
+  } else {
+    change.chatLine.content.photos.photos = photos.map { id in
+      var photo = Pochical_V1_ChatPhoto()
+      photo.id = id
+      photo.width = 1
+      photo.height = 1
+      return photo
+    }
   }
   return change
 }

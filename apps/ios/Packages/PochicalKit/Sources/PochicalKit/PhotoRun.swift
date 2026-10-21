@@ -43,11 +43,12 @@ public struct ChatPhotoItem: Hashable, Sendable, Identifiable {
   public static func items(of line: ChatLineRow, blocked: Set<String>) -> [ChatPhotoItem] {
     guard
       PhotoRun.seen(
-        photo: !line.photos.isEmpty, unsent: line.unsent, hidden: line.hidden,
-        ownChat: line.threadID == groupThread, writerBlocked: blocked.contains(line.authorID))
+        line.content.kind, ownChat: line.threadID == groupThread,
+        writerBlocked: blocked.contains(line.authorID)),
+      case .photos(let photos) = line.content
     else { return [] }
     let sentAt = Date(timeIntervalSince1970: TimeInterval(line.sentAtMs) / 1000)
-    return line.photos.enumerated().map { index, photo in
+    return photos.enumerated().map { index, photo in
       ChatPhotoItem(
         key: PhotoKey(seq: line.seq, index: index), photo: photo, authorID: line.authorID,
         sentAt: sentAt)
@@ -156,13 +157,12 @@ public struct PhotoRun: Sendable {
   private var asked: Set<Ask> = []
   private let ahead: Int
 
-  /// Whether the reader sees a line's photos among the chat's: not once
-  /// taken back, nor hidden from them, nor in the place's own chat when
-  /// they have blocked its writer, whose lines fold away there.
-  public static func seen(
-    photo: Bool, unsent: Bool, hidden: Bool, ownChat: Bool, writerBlocked: Bool
-  ) -> Bool {
-    photo && !unsent && !hidden && !(ownChat && writerBlocked)
+  /// Whether the reader sees a line's photos among the chat's, by its
+  /// kind: photos, not once taken back nor hidden from them, nor in the
+  /// place's own chat when they have blocked its writer, whose lines fold
+  /// away there.
+  public static func seen(_ kind: LineContent.Kind, ownChat: Bool, writerBlocked: Bool) -> Bool {
+    kind == .photos && !(ownChat && writerBlocked)
   }
 
   /// Opened on `tapped`, among the photos `held` of the lines laid out.
@@ -333,14 +333,20 @@ extension Chats {
     let lines = try ChatLineRow
       .where {
         $0.groupID.eq(groupID) && $0.threadID.eq(threadID)
-          && ($0.photosJSON.neq("[]") || $0.unsent || $0.hidden)
+          && $0.kind.in([LineContent.Kind.photos, .unsent, .hidden])
       }
       .order(by: \.seq)
       .fetchAll(db)
+    let gone = lines.filter { line in
+      switch line.content {
+      case .unsent, .hidden: true
+      case .words, .photos, .days, .poll, .notice: false
+      }
+    }
     return PhotoLines(
       cursor: try GroupSync.cursor(of: groupID, in: db),
       photos: lines.flatMap { ChatPhotoItem.items(of: $0, blocked: blocked).map(\.key) },
-      gone: Set(lines.filter { $0.unsent || $0.hidden }.map(\.seq)),
+      gone: Set(gone.map(\.seq)),
       blocked: blocked)
   }
 }

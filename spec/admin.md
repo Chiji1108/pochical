@@ -22,9 +22,9 @@ Pochical's people read and answer users' chats with them, and look at what membe
 
   | Prefix | Written by | Named by | Verdicts when nothing names it |
   | --- | --- | --- | --- |
-  | `groups/{groupId}/photos/{photoId}` and `…/small` | a member's upload, Slack's images in a support chat, a copy of a user's own photo (`photos.ts`) | the Group DO (`support:{userId}` for a support chat): `group_photos` while unsent, shown or deleting (the sweep owns those), a line's `chat_lines.photos`, the group's mark (`profile.photo`), a face (`members.usual_photo`, `own_photo`) | `unnoted` (no `group_photos` row), `takenBack` (its row says R2 holds it no more), `sentUnnamed` (sent, but no line carries it: the lines Group DO migration 0035 emptied), `groupGone` (the group is not set up, or was erased) |
+  | `groups/{groupId}/photos/{photoId}` and `…/small` | a member's upload, Slack's images in a support chat, a copy of a user's own photo (`photos.ts`) | the Group DO (`support:{userId}` for a support chat): `group_photos` while unsent, shown or deleting (the sweep owns those), a photos line's `chat_lines.content.photos`, the group's mark (`profile.photo`), a face (`members.usual_photo`, `own_photo`) | `unnoted` (no `group_photos` row), `takenBack` (its row says R2 holds it no more), `sentUnnamed` (sent, but no line carries it: the lines Group DO migration 0035 emptied), `groupGone` (the group is not set up, or was erased) |
   | `people/{userId}/photos/{photoId}` | the user's upload of their own photo | the User DO's usual photo (`profile.photo_id`) | `notUsual` (a mark picked but never dropped, an upload never set), `userGone` (no D1 `user` row) |
-  | `previews/images/{imageId}` | a link preview's picture (`link-preview.ts`) | a line's `chat_lines.preview.imageId`, in any group | `unlinked` |
+  | `previews/images/{imageId}` | a link preview's picture (`link-preview.ts`) | a words line's `chat_lines.content.preview.imageId`, in any group | `unlinked` |
   | `previews/pages/{sha256}.json` | a page's preview, cached for a day | none: a cache | `expired` (older than its day) |
   | anything else | nothing | nothing | `unknown` |
 

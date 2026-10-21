@@ -119,18 +119,23 @@ describe("the photos bucket's audit", () => {
       const db = drizzle(state.storage);
       // The line 0035 left without its photo, as 0036 took it back.
       db.update(chatLines)
-        .set({ photos: null, unsent: true })
+        .set({ content: { kind: "unsent" } })
         .where(eq(chatLines.seq, 4))
         .run();
       db.update(chatLines)
         .set({
-          preview: {
-            imageHeight: 1,
-            imageId: linked,
-            imageWidth: 1,
-            site: "example.com",
-            title: "Example",
-            url: "https://example.com",
+          content: {
+            edited: false,
+            kind: "words",
+            preview: {
+              imageHeight: 1,
+              imageId: linked,
+              imageWidth: 1,
+              site: "example.com",
+              title: "Example",
+              url: "https://example.com",
+            },
+            text: "見て",
           },
         })
         .where(eq(chatLines.seq, 5))

@@ -19,6 +19,12 @@ func photoWords(_ photo: LinePhoto) -> String {
   return "正方形の写真"
 }
 
+/// A line's photos as VoiceOver says them: one by its shape, an album by
+/// how many.
+func photoWords(_ photos: [LinePhoto]) -> String {
+  photos.count == 1 ? photoWords(photos[0]) : "\(photos.count)枚の写真"
+}
+
 /// A line's reactions as VoiceOver sums them up: each emoji and how many
 /// chose it, the reader's own said.
 func reactionWords(_ reactions: [LineReaction], meID: String?) -> String {

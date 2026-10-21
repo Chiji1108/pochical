@@ -50,6 +50,7 @@ import {
   readMarkOf,
   unreadCount,
   reportContext,
+  wordsOf,
   setMemberBlocks,
   readerView,
   writeNotice,
@@ -1261,7 +1262,7 @@ export class GroupDO extends DurableObject<Env> {
                 if (!blockers.has(reader)) {
                   alerts.set(readerKey(threadId, reader), {
                     alert,
-                    mentioned: mentions(line.text, reader),
+                    mentioned: mentions(wordsOf(line), reader),
                   });
                 }
               }

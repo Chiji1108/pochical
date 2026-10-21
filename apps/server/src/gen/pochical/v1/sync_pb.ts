@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/sync.proto.
  */
 export const file_pochical_v1_sync: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS9zeW5jLnByb3RvEgtwb2NoaWNhbC52MSK7BAoLQ2xpZW50RnJhbWUSIwoFaGVsbG8YASABKAsyEi5wb2NoaWNhbC52MS5IZWxsb0gAEiEKBHBpbmcYAiABKAsyES5wb2NoaWNhbC52MS5QaW5nSAASKgoJZGF5X2VkaXRzGAMgASgLMhUucG9jaGljYWwudjEuRGF5RWRpdHNIABIyCg1wYXR0ZXJuX2VkaXRzGAQgASgLMhkucG9jaGljYWwudjEuUGF0dGVybkVkaXRzSAASPQoTcmVwZWF0X29yZGVyc19lZGl0cxgFIAEoCzIeLnBvY2hpY2FsLnYxLlJlcGVhdE9yZGVyc0VkaXRzSAASNAoOY293b3JrZXJfZWRpdHMYBiABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlckVkaXRzSAASLAoKY2hhdF9lZGl0cxgHIAEoCzIWLnBvY2hpY2FsLnYxLkNoYXRFZGl0c0gAEjkKEWNoYXRfcGFnZV9yZXF1ZXN0GAggASgLMhwucG9jaGljYWwudjEuQ2hhdFBhZ2VSZXF1ZXN0SAASJQoGdHlwaW5nGAkgASgLMhMucG9jaGljYWwudjEuVHlwaW5nSAASOAoQcHJlZmVyZW5jZV9lZGl0cxgKIAEoCzIcLnBvY2hpY2FsLnYxLlByZWZlcmVuY2VFZGl0c0gAEj0KE2NoYXRfcGhvdG9zX3JlcXVlc3QYCyABKAsyHi5wb2NoaWNhbC52MS5DaGF0UGhvdG9zUmVxdWVzdEgAQgYKBGtpbmQimgMKC1NlcnZlckZyYW1lEicKB3dlbGNvbWUYASABKAsyFC5wb2NoaWNhbC52MS5XZWxjb21lSAASIQoEcG9uZxgCIAEoCzIRLnBvY2hpY2FsLnYxLlBvbmdIABIpCgVlcnJvchgDIAEoCzIYLnBvY2hpY2FsLnYxLlNlcnZlckVycm9ySAASJwoHY2hhbmdlcxgEIAEoCzIULnBvY2hpY2FsLnYxLkNoYW5nZXNIABIjCgVhY2tlZBgFIAEoCzISLnBvY2hpY2FsLnYxLkFja2VkSAASIwoFcmVzZXQYBiABKAsyEi5wb2NoaWNhbC52MS5SZXNldEgAEioKCWNoYXRfcGFnZRgHIAEoCzIVLnBvY2hpY2FsLnYxLkNoYXRQYWdlSAASJQoGdHlwaW5nGAggASgLMhMucG9jaGljYWwudjEuVHlwaW5nSAASLgoLY2hhdF9waG90b3MYCiABKAsyFy5wb2NoaWNhbC52MS5DaGF0UGhvdG9zSABCBgoEa2luZEoECAkQClIQc3VwcG9ydF9hbnN3ZXJlZCI4CgZUeXBpbmcSEQoJdGhyZWFkX2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSCgoCb24YAyABKAgiMQoFSGVsbG8SGAoQcHJvdG9jb2xfdmVyc2lvbhgBIAEoDRIOCgZjdXJzb3IYAiABKAQiLAoHV2VsY29tZRIOCgZjdXJzb3IYASABKAQSEQoJc2VydmVyX21zGAIgASgDIhUKBFBpbmcSDQoFbm9uY2UYASABKA0iFQoEUG9uZxINCgVub25jZRgBIAEoDSKuAQoLU2VydmVyRXJyb3ISKwoEY29kZRgBIAEoDjIdLnBvY2hpY2FsLnYxLlNlcnZlckVycm9yLkNvZGUSDwoHbWVzc2FnZRgCIAEoCSJhCgRDb2RlEhQKEENPREVfVU5TUEVDSUZJRUQQABIZChVDT0RFX1BST1RPQ09MX1RPT19PTEQQARISCg5DT0RFX0JBRF9GUkFNRRACEhQKEENPREVfQ0xPQ0tfQUhFQUQQAyI+CgNIbGMSEwoLcGh5c2ljYWxfbXMYASABKAMSDwoHY291bnRlchgCIAEoDRIRCglkZXZpY2VfaWQYAyABKAkiewoIRGF5VmFsdWUSDAoEZGF0ZRgBIAEoCRIkCgVmaWVsZBgCIAEoDjIVLnBvY2hpY2FsLnYxLkRheUZpZWxkEhIKBXZhbHVlGAMgASgJSACIAQESHQoDaGxjGAQgASgLMhAucG9jaGljYWwudjEuSGxjQggKBl92YWx1ZSIvCghEYXlFZGl0cxIjCgVlZGl0cxgBIAMoCzIULnBvY2hpY2FsLnYxLkRheUVkaXQiPgoHRGF5RWRpdBINCgVvcF9pZBgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLnBvY2hpY2FsLnYxLkRheVZhbHVlIkIKBUFja2VkEg4KBm9wX2lkcxgBIAMoCRIpCgdyZWZ1c2VkGAIgAygLMhgucG9jaGljYWwudjEuUmVmdXNlZFNlbmQioQEKC1JlZnVzZWRTZW5kEg0KBW9wX2lkGAEgASgJEi8KBnJlYXNvbhgCIAEoDjIfLnBvY2hpY2FsLnYxLlJlZnVzZWRTZW5kLlJlYXNvbiJSCgZSZWFzb24SFgoSUkVBU09OX1VOU1BFQ0lGSUVEEAASFwoTUkVBU09OX0RPRVNfTk9UX0ZJVBABEhcKE1JFQVNPTl9OT1RfSU5fR1JPVVAQAiIvCgdDaGFuZ2VzEiQKB2NoYW5nZXMYASADKAsyEy5wb2NoaWNhbC52MS5DaGFuZ2Ui5wcKBkNoYW5nZRIOCgZjdXJzb3IYASABKAQSJAoDZGF5GAIgASgLMhUucG9jaGljYWwudjEuRGF5VmFsdWVIABIsCgdwYXR0ZXJuGAMgASgLMhkucG9jaGljYWwudjEuUGF0dGVyblZhbHVlSAASMgoNcGF0dGVybl9vcmRlchgEIAEoCzIZLnBvY2hpY2FsLnYxLlBhdHRlcm5PcmRlckgAEiwKCm1lbWJlcl9kYXkYBSABKAsyFi5wb2NoaWNhbC52MS5NZW1iZXJEYXlIABI0Cg5tZW1iZXJfcGF0dGVybhgGIAEoCzIaLnBvY2hpY2FsLnYxLk1lbWJlclBhdHRlcm5IABIyCg1yZXBlYXRfb3JkZXJzGAcgASgLMhkucG9jaGljYWwudjEuUmVwZWF0T3JkZXJzSAASLgoIY293b3JrZXIYCCABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlclZhbHVlSAASNAoOY293b3JrZXJfb3JkZXIYCSABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlck9yZGVySAASPwoUbWVtYmVyX3JlcGVhdF9vcmRlcnMYCiABKAsyHy5wb2NoaWNhbC52MS5NZW1iZXJSZXBlYXRPcmRlcnNIABItCgptZW1iZXJzaGlwGAsgASgLMhcucG9jaGljYWwudjEuTWVtYmVyc2hpcEgAEjIKDWdyb3VwX3Byb2ZpbGUYDCABKAsyGS5wb2NoaWNhbC52MS5Hcm91cFByb2ZpbGVIABIlCgZtZW1iZXIYDSABKAsyEy5wb2NoaWNhbC52MS5NZW1iZXJIABIqCgljaGF0X2xpbmUYDiABKAsyFS5wb2NoaWNhbC52MS5DaGF0TGluZUgAEioKCXJlYWRfbWFyaxgPIAEoCzIVLnBvY2hpY2FsLnYxLlJlYWRNYXJrSAASMAoMdW5yZWFkX2NvdW50GBAgASgLMhgucG9jaGljYWwudjEuVW5yZWFkQ291bnRIABIjCgVibG9jaxgRIAEoCzISLnBvY2hpY2FsLnYxLkJsb2NrSAASKgoJY2hhdF9tdXRlGBIgASgLMhUucG9jaGljYWwudjEuQ2hhdE11dGVIABI8ChJjaGF0X25vdGlmaWNhdGlvbnMYEyABKAsyHi5wb2NoaWNhbC52MS5DaGF0Tm90aWZpY2F0aW9uc0gAEicKB3Byb2ZpbGUYFCABKAsyFC5wb2NoaWNhbC52MS5Qcm9maWxlSAASMgoKcHJlZmVyZW5jZRgVIAEoCzIcLnBvY2hpY2FsLnYxLlByZWZlcmVuY2VWYWx1ZUgAQgYKBGtpbmQiUwoHUHJvZmlsZRIMCgRuYW1lGAEgASgJEhAKCHBob3RvX2lkGAIgASgJEigKCW1hcmtfbG9vaxgDIAEoCzIVLnBvY2hpY2FsLnYxLk1hcmtMb29rIj4KCENoYXRNdXRlEhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIwChFDaGF0Tm90aWZpY2F0aW9ucxIbChNtZW50aW9uc193aGVuX211dGVkGAEgASgIIiQKBUJsb2NrEg8KB3VzZXJfaWQYASABKAkSCgoCb24YAiABKAgiUwoLVW5yZWFkQ291bnQSEAoIZ3JvdXBfaWQYASABKAkSEQoJdGhyZWFkX2lkGAIgASgJEg0KBWNvdW50GAMgASgNEhAKCG1lbnRpb25zGAQgASgNIoMBCgpNZW1iZXJzaGlwEhAKCGdyb3VwX2lkGAEgASgJEgwKBG5hbWUYAiABKAkSJAoEbWFyaxgGIAEoCzIWLnBvY2hpY2FsLnYxLkdyb3VwTWFyaxIUCgxqb2luZWRfYXRfbXMYBCABKAMSDAoEbGVmdBgFIAEoCEoECAMQBFIFZW1vamkiTwoMR3JvdXBQcm9maWxlEgwKBG5hbWUYASABKAkSJAoEbWFyaxgDIAEoCzIWLnBvY2hpY2FsLnYxLkdyb3VwTWFya0oECAIQA1IFZW1vamki2QEKBk1lbWJlchIPCgd1c2VyX2lkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIUCgxqb2luZWRfYXRfbXMYAyABKAMSDAoEbGVmdBgEIAEoCBIPCgdkZWxldGVkGAUgASgIEhAKCG93bl9uYW1lGAYgASgIEhAKCHBob3RvX2lkGAcgASgJEhEKCW93bl9waG90bxgIIAEoCBIoCgltYXJrX2xvb2sYCSABKAsyFS5wb2NoaWNhbC52MS5NYXJrTG9vaxISCgpyZW1vdmVkX2J5GAogASgJIkAKCU1lbWJlckRheRIPCgd1c2VyX2lkGAEgASgJEiIKA2RheRgCIAEoCzIVLnBvY2hpY2FsLnYxLkRheVZhbHVlIkwKDU1lbWJlclBhdHRlcm4SDwoHdXNlcl9pZBgBIAEoCRIqCgdwYXR0ZXJuGAIgASgLMhkucG9jaGljYWwudjEuUGF0dGVyblZhbHVlItgBCgdQYXR0ZXJuEgwKBG5hbWUYASABKAkSDQoFZW1vamkYAiABKAkSDgoGc3ltYm9sGAMgASgJEgwKBGljb24YBCABKAkSDQoFY29sb3IYBSABKA0SEgoFc3RhcnQYBiABKAlIAIgBARIQCgNlbmQYByABKAlIAYgBARIVCg1jb3VudHNfYXNfb2ZmGAggASgIEhUKCG5leHRfZGF5GAkgASgJSAKIAQESEAoIYXJjaGl2ZWQYCiABKAhCCAoGX3N0YXJ0QgYKBF9lbmRCCwoJX25leHRfZGF5InEKDFBhdHRlcm5WYWx1ZRIKCgJpZBgBIAEoCRIqCgdwYXR0ZXJuGAIgASgLMhQucG9jaGljYWwudjEuUGF0dGVybkgAiAEBEh0KA2hsYxgDIAEoCzIQLnBvY2hpY2FsLnYxLkhsY0IKCghfcGF0dGVybiI6CgxQYXR0ZXJuT3JkZXISCwoDaWRzGAEgAygJEh0KA2hsYxgCIAEoCzIQLnBvY2hpY2FsLnYxLkhsYyI3CgxQYXR0ZXJuRWRpdHMSJwoFZWRpdHMYASADKAsyGC5wb2NoaWNhbC52MS5QYXR0ZXJuRWRpdCJ+CgtQYXR0ZXJuRWRpdBINCgVvcF9pZBgBIAEoCRIsCgdwYXR0ZXJuGAIgASgLMhkucG9jaGljYWwudjEuUGF0dGVyblZhbHVlSAASKgoFb3JkZXIYAyABKAsyGS5wb2NoaWNhbC52MS5QYXR0ZXJuT3JkZXJIAEIGCgRraW5kIqsBCgtSZXBlYXRPcmRlchINCgVzdGFydBgBIAEoCRITCgZhbmNob3IYAiABKAlIAIgBARIQCghzZXF1ZW5jZRgDIAMoCRIUCgxob2xpZGF5c19vZmYYBCABKAgSGgoNaG9saWRheV9zaGlmdBgFIAEoCUgBiAEBEhcKD2hvbGlkYXlfY291bnRyeRgGIAEoCUIJCgdfYW5jaG9yQhAKDl9ob2xpZGF5X3NoaWZ0IlcKDFJlcGVhdE9yZGVycxIoCgZvcmRlcnMYASADKAsyGC5wb2NoaWNhbC52MS5SZXBlYXRPcmRlchIdCgNobGMYAiABKAsyEC5wb2NoaWNhbC52MS5IbGMiQQoRUmVwZWF0T3JkZXJzRWRpdHMSLAoFZWRpdHMYASADKAsyHS5wb2NoaWNhbC52MS5SZXBlYXRPcmRlcnNFZGl0InQKEFJlcGVhdE9yZGVyc0VkaXQSDQoFb3BfaWQYASABKAkSKQoGb3JkZXJzGAIgASgLMhkucG9jaGljYWwudjEuUmVwZWF0T3JkZXJzEhcKCmNsZWFyX2Zyb20YAyABKAlIAIgBAUINCgtfY2xlYXJfZnJvbSJQChJNZW1iZXJSZXBlYXRPcmRlcnMSDwoHdXNlcl9pZBgBIAEoCRIpCgZvcmRlcnMYAiABKAsyGS5wb2NoaWNhbC52MS5SZXBlYXRPcmRlcnMiVgoNQ293b3JrZXJWYWx1ZRIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESHQoDaGxjGAMgASgLMhAucG9jaGljYWwudjEuSGxjQgcKBV9uYW1lIjsKDUNvd29ya2VyT3JkZXISCwoDaWRzGAEgAygJEh0KA2hsYxgCIAEoCzIQLnBvY2hpY2FsLnYxLkhsYyI5Cg1Db3dvcmtlckVkaXRzEigKBWVkaXRzGAEgAygLMhkucG9jaGljYWwudjEuQ293b3JrZXJFZGl0IoIBCgxDb3dvcmtlckVkaXQSDQoFb3BfaWQYASABKAkSLgoIY293b3JrZXIYAiABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlclZhbHVlSAASKwoFb3JkZXIYAyABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlck9yZGVySABCBgoEa2luZCJbCg9QcmVmZXJlbmNlVmFsdWUSCwoDa2V5GAEgASgJEhIKBXZhbHVlGAIgASgJSACIAQESHQoDaGxjGAMgASgLMhAucG9jaGljYWwudjEuSGxjQggKBl92YWx1ZSI9Cg9QcmVmZXJlbmNlRWRpdHMSKgoFZWRpdHMYASADKAsyGy5wb2NoaWNhbC52MS5QcmVmZXJlbmNlRWRpdCJMCg5QcmVmZXJlbmNlRWRpdBINCgVvcF9pZBgBIAEoCRIrCgV2YWx1ZRgCIAEoCzIcLnBvY2hpY2FsLnYxLlByZWZlcmVuY2VWYWx1ZSIHCgVSZXNldCLeAwoIQ2hhdExpbmUSEQoJdGhyZWFkX2lkGAEgASgJEgsKA3NlcRgCIAEoBBIRCglhdXRob3JfaWQYAyABKAkSDAoEdGV4dBgEIAEoCRISCgpzZW50X2F0X21zGAUgASgDEg4KBmVkaXRlZBgGIAEoCBIOCgZ1bnNlbnQYByABKAgSDQoFb3BfaWQYCCABKAkSLAoJcmVhY3Rpb25zGAkgAygLMhkucG9jaGljYWwudjEuQ2hhdFJlYWN0aW9uEhQKDHBpbm5lZF9vcmRlchgKIAEoBBIMCgRkYXlzGAsgAygJEgwKBHBvbGwYDCABKAgSJQoFdm90ZXMYDSADKAsyFi5wb2NoaWNhbC52MS5DaGF0Vm90ZXMSDwoHZGVjaWRlZBgOIAEoCRIpCgdwcmV2aWV3GBAgASgLMhgucG9jaGljYWwudjEuTGlua1ByZXZpZXcSDgoGaGlkZGVuGBEgASgIEhAKCHJlcGx5X3RvGBIgASgEEicKBm5vdGljZRgTIAEoCzIXLnBvY2hpY2FsLnYxLkNoYXROb3RpY2USJgoGcGhvdG9zGBUgAygLMhYucG9jaGljYWwudjEuQ2hhdFBob3RvSgQIDxAQSgQIFBAVUgVwaG90b1IFYWxidW0i8wEKCkNoYXROb3RpY2USKgoEa2luZBgBIAEoDjIcLnBvY2hpY2FsLnYxLkNoYXROb3RpY2UuS2luZBISCgpzdWJqZWN0X2lkGAIgASgJEgwKBG5hbWUYAyABKAkSFAoMbWFya19jaGFuZ2VkGAQgASgIIoABCgRLaW5kEhQKEEtJTkRfVU5TUEVDSUZJRUQQABIPCgtLSU5EX0pPSU5FRBABEg0KCUtJTkRfTEVGVBACEhAKDEtJTkRfUkVNT1ZFRBADEhYKEktJTkRfSU5WSVRFX1JFTUFERRAEEhgKFEtJTkRfUFJPRklMRV9DSEFOR0VEEAUiSgoJQ2hhdFBob3RvEgoKAmlkGAEgASgJEg0KBXdpZHRoGAIgASgNEg4KBmhlaWdodBgDIAEoDRISCgp0aHVtYl9oYXNoGAQgASgMIioKCUNoYXRWb3RlcxILCgNkYXkYASABKAkSEAoIdXNlcl9pZHMYAiADKAkiLwoMQ2hhdFJlYWN0aW9uEg0KBWVtb2ppGAEgASgJEhAKCHVzZXJfaWRzGAIgAygJIkUKCFJlYWRNYXJrEg8KB3VzZXJfaWQYASABKAkSEQoJdGhyZWFkX2lkGAIgASgJEhUKDWxhc3RfcmVhZF9zZXEYAyABKAQiMQoJQ2hhdEVkaXRzEiQKBWVkaXRzGAEgAygLMhUucG9jaGljYWwudjEuQ2hhdEVkaXQikAMKCENoYXRFZGl0Eg0KBW9wX2lkGAEgASgJEiUKBHNlbmQYAiABKAsyFS5wb2NoaWNhbC52MS5DaGF0U2VuZEgAEikKBmNoYW5nZRgDIAEoCzIXLnBvY2hpY2FsLnYxLkNoYXRDaGFuZ2VIABIpCgZ1bnNlbmQYBCABKAsyFy5wb2NoaWNhbC52MS5DaGF0VW5zZW5kSAASJQoEcmVhZBgFIAEoCzIVLnBvY2hpY2FsLnYxLkNoYXRSZWFkSAASJwoFcmVhY3QYBiABKAsyFi5wb2NoaWNhbC52MS5DaGF0UmVhY3RIABIjCgNwaW4YByABKAsyFC5wb2NoaWNhbC52MS5DaGF0UGluSAASJQoEdm90ZRgIIAEoCzIVLnBvY2hpY2FsLnYxLkNoYXRWb3RlSAASKQoGZGVjaWRlGAkgASgLMhcucG9jaGljYWwudjEuQ2hhdERlY2lkZUgAEikKBnJlY2FsbBgKIAEoCzIXLnBvY2hpY2FsLnYxLkNoYXRSZWNhbGxIAEIGCgRraW5kIkMKCENoYXRWb3RlEhEKCXRocmVhZF9pZBgBIAEoCRILCgNzZXEYAiABKAQSCwoDZGF5GAMgASgJEgoKAm9uGAQgASgIIjkKCkNoYXREZWNpZGUSEQoJdGhyZWFkX2lkGAEgASgJEgsKA3NlcRgCIAEoBBILCgNkYXkYAyABKAkiNQoHQ2hhdFBpbhIRCgl0aHJlYWRfaWQYASABKAkSCwoDc2VxGAIgASgEEgoKAm9uGAMgASgIIkYKCUNoYXRSZWFjdBIRCgl0aHJlYWRfaWQYASABKAkSCwoDc2VxGAIgASgEEg0KBWVtb2ppGAMgASgJEgoKAm9uGAQgASgIIu8BCghDaGF0U2VuZBIRCgl0aHJlYWRfaWQYASABKAkSDAoEdGV4dBgCIAEoCRIMCgRkYXlzGAMgAygJEgwKBHBvbGwYBCABKAgSKQoHcHJldmlldxgGIAEoCzIYLnBvY2hpY2FsLnYxLkxpbmtQcmV2aWV3EhAKCHJlcGx5X3RvGAcgASgEEhcKD3dpdGhvdXRfcHJldmlldxgIIAEoCBIOCgZkZXZpY2UYCSABKAkSJgoGcGhvdG9zGAsgAygLMhYucG9jaGljYWwudjEuQ2hhdFBob3RvSgQIBRAGSgQIChALUgVwaG90b1IFYWxidW0ifAoKQ2hhdENoYW5nZRIRCgl0aHJlYWRfaWQYASABKAkSCwoDc2VxGAIgASgEEgwKBHRleHQYAyABKAkSFQoNa2VlcHNfcHJldmlldxgEIAEoCBIpCgdwcmV2aWV3GAUgASgLMhgucG9jaGljYWwudjEuTGlua1ByZXZpZXciLAoKQ2hhdFVuc2VuZBIRCgl0aHJlYWRfaWQYASABKAkSCwoDc2VxGAIgASgEIlYKCkNoYXRSZWNhbGwSEQoJdGhyZWFkX2lkGAEgASgJEhIKCnNlbmRfb3BfaWQYAiABKAkSEQoJcGhvdG9faWRzGAQgAygJSgQIAxAEUghwaG90b19pZCI0CghDaGF0UmVhZBIRCgl0aHJlYWRfaWQYASABKAkSFQoNbGFzdF9yZWFkX3NlcRgCIAEoBCI4Cg9DaGF0UGFnZVJlcXVlc3QSEQoJdGhyZWFkX2lkGAEgASgJEhIKCmJlZm9yZV9zZXEYAiABKAQikAEKCENoYXRQYWdlEhEKCXRocmVhZF9pZBgBIAEoCRISCgpiZWZvcmVfc2VxGAIgASgEEiQKBWxpbmVzGAMgAygLMhUucG9jaGljYWwudjEuQ2hhdExpbmUSEAoIYXRfc3RhcnQYBCABKAgSJQoGcXVvdGVkGAUgAygLMhUucG9jaGljYWwudjEuQ2hhdExpbmUiQgoRQ2hhdFBob3Rvc1JlcXVlc3QSEQoJdGhyZWFkX2lkGAEgASgJEgsKA3NlcRgCIAEoBBINCgVhZnRlchgDIAEoCCKXAQoKQ2hhdFBob3RvcxIRCgl0aHJlYWRfaWQYASABKAkSCwoDc2VxGAIgASgEEg0KBWFmdGVyGAMgASgIEisKBnBob3RvcxgEIAMoCzIbLnBvY2hpY2FsLnYxLkNoYXRQaG90b0VudHJ5Eg4KBm9mZnNldBgFIAEoDRINCgV0b3RhbBgGIAEoDRIOCgZjdXJzb3IYByABKAQiawoOQ2hhdFBob3RvRW50cnkSCwoDc2VxGAEgASgEEhEKCWF1dGhvcl9pZBgCIAEoCRISCgpzZW50X2F0X21zGAMgASgDEiUKBXBob3RvGAQgASgLMhYucG9jaGljYWwudjEuQ2hhdFBob3RvKo4BCghEYXlGaWVsZBIZChVEQVlfRklFTERfVU5TUEVDSUZJRUQQABIVChFEQVlfRklFTERfUEFUVEVSThABEhMKD0RBWV9GSUVMRF9TVEFSVBACEhEKDURBWV9GSUVMRF9FTkQQAxISCg5EQVlfRklFTERfTk9URRAEEhQKEERBWV9GSUVMRF9QRU9QTEUQBUJpCg9hcHAucG9jaGljYWwudjFCCVN5bmNQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM", [file_pochical_v1_chat, file_pochical_v1_marks]);
+  fileDesc("ChZwb2NoaWNhbC92MS9zeW5jLnByb3RvEgtwb2NoaWNhbC52MSK7BAoLQ2xpZW50RnJhbWUSIwoFaGVsbG8YASABKAsyEi5wb2NoaWNhbC52MS5IZWxsb0gAEiEKBHBpbmcYAiABKAsyES5wb2NoaWNhbC52MS5QaW5nSAASKgoJZGF5X2VkaXRzGAMgASgLMhUucG9jaGljYWwudjEuRGF5RWRpdHNIABIyCg1wYXR0ZXJuX2VkaXRzGAQgASgLMhkucG9jaGljYWwudjEuUGF0dGVybkVkaXRzSAASPQoTcmVwZWF0X29yZGVyc19lZGl0cxgFIAEoCzIeLnBvY2hpY2FsLnYxLlJlcGVhdE9yZGVyc0VkaXRzSAASNAoOY293b3JrZXJfZWRpdHMYBiABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlckVkaXRzSAASLAoKY2hhdF9lZGl0cxgHIAEoCzIWLnBvY2hpY2FsLnYxLkNoYXRFZGl0c0gAEjkKEWNoYXRfcGFnZV9yZXF1ZXN0GAggASgLMhwucG9jaGljYWwudjEuQ2hhdFBhZ2VSZXF1ZXN0SAASJQoGdHlwaW5nGAkgASgLMhMucG9jaGljYWwudjEuVHlwaW5nSAASOAoQcHJlZmVyZW5jZV9lZGl0cxgKIAEoCzIcLnBvY2hpY2FsLnYxLlByZWZlcmVuY2VFZGl0c0gAEj0KE2NoYXRfcGhvdG9zX3JlcXVlc3QYCyABKAsyHi5wb2NoaWNhbC52MS5DaGF0UGhvdG9zUmVxdWVzdEgAQgYKBGtpbmQimgMKC1NlcnZlckZyYW1lEicKB3dlbGNvbWUYASABKAsyFC5wb2NoaWNhbC52MS5XZWxjb21lSAASIQoEcG9uZxgCIAEoCzIRLnBvY2hpY2FsLnYxLlBvbmdIABIpCgVlcnJvchgDIAEoCzIYLnBvY2hpY2FsLnYxLlNlcnZlckVycm9ySAASJwoHY2hhbmdlcxgEIAEoCzIULnBvY2hpY2FsLnYxLkNoYW5nZXNIABIjCgVhY2tlZBgFIAEoCzISLnBvY2hpY2FsLnYxLkFja2VkSAASIwoFcmVzZXQYBiABKAsyEi5wb2NoaWNhbC52MS5SZXNldEgAEioKCWNoYXRfcGFnZRgHIAEoCzIVLnBvY2hpY2FsLnYxLkNoYXRQYWdlSAASJQoGdHlwaW5nGAggASgLMhMucG9jaGljYWwudjEuVHlwaW5nSAASLgoLY2hhdF9waG90b3MYCiABKAsyFy5wb2NoaWNhbC52MS5DaGF0UGhvdG9zSABCBgoEa2luZEoECAkQClIQc3VwcG9ydF9hbnN3ZXJlZCI4CgZUeXBpbmcSEQoJdGhyZWFkX2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSCgoCb24YAyABKAgiMQoFSGVsbG8SGAoQcHJvdG9jb2xfdmVyc2lvbhgBIAEoDRIOCgZjdXJzb3IYAiABKAQiLAoHV2VsY29tZRIOCgZjdXJzb3IYASABKAQSEQoJc2VydmVyX21zGAIgASgDIhUKBFBpbmcSDQoFbm9uY2UYASABKA0iFQoEUG9uZxINCgVub25jZRgBIAEoDSKuAQoLU2VydmVyRXJyb3ISKwoEY29kZRgBIAEoDjIdLnBvY2hpY2FsLnYxLlNlcnZlckVycm9yLkNvZGUSDwoHbWVzc2FnZRgCIAEoCSJhCgRDb2RlEhQKEENPREVfVU5TUEVDSUZJRUQQABIZChVDT0RFX1BST1RPQ09MX1RPT19PTEQQARISCg5DT0RFX0JBRF9GUkFNRRACEhQKEENPREVfQ0xPQ0tfQUhFQUQQAyI+CgNIbGMSEwoLcGh5c2ljYWxfbXMYASABKAMSDwoHY291bnRlchgCIAEoDRIRCglkZXZpY2VfaWQYAyABKAkiewoIRGF5VmFsdWUSDAoEZGF0ZRgBIAEoCRIkCgVmaWVsZBgCIAEoDjIVLnBvY2hpY2FsLnYxLkRheUZpZWxkEhIKBXZhbHVlGAMgASgJSACIAQESHQoDaGxjGAQgASgLMhAucG9jaGljYWwudjEuSGxjQggKBl92YWx1ZSIvCghEYXlFZGl0cxIjCgVlZGl0cxgBIAMoCzIULnBvY2hpY2FsLnYxLkRheUVkaXQiPgoHRGF5RWRpdBINCgVvcF9pZBgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLnBvY2hpY2FsLnYxLkRheVZhbHVlIkIKBUFja2VkEg4KBm9wX2lkcxgBIAMoCRIpCgdyZWZ1c2VkGAIgAygLMhgucG9jaGljYWwudjEuUmVmdXNlZFNlbmQioQEKC1JlZnVzZWRTZW5kEg0KBW9wX2lkGAEgASgJEi8KBnJlYXNvbhgCIAEoDjIfLnBvY2hpY2FsLnYxLlJlZnVzZWRTZW5kLlJlYXNvbiJSCgZSZWFzb24SFgoSUkVBU09OX1VOU1BFQ0lGSUVEEAASFwoTUkVBU09OX0RPRVNfTk9UX0ZJVBABEhcKE1JFQVNPTl9OT1RfSU5fR1JPVVAQAiIvCgdDaGFuZ2VzEiQKB2NoYW5nZXMYASADKAsyEy5wb2NoaWNhbC52MS5DaGFuZ2Ui5wcKBkNoYW5nZRIOCgZjdXJzb3IYASABKAQSJAoDZGF5GAIgASgLMhUucG9jaGljYWwudjEuRGF5VmFsdWVIABIsCgdwYXR0ZXJuGAMgASgLMhkucG9jaGljYWwudjEuUGF0dGVyblZhbHVlSAASMgoNcGF0dGVybl9vcmRlchgEIAEoCzIZLnBvY2hpY2FsLnYxLlBhdHRlcm5PcmRlckgAEiwKCm1lbWJlcl9kYXkYBSABKAsyFi5wb2NoaWNhbC52MS5NZW1iZXJEYXlIABI0Cg5tZW1iZXJfcGF0dGVybhgGIAEoCzIaLnBvY2hpY2FsLnYxLk1lbWJlclBhdHRlcm5IABIyCg1yZXBlYXRfb3JkZXJzGAcgASgLMhkucG9jaGljYWwudjEuUmVwZWF0T3JkZXJzSAASLgoIY293b3JrZXIYCCABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlclZhbHVlSAASNAoOY293b3JrZXJfb3JkZXIYCSABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlck9yZGVySAASPwoUbWVtYmVyX3JlcGVhdF9vcmRlcnMYCiABKAsyHy5wb2NoaWNhbC52MS5NZW1iZXJSZXBlYXRPcmRlcnNIABItCgptZW1iZXJzaGlwGAsgASgLMhcucG9jaGljYWwudjEuTWVtYmVyc2hpcEgAEjIKDWdyb3VwX3Byb2ZpbGUYDCABKAsyGS5wb2NoaWNhbC52MS5Hcm91cFByb2ZpbGVIABIlCgZtZW1iZXIYDSABKAsyEy5wb2NoaWNhbC52MS5NZW1iZXJIABIqCgljaGF0X2xpbmUYDiABKAsyFS5wb2NoaWNhbC52MS5DaGF0TGluZUgAEioKCXJlYWRfbWFyaxgPIAEoCzIVLnBvY2hpY2FsLnYxLlJlYWRNYXJrSAASMAoMdW5yZWFkX2NvdW50GBAgASgLMhgucG9jaGljYWwudjEuVW5yZWFkQ291bnRIABIjCgVibG9jaxgRIAEoCzISLnBvY2hpY2FsLnYxLkJsb2NrSAASKgoJY2hhdF9tdXRlGBIgASgLMhUucG9jaGljYWwudjEuQ2hhdE11dGVIABI8ChJjaGF0X25vdGlmaWNhdGlvbnMYEyABKAsyHi5wb2NoaWNhbC52MS5DaGF0Tm90aWZpY2F0aW9uc0gAEicKB3Byb2ZpbGUYFCABKAsyFC5wb2NoaWNhbC52MS5Qcm9maWxlSAASMgoKcHJlZmVyZW5jZRgVIAEoCzIcLnBvY2hpY2FsLnYxLlByZWZlcmVuY2VWYWx1ZUgAQgYKBGtpbmQiUwoHUHJvZmlsZRIMCgRuYW1lGAEgASgJEhAKCHBob3RvX2lkGAIgASgJEigKCW1hcmtfbG9vaxgDIAEoCzIVLnBvY2hpY2FsLnYxLk1hcmtMb29rIj4KCENoYXRNdXRlEhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIwChFDaGF0Tm90aWZpY2F0aW9ucxIbChNtZW50aW9uc193aGVuX211dGVkGAEgASgIIiQKBUJsb2NrEg8KB3VzZXJfaWQYASABKAkSCgoCb24YAiABKAgiUwoLVW5yZWFkQ291bnQSEAoIZ3JvdXBfaWQYASABKAkSEQoJdGhyZWFkX2lkGAIgASgJEg0KBWNvdW50GAMgASgNEhAKCG1lbnRpb25zGAQgASgNIoMBCgpNZW1iZXJzaGlwEhAKCGdyb3VwX2lkGAEgASgJEgwKBG5hbWUYAiABKAkSJAoEbWFyaxgGIAEoCzIWLnBvY2hpY2FsLnYxLkdyb3VwTWFyaxIUCgxqb2luZWRfYXRfbXMYBCABKAMSDAoEbGVmdBgFIAEoCEoECAMQBFIFZW1vamkiTwoMR3JvdXBQcm9maWxlEgwKBG5hbWUYASABKAkSJAoEbWFyaxgDIAEoCzIWLnBvY2hpY2FsLnYxLkdyb3VwTWFya0oECAIQA1IFZW1vamki2QEKBk1lbWJlchIPCgd1c2VyX2lkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIUCgxqb2luZWRfYXRfbXMYAyABKAMSDAoEbGVmdBgEIAEoCBIPCgdkZWxldGVkGAUgASgIEhAKCG93bl9uYW1lGAYgASgIEhAKCHBob3RvX2lkGAcgASgJEhEKCW93bl9waG90bxgIIAEoCBIoCgltYXJrX2xvb2sYCSABKAsyFS5wb2NoaWNhbC52MS5NYXJrTG9vaxISCgpyZW1vdmVkX2J5GAogASgJIkAKCU1lbWJlckRheRIPCgd1c2VyX2lkGAEgASgJEiIKA2RheRgCIAEoCzIVLnBvY2hpY2FsLnYxLkRheVZhbHVlIkwKDU1lbWJlclBhdHRlcm4SDwoHdXNlcl9pZBgBIAEoCRIqCgdwYXR0ZXJuGAIgASgLMhkucG9jaGljYWwudjEuUGF0dGVyblZhbHVlItgBCgdQYXR0ZXJuEgwKBG5hbWUYASABKAkSDQoFZW1vamkYAiABKAkSDgoGc3ltYm9sGAMgASgJEgwKBGljb24YBCABKAkSDQoFY29sb3IYBSABKA0SEgoFc3RhcnQYBiABKAlIAIgBARIQCgNlbmQYByABKAlIAYgBARIVCg1jb3VudHNfYXNfb2ZmGAggASgIEhUKCG5leHRfZGF5GAkgASgJSAKIAQESEAoIYXJjaGl2ZWQYCiABKAhCCAoGX3N0YXJ0QgYKBF9lbmRCCwoJX25leHRfZGF5InEKDFBhdHRlcm5WYWx1ZRIKCgJpZBgBIAEoCRIqCgdwYXR0ZXJuGAIgASgLMhQucG9jaGljYWwudjEuUGF0dGVybkgAiAEBEh0KA2hsYxgDIAEoCzIQLnBvY2hpY2FsLnYxLkhsY0IKCghfcGF0dGVybiI6CgxQYXR0ZXJuT3JkZXISCwoDaWRzGAEgAygJEh0KA2hsYxgCIAEoCzIQLnBvY2hpY2FsLnYxLkhsYyI3CgxQYXR0ZXJuRWRpdHMSJwoFZWRpdHMYASADKAsyGC5wb2NoaWNhbC52MS5QYXR0ZXJuRWRpdCJ+CgtQYXR0ZXJuRWRpdBINCgVvcF9pZBgBIAEoCRIsCgdwYXR0ZXJuGAIgASgLMhkucG9jaGljYWwudjEuUGF0dGVyblZhbHVlSAASKgoFb3JkZXIYAyABKAsyGS5wb2NoaWNhbC52MS5QYXR0ZXJuT3JkZXJIAEIGCgRraW5kIqsBCgtSZXBlYXRPcmRlchINCgVzdGFydBgBIAEoCRITCgZhbmNob3IYAiABKAlIAIgBARIQCghzZXF1ZW5jZRgDIAMoCRIUCgxob2xpZGF5c19vZmYYBCABKAgSGgoNaG9saWRheV9zaGlmdBgFIAEoCUgBiAEBEhcKD2hvbGlkYXlfY291bnRyeRgGIAEoCUIJCgdfYW5jaG9yQhAKDl9ob2xpZGF5X3NoaWZ0IlcKDFJlcGVhdE9yZGVycxIoCgZvcmRlcnMYASADKAsyGC5wb2NoaWNhbC52MS5SZXBlYXRPcmRlchIdCgNobGMYAiABKAsyEC5wb2NoaWNhbC52MS5IbGMiQQoRUmVwZWF0T3JkZXJzRWRpdHMSLAoFZWRpdHMYASADKAsyHS5wb2NoaWNhbC52MS5SZXBlYXRPcmRlcnNFZGl0InQKEFJlcGVhdE9yZGVyc0VkaXQSDQoFb3BfaWQYASABKAkSKQoGb3JkZXJzGAIgASgLMhkucG9jaGljYWwudjEuUmVwZWF0T3JkZXJzEhcKCmNsZWFyX2Zyb20YAyABKAlIAIgBAUINCgtfY2xlYXJfZnJvbSJQChJNZW1iZXJSZXBlYXRPcmRlcnMSDwoHdXNlcl9pZBgBIAEoCRIpCgZvcmRlcnMYAiABKAsyGS5wb2NoaWNhbC52MS5SZXBlYXRPcmRlcnMiVgoNQ293b3JrZXJWYWx1ZRIKCgJpZBgBIAEoCRIRCgRuYW1lGAIgASgJSACIAQESHQoDaGxjGAMgASgLMhAucG9jaGljYWwudjEuSGxjQgcKBV9uYW1lIjsKDUNvd29ya2VyT3JkZXISCwoDaWRzGAEgAygJEh0KA2hsYxgCIAEoCzIQLnBvY2hpY2FsLnYxLkhsYyI5Cg1Db3dvcmtlckVkaXRzEigKBWVkaXRzGAEgAygLMhkucG9jaGljYWwudjEuQ293b3JrZXJFZGl0IoIBCgxDb3dvcmtlckVkaXQSDQoFb3BfaWQYASABKAkSLgoIY293b3JrZXIYAiABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlclZhbHVlSAASKwoFb3JkZXIYAyABKAsyGi5wb2NoaWNhbC52MS5Db3dvcmtlck9yZGVySABCBgoEa2luZCJbCg9QcmVmZXJlbmNlVmFsdWUSCwoDa2V5GAEgASgJEhIKBXZhbHVlGAIgASgJSACIAQESHQoDaGxjGAMgASgLMhAucG9jaGljYWwudjEuSGxjQggKBl92YWx1ZSI9Cg9QcmVmZXJlbmNlRWRpdHMSKgoFZWRpdHMYASADKAsyGy5wb2NoaWNhbC52MS5QcmVmZXJlbmNlRWRpdCJMCg5QcmVmZXJlbmNlRWRpdBINCgVvcF9pZBgBIAEoCRIrCgV2YWx1ZRgCIAEoCzIcLnBvY2hpY2FsLnYxLlByZWZlcmVuY2VWYWx1ZSIHCgVSZXNldCKQAwoIQ2hhdExpbmUSEQoJdGhyZWFkX2lkGAEgASgJEgsKA3NlcRgCIAEoBBIRCglhdXRob3JfaWQYAyABKAkSEgoKc2VudF9hdF9tcxgFIAEoAxINCgVvcF9pZBgIIAEoCRIsCglyZWFjdGlvbnMYCSADKAsyGS5wb2NoaWNhbC52MS5DaGF0UmVhY3Rpb24SFAoMcGlubmVkX29yZGVyGAogASgEEhAKCHJlcGx5X3RvGBIgASgEEikKB2NvbnRlbnQYFiABKAsyGC5wb2NoaWNhbC52MS5DaGF0Q29udGVudEoECAQQBUoECAYQB0oECAcQCEoECAsQDEoECAwQDUoECA0QDkoECA4QD0oECA8QEEoECBAQEUoECBEQEkoECBMQFEoECBQQFUoECBUQFlIEdGV4dFIGZWRpdGVkUgZ1bnNlbnRSBGRheXNSBHBvbGxSBXZvdGVzUgdkZWNpZGVkUgVwaG90b1IFYWxidW1SB3ByZXZpZXdSBmhpZGRlblIGbm90aWNlUgZwaG90b3MiwAIKC0NoYXRDb250ZW50EicKBXdvcmRzGAEgASgLMhYucG9jaGljYWwudjEuQ2hhdFdvcmRzSAASKAoGcGhvdG9zGAIgASgLMhYucG9jaGljYWwudjEuQ2hhdEFsYnVtSAASKwoEZGF5cxgDIAEoCzIbLnBvY2hpY2FsLnYxLkNoYXRTaGFyZWREYXlzSAASJQoEcG9sbBgEIAEoCzIVLnBvY2hpY2FsLnYxLkNoYXRQb2xsSAASKQoGbm90aWNlGAUgASgLMhcucG9jaGljYWwudjEuQ2hhdE5vdGljZUgAEiwKBnVuc2VudBgGIAEoCzIaLnBvY2hpY2FsLnYxLkNoYXRUYWtlbkJhY2tIABIpCgZoaWRkZW4YByABKAsyFy5wb2NoaWNhbC52MS5DaGF0SGlkZGVuSABCBgoEa2luZCJUCglDaGF0V29yZHMSDAoEdGV4dBgBIAEoCRIOCgZlZGl0ZWQYAiABKAgSKQoHcHJldmlldxgDIAEoCzIYLnBvY2hpY2FsLnYxLkxpbmtQcmV2aWV3IjMKCUNoYXRBbGJ1bRImCgZwaG90b3MYASADKAsyFi5wb2NoaWNhbC52MS5DaGF0UGhvdG8iHgoOQ2hhdFNoYXJlZERheXMSDAoEZGF5cxgBIAMoCSJQCghDaGF0UG9sbBIMCgRkYXlzGAEgAygJEiUKBXZvdGVzGAIgAygLMhYucG9jaGljYWwudjEuQ2hhdFZvdGVzEg8KB2RlY2lkZWQYAyABKAkiDwoNQ2hhdFRha2VuQmFjayIMCgpDaGF0SGlkZGVuIvMBCgpDaGF0Tm90aWNlEioKBGtpbmQYASABKA4yHC5wb2NoaWNhbC52MS5DaGF0Tm90aWNlLktpbmQSEgoKc3ViamVjdF9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhQKDG1hcmtfY2hhbmdlZBgEIAEoCCKAAQoES2luZBIUChBLSU5EX1VOU1BFQ0lGSUVEEAASDwoLS0lORF9KT0lORUQQARINCglLSU5EX0xFRlQQAhIQCgxLSU5EX1JFTU9WRUQQAxIWChJLSU5EX0lOVklURV9SRU1BREUQBBIYChRLSU5EX1BST0ZJTEVfQ0hBTkdFRBAFIkoKCUNoYXRQaG90bxIKCgJpZBgBIAEoCRINCgV3aWR0aBgCIAEoDRIOCgZoZWlnaHQYAyABKA0SEgoKdGh1bWJfaGFzaBgEIAEoDCIqCglDaGF0Vm90ZXMSCwoDZGF5GAEgASgJEhAKCHVzZXJfaWRzGAIgAygJIi8KDENoYXRSZWFjdGlvbhINCgVlbW9qaRgBIAEoCRIQCgh1c2VyX2lkcxgCIAMoCSJFCghSZWFkTWFyaxIPCgd1c2VyX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRIVCg1sYXN0X3JlYWRfc2VxGAMgASgEIjEKCUNoYXRFZGl0cxIkCgVlZGl0cxgBIAMoCzIVLnBvY2hpY2FsLnYxLkNoYXRFZGl0IpADCghDaGF0RWRpdBINCgVvcF9pZBgBIAEoCRIlCgRzZW5kGAIgASgLMhUucG9jaGljYWwudjEuQ2hhdFNlbmRIABIpCgZjaGFuZ2UYAyABKAsyFy5wb2NoaWNhbC52MS5DaGF0Q2hhbmdlSAASKQoGdW5zZW5kGAQgASgLMhcucG9jaGljYWwudjEuQ2hhdFVuc2VuZEgAEiUKBHJlYWQYBSABKAsyFS5wb2NoaWNhbC52MS5DaGF0UmVhZEgAEicKBXJlYWN0GAYgASgLMhYucG9jaGljYWwudjEuQ2hhdFJlYWN0SAASIwoDcGluGAcgASgLMhQucG9jaGljYWwudjEuQ2hhdFBpbkgAEiUKBHZvdGUYCCABKAsyFS5wb2NoaWNhbC52MS5DaGF0Vm90ZUgAEikKBmRlY2lkZRgJIAEoCzIXLnBvY2hpY2FsLnYxLkNoYXREZWNpZGVIABIpCgZyZWNhbGwYCiABKAsyFy5wb2NoaWNhbC52MS5DaGF0UmVjYWxsSABCBgoEa2luZCJDCghDaGF0Vm90ZRIRCgl0aHJlYWRfaWQYASABKAkSCwoDc2VxGAIgASgEEgsKA2RheRgDIAEoCRIKCgJvbhgEIAEoCCI5CgpDaGF0RGVjaWRlEhEKCXRocmVhZF9pZBgBIAEoCRILCgNzZXEYAiABKAQSCwoDZGF5GAMgASgJIjUKB0NoYXRQaW4SEQoJdGhyZWFkX2lkGAEgASgJEgsKA3NlcRgCIAEoBBIKCgJvbhgDIAEoCCJGCglDaGF0UmVhY3QSEQoJdGhyZWFkX2lkGAEgASgJEgsKA3NlcRgCIAEoBBINCgVlbW9qaRgDIAEoCRIKCgJvbhgEIAEoCCLvAQoIQ2hhdFNlbmQSEQoJdGhyZWFkX2lkGAEgASgJEgwKBHRleHQYAiABKAkSDAoEZGF5cxgDIAMoCRIMCgRwb2xsGAQgASgIEikKB3ByZXZpZXcYBiABKAsyGC5wb2NoaWNhbC52MS5MaW5rUHJldmlldxIQCghyZXBseV90bxgHIAEoBBIXCg93aXRob3V0X3ByZXZpZXcYCCABKAgSDgoGZGV2aWNlGAkgASgJEiYKBnBob3RvcxgLIAMoCzIWLnBvY2hpY2FsLnYxLkNoYXRQaG90b0oECAUQBkoECAoQC1IFcGhvdG9SBWFsYnVtInwKCkNoYXRDaGFuZ2USEQoJdGhyZWFkX2lkGAEgASgJEgsKA3NlcRgCIAEoBBIMCgR0ZXh0GAMgASgJEhUKDWtlZXBzX3ByZXZpZXcYBCABKAgSKQoHcHJldmlldxgFIAEoCzIYLnBvY2hpY2FsLnYxLkxpbmtQcmV2aWV3IiwKCkNoYXRVbnNlbmQSEQoJdGhyZWFkX2lkGAEgASgJEgsKA3NlcRgCIAEoBCJWCgpDaGF0UmVjYWxsEhEKCXRocmVhZF9pZBgBIAEoCRISCgpzZW5kX29wX2lkGAIgASgJEhEKCXBob3RvX2lkcxgEIAMoCUoECAMQBFIIcGhvdG9faWQiNAoIQ2hhdFJlYWQSEQoJdGhyZWFkX2lkGAEgASgJEhUKDWxhc3RfcmVhZF9zZXEYAiABKAQiOAoPQ2hhdFBhZ2VSZXF1ZXN0EhEKCXRocmVhZF9pZBgBIAEoCRISCgpiZWZvcmVfc2VxGAIgASgEIpABCghDaGF0UGFnZRIRCgl0aHJlYWRfaWQYASABKAkSEgoKYmVmb3JlX3NlcRgCIAEoBBIkCgVsaW5lcxgDIAMoCzIVLnBvY2hpY2FsLnYxLkNoYXRMaW5lEhAKCGF0X3N0YXJ0GAQgASgIEiUKBnF1b3RlZBgFIAMoCzIVLnBvY2hpY2FsLnYxLkNoYXRMaW5lIkIKEUNoYXRQaG90b3NSZXF1ZXN0EhEKCXRocmVhZF9pZBgBIAEoCRILCgNzZXEYAiABKAQSDQoFYWZ0ZXIYAyABKAgilwEKCkNoYXRQaG90b3MSEQoJdGhyZWFkX2lkGAEgASgJEgsKA3NlcRgCIAEoBBINCgVhZnRlchgDIAEoCBIrCgZwaG90b3MYBCADKAsyGy5wb2NoaWNhbC52MS5DaGF0UGhvdG9FbnRyeRIOCgZvZmZzZXQYBSABKA0SDQoFdG90YWwYBiABKA0SDgoGY3Vyc29yGAcgASgEImsKDkNoYXRQaG90b0VudHJ5EgsKA3NlcRgBIAEoBBIRCglhdXRob3JfaWQYAiABKAkSEgoKc2VudF9hdF9tcxgDIAEoAxIlCgVwaG90bxgEIAEoCzIWLnBvY2hpY2FsLnYxLkNoYXRQaG90byqOAQoIRGF5RmllbGQSGQoVREFZX0ZJRUxEX1VOU1BFQ0lGSUVEEAASFQoRREFZX0ZJRUxEX1BBVFRFUk4QARITCg9EQVlfRklFTERfU1RBUlQQAhIRCg1EQVlfRklFTERfRU5EEAMSEgoOREFZX0ZJRUxEX05PVEUQBBIUChBEQVlfRklFTERfUEVPUExFEAVCaQoPYXBwLnBvY2hpY2FsLnYxQglTeW5jUHJvdG9QAaICA1BYWKoCC1BvY2hpY2FsLlYxygILUG9jaGljYWxcVjHiAhdQb2NoaWNhbFxWMVxHUEJNZXRhZGF0YeoCDFBvY2hpY2FsOjpWMWIGcHJvdG8z", [file_pochical_v1_chat, file_pochical_v1_marks]);
 
 /**
  * Every binary WebSocket message from a client is one ClientFrame.
@@ -1741,19 +1741,12 @@ export type ChatLine = Message<"pochical.v1.ChatLine"> & {
   seq: bigint;
 
   /**
-   * Who wrote it; it stays theirs after they leave.
+   * Who wrote it; it stays theirs after they leave. For a notice, who did
+   * what it tells.
    *
    * @generated from field: string author_id = 3;
    */
   authorId: string;
-
-  /**
-   * chatMessage characters at most (design/src/limits.ts); empty for a
-   * line of shared days, and once unsent.
-   *
-   * @generated from field: string text = 4;
-   */
-  text: string;
 
   /**
    * When the group took it, in ms since the epoch.
@@ -1761,20 +1754,6 @@ export type ChatLine = Message<"pochical.v1.ChatLine"> & {
    * @generated from field: int64 sent_at_ms = 5;
    */
   sentAtMs: bigint;
-
-  /**
-   * Its words were changed after it was sent (編集済み).
-   *
-   * @generated from field: bool edited = 6;
-   */
-  edited: boolean;
-
-  /**
-   * Taken back by its writer (送信取消): its words are gone for everyone.
-   *
-   * @generated from field: bool unsent = 7;
-   */
-  unsent: boolean;
 
   /**
    * The op_id of the edit that sent it, so the sending device puts the
@@ -1786,7 +1765,8 @@ export type ChatLine = Message<"pochical.v1.ChatLine"> & {
 
   /**
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    *
    * @generated from field: repeated pochical.v1.ChatReaction reactions = 9;
    */
@@ -1801,75 +1781,21 @@ export type ChatLine = Message<"pochical.v1.ChatLine"> & {
   pinnedOrder: bigint;
 
   /**
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   *
-   * @generated from field: repeated string days = 11;
-   */
-  days: string[];
-
-  /**
-   * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-   *
-   * @generated from field: bool poll = 12;
-   */
-  poll: boolean;
-
-  /**
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   *
-   * @generated from field: repeated pochical.v1.ChatVotes votes = 13;
-   */
-  votes: ChatVotes[];
-
-  /**
-   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-   *
-   * @generated from field: string decided = 14;
-   */
-  decided: string;
-
-  /**
-   * Its first link's page, under its words; none once unsent.
-   *
-   * @generated from field: pochical.v1.LinkPreview preview = 16;
-   */
-  preview?: LinkPreview | undefined;
-
-  /**
-   * Sent in a one-to-one chat by someone the reader had blocked: never
-   * delivered to them, so it comes without its content and shows nothing.
-   *
-   * @generated from field: bool hidden = 17;
-   */
-  hidden: boolean;
-
-  /**
    * The line it answers (返信), by its seq in the same chat; 0 for none,
-   * and none once unsent.
+   * and none for a notice or once unsent.
    *
    * @generated from field: uint64 reply_to = 18;
    */
   replyTo: bigint;
 
   /**
-   * A line from the app in 全体チャット, not a message (spec/chat.md,
-   * Notices): author_id is who did it. It has no words, takes no
-   * reactions, replies or pins, and is never unread.
+   * What the line is: always one of its kinds. A device that gets none,
+   * or one it does not know (from an app newer than itself), shows
+   * nothing in its place.
    *
-   * @generated from field: pochical.v1.ChatNotice notice = 19;
+   * @generated from field: pochical.v1.ChatContent content = 22;
    */
-  notice?: ChatNotice | undefined;
-
-  /**
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   *
-   * @generated from field: repeated pochical.v1.ChatPhoto photos = 21;
-   */
-  photos: ChatPhoto[];
+  content?: ChatContent | undefined;
 };
 
 /**
@@ -1878,6 +1804,218 @@ export type ChatLine = Message<"pochical.v1.ChatLine"> & {
  */
 export const ChatLineSchema: GenMessage<ChatLine> = /*@__PURE__*/
   messageDesc(file_pochical_v1_sync, 44);
+
+/**
+ * What a chat line is (spec/chat.md, What a line is): one thing to the
+ * reader, so one kind of it.
+ *
+ * @generated from message pochical.v1.ChatContent
+ */
+export type ChatContent = Message<"pochical.v1.ChatContent"> & {
+  /**
+   * @generated from oneof pochical.v1.ChatContent.kind
+   */
+  kind: {
+    /**
+     * @generated from field: pochical.v1.ChatWords words = 1;
+     */
+    value: ChatWords;
+    case: "words";
+  } | {
+    /**
+     * The photos sent as the line, with no words: one, or several sent at
+     * once, drawn as one album (spec/chat.md, Albums).
+     *
+     * @generated from field: pochical.v1.ChatAlbum photos = 2;
+     */
+    value: ChatAlbum;
+    case: "photos";
+  } | {
+    /**
+     * Days shared with everyone's shifts, with no words (spec/chat.md,
+     * Long messages and shared days).
+     *
+     * @generated from field: pochical.v1.ChatSharedDays days = 3;
+     */
+    value: ChatSharedDays;
+    case: "days";
+  } | {
+    /**
+     * Days put to the vote (spec/chat.md, Polls), in a group chat.
+     *
+     * @generated from field: pochical.v1.ChatPoll poll = 4;
+     */
+    value: ChatPoll;
+    case: "poll";
+  } | {
+    /**
+     * A line from the app in 全体チャット, not a message (spec/chat.md,
+     * Notices): it takes no reactions, replies or pins, and is never
+     * unread.
+     *
+     * @generated from field: pochical.v1.ChatNotice notice = 5;
+     */
+    value: ChatNotice;
+    case: "notice";
+  } | {
+    /**
+     * Taken back by its writer (送信取消): nothing of it is left, so a
+     * quote of it says it was taken back.
+     *
+     * @generated from field: pochical.v1.ChatTakenBack unsent = 6;
+     */
+    value: ChatTakenBack;
+    case: "unsent";
+  } | {
+    /**
+     * Sent in a one-to-one chat by someone the reader had blocked: never
+     * delivered to them, so it comes without its content and shows
+     * nothing.
+     *
+     * @generated from field: pochical.v1.ChatHidden hidden = 7;
+     */
+    value: ChatHidden;
+    case: "hidden";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * Describes the message pochical.v1.ChatContent.
+ * Use `create(ChatContentSchema)` to create a new message.
+ */
+export const ChatContentSchema: GenMessage<ChatContent> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 45);
+
+/**
+ * @generated from message pochical.v1.ChatWords
+ */
+export type ChatWords = Message<"pochical.v1.ChatWords"> & {
+  /**
+   * 1 to chatMessage characters (design/src/limits.ts), not blank.
+   *
+   * @generated from field: string text = 1;
+   */
+  text: string;
+
+  /**
+   * Changed after it was sent (編集済み).
+   *
+   * @generated from field: bool edited = 2;
+   */
+  edited: boolean;
+
+  /**
+   * Its first link's page, under its words; none without one.
+   *
+   * @generated from field: pochical.v1.LinkPreview preview = 3;
+   */
+  preview?: LinkPreview | undefined;
+};
+
+/**
+ * Describes the message pochical.v1.ChatWords.
+ * Use `create(ChatWordsSchema)` to create a new message.
+ */
+export const ChatWordsSchema: GenMessage<ChatWords> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 46);
+
+/**
+ * @generated from message pochical.v1.ChatAlbum
+ */
+export type ChatAlbum = Message<"pochical.v1.ChatAlbum"> & {
+  /**
+   * 1 to chatRules.photosPerSend, in the order sent.
+   *
+   * @generated from field: repeated pochical.v1.ChatPhoto photos = 1;
+   */
+  photos: ChatPhoto[];
+};
+
+/**
+ * Describes the message pochical.v1.ChatAlbum.
+ * Use `create(ChatAlbumSchema)` to create a new message.
+ */
+export const ChatAlbumSchema: GenMessage<ChatAlbum> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 47);
+
+/**
+ * @generated from message pochical.v1.ChatSharedDays
+ */
+export type ChatSharedDays = Message<"pochical.v1.ChatSharedDays"> & {
+  /**
+   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD in
+   * order.
+   *
+   * @generated from field: repeated string days = 1;
+   */
+  days: string[];
+};
+
+/**
+ * Describes the message pochical.v1.ChatSharedDays.
+ * Use `create(ChatSharedDaysSchema)` to create a new message.
+ */
+export const ChatSharedDaysSchema: GenMessage<ChatSharedDays> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 48);
+
+/**
+ * @generated from message pochical.v1.ChatPoll
+ */
+export type ChatPoll = Message<"pochical.v1.ChatPoll"> & {
+  /**
+   * Two days at least, as YYYY-MM-DD in order.
+   *
+   * @generated from field: repeated string days = 1;
+   */
+  days: string[];
+
+  /**
+   * Each day someone can come, with who can, in the order they said so.
+   *
+   * @generated from field: repeated pochical.v1.ChatVotes votes = 2;
+   */
+  votes: ChatVotes[];
+
+  /**
+   * The day it was settled on, as YYYY-MM-DD; empty while open.
+   *
+   * @generated from field: string decided = 3;
+   */
+  decided: string;
+};
+
+/**
+ * Describes the message pochical.v1.ChatPoll.
+ * Use `create(ChatPollSchema)` to create a new message.
+ */
+export const ChatPollSchema: GenMessage<ChatPoll> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 49);
+
+/**
+ * @generated from message pochical.v1.ChatTakenBack
+ */
+export type ChatTakenBack = Message<"pochical.v1.ChatTakenBack"> & {
+};
+
+/**
+ * Describes the message pochical.v1.ChatTakenBack.
+ * Use `create(ChatTakenBackSchema)` to create a new message.
+ */
+export const ChatTakenBackSchema: GenMessage<ChatTakenBack> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 50);
+
+/**
+ * @generated from message pochical.v1.ChatHidden
+ */
+export type ChatHidden = Message<"pochical.v1.ChatHidden"> & {
+};
+
+/**
+ * Describes the message pochical.v1.ChatHidden.
+ * Use `create(ChatHiddenSchema)` to create a new message.
+ */
+export const ChatHiddenSchema: GenMessage<ChatHidden> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_sync, 51);
 
 /**
  * What a notice line says happened to the group, its names worded by
@@ -1919,7 +2057,7 @@ export type ChatNotice = Message<"pochical.v1.ChatNotice"> & {
  * Use `create(ChatNoticeSchema)` to create a new message.
  */
 export const ChatNoticeSchema: GenMessage<ChatNotice> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 45);
+  messageDesc(file_pochical_v1_sync, 52);
 
 /**
  * @generated from enum pochical.v1.ChatNotice.Kind
@@ -1970,7 +2108,7 @@ export enum ChatNotice_Kind {
  * Describes the enum pochical.v1.ChatNotice.Kind.
  */
 export const ChatNotice_KindSchema: GenEnum<ChatNotice_Kind> = /*@__PURE__*/
-  enumDesc(file_pochical_v1_sync, 45, 0);
+  enumDesc(file_pochical_v1_sync, 52, 0);
 
 /**
  * A photo in a chat (spec/chat.md, Photos): uploaded by its sender to the
@@ -2012,7 +2150,7 @@ export type ChatPhoto = Message<"pochical.v1.ChatPhoto"> & {
  * Use `create(ChatPhotoSchema)` to create a new message.
  */
 export const ChatPhotoSchema: GenMessage<ChatPhoto> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 46);
+  messageDesc(file_pochical_v1_sync, 53);
 
 /**
  * Who can come on one of a poll's days.
@@ -2036,7 +2174,7 @@ export type ChatVotes = Message<"pochical.v1.ChatVotes"> & {
  * Use `create(ChatVotesSchema)` to create a new message.
  */
 export const ChatVotesSchema: GenMessage<ChatVotes> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 47);
+  messageDesc(file_pochical_v1_sync, 54);
 
 /**
  * One emoji on a line and the members who chose it.
@@ -2062,7 +2200,7 @@ export type ChatReaction = Message<"pochical.v1.ChatReaction"> & {
  * Use `create(ChatReactionSchema)` to create a new message.
  */
 export const ChatReactionSchema: GenMessage<ChatReaction> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 48);
+  messageDesc(file_pochical_v1_sync, 55);
 
 /**
  * How far a member has read a chat: every line up to last_read_seq.
@@ -2091,7 +2229,7 @@ export type ReadMark = Message<"pochical.v1.ReadMark"> & {
  * Use `create(ReadMarkSchema)` to create a new message.
  */
 export const ReadMarkSchema: GenMessage<ReadMark> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 49);
+  messageDesc(file_pochical_v1_sync, 56);
 
 /**
  * @generated from message pochical.v1.ChatEdits
@@ -2108,7 +2246,7 @@ export type ChatEdits = Message<"pochical.v1.ChatEdits"> & {
  * Use `create(ChatEditsSchema)` to create a new message.
  */
 export const ChatEditsSchema: GenMessage<ChatEdits> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 50);
+  messageDesc(file_pochical_v1_sync, 57);
 
 /**
  * One of a member's edits of a chat, which the group takes in the order it
@@ -2190,7 +2328,7 @@ export type ChatEdit = Message<"pochical.v1.ChatEdit"> & {
  * Use `create(ChatEditSchema)` to create a new message.
  */
 export const ChatEditSchema: GenMessage<ChatEdit> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 51);
+  messageDesc(file_pochical_v1_sync, 58);
 
 /**
  * The member can come on one of a poll's days (行ける), or takes it
@@ -2226,7 +2364,7 @@ export type ChatVote = Message<"pochical.v1.ChatVote"> & {
  * Use `create(ChatVoteSchema)` to create a new message.
  */
 export const ChatVoteSchema: GenMessage<ChatVote> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 52);
+  messageDesc(file_pochical_v1_sync, 59);
 
 /**
  * A poll settled on one of its days (日にちを決める, 決め直す), by its
@@ -2256,7 +2394,7 @@ export type ChatDecide = Message<"pochical.v1.ChatDecide"> & {
  * Use `create(ChatDecideSchema)` to create a new message.
  */
 export const ChatDecideSchema: GenMessage<ChatDecide> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 53);
+  messageDesc(file_pochical_v1_sync, 60);
 
 /**
  * A line pinned for everyone in the chat, or its pin taken off, by any
@@ -2289,7 +2427,7 @@ export type ChatPin = Message<"pochical.v1.ChatPin"> & {
  * Use `create(ChatPinSchema)` to create a new message.
  */
 export const ChatPinSchema: GenMessage<ChatPin> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 54);
+  messageDesc(file_pochical_v1_sync, 61);
 
 /**
  * The member's reaction on a line, put on or taken off: anyone's line but
@@ -2326,7 +2464,7 @@ export type ChatReact = Message<"pochical.v1.ChatReact"> & {
  * Use `create(ChatReactSchema)` to create a new message.
  */
 export const ChatReactSchema: GenMessage<ChatReact> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 55);
+  messageDesc(file_pochical_v1_sync, 62);
 
 /**
  * A new line at the end of the chat: words, or days shared with
@@ -2409,7 +2547,7 @@ export type ChatSend = Message<"pochical.v1.ChatSend"> & {
  * Use `create(ChatSendSchema)` to create a new message.
  */
 export const ChatSendSchema: GenMessage<ChatSend> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 56);
+  messageDesc(file_pochical_v1_sync, 63);
 
 /**
  * New words for one of the member's own lines of words (編集).
@@ -2455,7 +2593,7 @@ export type ChatChange = Message<"pochical.v1.ChatChange"> & {
  * Use `create(ChatChangeSchema)` to create a new message.
  */
 export const ChatChangeSchema: GenMessage<ChatChange> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 57);
+  messageDesc(file_pochical_v1_sync, 64);
 
 /**
  * One of the member's own lines taken back (送信取消).
@@ -2479,7 +2617,7 @@ export type ChatUnsend = Message<"pochical.v1.ChatUnsend"> & {
  * Use `create(ChatUnsendSchema)` to create a new message.
  */
 export const ChatUnsendSchema: GenMessage<ChatUnsend> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 58);
+  messageDesc(file_pochical_v1_sync, 65);
 
 /**
  * One of the member's own lines taken back while it waited on their
@@ -2517,7 +2655,7 @@ export type ChatRecall = Message<"pochical.v1.ChatRecall"> & {
  * Use `create(ChatRecallSchema)` to create a new message.
  */
 export const ChatRecallSchema: GenMessage<ChatRecall> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 59);
+  messageDesc(file_pochical_v1_sync, 66);
 
 /**
  * The member has read the chat up to here; the group only moves a mark
@@ -2542,7 +2680,7 @@ export type ChatRead = Message<"pochical.v1.ChatRead"> & {
  * Use `create(ChatReadSchema)` to create a new message.
  */
 export const ChatReadSchema: GenMessage<ChatRead> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 60);
+  messageDesc(file_pochical_v1_sync, 67);
 
 /**
  * @generated from message pochical.v1.ChatPageRequest
@@ -2566,7 +2704,7 @@ export type ChatPageRequest = Message<"pochical.v1.ChatPageRequest"> & {
  * Use `create(ChatPageRequestSchema)` to create a new message.
  */
 export const ChatPageRequestSchema: GenMessage<ChatPageRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 61);
+  messageDesc(file_pochical_v1_sync, 68);
 
 /**
  * Up to chatRules.pageSize lines of a chat before the asked one, oldest
@@ -2611,7 +2749,7 @@ export type ChatPage = Message<"pochical.v1.ChatPage"> & {
  * Use `create(ChatPageSchema)` to create a new message.
  */
 export const ChatPageSchema: GenMessage<ChatPage> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 62);
+  messageDesc(file_pochical_v1_sync, 69);
 
 /**
  * Asks for a page of a chat's photos alone, without the lines between
@@ -2645,7 +2783,7 @@ export type ChatPhotosRequest = Message<"pochical.v1.ChatPhotosRequest"> & {
  * Use `create(ChatPhotosRequestSchema)` to create a new message.
  */
 export const ChatPhotosRequestSchema: GenMessage<ChatPhotosRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 63);
+  messageDesc(file_pochical_v1_sync, 70);
 
 /**
  * Up to chatRules.photoPageSize of a chat's photos nearest the asked line
@@ -2710,7 +2848,7 @@ export type ChatPhotos = Message<"pochical.v1.ChatPhotos"> & {
  * Use `create(ChatPhotosSchema)` to create a new message.
  */
 export const ChatPhotosSchema: GenMessage<ChatPhotos> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 64);
+  messageDesc(file_pochical_v1_sync, 71);
 
 /**
  * A photo of a chat and the line that sent it, one entry a photo, a
@@ -2745,7 +2883,7 @@ export type ChatPhotoEntry = Message<"pochical.v1.ChatPhotoEntry"> & {
  * Use `create(ChatPhotoEntrySchema)` to create a new message.
  */
 export const ChatPhotoEntrySchema: GenMessage<ChatPhotoEntry> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_sync, 65);
+  messageDesc(file_pochical_v1_sync, 72);
 
 /**
  * A field of a day's shift. Each is its own last-writer-wins value.

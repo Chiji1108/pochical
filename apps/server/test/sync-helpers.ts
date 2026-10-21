@@ -10,6 +10,7 @@ import {
 } from "../src/gen/pochical/v1/sync_pb";
 import type {
   Change,
+  ChatContent,
   DayField,
   ServerFrame,
 } from "../src/gen/pochical/v1/sync_pb";
@@ -176,7 +177,18 @@ export const shiftsIn = (frame: ServerFrame) =>
 // Whether a change is a notice line the app wrote in the chat as the group
 // changed, which tests about something else leave out.
 export const isNotice = (kind: Change["kind"]): boolean =>
-  kind.case === "chatLine" && kind.value.notice !== undefined;
+  kind.case === "chatLine" && kind.value.content?.kind.case === "notice";
+
+// What a line is, as toMatchObject compares a ChatLine: one of
+// ChatContent's cases and what it holds.
+export const holding = (
+  kind: NonNullable<ChatContent["kind"]["case"]>,
+  value: Record<string, unknown> = {}
+) => ({ content: { kind: { case: kind, value } } });
+
+// A line of words, as holding compares it.
+export const words = (text: string, more: Record<string, unknown> = {}) =>
+  holding("words", { text, ...more });
 
 // A frame's changes without the chat's notice lines.
 export const changesBesidesNotices = (frame: ServerFrame) =>

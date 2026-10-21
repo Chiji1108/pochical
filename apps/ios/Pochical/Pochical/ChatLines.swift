@@ -109,18 +109,13 @@ struct LineView: View {
   @Environment(\.openGroupRoute) private var openGroupRoute
   /// The line's opID, which its actions name it by.
   let lineID: String
-  let text: String
-  /// Its first link's page.
-  var preview: LinePreview?
-  /// The days a line of shared days shares, drawn on a card.
-  var days: [Day] = []
+  /// What it is: words, photos each opened large by a tap, or days or a
+  /// poll on a card.
+  let content: LineContent
   /// Whose shifts its card shows.
   var members: [GroupMember] = []
-  /// A poll's card, for days put to the vote.
-  var poll: PollLine?
-  /// The photos sent as the line, each opened large by a tap: one, or
-  /// several drawn as an album (spec/chat.md, Albums).
-  var photos: [LinePhoto] = []
+  /// The reader may settle its poll.
+  var canDecide = false
   /// Those of its photos up, while it waits.
   var up: Set<String> = []
   /// The line it answers, inside its bubble.
@@ -133,7 +128,6 @@ struct LineView: View {
   var time: Int64
   /// Left to the next line of the run sent in the same minute.
   var showsTime = true
-  let edited: Bool
   let mine: Bool
   /// The writer's name at the start of a run of others' lines, for their
   /// face.
@@ -185,6 +179,14 @@ struct LineView: View {
   private func nameOf(_ id: String) -> String {
     memberName(id, in: names)
   }
+
+  /// Its words, none for a line of anything else.
+  private var text: String { content.words?.text ?? "" }
+
+  /// Its words changed after they were sent (編集済み).
+  private var edited: Bool { content.words?.edited ?? false }
+
+  private var photos: [LinePhoto] { content.photos }
 
   /// What its words take to draw: kept by the chat's lines for this line
   /// alone, for these words and names. A cell's views of the line it had
@@ -293,15 +295,15 @@ struct LineView: View {
 
   /// What the line is drawn as, alone: its bubble lifted over the chat
   /// while its menu is open, where nothing on it is done.
-  var bubble: LineContent {
-    LineContent(
-      text: text, preview: preview, days: days, members: members, poll: poll, photos: photos,
+  var bubble: LineBody {
+    LineBody(
+      content: content, members: members, names: names, meID: meID, canDecide: canDecide,
       up: up, lineID: lineID, quote: quote, shelf: shelf, mine: mine, first: first,
       waiting: waiting && !failed, nameOf: nameOf, unfolded: unfolded)
   }
 
   /// The bubble in the chat, its drawing kept and its parts acting.
-  private var actedBubble: LineContent {
+  private var actedBubble: LineBody {
     var bubble = bubble
     bubble.drawing = drawing
     bubble.onOpenQuote = { act(.openQuote) }
@@ -315,7 +317,12 @@ struct LineView: View {
 
   /// Days or a poll on a card, whose days and 行ける VoiceOver goes
   /// through one by one.
-  private var carded: Bool { !days.isEmpty }
+  private var carded: Bool {
+    switch content {
+    case .days, .poll: true
+    case .words, .photos, .notice, .unsent, .hidden: false
+    }
+  }
 
   /// The time and state, the line as VoiceOver says it on a card's line.
   private var voicedMeta: some View {
@@ -341,24 +348,20 @@ struct LineView: View {
     if let quote {
       parts.append(quote.writer.map { "\($0)「\(quote.words)」への返信" } ?? "\(quote.words)への返信")
     }
-    if photos.count > 1 {
-      parts.append("\(photos.count)枚の写真")
-    } else if let photo = photos.first {
-      parts.append(photoWords(photo))
-    } else {
-      if days.isEmpty, poll == nil {
-        // Its words alone, kept with what the names make of them.
-        let drawing = drawing
-        let words = drawing.said ?? plainText(text, nameOf: nameOf)
-        drawing.said = words
-        parts.append(words)
-      } else {
-        parts.append(
-          lineWords(text, days: days, poll: poll != nil, decided: poll?.decided, nameOf: nameOf))
-      }
-      if let preview, !preview.title.isEmpty {
+    switch content {
+    case .photos(let photos):
+      parts.append(photoWords(photos))
+    case .words(let words):
+      // Its words alone, kept with what the names make of them.
+      let drawing = drawing
+      let said = drawing.said ?? plainText(words.text, nameOf: nameOf)
+      drawing.said = said
+      parts.append(said)
+      if let preview = words.preview, !preview.title.isEmpty {
         parts.append("リンク「\(preview.title)」")
       }
+    case .days, .poll, .notice, .unsent, .hidden:
+      parts.append(lineWords(content, nameOf: nameOf))
     }
     parts.append(ChatTime.clock(time))
     if pinned { parts.append("ピン留め中") }
@@ -430,8 +433,14 @@ struct LineView: View {
   /// The ring's shape: the bubble's (a photo answering a line sits in
   /// one), or the card's.
   private var ringShape: AnyShape {
-    days.isEmpty && (photos.isEmpty || quote != nil)
-      && !(photos.isEmpty && quote == nil && preview == nil && drawing.largeEmoji > 0)
+    let bubbled =
+      switch content {
+      // Emoji drawn large stand without a bubble.
+      case .words(let words): quote != nil || words.preview != nil || drawing.largeEmoji == 0
+      case .photos: quote != nil
+      case .days, .poll, .notice, .unsent, .hidden: false
+      }
+    return bubbled
       ? AnyShape(BubbleShape(mine: mine, first: first))
       : AnyShape(RoundedRectangle(cornerRadius: Radius.lg))
   }
@@ -539,18 +548,16 @@ struct DaySpan: Hashable {
 }
 
 /// What a line is drawn as: its words in a bubble, or its days on a card.
-struct LineContent: View {
-  let text: String
+struct LineBody: View {
+  let content: LineContent
   /// What its words take to draw, when kept.
   var drawing: LineDrawing?
-  /// Its first link's page.
-  var preview: LinePreview?
-  let days: [Day]
   let members: [GroupMember]
-  /// Its days are put to the vote, with what the card needs.
-  var poll: PollLine?
-  /// The photos sent as the line, from the group's photos.
-  var photos: [LinePhoto] = []
+  /// For a poll's card: the group's names as it shows them now, the
+  /// reader, and whether they may settle it.
+  var names: [String: String] = [:]
+  var meID: String?
+  var canDecide = false
   /// Those of its photos up, while it waits.
   var up: Set<String> = []
   /// The line's op_id, which its photos going up are stopped by.
@@ -577,35 +584,40 @@ struct LineContent: View {
   @Environment(\.themeColors) private var colors
 
   var body: some View {
-    if !photos.isEmpty, let quote {
-      QuotedMedia(quote: quote, shelf: shelf, mine: mine, first: first, onOpen: onOpenQuote) {
-        photoMedia
+    switch content {
+    case .photos(let photos):
+      if let quote {
+        QuotedMedia(quote: quote, shelf: shelf, mine: mine, first: first, onOpen: onOpenQuote) {
+          photoMedia(photos)
+        }
+      } else {
+        photoMedia(photos)
       }
-    } else if !photos.isEmpty {
-      photoMedia
-    } else if let poll {
+    case .poll(let poll):
       PollCard(
-        days: days, votes: poll.votes, decided: poll.decided, members: members,
-        names: poll.names, meID: poll.meID, canDecide: poll.canDecide, waiting: waiting,
+        days: poll.days, votes: poll.votes, decided: poll.decided, members: members,
+        names: names, meID: meID, canDecide: canDecide, waiting: waiting,
         onVote: onVote, onDecide: onDecide)
-    } else if days.isEmpty {
+    case .words(let words):
       MessageBubble(
-        text: text, drawing: drawing, mine: mine, first: first, waiting: waiting, nameOf: nameOf,
-        preview: preview,
-        quote: quote, shelf: shelf, onOpenQuote: onOpenQuote, unfolded: unfolded,
-        onUnfold: onUnfold)
-    } else {
+        text: words.text, drawing: drawing, mine: mine, first: first, waiting: waiting,
+        nameOf: nameOf, preview: words.preview, quote: quote, shelf: shelf,
+        onOpenQuote: onOpenQuote, unfolded: unfolded, onUnfold: onUnfold)
+    case .days(let days):
       DayCard(days: days, members: members)
         .dimmedWhileWaiting(waiting, in: RoundedRectangle(cornerRadius: Radius.lg))
+    case .notice, .unsent, .hidden:
+      // Drawn by the chat as a line of its own, not in a bubble.
+      EmptyView()
     }
   }
 }
 
-extension LineContent {
+extension LineBody {
   /// One photo as it was sent, or several as one album, each opened by a
   /// tap of its own; while the line waits, each ringed with how far it has
   /// gone up, × on any stopping the whole line.
-  @ViewBuilder private var photoMedia: some View {
+  @ViewBuilder private func photoMedia(_ photos: [LinePhoto]) -> some View {
     if photos.count == 1 {
       photoLine(photos[0])
     } else {

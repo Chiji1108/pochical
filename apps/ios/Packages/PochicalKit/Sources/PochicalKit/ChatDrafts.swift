@@ -67,30 +67,19 @@ public struct KeptDraft: Hashable, Sendable {
   }
 }
 
-/// A line a draft answers or changes, as the device holds it.
-public struct DraftLine: Hashable, Sendable {
-  public var text: String
-  public var unsent: Bool
-
-  public init(text: String, unsent: Bool) {
-    self.text = text
-    self.unsent = unsent
-  }
-}
-
-/// The draft to keep, or to open again, with the chat's lines as the
-/// device holds them (`lineOf`, nil for one it does not hold); nil for
-/// none: words make a draft, an edit whose words are still the line's own
-/// is none, an edit of a line taken back or not held goes with its words,
-/// and a reply to a line taken back keeps its words without the quote
-/// (spec/vectors/chat.json, draft).
-public func keptDraft(_ draft: KeptDraft, lineOf: (Int64) -> DraftLine?) -> KeptDraft? {
+/// The draft to keep, or to open again, with the content of the chat's
+/// lines as the device holds them (`lineOf`, nil for one it does not
+/// hold); nil for none: words make a draft, an edit whose words are still
+/// the line's own is none, an edit of a line taken back or not held goes
+/// with its words, and a reply to a line taken back keeps its words
+/// without the quote (spec/vectors/chat.json, draft).
+public func keptDraft(_ draft: KeptDraft, lineOf: (Int64) -> LineContent?) -> KeptDraft? {
   guard !draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
   switch draft.target {
   case .edit(let seq):
-    guard let line = lineOf(seq), !line.unsent, line.text != draft.text else { return nil }
+    guard case .words(let words) = lineOf(seq), words.text != draft.text else { return nil }
     return draft
-  case .reply(let seq) where lineOf(seq)?.unsent == true:
+  case .reply(let seq) where lineOf(seq) == .unsent:
     return KeptDraft(text: draft.text)
   case .reply, nil:
     return draft
@@ -210,9 +199,7 @@ extension Chats {
       try line(kept: $0.seq, of: threadID, in: groupID, db: db)
     }
     // The target's line is the one asked for.
-    return PochicalKit.keptDraft(draft) { _ in
-      line.map { DraftLine(text: $0.text, unsent: $0.unsent) }
-    }
+    return PochicalKit.keptDraft(draft) { _ in line?.content }
   }
 
   private static func line(kept seq: Int64, of threadID: String, in groupID: String, db: Database)

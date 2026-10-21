@@ -22,13 +22,8 @@ public  final class ChatLine extends
   private ChatLine() {
     threadId_ = "";
     authorId_ = "";
-    text_ = "";
     opId_ = "";
     reactions_ = emptyProtobufList();
-    days_ = emptyProtobufList();
-    votes_ = emptyProtobufList();
-    decided_ = "";
-    photos_ = emptyProtobufList();
   }
   private int bitField0_;
   public static final int THREAD_ID_FIELD_NUMBER = 1;
@@ -120,7 +115,8 @@ public  final class ChatLine extends
   private java.lang.String authorId_;
   /**
    * <pre>
-   * Who wrote it; it stays theirs after they leave.
+   * Who wrote it; it stays theirs after they leave. For a notice, who did
+   * what it tells.
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -132,7 +128,8 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * Who wrote it; it stays theirs after they leave.
+   * Who wrote it; it stays theirs after they leave. For a notice, who did
+   * what it tells.
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -145,7 +142,8 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * Who wrote it; it stays theirs after they leave.
+   * Who wrote it; it stays theirs after they leave. For a notice, who did
+   * what it tells.
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -159,7 +157,8 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * Who wrote it; it stays theirs after they leave.
+   * Who wrote it; it stays theirs after they leave. For a notice, who did
+   * what it tells.
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -170,7 +169,8 @@ public  final class ChatLine extends
   }
   /**
    * <pre>
-   * Who wrote it; it stays theirs after they leave.
+   * Who wrote it; it stays theirs after they leave. For a notice, who did
+   * what it tells.
    * </pre>
    *
    * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -180,78 +180,6 @@ public  final class ChatLine extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     authorId_ = value.toStringUtf8();
-
-  }
-
-  public static final int TEXT_FIELD_NUMBER = 4;
-  private java.lang.String text_;
-  /**
-   * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty for a
-   * line of shared days, and once unsent.
-   * </pre>
-   *
-   * <code>string text = 4 [json_name = "text"];</code>
-   * @return The text.
-   */
-  @java.lang.Override
-  public java.lang.String getText() {
-    return text_;
-  }
-  /**
-   * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty for a
-   * line of shared days, and once unsent.
-   * </pre>
-   *
-   * <code>string text = 4 [json_name = "text"];</code>
-   * @return The bytes for text.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getTextBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(text_);
-  }
-  /**
-   * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty for a
-   * line of shared days, and once unsent.
-   * </pre>
-   *
-   * <code>string text = 4 [json_name = "text"];</code>
-   * @param value The text to set.
-   */
-  private void setText(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    text_ = value;
-  }
-  /**
-   * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty for a
-   * line of shared days, and once unsent.
-   * </pre>
-   *
-   * <code>string text = 4 [json_name = "text"];</code>
-   */
-  private void clearText() {
-
-    text_ = getDefaultInstance().getText();
-  }
-  /**
-   * <pre>
-   * chatMessage characters at most (design/src/limits.ts); empty for a
-   * line of shared days, and once unsent.
-   * </pre>
-   *
-   * <code>string text = 4 [json_name = "text"];</code>
-   * @param value The bytes for text to set.
-   */
-  private void setTextBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    text_ = value.toStringUtf8();
 
   }
 
@@ -291,82 +219,6 @@ public  final class ChatLine extends
   private void clearSentAtMs() {
 
     sentAtMs_ = 0L;
-  }
-
-  public static final int EDITED_FIELD_NUMBER = 6;
-  private boolean edited_;
-  /**
-   * <pre>
-   * Its words were changed after it was sent (編集済み).
-   * </pre>
-   *
-   * <code>bool edited = 6 [json_name = "edited"];</code>
-   * @return The edited.
-   */
-  @java.lang.Override
-  public boolean getEdited() {
-    return edited_;
-  }
-  /**
-   * <pre>
-   * Its words were changed after it was sent (編集済み).
-   * </pre>
-   *
-   * <code>bool edited = 6 [json_name = "edited"];</code>
-   * @param value The edited to set.
-   */
-  private void setEdited(boolean value) {
-    
-    edited_ = value;
-  }
-  /**
-   * <pre>
-   * Its words were changed after it was sent (編集済み).
-   * </pre>
-   *
-   * <code>bool edited = 6 [json_name = "edited"];</code>
-   */
-  private void clearEdited() {
-
-    edited_ = false;
-  }
-
-  public static final int UNSENT_FIELD_NUMBER = 7;
-  private boolean unsent_;
-  /**
-   * <pre>
-   * Taken back by its writer (送信取消): its words are gone for everyone.
-   * </pre>
-   *
-   * <code>bool unsent = 7 [json_name = "unsent"];</code>
-   * @return The unsent.
-   */
-  @java.lang.Override
-  public boolean getUnsent() {
-    return unsent_;
-  }
-  /**
-   * <pre>
-   * Taken back by its writer (送信取消): its words are gone for everyone.
-   * </pre>
-   *
-   * <code>bool unsent = 7 [json_name = "unsent"];</code>
-   * @param value The unsent to set.
-   */
-  private void setUnsent(boolean value) {
-    
-    unsent_ = value;
-  }
-  /**
-   * <pre>
-   * Taken back by its writer (送信取消): its words are gone for everyone.
-   * </pre>
-   *
-   * <code>bool unsent = 7 [json_name = "unsent"];</code>
-   */
-  private void clearUnsent() {
-
-    unsent_ = false;
   }
 
   public static final int OP_ID_FIELD_NUMBER = 8;
@@ -446,7 +298,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -458,7 +311,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -470,7 +324,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -482,7 +337,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -494,7 +350,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -514,7 +371,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -528,7 +386,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -541,7 +400,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -555,7 +415,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -569,7 +430,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -580,7 +442,8 @@ public  final class ChatLine extends
   /**
    * <pre>
    * Its reactions, each emoji with who chose it in the order they did,
-   * the emoji in the order first chosen; none once unsent.
+   * the emoji in the order first chosen; none for a notice, and once
+   * unsent.
    * </pre>
    *
    * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -631,512 +494,12 @@ public  final class ChatLine extends
     pinnedOrder_ = 0L;
   }
 
-  public static final int DAYS_FIELD_NUMBER = 11;
-  private com.google.protobuf.Internal.ProtobufList<java.lang.String> days_;
-  /**
-   * <pre>
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   * </pre>
-   *
-   * <code>repeated string days = 11 [json_name = "days"];</code>
-   * @return A list containing the days.
-   */
-  @java.lang.Override
-  public java.util.List<java.lang.String> getDaysList() {
-    return days_;
-  }
-  /**
-   * <pre>
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   * </pre>
-   *
-   * <code>repeated string days = 11 [json_name = "days"];</code>
-   * @return The count of days.
-   */
-  @java.lang.Override
-  public int getDaysCount() {
-    return days_.size();
-  }
-  /**
-   * <pre>
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   * </pre>
-   *
-   * <code>repeated string days = 11 [json_name = "days"];</code>
-   * @param index The index of the element to return.
-   * @return The days at the given index.
-   */
-  @java.lang.Override
-  public java.lang.String getDays(int index) {
-    return days_.get(index);
-  }
-  /**
-   * <pre>
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   * </pre>
-   *
-   * <code>repeated string days = 11 [json_name = "days"];</code>
-   * @param index The index of the value to return.
-   * @return The bytes of the days at the given index.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getDaysBytes(int index) {
-    return com.google.protobuf.ByteString.copyFromUtf8(
-        days_.get(index));
-  }
-  private void ensureDaysIsMutable() {
-    com.google.protobuf.Internal.ProtobufList<java.lang.String> tmp =
-        days_;  if (!tmp.isModifiable()) {
-      days_ =
-          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-     }
-  }
-  /**
-   * <pre>
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   * </pre>
-   *
-   * <code>repeated string days = 11 [json_name = "days"];</code>
-   * @param index The index to set the value at.
-   * @param value The days to set.
-   */
-  private void setDays(
-      int index, java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-    ensureDaysIsMutable();
-    days_.set(index, value);
-  }
-  /**
-   * <pre>
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   * </pre>
-   *
-   * <code>repeated string days = 11 [json_name = "days"];</code>
-   * @param value The days to add.
-   */
-  private void addDays(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-    ensureDaysIsMutable();
-    days_.add(value);
-  }
-  /**
-   * <pre>
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   * </pre>
-   *
-   * <code>repeated string days = 11 [json_name = "days"];</code>
-   * @param values The days to add.
-   */
-  private void addAllDays(
-      java.lang.Iterable<java.lang.String> values) {
-    ensureDaysIsMutable();
-    com.google.protobuf.AbstractMessageLite.addAll(
-        values, days_);
-  }
-  /**
-   * <pre>
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   * </pre>
-   *
-   * <code>repeated string days = 11 [json_name = "days"];</code>
-   */
-  private void clearDays() {
-    days_ = emptyProtobufList();
-  }
-  /**
-   * <pre>
-   * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-   * line of days has no words. None once unsent.
-   * </pre>
-   *
-   * <code>repeated string days = 11 [json_name = "days"];</code>
-   * @param value The bytes of the days to add.
-   */
-  private void addDaysBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    ensureDaysIsMutable();
-    days_.add(value.toStringUtf8());
-  }
-
-  public static final int POLL_FIELD_NUMBER = 12;
-  private boolean poll_;
-  /**
-   * <pre>
-   * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-   * </pre>
-   *
-   * <code>bool poll = 12 [json_name = "poll"];</code>
-   * @return The poll.
-   */
-  @java.lang.Override
-  public boolean getPoll() {
-    return poll_;
-  }
-  /**
-   * <pre>
-   * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-   * </pre>
-   *
-   * <code>bool poll = 12 [json_name = "poll"];</code>
-   * @param value The poll to set.
-   */
-  private void setPoll(boolean value) {
-    
-    poll_ = value;
-  }
-  /**
-   * <pre>
-   * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-   * </pre>
-   *
-   * <code>bool poll = 12 [json_name = "poll"];</code>
-   */
-  private void clearPoll() {
-
-    poll_ = false;
-  }
-
-  public static final int VOTES_FIELD_NUMBER = 13;
-  private com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatVotes> votes_;
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  @java.lang.Override
-  public java.util.List<app.pochical.v1.ChatVotes> getVotesList() {
-    return votes_;
-  }
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  public java.util.List<? extends app.pochical.v1.ChatVotesOrBuilder> 
-      getVotesOrBuilderList() {
-    return votes_;
-  }
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  @java.lang.Override
-  public int getVotesCount() {
-    return votes_.size();
-  }
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  @java.lang.Override
-  public app.pochical.v1.ChatVotes getVotes(int index) {
-    return votes_.get(index);
-  }
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  public app.pochical.v1.ChatVotesOrBuilder getVotesOrBuilder(
-      int index) {
-    return votes_.get(index);
-  }
-  private void ensureVotesIsMutable() {
-    com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatVotes> tmp = votes_;
-    if (!tmp.isModifiable()) {
-      votes_ =
-          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-     }
-  }
-
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  private void setVotes(
-      int index, app.pochical.v1.ChatVotes value) {
-    java.util.Objects.requireNonNull(value);
-    ensureVotesIsMutable();
-    votes_.set(index, value);
-  }
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  private void addVotes(app.pochical.v1.ChatVotes value) {
-    java.util.Objects.requireNonNull(value);
-    ensureVotesIsMutable();
-    votes_.add(value);
-  }
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  private void addVotes(
-      int index, app.pochical.v1.ChatVotes value) {
-    java.util.Objects.requireNonNull(value);
-    ensureVotesIsMutable();
-    votes_.add(index, value);
-  }
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  private void addAllVotes(
-      java.lang.Iterable<? extends app.pochical.v1.ChatVotes> values) {
-    ensureVotesIsMutable();
-    com.google.protobuf.AbstractMessageLite.addAll(
-        values, votes_);
-  }
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  private void clearVotes() {
-    votes_ = emptyProtobufList();
-  }
-  /**
-   * <pre>
-   * A poll's votes: each day someone can come, with who can, in the
-   * order they said so. None once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-   */
-  private void removeVotes(int index) {
-    ensureVotesIsMutable();
-    votes_.remove(index);
-  }
-
-  public static final int DECIDED_FIELD_NUMBER = 14;
-  private java.lang.String decided_;
-  /**
-   * <pre>
-   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-   * </pre>
-   *
-   * <code>string decided = 14 [json_name = "decided"];</code>
-   * @return The decided.
-   */
-  @java.lang.Override
-  public java.lang.String getDecided() {
-    return decided_;
-  }
-  /**
-   * <pre>
-   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-   * </pre>
-   *
-   * <code>string decided = 14 [json_name = "decided"];</code>
-   * @return The bytes for decided.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getDecidedBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(decided_);
-  }
-  /**
-   * <pre>
-   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-   * </pre>
-   *
-   * <code>string decided = 14 [json_name = "decided"];</code>
-   * @param value The decided to set.
-   */
-  private void setDecided(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    decided_ = value;
-  }
-  /**
-   * <pre>
-   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-   * </pre>
-   *
-   * <code>string decided = 14 [json_name = "decided"];</code>
-   */
-  private void clearDecided() {
-
-    decided_ = getDefaultInstance().getDecided();
-  }
-  /**
-   * <pre>
-   * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-   * </pre>
-   *
-   * <code>string decided = 14 [json_name = "decided"];</code>
-   * @param value The bytes for decided to set.
-   */
-  private void setDecidedBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    decided_ = value.toStringUtf8();
-
-  }
-
-  public static final int PREVIEW_FIELD_NUMBER = 16;
-  private app.pochical.v1.LinkPreview preview_;
-  /**
-   * <pre>
-   * Its first link's page, under its words; none once unsent.
-   * </pre>
-   *
-   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-   */
-  @java.lang.Override
-  public boolean hasPreview() {
-    return ((bitField0_ & 0x00000001) != 0);
-  }
-  /**
-   * <pre>
-   * Its first link's page, under its words; none once unsent.
-   * </pre>
-   *
-   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-   */
-  @java.lang.Override
-  public app.pochical.v1.LinkPreview getPreview() {
-    return preview_ == null ? app.pochical.v1.LinkPreview.getDefaultInstance() : preview_;
-  }
-  /**
-   * <pre>
-   * Its first link's page, under its words; none once unsent.
-   * </pre>
-   *
-   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-   */
-  private void setPreview(app.pochical.v1.LinkPreview value) {
-    java.util.Objects.requireNonNull(value);
-    preview_ = value;
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <pre>
-   * Its first link's page, under its words; none once unsent.
-   * </pre>
-   *
-   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-   */
-  @java.lang.SuppressWarnings("ReferenceEquality")
-  private void mergePreview(app.pochical.v1.LinkPreview value) {
-    java.util.Objects.requireNonNull(value);
-    if (preview_ != null &&
-        preview_ != app.pochical.v1.LinkPreview.getDefaultInstance()) {
-      preview_ =
-        app.pochical.v1.LinkPreview.newBuilder(preview_).mergeFrom(value).buildPartial();
-    } else {
-      preview_ = value;
-    }
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <pre>
-   * Its first link's page, under its words; none once unsent.
-   * </pre>
-   *
-   * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-   */
-  private void clearPreview() {
-    preview_ = null;
-    bitField0_ = (bitField0_ & ~0x00000001);
-  }
-
-  public static final int HIDDEN_FIELD_NUMBER = 17;
-  private boolean hidden_;
-  /**
-   * <pre>
-   * Sent in a one-to-one chat by someone the reader had blocked: never
-   * delivered to them, so it comes without its content and shows nothing.
-   * </pre>
-   *
-   * <code>bool hidden = 17 [json_name = "hidden"];</code>
-   * @return The hidden.
-   */
-  @java.lang.Override
-  public boolean getHidden() {
-    return hidden_;
-  }
-  /**
-   * <pre>
-   * Sent in a one-to-one chat by someone the reader had blocked: never
-   * delivered to them, so it comes without its content and shows nothing.
-   * </pre>
-   *
-   * <code>bool hidden = 17 [json_name = "hidden"];</code>
-   * @param value The hidden to set.
-   */
-  private void setHidden(boolean value) {
-    
-    hidden_ = value;
-  }
-  /**
-   * <pre>
-   * Sent in a one-to-one chat by someone the reader had blocked: never
-   * delivered to them, so it comes without its content and shows nothing.
-   * </pre>
-   *
-   * <code>bool hidden = 17 [json_name = "hidden"];</code>
-   */
-  private void clearHidden() {
-
-    hidden_ = false;
-  }
-
   public static final int REPLY_TO_FIELD_NUMBER = 18;
   private long replyTo_;
   /**
    * <pre>
    * The line it answers (返信), by its seq in the same chat; 0 for none,
-   * and none once unsent.
+   * and none for a notice or once unsent.
    * </pre>
    *
    * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
@@ -1149,7 +512,7 @@ public  final class ChatLine extends
   /**
    * <pre>
    * The line it answers (返信), by its seq in the same chat; 0 for none,
-   * and none once unsent.
+   * and none for a notice or once unsent.
    * </pre>
    *
    * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
@@ -1162,7 +525,7 @@ public  final class ChatLine extends
   /**
    * <pre>
    * The line it answers (返信), by its seq in the same chat; 0 for none,
-   * and none once unsent.
+   * and none for a notice or once unsent.
    * </pre>
    *
    * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
@@ -1172,241 +535,81 @@ public  final class ChatLine extends
     replyTo_ = 0L;
   }
 
-  public static final int NOTICE_FIELD_NUMBER = 19;
-  private app.pochical.v1.ChatNotice notice_;
+  public static final int CONTENT_FIELD_NUMBER = 22;
+  private app.pochical.v1.ChatContent content_;
   /**
    * <pre>
-   * A line from the app in 全体チャット, not a message (spec/chat.md,
-   * Notices): author_id is who did it. It has no words, takes no
-   * reactions, replies or pins, and is never unread.
+   * What the line is: always one of its kinds. A device that gets none,
+   * or one it does not know (from an app newer than itself), shows
+   * nothing in its place.
    * </pre>
    *
-   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
    */
   @java.lang.Override
-  public boolean hasNotice() {
-    return ((bitField0_ & 0x00000002) != 0);
+  public boolean hasContent() {
+    return ((bitField0_ & 0x00000001) != 0);
   }
   /**
    * <pre>
-   * A line from the app in 全体チャット, not a message (spec/chat.md,
-   * Notices): author_id is who did it. It has no words, takes no
-   * reactions, replies or pins, and is never unread.
+   * What the line is: always one of its kinds. A device that gets none,
+   * or one it does not know (from an app newer than itself), shows
+   * nothing in its place.
    * </pre>
    *
-   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
    */
   @java.lang.Override
-  public app.pochical.v1.ChatNotice getNotice() {
-    return notice_ == null ? app.pochical.v1.ChatNotice.getDefaultInstance() : notice_;
+  public app.pochical.v1.ChatContent getContent() {
+    return content_ == null ? app.pochical.v1.ChatContent.getDefaultInstance() : content_;
   }
   /**
    * <pre>
-   * A line from the app in 全体チャット, not a message (spec/chat.md,
-   * Notices): author_id is who did it. It has no words, takes no
-   * reactions, replies or pins, and is never unread.
+   * What the line is: always one of its kinds. A device that gets none,
+   * or one it does not know (from an app newer than itself), shows
+   * nothing in its place.
    * </pre>
    *
-   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
    */
-  private void setNotice(app.pochical.v1.ChatNotice value) {
+  private void setContent(app.pochical.v1.ChatContent value) {
     java.util.Objects.requireNonNull(value);
-    notice_ = value;
-    bitField0_ |= 0x00000002;
+    content_ = value;
+    bitField0_ |= 0x00000001;
   }
   /**
    * <pre>
-   * A line from the app in 全体チャット, not a message (spec/chat.md,
-   * Notices): author_id is who did it. It has no words, takes no
-   * reactions, replies or pins, and is never unread.
+   * What the line is: always one of its kinds. A device that gets none,
+   * or one it does not know (from an app newer than itself), shows
+   * nothing in its place.
    * </pre>
    *
-   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
    */
   @java.lang.SuppressWarnings("ReferenceEquality")
-  private void mergeNotice(app.pochical.v1.ChatNotice value) {
+  private void mergeContent(app.pochical.v1.ChatContent value) {
     java.util.Objects.requireNonNull(value);
-    if (notice_ != null &&
-        notice_ != app.pochical.v1.ChatNotice.getDefaultInstance()) {
-      notice_ =
-        app.pochical.v1.ChatNotice.newBuilder(notice_).mergeFrom(value).buildPartial();
+    if (content_ != null &&
+        content_ != app.pochical.v1.ChatContent.getDefaultInstance()) {
+      content_ =
+        app.pochical.v1.ChatContent.newBuilder(content_).mergeFrom(value).buildPartial();
     } else {
-      notice_ = value;
+      content_ = value;
     }
-    bitField0_ |= 0x00000002;
+    bitField0_ |= 0x00000001;
   }
   /**
    * <pre>
-   * A line from the app in 全体チャット, not a message (spec/chat.md,
-   * Notices): author_id is who did it. It has no words, takes no
-   * reactions, replies or pins, and is never unread.
+   * What the line is: always one of its kinds. A device that gets none,
+   * or one it does not know (from an app newer than itself), shows
+   * nothing in its place.
    * </pre>
    *
-   * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+   * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
    */
-  private void clearNotice() {
-    notice_ = null;
-    bitField0_ = (bitField0_ & ~0x00000002);
-  }
-
-  public static final int PHOTOS_FIELD_NUMBER = 21;
-  private com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatPhoto> photos_;
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  @java.lang.Override
-  public java.util.List<app.pochical.v1.ChatPhoto> getPhotosList() {
-    return photos_;
-  }
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  public java.util.List<? extends app.pochical.v1.ChatPhotoOrBuilder> 
-      getPhotosOrBuilderList() {
-    return photos_;
-  }
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  @java.lang.Override
-  public int getPhotosCount() {
-    return photos_.size();
-  }
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  @java.lang.Override
-  public app.pochical.v1.ChatPhoto getPhotos(int index) {
-    return photos_.get(index);
-  }
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  public app.pochical.v1.ChatPhotoOrBuilder getPhotosOrBuilder(
-      int index) {
-    return photos_.get(index);
-  }
-  private void ensurePhotosIsMutable() {
-    com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatPhoto> tmp = photos_;
-    if (!tmp.isModifiable()) {
-      photos_ =
-          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-     }
-  }
-
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  private void setPhotos(
-      int index, app.pochical.v1.ChatPhoto value) {
-    java.util.Objects.requireNonNull(value);
-    ensurePhotosIsMutable();
-    photos_.set(index, value);
-  }
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  private void addPhotos(app.pochical.v1.ChatPhoto value) {
-    java.util.Objects.requireNonNull(value);
-    ensurePhotosIsMutable();
-    photos_.add(value);
-  }
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  private void addPhotos(
-      int index, app.pochical.v1.ChatPhoto value) {
-    java.util.Objects.requireNonNull(value);
-    ensurePhotosIsMutable();
-    photos_.add(index, value);
-  }
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  private void addAllPhotos(
-      java.lang.Iterable<? extends app.pochical.v1.ChatPhoto> values) {
-    ensurePhotosIsMutable();
-    com.google.protobuf.AbstractMessageLite.addAll(
-        values, photos_);
-  }
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  private void clearPhotos() {
-    photos_ = emptyProtobufList();
-  }
-  /**
-   * <pre>
-   * The photos sent as the line, with no words: one, or several sent at
-   * once, drawn as one album (spec/chat.md, Albums). None for anything
-   * else, and once unsent.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-   */
-  private void removePhotos(int index) {
-    ensurePhotosIsMutable();
-    photos_.remove(index);
+  private void clearContent() {
+    content_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static app.pochical.v1.ChatLine parseFrom(
@@ -1602,7 +805,8 @@ public  final class ChatLine extends
 
     /**
      * <pre>
-     * Who wrote it; it stays theirs after they leave.
+     * Who wrote it; it stays theirs after they leave. For a notice, who did
+     * what it tells.
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -1614,7 +818,8 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * Who wrote it; it stays theirs after they leave.
+     * Who wrote it; it stays theirs after they leave. For a notice, who did
+     * what it tells.
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -1627,7 +832,8 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * Who wrote it; it stays theirs after they leave.
+     * Who wrote it; it stays theirs after they leave. For a notice, who did
+     * what it tells.
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -1642,7 +848,8 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * Who wrote it; it stays theirs after they leave.
+     * Who wrote it; it stays theirs after they leave. For a notice, who did
+     * what it tells.
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -1655,7 +862,8 @@ public  final class ChatLine extends
     }
     /**
      * <pre>
-     * Who wrote it; it stays theirs after they leave.
+     * Who wrote it; it stays theirs after they leave. For a notice, who did
+     * what it tells.
      * </pre>
      *
      * <code>string author_id = 3 [json_name = "authorId"];</code>
@@ -1666,80 +874,6 @@ public  final class ChatLine extends
         com.google.protobuf.ByteString value) {
       copyOnWrite();
       instance.setAuthorIdBytes(value);
-      return this;
-    }
-
-    /**
-     * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty for a
-     * line of shared days, and once unsent.
-     * </pre>
-     *
-     * <code>string text = 4 [json_name = "text"];</code>
-     * @return The text.
-     */
-    @java.lang.Override
-    public java.lang.String getText() {
-      return instance.getText();
-    }
-    /**
-     * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty for a
-     * line of shared days, and once unsent.
-     * </pre>
-     *
-     * <code>string text = 4 [json_name = "text"];</code>
-     * @return The bytes for text.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getTextBytes() {
-      return instance.getTextBytes();
-    }
-    /**
-     * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty for a
-     * line of shared days, and once unsent.
-     * </pre>
-     *
-     * <code>string text = 4 [json_name = "text"];</code>
-     * @param value The text to set.
-     * @return This builder for chaining.
-     */
-    public Builder setText(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setText(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty for a
-     * line of shared days, and once unsent.
-     * </pre>
-     *
-     * <code>string text = 4 [json_name = "text"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearText() {
-      copyOnWrite();
-      instance.clearText();
-      return this;
-    }
-    /**
-     * <pre>
-     * chatMessage characters at most (design/src/limits.ts); empty for a
-     * line of shared days, and once unsent.
-     * </pre>
-     *
-     * <code>string text = 4 [json_name = "text"];</code>
-     * @param value The bytes for text to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTextBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setTextBytes(value);
       return this;
     }
 
@@ -1780,86 +914,6 @@ public  final class ChatLine extends
     public Builder clearSentAtMs() {
       copyOnWrite();
       instance.clearSentAtMs();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * Its words were changed after it was sent (編集済み).
-     * </pre>
-     *
-     * <code>bool edited = 6 [json_name = "edited"];</code>
-     * @return The edited.
-     */
-    @java.lang.Override
-    public boolean getEdited() {
-      return instance.getEdited();
-    }
-    /**
-     * <pre>
-     * Its words were changed after it was sent (編集済み).
-     * </pre>
-     *
-     * <code>bool edited = 6 [json_name = "edited"];</code>
-     * @param value The edited to set.
-     * @return This builder for chaining.
-     */
-    public Builder setEdited(boolean value) {
-      copyOnWrite();
-      instance.setEdited(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Its words were changed after it was sent (編集済み).
-     * </pre>
-     *
-     * <code>bool edited = 6 [json_name = "edited"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearEdited() {
-      copyOnWrite();
-      instance.clearEdited();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * Taken back by its writer (送信取消): its words are gone for everyone.
-     * </pre>
-     *
-     * <code>bool unsent = 7 [json_name = "unsent"];</code>
-     * @return The unsent.
-     */
-    @java.lang.Override
-    public boolean getUnsent() {
-      return instance.getUnsent();
-    }
-    /**
-     * <pre>
-     * Taken back by its writer (送信取消): its words are gone for everyone.
-     * </pre>
-     *
-     * <code>bool unsent = 7 [json_name = "unsent"];</code>
-     * @param value The unsent to set.
-     * @return This builder for chaining.
-     */
-    public Builder setUnsent(boolean value) {
-      copyOnWrite();
-      instance.setUnsent(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Taken back by its writer (送信取消): its words are gone for everyone.
-     * </pre>
-     *
-     * <code>bool unsent = 7 [json_name = "unsent"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearUnsent() {
-      copyOnWrite();
-      instance.clearUnsent();
       return this;
     }
 
@@ -1940,7 +994,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -1953,7 +1008,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -1964,7 +1020,8 @@ public  final class ChatLine extends
     }/**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -1976,7 +1033,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -1990,7 +1048,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -2005,7 +1064,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -2018,7 +1078,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -2032,7 +1093,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -2046,7 +1108,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -2061,7 +1124,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -2075,7 +1139,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -2088,7 +1153,8 @@ public  final class ChatLine extends
     /**
      * <pre>
      * Its reactions, each emoji with who chose it in the order they did,
-     * the emoji in the order first chosen; none once unsent.
+     * the emoji in the order first chosen; none for a notice, and once
+     * unsent.
      * </pre>
      *
      * <code>repeated .pochical.v1.ChatReaction reactions = 9 [json_name = "reactions"];</code>
@@ -2144,530 +1210,8 @@ public  final class ChatLine extends
 
     /**
      * <pre>
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * </pre>
-     *
-     * <code>repeated string days = 11 [json_name = "days"];</code>
-     * @return A list containing the days.
-     */
-    @java.lang.Override
-    public java.util.List<java.lang.String>
-        getDaysList() {
-      return java.util.Collections.unmodifiableList(
-          instance.getDaysList());
-    }
-    /**
-     * <pre>
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * </pre>
-     *
-     * <code>repeated string days = 11 [json_name = "days"];</code>
-     * @return The count of days.
-     */
-    @java.lang.Override
-    public int getDaysCount() {
-      return instance.getDaysCount();
-    }
-    /**
-     * <pre>
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * </pre>
-     *
-     * <code>repeated string days = 11 [json_name = "days"];</code>
-     * @param index The index of the element to return.
-     * @return The days at the given index.
-     */
-    @java.lang.Override
-    public java.lang.String getDays(int index) {
-      return instance.getDays(index);
-    }
-    /**
-     * <pre>
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * </pre>
-     *
-     * <code>repeated string days = 11 [json_name = "days"];</code>
-     * @param index The index of the value to return.
-     * @return The bytes of the days at the given index.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getDaysBytes(int index) {
-      return instance.getDaysBytes(index);
-    }
-    /**
-     * <pre>
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * </pre>
-     *
-     * <code>repeated string days = 11 [json_name = "days"];</code>
-     * @param index The index to set the value at.
-     * @param value The days to set.
-     * @return This builder for chaining.
-     */
-    public Builder setDays(
-        int index, java.lang.String value) {
-      copyOnWrite();
-      instance.setDays(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * </pre>
-     *
-     * <code>repeated string days = 11 [json_name = "days"];</code>
-     * @param value The days to add.
-     * @return This builder for chaining.
-     */
-    public Builder addDays(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.addDays(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * </pre>
-     *
-     * <code>repeated string days = 11 [json_name = "days"];</code>
-     * @param values The days to add.
-     * @return This builder for chaining.
-     */
-    public Builder addAllDays(
-        java.lang.Iterable<java.lang.String> values) {
-      copyOnWrite();
-      instance.addAllDays(values);
-      return this;
-    }
-    /**
-     * <pre>
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * </pre>
-     *
-     * <code>repeated string days = 11 [json_name = "days"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearDays() {
-      copyOnWrite();
-      instance.clearDays();
-      return this;
-    }
-    /**
-     * <pre>
-     * The days it shares with everyone's shifts, as YYYY-MM-DD in order; a
-     * line of days has no words. None once unsent.
-     * </pre>
-     *
-     * <code>repeated string days = 11 [json_name = "days"];</code>
-     * @param value The bytes of the days to add.
-     * @return This builder for chaining.
-     */
-    public Builder addDaysBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.addDaysBytes(value);
-      return this;
-    }
-
-    /**
-     * <pre>
-     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-     * </pre>
-     *
-     * <code>bool poll = 12 [json_name = "poll"];</code>
-     * @return The poll.
-     */
-    @java.lang.Override
-    public boolean getPoll() {
-      return instance.getPoll();
-    }
-    /**
-     * <pre>
-     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-     * </pre>
-     *
-     * <code>bool poll = 12 [json_name = "poll"];</code>
-     * @param value The poll to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPoll(boolean value) {
-      copyOnWrite();
-      instance.setPoll(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Its days are put to the vote (spec/chat.md, Polls), in a group chat.
-     * </pre>
-     *
-     * <code>bool poll = 12 [json_name = "poll"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearPoll() {
-      copyOnWrite();
-      instance.clearPoll();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    @java.lang.Override
-    public java.util.List<app.pochical.v1.ChatVotes> getVotesList() {
-      return java.util.Collections.unmodifiableList(
-          instance.getVotesList());
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    @java.lang.Override
-    public int getVotesCount() {
-      return instance.getVotesCount();
-    }/**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    @java.lang.Override
-    public app.pochical.v1.ChatVotes getVotes(int index) {
-      return instance.getVotes(index);
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    public Builder setVotes(
-        int index, app.pochical.v1.ChatVotes value) {
-      copyOnWrite();
-      instance.setVotes(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    public Builder setVotes(
-        int index, app.pochical.v1.ChatVotes.Builder builderForValue) {
-      copyOnWrite();
-      instance.setVotes(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    public Builder addVotes(app.pochical.v1.ChatVotes value) {
-      copyOnWrite();
-      instance.addVotes(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    public Builder addVotes(
-        int index, app.pochical.v1.ChatVotes value) {
-      copyOnWrite();
-      instance.addVotes(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    public Builder addVotes(
-        app.pochical.v1.ChatVotes.Builder builderForValue) {
-      copyOnWrite();
-      instance.addVotes(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    public Builder addVotes(
-        int index, app.pochical.v1.ChatVotes.Builder builderForValue) {
-      copyOnWrite();
-      instance.addVotes(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    public Builder addAllVotes(
-        java.lang.Iterable<? extends app.pochical.v1.ChatVotes> values) {
-      copyOnWrite();
-      instance.addAllVotes(values);
-      return this;
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    public Builder clearVotes() {
-      copyOnWrite();
-      instance.clearVotes();
-      return this;
-    }
-    /**
-     * <pre>
-     * A poll's votes: each day someone can come, with who can, in the
-     * order they said so. None once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatVotes votes = 13 [json_name = "votes"];</code>
-     */
-    public Builder removeVotes(int index) {
-      copyOnWrite();
-      instance.removeVotes(index);
-      return this;
-    }
-
-    /**
-     * <pre>
-     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-     * </pre>
-     *
-     * <code>string decided = 14 [json_name = "decided"];</code>
-     * @return The decided.
-     */
-    @java.lang.Override
-    public java.lang.String getDecided() {
-      return instance.getDecided();
-    }
-    /**
-     * <pre>
-     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-     * </pre>
-     *
-     * <code>string decided = 14 [json_name = "decided"];</code>
-     * @return The bytes for decided.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getDecidedBytes() {
-      return instance.getDecidedBytes();
-    }
-    /**
-     * <pre>
-     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-     * </pre>
-     *
-     * <code>string decided = 14 [json_name = "decided"];</code>
-     * @param value The decided to set.
-     * @return This builder for chaining.
-     */
-    public Builder setDecided(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setDecided(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-     * </pre>
-     *
-     * <code>string decided = 14 [json_name = "decided"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearDecided() {
-      copyOnWrite();
-      instance.clearDecided();
-      return this;
-    }
-    /**
-     * <pre>
-     * The day a poll was settled on, as YYYY-MM-DD; empty while open.
-     * </pre>
-     *
-     * <code>string decided = 14 [json_name = "decided"];</code>
-     * @param value The bytes for decided to set.
-     * @return This builder for chaining.
-     */
-    public Builder setDecidedBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setDecidedBytes(value);
-      return this;
-    }
-
-    /**
-     * <pre>
-     * Its first link's page, under its words; none once unsent.
-     * </pre>
-     *
-     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-     */
-    @java.lang.Override
-    public boolean hasPreview() {
-      return instance.hasPreview();
-    }
-    /**
-     * <pre>
-     * Its first link's page, under its words; none once unsent.
-     * </pre>
-     *
-     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-     */
-    @java.lang.Override
-    public app.pochical.v1.LinkPreview getPreview() {
-      return instance.getPreview();
-    }
-    /**
-     * <pre>
-     * Its first link's page, under its words; none once unsent.
-     * </pre>
-     *
-     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-     */
-    public Builder setPreview(app.pochical.v1.LinkPreview value) {
-      copyOnWrite();
-      instance.setPreview(value);
-      return this;
-      }
-    /**
-     * <pre>
-     * Its first link's page, under its words; none once unsent.
-     * </pre>
-     *
-     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-     */
-    public Builder setPreview(
-        app.pochical.v1.LinkPreview.Builder builderForValue) {
-      copyOnWrite();
-      instance.setPreview(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * Its first link's page, under its words; none once unsent.
-     * </pre>
-     *
-     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-     */
-    public Builder mergePreview(app.pochical.v1.LinkPreview value) {
-      copyOnWrite();
-      instance.mergePreview(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Its first link's page, under its words; none once unsent.
-     * </pre>
-     *
-     * <code>.pochical.v1.LinkPreview preview = 16 [json_name = "preview"];</code>
-     */
-    public Builder clearPreview() {  copyOnWrite();
-      instance.clearPreview();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * Sent in a one-to-one chat by someone the reader had blocked: never
-     * delivered to them, so it comes without its content and shows nothing.
-     * </pre>
-     *
-     * <code>bool hidden = 17 [json_name = "hidden"];</code>
-     * @return The hidden.
-     */
-    @java.lang.Override
-    public boolean getHidden() {
-      return instance.getHidden();
-    }
-    /**
-     * <pre>
-     * Sent in a one-to-one chat by someone the reader had blocked: never
-     * delivered to them, so it comes without its content and shows nothing.
-     * </pre>
-     *
-     * <code>bool hidden = 17 [json_name = "hidden"];</code>
-     * @param value The hidden to set.
-     * @return This builder for chaining.
-     */
-    public Builder setHidden(boolean value) {
-      copyOnWrite();
-      instance.setHidden(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Sent in a one-to-one chat by someone the reader had blocked: never
-     * delivered to them, so it comes without its content and shows nothing.
-     * </pre>
-     *
-     * <code>bool hidden = 17 [json_name = "hidden"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearHidden() {
-      copyOnWrite();
-      instance.clearHidden();
-      return this;
-    }
-
-    /**
-     * <pre>
      * The line it answers (返信), by its seq in the same chat; 0 for none,
-     * and none once unsent.
+     * and none for a notice or once unsent.
      * </pre>
      *
      * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
@@ -2680,7 +1224,7 @@ public  final class ChatLine extends
     /**
      * <pre>
      * The line it answers (返信), by its seq in the same chat; 0 for none,
-     * and none once unsent.
+     * and none for a notice or once unsent.
      * </pre>
      *
      * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
@@ -2695,7 +1239,7 @@ public  final class ChatLine extends
     /**
      * <pre>
      * The line it answers (返信), by its seq in the same chat; 0 for none,
-     * and none once unsent.
+     * and none for a notice or once unsent.
      * </pre>
      *
      * <code>uint64 reply_to = 18 [json_name = "replyTo"];</code>
@@ -2709,258 +1253,84 @@ public  final class ChatLine extends
 
     /**
      * <pre>
-     * A line from the app in 全体チャット, not a message (spec/chat.md,
-     * Notices): author_id is who did it. It has no words, takes no
-     * reactions, replies or pins, and is never unread.
+     * What the line is: always one of its kinds. A device that gets none,
+     * or one it does not know (from an app newer than itself), shows
+     * nothing in its place.
      * </pre>
      *
-     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
      */
     @java.lang.Override
-    public boolean hasNotice() {
-      return instance.hasNotice();
+    public boolean hasContent() {
+      return instance.hasContent();
     }
     /**
      * <pre>
-     * A line from the app in 全体チャット, not a message (spec/chat.md,
-     * Notices): author_id is who did it. It has no words, takes no
-     * reactions, replies or pins, and is never unread.
+     * What the line is: always one of its kinds. A device that gets none,
+     * or one it does not know (from an app newer than itself), shows
+     * nothing in its place.
      * </pre>
      *
-     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
      */
     @java.lang.Override
-    public app.pochical.v1.ChatNotice getNotice() {
-      return instance.getNotice();
+    public app.pochical.v1.ChatContent getContent() {
+      return instance.getContent();
     }
     /**
      * <pre>
-     * A line from the app in 全体チャット, not a message (spec/chat.md,
-     * Notices): author_id is who did it. It has no words, takes no
-     * reactions, replies or pins, and is never unread.
+     * What the line is: always one of its kinds. A device that gets none,
+     * or one it does not know (from an app newer than itself), shows
+     * nothing in its place.
      * </pre>
      *
-     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
      */
-    public Builder setNotice(app.pochical.v1.ChatNotice value) {
+    public Builder setContent(app.pochical.v1.ChatContent value) {
       copyOnWrite();
-      instance.setNotice(value);
+      instance.setContent(value);
       return this;
       }
     /**
      * <pre>
-     * A line from the app in 全体チャット, not a message (spec/chat.md,
-     * Notices): author_id is who did it. It has no words, takes no
-     * reactions, replies or pins, and is never unread.
+     * What the line is: always one of its kinds. A device that gets none,
+     * or one it does not know (from an app newer than itself), shows
+     * nothing in its place.
      * </pre>
      *
-     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
      */
-    public Builder setNotice(
-        app.pochical.v1.ChatNotice.Builder builderForValue) {
+    public Builder setContent(
+        app.pochical.v1.ChatContent.Builder builderForValue) {
       copyOnWrite();
-      instance.setNotice(builderForValue.build());
+      instance.setContent(builderForValue.build());
       return this;
     }
     /**
      * <pre>
-     * A line from the app in 全体チャット, not a message (spec/chat.md,
-     * Notices): author_id is who did it. It has no words, takes no
-     * reactions, replies or pins, and is never unread.
+     * What the line is: always one of its kinds. A device that gets none,
+     * or one it does not know (from an app newer than itself), shows
+     * nothing in its place.
      * </pre>
      *
-     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
      */
-    public Builder mergeNotice(app.pochical.v1.ChatNotice value) {
+    public Builder mergeContent(app.pochical.v1.ChatContent value) {
       copyOnWrite();
-      instance.mergeNotice(value);
+      instance.mergeContent(value);
       return this;
     }
     /**
      * <pre>
-     * A line from the app in 全体チャット, not a message (spec/chat.md,
-     * Notices): author_id is who did it. It has no words, takes no
-     * reactions, replies or pins, and is never unread.
+     * What the line is: always one of its kinds. A device that gets none,
+     * or one it does not know (from an app newer than itself), shows
+     * nothing in its place.
      * </pre>
      *
-     * <code>.pochical.v1.ChatNotice notice = 19 [json_name = "notice"];</code>
+     * <code>.pochical.v1.ChatContent content = 22 [json_name = "content"];</code>
      */
-    public Builder clearNotice() {  copyOnWrite();
-      instance.clearNotice();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    @java.lang.Override
-    public java.util.List<app.pochical.v1.ChatPhoto> getPhotosList() {
-      return java.util.Collections.unmodifiableList(
-          instance.getPhotosList());
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    @java.lang.Override
-    public int getPhotosCount() {
-      return instance.getPhotosCount();
-    }/**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    @java.lang.Override
-    public app.pochical.v1.ChatPhoto getPhotos(int index) {
-      return instance.getPhotos(index);
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    public Builder setPhotos(
-        int index, app.pochical.v1.ChatPhoto value) {
-      copyOnWrite();
-      instance.setPhotos(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    public Builder setPhotos(
-        int index, app.pochical.v1.ChatPhoto.Builder builderForValue) {
-      copyOnWrite();
-      instance.setPhotos(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    public Builder addPhotos(app.pochical.v1.ChatPhoto value) {
-      copyOnWrite();
-      instance.addPhotos(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    public Builder addPhotos(
-        int index, app.pochical.v1.ChatPhoto value) {
-      copyOnWrite();
-      instance.addPhotos(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    public Builder addPhotos(
-        app.pochical.v1.ChatPhoto.Builder builderForValue) {
-      copyOnWrite();
-      instance.addPhotos(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    public Builder addPhotos(
-        int index, app.pochical.v1.ChatPhoto.Builder builderForValue) {
-      copyOnWrite();
-      instance.addPhotos(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    public Builder addAllPhotos(
-        java.lang.Iterable<? extends app.pochical.v1.ChatPhoto> values) {
-      copyOnWrite();
-      instance.addAllPhotos(values);
-      return this;
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    public Builder clearPhotos() {
-      copyOnWrite();
-      instance.clearPhotos();
-      return this;
-    }
-    /**
-     * <pre>
-     * The photos sent as the line, with no words: one, or several sent at
-     * once, drawn as one album (spec/chat.md, Albums). None for anything
-     * else, and once unsent.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 21 [json_name = "photos"];</code>
-     */
-    public Builder removePhotos(int index) {
-      copyOnWrite();
-      instance.removePhotos(index);
+    public Builder clearContent() {  copyOnWrite();
+      instance.clearContent();
       return this;
     }
 
@@ -2984,31 +1354,17 @@ public  final class ChatLine extends
             "threadId_",
             "seq_",
             "authorId_",
-            "text_",
             "sentAtMs_",
-            "edited_",
-            "unsent_",
             "opId_",
             "reactions_",
             app.pochical.v1.ChatReaction.class,
             "pinnedOrder_",
-            "days_",
-            "poll_",
-            "votes_",
-            app.pochical.v1.ChatVotes.class,
-            "decided_",
-            "preview_",
-            "hidden_",
             "replyTo_",
-            "notice_",
-            "photos_",
-            app.pochical.v1.ChatPhoto.class,
+            "content_",
           };
           java.lang.String info =
-              "\u0000\u0013\u0000\u0001\u0001\u0015\u0013\u0000\u0004\u0000\u0001\u0208\u0002\u0003" +
-              "\u0003\u0208\u0004\u0208\u0005\u0002\u0006\u0007\u0007\u0007\b\u0208\t\u001b\n\u0003" +
-              "\u000b\u021a\f\u0007\r\u001b\u000e\u0208\u0010\u1009\u0000\u0011\u0007\u0012\u0003" +
-              "\u0013\u1009\u0001\u0015\u001b";
+              "\u0000\t\u0000\u0001\u0001\u0016\t\u0000\u0001\u0000\u0001\u0208\u0002\u0003\u0003" +
+              "\u0208\u0005\u0002\b\u0208\t\u001b\n\u0003\u0012\u0003\u0016\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

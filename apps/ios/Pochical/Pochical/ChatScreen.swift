@@ -215,7 +215,7 @@ struct ChatScreen: View {
     // lines laid out keep it meanwhile (`holds`).
     .onChange(
       of: acting.map { acting in
-        state.lines.contains { $0.opID == acting.lineID && !$0.unsent }
+        state.lines.contains { $0.opID == acting.lineID && $0.content != .unsent }
       }
     ) {
       _, there in
@@ -457,8 +457,10 @@ struct ChatScreen: View {
         reporting: $reporting, profileOf: $profileOf, blockQuestion: $blockQuestion,
         onMessage: message(_:), onReported: reported, onSetBlocked: setBlocked))
     .sheet(item: $deciding) { line in
-      DecidePollSheet(days: line.days, votes: line.votes, decided: line.decided) { day in
-        decide(line, on: day)
+      if case .poll(let poll) = line.content {
+        DecidePollSheet(days: poll.days, votes: poll.votes, decided: poll.decided) { day in
+          decide(line, on: day)
+        }
       }
     }
     .sheet(item: $reactingTo) { line in
@@ -669,7 +671,7 @@ struct ChatScreen: View {
       switch item {
       case .line(let line, _):
         starts = startsRun(
-          at: line.sentAtMs, writer: line.unsent || line.notice != nil ? nil : line.authorID)
+          at: line.sentAtMs, writer: isMessage(line) ? line.authorID : nil)
         replies = line.replyTo != nil
       case .waiting(let line, _):
         starts = startsRun(at: line.madeAtMs, writer: meID)
@@ -708,8 +710,17 @@ struct ChatScreen: View {
   /// the next; nil for what shows no time of its own (a notice, a line
   /// taken back or waiting).
   private func sentAt(_ item: ChatItem) -> Int64? {
-    guard case .line(let line, _) = item, !line.unsent, line.notice == nil else { return nil }
+    guard case .line(let line, _) = item, isMessage(line) else { return nil }
     return line.sentAtMs
+  }
+
+  /// A line someone wrote, not one the chat words itself: a notice, or
+  /// a line taken back, which sits apart from the runs of messages.
+  private func isMessage(_ line: ChatLineRow) -> Bool {
+    switch line.content {
+    case .words, .photos, .days, .poll, .hidden: true
+    case .notice, .unsent: false
+    }
   }
 
   @ViewBuilder private func row(
@@ -728,16 +739,12 @@ struct ChatScreen: View {
       // A heading, as the days are, for VoiceOver's rotor to go to.
       .accessibilityElement(children: .combine)
       .accessibilityAddTraits(.isHeader)
-    case .line(let line, _) where line.hidden:
-      // Never delivered to the reader: nothing shows.
-      EmptyView()
-    case .line(let line, _) where folded(line) && !line.unsent && line.notice == nil:
-      BlockedLine { shownBlocked.insert(line.seq) }
     case .line(let line, let runStart):
-      // A blocked member's line shown at a tap stands alone between the
-      // folded ones, with their face, the way to their profile.
-      let startsRun = runStart || writerBlocked(line)
-      if let notice = line.notice {
+      switch line.content {
+      case .hidden:
+        // Never delivered to the reader: nothing shows.
+        EmptyView()
+      case .notice(let notice):
         // A line from the app, as an unsent line sits: who did what, by
         // the names the group shows now.
         Text(
@@ -750,7 +757,7 @@ struct ChatScreen: View {
           .frame(maxWidth: .infinity)
           .padding(.horizontal, 24)
           .padding(.vertical, 8)
-      } else if line.unsent {
+      case .unsent:
         Text(
           unsentLine(
             names[line.authorID], mine: line.authorID == meID,
@@ -760,8 +767,15 @@ struct ChatScreen: View {
           .multilineTextAlignment(.center)
           .frame(maxWidth: .infinity)
           .padding(.vertical, 8)
-      } else {
-        lineView(line, startsRun: startsRun, showsTime: showsTime, names: names)
+      case .words, .photos, .days, .poll:
+        if folded(line) {
+          BlockedLine { shownBlocked.insert(line.seq) }
+        } else {
+          // A blocked member's line shown at a tap stands alone between
+          // the folded ones, with their face, the way to their profile.
+          lineView(
+            line, startsRun: runStart || writerBlocked(line), showsTime: showsTime, names: names)
+        }
       }
     case .waiting(let line, let startsRun):
       lineView(waiting: line, startsRun: startsRun, names: names)
@@ -773,13 +787,14 @@ struct ChatScreen: View {
     _ line: ChatLineRow, startsRun: Bool, showsTime: Bool = true, names: [String: String]
   ) -> LineView {
     let mine = line.authorID == meID
+    let table: GroupRoute? =
+      if case .days(let days) = line.content { shifts(on: days.first) } else { nil }
     return LineView(
-      lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
-      members: cardMembers, poll: pollLine(for: line), photos: line.photos,
+      lineID: line.opID, content: line.content, members: cardMembers,
+      canDecide: canDecide(line),
       quote: line.replyTo.map(quote(of:)), unfolded: unfolded.contains(line.opID),
-      shelf: place.shelf,
-      shifts: line.poll ? nil : shifts(on: line.days.first),
-      time: line.sentAtMs, showsTime: showsTime, edited: line.edited, mine: mine,
+      shelf: place.shelf, shifts: table,
+      time: line.sentAtMs, showsTime: showsTime, mine: mine,
       writer: mine || !startsRun ? nil : names[line.authorID] ?? "",
       author: mine ? nil : memberName(line.authorID, in: names),
       menu: actions(for: line, mine: mine).map(\.title),
@@ -797,12 +812,11 @@ struct ChatScreen: View {
     waiting line: WaitingLine, startsRun: Bool, names: [String: String]
   ) -> LineView {
     LineView(
-      lineID: line.opID, text: line.text, preview: line.preview, days: line.days,
-      members: cardMembers, poll: waitingPoll(line), photos: line.photos, up: line.up,
-      quote: line.replyTo.map(quote(of:)), shelf: place.shelf, time: line.madeAtMs,
-      edited: false, mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
+      lineID: line.opID, content: line.content, members: cardMembers, canDecide: true,
+      up: line.up, quote: line.replyTo.map(quote(of:)), shelf: place.shelf, time: line.madeAtMs,
+      mine: true, writer: nil, menu: actions(forWaiting: line).map(\.title),
       named: false, first: startsRun, waiting: true, failed: line.failed, names: names,
-      marks: marks,
+      marks: marks, meID: meID,
       actions: lineActions)
   }
 
@@ -814,24 +828,21 @@ struct ChatScreen: View {
   /// A line come in as VoiceOver says it: who and what, or the app's
   /// notice; nothing for one's own, one not shown, or a blocked writer's.
   private func spoken(_ line: ChatLineRow) -> String? {
-    guard line.authorID != meID, !line.hidden, !line.unsent else { return nil }
+    guard line.authorID != meID else { return nil }
     let name = nameOf(line.authorID)
-    if let notice = line.notice {
+    let words: String
+    switch line.content {
+    case .hidden, .unsent:
+      return nil
+    case .notice(let notice):
       return notice.words(by: name, subject: nameOf(notice.subjectID))
+    case .photos(let photos):
+      words = photoWords(photos)
+    case .words, .days, .poll:
+      words = lineWords(line.content, nameOf: nameOf)
     }
     guard !writerBlocked(line) else { return nil }
-    let words =
-      line.photos.count > 1
-      ? "\(line.photos.count)枚の写真"
-      : line.photos.first.map(photoWords)
-        ?? lineWords(
-          line.text, days: line.days, poll: line.poll, decided: line.decided, nameOf: nameOf)
     return "\(name)、\(words)"
-  }
-
-  /// A poll on its way: nothing voted yet.
-  private func waitingPoll(_ line: WaitingLine) -> PollLine? {
-    line.poll ? PollLine(votes: [], decided: nil, names: names, meID: meID, canDecide: true) : nil
   }
 
   /// Acts on the line `lineID` as the chat is now.
@@ -919,12 +930,14 @@ struct ChatScreen: View {
   /// A line still on its way's menu: コピー for words, and 送信取消, which
   /// takes it back before it goes (spec/chat.md, Lines on their way).
   private func actions(forWaiting line: WaitingLine) -> [MessageAction] {
-    let words = line.days.isEmpty && line.photos.isEmpty
-    var actions = words ? [copy(line.text)] : []
+    var actions: [MessageAction] = []
+    if let words = line.content.words {
+      actions.append(copy(words.text))
+    }
     actions.append(
       MessageAction(
         title: "送信取消", systemImage: "arrow.uturn.backward", destructive: true,
-        startsGroup: words
+        startsGroup: !actions.isEmpty
       ) { unsending = .waiting(line) })
     return actions
   }
@@ -961,14 +974,14 @@ struct ChatScreen: View {
   /// もう一度送る and 削除 (spec/chat.md, Photos).
   /// Nothing once its photos are up and the line is being sent.
   private func stopSending(_ line: WaitingLine) {
-    if !line.photos.isEmpty, !PhotoUploads.shared.stop(line.opID) { return }
+    if !line.content.photos.isEmpty, !PhotoUploads.shared.stop(line.opID) { return }
     write { try Chats.fail(line.opID, in: $0) }
   }
 
   /// Sends a line not sent once more, after the rest, as if written now.
   /// Its photos not up go again from waiting their turn, × stopping it.
   private func sendAgain(_ line: WaitingLine) {
-    PhotoUploads.shared.forget(line.opID, photos: line.photos.map(\.id))
+    PhotoUploads.shared.forget(line.opID, photos: line.content.photos.map(\.id))
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     sendingAgain[line.opID] = line.madeAtMs
     if !write({ try Chats.sendAgain(line.opID, now: now, in: $0) }) {
@@ -982,8 +995,8 @@ struct ChatScreen: View {
   /// before (spec/chat.md, Lines on their way).
   private func takeBack(_ line: WaitingLine) {
     guard write({ try Chats.takeBack(line.opID, in: $0) }) else { return }
-    PhotoUploads.shared.forget(line.opID, photos: line.photos.map(\.id))
-    for photo in line.photos {
+    PhotoUploads.shared.forget(line.opID, photos: line.content.photos.map(\.id))
+    for photo in line.content.photos {
       ChatPhotos.forget(photo.id, in: place.shelf)
     }
   }
@@ -1327,7 +1340,8 @@ struct ChatScreen: View {
   /// The first and last of the days the chat's lines share, for their
   /// cards' shifts.
   private var sharedSpan: DaySpan? {
-    let days = chat.state.lines.flatMap(\.days) + chat.state.waiting.flatMap(\.days)
+    let contents = chat.state.lines.map(\.content) + chat.state.waiting.map(\.content)
+    let days = contents.flatMap(\.days)
     guard let from = days.min(), let through = days.max() else { return nil }
     return DaySpan(from: from, through: through)
   }
@@ -1356,8 +1370,8 @@ struct ChatScreen: View {
     let photos = near.flatMap { item -> [LinePhoto] in
       switch item {
       case .line(let line, _):
-        return line.hidden || line.unsent || folded(line) ? [] : line.photos
-      case .waiting(let line, _): return line.photos
+        return folded(line) ? [] : line.content.photos
+      case .waiting(let line, _): return line.content.photos
       default: return []
       }
     }
@@ -1369,10 +1383,11 @@ struct ChatScreen: View {
   /// from the group (not a blocked member's folded away, as the group
   /// leaves them out too).
   private func openPhoto(_ key: PhotoKey, of line: ChatLineRow) {
-    guard line.photos.indices.contains(key.index) else { return }
+    let photos = line.content.photos
+    guard photos.indices.contains(key.index) else { return }
     guard let tapped = ChatPhotoItem.items(of: line, blocked: []).first(where: { $0.key == key })
     else {
-      viewing = PhotoViewing(line.photos[key.index])
+      viewing = PhotoViewing(photos[key.index])
       return
     }
     let held = chat.state.lines.flatMap { ChatPhotoItem.items(of: $0, blocked: blocked) }
@@ -1493,14 +1508,6 @@ struct ChatScreen: View {
       || chat.writers.contains { $0.userID == line.authorID && $0.left }
   }
 
-  /// A poll's card's votes and what voting and settling it do.
-  private func pollLine(for line: ChatLineRow) -> PollLine? {
-    guard line.poll else { return nil }
-    return PollLine(
-      votes: line.votes, decided: line.decided, names: names, meID: meID,
-      canDecide: canDecide(line))
-  }
-
   /// Settles a poll on `day`, and says so to whoever settled it.
   private func decide(_ line: ChatLineRow, on day: Day) {
     var decide = Pochical_V1_ChatDecide()
@@ -1535,10 +1542,11 @@ struct ChatScreen: View {
   /// notices, a line taken back or folded for a blocked writer, nor one
   /// still on its way.
   private func replySwipe(_ item: ChatItem?) -> ReplySwipe? {
-    guard let line = answered(item), !line.hidden, !line.unsent, line.notice == nil,
-      !folded(line)
-    else { return nil }
-    return line.authorID == meID ? .leftward : .rightward
+    guard let line = answered(item), !folded(line) else { return nil }
+    switch line.content {
+    case .words, .photos, .days, .poll: return line.authorID == meID ? .leftward : .rightward
+    case .notice, .unsent, .hidden: return nil
+    }
   }
 
   /// Answers a line (返信): quoted over the composer until sent or ×.
@@ -1568,25 +1576,29 @@ struct ChatScreen: View {
       return LineQuote(seq: seq, words: "以前のメッセージ")
     }
     let writer = nameOf(line.authorID)
-    if line.unsent {
+    switch line.content {
+    case .unsent:
       return LineQuote(seq: seq, writer: writer, words: "取り消されたメッセージ")
+    case .notice, .hidden:
+      // A notice takes no reply; a line of a kind the app does not know
+      // is quoted as one not held.
+      return LineQuote(seq: seq, words: "以前のメッセージ")
+    case .words, .photos, .days, .poll:
+      if blocked.contains(line.authorID) {
+        return LineQuote(seq: seq, words: "ブロック中のメンバーのメッセージ")
+      }
+      return LineQuote(
+        seq: seq, writer: writer, words: lineWords(line.content, nameOf: nameOf),
+        photo: line.content.photos.first)
     }
-    if blocked.contains(line.authorID) {
-      return LineQuote(seq: seq, words: "ブロック中のメンバーのメッセージ")
-    }
-    return LineQuote(
-      seq: seq, writer: writer,
-      words: lineWords(
-        line.text, days: line.days, poll: line.poll, decided: line.decided,
-        photos: line.photos.count, nameOf: nameOf),
-      photo: line.photos.first)
   }
 
   private func edit(_ line: ChatLineRow) {
+    guard case .words(let words) = line.content else { return }
     draft.target = .edit(line)
     // Its mentions as @name again, still picked.
-    draft.text = plainText(line.text, nameOf: nameOf)
-    draft.picked = mentions(in: line.text).map { PickedMember(id: $0, name: nameOf($0)) }
+    draft.text = plainText(words.text, nameOf: nameOf)
+    draft.picked = mentions(in: words.text).map { PickedMember(id: $0, name: nameOf($0)) }
     draft.field.focus()
   }
 
@@ -1597,13 +1609,14 @@ struct ChatScreen: View {
   }
 
   private func save(_ line: ChatLineRow, text: String) {
+    guard case .words(let words) = line.content else { return }
     var change = Pochical_V1_ChatChange()
     change.threadID = threadID
     change.seq = UInt64(line.seq)
     change.text = withMentions(text, picked: draft.picked)
     // The page stays while the first link does (spec/vectors/chat.json,
     // edited); else the new link's, if it has come.
-    change.keepsPreview = keepsPreview(of: line.text, editedTo: change.text)
+    change.keepsPreview = keepsPreview(of: words.text, editedTo: change.text)
     if !change.keepsPreview, let preview = draft.attachedPreview(for: text) {
       change.preview = preview.wire
     }
@@ -1616,18 +1629,24 @@ struct ChatScreen: View {
   /// the danger color (spec/chat.md, Editing and unsending).
   private func actions(for line: ChatLineRow, mine: Bool) -> [MessageAction] {
     let pinned = chat.state.pins.contains { $0.seq == line.seq }
-    // Shared days, polls and photos have no words to copy or change.
-    let words = line.days.isEmpty && line.photos.isEmpty
     // First, for any line (/design's menu).
     var actions = [
       MessageAction(title: "返信", systemImage: "arrowshape.turn.up.left") { reply(to: line) }
     ]
-    if words {
-      actions.append(copy(line.text))
-    }
-    if !line.photos.isEmpty {
+    // Shared days and polls have no words to copy or change.
+    var words = false
+    var poll: LineContent.Poll?
+    switch line.content {
+    case .words(let said):
+      words = true
+      actions.append(copy(said.text))
+    case .photos(let photos):
       actions.append(
-        MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(line.photos) })
+        MessageAction(title: "保存", systemImage: "square.and.arrow.down") { save(photos) })
+    case .poll(let asked):
+      poll = asked
+    case .days, .notice, .unsent, .hidden:
+      break
     }
     // Anyone's line, for everyone in the chat (spec/chat.md, Pins).
     if place.rules.pins {
@@ -1639,7 +1658,7 @@ struct ChatScreen: View {
     if mine, words, place.rules.edit {
       actions.append(MessageAction(title: "編集", systemImage: "pencil") { edit(line) })
     }
-    if line.poll, line.decided != nil, canDecide(line) {
+    if poll?.decided != nil, canDecide(line) {
       actions.append(
         MessageAction(title: "決め直す", systemImage: "calendar.badge.checkmark") {
           deciding = line
