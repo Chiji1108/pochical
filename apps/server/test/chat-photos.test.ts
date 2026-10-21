@@ -46,13 +46,25 @@ const send = async (
               }
             : {
                 case: "send" as const,
-                value:
-                  "photo" in line
-                    ? {
-                        photos: [{ height: 10, id: line.photo, width: 10 }],
-                        threadId: "group",
-                      }
-                    : { text: line.text, threadId: "group" },
+                value: {
+                  content: {
+                    kind:
+                      "photo" in line
+                        ? {
+                            case: "photos" as const,
+                            value: {
+                              photos: [
+                                { height: 10, id: line.photo, width: 10 },
+                              ],
+                            },
+                          }
+                        : {
+                            case: "words" as const,
+                            value: { text: line.text },
+                          },
+                  },
+                  threadId: "group",
+                },
               },
         opId: crypto.randomUUID(),
       })),

@@ -740,35 +740,54 @@ message ChatReact {
   bool on = 4;
 }
 
-// A new line at the end of the chat: words, or days shared with
-// everyone's shifts (spec/chat.md, Long messages and shared days).
+// A new line at the end of the chat.
 message ChatSend {
   string thread_id = 1;
-  // 1 to chatMessage characters, not blank; empty for days.
-  string text = 2;
-  // 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-  // each once and in order; none for words.
-  repeated string days = 3;
-  // The days put to the vote instead: 2 days at least, in the group chat.
-  bool poll = 4;
-  reserved 5, 10;
-  reserved "photo", "album";
-  // The page of the words' first link, as GetLinkPreview gave it; none
-  // when the sender took it off (×) or it had not come, when the server
-  // reads the page itself once the line is taken and adds it to the line.
-  LinkPreview preview = 6;
+  // What the line is to be: always one of the kinds a member sends.
+  ChatSendContent content = 12;
   // The line it answers (返信), an earlier one of the same chat; 0 for none.
   uint64 reply_to = 7;
-  // The sender took the page off (×): the line goes without one.
-  bool without_preview = 8;
   // The app's version and the device, as the chat's head says reach its
   // readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
   // ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
   // only there, cut short as an app's word on itself.
   string device = 9;
-  // Photos instead, 1 to chatRules.photosPerSend, each once: the
-  // sender's own, uploaded first and not sent before. No words or days.
-  repeated ChatPhoto photos = 11;
+  reserved 2, 3, 4, 5, 6, 8, 10, 11;
+  reserved "text", "days", "poll", "photo", "album", "preview", "without_preview", "photos";
+}
+
+// What a member sends as a line (spec/chat.md, What a line is): one thing
+// to its readers, so one kind of it. A send of none, or of a kind the
+// group does not know, is not taken.
+message ChatSendContent {
+  oneof kind {
+    ChatSendWords words = 1;
+    // 1 to chatRules.photosPerSend photos, each once: the sender's own,
+    // uploaded first and not sent before (spec/chat.md, Albums).
+    ChatAlbum photos = 2;
+    // Days shared with everyone's shifts (spec/chat.md, Long messages and
+    // shared days).
+    ChatSharedDays days = 3;
+    // Days put to the vote (spec/chat.md, Polls), in the group chat.
+    ChatSendPoll poll = 4;
+  }
+}
+
+message ChatSendWords {
+  // 1 to chatMessage characters (design/src/limits.ts), not blank.
+  string text = 1;
+  // The page of the words' first link, as GetLinkPreview gave it; none
+  // when the sender took it off (×) or it had not come, when the server
+  // reads the page itself once the line is taken and adds it to the line.
+  LinkPreview preview = 2;
+  // The sender took the page off (×): the line goes without one.
+  bool without_preview = 3;
+}
+
+message ChatSendPoll {
+  // 2 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD, each
+  // once and in order.
+  repeated string days = 1;
 }
 
 // New words for one of the member's own lines of words (編集).

@@ -74,7 +74,13 @@ describe("a group's notices", () => {
       value: {
         edits: [
           {
-            kind: { case: "send", value: { text: "やあ", threadId: "group" } },
+            kind: {
+              case: "send",
+              value: {
+                content: { kind: { case: "words", value: { text: "やあ" } } },
+                threadId: "group",
+              },
+            },
             opId: "a",
           },
         ],

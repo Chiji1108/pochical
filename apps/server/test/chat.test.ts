@@ -55,7 +55,10 @@ function sendChatKind(kind: ChatKind, threadId: string) {
   if ("poll" in kind) {
     return {
       case: "send",
-      value: { days: kind.poll, poll: true, text: "", threadId },
+      value: {
+        content: { kind: { case: "poll", value: { days: kind.poll } } },
+        threadId,
+      },
     } as const;
   }
   if ("vote" in kind) {
@@ -75,7 +78,10 @@ function sendChatKind(kind: ChatKind, threadId: string) {
   if ("days" in kind) {
     return {
       case: "send",
-      value: { days: kind.days, text: "", threadId },
+      value: {
+        content: { kind: { case: "days", value: { days: kind.days } } },
+        threadId,
+      },
     } as const;
   }
   if ("pin" in kind) {
@@ -95,14 +101,21 @@ function sendChatKind(kind: ChatKind, threadId: string) {
   if ("send" in kind) {
     return {
       case: "send",
-      value: { text: kind.send, threadId },
+      value: {
+        content: { kind: { case: "words", value: { text: kind.send } } },
+        threadId,
+      },
     } as const;
   }
   if ("reply" in kind) {
     const [seq, text] = kind.reply;
     return {
       case: "send",
-      value: { replyTo: BigInt(seq), text, threadId },
+      value: {
+        content: { kind: { case: "words", value: { text } } },
+        replyTo: BigInt(seq),
+        threadId,
+      },
     } as const;
   }
   if ("change" in kind) {
@@ -705,8 +718,15 @@ describe("a group's chat", () => {
     edit("a", {
       case: "send",
       value: {
-        preview: page("https://cafe.example"),
-        text: "ここ https://cafe.example",
+        content: {
+          kind: {
+            case: "words",
+            value: {
+              preview: page("https://cafe.example"),
+              text: "ここ https://cafe.example",
+            },
+          },
+        },
         threadId: thread,
       },
     });
@@ -757,7 +777,12 @@ describe("a group's chat", () => {
             {
               kind: {
                 case: "send",
-                value: { text, threadId: thread, withoutPreview },
+                value: {
+                  content: {
+                    kind: { case: "words", value: { text, withoutPreview } },
+                  },
+                  threadId: thread,
+                },
               },
               opId,
             },

@@ -49,11 +49,15 @@ const upload = async (
 type Kind = MessageInitShape<typeof ChatEditSchema>["kind"];
 
 /** A send of the photos as one line, as the composer sends them. */
-const photoLine = (ids: string[], text = ""): Kind => ({
+const photoLine = (ids: string[]): Kind => ({
   case: "send",
   value: {
-    photos: ids.map((id) => ({ height: 10, id, width: 10 })),
-    text,
+    content: {
+      kind: {
+        case: "photos",
+        value: { photos: ids.map((id) => ({ height: 10, id, width: 10 })) },
+      },
+    },
     threadId: "group",
   },
 });
@@ -231,7 +235,7 @@ describe("a line of photos", () => {
       .toStrictEqual(many.map((id) => id !== "m0"));
   });
 
-  it("is dropped unless its photos are the sender's own, unsent, each once, as many as one send holds, without words", async () => {
+  it("is dropped empty, or unless its photos are the sender's own, unsent, each once, as many as one send holds", async () => {
     const { groupId, guest, maker } = await pair();
     const many = Array.from(
       { length: chatRules.photosPerSend + 1 },
@@ -246,8 +250,8 @@ describe("a line of photos", () => {
       photoLine(many),
       photoLine(["m0", "theirs"]),
       photoLine(["m0", "sent"]),
-      photoLine(["m0"], "見て"),
       photoLine([]),
+      { case: "send", value: { threadId: "group" } },
     ]);
     // None of those took m0 and m1, which still go.
     await edit(mine, [photoLine(["m0", "m1"])]);

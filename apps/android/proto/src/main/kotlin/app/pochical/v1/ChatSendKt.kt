@@ -12,8 +12,7 @@ public inline fun chatSend(block: app.pochical.v1.ChatSendKt.Dsl.() -> kotlin.Un
   app.pochical.v1.ChatSendKt.Dsl._create(app.pochical.v1.ChatSend.newBuilder()).apply { block() }._build()
 /**
  * ```
- * A new line at the end of the chat: words, or days shared with
- * everyone's shifts (spec/chat.md, Long messages and shared days).
+ * A new line at the end of the chat.
  * ```
  *
  * Protobuf type `pochical.v1.ChatSend`
@@ -53,203 +52,42 @@ public object ChatSendKt {
 
     /**
      * ```
-     * 1 to chatMessage characters, not blank; empty for days.
+     * What the line is to be: always one of the kinds a member sends.
      * ```
      *
-     * `string text = 2 [json_name = "text"];`
+     * `.pochical.v1.ChatSendContent content = 12 [json_name = "content"];`
      */
-    public var text: kotlin.String
-      @kotlin.jvm.JvmName("getText")
-        get() = _builder.text
-      @kotlin.jvm.JvmName("setText")
+    public var content: app.pochical.v1.ChatSendContent
+      @kotlin.jvm.JvmName("getContent")
+        get() = _builder.content
+      @kotlin.jvm.JvmName("setContent")
         set(value) {
-        _builder.text = value
+        _builder.content = value
       }
     /**
      * ```
-     * 1 to chatMessage characters, not blank; empty for days.
+     * What the line is to be: always one of the kinds a member sends.
      * ```
      *
-     * `string text = 2 [json_name = "text"];`
+     * `.pochical.v1.ChatSendContent content = 12 [json_name = "content"];`
      */
-    public fun clearText() {
-      _builder.clearText()
+    public fun clearContent() {
+      _builder.clearContent()
+    }
+    /**
+     * ```
+     * What the line is to be: always one of the kinds a member sends.
+     * ```
+     *
+     * `.pochical.v1.ChatSendContent content = 12 [json_name = "content"];`
+     * @return Whether the content field is set.
+     */
+    public fun hasContent(): kotlin.Boolean {
+      return _builder.hasContent()
     }
 
-    /**
-     * An uninstantiable, behaviorless type to represent the field in
-     * generics.
-     */
-    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
-    public class DaysProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
-    /**
-     * ```
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * ```
-     *
-     * `repeated string days = 3 [json_name = "days"];`
-     * @return A list containing the days.
-     */
-    public val days: com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>
-    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
-      get() = com.google.protobuf.kotlin.DslList(
-        _builder.daysList
-      )
-    /**
-     * ```
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * ```
-     *
-     * `repeated string days = 3 [json_name = "days"];`
-     * @param value The days to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addDays")
-    public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.add(value: kotlin.String) {
-      _builder.addDays(value)
-    }
-    /**
-     * ```
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * ```
-     *
-     * `repeated string days = 3 [json_name = "days"];`
-     * @param value The days to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignDays")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.plusAssign(value: kotlin.String) {
-      add(value)
-    }
-    /**
-     * ```
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * ```
-     *
-     * `repeated string days = 3 [json_name = "days"];`
-     * @param values The days to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addAllDays")
-    public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.addAll(values: kotlin.collections.Iterable<kotlin.String>) {
-      _builder.addAllDays(values)
-    }
-    /**
-     * ```
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * ```
-     *
-     * `repeated string days = 3 [json_name = "days"];`
-     * @param values The days to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignAllDays")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.plusAssign(values: kotlin.collections.Iterable<kotlin.String>) {
-      addAll(values)
-    }
-    /**
-     * ```
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * ```
-     *
-     * `repeated string days = 3 [json_name = "days"];`
-     * @param index The index to set the value at.
-     * @param value The days to set.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("setDays")
-    public operator fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.set(index: kotlin.Int, value: kotlin.String) {
-      _builder.setDays(index, value)
-    }/**
-     * ```
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * ```
-     *
-     * `repeated string days = 3 [json_name = "days"];`
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("setDays")
-    public fun com.google.protobuf.kotlin.DslList<kotlin.String, DaysProxy>.clear() {
-      _builder.clearDays()
-    }
-    /**
-     * ```
-     * The days put to the vote instead: 2 days at least, in the group chat.
-     * ```
-     *
-     * `bool poll = 4 [json_name = "poll"];`
-     */
-    public var poll: kotlin.Boolean
-      @kotlin.jvm.JvmName("getPoll")
-        get() = _builder.poll
-      @kotlin.jvm.JvmName("setPoll")
-        set(value) {
-        _builder.poll = value
-      }
-    /**
-     * ```
-     * The days put to the vote instead: 2 days at least, in the group chat.
-     * ```
-     *
-     * `bool poll = 4 [json_name = "poll"];`
-     */
-    public fun clearPoll() {
-      _builder.clearPoll()
-    }
-
-    /**
-     * ```
-     * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come, when the server
-     * reads the page itself once the line is taken and adds it to the line.
-     * ```
-     *
-     * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
-     */
-    public var preview: app.pochical.v1.LinkPreview
-      @kotlin.jvm.JvmName("getPreview")
-        get() = _builder.preview
-      @kotlin.jvm.JvmName("setPreview")
-        set(value) {
-        _builder.preview = value
-      }
-    /**
-     * ```
-     * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come, when the server
-     * reads the page itself once the line is taken and adds it to the line.
-     * ```
-     *
-     * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
-     */
-    public fun clearPreview() {
-      _builder.clearPreview()
-    }
-    /**
-     * ```
-     * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come, when the server
-     * reads the page itself once the line is taken and adds it to the line.
-     * ```
-     *
-     * `.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];`
-     * @return Whether the preview field is set.
-     */
-    public fun hasPreview(): kotlin.Boolean {
-      return _builder.hasPreview()
-    }
-
-    public val ChatSendKt.Dsl.previewOrNull: app.pochical.v1.LinkPreview?
-      get() = _builder.previewOrNull
+    public val ChatSendKt.Dsl.contentOrNull: app.pochical.v1.ChatSendContent?
+      get() = _builder.contentOrNull
 
     /**
      * ```
@@ -274,31 +112,6 @@ public object ChatSendKt {
      */
     public fun clearReplyTo() {
       _builder.clearReplyTo()
-    }
-
-    /**
-     * ```
-     * The sender took the page off (×): the line goes without one.
-     * ```
-     *
-     * `bool without_preview = 8 [json_name = "withoutPreview"];`
-     */
-    public var withoutPreview: kotlin.Boolean
-      @kotlin.jvm.JvmName("getWithoutPreview")
-        get() = _builder.withoutPreview
-      @kotlin.jvm.JvmName("setWithoutPreview")
-        set(value) {
-        _builder.withoutPreview = value
-      }
-    /**
-     * ```
-     * The sender took the page off (×): the line goes without one.
-     * ```
-     *
-     * `bool without_preview = 8 [json_name = "withoutPreview"];`
-     */
-    public fun clearWithoutPreview() {
-      _builder.clearWithoutPreview()
     }
 
     /**
@@ -331,117 +144,11 @@ public object ChatSendKt {
     public fun clearDevice() {
       _builder.clearDevice()
     }
-
-    /**
-     * An uninstantiable, behaviorless type to represent the field in
-     * generics.
-     */
-    @kotlin.OptIn(com.google.protobuf.kotlin.OnlyForUseByGeneratedProtoCode::class)
-    public class PhotosProxy private constructor() : com.google.protobuf.kotlin.DslProxy()
-    /**
-     * ```
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
-     */
-     public val photos: com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>
-      @kotlin.jvm.JvmSynthetic
-  get() = com.google.protobuf.kotlin.DslList(
-        _builder.photosList
-      )
-    /**
-     * ```
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
-     * @param value The photos to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addPhotos")
-    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.add(value: app.pochical.v1.ChatPhoto) {
-      _builder.addPhotos(value)
-    }
-    /**
-     * ```
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
-     * @param value The photos to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignPhotos")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.plusAssign(value: app.pochical.v1.ChatPhoto) {
-      add(value)
-    }
-    /**
-     * ```
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
-     * @param values The photos to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("addAllPhotos")
-    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.addAll(values: kotlin.collections.Iterable<app.pochical.v1.ChatPhoto>) {
-      _builder.addAllPhotos(values)
-    }
-    /**
-     * ```
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
-     * @param values The photos to add.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("plusAssignAllPhotos")
-    @Suppress("NOTHING_TO_INLINE")
-    public inline operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.plusAssign(values: kotlin.collections.Iterable<app.pochical.v1.ChatPhoto>) {
-      addAll(values)
-    }
-    /**
-     * ```
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
-     * @param index The index to set the value at.
-     * @param value The photos to set.
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("setPhotos")
-    public operator fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.set(index: kotlin.Int, value: app.pochical.v1.ChatPhoto) {
-      _builder.setPhotos(index, value)
-    }
-    /**
-     * ```
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * ```
-     *
-     * `repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];`
-     */
-    @kotlin.jvm.JvmSynthetic
-@kotlin.jvm.JvmName("clearPhotos")
-    public fun com.google.protobuf.kotlin.DslList<app.pochical.v1.ChatPhoto, PhotosProxy>.clear() {
-      _builder.clearPhotos()
-    }
   }
 }
 public inline fun app.pochical.v1.ChatSend.copy(block: `app.pochical.v1`.ChatSendKt.Dsl.() -> kotlin.Unit): app.pochical.v1.ChatSend =
   `app.pochical.v1`.ChatSendKt.Dsl._create(this.toBuilder()).apply { block() }._build()
 
-public val app.pochical.v1.ChatSendOrBuilder.previewOrNull: app.pochical.v1.LinkPreview?
-  get() = if (hasPreview()) getPreview() else null
+public val app.pochical.v1.ChatSendOrBuilder.contentOrNull: app.pochical.v1.ChatSendContent?
+  get() = if (hasContent()) getContent() else null
 

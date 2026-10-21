@@ -109,6 +109,21 @@ public enum LineContent: Hashable, Sendable {
     case .hidden, nil: self = .hidden
     }
   }
+
+  /// The line a send makes, as the group will hold it: its words not
+  /// changed yet, its poll open; none, or a kind this app does not know,
+  /// is nothing to show.
+  init(_ wire: Pochical_V1_ChatSendContent) {
+    switch wire.kind {
+    case .words(let words):
+      self = .words(
+        Words(text: words.text, preview: words.hasPreview ? LinePreview(words.preview) : nil))
+    case .photos(let album): self = .photos(album.photos.map(LinePhoto.init))
+    case .days(let days): self = .days(days.days.compactMap(Day.init))
+    case .poll(let poll): self = .poll(Poll(days: poll.days.compactMap(Day.init)))
+    case nil: self = .hidden
+    }
+  }
 }
 
 /// Kept as JSON with its `kind`, the rest of a kind beside it.

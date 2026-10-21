@@ -394,13 +394,44 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
   }
 }
 
+@Test func eachKindOfSendWaitsAsTheLineItWillBe() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var words = Pochical_V1_ChatSendContent()
+    words.words.text = "見て"
+    var photos = Pochical_V1_ChatSendContent()
+    photos.photos.photos = wirePhotos(["a", "b"])
+    var days = Pochical_V1_ChatSendContent()
+    days.days.days = ["2026-11-03"]
+    var poll = Pochical_V1_ChatSendContent()
+    poll.poll.days = ["2026-11-03", "2026-11-04"]
+    let contents = [words, photos, days, poll, Pochical_V1_ChatSendContent()]
+    for (at, content) in contents.enumerated() {
+      var send = Pochical_V1_ChatSend()
+      send.threadID = groupThread
+      send.content = content
+      try Chats.edit(.send(send), in: "g", now: 10 + Int64(at), db: db)
+    }
+    let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
+    let november3 = Day(year: 2026, month: 11, day: 3)
+    #expect(
+      state.waiting.map(\.content) == [
+        .words(LineContent.Words(text: "見て")),
+        .photos(wirePhotos(["a", "b"]).map(LinePhoto.init)),
+        .days([november3]),
+        .poll(LineContent.Poll(days: [november3, Day(year: 2026, month: 11, day: 4)])),
+        .hidden,
+      ])
+  }
+}
+
 @Test func theMembersEditsShowWhileTheyWait() throws {
   let database = try appDatabase()
   try database.write { db in
     try GroupSync.take([line(1, "はじめ")], of: "g", in: db)
     var send = Pochical_V1_ChatSend()
     send.threadID = groupThread
-    send.text = "まだ届いてない"
+    send.content.words.text = "まだ届いてない"
     try Chats.edit(.send(send), in: "g", now: 10, db: db)
     var change = Pochical_V1_ChatChange()
     change.threadID = groupThread
@@ -485,7 +516,7 @@ private func line(_ seq: UInt64, _ text: String, op: String = "") -> Pochical_V1
   try database.write { db in
     var send = Pochical_V1_ChatSend()
     send.threadID = groupThread
-    send.text = "抜ける前に"
+    send.content.words.text = "抜ける前に"
     try Chats.edit(.send(send), in: "g", now: 1, db: db)
     var left = Pochical_V1_Change()
     left.cursor = 1
@@ -568,7 +599,7 @@ private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String =
 
     var send = Pochical_V1_ChatSend()
     send.threadID = groupThread
-    send.text = "まだ"
+    send.content.words.text = "まだ"
     try Chats.edit(.send(send), in: "g", now: 5, db: db)
     var read = Pochical_V1_ChatRead()
     read.threadID = groupThread
@@ -586,7 +617,7 @@ private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String =
   try database.write { db in
     var send = Pochical_V1_ChatSend()
     send.threadID = groupThread
-    send.text = "まだ"
+    send.content.words.text = "まだ"
     send.replyTo = 4
     try Chats.edit(.send(send), in: "g", now: 5, db: db)
     let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
@@ -615,7 +646,7 @@ private func unreadCount(_ cursor: UInt64, _ count: UInt32, in groupID: String =
     try GroupSync.take([line(1, "a")], of: "g", in: db)
     var send = Pochical_V1_ChatSend()
     send.threadID = directThread("me", "aya")
-    send.text = "ふたりで"
+    send.content.words.text = "ふたりで"
     try Chats.edit(.send(send), in: "g", now: 1, db: db)
     #expect(try Chats.threads(in: "g", db: db) == [groupThread, "direct:aya:me"])
   }
@@ -826,7 +857,7 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
     try GroupSync.take([days], of: "g", in: db)
     var send = Pochical_V1_ChatSend()
     send.threadID = groupThread
-    send.days = ["2026-11-03"]
+    send.content.days.days = ["2026-11-03"]
     try Chats.edit(.send(send), in: "g", now: 10, db: db)
     var unsend = Pochical_V1_ChatUnsend()
     unsend.threadID = groupThread
@@ -919,7 +950,7 @@ private func wirePhotos(_ ids: [String]) -> [Pochical_V1_ChatPhoto] {
 private func photoSend(_ ids: [String]) -> Pochical_V1_ChatSend {
   var send = Pochical_V1_ChatSend()
   send.threadID = groupThread
-  send.photos = wirePhotos(ids)
+  send.content.photos.photos = wirePhotos(ids)
   return send
 }
 
@@ -1212,10 +1243,10 @@ private func preview(of line: ChatLineRow) -> LinePreview? {
   try database.write { db in
     var send = Pochical_V1_ChatSend()
     send.threadID = groupThread
-    send.text = "とどいた"
+    send.content.words.text = "とどいた"
     try Chats.edit(.send(send), in: "g", now: 1, db: db)
     let taken = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
-    send.text = "まだ"
+    send.content.words.text = "まだ"
     try Chats.edit(.send(send), in: "g", now: 2, db: db)
     // Its line came first, then 129 more: it is far before the lines shown.
     try GroupSync.take(
@@ -1249,7 +1280,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     try Chats.edit(.send(photoSend(["p1"])), in: "g", now: 1, db: db)
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "見て"
+    words.content.words.text = "見て"
     try Chats.edit(.send(words), in: "g", now: 2, db: db)
     let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
 
@@ -1257,7 +1288,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     #expect(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting.map(\.failed) == [true, false])
     // The words go on without it.
     let (frames, sent) = try Chats.frames(of: "g", after: 0, now: early, in: db)
-    #expect(frames.flatMap(\.chatEdits.edits).map(\.send.text) == ["見て"])
+    #expect(frames.flatMap(\.chatEdits.edits).map(\.send.content.words.text) == ["見て"])
 
     // Sent again, it comes after what was sent, as itself.
     try Chats.sendAgain(opID, now: 3, in: db)
@@ -1366,9 +1397,9 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "明日休み？"
+    words.content.words.text = "明日休み？"
     try Chats.edit(.send(words), in: "g", now: 1000, db: db)
-    words.text = "あとで"
+    words.content.words.text = "あとで"
     try Chats.edit(.send(words), in: "g", now: 5000, db: db)
     let limit = Int64(Chat.unsentAfterMs)
 
@@ -1385,7 +1416,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     #expect(listed.failsAt == 5000 + limit)
     let edits = try Chats.frames(of: "g", after: 0, now: 1000 + limit, in: db).frames
       .flatMap(\.chatEdits.edits)
-    #expect(edits.map(\.send.text) == ["あとで"])
+    #expect(edits.map(\.send.content.words.text) == ["あとで"])
     #expect(try Chats.lastToSend(of: "g", now: 5000 + limit, in: db) == nil)
   }
 }
@@ -1412,7 +1443,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     // A line still being sent is the newest, whenever it was written.
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "見て"
+    words.content.words.text = "見て"
     try Chats.edit(.send(words), in: "g", now: 1500, db: db)
     #expect(
       try Chats.summary(of: groupThread, in: "g", me: "me", now: early, db: db).waiting?.text
@@ -1431,7 +1462,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
     try GroupSync.take(lines, of: "g", in: db)
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "あとで"
+    words.content.words.text = "あとで"
     try Chats.edit(.send(words), in: "g", now: 6000, db: db)
     try Chats.fail(try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID, in: db)
 
@@ -1450,7 +1481,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "明日休み？"
+    words.content.words.text = "明日休み？"
     try Chats.edit(.send(words), in: "g", now: 1000, db: db)
 
     // The device's clock jumps an hour ahead, and Welcome corrects it.
@@ -1471,7 +1502,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "明日休み？"
+    words.content.words.text = "明日休み？"
     let made: Int64 = 1_000 * minute
     try Chats.edit(.send(words), in: "g", now: made, db: db)
 
@@ -1493,7 +1524,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "まちがい"
+    words.content.words.text = "まちがい"
     try Chats.edit(.send(words), in: "g", now: 1, db: db)
     let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
     try Chats.fail(opID, in: db)
@@ -1508,9 +1539,9 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "長すぎる"
+    words.content.words.text = "長すぎる"
     try Chats.edit(.send(words), in: "g", now: 1, db: db)
-    words.text = "届く"
+    words.content.words.text = "届く"
     try Chats.edit(.send(words), in: "g", now: 2, db: db)
     let frame = try Chats.frames(of: "g", after: 0, now: early, in: db).frames[0]
     let opIDs = try Chats.goOut(frame.chatEdits.edits, now: early, in: db).map(\.opID)
@@ -1531,18 +1562,18 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "まちがい"
+    words.content.words.text = "まちがい"
     try Chats.edit(.send(words), in: "g", now: 1, db: db)
-    words.text = "明日休み？"
+    words.content.words.text = "明日休み？"
     try Chats.edit(.send(words), in: "g", now: 2, db: db)
     let frame = try Chats.frames(of: "g", after: 0, now: early, in: db).frames[0]
 
     try Chats.takeBack(frame.chatEdits.edits[0].opID, in: db)
     let going = try Chats.goOut(frame.chatEdits.edits, now: early, in: db)
-    #expect(going.map(\.send.text) == ["明日休み？"])
+    #expect(going.map(\.send.content.words.text) == ["明日休み？"])
     // Nothing to take back from the group: it never went out.
     let left = try Chats.frames(of: "g", after: 0, now: early, in: db).frames.flatMap(\.chatEdits.edits)
-    #expect(left.map(\.send.text) == ["明日休み？"])
+    #expect(left.map(\.send.content.words.text) == ["明日休み？"])
   }
 }
 
@@ -1551,7 +1582,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "届いた"
+    words.content.words.text = "届いた"
     try Chats.edit(.send(words), in: "g", now: 1000, db: db)
     let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
     // Its line came, but not the Acked.
@@ -1570,7 +1601,7 @@ func emojiShownLarge(_ vector: LargeEmojiVectors.Case) {
   try database.write { db in
     var words = Pochical_V1_ChatSend()
     words.threadID = groupThread
-    words.text = "まちがい"
+    words.content.words.text = "まちがい"
     try Chats.edit(.send(words), in: "g", now: 1, db: db)
     let opID = try Chats.state(of: groupThread, in: "g", now: early, db: db).waiting[0].opID
     let frame = try Chats.frames(of: "g", after: 0, now: early, in: db).frames[0]
@@ -1709,7 +1740,7 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   let database = try appDatabase()
   var send = Pochical_V1_ChatSend()
   send.threadID = groupThread
-  send.text = "行けそう"
+  send.content.words.text = "行けそう"
   let edit = Pochical_V1_ChatEdit.OneOf_Kind.send(send)
   let now = SyncClient.nowMs()
   try await database.write { db in
@@ -1732,7 +1763,7 @@ func aNewPatternsColor(_ vector: LookVectors.ColorCase) {
   let database = try appDatabase()
   var send = Pochical_V1_ChatSend()
   send.threadID = groupThread
-  send.text = "行けそう"
+  send.content.words.text = "行けそう"
   let edit = Pochical_V1_ChatEdit.OneOf_Kind.send(send)
   let waitLeft: Int64 = 300
   let written = SyncClient.nowMs() - Int64(Chat.unsentAfterMs) + waitLeft
