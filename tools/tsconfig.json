@@ -1,5 +1,6 @@
 {
-  "include": ["*.ts"],
+  "include": ["*/*.ts"],
+  "exclude": ["layout-diff"],
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
