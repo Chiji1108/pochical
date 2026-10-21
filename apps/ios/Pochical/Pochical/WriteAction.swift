@@ -30,11 +30,22 @@ extension EnvironmentValues {
 
 /// Gives the screens under it `write`, and its alert when a write fails.
 struct KeepsEdits: ViewModifier {
-  @State private var failed = false
-
   func body(content: Content) -> some View {
-    content
-      .environment(\.write, WriteAction { failed = true })
+    KeepingEdits { _ in content }
+  }
+}
+
+/// Gives `content` a `write` of its own, its alert shown over it, for a
+/// sheet whose edits are written as it stays open: an alert from under a
+/// sheet takes the sheet down to show, and what was being written with it.
+struct KeepingEdits<Content: View>: View {
+  @State private var failed = false
+  @ViewBuilder let content: (WriteAction) -> Content
+
+  var body: some View {
+    let write = WriteAction { failed = true }
+    content(write)
+      .environment(\.write, write)
       .alert("保存できませんでした", isPresented: $failed) {
         Button("OK", role: .cancel) {}
       } message: {

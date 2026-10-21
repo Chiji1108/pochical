@@ -10,7 +10,7 @@ struct CalendarScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(Settings.self) private var settings
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   @FetchAll private var days: [DayRow]
   @FetchAll private var patterns: [PatternRow]
   @FetchAll private var patternOrder: [PatternOrderRow]
@@ -259,31 +259,35 @@ struct CalendarScreen: View {
         let entry = calendar.shown(from: day, through: day)[day]
         // One day gives way to the next however it is opened, by a tap,
         // ‹ ›, 今週 or a swipe.
-        ZStack {
-          DayDetail(
-            day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-            coworkers: ordered(coworkerRows, by: coworkerOrder),
-            onChange: { entry in
-              write { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
-            },
-            onNoteChange: { note in
-              write { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
-            },
-            // Someone added from a day is on that day too.
-            onAddCoworker: { name in
-              write { db, now in
-                let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-                if var entry {
-                  entry.people = (entry.people ?? []) + [id]
-                  try OwnValues.set(day, to: entry, now: now, in: db)
+        KeepingEdits { inSheet in
+          ZStack {
+            DayDetail(
+              day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+              coworkers: ordered(coworkerRows, by: coworkerOrder),
+              onChange: { entry in
+                keep(by: inSheet) { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+              },
+              onNoteChange: { note in
+                keep(by: inSheet) { db, now in
+                  try OwnValues.setNote(day, to: note, now: now, in: db)
                 }
-              }
-            },
-            onStep: { step in go(to: day.adding(days: step)) }
-          )
-          .id(day)
+              },
+              // Someone added from a day is on that day too.
+              onAddCoworker: { name in
+                keep(by: inSheet) { db, now in
+                  let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+                  if var entry {
+                    entry.people = (entry.people ?? []) + [id]
+                    try OwnValues.set(day, to: entry, now: now, in: db)
+                  }
+                }
+              },
+              onStep: { step in go(to: day.adding(days: step)) }
+            )
+            .id(day)
+          }
+          .animation(folding, value: day)
         }
-        .animation(folding, value: day)
         // Closed by its × or in code, the day has closed already.
         .onSheetLeaving { going in
           if opened != nil { withAnimation(folding) { leaving = going } }
@@ -318,7 +322,7 @@ struct CalendarScreen: View {
       }
     }
     .sheet(isPresented: Binding(get: { !gaps.isEmpty }, set: { if !$0 { gaps = [] } })) {
-      gapSheet(calendar)
+      KeepingEdits { inSheet in gapSheet(calendar, keptBy: inSheet) }
     }
     // Shifts first entered: what the reminders are for, then the system's
     // question only if wanted (spec/calendar.md, Reminders).
@@ -530,7 +534,10 @@ struct CalendarScreen: View {
         canClear: shown[day] != nil,
         canSkip: day != day.daysOfMonth.last,
         onEnter: { shift in
-          write { db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }
+          // A shift not kept leaves the day to enter again.
+          guard keep({ db, now in try OwnValues.enter(shift, on: day, now: now, in: db) }) else {
+            return
+          }
           let next = selectedAfterEntering(shift, on: day, patterns: calendar.patternsByID)
           entering = next
           let pattern = shift.flatMap { calendar.patternsByID[$0] }
@@ -603,14 +610,14 @@ struct CalendarScreen: View {
 
   /// What 完了 asks about the month's blank days, while there are some
   /// and a pattern that counts as off to fill them with.
-  private func gapSheet(_ calendar: OwnCalendar) -> GapSheet? {
+  private func gapSheet(_ calendar: OwnCalendar, keptBy write: WriteAction) -> GapSheet? {
     let offPatterns = calendar.patterns.inUse.filter(\.countsAsOff)
     guard !offPatterns.isEmpty, !gaps.isEmpty else { return nil }
     return GapSheet(
       days: gaps, offPatterns: offPatterns, picked: $gapFill,
       openedLook: settings.device.look.options
     ) { off in
-      write { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
+      keep(by: write) { db, now in try OwnValues.fill(gaps, with: off.id, now: now, in: db) }
     }
   }
 
@@ -632,19 +639,18 @@ struct CalendarScreen: View {
     ReviewPrompt.asked()
   }
 
-  /// Writes the person's edits at once; they wait in the outbox for sync.
-  private func write(_ edit: @escaping (Database, Int64) throws -> Void) {
+  /// Keeps the person's edit (WriteAction), by a sheet's own `write` for
+  /// one written in it; true when kept.
+  @discardableResult
+  private func keep(by write: WriteAction? = nil, _ edit: (Database, Int64) throws -> Void)
+    -> Bool
+  {
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-    do {
-      try database.write { db in try edit(db, now) }
-      changed = true
-      // A memo kept as its day closes comes after the day has gone.
-      askForReviewIfDue()
-    } catch {
-      // Not expected: the edit is the device's own, and its tables are.
-      ReviewPrompt.troubled = true
-      assertionFailure("Could not keep the edit: \(error)")
-    }
+    guard (write ?? self.write)({ try edit($0, now) }) else { return false }
+    changed = true
+    // A memo kept as its day closes comes after the day has gone.
+    askForReviewIfDue()
+    return true
   }
 
   /// Says what entering did and where it goes on, for VoiceOver, as

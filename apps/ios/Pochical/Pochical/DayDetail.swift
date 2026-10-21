@@ -17,7 +17,7 @@ struct DayDetail: View {
   let onChange: (DayEntry?) -> Void
   /// "" clears the memo.
   let onNoteChange: (String) -> Void
-  let onAddCoworker: (String) -> Void
+  let onAddCoworker: (String) -> Bool
   /// Opens the day before (-1) or after (1).
   let onStep: (Int) -> Void
   /// The memo as it is written, kept when the field is left, the detail
@@ -207,10 +207,10 @@ struct DayDetail: View {
         Button("追加") {
           let name = String(newCoworker.trimmingCharacters(in: .whitespacesAndNewlines)
             .prefix(TextLimits.personName))
-          if !name.isEmpty {
-            onAddCoworker(name)
+          // A name not kept stays for 追加 to be tried again.
+          if name.isEmpty || onAddCoworker(name) {
+            newCoworker = ""
           }
-          newCoworker = ""
         }
         Button("キャンセル", role: .cancel) { newCoworker = "" }
       }
