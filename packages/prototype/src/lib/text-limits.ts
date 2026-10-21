@@ -2,12 +2,9 @@
 // spec/text-limits.md sets it for every platform. Counted as a reader sees
 // characters, so an emoji or a letter with its accent counts as one.
 import { textFields } from "@pochical/design/limits";
+import { characterCount } from "@pochical/design/text";
 
 const graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
-
-export function characterCount(text: string) {
-  return [...graphemes.segment(text)].length;
-}
 
 export function limitText(text: string, limit: number) {
   const kept = [...graphemes.segment(text)].slice(0, limit);
