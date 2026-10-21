@@ -1,9 +1,9 @@
 import { textLimits } from "@pochical/design/limits";
+import { characterCount, withinLimit } from "@pochical/design/text";
 import { env } from "cloudflare:workers";
 import { useState } from "react";
 import { data, Form, Link, redirect, useNavigation } from "react-router";
 
-import { characterCount, withinLimit } from "../../../server/src/text-limits";
 import { when } from "../when";
 import type { Route } from "./+types/support-chat";
 

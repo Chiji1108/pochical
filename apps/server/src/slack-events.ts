@@ -6,6 +6,7 @@ import { create } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
 import { textLimits } from "@pochical/design/limits";
+import { withinLimit } from "@pochical/design/text";
 import { waitUntil } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
@@ -26,7 +27,6 @@ import {
 } from "./slack";
 import { supportPlace } from "./support-lines";
 import { linesOfSlackTs } from "./support-place";
-import { withinLimit } from "./text-limits";
 
 type EditKind = MessageInitShape<typeof ChatEditSchema>["kind"];
 

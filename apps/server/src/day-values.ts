@@ -1,10 +1,10 @@
 import { dayRules } from "@pochical/design/days";
 import { syncLimits, textLimits } from "@pochical/design/limits";
+import { withinLimit } from "@pochical/design/text";
 
 import { DayField } from "./gen/pochical/v1/sync_pb";
 import type { DayValue } from "./gen/pochical/v1/sync_pb";
 import { hasDeviceClock, isId, isIdList } from "./ids";
-import { withinLimit } from "./text-limits";
 
 // What a day's field may hold (spec/sync-protocol.md, Shifts), checked as
 // the owner's edits arrive.
