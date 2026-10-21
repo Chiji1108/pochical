@@ -7,7 +7,9 @@
     "build": "react-router build",
     "deploy": "bun run build && wrangler deploy",
     "cf-typegen": "wrangler types --strict-vars=false -c wrangler.jsonc -c ../server/wrangler.jsonc",
-    "typecheck": "react-router typegen && tsc --noEmit"
+    "typegen": "react-router typegen",
+    "prepare": "bun run typegen",
+    "typecheck": "bun run typegen && tsc --noEmit"
   },
   "dependencies": {
     "@pochical/design": "workspace:*",
