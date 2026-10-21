@@ -74,7 +74,7 @@ struct GapSheet: View {
             Toggle(isOn: $blank) {
               Text("カレンダーでは空白で見せる")
               Text("お休みとして入れて、印は出しません")
-              Text("あとから設定 › スタイル › 休みの見せ方で変えられます")
+              Text("あとから設定の「スタイル」にある「休みの見せ方」で変えられます")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)

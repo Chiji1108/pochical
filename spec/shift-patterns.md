@@ -42,7 +42,7 @@ So a day may hold a memo and no shift. It is blank wherever blanks count (Blanks
 
 ## Blanks when entering ends
 
-Many people leave days off blank, moving on with 翌日へ. Rather than stop them while entering, 完了 asks once about the blank days of the month before its last entered day, and fills them with a day off in one tap. Blanks after the last entered day are left alone: those are more likely not decided yet (`spec/vectors/entering.json`, gaps). Someone with no pattern that counts as off leaves days off blank on purpose, so nothing is asked of them. Showing them blank can be chosen there, for those who keep days off blank for the look; the sheet says the look changes back in 設定 › スタイル › 休みの見せ方, as a blank day off is otherwise hard to tell from one not entered (spec/calendar.md, ポチポチ入力).
+Many people leave days off blank, moving on with 翌日へ. Rather than stop them while entering, 完了 asks once about the blank days of the month before its last entered day, and fills them with a day off in one tap. Blanks after the last entered day are left alone: those are more likely not decided yet (`spec/vectors/entering.json`, gaps). Someone with no pattern that counts as off leaves days off blank on purpose, so nothing is asked of them. Showing them blank can be chosen there, for those who keep days off blank for the look; the sheet says the look changes back in 休みの見せ方 (設定 > スタイル), as a blank day off is otherwise hard to tell from one not entered (spec/calendar.md, ポチポチ入力).
 
 ## Picking a mark's icon
 
