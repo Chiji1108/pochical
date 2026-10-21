@@ -6,8 +6,7 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 
 - Tool versions and tasks are in `mise.toml` (`mise run gen`, `mise run server:test`, `mise run ios:test`, ...).
 - Generated files are never edited by hand; change their source and regenerate:
-  - Wire types: `proto/` → `mise run gen` (into `apps/server/src/gen`, `apps/web/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`).
-    A change to `Change` or anything it holds fails `mise run sync:check` until the iOS `Sync.schema` is raised and `mise run sync:check -- --write` records it.
+  - Wire types: `proto/` → `mise run gen` (into `apps/server/src/gen`, `apps/web/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`). A change to `Change` or anything it holds fails `mise run sync:check` until the iOS `Sync.schema` is raised and `mise run sync:check -- --write` records it.
   - Numbers every platform shares (limits, the chat's, days', invites', sockets', widgets'), design tokens, mark icons and holidays: `design/` → `mise run gen` (into `spec/design-tokens.json`, `apps/ios/Packages/PochicalDesign/Sources`, `apps/android/design/src/main`). Specs and code refer to them by name, never by value.
   - Icons: the marks' paths from Phosphor via `bun run --cwd design icon:marks`; the iOS app icons and the widgets' `PeekingPoodle` via `bun run --cwd packages/prototype icon:ios`.
   - SQL schemas are Drizzle and their migrations are generated, never written: D1 `apps/server/src/db/schema.ts` (`mise run db:generate -- --name <what>`; better-auth's tables via `mise run auth:schema` first), the Group DO `group-do-schema.ts` (`mise run group-do:generate`), the User DO `user-do-schema.ts` (`mise run user-do:generate`). CI runs `mise run db:check`.

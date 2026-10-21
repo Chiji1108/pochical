@@ -32,7 +32,7 @@ run = "buf breaking --against '../.git#branch=main,subdir=proto'"
 
 [tasks."sync:check"]
 description = "Fail if the Changes the iOS app reads changed without raising Sync.schema (--write records it once raised)"
-run = "bun tools/sync-schema/check.ts"
+run = ["bun test tools/sync-schema", "bun tools/sync-schema/check.ts"]
 
 [tasks.server]
 description = "Run the Workers dev server"
