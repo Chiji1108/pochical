@@ -18,6 +18,7 @@ pre-commit:
         - "**/*.jsonc"
         - "**/*.css"
         - "**/*.md"
+        - "**/*.astro"
       stage_fixed: true
     - name: buf format and lint
       root: proto/

@@ -5,7 +5,10 @@ import { ArrowUpRight, RefreshCw } from "lucide-react";
 import Link from "../../components/link.astro";
 import StoreLinks from "../../components/store-links.astro";
 import Site from "../../layouts/site.astro";
-import { fetchInvitePreview, inviteImageVersion } from "../../lib/invite-preview";
+import {
+  fetchInvitePreview,
+  inviteImageVersion,
+} from "../../lib/invite-preview";
 import { fromServer } from "../../lib/server";
 
 // Asked of the server on each request: an invitation can be renamed,
@@ -27,64 +30,69 @@ const group =
 
 <Site
   description={description}
-  image={invite.status === "valid"
-    ? {
-        alt: `${group}への招待`,
-        path: `${path}/og.png?v=${inviteImageVersion(invite)}`,
-      }
-    : undefined}
+  image={
+    invite.status === "valid"
+      ? {
+          alt: `${group}への招待`,
+          path: `${path}/og.png?v=${inviteImageVersion(invite)}`,
+        }
+      : undefined
+  }
   path={path}
   privatePage
   title={group === undefined ? "グループへの招待" : `${group}への招待`}
 >
   <main class="invite-page" id="main">
-    {
-      invite.status === "valid" ? (
-        <>
-          {/* The group is what the page is about, so its mark leads, in a
-              frame like the app's join screen; the header says ポチカル. */}
-          <span aria-hidden="true" class="invite-mark">
-            <InviteMark
-              mark={invite.groupMark}
-              photo={`${path}/mark/${invite.groupMark.photoId}`}
-              size={66}
-            />
-          </span>
-          <p class="eyebrow">YOU'RE INVITED</p>
-          <h1>{invite.groupName}</h1>
-          {invite.memberCount > 0 && (
-            <p class="invite-members">メンバー {invite.memberCount}人</p>
-          )}
-          <a class="button" href={`pochical://invite/${encodeURIComponent(code)}`}>
-            アプリで開く <ArrowUpRight aria-hidden="true" size={18} />
-          </a>
-        </>
-      ) : (
-        <>
-          <p class="eyebrow">GROUP INVITATION</p>
-          <h1>
-            {invite.status === "invalid"
-              ? "この招待リンクは使えません。"
-              : "招待を確認できませんでした。"}
-          </h1>
-          <p>
-            {invite.status === "invalid"
-              ? "招待リンクが変更されたか、グループが削除された可能性があります。送り主に新しいリンクを確認してください。"
-              : "一時的に接続できない可能性があります。少し時間をおいて、もう一度お試しください。"}
-          </p>
-          {invite.status === "unavailable" && (
-            <button class="button" data-retry type="button">
-              <RefreshCw aria-hidden="true" size={16} />
-              もう一度確認する
-            </button>
-          )}
-        </>
-      )
-    }
+    {invite.status === "valid" ? (
+      <>
+        {/* The group is what the page is about, so its mark leads, in a
+           frame like the app's join screen; the header says ポチカル. */}
+        <span aria-hidden="true" class="invite-mark">
+          <InviteMark
+            mark={invite.groupMark}
+            photo={`${path}/mark/${invite.groupMark.photoId}`}
+            size={66}
+          />
+        </span>
+        <p class="eyebrow">YOU'RE INVITED</p>
+        <h1>{invite.groupName}</h1>
+        {invite.memberCount > 0 && (
+          <p class="invite-members">メンバー {invite.memberCount}人</p>
+        )}
+        <a
+          class="button"
+          href={`pochical://invite/${encodeURIComponent(code)}`}
+        >
+          アプリで開く <ArrowUpRight aria-hidden="true" size={18} />
+        </a>
+      </>
+    ) : (
+      <>
+        <p class="eyebrow">GROUP INVITATION</p>
+        <h1>
+          {invite.status === "invalid"
+            ? "この招待リンクは使えません。"
+            : "招待を確認できませんでした。"}
+        </h1>
+        <p>
+          {invite.status === "invalid"
+            ? "招待リンクが変更されたか、グループが削除された可能性があります。送り主に新しいリンクを確認してください。"
+            : "一時的に接続できない可能性があります。少し時間をおいて、もう一度お試しください。"}
+        </p>
+        {invite.status === "unavailable" && (
+          <button class="button" data-retry type="button">
+            <RefreshCw aria-hidden="true" size={16} />
+            もう一度確認する
+          </button>
+        )}
+      </>
+    )}
     <div class="invite-download">
       <h2>アプリをまだお持ちでない方へ</h2>
       <StoreLinks />
-      <Link class="text-link" href="/">ポチカルについて →</Link>
+      <Link class="text-link" href="/">
+        ポチカルについて →
+      </Link>
     </div>
   </main>
 </Site>

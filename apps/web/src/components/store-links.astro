@@ -17,31 +17,29 @@ const stores = [
 ---
 
 <div class="store-links">
-  {
-    stores.map((store) =>
-      store.url ? (
-        <a
-          class="store-link"
-          href={store.url}
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <Smartphone aria-hidden="true" size={22} />
-          <span>
-            <small>ダウンロード</small>
-            <strong>{store.name}</strong>
-          </span>
-          <ArrowUpRight aria-hidden="true" size={16} />
-        </a>
-      ) : (
-        <div class="store-link coming-soon">
-          <Smartphone aria-hidden="true" size={22} />
-          <span>
-            <small>公開準備中</small>
-            <strong>{store.name}</strong>
-          </span>
-        </div>
-      )
+  {stores.map((store) =>
+    store.url ? (
+      <a
+        class="store-link"
+        href={store.url}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <Smartphone aria-hidden="true" size={22} />
+        <span>
+          <small>ダウンロード</small>
+          <strong>{store.name}</strong>
+        </span>
+        <ArrowUpRight aria-hidden="true" size={16} />
+      </a>
+    ) : (
+      <div class="store-link coming-soon">
+        <Smartphone aria-hidden="true" size={22} />
+        <span>
+          <small>公開準備中</small>
+          <strong>{store.name}</strong>
+        </span>
+      </div>
     )
-  }
+  )}
 </div>

@@ -35,49 +35,50 @@ const fullTitle = `${meta?.title} | ポチカル`;
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1" name="viewport" />
     <meta content="#fbfaf7" name="theme-color" />
-    {
-      meta && (
-        <>
-          <title>{fullTitle}</title>
-          <meta content={meta.description} name="description" />
-          <meta content={fullTitle} property="og:title" />
-          <meta content={meta.description} property="og:description" />
-          <meta content="website" property="og:type" />
-          <meta content="ja_JP" property="og:locale" />
-          <meta content={site.name} property="og:site_name" />
-          <meta content="summary_large_image" name="twitter:card" />
-          {origin && (
-            <>
-              <meta content={`${origin}${meta.path}`} property="og:url" />
-              <meta content={`${origin}${image.path}`} property="og:image" />
-              <meta
-                content={String(SHARE_IMAGE.width)}
-                property="og:image:width"
-              />
-              <meta
-                content={String(SHARE_IMAGE.height)}
-                property="og:image:height"
-              />
-              <meta content={image.alt} property="og:image:alt" />
-            </>
-          )}
-          {meta.privatePage ? (
-            <meta content="noindex, nofollow" name="robots" />
-          ) : (
-            origin && <link href={`${origin}${meta.path}`} rel="canonical" />
-          )}
-        </>
-      )
-    }
+    {meta && (
+      <>
+        <title>{fullTitle}</title>
+        <meta content={meta.description} name="description" />
+        <meta content={fullTitle} property="og:title" />
+        <meta content={meta.description} property="og:description" />
+        <meta content="website" property="og:type" />
+        <meta content="ja_JP" property="og:locale" />
+        <meta content={site.name} property="og:site_name" />
+        <meta content="summary_large_image" name="twitter:card" />
+        {origin && (
+          <>
+            <meta content={`${origin}${meta.path}`} property="og:url" />
+            <meta content={`${origin}${image.path}`} property="og:image" />
+            <meta
+              content={String(SHARE_IMAGE.width)}
+              property="og:image:width"
+            />
+            <meta
+              content={String(SHARE_IMAGE.height)}
+              property="og:image:height"
+            />
+            <meta content={image.alt} property="og:image:alt" />
+          </>
+        )}
+        {meta.privatePage ? (
+          <meta content="noindex, nofollow" name="robots" />
+        ) : (
+          origin && <link href={`${origin}${meta.path}`} rel="canonical" />
+        )}
+      </>
+    )}
     <link href={siteIcon} rel="icon" type="image/png" />
     {/* Any page added to an iPhone's home screen. */}
     <link href={homeScreenIcon} rel="apple-touch-icon" />
   </head>
   <body>
-    <a class="skip-link" href="#main">本文へスキップ</a>
+    <a class="skip-link" href="#main">
+      本文へスキップ
+    </a>
     <header class="site-header">
       <Link aria-label="ポチカル ホーム" class="brand" href="/">
-        <img alt="" height="36" src={siteIcon} width="36" /><span>ポチカル</span>
+        <img alt="" height="36" src={siteIcon} width="36" />
+        <span>ポチカル</span>
       </Link>
     </header>
     <slot />
@@ -85,7 +86,8 @@ const fullTitle = `${meta?.title} | ポチカル`;
       <div class="footer-top">
         <div>
           <Link class="brand" href="/">
-            <img alt="" height="30" src={siteIcon} width="30" /><span>ポチカル</span>
+            <img alt="" height="30" src={siteIcon} width="30" />
+            <span>ポチカル</span>
           </Link>
           <p>はたらく日も、おやすみの日も。</p>
         </div>
@@ -98,9 +100,9 @@ const fullTitle = `${meta?.title} | ポチカル`;
       </div>
       <div class="footer-bottom">
         <span>© 2026 ポチカル</span>
-        <a href={`mailto:${site.email}`}
-          >{site.email} <ArrowUpRight aria-hidden="true" size={12} /></a
-        >
+        <a href={`mailto:${site.email}`}>
+          {site.email} <ArrowUpRight aria-hidden="true" size={12} />
+        </a>
       </div>
     </footer>
   </body>
