@@ -1,12 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { env } from "cloudflare:workers";
+import { Link } from "react-router";
 
-import { getSupportChats, when } from "../admin";
+import { when } from "../when";
+import type { Route } from "./+types/support-chats";
 
 // Every user's chat, the latest first, the ones waiting for an answer said.
-export const Route = createFileRoute("/")({
-  component: SupportChats,
-  loader: async () => await getSupportChats(),
-});
+export const loader = async () => await env.SERVER.supportChats();
 
 /** A chat's latest line, as its row shows it. */
 function summaryOf(chat: { text: string; unsent: boolean }): string {
@@ -35,8 +34,9 @@ function SlackFailing({ failures }: { failures: Failure[] }) {
   );
 }
 
-function SupportChats() {
-  const chats = Route.useLoaderData();
+export default function SupportChats({
+  loaderData: chats,
+}: Route.ComponentProps) {
   const failures = chats.flatMap((chat) => chat.slackFailure ?? []);
   return (
     <main>
@@ -56,7 +56,7 @@ function SupportChats() {
             <tr key={chat.userId}>
               <td>{when(chat.lastAtMs)}</td>
               <td>
-                <Link params={{ userId: chat.userId }} to="/support/$userId">
+                <Link to={`/support/${chat.userId}`}>
                   {chat.userId.slice(0, 8)}
                 </Link>
               </td>
