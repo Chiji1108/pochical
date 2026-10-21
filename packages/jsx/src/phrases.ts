@@ -2,10 +2,26 @@ import { jaModel, Parser } from "budoux";
 
 // Japanese has no spaces, so a browser may break a line in the middle of a
 // word (メ／ンバー). BudouX, the model behind Chrome's word-break:
-// auto-phrase, finds the phrases a line may break between; the site's JSX
-// runtime (jsx-runtime.ts) marks them with <wbr> on every browser, Safari too.
+// auto-phrase, finds the phrases a line may break between; the JSX runtime
+// (jsx-runtime.ts) and the HTML that is not JSX (html.ts) mark them with
+// <wbr> on every browser, Safari too.
 
 const parser = new Parser(jaModel);
+
+// Elements whose text is not laid out in lines, SVG's among them: their
+// Japanese stays whole.
+export const UNBROKEN: ReadonlySet<string> = new Set([
+  "desc",
+  "option",
+  "script",
+  "style",
+  "template",
+  "text",
+  "textarea",
+  "textPath",
+  "title",
+  "tspan",
+]);
 
 const JAPANESE = /[\p{scx=Hiragana}\p{scx=Katakana}\p{scx=Han}]/u;
 
