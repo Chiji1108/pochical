@@ -1,0 +1,34 @@
+---
+import homeScreenIcon from "@pochical/prototype/assets/icon-180.png";
+import siteIcon from "@pochical/prototype/assets/icon.png";
+import { Footer, Header } from "@pochical/web/src/components/site-layout";
+import { pageMeta } from "@pochical/web/src/lib/site";
+import "@pochical/web/src/styles.css";
+import "@pochical/web/src/panda.css";
+
+type Props = { title: string; description: string; path: string };
+const { title, description, path } = Astro.props;
+const head = pageMeta(title, description, path);
+---
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fbfaf7" />
+    {
+      head.meta.map((meta) =>
+        "title" in meta ? <title>{meta.title}</title> : <meta {...meta} />
+      )
+    }
+    {head.links.map((link) => <link {...link} />)}
+    <link rel="icon" type="image/png" href={siteIcon.src} />
+    <link rel="apple-touch-icon" href={homeScreenIcon.src} />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">本文へスキップ</a>
+    <Header />
+    <slot />
+    <Footer />
+  </body>
+</html>
