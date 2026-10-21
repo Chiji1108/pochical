@@ -1,7 +1,12 @@
 import { chatRules } from "@pochical/design/chat";
 
-import { firstLink } from "./chat-text";
-import type { ChatDraft, LinkPreview, Message } from "./design-group-data";
+import { firstLink, mentionsOf, plainText } from "./chat-text";
+import type {
+  ChatDraft,
+  DraftTarget,
+  LinkPreview,
+  Message,
+} from "./design-group-data";
 
 // What a chat's lines become as people use them (spec/chat.md): pins,
 // polls, reactions, edits and lines taken back. Each takes the lines and
@@ -184,21 +189,66 @@ export function keptDraft(
   if (draft.text.trim() === "") {
     return undefined;
   }
-  const lineOf = (id: string) => messages.find((message) => message.id === id);
-  if (draft.editing !== undefined) {
-    const line = lineOf(draft.editing);
-    if (line?.content.kind !== "words" || line.content.text === draft.text) {
-      return undefined;
-    }
-    return { editing: draft.editing, text: draft.text };
+  const { target } = draft;
+  const line = target && messages.find((message) => message.id === target.id);
+  if (target?.kind === "edit") {
+    return line?.content.kind === "words" && line.content.text !== draft.text
+      ? draft
+      : undefined;
   }
-  if (
-    draft.replyTo !== undefined &&
-    lineOf(draft.replyTo)?.content.kind === "unsent"
-  ) {
+  if (line?.content.kind === "unsent") {
     return { text: draft.text };
   }
   return draft;
+}
+
+// What the composer holds: the words as written, mentions as @name; the
+// members picked from the @ list, made mentions as it is sent; and the
+// line it answers or changes.
+export type Writing = {
+  words: string;
+  picked: { id: string; name: string }[];
+  target?: DraftTarget;
+};
+
+// Words as sent (<@id>) put back in the composer, their mentions as @name
+// again, still picked.
+export function writingOf(
+  text: string,
+  mentionName: (id: string) => string,
+  target?: DraftTarget
+): Writing {
+  return {
+    picked: mentionsOf(text).map((id) => ({ id, name: mentionName(id) })),
+    target,
+    words: plainText(text, mentionName),
+  };
+}
+
+// Answering a line in place of changing one lets the edit go, and its
+// words with it, which were that line's; the words of a reply stay.
+export function answering(writing: Writing, id: string): Writing {
+  const target = { id, kind: "reply" } as const;
+  return writing.target?.kind === "edit"
+    ? { picked: [], target, words: "" }
+    : { ...writing, target };
+}
+
+// Changing your line in place of answering one puts its words in the
+// composer, in place of what was written.
+export function changing(
+  message: Message,
+  mentionName: (id: string) => string
+): Writing {
+  const text = message.content.kind === "words" ? message.content.text : "";
+  return writingOf(text, mentionName, { id: message.id, kind: "edit" });
+}
+
+// × on the bar: an edit goes with its words; a reply's words stay.
+export function stopping(writing: Writing): Writing {
+  return writing.target?.kind === "edit"
+    ? { picked: [], words: "" }
+    : { ...writing, target: undefined };
 }
 
 // How many of a line's photos go in each of its rows, top first: three
