@@ -1,0 +1,243 @@
+import { chatRules } from "@pochical/design/chat";
+import { css, cx } from "@pochical/styled-system/css";
+import { BellOff, CircleAlert } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+
+import { BubbleOutline } from "./design-chat-bubble";
+import { chatRow, chatStyle } from "./design-chat-style";
+import type { ListedLine } from "./design-chat-summary";
+import { badge } from "./design-group-parts";
+import { listRow } from "./design-list";
+import { srOnly } from "./design-ui";
+
+// What every chat draws alike, the group chats and the support chat: a
+// chat's row in a list, the frame a line sits in, and the bubble or the
+// large emoji its words are drawn in. Each chat fills
+// them with its own, so the two never drift apart.
+
+// A chat whose notifications are off, after its name in the list and in
+// its own header, as chat apps mark a muted room.
+const mutedMark = css({ color: "text.tertiary", flexShrink: 0 });
+
+export function MutedMark() {
+  return (
+    <BellOff aria-label="通知オフ" className={mutedMark} role="img" size={14} />
+  );
+}
+
+// A chat row's line: the draft left in it, else its latest line, which
+// for one of yours not sent is the line's red ! and 送れませんでした.
+function RowLine({ preview, draft }: { preview: ListedLine; draft?: string }) {
+  if (draft !== undefined) {
+    return (
+      <>
+        <span className={chatRow.draft}>下書き：</span>
+        {draft}
+      </>
+    );
+  }
+  if (typeof preview === "string") {
+    return preview;
+  }
+  return (
+    <>
+      <CircleAlert aria-hidden="true" className={chatRow.failed} size={13} />
+      送れませんでした
+    </>
+  );
+}
+
+// A chat in a list: its face, who it is with and its latest line, and at
+// the end that line's time and the count of lines not read yet.
+export function ChatListRow({
+  label,
+  icon,
+  preview,
+  draft,
+  time,
+  unread,
+  mentioned = false,
+  muted = false,
+  onOpen,
+}: {
+  label: string;
+  icon: ReactNode;
+  // The latest line, or what to say before there is one.
+  preview: ListedLine;
+  // What is being written, kept as the chat was left, shown in place of
+  // the latest line (spec/chat.md, Drafts).
+  draft?: string;
+  // The latest line's time, once there is one.
+  time?: string;
+  unread: number;
+  // An unread line mentions you: an @ beside the count, as Telegram marks
+  // one, so it is found among chats whose notifications are off.
+  mentioned?: boolean;
+  muted?: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      className={cx(listRow.twoLine, listRow.pressable)}
+      data-list-row=""
+      onClick={onOpen}
+      type="button"
+    >
+      {icon}
+      <span className={chatRow.text}>
+        <span className={chatRow.name}>
+          {label}
+          {muted && <MutedMark />}
+        </span>
+        <small className={chatRow.preview}>
+          <RowLine draft={draft} preview={preview} />
+        </small>
+      </span>
+      {(time !== undefined || unread > 0) && (
+        <span className={chatRow.meta}>
+          {time !== undefined && <small className={chatRow.time}>{time}</small>}
+          {unread > 0 && (
+            <span className={chatRow.badges}>
+              {mentioned && (
+                <span className={chatRow.mention}>
+                  @<span className={srOnly}>自分へのメンションあり、</span>
+                </span>
+              )}
+              <span className={badge} role="status">
+                {unread}
+                <span className={srOnly}>件の未読</span>
+              </span>
+            </span>
+          )}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// One place in a chat's lines, under the day it starts when it is the
+// first of that day.
+export function ChatItem({
+  day,
+  id,
+  flash = false,
+  runStart = true,
+  children,
+}: {
+  // The day, when this line is its first.
+  day?: string;
+  id?: string;
+  // Rung, as a pin or a quote jumped to it.
+  flash?: boolean;
+  // More room before it: false for a line that goes on its writer's run.
+  runStart?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <li
+      className={chatStyle.item({
+        flash,
+        runStart: runStart || day !== undefined,
+      })}
+      id={id}
+    >
+      {day !== undefined && (
+        <span className={chatStyle.when} data-day={day}>
+          {day}
+        </span>
+      )}
+      {children}
+    </li>
+  );
+}
+
+// A line someone wrote, as the messaging apps draw one: the others' on
+// the left with a column for their face and their name over it at the
+// start of a run, yours on the right. What the line holds (its bubble,
+// time, reactions) goes in its body.
+export function LineFrame({
+  mine,
+  avatar,
+  name,
+  children,
+  ...item
+}: {
+  day?: string;
+  id?: string;
+  flash?: boolean;
+  mine: boolean;
+  // The face, at the start of a run; the column stays either way, so the
+  // others' lines start at one edge.
+  avatar?: ReactNode;
+  // Over the line, at the start of a run in a chat of more than two.
+  name?: string;
+  runStart?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <ChatItem {...item}>
+      <span className={chatStyle.message({ mine })}>
+        {!mine && <span className={chatStyle.avatar}>{avatar}</span>}
+        <span className={chatStyle.body({ mine })}>
+          {!mine && name !== undefined && (
+            <small className={chatStyle.name}>{name}</small>
+          )}
+          {children}
+        </span>
+      </span>
+    </ChatItem>
+  );
+}
+
+// A line's words in their bubble: the others' on the left in a fill,
+// yours on the right in the accent, the first of a run with its tail by
+// the writer. A bubble with a link's page under its words is wide enough
+// for the page (`linked`).
+export function Bubble({
+  mine,
+  first,
+  linked = false,
+  children,
+}: {
+  mine: boolean;
+  first: boolean;
+  linked?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <BubbleOutline
+      className={linked ? chatStyle.linked : undefined}
+      first={first}
+      mine={mine}
+    >
+      {children}
+    </BubbleOutline>
+  );
+}
+
+// The room between a chat's lines, set on its list of them (chatRules'
+// lineGap and runGap), as a variable for the same reason as below.
+export const chatGaps: CSSProperties = {
+  "--line-gap": `${chatRules.lineGap}px`,
+  "--run-gap": `${chatRules.runGap}px`,
+};
+
+// The size LargeEmoji draws at. Panda reads styles before the code runs,
+// so it reaches them as a variable rather than from chatRules.
+const largeEmojiSize: CSSProperties = {
+  "--large-emoji-size": `${chatRules.largeEmojiSize}px`,
+};
+
+// A message of nothing but a few emoji (spec/chat.md, Large emoji), drawn
+// large without a bubble in its place, as iMessage does.
+export function LargeEmoji({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className={chatStyle.largeEmoji}
+      data-part="bubble"
+      style={largeEmojiSize}
+    >
+      {children}
+    </span>
+  );
+}

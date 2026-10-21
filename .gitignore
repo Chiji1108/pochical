@@ -43,7 +43,7 @@ yarn-error.*
 !.dev.vars.example
 
 # Panda CSS output, made by `panda codegen`
-apps/web/styled-system/
+packages/styled-system/dist/
 
 # Real roster photos and their answer key: coworkers' names, never commit
 assets/shift-schedule/

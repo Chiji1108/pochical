@@ -1,8 +1,9 @@
+import { site } from "@pochical/prototype/lib/brand";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Mail } from "lucide-react";
 
 import { Page } from "../components/site-layout";
-import { pageMeta, site } from "../lib/site";
+import { pageMeta } from "../lib/site";
 
 export const Route = createFileRoute("/account/delete")({
   component: DeleteAccount,

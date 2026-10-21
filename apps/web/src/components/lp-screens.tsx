@@ -1,30 +1,19 @@
 import { themeSkyId } from "@pochical/design/skies";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
-import type { ReactNode } from "react";
-import { css, cva } from "styled-system/css";
-
-import { initialDesignSchedule } from "../lib/design-days";
-import { useSamplePerson } from "../lib/design-sample-person";
+import { DesignApp } from "@pochical/prototype/components/design-app";
 import {
-  createUserStore,
-  sampleCoworkers,
-  UserStoreContext,
-} from "../lib/design-user-store";
-import { parseDesignVariants } from "../lib/design-variants";
-import { DesignApp } from "./design-app";
-import { sampleGroups } from "./design-group-samples";
-import { DesignProviders, PresetContexts } from "./design-providers";
+  DesignProviders,
+  PresetContexts,
+} from "@pochical/prototype/components/design-providers";
 import {
   BREATH_SECONDS,
   nextSkyId,
   paleSkyFromTop,
   paleSkyLights,
   SKY_CHANGE,
-} from "./design-surprise";
-import type { Tab } from "./design-tab-bar";
-import { ColorSchemeContext } from "./design-theme";
-import type { PresetId } from "./design-theme";
+} from "@pochical/prototype/components/design-surprise";
+import type { Tab } from "@pochical/prototype/components/design-tab-bar";
+import { ColorSchemeContext } from "@pochical/prototype/components/design-theme";
+import type { PresetId } from "@pochical/prototype/components/design-theme";
 import {
   CellNamesContext,
   IconWeightContext,
@@ -32,8 +21,25 @@ import {
   noOffLooks,
   OffLooksContext,
   ShiftMarkStyleContext,
-} from "./shift-mark";
-import type { OffLooks, ShiftMarkStyle } from "./shift-mark";
+} from "@pochical/prototype/components/shift-mark";
+import type {
+  OffLooks,
+  ShiftMarkStyle,
+} from "@pochical/prototype/components/shift-mark";
+import { initialDesignSchedule } from "@pochical/prototype/lib/design-days";
+import { sampleGroups } from "@pochical/prototype/lib/design-group-samples";
+import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
+import {
+  createUserStore,
+  sampleCoworkers,
+  UserStoreContext,
+} from "@pochical/prototype/lib/design-user-store";
+import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
+import { css, cva } from "@pochical/styled-system/css";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useState } from "react";
+import type { ReactNode } from "react";
+
 import { WhenNear } from "./when-near";
 
 // The top page's pieces drawn by the app's own code: its sky, the hero's
@@ -41,7 +47,8 @@ import { WhenNear } from "./when-near";
 // (routes/index.tsx takes them lazily), so its words need not wait for
 // the app; until then the server's drawing of them stands.
 
-// The current proposal for each open design choice, as on /try.
+// The current proposal for each open design choice, as on the catalog's
+// /try (apps/catalog).
 const variants = parseDesignVariants({});
 
 // The app's own ポチカル sky (おたのしみ), drawn as the app draws it: its
@@ -165,7 +172,8 @@ const heroSchedule = Object.fromEntries(
   )
 );
 
-// The app itself, the same one /try runs, to tap right on the page.
+// The app itself, the same one the catalog's /try runs, to tap right on
+// the page.
 export function HeroPhone() {
   const [person] = useState(() =>
     createUserStore({
