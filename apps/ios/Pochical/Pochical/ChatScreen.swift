@@ -930,7 +930,7 @@ struct ChatScreen: View {
   /// takes it back before it goes (spec/chat.md, Lines on their way).
   private func actions(forWaiting line: WaitingLine) -> [MessageAction] {
     var actions: [MessageAction] = []
-    if case .words(let words) = line.content {
+    if let words = line.content.words {
       actions.append(copy(words.text))
     }
     actions.append(
@@ -1328,13 +1328,7 @@ struct ChatScreen: View {
   /// cards' shifts.
   private var sharedSpan: DaySpan? {
     let contents = chat.state.lines.map(\.content) + chat.state.waiting.map(\.content)
-    let days = contents.flatMap { content -> [Day] in
-      switch content {
-      case .days(let days): days
-      case .poll(let poll): poll.days
-      case .words, .photos, .notice, .unsent, .hidden: []
-      }
-    }
+    let days = contents.flatMap(\.days)
     guard let from = days.min(), let through = days.max() else { return nil }
     return DaySpan(from: from, through: through)
   }

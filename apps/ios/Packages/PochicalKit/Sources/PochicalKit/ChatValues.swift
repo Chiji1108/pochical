@@ -1082,12 +1082,7 @@ extension Chats {
     return try ChatLineRow.where {
       $0.groupID.eq(groupID) && $0.threadID.eq(threadID) && $0.seq > read
     }
-    .fetchAll(db).filter { $0.writer(for: me) == .others }.map { line in
-      switch line.content {
-      case .words(let words): words.text
-      case .photos, .days, .poll, .notice, .unsent, .hidden: ""
-      }
-    }
+    .fetchAll(db).filter { $0.writer(for: me) == .others }.map { $0.content.words?.text ?? "" }
   }
 
   /// The member's newest read waiting to be sent in each of the group's

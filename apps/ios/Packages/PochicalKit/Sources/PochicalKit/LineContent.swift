@@ -70,6 +70,21 @@ public enum LineContent: Hashable, Sendable {
     if case .photos(let photos) = self { photos } else { [] }
   }
 
+  /// Its words, none for a line of anything else.
+  public var words: Words? {
+    if case .words(let words) = self { words } else { nil }
+  }
+
+  /// The days it shares or puts to the vote, none for a line of anything
+  /// else.
+  public var days: [Day] {
+    switch self {
+    case .days(let days): days
+    case .poll(let poll): poll.days
+    case .words, .photos, .notice, .unsent, .hidden: []
+    }
+  }
+
   /// The line's content as the group sent it; none, or a kind or notice
   /// this app does not know, is nothing to show.
   init(_ wire: Pochical_V1_ChatContent) {

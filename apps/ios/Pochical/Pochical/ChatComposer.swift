@@ -13,11 +13,10 @@ final class ChatDraft {
   /// The line being answered (返信), by its seq, quoted over the composer
   /// as the chat has it now; or the line of one's own being changed in it.
   var target: DraftTarget<ChatLineRow>?
-  var editing: ChatLineRow? { target?.editing }
+  /// The line of words being changed: only words are (spec/chat.md, 編集).
+  var editing: ChatLineRow? { target?.editing.flatMap { $0.content.words == nil ? nil : $0 } }
   /// The words of the line being changed, as it was sent.
-  var editedWords: String? {
-    if case .words(let words) = editing?.content { words.text } else { nil }
-  }
+  var editedWords: String? { editing?.content.words?.text }
   var replyTo: Int64? { target?.replyTo }
   /// Days to go with the next message (共有する日), sent first.
   var attachedDays: [Day]?

@@ -181,14 +181,10 @@ struct LineView: View {
   }
 
   /// Its words, none for a line of anything else.
-  private var text: String {
-    if case .words(let words) = content { words.text } else { "" }
-  }
+  private var text: String { content.words?.text ?? "" }
 
   /// Its words changed after they were sent (編集済み).
-  private var edited: Bool {
-    if case .words(let words) = content { words.edited } else { false }
-  }
+  private var edited: Bool { content.words?.edited ?? false }
 
   private var photos: [LinePhoto] { content.photos }
 
