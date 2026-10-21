@@ -1,4 +1,3 @@
-import { chatRules } from "@pochical/design/chat";
 import { cx } from "@pochical/styled-system/css";
 import { CircleAlert, Pin } from "lucide-react";
 import {
@@ -10,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import {
   firstLink,
@@ -629,8 +628,6 @@ function MessageText({
   });
 }
 
-const foldLines: CSSProperties = { "--fold-lines": chatRules.foldLines };
-
 // A message's words, folded at chatRules.foldLines until opened. Whether they run
 // past it is measured, not guessed from their length, and told to the
 // chat so 続きを読む shows only under words that were cut.
@@ -652,11 +649,7 @@ function FoldedText({
     onFolds(words.scrollHeight > words.clientHeight + 1);
   }, [open, onFolds]);
   return (
-    <span
-      className={open ? undefined : chatStyle.folded}
-      ref={ref}
-      style={open ? undefined : foldLines}
-    >
+    <span className={open ? undefined : chatStyle.folded} ref={ref}>
       {children}
     </span>
   );

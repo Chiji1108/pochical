@@ -1,3 +1,4 @@
+import { chatRules } from "@pochical/design/chat";
 import { css, cva } from "@pochical/styled-system/css";
 
 // The look of the chats: the list of them in a group, and a chat's own
@@ -167,9 +168,7 @@ export const chatStyle = {
   }),
   // A message keeps the lines it was written in.
   // A long message's words, cut at chatRules.foldLines with an ellipsis.
-  // The number reaches the style as a variable FoldedText sets: Panda
-  // reads styles before the code runs, so it cannot follow chatRules.
-  folded: css({ lineClamp: "var(--fold-lines)" }),
+  folded: css({ lineClamp: chatRules.foldLines }),
   // Under a folded message, in the color its links take.
   unfold: cva({
     base: {
@@ -198,12 +197,11 @@ export const chatStyle = {
     whiteSpace: "pre-wrap",
   }),
   // A message of nothing but a few emoji (LargeEmoji), large and without
-  // a bubble, at the size LargeEmoji sets. Rounded for the ring a jump
-  // gives it.
+  // a bubble. Rounded for the ring a jump gives it.
   largeEmoji: css({
     borderRadius: "lg",
     display: "flex",
-    fontSize: "var(--large-emoji-size)",
+    fontSize: `${chatRules.largeEmojiSize}px`,
     lineHeight: 1.15,
     minWidth: 0,
     whiteSpace: "nowrap",
@@ -421,7 +419,7 @@ export const chatStyle = {
       runStart: {
         true: {
           "&:not(:first-child)": {
-            marginTop: "calc(var(--run-gap) - var(--line-gap))",
+            marginTop: `${chatRules.runGap - chatRules.lineGap}px`,
           },
         },
       },
@@ -498,7 +496,7 @@ export const chatStyle = {
     display: "flex",
     gap: "12px",
     // A run's room either side, as the line after it starts one.
-    margin: "calc(var(--run-gap) - var(--line-gap)) 0",
+    margin: `${chatRules.runGap - chatRules.lineGap}px 0`,
     textStyle: "caption",
   }),
   // Three dots in a bubble of the others' kind (a run's first, by their
@@ -526,7 +524,7 @@ export const chatStyle = {
     display: "flex",
     flex: 1,
     flexDirection: "column",
-    gap: "var(--line-gap)",
+    gap: `${chatRules.lineGap}px`,
     listStyle: "none",
     margin: 0,
     minHeight: 0,
