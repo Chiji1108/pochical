@@ -14,7 +14,7 @@ struct GapSheet: View {
   /// The patterns that count as off; with more than one, chips pick
   /// which fills the days, the first to begin with.
   let offPatterns: [Pattern]
-  let onFill: (Pattern) -> Void
+  let onFill: (Pattern) -> Bool
   /// The pattern picked to fill with, shared with the calendar behind,
   /// which shows it faint on the days; none for the first.
   @Binding var picked: PatternID?
@@ -29,7 +29,7 @@ struct GapSheet: View {
 
   init(
     days: [Day], offPatterns: [Pattern], picked: Binding<PatternID?>, openedLook: MarkOptions,
-    onFill: @escaping (Pattern) -> Void
+    onFill: @escaping (Pattern) -> Bool
   ) {
     self.days = days
     _picked = picked
@@ -88,11 +88,11 @@ struct GapSheet: View {
       // The answer stays at the foot, whatever scrolls above it.
       .safeAreaInset(edge: .bottom) {
         Button {
+          guard onFill(offPattern) else { return }
           if blank && !blankAtOpen.contains(offPattern.id) {
             settings.device.look.setOffLook(
               .blank, of: offPattern.id, offPatterns: offPatterns.map(\.id))
           }
-          onFill(offPattern)
           dismiss()
         } label: {
           Text("\(offPattern.name)にする")
