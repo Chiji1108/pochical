@@ -27,7 +27,7 @@ private func ownPatterns(_ rows: [PatternRow], _ order: [PatternOrderRow]) -> [P
 /// 設定 › シフトパターン, and below the list 新しい仕事にする.
 struct PatternsPage: View {
   @Environment(\.themeColors) private var colors
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   @FetchAll private var rows: [PatternRow]
   @FetchAll private var order: [PatternOrderRow]
   @State private var editMode = EditMode.inactive
@@ -58,7 +58,7 @@ struct PatternsPage: View {
         var ids = patterns.map(\.id)
         ids.move(fromOffsets: from, toOffset: to)
         let order = ids + archived.map(\.id)
-        try? database.write { try OwnValues.order(order, now: nowMs(), in: $0) }
+        write { try OwnValues.order(order, now: nowMs(), in: $0) }
       }
       .settingsRows()
 
@@ -153,7 +153,7 @@ struct PatternsPage: View {
 private struct AddPatternPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
-  @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   let patterns: [Pattern]
   @State private var picked: Set<PatternID> = []
   /// One made with 自分で作る: back to the list, past this page, once the
@@ -212,12 +212,12 @@ private struct AddPatternPage: View {
     let there = ids.union(chosen)
     let added = chosen.compactMap(ReadyPatterns.pattern).map { Pattern($0, keeping: there) }
     let now = nowMs()
-    try? database.write { db in
+    let kept = write { db in
       for pattern in added {
         try OwnValues.save(pattern, now: now, in: db)
       }
     }
-    dismiss()
+    if kept { dismiss() }
   }
 
   /// A blank pattern: 9:00 to 18:00, its mark guessed as it is named and
@@ -244,6 +244,7 @@ struct PatternEditor: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Dependency(\.defaultDatabase) private var database
+  @Environment(\.write) private var write
   @FetchAll private var rows: [PatternRow]
   @FetchAll private var order: [PatternOrderRow]
   let initial: Pattern
@@ -417,7 +418,7 @@ struct PatternEditor: View {
 
   private func save() {
     let pattern = shaped
-    try? database.write { try OwnValues.save(pattern, now: nowMs(), in: $0) }
+    guard write({ try OwnValues.save(pattern, now: nowMs(), in: $0) }) else { return }
     onSaved()
     dismiss()
   }
@@ -436,13 +437,11 @@ struct PatternEditor: View {
   private func setArchived(_ archived: Bool) {
     var pattern = initial
     pattern.archived = archived
-    try? database.write { try OwnValues.save(pattern, now: nowMs(), in: $0) }
-    dismiss()
+    if write({ try OwnValues.save(pattern, now: nowMs(), in: $0) }) { dismiss() }
   }
 
   private func delete() {
-    try? database.write { try OwnValues.deletePattern(initial.id, now: nowMs(), in: $0) }
-    dismiss()
+    if write({ try OwnValues.deletePattern(initial.id, now: nowMs(), in: $0) }) { dismiss() }
   }
 }
 

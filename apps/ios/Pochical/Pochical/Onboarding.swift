@@ -68,6 +68,7 @@ struct AppRoot: View {
         Onboarding()
       }
     }
+    .modifier(KeepsEdits())
     .onChange(of: hasPatterns, initial: true) { _, has in
       if has { done = true }
     }
@@ -103,6 +104,7 @@ private enum OnboardingStep: Hashable {
 /// question back.
 struct Onboarding: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.write) private var write
   @State private var path: [OnboardingStep] = []
   /// Starting over after deleting the account, which is said first.
   @AppStorage(FirstRun.deletedKey) private var deleted = false
@@ -151,25 +153,27 @@ struct Onboarding: View {
     if let sequence = template.sequence, template.weekly {
       // A week starts on Sunday: its order lines up with the weekdays.
       let month = Day.today.firstOfMonth
-      begin(patterns, sequence: sequence, anchor: month.adding(days: -month.weekday))
+      begin(patterns, sequence: sequence, anchor: month.adding(days: -month.weekday), write: write)
     } else if template.sequence != nil {
       path.append(.order(template, patterns))
     } else {
-      begin(patterns, sequence: [], anchor: .today)
+      begin(patterns, sequence: [], anchor: .today, write: write)
     }
   }
 }
 
 /// The patterns chosen become the person's, and the order repeats.
-@MainActor private func begin(_ patternIDs: [PatternID], sequence: [PatternID], anchor: Day) {
-  @Dependency(\.defaultDatabase) var database
+@MainActor private func begin(
+  _ patternIDs: [PatternID], sequence: [PatternID], anchor: Day, write: WriteAction
+) {
   let incoming = readyPatterns(patternIDs)
   let now = Int64(Date.now.timeIntervalSince1970 * 1000)
-  try? database.write {
+  let kept = write {
     try OwnValues.begin(
       with: incoming, sequence: sequence, anchor: anchor, today: .today,
       holidayCountry: HolidayCountry.current, now: now, in: $0)
   }
+  guard kept else { return }
   ReminderOffer.setUpOrder(sequence)
 }
 
@@ -345,6 +349,7 @@ private struct PatternsStep: View {
 /// day, and 完了 asks nothing, as no day is there yet.
 private struct OrderStep: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.write) private var write
   let template: JobTemplate
   let patternIDs: [PatternID]
   @State private var sequence: [PatternID]
@@ -369,7 +374,7 @@ private struct OrderStep: View {
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         Button("完了", systemImage: "checkmark", role: .confirm) {
-          begin(patternIDs, sequence: sequence, anchor: anchor)
+          begin(patternIDs, sequence: sequence, anchor: anchor, write: write)
         }
         .disabled(sequence.isEmpty)
       }
