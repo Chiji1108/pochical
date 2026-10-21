@@ -39,6 +39,7 @@ yarn-error.*
 .wrangler/
 .output/
 .tanstack/
+.astro/
 .dev.vars*
 !.dev.vars.example
 

@@ -1,0 +1,15 @@
+---
+// A document page's main: its heading, then its content.
+type Props = { eyebrow: string; title: string; intro: string };
+
+const { eyebrow, title, intro } = Astro.props;
+---
+
+<main class="document-page" id="main">
+  <header class="page-heading">
+    <p class="eyebrow">{eyebrow}</p>
+    <h1>{title}</h1>
+    <p>{intro}</p>
+  </header>
+  <slot />
+</main>

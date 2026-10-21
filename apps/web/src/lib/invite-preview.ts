@@ -23,6 +23,11 @@ export type InviteFetch = (
 const SERVER_ORIGIN = "https://api.pochical.app";
 const TIMEOUT_MS = 5000;
 
+// An invitation's image (its share image, its group's photo) keeps for an
+// hour; one whose group changed has a new address on the page by then
+// (inviteImageVersion).
+export const IMAGE_CACHE = "public, max-age=3600";
+
 // A string hash's base and modulus: a 32-bit polynomial hash, enough to
 // tell one invitation's versions apart.
 const HASH_BASE = 31;
