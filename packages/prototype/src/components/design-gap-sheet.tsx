@@ -128,7 +128,13 @@ function GapSheetBody({
           {offerBlank && (
             <List className={gap.blank}>
               <SwitchRow
-                detail="お休みとして入れて、印は出しません"
+                detail={
+                  <>
+                    お休みとして入れて、印は出しません
+                    <br />
+                    あとから設定の「スタイル」にある「休みの見せ方」で変えられます
+                  </>
+                }
                 label="カレンダーでは空白で見せる"
                 checked={blank}
                 onChange={setBlank}
