@@ -177,7 +177,8 @@ extension DatabaseMigrator {
           "start" TEXT,
           "end" TEXT,
           "countsAsOff" INTEGER NOT NULL,
-          "nextDay" TEXT
+          "nextDay" TEXT,
+          "archived" INTEGER NOT NULL DEFAULT 0
         ) STRICT
         """
       )
@@ -250,6 +251,8 @@ extension DatabaseMigrator {
         """
       )
       .execute(db)
+      // `schema` starts at 0, older than any, so a device takes everything
+      // again under the app's (`Sync.takeAllAgainIfOlder`).
       try #sql(
         """
         CREATE TABLE "syncState" (
@@ -258,37 +261,10 @@ extension DatabaseMigrator {
           "lastMs" INTEGER NOT NULL,
           "lastCounter" INTEGER NOT NULL,
           "offsetMs" INTEGER NOT NULL,
-          "cursor" INTEGER NOT NULL DEFAULT 0
+          "cursor" INTEGER NOT NULL DEFAULT 0,
+          "owner" TEXT NOT NULL DEFAULT '',
+          "schema" INTEGER NOT NULL DEFAULT 0
         ) STRICT
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep patterns no longer used") { db in
-      try #sql(
-        """
-        ALTER TABLE "patterns" ADD COLUMN "archived" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep whose the device's data is") { db in
-      try #sql(
-        """
-        ALTER TABLE "syncState" ADD COLUMN "owner" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-    }
-  }
-
-  mutating func registerSyncSchema() {
-    // 0 is older than any schema, so a device synced before takes
-    // everything again (`Sync.takeAllAgainIfOlder`).
-    registerMigration("Keep the sync schema the device took its values under") { db in
-      try #sql(
-        """
-        ALTER TABLE "syncState" ADD COLUMN "schema" INTEGER NOT NULL DEFAULT 0
         """
       )
       .execute(db)

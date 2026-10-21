@@ -40,12 +40,6 @@ extension DatabaseMigrator {
         """
       )
       .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "unreadCounts" ADD COLUMN "mentions" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
     }
   }
 }

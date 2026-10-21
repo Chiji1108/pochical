@@ -289,6 +289,17 @@ extension DatabaseMigrator {
           "edited" INTEGER NOT NULL,
           "unsent" INTEGER NOT NULL,
           "opID" TEXT NOT NULL,
+          "reactionsJSON" TEXT NOT NULL DEFAULT '[]',
+          "pinnedOrder" INTEGER NOT NULL DEFAULT 0,
+          "daysJSON" TEXT NOT NULL DEFAULT '[]',
+          "poll" INTEGER NOT NULL DEFAULT 0,
+          "votesJSON" TEXT NOT NULL DEFAULT '[]',
+          "decidedKey" TEXT NOT NULL DEFAULT '',
+          "previewJSON" TEXT NOT NULL DEFAULT '',
+          "hidden" INTEGER NOT NULL DEFAULT 0,
+          "replyTo" INTEGER,
+          "noticeJSON" TEXT NOT NULL DEFAULT '',
+          "photosJSON" TEXT NOT NULL DEFAULT '[]',
           PRIMARY KEY ("groupID", "threadID", "seq")
         ) STRICT
         """
@@ -313,167 +324,23 @@ extension DatabaseMigrator {
           "groupID" TEXT NOT NULL,
           "opID" TEXT NOT NULL UNIQUE,
           "edit" BLOB NOT NULL,
-          "madeAtMs" INTEGER NOT NULL
+          "madeAtMs" INTEGER NOT NULL,
+          "failed" INTEGER NOT NULL DEFAULT 0,
+          "wentOut" INTEGER NOT NULL DEFAULT 0,
+          "upJSON" TEXT NOT NULL DEFAULT '{}'
         ) STRICT
         """
       )
       .execute(db)
-    }
-    registerMigration("Keep the chats' unread counts") { db in
       try #sql(
         """
         CREATE TABLE "unreadCounts" (
           "groupID" TEXT NOT NULL,
           "threadID" TEXT NOT NULL,
           "count" INTEGER NOT NULL,
+          "mentions" INTEGER NOT NULL DEFAULT 0,
           PRIMARY KEY ("groupID", "threadID")
         ) STRICT
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the chats' reactions") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "reactionsJSON" TEXT NOT NULL DEFAULT '[]'
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the chats' pins") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "pinnedOrder" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the chats' shared days") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "daysJSON" TEXT NOT NULL DEFAULT '[]'
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the chats' polls") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "poll" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "votesJSON" TEXT NOT NULL DEFAULT '[]'
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "decidedKey" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the chats' photos") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "photoJSON" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the chats' link previews") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "previewJSON" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep lines hidden from the reader") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "hidden" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-  }
-
-  mutating func registerChatReplies() {
-    registerMigration("Keep the line each answers") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "replyTo" INTEGER
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the app's notices among the lines") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "noticeJSON" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the photos that could not be sent") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatOutbox" ADD COLUMN "failed" INTEGER NOT NULL DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-  }
-
-  mutating func registerChatAlbums() {
-    registerMigration("Keep the photos' albums") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "album" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-    }
-  }
-
-  mutating func registerChatLinePhotos() {
-    registerMigration("Keep a line's photos together") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatLines" DROP COLUMN "photoJSON"
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "chatLines" DROP COLUMN "album"
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "chatLines" ADD COLUMN "photosJSON" TEXT NOT NULL DEFAULT '[]'
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "chatOutbox" ADD COLUMN "upJSON" TEXT NOT NULL DEFAULT '{}'
-        """
-      )
-      .execute(db)
-    }
-  }
-
-  mutating func registerChatWentOut() {
-    registerMigration("Keep which waiting chat edits went out") { db in
-      try #sql(
-        """
-        ALTER TABLE "chatOutbox" ADD COLUMN "wentOut" INTEGER NOT NULL DEFAULT 0
         """
       )
       .execute(db)

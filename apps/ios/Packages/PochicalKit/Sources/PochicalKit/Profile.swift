@@ -19,35 +19,16 @@ struct ProfileRow: Hashable, Sendable {
 
 extension DatabaseMigrator {
   mutating func registerProfile() {
-    registerMigration("Keep the usual name") { db in
+    registerMigration("Keep the account's profile") { db in
       try #sql(
         """
         CREATE TABLE "profile" (
           "id" INTEGER PRIMARY KEY NOT NULL CHECK ("id" = 1),
-          "name" TEXT NOT NULL
+          "name" TEXT NOT NULL,
+          "photoID" TEXT NOT NULL DEFAULT '',
+          "markStyle" TEXT NOT NULL DEFAULT '',
+          "markFill" INTEGER NOT NULL DEFAULT 1
         ) STRICT
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the usual photo") { db in
-      try #sql(
-        """
-        ALTER TABLE "profile" ADD COLUMN "photoID" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-    }
-    registerMigration("Keep the shape the account draws marks in") { db in
-      try #sql(
-        """
-        ALTER TABLE "profile" ADD COLUMN "markStyle" TEXT NOT NULL DEFAULT ''
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "profile" ADD COLUMN "markFill" INTEGER NOT NULL DEFAULT 1
         """
       )
       .execute(db)

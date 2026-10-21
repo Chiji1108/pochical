@@ -41,8 +41,7 @@ struct MemberEntity: AppEntity {
 
 /// The person's groups and who is in each, as the database holds them.
 private func choiceGroups() -> [WidgetChoiceGroup] {
-  guard let database = try? widgetDatabase() else { return [] }
-  return (try? database.read { try widgetChoices(me: widgetMeID(), in: $0) }) ?? []
+  (try? readWidgetDatabase { try widgetChoices(me: widgetMeID(), in: $0) }) ?? []
 }
 
 struct CompanionQuery: EntityQuery {
