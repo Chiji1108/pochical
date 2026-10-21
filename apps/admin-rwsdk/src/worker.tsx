@@ -24,11 +24,16 @@ const sameOrigin = ({ request }: RequestInfo) =>
 export default defineApp([
   sameOrigin,
   route("/photos/:userId/:photoId", photo),
-  render(Document, [
-    route("/", SupportChats),
-    route("/reports", Reports),
-    route("/bucket", { get: Bucket, post: cleanBucket }),
-  ]),
+  // Pages with nothing of React's to hydrate: HTML only, no RSC payload.
+  render(
+    Document,
+    [
+      route("/", SupportChats),
+      route("/reports", Reports),
+      route("/bucket", { get: Bucket, post: cleanBucket }),
+    ],
+    { rscPayload: false }
+  ),
   render(HydratedDocument, [
     route("/support/:userId", { get: SupportChat, post: postAnswer }),
   ]),
