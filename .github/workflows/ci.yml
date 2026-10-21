@@ -60,7 +60,7 @@ jobs:
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
-  # apps/web, apps/catalog, apps/server, apps/admin and packages/: lint
+  # apps/web, apps/catalog, apps/server, apps/admin, packages/ and tools/: lint
   # and format, types, tests.
   typescript:
     needs: changes

@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "scripts": {
-    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/catalog typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck",
+    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/catalog typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck && tsc --noEmit -p tools/api-try && tsc --noEmit -p tools/chat-try && tsc --noEmit -p tools/layout-diff && tsc --noEmit -p tools/roster-eval && tsc --noEmit -p tools/sync-schema",
     "test": "bun run --cwd packages/jsx test && bun run --cwd packages/prototype test && bun run --cwd apps/web test && bun run --cwd apps/catalog test && bun run --cwd apps/server test",
     "check": "ultracite check",
     "fix": "ultracite fix",
@@ -34,6 +34,7 @@
     "oxlint-tsgolint": "^7.0.2003",
     "playwright-core": "^1.63.0",
     "sharp": "0.35.4",
+    "typescript": "~6.0.3",
     "ultracite": "7.12.0"
   },
   "packageManager": "bun@1.4.2"
