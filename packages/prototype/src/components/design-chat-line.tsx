@@ -12,7 +12,6 @@ import {
 } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
-import { albumsOf } from "../lib/chat-messages";
 import {
   firstLink,
   inviteCodeOf,
@@ -32,16 +31,10 @@ import {
   DayCard,
   InviteCard,
   LinkCard,
-  PhotoAlbum,
   PhotoLine,
   ReactionPill,
 } from "./design-chat-cards";
-import type {
-  AlbumCell,
-  ChatPhoto,
-  InviteLook,
-  Upload,
-} from "./design-chat-cards";
+import type { ChatPhoto, InviteLook, LineUpload } from "./design-chat-cards";
 import { Bubble, ChatItem, LargeEmoji, LineFrame } from "./design-chat-parts";
 import { PollCard } from "./design-chat-poll";
 import { chatAvatarSize, chatStyle } from "./design-chat-style";
@@ -98,82 +91,17 @@ export const photosOf = (
   shown: (message: Message) => boolean
 ): ChatPhoto[] =>
   messages.flatMap((message) =>
-    message.photo && !message.unsent && shown(message)
-      ? [
-          {
-            label: photoLabel(writerOf(message.from)),
-            mine: message.from === "me",
-            photo: message.photo,
-            when: message.when,
-          },
-        ]
+    message.photos && !message.unsent && shown(message)
+      ? message.photos.map((photo, at) => ({
+          at,
+          label: photoLabel(writerOf(message.from)),
+          line: message.id,
+          mine: message.from === "me",
+          photo,
+          when: message.when,
+        }))
       : []
   );
-
-// A chat's lines as they are drawn, each with the lines around it: an
-// album as its first line holding them all, unless a line of it is
-// folded away (a blocked member's), when each is drawn alone.
-export type DrawnLine = {
-  message: Message;
-  previous?: Message;
-  next?: Message;
-  album?: Message[];
-};
-
-export function drawnLines(
-  messages: Message[],
-  folded: (message: Message) => boolean = () => false
-): DrawnLine[] {
-  // Each album by its first line.
-  const albums = new Map<string, Message[]>();
-  for (const ids of albumsOf(messages)) {
-    const lines = messages.filter((message) => ids.includes(message.id));
-    const [first] = lines;
-    if (first && !lines.some(folded)) {
-      albums.set(first.id, lines);
-    }
-  }
-  const inAlbums = new Set(
-    [...albums.values()].flatMap((lines) => lines.slice(1).map(({ id }) => id))
-  );
-  return messages.flatMap((message, index) => {
-    if (inAlbums.has(message.id)) {
-      return [];
-    }
-    const album = albums.get(message.id);
-    return [
-      {
-        album,
-        message,
-        next: messages[index + (album?.length ?? 1)],
-        previous: messages[index - 1],
-      },
-    ];
-  });
-}
-
-// An album's photos as MessageLine draws them, each with what its chat
-// gives its line.
-export const albumOf = (
-  lines: Message[] | undefined,
-  cellOf: (line: Message) => Omit<AlbumCell, "anchor" | "key" | "photo">
-) =>
-  lines && {
-    cells: lines.flatMap((line, index) =>
-      line.photo
-        ? [
-            {
-              ...cellOf(line),
-              // The first's place is the whole album's.
-              anchor: index === 0 ? undefined : `message-${line.id}`,
-              key: line.id,
-              photo: line.photo,
-            },
-          ]
-        : []
-    ),
-    lines,
-  };
 
 export const ChatContext = createContext<ChatScope | undefined>(undefined);
 
@@ -216,7 +144,6 @@ export function MessageLine({
   flash,
   lifted,
   upload,
-  album,
   actions,
   onSelect,
   onDecide = nothing,
@@ -239,19 +166,17 @@ export function MessageLine({
   flash: boolean;
   // Its actions are open over it.
   lifted: boolean;
-  upload?: Upload;
-  // The album it starts, drawn here as one with its lines after it
-  // (albumsOf); `next` is then the line after the album.
-  album?: { lines: Message[]; cells: AlbumCell[] };
+  // Its photos' way up, while it is yours going out or not sent.
+  upload?: LineUpload;
   actions: LineActions;
   // Opens its actions, from a card's long press.
   onSelect: () => void;
   // Settling its poll, and a vote in it, for a chat that has polls.
   onDecide?: () => void;
   onVote?: (key: string) => void;
-  // A tap on a photo that could not be sent.
+  // A tap on the ! of a photo line that could not be sent.
   onFailed?: () => void;
-  // × on a photo going up, stopping it.
+  // × on a photo going up, stopping its line.
   onStopUpload?: () => void;
   // Its words were measured to fold, and 続きを読む has come in under
   // them, after the chat was scrolled to its place.
@@ -332,23 +257,11 @@ export function MessageLine({
       </ChatItem>
     );
   }
-  // An album's time is its last photo's, beside it, held back while any
-  // of its photos goes up; a quoted album is lifted whole, as its bubble
-  // clips the photo held.
-  const timed = album?.lines.at(-1) ?? message;
-  const going = album
-    ? album.cells.some((cell) => cell.upload === "sending")
-    : upload !== undefined;
-  const failedBeside = upload === "failed" && !album;
-  const notSent = album
-    ? album.cells.some((cell) => cell.upload === "failed")
-    : upload === "failed";
-  const pinned = (album?.lines ?? [message]).some(
-    (line) => line.pinned !== undefined
-  );
-  const rowLifted = album
-    ? quoted !== undefined && album.cells.some((cell) => cell.lifted)
-    : lifted;
+  // Its time held back while its photos go up; its ! beside it, by the
+  // last photo, once not sent.
+  const status = upload?.line;
+  const notSent = status === "failed";
+  const pinned = message.pinned !== undefined;
   const face =
     member &&
     (faces?.[member.id] ?? <Avatar member={member} size={chatAvatarSize} />);
@@ -382,7 +295,7 @@ export function MessageLine({
       <SwipeToReply
         className={cx(
           chatStyle.bubbleRow({ mine }),
-          rowLifted && messageActions.lifted
+          lifted && messageActions.lifted
         )}
         // Not while it goes up, nor once it could not.
         disabled={upload !== undefined}
@@ -391,36 +304,24 @@ export function MessageLine({
           actions.onReply();
         }}
       >
-        {album && (
-          <PhotoAlbum
-            among={photos}
-            cells={album.cells}
-            fetchFails={fetchFails ?? false}
-            label={photoLabel(member)}
-            mine={actions.mine}
-            onSave={() => {
-              toast("写真を保存しました");
-            }}
-            quote={quote}
-          />
-        )}
-        {!album && message.photo && (
+        {message.photos && (
           <PhotoLine
             actions={actions}
             among={photos}
             fetchFails={fetchFails}
-            onStop={onStopUpload}
-            upload={upload}
+            id={message.id}
             label={photoLabel(member)}
             mine={actions.mine}
             onSave={() => {
               toast("写真を保存しました");
             }}
-            photo={message.photo}
+            onStop={onStopUpload}
+            photos={message.photos}
             quote={quote}
+            upload={upload}
           />
         )}
-        {!message.photo && message.days && (
+        {!message.photos && message.days && (
           <MessageActions {...actions}>
             <button
               aria-label={`${member?.name ?? ""}が共有した日にち。長押しでリアクションと返信`}
@@ -467,7 +368,7 @@ export function MessageLine({
             </MessageActions>
           </LargeEmoji>
         )}
-        {!message.photo && !message.days && !message.poll && !largeEmoji && (
+        {!message.photos && !message.days && !message.poll && !largeEmoji && (
           // Like the app: the quoted line sits inside the bubble,
           // above a thin rule, and jumps to the original.
           <Bubble
@@ -555,7 +456,7 @@ export function MessageLine({
             )}
           </Bubble>
         )}
-        {failedBeside && (
+        {notSent && (
           <button
             aria-label="送れませんでした。押すと再送か削除"
             className={chatStyle.failed}
@@ -565,7 +466,7 @@ export function MessageLine({
             <CircleAlert aria-hidden="true" size={22} />
           </button>
         )}
-        {!failedBeside && (
+        {!notSent && (
           <small className={chatStyle.time}>
             {(pinned || message.edited) && (
               <span className={chatStyle.timeNote({ mine })}>
@@ -576,10 +477,10 @@ export function MessageLine({
             {/* Left to the next line, or while its photo goes up, its
                 room is kept, so the bubble is as wide either way
                 (spec/chat.md, In a message). */}
-            {!going && showsTime(timed, next) ? (
-              timed.time
+            {status === undefined && showsTime(message, next) ? (
+              message.time
             ) : (
-              <span className={chatStyle.timeKept}>{timed.time}</span>
+              <span className={chatStyle.timeKept}>{message.time}</span>
             )}
           </small>
         )}
@@ -617,7 +518,7 @@ export function MessageLine({
 
 // The line a reply answers, inside the bubble over a thin rule, in the
 // bubble's own text color; one line, so it never outweighs the answer.
-// A photo shows small beside it, to tell which one of several.
+// A photo line's first photo shows small beside it.
 function BubbleQuote({
   quoted,
   name,
@@ -646,8 +547,12 @@ function BubbleQuote({
             {summaryOf(quoted, nameOf)}
           </span>
         </span>
-        {quoted.photo && (
-          <img alt="" className={chatStyle.quoteThumb} src={quoted.photo.src} />
+        {quoted.photos?.[0] && (
+          <img
+            alt=""
+            className={chatStyle.quoteThumb}
+            src={quoted.photos[0].src}
+          />
         )}
       </span>
       <span aria-hidden="true" className={chatStyle.bubbleRule} />

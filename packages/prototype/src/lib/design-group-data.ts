@@ -135,7 +135,8 @@ export function sameMonth(date: Date, month: Date) {
 }
 
 // A chat line. `days` shares dates, drawn with everyone's shifts;
-// `photo` is a picture, one per line; `replyTo` quotes an earlier line;
+// `photos` are pictures sent at once, in the order sent; `replyTo` quotes
+// an earlier line;
 // `text` keeps a mention as <@id> (spec/chat.md); `link` is the
 // preview of the first link in `text`, made as it was
 // written and sent with it; `notice` is a line from the app about who is
@@ -158,13 +159,12 @@ export type Message = {
   link?: LinkPreview;
   notice?: string;
   days?: Date[];
-  photo?: Photo;
-  // The send a photo went with, when it went with others: they are drawn
-  // as one album (spec/chat.md, Albums).
-  album?: string;
+  // 1 to chatRules.photosPerSend; two or more are drawn as an album
+  // (spec/chat.md, Albums).
+  photos?: Photo[];
   replyTo?: string;
   reactions?: Reaction[];
-  // Yours, not sent (its photo could not be uploaded): only this phone
+  // Yours, not sent (a photo could not be uploaded): only this phone
   // knows, as the apps keep it in their outbox (spec/chat.md, Lines on
   // their way).
   failed?: boolean;
