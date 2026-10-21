@@ -7,7 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AUDIT_GRACE_MS } from "../src/bucket-audit";
 import type { BucketAudit } from "../src/bucket-audit";
 import { chatLines, groupPhotos } from "../src/group-do-schema";
-import { deletePhotosUnder, personPhotoKey, photoKey } from "../src/photos";
+import {
+  deletePhotosUnder,
+  personPhotoKey,
+  photoKey,
+  sharePersonPhoto,
+} from "../src/photos";
 import { call, ORIGIN } from "./helpers";
 import {
   PAIR_ROSTER,
@@ -266,11 +271,13 @@ describe("the photos bucket's audit", () => {
     await seedBucket();
     const admin = exports.AdminEntrypoint;
     // Just stored: nothing is deleted.
-    await expect(admin.cleanBucket()).resolves.toMatchObject({ rows: [] });
+    await expect(admin.cleanBucket(Date.now())).resolves.toMatchObject({
+      rows: [],
+    });
 
     afterGrace();
     const audited = await admin.bucketAudit();
-    const cleanup = await admin.cleanBucket();
+    const cleanup = await admin.cleanBucket(Date.now());
     expect(
       Object.fromEntries(
         cleanup.rows.map(({ verdict, ...rest }) => [verdict, rest])
@@ -295,13 +302,15 @@ describe("the photos bucket's audit", () => {
     ).toStrictEqual(
       audited.rows.filter(({ verdict }) => verdict === "referenced")
     );
-    await expect(admin.cleanBucket()).resolves.toMatchObject({ rows: [] });
+    await expect(admin.cleanBucket(Date.now())).resolves.toMatchObject({
+      rows: [],
+    });
   });
 
   it("leaves the group's notes saying what the bucket holds", async () => {
     const { groupId, ids, maker, photosPath } = await seedBucket();
     afterGrace();
-    await exports.AdminEntrypoint.cleanBucket();
+    await exports.AdminEntrypoint.cleanBucket(Date.now());
 
     // The photo no line carried is taken back, so its id is never stored
     // again; one stored with no note has none still.
@@ -356,5 +365,65 @@ describe("the photos bucket's audit", () => {
     await expect(
       Promise.all([env.PHOTOS.head(raced), env.PHOTOS.head(usual)])
     ).resolves.not.toContain(null);
+  });
+});
+
+/**
+ * A photo of the maker's own, not their usual one, deleted as the audit
+ * found it spare.
+ */
+const deletedSpare = async () => {
+  const { groupId, maker, makerId } = await pair();
+  const photoId = crypto.randomUUID();
+  await expect(upload(`/v1/me/photos/${photoId}`, maker)).resolves.toBe(204);
+  const key = personPhotoKey(makerId, photoId);
+  await env.USERS.getByName(makerId).deleteOrphanPhotos([
+    { bytes: JPEG.byteLength, key, verdict: "notUsual" },
+  ]);
+  return { groupId, key, maker, makerId, photoId };
+};
+
+describe("what comes to name a photo as the delete takes it", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("never sets as the usual photo one the delete took", async () => {
+    const { maker, makerId, photoId } = await deletedSpare();
+    const user = env.USERS.getByName(makerId);
+    // Reached after a look that still found it, the user's DO looks again.
+    await expect(user.setProfile("さくら", photoId)).resolves.toBeNull();
+    const set = await call(
+      "UserService/SetProfile",
+      { name: "さくら", photoId },
+      maker
+    );
+    expect(set.status).toBe(400);
+    await expect(user.profileOf()).resolves.toMatchObject({ photoId: "" });
+  });
+
+  it("never makes a group's mark of one the delete took", async () => {
+    const { groupId, maker, makerId, photoId } = await deletedSpare();
+    // Reached after a look that still found it, the copy finds none.
+    expect({
+      shared: await sharePersonPhoto(env, makerId, photoId, groupId),
+    }).toStrictEqual({ shared: false });
+    const renamed = await call(
+      "GroupService/RenameGroup",
+      { groupId, mark: { photoId }, name: "いとこ会" },
+      maker
+    );
+    expect(renamed.status).toBe(400);
+    const profile = await env.GROUPS.getByName(groupId).getProfile();
+    expect(profile?.mark.photoId).toBe("");
+  });
+
+  it("deletes as of the audit read, not what passed the grace since", async () => {
+    const readAt = Date.now();
+    await seedBucket();
+    afterGrace();
+    await expect(
+      exports.AdminEntrypoint.cleanBucket(readAt)
+    ).resolves.toMatchObject({ rows: [] });
   });
 });

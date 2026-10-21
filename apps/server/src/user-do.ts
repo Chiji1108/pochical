@@ -39,7 +39,7 @@ import type {
 import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
-import { personPhotoKey, sharePersonPhoto } from "./photos";
+import { hasPersonPhoto, personPhotoKey, sharePersonPhoto } from "./photos";
 import { devicesOf, dropPushToken } from "./push-tokens";
 import type { Device } from "./push-tokens";
 import { retryWait } from "./retry-wait";
@@ -693,8 +693,8 @@ export class UserDO extends DurableObject<Env> {
       );
       return await deleteOrphans(
         this.env.PHOTOS,
-        orphans,
-        ({ key }) => key === usual
+        orphans.filter(({ key }) => key !== usual),
+        orphans.filter(({ key }) => key === usual)
       );
     });
   }
@@ -702,25 +702,37 @@ export class UserDO extends DurableObject<Env> {
   /**
    * Sets the usual name and photo, each empty for none, sent to the user's
    * devices and pushed to their groups. The photo it replaces, for the
-   * caller to delete; empty when none.
+   * caller to delete; empty when none. Null, setting nothing, for a new
+   * photo the user has not uploaded: looked for in the same turn as the
+   * write, as the bucket's delete (deleteOrphanPhotos) takes the user's
+   * spare photos in a turn of its own, so it never takes the one set.
    */
-  setProfile(name: string, photoId: string): string {
-    const before = this.profileOf().photoId;
-    const changed = this.ctx.storage.transactionSync(() => {
-      const row = { cursor: this.nextCursor(), id: 1, name, photoId };
-      return this.db
-        .insert(profile)
-        .values(row)
-        .onConflictDoUpdate({
-          set: { cursor: row.cursor, name, photoId },
-          target: profile.id,
-        })
-        .returning()
-        .get();
+  async setProfile(name: string, photoId: string): Promise<string | null> {
+    return await this.ctx.blockConcurrencyWhile(async () => {
+      const before = this.profileOf().photoId;
+      if (
+        photoId !== before &&
+        photoId !== "" &&
+        !(await hasPersonPhoto(this.env, this.ctx.id.name ?? "", photoId))
+      ) {
+        return null;
+      }
+      const changed = this.ctx.storage.transactionSync(() => {
+        const row = { cursor: this.nextCursor(), id: 1, name, photoId };
+        return this.db
+          .insert(profile)
+          .values(row)
+          .onConflictDoUpdate({
+            set: { cursor: row.cursor, name, photoId },
+            target: profile.id,
+          })
+          .returning()
+          .get();
+      });
+      broadcastChanges(this.ctx, [profileChange(changed)]);
+      this.schedulePush();
+      return before === photoId ? "" : before;
     });
-    broadcastChanges(this.ctx, [profileChange(changed)]);
-    this.schedulePush();
-    return before === photoId ? "" : before;
   }
 
   /**

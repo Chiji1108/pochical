@@ -28,9 +28,9 @@ export const getBucketAudit = createServerFn().handler(
   async () => await env.SERVER.bucketAudit()
 );
 
-export const cleanBucket = createServerFn({ method: "POST" }).handler(
-  async () => await env.SERVER.cleanBucket()
-);
+export const cleanBucket = createServerFn({ method: "POST" })
+  .validator((asOfMs: number) => asOfMs)
+  .handler(async ({ data }) => await env.SERVER.cleanBucket(data));
 
 /** When, as Pochical's people read it: Japan's time. */
 export const when = (ms: number): string =>

@@ -48,19 +48,10 @@ function BucketAudit() {
   const [cleaning, setCleaning] = useState(false);
   const [cleanup, setCleanup] = useState<Cleanup | "failed" | null>(null);
   const confirm = useRef<HTMLDialogElement>(null);
-  // What 消す will delete, by verdict across every prefix: the server
-  // leaves the keys it does not write.
-  const deletable = new Map<Verdict, Weight>();
   const total: Weight = { bytes: 0, count: 0 };
-  for (const row of audit.rows) {
-    if (row.orphan && row.verdict !== "unknown") {
-      const weight = deletable.get(row.verdict) ?? { bytes: 0, count: 0 };
-      weight.bytes += row.bytes;
-      weight.count += row.count;
-      deletable.set(row.verdict, weight);
-      total.bytes += row.bytes;
-      total.count += row.count;
-    }
+  for (const { bytes, count } of audit.deletable) {
+    total.bytes += bytes;
+    total.count += count;
   }
   const rerun = async () => {
     setRunning(true);
@@ -70,7 +61,10 @@ function BucketAudit() {
   };
   const clean = async () => {
     setCleaning(true);
-    const result = await cleanBucket().catch(() => "failed" as const);
+    // As of the audit shown, so what passed the grace since stays.
+    const result = await cleanBucket({ data: audit.atMs }).catch(
+      () => "failed" as const
+    );
     setCleaning(false);
     confirm.current?.close();
     setCleanup(result);
@@ -124,17 +118,17 @@ function BucketAudit() {
             </tr>
           </thead>
           <tbody>
-            {[...deletable].map(([verdict, weight]) => (
+            {audit.deletable.map(({ bytes, count, verdict }) => (
               <tr key={verdict}>
                 <td>{VERDICT_NAMES[verdict]}</td>
-                <td>{weight.count}</td>
-                <td>{sizeOf(weight.bytes)}</td>
+                <td>{count}</td>
+                <td>{sizeOf(bytes)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <p className="meta">
-          {`${VERDICT_NAMES.unknown}と、${audit.graceMs / 3_600_000} 時間以内に置かれたものは残します。消す前に持ち主にもう一度聞き、その間に使われたものは飛ばします。`}
+          {`${VERDICT_NAMES.unknown}と、${audit.graceMs / 3_600_000} 時間以内に置かれたものは残します。グループの写真と自分の写真は、消す前に持ち主にもう一度聞き、その間に使われたものは飛ばします。`}
         </p>
         <div className="actions">
           <button

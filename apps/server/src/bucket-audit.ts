@@ -63,6 +63,9 @@ export type OwnerCleanup = Record<"deleted" | "skipped" | "failed", Orphan[]>;
 /** How many objects, and their bytes. */
 export type Weight = { count: number; bytes: number };
 
+/** The orphans of one verdict the delete takes, every prefix's together. */
+export type DeletableWeight = Weight & { verdict: DeletableReason };
+
 /** What the delete did with the orphans of one verdict. */
 export type CleanupRow = { verdict: DeletableReason } & Record<
   keyof OwnerCleanup,
@@ -105,7 +108,9 @@ export type BucketAudit = {
   groupsAsked: number;
   usersAsked: number;
   /** Every orphan row's together. */
-  orphans: { count: number; bytes: number };
+  orphans: Weight;
+  /** What cleanBucket as of `atMs` would delete, by verdict. */
+  deletable: DeletableWeight[];
   rows: AuditRow[];
 };
 
@@ -470,6 +475,9 @@ const walkBucket = async (
   return { groupsAsked, usersAsked };
 };
 
+const isDeletable = (verdict: Verdict): verdict is DeletableReason =>
+  verdict !== "referenced" && verdict !== "recent" && verdict !== "unknown";
+
 /** The bucket audited as of `atMs`. It only reads. */
 export const auditBucket = async (
   env: Env,
@@ -486,32 +494,42 @@ export const auditBucket = async (
     }
   );
   const sorted = rows.sorted();
-  const orphans = sorted.filter(({ orphan }) => orphan);
+  const deletable = new Map<DeletableReason, DeletableWeight>();
+  const orphans: Weight = { bytes: 0, count: 0 };
+  for (const { bytes, count, orphan, verdict } of sorted) {
+    if (orphan) {
+      orphans.bytes += bytes;
+      orphans.count += count;
+    }
+    if (isDeletable(verdict)) {
+      const weight = deletable.get(verdict) ?? { bytes: 0, count: 0, verdict };
+      weight.bytes += bytes;
+      weight.count += count;
+      deletable.set(verdict, weight);
+    }
+  }
   return {
     atMs,
+    deletable: [...deletable.values()],
     graceMs: AUDIT_GRACE_MS,
     groupsAsked,
-    orphans: {
-      bytes: orphans.reduce((sum, row) => sum + row.bytes, 0),
-      count: orphans.reduce((sum, row) => sum + row.count, 0),
-    },
+    orphans,
     rows: sorted,
     usersAsked,
   };
 };
 
 /**
- * `orphans` deleted from the bucket in R2's batches, but those `named`
- * says something names now, skipped. A batch R2 refused is failed. R2
- * deletes a key it no longer has as it does one it has, so a run cut
- * short and run again deletes the rest.
+ * `going` deleted from the bucket in R2's batches, and `skipped` with
+ * them as skipped. A batch R2 refused is failed. R2 deletes a key it no
+ * longer has as it does one it has, so a run cut short and run again
+ * deletes the rest.
  */
 export const deleteOrphans = async (
   bucket: R2Bucket,
-  orphans: Orphan[],
-  named: (orphan: Orphan) => boolean = () => false
+  going: Orphan[],
+  skipped: Orphan[] = []
 ): Promise<OwnerCleanup> => {
-  const going = orphans.filter((orphan) => !named(orphan));
   const done = await Promise.all(
     deleteBatchesOf(going).map(async (batch) => {
       try {
@@ -525,7 +543,7 @@ export const deleteOrphans = async (
   return {
     deleted: done.flatMap(({ batch, deleted }) => (deleted ? batch : [])),
     failed: done.flatMap(({ batch, deleted }) => (deleted ? [] : batch)),
-    skipped: orphans.filter(named),
+    skipped,
   };
 };
 
@@ -534,8 +552,9 @@ export const deleteOrphans = async (
  * again against what the group names now: one a line, a face, the mark
  * or the sweep came to hold is skipped. The sent photos among them are
  * noted as taken back first, as a line taken back leaves its photos, so
- * the note never says R2 holds what it does not, and no upload stores
- * their ids again.
+ * no upload stores their ids again; should R2 refuse, the note says taken
+ * back of a photo still stored, which the audit reports and a run again
+ * deletes, as after a take-back.
  */
 export const deleteGroupOrphans = async (
   db: DrizzleSqliteDODatabase,
@@ -544,25 +563,30 @@ export const deleteGroupOrphans = async (
   orphans: Orphan[]
 ): Promise<OwnerCleanup> => {
   const group = groupReferences(db);
-  const photoOf = ({ key }: Orphan) => GROUP_PHOTO.exec(key)?.groups;
-  const named = (orphan: Orphan) => {
-    const parts = photoOf(orphan);
-    return (
+  const going: { orphan: Orphan; photoId: string }[] = [];
+  const skipped: Orphan[] = [];
+  for (const orphan of orphans) {
+    const parts = GROUP_PHOTO.exec(orphan.key)?.groups;
+    const photoId = parts?.photoId ?? "";
+    const named =
       parts?.groupId !== groupId ||
-      groupPhotoVerdict(parts.photoId ?? "", group) === "referenced"
-    );
-  };
+      groupPhotoVerdict(photoId, group) === "referenced";
+    if (named) {
+      skipped.push(orphan);
+    } else {
+      going.push({ orphan, photoId });
+    }
+  }
   takeBackUncarried(
     db,
-    orphans
-      .filter((orphan) => !named(orphan))
-      .map((orphan) => photoOf(orphan)?.photoId ?? "")
+    going.map(({ photoId }) => photoId)
   );
-  return await deleteOrphans(bucket, orphans, named);
+  return await deleteOrphans(
+    bucket,
+    going.map(({ orphan }) => orphan),
+    skipped
+  );
 };
-
-const isDeletable = (verdict: Verdict): verdict is DeletableReason =>
-  verdict !== "referenced" && verdict !== "recent" && verdict !== "unknown";
 
 /** An owner's orphans deleted, each judged again by what would name it. */
 const cleanUp = async (
@@ -587,7 +611,9 @@ const cleanUp = async (
         .from(user)
         .where(eq(user.id, owner.userId))
         .get();
-      return await deleteOrphans(env.PHOTOS, orphans, () => made !== undefined);
+      return made === undefined
+        ? await deleteOrphans(env.PHOTOS, orphans)
+        : await deleteOrphans(env.PHOTOS, [], orphans);
     }
     case "rest": {
       return await deleteOrphans(env.PHOTOS, orphans);

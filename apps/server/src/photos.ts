@@ -263,27 +263,30 @@ export const hasPersonPhoto = async (
 
 /**
  * The user's own photo copied into a group's photos where the group has
- * none under its id; nothing when the user has no photo of that id.
+ * none under its id: whether the group has it now, false when the user
+ * has no photo of that id (gone since it was looked for, as the bucket's
+ * delete may take it).
  */
 export const copyPersonPhoto = async (
   env: Env,
   userId: string,
   photoId: string,
   groupId: string
-): Promise<void> => {
+): Promise<boolean> => {
   const key = photoKey(groupId, photoId);
   if ((await env.PHOTOS.head(key)) !== null) {
-    return;
+    return true;
   }
   const photo = await env.PHOTOS.get(personPhotoKey(userId, photoId));
   if (photo === null) {
-    return;
+    return false;
   }
   await env.PHOTOS.put(key, photo.body, {
     customMetadata: { userId },
     httpMetadata: { contentType: "image/jpeg" },
     onlyIf: CREATE_ONLY,
   });
+  return true;
 };
 
 /**
@@ -291,17 +294,19 @@ export const copyPersonPhoto = async (
  * copied into a group's photos, for its members to read as they read the
  * rest; noted by the group as one it shows first, so no upload takes it,
  * and copied once, as a photo never changes. Nothing when the id is an
- * upload's.
+ * upload's. False when the user has no such photo, so nothing comes to
+ * name it in the group; a note made of it goes as a copy nothing named.
  */
 export const sharePersonPhoto = async (
   env: Env,
   userId: string,
   photoId: string,
   groupId: string
-): Promise<void> => {
+): Promise<boolean> => {
   if (await env.GROUPS.getByName(groupId).noteSharedPhoto(photoId, userId)) {
-    await copyPersonPhoto(env, userId, photoId, groupId);
+    return await copyPersonPhoto(env, userId, photoId, groupId);
   }
+  return true;
 };
 
 /**

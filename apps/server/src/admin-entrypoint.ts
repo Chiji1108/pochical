@@ -144,13 +144,18 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   }
 
   /**
-   * What the audit finds nothing names now deleted from the photos bucket
+   * What the audit finds nothing names deleted from the photos bucket
    * (削除), but the keys no part of the server writes, each judged again
    * by its owner first: what was deleted, skipped and failed, by verdict.
-   * It cannot be undone; run again, it deletes what a run cut short left.
+   * Judged as of `asOfMs`, the audit Pochical's people read, so nothing
+   * that passed the grace since is deleted unseen. It cannot be undone;
+   * run again, it deletes what a run cut short left.
    */
-  async cleanBucket(): Promise<BucketCleanup> {
-    return await cleanBucket(this.env, Date.now());
+  async cleanBucket(asOfMs: number): Promise<BucketCleanup> {
+    if (!Number.isFinite(asOfMs)) {
+      throw new TypeError("No audit's time to delete as of");
+    }
+    return await cleanBucket(this.env, Math.min(asOfMs, Date.now()));
   }
 
   /** What members reported, the latest first. */
