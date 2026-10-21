@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { navigating } from "$app/state";
+  import { refreshAll } from "$app/navigation";
   import { when } from "#lib/when.ts";
 
   let { data, form } = $props();
@@ -40,7 +40,8 @@
     return sum;
   });
   let cleaning = $state(false);
-  const busy = $derived(cleaning || navigating.to !== null);
+  let running = $state(false);
+  const busy = $derived(cleaning || running);
   let confirm: HTMLDialogElement;
 </script>
 
@@ -53,7 +54,18 @@
     {`どこからも指されないもの：${audit.orphans.count} 件、${sizeOf(audit.orphans.bytes)}`}
   </p>
   <div class="actions">
-    <form method="GET">
+    <!-- Without JavaScript a GET to the same page runs the audit again; the
+    client router would reuse the page's data, so it refreshes instead. -->
+    <form
+      method="GET"
+      onsubmit={async (event) => {
+        event.preventDefault();
+        running = true;
+        await refreshAll().finally(() => {
+          running = false;
+        });
+      }}
+    >
       <button disabled={busy} type="submit">再実行</button>
     </form>
     <button

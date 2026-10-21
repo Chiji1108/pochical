@@ -35,58 +35,40 @@
     <a href="?before={earliest}">前のメッセージ</a>
   {/if}
   {#each data.lines as line (line.seq)}
-    <div class="line" data-from={line.fromPochical ? "staff" : "user"}>
-      <div class="meta">
-        {line.fromPochical ? "ポチカル" : "ユーザー"}・{when(line.sentAtMs)}{line.device ===
-        null
-          ? ""
-          : `・${line.device}`}
-      </div>
-      {#if line.replyTo !== null}
-        <div class="quote">{quoteOf(line.replyTo)}</div>
-      {/if}
-      {#if line.unsent}
-        <span class="meta">送信が取り消されました</span>
-      {/if}
-      {#if line.photos.length > 0}
-        <div class="photos">
-          {#each line.photos as photo (photo.id)}
-            <a
+    <!-- .line keeps white-space as written (pre-wrap), so nothing between
+    its parts may be a space or a line break. -->
+    <div class="line" data-from={line.fromPochical ? "staff" : "user"}
+      ><div class="meta"
+        >{line.fromPochical ? "ポチカル" : "ユーザー"}・{when(line.sentAtMs)}{line.device === null ? "" : `・${line.device}`}</div
+      >{#if line.replyTo !== null}<div class="quote">{quoteOf(line.replyTo)}</div
+        >{/if}{#if line.unsent}<span class="meta">送信が取り消されました</span
+        >{/if}{#if line.photos.length > 0}<div class="photos"
+          >{#each line.photos as photo (photo.id)}<a
               href="/photos/{userId}/{photo.id}"
               rel="noopener"
               target="_blank"
               data-sveltekit-reload
-            >
-              <img
+              ><img
                 alt="写真"
                 class="photo"
                 height={photo.height}
                 src="/photos/{userId}/{photo.id}"
                 width={photo.width}
-              />
-            </a>
-          {/each}
-        </div>
-      {/if}
-      {line.text}
-      {#if line.preview !== null}
-        <div class="meta">
-          <a href={line.preview.url} rel="noopener" target="_blank">
-            {line.preview.title}（{line.preview.site}）
-          </a>
-        </div>
-      {/if}
-      {#if line.reactions.length > 0}
-        <div class="meta">
-          {line.reactions
+              /></a
+            >{/each}</div
+        >{/if}{line.text}{#if line.preview !== null}<div class="meta"
+          ><a href={line.preview.url} rel="noopener" target="_blank"
+            >{line.preview.title}（{line.preview.site}）</a
+          ></div
+        >{/if}{#if line.reactions.length > 0}<div class="meta"
+          >{line.reactions
             .map(
               ({ emoji, mine, support }) =>
                 `${emoji}${[mine && "ユーザー", support && "ポチカル"].filter(Boolean).join("・")}`
             )
-            .join("　")}
-        </div>
-      {/if}
-    </div>
+            .join("　")}</div
+        >{/if}</div
+    >
   {/each}
   <form
     method="POST"

@@ -6,9 +6,9 @@
     "#lib/*": "./src/lib/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3200 --strictPort",
+    "dev": "vite dev --port 3300 --strictPort",
     "build": "vite build",
-    "preview": "vite preview --port 3201 --strictPort",
+    "preview": "vite preview --port 3301 --strictPort",
     "cf-typegen": "wrangler types --strict-vars=false -c wrangler.jsonc -c ../server/wrangler.jsonc",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json"
   },

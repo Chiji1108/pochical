@@ -38,11 +38,14 @@ export const actions: Actions = {
         text,
       });
     }
-    const kept = await env.SERVER.answerSupport(
-      params.userId,
-      text,
-      opId
-    ).catch(() => false);
+    let kept = false;
+    try {
+      // Not .catch(): in `vite dev` the binding is wrangler's platform proxy
+      // in Node, whose RPC result is a thenable without it.
+      kept = await env.SERVER.answerSupport(params.userId, text, opId);
+    } catch {
+      kept = false;
+    }
     if (!kept) {
       // The same op id comes back, so sending again is the same answer.
       return fail(502, { error: "返信できませんでした。", opId, text });
