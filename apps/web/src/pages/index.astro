@@ -205,15 +205,18 @@ const closing = {
         <Sky client:idle place="top" />
         <p class={hero.eyebrow}>シフトカレンダー</p>
         <h1 class={hero.title}>
-          シフトを、<br /><button
-            class={pressed}
-            data-press="top"
-            type="button">ポチッと。</button
-          >
+          シフトを、
+          <br />
+          <button class={pressed} data-press="top" type="button">
+            ポチッと。
+          </button>
         </h1>
         <p class={hero.description}>
-          勤務を選んで、日付をポチポチ。<br />ひと月ぶんが、すぐ埋まります。<br
-          />家族や友だちとも、そのまま共有。
+          勤務を選んで、日付をポチポチ。
+          <br />
+          ひと月ぶんが、すぐ埋まります。
+          <br />
+          家族や友だちとも、そのまま共有。
         </p>
         <div class={hero.store}>
           <StoreLinks />
@@ -223,40 +226,43 @@ const closing = {
       <div class={hero.demo}>
         <HeroPhone client:idle />
         <p class={hero.hint}>
-          そのまま触れます。勤務を選んで、日付をポチッ。<br
-          />左右にスワイプすると、月が変わります。
+          そのまま触れます。勤務を選んで、日付をポチッ。
+          <br />
+          左右にスワイプすると、月が変わります。
         </p>
       </div>
     </section>
-    {
-      /* What else the app does, each beside its own screen: the real one,
-         not touchable, so the page never drifts from the app. */
-    }
+    {/* What else the app does, each beside its own screen: the real one,
+       not touchable, so the page never drifts from the app. */}
     <ol aria-label="ポチカルでできること" class={feature.list}>
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>SHARE</p>
-          <h2 class={feature.title}>「いつ休み？」が、<br />ひと目で。</h2>
+          <h2 class={feature.title}>
+            「いつ休み？」が、
+            <br />
+            ひと目で。
+          </h2>
           <p class={feature.body}>
-            家族や友だちのシフトを、ひとつの表に。<br
-            />みんなが休みの日も、すぐ見つかります。
+            家族や友だちのシフトを、ひとつの表に。
+            <br />
+            みんなが休みの日も、すぐ見つかります。
           </p>
         </div>
-        <FeatureScreen
-          client:visible={NEAR}
-          groupPage="shifts"
-          tab="group"
-        />
+        <FeatureScreen client:visible={NEAR} groupPage="shifts" tab="group" />
       </li>
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>CHAT</p>
           <h2 class={feature.title}>
-            「どの日にする？」も、<br />みんなで決めて。
+            「どの日にする？」も、
+            <br />
+            みんなで決めて。
           </h2>
           <p class={feature.body}>
-            休みの合う日を候補にして、行ける日を押すだけ。<br
-            />決まった日は、チャットのいちばん上に。
+            休みの合う日を候補にして、行ける日を押すだけ。
+            <br />
+            決まった日は、チャットのいちばん上に。
           </p>
         </div>
         <FeatureScreen client:visible={NEAR} groupPage="chat" tab="group" />
@@ -264,9 +270,15 @@ const closing = {
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>STYLE</p>
-          <h2 class={feature.title}>見た目も、<br />自分らしく。</h2>
+          <h2 class={feature.title}>
+            見た目も、
+            <br />
+            自分らしく。
+          </h2>
           <p class={feature.body}>
-            テーマは12種類。<br />シフトの印も、好きな見た目に。
+            テーマは12種類。
+            <br />
+            シフトの印も、好きな見た目に。
           </p>
         </div>
         <ThemeGallery client:visible={NEAR} />
@@ -283,11 +295,11 @@ const closing = {
           width="64"
         />
         <h2 class={closing.title} id="closing-title">
-          今月のシフトから、<br /><button
-            class={pressed}
-            data-press="sides"
-            type="button">ポチッと。</button
-          >
+          今月のシフトから、
+          <br />
+          <button class={pressed} data-press="sides" type="button">
+            ポチッと。
+          </button>
         </h2>
         <StoreLinks />
         <p class={closing.release}>iPhone・Android 向けに、ただいま準備中。</p>
@@ -299,7 +311,9 @@ const closing = {
 <script>
   import { press } from "../lib/presses";
 
-  for (const button of document.querySelectorAll<HTMLButtonElement>("button[data-press]")) {
+  for (const button of document.querySelectorAll<HTMLButtonElement>(
+    "button[data-press]"
+  )) {
     const place = button.dataset.press;
     if (place === "top" || place === "sides") {
       button.addEventListener("click", () => {

@@ -5,5 +5,6 @@ import { ignorePatterns } from "./lint-ignores.ts";
 
 export default defineConfig({
   ...ultracite,
+  astro: true,
   ignorePatterns,
 });

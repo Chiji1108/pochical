@@ -52,38 +52,39 @@ const contact = `mailto:${site.email}?subject=${encodeURIComponent("ポチカル
   >
     <section class="faq-section">
       <h2>よくある質問</h2>
-      {
-        questions.map((item) => (
-          <details class="faq">
-            <summary>
-              {item.question}<Plus aria-hidden="true" size={18} />
-            </summary>
-            <p>{item.answer}</p>
-            {item.guide && (
-              <Link class="text-link faq-guide" href={item.guide.href}>
-                {item.guide.label} →
-              </Link>
-            )}
-          </details>
-        ))
-      }
+      {questions.map((item) => (
+        <details class="faq">
+          <summary>
+            {item.question}
+            <Plus aria-hidden="true" size={18} />
+          </summary>
+          <p>{item.answer}</p>
+          {item.guide && (
+            <Link class="text-link faq-guide" href={item.guide.href}>
+              {item.guide.label} →
+            </Link>
+          )}
+        </details>
+      ))}
     </section>
     <section class="contact-box">
       <p class="eyebrow">CONTACT</p>
       <h2>解決しないときは</h2>
       <p>
-        ご質問、不具合のご報告、ご要望をお寄せください。アプリの設定にある「作っている人とチャット」からなら、チャットで気軽に送れます。<br
-        />メールで送る場合、不具合については、端末の種類・アプリのバージョン・発生した状況を添えていただけると助かります。
+        ご質問、不具合のご報告、ご要望をお寄せください。アプリの設定にある「作っている人とチャット」からなら、チャットで気軽に送れます。
+        <br />
+        メールで送る場合、不具合については、端末の種類・アプリのバージョン・発生した状況を添えていただけると助かります。
       </p>
-      <a class="text-link" href={contact}
-        >{site.email}<ArrowUpRight aria-hidden="true" size={17} /></a
-      >
+      <a class="text-link" href={contact}>
+        {site.email}
+        <ArrowUpRight aria-hidden="true" size={17} />
+      </a>
       <p class="small-note">
         パスワードや、勤務先で扱う個人情報は送らないでください。
       </p>
     </section>
-    <Link class="text-link" href="/account/delete"
-      >アカウント削除の手続きはこちら →</Link
-    >
+    <Link class="text-link" href="/account/delete">
+      アカウント削除の手続きはこちら →
+    </Link>
   </Page>
 </Site>
