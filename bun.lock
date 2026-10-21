@@ -6,6 +6,7 @@
       "name": "pochical",
       "devDependencies": {
         "@anthropic-ai/sdk": "^0.128.0",
+        "@astrojs/compiler-rs": "^0.5.2",
         "@bufbuild/protobuf": "2.15.0",
         "@pochical/design": "workspace:*",
         "@types/bun": "^1.4.2",
