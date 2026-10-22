@@ -56,10 +56,10 @@ What the device holds may be a few taps tried before signing in, or months of sh
 アカウントを削除 and ログアウト are offered only while the device has its session: before its first sign-in reaches the server (offline at a first launch, or a Keychain it could not read), both are disabled, saying インターネットにつながると、ログアウトとアカウントの削除ができます。, rather than failing after Apple was asked. A deletion that fails says why, titled アカウントを削除できませんでした, and what to do next, the device signed in as before but where said (iOS: `DeletionFailure`):
 
 - No session yet, the button pressed just before it was disabled: まだサーバーにつながっていません。少し待ってから、もう一度お試しください。
-- The device signed out or started afresh while Apple was asked (another window): nothing is deleted, the user it is now included, as the deletion goes only as the session it was asked in: 削除しているあいだにアカウントが切り替わったため、削除していません。
+- The account changing, or the device signed out or started afresh while Apple was asked (another window): nothing is deleted, the user it is now included, as the deletion goes only as the session it was asked in: 削除しているあいだにアカウントが切り替わったため、削除していません。
 - Apple gave no code (the person canceling says nothing): Appleで確認できませんでした。もう一度お試しください。
 - The server refused it (`FAILED_PRECONDITION`, step 1): このアカウントのApple IDか確かめられませんでした。ログインしたときと同じApple IDで、もう一度お試しください。
-- The server was not reached (no answer: offline, the connection dropped, or timed out): サーバーに接続できませんでした。インターネット接続を確かめて、もう一度お試しください。
+- The server was not reached (no answer: URLSession failed short of being cancelled, as offline or the connection dropped, or the call timed out): サーバーに接続できませんでした。インターネット接続を確かめて、もう一度お試しください。
 - Any other error of the server's: 時間をおいて、もう一度お試しください。, a deletion cut off part way finishing as it is tried again.
 - The server does not know the session (401), or a socket said so while Apple was asked: the session ends as on a 401 to a socket, ログアウトされています in place of the app (Reconnecting), with no alert. A retry after a deletion whose answer was lost lands here too, which that screen covers (アカウントが削除されたため).
 

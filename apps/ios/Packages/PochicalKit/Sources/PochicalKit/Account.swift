@@ -175,11 +175,11 @@ protocol AccountServer: Sendable {
 /// trying again.
 public enum DeletionFailure: Error, Equatable, Sendable {
   /// The device has no session yet, as before its first sign-in reaches
-  /// the server, or its account is changing.
+  /// the server.
   case notSignedIn
-  /// The device signed out or started afresh while Apple was asked: the
-  /// account asked for is not the device's any more, and the one it is
-  /// now is left as it is.
+  /// The device is changing its account, or signed out or started afresh
+  /// while Apple was asked: the account asked for is not the device's any
+  /// more, and the one it is now is left as it is.
   case accountChanged
   /// The server does not know the session (401): signed out or deleted
   /// on another device, or by request.
@@ -190,7 +190,8 @@ public enum DeletionFailure: Error, Equatable, Sendable {
   /// The server could not revoke Apple's tokens (FAILED_PRECONDITION): no
   /// code, or one Apple does not take or of another Apple account.
   case appleRefused
-  /// The server was not reached: offline, or the connection dropped.
+  /// The server was not reached: offline, the connection dropped, or the
+  /// call timed out.
   case offline
   /// The server answered with an error of its own.
   case serverFailed
@@ -200,9 +201,11 @@ public enum DeletionFailure: Error, Equatable, Sendable {
     switch error.code {
     case .unauthenticated: self = .sessionEnded
     case .failedPrecondition: self = .appleRefused
-    // No answer: a connection that was never made or dropped (URLSession's
-    // error, which an HTTP 503 has none of), or the call timed out.
-    case .unavailable where error.exception is URLError, .deadlineExceeded: self = .offline
+    // No answer: URLSession failed (an HTTP answer, a 503 too, carries no
+    // such error), short of the call being cancelled; or it timed out.
+    case _ where (error.exception as? URLError).map({ $0.code != .cancelled }) == true,
+      .deadlineExceeded:
+      self = .offline
     default: self = .serverFailed
     }
   }

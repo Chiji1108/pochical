@@ -627,6 +627,19 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.server.asked.withLock(\.deleted).isEmpty)
 }
 
+@MainActor @Test func aSessionThatEndsWhileAppleIsAskedIsSaidSoNotAsAnotherAccount() async throws {
+  let made = try await Made.signedIn(as: "a", "A", socketStatus: "401 Unauthorized")
+  await #expect(throws: DeletionFailure.sessionEnded) {
+    try await made.session.deleteAccount(appleCode: {
+      // A socket's 401 while Apple is asked.
+      made.session.cameToFront()
+      #expect(await eventually { made.session.phase == .ended })
+      return "code"
+    })
+  }
+  #expect(made.server.asked.withLock(\.deleted).isEmpty)
+}
+
 @MainActor @Test func aPlaceHeldOpensAgainAfterADeletionThatFailed() async throws {
   let made = try await Made.signedIn(as: "a", "A")
   _ = await made.session.hold("g1")

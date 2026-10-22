@@ -258,12 +258,7 @@ import SQLiteData
   public func deleteAccount(appleCode: @MainActor () async throws -> String?)
     async throws(DeletionFailure) -> Bool
   {
-    let asking: Credentials
-    switch state {
-    case .signedIn(let credentials): asking = credentials
-    case .ended: throw .sessionEnded
-    case .starting, .changing, .erasing: throw .notSignedIn
-    }
+    guard case .signedIn(let asking) = state else { throw whyNotSignedIn }
     let code: String
     do {
       guard let asked = try await appleCode() else { return false }
@@ -279,12 +274,24 @@ import SQLiteData
       }
     } catch let failure as DeletionFailure {
       throw failure
+    } catch is AccountChanged {
+      // The device is no longer the account Apple was asked for.
+      throw whyNotSignedIn
     } catch {
-      // change's own refusal (`AccountChanged`): the device is no longer
-      // the account Apple was asked for.
-      throw .accountChanged
+      Logger.account.error("Deleting the account failed: \(error)")
+      throw .serverFailed
     }
     return true
+  }
+
+  /// Why a deletion cannot go as the device is now, not signed in as the
+  /// account it was asked for.
+  private var whyNotSignedIn: DeletionFailure {
+    switch state {
+    case .starting: .notSignedIn
+    case .ended: .sessionEnded
+    case .signedIn, .changing, .erasing: .accountChanged
+    }
   }
 
   /// How the server's part of a change ended.
@@ -324,8 +331,7 @@ import SQLiteData
       }
     } catch DeletionFailure.sessionEnded {
       // As a socket's 401 would say before long.
-      await places.forgetAccount()
-      keepEnded(before)
+      endUnknown(before)
       throw DeletionFailure.sessionEnded
     } catch {
       Logger.account.error("Changing the account failed: \(error)")
@@ -441,16 +447,14 @@ import SQLiteData
   fileprivate func sessionUnknown(in generation: Int) {
     guard case .signedIn(let credentials) = state, credentials.generation == generation
     else { return }
-    keepEnded(credentials)
-    begin(nil)
-    credentials.content.invalidateAndCancel()
-    // The user's socket stopped itself; the places' close.
-    ending = Task { await places.forgetAccount() }
+    endUnknown(credentials)
   }
 
   /// The session of `credentials`, which the server does not know, ended
-  /// until the person chooses, the Keychain keeping it so for a relaunch.
-  private func keepEnded(_ credentials: Credentials) {
+  /// until the person chooses, the Keychain keeping it so for a relaunch:
+  /// what its stretch handed out is not current from here, and the places'
+  /// sockets close (the user's stopped itself, or was by a change).
+  private func endUnknown(_ credentials: Credentials) {
     let ended = StoredSession(token: credentials.token, userID: credentials.userID, ended: true)
     do {
       try keychain.keep(ended)
@@ -459,6 +463,9 @@ import SQLiteData
       Logger.account.error("Keeping the session as ended failed: \(error)")
     }
     state = .ended(ended)
+    begin(nil)
+    credentials.content.invalidateAndCancel()
+    ending = Task { await places.forgetAccount() }
   }
 
   /// もう一度つなぐ: the session the server did not know, tried again, as
