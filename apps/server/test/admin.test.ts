@@ -190,6 +190,7 @@ describe("what the admin site asks of the server", () => {
       name: "ハナ",
       reportsAbout: [],
       reportsBy: [{ context: "言い過ぎ", targetId: "someone" }],
+      reportsByCount: 1,
       sessions: 1,
       unanswered: 1,
     });
@@ -331,9 +332,24 @@ describe("what the admin site asks of the server", () => {
     const first = await admin.users(prefix);
     expect(first.next).not.toBeNull();
     const second = await admin.users(prefix, first.next);
+    // The last 50 follow no one: no page after them.
     expect(second.next).toBeNull();
     const seen = [...first.users, ...second.users].map((one) => one.userId);
     expect(new Set(seen)).toStrictEqual(new Set(ids));
     expect(seen).toHaveLength(250);
+  });
+
+  it("gives no next page after exactly a full page", async () => {
+    const prefix = `full-${crypto.randomUUID().slice(0, 8)}-`;
+    const at = Date.now();
+    await env.DB.batch(
+      Array.from({ length: 200 }, (_, index) =>
+        env.DB.prepare(
+          "insert into user (id, name, email, created_at, updated_at, is_anonymous) values (?, '', ?, ?, ?, 1)"
+        ).bind(`${prefix}${index}`, `${prefix}${index}@example.test`, at, at)
+      )
+    );
+    const { next, users } = await exports.AdminEntrypoint.users(prefix);
+    expect([users.length, next]).toStrictEqual([200, null]);
   });
 });
