@@ -1,3 +1,5 @@
+import { useDesignTheme } from "@pochical/prototype/components/design-providers";
+import { pageStyle } from "@pochical/prototype/components/design-theme";
 import { css, cx } from "@pochical/styled-system/css";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type { MDXComponents } from "mdx/types";
@@ -17,11 +19,33 @@ const ground = css({
   lineHeight: "initial",
 });
 
+// The light page itself, on a dark document as on a light one.
+const lightPage = css({
+  bg: "var(--ws-bg)",
+  borderRadius: "2xl",
+  padding: "16px",
+});
+
 // The app's pieces on a document, out of Fumadocs UI's typography
 // (`not-prose`): they draw only with their own Panda CSS, as on a screen.
-function Pieces({ children }: { children: ReactNode }) {
+// They follow the document's light or dark, or with `light` stay on the
+// light page whatever 外観 is, as a page showing light and dark side by
+// side (colors.mdx) is drawn for.
+function Pieces({
+  children,
+  light = false,
+}: {
+  children: ReactNode;
+  light?: boolean;
+}) {
+  const theme = useDesignTheme();
   return (
-    <div className={cx("not-prose my-6", workspace, ground)}>{children}</div>
+    <div
+      className={cx("not-prose my-6", workspace, ground, light && lightPage)}
+      style={light ? pageStyle(theme) : undefined}
+    >
+      {children}
+    </div>
   );
 }
 

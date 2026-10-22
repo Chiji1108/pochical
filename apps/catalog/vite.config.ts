@@ -10,7 +10,12 @@ export default defineConfig({
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     // The /design documents written in MDX (content/design), read through
     // src/lib/source.ts.
-    fumadocsMdx({ macro: { include: ["src/lib/source.ts"] } }),
+    fumadocsMdx({
+      // Japanese breaks between phrases in the documents too, as in the
+      // pages' own JSX.
+      globalOptions: { mdxOptions: { jsxImportSource: "@pochical/jsx" } },
+      macro: { include: ["src/lib/source.ts"] },
+    }),
     // Tailwind CSS for Fumadocs UI only: src/docs.css, which the documents
     // alone load.
     tailwindcss(),
