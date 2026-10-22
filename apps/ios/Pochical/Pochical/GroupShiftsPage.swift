@@ -56,8 +56,6 @@ struct GroupShiftsPage: View {
   @State private var pickedFromList: Day?
   /// The layout picked from the menu; until then the group's size's.
   @State private var pickedLayout: ShiftsLayout?
-  /// The month at the top of the list, named in the row pinned over it.
-  @State private var monthInSight = Day.today.firstOfMonth
   /// Whether today's day or week is in sight; 今日 shows while it isn't.
   @State private var todayInSight = true
   /// How far a big group's 一覧 is scrolled sideways, for the faces over
@@ -66,8 +64,9 @@ struct GroupShiftsPage: View {
   @State private var sidewaysOffset = SidewaysOffset()
   @State private var scrolledSideways = false
   @State private var viewWidth: CGFloat = 0
-  /// Where 月を選ぶ or 今日 asked the list to go.
-  @State private var goal: ListGoal?
+  /// The row or heading at the list's top, which it keeps there as the
+  /// screen turns; 月を選ぶ and 今日 send it there.
+  @State private var position = ScrollPosition(idType: ListPlace.self)
 
   /// A big group's 一覧 scrolls sideways, so it opens on 週ごと, where
   /// everyone fits; picked, 一覧 keeps the dates and the viewer's column.
@@ -109,7 +108,7 @@ struct GroupShiftsPage: View {
         HStack {
           MonthTitleButton(
             month: monthInSight, first: months[0], last: months[months.count - 1]
-          ) { goal = .month($0) } label: {
+          ) { position.scrollTo(id: ListPlace.month($0), anchor: .topLeading) } label: {
             // Quieter than the months' own headings under it.
             Text(monthInSight.monthWithYear(english: english))
               .font(.headline)
@@ -119,7 +118,11 @@ struct GroupShiftsPage: View {
           }
           Spacer()
           if !todayInSight {
-            TodayButton(unit: "日") { goal = .today }
+            TodayButton(unit: "日") {
+              withAnimation(Springs.standard) {
+                position.scrollTo(id: anchor(of: Day.today), anchor: .topLeading)
+              }
+            }
           }
         }
         .animation(.default, value: todayInSight)
@@ -278,7 +281,7 @@ struct GroupShiftsPage: View {
 
   /// 一覧 and 週ごと: the months as one list, opening on `opening`.
   private func list(months: [Day], opening: Day) -> some View {
-    ScrollViewReader { scroll in
+    Group {
       let sideways = wide && layout == .days
       let pinning: Sideways = sideways ? .scrolls(edged: scrolledSideways) : .fits
       ScrollView(sideways ? [.vertical, .horizontal] : .vertical) {
@@ -294,8 +297,7 @@ struct GroupShiftsPage: View {
               // Each with its own margins, not the list's, so a month or day
               // gone to lies at the left edge, not a margin past it.
               .padding(.horizontal, 16)
-              // Not a day: the month in sight is read off the days.
-              .id("heading-\(month.key)")
+              .id(ListPlace.month(month))
             if layout == .days {
               ForEach(month.daysOfMonth, id: \.self) { day in
                 GroupDayRow(
@@ -305,7 +307,7 @@ struct GroupShiftsPage: View {
                 )
                 .equatable()
                 .padding(.horizontal, 16)
-                .id(day)
+                .id(ListPlace.day(day))
               }
             } else {
               ForEach(weeks(endingIn: month), id: \.self) { week in
@@ -326,7 +328,7 @@ struct GroupShiftsPage: View {
                 .overlay(
                   RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
                 .padding(.horizontal, 16)
-                .id(week[0])
+                .id(ListPlace.day(week[0]))
               }
             }
           }
@@ -340,11 +342,18 @@ struct GroupShiftsPage: View {
           alignment: .leading)
         .padding(.bottom, 24)
       }
+      // Made anew when it starts or stops scrolling sideways. One whose
+      // axes change in place keeps the safe area at its sides as it had
+      // it: made scrolling down only, it lays its rows out inside the
+      // safe area but, scrolling sideways, draws them from the screen's
+      // edge, so in landscape they lie under the notch, apart from the
+      // faces.
+      .id(sideways)
       // A big group's 一覧: how far it is scrolled sideways from where it
       // rests, read by the faces alone, so each frame of a scroll makes
       // only them again; then what changes seldom: the safe area at its
       // leading edge (in landscape), which the pinned columns cross before
-      // they stop, whether they have stopped, and its width.
+      // they stop, and whether they have stopped.
       .onScrollGeometryChange(for: CGFloat.self) {
         $0.contentOffset.x + $0.contentInsets.leading
       } action: {
@@ -356,41 +365,36 @@ struct GroupShiftsPage: View {
       .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.x > 0 } action: {
         scrolledSideways = $1
       }
+      // Its width; and, laid out at a new width as the screen turns, back
+      // to the row at the top: SwiftUI keeps that row in place from the
+      // heights it guesses for the months above, which at large text wrap
+      // anew at the new width, and leaves the list where the guess put it.
       .onScrollGeometryChange(for: CGFloat.self) { $0.containerSize.width } action: {
         viewWidth = $1
+        if let top = position.viewID(type: ListPlace.self) {
+          position.scrollTo(id: top, anchor: .topLeading)
+        }
       }
       .scrollIndicators(.hidden, axes: .horizontal)
-      .onScrollTargetVisibilityChange(idType: Day.self, threshold: 0.5) { shown in
-        // A week belongs to the month it ends in.
-        if let first = shown.min() {
-          monthInSight = (layout == .days ? first : first.adding(days: 6)).firstOfMonth
-        }
+      .onScrollTargetVisibilityChange(idType: ListPlace.self, threshold: 0.5) { shown in
         todayInSight = shown.contains(anchor(of: Day.today))
       }
       // At the leading edge too: .top alone would center a big group's
       // wide rows sideways.
-      .onChange(of: goal) { _, goal in
-        switch goal {
-        case .month(let month): scroll.scrollTo("heading-\(month.key)", anchor: .topLeading)
-        case .today:
-          withAnimation(Springs.standard) {
-            scroll.scrollTo(anchor(of: Day.today), anchor: .topLeading)
-          }
-        case nil: return
-        }
-        self.goal = nil
-      }
+      .scrollPosition($position, anchor: .topLeading)
       // Opening at the top, the day's month named in the pinned row, and
       // its sheet up once there: a sheet coming up as the list appears
       // keeps it from scrolling.
-      .onAppear { scroll.scrollTo(anchor(of: opening), anchor: .topLeading) }
+      .onAppear { position.scrollTo(id: anchor(of: opening), anchor: .topLeading) }
       .task {
         if let openingDay, !openedDay {
           openedDay = true
           picked = openingDay
         }
       }
-      .onChange(of: layout) { scroll.scrollTo(anchor(of: picked ?? Day.today), anchor: .topLeading) }
+      .onChange(of: layout) {
+        position.scrollTo(id: anchor(of: picked ?? Day.today), anchor: .topLeading)
+      }
       // As /design's: the table stays where it is when a day is picked;
       // room under it while the sheet is up lets a row near the bottom be
       // scrolled above the sheet.
@@ -407,14 +411,33 @@ struct GroupShiftsPage: View {
     picked = picked == day ? nil : day
   }
 
+  /// The month at the top of the list, named in the row pinned over it:
+  /// its heading's, or its first row's; a week belongs to the month it
+  /// ends in.
+  private var monthInSight: Day {
+    switch position.viewID(type: ListPlace.self) {
+    case .month(let month): month
+    case .day(let day): (layout == .days ? day : day.adding(days: 6)).firstOfMonth
+    case nil: Day.today.firstOfMonth
+    }
+  }
+
   /// Where a day is in the list: its own row, or its week's block.
-  private func anchor(of day: Day) -> Day {
-    layout == .days ? day : weekStart(of: day)
+  private func anchor(of day: Day) -> ListPlace {
+    .day(layout == .days ? day : weekStart(of: day))
   }
 
   private func weekStart(of day: Day) -> Day {
     day.adding(days: -(((day.weekday - settings.device.week.start) % 7 + 7) % 7))
   }
+}
+
+/// A place in the list of months, which it is scrolled to and keeps at
+/// its top: a month's heading, or a day's row (一覧) or week's block (週ごと),
+/// named by its first day.
+nonisolated private enum ListPlace: Hashable, Sendable {
+  case month(Day)
+  case day(Day)
 }
 
 /// A month's days everyone is off, for its sheet.
@@ -574,12 +597,6 @@ struct TogetherSummary: View {
       }
     }
   }
-}
-
-/// Where the list of months is asked to go.
-private enum ListGoal: Hashable {
-  case month(Day)
-  case today
 }
 
 /// Whose シフトパターン is open.

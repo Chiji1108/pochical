@@ -11,12 +11,19 @@ import Testing
 final class MemoryStore: TokenStore {
   private let kept = Mutex<Data?>(nil)
   let refusesToForget = Mutex(false)
+  /// As a Keychain before the phone's first unlock.
+  let refusesToRead = Mutex(false)
+  let reads = Mutex(0)
 
   init(_ data: Data? = nil) {
     kept.withLock { $0 = data }
   }
 
-  func data() -> Data? { kept.withLock { $0 } }
+  func data() throws -> Data? {
+    reads.withLock { $0 += 1 }
+    if refusesToRead.withLock({ $0 }) { throw KeychainError(status: errSecInteractionNotAllowed) }
+    return kept.withLock { $0 }
+  }
   func replace(with data: Data) { kept.withLock { $0 = data } }
 
   func forget() throws {

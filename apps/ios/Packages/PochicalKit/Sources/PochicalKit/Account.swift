@@ -1,5 +1,6 @@
 import Connect
 import Foundation
+import OSLog
 import PochicalProto
 import Security
 
@@ -15,15 +16,19 @@ public enum Server {
   #endif
 }
 
-/// A session the device keeps: its token, and the user it signs in as,
-/// kept as one so the two never part.
+/// A session the device keeps: its token, the user it signs in as, and
+/// whether the server said it does not know it, kept as one so they never
+/// part: a session that ended stays ended, a relaunch too, until the
+/// person tries it again or starts afresh (AccountSession, `ended`).
 public struct StoredSession: Codable, Equatable, Sendable {
   public let token: String
   public let userID: String
+  public let ended: Bool
 
-  public init(token: String, userID: String) {
+  public init(token: String, userID: String, ended: Bool = false) {
     self.token = token
     self.userID = userID
+    self.ended = ended
   }
 }
 
@@ -114,8 +119,20 @@ struct SessionKeychain: Sendable {
     self.leftBehind = leftBehind
   }
 
+  /// Nil when nothing is kept, or, until release (`erasesOnShapeChange`),
+  /// when what is kept is not a session this app can read: the device
+  /// signs in anew and keeping that session replaces it
+  /// (spec/sync-protocol.md, Signing in). A Keychain it cannot reach, as
+  /// before the first unlock, throws.
   func kept() throws -> StoredSession? {
-    try own.data().map { try JSONDecoder().decode(StoredSession.self, from: $0) }
+    guard let data = try own.data() else { return nil }
+    do {
+      return try JSONDecoder().decode(StoredSession.self, from: data)
+    } catch {
+      guard erasesOnShapeChange else { throw error }
+      Logger.account.notice("The kept session is unreadable, so the device signs in anew: \(error)")
+      return nil
+    }
   }
 
   /// Keeps `session` from now on, in place of any other.

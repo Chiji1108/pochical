@@ -98,7 +98,9 @@ private final class FakeAccountServer: AccountServer {
 }
 
 /// A session on a fresh database, with `kept` in its Keychain, its sockets
-/// reaching a server that refuses them and keeps their tokens.
+/// reaching a server that refuses them with `socketStatus` and keeps
+/// their tokens: by default as a place the user is not in, which stops a
+/// socket and leaves the session as it is.
 @MainActor private struct Made {
   let session: AccountSession
   let server: FakeAccountServer
@@ -106,12 +108,24 @@ private final class FakeAccountServer: AccountServer {
   let keychain: SessionKeychain
   let database: any DatabaseWriter
   let shared: UserDefaults
+  let socketURL: URL
 
-  init(kept: Data? = nil, owner: String? = nil) async throws {
+  init(kept: Data? = nil, owner: String? = nil, socketStatus: String = "403 Forbidden")
+    async throws
+  {
+    try await self.init(
+      keychain: SessionKeychain(own: MemoryStore(kept), leftBehind: MemoryStore()), owner: owner,
+      socketStatus: socketStatus)
+  }
+
+  init(keychain: SessionKeychain, owner: String? = nil, socketStatus: String = "403 Forbidden")
+    async throws
+  {
     server = FakeAccountServer()
-    sockets = try RefusingServer()
+    sockets = try RefusingServer(status: socketStatus)
     let url = try await sockets.start()
-    keychain = SessionKeychain(own: MemoryStore(kept), leftBehind: MemoryStore())
+    socketURL = url
+    self.keychain = keychain
     database = try appDatabase()
     // Left by another user: a coworker of theirs, still waiting to go.
     if let owner {
@@ -126,8 +140,12 @@ private final class FakeAccountServer: AccountServer {
       eraseFiles: {}, socketServer: url)
   }
 
-  static func signedIn(as token: String, _ userID: String) async throws -> Made {
-    try await Made(kept: JSONEncoder().encode(StoredSession(token: token, userID: userID)))
+  static func signedIn(as token: String, _ userID: String, socketStatus: String = "403 Forbidden")
+    async throws -> Made
+  {
+    try await Made(
+      kept: JSONEncoder().encode(StoredSession(token: token, userID: userID)),
+      socketStatus: socketStatus)
   }
 
   var owner: String? {
@@ -177,6 +195,34 @@ private final class FakeAccountServer: AccountServer {
   #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
   #expect(await eventually { made.socketTokens == ["anon-token-1"] })
   #expect(made.owner == "anon-1")
+}
+
+@MainActor @Test func aKeptSessionItCannotReadIsNoSession() async throws {
+  let made = try await Made(kept: Data("raw-token".utf8), owner: "old")
+  #expect(made.session.phase == .starting)
+
+  made.session.cameToFront()
+  #expect(await eventually { made.session.phase == .signedIn })
+  #expect(made.session.userID == "anon-1")
+  #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
+  // No session can send what the user before left, so it goes.
+  #expect(await eventually { made.owner == "anon-1" })
+  #expect(made.coworkers == 0)
+}
+
+@MainActor @Test func aKeychainItCannotReachIsWaitedForNotSignedInAnew() async throws {
+  let kept = try JSONEncoder().encode(StoredSession(token: "a", userID: "A"))
+  let own = MemoryStore(kept)
+  own.refusesToRead.withLock { $0 = true }
+  let made = try await Made(keychain: SessionKeychain(own: own, leftBehind: MemoryStore()))
+  #expect(made.session.phase == .starting)
+
+  made.session.cameToFront()
+  #expect(await eventually { own.reads.withLock { $0 } == 2 })
+  own.refusesToRead.withLock { $0 = false }
+  made.session.cameToFront()
+  #expect(await eventually { made.session.userID == "A" })
+  #expect(made.server.made.withLock { $0 } == 0)
 }
 
 @MainActor @Test func nothingConnectsWhileTheAccountSwitchesAndOnlyTheAccountAfter() async throws {
@@ -400,15 +446,44 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.sockets.tokens.withLock { $0.last } == "account-token")
 }
 
-@MainActor @Test func signingOutAfterTheSessionWasRefusedDoesNotWaitForever() async throws {
-  let made = try await Made.signedIn(as: "a", "A")
-  made.session.cameToFront()
-  #expect(await eventually { made.sockets.asked > 0 })
-  // Refused (401), the socket stops; an edit made since waits for good.
-  try await Task.sleep(for: .milliseconds(200))
+@MainActor @Test func aSessionTheServerDoesNotKnowKeepsTheDataUntilThePersonChooses() async throws {
+  let made = try await Made.signedIn(as: "a", "A", socketStatus: "401 Unauthorized")
+  #expect(await eventually { made.owner == "A" })
   try await made.addCoworker()
-  try await made.session.signOut()
-  #expect(await eventually { made.session.userID == "anon-1" })
+  made.session.cameToFront()
+  #expect(await eventually { made.session.phase == .ended })
+  // Nothing is cleared, nothing goes as the session, and coming to the
+  // front again does not try it.
+  #expect(made.session.userID == "A")
+  #expect(made.coworkers == 1)
+  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A", ended: true))
+  #expect(throws: NotSignedIn.self) { try made.session.current.credentials() }
+  let seen = made.sockets.asked
+  made.session.cameToFront()
+
+  // The app ends and starts again: still ended.
+  let again = AccountSession(
+    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
+    eraseFiles: {}, socketServer: made.socketURL)
+  #expect(again.phase == .ended)
+  #expect(again.userID == "A")
+  again.cameToFront()
+
+  // もう一度つなぐ tries it again, and it ends again: the one socket since
+  // is its, so coming to the front tried nothing.
+  again.tryAgain()
+  #expect(await eventually { made.sockets.asked > seen })
+  #expect(await eventually { again.phase == .ended })
+  #expect(made.sockets.asked == seen + 1)
+  #expect(made.server.made.withLock { $0 } == 0)
+  #expect(made.coworkers == 1)
+
+  // はじめから使う lets it go, with what the device holds.
+  again.startAfresh()
+  #expect(await eventually { again.userID == "anon-1" })
+  #expect(made.coworkers == 0)
+  // (This server refuses the new session's socket too.)
+  #expect(try made.keychain.kept()?.token == "anon-token-1")
 }
 
 /// An invitation opened from a link as the app first launches: its call
