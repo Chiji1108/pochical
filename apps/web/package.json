@@ -25,18 +25,17 @@
     "@pochical/jsx": "workspace:*",
     "@pochical/prototype": "workspace:*",
     "@pochical/styled-system": "workspace:*",
-    "@resvg/resvg-wasm": "^2.6.2",
     "astro": "7.4.2",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.61.0",
     "motion": "^14.4.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "satori": "0.32.0"
+    "takumi-js": "^2.17.1"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.12",
     "@pandacss/dev": "^2.3.0",
-    "@types/node": "25.9.9",
+    "@types/node": "24.19.2",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "npm:@typescript/typescript6@~6.0.2",

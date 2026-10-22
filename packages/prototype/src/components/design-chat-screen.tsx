@@ -9,7 +9,7 @@ import {
   Ellipsis,
   Images,
   RotateCcw,
-  Trash2,
+  Trash,
 } from "lucide-react";
 import {
   Fragment,
@@ -694,7 +694,7 @@ export function ChatScreen({
             <ListRow
               danger
               label="削除"
-              leading={<Trash2 aria-hidden="true" size={20} />}
+              leading={<Trash aria-hidden="true" size={20} />}
               onClick={() => {
                 if (failedOpen) {
                   remove(failedOpen);
