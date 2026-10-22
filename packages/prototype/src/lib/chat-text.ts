@@ -77,7 +77,7 @@ export function textParts(text: string): TextPart[] {
 // The message as words alone, each mention as @ and the member's name:
 // for コピー, a chat's last line in the list, a quote and a notification.
 export function plainText(text: string, nameOf: (id: string) => string) {
-  return text.replace(MENTION, (_, id: string) => `@${nameOf(id)}`);
+  return text.replaceAll(MENTION, (_, id: string) => `@${nameOf(id)}`);
 }
 
 // The members a message mentions.
@@ -113,10 +113,10 @@ export function withMentions(
   let sent = text;
   for (const { id, name } of picked) {
     const written = new RegExp(
-      `@${name.replace(REGEX_SPECIAL, "\\$&")}(?=\\s|$)`,
+      `@${name.replaceAll(REGEX_SPECIAL, "\\$&")}(?=\\s|$)`,
       "gu"
     );
-    sent = sent.replace(written, `<@${id}>`);
+    sent = sent.replaceAll(written, `<@${id}>`);
   }
   return sent;
 }

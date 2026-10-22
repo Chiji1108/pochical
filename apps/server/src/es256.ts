@@ -5,7 +5,7 @@ const base64url = (bytes: Uint8Array): string =>
   btoa(String.fromCodePoint(...bytes))
     .replaceAll("+", "-")
     .replaceAll("/", "_")
-    .replace(/=+$/u, "");
+    .replace(/[=]+$/u, "");
 
 const text = (value: string): string =>
   base64url(new TextEncoder().encode(value));

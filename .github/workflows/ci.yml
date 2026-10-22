@@ -71,7 +71,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: jdx/mise-action@v5
         with:
-          install_args: bun
+          install_args: node bun
       - run: bun install --frozen-lockfile
       # Each Worker's worker-configuration.d.ts is what its wrangler.jsonc
       # and the locked wrangler (and the workerd it pins) give, not left
@@ -108,7 +108,7 @@ jobs:
           fetch-depth: 0
       - uses: jdx/mise-action@v5
         with:
-          install_args: buf bun
+          install_args: buf node bun
       - run: mise run proto:lint
       # The code generated from proto/ is what proto/ gives now: none edited
       # by hand, none left behind by a .proto change. protoc-gen-es comes
