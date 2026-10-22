@@ -1,11 +1,9 @@
 import { themeSkyId } from "@pochical/design/skies";
 import { DesignApp } from "@pochical/prototype/components/design-app";
-import type { GroupStart } from "@pochical/prototype/components/design-group";
 import {
   DesignProviders,
   PresetContexts,
 } from "@pochical/prototype/components/design-providers";
-import type { SettingsPage } from "@pochical/prototype/components/design-settings";
 import {
   nextSkyId,
   paleSkyFromTop,
@@ -27,22 +25,17 @@ import type {
   ShiftMarkStyle,
 } from "@pochical/prototype/components/shift-mark";
 import { initialDesignSchedule } from "@pochical/prototype/lib/design-days";
-import { sampleGroups } from "@pochical/prototype/lib/design-group-samples";
 import {
   sampleOrder,
   useSamplePerson,
 } from "@pochical/prototype/lib/design-sample-person";
-import {
-  createUserStore,
-  sampleCoworkers,
-  UserStoreContext,
-} from "@pochical/prototype/lib/design-user-store";
+import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
 import type { OwnData } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { css, cva } from "@pochical/styled-system/css";
 import { AnimatePresence, MotionConfig } from "motion/react";
 import { useState, useSyncExternalStore } from "react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { pressesOf, subscribe } from "../lib/presses";
 import type { SkyPlace } from "../lib/presses";
@@ -172,13 +165,7 @@ const heroSchedule = Object.fromEntries(
 // The app itself, the same one the catalog's /try runs, to tap right on
 // the page.
 export function HeroPhone() {
-  const [person] = useState(() =>
-    createUserStore({
-      coworkers: sampleCoworkers,
-      groups: sampleGroups(),
-      schedule: heroSchedule,
-    })
-  );
+  const person = useSamplePerson({ schedule: heroSchedule });
   return (
     <Motion>
       <DesignProviders fresh>
@@ -210,9 +197,14 @@ const screenStyle = css({
 
 // Where each feature's screen opens, a tab and its page, and what the
 // sample person holds for it beyond the demo's.
+type AppProps = ComponentProps<typeof DesignApp>;
 type FeatureOpening =
-  | { initialTab: "group"; initialGroupPage: GroupStart }
-  | { initialTab: "settings"; initialSettingsPage: SettingsPage };
+  | (Required<Pick<AppProps, "initialTab" | "initialGroupPage">> & {
+      initialTab: "group";
+    })
+  | (Required<Pick<AppProps, "initialTab" | "initialSettingsPage">> & {
+      initialTab: "settings";
+    });
 
 type Feature = "repeat" | "share" | "chat";
 
