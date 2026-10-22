@@ -31,6 +31,12 @@ import SQLiteData
     /// erased (`erasing`): the app shows none of it, and signs in afresh
     /// only once it is gone.
     case erasing
+    /// The server does not know the session (a 401 to the user's socket):
+    /// signed out or deleted on another device or by request, or the
+    /// server misconfigured. Nothing syncs and nothing is cleared until the
+    /// person tries again (`tryAgain`) or starts afresh (`startAfresh`)
+    /// (spec/sync-protocol.md, Reconnecting).
+    case ended
   }
 
   /// Why the device's data is being erased, and whether a try failed.
@@ -48,6 +54,8 @@ import SQLiteData
     case signedIn(Credentials)
     case changing
     case erasing
+    /// The session the server did not know, kept to try again with.
+    case ended(StoredSession)
   }
 
   private var state = State.starting
@@ -58,6 +66,7 @@ import SQLiteData
     case .signedIn: .signedIn
     case .changing: .changing
     case .erasing: .erasing
+    case .ended: .ended
     }
   }
 
@@ -98,6 +107,8 @@ import SQLiteData
   @ObservationIgnored private var signingIn: Task<Void, Never>?
   /// The stretch whose claim on the database is done.
   @ObservationIgnored private var claimedIn: Int?
+  /// The places' sockets closing as the server did not know the session.
+  @ObservationIgnored private var ending: Task<Void, Never>?
   /// The wait before erasing is tried again, cut short by `eraseAgain`.
   @ObservationIgnored private var backoff: Task<Void, Never>?
 
@@ -118,7 +129,10 @@ import SQLiteData
     self.server = server
     self.keychain = keychain
     self.shared = shared
-    userSocket = SyncClient(database: database, server: socketServer)
+    let ends = SessionEnds()
+    userSocket = SyncClient(database: database, server: socketServer) { generation in
+      await ends.unknown(in: generation)
+    }
     places = GroupSockets(database: database, server: socketServer)
     // Cut off while erasing: the session kept, if the Keychain still has
     // it, is the one that ended, and is never signed in as again.
@@ -127,6 +141,7 @@ import SQLiteData
     } else if let kept = try? keychain.kept() {
       enter(kept)
     }
+    ends.session = self
   }
 
   // MARK: The app
@@ -144,7 +159,7 @@ import SQLiteData
         await connect()
         await deleteLeftBehind()
       }
-    case .changing, .erasing:
+    case .changing, .erasing, .ended:
       break
     }
   }
@@ -354,6 +369,47 @@ import SQLiteData
     await places.forgetAccount()
   }
 
+  // MARK: A session the server does not know
+
+  /// The user's socket in the stretch `generation` was refused as a
+  /// session the server does not know: every socket closes and the device
+  /// keeps what it holds, its outbox too, saying so until the person
+  /// chooses. A stretch already over says nothing of the one after it.
+  fileprivate func sessionUnknown(in generation: Int) {
+    guard case .signedIn(let credentials) = state, credentials.generation == generation
+    else { return }
+    state = .ended(StoredSession(token: credentials.token, userID: credentials.userID))
+    begin(nil)
+    credentials.content.invalidateAndCancel()
+    // The user's socket stopped itself; the places' close.
+    ending = Task { await places.forgetAccount() }
+  }
+
+  /// もう一度つなぐ: the session the server did not know, tried again, as
+  /// a server set right since knows it again.
+  public func tryAgain() {
+    afterEnding { [self] kept in enter(kept) }
+  }
+
+  /// はじめから使う: the person's own choice to let the session go, and
+  /// what the device holds with it, erasing as after signing out, then
+  /// signing in afresh as a new install does.
+  public func startAfresh() {
+    afterEnding { [self] _ in beginErasing(.signedOut) }
+  }
+
+  /// `then` with the session the server did not know, once the places'
+  /// sockets of its stretch have closed, if the person has not chosen
+  /// meanwhile.
+  private func afterEnding(_ then: @escaping @MainActor (StoredSession) -> Void) {
+    let ending = self.ending
+    Task {
+      await ending?.value
+      guard case .ended(let kept) = state else { return }
+      then(kept)
+    }
+  }
+
   // MARK: Signed in
 
   /// A new stretch, signed in as `session`, its sockets connecting.
@@ -466,4 +522,14 @@ import SQLiteData
 
 extension Logger {
   static let account = Logger(subsystem: "app.pochical", category: "account")
+}
+
+/// Where the user's socket tells the session of a session the server does
+/// not know, made before the session it tells is.
+@MainActor private final class SessionEnds {
+  weak var session: AccountSession?
+
+  func unknown(in generation: Int) {
+    session?.sessionUnknown(in: generation)
+  }
 }

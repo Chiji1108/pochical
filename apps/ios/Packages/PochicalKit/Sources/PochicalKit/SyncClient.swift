@@ -54,7 +54,8 @@ public actor SyncClient {
   public enum Stop: Error, Sendable {
     /// The server does not know the session: the user signed out or their
     /// account was deleted elsewhere. Nothing is cleared and no new user
-    /// is made (Reconnecting).
+    /// is made: AccountSession says so and lets the person choose
+    /// (Reconnecting).
     case signedOut
     /// The server needs a newer app.
     case protocolTooOld
@@ -131,10 +132,19 @@ public actor SyncClient {
   private var typingWatchers: [UUID: AsyncStream<Pochical_V1_Typing>.Continuation] = [:]
   private var photoPageWatchers: [UUID: AsyncStream<ChatPhotosPage>.Continuation] = [:]
 
-  init(database: any DatabaseWriter, peer: Peer = .user, server: URL = Server.url) {
+  /// Told, with the stretch's generation, that the server does not know
+  /// the session it connected as (a 401): the user's socket tells
+  /// AccountSession, which alone decides what comes of it.
+  private let sessionUnknown: @Sendable (Int) async -> Void
+
+  init(
+    database: any DatabaseWriter, peer: Peer = .user, server: URL = Server.url,
+    sessionUnknown: @escaping @Sendable (Int) async -> Void = { _ in }
+  ) {
     self.database = database
     self.peer = peer
     self.server = server
+    self.sessionUnknown = sessionUnknown
     var socket = URLComponents(url: server, resolvingAgainstBaseURL: false)!
     socket.scheme = server.scheme == "https" ? "wss" : "ws"
     switch peer {
@@ -328,6 +338,9 @@ public actor SyncClient {
         finishing?.cancel()
         Logger.sync.error("Stopped syncing: \(String(describing: stop))")
         running = nil
+        if case .signedOut = stop {
+          await sessionUnknown(credentials.generation)
+        }
         return
       } catch is ClockAhead {
         // Reconnected at once; the outbox's clocks are put right then.

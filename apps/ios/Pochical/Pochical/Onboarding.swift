@@ -37,7 +37,8 @@ enum FirstRun {
 /// account signed in to, end it. An invitation opened meanwhile waits for
 /// the tabs, and is asked about there as any other time. While the device
 /// is still erasing after signing out or deleting, neither: nothing of the
-/// user before shows.
+/// user before shows; nor while the server does not know the session,
+/// which is said instead.
 struct AppRoot: View {
   @AppStorage(FirstRun.doneKey) private var done = false
   @Environment(OpenPlaceSocket.self) private var openPlace
@@ -58,6 +59,8 @@ struct AppRoot: View {
     Group {
       if let erasing = session.erasing {
         ErasingScreen(erasing: erasing) { session.eraseAgain() }
+      } else if session.phase == .ended {
+        SessionEndedScreen(tryAgain: session.tryAgain, startAfresh: session.startAfresh)
       } else if showsTabs {
         // Made anew for each stretch of the account, so no page of the
         // user before stays open, whatever page it is, and the place it
