@@ -35,6 +35,7 @@ What any line has besides is not its kind: who wrote it, when, its place, its re
 - A member's profile, from their face, their mention or a one-to-one chat's title, is a sheet: their face, which opens large when it is a photo, their name, ブロック中 while blocked, 〇〇でのプロフィール with the group's mark, and メッセージを送る for the one-to-one chat with them, but in that chat itself and while they are blocked. ブロック and 通報 are in its ⋯ (Reporting and blocking).
 - A one-to-one chat with someone who left the group, or was taken out of it, stays in the hub's chats to be read, but takes no more lines: 〇〇はグループを抜けました stands where the composer was, in a capsule of its own (glass on iOS) (相手のアカウントは削除されました once their account is deleted, spec/sync-protocol.md).
 - ⋯ beside the title holds みんなのシフト for 全体チャット and 写真 for every chat (the chat with Pochical's people too, Photos), then the chat's notifications (Mentions).
+- The bar's buttons (back and ⋯) and the round ↓ draw their symbols in the text's color on the system's glass on iOS, as every bar button in the app does (the calendar's heading, the group's hub's 招待 and 設定); the accent is kept for a page's one confirming action, which fills with it as iOS 26 draws a prominent bar button (保存, 作る, 追加, 完了, 送る), and for the send button.
 - In the group's hub, under its chats, a group of one says メンバーを招待すると、1対1でも話せます。 Starting a one-to-one chat lists the members with 〇〇での名前とアイコンで話します。, as the chat belongs to the group.
 - コピー says コピーしました.
 

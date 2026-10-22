@@ -67,3 +67,16 @@ private struct MainButton: ViewModifier {
       .foregroundStyle(colors.accentOnFill)
   }
 }
+
+/// 並び替え in a list's bar, and 完了 while sorting, which confirms and so
+/// is prominent, as /design's and iOS 26's 完了 are.
+struct SortButton: View {
+  @Binding var editMode: EditMode
+
+  var body: some View {
+    let sorting = editMode.isEditing
+    Button(sorting ? "完了" : "並び替え", role: sorting ? .confirm : nil) {
+      withAnimation { editMode = sorting ? .inactive : .active }
+    }
+  }
+}
