@@ -4,6 +4,7 @@ import type { InviteImageGroup } from "@pochical/prototype/components/invite-sha
 import { SHARE_IMAGE } from "@pochical/prototype/lib/brand";
 import { render } from "takumi-js";
 import { googleFonts } from "takumi-js/helpers";
+import type { FontSubset } from "takumi-js/helpers";
 
 // Draws an invitation's share image (components/invite-share-image.tsx)
 // as a PNG in the site's Worker with Takumi. Under the workerd condition
@@ -19,16 +20,27 @@ const FONTS = ["Noto Sans JP", "Noto Sans KR", "Noto Sans TC"].map((name) => ({
   weight: [400, 700],
 }));
 
-// The fonts' stylesheet, kept for the isolate: Takumi's own cache keeps
-// none over a megabyte, and the three CJK families' is more.
-const fontStylesheets = new Map<string, Promise<string>>();
-
 // Fonts and emoji keep for a day at Cloudflare's edge.
 const fetchCached = async (input: string, init?: RequestInit) =>
   await fetch(input, {
     ...init,
     cf: { cacheEverything: true, cacheTtl: 86_400 },
   });
+
+// The fonts' subsets, read once per isolate from their stylesheet, which
+// Takumi's own cache does not keep (it keeps none over a megabyte, and the
+// three CJK families' is more); a failed read is tried again next time.
+let fontSubsets: Promise<FontSubset[]> | undefined;
+
+const loadFonts = async (): Promise<FontSubset[]> => {
+  fontSubsets ??= googleFonts({ families: FONTS, fetch: fetchCached });
+  try {
+    return await fontSubsets;
+  } catch (error) {
+    fontSubsets = undefined;
+    throw error;
+  }
+};
 
 // The name the image gives a photo mark, whose bytes come with it.
 const PHOTO = "mark-photo";
@@ -44,11 +56,7 @@ export const drawInviteImage = async (
       icon: iconData,
     }),
     {
-      fonts: googleFonts({
-        cache: fontStylesheets,
-        families: FONTS,
-        fetch: fetchCached,
-      }),
+      fonts: await loadFonts(),
       height: SHARE_IMAGE.height,
       images: {
         fetch: fetchCached,
