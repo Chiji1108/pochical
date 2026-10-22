@@ -1,3 +1,4 @@
+import { rotationTemplates } from "@pochical/design/patterns";
 import { themeSkyId } from "@pochical/design/skies";
 import { DesignApp } from "@pochical/prototype/components/design-app";
 import {
@@ -25,10 +26,8 @@ import type {
   ShiftMarkStyle,
 } from "@pochical/prototype/components/shift-mark";
 import { initialDesignSchedule } from "@pochical/prototype/lib/design-days";
-import {
-  sampleOrder,
-  useSamplePerson,
-} from "@pochical/prototype/lib/design-sample-person";
+import { presetList } from "@pochical/prototype/lib/design-patterns";
+import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
 import type { OwnData } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
@@ -208,16 +207,25 @@ type FeatureOpening =
 
 type Feature = "repeat" | "share" | "chat";
 
+// 繰り返し is for work that comes round in a fixed order, so the top page
+// shows the order はじめの設定 offers for it: 当番・非番・休み.
+const duty = rotationTemplates.find((template) => template.id === "duty");
+if (duty?.sequence === undefined) {
+  throw new Error("はじめの設定 has no 当番・非番・休み order");
+}
+
 const featureScreens: Record<
   Feature,
   { opening: FeatureOpening; own?: Partial<OwnData> }
 > = {
   chat: { opening: { initialGroupPage: "chat", initialTab: "group" } },
-  // An order typed on the month, as 設定's 新しい繰り返し opens with the
-  // last one: its days solid, then coming round faint.
   repeat: {
     opening: { initialSettingsPage: "repeat-new", initialTab: "settings" },
-    own: { rules: [sampleOrder] },
+    own: {
+      patterns: presetList(duty.patternKeys),
+      rules: [{ sequence: duty.sequence, start: new Date(2026, 3, 1) }],
+      schedule: {},
+    },
   },
   share: { opening: { initialGroupPage: "shifts", initialTab: "group" } },
 };
