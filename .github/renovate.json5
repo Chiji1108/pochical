@@ -6,7 +6,6 @@
   prConcurrentLimit: 5,
   prHourlyLimit: 2,
   labels: ["dependencies"],
-  automerge: false,
   lockFileMaintenance: {
     enabled: true,
     schedule: ["* 0-8 * * 1"],
@@ -35,6 +34,12 @@
     },
   ],
   packageRules: [
+    {
+      description: "The same wait as npm's, for Actions, Swift, mise's tools and buf's plugins, which the BSR publishes after the tag",
+      matchDatasources: ["github-tags", "github-releases"],
+      minimumReleaseAge: "3 days",
+      internalChecksFilter: "strict",
+    },
     {
       description: "astro check does not support TypeScript 7 yet (withastro/astro#17268)",
       matchFileNames: ["apps/web/package.json"],
@@ -75,10 +80,10 @@
       ],
     },
     {
-      matchManagers: ["custom.regex"],
-      matchFileNames: ["**/project.pbxproj"],
+      description: "Renovate rewrites only the bumped packages' pins in Package.resolved, and none for the Xcode project's own packages",
+      matchFileNames: ["**/Package.swift", "**/project.pbxproj"],
       prBodyNotes: [
-        "Renovate cannot update the Xcode project's `Package.resolved`. Resolve the packages (`xcodebuild -resolvePackageDependencies -project apps/ios/Pochical/Pochical.xcodeproj`) and commit it before merging.",
+        "Before merging, resolve the Swift packages (`xcodebuild -resolvePackageDependencies -project apps/ios/Pochical/Pochical.xcodeproj`, and `swift package resolve --package-path` for a changed package under `apps/ios/Packages`) and commit any `Package.resolved` change.",
       ],
     },
     {
@@ -86,7 +91,6 @@
       matchDepNames: ["bun", "@types/bun"],
       groupName: "Bun",
       separateMajorMinor: false,
-      minimumReleaseAge: "3 days",
       prBodyNotes: [
         "Before merging, set `BUN_VERSION` to the new version in each Worker's Workers Builds settings (server, web, catalog, admin) in the Cloudflare dashboard. Renovate cannot change it.",
       ],
