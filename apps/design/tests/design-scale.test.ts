@@ -1,0 +1,71 @@
+import { expect, test } from "bun:test";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+import { HAIRLINE_MAX, SPACING_STEP } from "@pochical/design/metrics";
+
+// The app's spacing sits on a 4px grid and its corners take the radius
+// tokens (design/src/metrics.ts), so pieces line up and the native apps
+// share the same steps. 1 and 2px are left for hairlines and nudges.
+// The site's design pages and the prototype's pieces they show.
+const folders = [
+  path.join(import.meta.dir, "../src/components"),
+  path.join(import.meta.dir, "../../../packages/prototype/src/components"),
+];
+const componentFiles = folders.flatMap((folder) =>
+  readdirSync(folder).map((file) => ({ file, full: path.join(folder, file) }))
+);
+
+// The design pages and the device's stand-ins draw to their own measure.
+const outside = new Set([
+  "design-app-icon.tsx",
+  "design-colors.tsx",
+  "design-frames.tsx",
+  "design-home-screen.tsx",
+  "design-phone.tsx",
+  "design-widget-frame.tsx",
+  "shift-mark.tsx",
+]);
+// A sheet pictured over the phone follows its screen's corner.
+const devicePictures = new Set(["design-sheet.tsx 46px"]);
+
+const spacingProperty =
+  /\b(?:gap|rowGap|columnGap|padding\w*|margin\w*):\s*"(?<value>[^"]+)"/gu;
+const radiusProperty = /\bborder\w*Radius:\s*"(?<value>[^"]+)"/gu;
+const pixels = /(?<number>-?\d+(?:\.\d+)?)px/gu;
+
+const offGrid = (property: RegExp, allowed: (px: number) => boolean) =>
+  componentFiles
+    .filter(({ file }) => file.endsWith(".tsx") && !outside.has(file))
+    .flatMap(({ file, full }) => {
+      const source = readFileSync(full, "utf-8");
+      return [...source.matchAll(property)].flatMap((match) => {
+        const value = match.groups?.value ?? "";
+        return value.includes("calc(")
+          ? []
+          : [...value.matchAll(pixels)]
+              .map((pixel) => ({
+                px: Number(pixel.groups?.number),
+                whole: pixel[0],
+              }))
+              .filter(({ px, whole }) => {
+                const pictured = devicePictures.has(`${file} ${whole}`);
+                return !(pictured || allowed(px));
+              })
+              .map(({ whole }) => `${file}: ${whole} in "${value}"`);
+      });
+    });
+
+test("spacing is on the 4px grid", () => {
+  expect(
+    offGrid(
+      spacingProperty,
+      (px) => Math.abs(px) <= HAIRLINE_MAX || px % SPACING_STEP === 0
+    )
+  ).toEqual([]);
+});
+
+// A corner names its size ("lg", "full"), never a number of px.
+test("corners take the radius tokens", () => {
+  expect(offGrid(radiusProperty, () => false)).toEqual([]);
+});

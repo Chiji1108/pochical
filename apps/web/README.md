@@ -9,7 +9,7 @@
 - `bun run build:web`: Workers向けにビルド
 - `bun run preview:web`: ビルド済みのサイトをWorkersランタイムで確認
 - `bun run typecheck`: TypeScriptの全パッケージ（apps、packages、design）の型チェック
-- `bun run test`: packages、web、catalog、serverのテスト
+- `bun run test`: packages、web、design、serverのテスト
 - `bun run check` / `bun run fix`: 共通のUltracite設定でチェック・整形
 
 ルートの `bun.lock` を使います。ページは `src/pages` の `.astro` ファイルです。`bun run --cwd apps/web typecheck` は `astro check` で `.astro` を、`tsc --noEmit` で `src` のTS/TSXとそこから読み込むファイル（`@pochical/prototype` を含む）を確かめます。`astro check` が報告するのは `src` のファイルだけで、読み込み先の型エラーは出さないからです。`worker-configuration.d.ts` は `mise run gen:worker-types` で、ほかの Worker の分と一緒に生成します。CI は `mise run worker-types:check` でコミットとの差を確かめます。Workers設定を変更したら型を再生成してください。
@@ -26,7 +26,7 @@
 | `/support/google-calendar` | Googleカレンダーにシフトを入れる手順（アプリから開く） |
 | `/account/delete` | 削除される内容と、メールでの削除依頼 |
 
-デザイン資料（`/design`）と試作（`/try`、`/demo`）は `apps/catalog` にあります。
+デザイン資料は `apps/design`、試作のデモは `apps/demo`、スマホで試す試作は `apps/try` にあります。
 
 招待ページ（と招待の画像）以外はビルド時に描画し、静的ファイルとして配信します。招待ページはリクエストごとにWorkerで描画し、no-storeです。招待ページ・削除ページはnoindexです。セキュリティヘッダーは `src/lib/headers.ts` の一覧から、静的ファイルには `_headers`（ビルド時に書き出し）、Workerのページにはmiddlewareで付けます。日本語の改行位置（文節ごとの `<wbr>`）は、`.astro` のHTMLにはmiddlewareが、ReactのアイランドにはJSXランタイムが、同じBudouXの規則（`@pochical/jsx`）で入れます。招待ページのタイトルとOGPにはグループ名と絵文字を入れ、チャットに貼ったリンクのカードにも出します。ページを開けば誰でも見られる情報なので、カードに出しても見える範囲は変わりません。
 

@@ -49,8 +49,7 @@ function Motion({ children }: { children: ReactNode }) {
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
 }
 
-// The current proposal for each open design choice, as on the catalog's
-// /try (apps/catalog).
+// The current proposal for each open design choice, as on apps/try.
 const variants = parseDesignVariants({});
 
 // The app's own ポチカル sky (おたのしみ), drawn as the app draws it: its
@@ -162,7 +161,7 @@ const heroSchedule = Object.fromEntries(
   )
 );
 
-// The app itself, the same one the catalog's /try runs, to tap right on
+// The app itself, the same one apps/try runs, to tap right on
 // the page.
 export function HeroPhone() {
   const person = useSamplePerson({ schedule: heroSchedule });
