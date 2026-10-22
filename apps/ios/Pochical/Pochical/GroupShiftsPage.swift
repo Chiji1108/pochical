@@ -225,21 +225,22 @@ struct GroupShiftsPage: View {
       position = ScrollPosition(id: anchor(of: opening), anchor: .topLeading)
       membersRead = true
     }
-    .sheet(item: $picked) {
-      if let legend = legendAfterDay {
-        legendAfterDay = nil
-        legendOf = legend
+    // As tall as its rows, as /design's; half the screen until it has
+    // said, as a sheet of no height lays out no rows to measure.
+    .daySheet(
+      picked, first: daySheetHeight > 0 ? .height(daySheetHeight) : .medium,
+      onClose: { picked = nil },
+      onDismiss: {
+        if let legend = legendAfterDay {
+          legendAfterDay = nil
+          legendOf = legend
+        }
       }
-    } content: { day in
-      // As tall as its rows, as /design's; half the screen until it has
-      // said, as a sheet of no height lays out no rows to measure.
-      let fitted = daySheetHeight > 0 ? PresentationDetent.height(daySheetHeight) : .medium
+    ) { day in
       DaySheet(day: day, members: members, groupID: group.id, height: $daySheetHeight) {
         picked = nil
         navigator?.open(.group(.chat(group, thread: groupThread, with: nil, sharing: day)))
       }
-      .presentationDetents([fitted, .large])
-      .presentationBackgroundInteraction(.enabled(upThrough: fitted))
     }
     .sheet(item: $togetherSheet) {
       if let day = pickedFromList {

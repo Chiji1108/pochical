@@ -4,7 +4,8 @@
 # landscape and back, at the default text size and the largest (POC-132),
 # its 今日 after 月を選ぶ and a change of layout (POC-156), and its
 # 週ごと opening on today's week however late the members are read (POC-162);
-# and in a group of two, 今日's rows and 週ごと after 一覧 (POC-195).
+# and in a group of two, 今日's rows, 週ごと after 一覧 and the day's sheet
+# following the day tapped (POC-195).
 # It starts the server itself, so nothing else may be on :8787, and erases
 # the simulator it is given.
 #

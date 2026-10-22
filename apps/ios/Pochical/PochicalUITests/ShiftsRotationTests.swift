@@ -4,8 +4,9 @@ import XCTest
 /// drawn where they are laid out, under their faces, and the list stays
 /// on the days it showed; its 今日 shows while today is out of sight
 /// (POC-156); and its 週ごと opens on today's week (POC-162). In 少人数,
-/// whose 一覧 fits across: 今日 leaves each row in its place, and 週ごと
-/// after 一覧 shows only weeks (POC-195). Run by `mise run ios:shifts-rotation`, against the local
+/// whose 一覧 fits across: 今日 leaves each row in its place, 週ごと after
+/// 一覧 shows only weeks, and the day's sheet follows the day tapped
+/// (POC-195). Run by `mise run ios:shifts-rotation`, against the local
 /// server it starts with a group of twelve and one of two; skipped
 /// without it.
 final class ShiftsRotationTests: XCTestCase {
@@ -281,6 +282,42 @@ final class ShiftsRotationTests: XCTestCase {
       .allElementsBoundByIndex.filter { $0.isHittable && $0.frame.width > width / 2 }
     if !rows.isEmpty { snap("days-among-weeks") }
     XCTAssertEqual(rows.map(\.label), [], "no day of 一覧 among the weeks, \(when)")
+  }
+
+  /// 少人数's day sheet follows the day tapped, in 一覧 and in 1人ずつ,
+  /// staying at its height (POC-195).
+  @MainActor
+  func test9cSheetFollowsTheDay() throws {
+    launch()
+    openList(small: true)
+    continueAfterFailure = true
+    _ = settled()
+    // Tomorrow, under today's row at the list's top; in 1人ずつ a day
+    // beside today in its month, for the page to show both.
+    let calendar = Calendar.current
+    let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
+    let beside =
+      calendar.isDate(tomorrow, equalTo: Date(), toGranularity: .month)
+      ? tomorrow : calendar.date(byAdding: .day, value: -1, to: Date())!
+    let name = { (date: Date) in
+      let parts = calendar.dateComponents([.month, .day], from: date)
+      return "\(parts.month!)月\(parts.day!)日"
+    }
+    let tomorrowName = name(tomorrow)
+    let besideName = name(beside)
+    let rows = { (day: String) in
+      self.app.buttons.matching(NSPredicate(format: "label MATCHES %@", day + "([^0-9].*)?")).firstMatch
+    }
+    checkSheetFollows(
+      app, from: (rows(today()), today()), to: (rows(tomorrowName), tomorrowName), "in 一覧")
+    app.buttons["閉じる"].firstMatch.tap()
+    switchLayout(from: "一覧", to: "1人ずつ")
+    let cells = { (day: String) in
+      self.app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", day + "、")).firstMatch
+    }
+    XCTAssertTrue(cells(today()).waitForExistence(timeout: 10), "1人ずつ shows the month")
+    checkSheetFollows(
+      app, from: (cells(today()), today()), to: (cells(besideName), besideName), "in 1人ずつ")
   }
 
   @MainActor private func launch(_ arguments: [String] = []) {
