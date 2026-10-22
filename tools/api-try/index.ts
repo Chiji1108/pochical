@@ -57,15 +57,6 @@ const isState = (value: unknown): value is State =>
   "users" in value &&
   Array.isArray(value.users);
 
-// Bun loads the repo's .env, whose CF_* values are for tools/roster-eval;
-// wrangler would take CF_ACCOUNT_ID and CF_API_TOKEN as its own (and warn
-// they are deprecated), so it gets the environment without them and uses
-// its own login.
-const wranglerEnv = (): Record<string, string | undefined> =>
-  Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("CF_"))
-  );
-
 const fail = (message: string): never => {
   console.error(message);
   process.exit(1);
@@ -246,7 +237,6 @@ const cleanup = async (state: State): Promise<void> => {
       ],
       {
         cwd: serverDir,
-        env: wranglerEnv(),
         stderr: "inherit",
         stdout: "ignore",
       }

@@ -114,6 +114,3 @@ run = "bun tools/layout-diff/index.ts"
 description = "Try the server's groups and invitations by hand: create [name] [emoji] | join | preview | remake | cleanup [--local]"
 run = "bun tools/api-try/index.ts"
 
-[tasks."roster-eval"]
-description = "Compare vision models reading the roster photos in assets/shift-schedule (costs money)"
-run = "bun tools/roster-eval/eval.ts"

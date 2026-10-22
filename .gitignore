@@ -46,10 +46,6 @@ yarn-error.*
 # Panda CSS output, made by `panda codegen` and the apps' PostCSS plugin
 packages/styled-system/dist/
 
-# Real roster photos and their answer key: coworkers' names, never commit
-assets/shift-schedule/
-# Roster reading comparison: resized images, raw replies and the report
-tools/roster-eval/out/
 # layout-diff's measured runs, remade whenever they are needed
 tools/layout-diff/out/
 tools/api-try/out/
