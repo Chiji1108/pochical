@@ -7,6 +7,7 @@ import type {
   LinkPreview,
   Message,
 } from "./design-group-data";
+import type { Photo } from "./design-sample-photos";
 
 // What a chat's lines become as people use them (spec/chat.md): pins,
 // polls, reactions, edits and lines taken back. Each takes the lines and
@@ -203,12 +204,19 @@ export function keptDraft(
 }
 
 // What the composer holds: the words as written, mentions as @name; the
-// members picked from the @ list, made mentions as it is sent; and the
-// line it answers or changes.
+// members picked from the @ list, made mentions as it is sent; the line
+// it answers or changes; the days brought to share and the photos picked,
+// sent before the words; and the link whose page × took off. `message` is
+// the one being written, a new one each time the composer starts afresh,
+// for photos still being read to go to the one they were picked for.
 export type Writing = {
+  message: symbol;
   words: string;
   picked: { id: string; name: string }[];
   target?: DraftTarget;
+  days?: Date[];
+  photos: Photo[];
+  withoutPreview?: string;
 };
 
 // Words as sent (<@id>) put back in the composer, their mentions as @name
@@ -219,23 +227,32 @@ export function writingOf(
   target?: DraftTarget
 ): Writing {
   return {
+    message: Symbol("message"),
+    photos: [],
     picked: mentionsOf(text).map((id) => ({ id, name: mentionName(id) })),
     target,
     words: plainText(text, mentionName),
   };
 }
 
+const nothing = () => "";
+
+// A composer emptied for a new message.
+export const emptyWriting = (target?: DraftTarget) =>
+  writingOf("", nothing, target);
+
 // Answering a line in place of changing one lets the edit go, and its
-// words with it, which were that line's; the words of a reply stay.
+// words with it, which were that line's; else what was written stays,
+// and what goes with it (spec/vectors/chat.json, composer).
 export function answering(writing: Writing, id: string): Writing {
   const target = { id, kind: "reply" } as const;
   return writing.target?.kind === "edit"
-    ? { picked: [], target, words: "" }
+    ? emptyWriting(target)
     : { ...writing, target };
 }
 
-// Changing your line in place of answering one puts its words in the
-// composer, in place of what was written.
+// Changing your line puts its words alone in the composer, in place of
+// all that was written there.
 export function changing(
   message: Message,
   mentionName: (id: string) => string
@@ -244,11 +261,40 @@ export function changing(
   return writingOf(text, mentionName, { id: message.id, kind: "edit" });
 }
 
-// × on the bar: an edit goes with its words; a reply's words stay.
+// × on the bar: an edit goes with its words; a reply's words stay, and
+// what goes with them.
 export function stopping(writing: Writing): Writing {
   return writing.target?.kind === "edit"
-    ? { picked: [], words: "" }
+    ? emptyWriting()
     : { ...writing, target: undefined };
+}
+
+// Days brought to share start a message, as answering a line does: an
+// edit goes with its words, as it takes only words.
+export function sharing(writing: Writing, days: Date[]): Writing {
+  return {
+    ...(writing.target?.kind === "edit" ? emptyWriting() : writing),
+    days,
+  };
+}
+
+// Photos read into the tray of the message they were picked for, as
+// many as it has room for; those whose message the composer no longer
+// holds (an edit began, or ended, meanwhile) have nowhere to go.
+export function picking(
+  writing: Writing,
+  message: symbol,
+  photos: Photo[]
+): Writing {
+  return writing.message === message
+    ? {
+        ...writing,
+        photos: [...writing.photos, ...photos].slice(
+          0,
+          chatRules.photosPerSend
+        ),
+      }
+    : writing;
 }
 
 // How many of a line's photos go in each of its rows, top first: three
