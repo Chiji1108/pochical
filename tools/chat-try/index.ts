@@ -21,6 +21,12 @@
 // the group, to be removed from the app.
 //
 //   bun tools/chat-try/index.ts <invite code> --photos <dir> [--album] [--face <jpeg>]
+//
+// With `--react <emoji> --to <words>` it sends no lines: it puts that
+// reaction on the latest line of exactly those words instead, as another
+// member reacting while the chat is open.
+//
+//   bun tools/chat-try/index.ts <invite code> --react <emoji> --to <words> [--face <jpeg>]
 
 import { readdir } from "node:fs/promises";
 import path from "node:path";
@@ -55,9 +61,11 @@ const valueOf = (flag: string): string | undefined => {
 const every = Number(valueOf("--every") ?? 0);
 const photoDir = valueOf("--photos");
 const face = valueOf("--face");
+const reaction = valueOf("--react");
+const reactTo = valueOf("--to");
 const [code, countArg] = args.filter(
   (_, index) =>
-    !["--every", "--photos", "--face"].some((flag) => {
+    !["--every", "--photos", "--face", "--react", "--to"].some((flag) => {
       const at = args.indexOf(flag);
       return at !== -1 && (index === at || index === at + 1);
     })
@@ -275,6 +283,10 @@ const socket = new WebSocket(
 socket.binaryType = "arraybuffer";
 
 const welcomed = Promise.withResolvers<undefined>();
+// The catch-up has all come: the Pong to the Ping after Welcome.
+const caughtUp = Promise.withResolvers<undefined>();
+// The latest line of each words, by its seq.
+const seqOfWords = new Map<string, bigint>();
 // The sends the group took as lines.
 const taken = new Set<string>();
 socket.addEventListener("open", () => {
@@ -293,10 +305,16 @@ socket.addEventListener("message", (event) => {
   const frame = fromBinary(ServerFrameSchema, new Uint8Array(event.data));
   if (frame.kind.case === "welcome") {
     welcomed.resolve(undefined);
+  } else if (frame.kind.case === "pong") {
+    caughtUp.resolve(undefined);
   } else if (frame.kind.case === "changes") {
     for (const { kind } of frame.kind.value.changes) {
       if (kind.case === "chatLine") {
         taken.add(kind.value.opId);
+        const { content, seq } = kind.value;
+        if (content?.kind.case === "words") {
+          seqOfWords.set(content.kind.value.text, seq);
+        }
       }
     }
   } else if (frame.kind.case === "acked") {
@@ -309,6 +327,53 @@ socket.addEventListener("message", (event) => {
 });
 socket.addEventListener("error", () => fail("socket: could not connect"));
 await welcomed.promise;
+
+if (reaction !== undefined) {
+  socket.send(
+    toBinary(
+      ClientFrameSchema,
+      create(ClientFrameSchema, {
+        kind: { case: "ping", value: { nonce: 1 } },
+      })
+    )
+  );
+  await caughtUp.promise;
+  const seq =
+    seqOfWords.get(reactTo ?? "") ?? fail(`no line of the words ${reactTo}`);
+  const opId = crypto.randomUUID();
+  const answered = Promise.withResolvers<undefined>();
+  sent.set(opId, { answered, what: reaction });
+  socket.send(
+    toBinary(
+      ClientFrameSchema,
+      create(ClientFrameSchema, {
+        kind: {
+          case: "chatEdits",
+          value: {
+            edits: [
+              {
+                kind: {
+                  case: "react",
+                  value: {
+                    emoji: reaction,
+                    on: true,
+                    seq,
+                    threadId: GROUP_THREAD,
+                  },
+                },
+                opId,
+              },
+            ],
+          },
+        },
+      })
+    )
+  );
+  await answered.promise;
+  socket.close();
+  console.log(`${name}として${reactTo}に${reaction}を付けました`);
+  process.exit(0);
+}
 
 const lines = richLines(userId);
 const uploaded = await Promise.all(

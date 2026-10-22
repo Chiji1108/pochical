@@ -139,7 +139,7 @@ struct ChatScreen: View {
   @State private var pinsOpen = false
   /// A pinned line being gone to, its earlier lines asked for until held.
   @State private var jumpTarget: Int64?
-  /// The line gone to, ringed for a moment, and the line lifted while its
+  /// The line gone to, lit for a moment, and the line lifted while its
   /// menu is open.
   @State private var marks = LineMarks()
   /// What a pin did, said for a moment over the lines.
@@ -188,7 +188,7 @@ struct ChatScreen: View {
       row: { id in
         AnyView(
           lineRow(
-            id, item: byID[id], first: listed.first?.id, names: names,
+            id, item: byID[ChatItemID.line(of: id)], first: listed.first?.id, names: names,
             showsTime: !timeless.contains(id)))
       },
       top: AnyView(top),
@@ -201,7 +201,8 @@ struct ChatScreen: View {
       composer: AnyView(composer),
       empty: AnyView(empty),
       scroll: scroll, proxy: scroller, following: $following,
-      shown: placed, holds: acting != nil, dayOver: { dayOver($0, in: listed) },
+      shown: placed, holds: acting != nil,
+      dayOver: { dayOver(ChatItemID.line(of: $0), in: listed) },
       replySwipe: { replySwipe(byID[$0]) },
       onReply: { id in
         if let line = answered(byID[id]) { reply(to: line) }
@@ -587,6 +588,12 @@ struct ChatScreen: View {
         blockedWriter: blockedWriter, shownAnyway: shownAnyway, unfolded: unfoldedLine,
         common: common)
       rows.append(LinesRow(id: item.id, look: AnyHashable(look)))
+      if case .line(let line, _) = item, let reactions = shownReactions(line) {
+        rows.append(
+          LinesRow(
+            id: ChatItemID.reactions(line.opID),
+            look: AnyHashable(ReactionsLook(reactions: reactions, counted: ofTwo, common: common))))
+      }
     }
     for userID in writers {
       rows.append(LinesRow(id: ChatItemID.typing(userID), look: AnyHashable(common)))
@@ -606,6 +613,12 @@ struct ChatScreen: View {
       } else if let userID = ChatItemID.typer(of: id) {
         TypingLine(name: memberName(userID, in: names), photoID: faces[userID] ?? "")
           .padding(.top, CGFloat(Chat.runGap - Chat.lineGap))
+      } else if ChatItemID.isReactions(id) {
+        if case .line(let line, _) = item, let reactions = shownReactions(line) {
+          LineReactions(
+            lineID: line.opID, mine: line.authorID == meID, reactions: reactions, meID: meID,
+            names: names, counted: ofTwo, marks: marks, actions: lineActions)
+        }
       } else if let item {
         // Lines close within a run, parted where the writer changes; the
         // first has the list's own margin over it.
@@ -1052,6 +1065,16 @@ struct ChatScreen: View {
   /// lines fold away; a one-to-one chat with them shows all it has.
   private func writerBlocked(_ line: ChatLineRow) -> Bool {
     otherID == nil && blocked.contains(line.authorID)
+  }
+
+  /// The line's reactions as the chat shows them, under a line drawn as
+  /// one; none for a line without, or one folded away or not a message.
+  private func shownReactions(_ line: ChatLineRow) -> [LineReaction]? {
+    guard !line.reactions.isEmpty, !folded(line) else { return nil }
+    switch line.content {
+    case .words, .photos, .days, .poll: return line.reactions
+    case .notice, .unsent, .hidden: return nil
+    }
   }
 
   /// The line is folded away for its blocked writer, not shown at a tap.
@@ -1712,7 +1735,7 @@ struct ChatScreen: View {
     jumpTarget = seq
   }
 
-  /// Scrolls to the line gone to once laid out and rings it; else lays out
+  /// Scrolls to the line gone to once laid out and lights it; else lays out
   /// the page before, coming back as each comes, from the device or, as
   /// it arrives, the server.
   private func goToTarget() async {
@@ -1721,14 +1744,9 @@ struct ChatScreen: View {
     if let line = state.lines.first(where: { $0.seq == target }) {
       jumpTarget = nil
       following = false
-      // Rung once there, not on the way; by itself, as this task ends
-      // with the line gone to.
+      // Lit once there, not on the way.
       scroller.show(ChatItemID.line(line.opID), at: .center, animated: true) {
-        marks.ringed = target
-        Task { @MainActor in
-          try? await Task.sleep(for: .milliseconds(500))
-          withAnimation(.easeOut(duration: 0.7)) { marks.ringed = nil }
-        }
+        marks.jumped(to: target)
       }
     } else if let last = state.lines.last, target > last.seq {
       // Gone to a line after those laid out, past a gap: laid out from it.
@@ -1771,7 +1789,7 @@ struct ChatScreen: View {
     react.seq = UInt64(line.seq)
     react.emoji = emoji
     react.on = !current.reactions.contains { $0.emoji == emoji && $0.userIDs.contains(meID ?? "") }
-    keep(.react(react))
+    if keep(.react(react)), react.on { marks.chose(emoji, on: line.opID) }
   }
 
   private func unsend(_ line: ChatLineRow) {
@@ -1814,6 +1832,13 @@ private struct RowsLook: Hashable {
   let deleted: Set<String>
   let members: [GroupMember]
   let left: Set<String>
+}
+
+/// All a line's reactions' row draws.
+private struct ReactionsLook: Hashable {
+  let reactions: [LineReaction]
+  let counted: Bool
+  let common: RowsLook
 }
 
 /// All a line's row draws.

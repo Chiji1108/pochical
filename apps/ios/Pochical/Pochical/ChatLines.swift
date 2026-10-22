@@ -1,5 +1,6 @@
 import PochicalDesign
 import PochicalKit
+import Pow
 import SwiftUI
 
 // A chat's lines as ChatScreen lays them out: the items in order, and
@@ -46,6 +47,7 @@ enum ChatItemID {
   static let head = "head"
   static let unread = "unread"
   private static let linePrefix = "line-"
+  private static let reactionsPrefix = "reactions-"
   private static let typingPrefix = "typing-"
   private static let dayPrefix = "day-"
 
@@ -57,6 +59,23 @@ enum ChatItemID {
 
   static func isLine(_ id: String) -> Bool { id.hasPrefix(linePrefix) }
 
+  /// A line's reactions, under it: an item of their own, laid out where
+  /// they go as they come and go while the line moves to make room.
+  static func reactions(_ opID: String) -> String { reactionsPrefix + opID }
+
+  static func isReactions(_ id: String) -> Bool { id.hasPrefix(reactionsPrefix) }
+
+  /// The reactions of the line `lineID`.
+  static func reactions(of lineID: String) -> String {
+    reactionsPrefix + lineID.dropFirst(linePrefix.count)
+  }
+
+  /// The line whose reactions the item `id` is, or the item itself: what
+  /// is done to a line (dragged to reply) is done to all of it.
+  static func line(of id: String) -> String {
+    isReactions(id) ? line(String(id.dropFirst(reactionsPrefix.count))) : id
+  }
+
   /// Someone writing now, under the latest line.
   static func typing(_ userID: String) -> String { typingPrefix + userID }
 
@@ -67,11 +86,88 @@ enum ChatItemID {
 }
 
 /// What a chat's lines show for a moment, beyond what they are: the line
-/// ringed as it is gone to, and the line whose bubble is lifted over the
-/// chat while its menu is open.
+/// lit as it is gone to, and the line whose bubble is lifted over the chat
+/// while its menu is open.
 @MainActor @Observable final class LineMarks {
-  var ringed: Int64?
+  /// How many times each line, by seq, has been gone to: each time lights
+  /// it once (JumpHighlight).
+  private var jumps: [Int64: Int] = [:]
   var lifted: String?
+  /// The reactions the reader has just chosen, by line and emoji, each
+  /// to spray its emoji once, as its pill shows it (ReactionRow).
+  private(set) var chosen: Set<[String]> = []
+
+  func chose(_ emoji: String, on lineID: String) {
+    chosen.insert([lineID, emoji])
+  }
+
+  /// The reader's choice of `emoji` on the line `lineID` is shown: true
+  /// once, when it was just chosen.
+  func shows(_ emoji: String, on lineID: String) -> Bool {
+    chosen.remove([lineID, emoji]) != nil
+  }
+
+  func jumped(to seq: Int64) {
+    jumps[seq, default: 0] += 1
+  }
+
+  /// How many times the line `seq` has been gone to.
+  func jumps(to seq: Int64?) -> Int {
+    seq.flatMap { jumps[$0] } ?? 0
+  }
+}
+
+/// A line gone to lights for a moment, as Telegram's does: the accent over
+/// its bubble, tail and all, coming and going over chatRules.jumpFlashMs,
+/// and one band of shine sweeping across it, both inside the bubble's
+/// shape. With motion reduced the light holds still for that time instead,
+/// without the sweep.
+private struct JumpHighlight: ViewModifier {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// The bubble's outline, or the card's.
+  let shape: AnyShape
+  /// How many times the line has been gone to.
+  let lit: Int
+
+  private var total: Double { Double(Chat.jumpFlashMs) / 1000 }
+
+  func body(content: Content) -> some View {
+    content
+      .overlay {
+        light
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+      }
+      .overlay {
+        shape.fill(.clear)
+          .changeEffect(.shine(duration: total * 0.6), value: lit, isEnabled: !reduceMotion)
+          .clipShape(shape)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+      }
+  }
+
+  @ViewBuilder private var light: some View {
+    let fill = shape.fill(colors.accentDefault.opacity(0.25))
+    if reduceMotion {
+      fill.keyframeAnimator(initialValue: 0.0, trigger: lit) { view, on in
+        view.opacity(on)
+      } keyframes: { _ in
+        MoveKeyframe(1)
+        LinearKeyframe(1, duration: total)
+        MoveKeyframe(0)
+      }
+    } else {
+      fill.keyframeAnimator(initialValue: 0.0, trigger: lit) { view, on in
+        view.opacity(on)
+      } keyframes: { _ in
+        CubicKeyframe(1, duration: total * 0.2)
+        LinearKeyframe(1, duration: total * 0.4)
+        CubicKeyframe(0, duration: total * 0.4)
+      }
+    }
+  }
 }
 
 /// What is done on a line of words, which the chat acts on.
@@ -103,12 +199,40 @@ enum LineAction {
   case menu(String)
 }
 
+/// The writer's face, by their run's first line.
+let lineFaceSize: CGFloat = 32
+
+/// Where a line's parts stand across the chat: others' by the writer's
+/// face (room for it kept on every line of a run, so a run's lines line
+/// up), one's own on the right, and room kept on the other side. A line
+/// and its reactions, under it, stand alike.
+struct LineFrame<Face: View, Content: View>: View {
+  @Environment(\.dynamicTypeSize) private var typeSize
+  let mine: Bool
+  @ViewBuilder let face: Face
+  @ViewBuilder let content: Content
+
+  var body: some View {
+    HStack(alignment: .top, spacing: 8) {
+      if !mine { face.frame(width: lineFaceSize) }
+      content
+        // Room for the tail of a run's first bubble by the face. By the
+        // screen's edge the tail reaches into the margin, as LINE's and
+        // Messages' do.
+        .padding(.leading, mine ? 0 : BubbleShape.tailReach)
+        .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
+        // The room kept on the other side, less at the accessibility text
+        // sizes, where the words need the width more, as Messages gives it.
+        .padding(mine ? .leading : .trailing, typeSize.isAccessibilitySize ? 16 : 40)
+    }
+  }
+}
+
 /// A line of words: others' on the left with their face and, at the start
 /// of a run, their name; one's own on the right in the accent, dimmed
 /// while it waits to be sent. The time beside the bubble, 編集済み over it.
 struct LineView: View {
   @Environment(\.themeColors) private var colors
-  @Environment(\.dynamicTypeSize) private var typeSize
   @Environment(\.rootNavigator) private var navigator
   /// The line's opID, which its actions name it by.
   let lineID: String
@@ -160,11 +284,11 @@ struct LineView: View {
   var countedReactions = false
   /// Pinned for everyone: a small pin by its time.
   var pinned = false
-  /// What it shows for a moment: ringed when gone to from the pins, its
+  /// What it shows for a moment: lit when gone to from the pins, its
   /// bubble lifted over the chat while its menu is open, its place standing
   /// empty. Read by the line itself, which is drawn apart from the chat.
   var marks: LineMarks?
-  /// Its place in the chat, by which it is ringed; none while on its way.
+  /// Its place in the chat, by which it is lit; none while on its way.
   var seq: Int64?
   var meID: String?
   /// What is done on the line, for the chat to act on as it is when used:
@@ -175,8 +299,6 @@ struct LineView: View {
   @Environment(\.openURL) private var openURL
   /// What its words take to draw, kept while its row looks the same.
   @Environment(\.keptDrawing) private var kept
-
-  private static var avatar: CGFloat { 32 }
 
   /// A member's name in the group as it is now, for their mentions.
   private func nameOf(_ id: String) -> String {
@@ -211,26 +333,25 @@ struct LineView: View {
   }
 
   var body: some View {
-    HStack(alignment: .top, spacing: 8) {
-      if !mine {
-        Group {
-          if let writer, appFace {
-            AppIconChoice.current.image(size: Self.avatar)
-              .accessibilityLabel(writer)
-          } else if let writer {
-            Button { act(.openProfile) } label: {
-              MemberAvatar(name: writer, photoID: writerPhoto, shelf: shelf, size: Self.avatar)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(writer)のプロフィール")
-          } else {
-            Color.clear
+    LineFrame(mine: mine) {
+      Group {
+        if let writer, appFace {
+          AppIconChoice.current.image(size: lineFaceSize)
+            .accessibilityLabel(writer)
+        } else if let writer {
+          Button { act(.openProfile) } label: {
+            MemberAvatar(name: writer, photoID: writerPhoto, shelf: shelf, size: lineFaceSize)
           }
+          .buttonStyle(.plain)
+          .accessibilityLabel("\(writer)のプロフィール")
+        } else {
+          Color.clear
         }
-        .frame(width: Self.avatar, height: writer == nil ? 0 : Self.avatar)
-        // Said with the line, whose actions open the profile.
-        .accessibilityHidden(true)
       }
+      .frame(height: writer == nil ? 0 : lineFaceSize)
+      // Said with the line, whose actions open the profile.
+      .accessibilityHidden(true)
+    } content: {
       VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
         if let writer, named {
           Text(writer)
@@ -242,13 +363,7 @@ struct LineView: View {
         HStack(alignment: .bottom, spacing: 8) {
           if mine { voicedMeta }
           actedBubble
-            // Rung for a moment when gone to from the pins, as /design's
-            // flash: a ring just outside the bubble, held, then fading.
-            .background {
-              ringShape
-                .stroke(colors.accentBorder, lineWidth: 6)
-                .opacity(seq != nil && marks?.ringed == seq ? 1 : 0)
-            }
+            .modifier(JumpHighlight(shape: highlightShape, lit: marks?.jumps(to: seq) ?? 0))
             // A photo opens large at a tap (an album's each by its own);
             // the menu, the whole line's, is the long press's.
             .heldForActions(lineID: lineID, lifted: marks?.lifted == lineID) {
@@ -274,20 +389,7 @@ struct LineView: View {
             .foregroundStyle(colors.dangerDefault)
             .accessibilityHidden(true)
         }
-        if !reactions.isEmpty {
-          ReactionRow(
-            reactions: reactions, meID: meID, nameOf: nameOf, counted: countedReactions,
-            onReact: { act(.react($0)) })
-        }
       }
-      // Room for the tail of a run's first bubble by the face; every line
-      // keeps it, so a run's lines line up. By the screen's edge the tail
-      // reaches into the margin, as LINE's and Messages' do.
-      .padding(.leading, mine ? 0 : BubbleShape.tailReach)
-      .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
-      // The room kept on the other side, less at the accessibility text
-      // sizes, where the words need the width more, as Messages gives it.
-      .padding(mine ? .leading : .trailing, typeSize.isAccessibilitySize ? 16 : 40)
     }
     // The line reads as one, everything done on it its actions, an
     // album's photos with it; a card of days or a poll keeps its own
@@ -433,9 +535,9 @@ struct LineView: View {
     return actions.filter { seen.insert($0.id).inserted }
   }
 
-  /// The ring's shape: the bubble's (a photo answering a line sits in
-  /// one), or the card's.
-  private var ringShape: AnyShape {
+  /// What lights when the line is jumped to: the bubble's shape (a photo
+  /// answering a line sits in one), or the card's.
+  private var highlightShape: AnyShape {
     let bubbled =
       switch content {
       // Emoji drawn large stand without a bubble.

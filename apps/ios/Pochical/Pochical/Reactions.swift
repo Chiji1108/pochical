@@ -1,32 +1,94 @@
 import PochicalDesign
 import PochicalKit
+import Pow
 import SwiftUI
 import UIKit
 
 /// The emoji a line's menu offers first (/design's reactionChoices).
 let reactionChoices = ["👍", "❤️", "😂", "👀", "🙏", "🎉"]
 
+/// A line's reactions, an item of the lines of their own under the line,
+/// where the line's parts stand (LineFrame). Coming while the chat is
+/// open, they pop in where they go as the line moves up to make room,
+/// rather than showing as it grows.
+struct LineReactions: View {
+  /// The line's op_id, which its actions name it by.
+  let lineID: String
+  let mine: Bool
+  let reactions: [LineReaction]
+  let meID: String?
+  /// The group's names as it shows them now.
+  let names: [String: String]
+  var counted = false
+  /// What the reader has just chosen.
+  let marks: LineMarks
+  /// What is done on the line, as LineView's.
+  let actions: Handler<(lineID: String, action: LineAction)>
+
+  var body: some View {
+    LineFrame(mine: mine) {
+      Color.clear.frame(height: 0)
+    } content: {
+      ReactionRow(
+        lineID: lineID, reactions: reactions, meID: meID, nameOf: { memberName($0, in: names) },
+        counted: counted, marks: marks, onReact: { actions((lineID, .react($0))) })
+    }
+  }
+}
+
+extension EnvironmentValues {
+  /// The item comes in now, while the chat is open, for its parts to come
+  /// in as they do then, not as they stand when the chat opens on them.
+  @Entry var itemEntering = false
+}
+
 /// A line's reactions under its bubble, wrapping to more rows as needed.
+/// One coming while the chat is open pops in, the accent's, and the
+/// reader's own choice sprays its emoji, as Telegram's and iMessage's
+/// tapbacks land; one going shrinks away. Others' coming only pop, and
+/// with motion reduced each fades in and out where it is.
 struct ReactionRow: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.itemEntering) private var entering
+  /// The line's op_id.
+  let lineID: String
   let reactions: [LineReaction]
   let meID: String?
   let nameOf: (String) -> String
   /// In a chat of two, who chose it needs no face: the emoji alone, and
   /// how many once both did.
   var counted = false
+  /// What the reader has just chosen, which sprays.
+  let marks: LineMarks
   let onReact: (String) -> Void
+  /// Come in with the row: its reactions shown once it is on the screen,
+  /// so they come in as any coming while the chat is open.
+  @State private var shown = false
+  /// Where its pills' sprays are drawn.
+  static let sprays = "reaction-sprays"
 
   var body: some View {
+    let showing = entering && !shown ? [] : reactions
     WrappingRow(spacing: 4) {
-      ForEach(reactions, id: \.emoji) { reaction in
+      ForEach(showing, id: \.emoji) { reaction in
         ReactionPill(
           reaction: reaction, mine: reaction.userIDs.contains(meID ?? ""), nameOf: nameOf,
-          counted: counted
+          counted: counted, lineID: lineID, marks: marks
         ) {
           onReact(reaction.emoji)
         }
+        .transition(
+          reduceMotion
+            ? .opacity
+            : .asymmetric(
+              insertion: .movingParts.pop(colors.accentDefault),
+              removal: .scale(scale: 0.5).combined(with: .opacity)))
       }
     }
+    .animation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.35), value: showing)
+    .particleLayer(name: Self.sprays)
+    .onAppear { if entering { shown = true } }
   }
 }
 
@@ -40,7 +102,14 @@ private struct ReactionPill: View {
   let nameOf: (String) -> String
   @Environment(\.memberFaces) private var photos
   var counted = false
+  /// Its line's op_id, and what the reader has just chosen, which it
+  /// sprays for.
+  let lineID: String
+  let marks: LineMarks
   let onToggle: () -> Void
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// How many times it has sprayed.
+  @State private var sprayed = 0
   /// Its height and faces, growing with the reader's text size as its
   /// emoji and count do.
   @ScaledMetric(relativeTo: .subheadline) private var height: CGFloat = 24
@@ -49,6 +118,24 @@ private struct ReactionPill: View {
   private static var mostFaces: Int { 3 }
 
   var body: some View {
+    pill
+      // Its spray drawn over the row rather than on the pill, which keeps
+      // its own frame to be touched and read by.
+      .changeEffect(
+        .spray(layer: .named(ReactionRow.sprays)) { Text(reaction.emoji) }, value: sprayed,
+        isEnabled: !reduceMotion)
+      .onAppear(perform: spray)
+      .onChange(of: marks.chosen.contains([lineID, reaction.emoji])) { _, now in
+        if now { spray() }
+      }
+  }
+
+  /// Sprays for the reader's choice of it just made, once.
+  private func spray() {
+    if marks.shows(reaction.emoji, on: lineID) { sprayed += 1 }
+  }
+
+  @ViewBuilder private var pill: some View {
     let crowded = reaction.userIDs.count > Self.mostFaces
     let faces = crowded ? Array(reaction.userIDs.prefix(Self.mostFaces - 1)) : reaction.userIDs
     let names = reaction.userIDs.map(nameOf)

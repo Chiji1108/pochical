@@ -9,6 +9,7 @@
     "draftSettleMs": 500,
     "floatingDayMs": 1500,
     "foldLines": 10,
+    "jumpFlashMs": 1000,
     "largeEmojiMax": 3,
     "largeEmojiSize": 48,
     "lineGap": 4,
