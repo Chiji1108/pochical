@@ -5,7 +5,7 @@ import { directThread } from "../src/group-chat";
 import { call, ORIGIN, photosAmong, userIdOf } from "./helpers";
 import type { framesOf } from "./sync-helpers";
 import {
-  holdAlarms,
+  watchAlarms,
   pair,
   sendFrame,
   supportChat,
@@ -13,7 +13,7 @@ import {
   untilAcked,
 } from "./sync-helpers";
 
-holdAlarms();
+watchAlarms();
 
 // A JPEG's first bytes, as the app sends one.
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);

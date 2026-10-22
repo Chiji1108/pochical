@@ -12,7 +12,7 @@ import {
   userIdOf,
 } from "./helpers";
 import {
-  holdAlarms,
+  watchAlarms,
   pair,
   sendFrame,
   supportChat,
@@ -20,7 +20,7 @@ import {
   untilAcked,
 } from "./sync-helpers";
 
-holdAlarms();
+watchAlarms();
 
 /** A line in the group's chat, sent and taken. */
 const say = async (groupId: string, token: string, text: string) => {

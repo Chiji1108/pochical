@@ -1,5 +1,5 @@
 import { chatRules } from "@pochical/design/chat";
-import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -13,14 +13,16 @@ import {
 import { supportPlace } from "../src/support-lines";
 import { call, ORIGIN, signInAnonymously } from "./helpers";
 import {
-  holdAlarms,
+  alarmsSettled,
+  watchAlarms,
   relayed,
   sendFrame,
   supportChat,
+  tryNow,
   untilAcked,
 } from "./sync-helpers";
 
-holdAlarms();
+watchAlarms();
 
 const SECRET = "slack-signing-secret";
 
@@ -893,9 +895,15 @@ const nextTry = async (userId: string): Promise<number | null> => {
   return at === null ? null : Math.round((at - Date.now()) / 1000);
 };
 
-/** The relay run once, and when it comes back. */
+/** The relay's next try run now, and when it comes back. */
 const relayOnce = async (userId: string): Promise<number | null> => {
-  await runDurableObjectAlarm(env.GROUPS.getByName(supportPlace(userId)));
+  await tryNow(userId);
+  return await nextTry(userId);
+};
+
+/** When the relay comes back after the try a change asked for. */
+const triedAtOnce = async (userId: string): Promise<number | null> => {
+  await alarmsSettled(userId);
   return await nextTry(userId);
 };
 
@@ -1019,7 +1027,7 @@ describe("a line Slack took with its answer lost", () => {
       },
     });
     // Posted, its answer lost: the relay waits to try again.
-    await expect(relayOnce(userId)).resolves.toBeGreaterThan(0);
+    await expect(triedAtOnce(userId)).resolves.toBeGreaterThan(0);
     await edit({
       case: "chatEdits",
       value: {
@@ -1107,7 +1115,7 @@ const refusedOnce = async (token: string) => {
     await untilAcked(frames);
   };
   await send("届いてますか");
-  return { firstWait: await relayOnce(userId), send, userId };
+  return { firstWait: await triedAtOnce(userId), send, userId };
 };
 
 describe("a support chat Slack does not take", () => {
@@ -1186,8 +1194,7 @@ describe("a support chat Slack does not take", () => {
     expect(firstWait).toBe(MINUTE_S);
     await send("まだですか");
     // Tried again now, the line before it first, then waiting longer.
-    await expect(nextTry(userId)).resolves.toBeLessThanOrEqual(0);
-    await expect(relayOnce(userId)).resolves.toBe(2 * MINUTE_S);
+    await expect(triedAtOnce(userId)).resolves.toBe(2 * MINUTE_S);
     expect(postsIn(calls)).toBe(2);
   });
 });
