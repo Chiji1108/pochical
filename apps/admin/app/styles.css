@@ -111,7 +111,8 @@ th {
   font-size: 12px;
 }
 
-textarea {
+textarea,
+input[type="text"] {
   border: 1px solid var(--line);
   border-radius: 8px;
   box-sizing: border-box;

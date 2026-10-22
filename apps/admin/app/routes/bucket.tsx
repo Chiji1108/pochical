@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { data, Form, useNavigation } from "react-router";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 
+import { sizeOf } from "../size";
 import { when } from "../when";
 import type { Route } from "./+types/bucket";
 
@@ -44,15 +45,6 @@ const VERDICT_NAMES: Record<Verdict, string> = {
   unlinked: "どのプレビューにもない",
   unnoted: "グループに記録がない",
   userGone: "アカウントがない",
-};
-
-const sizeOf = (bytes: number): string => {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  return bytes < 1024 * 1024
-    ? `${(bytes / 1024).toFixed(1)} KB`
-    : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 };
 
 export default function BucketAudit({
