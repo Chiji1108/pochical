@@ -24,6 +24,7 @@ jobs:
     outputs:
       typescript: ${{ steps.filter.outputs.typescript }}
       proto: ${{ steps.filter.outputs.proto }}
+      android: ${{ steps.filter.outputs.android }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -57,6 +58,12 @@ jobs:
               - "apps/ios/Packages/PochicalKit/Sources/PochicalKit/Sync.swift"
               - "apps/ios/Packages/PochicalKit/sync-wire.json"
               - "tools/sync-schema/**"
+              - "mise.toml"
+              - ".github/workflows/ci.yml"
+            # design/ and proto/ reach the app through the code generated
+            # into apps/android.
+            android:
+              - "apps/android/**"
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
@@ -129,3 +136,24 @@ jobs:
         run: |
           git branch --force main origin/main
           mise run proto:breaking
+
+  # apps/android: the debug build, unit tests and lint. The runner's Android
+  # SDK has the platform and build tools the Gradle project names.
+  android:
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+        with:
+          install_args: java
+      # basic is the MIT-licensed cache over actions/cache; the default,
+      # enhanced, is a proprietary library only in preview for private
+      # repositories.
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+      - run: mise run android:build
+      - run: mise run android:test
