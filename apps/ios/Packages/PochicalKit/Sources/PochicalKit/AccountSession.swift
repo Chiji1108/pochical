@@ -61,6 +61,15 @@ import SQLiteData
     case erasing
     /// The session the server did not know, kept to try again with.
     case ended(StoredSession)
+    /// The person's choice on it, made at once, and done once the
+    /// sockets of its stretch have closed: from here, nothing that comes
+    /// for the session before (a change the server did) is taken.
+    case chosen(Choice, StoredSession)
+  }
+
+  /// What the person chose for a session the server did not know.
+  private enum Choice {
+    case tryAgain, startAfresh
   }
 
   private var state = State.starting
@@ -76,7 +85,7 @@ import SQLiteData
     case .signedIn: changingIn == nil ? .signedIn : .changing
     case .switching: .changing
     case .erasing: .erasing
-    case .ended: .ended
+    case .ended, .chosen: .ended
     }
   }
 
@@ -173,7 +182,7 @@ import SQLiteData
         await connect()
         await deleteLeftBehind()
       }
-    case .switching, .erasing, .ended:
+    case .switching, .erasing, .ended, .chosen:
       break
     }
   }
@@ -305,7 +314,7 @@ import SQLiteData
   private var whyNotSignedIn: DeletionFailure {
     switch state {
     case .starting: .notSignedIn
-    case .ended: .sessionEnded
+    case .ended, .chosen: .sessionEnded
     case .signedIn, .switching, .erasing: .accountChanged
     }
   }
@@ -354,19 +363,17 @@ import SQLiteData
       Logger.account.error("Changing the account failed: \(error)")
       throw error
     }
-    guard let live = stillFor(before) else { throw AccountChanged() }
+    guard stillFor(before) else { throw AccountChanged() }
     switch changed {
     case .left(let why):
       // Noted before anything is awaited: an app ended from here on
       // starts erasing, never as the session the server ended.
       beginErasing(why)
       before.content.invalidateAndCancel()
-      live?.content.invalidateAndCancel()
     case .switched(let after):
       state = .switching
       begin(nil)
       before.content.invalidateAndCancel()
-      live?.content.invalidateAndCancel()
       await userSocket.stop()
       await places.forgetAccount()
       do {
@@ -384,24 +391,17 @@ import SQLiteData
   }
 
   /// Whether the server's answer to a change asked in `before` is still the
-  /// device's to take, with the stretch going on now that it then ends,
-  /// if any. It is when nothing began meanwhile; and when all that did was
-  /// `before`'s own session ending (a 401, the session tried again after
-  /// it), which the change the server has done explains, as signing out
-  /// or deleting ends that session: the person's request wins, rather than
-  /// leaving them signed out of an account they asked to leave, its data
-  /// kept. Not once the person has chosen to start afresh, nor after
-  /// another change began.
-  private func stillFor(_ before: Credentials) -> Credentials?? {
-    if changingIn == before.generation { return .some(nil) }
-    switch state {
-    case .ended(let kept) where kept.token == before.token:
-      return .some(nil)
-    case .signedIn(let now) where now.token == before.token && changingIn == nil:
-      return .some(now)
-    case .starting, .signedIn, .switching, .erasing, .ended:
-      return nil
-    }
+  /// device's to take: when nothing began meanwhile, and when all that did
+  /// was `before`'s own session ending (a 401), which the change the
+  /// server has done explains, as signing out or deleting ends that
+  /// session: the person's request wins, rather than leaving them signed
+  /// out of an account they asked to leave, its data kept. Never once the
+  /// person has chosen since (もう一度つなぐ, はじめから使う), as the
+  /// latest thing they chose is what the device does.
+  private func stillFor(_ before: Credentials) -> Bool {
+    if changingIn == before.generation { return true }
+    if case .ended(let kept) = state, kept.token == before.token { return true }
+    return false
   }
 
   /// Where the device notes it is erasing, as soon as the server has ended
@@ -520,34 +520,43 @@ import SQLiteData
   /// もう一度つなぐ: the session the server did not know, tried again, as
   /// a server set right since knows it again.
   public func tryAgain() {
-    afterEnding { [self] kept in
-      let session = StoredSession(token: kept.token, userID: kept.userID)
-      do {
-        try keychain.keep(session)
-      } catch {
-        // Tried all the same: a relaunch says it ended again first.
-        Logger.account.error("Keeping the session tried again failed: \(error)")
-      }
-      enter(session)
-    }
+    choose(.tryAgain)
   }
 
   /// はじめから使う: the person's own choice to let the session go, and
   /// what the device holds with it, erasing as after signing out, then
   /// signing in afresh as a new install does.
   public func startAfresh() {
-    afterEnding { [self] _ in beginErasing(.signedOut) }
+    choose(.startAfresh)
   }
 
-  /// `then` with the session the server did not know, once the places'
-  /// sockets of its stretch have closed, if the person has not chosen
-  /// meanwhile.
-  private func afterEnding(_ then: @escaping @MainActor (StoredSession) -> Void) {
+  /// The person's choice for the session the server did not know, taken
+  /// at once (a later one in its place), and done once the places' sockets
+  /// of its stretch have closed.
+  private func choose(_ choice: Choice) {
+    switch state {
+    case .ended(let kept), .chosen(_, let kept):
+      state = .chosen(choice, kept)
+    case .starting, .signedIn, .switching, .erasing:
+      return
+    }
     let ending = self.ending
     Task {
       await ending?.value
-      guard case .ended(let kept) = state else { return }
-      then(kept)
+      guard case .chosen(let choice, let kept) = state else { return }
+      switch choice {
+      case .tryAgain:
+        let session = StoredSession(token: kept.token, userID: kept.userID)
+        do {
+          try keychain.keep(session)
+        } catch {
+          // Tried all the same: a relaunch says it ended again first.
+          Logger.account.error("Keeping the session tried again failed: \(error)")
+        }
+        enter(session)
+      case .startAfresh:
+        beginErasing(.signedOut)
+      }
     }
   }
 

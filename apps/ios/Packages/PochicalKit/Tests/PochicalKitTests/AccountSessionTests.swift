@@ -51,6 +51,8 @@ private final class FakeAccountServer: AccountServer {
   let deletion = Mutex<DeletionFailure?>(nil)
   /// Called as a deletion succeeds, before its answer is back.
   let whenDeleted = Mutex<(@Sendable () -> Void)?>(nil)
+  /// Called as Apple's sign-in succeeds, before its answer is back.
+  let whenSignedInApple = Mutex<(@Sendable () -> Void)?>(nil)
   /// Each call named here waits at its gate.
   let gates = Mutex<[String: Gate]>([:])
 
@@ -78,6 +80,7 @@ private final class FakeAccountServer: AccountServer {
     -> StoredSession
   {
     try await reach("signInApple")
+    whenSignedInApple.withLock { $0 }?()
     return StoredSession(token: "account-token", userID: "account")
   }
 
@@ -807,10 +810,31 @@ private final class FakeAccountServer: AccountServer {
   #expect(await eventually { made.session.phase == .changing })
   made.session.cameToFront()
   #expect(await eventually { made.session.phase == .ended })
-  // はじめから使う, before the server answers.
-  made.session.startAfresh()
-  #expect(await eventually { made.session.erasing != nil || made.session.userID == "anon-1" })
+  // はじめから使う, tapped as the server's answer is on its way: main-actor
+  // jobs run in order, so the answer comes after the tap and before the
+  // erasing the tap asks for has begun.
+  let session = made.session
+  made.server.whenSignedInApple.withLock {
+    $0 = { Task { @MainActor in session.startAfresh() } }
+  }
   gate.open()
   await #expect(throws: AccountChanged.self) { try await switching.value }
+  #expect(await eventually { made.session.erasing != nil || made.session.userID == "anon-1" })
   #expect(await eventually { made.session.userID == "anon-1" })
+  #expect(made.server.made.withLock { $0 } == 1)
+}
+
+@MainActor @Test func theLatestChoiceForAnEndedSessionIsTheOneDone() async throws {
+  let made = try await Made.signedIn(as: "a", "A", socketStatus: "401 Unauthorized")
+  #expect(await eventually { made.owner == "A" })
+  try await made.addCoworker()
+  made.session.cameToFront()
+  #expect(await eventually { made.session.phase == .ended })
+  let asked = made.sockets.asked
+  made.session.startAfresh()
+  made.session.tryAgain()
+  // Tried again as the session it was: nothing erased, no one new.
+  #expect(await eventually { made.sockets.asked > asked })
+  #expect(made.coworkers == 1)
+  #expect(made.server.made.withLock { $0 } == 0)
 }
