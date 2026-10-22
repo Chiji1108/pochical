@@ -21,7 +21,9 @@
     background: var(--paper);
     text-rendering: optimizeLegibility;
   }
-  * {
+  *,
+  ::before,
+  ::after {
     box-sizing: border-box;
   }
   html {

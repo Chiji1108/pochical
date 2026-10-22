@@ -84,7 +84,7 @@ const picker = {
   cell: css({ padding: "1px" }),
   month: css({ margin: "12px 0" }),
   table: css({ borderCollapse: "collapse", width: "100%" }),
-  title: css({ fontWeight: 700, margin: 0, textStyle: "body" }),
+  title: css({ margin: 0, textStyle: "headline" }),
   weekday: css({ padding: "1px 1px 8px" }),
 };
 

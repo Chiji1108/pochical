@@ -23,7 +23,14 @@ import { countShown, limitText, markLetter } from "../lib/text-limits";
 // row itself, like a name being added. box stands on its own ground, as
 // a day's memo. chip sits among chips as one more being added.
 export const fieldStyle = cva({
-  base: { font: "inherit", outline: "none" },
+  base: {
+    // The hint in the quieter words' role on every browser: Firefox would
+    // otherwise also fade it.
+    _placeholder: { color: "text.tertiary", opacity: 1 },
+    color: "text.primary",
+    font: "inherit",
+    outline: "none",
+  },
   defaultVariants: { align: "start" },
   variants: {
     align: { end: { textAlign: "right" }, start: {} },
@@ -33,7 +40,6 @@ export const fieldStyle = cva({
         bg: "fill.quaternary",
         border: "1px solid transparent",
         borderRadius: "md",
-        color: "text.primary",
         minHeight: "40px",
         minWidth: 0,
         padding: "0 12px",
@@ -43,7 +49,6 @@ export const fieldStyle = cva({
         bg: "transparent",
         border: "1px solid token(colors.accent.focus)",
         borderRadius: "full",
-        color: "text.primary",
         minHeight: "34px",
         padding: "0 12px",
         textStyle: "footnote",
@@ -51,7 +56,6 @@ export const fieldStyle = cva({
       inline: {
         bg: "transparent",
         border: 0,
-        color: "text.primary",
         flex: 1,
         minWidth: 0,
         padding: 0,
@@ -349,8 +353,6 @@ export function MarkLetterInput({
 const growing = {
   box: css({
     "&::after": {
-      // Its max height counts the padding, as the field's box does.
-      boxSizing: "border-box",
       content: "attr(data-value) ' '",
       gridArea: "1 / 1",
       maxHeight: "calc(var(--lines, 5) * 1lh + 2 * var(--pad-y, 0px))",
@@ -363,6 +365,7 @@ const growing = {
     display: "grid",
   }),
   field: css({
+    _placeholder: { color: "text.tertiary", opacity: 1 },
     bg: "transparent",
     border: 0,
     color: "inherit",
