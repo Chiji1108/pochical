@@ -36,7 +36,7 @@ struct GroupShiftsPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.look) private var look
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.openGroupRoute) private var openGroupRoute
+  @Environment(\.rootNavigator) private var navigator
   @Fetch private var members: [GroupMember] = []
   /// Whose シフトパターン is open, from a face or the menu.
   @State private var legendOf: LegendOf?
@@ -217,7 +217,7 @@ struct GroupShiftsPage: View {
       let fitted = daySheetHeight > 0 ? PresentationDetent.height(daySheetHeight) : .medium
       DaySheet(day: day, members: members, groupID: group.id, height: $daySheetHeight) {
         picked = nil
-        openGroupRoute(.chat(group, thread: groupThread, with: nil, sharing: day))
+        navigator?.open(.group(.chat(group, thread: groupThread, with: nil, sharing: day)))
       }
       .presentationDetents([fitted, .large])
       .presentationBackgroundInteraction(.enabled(upThrough: fitted))

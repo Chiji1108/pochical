@@ -106,7 +106,7 @@ enum LineAction {
 struct LineView: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dynamicTypeSize) private var typeSize
-  @Environment(\.openGroupRoute) private var openGroupRoute
+  @Environment(\.rootNavigator) private var navigator
   /// The line's opID, which its actions name it by.
   let lineID: String
   /// What it is: words, photos each opened large by a tap, or days or a
@@ -254,9 +254,9 @@ struct LineView: View {
           if !mine { voicedMeta }
         }
         if let shifts {
-          // All the days, with everyone's shifts round them; pushed by the
-          // groups' own stack, which a line's cell is hosted apart from.
-          Button { openGroupRoute(shifts) } label: {
+          // All the days, with everyone's shifts round them, over the
+          // chat: by the navigator, as a line's cell is hosted apart.
+          Button { navigator?.open(.group(shifts)) } label: {
             Text("シフト表で見る")
               .font(.caption)
               .underline()
@@ -423,7 +423,7 @@ struct LineView: View {
         VoiceAction(title: "\(author ?? writer ?? "メンバー")のプロフィール") { act(.openProfile) })
     }
     if let shifts {
-      actions.append(VoiceAction(title: "シフト表で見る") { openGroupRoute(shifts) })
+      actions.append(VoiceAction(title: "シフト表で見る") { navigator?.open(.group(shifts)) })
     }
     // Each once: a link written twice, a mention of the writer.
     var seen: Set<String> = []

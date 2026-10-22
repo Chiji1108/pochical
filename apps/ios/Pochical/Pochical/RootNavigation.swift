@@ -2,17 +2,17 @@ import PochicalKit
 import SwiftUI
 import UIKit
 
-// The app's navigation over its tabs, as LINE's and Telegram's: a chat,
-// and what a chat opens, are pushed over the tabs rather than inside one,
-// so the tab bar goes away with the screen under it as the chat comes, and
-// comes back as it goes, a back swipe included (spec/chat.md, The chat's
-// page). A UINavigationController whose root hosts the tabs: SwiftUI has
-// no stack over a TabView whose tabs keep stacks of their own (a
-// NavigationStack in another is not supported, and on iOS 27 a push from
-// the outer one stops the app), while UIKit's is a view controller like
-// any, the tabs and their stacks kept whole under it. A chat outside the
-// TabView keeps its view's keyboard layout guide too, which a view inside
-// it loses for good once the app has been in the background (POC-117).
+// The app's one navigation, as LINE's and Telegram's: every page is pushed
+// over the tabs rather than inside one, so the tab bar goes away with the
+// screen under it as the page comes, and comes back as it goes, a back
+// swipe included (spec/chat.md, The chat's page). A UINavigationController
+// whose root hosts the tabs, which keep no stacks of their own: its one bar
+// is the tabs' bar too, holding the tab's title and buttons, and is never
+// hidden or shown as a page comes or goes, which would take the edge
+// effect off the page coming for as long as it comes (POC-157). A chat
+// outside the TabView keeps its view's keyboard layout guide too, which a
+// view inside it loses for good once the app has been in the background
+// (POC-117).
 
 /// A page over the tabs.
 enum RootPage: Hashable {
@@ -51,6 +51,18 @@ enum RootPage: Hashable {
   }
 }
 
+/// A page on the stack over the tabs: one opened by the navigator, or one
+/// a NavigationLink in another opened, which SwiftUI pushes on the same
+/// stack, known by the controller it shows it in.
+enum StackPage: Hashable {
+  case root(RootPage)
+  case linked(ObjectIdentifier)
+
+  fileprivate var root: RootPage? {
+    if case .root(let page) = self { page } else { nil }
+  }
+}
+
 /// A chat whose photos are listed alone (ChatPhotosScreen).
 struct PhotosOfChat: Hashable {
   let placeID: String
@@ -59,10 +71,12 @@ struct PhotosOfChat: Hashable {
   let names: [String: String]
 }
 
-/// The pages over the tabs, bottom first, as the navigation has them
-/// (a back swipe included), and the way to open more.
+/// The tab shown and the pages over it, bottom first, as the navigation
+/// has them (a link's and a back swipe included), and the way to open
+/// more.
 @MainActor @Observable final class RootNavigator {
-  private(set) var pages: [RootPage] = []
+  private(set) var tab = RootTab.calendar
+  private(set) var pages: [StackPage] = []
   @ObservationIgnored fileprivate weak var controller: RootNavigationController?
 
   /// Opens `page` over those open. A chat already open below, as when its
@@ -70,21 +84,34 @@ struct PhotosOfChat: Hashable {
   /// opened again with what it brings, rather than opened twice.
   func open(_ page: RootPage) {
     var kept = pages
-    if let chat = page.chat, let below = kept.firstIndex(where: { $0.chat == chat }) {
+    if let chat = page.chat, let below = kept.firstIndex(where: { $0.root?.chat == chat }) {
       kept.removeSubrange(below...)
     }
-    show(kept + [page])
+    show(stack: kept + [.root(page)], over: nil)
   }
 
-  /// Shows `pages` over the tabs, and nothing else: a notification's chat,
-  /// or the tabs alone once a link opens one of them.
-  func show(_ pages: [RootPage]) {
+  /// Shows `pages` over `tab`, and nothing else: a notification's chat
+  /// over its tab, or a tab alone once a link opens it. Another tab is gone
+  /// to at once, as a tap on it does, rather than with a push.
+  func show(_ pages: [RootPage], over tab: RootTab? = nil) {
+    show(stack: pages.map(StackPage.root), over: tab)
+  }
+
+  private func show(stack pages: [StackPage], over tab: RootTab?) {
+    let jump = tab.map { $0 != self.tab } ?? false
+    if let tab { self.tab = tab }
     self.pages = pages
-    controller?.show(pages)
+    controller?.show(pages, over: self.tab, animated: !jump)
   }
 
-  /// The pages as the navigation has them now, after a back.
-  fileprivate func shown(_ pages: [RootPage]) {
+  /// The top page of a place, whose socket is held while it shows: a
+  /// linked page is of the place of the page it was opened from.
+  var placePage: RootPage? {
+    pages.last { $0.root != nil }?.root
+  }
+
+  /// The pages as the navigation has them now, after a link or a back.
+  fileprivate func shown(_ pages: [StackPage]) {
     if self.pages != pages { self.pages = pages }
   }
 }
@@ -92,6 +119,9 @@ struct PhotosOfChat: Hashable {
 extension EnvironmentValues {
   /// The navigation over the tabs, for a page to open another over them.
   @Entry var rootNavigator: RootNavigator?
+  /// How far down the screen the bar's top is, for a tab to head itself in
+  /// the bar's band (GroupsScreen).
+  @Entry var barTop: CGFloat = 0
 }
 
 /// The tabs, under the pages `navigator` has over them. Each page and the
@@ -106,7 +136,7 @@ struct RootNavigation: UIViewControllerRepresentable {
     let controller = RootNavigationController(tabs: tabs, page: page)
     navigator.controller = controller
     controller.onShown = { [weak navigator] in navigator?.shown($0) }
-    controller.show(navigator.pages)
+    controller.show(navigator.pages, over: navigator.tab, animated: false)
     return controller
   }
 
@@ -119,7 +149,7 @@ struct RootNavigation: UIViewControllerRepresentable {
 final class RootNavigationController: UINavigationController, UINavigationControllerDelegate {
   private let tabs: UIHostingController<AnyView>
   private var page: (RootPage) -> AnyView
-  var onShown: ([RootPage]) -> Void = { _ in }
+  var onShown: ([StackPage]) -> Void = { _ in }
 
   init(tabs: AnyView, page: @escaping (RootPage) -> AnyView) {
     self.tabs = UIHostingController(rootView: tabs)
@@ -132,43 +162,44 @@ final class RootNavigationController: UINavigationController, UINavigationContro
   override func viewDidLoad() {
     super.viewDidLoad()
     delegate = self
-    // The tabs' own stacks have their bars; this one's is for the pages.
-    setNavigationBarHidden(true, animated: false)
   }
 
-  /// The hosts of the pages over the tabs.
-  private var hosts: [PageHost] { viewControllers.compactMap { $0 as? PageHost } }
+  /// The pages over the tabs, as each controller over them shows one.
+  private var shown: [StackPage] {
+    viewControllers.dropFirst().map {
+      ($0 as? PageHost).map { .root($0.page) } ?? .linked(ObjectIdentifier($0))
+    }
+  }
 
   func update(tabs: AnyView, page: @escaping (RootPage) -> AnyView) {
     self.page = page
     self.tabs.rootView = tabs
-    for host in hosts { host.rootView = page(host.page) }
+    for case let host as PageHost in viewControllers { host.rootView = page(host.page) }
   }
 
   /// Puts `pages` over the tabs, keeping those already there in the same
-  /// place, so a page under the one opened stays as it was.
-  func show(_ pages: [RootPage]) {
-    let open = hosts
+  /// place, so a page under the one opened stays as it was. The calendar,
+  /// which its month heads, has no bar: hidden only while it shows alone,
+  /// so never as a page comes or goes.
+  func show(_ pages: [StackPage], over tab: RootTab, animated: Bool) {
+    let open = Array(viewControllers.dropFirst())
+    let openPages = shown
     var kept = 0
-    while kept < min(open.count, pages.count), open[kept].page == pages[kept] { kept += 1 }
-    guard kept < open.count || kept < pages.count else { return }
-    let made = pages[kept...].map { PageHost(page: $0, view: page($0)) }
-    let controllers: [UIViewController] = [tabs] + open[..<kept].map { $0 } + made
-    setViewControllers(controllers, animated: view.window != nil)
-  }
-
-  func navigationController(
-    _ navigationController: UINavigationController, willShow viewController: UIViewController,
-    animated: Bool
-  ) {
-    setNavigationBarHidden(viewController === tabs, animated: animated)
+    while kept < min(open.count, pages.count), openPages[kept] == pages[kept] { kept += 1 }
+    if kept < open.count || kept < pages.count {
+      // A link's page above those kept went with the page it was opened
+      // from, and is not made again.
+      let made = pages[kept...].compactMap(\.root).map { PageHost(page: $0, view: page($0)) }
+      setViewControllers([tabs] + open[..<kept] + made, animated: animated && view.window != nil)
+    }
+    setNavigationBarHidden(tab == .calendar && pages.isEmpty, animated: false)
   }
 
   func navigationController(
     _ navigationController: UINavigationController, didShow viewController: UIViewController,
     animated: Bool
   ) {
-    onShown(hosts.map(\.page))
+    onShown(shown)
   }
 }
 
@@ -182,4 +213,32 @@ private final class PageHost: UIHostingController<AnyView> {
   }
 
   @available(*, unavailable) required init?(coder: NSCoder) { fatalError() }
+}
+
+extension View {
+  /// A tab's root, whose scroll view the one bar follows while it shows.
+  func tabRoot() -> some View {
+    background(TabScrollViewForBar())
+  }
+}
+
+/// The scroll view of the tab shown, given to the screen under the
+/// navigation (the tabs) for its bar to follow, as the tab appears: the
+/// TabView keeps each tab under a tab bar controller of its own, below the
+/// tabs' host, which UIKit's search for the bar's scroll view does not
+/// reach. A chat's lines say theirs the same way (ChatController).
+private struct TabScrollViewForBar: UIViewControllerRepresentable {
+  func makeUIViewController(context: Context) -> Controller { Controller() }
+  func updateUIViewController(_ controller: Controller, context: Context) {}
+
+  final class Controller: UIViewController {
+    override func viewDidAppear(_ animated: Bool) {
+      super.viewDidAppear(animated)
+      var tab = parent
+      while let next = tab?.parent, !(next is UITabBarController) { tab = next }
+      var screen = tab?.parent
+      while let next = screen?.parent, !(next is UINavigationController) { screen = next }
+      screen?.setContentScrollView(tab?.contentScrollView(for: .top), for: .top)
+    }
+  }
 }

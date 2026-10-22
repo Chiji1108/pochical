@@ -18,17 +18,6 @@ struct OpenInviteAction {
   }
 }
 
-/// Opens one of a group's pages over the one showing, as a link within the
-/// group does, for what cannot be a link: a menu's button or a sheet's. A
-/// chat, and whatever a chat opens, goes over the tabs (RootNavigator).
-struct OpenGroupRouteAction {
-  let open: @MainActor (GroupRoute) -> Void
-
-  @MainActor func callAsFunction(_ route: GroupRoute) {
-    open(route)
-  }
-}
-
 extension EnvironmentValues {
   /// The server's GroupService, as the signed-in user: as no one until
   /// the app puts its own.
@@ -38,8 +27,6 @@ extension EnvironmentValues {
   /// Opens one of Pochical's invitations on its join screen, as reading
   /// its link does.
   @Entry var openInvite = OpenInviteAction { _ in }
-  /// Opens a group's page over the one showing.
-  @Entry var openGroupRoute = OpenGroupRouteAction { _ in }
   /// The group whose photos its screens' faces are, for those that know a
   /// member's photo but not the group (MemberAvatar).
   @Entry var photoShelf: PhotoShelf? = nil
@@ -51,155 +38,99 @@ extension EnvironmentValues {
 
 /// The グループ tab (/design's DesignGroup): with no group yet, what groups
 /// are for and a way to start one; else the groups down the side, as
-/// /design's rail, and the one open beside them.
+/// /design's rail, and the one open beside them. Its pages open over the
+/// tabs (RootNavigation), and its buttons are in the bar (GroupHubButtons).
 struct GroupsScreen: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.rootNavigator) private var navigator
+  @Environment(\.barTop) private var barTop
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   /// The group open beside the rail, the first until one is picked.
   @Binding var openID: String?
-  /// The tab's pages over the group, never a chat: chats open over the
-  /// tabs.
-  @Binding var path: [GroupRoute]
   /// Each group's unread lines that count.
   let unread: [String: Int]
   /// Opens the camera to read a group's QR code.
   let onScan: () -> Void
-  /// A group just made, whose メンバーを招待 opens over its hub once the
-  /// group has come, as /design goes on to it.
-  @State private var inviting: String?
-  /// How far down the screen's own top is, over the navigation bar's.
-  @State private var screenTop: CGFloat = 0
 
   var body: some View {
-    NavigationStack(path: $path) {
-      Group {
-        if let open = openGroup(openID, among: groups) {
-          HStack(alignment: .top, spacing: 0) {
-            GroupRail(
-              groups: groups, openID: open.id, unread: unread,
-              onOpen: { id in
-                openID = id
-                inviting = nil
-              },
-              onNew: { path.append(.newGroup) }, onScan: onScan)
-            // Up beside the bar's heading, as it stood beside the page's.
-            .padding(.top, screenTop)
+    Group {
+      if let open = openGroup(openID, among: groups) {
+        HStack(alignment: .top, spacing: 0) {
+          GroupRail(
+            groups: groups, openID: open.id, unread: unread,
+            onOpen: { openID = $0 }, onNew: newGroup, onScan: onScan)
+          // Up beside the bar's heading, as it stood beside the page's.
+          .padding(.top, barTop)
+          .ignoresSafeArea(.container, edges: .top)
+          GroupHub(group: open) { day in
+            navigator?.open(.group(.shifts(open, day: day)))
+          } onChat: { thread, other in
+            navigator?.open(.group(.chat(open, thread: thread, with: other)))
+          }
+          .padding(.horizontal, 16)
+          .tabRoot()
+        }
+        // The group's heading in the bar's band, beside its buttons, not
+        // an item of the bar: an item there would turn into the next
+        // page's back button as it is pushed.
+        .overlay(alignment: .topLeading) {
+          GroupHeading(group: open)
+            // Level with the bar's buttons, at its top.
+            .frame(maxWidth: .infinity, minHeight: Metrics.touch, alignment: .leading)
+            .padding(.leading, GroupRail.width + 16)
+            .padding(.trailing, GroupHub.actionsWidth)
+            .padding(.top, barTop)
             .ignoresSafeArea(.container, edges: .top)
-            GroupHub(group: open) {
-              path.append(.invite(open))
-            } onSettings: {
-              path.append(.settings(open))
-            } onShifts: { day in
-              path.append(.shifts(open, day: day))
-            } onChat: { thread, other in
-              self.open(.chat(open, thread: thread, with: other))
-            }
-            .padding(.horizontal, 16)
-          }
-          // The group's heading in the bar's band, beside its buttons, not
-          // an item of the bar: an item there would turn into the next
-          // page's back button as it is pushed. The bar itself stays, and
-          // with it the blur at the top of the pages pushed from here.
-          .overlay(alignment: .topLeading) {
-            GroupHeading(group: open)
-              // Level with the bar's buttons, at its top.
-              .frame(maxWidth: .infinity, minHeight: Metrics.touch, alignment: .leading)
-              .padding(.leading, GroupRail.width + 16)
-              .padding(.trailing, GroupHub.actionsWidth)
-              .padding(.top, screenTop)
-              .ignoresSafeArea(.container, edges: .top)
-          }
-        } else {
-          NoGroups(onNew: { path.append(.newGroup) }, onScan: onScan)
-            .padding(.horizontal, 20)
-            .toolbarVisibility(.hidden, for: .navigationBar)
         }
-      }
-      // The app's ground, as the calendar's, which dark mode lifts off black.
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(colors.backgroundBase)
-      .navigationDestination(for: GroupRoute.self) { route in
-        GroupPage(route: route) { group in
-          path.append(.invite(group))
-        } onLeft: {
-          openID = nil
-          path.removeAll()
-        } onMade: { made in
-          // グループを作る turns into メンバーを招待 in one change, once
-          // the group has come: popped first, the invitation pushed as the
-          // pop still goes would be taken back by the stack as it ends.
-          openID = made
-          inviting = made
-          inviteMade()
-        }
+      } else {
+        NoGroups(onNew: newGroup, onScan: onScan)
+          .padding(.horizontal, 20)
+          // Up under the bar, which has nothing in it here, as it stood
+          // under the status bar alone.
+          .padding(.top, barTop)
+          .ignoresSafeArea(.container, edges: .top)
+          .tabRoot()
       }
     }
-    .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { screenTop = $0 }
-    .environment(\.openGroupRoute, OpenGroupRouteAction { open($0) })
-    .onChange(of: groups.map(\.id)) { inviteMade() }
-    // Gone somewhere else meanwhile, the person is left there.
-    .onChange(of: path) { _, path in
-      if !path.isEmpty { inviting = nil }
-    }
-    .environment(\.photoShelf, openGroupID.map(PhotoShelf.group))
-    // A widget's group: its table at the day, else its top. One the person
-    // has left themselves leaves them on their first group.
-    .onChange(of: OpenedGroupKey(link: OpenedGroup.shared.link, groupIDs: groups.map(\.id)), initial: true) {
-      _, key in
-      guard let link = key.link else { return }
-      OpenedGroup.shared.link = nil
-      guard let group = groups.first(where: { $0.id == link.groupID }) else {
-        openID = nil
-        path = []
-        return
-      }
-      path = link.day.map { [.shifts(group, day: $0)] } ?? []
-    }
+    // The app's ground, as the calendar's, which dark mode lifts off black.
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(colors.backgroundBase)
+    .environment(\.photoShelf, openGroup(openID, among: groups).map { .group($0.id) })
   }
 
-  /// A group a widget opened, and the groups there are to show it in.
-  private struct OpenedGroupKey: Equatable {
-    let link: GroupLink?
-    let groupIDs: [String]
-  }
-
-  /// Opens メンバーを招待 for the group just made, once it is here, in
-  /// place of every page over the hub.
-  private func inviteMade() {
-    guard let id = inviting, let made = groups.first(where: { $0.id == id }) else { return }
-    inviting = nil
-    path = [.invite(made)]
-  }
-
-  /// The group open, whose socket is kept.
-  private var openGroupID: String? {
-    openGroup(openID, among: groups)?.id
+  private func newGroup() {
+    navigator?.open(.group(.newGroup))
   }
 }
 
-extension GroupsScreen {
-  /// Goes to `route`: a chat over the tabs, any other page in the tab.
-  fileprivate func open(_ route: GroupRoute) {
-    if case .chat = route {
-      navigator?.open(.group(route))
-    } else {
-      path.append(route)
+/// The open group's buttons in the bar over the グループ tab: a tab's own
+/// content does not reach the bar through the TabView (RootView).
+struct GroupHubButtons: ToolbarContent {
+  let group: GroupRow
+  let navigator: RootNavigator
+
+  var body: some ToolbarContent {
+    ToolbarItemGroup(placement: .topBarTrailing) {
+      Button("メンバーを招待", systemImage: "person.badge.plus") {
+        navigator.open(.group(.invite(group)))
+      }
+      Button("グループの設定", systemImage: "slider.horizontal.3") {
+        navigator.open(.group(.settings(group)))
+      }
     }
   }
 }
 
-/// One of a group's pages, showing the group as it is now, renamed
-/// meanwhile or not: in the グループ tab, or over the tabs from a chat.
+/// One of a group's pages over the tabs, showing the group as it is now,
+/// renamed meanwhile or not.
 struct GroupPage: View {
+  @Environment(\.rootNavigator) private var navigator
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   let route: GroupRoute
-  /// メンバーを招待, from the group's settings.
-  let onInvite: (GroupRow) -> Void
   /// The person has left the group, from its settings.
   let onLeft: () -> Void
   /// A group has been made, its id.
-  var onMade: (String) -> Void = { _ in }
+  let onMade: (String) -> Void
 
   var body: some View {
     switch route {
@@ -212,7 +143,11 @@ struct GroupPage: View {
     case .chat(let group, let thread, let other, let sharing):
       ChatScreen(place: .group(live(group)), threadID: thread, otherID: other, sharing: sharing)
     case .settings(let group):
-      GroupSettingsPage(group: live(group)) { onInvite(group) } onLeft: { onLeft() }
+      GroupSettingsPage(group: live(group)) {
+        navigator?.open(.group(.invite(group)))
+      } onLeft: {
+        onLeft()
+      }
     }
   }
 
@@ -520,14 +455,12 @@ private struct GroupMark: View {
   }
 }
 
-/// The open group: its mark and name, 招待, this week of everyone's
-/// shifts and its chat (/design's GroupHub).
+/// The open group: this week of everyone's shifts and its chats under its
+/// mark and name, 招待 and 設定 being in the bar (/design's GroupHub).
 private struct GroupHub: View {
   @Environment(\.themeColors) private var colors
   @Fetch private var members: [GroupMember] = []
   let group: GroupRow
-  let onInvite: () -> Void
-  let onSettings: () -> Void
   /// Opens everyone's shifts by the month, on a day when one is given.
   let onShifts: (Day?) -> Void
   /// Opens a chat: its thread, and the other member of a one-to-one chat.
@@ -571,12 +504,6 @@ private struct GroupHub: View {
     }
     .scrollIndicators(.hidden)
     .contentMargins(.top, 8, for: .scrollContent)
-    .toolbar {
-      ToolbarItemGroup(placement: .topBarTrailing) {
-        Button("メンバーを招待", systemImage: "person.badge.plus", action: onInvite)
-        Button("グループの設定", systemImage: "slider.horizontal.3", action: onSettings)
-      }
-    }
     .task(id: request) {
       _ = try? await $members.load(request)
     }

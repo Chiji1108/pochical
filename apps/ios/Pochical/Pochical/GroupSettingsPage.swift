@@ -10,7 +10,7 @@ import SwiftUINavigation
 struct GroupSettingsPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.openGroupRoute) private var openGroupRoute
+  @Environment(\.rootNavigator) private var navigator
   @Environment(\.say) private var say
   @Fetch private var members: [GroupMember] = []
   @Fetch(BlocksRequest()) private var blocked: Set<String> = []
@@ -154,7 +154,8 @@ struct GroupSettingsPage: View {
         onMessage: { person in
           guard let meID else { return nil }
           return {
-            openGroupRoute(.chat(group, thread: directThread(meID, person.id), with: person.id))
+            navigator?.open(
+              .group(.chat(group, thread: directThread(meID, person.id), with: person.id)))
           }
         },
         onReported: { target in

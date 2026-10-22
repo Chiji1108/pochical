@@ -66,7 +66,6 @@ private func periodText(_ orders: [RepeatOrder], _ index: Int) -> String {
 struct RepeatPage: View {
   @Environment(\.themeColors) private var colors
   @Fetch(WorkValues()) private var values = WorkValues.Value()
-  @State private var going: RepeatGoing?
 
   var body: some View {
     let orders = values.orders
@@ -115,11 +114,6 @@ struct RepeatPage: View {
     }
     .settingsList()
     .navigationTitle("繰り返し")
-    .navigationDestination(item: $going) { going in
-      switch going {
-      case .period(let start): RepeatPeriodPage(start: start)
-      }
-    }
   }
 
   @ViewBuilder private func cards(
@@ -129,12 +123,13 @@ struct RepeatPage: View {
       Section(title) {
         ForEach(indices, id: \.self) { index in
           let order = values.orders[index]
-          Button {
-            going = .period(order.start)
+          NavigationLink {
+            RepeatPeriodPage(start: order.start)
           } label: {
             OrderCard(order: order, period: periodText(values.orders, index), patterns: byID)
           }
-          .buttonStyle(.plain)
+          // The card draws its own arrow.
+          .navigationLinkIndicatorVisibility(.hidden)
           .settingsOnPage()
           .listRowSeparator(.hidden)
           .padding(.bottom, index == indices.last ? 0 : 12)
@@ -637,7 +632,3 @@ private struct StopRepeatPage: View {
   }
 }
 
-/// Where a card on 繰り返し goes: its period, by its start.
-private enum RepeatGoing: Hashable {
-  case period(Day)
-}

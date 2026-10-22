@@ -31,7 +31,6 @@ struct ChatScreen: View {
   @State private var syncSaid = SyncStatus.current
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.openGroupRoute) private var openGroupRoute
   @Environment(\.rootNavigator) private var navigator
   @Dependency(\.defaultDatabase) private var database
   @Environment(\.write) private var write
@@ -305,7 +304,7 @@ struct ChatScreen: View {
         Menu("チャットのメニュー", systemImage: "ellipsis") {
           if otherID == nil, let group = place.group {
             Button("みんなのシフト", systemImage: "calendar") {
-              openGroupRoute(.shifts(group, day: nil))
+              navigator?.open(.group(.shifts(group, day: nil)))
             }
           }
           Button("写真", systemImage: "photo.on.rectangle") {
@@ -1477,7 +1476,7 @@ struct ChatScreen: View {
   private func openTitle() {
     guard let otherID else {
       if let group = place.group {
-        openGroupRoute(.settings(group))
+        navigator?.open(.group(.settings(group)))
       }
       return
     }
@@ -1490,7 +1489,7 @@ struct ChatScreen: View {
   private func message(_ person: ProfileOf) -> (() -> Void)? {
     guard person.id != otherID, let meID, let group = place.group else { return nil }
     return {
-      openGroupRoute(.chat(group, thread: directThread(meID, person.id), with: person.id))
+      navigator?.open(.group(.chat(group, thread: directThread(meID, person.id), with: person.id)))
     }
   }
 

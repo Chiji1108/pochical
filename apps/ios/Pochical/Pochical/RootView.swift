@@ -5,7 +5,7 @@ import SwiftUI
 import UserNotifications
 
 /// The app's tabs, as /design's tab bar has them: カレンダー, グループ and
-/// 設定, and the chats opened over them (RootNavigation). An invitation
+/// 設定, and every page opened over them (RootNavigation). An invitation
 /// link opened in the app (AppRoot) shows its join screen over them, and
 /// once in, the group; one to a group the person is in already opens the
 /// group, saying so.
@@ -21,12 +21,12 @@ struct RootView: View {
   @Fetch private var unread: [String: Int] = [:]
   /// What is read in each chat, for the notifications of lines read to go.
   @Fetch private var read = ReadState()
-  @State private var tab = RootTab.calendar
   @State private var openGroupID: String?
-  /// The グループ tab's pages over the open group.
-  @State private var groupsPath: [GroupRoute] = []
-  /// The chats, and what they open, over the tabs.
+  /// The tab shown, and the pages over it.
   @State private var navigator = RootNavigator()
+  /// A group just made, whose メンバーを招待 opens in place of グループを作る
+  /// once the group has come, as /design goes on to it.
+  @State private var inviting: String?
   /// An invitation opened, its join screen shown over the tabs.
   @Binding var invite: OpenedInvite?
   @State private var scanning = false
@@ -36,15 +36,17 @@ struct RootView: View {
   /// Said over the tabs for a moment, as a toast is.
   @State private var notice: String?
   @State private var notices = 0
+  /// How far down the screen its own top is, the bar's under the status bar.
+  @State private var barTop: CGFloat = 0
 
   /// The place whose socket is held (spec/sync-protocol.md, Sockets): that
-  /// of the page over the tabs, else the open group's while グループ shows
-  /// and the chat with Pochical's people's while 設定 does; none in the
-  /// background.
+  /// of the top page of a place over the tabs, else the open group's while
+  /// グループ shows and the chat with Pochical's people's while 設定 does;
+  /// none in the background.
   private var openPlaceID: String? {
     guard scenePhase == .active else { return nil }
-    if let page = navigator.pages.last { return page.placeID }
-    switch tab {
+    if let page = navigator.placePage { return page.placeID }
+    switch navigator.tab {
     case .calendar: return nil
     case .groups: return openGroup(openGroupID, among: groups)?.id
     case .settings: return ChatPlace.supportID
@@ -63,12 +65,10 @@ struct RootView: View {
 
   var body: some View {
     RootNavigation(navigator: navigator, tabs: hosted(tabs)) { page in
-      hosted(
-        self.page(page)
-          .environment(\.photoShelf, page.photoShelf)
-          .environment(\.openGroupRoute, OpenGroupRouteAction { navigator.open(.group($0)) }))
+      hosted(self.page(page).environment(\.photoShelf, page.photoShelf))
     }
     .ignoresSafeArea()
+    .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { barTop = $0 }
     // The reminders' notifications, put in anew as what they read changes.
     .modifier(ReminderUpdates())
     // The widgets' entries, made again as what they show changes.
@@ -109,15 +109,29 @@ struct RootView: View {
     // A widget's day opens on the calendar (spec/widgets.md).
     .onChange(of: OpenedDay.shared.day, initial: true) { _, day in
       guard day != nil else { return }
-      tab = .calendar
-      navigator.show([])
+      navigator.show([], over: .calendar)
     }
-    // Set to someone or a group, in that group, which shows it once here.
-    .onChange(of: OpenedGroup.shared.link, initial: true) { _, link in
-      guard let link else { return }
-      tab = .groups
-      openGroupID = link.groupID
-      navigator.show([])
+    // A widget's group, set to someone or a group: its table at the day,
+    // else its top. One the person has left themselves leaves them on
+    // their first group.
+    .onChange(
+      of: OpenedGroupKey(link: OpenedGroup.shared.link, groupIDs: groups.map(\.id)), initial: true
+    ) { _, key in
+      guard let link = key.link else { return }
+      OpenedGroup.shared.link = nil
+      let group = groups.first { $0.id == link.groupID }
+      openGroupID = group?.id
+      navigator.show(
+        group.flatMap { group in link.day.map { [.group(.shifts(group, day: $0))] } } ?? [],
+        over: .groups)
+    }
+    .onChange(of: groups.map(\.id)) { inviteMade() }
+    // Gone somewhere else meanwhile, the person is left there.
+    .onChange(of: navigator.pages) { _, pages in
+      if !pages.isEmpty, pages != [.root(.group(.newGroup))] { inviting = nil }
+    }
+    .onChange(of: openGroupID) { _, id in
+      if id != inviting { inviting = nil }
     }
     .fullScreenCover(isPresented: $scanning) {
       if let scanned {
@@ -147,24 +161,32 @@ struct RootView: View {
   }
 
   private var tabs: some View {
-    TabView(selection: $tab) {
+    TabView(selection: Binding { navigator.tab } set: { navigator.show([], over: $0) }) {
       Tab("カレンダー", systemImage: "calendar", value: .calendar) {
         CalendarScreen()
       }
       Tab("グループ", systemImage: "person.2", value: .groups) {
-        GroupsScreen(
-          openID: $openGroupID, path: $groupsPath, unread: unread
-        ) {
+        GroupsScreen(openID: $openGroupID, unread: unread) {
           scanning = true
         }
       }
       .badge(groupsUnread)
       Tab("設定", systemImage: "gearshape", value: .settings) {
         SettingsScreen()
+          .tabRoot()
       }
       // Pochical's people's answers not read yet, on 設定's chat with them
       // (spec/chat.md, Unread lines and typing).
       .badge(unread[ChatPlace.supportID] ?? 0)
+    }
+    // The tab's title and buttons, in the one bar: a tab's own content does
+    // not reach it through the TabView. The calendar has none, its month
+    // heading it, and グループ heads itself in the bar's band (GroupsScreen).
+    .navigationTitle(navigator.tab == .settings ? "設定" : "")
+    .toolbar {
+      if navigator.tab == .groups, let group = openGroup(openGroupID, among: groups) {
+        GroupHubButtons(group: group, navigator: navigator)
+      }
     }
   }
 
@@ -172,12 +194,13 @@ struct RootView: View {
   @ViewBuilder private func page(_ page: RootPage) -> some View {
     switch page {
     case .group(let route):
-      GroupPage(route: route) { group in
-        navigator.open(.group(.invite(group)))
-      } onLeft: {
+      GroupPage(route: route) {
         openGroupID = nil
-        groupsPath = []
         navigator.show([])
+      } onMade: { made in
+        openGroupID = made
+        inviting = made
+        inviteMade()
       }
     case .support:
       SupportChatScreen()
@@ -201,8 +224,23 @@ struct RootView: View {
         .environment(\.english, settings.device.heading.english)
         .environment(\.meID, meID)
         .environment(\.rootNavigator, navigator)
+        .environment(\.barTop, barTop)
         .environment(\.openInvite, OpenInviteAction { code in invite = OpenedInvite(code: code) })
         .environment(\.say, SayAction(say: say)))
+  }
+
+  /// A group a widget opened, and the groups there are to show it in.
+  private struct OpenedGroupKey: Equatable {
+    let link: GroupLink?
+    let groupIDs: [String]
+  }
+
+  /// Opens メンバーを招待 for the group just made, once it is here, in
+  /// place of every page over the tabs.
+  private func inviteMade() {
+    guard let id = inviting, let made = groups.first(where: { $0.id == id }) else { return }
+    inviting = nil
+    navigator.show([.group(.invite(made))])
   }
 
   /// A chat a notification opened, and what it is opened with.
@@ -218,15 +256,13 @@ struct RootView: View {
   private func openNotified() {
     guard let chat = Notifications.shared.opening else { return }
     if chat.groupID == ChatPlace.supportID {
-      tab = .settings
-      navigator.show([.support])
+      navigator.show([.support], over: .settings)
     } else {
       guard let group = groups.first(where: { $0.id == chat.groupID }), let meID else { return }
-      tab = .groups
       openGroupID = group.id
-      groupsPath = []
       navigator.show(
-        [.group(.chat(group, thread: chat.threadID, with: otherIn(chat.threadID, me: meID)))])
+        [.group(.chat(group, thread: chat.threadID, with: otherIn(chat.threadID, me: meID)))],
+        over: .groups)
     }
     Notifications.shared.opening = nil
   }
@@ -234,9 +270,8 @@ struct RootView: View {
   /// The group an invitation led to, its join screen gone.
   private func open(_ groupID: String) {
     openGroupID = groupID
-    tab = .groups
     invite = nil
-    navigator.show([])
+    navigator.show([], over: .groups)
   }
 
   private func say(_ words: String) {

@@ -101,8 +101,8 @@ export function DesignSettings({
 }) {
   const coworkers = useCoworkerList();
   const [page, setPage] = useState<Page>(initialPage);
-  // A new job's order on the calendar takes the screen, its keys where
-  // the tab bar was, as typing an order does.
+  // A new job's order on the calendar takes the screen, its keys at the
+  // foot, as typing an order does.
   const [jobOrdering, setJobOrdering] = useState(false);
   const weekTools = useWeek();
   const patternKeys = patternsInUse(patterns).map((pattern) => pattern.id);
@@ -336,9 +336,8 @@ export function DesignSettings({
           />
         )}
       </ScreenScroll>
-      {!(page === "job" && jobOrdering) && (
-        <TabBar active="settings" onSelect={onTab} />
-      )}
+      {/* Each page is pushed over the tabs, as the group's are. */}
+      {page === "top" && <TabBar active="settings" onSelect={onTab} />}
     </Screen>
   );
 }
