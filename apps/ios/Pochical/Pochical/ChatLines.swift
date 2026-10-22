@@ -47,8 +47,11 @@ enum ChatItemID {
   static let unread = "unread"
   private static let linePrefix = "line-"
   private static let typingPrefix = "typing-"
+  private static let dayPrefix = "day-"
 
-  static func day(_ day: Day) -> String { "day-\(day.key)" }
+  static func day(_ day: Day) -> String { dayPrefix + day.key }
+
+  static func isDay(_ id: String) -> Bool { id.hasPrefix(dayPrefix) }
 
   static func line(_ opID: String) -> String { linePrefix + opID }
 

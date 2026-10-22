@@ -12,7 +12,7 @@ import { setTimeout as wait } from "node:timers/promises";
 import { chromium } from "playwright-core";
 import type { Browser, Page } from "playwright-core";
 
-const url = process.argv[2] ?? "http://localhost:3200/demo";
+const url = process.argv[2] ?? "http://localhost:3201/demo";
 // Long enough for a swipe's spring to land.
 const LAND_MS = 900;
 const STEP_MS = 16;

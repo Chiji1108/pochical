@@ -1,11 +1,12 @@
 import type { Page } from "playwright-core";
 
-// The screens layout-diff measures: the /design demo in its variants, and
-// the taps that reach each screen from the page as it loads. Add a state
-// here when a change reaches a screen none of these show.
+// The screens layout-diff measures, each app's under its own dev server:
+// the demo in its variants and the taps that reach each screen from the
+// page as it loads, and the design documents. Add a state here when a
+// change reaches a screen none of these show.
 export type State = {
   name: string;
-  // Under the dev server, with the demo's variants in the query.
+  // With the demo's variants in the query.
   path: string;
   steps?: (page: Page) => Promise<void>;
   // What to measure, when not the phones.
@@ -150,7 +151,7 @@ const toGroupMonth = async (page: Page) => {
   await tap(page, "月で見る");
 };
 
-export const states: State[] = [
+const demoStates: State[] = [
   {
     name: "calendar/filled",
     path: demo("scheduleSample=filled"),
@@ -341,40 +342,9 @@ export const states: State[] = [
       await tap(page, /^印と色/u);
     },
   },
-  // Every phone of the design pages: the calendar in its states, light
-  // and dark, and the first-run screens.
-  { name: "design/states", path: "/design/states" },
-  { name: "design/flows", path: "/design/flows" },
-  {
-    // The first run's order moved to start on another day. The flow page
-    // covers its frames against taps, so the click goes to the day.
-    name: "design/flows-anchor",
-    path: "/design/flows",
-    steps: async (page) => {
-      await page
-        .locator(".dc-phone", { hasText: /の日を押す/u })
-        .getByRole("button", { name: /^9月10日、/u })
-        .dispatchEvent("click");
-    },
-  },
-  // Every shared piece on its own, each in its sample box.
-  {
-    name: "design/components",
-    path: "/design/components",
-    root: "[data-sample]",
-  },
-  // The pages themselves around the phones: toolbars, headings, captions,
-  // the design choices beside the demo, and the design documents.
-  ...[
-    ["demo", demo("scheduleSample=filled")],
-    ["design", "/design"],
-    ["design/states", "/design/states"],
-    ["design/flows", "/design/flows"],
-    ["design/components", "/design/components"],
-    ["design/colors", "/design/colors"],
-    ["design/assets", "/design/assets"],
-    ["design/widgets", "/design/widgets"],
-  ].map(([name, path]) => ({ name: `page/${name}`, path, root: "main" })),
+  // The page itself around the phone: its toolbar, captions and the design
+  // choices beside it.
+  { name: "page/demo", path: demo("scheduleSample=filled"), root: "main" },
   {
     name: "group/legend-all",
     path: demo("scheduleSample=filled"),
@@ -921,3 +891,46 @@ export const states: State[] = [
     steps: tapOn("設定"),
   },
 ];
+
+const designStates: State[] = [
+  // Every phone of the design pages: the calendar in its states, light
+  // and dark, and the first-run screens.
+  { name: "design/states", path: "/design/states" },
+  { name: "design/flows", path: "/design/flows" },
+  {
+    // The first run's order moved to start on another day. The flow page
+    // covers its frames against taps, so the click goes to the day.
+    name: "design/flows-anchor",
+    path: "/design/flows",
+    steps: async (page) => {
+      await page
+        .locator(".dc-phone", { hasText: /の日を押す/u })
+        .getByRole("button", { name: /^9月10日、/u })
+        .dispatchEvent("click");
+    },
+  },
+  // Every shared piece on its own, each in its sample box.
+  {
+    name: "design/components",
+    path: "/design/components",
+    root: "[data-sample]",
+  },
+  // The pages themselves around the phones: toolbars, headings and
+  // captions.
+  ...[
+    ["design", "/"],
+    ["design/states", "/design/states"],
+    ["design/flows", "/design/flows"],
+    ["design/components", "/design/components"],
+    ["design/colors", "/design/colors"],
+    ["design/assets", "/design/assets"],
+    ["design/widgets", "/design/widgets"],
+  ].map(([name, path]) => ({ name: `page/${name}`, path, root: "main" })),
+];
+
+// The apps layout-diff measures, each under its own dev server.
+export type App = "design" | "demo";
+export const states: Record<App, State[]> = {
+  demo: demoStates,
+  design: designStates,
+};
