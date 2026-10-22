@@ -1,18 +1,18 @@
 import { textLimits } from "@pochical/design/limits";
 import { characterCount, withinLimit } from "@pochical/design/text";
-import { css, cx } from "@pochical/styled-system/css";
+import { css } from "@pochical/styled-system/css";
 import { env } from "cloudflare:workers";
 import { useState } from "react";
 import { data, Form, Link, redirect, useNavigation } from "react-router";
 
 import {
-  actions,
+  actionsStyle,
   alert,
   button,
-  card,
+  cardStyle,
   code,
   Crumbs,
-  field,
+  fieldStyle,
   meta,
   page,
   PageHeader,
@@ -131,10 +131,9 @@ export default function SupportChat({
       >
         {!atStart && earliest !== undefined && (
           <Link
-            className={cx(
-              button({ variant: "outline" }),
-              css({ alignSelf: "center" })
-            )}
+            className={css(button.raw({ variant: "outline" }), {
+              alignSelf: "center",
+            })}
             to={`?before=${earliest}`}
           >
             前のメッセージ
@@ -265,33 +264,27 @@ export default function SupportChat({
       </div>
       {/* The card is the field: it takes the ring as the words are written. */}
       <Form
-        className={cx(
-          card,
-          css({
-            _focusWithin: {
-              borderColor: "accent.default",
-              boxShadow: "0 0 0 3px var(--accent-container)",
-            },
-            padding: "3",
-            transition: "border-color 120ms, box-shadow 120ms",
-          })
-        )}
+        className={css(cardStyle, {
+          _focusWithin: {
+            borderColor: "accent.default",
+            boxShadow: "0 0 0 3px var(--accent-container)",
+          },
+          padding: "3",
+          transition: "border-color 120ms, box-shadow 120ms",
+        })}
         method="post"
       >
         <input name="draftId" type="hidden" value={draftId} />
         {/* A new draft starts empty. */}
         <textarea
           aria-label="返信"
-          className={cx(
-            field,
-            css({
-              _focusVisible: { boxShadow: "none" },
-              background: "transparent",
-              border: "none",
-              paddingInline: "1",
-              resize: "vertical",
-            })
-          )}
+          className={css(fieldStyle, {
+            _focusVisible: { boxShadow: "none" },
+            background: "transparent",
+            border: "none",
+            paddingInline: "1",
+            resize: "vertical",
+          })}
           defaultValue={
             actionData?.draftId === draftId ? actionData.text : undefined
           }
@@ -301,7 +294,7 @@ export default function SupportChat({
           required
           rows={4}
         />
-        <div className={cx(actions, css({ justifyContent: "flex-end" }))}>
+        <div className={css(actionsStyle, { justifyContent: "flex-end" })}>
           <button className={button()} disabled={sending} type="submit">
             返信する
           </button>

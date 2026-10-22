@@ -1,4 +1,4 @@
-import { css, cx } from "@pochical/styled-system/css";
+import { css } from "@pochical/styled-system/css";
 import { env } from "cloudflare:workers";
 import { data, Form, useNavigation } from "react-router";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
@@ -8,7 +8,8 @@ import {
   alert,
   button,
   card,
-  field,
+  cardStyle,
+  fieldStyle,
   label,
   meta,
   numeric,
@@ -109,17 +110,14 @@ export default function Reset({
         </p>
       </section>
       <Form
-        className={cx(
-          card,
-          css({
-            borderColor:
-              "color-mix(in srgb, var(--danger-default) 35%, transparent)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "3",
-            padding: "5",
-          })
-        )}
+        className={css(cardStyle, {
+          borderColor:
+            "color-mix(in srgb, var(--danger-default) 35%, transparent)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "3",
+          padding: "5",
+        })}
         method="post"
       >
         <div>
@@ -129,7 +127,7 @@ export default function Reset({
           >{`確認のため「${WORD}」と入力してください`}</label>
           <input
             autoComplete="off"
-            className={cx(field, css({ maxWidth: "320px" }))}
+            className={css(fieldStyle, { maxWidth: "320px" })}
             id="confirm"
             name="confirm"
             pattern={WORD}

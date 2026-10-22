@@ -1,4 +1,4 @@
-import { css, cx } from "@pochical/styled-system/css";
+import { css } from "@pochical/styled-system/css";
 import { env } from "cloudflare:workers";
 import { data, Form, useNavigation } from "react-router";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
@@ -6,11 +6,14 @@ import type { ShouldRevalidateFunctionArgs } from "react-router";
 import { sizeOf } from "../size";
 import {
   actions,
+  actionsStyle,
   alert,
   badge,
   button,
   card,
+  cardStyle,
   code,
+  codeStyle,
   dialog,
   Empty,
   meta,
@@ -172,7 +175,7 @@ export default function BucketAudit({
           {`${VERDICT_NAMES.unknown}と、${audit.graceMs / 3_600_000} 時間以内に置かれたものは残します。グループの写真と自分の写真は、消す前に持ち主にもう一度聞き、その間に使われたものは飛ばします。`}
         </p>
         <Form
-          className={cx(actions, css({ justifyContent: "flex-end" }))}
+          className={css(actionsStyle, { justifyContent: "flex-end" })}
           method="post"
         >
           <input name="asOfMs" type="hidden" value={audit.atMs} />
@@ -296,10 +299,10 @@ export default function BucketAudit({
                             {`${row.sample.length} 件`}
                           </summary>
                           <pre
-                            className={cx(
-                              code,
-                              css({ fontSize: "xs", marginTop: "2" })
-                            )}
+                            className={css(codeStyle, {
+                              fontSize: "xs",
+                              marginTop: "2",
+                            })}
                           >
                             {row.sample.join("\n")}
                           </pre>
@@ -329,16 +332,13 @@ function Stat({
 }) {
   return (
     <div
-      className={cx(
-        card,
-        css({
-          display: "flex",
-          flexDirection: "column",
-          gap: "1",
-          paddingBlock: "4",
-          paddingInline: "5",
-        })
-      )}
+      className={css(cardStyle, {
+        display: "flex",
+        flexDirection: "column",
+        gap: "1",
+        paddingBlock: "4",
+        paddingInline: "5",
+      })}
     >
       <span className={meta}>{label}</span>
       <span

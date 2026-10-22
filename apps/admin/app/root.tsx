@@ -74,12 +74,14 @@ const sidebar = css({
   flexDirection: { base: "row", md: "column" },
   gap: { base: "2", md: "6" },
   height: { md: "100dvh" },
-  overflowX: { base: "auto", md: "visible" },
+  // Its links scroll: sideways along the bar, down a sidebar taller than
+  // the window.
+  overflowX: { base: "auto", md: "hidden" },
+  overflowY: { base: "hidden", md: "auto" },
   paddingBlock: { base: "2", md: "5" },
   paddingInline: "3",
   position: "sticky",
-  // The bar's links scroll sideways without a scroll bar under them.
-  scrollbarWidth: "none",
+  scrollbarWidth: { base: "none", md: "thin" },
   top: "0",
   zIndex: 1,
 });
@@ -126,10 +128,12 @@ const placeLink = css({
 });
 
 function Sidebar() {
-  const { pathname } = useLocation();
+  // A path ending in a slash is the same page (/reports/ is /reports).
+  const path = useLocation().pathname.replace(/(?<=.)\/+$/u, "");
   return (
     <aside className={sidebar}>
-      <Link className={brand} to="/">
+      {/* On a narrow screen the mark alone, so the four pages fit beside it. */}
+      <Link aria-label="ポチカル管理" className={brand} to="/">
         <img
           alt=""
           className={css({ borderRadius: "xs", height: "6", width: "6" })}
@@ -137,18 +141,20 @@ function Sidebar() {
           src={icon}
           width={24}
         />
-        ポチカル
         <span
           className={css({
-            color: "text.tertiary",
-            display: { base: "none", md: "inline" },
-            fontWeight: 400,
+            display: { base: "none", md: "inline-flex" },
+            gap: "2",
           })}
         >
-          管理
+          ポチカル
+          <span className={css({ color: "text.tertiary", fontWeight: 400 })}>
+            管理
+          </span>
         </span>
       </Link>
       <nav
+        aria-label="ページ"
         className={css({
           display: "flex",
           flexDirection: { base: "row", md: "column" },
@@ -167,8 +173,7 @@ function Sidebar() {
             <p className={groupName}>{group}</p>
             {places.map(({ Icon, label, to, under }) => {
               const here =
-                pathname === to ||
-                (under !== undefined && pathname.startsWith(under));
+                path === to || (under !== undefined && path.startsWith(under));
               return (
                 <Link
                   aria-current={here ? "page" : undefined}
@@ -176,7 +181,13 @@ function Sidebar() {
                   key={to}
                   to={to}
                 >
-                  <Icon aria-hidden size={16} strokeWidth={1.75} />
+                  {/* Words alone on a narrow screen, where the bar is short of room. */}
+                  <Icon
+                    aria-hidden
+                    className={css({ display: { base: "none", md: "block" } })}
+                    size={16}
+                    strokeWidth={1.75}
+                  />
                   {label}
                 </Link>
               );

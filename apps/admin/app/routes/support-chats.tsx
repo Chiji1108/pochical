@@ -1,4 +1,4 @@
-import { css, cx } from "@pochical/styled-system/css";
+import { css } from "@pochical/styled-system/css";
 import { env } from "cloudflare:workers";
 import { Link } from "react-router";
 
@@ -6,7 +6,7 @@ import {
   alert,
   badge,
   card,
-  code,
+  codeStyle,
   Empty,
   numeric,
   page,
@@ -83,14 +83,11 @@ export default function SupportChats({
                 <tr key={chat.userId}>
                   <td>
                     <Link
-                      className={cx(
-                        code,
-                        css({
-                          _hover: { textDecoration: "underline" },
-                          color: "accent.default",
-                          fontWeight: 500,
-                        })
-                      )}
+                      className={css(codeStyle, {
+                        _hover: { textDecoration: "underline" },
+                        color: "accent.default",
+                        fontWeight: 500,
+                      })}
                       to={`/support/${chat.userId}`}
                     >
                       {chat.userId.slice(0, 8)}

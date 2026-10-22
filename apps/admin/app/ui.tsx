@@ -114,8 +114,12 @@ export const sectionTitle = css({
   fontWeight: 600,
 });
 
+// card, field and code as style objects too, for a page to merge its own
+// over them with css(cardStyle, {...}): cx() only joins class names, and
+// where two set the same property the stylesheet's order would decide.
+
 /** Something set apart on the page: a table, a form, a figure. */
-export const card = css({
+export const cardStyle = css.raw({
   background: "background.card",
   border: "1px solid",
   borderColor: "border.default",
@@ -123,6 +127,7 @@ export const card = css({
   // A table wider than a narrow screen scrolls inside it.
   overflowX: "auto",
 });
+export const card = css(cardStyle);
 
 /**
  * A table in a card: its head on a quiet ground, a hairline between rows,
@@ -173,10 +178,11 @@ export const numeric = css({
 });
 
 /** An id, a key or a path: fixed width, shortened where it shows. */
-export const code = css({
+export const codeStyle = css.raw({
   fontFamily: "mono",
   fontSize: "0.92em",
 });
+export const code = css(codeStyle);
 
 /** What says when, by whom, from where: small and quiet. */
 export const meta = css({ color: "text.tertiary", fontSize: "xs" });
@@ -253,15 +259,16 @@ export const button = cva({
 });
 
 /** A row of buttons. */
-export const actions = css({
+export const actionsStyle = css.raw({
   alignItems: "center",
   display: "flex",
   flexWrap: "wrap",
   gap: "2",
 });
+export const actions = css(actionsStyle);
 
 /** A text field or area. */
-export const field = css({
+export const fieldStyle = css.raw({
   _focusVisible: {
     borderColor: "accent.default",
     boxShadow: "0 0 0 3px var(--accent-container)",
@@ -279,6 +286,7 @@ export const field = css({
   transition: "border-color 120ms, box-shadow 120ms",
   width: "100%",
 });
+export const field = css(fieldStyle);
 
 /** A field's name over it. */
 export const label = css({
