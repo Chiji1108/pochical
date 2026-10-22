@@ -154,8 +154,8 @@ import SQLiteData
     // it, is the one that ended, and is never signed in as again.
     if let why = shared?.string(forKey: Self.erasingKey).flatMap(Erasing.Why.init) {
       beginErasing(why)
-    } else if let kept = try? keychain.kept() {
-      resume(kept)
+    } else {
+      goOnAsKept()
     }
     ends.session = self
   }
@@ -464,17 +464,31 @@ import SQLiteData
 
   // MARK: A session the server does not know
 
-  /// Back to `kept`, written to the Keychain in the same step, so the
-  /// device and a relaunch are the same: signed in as it, or, one the
-  /// server did not know, saying so.
+  /// Back to `kept`: written to the Keychain, then gone on as what the
+  /// Keychain holds, which a write that failed leaves as it was, so the
+  /// device is only ever what a relaunch would be.
   private func restore(_ kept: StoredSession) {
     do {
       try keychain.keep(kept)
     } catch {
-      // The Keychain still has what it had: `kept` but for its ending.
       Logger.account.error("Keeping the session gone back to failed: \(error)")
     }
-    resume(kept)
+    goOnAsKept()
+  }
+
+  /// As a launch goes on: as the session the Keychain holds; with none, or
+  /// a Keychain it cannot read (as before the first unlock), starting,
+  /// read again and signed in as the app comes to the front (`established`).
+  private func goOnAsKept() {
+    if let kept = try? keychain.kept() {
+      resume(kept)
+    } else {
+      state = .starting
+      current.signingIn()
+      if inFront {
+        signInAnew()
+      }
+    }
   }
 
   /// Goes on as the session kept: signed in as it, or, one the server did

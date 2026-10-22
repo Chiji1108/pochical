@@ -882,3 +882,39 @@ func aChangesAnswerSettlesA401ThatCameWhileItWaited(_ pending: Pending, _ answer
   #expect(again.phase == made.session.phase)
   #expect(again.userID == made.session.userID)
 }
+
+@MainActor @Test func aSwitchGoneBackWithAKeychainThatTakesNoWriteIsWhatItHolds()
+  async throws
+{
+  let made = try await Made.signedIn(as: "a", "A", socketStatus: "503 Service Unavailable")
+  #expect(await eventually { made.owner == "A" })
+  try await made.addCoworker()
+  try await made.database.write { db in
+    try db.execute(
+      sql: #"CREATE TRIGGER "keep" BEFORE DELETE ON "coworkers" BEGIN SELECT RAISE(ABORT, 'kept'); END"#)
+  }
+  made.session.cameToFront()
+  let gate = made.server.hold("signInApple")
+  let switching = Task { try await made.session.useAccount(appleIDToken: "id", nonce: "n") }
+  #expect(await eventually { made.session.phase == .changing })
+  let asked = made.sockets.asked
+  made.sockets.status.withLock { $0 = "401 Unauthorized" }
+  made.session.cameToFront()
+  #expect(await eventually { made.sockets.asked > asked })
+  try await Task.sleep(for: .milliseconds(100))
+  made.sockets.status.withLock { $0 = "503 Service Unavailable" }
+  let own = try #require(made.keychain.own as? MemoryStore)
+  own.refusesToKeep.withLock { $0 = true }
+  gate.open()
+  // Going back cannot write the session as ended: the device is what the
+  // Keychain still holds, the session as it was, and is told so by its
+  // sockets' next 401, as a relaunch would be.
+  await #expect(throws: (any Error).self) { try await switching.value }
+  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A"))
+  #expect(made.session.phase == .signedIn)
+  let again = AccountSession(
+    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
+    eraseFiles: {})
+  #expect(again.phase == made.session.phase)
+  #expect(again.userID == made.session.userID)
+}
