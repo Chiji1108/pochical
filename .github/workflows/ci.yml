@@ -88,6 +88,10 @@ jobs:
         working-directory: apps/admin
       # The tokens the native apps are generated from design/.
       - run: bun design/scripts/gen.ts --check
+      # Each Worker's worker-configuration.d.ts is what its wrangler.jsonc
+      # and the locked wrangler (and the workerd it pins) give, not left
+      # behind by a wrangler bump. wrangler types reads no account.
+      - run: mise run worker-types:check
       # The migrations drizzle-kit gives from each SQL schema (D1, Group DO,
       # User DO) are all in the branch, and agree with each other.
       - run: mise run db:check

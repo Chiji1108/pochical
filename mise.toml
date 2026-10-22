@@ -4,8 +4,8 @@ buf = "1.73.0"
 java = "temurin-21"
 
 [tasks.gen]
-description = "Generate the code made from proto/ and design/"
-depends = ["gen:proto", "gen:design"]
+description = "Generate the code made from proto/ and design/, and the Workers' types"
+depends = ["gen:proto", "gen:design", "gen:worker-types"]
 
 [tasks."gen:proto"]
 description = "Generate TypeScript, Swift and Kotlin code from proto/"
@@ -19,6 +19,24 @@ run = "bun design/scripts/gen.ts"
 [tasks."design:check"]
 description = "Fail if the code generated from design/ is out of date"
 run = "bun design/scripts/gen.ts --check"
+
+[tasks."gen:worker-types"]
+description = "Write each Worker's worker-configuration.d.ts from its wrangler.jsonc, with the wrangler in bun.lock"
+run = [
+  "bun run --cwd apps/server cf-typegen",
+  "bun run --cwd apps/admin cf-typegen",
+  "bun run --cwd apps/web cf-typegen",
+]
+
+[tasks."worker-types:check"]
+description = "Fail if a Worker's worker-configuration.d.ts is not what gen:worker-types writes"
+depends = ["gen:worker-types"]
+run = '''
+if ! git diff --exit-code --stat -- '*/worker-configuration.d.ts'; then
+  echo "worker-configuration.d.ts is out of date: run mise run gen:worker-types and commit it (AGENTS.md)."
+  exit 1
+fi
+'''
 
 [tasks."proto:lint"]
 description = "Lint and format-check proto/"

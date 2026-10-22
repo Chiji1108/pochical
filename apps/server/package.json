@@ -10,7 +10,7 @@
     "db:generate": "drizzle-kit generate",
     "group-do:generate": "drizzle-kit generate --config drizzle.group-do.config.ts",
     "user-do:generate": "drizzle-kit generate --config drizzle.user-do.config.ts",
-    "typecheck": "wrangler types && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "bun run --cwd ../.. check",
     "fix": "bun run --cwd ../.. fix"
