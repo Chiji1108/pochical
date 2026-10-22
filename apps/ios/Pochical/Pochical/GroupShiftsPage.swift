@@ -165,11 +165,13 @@ struct GroupShiftsPage: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(colors.backgroundBase)
-    // A list laid out anew, as on coming back from 1人ずつ, rests at its
-    // left edge.
+    // A new layout goes to the picked day or today, and a list laid out
+    // anew, as on coming back from 1人ずつ, rests at its left edge. Here,
+    // not on the list, which is made anew coming back from 1人ずつ.
     .onChange(of: layout) {
       sidewaysOffset.x = 0
       scrolledSideways = false
+      position.scrollTo(id: anchor(of: picked ?? Day.today), anchor: .topLeading)
     }
     .navigationTitle(group.name)
     .navigationBarTitleDisplayMode(.inline)
@@ -216,11 +218,6 @@ struct GroupShiftsPage: View {
     .task(id: settings.device.week.start) {
       let first = thisMonth.addingMonths(-monthSpan).adding(days: -6)
       let last = thisMonth.addingMonths(monthSpan + 1).adding(days: 6)
-      #if DEBUG
-        // Late, as a slow read would be, for the UI tests (POC-162).
-        let late = UserDefaults.standard.integer(forKey: "membersReadLate")
-        if late > 0 { try? await Task.sleep(for: .milliseconds(late)) }
-      #endif
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: first, through: last))
       // A read cut short by a new week start leaves the next to do this.
       guard !Task.isCancelled, !membersRead else { return }
@@ -409,9 +406,6 @@ struct GroupShiftsPage: View {
           openedDay = true
           picked = openingDay
         }
-      }
-      .onChange(of: layout) {
-        position.scrollTo(id: anchor(of: picked ?? Day.today), anchor: .topLeading)
       }
       // As /design's: the table stays where it is when a day is picked;
       // room under it while the sheet is up lets a row near the bottom be

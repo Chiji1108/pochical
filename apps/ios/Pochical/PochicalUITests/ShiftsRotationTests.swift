@@ -139,6 +139,17 @@ final class ShiftsRotationTests: XCTestCase {
     snap("today-days")
     checkToday("in 一覧 again, on today")
 
+    // Back from 1人ずつ, to today's week.
+    pick(year(1))
+    _ = settled()
+    switchLayout(from: "一覧", to: "1人ずつ")
+    switchLayout(from: "1人ずつ", to: "週ごと")
+    _ = settled()
+    snap("today-from-person")
+    checkToday("back from 1人ずつ, on today's week")
+    switchLayout(from: "週ごと", to: "一覧")
+    XCTAssertEqual(settled().top, today(), "一覧 goes to today")
+
     pick(year(1))
     _ = settled()
     todayButton().tap()
@@ -160,17 +171,16 @@ final class ShiftsRotationTests: XCTestCase {
       let shifts = app.buttons["月で見る"]
       XCTAssertTrue(shifts.waitForExistence(timeout: 15), "the group's hub shows")
       shifts.tap()
-      let row = app.buttons.matching(NSPredicate(format: "label MATCHES %@", today() + "([^0-9].*)?"))
-        .firstMatch
+      let rows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", today() + "([^0-9].*)?"))
       // Until the list has stopped where it lands.
       var frame = CGRect.null
       var tries = 0
-      while row.waitForExistence(timeout: 5), row.frame != frame, tries < 10 {
-        frame = row.frame
+      while rows.firstMatch.waitForExistence(timeout: 5), rows.firstMatch.frame != frame, tries < 10 {
+        frame = rows.firstMatch.frame
         tries += 1
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
       }
-      let landed = row.exists && row.isHittable && !todayButton().exists
+      let landed = rows.allElementsBoundByIndex.contains(where: \.isHittable) && !todayButton().exists
       if !landed { snap("opened-\(open)") }
       XCTAssertTrue(landed, "open \(open) lands on today's week")
     }
