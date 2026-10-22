@@ -96,6 +96,8 @@ struct ChatComposer: View {
   let keepDraft: () -> Void
   /// 日にちを共有, in a group's chat.
   var onShareDays: (() -> Void)?
+  /// 日にちの投票, in the group chat, not a one-to-one one.
+  var onPollDays: (() -> Void)?
   let say: (String) -> Void
   /// The photo picker is open.
   @State private var choosingPhotos = false
@@ -262,12 +264,16 @@ struct ChatComposer: View {
     .glassEffect(.regular, in: shape)
   }
 
-  /// ＋, opening what may be sent besides words, as Messages' does: 日にち
-  /// を共有 nearest it, then 写真. With the photo tool alone, as the support
-  /// chat has, the round is the photo tool itself.
+  /// ＋, opening what may be sent besides words, as Messages' does: 写真,
+  /// then 日にちを共有, and in the group chat 日にちの投票 nearest it (a
+  /// menu opening upward puts its first item nearest). With the photo tool
+  /// alone, as the support chat has, the round is the photo tool itself.
   @ViewBuilder private var tools: some View {
     if let onShareDays {
       Menu {
+        if let onPollDays {
+          Button("日にちの投票", systemImage: "calendar.badge.checkmark", action: onPollDays)
+        }
         Button("日にちを共有", systemImage: "calendar.badge.plus", action: onShareDays)
         Button("写真", systemImage: "photo", action: choosePhotos)
       } label: {

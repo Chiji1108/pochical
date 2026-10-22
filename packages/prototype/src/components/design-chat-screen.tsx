@@ -257,7 +257,14 @@ export function ChatScreen({
     timed.filter(({ going }) => going === undefined),
     timed.filter(({ going }) => going !== undefined)
   );
-  const [sharing, setSharing] = useState(false);
+  // The days sheet, open to share days or to put them to the vote; the
+  // way it was opened stays while it closes.
+  const [pickingDays, setPickingDays] = useState(false);
+  const [pollingDays, setPollingDays] = useState(false);
+  const pickDays = (poll: boolean) => {
+    setPollingDays(poll);
+    setPickingDays(true);
+  };
   const { answerSoon, typingMember } = useTypingSoon(members, chat.messages);
   const {
     awayFromLatest,
@@ -639,10 +646,17 @@ export function ChatScreen({
                 composer={composer}
                 editingMessage={byId(composer.editing)}
                 onSend={send}
+                onPollDays={
+                  rules.days && isGroup && rules.polls
+                    ? () => {
+                        pickDays(true);
+                      }
+                    : undefined
+                }
                 onShareDays={
                   rules.days
                     ? () => {
-                        setSharing(true);
+                        pickDays(false);
                       }
                     : undefined
                 }
@@ -750,17 +764,17 @@ export function ChatScreen({
         {rules.days && (
           <DaySheet
             members={people}
-            onOpenChange={setSharing}
-            onShare={(days, poll) => {
+            onOpenChange={setPickingDays}
+            onShare={(days) => {
               post({
-                content: poll
+                content: pollingDays
                   ? { days, kind: "poll", votes: {} }
                   : { days, kind: "days" },
               });
-              setSharing(false);
+              setPickingDays(false);
             }}
-            open={sharing}
-            pollable={isGroup && rules.polls}
+            open={pickingDays}
+            poll={pollingDays}
           />
         )}
         {rules.polls && (

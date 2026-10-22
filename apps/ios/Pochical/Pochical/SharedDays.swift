@@ -281,9 +281,19 @@ private struct Shifts {
   }
 }
 
-/// The days to share, picked (/design's DaySheet): days everyone is off
-/// in the next weeks offered first, then a month to pick any from. ✓ sends
-/// them as a line of their own with everyone's shifts.
+/// How the days sheet was opened: to share days, or to put them to the
+/// vote.
+enum DaysPick: Identifiable {
+  case share, poll
+
+  var id: Self { self }
+}
+
+/// The days to share or to put to the vote, picked (/design's DaySheet):
+/// days everyone is off in the next weeks offered first, then a month to
+/// pick any from. ✓ sends them as a line of their own with everyone's
+/// shifts, or as a poll. Which it is is how it was opened, never changed in
+/// it.
 struct ShareDaysSheet: View {
   @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
@@ -293,12 +303,10 @@ struct ShareDaysSheet: View {
   let groupID: String
   /// Who the card shows: everyone, or the two of a one-to-one chat.
   let people: Set<String>?
-  /// 共有 | 投票 at its top: in the group chat, not a one-to-one chat.
-  let pollable: Bool
-  /// Sends the days, shared, or put to the vote.
-  let onSend: ([Day], Bool) -> Bool
-  /// On 投票: the days are put to the vote instead.
-  @State private var poll = false
+  /// The days are put to the vote rather than shared.
+  let poll: Bool
+  /// Sends the days; true when kept.
+  let onSend: ([Day]) -> Bool
   @State private var month = Day.today.firstOfMonth
   @State private var picked: [Day] = []
   @State private var notice: String?
@@ -321,13 +329,6 @@ struct ShareDaysSheet: View {
     NavigationStack {
       ScrollView {
         VStack(alignment: .leading, spacing: 16) {
-          if pollable {
-            Picker("日にちをどうするか", selection: $poll) {
-              Text("共有").tag(false)
-              Text("投票").tag(true)
-            }
-            .pickerStyle(.segmented)
-          }
           suggestions(together.filter { $0 >= today }.sorted())
           monthGrid(together: together, today: today)
           note
@@ -342,7 +343,7 @@ struct ShareDaysSheet: View {
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("送る", systemImage: "checkmark", role: .confirm) {
-            if onSend(picked, poll) { dismiss() }
+            if onSend(picked) { dismiss() }
           }
           .disabled(picked.count < (poll ? Self.pollLeast : 1))
         }
