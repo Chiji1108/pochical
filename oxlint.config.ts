@@ -6,6 +6,8 @@ import vitest from "ultracite/oxlint/vitest";
 import { ignorePatterns } from "./lint-ignores.ts";
 
 export default defineConfig({
+  // Oxlint does not carry `env` through `extends`.
+  env: core.env,
   extends: [core, react],
   ignorePatterns,
   options: { typeAware: true },

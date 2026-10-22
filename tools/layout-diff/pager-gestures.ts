@@ -136,8 +136,15 @@ const recordRestFrames = async (page: Page) => {
 const restFrames = async (page: Page) =>
   await page.evaluate(() => globalThis.restFrames ?? []);
 
+// The days open under the calendar, each a region named by its date, as
+// 10月1日(木), or "" with none open.
 const daysOpened = async (page: Page) =>
-  await page.getByRole("button", { name: "完了" }).count();
+  await page
+    .locator(".dc-phone")
+    .getByRole("region", { name: /^\d+月\d+日\(.\)$/u })
+    .evaluateAll((regions) =>
+      regions.map((region) => region.getAttribute("aria-label")).join(", ")
+    );
 
 async function open(browser: Browser, touch: boolean) {
   const context = await browser.newContext({
@@ -255,7 +262,7 @@ async function withMouse(browser: Browser) {
   const right = box.x + box.width;
   await drag(page, [right - 40, y], -box.width / 6, 10, 30);
   expect("short drag goes back", await heading(page), "2026年9月");
-  expect("letting go opens no day", String(await daysOpened(page)), "0");
+  expect("letting go opens no day", await daysOpened(page), "");
   await drag(page, [box.x + 40, y], box.width * 0.4, 12, 30);
   expect("drag past a quarter", await heading(page), "2026年8月");
   await flick(page, [right - 40, y], -60);
@@ -289,7 +296,7 @@ async function withMouse(browser: Browser) {
     .first()
     .click();
   await page.waitForTimeout(600);
-  expect("a tap opens the day", String((await daysOpened(page)) > 0), "true");
+  expect("a tap opens the day", await daysOpened(page), "10月1日(木)");
   await context.close();
 }
 
@@ -330,7 +337,7 @@ async function withFinger(browser: Browser) {
   expect("finger swipe", await heading(page), "2026年10月");
   await swipe(box, box.width / 2, 200, 8, -150);
   expect("scrolling keeps the month", await heading(page), "2026年10月");
-  expect("a swipe opens no day", String(await daysOpened(page)), "0");
+  expect("a swipe opens no day", await daysOpened(page), "");
   await context.close();
 }
 
@@ -360,7 +367,7 @@ async function withTrackpad(browser: Browser) {
   expect("trackpad swipe back", await heading(page), "2026年9月");
   await wheel(page, 30, 400);
   expect("trackpad scroll keeps the month", await heading(page), "2026年9月");
-  expect("a trackpad swipe opens no day", String(await daysOpened(page)), "0");
+  expect("a trackpad swipe opens no day", await daysOpened(page), "");
   await context.close();
 }
 
