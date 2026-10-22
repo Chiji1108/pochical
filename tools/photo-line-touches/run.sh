@@ -19,25 +19,7 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 derived=${2:-$root/.build/DerivedData}
 shared=$(mktemp -d)
 server_log=$shared/server.log
-server=""
-
-start_server() {
-  (cd "$root/apps/server" && exec bunx wrangler dev >>"$server_log" 2>&1) &
-  server=$!
-  until curl -s -o /dev/null http://localhost:8787; do
-    kill -0 "$server" 2>/dev/null || { echo "the server did not start: $server_log" >&2; exit 1; }
-    sleep 1
-  done
-}
-
-stop_server() {
-  [ -n "$server" ] || return 0
-  pkill -P "$server" 2>/dev/null || true
-  kill "$server" 2>/dev/null || true
-  wait "$server" 2>/dev/null || true
-  server=""
-  while curl -s -o /dev/null http://localhost:8787; do sleep 1; done
-}
+. "$root/tools/ios-ui/lib.sh"
 
 # The photo taken out of the bucket, put back however the run ends.
 hidden=""
@@ -49,12 +31,6 @@ put_back() {
   hidden=""
 }
 trap 'put_back; stop_server' EXIT
-
-xcodebuild_for() {
-  xcodebuild "$1" -project "$root/apps/ios/Pochical/Pochical.xcodeproj" -scheme Pochical \
-    -destination "platform=iOS Simulator,name=$device" -derivedDataPath "$derived" \
-    -skipMacroValidation "${@:2}"
-}
 
 failed=0
 run_test() {
@@ -68,20 +44,13 @@ photo() {
     -annotate 0 "$2" "$3"
 }
 
-xcodebuild_for build-for-testing -quiet
-xcrun simctl shutdown "$device" 2>/dev/null || true
-xcrun simctl erase "$device"
-xcrun simctl boot "$device"
+prepare
 photo "#3a7bd5" 1 "$shared/1.jpg"
 xcrun simctl addmedia "$device" "$shared/1.jpg"
 
-(cd "$root/apps/server" && bunx wrangler d1 migrations apply pochical --local >/dev/null)
-start_server
-rm -f "$root/tools/api-try/out/state.json"
-bun "$root/tools/api-try/index.ts" create --local
-code=$(jq -r .inviteCode "$root/tools/api-try/out/state.json")
+new_group "$shared/invite"
+code=$(cat "$shared/invite")
 group=$(jq -r .groupId "$root/tools/api-try/out/state.json")
-echo "$code" >"$shared/invite"
 mkdir "$shared/first" "$shared/second"
 photo "#d53a7b" 2 "$shared/first/2.jpg"
 photo "#3ad57b" 3 "$shared/second/3.jpg"
@@ -110,6 +79,6 @@ until [ -e "$shared/retry-shown" ] || ! kill -0 "$tests" 2>/dev/null; do sleep 1
 put_back
 touch "$shared/photo-back"
 wait "$tests" || failed=1
-xcrun simctl shutdown "$device"
+xcrun simctl shutdown "$device" || true
 echo "results and screenshots: $shared"
 exit "$failed"
