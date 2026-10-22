@@ -1,7 +1,8 @@
 #!/bin/bash
 # Runs ShiftsRotationTests (apps/ios/Pochical/PochicalUITests) in a
 # simulator against `mise run server`: a big group's 一覧 turned to
-# landscape and back, at the default text size and the largest (POC-132).
+# landscape and back, at the default text size and the largest (POC-132),
+# and its 今日 after 月を選ぶ and a change of layout (POC-156).
 # It starts the server itself, so nothing else may be on :8787, and erases
 # the simulator it is given.
 #
