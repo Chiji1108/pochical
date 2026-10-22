@@ -1,3 +1,4 @@
+import { rotationTemplates } from "@pochical/design/patterns";
 import { themeSkyId } from "@pochical/design/skies";
 import { DesignApp } from "@pochical/prototype/components/design-app";
 import {
@@ -10,7 +11,6 @@ import {
   paleSkyLights,
   SkyLight,
 } from "@pochical/prototype/components/design-surprise";
-import type { Tab } from "@pochical/prototype/components/design-tab-bar";
 import { ColorSchemeContext } from "@pochical/prototype/components/design-theme";
 import type { PresetId } from "@pochical/prototype/components/design-theme";
 import {
@@ -26,18 +26,15 @@ import type {
   ShiftMarkStyle,
 } from "@pochical/prototype/components/shift-mark";
 import { initialDesignSchedule } from "@pochical/prototype/lib/design-days";
-import { sampleGroups } from "@pochical/prototype/lib/design-group-samples";
+import { presetList } from "@pochical/prototype/lib/design-patterns";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
-import {
-  createUserStore,
-  sampleCoworkers,
-  UserStoreContext,
-} from "@pochical/prototype/lib/design-user-store";
+import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
+import type { OwnData } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { css, cva } from "@pochical/styled-system/css";
 import { AnimatePresence, MotionConfig } from "motion/react";
 import { useState, useSyncExternalStore } from "react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { pressesOf, subscribe } from "../lib/presses";
 import type { SkyPlace } from "../lib/presses";
@@ -167,13 +164,7 @@ const heroSchedule = Object.fromEntries(
 // The app itself, the same one the catalog's /try runs, to tap right on
 // the page.
 export function HeroPhone() {
-  const [person] = useState(() =>
-    createUserStore({
-      coworkers: sampleCoworkers,
-      groups: sampleGroups(),
-      schedule: heroSchedule,
-    })
-  );
+  const person = useSamplePerson({ schedule: heroSchedule });
   return (
     <Motion>
       <DesignProviders fresh>
@@ -203,14 +194,47 @@ const screenStyle = css({
   width: "min(390px, 100%)",
 });
 
-export function FeatureScreen({
-  tab,
-  groupPage,
-}: {
-  tab: Tab;
-  groupPage?: "shifts" | "chat";
-}) {
-  const person = useSamplePerson();
+// Where each feature's screen opens, a tab and its page, and what the
+// sample person holds for it beyond the demo's.
+type AppProps = ComponentProps<typeof DesignApp>;
+type FeatureOpening =
+  | (Required<Pick<AppProps, "initialTab" | "initialGroupPage">> & {
+      initialTab: "group";
+    })
+  | (Required<Pick<AppProps, "initialTab" | "initialSettingsPage">> & {
+      initialTab: "settings";
+    });
+
+type Feature = "repeat" | "share" | "chat";
+
+// 繰り返し is for work that comes round in a fixed order, so the top page
+// shows the order はじめの設定 offers for it: 当番・非番・休み.
+const duty = rotationTemplates.find((template) => template.id === "duty");
+if (duty?.sequence === undefined) {
+  throw new Error("はじめの設定 has no 当番・非番・休み order");
+}
+
+const featureScreens: Record<
+  Feature,
+  { opening: FeatureOpening; own?: Partial<OwnData> }
+> = {
+  chat: { opening: { initialGroupPage: "chat", initialTab: "group" } },
+  repeat: {
+    opening: { initialSettingsPage: "repeat-new", initialTab: "settings" },
+    own: {
+      patterns: presetList(duty.patternKeys),
+      // From 4/1, as /demo's order, so it is the one in use on the
+      // prototype's today (9/24).
+      rules: [{ sequence: duty.sequence, start: new Date(2026, 3, 1) }],
+      schedule: {},
+    },
+  },
+  share: { opening: { initialGroupPage: "shifts", initialTab: "group" } },
+};
+
+export function FeatureScreen({ feature }: { feature: Feature }) {
+  const { opening, own } = featureScreens[feature];
+  const person = useSamplePerson(own);
   return (
     <Motion>
       <div aria-hidden="true" className={screenStyle} inert>
@@ -218,8 +242,7 @@ export function FeatureScreen({
           <UserStoreContext value={person}>
             <DesignApp
               initialEditing={false}
-              initialGroupPage={groupPage}
-              initialTab={tab}
+              {...opening}
               variants={variants}
             />
           </UserStoreContext>
