@@ -102,6 +102,10 @@ run = [
 description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts on :8787: <simulator name> [derived data]"
 run = "tools/photo-line-touches/run.sh"
 
+[tasks."ios:shifts-rotation"]
+description = "Run a big group's 一覧 rotation UI tests in a simulator, erasing it, against a server it starts on :8787: <simulator name> [derived data]"
+run = "tools/shifts-rotation/run.sh"
+
 [tasks."server:typecheck"]
 description = "Typecheck the server"
 run = "bun run --cwd apps/server typecheck"
