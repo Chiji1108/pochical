@@ -35,7 +35,7 @@
   ],
   packageRules: [
     // group:allNonMajor, but a 0.x package's minor update stays a PR of its
-    // own: below 1.0 a minor release may break, as budoux's and satori's do.
+    // own: below 1.0 a minor release may break, as budoux's does.
     {
       description: "Every patch, and the minor updates of packages at 1.0 or later, in one PR",
       matchPackageNames: ["*"],
@@ -66,11 +66,6 @@
       description: "@types/node's major is the Node major it describes; keep it at .node-version's (24), and raise this bound in the PR that moves .node-version",
       matchDepNames: ["@types/node"],
       allowedVersions: "<25",
-    },
-    {
-      description: "satori/standalone 0.33+ cannot run in a Worker: harfbuzzjs reads self.location.href, and 0.35.2+ compiles its embedded wasm at runtime (vercel/satori#878). Once vercel/satori#931 is released, move apps/web/src/lib/invite-image.ts to init({ layout, harfbuzz }) and lift this bound",
-      matchDepNames: ["satori"],
-      allowedVersions: "<0.33",
     },
     {
       description: "A Node major's PR reminds whoever merges it to move @types/node and its bound above",
