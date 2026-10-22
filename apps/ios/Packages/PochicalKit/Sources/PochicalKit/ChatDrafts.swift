@@ -230,7 +230,7 @@ extension Chats {
     recall.threadID = send.threadID
     recall.sendOpID = opID
     // Its photos, uploaded, go with the line, or at once if it never came.
-    recall.photoIds = send.photos.map(\.id)
+    recall.photoIds = send.content.photos.photos.map(\.id)
     try edit(
       .recall(recall), in: row.groupID, now: Int64(Date.now.timeIntervalSince1970 * 1000), db: db)
   }

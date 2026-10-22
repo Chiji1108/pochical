@@ -28,18 +28,24 @@ const supportSocket = async (token: string, cursor = 0n) =>
 const send = (
   socket: WebSocket,
   opId: string,
-  value: {
-    text?: string;
-    days?: string[];
-    poll?: boolean;
-    device?: string;
-  }
+  text: string,
+  device = ""
 ): void => {
   sendFrame(socket, {
     case: "chatEdits",
     value: {
       edits: [
-        { kind: { case: "send", value: { threadId: thread, ...value } }, opId },
+        {
+          kind: {
+            case: "send",
+            value: {
+              content: { kind: { case: "words", value: { text } } },
+              device,
+              threadId: thread,
+            },
+          },
+          opId,
+        },
       ],
     },
   });
@@ -75,10 +81,7 @@ describe("the chat with Pochical's people", () => {
     const { frames, socket } = await supportSocket(token);
     await frames.next();
 
-    send(socket, "a", {
-      device: "ポチカル 1.0・iPhone (iOS 26.0)",
-      text: "アプリが落ちます",
-    });
+    send(socket, "a", "アプリが落ちます", "ポチカル 1.0・iPhone (iOS 26.0)");
     expect(changesIn(await frames.next())).toMatchObject([
       {
         kind: {
@@ -106,7 +109,7 @@ describe("the chat with Pochical's people", () => {
     const userId = await userIdOf(token);
     const { frames, socket } = await supportSocket(token);
     await frames.next();
-    send(socket, "a", { text: "はじめ" });
+    send(socket, "a", "はじめ");
     await frames.next();
     await frames.next();
 
@@ -117,7 +120,12 @@ describe("the chat with Pochical's people", () => {
           {
             kind: {
               case: "send",
-              value: { days: ["2026-10-20"], text: "", threadId: thread },
+              value: {
+                content: {
+                  kind: { case: "days", value: { days: ["2026-10-20"] } },
+                },
+                threadId: thread,
+              },
             },
             opId: "b",
           },
@@ -125,9 +133,12 @@ describe("the chat with Pochical's people", () => {
             kind: {
               case: "send",
               value: {
-                days: ["2026-10-20", "2026-10-21"],
-                poll: true,
-                text: "",
+                content: {
+                  kind: {
+                    case: "poll",
+                    value: { days: ["2026-10-20", "2026-10-21"] },
+                  },
+                },
                 threadId: thread,
               },
             },
@@ -151,7 +162,9 @@ describe("the chat with Pochical's people", () => {
             kind: {
               case: "send",
               value: {
-                text: "べつのスレッド",
+                content: {
+                  kind: { case: "words", value: { text: "べつのスレッド" } },
+                },
                 threadId: directThread(userId, chatRules.pochicalMember),
               },
             },
@@ -170,7 +183,7 @@ describe("the chat with Pochical's people", () => {
     const token = await signInAnonymously();
     const { frames, socket } = await supportSocket(token);
     await frames.next();
-    send(socket, "a", { text: "はじめ" });
+    send(socket, "a", "はじめ");
     await frames.next();
     await frames.next();
 
@@ -188,7 +201,11 @@ describe("the chat with Pochical's people", () => {
           {
             kind: {
               case: "send",
-              value: { replyTo: 1n, text: "つづき", threadId: thread },
+              value: {
+                content: { kind: { case: "words", value: { text: "つづき" } } },
+                replyTo: 1n,
+                threadId: thread,
+              },
             },
             opId: "c",
           },
@@ -213,7 +230,7 @@ describe("the chat with Pochical's people", () => {
     const token = await signInAnonymously();
     const { frames, socket } = await supportSocket(token);
     await frames.next();
-    send(socket, "a", { text: "まちがい" });
+    send(socket, "a", "まちがい");
     await frames.next();
     await frames.next();
 
@@ -240,7 +257,7 @@ describe("the chat with Pochical's people", () => {
     await expect(frames.next()).resolves.toMatchObject({
       kind: { case: "acked", value: { opIds: ["r2"] } },
     });
-    send(socket, "b", { text: "これも" });
+    send(socket, "b", "これも");
     await expect(frames.next()).resolves.toMatchObject({
       kind: { case: "acked", value: { opIds: ["b"] } },
     });
@@ -251,7 +268,7 @@ describe("the chat with Pochical's people", () => {
     const userId = await userIdOf(token);
     const { frames, socket } = await supportSocket(token);
     await frames.next();
-    send(socket, "a", { text: "はじめ" });
+    send(socket, "a", "はじめ");
     await frames.next();
     await frames.next();
 

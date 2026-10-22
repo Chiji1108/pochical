@@ -68,7 +68,10 @@ describe("what the admin site asks of the server", () => {
       Array.from({ length: chatRules.pageSize }, (_, at) => ({
         kind: {
           case: "send" as const,
-          value: { text: `${at + 1}`, threadId: "group" },
+          value: {
+            content: { kind: { case: "words", value: { text: `${at + 1}` } } },
+            threadId: "group",
+          },
         },
         opId: crypto.randomUUID(),
       }))

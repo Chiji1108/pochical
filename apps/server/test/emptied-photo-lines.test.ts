@@ -33,15 +33,33 @@ describe("a Group DO with lines that were photos before 0035", () => {
       value: {
         edits: [
           {
-            kind: { case: "send", value: { text: "写真", threadId } },
+            kind: {
+              case: "send",
+              value: {
+                content: { kind: { case: "words", value: { text: "写真" } } },
+                threadId,
+              },
+            },
             opId: "a",
           },
           {
-            kind: { case: "send", value: { text: "写真2", threadId } },
+            kind: {
+              case: "send",
+              value: {
+                content: { kind: { case: "words", value: { text: "写真2" } } },
+                threadId,
+              },
+            },
             opId: "a2",
           },
           {
-            kind: { case: "send", value: { text: "ことば", threadId } },
+            kind: {
+              case: "send",
+              value: {
+                content: { kind: { case: "words", value: { text: "ことば" } } },
+                threadId,
+              },
+            },
             opId: "b",
           },
         ],
@@ -62,7 +80,11 @@ describe("a Group DO with lines that were photos before 0035", () => {
           {
             kind: {
               case: "send",
-              value: { replyTo: 2n, text: "いいね", threadId },
+              value: {
+                content: { kind: { case: "words", value: { text: "いいね" } } },
+                replyTo: 2n,
+                threadId,
+              },
             },
             opId: "c",
           },
@@ -166,7 +188,13 @@ describe("a Group DO with lines that were photos before 0035", () => {
       value: {
         edits: [
           {
-            kind: { case: "send", value: { text: "つぎ", threadId } },
+            kind: {
+              case: "send",
+              value: {
+                content: { kind: { case: "words", value: { text: "つぎ" } } },
+                threadId,
+              },
+            },
             opId: "d",
           },
         ],

@@ -128,7 +128,10 @@ const answerFromSlack = async (
     edits.push(
       editOf(`${base}-photos`, {
         case: "send",
-        value: { photos, text: "", threadId: GROUP_THREAD },
+        value: {
+          content: { kind: { case: "photos", value: { photos } } },
+          threadId: GROUP_THREAD,
+        },
       })
     );
   }
@@ -140,7 +143,10 @@ const answerFromSlack = async (
       edits.push(
         editOf(base, {
           case: "send",
-          value: { text: words, threadId: GROUP_THREAD },
+          value: {
+            content: { kind: { case: "words", value: { text: words } } },
+            threadId: GROUP_THREAD,
+          },
         })
       );
     }

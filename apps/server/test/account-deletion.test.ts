@@ -30,7 +30,13 @@ const say = async (groupId: string, token: string, text: string) => {
     value: {
       edits: [
         {
-          kind: { case: "send", value: { text, threadId: "group" } },
+          kind: {
+            case: "send",
+            value: {
+              content: { kind: { case: "words", value: { text } } },
+              threadId: "group",
+            },
+          },
           opId: crypto.randomUUID(),
         },
       ],

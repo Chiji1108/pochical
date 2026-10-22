@@ -7,8 +7,7 @@ package app.pochical.v1;
 
 /**
  * <pre>
- * A new line at the end of the chat: words, or days shared with
- * everyone's shifts (spec/chat.md, Long messages and shared days).
+ * A new line at the end of the chat.
  * </pre>
  *
  * Protobuf type {@code pochical.v1.ChatSend}
@@ -21,10 +20,7 @@ public  final class ChatSend extends
     ChatSendOrBuilder {
   private ChatSend() {
     threadId_ = "";
-    text_ = "";
-    days_ = emptyProtobufList();
     device_ = "";
-    photos_ = emptyProtobufList();
   }
   private int bitField0_;
   public static final int THREAD_ID_FIELD_NUMBER = 1;
@@ -74,323 +70,70 @@ public  final class ChatSend extends
 
   }
 
-  public static final int TEXT_FIELD_NUMBER = 2;
-  private java.lang.String text_;
+  public static final int CONTENT_FIELD_NUMBER = 12;
+  private app.pochical.v1.ChatSendContent content_;
   /**
    * <pre>
-   * 1 to chatMessage characters, not blank; empty for days.
+   * What the line is to be: always one of the kinds a member sends.
    * </pre>
    *
-   * <code>string text = 2 [json_name = "text"];</code>
-   * @return The text.
+   * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
    */
   @java.lang.Override
-  public java.lang.String getText() {
-    return text_;
-  }
-  /**
-   * <pre>
-   * 1 to chatMessage characters, not blank; empty for days.
-   * </pre>
-   *
-   * <code>string text = 2 [json_name = "text"];</code>
-   * @return The bytes for text.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getTextBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(text_);
-  }
-  /**
-   * <pre>
-   * 1 to chatMessage characters, not blank; empty for days.
-   * </pre>
-   *
-   * <code>string text = 2 [json_name = "text"];</code>
-   * @param value The text to set.
-   */
-  private void setText(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    text_ = value;
-  }
-  /**
-   * <pre>
-   * 1 to chatMessage characters, not blank; empty for days.
-   * </pre>
-   *
-   * <code>string text = 2 [json_name = "text"];</code>
-   */
-  private void clearText() {
-
-    text_ = getDefaultInstance().getText();
-  }
-  /**
-   * <pre>
-   * 1 to chatMessage characters, not blank; empty for days.
-   * </pre>
-   *
-   * <code>string text = 2 [json_name = "text"];</code>
-   * @param value The bytes for text to set.
-   */
-  private void setTextBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    text_ = value.toStringUtf8();
-
-  }
-
-  public static final int DAYS_FIELD_NUMBER = 3;
-  private com.google.protobuf.Internal.ProtobufList<java.lang.String> days_;
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @return A list containing the days.
-   */
-  @java.lang.Override
-  public java.util.List<java.lang.String> getDaysList() {
-    return days_;
-  }
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @return The count of days.
-   */
-  @java.lang.Override
-  public int getDaysCount() {
-    return days_.size();
-  }
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @param index The index of the element to return.
-   * @return The days at the given index.
-   */
-  @java.lang.Override
-  public java.lang.String getDays(int index) {
-    return days_.get(index);
-  }
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @param index The index of the value to return.
-   * @return The bytes of the days at the given index.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getDaysBytes(int index) {
-    return com.google.protobuf.ByteString.copyFromUtf8(
-        days_.get(index));
-  }
-  private void ensureDaysIsMutable() {
-    com.google.protobuf.Internal.ProtobufList<java.lang.String> tmp =
-        days_;  if (!tmp.isModifiable()) {
-      days_ =
-          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-     }
-  }
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @param index The index to set the value at.
-   * @param value The days to set.
-   */
-  private void setDays(
-      int index, java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-    ensureDaysIsMutable();
-    days_.set(index, value);
-  }
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @param value The days to add.
-   */
-  private void addDays(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-    ensureDaysIsMutable();
-    days_.add(value);
-  }
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @param values The days to add.
-   */
-  private void addAllDays(
-      java.lang.Iterable<java.lang.String> values) {
-    ensureDaysIsMutable();
-    com.google.protobuf.AbstractMessageLite.addAll(
-        values, days_);
-  }
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   */
-  private void clearDays() {
-    days_ = emptyProtobufList();
-  }
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @param value The bytes of the days to add.
-   */
-  private void addDaysBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    ensureDaysIsMutable();
-    days_.add(value.toStringUtf8());
-  }
-
-  public static final int POLL_FIELD_NUMBER = 4;
-  private boolean poll_;
-  /**
-   * <pre>
-   * The days put to the vote instead: 2 days at least, in the group chat.
-   * </pre>
-   *
-   * <code>bool poll = 4 [json_name = "poll"];</code>
-   * @return The poll.
-   */
-  @java.lang.Override
-  public boolean getPoll() {
-    return poll_;
-  }
-  /**
-   * <pre>
-   * The days put to the vote instead: 2 days at least, in the group chat.
-   * </pre>
-   *
-   * <code>bool poll = 4 [json_name = "poll"];</code>
-   * @param value The poll to set.
-   */
-  private void setPoll(boolean value) {
-    
-    poll_ = value;
-  }
-  /**
-   * <pre>
-   * The days put to the vote instead: 2 days at least, in the group chat.
-   * </pre>
-   *
-   * <code>bool poll = 4 [json_name = "poll"];</code>
-   */
-  private void clearPoll() {
-
-    poll_ = false;
-  }
-
-  public static final int PREVIEW_FIELD_NUMBER = 6;
-  private app.pochical.v1.LinkPreview preview_;
-  /**
-   * <pre>
-   * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come, when the server
-   * reads the page itself once the line is taken and adds it to the line.
-   * </pre>
-   *
-   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
-   */
-  @java.lang.Override
-  public boolean hasPreview() {
+  public boolean hasContent() {
     return ((bitField0_ & 0x00000001) != 0);
   }
   /**
    * <pre>
-   * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come, when the server
-   * reads the page itself once the line is taken and adds it to the line.
+   * What the line is to be: always one of the kinds a member sends.
    * </pre>
    *
-   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
    */
   @java.lang.Override
-  public app.pochical.v1.LinkPreview getPreview() {
-    return preview_ == null ? app.pochical.v1.LinkPreview.getDefaultInstance() : preview_;
+  public app.pochical.v1.ChatSendContent getContent() {
+    return content_ == null ? app.pochical.v1.ChatSendContent.getDefaultInstance() : content_;
   }
   /**
    * <pre>
-   * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come, when the server
-   * reads the page itself once the line is taken and adds it to the line.
+   * What the line is to be: always one of the kinds a member sends.
    * </pre>
    *
-   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
    */
-  private void setPreview(app.pochical.v1.LinkPreview value) {
+  private void setContent(app.pochical.v1.ChatSendContent value) {
     java.util.Objects.requireNonNull(value);
-    preview_ = value;
+    content_ = value;
     bitField0_ |= 0x00000001;
   }
   /**
    * <pre>
-   * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come, when the server
-   * reads the page itself once the line is taken and adds it to the line.
+   * What the line is to be: always one of the kinds a member sends.
    * </pre>
    *
-   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
    */
   @java.lang.SuppressWarnings("ReferenceEquality")
-  private void mergePreview(app.pochical.v1.LinkPreview value) {
+  private void mergeContent(app.pochical.v1.ChatSendContent value) {
     java.util.Objects.requireNonNull(value);
-    if (preview_ != null &&
-        preview_ != app.pochical.v1.LinkPreview.getDefaultInstance()) {
-      preview_ =
-        app.pochical.v1.LinkPreview.newBuilder(preview_).mergeFrom(value).buildPartial();
+    if (content_ != null &&
+        content_ != app.pochical.v1.ChatSendContent.getDefaultInstance()) {
+      content_ =
+        app.pochical.v1.ChatSendContent.newBuilder(content_).mergeFrom(value).buildPartial();
     } else {
-      preview_ = value;
+      content_ = value;
     }
     bitField0_ |= 0x00000001;
   }
   /**
    * <pre>
-   * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come, when the server
-   * reads the page itself once the line is taken and adds it to the line.
+   * What the line is to be: always one of the kinds a member sends.
    * </pre>
    *
-   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+   * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
    */
-  private void clearPreview() {
-    preview_ = null;
+  private void clearContent() {
+    content_ = null;
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
@@ -430,44 +173,6 @@ public  final class ChatSend extends
   private void clearReplyTo() {
 
     replyTo_ = 0L;
-  }
-
-  public static final int WITHOUT_PREVIEW_FIELD_NUMBER = 8;
-  private boolean withoutPreview_;
-  /**
-   * <pre>
-   * The sender took the page off (×): the line goes without one.
-   * </pre>
-   *
-   * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
-   * @return The withoutPreview.
-   */
-  @java.lang.Override
-  public boolean getWithoutPreview() {
-    return withoutPreview_;
-  }
-  /**
-   * <pre>
-   * The sender took the page off (×): the line goes without one.
-   * </pre>
-   *
-   * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
-   * @param value The withoutPreview to set.
-   */
-  private void setWithoutPreview(boolean value) {
-    
-    withoutPreview_ = value;
-  }
-  /**
-   * <pre>
-   * The sender took the page off (×): the line goes without one.
-   * </pre>
-   *
-   * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
-   */
-  private void clearWithoutPreview() {
-
-    withoutPreview_ = false;
   }
 
   public static final int DEVICE_FIELD_NUMBER = 9;
@@ -550,155 +255,6 @@ public  final class ChatSend extends
     checkByteStringIsUtf8(value);
     device_ = value.toStringUtf8();
 
-  }
-
-  public static final int PHOTOS_FIELD_NUMBER = 11;
-  private com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatPhoto> photos_;
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  @java.lang.Override
-  public java.util.List<app.pochical.v1.ChatPhoto> getPhotosList() {
-    return photos_;
-  }
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  public java.util.List<? extends app.pochical.v1.ChatPhotoOrBuilder> 
-      getPhotosOrBuilderList() {
-    return photos_;
-  }
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  @java.lang.Override
-  public int getPhotosCount() {
-    return photos_.size();
-  }
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  @java.lang.Override
-  public app.pochical.v1.ChatPhoto getPhotos(int index) {
-    return photos_.get(index);
-  }
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  public app.pochical.v1.ChatPhotoOrBuilder getPhotosOrBuilder(
-      int index) {
-    return photos_.get(index);
-  }
-  private void ensurePhotosIsMutable() {
-    com.google.protobuf.Internal.ProtobufList<app.pochical.v1.ChatPhoto> tmp = photos_;
-    if (!tmp.isModifiable()) {
-      photos_ =
-          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-     }
-  }
-
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  private void setPhotos(
-      int index, app.pochical.v1.ChatPhoto value) {
-    java.util.Objects.requireNonNull(value);
-    ensurePhotosIsMutable();
-    photos_.set(index, value);
-  }
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  private void addPhotos(app.pochical.v1.ChatPhoto value) {
-    java.util.Objects.requireNonNull(value);
-    ensurePhotosIsMutable();
-    photos_.add(value);
-  }
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  private void addPhotos(
-      int index, app.pochical.v1.ChatPhoto value) {
-    java.util.Objects.requireNonNull(value);
-    ensurePhotosIsMutable();
-    photos_.add(index, value);
-  }
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  private void addAllPhotos(
-      java.lang.Iterable<? extends app.pochical.v1.ChatPhoto> values) {
-    ensurePhotosIsMutable();
-    com.google.protobuf.AbstractMessageLite.addAll(
-        values, photos_);
-  }
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  private void clearPhotos() {
-    photos_ = emptyProtobufList();
-  }
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  private void removePhotos(int index) {
-    ensurePhotosIsMutable();
-    photos_.remove(index);
   }
 
   public static app.pochical.v1.ChatSend parseFrom(
@@ -786,8 +342,7 @@ public  final class ChatSend extends
 
   /**
    * <pre>
-   * A new line at the end of the chat: words, or days shared with
-   * everyone's shifts (spec/chat.md, Long messages and shared days).
+   * A new line at the end of the chat.
    * </pre>
    *
    * Protobuf type {@code pochical.v1.ChatSend}
@@ -854,330 +409,72 @@ public  final class ChatSend extends
 
     /**
      * <pre>
-     * 1 to chatMessage characters, not blank; empty for days.
+     * What the line is to be: always one of the kinds a member sends.
      * </pre>
      *
-     * <code>string text = 2 [json_name = "text"];</code>
-     * @return The text.
+     * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
      */
     @java.lang.Override
-    public java.lang.String getText() {
-      return instance.getText();
+    public boolean hasContent() {
+      return instance.hasContent();
     }
     /**
      * <pre>
-     * 1 to chatMessage characters, not blank; empty for days.
+     * What the line is to be: always one of the kinds a member sends.
      * </pre>
      *
-     * <code>string text = 2 [json_name = "text"];</code>
-     * @return The bytes for text.
+     * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
      */
     @java.lang.Override
-    public com.google.protobuf.ByteString
-        getTextBytes() {
-      return instance.getTextBytes();
+    public app.pochical.v1.ChatSendContent getContent() {
+      return instance.getContent();
     }
     /**
      * <pre>
-     * 1 to chatMessage characters, not blank; empty for days.
+     * What the line is to be: always one of the kinds a member sends.
      * </pre>
      *
-     * <code>string text = 2 [json_name = "text"];</code>
-     * @param value The text to set.
-     * @return This builder for chaining.
+     * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
      */
-    public Builder setText(
-        java.lang.String value) {
+    public Builder setContent(app.pochical.v1.ChatSendContent value) {
       copyOnWrite();
-      instance.setText(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * 1 to chatMessage characters, not blank; empty for days.
-     * </pre>
-     *
-     * <code>string text = 2 [json_name = "text"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearText() {
-      copyOnWrite();
-      instance.clearText();
-      return this;
-    }
-    /**
-     * <pre>
-     * 1 to chatMessage characters, not blank; empty for days.
-     * </pre>
-     *
-     * <code>string text = 2 [json_name = "text"];</code>
-     * @param value The bytes for text to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTextBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setTextBytes(value);
-      return this;
-    }
-
-    /**
-     * <pre>
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * </pre>
-     *
-     * <code>repeated string days = 3 [json_name = "days"];</code>
-     * @return A list containing the days.
-     */
-    @java.lang.Override
-    public java.util.List<java.lang.String>
-        getDaysList() {
-      return java.util.Collections.unmodifiableList(
-          instance.getDaysList());
-    }
-    /**
-     * <pre>
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * </pre>
-     *
-     * <code>repeated string days = 3 [json_name = "days"];</code>
-     * @return The count of days.
-     */
-    @java.lang.Override
-    public int getDaysCount() {
-      return instance.getDaysCount();
-    }
-    /**
-     * <pre>
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * </pre>
-     *
-     * <code>repeated string days = 3 [json_name = "days"];</code>
-     * @param index The index of the element to return.
-     * @return The days at the given index.
-     */
-    @java.lang.Override
-    public java.lang.String getDays(int index) {
-      return instance.getDays(index);
-    }
-    /**
-     * <pre>
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * </pre>
-     *
-     * <code>repeated string days = 3 [json_name = "days"];</code>
-     * @param index The index of the value to return.
-     * @return The bytes of the days at the given index.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getDaysBytes(int index) {
-      return instance.getDaysBytes(index);
-    }
-    /**
-     * <pre>
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * </pre>
-     *
-     * <code>repeated string days = 3 [json_name = "days"];</code>
-     * @param index The index to set the value at.
-     * @param value The days to set.
-     * @return This builder for chaining.
-     */
-    public Builder setDays(
-        int index, java.lang.String value) {
-      copyOnWrite();
-      instance.setDays(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * </pre>
-     *
-     * <code>repeated string days = 3 [json_name = "days"];</code>
-     * @param value The days to add.
-     * @return This builder for chaining.
-     */
-    public Builder addDays(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.addDays(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * </pre>
-     *
-     * <code>repeated string days = 3 [json_name = "days"];</code>
-     * @param values The days to add.
-     * @return This builder for chaining.
-     */
-    public Builder addAllDays(
-        java.lang.Iterable<java.lang.String> values) {
-      copyOnWrite();
-      instance.addAllDays(values);
-      return this;
-    }
-    /**
-     * <pre>
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * </pre>
-     *
-     * <code>repeated string days = 3 [json_name = "days"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearDays() {
-      copyOnWrite();
-      instance.clearDays();
-      return this;
-    }
-    /**
-     * <pre>
-     * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-     * each once and in order; none for words.
-     * </pre>
-     *
-     * <code>repeated string days = 3 [json_name = "days"];</code>
-     * @param value The bytes of the days to add.
-     * @return This builder for chaining.
-     */
-    public Builder addDaysBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.addDaysBytes(value);
-      return this;
-    }
-
-    /**
-     * <pre>
-     * The days put to the vote instead: 2 days at least, in the group chat.
-     * </pre>
-     *
-     * <code>bool poll = 4 [json_name = "poll"];</code>
-     * @return The poll.
-     */
-    @java.lang.Override
-    public boolean getPoll() {
-      return instance.getPoll();
-    }
-    /**
-     * <pre>
-     * The days put to the vote instead: 2 days at least, in the group chat.
-     * </pre>
-     *
-     * <code>bool poll = 4 [json_name = "poll"];</code>
-     * @param value The poll to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPoll(boolean value) {
-      copyOnWrite();
-      instance.setPoll(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The days put to the vote instead: 2 days at least, in the group chat.
-     * </pre>
-     *
-     * <code>bool poll = 4 [json_name = "poll"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearPoll() {
-      copyOnWrite();
-      instance.clearPoll();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come, when the server
-     * reads the page itself once the line is taken and adds it to the line.
-     * </pre>
-     *
-     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
-     */
-    @java.lang.Override
-    public boolean hasPreview() {
-      return instance.hasPreview();
-    }
-    /**
-     * <pre>
-     * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come, when the server
-     * reads the page itself once the line is taken and adds it to the line.
-     * </pre>
-     *
-     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
-     */
-    @java.lang.Override
-    public app.pochical.v1.LinkPreview getPreview() {
-      return instance.getPreview();
-    }
-    /**
-     * <pre>
-     * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come, when the server
-     * reads the page itself once the line is taken and adds it to the line.
-     * </pre>
-     *
-     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
-     */
-    public Builder setPreview(app.pochical.v1.LinkPreview value) {
-      copyOnWrite();
-      instance.setPreview(value);
+      instance.setContent(value);
       return this;
       }
     /**
      * <pre>
-     * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come, when the server
-     * reads the page itself once the line is taken and adds it to the line.
+     * What the line is to be: always one of the kinds a member sends.
      * </pre>
      *
-     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+     * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
      */
-    public Builder setPreview(
-        app.pochical.v1.LinkPreview.Builder builderForValue) {
+    public Builder setContent(
+        app.pochical.v1.ChatSendContent.Builder builderForValue) {
       copyOnWrite();
-      instance.setPreview(builderForValue.build());
+      instance.setContent(builderForValue.build());
       return this;
     }
     /**
      * <pre>
-     * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come, when the server
-     * reads the page itself once the line is taken and adds it to the line.
+     * What the line is to be: always one of the kinds a member sends.
      * </pre>
      *
-     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+     * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
      */
-    public Builder mergePreview(app.pochical.v1.LinkPreview value) {
+    public Builder mergeContent(app.pochical.v1.ChatSendContent value) {
       copyOnWrite();
-      instance.mergePreview(value);
+      instance.mergeContent(value);
       return this;
     }
     /**
      * <pre>
-     * The page of the words' first link, as GetLinkPreview gave it; none
-     * when the sender took it off (×) or it had not come, when the server
-     * reads the page itself once the line is taken and adds it to the line.
+     * What the line is to be: always one of the kinds a member sends.
      * </pre>
      *
-     * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
+     * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
      */
-    public Builder clearPreview() {  copyOnWrite();
-      instance.clearPreview();
+    public Builder clearContent() {  copyOnWrite();
+      instance.clearContent();
       return this;
     }
 
@@ -1218,46 +515,6 @@ public  final class ChatSend extends
     public Builder clearReplyTo() {
       copyOnWrite();
       instance.clearReplyTo();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * The sender took the page off (×): the line goes without one.
-     * </pre>
-     *
-     * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
-     * @return The withoutPreview.
-     */
-    @java.lang.Override
-    public boolean getWithoutPreview() {
-      return instance.getWithoutPreview();
-    }
-    /**
-     * <pre>
-     * The sender took the page off (×): the line goes without one.
-     * </pre>
-     *
-     * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
-     * @param value The withoutPreview to set.
-     * @return This builder for chaining.
-     */
-    public Builder setWithoutPreview(boolean value) {
-      copyOnWrite();
-      instance.setWithoutPreview(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The sender took the page off (×): the line goes without one.
-     * </pre>
-     *
-     * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearWithoutPreview() {
-      copyOnWrite();
-      instance.clearWithoutPreview();
       return this;
     }
 
@@ -1345,168 +602,6 @@ public  final class ChatSend extends
       return this;
     }
 
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    @java.lang.Override
-    public java.util.List<app.pochical.v1.ChatPhoto> getPhotosList() {
-      return java.util.Collections.unmodifiableList(
-          instance.getPhotosList());
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    @java.lang.Override
-    public int getPhotosCount() {
-      return instance.getPhotosCount();
-    }/**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    @java.lang.Override
-    public app.pochical.v1.ChatPhoto getPhotos(int index) {
-      return instance.getPhotos(index);
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    public Builder setPhotos(
-        int index, app.pochical.v1.ChatPhoto value) {
-      copyOnWrite();
-      instance.setPhotos(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    public Builder setPhotos(
-        int index, app.pochical.v1.ChatPhoto.Builder builderForValue) {
-      copyOnWrite();
-      instance.setPhotos(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    public Builder addPhotos(app.pochical.v1.ChatPhoto value) {
-      copyOnWrite();
-      instance.addPhotos(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    public Builder addPhotos(
-        int index, app.pochical.v1.ChatPhoto value) {
-      copyOnWrite();
-      instance.addPhotos(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    public Builder addPhotos(
-        app.pochical.v1.ChatPhoto.Builder builderForValue) {
-      copyOnWrite();
-      instance.addPhotos(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    public Builder addPhotos(
-        int index, app.pochical.v1.ChatPhoto.Builder builderForValue) {
-      copyOnWrite();
-      instance.addPhotos(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    public Builder addAllPhotos(
-        java.lang.Iterable<? extends app.pochical.v1.ChatPhoto> values) {
-      copyOnWrite();
-      instance.addAllPhotos(values);
-      return this;
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    public Builder clearPhotos() {
-      copyOnWrite();
-      instance.clearPhotos();
-      return this;
-    }
-    /**
-     * <pre>
-     * Photos instead, 1 to chatRules.photosPerSend, each once: the
-     * sender's own, uploaded first and not sent before. No words or days.
-     * </pre>
-     *
-     * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-     */
-    public Builder removePhotos(int index) {
-      copyOnWrite();
-      instance.removePhotos(index);
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:pochical.v1.ChatSend)
   }
   @java.lang.Override
@@ -1525,19 +620,13 @@ public  final class ChatSend extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "bitField0_",
             "threadId_",
-            "text_",
-            "days_",
-            "poll_",
-            "preview_",
             "replyTo_",
-            "withoutPreview_",
             "device_",
-            "photos_",
-            app.pochical.v1.ChatPhoto.class,
+            "content_",
           };
           java.lang.String info =
-              "\u0000\t\u0000\u0001\u0001\u000b\t\u0000\u0002\u0000\u0001\u0208\u0002\u0208\u0003" +
-              "\u021a\u0004\u0007\u0006\u1009\u0000\u0007\u0003\b\u0007\t\u0208\u000b\u001b";
+              "\u0000\u0004\u0000\u0001\u0001\f\u0004\u0000\u0000\u0000\u0001\u0208\u0007\u0003" +
+              "\t\u0208\f\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

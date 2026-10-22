@@ -609,20 +609,7 @@ public struct WaitingLine: Hashable, Sendable, Identifiable {
   init(_ send: Pochical_V1_ChatSend, opID: String, row: ChatOutboxRow, failed: Bool) {
     self.opID = opID
     madeAtMs = row.madeAtMs
-    let days = send.days.compactMap(Day.init)
-    // The kind the group makes of the send (spec/chat.md, What a line is).
-    content =
-      if !send.photos.isEmpty {
-        .photos(send.photos.map(LinePhoto.init))
-      } else if days.isEmpty {
-        .words(
-          LineContent.Words(
-            text: send.text, preview: send.hasPreview ? LinePreview(send.preview) : nil))
-      } else if send.poll {
-        .poll(LineContent.Poll(days: days))
-      } else {
-        .days(days)
-      }
+    content = LineContent(send.content)
     up = row.up.ids
     replyTo = send.replyTo == 0 ? nil : Int64(send.replyTo)
     self.failed = failed
