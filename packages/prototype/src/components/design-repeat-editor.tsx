@@ -1,5 +1,5 @@
 import { css, cva } from "@pochical/styled-system/css";
-import { ArrowRight, Trash2 } from "lucide-react";
+import { ArrowRight, Trash } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import { useState } from "react";
 
@@ -374,7 +374,7 @@ export function RepeatCalendar({
             }}
             type="button"
           >
-            <Trash2 aria-hidden="true" size={14} />
+            <Trash aria-hidden="true" size={14} />
             消す
           </button>
           <span>
