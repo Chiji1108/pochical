@@ -30,6 +30,7 @@ pre-commit:
         - "**/*.yaml"
         - "**/*.yml"
         - "**/*.toml"
+        - "**/*.webmanifest"
       stage_fixed: true
     - name: buf format and lint
       root: proto/
