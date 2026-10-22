@@ -5,9 +5,9 @@ plugins {
 
 android {
   namespace = "app.pochical.design"
-  compileSdk = 37
+  compileSdk = libs.versions.compileSdk.get().toInt()
   defaultConfig {
-    minSdk = 29
+    minSdk = libs.versions.minSdk.get().toInt()
   }
 }
 

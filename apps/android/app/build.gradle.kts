@@ -5,13 +5,13 @@ plugins {
 
 android {
   namespace = "app.pochical"
-  compileSdk = 37
+  compileSdk = libs.versions.compileSdk.get().toInt()
   defaultConfig {
     applicationId = "app.pochical"
-    minSdk = 29
-    targetSdk = 37
+    minSdk = libs.versions.minSdk.get().toInt()
+    targetSdk = libs.versions.compileSdk.get().toInt()
     versionCode = 1
-    versionName = "0.1.0"
+    versionName = "1.0"
   }
 }
 
