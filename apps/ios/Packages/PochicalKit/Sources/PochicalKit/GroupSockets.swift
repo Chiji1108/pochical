@@ -130,7 +130,18 @@ public actor GroupSockets {
     }
   }
 
-  /// Closes every socket at once, as the account is changing: nothing more
+  /// Closes every socket at once, as the account starts changing, keeping
+  /// their holds: nothing more is taken in, nor is a chat outbox sent,
+  /// until a session says whom to connect as again (`use`), the same one
+  /// after a change that failed.
+  func pause() async {
+    credentials = nil
+    for client in clients.withLock({ Array($0.values) }) {
+      await client.stop()
+    }
+  }
+
+  /// Closes every socket at once, as the account has changed: nothing more
   /// of the account before is taken in, nor is its chat outbox sent. Its
   /// holds go too, as the places were the user before's: the screens hold
   /// again those of whoever the device is next (OpenPlaceSocket).

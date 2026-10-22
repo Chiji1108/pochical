@@ -74,9 +74,11 @@ import SQLiteData
   /// failed so far, for the app to say so.
   public private(set) var erasing: Erasing?
 
-  /// Which stretch of the account this is, moving on as the device signs
-  /// in as someone, and as their account changes or is erased: what the
-  /// screens of one stretch showed is not the next one's (AppRoot).
+  /// Which account the screens show, moving on as the device signs in as
+  /// someone, and as their account changes or is erased: what the screens
+  /// of one showed is not the next one's (AppRoot). A change that fails
+  /// leaves the device as it was, its screens too, so it does not move on
+  /// for one, and the failure is said where it was asked.
   public private(set) var generation = 0
 
   /// The signed-in user's id, as their groups know them: known offline,
@@ -322,13 +324,15 @@ import SQLiteData
       }
     } catch DeletionFailure.sessionEnded {
       // As a socket's 401 would say before long.
+      await places.forgetAccount()
       keepEnded(before)
       throw DeletionFailure.sessionEnded
     } catch {
       Logger.account.error("Changing the account failed: \(error)")
-      enter(StoredSession(token: before.token, userID: before.userID))
+      enter(StoredSession(token: before.token, userID: before.userID), asBefore: true)
       throw error
     }
+    await places.forgetAccount()
     switch changed {
     case .switched(let after):
       enter(after)
@@ -395,21 +399,26 @@ import SQLiteData
     await onErase()
   }
 
-  /// A new stretch of the account, signed in as `session` or as no one.
+  /// A new stretch of the account, signed in as `session` or as no one;
+  /// for the screens too unless it goes on `asBefore`, as a change that
+  /// failed does (`generation`).
   @discardableResult
-  private func begin(_ session: StoredSession?) -> Credentials? {
-    defer { generation += 1 }
+  private func begin(_ session: StoredSession?, asBefore: Bool = false) -> Credentials? {
+    defer {
+      if !asBefore { generation += 1 }
+    }
     return current.begin(session)
   }
 
   /// Ends the stretch signed in as `before`: nothing it handed out is
-  /// current from here, and every socket closes.
+  /// current from here, and every socket closes, the places' holds kept
+  /// until the change is done, for a change that fails to open them again.
   private func leave(_ before: Credentials) async {
     state = .changing
-    begin(nil)
+    begin(nil, asBefore: true)
     before.content.invalidateAndCancel()
     await userSocket.stop()
-    await places.forgetAccount()
+    await places.pause()
   }
 
   // MARK: A session the server does not know
@@ -488,9 +497,10 @@ import SQLiteData
 
   // MARK: Signed in
 
-  /// A new stretch, signed in as `session`, its sockets connecting.
-  private func enter(_ session: StoredSession) {
-    guard let credentials = begin(session) else { return }
+  /// A new stretch, signed in as `session`, its sockets connecting; the
+  /// screens' account the same `asBefore`, after a change that failed.
+  private func enter(_ session: StoredSession, asBefore: Bool = false) {
+    guard let credentials = begin(session, asBefore: asBefore) else { return }
     state = .signedIn(credentials)
     userID = session.userID
     shared?.set(session.userID, forKey: SignedInUser.key)

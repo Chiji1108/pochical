@@ -344,7 +344,9 @@ private final class FakeAccountServer: AccountServer {
   #expect(await eventually { made.sockets.asked > 0 })
   try await made.addCoworker()
 
+  let shown = made.session.generation
   #expect(try await made.session.deleteAccount(appleCode: { "code" }))
+  #expect(made.session.generation != shown)
   #expect(made.server.asked.withLock(\.deleted) == ["a"])
   #expect(await eventually { made.session.userID == "anon-1" })
   #expect(made.coworkers == 0)
@@ -582,6 +584,7 @@ private final class FakeAccountServer: AccountServer {
   for failure in [DeletionFailure.appleRefused, .offline, .serverFailed] {
     let made = try await Made.signedIn(as: "a", "A")
     try await made.addCoworker()
+    let shown = made.session.generation
     made.server.deletion.withLock { $0 = failure }
     await #expect(throws: failure) {
       try await made.session.deleteAccount(appleCode: { "code" })
@@ -590,6 +593,8 @@ private final class FakeAccountServer: AccountServer {
     #expect(made.session.userID == "A")
     #expect(try made.session.current.credentials().token == "a")
     #expect(made.coworkers == 1)
+    // The screens stay, to say why where it was asked.
+    #expect(made.session.generation == shown)
   }
 }
 
@@ -620,4 +625,16 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.session.userID == "anon-1")
   #expect(made.session.phase == .signedIn)
   #expect(made.server.asked.withLock(\.deleted).isEmpty)
+}
+
+@MainActor @Test func aPlaceHeldOpensAgainAfterADeletionThatFailed() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  _ = await made.session.hold("g1")
+  #expect(await eventually { made.sockets.asked > 0 })
+  let seen = made.sockets.asked
+  made.server.deletion.withLock { $0 = .offline }
+  await #expect(throws: DeletionFailure.offline) {
+    try await made.session.deleteAccount(appleCode: { "code" })
+  }
+  #expect(await eventually { made.sockets.asked > seen })
 }
