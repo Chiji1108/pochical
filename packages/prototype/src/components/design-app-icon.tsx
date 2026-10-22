@@ -1,7 +1,7 @@
 import { css, cva, cx } from "@pochical/styled-system/css";
 import { useEffect, useState } from "react";
 
-import poodle from "../assets/poodle.png";
+import poodle from "../assets/poodle.png?url";
 import { Choice, ChoiceGrid } from "./design-choices";
 
 // The app icon from the poodle drawing: black lines on white. The outside
