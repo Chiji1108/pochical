@@ -58,11 +58,45 @@ struct AccountPage: View {
   @State private var busy = false
   @State private var problem: Problem?
 
-  enum Problem: String, Identifiable {
-    case notDeleted = "削除できませんでした。時間をおいてもう一度お試しください。"
-    case notSignedOut = "ログアウトできませんでした。時間をおいてもう一度お試しください。"
-    var id: String { rawValue }
+  enum Problem: Hashable, Identifiable {
+    case notDeleted(DeletionFailure)
+    case notSignedOut
+    var id: Self { self }
+
+    /// Why deleting failed; none for a session the server does not know,
+    /// which the app says in place of every page (AppRoot).
+    init?(_ failure: DeletionFailure) {
+      guard failure != .sessionEnded else { return nil }
+      self = .notDeleted(failure)
+    }
+
+    var title: String {
+      switch self {
+      case .notDeleted: "アカウントを削除できませんでした"
+      case .notSignedOut: "ログアウトできませんでした"
+      }
+    }
+
+    /// What to do next.
+    var message: String {
+      switch self {
+      case .notDeleted(.notSignedIn):
+        "まだサーバーにつながっていません。少し待ってから、もう一度お試しください。"
+      case .notDeleted(.offline):
+        "サーバーに接続できませんでした。インターネット接続を確かめて、もう一度お試しください。"
+      case .notDeleted(.appleUnconfirmed):
+        "Appleで確認できませんでした。もう一度お試しください。"
+      case .notDeleted(.appleRefused):
+        "このアカウントのApple IDか確かめられませんでした。ログインしたときと同じApple IDで、もう一度お試しください。"
+      case .notDeleted(.serverFailed), .notDeleted(.sessionEnded), .notSignedOut:
+        "時間をおいて、もう一度お試しください。"
+      }
+    }
   }
+
+  /// Signing out and deleting go only once the device has its session, so
+  /// neither fails after asking Apple.
+  private var hasSession: Bool { session.phase == .signedIn }
 
   var body: some View {
     List {
@@ -91,12 +125,16 @@ struct AccountPage: View {
         // Each asks first, on the spot, so no arrow as for a page.
         Section {
           Button("ログアウト", role: .destructive) { confirmingSignOut = true }
-            .disabled(busy)
+            .disabled(busy || !hasSession)
         }
         .settingsRows()
         Section {
           Button("アカウントを削除", role: .destructive) { confirmingDelete = true }
-            .disabled(busy)
+            .disabled(busy || !hasSession)
+        } footer: {
+          if session.phase == .starting {
+            Text("インターネットにつながると、ログアウトとアカウントの削除ができます。")
+          }
         }
         .settingsRows()
       } else {
@@ -107,7 +145,7 @@ struct AccountPage: View {
     .navigationTitle("アカウント")
     .navigationBarTitleDisplayMode(.inline)
     .alert(item: $problem) { problem in
-      Alert(title: Text(problem.rawValue))
+      Alert(title: Text(problem.title), message: Text(problem.message))
     }
     .alert("アカウントを削除しますか？", isPresented: $confirmingDelete) {
       Button("キャンセル", role: .cancel) {}
@@ -183,19 +221,10 @@ struct AccountPage: View {
   private func deleteAccount() async {
     busy = true
     defer { busy = false }
-    let code: String
-    do {
-      code = try await AppleCode.ask()
+    do throws(DeletionFailure) {
+      guard try await session.deleteAccount(appleCode: AppleCode.ask) else { return }
     } catch {
-      if (error as? ASAuthorizationError)?.code != .canceled {
-        problem = .notDeleted
-      }
-      return
-    }
-    do {
-      try await session.deleteAccount(appleAuthorizationCode: code)
-    } catch {
-      problem = .notDeleted
+      problem = Problem(error)
       return
     }
     withAnimation { linked = nil }
@@ -206,17 +235,18 @@ struct AccountPage: View {
 }
 
 /// Sign in with Apple asked once more, for a fresh authorization code, as
-/// deleting an account needs one to revoke Apple's tokens with.
+/// deleting an account needs one to revoke Apple's tokens with; nil when
+/// the person cancels.
 @MainActor private final class AppleCode: NSObject, ASAuthorizationControllerDelegate,
   ASAuthorizationControllerPresentationContextProviding
 {
-  private var answer: CheckedContinuation<String, Error>?
+  private var answer: CheckedContinuation<String?, Error>?
   private var controller: ASAuthorizationController?
   /// The one asking now, kept until Apple answers, as the controller holds
   /// its delegate weakly.
   private static var asking: AppleCode?
 
-  static func ask() async throws -> String {
+  static func ask() async throws -> String? {
     let asking = AppleCode()
     Self.asking = asking
     defer { Self.asking = nil }
@@ -246,7 +276,11 @@ struct AccountPage: View {
   }
 
   func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-    answer?.resume(throwing: error)
+    if (error as? ASAuthorizationError)?.code == .canceled {
+      answer?.resume(returning: nil)
+    } else {
+      answer?.resume(throwing: error)
+    }
     answer = nil
   }
 

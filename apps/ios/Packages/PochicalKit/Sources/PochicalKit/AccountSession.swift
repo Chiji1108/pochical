@@ -247,14 +247,33 @@ import SQLiteData
     }
   }
 
-  /// アカウントを削除: the account and everything of it deleted on the
-  /// server, with Apple's fresh authorization code, and the device going on
-  /// as someone new, holding nothing of the user.
-  public func deleteAccount(appleAuthorizationCode: String) async throws {
-    try await change { [server] before in
-      try await server.deleteAccount(before.token, appleAuthorizationCode: appleAuthorizationCode)
-      return .left(.deleted)
+  /// アカウントを削除, only while signed in: Apple asked once more for a
+  /// fresh authorization code (`appleCode`, nil when the person cancels),
+  /// the account and everything of it deleted on the server with it, and
+  /// the device going on as someone new, holding nothing of the user.
+  /// False when the person canceled.
+  public func deleteAccount(appleCode: @MainActor () async throws -> String?)
+    async throws(DeletionFailure) -> Bool
+  {
+    guard case .signedIn = state else { throw .notSignedIn }
+    let code: String
+    do {
+      guard let asked = try await appleCode() else { return false }
+      code = asked
+    } catch {
+      Logger.account.error("Asking Apple for a code failed: \(error)")
+      throw .appleUnconfirmed
     }
+    do {
+      try await change { [server] before in
+        try await server.deleteAccount(before.token, appleAuthorizationCode: code)
+        return .left(.deleted)
+      }
+    } catch {
+      // Else change's own refusal: the account changed while Apple was asked.
+      throw error as? DeletionFailure ?? .notSignedIn
+    }
+    return true
   }
 
   /// How the server's part of a change ended.
@@ -283,6 +302,10 @@ import SQLiteData
         try keychain.keepLeftBehind(before.token)
         try keychain.keep(after)
       }
+    } catch DeletionFailure.sessionEnded {
+      // As a socket's 401 would say before long.
+      keepEnded(before)
+      throw DeletionFailure.sessionEnded
     } catch {
       Logger.account.error("Changing the account failed: \(error)")
       enter(StoredSession(token: before.token, userID: before.userID))
@@ -387,11 +410,20 @@ import SQLiteData
   /// A socket in the stretch `generation` was refused as a
   /// session the server does not know: every socket closes and the device
   /// keeps what it holds, its outbox too, saying so until the person
-  /// chooses, the Keychain keeping the session as ended for a relaunch. A
-  /// stretch already over says nothing of the one after it.
+  /// chooses. A stretch already over says nothing of the one after it.
   fileprivate func sessionUnknown(in generation: Int) {
     guard case .signedIn(let credentials) = state, credentials.generation == generation
     else { return }
+    keepEnded(credentials)
+    begin(nil)
+    credentials.content.invalidateAndCancel()
+    // The user's socket stopped itself; the places' close.
+    ending = Task { await places.forgetAccount() }
+  }
+
+  /// The session of `credentials`, which the server does not know, ended
+  /// until the person chooses, the Keychain keeping it so for a relaunch.
+  private func keepEnded(_ credentials: Credentials) {
     let ended = StoredSession(token: credentials.token, userID: credentials.userID, ended: true)
     do {
       try keychain.keep(ended)
@@ -400,10 +432,6 @@ import SQLiteData
       Logger.account.error("Keeping the session as ended failed: \(error)")
     }
     state = .ended(ended)
-    begin(nil)
-    credentials.content.invalidateAndCancel()
-    // The user's socket stopped itself; the places' close.
-    ending = Task { await places.forgetAccount() }
   }
 
   /// もう一度つなぐ: the session the server did not know, tried again, as
@@ -540,7 +568,7 @@ import SQLiteData
     }
     do {
       try await server.deleteAccount(left, appleAuthorizationCode: "")
-    } catch is SessionUnknown {
+    } catch .sessionEnded {
     } catch {
       return
     }

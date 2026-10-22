@@ -166,12 +166,43 @@ protocol AccountServer: Sendable {
   func linkApple(idToken: String, nonce: String, on token: String) async throws -> LinkResult
   /// Whose the session is, and whether they are still anonymous.
   func me(_ token: String) async throws -> (userID: String, anonymous: Bool)
-  /// `SessionUnknown` when the server does not know the session.
-  func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws
+  func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws(DeletionFailure)
 }
 
-/// The server does not know the session: its user is gone, or signed out.
-struct SessionUnknown: Error {}
+/// Why the account was not deleted, each for the app to say what to do
+/// next (spec/sync-protocol.md, Deleting an account). Nothing was deleted
+/// in any of them, or the deletion was cut off part way and finishes by
+/// trying again.
+public enum DeletionFailure: Error, Equatable, Sendable {
+  /// The device has no session yet, as before its first sign-in reaches
+  /// the server, or its account is changing.
+  case notSignedIn
+  /// The server does not know the session (401): signed out or deleted
+  /// on another device, or by request.
+  case sessionEnded
+  /// Sign in with Apple, asked once more for its code, failed (not the
+  /// person canceling it).
+  case appleUnconfirmed
+  /// The server could not revoke Apple's tokens (FAILED_PRECONDITION): no
+  /// code, or one Apple does not take or of another Apple account.
+  case appleRefused
+  /// The server was not reached: offline, or the connection dropped.
+  case offline
+  /// The server answered with an error of its own.
+  case serverFailed
+
+  /// What the server's answer says.
+  init(_ error: ConnectError) {
+    switch error.code {
+    case .unauthenticated: self = .sessionEnded
+    case .failedPrecondition: self = .appleRefused
+    // URLSession failed with no answer, as a connection that was never
+    // made, timed out or dropped.
+    case _ where error.exception is URLError: self = .offline
+    default: self = .serverFailed
+    }
+  }
+}
 
 /// The server's account calls: better-auth's (`/api/auth/*`), and
 /// UserService's that say whose a session is and delete its user.
@@ -249,12 +280,13 @@ struct Account: AccountServer {
   /// Deletes the user of the session `token` and everything of theirs
   /// (spec/sync-protocol.md, Deleting an account), with Sign in with
   /// Apple's fresh authorization code when the user is linked to Apple.
-  func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws {
+  func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws(DeletionFailure)
+  {
     var request = Pochical_V1_DeleteAccountRequest()
     request.appleAuthorizationCode = appleAuthorizationCode
     let answer = await users.deleteAccount(request: request, headers: bearer(token))
     if case .failure(let error) = answer.result {
-      throw error.code == .unauthenticated ? SessionUnknown() : error
+      throw DeletionFailure(error)
     }
   }
 
