@@ -1,7 +1,7 @@
 import { chatRules } from "@pochical/design/chat";
 import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   fromSlackText,
@@ -886,17 +886,24 @@ describe("a user's photo, in Slack", () => {
   });
 });
 
-/** When the chat's relay comes back, in seconds from now; null for never. */
+/**
+ * When the chat's relay comes back, in seconds from now; null for never.
+ * Whole seconds while the test holds the clock still.
+ */
 const nextTry = async (userId: string): Promise<number | null> => {
   const at = await runInDurableObject(
     env.GROUPS.getByName(supportPlace(userId)),
     async (_, state) => await state.storage.getAlarm()
   );
-  return at === null ? null : Math.round((at - Date.now()) / 1000);
+  return at === null ? null : (at - Date.now()) / 1000;
 };
 
-/** The relay's next try run now, and when it comes back. */
+/**
+ * The relay's next try run now, and when it comes back. The held clock is
+ * moved to now first, so each try is at a time of its own.
+ */
 const relayOnce = async (userId: string): Promise<number | null> => {
+  vi.setSystemTime(vi.getRealSystemTime());
   await tryNow(userId);
   return await nextTry(userId);
 };
@@ -1119,7 +1126,14 @@ const refusedOnce = async (token: string) => {
 };
 
 describe("a support chat Slack does not take", () => {
+  // Each wait is read off the alarm the try set: with the clock still, it
+  // is what the try waits, however long the test takes to read it.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+  });
+
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 

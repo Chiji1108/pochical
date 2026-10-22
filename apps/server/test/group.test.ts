@@ -1,9 +1,10 @@
 import { GROUP_MAX_MEMBERS, syncLimits } from "@pochical/design/limits";
-import { env, exports } from "cloudflare:workers";
+import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import {
   call,
+  fillGroup,
   inOneLimitWindow,
   ORIGIN,
   openSocket,
@@ -262,19 +263,7 @@ describe("GroupService", () => {
     const { groupId, inviteCode } = await createGroup(
       await signInAnonymously()
     );
-    const group = env.GROUPS.getByName(groupId);
-    await Promise.all(
-      Array.from(
-        { length: GROUP_MAX_MEMBERS - 1 },
-        async (_, index) =>
-          await group.addMember({
-            ownName: null,
-            userId: `filler-${index}`,
-            usualName: `メンバー${index}`,
-            usualPhoto: "",
-          })
-      )
-    );
+    await fillGroup(groupId, GROUP_MAX_MEMBERS - 1);
     await expect(previewOf(inviteCode)).resolves.toMatchObject({
       memberCount: GROUP_MAX_MEMBERS,
     });

@@ -5,7 +5,7 @@ import {
   runInDurableObject,
 } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { NEWS_RETRY_FIRST_MS } from "../src/group-do";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
@@ -21,9 +21,6 @@ import { changesIn, device, pair, sendFrame, syncSocket } from "./sync-helpers";
 
 // Who is in a group, decided by its Group DO and told to each member's own
 // DO until it takes it (spec/sync-protocol.md, Groups).
-
-// Longer than any call here takes, shorter than a test may.
-const SLOW_MS = 1500;
 
 const MARK = { color: 0, emoji: "🍉", icon: "", letter: "", photoId: "" };
 
@@ -216,14 +213,23 @@ describe("telling a member's own DO", () => {
   it("answers a rename once the renamer's list has it, the others' coming by the alarm at once", async () => {
     const { groupId, guest, maker } = await pair();
     const guestId = await userIdOf(guest);
-    // The guest's DO is slow to take it.
+    // The guest's DO takes it only once the test lets it, so a rename that
+    // waited on it would never answer.
+    const held = Promise.withResolvers<undefined>();
+    const taken = Promise.withResolvers<undefined>();
     const restore = await failTelling(groupId, guestId, async (...news) => {
-      await scheduler.wait(SLOW_MS);
-      await Reflect.apply(
-        env.USERS.getByName(guestId).takeMembership,
-        undefined,
-        news
-      );
+      await held.promise;
+      try {
+        await Reflect.apply(
+          env.USERS.getByName(guestId).takeMembership,
+          undefined,
+          news
+        );
+        taken.resolve(undefined);
+      } catch (error) {
+        taken.reject(error);
+        throw error;
+      }
     });
     const nameIn = async (userId: string) =>
       await runInDurableObject(
@@ -235,24 +241,21 @@ describe("telling a member's own DO", () => {
             }>("select name from memberships where group_id = ?", groupId)
             .one().name
       );
-    const started = Date.now();
     const renamed = await call(
       "GroupService/RenameGroup",
       { groupId, mark: { emoji: "🍉" }, name: "はとこ会" },
       maker
     );
-    expect([renamed.status, Date.now() - started < SLOW_MS]).toStrictEqual([
-      200,
-      true,
-    ]);
+    expect(renamed.status).toBe(200);
     await expect(nameIn(await userIdOf(maker))).resolves.toBe("はとこ会");
-    // No alarm run here: it comes by itself.
-    await vi.waitFor(
-      async () => {
-        await expect(nameIn(guestId)).resolves.toBe("はとこ会");
-      },
-      { timeout: SLOW_MS * 2 }
-    );
+    await expect(nameIn(guestId)).resolves.toBe("いとこ会");
+    // No alarm run here: it comes by itself. Let and waited for inside the
+    // group, where its alarm tells the guest's DO.
+    await runInDurableObject(env.GROUPS.getByName(groupId), async () => {
+      held.resolve(undefined);
+      await taken.promise;
+    });
+    await expect(nameIn(guestId)).resolves.toBe("はとこ会");
     await restore();
   });
 
