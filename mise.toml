@@ -1,6 +1,7 @@
 [tools]
 bun = "1.4.3"
 buf = "1.74.0"
+java = "temurin-21.0.12+101.0.LTS"
 
 [settings]
 # Node's version is in .node-version, which Workers Builds reads too.

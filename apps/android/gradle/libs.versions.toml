@@ -1,0 +1,27 @@
+[versions]
+agp = "9.4.1"
+kotlin = "2.4.21"
+# protobuf's Java and Kotlin runtimes for the protoc v36.2 plugins in
+# proto/buf.gen.yaml, and connect-kotlin for its v0.9.0 plugin: they move
+# with buf.gen.yaml and mise run gen.
+protobuf = "4.36.2"
+connect = "0.9.0"
+compose-bom = "2026.09.00"
+activity-compose = "1.13.0"
+
+[libraries]
+protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf" }
+protobuf-kotlin-lite = { module = "com.google.protobuf:protobuf-kotlin-lite", version.ref = "protobuf" }
+connect-kotlin = { module = "com.connectrpc:connect-kotlin", version.ref = "connect" }
+connect-kotlin-google-javalite-ext = { module = "com.connectrpc:connect-kotlin-google-javalite-ext", version.ref = "connect" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-animation-core = { module = "androidx.compose.animation:animation-core" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
