@@ -407,3 +407,25 @@ export function markPalette(preset: Preset, scheme: ColorScheme) {
       : markColorIn(option, scheme, preset.vividness)
   );
 }
+
+// Every color variable a screen reads, for a テーマ drawn in the scheme
+// asked for (schemeIn): each role as `--` and its name, and the steps a
+// memo's stroke on a day off's tile is worked out by in CSS
+// (design-day-cell.tsx). The web sets them on a screen, or on a page.
+export function themeVariables(
+  preset: Preset,
+  requested: ColorScheme
+): Record<`--${string}`, string | number> {
+  const scheme = schemeIn(preset, requested);
+  const { onTile } = noteMarkerSteps[scheme];
+  return {
+    ...Object.fromEntries(
+      Object.entries(themeRoles(preset, scheme)).map(([name, value]) => [
+        `--${name}`,
+        value,
+      ])
+    ),
+    "--note-on-tile-chroma": onTile.chroma,
+    "--note-on-tile-lightness": onTile.lightness,
+  };
+}

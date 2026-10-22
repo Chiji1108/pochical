@@ -204,9 +204,7 @@ struct JoinScreen: View {
           loadError = nil
           Task { await load() }
         }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.capsule)
-        .tint(colors.accentDefault)
+        .quietButton()
         .padding(.top, 8)
       }
     }

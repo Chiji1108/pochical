@@ -152,8 +152,8 @@ struct ChatScreen: View {
   @Environment(\.openInvite) private var openInvite
   /// The line whose ほかの絵文字 is open.
   @State private var reactingTo: ChatLineRow?
-  /// The days to share are being picked.
-  @State private var sharingDays = false
+  /// The days to share, or to put to the vote, are being picked.
+  @State private var pickingDays: DaysPick?
   /// The poll whose day is being picked.
   @State private var deciding: ChatLineRow?
   /// The photos opened large.
@@ -435,10 +435,10 @@ struct ChatScreen: View {
       _ = try? await $dayMembers.load(
         GroupMembersRequest(groupID: place.id, from: span.from, through: span.through))
     }
-    .sheet(isPresented: $sharingDays) {
+    .sheet(item: $pickingDays) { pick in
       ShareDaysSheet(
-        groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) },
-        pollable: otherID == nil && place.rules.polls, onSend: shareDays)
+        groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) }, pick: pick
+      ) { shareDays($0, as: pick) }
     }
     // As the app leaves the screen, what is written is kept at once,
     // without waiting for the writing to pause.
@@ -539,7 +539,9 @@ struct ChatScreen: View {
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
         nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
         keepDraft: { keepDraft() },
-        onShareDays: place.rules.days ? { sharingDays = true } : nil, say: say)
+        onShareDays: place.rules.days ? { pickingDays = .share } : nil,
+        onPollDays: otherID == nil && place.rules.polls ? { pickingDays = .poll } : nil,
+        say: say)
     }
   }
 
@@ -618,14 +620,12 @@ struct ChatScreen: View {
 
   // MARK: Lines
 
-  /// The day whose lines are at the top, from the first item in sight:
-  /// none while that is the day's own title.
+  /// The day of the item `top`: a title's own, else that of the title
+  /// over it.
   private func dayOver(_ top: String?, in items: [ChatItem]) -> Day? {
     guard let top, let at = items.firstIndex(where: { $0.id == top }) else { return nil }
     for item in items[...at].reversed() {
-      if case .day(let day) = item {
-        return item.id == top ? nil : day
-      }
+      if case .day(let day) = item { return day }
     }
     return nil
   }
@@ -726,7 +726,7 @@ struct ChatScreen: View {
   ) -> some View {
     switch item {
     case .day(let day):
-      DayChip(day: day)
+      DayChip(day: day, scroll: scroll)
     case .unread:
       HStack(spacing: 12) {
         Rectangle().fill(colors.accentBorder).frame(height: 1)
@@ -1354,13 +1354,12 @@ struct ChatScreen: View {
 
   /// Shares days with everyone's shifts, as a line of their own; true when
   /// kept.
-  private func shareDays(_ days: [Day], poll: Bool) -> Bool {
+  private func shareDays(_ days: [Day], as pick: DaysPick) -> Bool {
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
-    if poll {
-      send.content.poll.days = days.map(\.key)
-    } else {
-      send.content.days.days = days.map(\.key)
+    switch pick {
+    case .share: send.content.days.days = days.map(\.key)
+    case .poll: send.content.poll.days = days.map(\.key)
     }
     return sent(send)
   }
@@ -1532,7 +1531,7 @@ struct ChatScreen: View {
     }
     // What is not kept stays in the composer, with all after it.
     if let days = draft.writing.days {
-      guard shareDays(days, poll: false) else { return }
+      guard shareDays(days, as: .share) else { return }
       draft.writing.days = nil
     }
     guard sendPhotos() else { return }

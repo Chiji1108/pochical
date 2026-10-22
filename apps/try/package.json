@@ -1,0 +1,36 @@
+{
+  "name": "@pochical/try",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --configLoader runner --port 3202 --strictPort",
+    "icon:app": "bun scripts/app-assets.ts",
+    "build": "vite build --configLoader runner",
+    "preview": "vite preview --configLoader runner --port 3202 --strictPort",
+    "deploy": "bun run build && wrangler deploy",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json"
+  },
+  "dependencies": {
+    "@pochical/design": "workspace:*",
+    "@pochical/jsx": "workspace:*",
+    "@pochical/prototype": "workspace:*",
+    "@pochical/showcase": "workspace:*",
+    "@pochical/styled-system": "workspace:*",
+    "lucide-react": "^1.61.0",
+    "motion": "^14.4.0",
+    "qrcode.react": "^4.2.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@pandacss/dev": "^2.3.0",
+    "@types/node": "24.19.2",
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "^19.2.0",
+    "@vite-pwa/assets-generator": "^2.0.0",
+    "sharp": "0.35.5",
+    "typescript": "~7.0.2",
+    "vite": "^8.0.0",
+    "wrangler": "^4.151.3"
+  }
+}
