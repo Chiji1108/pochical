@@ -29,6 +29,9 @@ public actor GroupSockets {
 
   private let database: any DatabaseWriter
   private let server: URL
+  /// Told of a session the server does not know, as the user's socket
+  /// tells it (SyncClient).
+  private let sessionUnknown: @Sendable (Int) async -> Void
   /// Each place's client, handed out at once to screens on the main actor.
   private let clients = Mutex<[String: SyncClient]>([:])
   private var sockets: [String: Socket] = [:]
@@ -38,16 +41,22 @@ public actor GroupSockets {
 
   /// None of its sockets opens until a session gives it whom to connect
   /// as, so one made for the screens' previews never does.
-  public init(database: any DatabaseWriter, server: URL = Server.url) {
+  public init(
+    database: any DatabaseWriter, server: URL = Server.url,
+    sessionUnknown: @escaping @Sendable (Int) async -> Void = { _ in }
+  ) {
     self.database = database
     self.server = server
+    self.sessionUnknown = sessionUnknown
   }
 
   /// The place's client, the same one each time, its socket open or not.
   public nonisolated func client(_ placeID: String) -> SyncClient {
     clients.withLock { clients in
       if let client = clients[placeID] { return client }
-      let client = SyncClient(database: database, peer: .place(placeID), server: server)
+      let client = SyncClient(
+        database: database, peer: .place(placeID), server: server,
+        sessionUnknown: sessionUnknown)
       clients[placeID] = client
       return client
     }

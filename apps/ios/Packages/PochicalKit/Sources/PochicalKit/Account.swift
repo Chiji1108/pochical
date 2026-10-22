@@ -16,15 +16,19 @@ public enum Server {
   #endif
 }
 
-/// A session the device keeps: its token, and the user it signs in as,
-/// kept as one so the two never part.
+/// A session the device keeps: its token, the user it signs in as, and
+/// whether the server said it does not know it, kept as one so they never
+/// part: a session that ended stays ended, a relaunch too, until the
+/// person tries it again or starts afresh (AccountSession, `ended`).
 public struct StoredSession: Codable, Equatable, Sendable {
   public let token: String
   public let userID: String
+  public let ended: Bool
 
-  public init(token: String, userID: String) {
+  public init(token: String, userID: String, ended: Bool = false) {
     self.token = token
     self.userID = userID
+    self.ended = ended
   }
 }
 
