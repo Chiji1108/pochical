@@ -223,6 +223,8 @@ const featureScreens: Record<
     opening: { initialSettingsPage: "repeat-new", initialTab: "settings" },
     own: {
       patterns: presetList(duty.patternKeys),
+      // From 4/1, as /demo's order, so it is the one in use on the
+      // prototype's today (9/24).
       rules: [{ sequence: duty.sequence, start: new Date(2026, 3, 1) }],
       schedule: {},
     },
