@@ -201,22 +201,37 @@ export const rosterIn = (frame: ServerFrame) =>
   );
 
 /**
- * Waits until the chat is told outside up to its newest line: its alarm
- * runs as soon as it is set, and is run here should it not have yet.
+ * Waits until the chat is told outside up to its newest line. An alarm
+ * due now is the runtime's, which runs it at once, and is waited for; one
+ * set for later, the relay's next try after a failure, is run here. The
+ * two never run at once, as the runtime never runs two alarms at once.
  */
 export const relayed = async (userId: string): Promise<void> => {
   const place = env.GROUPS.getByName(supportPlace(userId));
-  await vi.waitFor(async () => {
-    await runDurableObjectAlarm(place);
-    const behind = await runInDurableObject(place, (_, state) =>
-      state.storage.sql
+  const relay = async () =>
+    await runInDurableObject(place, async (_, state) => ({
+      alarm: await state.storage.getAlarm(),
+      behind: state.storage.sql
         .exec<{ behind: number }>(
           "select count(*) as behind from chat_lines where cursor > coalesce((select cursor from support_relay), 0)"
         )
-        .one()
-    );
-    expect(behind.behind).toBe(0);
-  });
+        .one().behind,
+    }));
+  for (;;) {
+    // oxlint-disable-next-line no-await-in-loop -- each try after the last
+    const { behind } = await vi.waitFor(async () => {
+      const now = await relay();
+      expect(
+        now.behind === 0 || (now.alarm !== null && now.alarm > Date.now())
+      ).toBeTruthy();
+      return now;
+    });
+    if (behind === 0) {
+      return;
+    }
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await runDurableObjectAlarm(place);
+  }
 };
 
 type ChatKind = Extract<
