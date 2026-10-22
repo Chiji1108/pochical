@@ -2,7 +2,11 @@ import { create } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { chatRules } from "@pochical/design/chat";
 import type { ChatPlaceRules } from "@pochical/design/chat";
-import { SHARED_DAYS_MAX, textLimits } from "@pochical/design/limits";
+import {
+  POLL_MIN_DAYS,
+  SHARED_DAYS_MAX,
+  textLimits,
+} from "@pochical/design/limits";
 import {
   and,
   asc,
@@ -533,9 +537,6 @@ const fitsDays = (days: readonly string[]): boolean =>
   days.every(
     (day, at) => isDate(day) && (at === 0 || (days[at - 1] ?? "") < day)
   );
-
-/** The fewest days a poll puts to the vote. */
-const POLL_MIN_DAYS = 2;
 
 /** A photo's size, as the sender read it while shrinking it to send. */
 const fitsPhotoSize = (side: number): boolean =>

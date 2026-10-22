@@ -3,6 +3,7 @@ import { chatRules } from "@pochical/design/chat";
 import { cx } from "@pochical/styled-system/css";
 import {
   ArrowUp,
+  CalendarCheck,
   CalendarPlus,
   Check,
   ImageIcon,
@@ -256,14 +257,16 @@ export function GoneNote({ name }: { name: string }) {
   );
 }
 
-// ＋ and what it opens over itself, as iOS 26's Messages: 日にちを共有
-// nearest the button, then 写真.
+// ＋ and what it opens over itself, as iOS 26's Messages: 写真, then
+// 日にちを共有, and in a group chat 日にちの投票.
 function AttachMenu({
   onPhotos,
   onShareDays,
+  onPollDays,
 }: {
   onPhotos: () => void;
   onShareDays: () => void;
+  onPollDays?: () => void;
 }) {
   return (
     <Menu.Root positioning={{ gutter: 8, placement: "top-start" }}>
@@ -282,19 +285,28 @@ function AttachMenu({
           )}
         >
           <MenuItem
-            icon={<CalendarPlus aria-hidden="true" size={18} />}
-            onSelect={onShareDays}
-            value="days"
-          >
-            日にちを共有
-          </MenuItem>
-          <MenuItem
             icon={<ImageIcon aria-hidden="true" size={18} />}
             onSelect={onPhotos}
             value="photos"
           >
             写真
           </MenuItem>
+          <MenuItem
+            icon={<CalendarPlus aria-hidden="true" size={18} />}
+            onSelect={onShareDays}
+            value="days"
+          >
+            日にちを共有
+          </MenuItem>
+          {onPollDays && (
+            <MenuItem
+              icon={<CalendarCheck aria-hidden="true" size={18} />}
+              onSelect={onPollDays}
+              value="poll"
+            >
+              日にちの投票
+            </MenuItem>
+          )}
         </Menu.Content>
       </Menu.Positioner>
     </Menu.Root>
@@ -311,6 +323,7 @@ export function Composer({
   reply,
   onSend,
   onShareDays,
+  onPollDays,
 }: {
   composer: ComposerState;
   // Your message whose words are being changed.
@@ -321,6 +334,8 @@ export function Composer({
   // Opens the days to share. Without it, as in the support chat, ＋ is
   // the photos alone, with no menu to open first.
   onShareDays?: () => void;
+  // Opens the days to put to the vote, in a group chat.
+  onPollDays?: () => void;
 }) {
   const {
     attached,
@@ -386,7 +401,11 @@ export function Composer({
             takes the row. */}
         {editing === undefined &&
           (onShareDays ? (
-            <AttachMenu onPhotos={choosePhotos} onShareDays={onShareDays} />
+            <AttachMenu
+              onPhotos={choosePhotos}
+              onPollDays={onPollDays}
+              onShareDays={onShareDays}
+            />
           ) : (
             <button
               aria-label="写真を送る"
