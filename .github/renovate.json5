@@ -78,12 +78,8 @@
       groupName: "React",
     },
     {
-      description: "vitest-pool-workers pins the vitest it runs under",
-      matchPackageNames: [
-        "vitest",
-        "@vitest/**",
-        "@cloudflare/vitest-pool-workers",
-      ],
+      description: "@cloudflare/vitest-plugin peers the vitest it runs under",
+      matchPackageNames: ["vitest", "@vitest/**", "@cloudflare/vitest-plugin"],
       groupName: "vitest",
       separateMajorMinor: false,
     },
