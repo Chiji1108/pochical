@@ -18,7 +18,7 @@ import type { ReactNode } from "react";
 // cannot see the device's own setting, so the cookie also keeps the one
 // this browser last reported: only a first visit, or a device that turned
 // dark since, is drawn light and then turns.
-export type Look = { appearance: Appearance; device: ColorScheme };
+export type SavedAppearance = { appearance: Appearance; device: ColorScheme };
 
 const APPEARANCE = "appearance";
 const DEVICE = "device-scheme";
@@ -29,7 +29,7 @@ const appearanceOf = (value: unknown): Appearance =>
 const schemeOf = (value: unknown): ColorScheme =>
   value === "dark" ? "dark" : "light";
 
-const parseLook = (input: unknown): Look => {
+const parseSaved = (input: unknown): SavedAppearance => {
   if (typeof input !== "object" || input === null) {
     throw new TypeError("A look is an appearance and a device scheme");
   }
@@ -39,13 +39,15 @@ const parseLook = (input: unknown): Look => {
   };
 };
 
-export const readLook = createServerFn({ method: "GET" }).handler((): Look => ({
-  appearance: appearanceOf(getCookie(APPEARANCE)),
-  device: schemeOf(getCookie(DEVICE)),
-}));
+export const readAppearance = createServerFn({ method: "GET" }).handler(
+  (): SavedAppearance => ({
+    appearance: appearanceOf(getCookie(APPEARANCE)),
+    device: schemeOf(getCookie(DEVICE)),
+  })
+);
 
-const saveLook = createServerFn({ method: "POST" })
-  .validator(parseLook)
+const saveAppearance = createServerFn({ method: "POST" })
+  .validator(parseSaved)
   .handler(({ data }) => {
     const options = {
       httpOnly: true,
@@ -67,7 +69,7 @@ const subscribe = (onChange: () => void) => {
 };
 const deviceIsDark = () => window.matchMedia(dark).matches;
 
-const LookContext = createContext<{
+const AppearanceContext = createContext<{
   appearance: Appearance;
   device: ColorScheme;
   scheme: ColorScheme;
@@ -82,11 +84,11 @@ const LookContext = createContext<{
 // The look the server drew, kept from then on in the page, which follows
 // the device's own setting live and saves each change for the next page
 // the server draws.
-export function LookProvider({
+export function AppearanceProvider({
   saved,
   children,
 }: {
-  saved: Look;
+  saved: SavedAppearance;
   children: ReactNode;
 }) {
   const [appearance, setAppearance] = useState(saved.appearance);
@@ -105,7 +107,7 @@ export function LookProvider({
       return;
     }
     stored.current = { appearance, device };
-    void saveLook({ data: stored.current });
+    void saveAppearance({ data: stored.current });
   }, [appearance, device]);
   const look = useMemo(
     () => ({
@@ -116,7 +118,7 @@ export function LookProvider({
     }),
     [appearance, device]
   );
-  return <LookContext value={look}>{children}</LookContext>;
+  return <AppearanceContext value={look}>{children}</AppearanceContext>;
 }
 
-export const useLook = () => use(LookContext);
+export const useAppearance = () => use(AppearanceContext);

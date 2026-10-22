@@ -3,6 +3,8 @@ import { DesignProviders } from "@pochical/prototype/components/design-providers
 import {
   ColorSchemeContext,
   DeviceSchemeContext,
+  schemeOf,
+  ThemeContext,
   useColorScheme,
   useThemeStyle,
 } from "@pochical/prototype/components/design-theme";
@@ -14,9 +16,14 @@ import {
 } from "@tanstack/react-router";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { MotionConfig } from "motion/react";
+import { use } from "react";
 import type { ReactNode } from "react";
 
-import { LookProvider, readLook, useLook } from "../lib/appearance";
+import {
+  AppearanceProvider,
+  readAppearance,
+  useAppearance,
+} from "../lib/appearance";
 import { japanese } from "../lib/translations";
 
 import stylesheet from "../styles.css?url";
@@ -46,7 +53,7 @@ export const Route = createRootRoute({
   }),
   // 外観 as the cookie keeps it, read once, when the server draws the
   // first page; the page keeps it from then on (lib/appearance.tsx).
-  loader: async () => await readLook(),
+  loader: async () => await readAppearance(),
   staleTime: Number.POSITIVE_INFINITY,
   notFoundComponent: () => (
     <main id="main">
@@ -61,11 +68,11 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
-    <LookProvider saved={Route.useLoaderData()}>
+    <AppearanceProvider saved={Route.useLoaderData()}>
       <DesignProviders>
         <Html>{children}</Html>
       </DesignProviders>
-    </LookProvider>
+    </AppearanceProvider>
   );
 }
 
@@ -73,11 +80,13 @@ function RootDocument({ children }: { children: ReactNode }) {
 // person's テーマ and the documents' 外観, set on <html> so the dialogs
 // Fumadocs UI opens on <body> have them too. The pieces on the pages draw
 // in the same light or dark, and the home and lock screens they show
-// follow the device's.
+// follow the device's. An always-dark テーマ keeps its dark, as
+// DesignProviders draws it.
 function Html({ children }: { children: ReactNode }) {
-  const { device, scheme } = useLook();
+  const { device, scheme } = useAppearance();
+  const { theme } = use(ThemeContext);
   return (
-    <ColorSchemeContext value={scheme}>
+    <ColorSchemeContext value={schemeOf(theme, scheme)}>
       <DeviceSchemeContext value={device}>
         <ThemedHtml>{children}</ThemedHtml>
       </DeviceSchemeContext>

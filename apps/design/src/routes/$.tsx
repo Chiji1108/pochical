@@ -60,6 +60,10 @@ export const Route = createFileRoute("/$")({
   },
   head: ({ loaderData }) =>
     loaderData ? pageMeta(loaderData.title, loaderData.description) : {},
+  // A page's content and the sidebar change only with a new build, so a
+  // page once loaded is not asked for again, as when the widgets'
+  // switches change its search.
+  staleTime: Number.POSITIVE_INFINITY,
 });
 
 // The other two apps, beside the documents in the sidebar.

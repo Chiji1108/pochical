@@ -3,7 +3,7 @@ import type { ThemeSwitchProps } from "fumadocs-ui/layouts/shared/slots/theme-sw
 import { Airplay, Moon, Sun } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { useLook } from "../lib/appearance";
+import { useAppearance } from "../lib/appearance";
 
 // Fumadocs UI's light, dark and system switch, drawn as its own
 // ("light-dark-system"), set to the documents' 外観 (lib/appearance.tsx)
@@ -18,8 +18,13 @@ const choices = [
   label: string;
 }[];
 
-export function DocsThemeSwitch({ className, ...props }: ThemeSwitchProps) {
-  const { appearance, setAppearance } = useLook();
+// `mode` is Fumadocs UI's choice of buttons, which this one fixes.
+export function DocsThemeSwitch({
+  className,
+  mode: _mode,
+  ...props
+}: ThemeSwitchProps) {
+  const { appearance, setAppearance } = useAppearance();
   return (
     <div
       className={`inline-flex items-center overflow-hidden rounded-full border p-1 *:rounded-full ${className ?? ""}`}

@@ -79,7 +79,7 @@ import { NowCircular, NowRectangular, NowSmall } from "./design-widgets-now";
 // The widgets of content/design/widgets at their real size, iPhone
 // (390×844pt) and Pixel 9a, switched between the day they show, the device
 // and the person's settings, as /demo switches the app. The switches are
-// kept in the URL, so every widget's page shows the same state. Each
+// kept in the URL, and 種類 carries them to another kind's page. Each
 // widget draws from one entry, worked out from the sample person, as the
 // native widgets will from theirs.
 
@@ -312,16 +312,48 @@ function useWidgetVariants() {
   return [variants, change] as const;
 }
 
-// The switches, at the top of every widget's page.
-export function WidgetSwitches() {
+// The pages under /design/widgets, a kind each, which 種類 moves between.
+const widgetPages = [
+  { label: "シンプル", slug: "simple" },
+  { label: "次の休み", slug: "next-off" },
+  { label: "これから", slug: "upcoming" },
+  { label: "いまのシフト", slug: "now" },
+  { label: "カレンダー", slug: "calendar" },
+  { label: "ロック画面", slug: "lock" },
+] as const;
+export type WidgetPage = (typeof widgetPages)[number]["slug"];
+
+const options = {
+  kind: {
+    choices: widgetPages.map(({ label, slug }) => ({ label, value: slug })),
+    label: "種類",
+  },
+  ...widgetVariantOptions,
+};
+const order = ["kind", ...widgetVariantKeys];
+
+// The switches, at the top of every widget's page: 種類 opens another
+// kind's page with the same switches, the rest change this page's URL.
+export function WidgetSwitches({ page }: { page: WidgetPage }) {
   const [variants, change] = useWidgetVariants();
+  const navigate = useNavigate();
   return (
     <VariantPanel
-      onChange={change}
-      options={widgetVariantOptions}
-      order={widgetVariantKeys}
+      onChange={(key, value) => {
+        if (key !== "kind") {
+          change(key, value);
+          return;
+        }
+        void navigate({
+          params: { _splat: `design/widgets/${value}` },
+          search: (previous) => previous,
+          to: "/$",
+        });
+      }}
+      options={options}
+      order={order}
       title="切り替え"
-      variants={variants}
+      variants={{ ...variants, kind: page }}
     />
   );
 }
