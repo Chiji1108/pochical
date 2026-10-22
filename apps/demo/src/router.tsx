@@ -1,22 +1,18 @@
-import { createRouter as createTanStackRouter } from "@tanstack/react-router";
+import { createRouter } from "@tanstack/react-router";
 
 import { routeTree } from "./routeTree.gen";
 
-export function getRouter() {
-  const router = createTanStackRouter({
-    defaultPreload: "intent",
-    defaultPreloadStaleTime: 0,
-    routeTree,
-    scrollRestoration: true,
-  });
-
-  return router;
-}
+export const router = createRouter({
+  defaultPreload: "intent",
+  defaultPreloadStaleTime: 0,
+  routeTree,
+  scrollRestoration: true,
+});
 
 declare module "@tanstack/react-router" {
   // Module augmentation only merges into an interface.
   // oxlint-disable-next-line typescript/consistent-type-definitions
   interface Register {
-    router: ReturnType<typeof getRouter>;
+    router: typeof router;
   }
 }
