@@ -41,5 +41,8 @@ export default defineConfig({
       wrangler: { configPath: "./wrangler.jsonc" },
     })),
   ],
-  test: { setupFiles: ["./test/setup.ts"] },
+  test: {
+    globalSetup: ["./vitest.stalls.ts"],
+    setupFiles: ["./test/setup.ts"],
+  },
 });
