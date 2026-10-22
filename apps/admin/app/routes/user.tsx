@@ -94,7 +94,10 @@ export default function User({ loaderData: user }: Route.ComponentProps) {
               <tbody>
                 {user.groups.map((group) => (
                   <tr key={group.groupId}>
-                    <td>{group.name}</td>
+                    {/* Whole on a narrow screen: the table scrolls instead. */}
+                    <td className={css({ whiteSpace: "nowrap" })}>
+                      {group.name}
+                    </td>
                     <td className={code}>{group.groupId.slice(0, 8)}</td>
                     <td className={css({ color: "text.tertiary" })}>
                       <span className={numeric}>{when(group.joinedAtMs)}</span>

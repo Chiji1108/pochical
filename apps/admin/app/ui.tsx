@@ -12,7 +12,7 @@ export const page = css({
   flexDirection: "column",
   gap: "6",
   marginInline: "auto",
-  maxWidth: "1080px",
+  maxWidth: "1200px",
   paddingBlock: { base: "6", md: "10" },
   paddingInline: { base: "4", md: "10" },
   width: "100%",
