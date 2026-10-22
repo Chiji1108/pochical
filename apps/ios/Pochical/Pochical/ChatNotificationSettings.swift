@@ -20,6 +20,7 @@ func chatNotificationsSummary(
 
 /// 設定 › 通知 › チャット.
 struct ChatNotificationsPage: View {
+  @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   @FetchAll private var members: [GroupMemberRow]
@@ -91,7 +92,7 @@ struct ChatNotificationsPage: View {
               unblocking = person
             } label: {
               LabeledContent {
-                Text("解除").foregroundStyle(.tint)
+                Text("解除").foregroundStyle(colors.accentDefault)
               } label: {
                 PersonLabel(
                   name: person.name, group: person.group, photoID: person.photoID,

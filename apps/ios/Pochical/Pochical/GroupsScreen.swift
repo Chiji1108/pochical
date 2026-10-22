@@ -260,9 +260,7 @@ private struct NoGroups: View {
         Label("QRコードで参加", systemImage: "qrcode.viewfinder")
           .frame(maxWidth: .infinity, minHeight: Metrics.control)
       }
-      .buttonStyle(.bordered)
-      .buttonBorderShape(.capsule)
-      .tint(colors.accentDefault)
+      .quietButton()
     }
     .padding(.bottom, 16)
   }

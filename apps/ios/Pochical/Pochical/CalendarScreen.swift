@@ -664,8 +664,7 @@ struct CalendarScreen: View {
         finish()
       }
       .labelStyle(.iconOnly)
-      .buttonStyle(BarButton(tint: colors.accentFill))
-      .foregroundStyle(colors.accentOnFill)
+      .buttonStyle(BarButton(prominent: true))
     } else {
       HStack(spacing: 12) {
         TodayFade(position: position, todayPage: todayPage) {
