@@ -144,14 +144,17 @@ describe("what the admin site asks of the server", () => {
       .run();
     const admin = exports.AdminEntrypoint;
 
-    const found = await admin.users(userId.slice(0, 6));
+    const { users: found } = await admin.users(userId.slice(0, 6));
     expect(found.find((one) => one.userId === userId)).toMatchObject({
       anonymous: true,
       signIns: [],
       unanswered: 1,
     });
     // An id's start is taken as it is: % matches no id.
-    await expect(admin.users("%")).resolves.toStrictEqual([]);
+    await expect(admin.users("%")).resolves.toStrictEqual({
+      next: null,
+      users: [],
+    });
 
     // The group tells the user's own DO of their place in it after it
     // answers.
@@ -195,10 +198,32 @@ describe("what the admin site asks of the server", () => {
     )
       .bind(crypto.randomUUID(), "apple-sub", first, Date.now())
       .run();
-    const listed = await exports.AdminEntrypoint.users(prefix);
+    const { users: listed } = await exports.AdminEntrypoint.users(prefix);
     expect(listed).toHaveLength(120);
     expect(listed.find((one) => one.userId === first)?.signIns).toStrictEqual([
       "apple",
     ]);
+  });
+
+  it("pages the users past a full page, none twice and none left out", async () => {
+    const prefix = `page-${crypto.randomUUID().slice(0, 8)}-`;
+    // Signed up at the same moment, so the page ends among equals.
+    const at = Date.now();
+    const ids = Array.from({ length: 250 }, (_, index) => `${prefix}${index}`);
+    await env.DB.batch(
+      ids.map((id) =>
+        env.DB.prepare(
+          "insert into user (id, name, email, created_at, updated_at, is_anonymous) values (?, '', ?, ?, ?, 1)"
+        ).bind(id, `${id}@example.test`, at, at)
+      )
+    );
+    const admin = exports.AdminEntrypoint;
+    const first = await admin.users(prefix);
+    expect(first.next).not.toBeNull();
+    const second = await admin.users(prefix, first.next);
+    expect(second.next).toBeNull();
+    const seen = [...first.users, ...second.users].map((one) => one.userId);
+    expect(new Set(seen)).toStrictEqual(new Set(ids));
+    expect(seen).toHaveLength(250);
   });
 });
