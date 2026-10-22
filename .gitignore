@@ -58,5 +58,11 @@ tools/api-try/out/
 # Xcode
 xcuserdata/
 
+# Gradle and Android Studio
+apps/android/.gradle/
+apps/android/**/build/
+apps/android/local.properties
+apps/android/.idea/
+
 # Screenshots taken while checking /design, never committed.
 apps/web/.shots/
