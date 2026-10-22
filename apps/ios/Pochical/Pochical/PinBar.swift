@@ -71,11 +71,14 @@ struct PinBar: View {
       // The glass is drawn behind what it holds, not around it: clipped to
       // the same shape, the list opening or closing shows only as far as
       // the glass has grown, the two one piece through the change.
-      .clipShape(.rect(cornerRadius: Radius.xxl))
-      .glassEffect(.regular, in: .rect(cornerRadius: Radius.xxl))
+      .clipShape(card)
+      .glassEffect(.regular, in: card)
       .padding([.horizontal, .top], CGFloat(Chat.pinMargin))
     }
   }
+
+  /// The card's glass, which also bounds what it holds.
+  private let card = RoundedRectangle(cornerRadius: Radius.xxl)
 
   /// A pin a tap goes to, its long press offering ピン留めを外す.
   private func item(_ line: ChatLineRow, @ViewBuilder label: () -> some View) -> some View {

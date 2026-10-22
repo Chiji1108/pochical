@@ -20,8 +20,9 @@ const pinBar = {
   card: css({
     borderRadius: "2xl",
     marginBottom: "4px",
-    marginLeft: `${chatRules.pinMargin}px`,
-    marginRight: `${chatRules.pinMargin}px`,
+    // From the screen's sides, out past the phone's own inset.
+    marginLeft: `calc(${chatRules.pinMargin}px - var(--screen-left))`,
+    marginRight: `calc(${chatRules.pinMargin}px - var(--screen-right))`,
     marginTop: `${chatRules.pinMargin}px`,
     paddingBottom: "4px",
     paddingLeft: "8px",
