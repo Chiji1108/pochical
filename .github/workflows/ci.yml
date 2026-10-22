@@ -32,7 +32,9 @@ jobs:
           filters: |
             typescript:
               - "apps/web/**"
-              - "apps/catalog/**"
+              - "apps/design/**"
+              - "apps/demo/**"
+              - "apps/try/**"
               - "apps/server/**"
               - "apps/admin/**"
               - "packages/**"
@@ -60,7 +62,8 @@ jobs:
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
-  # apps/web, apps/catalog, apps/server, apps/admin, packages/ and tools/: lint
+  # apps/web, apps/design, apps/demo, apps/try, apps/server, apps/admin,
+  # packages/ and tools/: lint
   # and format, types, tests.
   typescript:
     needs: changes
@@ -84,7 +87,9 @@ jobs:
       # The site builds, and its Worker's bundle and config validate.
       - run: bun run build && bunx wrangler deploy --dry-run
         working-directory: apps/web
-      - run: bun run --cwd apps/catalog build
+      - run: bun run --cwd apps/design build
+      - run: bun run --cwd apps/demo build
+      - run: bun run --cwd apps/try build
       # The server and admin Workers bundle and their configs validate, as
       # Workers Builds deploys them on merge. A dry run needs no account.
       - run: bunx wrangler deploy --dry-run

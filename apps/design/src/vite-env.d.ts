@@ -1,0 +1,5 @@
+// Vite's ImportMetaEnv is an interface, so only an interface merges into it.
+// oxlint-disable-next-line typescript/consistent-type-definitions
+interface ImportMetaEnv {
+  readonly VITE_DEMO_ORIGIN: string;
+}

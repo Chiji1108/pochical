@@ -38,18 +38,45 @@
         "wrangler": "^4.151.3",
       },
     },
-    "apps/catalog": {
-      "name": "@pochical/catalog",
+    "apps/demo": {
+      "name": "@pochical/demo",
       "dependencies": {
         "@pochical/design": "workspace:*",
         "@pochical/jsx": "workspace:*",
         "@pochical/prototype": "workspace:*",
+        "@pochical/showcase": "workspace:*",
         "@pochical/styled-system": "workspace:*",
         "@tanstack/react-router": "1.170.45",
         "@tanstack/react-start": "1.169.3",
         "lucide-react": "^1.61.0",
         "motion": "^14.4.0",
-        "qrcode.react": "^4.2.0",
+        "react": "19.3.1",
+        "react-dom": "19.3.1",
+      },
+      "devDependencies": {
+        "@cloudflare/vite-plugin": "^1.26.0",
+        "@pandacss/dev": "^2.3.0",
+        "@types/node": "24.19.2",
+        "@types/react": "~19.3.0",
+        "@types/react-dom": "^19.2.0",
+        "playwright-core": "^1.64.1",
+        "typescript": "~7.0.2",
+        "vite": "^8.0.0",
+        "wrangler": "^4.151.3",
+      },
+    },
+    "apps/design": {
+      "name": "@pochical/design-docs",
+      "dependencies": {
+        "@pochical/design": "workspace:*",
+        "@pochical/jsx": "workspace:*",
+        "@pochical/prototype": "workspace:*",
+        "@pochical/showcase": "workspace:*",
+        "@pochical/styled-system": "workspace:*",
+        "@tanstack/react-router": "1.170.45",
+        "@tanstack/react-start": "1.169.3",
+        "lucide-react": "^1.61.0",
+        "motion": "^14.4.0",
         "react": "19.3.1",
         "react-dom": "19.3.1",
       },
@@ -60,9 +87,6 @@
         "@types/node": "24.19.2",
         "@types/react": "~19.3.0",
         "@types/react-dom": "^19.2.0",
-        "@vite-pwa/assets-generator": "^2.0.0",
-        "playwright-core": "^1.64.1",
-        "sharp": "0.35.5",
         "typescript": "~7.0.2",
         "vite": "^8.0.0",
         "wrangler": "^4.151.3",
@@ -85,6 +109,35 @@
         "typescript": "~7.0.2",
         "vite": "^8.0.0",
         "vitest": "~5.0.5",
+        "wrangler": "^4.151.3",
+      },
+    },
+    "apps/try": {
+      "name": "@pochical/try",
+      "dependencies": {
+        "@pochical/design": "workspace:*",
+        "@pochical/jsx": "workspace:*",
+        "@pochical/prototype": "workspace:*",
+        "@pochical/showcase": "workspace:*",
+        "@pochical/styled-system": "workspace:*",
+        "@tanstack/react-router": "1.170.45",
+        "@tanstack/react-start": "1.169.3",
+        "lucide-react": "^1.61.0",
+        "motion": "^14.4.0",
+        "qrcode.react": "^4.2.0",
+        "react": "19.3.1",
+        "react-dom": "19.3.1",
+      },
+      "devDependencies": {
+        "@cloudflare/vite-plugin": "^1.26.0",
+        "@pandacss/dev": "^2.3.0",
+        "@types/node": "24.19.2",
+        "@types/react": "~19.3.0",
+        "@types/react-dom": "^19.2.0",
+        "@vite-pwa/assets-generator": "^2.0.0",
+        "sharp": "0.35.5",
+        "typescript": "~7.0.2",
+        "vite": "^8.0.0",
         "wrangler": "^4.151.3",
       },
     },
@@ -176,6 +229,21 @@
         "@types/react": "~19.3.0",
         "@types/react-dom": "^19.2.0",
         "sharp": "0.35.5",
+        "typescript": "~7.0.2",
+        "vite": "^8.0.0",
+      },
+    },
+    "packages/showcase": {
+      "name": "@pochical/showcase",
+      "dependencies": {
+        "@pochical/jsx": "workspace:*",
+        "@pochical/prototype": "workspace:*",
+        "@pochical/styled-system": "workspace:*",
+        "lucide-react": "^1.61.0",
+        "react": "19.3.1",
+      },
+      "devDependencies": {
+        "@types/react": "~19.3.0",
         "typescript": "~7.0.2",
         "vite": "^8.0.0",
       },
@@ -696,9 +764,11 @@
 
     "@pochical/admin": ["@pochical/admin@workspace:apps/admin"],
 
-    "@pochical/catalog": ["@pochical/catalog@workspace:apps/catalog"],
+    "@pochical/demo": ["@pochical/demo@workspace:apps/demo"],
 
     "@pochical/design": ["@pochical/design@workspace:design"],
+
+    "@pochical/design-docs": ["@pochical/design-docs@workspace:apps/design"],
 
     "@pochical/jsx": ["@pochical/jsx@workspace:packages/jsx"],
 
@@ -706,7 +776,11 @@
 
     "@pochical/server": ["@pochical/server@workspace:apps/server"],
 
+    "@pochical/showcase": ["@pochical/showcase@workspace:packages/showcase"],
+
     "@pochical/styled-system": ["@pochical/styled-system@workspace:packages/styled-system"],
+
+    "@pochical/try": ["@pochical/try@workspace:apps/try"],
 
     "@pochical/web": ["@pochical/web@workspace:apps/web"],
 

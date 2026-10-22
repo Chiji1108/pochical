@@ -64,9 +64,17 @@ run = "bun run --cwd apps/server dev"
 description = "Run the admin site's dev server, beside mise run server"
 run = "bun run --cwd apps/admin dev"
 
-[tasks.catalog]
-description = "Run the design catalog's dev server (/design, /try, /demo)"
-run = "bun run --cwd apps/catalog dev"
+[tasks.design]
+description = "Run the design documents' dev server (/design) at http://localhost:3200"
+run = "bun run --cwd apps/design dev"
+
+[tasks.demo]
+description = "Run the demo's dev server (/demo) at http://localhost:3201"
+run = "bun run --cwd apps/demo dev"
+
+[tasks.try]
+description = "Run the app to try's dev server at http://localhost:3202"
+run = "bun run --cwd apps/try dev"
 
 [tasks."db:generate"]
 description = "Generate a D1 migration from apps/server/src/db/schema.ts (pass --name <what>)"
@@ -136,9 +144,13 @@ run = "tools/shifts-rotation/run.sh"
 description = "Typecheck the server"
 run = "bun run --cwd apps/server typecheck"
 
-[tasks."catalog:layout"]
-description = "Measure the /design demo's screens, or compare them with a saved run: save <name> | check <name> (needs the catalog dev server)"
-run = "bun tools/layout-diff/index.ts"
+[tasks."design:layout"]
+description = "Measure the design documents' pages, or compare them with a saved run: save <name> | check <name> (needs mise run design)"
+run = "bun tools/layout-diff/index.ts --app design"
+
+[tasks."demo:layout"]
+description = "Measure /demo's screens and page, or compare them with a saved run: save <name> | check <name> (needs mise run demo)"
+run = "bun tools/layout-diff/index.ts --app demo"
 
 [tasks."api:try"]
 description = "Try the server's groups and invitations by hand: create [name] [emoji] | join | preview | remake | cleanup [--local]"

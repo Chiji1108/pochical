@@ -126,7 +126,7 @@
       groupName: "Bun",
       separateMajorMinor: false,
       prBodyNotes: [
-        "Before merging, set `BUN_VERSION` to the new version in each Worker's Workers Builds settings (server, web, catalog, admin) in the Cloudflare dashboard. Renovate cannot change it.",
+        "Before merging, set `BUN_VERSION` to the new version in each Worker's Workers Builds settings (server, web, design, demo, try, admin) in the Cloudflare dashboard. Renovate cannot change it.",
       ],
     },
   ],
