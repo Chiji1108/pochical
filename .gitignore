@@ -46,6 +46,11 @@ yarn-error.*
 # Panda CSS output, made by `panda codegen` and the apps' PostCSS plugin
 packages/styled-system/dist/
 
+# Left from the removed roster comparison, which older checkouts may still
+# hold: real roster photos with coworkers' names, and its raw replies.
+# Never commit them.
+assets/shift-schedule/
+tools/roster-eval/out/
 # layout-diff's measured runs, remade whenever they are needed
 tools/layout-diff/out/
 tools/api-try/out/
