@@ -24,11 +24,10 @@
     "admin": "bun run --cwd apps/admin dev"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.128.0",
     "@astrojs/compiler-rs": "^0.5.2",
     "@bufbuild/protobuf": "2.15.0",
     "@pochical/design": "workspace:*",
-    "@types/bun": "^1.4.2",
+    "@types/bun": "^1.4.3",
     "lefthook": "^2.1.6",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.85.0",
@@ -38,5 +37,5 @@
     "typescript": "~6.0.3",
     "ultracite": "7.12.0"
   },
-  "packageManager": "bun@1.4.2"
+  "packageManager": "bun@1.4.3"
 }
