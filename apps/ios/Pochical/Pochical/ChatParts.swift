@@ -78,19 +78,33 @@ enum ChatTime {
   }
 }
 
-/// The day over a day's first line in a chat.
-struct DayChip: View {
-  @Environment(\.themeColors) private var colors
+/// A day's name as a chat draws it, in the day's title and floating over
+/// the lines, the two of one size.
+struct DayWords: View {
   let day: Day
 
   var body: some View {
     Text(ChatTime.day(day))
       .font(.caption2)
-      .foregroundStyle(colors.textTertiary)
       .padding(.horizontal, 12)
       .padding(.vertical, 2)
+  }
+}
+
+/// The day over a day's first line in a chat, its words at its foot:
+/// not drawn once pinned, its words up past where the day floats, as the
+/// floating day is the title then, shown or faded.
+struct DayChip: View {
+  @Environment(\.themeColors) private var colors
+  let day: Day
+  let scroll: ChatScroll
+
+  var body: some View {
+    DayWords(day: day)
+      .foregroundStyle(colors.textTertiary)
       .background(colors.fillTertiary, in: RoundedRectangle(cornerRadius: Radius.sm))
-      .padding(.top, 8)
+      .opacity(scroll.topDay == day ? 0 : 1)
+      .padding(.top, FloatingDay.gap)
       // VoiceOver's rotor goes from day to day by its headings.
       .accessibilityAddTraits(.isHeader)
   }
