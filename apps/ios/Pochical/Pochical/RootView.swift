@@ -64,7 +64,7 @@ struct RootView: View {
   }
 
   var body: some View {
-    RootNavigation(navigator: navigator, tint: colors.accentDefault, tabs: hosted(tabs)) { page in
+    RootNavigation(navigator: navigator, tabs: hosted(tabs)) { page in
       hosted(self.page(page).environment(\.photoShelf, navigator.photoShelf(of: page)))
     }
     .ignoresSafeArea()

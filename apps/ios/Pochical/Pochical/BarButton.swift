@@ -22,9 +22,11 @@ private struct BarButtonBody: View {
   let prominent: Bool
 
   var body: some View {
+    // Its words or symbol in the label color it is given, as a bar
+    // button's are, the camera's white over its black included.
     configuration.label
       .font(.body.weight(prominent ? .semibold : .regular))
-      .foregroundStyle(prominent ? AnyShapeStyle(colors.accentOnFill) : AnyShapeStyle(.primary))
+      .foregroundStyle(prominent ? AnyShapeStyle(colors.accentOnFill) : AnyShapeStyle(.foreground))
       .padding(.horizontal, 14)
       .frame(minWidth: Metrics.touch, minHeight: Metrics.touch)
       .contentShape(.capsule)

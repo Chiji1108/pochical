@@ -75,7 +75,8 @@ const menu = {
     display: "flex",
     gap: "12px",
     // iOS 26's menu row: 42pt at the default text size.
-    padding: "10px 12px",
+    minHeight: "42px",
+    padding: "8px 12px",
     textAlign: "start",
     textStyle: "body",
     userSelect: "none",
@@ -84,9 +85,9 @@ const menu = {
   separator: css({
     border: 0,
     borderTop: "1px solid token(colors.separator)",
-    // Groups 21pt apart, the line in their middle and as far in as the
-    // icons, as iOS 26's menus.
-    margin: "10px 16px",
+    // Groups apart with the line in their middle, as far in as the icons,
+    // as iOS 26's menus (21pt there; the nearest step of the grid here).
+    margin: "8px 16px",
   }),
   trigger: css({
     alignItems: "center",
