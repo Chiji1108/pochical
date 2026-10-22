@@ -27,6 +27,8 @@ import { defaultWeekSettings } from "../src/components/design-week";
 import { guessLook, nextColor } from "../src/components/shift-mark";
 import {
   albumRows,
+  answering,
+  changing,
   chatOrder,
   decidePoll,
   editMessage,
@@ -34,9 +36,14 @@ import {
   keptDraft,
   pinMessage,
   pinsOf,
+  sharing,
+  stopping,
   unsendMessage,
+  writingOf,
 } from "../src/lib/chat-messages";
+import type { Writing } from "../src/lib/chat-messages";
 import {
+  firstLink,
   inviteCodeOf,
   largeEmojiCount,
   mentionQuery,
@@ -653,6 +660,84 @@ describe("spec/vectors/chat.json", () => {
           text: kept.text,
         }
       ).toEqual(expected ?? undefined);
+    });
+  }
+  // The composer as the vectors keep it: its words as sent, the target as
+  // two seqs, how many photos, and whether × took its link's page off.
+  type Held = {
+    text: string;
+    replyTo?: number;
+    editing?: number;
+    days?: string[];
+    photos?: number;
+    withoutPreview?: boolean;
+  };
+  const mentionName = (id: string) => (id === "u2" ? "ゆき" : id);
+  const writingFrom = (held: Held): Writing => {
+    let target: DraftTarget | undefined;
+    if (held.editing !== undefined) {
+      target = { id: String(held.editing), kind: "edit" };
+    } else if (held.replyTo !== undefined) {
+      target = { id: String(held.replyTo), kind: "reply" };
+    }
+    return {
+      ...writingOf(held.text, mentionName, target),
+      days: held.days?.map(dayOf),
+      photos: Array.from({ length: held.photos ?? 0 }, (_, index) => ({
+        height: 1,
+        src: String(index),
+        width: 1,
+      })),
+      withoutPreview:
+        held.withoutPreview === true ? firstLink(held.text) : undefined,
+    };
+  };
+  const heldOf = (writing: Writing): Held => {
+    const sent = withMentions(writing.words, writing.picked);
+    return {
+      days: writing.days?.map(dateKey),
+      editing:
+        writing.target?.kind === "edit" ? Number(writing.target.id) : undefined,
+      photos: writing.photos.length > 0 ? writing.photos.length : undefined,
+      replyTo:
+        writing.target?.kind === "reply"
+          ? Number(writing.target.id)
+          : undefined,
+      text: sent,
+      withoutPreview:
+        writing.withoutPreview !== undefined &&
+        writing.withoutPreview === firstLink(sent)
+          ? true
+          : undefined,
+    };
+  };
+  for (const {
+    name,
+    composer,
+    step,
+    lines,
+    expected,
+  } of chatMessages.composer) {
+    test(name, () => {
+      const before = writingFrom(composer);
+      let after: Writing;
+      if ("reply" in step) {
+        after = answering(before, String(step.reply));
+      } else if ("edit" in step) {
+        const edited = lines.find((one) => one.seq === step.edit);
+        if (!(edited && "text" in edited)) {
+          throw new Error(`no words at ${step.edit}`);
+        }
+        after = changing(
+          line(String(step.edit), { kind: "words", text: edited.text }),
+          mentionName
+        );
+      } else if ("share" in step) {
+        after = sharing(before, step.share.map(dayOf));
+      } else {
+        after = stopping(before);
+      }
+      expect(heldOf(after)).toEqual(expected);
     });
   }
   for (const { name, count, expected } of chatMessages.albumRows) {

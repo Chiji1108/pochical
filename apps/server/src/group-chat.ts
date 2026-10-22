@@ -70,6 +70,7 @@ import {
   chatVotes,
   readMarks,
 } from "./group-do-schema";
+import { letGoUnsent, takeBack } from "./group-photos";
 import { isId } from "./ids";
 import { keptPreview, mayFetch, sentPreview } from "./link-preview";
 import { fitsText, isEmoji } from "./text-limits";
@@ -939,13 +940,8 @@ const unsendLine = (
     return {};
   }
   const photosGone = photosOf(line.content).map(({ id }) => id);
-  if (photosGone.length > 0) {
-    db.update(groupPhotos)
-      .set({ state: "takenBack" })
-      .where(inArray(groupPhotos.id, photosGone))
-      .run();
-  }
-  // Its photos go from storage too, once the change is kept.
+  // Its photos go from storage too, by the sweep.
+  takeBack(db, photosGone);
   return { change: chatLineChange(db, row), photosGone };
 };
 
@@ -1026,9 +1022,7 @@ const keepRecall = (
     .onConflictDoNothing()
     .run();
   const photosGone = ownUnsentPhotos(db, userId, photoIds);
-  if (photosGone.length > 0) {
-    db.delete(groupPhotos).where(inArray(groupPhotos.id, photosGone)).run();
-  }
+  letGoUnsent(db, photosGone);
   return { photosGone };
 };
 

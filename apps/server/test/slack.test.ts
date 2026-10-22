@@ -1,5 +1,5 @@
 import { chatRules } from "@pochical/design/chat";
-import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -11,14 +11,18 @@ import {
   toSlackText,
 } from "../src/slack";
 import { supportPlace } from "../src/support-lines";
-import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
+import { call, ORIGIN, signInAnonymously } from "./helpers";
 import {
+  alarmsSettled,
+  watchAlarms,
   relayed,
   sendFrame,
   supportChat,
-  syncSocket,
+  tryNow,
   untilAcked,
 } from "./sync-helpers";
+
+watchAlarms();
 
 const SECRET = "slack-signing-secret";
 
@@ -891,6 +895,18 @@ const nextTry = async (userId: string): Promise<number | null> => {
   return at === null ? null : Math.round((at - Date.now()) / 1000);
 };
 
+/** The relay's next try run now, and when it comes back. */
+const relayOnce = async (userId: string): Promise<number | null> => {
+  await tryNow(userId);
+  return await nextTry(userId);
+};
+
+/** When the relay comes back after the try a change asked for. */
+const triedAtOnce = async (userId: string): Promise<number | null> => {
+  await alarmsSettled(userId);
+  return await nextTry(userId);
+};
+
 describe("a line Slack took with its answer lost", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -1011,9 +1027,7 @@ describe("a line Slack took with its answer lost", () => {
       },
     });
     // Posted, its answer lost: the relay waits to try again.
-    await vi.waitFor(async () => {
-      await expect(nextTry(userId)).resolves.toBeGreaterThan(0);
-    });
+    await expect(triedAtOnce(userId)).resolves.toBeGreaterThan(0);
     await edit({
       case: "chatEdits",
       value: {
@@ -1068,12 +1082,6 @@ describe("Slack's refusals", () => {
 
 const MINUTE_S = 60;
 
-/** The relay run once, and when it comes back. */
-const relayOnce = async (userId: string): Promise<number | null> => {
-  await runDurableObjectAlarm(env.GROUPS.getByName(supportPlace(userId)));
-  return await nextTry(userId);
-};
-
 /** What the admin pages say of the chat's lines not reaching Slack. */
 const failureOf = async (userId: string) => {
   const chats = await exports.AdminEntrypoint.supportChats();
@@ -1085,9 +1093,7 @@ const failureOf = async (userId: string) => {
  * of it: the relay waiting to try again, its first wait in seconds.
  */
 const refusedOnce = async (token: string) => {
-  const userId = await userIdOf(token);
-  const { socket, frames } = await syncSocket("/v1/me/support/socket", token);
-  await frames.next();
+  const { frames, socket, userId } = await supportChat(token);
   const send = async (text: string): Promise<void> => {
     sendFrame(socket, {
       case: "chatEdits",
@@ -1108,22 +1114,8 @@ const refusedOnce = async (token: string) => {
     });
     await untilAcked(frames);
   };
-  /** The try a line asks for, once refused: how long until the next. */
-  const refused = async (): Promise<number> => {
-    let wait = 0;
-    // The alarm a line sets for now runs by itself, however slow the
-    // runner: waited for, not run here, which would run the relay twice.
-    await vi.waitFor(
-      async () => {
-        wait = (await nextTry(userId)) ?? 0;
-        expect(wait).toBeGreaterThan(0);
-      },
-      { interval: 50, timeout: 10_000 }
-    );
-    return wait;
-  };
   await send("届いてますか");
-  return { firstWait: await refused(), refused, send, userId };
+  return { firstWait: await triedAtOnce(userId), send, userId };
 };
 
 describe("a support chat Slack does not take", () => {
@@ -1198,11 +1190,11 @@ describe("a support chat Slack does not take", () => {
       (method) => method === "chat.postMessage" && { error: "invalid_auth" }
     );
     const token = await signInAnonymously();
-    const { firstWait, refused, send } = await refusedOnce(token);
+    const { firstWait, send, userId } = await refusedOnce(token);
     expect(firstWait).toBe(MINUTE_S);
     await send("まだですか");
     // Tried again now, the line before it first, then waiting longer.
-    await expect(refused()).resolves.toBe(2 * MINUTE_S);
+    await expect(triedAtOnce(userId)).resolves.toBe(2 * MINUTE_S);
     expect(postsIn(calls)).toBe(2);
   });
 });
