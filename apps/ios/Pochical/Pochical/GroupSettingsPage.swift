@@ -141,7 +141,6 @@ struct GroupSettingsPage: View {
     .settingsList()
     .navigationTitle("グループの設定")
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarVisibility(.visible, for: .navigationBar)
     .task {
       let today = Day.today
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))

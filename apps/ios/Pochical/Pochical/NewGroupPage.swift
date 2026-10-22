@@ -63,7 +63,6 @@ struct NewGroupPage: View {
     .settingsList()
     .navigationTitle("グループを作る")
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarVisibility(.visible, for: .navigationBar)
     .onChange(of: usualName, initial: true) { _, usual in
       if myName.isEmpty { myName = usual }
     }

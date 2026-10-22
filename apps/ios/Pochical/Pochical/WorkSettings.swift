@@ -507,7 +507,6 @@ private struct RepeatEditor: View {
     .background(colors.backgroundBase)
     .navigationTitle(mode.title)
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarVisibility(.hidden, for: .tabBar)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         Button("完了", systemImage: "checkmark", role: .confirm) { confirming = true }

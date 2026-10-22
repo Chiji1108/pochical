@@ -526,9 +526,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   /// iOS 26 does for every screen whose content goes under its bars.
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
-    var screen = parent
-    while let next = screen?.parent, !(next is UINavigationController) { screen = next }
-    screen?.setContentScrollView(lines, for: .top)
+    parent?.pageInNavigation?.setContentScrollView(lines, for: .top)
   }
 
   override func viewDidLayoutSubviews() {

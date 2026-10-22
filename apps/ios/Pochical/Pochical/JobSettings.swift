@@ -189,7 +189,6 @@ struct JobChangePage: View {
           .disabled(sequence.isEmpty)
       }
     }
-    .toolbarVisibility(.hidden, for: .tabBar)
     // The days from the new job's first change, so 完了 asks first.
     .alert("\(start.slashText)から新しい仕事にしますか？", isPresented: $confirming) {
       Button("キャンセル", role: .cancel) {}

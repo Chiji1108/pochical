@@ -133,6 +133,7 @@ struct RootView: View {
     .onChange(of: openGroupID) { _, id in
       if id != inviting { inviting = nil }
     }
+    .onChange(of: navigator.tab) { inviting = nil }
     .fullScreenCover(isPresented: $scanning) {
       if let scanned {
         invite = scanned

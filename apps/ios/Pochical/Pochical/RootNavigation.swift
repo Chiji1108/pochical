@@ -236,9 +236,18 @@ private struct TabScrollViewForBar: UIViewControllerRepresentable {
       super.viewDidAppear(animated)
       var tab = parent
       while let next = tab?.parent, !(next is UITabBarController) { tab = next }
-      var screen = tab?.parent
-      while let next = screen?.parent, !(next is UINavigationController) { screen = next }
-      screen?.setContentScrollView(tab?.contentScrollView(for: .top), for: .top)
+      tab?.parent?.pageInNavigation?.setContentScrollView(
+        tab?.contentScrollView(for: .top), for: .top)
     }
+  }
+}
+
+extension UIViewController {
+  /// The page this controller is in, right under its navigation: the one
+  /// whose content scroll view the bar follows.
+  var pageInNavigation: UIViewController? {
+    var page: UIViewController? = self
+    while let next = page?.parent, !(next is UINavigationController) { page = next }
+    return page
   }
 }

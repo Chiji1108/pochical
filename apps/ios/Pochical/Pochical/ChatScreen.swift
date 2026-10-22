@@ -265,7 +265,6 @@ struct ChatScreen: View {
     .environment(\.memberFaces, faces)
     .navigationTitle(title)
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarVisibility(.visible, for: .navigationBar)
     .toolbar {
       // The title drawn here to carry 通知オフ's bell after it, which the
       // bar's own title does not draw, and to open what the chat is of:

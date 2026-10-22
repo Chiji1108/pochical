@@ -162,7 +162,6 @@ struct GroupShiftsPage: View {
     }
     .navigationTitle(group.name)
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarVisibility(.visible, for: .navigationBar)
     .toolbar {
       // One pull-down for the page's secondary actions: how the table is
       // laid out and what the marks mean. No 画像で保存: the members see it
