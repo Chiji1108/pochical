@@ -687,7 +687,8 @@ describe("spec/vectors/chat.json", () => {
         src: String(index),
         width: 1,
       })),
-      withoutPreview: held.withoutPreview ? firstLink(held.text) : undefined,
+      withoutPreview:
+        held.withoutPreview === true ? firstLink(held.text) : undefined,
     };
   };
   const heldOf = (writing: Writing): Held => {
