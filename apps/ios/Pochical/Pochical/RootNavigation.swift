@@ -152,6 +152,8 @@ extension EnvironmentValues {
 /// `hosted` puts the app's in it again.
 struct RootNavigation: UIViewControllerRepresentable {
   let navigator: RootNavigator
+  /// The テーマ's accent.
+  let tint: Color
   let tabs: AnyView
   let page: (RootPage) -> AnyView
 
@@ -160,11 +162,13 @@ struct RootNavigation: UIViewControllerRepresentable {
     navigator.controller = controller
     controller.onShown = { [weak navigator] in navigator?.shown($0) }
     controller.show(navigator.pages, over: navigator.tab, animated: false)
+    controller.tint = UIColor(tint)
     return controller
   }
 
   func updateUIViewController(_ controller: RootNavigationController, context: Context) {
     navigator.controller = controller
+    controller.tint = UIColor(tint)
     controller.update(tabs: tabs, page: page)
   }
 }
@@ -173,6 +177,13 @@ final class RootNavigationController: UINavigationController, UINavigationContro
   private let tabs: UIHostingController<AnyView>
   private var page: (RootPage) -> AnyView
   var onShown: ([RootPage]) -> Void = { _ in }
+  /// The app's tint, given to the window as UIKit tints an app: what is on
+  /// the pages takes it as their accent, and the bar fills its prominent
+  /// buttons with it, while the bar's other buttons and the menus stay in
+  /// the label color, as iOS 26 draws them.
+  var tint: UIColor? {
+    didSet { view.window?.tintColor = tint }
+  }
 
   init(tabs: AnyView, page: @escaping (RootPage) -> AnyView) {
     self.tabs = UIHostingController(rootView: tabs)
@@ -185,6 +196,11 @@ final class RootNavigationController: UINavigationController, UINavigationContro
   override func viewDidLoad() {
     super.viewDidLoad()
     delegate = self
+  }
+
+  override func viewIsAppearing(_ animated: Bool) {
+    super.viewIsAppearing(animated)
+    view.window?.tintColor = tint
   }
 
   /// The hosts of the pages over the tabs.

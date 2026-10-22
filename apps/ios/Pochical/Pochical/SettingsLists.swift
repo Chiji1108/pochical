@@ -20,6 +20,13 @@ extension View {
     modifier(MainButton(size: size))
   }
 
+  /// A button beside the main one or standing for a lesser step, as the
+  /// system draws a bordered one (/design's quiet): the accent's words on
+  /// its light fill, a capsule.
+  func quietButton() -> some View {
+    modifier(QuietButton())
+  }
+
   /// A row standing on the page itself, as /design's segments and cards
   /// do, between the same margins as the cards of rows.
   func settingsOnPage() -> some View {
@@ -65,6 +72,17 @@ private struct MainButton: ViewModifier {
       .controlSize(size)
       .tint(colors.accentFill)
       .foregroundStyle(colors.accentOnFill)
+  }
+}
+
+private struct QuietButton: ViewModifier {
+  @Environment(\.themeColors) private var colors
+
+  func body(content: Content) -> some View {
+    content
+      .buttonStyle(.bordered)
+      .buttonBorderShape(.capsule)
+      .tint(colors.accentDefault)
   }
 }
 
