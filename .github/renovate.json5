@@ -63,6 +63,24 @@
       allowedVersions: "<7",
     },
     {
+      description: "@types/node's major is the Node major it describes; keep it at .node-version's (24), and raise this bound in the PR that moves .node-version",
+      matchDepNames: ["@types/node"],
+      allowedVersions: "<25",
+    },
+    {
+      description: "satori/standalone 0.33+ cannot run in a Worker: harfbuzzjs reads self.location.href, and 0.35.2+ compiles its embedded wasm at runtime (vercel/satori#878). Once vercel/satori#931 is released, move apps/web/src/lib/invite-image.ts to init({ layout, harfbuzz }) and lift this bound",
+      matchDepNames: ["satori"],
+      allowedVersions: "<0.33",
+    },
+    {
+      description: "A new Node major also moves @types/node",
+      matchDepNames: ["node"],
+      matchUpdateTypes: ["major"],
+      prBodyNotes: [
+        "Before merging, raise `@types/node`'s `allowedVersions` in `.github/renovate.json5` to the new major and update `@types/node` in every package.json to it.",
+      ],
+    },
+    {
       matchDepNames: ["typescript"],
       matchUpdateTypes: ["major"],
       groupName: "TypeScript",

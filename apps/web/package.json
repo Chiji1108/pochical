@@ -36,7 +36,7 @@
   "devDependencies": {
     "@astrojs/check": "0.9.12",
     "@pandacss/dev": "^2.3.0",
-    "@types/node": "25.9.9",
+    "@types/node": "24.19.2",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "npm:@typescript/typescript6@~6.0.2",
