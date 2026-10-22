@@ -7,4 +7,5 @@ export default [
   route("photos/:userId/:photoId", "routes/photo.ts"),
   route("reports", "routes/reports.tsx"),
   route("bucket", "routes/bucket.tsx"),
+  route("reset", "routes/reset.tsx"),
 ] satisfies RouteConfig;

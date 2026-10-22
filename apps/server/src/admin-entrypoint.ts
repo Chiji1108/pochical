@@ -13,6 +13,8 @@ import { supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
 import { GROUP_THREAD } from "./group-chat";
 import { photoKey } from "./photos";
+import { previewReset, resetEverything } from "./reset";
+import type { ResetPreview } from "./reset";
 import { supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
@@ -159,6 +161,20 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       throw new TypeError("No audit's time to delete as of");
     }
     return await cleanBucket(this.env, Math.min(asOfMs, Date.now()));
+  }
+
+  /** What 全消去 would erase now: it only reads. */
+  async resetPreview(): Promise<ResetPreview> {
+    return await previewReset(this.env);
+  }
+
+  /**
+   * Every account, group, report and photo erased (全消去), before
+   * release only. It cannot be undone; run again, it erases what a run
+   * cut short left, and after one that finished, nothing.
+   */
+  async reset(): Promise<void> {
+    await resetEverything(this.env);
   }
 
   /** What members reported, the latest first. */

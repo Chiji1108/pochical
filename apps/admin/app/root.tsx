@@ -38,6 +38,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </NavLink>
           <NavLink to="/reports">通報</NavLink>
           <NavLink to="/bucket">棚卸し</NavLink>
+          <NavLink to="/reset">全消去</NavLink>
         </nav>
         {children}
         <Scripts />
