@@ -1,5 +1,6 @@
 import { textLimits } from "@pochical/design/limits";
 import type { TextKind } from "@pochical/design/limits";
+import { characterCount } from "@pochical/design/text";
 import { css, cva, cx } from "@pochical/styled-system/css";
 import { lazy, Suspense, useRef, useState } from "react";
 import type {
@@ -11,12 +12,7 @@ import type {
   TextareaHTMLAttributes,
 } from "react";
 
-import {
-  characterCount,
-  countShown,
-  limitText,
-  markLetter,
-} from "../lib/text-limits";
+import { countShown, limitText, markLetter } from "../lib/text-limits";
 
 // Fields: times, text held to its limit (spec/text-limits.md) and a
 // mark's letter, with the bits shown beside them.

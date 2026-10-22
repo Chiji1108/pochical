@@ -1,5 +1,4 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useReducedMotion } from "motion/react";
 import type { MotionValue } from "motion/react";
 import {
   useEffect,
@@ -19,6 +18,7 @@ import {
 import { sameMonth, togetherIn } from "../lib/design-group-data";
 import type { Group, Member, Together } from "../lib/design-group-data";
 import { designToday } from "../lib/design-today";
+import { useReducedMotion } from "../lib/device-media";
 import {
   DayRow,
   dayRows,
@@ -440,7 +440,7 @@ export function MonthRow({
   // Turned by a swipe, which has already brought the new name in.
   swiped?: boolean;
 }) {
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   const { english } = useWeek();
   const turn = useTurn(monthIndex(month), swiped);
   const next = monthAfter(month, 1);

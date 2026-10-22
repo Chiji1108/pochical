@@ -1,0 +1,45 @@
+---
+import { ArrowUpRight, Smartphone } from "lucide-react";
+
+import { storeLink } from "../lib/site";
+
+// The app's store pages, each marked 公開準備中 until its URL is set.
+const stores = [
+  {
+    name: "App Store",
+    url: storeLink(import.meta.env.VITE_APP_STORE_URL, "apps.apple.com"),
+  },
+  {
+    name: "Google Play",
+    url: storeLink(import.meta.env.VITE_GOOGLE_PLAY_URL, "play.google.com"),
+  },
+];
+---
+
+<div class="store-links">
+  {stores.map((store) =>
+    store.url ? (
+      <a
+        class="store-link"
+        href={store.url}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <Smartphone aria-hidden="true" size={22} />
+        <span>
+          <small>ダウンロード</small>
+          <strong>{store.name}</strong>
+        </span>
+        <ArrowUpRight aria-hidden="true" size={16} />
+      </a>
+    ) : (
+      <div class="store-link coming-soon">
+        <Smartphone aria-hidden="true" size={22} />
+        <span>
+          <small>公開準備中</small>
+          <strong>{store.name}</strong>
+        </span>
+      </div>
+    )
+  )}
+</div>

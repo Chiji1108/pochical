@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Fragment, jsx } from "react/jsx-runtime";
 
-import { phrasesOf } from "./phrases";
+import { phrasesOf, UNBROKEN } from "./phrases";
 
 // The site's JSX runtime (jsx-runtime.ts, set as jsxImportSource): every
 // Japanese string on its way to the page has a <wbr> between its phrases,
@@ -14,19 +14,6 @@ import { phrasesOf } from "./phrases";
 // whatever element holds them and which no element looks inside. The
 // site's own components are functions and get their strings untouched, as
 // one may use it as a label or count it.
-
-// Text that is not laid out in lines, and SVG's.
-const UNBROKEN = new Set([
-  "desc",
-  "option",
-  "script",
-  "style",
-  "text",
-  "textarea",
-  "textPath",
-  "title",
-  "tspan",
-]);
 
 const phrased = (text: string): ReactNode => {
   const phrases = phrasesOf(text);

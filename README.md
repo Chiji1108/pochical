@@ -9,7 +9,7 @@ apps/
   server/        Cloudflare Workers + Durable Objects（Connect RPC・WebSocket）
   ios/           SwiftUIアプリ
   android/       Jetpack Composeアプリ
-  web/           TanStack Start製の専用サイト。LP・招待・アカウント削除など
+  web/           Astro製の専用サイト。LP・招待・アカウント削除など
 ```
 
 ## 開発
