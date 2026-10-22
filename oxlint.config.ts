@@ -97,6 +97,13 @@ export default defineConfig({
             name: "motion/react",
           },
         ],
+        patterns: [
+          {
+            message:
+              "Vite gives a bare image import as its URL and Astro as an image object. Say which one: ?url, ?inline or ?no-inline.",
+            regex: "\\.(?:apng|avif|gif|jpe?g|png|svg|tiff|webp)$",
+          },
+        ],
       },
     ],
     "no-use-before-define": ["error", { functions: false }],

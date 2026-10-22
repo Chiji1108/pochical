@@ -1,5 +1,5 @@
 import { rotationTemplates } from "@pochical/design/patterns";
-import poodle from "@pochical/prototype/assets/poodle.png";
+import poodle from "@pochical/prototype/assets/poodle.png?url";
 import {
   ProviderButtons,
   signInMilliseconds,
