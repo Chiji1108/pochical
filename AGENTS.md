@@ -32,3 +32,4 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 - main takes pull requests only; name the Linear issue (team POC) in the PR, and file skipped findings or follow-ups there.
 - Before merging: run `/code-review` and address it, CI must be green (Xcode Cloud included for iOS), and review threads resolved. Merge main into the branch first when other PRs landed. Never merge on red.
 - Deploys happen through Cloudflare Workers Builds on merge; never deploy by hand.
+- Renovate (`.github/renovate.json5`) opens the dependency PRs on Monday mornings: patches and minors in one PR, each major in its own, and what must move together in its own group at every update (Bun, vitest, protobuf and Connect) or at majors (TypeScript, React). They merge like any other PR, after the manual steps their bodies name, such as `mise run gen`.

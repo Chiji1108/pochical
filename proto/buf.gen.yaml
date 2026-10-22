@@ -19,11 +19,13 @@ plugins:
     opt:
       - target=ts
   # iOS (swift-protobuf + connect-swift)
+  # renovate: datasource=github-tags depName=apple/swift-protobuf
   - remote: buf.build/apple/swift:v1.38.1
     out: ../apps/ios/Packages/PochicalProto/Sources/PochicalProto
     opt:
       - Visibility=Public
       - FileNaming=PathToUnderscores
+  # renovate: datasource=github-tags depName=connectrpc/connect-swift
   - remote: buf.build/connectrpc/swift:v1.2.3
     out: ../apps/ios/Packages/PochicalProto/Sources/PochicalProto
     opt:
@@ -31,14 +33,17 @@ plugins:
       - FileNaming=PathToUnderscores
       - GenerateCallbackMethods=false
   # Android (protobuf lite + connect-kotlin)
+  # renovate: datasource=github-tags depName=protocolbuffers/protobuf
   - remote: buf.build/protocolbuffers/java:v36.2
     out: ../apps/android/proto/src/main/java
     opt:
       - lite
+  # renovate: datasource=github-tags depName=protocolbuffers/protobuf
   - remote: buf.build/protocolbuffers/kotlin:v36.2
     out: ../apps/android/proto/src/main/kotlin
     opt:
       - lite
+  # renovate: datasource=github-tags depName=connectrpc/connect-kotlin
   - remote: buf.build/connectrpc/kotlin:v0.9.0
     out: ../apps/android/proto/src/main/kotlin
     opt:
