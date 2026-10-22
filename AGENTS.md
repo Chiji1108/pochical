@@ -21,7 +21,7 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 
 ## How to build
 
-- Plumbing comes from a maintained library before it is hand-written (check license, activity, fit; name it in the PR). MIT/Apache/BSD may be added; GPL/AGPL code (Signal, Telegram) is read for ideas only.
+- Plumbing comes from a maintained library before it is hand-written (check license, activity, fit; name it in the PR). MIT/Apache/BSD/ISC may be added; GPL/AGPL code (Signal, Telegram) is read for ideas only.
 - What does the same thing in two places is one piece, not two copies: build on the existing one and make the difference an input. A change to one carries to the others in the same PR.
 - Fix the root cause the way the platform or library intends; no timing hacks, sleeps or patches over symptoms. If the conventional answer is to leave a review finding, say so instead of adding special handling.
 - The apps are unreleased: change stored shapes directly, with no hand-written data migration, fallback or compatibility code for old saved data. On iOS that means editing a table where it is first created, never adding a migration step: any schema change erases the device's database in every build, TestFlight included, and it syncs again from the server. Likewise a kept session the app cannot read (the Keychain's) is no session: it signs in anew (spec/sync-protocol.md, Signing in). Server SQL schemas still get their generated Drizzle migrations, as above. At release, turn iOS's `erasesOnShapeChange` off, for the database and the kept session alike, and append migration steps from then on.
