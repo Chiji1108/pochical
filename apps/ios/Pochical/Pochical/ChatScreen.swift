@@ -437,8 +437,8 @@ struct ChatScreen: View {
     }
     .sheet(item: $pickingDays) { pick in
       ShareDaysSheet(
-        groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) }, poll: pick == .poll
-      ) { shareDays($0, poll: pick == .poll) }
+        groupID: place.id, people: otherID.map { Set([$0, meID ?? ""]) }, pick: pick
+      ) { shareDays($0, as: pick) }
     }
     // As the app leaves the screen, what is written is kept at once,
     // without waiting for the writing to pause.
@@ -540,8 +540,7 @@ struct ChatScreen: View {
         nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
         keepDraft: { keepDraft() },
         onShareDays: place.rules.days ? { pickingDays = .share } : nil,
-        onPollDays: place.rules.days && otherID == nil && place.rules.polls
-          ? { pickingDays = .poll } : nil,
+        onPollDays: otherID == nil && place.rules.polls ? { pickingDays = .poll } : nil,
         say: say)
     }
   }
@@ -1355,13 +1354,12 @@ struct ChatScreen: View {
 
   /// Shares days with everyone's shifts, as a line of their own; true when
   /// kept.
-  private func shareDays(_ days: [Day], poll: Bool) -> Bool {
+  private func shareDays(_ days: [Day], as pick: DaysPick) -> Bool {
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
-    if poll {
-      send.content.poll.days = days.map(\.key)
-    } else {
-      send.content.days.days = days.map(\.key)
+    switch pick {
+    case .share: send.content.days.days = days.map(\.key)
+    case .poll: send.content.poll.days = days.map(\.key)
     }
     return sent(send)
   }
@@ -1533,7 +1531,7 @@ struct ChatScreen: View {
     }
     // What is not kept stays in the composer, with all after it.
     if let days = draft.writing.days {
-      guard shareDays(days, poll: false) else { return }
+      guard shareDays(days, as: .share) else { return }
       draft.writing.days = nil
     }
     guard sendPhotos() else { return }

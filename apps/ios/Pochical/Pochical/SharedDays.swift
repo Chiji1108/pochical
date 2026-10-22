@@ -303,8 +303,8 @@ struct ShareDaysSheet: View {
   let groupID: String
   /// Who the card shows: everyone, or the two of a one-to-one chat.
   let people: Set<String>?
-  /// The days are put to the vote rather than shared.
-  let poll: Bool
+  /// To share the days, or to put them to the vote.
+  let pick: DaysPick
   /// Sends the days; true when kept.
   let onSend: ([Day]) -> Bool
   @State private var month = Day.today.firstOfMonth
@@ -313,9 +313,6 @@ struct ShareDaysSheet: View {
   /// How many notices have been said, so only the latest one's time takes
   /// it away.
   @State private var notices = 0
-
-  /// The fewest days a poll puts to the vote.
-  private static var pollLeast: Int { 2 }
 
   /// How far ahead the days everyone is off are offered.
   private static var suggestionDays: Int { 45 }
@@ -335,7 +332,7 @@ struct ShareDaysSheet: View {
         }
         .padding(16)
       }
-      .navigationTitle(poll ? "日にちの投票" : "日にちを共有")
+      .navigationTitle(pick == .poll ? "日にちの投票" : "日にちを共有")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -345,7 +342,7 @@ struct ShareDaysSheet: View {
           Button("送る", systemImage: "checkmark", role: .confirm) {
             if onSend(picked) { dismiss() }
           }
-          .disabled(picked.count < (poll ? Self.pollLeast : 1))
+          .disabled(picked.count < (pick == .poll ? pollMinDays : 1))
         }
       }
       .overlay(alignment: .top) {
@@ -472,11 +469,11 @@ struct ShareDaysSheet: View {
   private var note: some View {
     let tinted = "うすく色のついた日は、みんな休みの日です。"
     let words =
-      switch (poll, picked.count) {
-      case (true, ..<Self.pollLeast): "候補の日を\(Self.pollLeast)日以上選んでください。\(tinted)"
-      case (true, let count): "\(count)日の中から、みんなが行ける日を投票で決めます。"
-      case (false, 0): tinted
-      case (false, let count): "\(count)日分のみんなのシフトを送ります。"
+      switch (pick, picked.count) {
+      case (.poll, ..<pollMinDays): "候補の日を\(pollMinDays)日以上選んでください。\(tinted)"
+      case (.poll, let count): "\(count)日の中から、みんなが行ける日を投票で決めます。"
+      case (.share, 0): tinted
+      case (.share, let count): "\(count)日分のみんなのシフトを送ります。"
       }
     return Text(words)
     .font(.footnote)

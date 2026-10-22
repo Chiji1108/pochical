@@ -22,6 +22,7 @@ import {
   COWORKERS_MAX,
   PATTERNS_PER_PAGE,
   GROUP_MAX_MEMBERS,
+  POLL_MIN_DAYS,
   SHARED_DAYS_MAX,
   syncLimits,
   textFields,
@@ -171,6 +172,7 @@ function json() {
       coworkersMax: COWORKERS_MAX,
       groupMaxMembers: GROUP_MAX_MEMBERS,
       patternsPerPage: PATTERNS_PER_PAGE,
+      pollMinDays: POLL_MIN_DAYS,
       sharedDaysMax: SHARED_DAYS_MAX,
       sync: syncLimits,
       text: textLimits,
@@ -547,6 +549,7 @@ const SYNC_LIMITS_DOC =
 const CHAT_DOC =
   "The chat's shared numbers (spec/chat.md); times in milliseconds.";
 const SHARED_DAYS_DOC = "The most days one chat message shares.";
+const POLL_MIN_DAYS_DOC = "The fewest days a poll puts to the vote.";
 const GROUP_MEMBERS_DOC = "The most people in one group.";
 const COWORKERS_DOC = "The most people one person keeps in 一緒に働く人.";
 const PATTERNS_PAGE_DOC =
@@ -630,6 +633,10 @@ const outputs = {
       `const val SHARED_DAYS_MAX = ${SHARED_DAYS_MAX}`,
     ],
     [
+      `/** ${POLL_MIN_DAYS_DOC} */`,
+      `const val POLL_MIN_DAYS = ${POLL_MIN_DAYS}`,
+    ],
+    [
       `/** ${GROUP_MEMBERS_DOC} */`,
       `const val GROUP_MAX_MEMBERS = ${GROUP_MAX_MEMBERS}`,
     ],
@@ -646,6 +653,7 @@ const outputs = {
     swiftEnum("TextFields", TEXT_FIELDS_DOC, textFields),
     swiftEnum("SyncLimits", SYNC_LIMITS_DOC, syncLimits),
     [`/// ${SHARED_DAYS_DOC}`, `public let sharedDaysMax = ${SHARED_DAYS_MAX}`],
+    [`/// ${POLL_MIN_DAYS_DOC}`, `public let pollMinDays = ${POLL_MIN_DAYS}`],
     [
       `/// ${GROUP_MEMBERS_DOC}`,
       `public let groupMaxMembers = ${GROUP_MAX_MEMBERS}`,

@@ -1,4 +1,4 @@
-import { SHARED_DAYS_MAX } from "@pochical/design/limits";
+import { POLL_MIN_DAYS, SHARED_DAYS_MAX } from "@pochical/design/limits";
 import { css, cva, cx } from "@pochical/styled-system/css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useContext, useState } from "react";
@@ -147,8 +147,8 @@ function DaySheetBody({
   );
   const [picked, setPicked] = useState<Date[]>([]);
   const toast = useContext(ToastContext);
-  // A poll needs two days to choose from.
-  const least = poll ? 2 : 1;
+  // A poll needs days to choose from.
+  const least = poll ? POLL_MIN_DAYS : 1;
   const isPicked = (date: Date) =>
     picked.some((item) => dateKey(item) === dateKey(date));
   const toggle = (date: Date) => {
@@ -290,8 +290,8 @@ const dayNoteStyle = css({ minHeight: "2lh" });
 
 // What sending will do, under the days.
 function dayNote(count: number, poll: boolean) {
-  if (poll && count < 2) {
-    return "候補の日を2日以上選んでください。うすく色のついた日は、みんな休みの日です。";
+  if (poll && count < POLL_MIN_DAYS) {
+    return `候補の日を${POLL_MIN_DAYS}日以上選んでください。うすく色のついた日は、みんな休みの日です。`;
   }
   if (count === 0) {
     return "うすく色のついた日は、みんな休みの日です。";

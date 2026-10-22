@@ -647,7 +647,7 @@ export function ChatScreen({
                 editingMessage={byId(composer.editing)}
                 onSend={send}
                 onPollDays={
-                  rules.days && isGroup && rules.polls
+                  isGroup && rules.polls
                     ? () => {
                         pickDays(true);
                       }

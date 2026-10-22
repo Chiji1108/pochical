@@ -258,7 +258,7 @@ export function GoneNote({ name }: { name: string }) {
 }
 
 // ＋ and what it opens over itself, as iOS 26's Messages: 写真, then
-// 日にちを共有, and in a group chat 日にちの投票 nearest the button.
+// 日にちを共有, and in a group chat 日にちの投票.
 function AttachMenu({
   onPhotos,
   onShareDays,
