@@ -54,10 +54,6 @@ import { Pager } from "@pochical/prototype/components/design-pager";
 import { Phone } from "@pochical/prototype/components/design-phone";
 import { PhotoViewer } from "@pochical/prototype/components/design-photo-viewer";
 import {
-  DesignProviders,
-  useDesignTheme,
-} from "@pochical/prototype/components/design-providers";
-import {
   NameTabs,
   OffLookTabs,
 } from "@pochical/prototype/components/design-settings-style";
@@ -72,10 +68,6 @@ import {
 } from "@pochical/prototype/components/design-sheet";
 import { SortableList } from "@pochical/prototype/components/design-sortable-list";
 import { TabBar } from "@pochical/prototype/components/design-tab-bar";
-import {
-  pageStyle,
-  useThemeStyle,
-} from "@pochical/prototype/components/design-theme";
 import { toastLook } from "@pochical/prototype/components/design-toast";
 import {
   BarGroup,
@@ -106,7 +98,6 @@ import {
   UserStoreContext,
 } from "@pochical/prototype/lib/design-user-store";
 import { css, cva } from "@pochical/styled-system/css";
-import { createFileRoute } from "@tanstack/react-router";
 import {
   CalendarPlus,
   Check,
@@ -122,13 +113,6 @@ import {
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 
-import {
-  DesignIntro,
-  DesignPage,
-  DesignToolbar,
-} from "../components/design-page";
-import { pageMeta } from "../lib/page-meta";
-
 // The sample person the tab bar counts unread for: their groups' chats
 // and an answer from support, so both counts show.
 const tabBarPerson = createUserStore({ support: supportChatOf("answered") });
@@ -141,44 +125,14 @@ const toastKinds = css({
   gap: "8px",
 });
 
-export const Route = createFileRoute("/design_/components")({
-  component: ComponentsPage,
-  head: () => ({
-    ...pageMeta(
-      "部品の棚卸し",
-      "ポチカルの画面にある部品を、役割ごとに並べたもの"
-    ),
-  }),
-});
-
 // Every shared piece the screens are built from, sorted by what it is
-// for, each with the SwiftUI and Compose piece it becomes: the page is
-// the pieces' spec, kept true by being the real components, and complete
-// by tests/design-catalog.test.ts. Everything here is the real markup or
-// component.
-function ComponentsPage() {
-  const theme = useDesignTheme();
-  return (
-    <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar />
-      <DesignIntro eyebrow="POCHICAL / COMPONENTS" title="部品の棚卸し">
-        画面で使う共通の部品を、役割ごとにすべて並べています。それぞれに、iOS と
-        Android
-        のアプリでどの部品にあたるかを添えています。部品を足したら、ここにも載せます（載っていないとテストで止まります）。
-      </DesignIntro>
-      <DesignProviders>
-        <Surface />
-      </DesignProviders>
-    </DesignPage>
-  );
-}
-
+// for, each with the SwiftUI and Compose piece it becomes: the groups of
+// content/design/components.mdx, which names and explains each. The page
+// is the pieces' spec, kept true by being the real components, and
+// complete by tests/design-catalog.test.ts.
 const catalog = {
   // A day as big as on a month of five weeks.
   cell: css({ width: "46px" }),
-  group: css({
-    "& > h2": { fontSize: "17px", fontWeight: 700, margin: "0 0 4px" },
-  }),
   // Two across on a wide page; one on a phone.
   item: cva({
     base: {
@@ -269,12 +223,6 @@ const catalog = {
     margin: "4px 0 0",
     rowGap: "2px",
   }),
-  note: css({
-    color: "text.tertiary",
-    fontSize: "12px",
-    lineHeight: "1.6",
-    margin: "0 0 14px",
-  }),
   // A piece keeps within its box, or fills a wide one.
   sample: cva({
     base: {
@@ -298,57 +246,11 @@ const catalog = {
     position: "relative",
     width: "100%",
   }),
-  // The app's own ground, light or dark as the screen is, so the pieces
-  // sit on what they are drawn for.
-  surface: css({
-    bg: "background.base",
-    borderRadius: "24px",
-    color: "text.primary",
-    display: "flex",
-    flexDirection: "column",
-    gap: "40px",
-    margin: "0 auto 64px",
-    maxWidth: "1100px",
-    padding: "28px 20px 40px",
-  }),
 };
 
-// The phone's colors, without a phone around them.
-function Surface() {
-  return (
-    <div className={catalog.surface} style={useThemeStyle()}>
-      <Buttons />
-      <Rows />
-      <Cards />
-      <Fields />
-      <Switches />
-      <Times />
-      <Choices />
-      <Tiles />
-      <Chips />
-      <Sheets />
-      <Overlays />
-      <Pochical />
-    </div>
-  );
-}
-
-function Group({
-  title,
-  note,
-  children,
-}: {
-  title: string;
-  note?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section aria-label={title} className={catalog.group}>
-      <h2>{title}</h2>
-      {note && <p className={catalog.note}>{note}</p>}
-      <div className={catalog.items}>{children}</div>
-    </section>
-  );
+// A group's pieces, two across on a wide page and one on a phone.
+function Items({ children }: { children: ReactNode }) {
+  return <div className={catalog.items}>{children}</div>;
 }
 
 // One piece: what it looks like, what it is called in the code, and where
@@ -391,218 +293,214 @@ function Item({
   );
 }
 
-function Buttons() {
+export function Buttons() {
   return (
-    <>
-      <Group
-        note="主・控えめ・文字・目立たないの4段。以前の dc-start、dc-import-primary、ob-primary、st-primary(主)、dc-start-photo、dc-save-secondary、gr-secondary(控えめ)、ob-link、st-link(文字)、dc-import-later(目立たない)をまとめたものです。"
-        title="ボタン"
+    <Items>
+      <Item
+        name="Button variant=primary"
+        ios="Button ＋ .buttonStyle(.borderedProminent)"
+        android="Button"
+        where="その画面で次にすること"
       >
-        <Item
-          name="Button variant=primary"
-          ios="Button ＋ .buttonStyle(.borderedProminent)"
-          android="Button"
-          where="その画面で次にすること"
-        >
-          <Button>
-            <Pencil aria-hidden="true" size={18} />
-            ポチポチ入力
-          </Button>
-        </Item>
-        <Item
-          name="Button variant=quiet"
-          ios=".buttonStyle(.bordered)"
-          android="FilledTonalButton"
-          where="主の横、または一段下の操作"
-        >
-          <Button variant="quiet">
-            <ImageIcon aria-hidden="true" size={18} />
-            画像で保存
-          </Button>
-        </Item>
-        <Item
-          name="Button variant=text"
-          ios=".buttonStyle(.borderless)"
-          android="TextButton"
-          where="リンクのような選択肢"
-        >
-          <Button variant="text">アカウントをお持ちの方はログイン</Button>
-        </Item>
-        <Item
-          name="Button variant=subtle"
-          ios=".buttonStyle(.borderless) ＋ .foregroundStyle(.secondary)"
-          android="TextButton（文字を控えめな色で）"
-          where="あとにする、断る"
-        >
-          <Button variant="subtle">あとで入れる</Button>
-        </Item>
-        <Item
-          name="Button(押せない)"
-          ios=".disabled(true)"
-          android="enabled = false"
-          where="まだ選んでいないとき"
-        >
-          <Button disabled>
-            <CalendarPlus aria-hidden="true" size={18} />
-            追加する
-          </Button>
-        </Item>
-      </Group>
-      <Group
-        note="戻る(またはキャンセル)・右の操作・大きなタイトル。iPhone と Android のナビゲーションバーと同じ形です。設定、グループ、パターンの編集などの pe-topbar と PageHeader をまとめたものです。"
-        title="画面の上"
+        <Button>
+          <Pencil aria-hidden="true" size={18} />
+          ポチポチ入力
+        </Button>
+      </Item>
+      <Item
+        name="Button variant=quiet"
+        ios=".buttonStyle(.bordered)"
+        android="FilledTonalButton"
+        where="主の横、または一段下の操作"
       >
-        <Item
-          name="PageHeader"
-          ios=".navigationTitle ＋ .navigationBarTitleDisplayMode(.large)"
-          android="LargeTopAppBar"
-          where="戻る+タイトル"
-          wide
-        >
-          <PageHeader back="設定" onBack={() => undefined} title="スタイル" />
-        </Item>
-        <Item
-          name="PageHeader trailing=HeaderAction"
-          ios="ToolbarItem(placement: .confirmationAction)"
-          android="LargeTopAppBar の actions"
-          where="編集して保存するページ"
-          wide
-        >
-          <PageHeader
-            back="シフトパターン"
-            onBack={() => undefined}
-            title="パターンを編集"
-            trailing={<HeaderAction prominent>保存</HeaderAction>}
-          />
-        </Item>
-        <Item
-          name="IconButton(✕)"
-          ios="ToolbarItem(placement: .cancellationAction) の xmark"
-          android="TopAppBar の navigationIcon（Close）"
-          where="入力を捨てて戻るとき"
-        >
-          <IconButton label="キャンセル">
-            <X aria-hidden="true" size={22} />
-          </IconButton>
-        </Item>
-        <Item
-          name="BackButton"
-          ios="NavigationStack の戻る（OS が描く）"
-          android="TopAppBar の navigationIcon（ArrowBack）"
-          where="前の画面へ戻るとき"
-        >
-          <BackButton />
-        </Item>
-        <Item
-          name="IconButton"
-          ios="ToolbarItem の Button（SF Symbols、ガラスは OS）"
-          android="IconButton"
-          where="グループの見出しの招待・設定、月の保存"
-        >
-          <span className={catalog.marks}>
-            <IconButton label="招待">
-              <UserPlus aria-hidden="true" size={18} />
-            </IconButton>
-            <IconButton label="保存">
-              <Download aria-hidden="true" size={21} />
-            </IconButton>
-          </span>
-        </Item>
-        <Item
-          name="DoneButton"
-          ios="ToolbarItem(placement: .confirmationAction)"
-          android="TopAppBar の actions の Button"
-          where="カレンダーの入力中・週表示・繰り返しの並びの完了だけ"
-        >
-          <DoneButton />
-        </Item>
-      </Group>
-      <Group
-        note="画面の中で使う、そのほかの押すもの。"
-        title="そのほかのボタン"
+        <Button variant="quiet">
+          <ImageIcon aria-hidden="true" size={18} />
+          画像で保存
+        </Button>
+      </Item>
+      <Item
+        name="Button variant=text"
+        ios=".buttonStyle(.borderless)"
+        android="TextButton"
+        where="リンクのような選択肢"
       >
-        <Item
-          android="ListItem（leadingContent に Add）"
-          ios="Label の plus（accent の色）"
-          name="AddRow"
-          where="リストに1つ足す（パターン、同僚、リマインド）"
-          wide
-        >
-          <List>
-            <AddRow label="パターンを追加" onClick={() => undefined} />
-          </List>
-        </Item>
-        <Item
-          android="TextButton（error の色）"
-          ios="Button(role: .destructive)"
-          name="DestructiveButton"
-          where="この日のシフトを消す、グループを抜ける"
-        >
-          <DestructiveButton onClick={() => undefined}>
-            この日のシフトを消す
-          </DestructiveButton>
-        </Item>
-        <Item
-          android="TopAppBar の actions の TextButton"
-          ios="ToolbarItem の Button（ガラスは OS）"
-          name="TodayButton"
-          where="今の月・週・日から離れたとき"
-        >
-          <TodayButton unit="月" />
-        </Item>
-        <Item
-          android="TopAppBar の actions の TextButton"
-          ios="ToolbarItem の Button（ガラスは OS）"
-          name="ReturnButton"
-          where="並びを入れる月で、1日目の月から離れたとき（1日目へ）"
-        >
-          <ReturnButton onClick={() => undefined}>1日目へ</ReturnButton>
-        </Item>
-        <Item
-          android="TopAppBar の actions に IconButton を並べる"
-          ios="ToolbarItemGroup（隣り合うボタンを OS が1つのガラスにまとめる）"
-          name="BarGroup"
-          where="グループの招待と設定"
-        >
-          <BarGroup>
-            <IconButton label="招待">
-              <UserPlus aria-hidden="true" size={18} />
-            </IconButton>
-            <IconButton label="設定">
-              <Settings aria-hidden="true" size={18} />
-            </IconButton>
-          </BarGroup>
-        </Item>
-        <Item
-          android="IconButton ＋ DropdownMenu"
-          ios="ToolbarItem の Menu"
-          name="IconMenu"
-          where="月の保存（画像・端末のカレンダー）"
-        >
-          <IconMenu
-            icon={<Download aria-hidden="true" size={21} />}
-            label="この月のシフトを保存"
-          >
-            <MenuItem onSelect={() => undefined} value="image">
-              画像で保存
-            </MenuItem>
-            <MenuItem onSelect={() => undefined} value="calendar">
-              端末カレンダーに追加
-            </MenuItem>
-          </IconMenu>
-        </Item>
-      </Group>
-    </>
+        <Button variant="text">アカウントをお持ちの方はログイン</Button>
+      </Item>
+      <Item
+        name="Button variant=subtle"
+        ios=".buttonStyle(.borderless) ＋ .foregroundStyle(.secondary)"
+        android="TextButton（文字を控えめな色で）"
+        where="あとにする、断る"
+      >
+        <Button variant="subtle">あとで入れる</Button>
+      </Item>
+      <Item
+        name="Button(押せない)"
+        ios=".disabled(true)"
+        android="enabled = false"
+        where="まだ選んでいないとき"
+      >
+        <Button disabled>
+          <CalendarPlus aria-hidden="true" size={18} />
+          追加する
+        </Button>
+      </Item>
+    </Items>
   );
 }
 
-function Rows() {
+export function HeaderButtons() {
+  return (
+    <Items>
+      <Item
+        name="PageHeader"
+        ios=".navigationTitle ＋ .navigationBarTitleDisplayMode(.large)"
+        android="LargeTopAppBar"
+        where="戻る+タイトル"
+        wide
+      >
+        <PageHeader back="設定" onBack={() => undefined} title="スタイル" />
+      </Item>
+      <Item
+        name="PageHeader trailing=HeaderAction"
+        ios="ToolbarItem(placement: .confirmationAction)"
+        android="LargeTopAppBar の actions"
+        where="編集して保存するページ"
+        wide
+      >
+        <PageHeader
+          back="シフトパターン"
+          onBack={() => undefined}
+          title="パターンを編集"
+          trailing={<HeaderAction prominent>保存</HeaderAction>}
+        />
+      </Item>
+      <Item
+        name="IconButton(✕)"
+        ios="ToolbarItem(placement: .cancellationAction) の xmark"
+        android="TopAppBar の navigationIcon（Close）"
+        where="入力を捨てて戻るとき"
+      >
+        <IconButton label="キャンセル">
+          <X aria-hidden="true" size={22} />
+        </IconButton>
+      </Item>
+      <Item
+        name="BackButton"
+        ios="NavigationStack の戻る（OS が描く）"
+        android="TopAppBar の navigationIcon（ArrowBack）"
+        where="前の画面へ戻るとき"
+      >
+        <BackButton />
+      </Item>
+      <Item
+        name="IconButton"
+        ios="ToolbarItem の Button（SF Symbols、ガラスは OS）"
+        android="IconButton"
+        where="グループの見出しの招待・設定、月の保存"
+      >
+        <span className={catalog.marks}>
+          <IconButton label="招待">
+            <UserPlus aria-hidden="true" size={18} />
+          </IconButton>
+          <IconButton label="保存">
+            <Download aria-hidden="true" size={21} />
+          </IconButton>
+        </span>
+      </Item>
+      <Item
+        name="DoneButton"
+        ios="ToolbarItem(placement: .confirmationAction)"
+        android="TopAppBar の actions の Button"
+        where="カレンダーの入力中・週表示・繰り返しの並びの完了だけ"
+      >
+        <DoneButton />
+      </Item>
+    </Items>
+  );
+}
+
+export function OtherButtons() {
+  return (
+    <Items>
+      <Item
+        android="ListItem（leadingContent に Add）"
+        ios="Label の plus（accent の色）"
+        name="AddRow"
+        where="リストに1つ足す（パターン、同僚、リマインド）"
+        wide
+      >
+        <List>
+          <AddRow label="パターンを追加" onClick={() => undefined} />
+        </List>
+      </Item>
+      <Item
+        android="TextButton（error の色）"
+        ios="Button(role: .destructive)"
+        name="DestructiveButton"
+        where="この日のシフトを消す、グループを抜ける"
+      >
+        <DestructiveButton onClick={() => undefined}>
+          この日のシフトを消す
+        </DestructiveButton>
+      </Item>
+      <Item
+        android="TopAppBar の actions の TextButton"
+        ios="ToolbarItem の Button（ガラスは OS）"
+        name="TodayButton"
+        where="今の月・週・日から離れたとき"
+      >
+        <TodayButton unit="月" />
+      </Item>
+      <Item
+        android="TopAppBar の actions の TextButton"
+        ios="ToolbarItem の Button（ガラスは OS）"
+        name="ReturnButton"
+        where="並びを入れる月で、1日目の月から離れたとき（1日目へ）"
+      >
+        <ReturnButton onClick={() => undefined}>1日目へ</ReturnButton>
+      </Item>
+      <Item
+        android="TopAppBar の actions に IconButton を並べる"
+        ios="ToolbarItemGroup（隣り合うボタンを OS が1つのガラスにまとめる）"
+        name="BarGroup"
+        where="グループの招待と設定"
+      >
+        <BarGroup>
+          <IconButton label="招待">
+            <UserPlus aria-hidden="true" size={18} />
+          </IconButton>
+          <IconButton label="設定">
+            <Settings aria-hidden="true" size={18} />
+          </IconButton>
+        </BarGroup>
+      </Item>
+      <Item
+        android="IconButton ＋ DropdownMenu"
+        ios="ToolbarItem の Menu"
+        name="IconMenu"
+        where="月の保存（画像・端末のカレンダー）"
+      >
+        <IconMenu
+          icon={<Download aria-hidden="true" size={21} />}
+          label="この月のシフトを保存"
+        >
+          <MenuItem onSelect={() => undefined} value="image">
+            画像で保存
+          </MenuItem>
+          <MenuItem onSelect={() => undefined} value="calendar">
+            端末カレンダーに追加
+          </MenuItem>
+        </IconMenu>
+      </Item>
+    </Items>
+  );
+}
+
+export function Rows() {
   const [on, setOn] = useState(true);
   return (
-    <Group
-      note="List に ListRow を並べます。ラベル、右の値、前の印、後ろの操作(スイッチや入力)を持てて、押せる行には矢印が付きます。設定の Row と SwitchRow、各画面の st-row をまとめたものです。"
-      title="行"
-    >
+    <Items>
       <Item
         name="List + ListRow / SwitchRow(Toggle)"
         ios="List ＋ .listStyle(.insetGrouped)、行は LabeledContent・NavigationLink"
@@ -642,19 +540,16 @@ function Rows() {
         </Section>
         <Note>ポチポチ入力のボタンを長押ししても、その場で直せます。</Note>
       </Item>
-    </Group>
+    </Items>
   );
 }
 
-function Switches() {
+export function Switches() {
   const [off, setOff] = useState<OffLookId>("highlight");
   const [names, setNames] = useState(false);
   const [day, setDay] = useState(0);
   return (
-    <Group
-      note="SegmentedControl に Segment を並べます。中身は見本でも言葉だけでもよく、高さは regular(62px)、tall(大きな見本)、compact(言葉だけ)の3つ。SwiftUI の segmented Picker、Compose の SegmentedButton にあたります。比べる案の切り替え(design-segment)はアプリの外なので別です。"
-      title="切り替え"
-    >
+    <Items>
       <Item
         name="SegmentedControl + Segment size=tall"
         ios="Picker を独自の見た目で（.segmented は文字だけのため）"
@@ -695,17 +590,14 @@ function Switches() {
           ))}
         </SegmentedControl>
       </Item>
-    </Group>
+    </Items>
   );
 }
 
-function Times() {
+export function Times() {
   const [times, setTimes] = useState({ end: "18:00", start: "9:00" });
   return (
-    <Group
-      note="TimeField は時と分を別々に選んで、数字を打つか ↑↓ で変えます。24時間表記。React Aria の TimeField(HeroUI のもの)で、SwiftUI の DatePicker(.compact, .hourAndMinute)、Compose の TimeInput にあたります。シフトの開始と終了は TimeRange で並べます。"
-      title="時間"
-    >
+    <Items>
       <Item
         name="TimeRange + TimeField"
         ios="DatePicker(.hourAndMinute) ＋ .datePickerStyle(.compact) を2つ"
@@ -720,21 +612,18 @@ function Times() {
           start={times.start}
         />
       </Item>
-    </Group>
+    </Items>
   );
 }
 
 const sampleColors = ["#5b7a55", "#c29a4a", "#c9796a", "#7a86c4", "#9a9a94"];
 
-function Choices() {
+export function Choices() {
   const [color, setColor] = useState("0");
   const [appearance, setAppearance] = useState("system");
   const [page, setPage] = useState(0);
   return (
-    <Group
-      note="いくつかから1つを選ぶところ。ChoiceGrid に Choice を並べ、見た目(色の丸、アイコン、アプリアイコン)はその場所が決めます。行で選ぶときは ChoiceList と ChoiceRow で、選んだ行にチェックが付きます。Ark UI の RadioGroup なので矢印キーで選べます。SwiftUI の Picker、Compose の selectable にあたります。"
-      title="1つを選ぶ"
-    >
+    <Items>
       <Item
         name="ChoiceGrid + Choice"
         ios="LazyVGrid の選べるボタン（.isSelected を付ける）"
@@ -782,18 +671,15 @@ function Choices() {
           <ChoiceRow label="ダーク" value="dark" />
         </ChoiceList>
       </Item>
-    </Group>
+    </Items>
   );
 }
 
-function Chips() {
+export function Chips() {
   const [picked, setPicked] = useState(["田中"]);
   const [off, setOff] = useState("off");
   return (
-    <Group
-      note="押せる Chip と、見せるだけの Tag。どちらも ChipGroup で折り返して並べます。Tag は accent(グループの知らせ)、neutral(ページの上)、raised(塗られたカードの上)の3色と、sm・md の2つの大きさです。"
-      title="チップとタグ"
-    >
+    <Items>
       <Item
         name="ChipGroup + Chip(いくつでも)+ Chip variant=add"
         ios="使わない：一緒に働く人は、名前を並べた行から ✓ の一覧（List ＋ checkmark、時計の繰り返しと同じ）を開いて選び、一番下に「人を追加…」"
@@ -881,21 +767,18 @@ function Chips() {
           </Tag>
         </ChipGroup>
       </Item>
-    </Group>
+    </Items>
   );
 }
 
-function Cards() {
+export function Cards() {
   const [items, setItems] = useState([
     { id: "佐藤" },
     { id: "田中" },
     { id: "鈴木" },
   ]);
   return (
-    <Group
-      note="画面に直接置く面は、リストと同じ角丸 24 です。"
-      title="カードと並べ替え"
-    >
+    <Items>
       <Item
         android="Card の中に ListItem（押せる）"
         ios="独自の Button（ボタンの中に絵文字と2行）"
@@ -957,21 +840,18 @@ function Cards() {
           <SampleTag label="カレンダー" />
         </div>
       </Item>
-    </Group>
+    </Items>
   );
 }
 
-function Fields() {
+export function Fields() {
   const [name, setName] = useState("日勤");
   const [note, setNote] = useState("棚卸し");
   const [member, setMember] = useState("");
   const [message, setMessage] = useState("");
   const [letter, setLetter] = useState("日");
   return (
-    <Group
-      note="LimitedInput の look で見た目を選びます。inline は行の中、box は地の上に1つ、chip はチップの間。文字数の上限を超えそうになると数を出します。"
-      title="入力"
-    >
+    <Items>
       <Item
         android="ListItem の trailingContent に BasicTextField（右寄せ）"
         ios="LabeledContent の中の TextField（.multilineTextAlignment(.trailing)）"
@@ -1062,7 +942,7 @@ function Fields() {
           value={message}
         />
       </Item>
-    </Group>
+    </Items>
   );
 }
 
@@ -1072,15 +952,12 @@ const tileSamples = [
   { emoji: "🌙", id: "night", name: "夜" },
 ];
 
-function Tiles() {
+export function Tiles() {
   const [small, setSmall] = useState("moss");
   const [large, setLarge] = useState("moss");
   const [page, setPage] = useState(0);
   return (
-    <Group
-      note="絵の下に名前を置いて選ぶタイルと、横にめくる並び。選んだタイルは枠と地が付き、名前が太字になります。"
-      title="タイルとめくり"
-    >
+    <Items>
       <Item
         android="LazyVerticalGrid の selectable な Card"
         ios="LazyVGrid の選べるボタン（独自）"
@@ -1150,7 +1027,7 @@ function Tiles() {
           />
         </div>
       </Item>
-    </Group>
+    </Items>
   );
 }
 
@@ -1198,12 +1075,9 @@ function ChoiceChipSample() {
   );
 }
 
-function Overlays() {
+export function Overlays() {
   return (
-    <Group
-      note="画面の器と、電話の上に重なって出るもの。ページの上では出せないので、電話の中で開いて見ます。"
-      title="画面と重なり"
-    >
+    <Items>
       <Item
         android="Scaffold ＋ LazyColumn、ModalBottomSheet、AlertDialog、全画面の Dialog。SystemAlert は OS が出す（POST_NOTIFICATIONS の許可など）"
         ios="NavigationStack の画面 ＋ ScrollView、.sheet、.alert、.fullScreenCover。SystemAlert は OS が出す（requestAuthorization、アイコン変更）"
@@ -1213,7 +1087,7 @@ function Overlays() {
       >
         <OverlaySample />
       </Item>
-    </Group>
+    </Items>
   );
 }
 
@@ -1332,12 +1206,9 @@ function MenuSample() {
   );
 }
 
-function Sheets() {
+export function Sheets() {
   return (
-    <Group
-      note="見るだけのシートは「タイトル+×」、決めるシートは「キャンセル/タイトル/決定」。iPhone と Android の標準のシートと同じ使い分けです。メニューと確認は見出しなしで、下にキャンセルがあります。"
-      title="シートの見出し"
-    >
+    <Items>
       <Item
         name="SheetHeading（SheetPicture の中）"
         ios=".sheet の中の .navigationTitle ＋ ✕（.cancellationAction）"
@@ -1395,7 +1266,7 @@ function Sheets() {
       >
         <MenuSample />
       </Item>
-    </Group>
+    </Items>
   );
 }
 
@@ -1404,154 +1275,159 @@ const markStyles: ShiftMarkStyle[] = ["icon", "emoji", "badge"];
 
 // The pieces SwiftUI and Compose will build themselves: nothing in either
 // platform draws them.
-function Pochical() {
+export function ShiftMarks() {
   return (
-    <>
-      <Group
-        note="スタイル3種 × 印なし・早出・残業。グループでも同じものが出ます。"
-        title="シフトの印(ポチカル独自)"
+    <Items>
+      {markStyles.map((style) => (
+        <Item
+          key={style}
+          name={`ShiftMark(${style})`}
+          ios="独自の View（同じ図柄を描く）"
+          android="独自の Composable（同じ図柄を描く）"
+          where="シフトが出るところすべて"
+        >
+          <ShiftMarkStyleContext value={style}>
+            <span className={catalog.marks}>
+              <ShiftMark shift="day" size={24} />
+              <ShiftMark early shift="day" size={24} />
+              <ShiftMark late shift="day" size={24} />
+            </span>
+          </ShiftMarkStyleContext>
+        </Item>
+      ))}
+    </Items>
+  );
+}
+
+export function DayCells() {
+  return (
+    <Items>
+      <Item
+        name="DayCell"
+        ios="独自の View"
+        android="独自の Composable"
+        where="入力済み"
       >
-        {markStyles.map((style) => (
-          <Item
-            key={style}
-            name={`ShiftMark(${style})`}
-            ios="独自の View（同じ図柄を描く）"
-            android="独自の Composable（同じ図柄を描く）"
-            where="シフトが出るところすべて"
-          >
-            <ShiftMarkStyleContext value={style}>
-              <span className={catalog.marks}>
-                <ShiftMark shift="day" size={24} />
-                <ShiftMark early shift="day" size={24} />
-                <ShiftMark late shift="day" size={24} />
-              </span>
-            </ShiftMarkStyleContext>
-          </Item>
-        ))}
-      </Group>
-      <Group note="月のマスの状態。" title="日のマス(ポチカル独自)">
-        <Item
-          name="DayCell"
-          ios="独自の View"
-          android="独自の Composable"
-          where="入力済み"
-        >
-          <Cell entry={{ shift: "day" }} />
-        </Item>
-        <Item
-          name="DayCell"
-          ios="独自の View"
-          android="独自の Composable"
-          where="休み(色をつける)"
-        >
+        <Cell entry={{ shift: "day" }} />
+      </Item>
+      <Item
+        name="DayCell"
+        ios="独自の View"
+        android="独自の Composable"
+        where="休み(色をつける)"
+      >
+        <Cell entry={{ shift: "off" }} />
+      </Item>
+      <Item
+        name="DayCell"
+        ios="独自の View"
+        android="独自の Composable"
+        where="休み(空白)"
+      >
+        <OffLooksContext value={blankOffs}>
           <Cell entry={{ shift: "off" }} />
-        </Item>
-        <Item
-          name="DayCell"
-          ios="独自の View"
-          android="独自の Composable"
-          where="休み(空白)"
-        >
-          <OffLooksContext value={blankOffs}>
-            <Cell entry={{ shift: "off" }} />
-          </OffLooksContext>
-        </Item>
-        <Item
-          name="DayCell"
-          ios="独自の View"
-          android="独自の Composable"
-          where="メモ"
-        >
-          <Cell entry={{ note: "棚卸し", shift: "day" }} />
-        </Item>
-        <Item
-          name="DayCell"
-          ios="独自の View"
-          android="独自の Composable"
-          where="残業"
-        >
-          <Cell entry={{ end: "20:00", shift: "day" }} />
-        </Item>
-        <Item
-          name="DayCell"
-          ios="独自の View"
-          android="独自の Composable"
-          where="選択中"
-        >
-          <Cell active entry={{ shift: "day" }} />
-        </Item>
-        <Item
-          name="DayCell"
-          ios="独自の View"
-          android="独自の Composable"
-          where="未入力"
-        >
-          <Cell />
-        </Item>
-        <Item
-          name="DayCell"
-          ios="独自の View"
-          android="独自の Composable"
-          where="前後の月"
-        >
-          <Cell entry={{ note: "棚卸し", shift: "day" }} outside />
-        </Item>
-        <Item
-          name="WeekdayRow + dayGrid"
-          ios="Grid（7列）"
-          android="LazyVerticalGrid(GridCells.Fixed(7))"
-          where="カレンダー・メンバーの月・保存する画像・見た目の見本"
-          wide
-        >
-          <WeekSample />
-        </Item>
-      </Group>
-      <Group title="画面の下と見出し(ポチカル独自)">
-        <Item
-          name="MonthSummary"
-          ios="独自の行"
-          android="独自の行"
-          where="カレンダー下の今月のお休み、一緒の日を見ている間はその日数"
-          wide
-        >
-          <MonthSummary
-            days={9}
-            month={new Date(2026, 8, 1)}
-            onOpen={() => undefined}
-          />
-          <MonthSummary
-            days={5}
-            month={new Date(2026, 8, 1)}
-            onOpen={() => undefined}
-            person="田中"
-          />
-        </Item>
-        <Item
-          name="TabBar"
-          ios="TabView（iOS 26 のガラスのタブバーは OS が描く）"
-          android="NavigationBar"
-          where="画面の一番下"
-          wide
-        >
-          <div className={catalog.tabBarStage}>
-            <UserStoreContext value={tabBarPerson}>
-              <TabBar active="calendar" onSelect={() => undefined} />
-            </UserStoreContext>
-          </div>
-        </Item>
-        <Item
-          name="PhotoAvatar"
-          ios="AsyncImage を Circle で切る、写真がなければ頭文字"
-          android="Coil の AsyncImage ＋ CircleShape、なければ頭文字"
-          where="グループのメンバー"
-        >
-          <span className={catalog.marks}>
-            <PhotoAvatar name="ゆうき" />
-            <PhotoAvatar me name="自分" />
-          </span>
-        </Item>
-      </Group>
-    </>
+        </OffLooksContext>
+      </Item>
+      <Item
+        name="DayCell"
+        ios="独自の View"
+        android="独自の Composable"
+        where="メモ"
+      >
+        <Cell entry={{ note: "棚卸し", shift: "day" }} />
+      </Item>
+      <Item
+        name="DayCell"
+        ios="独自の View"
+        android="独自の Composable"
+        where="残業"
+      >
+        <Cell entry={{ end: "20:00", shift: "day" }} />
+      </Item>
+      <Item
+        name="DayCell"
+        ios="独自の View"
+        android="独自の Composable"
+        where="選択中"
+      >
+        <Cell active entry={{ shift: "day" }} />
+      </Item>
+      <Item
+        name="DayCell"
+        ios="独自の View"
+        android="独自の Composable"
+        where="未入力"
+      >
+        <Cell />
+      </Item>
+      <Item
+        name="DayCell"
+        ios="独自の View"
+        android="独自の Composable"
+        where="前後の月"
+      >
+        <Cell entry={{ note: "棚卸し", shift: "day" }} outside />
+      </Item>
+      <Item
+        name="WeekdayRow + dayGrid"
+        ios="Grid（7列）"
+        android="LazyVerticalGrid(GridCells.Fixed(7))"
+        where="カレンダー・メンバーの月・保存する画像・見た目の見本"
+        wide
+      >
+        <WeekSample />
+      </Item>
+    </Items>
+  );
+}
+
+export function BottomPieces() {
+  return (
+    <Items>
+      <Item
+        name="MonthSummary"
+        ios="独自の行"
+        android="独自の行"
+        where="カレンダー下の今月のお休み、一緒の日を見ている間はその日数"
+        wide
+      >
+        <MonthSummary
+          days={9}
+          month={new Date(2026, 8, 1)}
+          onOpen={() => undefined}
+        />
+        <MonthSummary
+          days={5}
+          month={new Date(2026, 8, 1)}
+          onOpen={() => undefined}
+          person="田中"
+        />
+      </Item>
+      <Item
+        name="TabBar"
+        ios="TabView（iOS 26 のガラスのタブバーは OS が描く）"
+        android="NavigationBar"
+        where="画面の一番下"
+        wide
+      >
+        <div className={catalog.tabBarStage}>
+          <UserStoreContext value={tabBarPerson}>
+            <TabBar active="calendar" onSelect={() => undefined} />
+          </UserStoreContext>
+        </div>
+      </Item>
+      <Item
+        name="PhotoAvatar"
+        ios="AsyncImage を Circle で切る、写真がなければ頭文字"
+        android="Coil の AsyncImage ＋ CircleShape、なければ頭文字"
+        where="グループのメンバー"
+      >
+        <span className={catalog.marks}>
+          <PhotoAvatar name="ゆうき" />
+          <PhotoAvatar me name="自分" />
+        </span>
+      </Item>
+    </Items>
   );
 }
 

@@ -11,7 +11,6 @@ import type { Preset } from "@pochical/design/themes";
 import { themeStyle } from "@pochical/prototype/components/design-theme";
 import { firstCharacter } from "@pochical/prototype/lib/text-limits";
 import { css, cva, cx } from "@pochical/styled-system/css";
-import type { ReactNode } from "react";
 
 const schemeLabels: Record<ColorScheme, string> = {
   dark: "ダーク",
@@ -222,18 +221,6 @@ const palette = {
     fontSize: "11px",
     gap: "6px 16px",
     marginBottom: "20px",
-  }),
-  section: css({
-    "& > h2": { fontSize: "20px", fontWeight: 500, letterSpacing: "0.04em" },
-    margin: "72px auto 0",
-    maxWidth: "1100px",
-  }),
-  sectionDescription: css({
-    color: "text.tertiary",
-    fontSize: "13px",
-    lineHeight: "1.8",
-    margin: "8px 0 28px",
-    maxWidth: "640px",
   }),
   // Cards stacked into one, light over dark: rounded only at the ends.
   stacked: css({
@@ -480,33 +467,9 @@ function TokenCell({
   );
 }
 
-function Section({
-  children,
-  description,
-  id,
-  title,
-}: {
-  children: ReactNode;
-  description: string;
-  id: string;
-  title: string;
-}) {
+export function NeutralTokens() {
   return (
-    <section aria-labelledby={id} className={palette.section}>
-      <h2 id={id}>{title}</h2>
-      <p className={palette.sectionDescription}>{description}</p>
-      {children}
-    </section>
-  );
-}
-
-function NeutralTokens() {
-  return (
-    <Section
-      description="役割ごとの色です。画面はこの名前の変数だけを使います。文字の色には、画面の背景に対するコントラスト比を添えています。"
-      id="cp-neutral"
-      title="基本色"
-    >
+    <>
       {neutralTokenGroups.map((group) => (
         <div className={palette.group} key={group.label}>
           <h3 className={palette.subheading}>{group.label}</h3>
@@ -537,7 +500,7 @@ function NeutralTokens() {
           </table>
         </div>
       ))}
-    </Section>
+    </>
   );
 }
 
@@ -601,13 +564,9 @@ function marksLabel(preset: Preset) {
     : "シフトの色はやわらか";
 }
 
-function ThemeTokens() {
+export function ThemeTokens() {
   return (
-    <Section
-      description="設定で選べる9つのテーマです。それぞれ、テーマの色（色相・鮮やかさ・明るさ）とグレーの寄せ方、地の色、シフトの描き方だけを持ち、残りの色はすべて同じ段で作ります。ライトは明るさの段差と鮮やかさの割合、ダークはどのテーマも同じ明るさです。どのテーマでも同じ役割の変数（--accent-default など）に入り、画面の組み方は変わりません。"
-      id="cp-themes"
-      title="テーマ"
-    >
+    <>
       <p className={palette.roleList}>
         {themeRoleTokens.map((role) => (
           <span key={role.key}>
@@ -628,7 +587,7 @@ function ThemeTokens() {
           </article>
         ))}
       </div>
-    </Section>
+    </>
   );
 }
 
@@ -676,31 +635,25 @@ function MarkChip({
   );
 }
 
-function MarkTokens() {
+export function MarkTokens() {
   return (
-    <Section
-      description="シフトごとに選べる12色です。濃い色は記号と文字、薄い色はその地に使います。比は記号の色と地の色のコントラストです。1番目はテーマの色で、テーマごとに変わります。やわらかなテーマは、明るさを保ったまま鮮やかさを落とします。"
-      id="cp-marks"
-      title="シフトの色"
-    >
-      <div className={palette.marks}>
-        {markColors.map((option) => (
-          <article key={option.name}>
-            <h3 className={palette.subheading}>{option.name}</h3>
-            {markLevels.map((level) =>
-              colorSchemes.map((scheme) => (
-                <MarkChip
-                  key={`${level.vividness}-${scheme}`}
-                  level={level}
-                  option={option}
-                  scheme={scheme}
-                />
-              ))
-            )}
-          </article>
-        ))}
-      </div>
-    </Section>
+    <div className={palette.marks}>
+      {markColors.map((option) => (
+        <article key={option.name}>
+          <h3 className={palette.subheading}>{option.name}</h3>
+          {markLevels.map((level) =>
+            colorSchemes.map((scheme) => (
+              <MarkChip
+                key={`${level.vividness}-${scheme}`}
+                level={level}
+                option={option}
+                scheme={scheme}
+              />
+            ))
+          )}
+        </article>
+      ))}
+    </div>
   );
 }
 
@@ -715,8 +668,8 @@ function colorDistance(first: string, second: string) {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 }
 
-const BLURRED_DISTANCE = 0.02;
-const CLOSE_DISTANCE = 0.03;
+export const BLURRED_DISTANCE = 0.02;
+export const CLOSE_DISTANCE = 0.03;
 const SHOWN_PAIRS = 5;
 
 function closestPairs(vividness: number, scheme: ColorScheme) {
@@ -745,101 +698,49 @@ function distanceLabel(distance: number) {
   return "OK";
 }
 
-function DistinctTokens() {
+export function DistinctTokens() {
   return (
-    <Section
-      description={`シフトの12色のうち、記号の色がいちばん近い組み合わせです。数値はOKLabでの色の差（ΔE）で、${CLOSE_DISTANCE}未満を「近い」、${BLURRED_DISTANCE}未満を「見分けにくい」としています。同じ月に並べて使うと、小さなマスでは区別しにくくなります。`}
-      id="cp-distinct"
-      title="見分けやすさ"
-    >
-      <div className={palette.distinct}>
-        {markLevels.map((level) =>
-          colorSchemes.map((scheme) => (
-            <article
-              className={palette.distinctCard}
-              key={`${level.vividness}-${scheme}`}
-              style={themeStyle("pochical", scheme)}
-            >
-              <h3>
-                {level.label}・{schemeLabels[scheme]}
-              </h3>
-              <ul>
-                {closestPairs(level.vividness, scheme).map(
-                  ({ distance, first, second }) => (
-                    <li key={`${first.name}-${second.name}`}>
-                      {[first, second].map((mark) => (
-                        <span
-                          className={palette.markTile({ size: "small" })}
-                          key={mark.name}
-                          style={{ background: mark.tint, color: mark.color }}
-                        >
-                          {firstCharacter(mark.name)}
-                        </span>
-                      ))}
-                      <span className={palette.distinctNames}>
-                        {first.name}と{second.name}
-                      </span>
+    <div className={palette.distinct}>
+      {markLevels.map((level) =>
+        colorSchemes.map((scheme) => (
+          <article
+            className={palette.distinctCard}
+            key={`${level.vividness}-${scheme}`}
+            style={themeStyle("pochical", scheme)}
+          >
+            <h3>
+              {level.label}・{schemeLabels[scheme]}
+            </h3>
+            <ul>
+              {closestPairs(level.vividness, scheme).map(
+                ({ distance, first, second }) => (
+                  <li key={`${first.name}-${second.name}`}>
+                    {[first, second].map((mark) => (
                       <span
-                        className={palette.distinctValue}
-                        data-level={distanceLabel(distance)}
+                        className={palette.markTile({ size: "small" })}
+                        key={mark.name}
+                        style={{ background: mark.tint, color: mark.color }}
                       >
-                        {distance.toFixed(3)}
-                        <small>{distanceLabel(distance)}</small>
+                        {firstCharacter(mark.name)}
                       </span>
-                    </li>
-                  )
-                )}
-              </ul>
-            </article>
-          ))
-        )}
-      </div>
-    </Section>
-  );
-}
-
-// The page's sections, as pills to jump to.
-const contents = css({
-  "& a": {
-    _hover: { bg: "accent.hover" },
-    border: "1px solid token(colors.border.default)",
-    borderRadius: "24px",
-    color: "accent.default",
-    fontSize: "12px",
-    padding: "10px 16px",
-  },
-  "& a > span": {
-    color: "text.quaternary",
-    fontSize: "10px",
-    marginRight: "8px",
-  },
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "10px",
-  justifyContent: "center",
-  margin: "-20px auto 44px",
-});
-
-export function DesignColors() {
-  return (
-    <>
-      <nav aria-label="このページの内容" className={contents}>
-        {[
-          { href: "#cp-neutral", number: "01", title: "基本色" },
-          { href: "#cp-themes", number: "02", title: "テーマ" },
-          { href: "#cp-marks", number: "03", title: "シフトの色" },
-          { href: "#cp-distinct", number: "04", title: "見分けやすさ" },
-        ].map(({ href, number, title }) => (
-          <a href={href} key={href}>
-            <span>{number}</span>
-            {title}
-          </a>
-        ))}
-      </nav>
-      <NeutralTokens />
-      <ThemeTokens />
-      <MarkTokens />
-      <DistinctTokens />
-    </>
+                    ))}
+                    <span className={palette.distinctNames}>
+                      {first.name}と{second.name}
+                    </span>
+                    <span
+                      className={palette.distinctValue}
+                      data-level={distanceLabel(distance)}
+                    >
+                      {distance.toFixed(3)}
+                      <small>{distanceLabel(distance)}</small>
+                    </span>
+                  </li>
+                )
+              )}
+            </ul>
+          </article>
+        ))
+      )}
+    </div>
   );
 }

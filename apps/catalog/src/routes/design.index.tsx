@@ -7,7 +7,7 @@ import { ChevronRight } from "lucide-react";
 import { DesignIntro, DesignPage } from "../components/design-page";
 import { pageMeta } from "../lib/page-meta";
 
-export const Route = createFileRoute("/design")({
+export const Route = createFileRoute("/design/")({
   component: DocumentsPage,
   head: () => ({
     ...pageMeta("デザイン資料", "ポチカルのデザイン資料"),
@@ -36,8 +36,9 @@ const documents = [
   {
     description:
       "ボタン、行、切り替え、シートなどの部品を役割ごとに。同じ役割の重複も見えます。",
+    splat: "components",
     title: "部品の棚卸し",
-    to: "/design/components",
+    to: "/design/$",
   },
   {
     description:
@@ -52,8 +53,9 @@ const documents = [
   },
   {
     description: "役割ごとの色、トーンごとのテーマ、シフトの色の見分けやすさ。",
+    splat: "colors",
     title: "カラーパレット",
-    to: "/design/colors",
+    to: "/design/$",
   },
 ] as const;
 
@@ -102,7 +104,11 @@ function DocumentsPage() {
       </DesignIntro>
       <nav aria-label="デザイン資料" className={documentList}>
         {documents.map((document) => (
-          <Link key={document.to} to={document.to}>
+          <Link
+            key={document.title}
+            params={{ _splat: "splat" in document ? document.splat : "" }}
+            to={document.to}
+          >
             <span>
               <strong>{document.title}</strong>
               {document.description}

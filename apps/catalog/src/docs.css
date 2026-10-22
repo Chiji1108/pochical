@@ -1,0 +1,41 @@
+/* Fumadocs UI's chrome around the /design documents (src/routes/design_.$.tsx):
+   Tailwind CSS with Fumadocs UI's preset, loaded by those pages alone, after
+   styles.css, whose @layer line puts Tailwind's layers among the catalog's.
+   The pieces shown on the pages stay Panda CSS's, in layers above these. */
+@import "tailwindcss" source(none);
+@import "fumadocs-ui/css/lib/default-colors.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* Tailwind reads its classes from the pages' own files only; Fumadocs UI's
+   preset brings its own. */
+@source "./routes/design_.$.tsx";
+@source "./components/docs-theme-switch.tsx";
+@source "./components/mdx.tsx";
+
+/* Fumadocs UI's colors are the design tokens' roles, the way its shadcn
+   preset takes shadcn's: themeStyle() sets them on <html>, in the person's
+   テーマ and light or dark (__root.tsx). */
+:root,
+.dark {
+  --color-fd-background: var(--background-base);
+  --color-fd-foreground: var(--text-primary);
+  --color-fd-muted: var(--fill-quaternary);
+  --color-fd-muted-foreground: var(--text-tertiary);
+  --color-fd-popover: var(--background-elevated);
+  --color-fd-popover-foreground: var(--text-primary);
+  --color-fd-card: var(--background-card);
+  --color-fd-card-foreground: var(--text-primary);
+  --color-fd-border: var(--border-default);
+  --color-fd-primary: var(--accent-default);
+  --color-fd-primary-foreground: var(--accent-on-fill);
+  --color-fd-secondary: var(--fill-tertiary);
+  --color-fd-secondary-foreground: var(--text-primary);
+  --color-fd-accent: var(--accent-container);
+  --color-fd-accent-foreground: var(--text-primary);
+  --color-fd-ring: var(--accent-focus);
+  --color-fd-overlay: var(--scrim);
+}
+
+@theme static {
+  --color-fd-error: var(--danger-default);
+}

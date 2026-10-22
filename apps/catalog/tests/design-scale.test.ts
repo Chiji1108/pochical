@@ -20,6 +20,7 @@ const componentFiles = folders.flatMap((folder) =>
 const outside = new Set([
   "design-app-icon.tsx",
   "design-colors.tsx",
+  "design-components.tsx",
   "design-frames.tsx",
   "design-home-screen.tsx",
   "design-page.tsx",

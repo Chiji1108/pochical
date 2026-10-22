@@ -23,7 +23,7 @@ const shared = [
   "design-sheet.tsx",
 ];
 const catalog = readFileSync(
-  path.join(import.meta.dir, "../src/routes/design_.components.tsx"),
+  path.join(import.meta.dir, "../src/components/design-components.tsx"),
   "utf-8"
 );
 

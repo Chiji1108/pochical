@@ -12,15 +12,23 @@ import type { CSSProperties, ReactNode } from "react";
 const NARROW = "@media (max-width: 760px)";
 
 // The workspace's own colors around the phones; the app's come from
-// design/ through design-theme.tsx as CSS variables. `design-page`
-// stays on it as the hook the site's header and footer hide by.
+// design/ through design-theme.tsx as CSS variables. Every page showing
+// the app's pieces sits on it, the MDX documents' pieces too
+// (components/mdx.tsx), with `design-page` as the hook for the pieces'
+// focus rings and button colors (@pochical/styled-system's globalCss).
+export const workspace = cx(
+  "design-page",
+  css({
+    "--ws-bezel": "#333631",
+    "--ws-bezel-edge": "#b9bdb6",
+    "--ws-bezel-shadow": "#30392f35",
+    "--ws-bg": "#fbfaf7",
+    "--ws-bg-translucent": "#fbfaf7e8",
+    "--ws-island": "#242724",
+  })
+);
+
 const page = css({
-  "--ws-bezel": "#333631",
-  "--ws-bezel-edge": "#b9bdb6",
-  "--ws-bezel-shadow": "#30392f35",
-  "--ws-bg": "#fbfaf7",
-  "--ws-bg-translucent": "#fbfaf7e8",
-  "--ws-island": "#242724",
   [NARROW]: { padding: "20px 18px 36px" },
   bg: "var(--ws-bg)",
   minHeight: "100vh",
@@ -36,7 +44,7 @@ export function DesignPage({
   style?: CSSProperties;
 }) {
   return (
-    <main className={cx("design-page", page)} id="main" style={style}>
+    <main className={cx(workspace, page)} id="main" style={style}>
       {children}
     </main>
   );
