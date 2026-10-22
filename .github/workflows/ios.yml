@@ -19,17 +19,23 @@ on:
 
 permissions: {}
 
-# Xcode Cloud's GitHub App. Also in the job's `if`, which cannot read env.
+# Xcode Cloud's GitHub App and its pull request workflow. The app id is also
+# in the job's `if` and the concurrency group, which cannot read env.
 env:
   XCODE_CLOUD_APP: 117084
+  XCODE_CLOUD_WORKFLOW: "Pochical | PRのテスト"
 
-# One head at a time, so the last run to write reads Xcode Cloud last.
+# One head at a time, so the last run to write reads Xcode Cloud last. Check
+# runs of other apps, which this job skips, get a group of their own so
+# they cannot cancel a waiting run.
 concurrency:
-  group: ios-${{ github.event.pull_request.head.sha || github.event.check_run.head_sha }}
+  group: >-
+    ios-${{ (github.event_name == 'check_run' && github.event.check_run.app.id != 117084) && github.run_id || github.event.pull_request.head.sha || github.event.check_run.head_sha }}
 
 jobs:
   gate:
-    if: github.event_name == 'pull_request_target' || github.event.check_run.app.id == 117084
+    if: >-
+      (github.event_name == 'pull_request_target' && (github.event.action != 'edited' || github.event.changes.base)) || github.event.check_run.app.id == 117084
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
