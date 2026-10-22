@@ -1,5 +1,5 @@
 {
-  "about": "Japanese text cut into the phrases a line may break between, as BudouX 0.10's Japanese model finds them in JavaScript: the site marks them with <wbr> (packages/jsx phrasesOf), the iOS app keeps each whole (PochicalDesign Phrases.split). BudouX scores the text in UTF-16 code units, so an emoji outside the BMP counts as two, and never cuts between the halves of a surrogate pair. Text with no Hiragana, Katakana or Han, by Unicode script extensions (which take in 、。ー and the half-width kana, but not full-width Latin letters or ！？), stays whole, though BudouX would cut it. Every other `expected` is what BudouX's own parser gives for `text`.",
+  "about": "Japanese text cut into the phrases a line may break between, as BudouX 0.10's Japanese model finds them in JavaScript: the site marks them with <wbr> (packages/jsx phrasesOf), the iOS app keeps each whole (PochicalDesign Phrases.split). BudouX scores the text in UTF-16 code units, so an emoji outside the BMP counts as two, and never cuts between the halves of a surrogate pair. Text with no Unicode scalar in Hiragana, Katakana or Han by script extensions (which take in 、。ー and the half-width kana, but not full-width Latin letters or ！？), stays whole, though BudouX would cut it. Every other `expected` is what BudouX's own parser gives for `text`.",
   "split": [
     {
       "name": "nothing",
@@ -15,6 +15,11 @@
       "name": "full-width letters and marks, which BudouX would cut",
       "text": "ＯＫ！ＮＧ？ＯＫ",
       "expected": ["ＯＫ！ＮＧ？ＯＫ"]
+    },
+    {
+      "name": "a voicing mark on a full-width letter",
+      "text": "ＯＫ！ＮＧ゙？ＯＫ",
+      "expected": ["ＯＫ！", "ＮＧ゙？", "ＯＫ"]
     },
     {
       "name": "only Japanese punctuation",

@@ -26,11 +26,22 @@ public enum Phrases {
   /// The text's phrases, in order; together they are the text. Text with
   /// no Japanese is one phrase, as on the site.
   public static func split(_ text: String) -> [String] {
-    // BudouX reads text in UTF-16 code units, as JavaScript holds it, so an
-    // emoji outside the BMP is two; read the same way, it scores as the
-    // site's.
+    guard hasJapanese(text) else { return [text] }
     let units = Array(text.utf16)
-    guard units.count > 1, hasJapanese(text) else { return [text] }
+    var start = 0
+    return (breaks(units) + [units.count]).map { end in
+      defer { start = end }
+      return String(decoding: units[start..<end], as: UTF16.self)
+    }
+  }
+
+  /// Where BudouX ends the phrases before the last, counted in the text's
+  /// UTF-16 code units. BudouX reads text in them, as JavaScript holds it,
+  /// so an emoji outside the BMP is two; read the same way, it scores as
+  /// the site's. It never ends a phrase between a surrogate pair's halves,
+  /// but may inside a letter (a kana and its voicing mark).
+  static func breaks(_ units: [UInt16]) -> [Int] {
+    guard units.count > 1 else { return [] }
     // The units from `from` to `to`, cut to the text as JavaScript's
     // substring cuts them.
     func score(_ feature: String, _ from: Int, _ to: Int) -> Double {
@@ -38,9 +49,8 @@ public enum Phrases {
       let end = min(max(to, 0), units.count)
       return Double(model[feature]?[Array(units[start..<max(start, end)])] ?? 0)
     }
-    var phrases: [String] = []
-    var start = 0
-    for index in 1..<units.count where !UTF16.isLeadSurrogate(units[index - 1]) {
+    return (1..<units.count).filter { index in
+      guard !UTF16.isLeadSurrogate(units[index - 1]) else { return false }
       let total =
         baseScore
         + score("UW1", index - 3, index - 2)
@@ -56,32 +66,38 @@ public enum Phrases {
         + score("TW2", index - 2, index + 1)
         + score("TW3", index - 1, index + 2)
         + score("TW4", index, index + 3)
-      if total > 0 {
-        phrases.append(String(decoding: units[start..<index], as: UTF16.self))
-        start = index
-      }
+      return total > 0
     }
-    phrases.append(String(decoding: units[start...], as: UTF16.self))
-    return phrases
   }
 
-  /// Whether the text has Japanese in it, as the site asks: a letter whose
-  /// scripts take in Hiragana, Katakana or Han, 、 and ー among them.
+  /// Whether the text has Japanese in it, as the site asks: a Unicode
+  /// scalar whose scripts take in Hiragana, Katakana or Han, 、, ー and the
+  /// voicing marks among them, even where it is not the first of its letter.
   static func hasJapanese(_ text: String) -> Bool {
-    text.contains(#/[\p{scx=Hiragana}\p{scx=Katakana}\p{scx=Han}]/#)
+    text.contains(
+      #/[\p{scx=Hiragana}\p{scx=Katakana}\p{scx=Han}]/#.matchingSemantics(.unicodeScalar))
   }
 }
 
 extension String {
   /// This text for showing, with each Japanese phrase kept whole on a line:
-  /// a WORD JOINER (U+2060), which nothing draws, between a phrase's
-  /// letters, so a line breaks only between phrases. A phrase too long for
-  /// its line still breaks. Keep the text itself as it is; only show this.
+  /// a WORD JOINER (U+2060), which nothing draws, between two letters
+  /// wherever no phrase ends, so a line breaks only between phrases. A
+  /// phrase too long for its line still breaks. Keep the text itself as it
+  /// is; only show this.
   public var phrased: String {
     guard Phrases.hasJapanese(self) else { return self }
-    return Phrases.split(self)
-      .map { phrase in phrase.map(String.init).joined(separator: "\u{2060}") }
-      .joined()
+    let breaks = Set(Phrases.breaks(Array(utf16)))
+    var phrased = ""
+    var offset = 0
+    for letter in self {
+      if offset > 0, !breaks.contains(offset) {
+        phrased += "\u{2060}"
+      }
+      phrased.append(letter)
+      offset += letter.utf16.count
+    }
+    return phrased
   }
 }
 
