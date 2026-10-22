@@ -32,6 +32,7 @@ public enum Chat {
   public static let photoThumbHashMaxBytes = 25
   public static let photosPerSend = 10
   public static let pictureMaxEdge = 640
+  public static let pinMargin = 8
   public static let pochicalMember = "pochical"
   public static let prefetchScreens = 2
   public static let replySwipe = 56
