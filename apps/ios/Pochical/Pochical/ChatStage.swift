@@ -1091,17 +1091,25 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     if place != before {
       scroll.place = place
     }
-    let top = lines.contentOffset.y + inset.top
-    let first = lines.indexPathsForVisibleItems.sorted().first {
-      (layout.layoutAttributesForItem(at: $0)?.frame.maxY ?? 0) > top
-    }
-    let day = first.flatMap { $0.item < ids.count ? settings?.dayOver(ids[$0.item]) : nil }
-    if day != scroll.topDay { scroll.topDay = day }
     // From the layout's own frames, as the visible items may not have
     // caught up with the scroll yet (Signal's).
+    let laid = (layout.layoutAttributesForElements(in: lines.bounds) ?? [])
+      .filter { $0.representedElementCategory == .cell }
+      .sorted { $0.indexPath < $1.indexPath }
+    let pinned = PinnedDay(
+      rows: laid.compactMap { cell in
+        let item = cell.indexPath.item
+        guard item < ids.count else { return nil }
+        return PinnedDay.Row(
+          item: item, foot: cell.frame.maxY, title: ChatItemID.isDay(ids[item]))
+      },
+      line: lines.contentOffset.y + inset.top + FloatingDay.gap, height: scroll.dayHeight)
+    let day = pinned.item.flatMap { $0 < ids.count ? settings?.dayOver(ids[$0]) : nil }
+    if day != scroll.topDay { scroll.topDay = day }
+    if pinned.push != scroll.dayPush { scroll.dayPush = pinned.push }
     let foot = lines.contentOffset.y + lines.bounds.height - inset.bottom + 1
-    let seen = (layout.layoutAttributesForElements(in: lines.bounds) ?? [])
-      .filter { $0.representedElementCategory == .cell && $0.frame.maxY <= foot }
+    let seen = laid
+      .filter { $0.frame.maxY <= foot }
       .compactMap { $0.indexPath.item < ids.count ? ids[$0.indexPath.item] : nil }
       .filter(ChatItemID.isLine)
     if seen != scroll.seen { scroll.seen = seen }
