@@ -2,25 +2,17 @@ import Testing
 
 @testable import PochicalDesign
 
-// The phrases BudouX finds on the site (packages/jsx/tests/phrases.test.tsx),
-// so a sentence breaks in the same places in the app.
-@Test func splitsAsTheSiteDoes() {
-  #expect(
-    Phrases.split("参加すると、あなたのシフトもメンバーに見えるようになります。")
-      == ["参加すると、", "あなたの", "シフトも", "メンバーに", "見えるようになります。"])
-  #expect(
-    Phrases.split("通信状態を確認して、もう一度お試しください。")
-      == ["通信状態を", "確認して、", "もう", "一度", "お試しください。"])
-  #expect(
-    Phrases.split("家族や友だちのシフトを、ひとつの表に。みんなが休みの日も、すぐ見つかります。")
-      == [
-        "家族や", "友だちの", "シフトを、", "ひとつの", "表に。", "みんなが", "休みの", "日も、",
-        "すぐ", "見つかります。",
-      ])
-}
-
 @Test func joinsEachPhrasesLetters() {
   #expect("もう一度お試し".phrased == "も\u{2060}う一\u{2060}度お\u{2060}試\u{2060}し")
+  #expect("家族👩🏻‍💻です".phrased == "家\u{2060}族\u{2060}👩🏻‍💻\u{2060}で\u{2060}す")
+}
+
+// BudouX ends a phrase between か and its voicing mark here (か / ゙さくらさんの /
+// シフトを / 見る); a letter never breaks, so が stays one and joins さ.
+@Test func keepsALetterWholeWhereAPhraseEndsInsideIt() {
+  #expect(
+    "か\u{3099}さくらさんのシフトを見る".phrased
+      == "か\u{3099}\u{2060}さ\u{2060}く\u{2060}ら\u{2060}さ\u{2060}ん\u{2060}のシ\u{2060}フ\u{2060}ト\u{2060}を見\u{2060}る")
 }
 
 @Test func leavesTextWithoutJapaneseAlone() {

@@ -1,8 +1,7 @@
 import { GROUP_MAX_MEMBERS, textLimits } from "@pochical/design/limits";
-import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-import { call, signInAnonymously, userIdOf } from "./helpers";
+import { call, fillGroup, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesIn,
   device,
@@ -121,19 +120,7 @@ describe("the usual name", () => {
 
   it("is not taken from a join refused as the group is full", async () => {
     const { groupId, inviteCode } = await pair();
-    const group = env.GROUPS.getByName(groupId);
-    await Promise.all(
-      Array.from(
-        { length: GROUP_MAX_MEMBERS - 2 },
-        async (_, index) =>
-          await group.addMember({
-            ownName: null,
-            userId: `filler-${index}`,
-            usualName: `メンバー${index}`,
-            usualPhoto: "",
-          })
-      )
-    );
+    await fillGroup(groupId, GROUP_MAX_MEMBERS - 2);
     const late = await signInAnonymously();
     const refused = await call(
       "GroupService/JoinGroup",

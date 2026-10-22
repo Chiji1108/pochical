@@ -3,7 +3,7 @@ import { characterCount } from "@pochical/design/text";
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/durable-sqlite";
-import { describe, expect, test } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // The cases every platform checks its own code against (spec/vectors).
 import chatPhotos from "../../../spec/vectors/chat-photos.json";
@@ -26,7 +26,7 @@ import { photosAmong } from "./helpers";
 
 // Which thread two members' one-to-one chat is, as their apps name it.
 describe("spec/vectors/chat.json", () => {
-  test.each(chatText.plainText)(
+  it.each(chatText.plainText)(
     "plainText: $text",
     ({ text: words, names, expected }) => {
       const byId = new Map(Object.entries(names));
@@ -34,32 +34,32 @@ describe("spec/vectors/chat.json", () => {
     }
   );
 
-  test.each(chatText.textParts)(
+  it.each(chatText.textParts)(
     "textParts: $name",
     ({ text: words, expected }) => {
       expect(textParts(words)).toStrictEqual(expected);
     }
   );
 
-  test.each(chatText.inviteCode)("inviteCode: $url", ({ url, expected }) => {
+  it.each(chatText.inviteCode)("inviteCode: $url", ({ url, expected }) => {
     expect(inviteCodeOf(url) ?? null).toBe(expected);
   });
 
-  test.each(chat.directThread)("directThread: $name", ({ a, b, expected }) => {
+  it.each(chat.directThread)("directThread: $name", ({ a, b, expected }) => {
     expect(directThread(a, b)).toBe(expected);
   });
 
-  test.each(chat.pins)("pins: $name", ({ pins, step, expected }) => {
+  it.each(chat.pins)("pins: $name", ({ pins, step, expected }) => {
     expect(pinStep(pins, step)).toStrictEqual(expected);
   });
 });
 
 describe("spec/vectors/hlc.json", () => {
-  test.each(hlc.compare)("$name", ({ a, b, expected }) => {
+  it.each(hlc.compare)("$name", ({ a, b, expected }) => {
     expect(Math.sign(compareClocks(a, b))).toBe(expected);
   });
 
-  test.each(hlc.ahead)("$name", ({ now, pastLimitMs, expected }) => {
+  it.each(hlc.ahead)("$name", ({ now, pastLimitMs, expected }) => {
     const ms = now + syncLimits.clockAheadMs + pastLimitMs;
     expect(isAhead({ counter: 0, device: "phone", ms }, now)).toBe(expected);
   });
@@ -68,15 +68,15 @@ describe("spec/vectors/hlc.json", () => {
 // The server holds text to the limits with its own count, and marks to
 // one emoji, which must be the apps'.
 describe("spec/vectors/text.json", () => {
-  test.each(text.characterCount)("$name", ({ text: written, expected }) => {
+  it.each(text.characterCount)("$name", ({ text: written, expected }) => {
     expect(characterCount(written)).toBe(expected);
   });
 
-  test.each(text.isEmoji)("isEmoji: $name", ({ text: written, expected }) => {
+  it.each(text.isEmoji)("isEmoji: $name", ({ text: written, expected }) => {
     expect(isEmoji(written)).toBe(expected);
   });
 
-  test.each(text.fitsText)(
+  it.each(text.fitsText)(
     "fitsText: $name",
     ({ text: written, limit, expected }) => {
       expect(fitsText(written, limit)).toBe(expected);
@@ -96,14 +96,14 @@ const fieldOf = (name: string): DayField =>
   FIELDS[name] ?? DayField.UNSPECIFIED;
 
 describe("spec/vectors/order-clears.json", () => {
-  test.each(orderClears.givesWay)(
+  it.each(orderClears.givesWay)(
     "gives way: $name",
     ({ date, expected, field, floor, set }) => {
       expect(givesWay(date, fieldOf(field), set, floor)).toBe(expected);
     }
   );
 
-  test.each(orderClears.heldBackBy)(
+  it.each(orderClears.heldBackBy)(
     "held back: $name",
     ({ date, expected, field, floors, set }) => {
       expect(heldBackBy(floors, date, fieldOf(field), set)?.from ?? null).toBe(
@@ -123,7 +123,7 @@ describe("spec/vectors/chat-photos.json", () => {
 
   // The group's own answer, from its database: the line alone in its chat,
   // counted among the reader's photos or not.
-  test.each(chatPhotos.seen)("seen: $name", async ({ line, expected }) => {
+  it.each(chatPhotos.seen)("seen: $name", async ({ line, expected }) => {
     const threadId = line.ownChat ? "group" : directThread("reader", "writer");
     const { total } = await photosAmong({
       after: false,
@@ -146,7 +146,7 @@ describe("spec/vectors/chat-photos.json", () => {
 
   // The chat's lines from the first, each holding the photos its seq
   // names, words where none is.
-  test.each(chatPhotos.page)(
+  it.each(chatPhotos.page)(
     "page: $name",
     async ({ photos, seq, after, size, expected }) => {
       const seqs = photos.map((name) => Number(name.slice(0, -1)));
@@ -204,7 +204,7 @@ describe("spec/vectors/unread.json", () => {
       }
     );
 
-  test.each(unread.notifying)(
+  it.each(unread.notifying)(
     "$name",
     async ({ expected, groups, mentionsWhenMuted }) => {
       const counts = await Promise.all(

@@ -105,6 +105,8 @@ public actor SyncClient {
   private var sending: (socket: URLSessionWebSocketTask, task: Task<Void, Never>)?
   /// Waiting for the outbox to empty before closing, in the background.
   private var finishing: Task<Void, Never>?
+  /// Waiting for the outbox to empty, the socket staying open (`send`).
+  private var emptying: Task<Void, Never>?
   /// Whom it connects as, from `start` until `stop`.
   private var credentials: Credentials?
   public private(set) var stopped: Stop?
@@ -218,11 +220,13 @@ public actor SyncClient {
     }
   }
 
-  /// Closes the socket: the app went to the background, or the account is
-  /// changing.
+  /// Closes the socket: the app went to the background, or the account
+  /// has changed.
   func stop() {
     finishing?.cancel()
     finishing = nil
+    emptying?.cancel()
+    emptying = nil
     credentials = nil
     running?.cancel()
     running = nil
@@ -267,19 +271,36 @@ public actor SyncClient {
       stop()
       return Task {}
     }
-    let emptied = Task { [database, peer] in
-      await waitUntil(in: database) { db, now in
-        guard try Self.lastToSend(to: peer, now: now, in: db) != nil else { return (true, nil) }
-        guard let placeID = peer.placeID else { return (false, nil) }
-        return (false, try Chats.nextFailing(of: placeID, now: now, in: db))
-      }
-    }
+    let emptied = outboxEmptied()
     finishing = emptied
     return Task {
       await emptied.value
       // Not stopped or brought back meanwhile.
       if finishing == emptied {
         stop()
+      }
+    }
+  }
+
+  /// Waits until the outbox is sent, connected as `credentials` if it is
+  /// not yet, the socket staying open after: what goes before the account
+  /// changes (signing out), the change failing leaving the socket as it was.
+  func send(as credentials: Credentials) async {
+    start(as: credentials)
+    guard running != nil, stopped == nil else { return }
+    let emptied = outboxEmptied()
+    emptying = emptied
+    await emptied.value
+  }
+
+  /// Ends once nothing is left to send to `peer`, or nothing left that
+  /// still goes (a line past its wait stops going by itself).
+  private func outboxEmptied() -> Task<Void, Never> {
+    Task { [database, peer] in
+      await waitUntil(in: database) { db, now in
+        guard try Self.lastToSend(to: peer, now: now, in: db) != nil else { return (true, nil) }
+        guard let placeID = peer.placeID else { return (false, nil) }
+        return (false, try Chats.nextFailing(of: placeID, now: now, in: db))
       }
     }
   }
@@ -336,6 +357,7 @@ public actor SyncClient {
         // Nothing more goes on it: what waits for its outbox to empty
         // waits no longer.
         finishing?.cancel()
+        emptying?.cancel()
         Logger.sync.error("Stopped syncing: \(String(describing: stop))")
         running = nil
         if case .signedOut = stop {
