@@ -77,6 +77,10 @@ export const config = defineConfig({
       outlineOffset: "4px",
     },
     ":is(.design-page, .dc-phone) button": { color: "inherit" },
+    // A field's hint in the quieter words' color, as the native apps draw
+    // it, which Increase Contrast strengthens (spec/chat.md), rather than
+    // the browser's own gray, which follows neither テーマ nor dark.
+    ":is(.design-page, .dc-phone) ::placeholder": { color: "text.tertiary" },
     "@media (prefers-contrast: more)": {
       ':where(:root, [style*="--accent"]) > *': contrastedRoles,
     },

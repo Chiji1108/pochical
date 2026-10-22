@@ -40,8 +40,10 @@ export const fieldStyle = cva({
         textStyle: "body",
       },
       chip: {
+        bg: "transparent",
         border: "1px solid token(colors.accent.focus)",
         borderRadius: "full",
+        color: "text.primary",
         minHeight: "34px",
         padding: "0 12px",
         textStyle: "footnote",
@@ -347,6 +349,8 @@ export function MarkLetterInput({
 const growing = {
   box: css({
     "&::after": {
+      // Its max height counts the padding, as the field's box does.
+      boxSizing: "border-box",
       content: "attr(data-value) ' '",
       gridArea: "1 / 1",
       maxHeight: "calc(var(--lines, 5) * 1lh + 2 * var(--pad-y, 0px))",
