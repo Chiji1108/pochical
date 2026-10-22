@@ -4,17 +4,20 @@ import Synchronization
 
 /// A server on this Mac that refuses every socket with `status`: 401, as
 /// the server does a session it does not know, or 403, a group the user is
-/// not in; keeping the token each socket was asked with.
+/// not in; keeping the token each socket was asked with. Its status may
+/// change, as a server's word on a session does.
 final class RefusingServer: Sendable {
   let listener: NWListener
   /// The bearer token of each socket asked for, in order.
   let tokens = Mutex<[String]>([])
+  let status: Mutex<String>
 
   var asked: Int {
     tokens.withLock(\.count)
   }
 
   init(status: String = "401 Unauthorized") throws {
+    self.status = Mutex(status)
     listener = try NWListener(using: .tcp, on: .any)
     listener.newConnectionHandler = { [weak self] connection in
       connection.start(queue: .global())
@@ -26,6 +29,7 @@ final class RefusingServer: Sendable {
           .first { $0.lowercased().hasPrefix("authorization: bearer ") }
           .map { String($0.dropFirst("authorization: bearer ".count)) } ?? ""
         self?.tokens.withLock { $0.append(token) }
+        let status = self?.status.withLock { $0 } ?? "500 Internal Server Error"
         let refusal = "HTTP/1.1 \(status)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
         connection.send(
           content: Data(refusal.utf8),

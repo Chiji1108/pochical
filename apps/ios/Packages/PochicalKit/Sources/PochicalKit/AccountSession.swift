@@ -72,12 +72,26 @@ import SQLiteData
     case tryAgain, startAfresh
   }
 
-  private var state = State.starting
+  private var state = State.starting {
+    didSet { epoch += 1 }
+  }
   /// The stretch a change under way began in, until the server has done
-  /// its part or it has failed; none once any new stretch begins (a 401
-  /// meanwhile, the person's choice after it), which the change then
-  /// leaves as it is.
-  private var changingIn: Int?
+  /// its part or it has failed; none once any new stretch begins.
+  private var changingIn: Int? {
+    didSet { epoch += 1 }
+  }
+  /// Moves on with every change of `state` or `changingIn`, whatever made
+  /// it: a change begun or answered, a 401, the person's choice. The one
+  /// rule for whatever waits on something (the server's answer to a
+  /// change, a choice waiting for the sockets to close): what it then does
+  /// goes only if `epoch` is what it was as it began, nothing having moved
+  /// meanwhile. The one exception is a change's answer after the 401 the
+  /// change itself explains (`answerGoes`).
+  private var epoch = 0
+  /// A change's session ending as the server did not know it, while the
+  /// change waited for the server: `epoch` as the change began, and as the
+  /// session had ended.
+  private var endedWhileChanging: (began: Int, ended: Int)?
 
   public var phase: Phase {
     switch state {
@@ -342,28 +356,28 @@ import SQLiteData
   /// back: the device is erasing until both the session and its data are
   /// gone (`beginErasing`). A deletion's 401 ends the session as a
   /// socket's does (`sessionUnknown`); one to a socket meanwhile gives way
-  /// to the change the server has done (`stillFor`).
+  /// to the change the server has done (`answerGoes`).
   private func change(from before: Credentials, _ onServer: (Credentials) async throws -> Changed)
     async throws
   {
     guard case .signedIn(let now) = state, now.generation == before.generation, changingIn == nil
     else { throw AccountChanged() }
     changingIn = before.generation
+    let began = epoch
     defer {
-      // Unless left behind already, and another change begun since.
-      if changingIn == before.generation { changingIn = nil }
+      if epoch == began { changingIn = nil }
     }
     let changed: Changed
     do {
       changed = try await onServer(before)
     } catch DeletionFailure.sessionEnded {
-      if changingIn == before.generation { endUnknown(before) }
+      if epoch == began { endUnknown(before) }
       throw DeletionFailure.sessionEnded
     } catch {
       Logger.account.error("Changing the account failed: \(error)")
       throw error
     }
-    guard stillFor(before) else { throw AccountChanged() }
+    guard answerGoes(began: began) else { throw AccountChanged() }
     switch changed {
     case .left(let why):
       // Noted before anything is awaited: an app ended from here on
@@ -390,18 +404,17 @@ import SQLiteData
     }
   }
 
-  /// Whether the server's answer to a change asked in `before` is still the
-  /// device's to take: when nothing began meanwhile, and when all that did
-  /// was `before`'s own session ending (a 401), which the change the
-  /// server has done explains, as signing out or deleting ends that
-  /// session: the person's request wins, rather than leaving them signed
-  /// out of an account they asked to leave, its data kept. Never once the
-  /// person has chosen since (もう一度つなぐ, はじめから使う), as the
-  /// latest thing they chose is what the device does.
-  private func stillFor(_ before: Credentials) -> Bool {
-    if changingIn == before.generation { return true }
-    if case .ended(let kept) = state, kept.token == before.token { return true }
-    return false
+  /// Whether the server's answer to a change begun at `began` goes: when
+  /// nothing moved meanwhile (`epoch`); and, the one exception, when all
+  /// that did was the change's own session ending (a socket's 401), which
+  /// the change the server has done explains, as signing out and deleting
+  /// end that session: the person's request wins, rather than leaving them
+  /// signed out of an account they asked to leave, its data kept. Anything
+  /// after that 401 (もう一度つなぐ, はじめから使う, another 401, another
+  /// change) moved `epoch` on again, so the answer loses to it: the latest
+  /// thing the person chose is what the device does.
+  private func answerGoes(began: Int) -> Bool {
+    epoch == began || endedWhileChanging.map { $0 == (began, epoch) } == true
   }
 
   /// Where the device notes it is erasing, as soon as the server has ended
@@ -501,6 +514,8 @@ import SQLiteData
   /// what its stretch handed out is not current from here, and every
   /// socket closes.
   private func endUnknown(_ credentials: Credentials) {
+    let began = changingIn == credentials.generation ? epoch : nil
+    defer { endedWhileChanging = began.map { ($0, epoch) } }
     let ended = StoredSession(token: credentials.token, userID: credentials.userID, ended: true)
     do {
       try keychain.keep(ended)
@@ -541,9 +556,11 @@ import SQLiteData
       return
     }
     let ending = self.ending
+    let chosen = epoch
     Task {
       await ending?.value
-      guard case .chosen(let choice, let kept) = state else { return }
+      // A later choice, or anything else since, goes instead.
+      guard epoch == chosen, case .chosen(let choice, let kept) = state else { return }
       switch choice {
       case .tryAgain:
         let session = StoredSession(token: kept.token, userID: kept.userID)
