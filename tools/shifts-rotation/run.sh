@@ -30,6 +30,6 @@ failed=0
 TEST_RUNNER_SHIFTS_ROTATION_DIR=$shared xcodebuild_for test-without-building -collect-test-diagnostics never \
   -parallel-testing-enabled NO -resultBundlePath "$shared/results.xcresult" \
   -only-testing:PochicalUITests/ShiftsRotationTests || failed=1
-xcrun simctl shutdown "$device"
+xcrun simctl shutdown "$device" || true
 echo "results and screenshots: $shared"
 exit "$failed"

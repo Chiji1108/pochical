@@ -16,6 +16,11 @@ final class ShiftsRotationTests: XCTestCase {
     shared = URL(filePath: dir)
   }
 
+  /// Upright again for the next test, however this one ended.
+  override func tearDown() {
+    MainActor.assumeIsolated { XCUIDevice.shared.orientation = .portrait }
+  }
+
   @MainActor
   func test1JoinsTheGroup() throws {
     launch()
@@ -52,7 +57,19 @@ final class ShiftsRotationTests: XCTestCase {
   }
 
   @MainActor
-  func test4OpensInLandscape() throws {
+  func test4PicksAMonthAndTurns() throws {
+    launch()
+    turn("picked", year: "2027年")
+  }
+
+  @MainActor
+  func test5PicksAMonthAndTurnsAtTheLargestText() throws {
+    launch(["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
+    turn("picked-largest", year: "2027年")
+  }
+
+  @MainActor
+  func test6OpensInLandscape() throws {
     launch()
     XCUIDevice.shared.orientation = .landscapeLeft
     openList()
@@ -86,14 +103,24 @@ final class ShiftsRotationTests: XCTestCase {
     app.launch()
   }
 
-  /// Opens 一覧, turns it to landscape and back, and checks it each time.
-  @MainActor private func turn(_ name: String) {
+  /// Opens 一覧, goes to the month in sight in `year` with 月を選ぶ if
+  /// given, turns it to landscape and back, and checks it each time.
+  @MainActor private func turn(_ name: String, year: String? = nil) {
     XCUIDevice.shared.orientation = .portrait
     openList()
     continueAfterFailure = true
+    if let year {
+      let month = settled().month.replacing(/^[0-9]{4}年/, with: year)
+      pick(year)
+      XCTAssertEqual(settled().month, month, "月を選ぶ goes to the month")
+      let picked = settled().top
+      scrollByHand()
+      XCTAssertNotEqual(settled().top, picked, "the list is scrolled by hand")
+    } else {
+      XCTAssertEqual(settled().top, today(), "一覧 opens on today")
+    }
     let portrait = settled()
     snap("\(name)-portrait")
-    XCTAssertEqual(portrait.top, today(), "一覧 opens on today")
 
     XCUIDevice.shared.orientation = .landscapeLeft
     let landscape = settled()
@@ -152,6 +179,28 @@ final class ShiftsRotationTests: XCTestCase {
       zip(pixel(x), ground).contains { abs(Int($0) - Int($1)) > 24 }
     }
     return CGFloat(start ?? 0) / scale
+  }
+
+  /// Drags the list up a few rows, held at the end so it stops there.
+  @MainActor private func scrollByHand() {
+    app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65))
+      .press(
+        forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)),
+        withVelocity: .default, thenHoldForDuration: 0.5)
+  }
+
+  /// Turns 月を選ぶ's year wheel to `year`, and closes it. One wheel
+  /// only: the wheels follow the list, which moves as each one stops.
+  @MainActor private func pick(_ year: String) {
+    app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]{4}年[0-9]{1,2}月'")).firstMatch
+      .tap()
+    let wheels = app.pickerWheels
+    XCTAssertTrue(wheels.firstMatch.waitForExistence(timeout: 5), "月を選ぶ opens")
+    wheels.matching(NSPredicate(format: "value ENDSWITH '年'")).firstMatch
+      .adjust(toPickerWheelValue: year)
+    app.navigationBars.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+    let closed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: wheels.firstMatch)
+    wait(for: [closed], timeout: 5)
   }
 
   /// The group's 一覧, from the グループ tab.

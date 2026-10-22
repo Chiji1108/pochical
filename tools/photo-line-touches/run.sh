@@ -79,6 +79,6 @@ until [ -e "$shared/retry-shown" ] || ! kill -0 "$tests" 2>/dev/null; do sleep 1
 put_back
 touch "$shared/photo-back"
 wait "$tests" || failed=1
-xcrun simctl shutdown "$device"
+xcrun simctl shutdown "$device" || true
 echo "results and screenshots: $shared"
 exit "$failed"
