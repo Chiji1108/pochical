@@ -20,7 +20,7 @@ plugins:
       - target=ts
   # iOS (swift-protobuf + connect-swift)
   # renovate: datasource=github-tags depName=apple/swift-protobuf
-  - remote: buf.build/apple/swift:v1.38.1
+  - remote: buf.build/apple/swift:v1.39.0
     out: ../apps/ios/Packages/PochicalProto/Sources/PochicalProto
     opt:
       - Visibility=Public
