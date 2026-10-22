@@ -92,18 +92,18 @@ struct DayWords: View {
 }
 
 /// The day over a day's first line in a chat, its words at its foot:
-/// not drawn while the floating day stands for it, pinned in its place.
+/// not drawn once pinned, its words up past where the day floats, as the
+/// floating day is the title then, shown or faded.
 struct DayChip: View {
   @Environment(\.themeColors) private var colors
   let day: Day
   let scroll: ChatScroll
-  let notice: ChatNotice
 
   var body: some View {
     DayWords(day: day)
       .foregroundStyle(colors.textTertiary)
       .background(colors.fillTertiary, in: RoundedRectangle(cornerRadius: Radius.sm))
-      .opacity(scroll.floats(day, covered: notice.words != nil) ? 0 : 1)
+      .opacity(scroll.topDay == day ? 0 : 1)
       .padding(.top, FloatingDay.gap)
       // VoiceOver's rotor goes from day to day by its headings.
       .accessibilityAddTraits(.isHeader)

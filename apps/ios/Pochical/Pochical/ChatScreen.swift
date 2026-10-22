@@ -724,7 +724,7 @@ struct ChatScreen: View {
   ) -> some View {
     switch item {
     case .day(let day):
-      DayChip(day: day, scroll: scroll, notice: notice)
+      DayChip(day: day, scroll: scroll)
     case .unread:
       HStack(spacing: 12) {
         Rectangle().fill(colors.accentBorder).frame(height: 1)

@@ -27,12 +27,6 @@ final class ChatScroll {
   /// laid out or asked for. By item id, as the chat's own lines may be
   /// ahead of those in place.
   var near = NearEnds()
-
-  /// The day `day` floats over the lines, pinned in its title's place:
-  /// shown while the chat scrolls, unless a notice is said there.
-  func floats(_ day: Day, covered: Bool) -> Bool {
-    dayShown && !covered && topDay == day
-  }
 }
 
 /// The ↓ to the latest, once away from it or with others' unread lines
@@ -128,7 +122,7 @@ struct FloatingDay: View {
 
   var body: some View {
     Group {
-      if let day = scroll.topDay, scroll.floats(day, covered: covered) {
+      if let day = scroll.topDay, scroll.dayShown, !covered {
         DayWords(day: day)
           .foregroundStyle(colors.textSecondary)
           .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Radius.sm))
