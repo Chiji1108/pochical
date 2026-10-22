@@ -1,6 +1,10 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:recommended", "group:allNonMajor", "security:minimumReleaseAgeNpm"],
+  extends: [
+    "config:recommended",
+    "group:allNonMajor",
+    "security:minimumReleaseAgeNpm",
+  ],
   timezone: "Asia/Tokyo",
   schedule: ["* 0-8 * * 1"],
   prConcurrentLimit: 5,
@@ -52,13 +56,22 @@
       groupName: "TypeScript",
     },
     {
-      matchPackageNames: ["react", "react-dom", "@types/react", "@types/react-dom"],
+      matchPackageNames: [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom",
+      ],
       matchUpdateTypes: ["major"],
       groupName: "React",
     },
     {
       description: "vitest-pool-workers pins the vitest it runs under",
-      matchPackageNames: ["vitest", "@vitest/**", "@cloudflare/vitest-pool-workers"],
+      matchPackageNames: [
+        "vitest",
+        "@vitest/**",
+        "@cloudflare/vitest-pool-workers",
+      ],
       groupName: "vitest",
       separateMajorMinor: false,
     },

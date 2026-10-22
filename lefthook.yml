@@ -19,6 +19,7 @@ pre-commit:
         - "**/*.tsx"
         - "**/*.json"
         - "**/*.jsonc"
+        - "**/*.json5"
         - "**/*.css"
         - "**/*.md"
         - "**/*.astro"
