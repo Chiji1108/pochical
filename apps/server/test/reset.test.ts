@@ -91,7 +91,7 @@ describe("erasing everything (全消去)", () => {
       users: 2,
     });
 
-    await admin.reset();
+    await admin.reset("staff@pochical.app");
     // Their sessions unknown, their group and chat empty, the bucket too.
     const left = await Promise.all([
       admin.resetPreview(),
@@ -103,7 +103,7 @@ describe("erasing everything (全消去)", () => {
     ]);
     expect(left).toStrictEqual([NOTHING, 401, 401, [], [], []]);
 
-    await admin.reset();
+    await admin.reset("staff@pochical.app");
     await expect(admin.resetPreview()).resolves.toStrictEqual(NOTHING);
   });
 
@@ -117,7 +117,7 @@ describe("erasing everything (全消去)", () => {
       .bind(groupId)
       .run();
 
-    await exports.AdminEntrypoint.reset();
+    await exports.AdminEntrypoint.reset("staff@pochical.app");
     await expect(exports.AdminEntrypoint.resetPreview()).resolves.toStrictEqual(
       NOTHING
     );
@@ -149,7 +149,7 @@ describe("erasing everything (全消去)", () => {
     await expect(resetEverything(env)).rejects.toThrow("unreachable");
     unreachable.mockRestore();
 
-    await exports.AdminEntrypoint.reset();
+    await exports.AdminEntrypoint.reset("staff@pochical.app");
     await expect(exports.AdminEntrypoint.resetPreview()).resolves.toStrictEqual(
       NOTHING
     );
@@ -161,7 +161,7 @@ describe("erasing everything (全消去)", () => {
   it("lets the device sign in anew afterwards, as a new user", async () => {
     const before = await signInAnonymously();
     const beforeId = await userIdOf(before);
-    await exports.AdminEntrypoint.reset();
+    await exports.AdminEntrypoint.reset("staff@pochical.app");
     const after = await signInAnonymously();
     await expect(userIdOf(after)).resolves.not.toBe(beforeId);
     await expect(signedIn(after)).resolves.toBe(200);

@@ -5,6 +5,7 @@ import { env } from "cloudflare:workers";
 import { useState } from "react";
 import { data, Form, Link, redirect, useNavigation } from "react-router";
 
+import { staffOf } from "../staff";
 import {
   actionsStyle,
   alert,
@@ -74,7 +75,8 @@ export const action = async ({ params, request, url }: Route.ActionArgs) => {
   const kept = await env.SERVER.answerSupport(
     params.userId,
     text,
-    await opIdOf(draftId, words)
+    await opIdOf(draftId, words),
+    staffOf(request)
   ).catch(() => false);
   if (!kept) {
     return refuse(502, "返信できませんでした。");

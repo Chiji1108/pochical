@@ -8,6 +8,7 @@ export default [
   route("reports", "routes/reports.tsx"),
   route("users", "routes/users.tsx"),
   route("users/:userId", "routes/user.tsx"),
+  route("actions", "routes/actions.tsx"),
   route("bucket", "routes/bucket.tsx"),
   route("reset", "routes/reset.tsx"),
 ] satisfies RouteConfig;
