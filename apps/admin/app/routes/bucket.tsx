@@ -41,6 +41,7 @@ const VERDICT_NAMES: Record<Verdict, string> = {
   referenced: "使われている",
   sentUnnamed: "送信済みだが、どの行にもない",
   takenBack: "取り消し済み",
+  unclaimed: "使われなかったアップロード",
   unknown: "サーバーが書かないキー",
   unlinked: "どのプレビューにもない",
   unnoted: "グループに記録がない",

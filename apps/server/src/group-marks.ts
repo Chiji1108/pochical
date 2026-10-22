@@ -6,7 +6,7 @@ import { withinLimit } from "@pochical/design/text";
 
 import type { GroupMark } from "./gen/pochical/v1/marks_pb";
 import { isId } from "./ids";
-import { hasPersonPhoto, personPhotoKey, sharePersonPhoto } from "./photos";
+import { hasPersonPhoto, sharePersonPhoto } from "./photos";
 import { isEmoji } from "./text-limits";
 
 /**
@@ -65,8 +65,9 @@ export const requireMark = (mark: GroupMark | undefined): MarkValue => {
 
 /**
  * A photo mark into the group's photos before the group shows it: a new
- * one must be one of the caller's own photos, which the group takes a
- * copy of; the group's photo already (`current`) stays as it is.
+ * one must be one of the caller's own photos (an upload, which the
+ * bucket lets go of after its day, or their usual photo), which the group
+ * takes a copy of; the group's photo already (`current`) stays as it is.
  * INVALID_ARGUMENT when the caller has no such photo, looked for first
  * and again by the copy, as the bucket's delete may take it between.
  */
@@ -88,21 +89,6 @@ export const shareMarkPhoto = async (
     )
   ) {
     throw invalidMark();
-  }
-};
-
-/**
- * The caller's own copy of a photo mark gone, once the group shows its
- * own: it was sent up only for the group to take. Their usual photo stays.
- */
-export const dropPickedPhoto = async (
-  env: Env,
-  userId: string,
-  mark: MarkValue,
-  usualPhoto: string
-): Promise<void> => {
-  if (mark.photoId !== "" && mark.photoId !== usualPhoto) {
-    await env.PHOTOS.delete(personPhotoKey(userId, mark.photoId));
   }
 };
 

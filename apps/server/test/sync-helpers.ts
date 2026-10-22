@@ -2,7 +2,7 @@ import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { expect, vi } from "vitest";
+import { beforeEach, expect, vi } from "vitest";
 
 import {
   ClientFrameSchema,
@@ -14,6 +14,7 @@ import type {
   DayField,
   ServerFrame,
 } from "../src/gen/pochical/v1/sync_pb";
+import { GroupDO } from "../src/group-do";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
 import { supportPlace } from "../src/support-lines";
 import { call, openSocket, signInAnonymously, userIdOf } from "./helpers";
@@ -200,23 +201,153 @@ export const rosterIn = (frame: ServerFrame) =>
     ({ kind }) => kind.case === "groupProfile" || kind.case === "member"
   );
 
+/** The group alarm as the code has it, run by watchAlarms' spy. */
+// oxlint-disable-next-line typescript/unbound-method -- called with each group as this
+const groupAlarm = GroupDO.prototype.alarm;
+
 /**
- * Waits until the chat is told outside up to its newest line: its alarm
- * runs as soon as it is set, and is run here should it not have yet.
+ * A group's alarms as watchAlarms sees them: how many have started, those
+ * still running, and who waits for the next to start.
+ */
+type Alarms = {
+  running: Set<Promise<void>>;
+  started: number;
+  waiting: Set<(started: undefined) => void>;
+};
+
+/** Each group's alarms, by its instance. */
+const alarmsOf = new WeakMap<GroupDO, Alarms>();
+
+const alarmsIn = (group: GroupDO): Alarms => {
+  const known = alarmsOf.get(group);
+  if (known !== undefined) {
+    return known;
+  }
+  const alarms: Alarms = { running: new Set(), started: 0, waiting: new Set() };
+  alarmsOf.set(group, alarms);
+  return alarms;
+};
+
+/** Whether the running test watches its alarms (watchAlarms). */
+let watching = false;
+
+/**
+ * Watches every group's alarm in each of the file's tests, for a test to
+ * wait on: the runtime still runs each at its time, one at a time.
+ */
+export const watchAlarms = (): void => {
+  beforeEach(() => {
+    vi.spyOn(GroupDO.prototype, "alarm").mockImplementation(
+      async function watched(this: GroupDO) {
+        const alarms = alarmsIn(this);
+        alarms.started += 1;
+        for (const wake of alarms.waiting) {
+          wake(undefined);
+        }
+        alarms.waiting.clear();
+        const run = groupAlarm.call(this);
+        alarms.running.add(run);
+        try {
+          await run;
+        } finally {
+          alarms.running.delete(run);
+        }
+      }
+    );
+    watching = true;
+    return () => {
+      watching = false;
+    };
+  });
+};
+
+/** Waits until one of the group's alarms starts after the `after`th. */
+const alarmStarted = async (alarms: Alarms, after: number): Promise<void> => {
+  while (alarms.started <= after) {
+    const { promise, resolve } = Promise.withResolvers<undefined>();
+    alarms.waiting.add(resolve);
+    // oxlint-disable-next-line no-await-in-loop -- the next one to start
+    await promise;
+  }
+};
+
+/** What a chat's place holds of its relay: its next alarm and lines untold. */
+type Relay = { alarm: number | null; behind: number };
+
+/**
+ * A chat's place once no alarm of it runs or is about to: its next alarm,
+ * if any, for later. A due alarm is the runtime's to run, waited for as it
+ * starts and ends; so is one the runtime has taken up but not yet started,
+ * while the alarm reads as none though lines are untold, which a relay
+ * never leaves. Waited for inside the place, where its alarms run.
+ */
+const settledIn = async (
+  group: GroupDO,
+  storage: DurableObjectStorage
+): Promise<Relay> => {
+  const alarms = alarmsIn(group);
+  for (;;) {
+    while (alarms.running.size > 0) {
+      // oxlint-disable-next-line no-await-in-loop -- until none runs
+      await Promise.allSettled(alarms.running);
+    }
+    const { started } = alarms;
+    // oxlint-disable-next-line no-await-in-loop -- read once none runs
+    const alarm = await storage.getAlarm();
+    const { behind } = storage.sql
+      .exec<{ behind: number }>(
+        "select count(*) as behind from chat_lines where cursor > coalesce((select cursor from support_relay), 0)"
+      )
+      .one();
+    const due = alarm === null ? behind > 0 : alarm <= Date.now();
+    if (alarms.started === started && alarms.running.size === 0) {
+      if (!due) {
+        return { alarm, behind };
+      }
+      // oxlint-disable-next-line no-await-in-loop -- the runtime starts it
+      await alarmStarted(alarms, started);
+    }
+  }
+};
+
+const placeOf = (userId: string) => env.GROUPS.getByName(supportPlace(userId));
+
+/**
+ * Waits until no alarm of the user's chat runs or is due, in a file that
+ * watches its alarms (watchAlarms).
+ */
+export const alarmsSettled = async (userId: string): Promise<Relay> =>
+  await runInDurableObject(
+    placeOf(userId),
+    async (group, state) => await settledIn(group, state.storage)
+  );
+
+/**
+ * The chat's next try, set for later after a failure, brought to now for
+ * the runtime to run, and waited for.
+ */
+export const tryNow = async (userId: string): Promise<Relay> =>
+  await runInDurableObject(placeOf(userId), async (group, state) => {
+    await settledIn(group, state.storage);
+    const alarms = alarmsIn(group);
+    const { started } = alarms;
+    await state.storage.setAlarm(Date.now());
+    await alarmStarted(alarms, started);
+    return await settledIn(group, state.storage);
+  });
+
+/**
+ * Waits until the chat is told outside up to its newest line: the try a
+ * change asks for, which the runtime runs at once, and each after a
+ * failure, brought to now (tryNow).
  */
 export const relayed = async (userId: string): Promise<void> => {
-  const place = env.GROUPS.getByName(supportPlace(userId));
-  await vi.waitFor(async () => {
-    await runDurableObjectAlarm(place);
-    const behind = await runInDurableObject(place, (_, state) =>
-      state.storage.sql
-        .exec<{ behind: number }>(
-          "select count(*) as behind from chat_lines where cursor > coalesce((select cursor from support_relay), 0)"
-        )
-        .one()
-    );
-    expect(behind.behind).toBe(0);
-  });
+  let relay = await alarmsSettled(userId);
+  while (relay.behind > 0 && relay.alarm !== null) {
+    // oxlint-disable-next-line no-await-in-loop -- each try after the last
+    relay = await tryNow(userId);
+  }
+  expect(relay.behind).toBe(0);
 };
 
 type ChatKind = Extract<
@@ -225,10 +356,14 @@ type ChatKind = Extract<
 >["value"]["edits"];
 
 /**
- * The user's chat with Pochical's people, open on a device: each edit
- * sent as its outbox sends one, taken once acknowledged, then told outside.
+ * The user's chat with Pochical's people, open on a device, in a file
+ * that watches its alarms (watchAlarms): each edit sent as its outbox
+ * sends one, taken once acknowledged, then told outside.
  */
 export const supportChat = async (token: string) => {
+  if (!watching) {
+    throw new Error("supportChat waits on its chat's alarms: watchAlarms()");
+  }
   const userId = await userIdOf(token);
   const { socket, frames } = await syncSocket("/v1/me/support/socket", token);
   await frames.next();

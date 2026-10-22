@@ -39,10 +39,17 @@ import type {
 import type { GroupProfile } from "./group-do";
 import { markColumns } from "./group-marks";
 import { isAhead } from "./hlc";
-import { hasPersonPhoto, personPhotoKey, sharePersonPhoto } from "./photos";
+import { isId } from "./ids";
+import {
+  deleteBatchesOf,
+  deletePhotosUnder,
+  personPhotoKey,
+  sharePersonPhoto,
+  uploadedPhotoKey,
+} from "./photos";
 import { devicesOf, dropPushToken } from "./push-tokens";
 import type { Device } from "./push-tokens";
-import { retryWait } from "./retry-wait";
+import { bucketRetryWait, countFailure, retryWait } from "./retry-wait";
 import { supportPlace } from "./support-lines";
 import {
   acceptSyncSocket,
@@ -70,6 +77,7 @@ import {
   coworkerOrder,
   coworkers,
   dayFields,
+  goingPhotos,
   groupRequests,
   knownGroups,
   logHead,
@@ -118,6 +126,10 @@ const PUSH_RETRIES_MOST = 30;
 
 // How many pushes to the group have failed in a row, in the DO's storage.
 const pushFailuresKey = (groupId: string): string => `pushFailures:${groupId}`;
+
+// How many deletes of the user's photos going have failed at storage in a
+// row, in the DO's storage; the alarm comes back after bucketRetryWait.
+const PHOTOS_FAILURES = "photoDeleteFailures";
 
 // Set in the DO's storage once the account is deleted, so news a group was
 // still telling it writes nothing.
@@ -467,6 +479,11 @@ export class UserDO extends DurableObject<Env> {
       for (const socket of this.ctx.getWebSockets()) {
         socket.close(1000, "The account is deleted");
       }
+      // Their own photos first, while the notes of them stay: in the same
+      // turn as every write of one (setProfile), so none lands after.
+      const userId = this.ctx.id.name ?? "";
+      await deletePhotosUnder(this.env, `people/${userId}/`);
+      await deletePhotosUnder(this.env, uploadedPhotoKey(userId, ""));
       await this.ctx.storage.deleteAlarm();
       await this.ctx.storage.deleteAll();
       // Empty, not broken: its tables again, for whatever still asks.
@@ -679,6 +696,19 @@ export class UserDO extends DurableObject<Env> {
     return { name: row?.name ?? "", photoId: row?.photoId ?? "" };
   }
 
+  /** What the user's DO names in the photos bucket, for its audit. */
+  bucketReferences(): { photoId: string; going: string[] } {
+    return { going: this.goingPhotoIds(), photoId: this.profileOf().photoId };
+  }
+
+  private goingPhotoIds(): string[] {
+    return this.db
+      .select({ photoId: goingPhotos.photoId })
+      .from(goingPhotos)
+      .all()
+      .map(({ photoId }) => photoId);
+  }
+
   /**
    * The orphans the audit found among the user's own photos deleted from
    * the photos bucket, but the usual photo, should it be one now, skipped.
@@ -701,23 +731,41 @@ export class UserDO extends DurableObject<Env> {
 
   /**
    * Sets the usual name and photo, each empty for none, sent to the user's
-   * devices and pushed to their groups. The photo it replaces, for the
-   * caller to delete; empty when none. Null, setting nothing, for a new
-   * photo the user has not uploaded: looked for in the same turn as the
-   * write, as the bucket's delete (deleteOrphanPhotos) takes the user's
-   * spare photos in a turn of its own, so it never takes the one set.
+   * devices and pushed to their groups. A new photo is copied from the
+   * user's upload of it to where the usual photo is kept, noted as going
+   * before it is stored, and let off in the transaction that names it, so
+   * one stored and never named is deleted. The photo it replaces is noted
+   * as going in that transaction, and the alarm deletes it. False, setting
+   * nothing, for a new photo the user has not uploaded. Nothing else
+   * reaches the user meanwhile, so the alarm's delete never takes the
+   * photo as it is set.
    */
-  async setProfile(name: string, photoId: string): Promise<string | null> {
+  async setProfile(name: string, photoId: string): Promise<boolean> {
     return await this.ctx.blockConcurrencyWhile(async () => {
+      const userId = this.ctx.id.name ?? "";
       const before = this.profileOf().photoId;
+      if (this.ctx.storage.kv.get(ERASED_KEY) === true) {
+        return false;
+      }
       if (
         photoId !== before &&
         photoId !== "" &&
-        !(await hasPersonPhoto(this.env, this.ctx.id.name ?? "", photoId))
+        !(await this.keepUpload(userId, photoId))
       ) {
-        return null;
+        return false;
       }
       const changed = this.ctx.storage.transactionSync(() => {
+        this.db
+          .delete(goingPhotos)
+          .where(eq(goingPhotos.photoId, photoId))
+          .run();
+        if (before !== "" && before !== photoId) {
+          this.db
+            .insert(goingPhotos)
+            .values({ photoId: before })
+            .onConflictDoNothing()
+            .run();
+        }
         const row = { cursor: this.nextCursor(), id: 1, name, photoId };
         return this.db
           .insert(profile)
@@ -730,8 +778,72 @@ export class UserDO extends DurableObject<Env> {
           .get();
       });
       broadcastChanges(this.ctx, [profileChange(changed)]);
+      // The alarm pushes the profile to the groups and deletes what goes.
       this.schedulePush();
-      return before === photoId ? "" : before;
+      return true;
+    });
+  }
+
+  /**
+   * The user's upload of a photo copied to where the usual photo is kept,
+   * noted as going first, for SetProfile to let off as it names it:
+   * whether it is kept there now, false when they have no such upload.
+   */
+  private async keepUpload(userId: string, photoId: string): Promise<boolean> {
+    if (!isId(photoId)) {
+      return false;
+    }
+    const key = personPhotoKey(userId, photoId);
+    if ((await this.env.PHOTOS.head(key)) !== null) {
+      return true;
+    }
+    const upload = await this.env.PHOTOS.get(uploadedPhotoKey(userId, photoId));
+    if (upload === null) {
+      return false;
+    }
+    // Noted with the alarm that deletes it, should SetProfile stop before
+    // it names the photo.
+    this.db.insert(goingPhotos).values({ photoId }).onConflictDoNothing().run();
+    void this.ctx.storage.setAlarm(Date.now());
+    // Read whole first: a body streamed to R2 inside blockConcurrencyWhile
+    // stalls until the call is cancelled.
+    await this.env.PHOTOS.put(key, await upload.arrayBuffer(), {
+      httpMetadata: { contentType: "image/jpeg" },
+    });
+    return true;
+  }
+
+  /**
+   * The user's own photos noted as going deleted from the bucket, then
+   * their notes; nothing else reaches the user meanwhile, so none is set
+   * as the usual photo as R2 deletes it. When to try again should storage
+   * fail, if it did.
+   */
+  private async deleteGoingPhotos(userId: string): Promise<number | undefined> {
+    return await this.ctx.blockConcurrencyWhile(async () => {
+      const going = this.goingPhotoIds();
+      if (going.length === 0) {
+        return undefined;
+      }
+      const { kv } = this.ctx.storage;
+      try {
+        await Promise.all(
+          deleteBatchesOf(going.map((id) => personPhotoKey(userId, id))).map(
+            async (batch) => {
+              await this.env.PHOTOS.delete(batch);
+            }
+          )
+        );
+      } catch (error) {
+        console.error(`Deleting user ${userId}'s photos failed`, error);
+        return bucketRetryWait(countFailure(kv, PHOTOS_FAILURES));
+      }
+      kv.delete(PHOTOS_FAILURES);
+      this.db
+        .delete(goingPhotos)
+        .where(inArray(goingPhotos.photoId, going))
+        .run();
+      return undefined;
     });
   }
 
@@ -900,7 +1012,8 @@ export class UserDO extends DurableObject<Env> {
    * which would leave the values waiting for the user's next change, so
    * the alarm comes back for a failed group itself, each group waiting by
    * its own failures. A change made while it runs has set the next alarm
-   * already, which is kept.
+   * already, which is kept. The user's own photos noted as going are
+   * deleted first, and come back so should storage fail.
    */
   async alarm(): Promise<void> {
     const userId = this.ctx.id.name;
@@ -908,13 +1021,17 @@ export class UserDO extends DurableObject<Env> {
       return;
     }
     this.pushRequested = false;
+    const retries: number[] = [];
+    const photosWait = await this.deleteGoingPhotos(userId);
+    if (photosWait !== undefined) {
+      retries.push(photosWait);
+    }
     const head = this.head();
     const groups = this.db
       .select()
       .from(memberships)
       .where(isNull(memberships.leftAt))
       .all();
-    const retries: number[] = [];
     for (const { groupId, pushedCursor } of groups) {
       try {
         // oxlint-disable-next-line no-await-in-loop -- one group at a time
@@ -944,10 +1061,10 @@ export class UserDO extends DurableObject<Env> {
    * again, or undefined once it has failed too many times in a row.
    */
   private pushFailed(groupId: string): number | undefined {
-    const { kv } = this.ctx.storage;
-    const stored: unknown = kv.get(pushFailuresKey(groupId));
-    const failures = (typeof stored === "number" ? stored : 0) + 1;
-    kv.put(pushFailuresKey(groupId), failures);
+    const failures = countFailure(
+      this.ctx.storage.kv,
+      pushFailuresKey(groupId)
+    );
     if (failures > PUSH_RETRIES_MOST) {
       return undefined;
     }

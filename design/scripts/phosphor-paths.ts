@@ -34,7 +34,7 @@ export async function readPhosphorPaths(name: string) {
       ? loaded.default
       : undefined;
   if (!(weights instanceof Map)) {
-    throw new Error(`Phosphor has no drawings for ${name}`);
+    throw new TypeError(`Phosphor has no drawings for ${name}`);
   }
   const paths: Record<string, MarkIconPath[]> = {};
   for (const weight of markIconWeights) {
