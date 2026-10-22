@@ -90,6 +90,23 @@ struct PhotosOfChat: Hashable {
     show(stack: kept + [.root(page)], over: nil)
   }
 
+  /// Puts `next` in place of `page` and what was opened over it, the
+  /// way a page turns into the next of its flow (グループを作る into
+  /// メンバーを招待); nothing once `page` has gone, so a request that ends
+  /// after the person left takes them nowhere. Whether it was there.
+  func replace(_ page: RootPage, with next: RootPage) -> Bool {
+    guard let index = pages.lastIndex(of: .root(page)) else { return false }
+    show(stack: Array(pages[..<index]) + [.root(next)], over: nil)
+    return true
+  }
+
+  /// Takes away the pages of a place gone, as a group left, and what they
+  /// opened; the rest stay as they are.
+  func close(_ placeID: String) {
+    guard let index = pages.firstIndex(where: { $0.root?.placeID == placeID }) else { return }
+    show(stack: Array(pages[..<index]), over: nil)
+  }
+
   /// Shows `pages` over `tab`, and nothing else: a notification's chat
   /// over its tab, or a tab alone once a link opens it. Another tab is gone
   /// to at once, as a tap on it does, rather than with a push.

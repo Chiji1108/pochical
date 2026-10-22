@@ -24,7 +24,7 @@ struct RootView: View {
   @State private var openGroupID: String?
   /// The tab shown, and the pages over it.
   @State private var navigator = RootNavigator()
-  /// A group just made, whose メンバーを招待 opens in place of グループを作る
+  /// A group just made, whose メンバーを招待 takes the place of グループを作る
   /// once the group has come, as /design goes on to it.
   @State private var inviting: String?
   /// An invitation opened, its join screen shown over the tabs.
@@ -126,14 +126,6 @@ struct RootView: View {
         over: .groups)
     }
     .onChange(of: groups.map(\.id)) { inviteMade() }
-    // Gone somewhere else meanwhile, the person is left there.
-    .onChange(of: navigator.pages) { _, pages in
-      if !pages.isEmpty, pages != [.root(.group(.newGroup))] { inviting = nil }
-    }
-    .onChange(of: openGroupID) { _, id in
-      if id != inviting { inviting = nil }
-    }
-    .onChange(of: navigator.tab) { inviting = nil }
     .fullScreenCover(isPresented: $scanning) {
       if let scanned {
         invite = scanned
@@ -195,11 +187,12 @@ struct RootView: View {
   @ViewBuilder private func page(_ page: RootPage) -> some View {
     switch page {
     case .group(let route):
-      GroupPage(route: route) {
-        openGroupID = nil
-        navigator.show([])
+      GroupPage(route: route) { left in
+        // Its pages go, wherever the person is now; the rail opens on the
+        // first group if it was the one open.
+        if openGroupID == left { openGroupID = nil }
+        navigator.close(left)
       } onMade: { made in
-        openGroupID = made
         inviting = made
         inviteMade()
       }
@@ -236,12 +229,16 @@ struct RootView: View {
     let groupIDs: [String]
   }
 
-  /// Opens メンバーを招待 for the group just made, once it is here, in
-  /// place of every page over the tabs.
+  /// Turns グループを作る into メンバーを招待 for the group just made, once it
+  /// is here, and opens the group beside the rail. A person who left
+  /// グループを作る meanwhile is left where they are, as Telegram and LINE
+  /// make a group without taking anyone to it: it is in the rail.
   private func inviteMade() {
     guard let id = inviting, let made = groups.first(where: { $0.id == id }) else { return }
     inviting = nil
-    navigator.show([.group(.invite(made))])
+    if navigator.replace(.group(.newGroup), with: .group(.invite(made))) {
+      openGroupID = made.id
+    }
   }
 
   /// A chat a notification opened, and what it is opened with.

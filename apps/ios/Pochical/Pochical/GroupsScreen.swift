@@ -127,8 +127,8 @@ struct GroupPage: View {
   @Environment(\.rootNavigator) private var navigator
   @FetchAll(GroupRow.order(by: \.joinedAtMs)) private var groups
   let route: GroupRoute
-  /// The person has left the group, from its settings.
-  let onLeft: () -> Void
+  /// The person has left a group, from its settings: its id.
+  let onLeft: (String) -> Void
   /// A group has been made, its id.
   let onMade: (String) -> Void
 
@@ -146,7 +146,7 @@ struct GroupPage: View {
       GroupSettingsPage(group: live(group)) {
         navigator?.open(.group(.invite(group)))
       } onLeft: {
-        onLeft()
+        onLeft(group.id)
       }
     }
   }
