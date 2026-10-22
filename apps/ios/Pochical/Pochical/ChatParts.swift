@@ -97,15 +97,13 @@ struct DayChip: View {
   @Environment(\.themeColors) private var colors
   let day: Day
   let scroll: ChatScroll
+  let notice: ChatNotice
 
   var body: some View {
     DayWords(day: day)
       .foregroundStyle(colors.textTertiary)
       .background(colors.fillTertiary, in: RoundedRectangle(cornerRadius: Radius.sm))
-      .onGeometryChange(for: CGFloat.self, of: \.size.height) { height in
-        if scroll.dayHeight != height { scroll.dayHeight = height }
-      }
-      .opacity(scroll.dayShown && scroll.topDay == day ? 0 : 1)
+      .opacity(scroll.floats(day, covered: notice.words != nil) ? 0 : 1)
       .padding(.top, FloatingDay.gap)
       // VoiceOver's rotor goes from day to day by its headings.
       .accessibilityAddTraits(.isHeader)

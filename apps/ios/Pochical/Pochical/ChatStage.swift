@@ -185,9 +185,23 @@ struct LinesRow: Equatable {
     return kept
   }
 
+  /// How tall a day's words are drawn, in its title and floating over the
+  /// lines (DayWords), measured once for the chat's environment.
+  var dayHeight: CGFloat {
+    if let dayHeightKept { return dayHeightKept }
+    sizer.rootView = AnyView(DayWords(day: .today).environment(\.self, environment))
+    let height = sizer.sizeThatFits(
+      in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+    ).height
+    dayHeightKept = height
+    return height
+  }
+  private var dayHeightKept: CGFloat?
+
   /// Every item is drawn and measured again, the chat's environment having
   /// changed how they are drawn.
   func forgetHeights() {
+    dayHeightKept = nil
     heights.removeAll()
     drawings.removeAllObjects()
   }
@@ -1103,7 +1117,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
         return PinnedDay.Row(
           item: item, foot: cell.frame.maxY, title: ChatItemID.isDay(ids[item]))
       },
-      line: lines.contentOffset.y + inset.top + FloatingDay.gap, height: scroll.dayHeight)
+      line: lines.contentOffset.y + inset.top + FloatingDay.gap, height: model.dayHeight)
     let day = pinned.item.flatMap { $0 < ids.count ? settings?.dayOver(ids[$0]) : nil }
     if day != scroll.topDay { scroll.topDay = day }
     if pinned.push != scroll.dayPush { scroll.dayPush = pinned.push }
