@@ -39,7 +39,7 @@ struct CoworkersPage: View {
             if sorting {
               Text(person.name).lineLimit(1)
             } else {
-              NavigationLink {
+              PageLink {
                 CoworkerEditor(
                   person: person, days: daysWith(person.id),
                   taken: list.map(\.name).filter { $0 != person.name })

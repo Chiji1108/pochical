@@ -37,7 +37,7 @@ struct NewGroupPage: View {
         LabeledContent("グループ名") {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
-        NavigationLink {
+        PageLink {
           GroupMarkPage(name: name, mark: mark) { pick in
             mark = pick
             picked = true
@@ -63,7 +63,6 @@ struct NewGroupPage: View {
     .settingsList()
     .navigationTitle("グループを作る")
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarVisibility(.visible, for: .navigationBar)
     .onChange(of: usualName, initial: true) { _, usual in
       if myName.isEmpty { myName = usual }
     }

@@ -47,7 +47,7 @@ struct PatternsPage: View {
         if sorting {
           row(pattern, page: page)
         } else {
-          NavigationLink {
+          PageLink {
             PatternEditor(pattern: pattern, isNew: false)
           } label: {
             row(pattern, page: page)
@@ -71,7 +71,7 @@ struct PatternsPage: View {
             .padding(.horizontal, 16)
             .settingsOnPage()
         } else {
-          NavigationLink {
+          PageLink {
             AddPatternPage(patterns: patterns)
           } label: {
             Label("パターンを追加", systemImage: "plus")
@@ -84,7 +84,7 @@ struct PatternsPage: View {
       if !sorting, !archived.isEmpty {
         Section {
           ForEach(archived) { pattern in
-            NavigationLink {
+            PageLink {
               PatternEditor(pattern: pattern, isNew: false)
             } label: {
               row(pattern, page: nil)
@@ -101,7 +101,7 @@ struct PatternsPage: View {
       // Choosing the patterns again with the repeat, for a new job.
       if !sorting {
         Section("仕事") {
-          NavigationLink {
+          PageLink {
             JobChangePage()
           } label: {
             VStack(alignment: .leading, spacing: 2) {
@@ -179,7 +179,7 @@ private struct AddPatternPage: View {
         }
       }
       Section {
-        NavigationLink {
+        PageLink {
           PatternEditor(pattern: newPattern, isNew: true) { made = true }
         } label: {
           Text("自分で作る")
@@ -314,7 +314,7 @@ struct PatternEditor: View {
           Text("休みとして数える")
           Text("今月のお休みの日数に入ります")
         }
-        NavigationLink {
+        PageLink {
           NextDayPicker(name: draft.name, others: others, nextDay: $draft.nextDay)
         } label: {
           LabeledContent("翌日のパターン") {
@@ -332,7 +332,7 @@ struct PatternEditor: View {
       .settingsRows()
 
       Section("見た目") {
-        NavigationLink {
+        PageLink {
           LookEditor(draft: $draft, picked: $picked, others: others)
         } label: {
           LabeledContent("印と色") {

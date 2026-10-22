@@ -66,7 +66,6 @@ private func periodText(_ orders: [RepeatOrder], _ index: Int) -> String {
 struct RepeatPage: View {
   @Environment(\.themeColors) private var colors
   @Fetch(WorkValues()) private var values = WorkValues.Value()
-  @State private var going: RepeatGoing?
 
   var body: some View {
     let orders = values.orders
@@ -77,7 +76,7 @@ struct RepeatPage: View {
     List {
       if orders.isEmpty {
         Section {
-          NavigationLink {
+          PageLink {
             RepeatEditor(mode: .first)
           } label: {
             LabeledContent("繰り返しを設定する", value: "なし")
@@ -89,13 +88,13 @@ struct RepeatPage: View {
       } else {
         // Over the newest first, where a new period mostly lands.
         Section {
-          NavigationLink {
+          PageLink {
             RepeatEditor(mode: .switch)
           } label: {
             Label("新しい繰り返しを追加", systemImage: "plus")
               .foregroundStyle(colors.accentDefault)
           }
-          NavigationLink {
+          PageLink {
             StopRepeatPage()
           } label: {
             Label {
@@ -115,11 +114,6 @@ struct RepeatPage: View {
     }
     .settingsList()
     .navigationTitle("繰り返し")
-    .navigationDestination(item: $going) { going in
-      switch going {
-      case .period(let start): RepeatPeriodPage(start: start)
-      }
-    }
   }
 
   @ViewBuilder private func cards(
@@ -129,12 +123,12 @@ struct RepeatPage: View {
       Section(title) {
         ForEach(indices, id: \.self) { index in
           let order = values.orders[index]
-          Button {
-            going = .period(order.start)
+          // The card draws its own arrow.
+          PageLink(indicator: false) {
+            RepeatPeriodPage(start: order.start)
           } label: {
             OrderCard(order: order, period: periodText(values.orders, index), patterns: byID)
           }
-          .buttonStyle(.plain)
           .settingsOnPage()
           .listRowSeparator(.hidden)
           .padding(.bottom, index == indices.last ? 0 : 12)
@@ -226,7 +220,7 @@ private struct RepeatPeriodPage: View {
               SequenceTiles(sequence: order.sequence, patterns: byID)
             }
             .padding(.vertical, 6)
-            NavigationLink("カレンダーで直す") {
+            PageLink("カレンダーで直す") {
               RepeatEditor(mode: .fix(start))
             }
           }
@@ -512,7 +506,6 @@ private struct RepeatEditor: View {
     .background(colors.backgroundBase)
     .navigationTitle(mode.title)
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarVisibility(.hidden, for: .tabBar)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         Button("完了", systemImage: "checkmark", role: .confirm) { confirming = true }
@@ -637,7 +630,3 @@ private struct StopRepeatPage: View {
   }
 }
 
-/// Where a card on 繰り返し goes: its period, by its start.
-private enum RepeatGoing: Hashable {
-  case period(Day)
-}

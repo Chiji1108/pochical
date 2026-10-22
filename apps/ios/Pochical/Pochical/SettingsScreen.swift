@@ -5,7 +5,8 @@ import SwiftUI
 
 /// 設定: what the person sets, sorted as /design's settings are. 表示
 /// holds スタイル and the calendar's frame for now; the rest comes as it is
-/// built.
+/// built. Titled in the bar (RootView), each row's page pushed over the
+/// tabs.
 struct SettingsScreen: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
@@ -23,122 +24,119 @@ struct SettingsScreen: View {
   @State private var page: OpenedLink?
 
   var body: some View {
-    NavigationStack {
-      List {
-        // The patterns first: every way of working has them, and the
-        // repeating order is made of them.
-        Section("シフト") {
-          NavigationLink {
-            PatternsPage()
-          } label: {
-            LabeledContent("シフトパターン") {
-              HStack(spacing: 8) {
-                HStack(spacing: 4) {
-                  ForEach(ownPatterns, id: \.id) { pattern in
-                    ShiftMark(pattern: pattern, size: 14)
-                  }
+    List {
+      // The patterns first: every way of working has them, and the
+      // repeating order is made of them.
+      Section("シフト") {
+        PageLink {
+          PatternsPage()
+        } label: {
+          LabeledContent("シフトパターン") {
+            HStack(spacing: 8) {
+              HStack(spacing: 4) {
+                ForEach(ownPatterns, id: \.id) { pattern in
+                  ShiftMark(pattern: pattern, size: 14)
                 }
-                Text("\(ownPatterns.count)つ")
               }
-            }
-            .accessibilityValue("\(ownPatterns.count)つ")
-          }
-          NavigationLink {
-            RepeatPage()
-          } label: {
-            LabeledContent("繰り返し", value: repeatSummary(orders))
-          }
-          NavigationLink {
-            CoworkersPage()
-          } label: {
-            LabeledContent("一緒に働く人", value: "\(coworkerRows.count)人")
-          }
-        }
-        .settingsRows()
-
-        Section("通知") {
-          NavigationLink {
-            RemindersPage()
-          } label: {
-            LabeledContent("リマインド", value: remindersSummary)
-          }
-          NavigationLink {
-            ChatNotificationsPage()
-          } label: {
-            LabeledContent(
-              "チャット",
-              value: chatNotificationsSummary(
-                groups: groups, notifications: notifications,
-                allowed: Notifications.shared.permission == .allowed))
-          }
-        }
-        .settingsRows()
-
-        Section("表示") {
-          NavigationLink {
-            StyleSettings()
-          } label: {
-            // A look is shown rather than named, as /design's: one of the
-            // person's own marks, then the テーマ's name.
-            LabeledContent("スタイル") {
-              HStack(spacing: 8) {
-                if let work = ownPatterns.first(where: { !$0.countsAsOff }) ?? ownPatterns.first {
-                  ShiftMark(pattern: work, size: 20)
-                }
-                Text(settings.device.theme.name)
-              }
-            }
-            .accessibilityValue("\(styleName)、\(settings.device.theme.name)")
-          }
-          NavigationLink {
-            AppearanceSettings()
-          } label: {
-            LabeledContent("外観", value: appearanceName)
-          }
-          NavigationLink {
-            CalendarSettings()
-          } label: {
-            // The month as small text writes it, 10月 or Oct, saying
-            // 月と曜日 without a word for it.
-            LabeledContent(
-              "カレンダー",
-              value: "\(Day.weekdayNames[settings.device.week.start])曜はじまり・"
-                + Day.today.shortMonth(english: settings.device.heading.english))
-          }
-          // Outside the app, and changed least, so last.
-          NavigationLink {
-            AppIconSettings()
-          } label: {
-            LabeledContent("アプリアイコン") {
-              HStack(spacing: 8) {
-                appIcon.image(size: 22)
-                Text(appIcon.name)
-              }
+              Text("\(ownPatterns.count)つ")
             }
           }
+          .accessibilityValue("\(ownPatterns.count)つ")
         }
-        .settingsRows()
-
-        Section("アカウント") {
-          ProfileRow()
-          AccountRow()
+        PageLink {
+          RepeatPage()
+        } label: {
+          LabeledContent("繰り返し", value: repeatSummary(orders))
         }
-        .settingsRows()
-
-        // The chat with the people who make Pochical, over ポチカルについて.
-        Section {
-          SupportRow()
+        PageLink {
+          CoworkersPage()
+        } label: {
+          LabeledContent("一緒に働く人", value: "\(coworkerRows.count)人")
         }
-        .settingsRows()
-
-        about
       }
-      .settingsList()
-      .navigationTitle("設定")
-      .onAppear { appIcon = .current }
-      .sheet(item: $page) { page in
-        SafariView(url: page.url).ignoresSafeArea()
+      .settingsRows()
+
+      Section("通知") {
+        PageLink {
+          RemindersPage()
+        } label: {
+          LabeledContent("リマインド", value: remindersSummary)
+        }
+        PageLink {
+          ChatNotificationsPage()
+        } label: {
+          LabeledContent(
+            "チャット",
+            value: chatNotificationsSummary(
+              groups: groups, notifications: notifications,
+              allowed: Notifications.shared.permission == .allowed))
+        }
       }
+      .settingsRows()
+
+      Section("表示") {
+        PageLink {
+          StyleSettings()
+        } label: {
+          // A look is shown rather than named, as /design's: one of the
+          // person's own marks, then the テーマ's name.
+          LabeledContent("スタイル") {
+            HStack(spacing: 8) {
+              if let work = ownPatterns.first(where: { !$0.countsAsOff }) ?? ownPatterns.first {
+                ShiftMark(pattern: work, size: 20)
+              }
+              Text(settings.device.theme.name)
+            }
+          }
+          .accessibilityValue("\(styleName)、\(settings.device.theme.name)")
+        }
+        PageLink {
+          AppearanceSettings()
+        } label: {
+          LabeledContent("外観", value: appearanceName)
+        }
+        PageLink {
+          CalendarSettings()
+        } label: {
+          // The month as small text writes it, 10月 or Oct, saying
+          // 月と曜日 without a word for it.
+          LabeledContent(
+            "カレンダー",
+            value: "\(Day.weekdayNames[settings.device.week.start])曜はじまり・"
+              + Day.today.shortMonth(english: settings.device.heading.english))
+        }
+        // Outside the app, and changed least, so last.
+        PageLink {
+          AppIconSettings()
+        } label: {
+          LabeledContent("アプリアイコン") {
+            HStack(spacing: 8) {
+              appIcon.image(size: 22)
+              Text(appIcon.name)
+            }
+          }
+        }
+      }
+      .settingsRows()
+
+      Section("アカウント") {
+        ProfileRow()
+        AccountRow()
+      }
+      .settingsRows()
+
+      // The chat with the people who make Pochical, over ポチカルについて.
+      Section {
+        SupportRow()
+      }
+      .settingsRows()
+
+      about
+    }
+    .settingsList()
+    .onAppear { appIcon = .current }
+    .sheet(item: $page) { page in
+      SafariView(url: page.url).ignoresSafeArea()
     }
   }
 

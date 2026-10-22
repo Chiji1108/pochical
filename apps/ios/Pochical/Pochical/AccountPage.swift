@@ -10,7 +10,7 @@ struct AccountRow: View {
   @State private var linked = LinkedAccount.kept
 
   var body: some View {
-    NavigationLink {
+    PageLink {
       AccountPage(linked: $linked)
     } label: {
       LabeledContent("アカウント") {

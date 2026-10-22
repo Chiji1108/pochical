@@ -108,7 +108,6 @@ struct InvitePage: View {
     }
     .navigationTitle("メンバーを招待")
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarVisibility(.visible, for: .navigationBar)
     .task { await load() }
     .alert("招待リンクを作り直しますか？", isPresented: $confirmingRemake) {
       Button("作り直す", role: .destructive) {

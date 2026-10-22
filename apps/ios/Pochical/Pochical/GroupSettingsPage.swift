@@ -10,7 +10,7 @@ import SwiftUINavigation
 struct GroupSettingsPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.groupCalls) private var groupCalls
-  @Environment(\.openGroupRoute) private var openGroupRoute
+  @Environment(\.rootNavigator) private var navigator
   @Environment(\.say) private var say
   @Fetch private var members: [GroupMember] = []
   @Fetch(BlocksRequest()) private var blocked: Set<String> = []
@@ -32,7 +32,7 @@ struct GroupSettingsPage: View {
     let me = members.first { $0.userID == meID }
     List {
       Section {
-        NavigationLink {
+        PageLink {
           GroupEditPage(group: group)
         } label: {
           LabeledContent {
@@ -54,7 +54,7 @@ struct GroupSettingsPage: View {
 
       // /design's GroupProfileRow: the name, and whether it is the usual one.
       Section("このグループでのあなた") {
-        NavigationLink {
+        PageLink {
           if let me {
             DisplayNamePage(group: group, meID: me.userID, name: me.ownName ? me.name : "")
           }
@@ -141,7 +141,6 @@ struct GroupSettingsPage: View {
     .settingsList()
     .navigationTitle("グループの設定")
     .navigationBarTitleDisplayMode(.inline)
-    .toolbarVisibility(.visible, for: .navigationBar)
     .task {
       let today = Day.today
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: today, through: today))
@@ -154,7 +153,8 @@ struct GroupSettingsPage: View {
         onMessage: { person in
           guard let meID else { return nil }
           return {
-            openGroupRoute(.chat(group, thread: directThread(meID, person.id), with: person.id))
+            navigator?.open(
+              .group(.chat(group, thread: directThread(meID, person.id), with: person.id)))
           }
         },
         onReported: { target in
@@ -228,7 +228,7 @@ private struct GroupEditPage: View {
         LabeledContent("グループ名") {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
-        NavigationLink {
+        PageLink {
           GroupMarkPage(name: name, mark: mark, shelf: .group(group.id)) { mark = $0 }
         } label: {
           LabeledContent("アイコン") {

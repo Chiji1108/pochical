@@ -12,7 +12,7 @@ struct ProfileRow: View {
   @Fetch(UsualProfileRequest()) private var usual = UsualProfile()
 
   var body: some View {
-    NavigationLink {
+    PageLink {
       ProfilePage()
     } label: {
       LabeledContent("プロフィール") {

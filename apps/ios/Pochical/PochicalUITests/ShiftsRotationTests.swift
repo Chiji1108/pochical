@@ -198,7 +198,9 @@ final class ShiftsRotationTests: XCTestCase {
     XCTAssertTrue(wheels.firstMatch.waitForExistence(timeout: 5), "月を選ぶ opens")
     wheels.matching(NSPredicate(format: "value ENDSWITH '年'")).firstMatch
       .adjust(toPickerWheelValue: year)
-    app.navigationBars.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+    // A tap outside the wheels closes them: low on the screen, as they can
+    // come up over the bar.
+    app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
     let closed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: wheels.firstMatch)
     wait(for: [closed], timeout: 5)
   }
