@@ -201,6 +201,9 @@ private let server = URL(string: "http://localhost:8787")!
     (ConnectError(code: .unavailable, message: nil, exception: offline), .offline),
     (ConnectError(code: .unavailable, message: nil, exception: unreachable), .offline),
     (ConnectError(code: .deadlineExceeded, message: nil, exception: timedOut), .offline),
+    // Connect's own timeout.
+    (ConnectError(code: .deadlineExceeded, message: "request exceeded allowed timeout"), .offline),
+    (ConnectError(code: .canceled, message: nil, exception: URLError(.cancelled)), .serverFailed),
     // A 503 is the server's own answer, not the network's.
     (ConnectError(code: .unavailable, message: nil), .serverFailed),
     (ConnectError(code: .internalError, message: nil), .serverFailed),

@@ -53,14 +53,15 @@ What the device holds may be a few taps tried before signing in, or months of sh
 4. The User DO's storage goes: days, patterns, coworkers, groups, push tokens. Its sockets close, and it takes no group's news after.
 5. better-auth deletes the user, their sessions and their provider accounts, which closes what is still open. Their other devices are signed out, as on a 401 (Reconnecting).
 
-アカウントを削除 and ログアウト are offered only while the device has its session: before its first sign-in reaches the server (offline at a first launch, or a Keychain it could not read), both are disabled, saying インターネットにつながると、ログアウトとアカウントの削除ができます。, rather than failing after Apple was asked. A deletion that fails says why, titled アカウントを削除できませんでした, and what to do next, nothing on the device changed (iOS: `DeletionFailure`):
+アカウントを削除 and ログアウト are offered only while the device has its session: before its first sign-in reaches the server (offline at a first launch, or a Keychain it could not read), both are disabled, saying インターネットにつながると、ログアウトとアカウントの削除ができます。, rather than failing after Apple was asked. A deletion that fails says why, titled アカウントを削除できませんでした, and what to do next, the device signed in as before but where said (iOS: `DeletionFailure`):
 
-- Still no session, as the account changed while Apple was asked: まだサーバーにつながっていません。少し待ってから、もう一度お試しください。
-- Apple gave no code (the person canceling says nothing): Appleで確認できませんでした。インターネット接続を確かめて、もう一度お試しください。
+- No session yet, the button pressed just before it was disabled: まだサーバーにつながっていません。少し待ってから、もう一度お試しください。
+- The device signed out or started afresh while Apple was asked (another window): nothing is deleted, the user it is now included, as the deletion goes only as the session it was asked in: 削除しているあいだにアカウントが切り替わったため、削除していません。
+- Apple gave no code (the person canceling says nothing): Appleで確認できませんでした。もう一度お試しください。
 - The server refused it (`FAILED_PRECONDITION`, step 1): このアカウントのApple IDか確かめられませんでした。ログインしたときと同じApple IDで、もう一度お試しください。
-- The server was not reached (no answer: offline, timed out, the connection dropped): サーバーに接続できませんでした。インターネット接続を確かめて、もう一度お試しください。
+- The server was not reached (no answer: offline, the connection dropped, or timed out): サーバーに接続できませんでした。インターネット接続を確かめて、もう一度お試しください。
 - Any other error of the server's: 時間をおいて、もう一度お試しください。, a deletion cut off part way finishing as it is tried again.
-- The server does not know the session (401): the session ends as on a 401 to a socket, ログアウトされています in place of the app (Reconnecting), with no alert.
+- The server does not know the session (401), or a socket said so while Apple was asked: the session ends as on a 401 to a socket, ログアウトされています in place of the app (Reconnecting), with no alert. A retry after a deletion whose answer was lost lands here too, which that screen covers (アカウントが削除されたため).
 
 The device that deleted the account erases what it holds of the user (every table, the outbox and the chats' photos), forgets its token, and goes on as a new anonymous user, as on a first launch, はじめの設定 and all, kept as soon as the deletion is done (so the app ending meanwhile still starts there) and saying アカウントを削除しました over its welcome; its own settings stay. In the groups, the members left see each line of theirs as 削除されたメッセージ, and a one-to-one chat with them as 相手のアカウントは削除されました, where it takes no more lines. Reports made by or about them stay, as what Pochical's people act on, as the privacy policy says. better-auth's own deletion of an anonymous user (`/delete-anonymous-user`, and after a switching sign-in) is turned off, as it would leave their groups and chats behind.
 

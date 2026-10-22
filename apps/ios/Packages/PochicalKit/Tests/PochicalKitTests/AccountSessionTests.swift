@@ -605,3 +605,19 @@ private final class FakeAccountServer: AccountServer {
   #expect(throws: NotSignedIn.self) { try made.session.current.credentials() }
   #expect(made.coworkers == 1)
 }
+
+@MainActor @Test func theUserAfterAnAccountThatChangesWhileAppleIsAskedIsNotDeleted() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  made.session.cameToFront()
+  await #expect(throws: DeletionFailure.accountChanged) {
+    try await made.session.deleteAccount(appleCode: {
+      // Signed out in another window, and signed in afresh as a new user.
+      try await made.session.signOut()
+      #expect(await eventually { made.session.phase == .signedIn })
+      return "code"
+    })
+  }
+  #expect(made.session.userID == "anon-1")
+  #expect(made.session.phase == .signedIn)
+  #expect(made.server.asked.withLock(\.deleted).isEmpty)
+}

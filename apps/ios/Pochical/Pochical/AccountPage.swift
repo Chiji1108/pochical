@@ -63,13 +63,6 @@ struct AccountPage: View {
     case notSignedOut
     var id: Self { self }
 
-    /// Why deleting failed; none for a session the server does not know,
-    /// which the app says in place of every page (AppRoot).
-    init?(_ failure: DeletionFailure) {
-      guard failure != .sessionEnded else { return nil }
-      self = .notDeleted(failure)
-    }
-
     var title: String {
       switch self {
       case .notDeleted: "アカウントを削除できませんでした"
@@ -82,12 +75,16 @@ struct AccountPage: View {
       switch self {
       case .notDeleted(.notSignedIn):
         "まだサーバーにつながっていません。少し待ってから、もう一度お試しください。"
+      case .notDeleted(.accountChanged):
+        "削除しているあいだにアカウントが切り替わったため、削除していません。"
       case .notDeleted(.offline):
         "サーバーに接続できませんでした。インターネット接続を確かめて、もう一度お試しください。"
       case .notDeleted(.appleUnconfirmed):
-        "Appleで確認できませんでした。インターネット接続を確かめて、もう一度お試しください。"
+        "Appleで確認できませんでした。もう一度お試しください。"
       case .notDeleted(.appleRefused):
         "このアカウントのApple IDか確かめられませんでした。ログインしたときと同じApple IDで、もう一度お試しください。"
+      // A session the server does not know is said in place of every page
+      // (AppRoot), not here.
       case .notDeleted(.serverFailed), .notDeleted(.sessionEnded), .notSignedOut:
         "時間をおいて、もう一度お試しください。"
       }
@@ -223,8 +220,10 @@ struct AccountPage: View {
     defer { busy = false }
     do throws(DeletionFailure) {
       guard try await session.deleteAccount(appleCode: AppleCode.ask) else { return }
+    } catch .sessionEnded {
+      return
     } catch {
-      problem = Problem(error)
+      problem = .notDeleted(error)
       return
     }
     withAnimation { linked = nil }

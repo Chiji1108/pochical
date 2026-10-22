@@ -228,7 +228,8 @@ import SQLiteData
   /// account; the user it was is deleted, tried again as the app comes back
   /// should that fail.
   public func useAccount(appleIDToken: String, nonce: String) async throws {
-    try await change { [server] before in
+    guard case .signedIn(let before) = state else { throw NotSignedIn() }
+    try await change(from: before) { [server] before in
       .switched(
         to: try await server.signInApple(idToken: appleIDToken, nonce: nonce, on: before.token))
     }
@@ -241,7 +242,7 @@ import SQLiteData
     guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials)
     else { throw NotSignedIn() }
     await userSocket.finishSending(as: credentials)
-    try await change { [server] before in
+    try await change(from: credentials) { [server] before in
       try await server.signOut(before.token)
       return .left(.signedOut)
     }
@@ -255,7 +256,12 @@ import SQLiteData
   public func deleteAccount(appleCode: @MainActor () async throws -> String?)
     async throws(DeletionFailure) -> Bool
   {
-    guard case .signedIn = state else { throw .notSignedIn }
+    let asking: Credentials
+    switch state {
+    case .signedIn(let credentials): asking = credentials
+    case .ended: throw .sessionEnded
+    case .starting, .changing, .erasing: throw .notSignedIn
+    }
     let code: String
     do {
       guard let asked = try await appleCode() else { return false }
@@ -265,13 +271,16 @@ import SQLiteData
       throw .appleUnconfirmed
     }
     do {
-      try await change { [server] before in
+      try await change(from: asking) { [server] before in
         try await server.deleteAccount(before.token, appleAuthorizationCode: code)
         return .left(.deleted)
       }
+    } catch let failure as DeletionFailure {
+      throw failure
     } catch {
-      // Else change's own refusal: the account changed while Apple was asked.
-      throw error as? DeletionFailure ?? .notSignedIn
+      // change's own refusal (`AccountChanged`): the device is no longer
+      // the account Apple was asked for.
+      throw .accountChanged
     }
     return true
   }
@@ -291,8 +300,17 @@ import SQLiteData
   /// user it was, whose session still holds. Once the server has ended the
   /// session (signed out, deleted) there is no going back: the device is
   /// erasing until both the session and its data are gone (`beginErasing`).
-  private func change(_ onServer: (Credentials) async throws -> Changed) async throws {
-    guard case .signedIn(let before) = state else { throw NotSignedIn() }
+  /// A deletion the server answers with a 401 ends the session as a
+  /// socket's 401 does (`sessionUnknown`), rather than going back to it.
+  /// Only from the stretch `before` it was asked in: one the account left
+  /// meanwhile (signed out, started afresh, while Apple was asked) is
+  /// refused (`AccountChanged`), so the user after it is never changed.
+  private func change(from before: Credentials, _ onServer: (Credentials) async throws -> Changed)
+    async throws
+  {
+    guard case .signedIn(let now) = state, now.generation == before.generation else {
+      throw AccountChanged()
+    }
     await leave(before)
     let changed: Changed
     do {
