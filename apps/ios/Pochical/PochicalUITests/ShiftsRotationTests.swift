@@ -2,9 +2,10 @@ import XCTest
 
 /// A big group's 一覧 turned to landscape and back (POC-132): its rows are
 /// drawn where they are laid out, under their faces, and the list stays
-/// on the days it showed; and its 今日 shows while today is out of sight
-/// (POC-156). Run by `mise run ios:shifts-rotation`, against
-/// the local server it starts with a group of twelve; skipped without it.
+/// on the days it showed; its 今日 shows while today is out of sight
+/// (POC-156); and its 週ごと opens on today's week (POC-162). Run by
+/// `mise run ios:shifts-rotation`, against the local server it starts
+/// with a group of twelve; skipped without it.
 final class ShiftsRotationTests: XCTestCase {
   private var app: XCUIApplication!
   private var shared: URL!
@@ -138,12 +139,51 @@ final class ShiftsRotationTests: XCTestCase {
     snap("today-days")
     checkToday("in 一覧 again, on today")
 
+    // Back from 1人ずつ, to today's week.
+    pick(year(1))
+    _ = settled()
+    switchLayout(from: "一覧", to: "1人ずつ")
+    switchLayout(from: "1人ずつ", to: "週ごと")
+    _ = settled()
+    snap("today-from-person")
+    checkToday("back from 1人ずつ, on today's week")
+    switchLayout(from: "週ごと", to: "一覧")
+    XCTAssertEqual(settled().top, today(), "一覧 goes to today")
+
     pick(year(1))
     _ = settled()
     todayButton().tap()
     XCTAssertEqual(settled().top, today(), "今日 goes back to today")
     snap("today-tapped")
     checkToday("after 今日")
+  }
+
+  /// Launched and opened again and again, its members read later each
+  /// time, up to two seconds, 週ごと lands on today's week, not on one the
+  /// heights SwiftUI guesses put at the top (POC-162).
+  @MainActor
+  func test8OpensOnTodaysWeek() throws {
+    continueAfterFailure = true
+    for open in 1...20 {
+      launch(["-membersReadLate", "\(open * 100)"])
+      let tab = app.tabBars.buttons["グループ"]
+      if tab.waitForExistence(timeout: 10) { tab.tap() }
+      let shifts = app.buttons["月で見る"]
+      XCTAssertTrue(shifts.waitForExistence(timeout: 15), "the group's hub shows")
+      shifts.tap()
+      let rows = app.buttons.matching(NSPredicate(format: "label MATCHES %@", today() + "([^0-9].*)?"))
+      // Until the list has stopped where it lands.
+      var frame = CGRect.null
+      var tries = 0
+      while rows.firstMatch.waitForExistence(timeout: 5), rows.firstMatch.frame != frame, tries < 10 {
+        frame = rows.firstMatch.frame
+        tries += 1
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.5))
+      }
+      let landed = rows.allElementsBoundByIndex.contains(where: \.isHittable) && !todayButton().exists
+      if !landed { snap("opened-\(open)") }
+      XCTAssertTrue(landed, "open \(open) lands on today's week")
+    }
   }
 
   @MainActor private func launch(_ arguments: [String] = []) {

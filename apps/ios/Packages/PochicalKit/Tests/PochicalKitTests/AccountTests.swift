@@ -14,6 +14,7 @@ final class MemoryStore: TokenStore {
   let refusesToForget = Mutex(false)
   /// As a Keychain before the phone's first unlock.
   let refusesToRead = Mutex(false)
+  let refusesToKeep = Mutex(false)
   let reads = Mutex(0)
 
   init(_ data: Data? = nil) {
@@ -25,7 +26,10 @@ final class MemoryStore: TokenStore {
     if refusesToRead.withLock({ $0 }) { throw KeychainError(status: errSecInteractionNotAllowed) }
     return kept.withLock { $0 }
   }
-  func replace(with data: Data) { kept.withLock { $0 = data } }
+  func replace(with data: Data) throws {
+    if refusesToKeep.withLock({ $0 }) { throw KeychainError(status: errSecInteractionNotAllowed) }
+    kept.withLock { $0 = data }
+  }
 
   func forget() throws {
     if refusesToForget.withLock({ $0 }) { throw KeychainError(status: errSecInteractionNotAllowed) }

@@ -22,7 +22,7 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 
 ## How to build
 
-- Plumbing comes from a maintained library before it is hand-written (check license, activity, fit; name it in the PR). MIT/Apache/BSD may be added; GPL/AGPL code (Signal, Telegram) is read for ideas only.
+- Plumbing comes from a maintained library before it is hand-written (check license, activity, fit; name it in the PR). MIT/Apache/BSD/ISC may be added; GPL/AGPL code (Signal, Telegram) is read for ideas only.
 - What does the same thing in two places is one piece, not two copies: build on the existing one and make the difference an input. A change to one carries to the others in the same PR.
 - Fix the root cause the way the platform or library intends; no timing hacks, sleeps or patches over symptoms. If the conventional answer is to leave a review finding, say so instead of adding special handling.
 - The apps are unreleased: change stored shapes directly, with no hand-written data migration, fallback or compatibility code for old saved data. On iOS that means editing a table where it is first created, never adding a migration step: any schema change erases the device's database in every build, TestFlight included, and it syncs again from the server. Likewise a kept session the app cannot read (the Keychain's) is no session: it signs in anew (spec/sync-protocol.md, Signing in). Server SQL schemas still get their generated Drizzle migrations, as above. At release, turn iOS's `erasesOnShapeChange` off, for the database and the kept session alike, and append migration steps from then on.
@@ -33,6 +33,8 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 ## How to ship
 
 - main takes pull requests only; name the Linear issue (team POC) in the PR, and file skipped findings or follow-ups there.
-- Before merging: run `/code-review` and address it, CI must be green (Xcode Cloud included for iOS), and review threads resolved. Merge main into the branch first when other PRs landed. Never merge on red.
+- Before merging: run `/code-review` and address it, CI must be green, and review threads resolved. Merge main into the branch first when other PRs landed. Never merge on red.
+- The required `ios` status stands for Xcode Cloud (`.github/workflows/ios.yml`): it passes when the PR's own changes leave `apps/ios` and `spec/vectors` alone, or once Xcode Cloud's PR build has passed on the head (or, when it never finished there, on the newest earlier commit of the PR with the same files there), and fails when that build fails. Xcode Cloud's Files and Folders start condition watches the same paths as `.github/scripts/ios-gate.sh`; change both together. When Xcode Cloud never starts on a head that needs it, or is cancelled there, start its build by hand in App Store Connect.
+- Once `ios` is a required check in main's ruleset, auto-merge (`gh pr merge --auto --match-head-commit <sha>`) may be used when `/code-review` is addressed and Codex's review of that head is clean; the required checks, `ios` among them, then decide when it merges.
 - Deploys happen through Cloudflare Workers Builds on merge; never deploy by hand.
 - Renovate (`.github/renovate.json5`) opens the dependency PRs on Monday mornings: patches and minors in one PR (a 0.x package's minor, which may break, in its own), each major in its own, and what must move together in its own group at every update (Bun, vitest, protobuf and Connect) or at majors (TypeScript, React). They merge like any other PR, after the manual steps their bodies name, such as `mise run gen`.

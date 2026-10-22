@@ -77,6 +77,11 @@ export const ThemeContext = createContext<{
 // The scheme in effect: the device's unless 外観 in settings keeps one.
 export const ColorSchemeContext = createContext<ColorScheme>("light");
 
+// The device's own light or dark, which the system's screens around the
+// app (the home and lock screens) follow, as a home screen follows the
+// phone rather than the app's 外観. DesignProviders sets it.
+export const DeviceSchemeContext = createContext<ColorScheme>("light");
+
 // 外観 in settings: follow the device, or force light or dark.
 export type Appearance = "system" | ColorScheme;
 

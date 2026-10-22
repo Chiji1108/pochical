@@ -1,13 +1,17 @@
 ---
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
 import { site } from "@pochical/prototype/lib/brand";
+import { defaultDayBeforeTime } from "@pochical/prototype/lib/design-reminders";
 import { css } from "@pochical/styled-system/css";
+import { BellRing, CalendarPlus, ImageDown, UserRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import {
   FeatureScreen,
   HeroPhone,
   Sky,
   ThemeGallery,
+  WidgetScreen,
 } from "../components/lp-screens";
 import StoreLinks from "../components/store-links.astro";
 import Site from "../layouts/site.astro";
@@ -147,9 +151,12 @@ const feature = {
     maxWidth: "1080px",
     padding: "40px 16px 96px",
   }),
+  // Each row its copy, then its screen, as they stack on a phone. Wide,
+  // the screens take turns from the left: the hero's phone is on the
+  // right, so the first feature's comes in on the other side.
   row: css({
     _wide: {
-      "&:nth-child(even)": { flexDirection: "row-reverse" },
+      "&:nth-child(odd)": { flexDirection: "row-reverse" },
       flexDirection: "row",
       gap: "120px",
       justifyContent: "center",
@@ -164,6 +171,76 @@ const feature = {
     fontWeight: 700,
     letterSpacing: "0.01em",
     lineHeight: 1.5,
+  }),
+};
+
+// Smaller things the app does, after the features' rows: a line each, no
+// screen.
+const extras: { Icon: LucideIcon; title: string; body: string }[] = [
+  {
+    Icon: UserRound,
+    body: "あとでログインすれば、機種変更してもそのまま。",
+    title: "アカウント登録なしで始められる",
+  },
+  {
+    Icon: BellRing,
+    body: `前の日の${defaultDayBeforeTime}に、明日のシフトが届きます。`,
+    title: "前の晩にお知らせ",
+  },
+  {
+    Icon: CalendarPlus,
+    body: "ひと月ぶんのシフトを、いつものカレンダーにまとめて追加。",
+    title: "iPhoneやGoogleのカレンダーにも",
+  },
+  {
+    Icon: ImageDown,
+    body: "ひと月を1枚の画像に。写真に保存しても、そのまま送っても。",
+    title: "月まるごと画像で保存",
+  },
+];
+
+const more = {
+  body: css({ color: "var(--muted)", fontSize: "13px", lineHeight: 1.9 }),
+  icon: css({
+    alignItems: "center",
+    bg: "var(--soft-green)",
+    borderRadius: "full",
+    color: "var(--green)",
+    display: "flex",
+    flexShrink: 0,
+    height: "40px",
+    justifyContent: "center",
+    width: "40px",
+  }),
+  item: css({ alignItems: "flex-start", display: "flex", gap: "16px" }),
+  itemTitle: css({
+    fontSize: "15px",
+    fontWeight: 700,
+    letterSpacing: "0.02em",
+    lineHeight: 1.6,
+  }),
+  list: css({
+    _wide: { gap: "40px 56px", gridTemplateColumns: "repeat(2, 1fr)" },
+    display: "grid",
+    gap: "28px",
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+  }),
+  root: css({
+    _wide: { padding: "0 48px 40px" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "40px",
+    margin: "0 auto",
+    maxWidth: "880px",
+    padding: "0 16px 24px",
+  }),
+  title: css({
+    fontSize: "clamp(22px, 2.4vw, 26px)",
+    fontWeight: 700,
+    letterSpacing: "0.01em",
+    textAlign: "center",
   }),
 };
 
@@ -255,6 +332,22 @@ const closing = {
       </li>
       <li class={feature.row}>
         <div class={feature.copy}>
+          <p class={feature.label}>WIDGET</p>
+          <h2 class={feature.title}>
+            アプリを開かなくても、
+            <br />
+            ホーム画面に。
+          </h2>
+          <p class={feature.body}>
+            今日のシフトも、次の休みも。
+            <br />
+            みんなが休みの日まで、あと何日かも。
+          </p>
+        </div>
+        <WidgetScreen client:visible={NEAR} />
+      </li>
+      <li class={feature.row}>
+        <div class={feature.copy}>
           <p class={feature.label}>SHARE</p>
           <h2 class={feature.title}>
             「いつ休み？」が、
@@ -302,6 +395,24 @@ const closing = {
         <ThemeGallery client:visible={NEAR} />
       </li>
     </ol>
+    <section aria-labelledby="more-title" class={more.root}>
+      <h2 class={more.title} id="more-title">
+        ほかにも
+      </h2>
+      <ul class={more.list}>
+        {extras.map(({ Icon, title, body }) => (
+          <li class={more.item}>
+            <span class={more.icon}>
+              <Icon aria-hidden="true" size={20} />
+            </span>
+            <div>
+              <h3 class={more.itemTitle}>{title}</h3>
+              <p class={more.body}>{body}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
     <section aria-labelledby="closing-title" class={closing.root}>
       <Sky bare client:visible place="sides" />
       <div class={closing.content}>

@@ -1,5 +1,6 @@
 import { DesignApp } from "@pochical/prototype/components/design-app";
 import type { GroupStart } from "@pochical/prototype/components/design-group";
+import { HomeScreen } from "@pochical/prototype/components/design-home-screen";
 import type { SettingsPage } from "@pochical/prototype/components/design-settings";
 import type { Tab } from "@pochical/prototype/components/design-tab-bar";
 import { initialDesignSchedule } from "@pochical/prototype/lib/design-days";
@@ -13,8 +14,6 @@ import { css, cva } from "@pochical/styled-system/css";
 import { ArrowRight, CornerDownRight } from "lucide-react";
 import { Fragment, useState } from "react";
 import type { ReactNode } from "react";
-
-import { HomeScreen } from "./design-home-screen";
 
 // Real screens drawn small and not touchable, for /design/flows and
 // /design/states, so the documents never drift from the app. Frames open

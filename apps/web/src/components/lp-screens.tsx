@@ -1,6 +1,7 @@
 import { rotationTemplates } from "@pochical/design/patterns";
 import { themeSkyId } from "@pochical/design/skies";
 import { DesignApp } from "@pochical/prototype/components/design-app";
+import { HomeScreen } from "@pochical/prototype/components/design-home-screen";
 import {
   DesignProviders,
   PresetContexts,
@@ -232,23 +233,42 @@ const featureScreens: Record<
   share: { opening: { initialGroupPage: "shifts", initialTab: "group" } },
 };
 
-export function FeatureScreen({ feature }: { feature: Feature }) {
-  const { opening, own } = featureScreens[feature];
+function ShownScreen({
+  own,
+  children,
+}: {
+  own?: Partial<OwnData>;
+  children: ReactNode;
+}) {
   const person = useSamplePerson(own);
   return (
     <Motion>
       <div aria-hidden="true" className={screenStyle} inert>
         <DesignProviders fresh>
-          <UserStoreContext value={person}>
-            <DesignApp
-              initialEditing={false}
-              {...opening}
-              variants={variants}
-            />
-          </UserStoreContext>
+          <UserStoreContext value={person}>{children}</UserStoreContext>
         </DesignProviders>
       </div>
     </Motion>
+  );
+}
+
+export function FeatureScreen({ feature }: { feature: Feature }) {
+  const { opening, own } = featureScreens[feature];
+  return (
+    <ShownScreen own={own}>
+      <DesignApp initialEditing={false} {...opening} variants={variants} />
+    </ShownScreen>
+  );
+}
+
+// The phone's home screen with the app's widgets on it, as /demo shows
+// it, 次の休み set to the sample person's family: the days everyone in
+// it is off (みんな休み).
+export function WidgetScreen() {
+  return (
+    <ShownScreen>
+      <HomeScreen nextOffGroup="family" />
+    </ShownScreen>
   );
 }
 

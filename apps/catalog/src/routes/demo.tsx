@@ -1,4 +1,5 @@
 import { DesignApp } from "@pochical/prototype/components/design-app";
+import { HomeScreen } from "@pochical/prototype/components/design-home-screen";
 import {
   DesignProviders,
   useDesignTheme,
@@ -23,11 +24,10 @@ import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
 import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
 import { css } from "@pochical/styled-system/css";
-import { createFileRoute } from "@tanstack/react-router";
-import { RotateCcw } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { RotateCcw, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { HomeScreen } from "../components/design-home-screen";
 import {
   designCaption,
   DesignPage,
@@ -119,6 +119,10 @@ const demo = {
   }),
 };
 
+// On a phone the toolbar has room for the link's icon alone; its words
+// stay for screen readers.
+const tryLabel = css({ "@media (max-width: 760px)": { srOnly: true } });
+
 // The app to touch: one person on a phone, their home screen beside it,
 // and the open design choices. The design documents live under /design.
 function DemoPage() {
@@ -147,6 +151,10 @@ function DemoPage() {
   return (
     <DesignPage style={pageStyle(theme)}>
       <DesignToolbar>
+        <Link className={toolbarAction} to="/try">
+          <Smartphone aria-hidden="true" size={14} />
+          <span className={tryLabel}>自分のスマホで試す</span>
+        </Link>
         <button
           className={toolbarAction}
           onClick={() => {

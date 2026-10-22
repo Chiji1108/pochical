@@ -1,5 +1,6 @@
 import { GapSheetPreview } from "@pochical/prototype/components/design-gap-sheet";
 import type { GapSheetProps } from "@pochical/prototype/components/design-gap-sheet";
+import { LockScreen } from "@pochical/prototype/components/design-home-screen";
 import {
   DesignProviders,
   useDesignTheme,
@@ -42,7 +43,6 @@ import {
   frameSections,
   HomeFrame,
 } from "../components/design-frames";
-import { LockScreen } from "../components/design-home-screen";
 import { DesignOnboarding } from "../components/design-onboarding";
 import type { OnboardingScreen } from "../components/design-onboarding";
 import {
