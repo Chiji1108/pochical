@@ -1,12 +1,8 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { pochicalJsx } from "@pochical/jsx/vite";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
-    tanstackStart(),
-    pochicalJsx(),
-  ],
+  // The routes in src/routes, written to src/routeTree.gen.ts.
+  plugins: [tanstackRouter({ target: "react" }), pochicalJsx()],
 });

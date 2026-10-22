@@ -1,12 +1,13 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { pochicalJsx } from "@pochical/jsx/vite";
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { defineConfig } from "vite";
 
+import { head } from "./head";
+
+// Loaded with --configLoader runner (package.json): head.ts imports the
+// workspace's TypeScript, which Node cannot load as it is.
 export default defineConfig({
   plugins: [
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
-    tanstackStart(),
     pochicalJsx(),
+    { name: "pochical-try-head", transformIndexHtml: head },
   ],
 });

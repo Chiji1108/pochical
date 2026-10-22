@@ -3,8 +3,7 @@ import { fileURLToPath } from "node:url";
 // Takes the picture a link to the site shows (@pochical/prototype's
 // assets/share.png) from /_render/share-image, drawn by the prototype's
 // components, on a dev server of its own. Run again after changing it: bun run image:share
-// It drives the installed Google Chrome, and runs on Node: the dev server's
-// Workers runtime (Miniflare) fails to start under Bun.
+// It drives the installed Google Chrome.
 import { SHARE_IMAGE } from "@pochical/prototype/lib/brand";
 import { chromium } from "playwright-core";
 import { createServer } from "vite";
