@@ -25,10 +25,11 @@
   },
   "devDependencies": {
     "@bufbuild/protoc-gen-es": "2.16.0",
-    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@cloudflare/vitest-plugin": "1.4.6",
     "drizzle-kit": "^0.31.11",
     "typescript": "~7.0.2",
-    "vitest": "~4.1.11",
+    "vite": "^8.0.0",
+    "vitest": "~5.0.5",
     "wrangler": "^4.151.3"
   }
 }

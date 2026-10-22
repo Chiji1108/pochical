@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pochical-server",
   "main": "src/index.ts",
-  // Keep at or below the workerd bundled with @cloudflare/vitest-pool-workers.
+  // Keep at or below the workerd bundled with @cloudflare/vitest-plugin.
   "compatibility_date": "2026-08-15",
   "observability": { "enabled": true },
   "durable_objects": {
