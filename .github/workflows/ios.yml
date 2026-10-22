@@ -7,6 +7,8 @@ name: iOS
 
 on:
   pull_request:
+    # edited: a pull request retargeted to main.
+    types: [opened, synchronize, reopened, edited]
   # Xcode Cloud's status. A status event runs this file as it is on main, and
   # the statuses set here with GITHUB_TOKEN start no run of their own.
   status:
@@ -18,6 +20,7 @@ permissions:
   pull-requests: read
   statuses: write
 
+# Also in the job's `if`, which cannot read env.
 env:
   XCODE_CLOUD: "Pochical | PRのテスト"
 
@@ -27,7 +30,8 @@ concurrency:
 
 jobs:
   gate:
-    if: github.event_name == 'status' || github.event.pull_request.base.ref == github.event.repository.default_branch
+    if: >-
+      (github.event_name == 'status' && github.event.context == 'Pochical | PRのテスト') || (github.event_name == 'pull_request' && github.event.pull_request.base.ref == github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:

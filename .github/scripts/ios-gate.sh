@@ -33,20 +33,26 @@ if same_ios "$fork" "$sha"; then
   exit
 fi
 
-case $(xcode_cloud "$sha") in
-  success) echo "success Xcode Cloud が通った" ;;
-  failure | error) echo "failure Xcode Cloud が落ちた" ;;
-  pending) echo "pending Xcode Cloud を待っている" ;;
-  *)
-    # Xcode Cloud does not always build a push that leaves the iOS files as
-    # they were, such as merging main. An earlier commit of the pull
-    # request with the same iOS files stands for it.
-    for commit in $(git rev-list "$fork..$sha"); do
-      if same_ios "$commit" "$sha" && [ "$(xcode_cloud "$commit")" = success ]; then
+head=$(xcode_cloud "$sha")
+if [ "$head" = failure ] || [ "$head" = error ]; then
+  echo "failure Xcode Cloud が落ちた"
+  exit
+fi
+
+# Xcode Cloud does not always build a push that leaves the iOS files as they
+# were, such as merging main, so any commit of the pull request with the
+# head's iOS files stands for it.
+for commit in $(git rev-list "$fork..$sha"); do
+  if same_ios "$commit" "$sha"; then
+    state=$(xcode_cloud "$commit")
+    if [ "$state" = success ]; then
+      if [ "$commit" = "$sha" ]; then
+        echo "success Xcode Cloud が通った"
+      else
         echo "success ${commit:0:8} と同じ iOS のファイルで Xcode Cloud が通った"
-        exit
       fi
-    done
-    echo "pending Xcode Cloud を待っている"
-    ;;
-esac
+      exit
+    fi
+  fi
+done
+echo "pending Xcode Cloud を待っている"
