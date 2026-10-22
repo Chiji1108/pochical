@@ -1,8 +1,22 @@
+import { css, cx } from "@pochical/styled-system/css";
 import { env } from "cloudflare:workers";
 import { data, Form, useNavigation } from "react-router";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 
 import { sizeOf } from "../size";
+import {
+  alert,
+  button,
+  card,
+  field,
+  label,
+  meta,
+  numeric,
+  page,
+  PageHeader,
+  sectionTitle,
+  table,
+} from "../ui";
 import { when } from "../when";
 import type { Route } from "./+types/reset";
 
@@ -48,58 +62,93 @@ export default function Reset({
 }: Route.ComponentProps) {
   const busy = useNavigation().state !== "idle";
   return (
-    <main>
-      <h1>全消去</h1>
-      <p className="alert">
-        リリース前だけのものです。すべてのアカウント、グループ、チャット、通報、写真をサーバーから消します。元に戻せません。
+    <main className={page}>
+      <PageHeader description="リリース前だけのものです。" title="全消去" />
+      <p className={alert}>
+        すべてのアカウント、グループ、チャット、通報、写真をサーバーから消します。元に戻せません。
       </p>
-      <h2>サーバーにあるもの</h2>
-      <table>
-        <tbody>
-          <tr>
-            <th>ユーザー</th>
-            <td>{`${preview.users} 人（うち匿名 ${preview.anonymous} 人）`}</td>
-          </tr>
-          <tr>
-            <th>グループ</th>
-            <td>{preview.groups}</td>
-          </tr>
-          <tr>
-            <th>サポートのチャット</th>
-            <td>{preview.supportChats}</td>
-          </tr>
-          <tr>
-            <th>通報</th>
-            <td>{preview.reports}</td>
-          </tr>
-          <tr>
-            <th>写真バケット</th>
-            <td>{`${preview.objects.count} 件、${sizeOf(preview.objects.bytes)}`}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p className="meta">
-        アカウントは、アカウントの削除と同じ手順で消します。Apple
-        のトークンは取り消しません（取り消しには本人の新しい認可コードが要ります）。同じ
-        Apple ID
-        でもう一度ログインすると、新しいユーザーになります。端末に残ったセッションは使えなくなります。
-      </p>
-      <Form method="post">
-        <label htmlFor="confirm">{`確認のため「${WORD}」と入力してください`}</label>
-        <input
-          autoComplete="off"
-          id="confirm"
-          name="confirm"
-          pattern={WORD}
-          required
-          type="text"
-        />
-        <button className="danger" disabled={busy} type="submit">
-          すべて消す
-        </button>
+      <section
+        className={css({ display: "flex", flexDirection: "column", gap: "3" })}
+      >
+        <h2 className={sectionTitle}>サーバーにあるもの</h2>
+        <div className={card}>
+          <table className={table}>
+            <tbody>
+              <tr>
+                <th>ユーザー</th>
+                <td
+                  className={numeric}
+                >{`${preview.users} 人（うち匿名 ${preview.anonymous} 人）`}</td>
+              </tr>
+              <tr>
+                <th>グループ</th>
+                <td className={numeric}>{preview.groups}</td>
+              </tr>
+              <tr>
+                <th>サポートのチャット</th>
+                <td className={numeric}>{preview.supportChats}</td>
+              </tr>
+              <tr>
+                <th>通報</th>
+                <td className={numeric}>{preview.reports}</td>
+              </tr>
+              <tr>
+                <th>写真バケット</th>
+                <td
+                  className={numeric}
+                >{`${preview.objects.count} 件、${sizeOf(preview.objects.bytes)}`}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className={meta}>
+          アカウントは、アカウントの削除と同じ手順で消します。Apple
+          のトークンは取り消しません（取り消しには本人の新しい認可コードが要ります）。同じ
+          Apple ID
+          でもう一度ログインすると、新しいユーザーになります。端末に残ったセッションは使えなくなります。
+        </p>
+      </section>
+      <Form
+        className={cx(
+          card,
+          css({
+            borderColor:
+              "color-mix(in srgb, var(--danger-default) 35%, transparent)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "3",
+            padding: "5",
+          })
+        )}
+        method="post"
+      >
+        <div>
+          <label
+            className={label}
+            htmlFor="confirm"
+          >{`確認のため「${WORD}」と入力してください`}</label>
+          <input
+            autoComplete="off"
+            className={cx(field, css({ maxWidth: "320px" }))}
+            id="confirm"
+            name="confirm"
+            pattern={WORD}
+            required
+            type="text"
+          />
+        </div>
+        <div>
+          <button
+            className={button({ variant: "danger" })}
+            disabled={busy}
+            type="submit"
+          >
+            すべて消す
+          </button>
+        </div>
       </Form>
       {actionData !== undefined && "error" in actionData && (
-        <p className="open" role="alert">
+        <p className={alert} role="alert">
           {actionData.error}
         </p>
       )}

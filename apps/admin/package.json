@@ -13,13 +13,18 @@
   },
   "dependencies": {
     "@pochical/design": "workspace:*",
+    "@pochical/jsx": "workspace:*",
+    "@pochical/prototype": "workspace:*",
+    "@pochical/styled-system": "workspace:*",
     "isbot": "^5.1.40",
+    "lucide-react": "^1.61.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-router": "8.5.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
+    "@pandacss/dev": "^2.3.0",
     "@react-router/dev": "8.5.0",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
