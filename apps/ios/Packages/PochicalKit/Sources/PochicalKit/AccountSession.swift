@@ -338,12 +338,15 @@ import SQLiteData
       enter(StoredSession(token: before.token, userID: before.userID), asBefore: true)
       throw error
     }
-    await places.forgetAccount()
     switch changed {
     case .switched(let after):
+      // The Keychain already has the user after, so a relaunch is them.
+      await places.forgetAccount()
       enter(after)
       Task { await deleteLeftBehind() }
     case .left(let why):
+      // Noted before anything is awaited: an app ended from here on
+      // starts erasing, never as the session the server ended.
       beginErasing(why)
     }
   }
@@ -364,6 +367,8 @@ import SQLiteData
     userID = nil
     shared?.removeObject(forKey: SignedInUser.key)
     Task {
+      // The places of the user before, paused as the change began.
+      await places.forgetAccount()
       var wait = Duration.seconds(1)
       while true {
         do {
