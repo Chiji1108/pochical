@@ -1789,7 +1789,8 @@ struct ChatScreen: View {
     react.seq = UInt64(line.seq)
     react.emoji = emoji
     react.on = !current.reactions.contains { $0.emoji == emoji && $0.userIDs.contains(meID ?? "") }
-    if keep(.react(react)), react.on { marks.chose(emoji, on: line.opID) }
+    guard keep(.react(react)) else { return }
+    marks.chose(emoji, on: line.opID, react.on)
   }
 
   private func unsend(_ line: ChatLineRow) {

@@ -673,7 +673,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     model.entering = popping
     let below = cameBelow(old, in: new).subtracting(popping)
     let fading = new != old && !earlier && rows.reduceMotion ? below : []
-    updating = Updating(before: old, risingIn: animated ? below : [], popping: popping)
+    updating = Updating(risingIn: animated ? below : [], popping: popping)
     let update = { [weak self] in
       guard let self else { return }
       source.apply(snapshot, animatingDifferences: animated, commitAlongsideUpdates: {}) {
@@ -787,21 +787,6 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     originalAttributes.alpha = 0
     if let id, updating?.risingIn.contains(id) == true {
       originalAttributes.center.y += originalAttributes.frame.height
-    }
-  }
-
-  /// A line's last reaction taken back shrinks and fades where it stood,
-  /// as a pill going from a row does; anything else fades, ChatLayout's
-  /// own.
-  func finalLayoutAttributesForDeletedItem(
-    _ chatLayout: CollectionViewChatLayout, at indexPath: IndexPath,
-    modifying originalAttributes: ChatLayoutAttributes
-  ) {
-    originalAttributes.alpha = 0
-    if let before = updating?.before, indexPath.item < before.count,
-      ChatItemID.isReactions(before[indexPath.item])
-    {
-      originalAttributes.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
     }
   }
 
@@ -1640,8 +1625,6 @@ private struct Rows {
 
 /// An update of the lines being put in.
 private struct Updating {
-  /// The items as they were before it.
-  let before: [String]
   /// The items coming in at the foot, which rise into place from under
   /// the lines' foot as the lines slide up.
   let risingIn: Set<String>
@@ -1690,10 +1673,7 @@ private final class LineCell: UICollectionViewCell {
   /// It draws over the items by it, uncut: a line's reactions, whose pop
   /// and spray of emoji reach past their row, over the line they are under.
   var rises = false {
-    didSet {
-      clipsToBounds = !rises
-      layer.zPosition = rises ? 1 : 0
-    }
+    didSet { clipsToBounds = !rises }
   }
 
   override init(frame: CGRect) {

@@ -108,6 +108,8 @@ private struct ReactionPill: View {
   let marks: LineMarks
   let onToggle: () -> Void
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// Drawn only to be measured, apart from the screen.
+  @Environment(\.measuringLine) private var measuring
   /// How many times it has sprayed.
   @State private var sprayed = 0
   /// Its height and faces, growing with the reader's text size as its
@@ -132,7 +134,7 @@ private struct ReactionPill: View {
 
   /// Sprays for the reader's choice of it just made, once.
   private func spray() {
-    if marks.shows(reaction.emoji, on: lineID) { sprayed += 1 }
+    if !measuring, marks.shows(reaction.emoji, on: lineID) { sprayed += 1 }
   }
 
   @ViewBuilder private var pill: some View {

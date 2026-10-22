@@ -97,8 +97,13 @@ enum ChatItemID {
   /// to spray its emoji once, as its pill shows it (ReactionRow).
   private(set) var chosen: Set<[String]> = []
 
-  func chose(_ emoji: String, on lineID: String) {
-    chosen.insert([lineID, emoji])
+  /// The reader put `emoji` on the line `lineID`, or took it back.
+  func chose(_ emoji: String, on lineID: String, _ on: Bool) {
+    if on {
+      chosen.insert([lineID, emoji])
+    } else {
+      chosen.remove([lineID, emoji])
+    }
   }
 
   /// The reader's choice of `emoji` on the line `lineID` is shown: true
