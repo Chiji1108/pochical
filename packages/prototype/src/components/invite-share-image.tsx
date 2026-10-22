@@ -1,6 +1,3 @@
-/* @jsxImportSource react */
-// satori breaks its own lines and draws no <wbr> (@pochical/jsx). The pragma
-// works only as the file's first line, above the imports.
 import { themeSkyId } from "@pochical/design/skies";
 import type { CSSProperties } from "react";
 
@@ -11,14 +8,14 @@ import type { InviteGroupMark } from "./invite-mark";
 
 // The picture an invitation link shows where it is shared (og:image): the
 // group it invites to, under the same ポチカル sky as the site's own share
-// image. The site's Worker draws it with satori (apps/web/src/lib/invite-image.ts),
-// so it is made of what satori draws: inline styles, flex boxes, and no
-// classes. /design/share-image shows the same component in the page.
+// image. The site's Worker draws it with Takumi (apps/web/src/lib/invite-image.ts)
+// from inline styles alone, as it gets none of the site's stylesheets.
+// /design/share-image shows the same component in the page.
 
 export type InviteImageGroup = {
   name: string;
   mark: InviteGroupMark;
-  // A photo mark as a data URL, satori drawing no other address.
+  // A photo mark's address; in the Worker, the name its bytes come under.
   photo?: string;
   memberCount: number;
 };
@@ -51,7 +48,7 @@ const styles = {
     position: "absolute",
     top: 70,
   },
-  // Positioned, so a browser paints it over the sky as satori does.
+  // Positioned, so it paints over the sky.
   group: {
     alignItems: "center",
     display: "flex",
@@ -110,7 +107,7 @@ export function InviteShareImage({
   icon,
 }: {
   group: InviteImageGroup;
-  // The app icon's address: a data URL where satori draws it.
+  // The app icon's address: a data URL where the Worker draws it.
   icon: string;
 }) {
   return (

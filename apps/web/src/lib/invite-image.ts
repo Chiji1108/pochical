@@ -2,122 +2,62 @@ import iconData from "@pochical/prototype/assets/icon-192.png?inline";
 import { InviteShareImage } from "@pochical/prototype/components/invite-share-image";
 import type { InviteImageGroup } from "@pochical/prototype/components/invite-share-image";
 import { SHARE_IMAGE } from "@pochical/prototype/lib/brand";
-import { initWasm, Resvg } from "@resvg/resvg-wasm";
-import resvgWasm from "@resvg/resvg-wasm/index_bg.wasm?module";
-import satori, { init as initSatori } from "satori/standalone";
-import yogaWasm from "satori/yoga.wasm?module";
+import { render } from "takumi-js";
+import { googleFonts } from "takumi-js/helpers";
 
 // Draws an invitation's share image (components/invite-share-image.tsx)
-// as a PNG in the site's Worker: satori lays it out as SVG and resvg paints
-// it. Workers cannot compile WebAssembly from bytes, so both engines come
-// in as modules the bundler hands over. satori stays at 0.32: 0.33 shapes
-// text with harfbuzzjs, whose loader looks for a script URL a Worker does
-// not have.
+// as a PNG in the site's Worker with Takumi. Under the workerd condition
+// it takes its WebAssembly as a module the bundler hands over, as Workers
+// cannot compile WebAssembly from bytes.
 
 // Noto Sans JP first, for Japanese shapes; then KR for Hangul, which JP
 // has none of, and TC for the traditional characters JP lacks (嬤), so a
-// group named in Korean or Chinese shows its name. Only the characters
-// drawn are fetched, so a font is a few kilobytes.
-const INVITE_IMAGE_FONTS = [
-  "Noto Sans JP",
-  "Noto Sans KR",
-  "Noto Sans TC",
-] as const;
-const WEIGHTS = [400, 700] as const;
-const FONT_CSS = "https://fonts.googleapis.com/css2";
-const FONT_URL = /src: url\((?<url>[^)]+)\)/u;
-// Twemoji, the emoji set satori's own examples use, pinned so a group's
-// mark does not change under it.
-const EMOJI_SVG =
-  "https://cdn.jsdelivr.net/gh/jdecked/twemoji@16.0.1/assets/svg";
-// The text the image always holds besides the group's name and mark.
-const FIXED_TEXT = "ポチカルグループへの招待・メンバー0123456789人 ";
-// External assets keep for a day at Cloudflare's edge.
-const ASSET_CACHE = { cf: { cacheEverything: true, cacheTtl: 86_400 } };
+// group named in Korean or Chinese shows its name. Only the subsets the
+// image's text falls in are fetched, once per isolate.
+const FONTS = ["Noto Sans JP", "Noto Sans KR", "Noto Sans TC"].map((name) => ({
+  name,
+  weight: [400, 700],
+}));
 
-// resvg refuses a second start, which a module reloaded in development
-// (or a retry after a failed draw) would make.
-const startResvg = async (): Promise<void> => {
-  try {
-    await initWasm(resvgWasm);
-  } catch (error) {
-    if (!(error instanceof Error && error.message.includes("Already"))) {
-      throw error;
-    }
-  }
-};
+// The fonts' stylesheet, kept for the isolate: Takumi's own cache keeps
+// none over a megabyte, and the three CJK families' is more.
+const fontStylesheets = new Map<string, Promise<string>>();
 
-const startEngines = async (): Promise<void> => {
-  await Promise.all([initSatori(yogaWasm), startResvg()]);
-};
-
-// Started once per isolate, by the first image it draws.
-let engines: Promise<void> | undefined;
-
-const loadEngines = async (): Promise<void> => {
-  engines ??= startEngines();
-  try {
-    await engines;
-  } catch (error) {
-    // The next image tries again.
-    engines = undefined;
-    throw error;
-  }
-};
-
-const fontOf = async (
-  family: string,
-  weight: number,
-  text: string
-): Promise<ArrayBuffer> => {
-  const query = new URLSearchParams({
-    family: `${family}:wght@${weight}`,
-    text,
+// Fonts and emoji keep for a day at Cloudflare's edge.
+const fetchCached = async (input: string, init?: RequestInit) =>
+  await fetch(input, {
+    ...init,
+    cf: { cacheEverything: true, cacheTtl: 86_400 },
   });
-  const answer = await fetch(`${FONT_CSS}?${query}`, ASSET_CACHE);
-  const url = FONT_URL.exec(await answer.text())?.groups?.url;
-  if (url === undefined) {
-    throw new Error(`No ${family} ${weight} in Google Fonts' answer`);
-  }
-  const font = await fetch(url, ASSET_CACHE);
-  return await font.arrayBuffer();
-};
 
-// An emoji's Twemoji file is named by its code points, without the
-// variation selector.
-const emojiOf = async (emoji: string): Promise<string> => {
-  const name = [...emoji]
-    .map((char) => char.codePointAt(0)?.toString(16) ?? "")
-    .filter((point) => point !== "fe0f")
-    .join("-");
-  const response = await fetch(`${EMOJI_SVG}/${name}.svg`, ASSET_CACHE);
-  if (!response.ok) {
-    return "";
-  }
-  return `data:image/svg+xml;base64,${btoa(await response.text())}`;
-};
+// The name the image gives a photo mark, whose bytes come with it.
+const PHOTO = "mark-photo";
 
-/** The invitation's share image as a PNG. */
+/** The invitation's share image as a PNG, with a photo mark's bytes. */
 export const drawInviteImage = async (
-  group: InviteImageGroup
-): Promise<Uint8Array> => {
-  await loadEngines();
-  const text = `${FIXED_TEXT}${group.name}${group.mark.letter}`;
-  const fonts = await Promise.all(
-    INVITE_IMAGE_FONTS.flatMap((name) =>
-      WEIGHTS.map(async (weight) => ({
-        data: await fontOf(name, weight, text),
-        name,
-        weight,
-      }))
-    )
+  group: Omit<InviteImageGroup, "photo">,
+  photo: ArrayBuffer | undefined
+): Promise<Uint8Array<ArrayBuffer>> =>
+  await render(
+    InviteShareImage({
+      group: { ...group, photo: photo === undefined ? undefined : PHOTO },
+      icon: iconData,
+    }),
+    {
+      fonts: googleFonts({
+        cache: fontStylesheets,
+        families: FONTS,
+        fetch: fetchCached,
+      }),
+      height: SHARE_IMAGE.height,
+      images: {
+        fetch: fetchCached,
+        // Each group's own, so not kept once drawn.
+        sources:
+          photo === undefined
+            ? []
+            : [{ cache: "none", data: photo, src: PHOTO }],
+      },
+      width: SHARE_IMAGE.width,
+    }
   );
-  const svg = await satori(InviteShareImage({ group, icon: iconData }), {
-    fonts,
-    height: SHARE_IMAGE.height,
-    loadAdditionalAsset: async (code, segment) =>
-      code === "emoji" ? await emojiOf(segment) : [],
-    width: SHARE_IMAGE.width,
-  });
-  return new Resvg(svg).render().asPng();
-};

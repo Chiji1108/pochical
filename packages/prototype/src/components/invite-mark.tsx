@@ -1,5 +1,4 @@
-/* @jsxImportSource react */
-// satori draws this too (apps/web/src/lib/invite-image.ts): inline styles only.
+// The site's Worker draws this too (apps/web/src/lib/invite-image.ts): inline styles only.
 import { markColors } from "@pochical/design/colors";
 import { markIconGlyphs } from "@pochical/design/mark-icons";
 import type { MarkIcon } from "@pochical/design/mark-icons";
@@ -28,7 +27,7 @@ export function InviteMark({
 }: {
   mark: InviteGroupMark;
   size: number;
-  // A photo mark's address: a data URL where satori draws it.
+  // A photo mark's address; in the Worker, the name its bytes come under.
   photo?: string;
 }) {
   const { color, tint } = markColors[mark.color] ?? markColors[0];

@@ -12,33 +12,19 @@ import { fromServer } from "../../../lib/server";
 
 export const prerender = false;
 
-// Bytes turned into base64 this many at a time, as one call can take only
-// so many arguments.
-const BASE64_CHUNK = 0x80_00;
-
 /**
- * A group's photo mark as a data URL for satori; none for another mark, or
- * when it cannot be read, the image drawn without it.
+ * A group's photo mark; none for another mark, or when it cannot be read,
+ * the image drawn without it.
  */
-const markPhotoData = async (
+const markPhoto = async (
   code: string,
   photoId: string
-): Promise<string | undefined> => {
+): Promise<ArrayBuffer | undefined> => {
   const photo =
     photoId === ""
       ? null
       : await fetchInviteMark(code, photoId, fromServer).catch(() => null);
-  if (photo === null) {
-    return undefined;
-  }
-  const bytes = new Uint8Array(await photo.arrayBuffer());
-  let binary = "";
-  for (let start = 0; start < bytes.length; start += BASE64_CHUNK) {
-    binary += String.fromCodePoint(
-      ...bytes.subarray(start, start + BASE64_CHUNK)
-    );
-  }
-  return `data:image/jpeg;base64,${btoa(binary)}`;
+  return photo === null ? undefined : await photo.arrayBuffer();
 };
 
 // An invitation's share image, drawn for its group; any link that does
@@ -64,14 +50,15 @@ export const GET: APIRoute = async ({ locals, params, request }) => {
     return cached;
   }
   try {
-    const png = await drawInviteImage({
-      mark: invite.groupMark,
-      memberCount: invite.memberCount,
-      name: invite.groupName,
-      photo: await markPhotoData(code, invite.groupMark.photoId),
-    });
-    // A copy on an ArrayBuffer of its own, as a response body wants.
-    const response = new Response(Uint8Array.from(png), {
+    const png = await drawInviteImage(
+      {
+        mark: invite.groupMark,
+        memberCount: invite.memberCount,
+        name: invite.groupName,
+      },
+      await markPhoto(code, invite.groupMark.photoId)
+    );
+    const response = new Response(png, {
       headers: { "Cache-Control": IMAGE_CACHE, "Content-Type": "image/png" },
     });
     locals.cfContext.waitUntil(cache.put(key, response.clone()));
