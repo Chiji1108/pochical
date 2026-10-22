@@ -16,8 +16,8 @@
     "fix": "bun run --cwd ../.. fix"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "14.4.1",
-    "@astrojs/react": "7.1.0",
+    "@astrojs/cloudflare": "14.4.2",
+    "@astrojs/react": "7.1.1",
     "@bufbuild/protobuf": "2.16.0",
     "@connectrpc/connect": "2.2.0",
     "@connectrpc/connect-web": "2.2.0",
@@ -26,20 +26,20 @@
     "@pochical/prototype": "workspace:*",
     "@pochical/styled-system": "workspace:*",
     "@resvg/resvg-wasm": "^2.6.2",
-    "astro": "7.4.1",
+    "astro": "7.4.2",
     "lucide-react": "^0.577.0",
-    "motion": "^13.4.4",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "motion": "^13.5.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "satori": "0.32.0"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.10",
+    "@astrojs/check": "0.9.12",
     "@pandacss/dev": "^2.3.0",
-    "@types/node": "25.6.0",
+    "@types/node": "25.9.9",
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "npm:@typescript/typescript6@~6.0.2",
-    "wrangler": "^4.137.0"
+    "wrangler": "^4.151.3"
   }
 }

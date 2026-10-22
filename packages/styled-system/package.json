@@ -23,7 +23,7 @@
     "@pandacss/preset-base": "^2.3.0",
     "@pandacss/preset-panda": "^2.3.0",
     "@types/react": "~19.3.0",
-    "react": "19.3.0",
+    "react": "19.3.1",
     "typescript": "~7.0.2"
   }
 }
