@@ -30,10 +30,10 @@ const appleAccountOf = async (
 };
 
 /**
- * A group whose last member's account went, gone whole: its invitation
- * first, so no one joins it as it goes.
+ * A group gone whole, as its last member's account goes (or everything,
+ * at a reset): its invitation first, so no one joins it as it goes.
  */
-const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
+export const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
   await drizzle(env.DB).delete(invites).where(eq(invites.groupId, groupId));
   await env.GROUPS.getByName(groupId).erase();
   await deletePhotosUnder(env, `groups/${groupId}/`);
