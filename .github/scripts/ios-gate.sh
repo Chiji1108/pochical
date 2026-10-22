@@ -2,8 +2,9 @@
 # Whether Xcode Cloud has verified the iOS files a pull request's head has,
 # printed as the `ios` commit status: "<state> <description>".
 # Usage: ios-gate.sh <head sha> <base branch or commit>, in a clone whose
-# origin is the repository; gh reads its statuses, and XCODE_CLOUD names the
-# status Xcode Cloud's pull request workflow posts.
+# origin is the repository. It runs nothing from the head: it reads the
+# head's trees, and through gh the check runs of the GitHub App with id
+# XCODE_CLOUD_APP, which only Xcode Cloud can post.
 set -euo pipefail
 sha=$1
 base=$2
@@ -21,11 +22,16 @@ same_ios() {
   git diff-tree --quiet -r "$1" "$2" -- "${paths[@]}"
 }
 
-# The state of Xcode Cloud's latest status on a commit, empty when it has
-# never started there.
+# Xcode Cloud's verdict on a commit from its latest check runs there:
+# success, failure (cancelled included), pending, or empty when it has never
+# started there.
 xcode_cloud() {
-  gh api "repos/$GITHUB_REPOSITORY/commits/$1/status" \
-    --jq '.statuses[] | select(.context == env.XCODE_CLOUD) | .state'
+  gh api "repos/$GITHUB_REPOSITORY/commits/$1/check-runs?app_id=$XCODE_CLOUD_APP&per_page=100" \
+    --jq '.check_runs
+      | if length == 0 then ""
+        elif any(.[]; .status != "completed") then "pending"
+        elif all(.[]; .conclusion == "success") then "success"
+        else "failure" end'
 }
 
 if same_ios "$fork" "$sha"; then
@@ -34,7 +40,7 @@ if same_ios "$fork" "$sha"; then
 fi
 
 head=$(xcode_cloud "$sha")
-if [ "$head" = failure ] || [ "$head" = error ]; then
+if [ "$head" = failure ]; then
   echo "failure Xcode Cloud が落ちた"
   exit
 fi
