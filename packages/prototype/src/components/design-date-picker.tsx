@@ -277,14 +277,14 @@ const dateButton = {
 };
 
 export function InputDatePicker({
-  title = "入力する日付",
+  title,
   ariaLabel,
   look = "inline",
   date,
   onSelect,
   children,
 }: {
-  title?: string;
+  title: string;
   ariaLabel: string;
   look?: "inline" | "field";
   date: Date;

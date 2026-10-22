@@ -129,6 +129,22 @@ const toShareDays = async (page: Page) => {
   await page.getByRole("menuitem", { name: named("日にちを共有") }).click();
 };
 
+const toRepeat = async (page: Page) => {
+  await tap(page, "設定");
+  await tap(page, /^繰り返し/u);
+};
+
+const toNewRepeat = async (page: Page) => {
+  await toRepeat(page);
+  await tap(page, /^繰り返しを設定する/u);
+};
+
+const toNewJob = async (page: Page) => {
+  await tap(page, "設定");
+  await tap(page, /^シフトパターン/u);
+  await tap(page, /^新しい仕事にする/u);
+};
+
 const toGroupMonth = async (page: Page) => {
   await tap(page, "グループ");
   await tap(page, "月で見る");
@@ -288,29 +304,19 @@ export const states: State[] = [
   {
     name: "settings/repeat-new",
     path: demo("scheduleSample=filled"),
-    steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^繰り返し/u);
-      await tap(page, /^繰り返しを設定する/u);
-    },
+    steps: toNewRepeat,
   },
   {
     name: "settings/job",
     path: demo("scheduleSample=filled"),
-    steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^シフトパターン/u);
-      await tap(page, /^新しい仕事にする/u);
-    },
+    steps: toNewJob,
   },
   {
     // The date picker, over 新しい仕事にする's first day.
     name: "settings/job-date-picker",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^シフトパターン/u);
-      await tap(page, /^新しい仕事にする/u);
+      await toNewJob(page);
       await tap(page, /^新しい仕事の初日/u);
     },
   },
@@ -319,9 +325,7 @@ export const states: State[] = [
     name: "settings/repeat-sequence",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^繰り返し/u);
-      await tap(page, /^繰り返しを設定する/u);
+      await toNewRepeat(page);
       await tap(page, "日勤");
       await tap(page, "日勤");
       await tap(page, "休み");
@@ -469,10 +473,7 @@ export const states: State[] = [
   {
     name: "settings/repeat",
     path: demo("scheduleSample=filled"),
-    steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^繰り返し/u);
-    },
+    steps: toRepeat,
   },
   {
     name: "settings/appearance",
