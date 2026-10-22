@@ -11,12 +11,33 @@ extension View {
     _ day: Day?, first: PresentationDetent, onClose: @escaping () -> Void,
     onDismiss: (() -> Void)? = nil, @ViewBuilder content: @escaping (Day) -> Sheet
   ) -> some View {
-    sheet(isPresented: Binding { day != nil } set: { if !$0 { onClose() } }, onDismiss: onDismiss) {
-      if let day {
-        content(day)
-          .presentationDetents([first, .large])
-          .presentationBackgroundInteraction(.enabled(upThrough: first))
+    modifier(
+      DaySheetPresentation(
+        day: day, first: first, onClose: onClose, onDismiss: onDismiss, sheet: content))
+  }
+}
+
+private struct DaySheetPresentation<Sheet: View>: ViewModifier {
+  let day: Day?
+  let first: PresentationDetent
+  let onClose: () -> Void
+  let onDismiss: (() -> Void)?
+  @ViewBuilder let sheet: (Day) -> Sheet
+  /// The day last shown, kept as the sheet goes down once `day` is gone,
+  /// so it goes with its day on it, as a sheet presented for an item does.
+  @State private var shown: Day?
+
+  func body(content: Content) -> some View {
+    content
+      .onChange(of: day, initial: true) {
+        if let day { shown = day }
       }
-    }
+      .sheet(isPresented: Binding { day != nil } set: { if !$0 { onClose() } }, onDismiss: onDismiss) {
+        if let day = day ?? shown {
+          sheet(day)
+            .presentationDetents([first, .large])
+            .presentationBackgroundInteraction(.enabled(upThrough: first))
+        }
+      }
   }
 }

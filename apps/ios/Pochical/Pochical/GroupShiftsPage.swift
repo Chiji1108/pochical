@@ -165,13 +165,14 @@ struct GroupShiftsPage: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(colors.backgroundBase)
-    // A new layout goes to the picked day or today, and a list laid out
-    // anew, as on coming back from 1人ずつ, rests at its left edge. Here,
-    // not on the list, which is made anew coming back from 1人ずつ.
+    // A list laid out anew, as on coming back from 1人ずつ, rests at its
+    // left edge. Here, not on the list, which is made anew coming back
+    // from 1人ずつ. A layout the group's size brings, not one picked,
+    // goes to the picked day or today once it has come.
     .onChange(of: layout) {
       sidewaysOffset.x = 0
       scrolledSideways = false
-      go(to: anchor(of: picked ?? Day.today))
+      if pickedLayout == nil { go(to: anchor(of: picked ?? Day.today)) }
     }
     .navigationTitle(group.name)
     .navigationBarTitleDisplayMode(.inline)
@@ -182,7 +183,7 @@ struct GroupShiftsPage: View {
       if membersRead {
         ToolbarItem(placement: .primaryAction) {
           Menu {
-            Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
+            Picker("表示", selection: Binding { layout } set: { show($0) }) {
               ForEach(ShiftsLayout.allCases, id: \.self) { Text($0.name).tag($0) }
             }
             Divider()
@@ -237,10 +238,12 @@ struct GroupShiftsPage: View {
         }
       }
     ) { day in
+      // Each day its own, from the top of its rows.
       DaySheet(day: day, members: members, groupID: group.id, height: $daySheetHeight) {
         picked = nil
         navigator?.open(.group(.chat(group, thread: groupThread, with: nil, sharing: day)))
       }
+      .id(day)
     }
     .sheet(item: $togetherSheet) {
       if let day = pickedFromList {
@@ -436,9 +439,19 @@ struct GroupShiftsPage: View {
     }
   }
 
-  /// Where a day is in the list: its own row, or its week's block.
-  private func anchor(of day: Day) -> ListPlace {
-    .day(layout == .days ? day : weekStart(of: day))
+  /// Where a day is in the list, laid out as it is or as `shown`: its own
+  /// row, or its week's block.
+  private func anchor(of day: Day, in shown: ShiftsLayout? = nil) -> ListPlace {
+    .day((shown ?? layout) == .days ? day : weekStart(of: day))
+  }
+
+  /// A layout picked from the menu, its list made with the picked day or
+  /// today at its top: set with the layout, the place is there as the new
+  /// list is first laid out, not gone to from wherever the old place put
+  /// it.
+  private func show(_ new: ShiftsLayout) {
+    position = ScrollPosition(id: anchor(of: picked ?? Day.today, in: new), anchor: .topLeading)
+    pickedLayout = new
   }
 
   /// To `place`, at the list's top, at once: SwiftUI lays out only the
@@ -454,9 +467,6 @@ struct GroupShiftsPage: View {
   }
 }
 
-/// A place in the list of months, which it is scrolled to and keeps at
-/// its top: a month's heading, or a day's row (一覧) or week's block (週ごと),
-/// named by its first day.
 /// What makes the list of months a list of its own: its layout, and
 /// whether it scrolls sideways.
 private struct ListShape: Hashable {
@@ -464,6 +474,9 @@ private struct ListShape: Hashable {
   let sideways: Bool
 }
 
+/// A place in the list of months, which it is scrolled to and keeps at
+/// its top: a month's heading, or a day's row (一覧) or week's block (週ごと),
+/// named by its first day.
 nonisolated private enum ListPlace: Hashable, Sendable {
   case month(Day)
   case day(Day)

@@ -212,6 +212,7 @@ final class ShiftsRotationTests: XCTestCase {
     continueAfterFailure = true
     _ = settled()
     let lastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
+    if Calendar.current.component(.month, from: Date()) == 1 { pick(year(-1)) }
     pick("\(Calendar.current.component(.month, from: lastMonth))月")
     _ = settled()
     let button = todayButton()
@@ -292,19 +293,12 @@ final class ShiftsRotationTests: XCTestCase {
     openList(small: true)
     continueAfterFailure = true
     _ = settled()
-    // Tomorrow, under today's row at the list's top; in 1人ずつ a day
-    // beside today in its month, for the page to show both.
+    // Tomorrow, under today's row at the list's top; in 1人ずつ the 8th
+    // and 9th, high in the month, clear of the sheet.
     let calendar = Calendar.current
-    let tomorrow = calendar.date(byAdding: .day, value: 1, to: Date())!
-    let beside =
-      calendar.isDate(tomorrow, equalTo: Date(), toGranularity: .month)
-      ? tomorrow : calendar.date(byAdding: .day, value: -1, to: Date())!
-    let name = { (date: Date) in
-      let parts = calendar.dateComponents([.month, .day], from: date)
-      return "\(parts.month!)月\(parts.day!)日"
-    }
-    let tomorrowName = name(tomorrow)
-    let besideName = name(beside)
+    let tomorrow = calendar.dateComponents(
+      [.month, .day], from: calendar.date(byAdding: .day, value: 1, to: Date())!)
+    let tomorrowName = "\(tomorrow.month!)月\(tomorrow.day!)日"
     let rows = { (day: String) in
       self.app.buttons.matching(NSPredicate(format: "label MATCHES %@", day + "([^0-9].*)?")).firstMatch
     }
@@ -312,12 +306,13 @@ final class ShiftsRotationTests: XCTestCase {
       app, from: (rows(today()), today()), to: (rows(tomorrowName), tomorrowName), "in 一覧")
     app.buttons["閉じる"].firstMatch.tap()
     switchLayout(from: "一覧", to: "1人ずつ")
+    let month = calendar.component(.month, from: Date())
     let cells = { (day: String) in
       self.app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", day + "、")).firstMatch
     }
-    XCTAssertTrue(cells(today()).waitForExistence(timeout: 10), "1人ずつ shows the month")
-    checkSheetFollows(
-      app, from: (cells(today()), today()), to: (cells(besideName), besideName), "in 1人ずつ")
+    let (eighth, ninth) = ("\(month)月8日", "\(month)月9日")
+    XCTAssertTrue(cells(eighth).waitForExistence(timeout: 10), "1人ずつ shows the month")
+    checkSheetFollows(app, from: (cells(eighth), eighth), to: (cells(ninth), ninth), "in 1人ずつ")
   }
 
   @MainActor private func launch(_ arguments: [String] = []) {
@@ -552,23 +547,37 @@ private struct Pixels {
     }
   }
 
-  private let image: CGImage
-  private let data: CFData
+  private let bytes: [UInt8]
+  private let width: Int
+  private let height: Int
   private let scale: CGFloat
 
+  /// The shot drawn into 8-bit RGBA, whatever its own format.
   init?(_ shot: XCUIScreenshot) {
     let image = shot.image
-    guard let cg = image.cgImage, let data = cg.dataProvider?.data else { return nil }
-    self.image = cg
-    self.data = data
+    guard let cg = image.cgImage else { return nil }
+    width = cg.width
+    height = cg.height
     scale = CGFloat(cg.width) / image.size.width
+    var bytes = [UInt8](repeating: 0, count: width * height * 4)
+    let drawn = bytes.withUnsafeMutableBytes { buffer in
+      guard
+        let context = CGContext(
+          data: buffer.baseAddress, width: cg.width, height: cg.height, bitsPerComponent: 8,
+          bytesPerRow: cg.width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+      else { return false }
+      context.draw(cg, in: CGRect(x: 0, y: 0, width: cg.width, height: cg.height))
+      return true
+    }
+    guard drawn else { return nil }
+    self.bytes = bytes
   }
 
   func color(x: CGFloat, y: CGFloat) -> Color {
-    let px = min(max(Int(x * scale), 0), image.width - 1)
-    let py = min(max(Int(y * scale), 0), image.height - 1)
-    let bytes = CFDataGetBytePtr(data)!
-    let at = py * image.bytesPerRow + px * image.bitsPerPixel / 8
+    let px = min(max(Int(x * scale), 0), width - 1)
+    let py = min(max(Int(y * scale), 0), height - 1)
+    let at = (py * width + px) * 4
     return Color(rgb: (0..<3).map { Int(bytes[at + $0]) })
   }
 
