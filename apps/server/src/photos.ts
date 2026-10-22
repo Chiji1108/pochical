@@ -134,8 +134,7 @@ export const putPhoto = async (
  * A photo kept by the device: a photo never changes, only goes when its
  * line is taken back.
  */
-const servePhoto = async (env: Env, key: string): Promise<Response> => {
-  const photo = await env.PHOTOS.get(key);
+const photoResponse = (photo: R2ObjectBody | null): Response => {
   if (photo === null) {
     return new Response("No such photo", { status: 404 });
   }
@@ -147,6 +146,10 @@ const servePhoto = async (env: Env, key: string): Promise<Response> => {
     },
   });
 };
+
+/** The photo under `key`, as photoResponse answers with it. */
+const servePhoto = async (env: Env, key: string): Promise<Response> =>
+  photoResponse(await env.PHOTOS.get(key));
 
 /**
  * A chat photo, or its small version when asked for one and it has one
@@ -265,10 +268,7 @@ export const personPhoto = async (
       return new Response(null, { status: 204 });
     }
     case "GET": {
-      const usual = await servePhoto(env, personPhotoKey(userId, photoId));
-      return usual.ok
-        ? usual
-        : await servePhoto(env, uploadedPhotoKey(userId, photoId));
+      return photoResponse(await personPhotoOf(env, userId, photoId));
     }
     default: {
       return new Response("Method not allowed", { status: 405 });
@@ -281,10 +281,17 @@ export const hasPersonPhoto = async (
   env: Env,
   userId: string,
   photoId: string
-): Promise<boolean> =>
-  isId(photoId) &&
-  ((await env.PHOTOS.head(personPhotoKey(userId, photoId))) !== null ||
-    (await env.PHOTOS.head(uploadedPhotoKey(userId, photoId))) !== null);
+): Promise<boolean> => {
+  if (!isId(photoId)) {
+    return false;
+  }
+  const found = await Promise.all(
+    [personPhotoKey, uploadedPhotoKey].map(
+      async (key) => await env.PHOTOS.head(key(userId, photoId))
+    )
+  );
+  return found.some((object) => object !== null);
+};
 
 /**
  * The user's own photo copied into a group's photos where the group has
