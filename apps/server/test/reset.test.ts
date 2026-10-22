@@ -80,7 +80,8 @@ describe("erasing everything (全消去)", () => {
     const admin = exports.AdminEntrypoint;
     await expect(admin.resetPreview()).resolves.toStrictEqual({
       anonymous: 2,
-      groups: 1,
+      // The group, and one only a photo of its in the bucket names.
+      groups: 2,
       // The group's photo, and the three no part of the server names.
       objects: { bytes: 4 * JPEG.byteLength, count: 4 },
       reports: 1,
@@ -88,18 +89,20 @@ describe("erasing everything (全消去)", () => {
       users: 2,
     });
 
-    await expect(admin.reset()).resolves.toStrictEqual(NOTHING);
+    await admin.reset();
     // Their sessions unknown, their group and chat empty, the bucket too.
     const left = await Promise.all([
+      admin.resetPreview(),
       signedIn(maker),
       signedIn(guest),
       rowsIn(env.GROUPS, groupId, "select user_id from members"),
       rowsIn(env.GROUPS, supportPlace(guestId), "select seq from chat_lines"),
       env.PHOTOS.list().then(({ objects }) => objects),
     ]);
-    expect(left).toStrictEqual([401, 401, [], [], []]);
+    expect(left).toStrictEqual([NOTHING, 401, 401, [], [], []]);
 
-    await expect(admin.reset()).resolves.toStrictEqual(NOTHING);
+    await admin.reset();
+    await expect(admin.resetPreview()).resolves.toStrictEqual(NOTHING);
   });
 
   it("finishes a reset cut off part way: a group its users' erasure did not reach, found by its invitation or its photos", async () => {
@@ -112,7 +115,8 @@ describe("erasing everything (全消去)", () => {
       .bind(groupId)
       .run();
 
-    await expect(exports.AdminEntrypoint.reset()).resolves.toStrictEqual(
+    await exports.AdminEntrypoint.reset();
+    await expect(exports.AdminEntrypoint.resetPreview()).resolves.toStrictEqual(
       NOTHING
     );
     for (const id of [invited.groupId, groupId]) {
@@ -143,7 +147,8 @@ describe("erasing everything (全消去)", () => {
     await expect(resetEverything(env)).rejects.toThrow("unreachable");
     unreachable.mockRestore();
 
-    await expect(exports.AdminEntrypoint.reset()).resolves.toStrictEqual(
+    await exports.AdminEntrypoint.reset();
+    await expect(exports.AdminEntrypoint.resetPreview()).resolves.toStrictEqual(
       NOTHING
     );
     await expect(

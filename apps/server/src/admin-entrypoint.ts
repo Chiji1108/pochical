@@ -170,13 +170,11 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
 
   /**
    * Every account, group, report and photo erased (全消去), before
-   * release only; what is left after, which a run that finished leaves
-   * none of. It cannot be undone; run again, it erases what a run cut
-   * short left.
+   * release only. It cannot be undone; run again, it erases what a run
+   * cut short left, and after one that finished, nothing.
    */
-  async reset(): Promise<ResetPreview> {
+  async reset(): Promise<void> {
     await resetEverything(this.env);
-    return await previewReset(this.env);
   }
 
   /** What members reported, the latest first. */

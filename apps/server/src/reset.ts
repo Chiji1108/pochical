@@ -13,10 +13,14 @@ import { bucketPages, deletePhotosUnder } from "./photos";
 
 /** What a reset erases, as it is now. */
 export type ResetPreview = {
+  /** Those with an account, and any an erasure cut off part way left. */
   users: number;
-  /** Of `users`, those never linked to Apple or Google. */
+  /** Of the accounts, those never linked to Apple or Google. */
   anonymous: number;
-  /** The groups with a live invitation: every group set up has one. */
+  /**
+   * Those with a live invitation (every group set up has one), and any
+   * an erasure cut off part way left.
+   */
   groups: number;
   supportChats: number;
   reports: number;
@@ -24,19 +28,6 @@ export type ResetPreview = {
 };
 
 const GROUPS = "groups/";
-
-/** What each page of the bucket listed with `options` gives, together. */
-const listed = async <T>(
-  env: Env,
-  options: { prefix?: string; delimiter?: string },
-  take: (page: R2Objects) => T[]
-): Promise<T[]> => {
-  const all: T[] = [];
-  for await (const page of bucketPages(env.PHOTOS, options)) {
-    all.push(...take(page));
-  }
-  return all;
-};
 
 /**
  * Whose data is kept: every user with an account, or with a chat with
@@ -47,50 +38,57 @@ const listed = async <T>(
  */
 const holders = async (env: Env) => {
   const db = drizzle(env.DB);
-  const [accounts, chats, slack, invited, groupDirs] = await Promise.all([
+  const [accounts, chats, slack, invited] = await Promise.all([
     db.select({ id: user.id }).from(user).all(),
     db.select({ id: supportChats.userId }).from(supportChats).all(),
     db.selectDistinct({ id: supportSlack.userId }).from(supportSlack).all(),
     db.select({ id: invites.groupId }).from(invites).all(),
-    listed(
-      env,
-      { delimiter: "/", prefix: GROUPS },
-      (page) => page.delimitedPrefixes
-    ),
   ]);
+  const groups = new Set(invited.map(({ id }) => id));
+  for await (const page of bucketPages(env.PHOTOS, {
+    delimiter: "/",
+    prefix: GROUPS,
+  })) {
+    for (const dir of page.delimitedPrefixes) {
+      groups.add(dir.slice(GROUPS.length, -1));
+    }
+  }
   return {
-    groups: [
-      ...new Set([
-        ...invited.map(({ id }) => id),
-        ...groupDirs.map((dir) => dir.slice(GROUPS.length, -1)),
-      ]),
-    ],
+    groups: [...groups],
     users: [...new Set([...accounts, ...chats, ...slack].map(({ id }) => id))],
   };
 };
 
-/** What a reset would erase now. It only reads. */
+/** Every object in the bucket counted and weighed, a page at a time. */
+const weighBucket = async (bucket: R2Bucket) => {
+  const weight = { bytes: 0, count: 0 };
+  for await (const page of bucketPages(bucket, {})) {
+    for (const { size } of page.objects) {
+      weight.bytes += size;
+      weight.count += 1;
+    }
+  }
+  return weight;
+};
+
+/** What a reset would erase now, counted as it finds it. It only reads. */
 export const previewReset = async (env: Env): Promise<ResetPreview> => {
   const db = drizzle(env.DB);
-  const [[users], [anonymous], [groups], [chats], [reported], objects] =
+  const [{ groups, users }, [anonymous], [chats], [reported], objects] =
     await Promise.all([
-      db.select({ n: count() }).from(user),
+      holders(env),
       db.select({ n: count() }).from(user).where(eq(user.isAnonymous, true)),
-      db.select({ n: count() }).from(invites),
       db.select({ n: count() }).from(supportChats),
       db.select({ n: count() }).from(reports),
-      listed(env, {}, (page) => page.objects),
+      weighBucket(env.PHOTOS),
     ]);
   return {
     anonymous: anonymous?.n ?? 0,
-    groups: groups?.n ?? 0,
-    objects: {
-      bytes: objects.reduce((total, { size }) => total + size, 0),
-      count: objects.length,
-    },
+    groups: groups.length,
+    objects,
     reports: reported?.n ?? 0,
     supportChats: chats?.n ?? 0,
-    users: users?.n ?? 0,
+    users: users.length,
   };
 };
 
