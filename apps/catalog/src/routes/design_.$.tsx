@@ -45,6 +45,9 @@ const loadPage = createServerFn({ method: "GET" })
 // what the loader returns.
 // oxlint-disable-next-line sort-keys
 export const Route = createFileRoute("/design_/$")({
+  // The loader on its own chunk too, as the page is: it reaches the
+  // documents' content, which no other page should download.
+  codeSplitGroupings: [["loader"], ["component"]],
   component: DocumentPage,
   loader: async ({ params }) => {
     const data = await loadPage({ data: params._splat?.split("/") ?? [] });
