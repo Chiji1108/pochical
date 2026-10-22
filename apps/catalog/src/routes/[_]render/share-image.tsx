@@ -13,9 +13,9 @@ import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { pageMeta } from "../lib/page-meta";
+import { pageMeta } from "../../lib/page-meta";
 
-export const Route = createFileRoute("/design_/share-image")({
+export const Route = createFileRoute("/_render/share-image")({
   component: ShareImage,
   head: () =>
     pageMeta(
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/design_/share-image")({
 });
 
 // The picture a link to the site shows where it is shared (og:image), which
-// bun run image:share takes from /design/share-image into @pochical/prototype's assets/share.png:
+// bun run image:share takes from /_render/share-image into @pochical/prototype's assets/share.png:
 // the top page's hero in one frame, its words on the app's ポチカル sky and
 // the calendar's phone rising from the bottom edge. Under it, an invitation
 // link's picture for a sample group, which the site's Worker draws for each

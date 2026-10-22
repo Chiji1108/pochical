@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 
 // Takes the picture a link to the site shows (@pochical/prototype's
-// assets/share.png) from /design/share-image, drawn by the prototype's
+// assets/share.png) from /_render/share-image, drawn by the prototype's
 // components, on a dev server of its own. Run again after changing it: bun run image:share
 // It drives the installed Google Chrome, and runs on Node: the dev server's
 // Workers runtime (Miniflare) fails to start under Bun.
@@ -35,7 +35,7 @@ try {
     deviceScaleFactor: 1,
     viewport: { height: SHARE_IMAGE.height + 400, width: SHARE_IMAGE.width },
   });
-  await page.goto(new URL("/design/share-image", origin).href, {
+  await page.goto(new URL("/_render/share-image", origin).href, {
     waitUntil: "networkidle",
   });
   await page.waitForFunction(() =>

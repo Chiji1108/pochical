@@ -13,11 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DesignRouteImport } from './routes/design'
 import { Route as TryRouteImport } from './routes/try'
+import { Route as RenderShareImageRouteImport } from './routes/[_]render/share-image'
 import { Route as DesignAssetsRouteImport } from './routes/design_.assets'
 import { Route as DesignColorsRouteImport } from './routes/design_.colors'
 import { Route as DesignComponentsRouteImport } from './routes/design_.components'
 import { Route as DesignFlowsRouteImport } from './routes/design_.flows'
-import { Route as DesignShareImageRouteImport } from './routes/design_.share-image'
 import { Route as DesignStatesRouteImport } from './routes/design_.states'
 import { Route as DesignWidgetsRouteImport } from './routes/design_.widgets'
 
@@ -41,6 +41,11 @@ const TryRoute = TryRouteImport.update({
   path: '/try',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RenderShareImageRoute = RenderShareImageRouteImport.update({
+  id: '/_render/share-image',
+  path: '/_render/share-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DesignAssetsRoute = DesignAssetsRouteImport.update({
   id: '/design_/assets',
   path: '/design/assets',
@@ -61,11 +66,6 @@ const DesignFlowsRoute = DesignFlowsRouteImport.update({
   path: '/design/flows',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DesignShareImageRoute = DesignShareImageRouteImport.update({
-  id: '/design_/share-image',
-  path: '/design/share-image',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DesignStatesRoute = DesignStatesRouteImport.update({
   id: '/design_/states',
   path: '/design/states',
@@ -82,11 +82,11 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/design': typeof DesignRoute
   '/try': typeof TryRoute
+  '/_render/share-image': typeof RenderShareImageRoute
   '/design/assets': typeof DesignAssetsRoute
   '/design/colors': typeof DesignColorsRoute
   '/design/components': typeof DesignComponentsRoute
   '/design/flows': typeof DesignFlowsRoute
-  '/design/share-image': typeof DesignShareImageRoute
   '/design/states': typeof DesignStatesRoute
   '/design/widgets': typeof DesignWidgetsRoute
 }
@@ -95,11 +95,11 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/design': typeof DesignRoute
   '/try': typeof TryRoute
+  '/_render/share-image': typeof RenderShareImageRoute
   '/design/assets': typeof DesignAssetsRoute
   '/design/colors': typeof DesignColorsRoute
   '/design/components': typeof DesignComponentsRoute
   '/design/flows': typeof DesignFlowsRoute
-  '/design/share-image': typeof DesignShareImageRoute
   '/design/states': typeof DesignStatesRoute
   '/design/widgets': typeof DesignWidgetsRoute
 }
@@ -109,11 +109,11 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/design': typeof DesignRoute
   '/try': typeof TryRoute
+  '/_render/share-image': typeof RenderShareImageRoute
   '/design_/assets': typeof DesignAssetsRoute
   '/design_/colors': typeof DesignColorsRoute
   '/design_/components': typeof DesignComponentsRoute
   '/design_/flows': typeof DesignFlowsRoute
-  '/design_/share-image': typeof DesignShareImageRoute
   '/design_/states': typeof DesignStatesRoute
   '/design_/widgets': typeof DesignWidgetsRoute
 }
@@ -124,11 +124,11 @@ export interface FileRouteTypes {
     | '/demo'
     | '/design'
     | '/try'
+    | '/_render/share-image'
     | '/design/assets'
     | '/design/colors'
     | '/design/components'
     | '/design/flows'
-    | '/design/share-image'
     | '/design/states'
     | '/design/widgets'
   fileRoutesByTo: FileRoutesByTo
@@ -137,11 +137,11 @@ export interface FileRouteTypes {
     | '/demo'
     | '/design'
     | '/try'
+    | '/_render/share-image'
     | '/design/assets'
     | '/design/colors'
     | '/design/components'
     | '/design/flows'
-    | '/design/share-image'
     | '/design/states'
     | '/design/widgets'
   id:
@@ -150,11 +150,11 @@ export interface FileRouteTypes {
     | '/demo'
     | '/design'
     | '/try'
+    | '/_render/share-image'
     | '/design_/assets'
     | '/design_/colors'
     | '/design_/components'
     | '/design_/flows'
-    | '/design_/share-image'
     | '/design_/states'
     | '/design_/widgets'
   fileRoutesById: FileRoutesById
@@ -164,11 +164,11 @@ export interface RootRouteChildren {
   DemoRoute: typeof DemoRoute
   DesignRoute: typeof DesignRoute
   TryRoute: typeof TryRoute
+  RenderShareImageRoute: typeof RenderShareImageRoute
   DesignAssetsRoute: typeof DesignAssetsRoute
   DesignColorsRoute: typeof DesignColorsRoute
   DesignComponentsRoute: typeof DesignComponentsRoute
   DesignFlowsRoute: typeof DesignFlowsRoute
-  DesignShareImageRoute: typeof DesignShareImageRoute
   DesignStatesRoute: typeof DesignStatesRoute
   DesignWidgetsRoute: typeof DesignWidgetsRoute
 }
@@ -203,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_render/share-image': {
+      id: '/_render/share-image'
+      path: '/_render/share-image'
+      fullPath: '/_render/share-image'
+      preLoaderRoute: typeof RenderShareImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/design_/assets': {
       id: '/design_/assets'
       path: '/design/assets'
@@ -231,13 +238,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignFlowsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/design_/share-image': {
-      id: '/design_/share-image'
-      path: '/design/share-image'
-      fullPath: '/design/share-image'
-      preLoaderRoute: typeof DesignShareImageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/design_/states': {
       id: '/design_/states'
       path: '/design/states'
@@ -260,11 +260,11 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRoute: DemoRoute,
   DesignRoute: DesignRoute,
   TryRoute: TryRoute,
+  RenderShareImageRoute: RenderShareImageRoute,
   DesignAssetsRoute: DesignAssetsRoute,
   DesignColorsRoute: DesignColorsRoute,
   DesignComponentsRoute: DesignComponentsRoute,
   DesignFlowsRoute: DesignFlowsRoute,
-  DesignShareImageRoute: DesignShareImageRoute,
   DesignStatesRoute: DesignStatesRoute,
   DesignWidgetsRoute: DesignWidgetsRoute,
 }
