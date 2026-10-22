@@ -16,8 +16,9 @@ private struct HasPatternsRequest: FetchKeyRequest, Hashable {
 }
 
 /// Whether はじめの設定 is done on this device, or to be asked again:
-/// after signing out or deleting the account, the device holds nothing and
-/// starts as a new one does.
+/// after signing out, deleting the account or starting afresh as the server
+/// did not know the session, the device holds nothing and starts as a new
+/// one does.
 enum FirstRun {
   static let doneKey = "firstRunDone"
   /// The account was just deleted: said over the welcome, as the page it
@@ -60,7 +61,11 @@ struct AppRoot: View {
       if let erasing = session.erasing {
         ErasingScreen(erasing: erasing) { session.eraseAgain() }
       } else if session.phase == .ended {
-        SessionEndedScreen(tryAgain: session.tryAgain, startAfresh: session.startAfresh)
+        SessionEndedScreen(tryAgain: session.tryAgain) {
+          // As after ログアウト: the device starts as a new one does.
+          FirstRun.again()
+          session.startAfresh()
+        }
       } else if showsTabs {
         // Made anew for each stretch of the account, so no page of the
         // user before stays open, whatever page it is, and the place it
