@@ -24,9 +24,6 @@ import { countShown, limitText, markLetter } from "../lib/text-limits";
 // a day's memo. chip sits among chips as one more being added.
 export const fieldStyle = cva({
   base: {
-    // The hint in the quieter words' role on every browser: Firefox would
-    // otherwise also fade it.
-    _placeholder: { color: "text.tertiary", opacity: 1 },
     color: "text.primary",
     font: "inherit",
     outline: "none",
@@ -365,7 +362,6 @@ const growing = {
     display: "grid",
   }),
   field: css({
-    _placeholder: { color: "text.tertiary", opacity: 1 },
     bg: "transparent",
     border: 0,
     color: "inherit",

@@ -43,7 +43,6 @@ export const pickerStyle = {
   row: css({ display: "flex", paddingInline: "2px" }),
   search: css({
     _focusVisible: { outline: "2px solid token(colors.accent.default)" },
-    _placeholder: { color: "text.tertiary", opacity: 1 },
     bg: "fill.quaternary",
     border: 0,
     borderRadius: "md",
