@@ -9,7 +9,6 @@ import { drizzle } from "drizzle-orm/d1";
 import { revokeApple } from "./apple";
 import { account } from "./db/auth-schema";
 import { invites, supportChats, supportSlack } from "./db/schema";
-import { deletePhotosUnder, uploadedPhotoKey } from "./photos";
 import { getAuth } from "./session";
 import { tellStaffOfDeletion } from "./slack";
 import { supportPlace } from "./support-lines";
@@ -71,12 +70,10 @@ export const eraseUser = async (env: Env, userId: string): Promise<void> => {
   await drizzle(env.DB)
     .delete(supportSlack)
     .where(eq(supportSlack.userId, userId));
-  // Their usual photo, any still going, and their uploads not taken.
-  await deletePhotosUnder(env, `people/${userId}/`);
-  await deletePhotosUnder(env, uploadedPhotoKey(userId, ""));
   if (chat?.thread !== undefined && chat.thread !== null) {
     waitUntil(tellStaffOfDeletion(env, chat.thread));
   }
+  // With their own photos, and their uploads not taken.
   await user.erase();
   const auth = await getAuth().$context;
   await auth.internalAdapter.deleteUser(userId);

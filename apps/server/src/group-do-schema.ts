@@ -298,12 +298,13 @@ export const chatRecalls = sqliteTable(
 //   copy nothing came to name goes as an unsent one does.
 // - deleting: the sweep is deleting it from R2, its row going after: an
 //   unsent one past its time, or one let go at once (its send recalled,
-//   or shown and named no more), its time then made long up. Meanwhile
-//   its uploader's upload of it is answered to try again (503) and a send
-//   of it does not fit; a copy noted again keeps going, noted since the
-//   sweep's time, and the sweep copies it in anew once R2 has deleted it,
-//   then shows it again. A sweep cut short leaves its rows so, and the
-//   next finishes them.
+//   or shown and named no more). Meanwhile its uploader's upload of it is
+//   answered to try again (503) and a send of it does not fit. A sweep cut
+//   short leaves its rows so, and the next finishes them.
+// - reviving: a copy noted again while deleting: the sweep deletes it from
+//   R2 still (a copy made meanwhile may have found it stored and stored
+//   nothing), copies it in anew, then shows it. A sweep cut short leaves
+//   it so, for the next.
 export const photoStates = [
   "unsent",
   "sent",
@@ -311,6 +312,7 @@ export const photoStates = [
   "takenBack",
   "shown",
   "deleting",
+  "reviving",
 ] as const;
 
 export const groupPhotos = sqliteTable("group_photos", {
@@ -319,7 +321,7 @@ export const groupPhotos = sqliteTable("group_photos", {
   // While unsent, when its uploader last uploaded to the group: each
   // upload sets it on all of theirs not sent, so the photos of a frame
   // stay while the rest of the frame goes up. For a copy shown, when it
-  // was last copied in. The start of time for one let go at once.
+  // was last copied in.
   uploadedAt: integer("uploaded_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`0`),

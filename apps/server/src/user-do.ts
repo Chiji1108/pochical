@@ -42,13 +42,14 @@ import { isAhead } from "./hlc";
 import { isId } from "./ids";
 import {
   deleteBatchesOf,
+  deletePhotosUnder,
   personPhotoKey,
   sharePersonPhoto,
   uploadedPhotoKey,
 } from "./photos";
 import { devicesOf, dropPushToken } from "./push-tokens";
 import type { Device } from "./push-tokens";
-import { retryWait } from "./retry-wait";
+import { bucketRetryWait, countFailure, retryWait } from "./retry-wait";
 import { supportPlace } from "./support-lines";
 import {
   acceptSyncSocket,
@@ -126,12 +127,8 @@ const PUSH_RETRIES_MOST = 30;
 // How many pushes to the group have failed in a row, in the DO's storage.
 const pushFailuresKey = (groupId: string): string => `pushFailures:${groupId}`;
 
-// After deleting the user's photos going fails at storage, the alarm
-// comes back for them after this long, twice as long each time in a row,
-// up to the most; it never stops, as R2 must come to hold only the usual
-// photo.
-const PHOTOS_RETRY_FIRST_MS = 10_000;
-const PHOTOS_RETRY_MOST_MS = 3_600_000;
+// How many deletes of the user's photos going have failed at storage in a
+// row, in the DO's storage; the alarm comes back after bucketRetryWait.
 const PHOTOS_FAILURES = "photoDeleteFailures";
 
 // Set in the DO's storage once the account is deleted, so news a group was
@@ -482,6 +479,11 @@ export class UserDO extends DurableObject<Env> {
       for (const socket of this.ctx.getWebSockets()) {
         socket.close(1000, "The account is deleted");
       }
+      // Their own photos first, while the notes of them stay: in the same
+      // turn as every write of one (setProfile), so none lands after.
+      const userId = this.ctx.id.name ?? "";
+      await deletePhotosUnder(this.env, `people/${userId}/`);
+      await deletePhotosUnder(this.env, uploadedPhotoKey(userId, ""));
       await this.ctx.storage.deleteAlarm();
       await this.ctx.storage.deleteAll();
       // Empty, not broken: its tables again, for whatever still asks.
@@ -742,6 +744,9 @@ export class UserDO extends DurableObject<Env> {
     return await this.ctx.blockConcurrencyWhile(async () => {
       const userId = this.ctx.id.name ?? "";
       const before = this.profileOf().photoId;
+      if (this.ctx.storage.kv.get(ERASED_KEY) === true) {
+        return false;
+      }
       if (
         photoId !== before &&
         photoId !== "" &&
@@ -796,7 +801,10 @@ export class UserDO extends DurableObject<Env> {
     if (upload === null) {
       return false;
     }
+    // Noted with the alarm that deletes it, should SetProfile stop before
+    // it names the photo.
     this.db.insert(goingPhotos).values({ photoId }).onConflictDoNothing().run();
+    void this.ctx.storage.setAlarm(Date.now());
     // Read whole first: a body streamed to R2 inside blockConcurrencyWhile
     // stalls until the call is cancelled.
     await this.env.PHOTOS.put(key, await upload.arrayBuffer(), {
@@ -828,10 +836,7 @@ export class UserDO extends DurableObject<Env> {
         );
       } catch (error) {
         console.error(`Deleting user ${userId}'s photos failed`, error);
-        const stored: unknown = kv.get(PHOTOS_FAILURES);
-        const failures = (typeof stored === "number" ? stored : 0) + 1;
-        kv.put(PHOTOS_FAILURES, failures);
-        return retryWait(failures, PHOTOS_RETRY_FIRST_MS, PHOTOS_RETRY_MOST_MS);
+        return bucketRetryWait(countFailure(kv, PHOTOS_FAILURES));
       }
       kv.delete(PHOTOS_FAILURES);
       this.db
@@ -1056,10 +1061,10 @@ export class UserDO extends DurableObject<Env> {
    * again, or undefined once it has failed too many times in a row.
    */
   private pushFailed(groupId: string): number | undefined {
-    const { kv } = this.ctx.storage;
-    const stored: unknown = kv.get(pushFailuresKey(groupId));
-    const failures = (typeof stored === "number" ? stored : 0) + 1;
-    kv.put(pushFailuresKey(groupId), failures);
+    const failures = countFailure(
+      this.ctx.storage.kv,
+      pushFailuresKey(groupId)
+    );
     if (failures > PUSH_RETRIES_MOST) {
       return undefined;
     }

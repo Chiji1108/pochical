@@ -77,7 +77,7 @@ import {
   noteSharedPhoto,
   oldestStalePhoto,
   photosTakingBack,
-  revivedPhotos,
+  revivingPhotos,
   settleSwept,
   settleTakenBack,
   showOwnPhoto,
@@ -101,7 +101,7 @@ import {
   smallKey,
 } from "./photos";
 import { overLimit } from "./rate-limits";
-import { retryWait } from "./retry-wait";
+import { bucketRetryWait, countFailure, retryWait } from "./retry-wait";
 import { supportPlace } from "./support-lines";
 import { relaySupport, supportPage } from "./support-place";
 import {
@@ -157,11 +157,8 @@ const readerKey = (threadId: string, userId: string): string =>
 export const NEWS_RETRY_FIRST_MS = 10_000;
 const NEWS_RETRY_MOST_MS = 3_600_000;
 
-// After a sweep of the photos fails at storage, the alarm sweeps again
-// after this long, twice as long each time in a row, up to the most; it
-// never stops, as R2 must come to hold only what the group notes.
-const SWEEP_RETRY_FIRST_MS = 10_000;
-const SWEEP_RETRY_MOST_MS = 3_600_000;
+// How many sweeps of the photos have failed at storage in a row, in the
+// DO's storage; the alarm sweeps again after bucketRetryWait.
 const SWEEP_FAILURES = "photoSweepFailures";
 
 /**
@@ -233,6 +230,9 @@ export class GroupDO extends DurableObject<Env> {
   // Set when a support chat's change asks for its relay, so a relay
   // running meanwhile leaves the next alarm to it.
   private relayRequested = false;
+  // Set when a change lets photos go, so an alarm running meanwhile
+  // leaves the next one, set for at once, to it.
+  private sweepRequested = false;
   // The writes to R2 of photos noted and not stored yet: the sweep waits
   // on those running as it marks photos going before it deletes them, so
   // none lands after the delete. Each is added in the turn its note is
@@ -265,15 +265,16 @@ export class GroupDO extends DurableObject<Env> {
    */
   async deleteOrphanPhotos(orphans: Orphan[]): Promise<OwnerCleanup> {
     return await this.ctx.blockConcurrencyWhile(async () => {
-      const cleanup = deleteGroupOrphans(
+      const cleanup = await deleteGroupOrphans(
         this.db,
         this.env.PHOTOS,
         this.ctx.id.name ?? "",
         orphans
       );
-      // In the turn its notes of photos being taken back were written.
-      this.sweepIf(true);
-      return await cleanup;
+      // The sweep notes taken back the sent ones it took, or deletes them
+      // again should R2 have refused.
+      this.sweepIf(photosTakingBack(this.db).length > 0);
+      return cleanup;
     });
   }
 
@@ -590,24 +591,28 @@ export class GroupDO extends DurableObject<Env> {
    * alarm goes on telling. Nothing reaches it until its tables are back.
    */
   async erase(): Promise<void> {
+    // No photo is noted or written from here; those on their way land.
     this.erasing = true;
-    await Promise.allSettled(this.storing);
-    await this.ctx.blockConcurrencyWhile(async () => {
-      closeUserSockets(this.ctx);
-      const untold = this.db.select().from(membershipOutbox).all();
+    try {
+      await Promise.allSettled(this.storing);
       // Its photos first, while its notes of them stay: cut off part way,
       // the erase is run again, and R2 never keeps what nothing notes.
       await deletePhotosUnder(this.env, `groups/${this.ctx.id.name ?? ""}/`);
-      await this.ctx.storage.deleteAlarm();
-      await this.ctx.storage.deleteAll();
-      // Empty, not broken: its tables again, for whatever still asks.
-      await migrate(this.db, migrations);
-      if (untold.length > 0) {
-        this.db.insert(membershipOutbox).values(untold).run();
-        await this.wakeBy(Date.now());
-      }
-    });
-    this.erasing = false;
+      await this.ctx.blockConcurrencyWhile(async () => {
+        closeUserSockets(this.ctx);
+        const untold = this.db.select().from(membershipOutbox).all();
+        await this.ctx.storage.deleteAlarm();
+        await this.ctx.storage.deleteAll();
+        // Empty, not broken: its tables again, for whatever still asks.
+        await migrate(this.db, migrations);
+        if (untold.length > 0) {
+          this.db.insert(membershipOutbox).values(untold).run();
+          await this.wakeBy(Date.now());
+        }
+      });
+    } finally {
+      this.erasing = false;
+    }
   }
 
   /** Closes a member's sockets opened with a session that has ended. */
@@ -897,6 +902,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   private sweepIf(photosGoing: boolean): void {
     if (photosGoing) {
+      this.sweepRequested = true;
       void this.ctx.storage.setAlarm(Date.now());
     }
   }
@@ -1118,39 +1124,52 @@ export class GroupDO extends DurableObject<Env> {
     if (groupId === undefined) {
       return undefined;
     }
-    const before = new Date(Date.now() - chatRules.unsentAfterMs);
-    const going = markStalePhotos(this.db, before);
+    const going = markStalePhotos(
+      this.db,
+      new Date(Date.now() - chatRules.unsentAfterMs)
+    );
     const takingBack = photosTakingBack(this.db);
-    if (going.length > 0 || takingBack.length > 0) {
+    const deleted = new Set([
+      ...going,
+      ...takingBack,
+      ...revivingPhotos(this.db).map(({ id }) => id),
+    ]);
+    if (deleted.size > 0) {
+      // Those reviving now that storage has none, noted again before the
+      // delete or as it ran.
+      let revived: { id: string; userId: string }[] = [];
       try {
         await Promise.allSettled(this.storing);
-        await deleteGroupPhotos(this.env, groupId, [...going, ...takingBack]);
+        await deleteGroupPhotos(this.env, groupId, [...deleted]);
+        // An erase deletes them all, and the notes with them.
+        if (this.erasing) {
+          return undefined;
+        }
+        revived = revivingPhotos(this.db).filter(({ id }) => deleted.has(id));
         await Promise.all(
-          revivedPhotos(this.db, going, before).map(async ({ id, userId }) => {
+          revived.map(async ({ id, userId }) => {
             await this.stores(copyPersonPhoto(this.env, userId, id, groupId));
           })
         );
       } catch (error) {
         console.error(`Sweeping group ${groupId}'s photos failed`, error);
-        return Date.now() + this.sweepFailed();
+        return (
+          Date.now() +
+          bucketRetryWait(countFailure(this.ctx.storage.kv, SWEEP_FAILURES))
+        );
       }
       this.ctx.storage.kv.delete(SWEEP_FAILURES);
-      settleSwept(this.db, going, before);
+      settleSwept(
+        this.db,
+        going,
+        revived.map(({ id }) => id)
+      );
       settleTakenBack(this.db, takingBack);
     }
     const oldest = oldestStalePhoto(this.db);
     return oldest === undefined
       ? undefined
       : oldest.getTime() + chatRules.unsentAfterMs;
-  }
-
-  /** Counts a failed sweep: how long to wait before the next. */
-  private sweepFailed(): number {
-    const { kv } = this.ctx.storage;
-    const stored: unknown = kv.get(SWEEP_FAILURES);
-    const failures = (typeof stored === "number" ? stored : 0) + 1;
-    kv.put(SWEEP_FAILURES, failures);
-    return retryWait(failures, SWEEP_RETRY_FIRST_MS, SWEEP_RETRY_MOST_MS);
   }
 
   /**
@@ -1426,6 +1445,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   async alarm(): Promise<void> {
     this.relayRequested = false;
+    this.sweepRequested = false;
     const userId = this.supportUser();
     const waitMs =
       userId === undefined
@@ -1433,7 +1453,7 @@ export class GroupDO extends DurableObject<Env> {
         : await relaySupport(this.env, this.db, userId);
     const photosDue = await this.sweepPhotos();
     await this.deliverNews(lte(membershipOutbox.dueAt, new Date()));
-    if (this.relayRequested) {
+    if (this.relayRequested || this.sweepRequested) {
       return;
     }
     const newsDue = this.newsDue();

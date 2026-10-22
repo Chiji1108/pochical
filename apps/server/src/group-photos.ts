@@ -7,7 +7,6 @@
 import {
   and,
   eq,
-  gt,
   inArray,
   isNull,
   lte,
@@ -51,7 +50,7 @@ export const notePhoto = (
   if (noted !== undefined && noted.userId !== userId) {
     return "refused";
   }
-  if (noted?.state === "deleting") {
+  if (noted?.state === "deleting" || noted?.state === "reviving") {
     return "going";
   }
   if (noted !== undefined && noted.state !== "unsent") {
@@ -77,8 +76,8 @@ export const notePhoto = (
  * which then stays as it is. One nothing comes to name (a group not made
  * after all, a push that failed) goes as an upload not sent does
  * (`markStalePhotos`); one noted again while the sweep deletes it is
- * kept, and the sweep copies it in anew once storage has deleted it
- * (`revivedPhotos`).
+ * reviving, and the sweep copies it in anew once storage has deleted it
+ * (`revivingPhotos`).
  */
 export const noteSharedPhoto = (
   db: DrizzleSqliteDODatabase,
@@ -90,19 +89,24 @@ export const noteSharedPhoto = (
     .from(groupPhotos)
     .where(eq(groupPhotos.id, photoId))
     .get();
+  const going = noted?.state === "deleting" || noted?.state === "reviving";
   const kept =
     noted === undefined ||
     noted.state === "shown" ||
-    (noted.state === "deleting" && noted.userId === userId);
+    (going && noted.userId === userId);
   if (!kept) {
     return false;
   }
   const now = new Date();
-  // Noted again while the sweep deletes it: it stays going, noted since
-  // the sweep's time, for the sweep to copy it in anew (`settleSwept`).
+  // Noted again while the sweep deletes it: reviving, for the sweep to
+  // copy it in anew once storage has deleted it (`settleSwept`).
+  const state = going ? "reviving" : "shown";
   db.insert(groupPhotos)
-    .values({ id: photoId, state: "shown", uploadedAt: now, userId })
-    .onConflictDoUpdate({ set: { uploadedAt: now }, target: groupPhotos.id })
+    .values({ id: photoId, state, uploadedAt: now, userId })
+    .onConflictDoUpdate({
+      set: { state, uploadedAt: now },
+      target: groupPhotos.id,
+    })
     .run();
   return true;
 };
@@ -146,15 +150,11 @@ export const namedPhotos = (db: DrizzleSqliteDODatabase): string[] =>
 const idList = (photoIds: string[]) =>
   sql`(select value from json_each(${JSON.stringify(photoIds)}))`;
 
-/**
- * Photos let go at once: marked as going, their time made long up, so
- * the sweep deletes them as it next runs, and only one noted again after
- * this is copied in anew (`revivedPhotos`).
- */
+/** Photos let go at once: marked as going, for the sweep to delete. */
 const letGo = (db: DrizzleSqliteDODatabase, which: SQL | undefined) =>
   db
     .update(groupPhotos)
-    .set({ state: "deleting", uploadedAt: new Date(0) })
+    .set({ state: "deleting" })
     .where(which)
     .returning({ id: groupPhotos.id })
     .all();
@@ -256,47 +256,48 @@ export const markStalePhotos = (
     .map(({ id }) => id);
 
 /**
- * The copies among `photoIds`, deleted from storage by the sweep whose
- * time was `before`, noted again since (`noteSharedPhoto`), and whose
- * they are: for the sweep to copy in anew, as a copy made meanwhile may
- * have found the photo still stored and stored nothing.
+ * The copies noted again while the sweep deleted them (`noteSharedPhoto`),
+ * and whose they are: for the sweep to delete from storage and copy in
+ * anew, as a copy made meanwhile may have found the photo still stored
+ * and stored nothing.
  */
-export const revivedPhotos = (
-  db: DrizzleSqliteDODatabase,
-  photoIds: string[],
-  before: Date
+export const revivingPhotos = (
+  db: DrizzleSqliteDODatabase
 ): { id: string; userId: string }[] =>
   db
     .select({ id: groupPhotos.id, userId: groupPhotos.userId })
     .from(groupPhotos)
-    .where(
-      and(
-        eq(groupPhotos.state, "deleting"),
-        gt(groupPhotos.uploadedAt, before),
-        inArray(groupPhotos.id, idList(photoIds))
-      )
-    )
+    .where(eq(groupPhotos.state, "reviving"))
     .all();
 
 /**
- * The photos among `photoIds` settled once storage has none and the
- * revived ones are copied in anew: those noted since `before` shown
- * again, the rest forgotten.
+ * The photos settled once storage has none of `going` and `reviving`,
+ * and those of `reviving` are copied in anew: those still going
+ * forgotten, those copied in shown again. One that came to revive whose
+ * photo the sweep did not delete stays reviving, for the next.
  */
 export const settleSwept = (
   db: DrizzleSqliteDODatabase,
-  photoIds: string[],
-  before: Date
+  going: string[],
+  reviving: string[]
 ): void => {
-  const going = and(
-    eq(groupPhotos.state, "deleting"),
-    inArray(groupPhotos.id, idList(photoIds))
-  );
+  db.delete(groupPhotos)
+    .where(
+      and(
+        eq(groupPhotos.state, "deleting"),
+        inArray(groupPhotos.id, idList(going))
+      )
+    )
+    .run();
   db.update(groupPhotos)
     .set({ state: "shown" })
-    .where(and(going, gt(groupPhotos.uploadedAt, before)))
+    .where(
+      and(
+        eq(groupPhotos.state, "reviving"),
+        inArray(groupPhotos.id, idList(reviving))
+      )
+    )
     .run();
-  db.delete(groupPhotos).where(going).run();
 };
 
 /** The photos being taken back, for the sweep to delete from storage. */
@@ -326,8 +327,8 @@ export const settleTakenBack = (
 
 /**
  * When the photos nothing holds were noted, the earliest; the start of
- * time while some are to be deleted now (let go, taken back, or left
- * going by a sweep that stopped part way), so the sweep comes at once;
+ * time while some are to be deleted now (let go, taken back, reviving,
+ * or left so by a sweep that stopped part way), so the sweep comes at once;
  * none without any.
  */
 export const oldestStalePhoto = (
@@ -336,7 +337,7 @@ export const oldestStalePhoto = (
   const going = db
     .select({ id: groupPhotos.id })
     .from(groupPhotos)
-    .where(inArray(groupPhotos.state, ["deleting", "takingBack"]))
+    .where(inArray(groupPhotos.state, ["deleting", "reviving", "takingBack"]))
     .get();
   if (going !== undefined) {
     return new Date(0);

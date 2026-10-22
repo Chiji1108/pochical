@@ -2,7 +2,7 @@ import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { eraseGroup } from "../src/account-deletion";
+import { eraseGroup, eraseUser } from "../src/account-deletion";
 import type { GroupDO } from "../src/group-do";
 import {
   personPhotoKey,
@@ -342,6 +342,41 @@ describe("the photos bucket", () => {
       await expect(
         env.USERS.getByName(makerId).bucketReferences()
       ).resolves.toStrictEqual({ going: [], photoId: next });
+    });
+
+    it("goes with the account, though SetProfile was storing it as it went", async () => {
+      const { maker, makerId } = await pair();
+      const id = crypto.randomUUID();
+      await upload(`/v1/me/photos/${id}`, maker);
+      // R2 takes the usual photo's copy only once let.
+      const { promise: landed, resolve: land } =
+        Promise.withResolvers<undefined>();
+      const { promise: storing, resolve: started } =
+        Promise.withResolvers<undefined>();
+      const put = env.PHOTOS.put.bind(env.PHOTOS);
+      vi.spyOn(env.PHOTOS, "put").mockImplementationOnce(async (...args) => {
+        started(undefined);
+        await landed;
+        return await put(...args);
+      });
+      const set = call(
+        "UserService/SetProfile",
+        { name: "さくら", photoId: id },
+        maker
+      );
+      await storing;
+      const erased = eraseUser(env, makerId);
+      land(undefined);
+      await Promise.all([set, erased]);
+      const left = await Promise.all(
+        [`people/${makerId}/`, uploadedPhotoKey(makerId, "")].map(
+          async (prefix) => {
+            const listed = await env.PHOTOS.list({ prefix });
+            return listed.objects.length;
+          }
+        )
+      );
+      expect(left).toStrictEqual([0, 0]);
     });
 
     it("picked as a group's mark, is copied into the group alone", async () => {
