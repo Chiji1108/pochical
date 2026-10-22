@@ -2,37 +2,61 @@ import { css, cva, cx } from "@pochical/styled-system/css";
 import { Check, ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { useDevice } from "../lib/design-device";
 import type { ButtonProps } from "./design-ui";
 
 // A screen's top: the way back, its actions, 完了 and 今月.
 
 // 完了 at a screen's top right, for the mode that has to be left on
-// purpose: entering shifts, a day opened in the week, an order typed on
-// the calendar.
-const doneButtonStyle = css({
-  _disabled: {
-    bg: "fill.quaternary",
-    color: "text.disabled",
-    cursor: "default",
+// purpose: entering shifts, an order typed on the calendar.
+// Each platform's own: iOS 26 draws a confirming bar button as its
+// symbol alone, a check on a round of tinted glass that names itself
+// only to a screen reader; Material's is a filled button with its word.
+const doneButtonStyle = cva({
+  base: {
+    _disabled: {
+      bg: "fill.quaternary",
+      color: "text.disabled",
+      cursor: "default",
+    },
+    alignItems: "center",
+    bg: "accent.fill",
+    border: 0,
+    color: "accent.onFill",
+    display: "inline-flex",
+    flexShrink: 0,
+    height: "touch",
+    justifyContent: "center",
   },
-  alignItems: "center",
-  bg: "accent.fill",
-  border: 0,
-  borderRadius: "2xl",
-  color: "accent.onFill",
-  display: "inline-flex",
-  gap: "8px",
-  height: "44px",
-  justifyContent: "center",
-  padding: "0 20px",
-  textStyle: "subheadline",
+  variants: {
+    platform: {
+      android: {
+        borderRadius: "2xl",
+        gap: "8px",
+        paddingInline: "20px",
+        textStyle: "subheadline",
+      },
+      ios: { borderRadius: "full", width: "touch" },
+    },
+  },
 });
 
 export function DoneButton({ className, ...props }: ButtonProps) {
+  const platform = useDevice((state) => state.platform);
+  const ios = platform === "ios";
   return (
-    <button className={cx(doneButtonStyle, className)} type="button" {...props}>
-      <Check aria-hidden="true" size={18} />
-      完了
+    <button
+      aria-label={ios ? "完了" : undefined}
+      className={cx(doneButtonStyle({ platform }), className)}
+      type="button"
+      {...props}
+    >
+      <Check
+        aria-hidden="true"
+        size={ios ? 22 : 18}
+        strokeWidth={ios ? 2.5 : 2}
+      />
+      {ios ? null : "完了"}
     </button>
   );
 }

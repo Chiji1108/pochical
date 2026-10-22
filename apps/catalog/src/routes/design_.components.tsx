@@ -510,9 +510,9 @@ function Buttons() {
         </Item>
         <Item
           name="DoneButton"
-          ios="ToolbarItem(placement: .confirmationAction)"
-          android="TopAppBar の actions の Button"
-          where="カレンダーの入力中・週表示・繰り返しの並びの完了だけ"
+          ios="Button(role: .confirm) の checkmark（✓だけ、完了は読み上げ）"
+          android="TopAppBar の actions の Button（✓と完了）"
+          where="ポチポチ入力と、繰り返しの並びを入れる画面の完了だけ"
         >
           <DoneButton />
         </Item>
