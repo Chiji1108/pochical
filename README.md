@@ -30,3 +30,4 @@ apps/
 | `bun run check` / `bun run fix` | TypeScriptのコードチェック・整形 |
 
 Webの開発・公開設定は [WebのREADME](apps/web/README.md) を参照してください。
+
