@@ -123,7 +123,7 @@
         "@phosphor-icons/react": "^2.1.10",
         "@types/bun": "^1.4.3",
         "@types/react": "~19.3.0",
-        "budoux": "^0.9.3",
+        "budoux": "^0.10.0",
         "react": "19.3.0",
         "svgpath": "^2.6.0",
         "typescript": "~7.0.2",
@@ -132,7 +132,7 @@
     "packages/jsx": {
       "name": "@pochical/jsx",
       "dependencies": {
-        "budoux": "^0.9.3",
+        "budoux": "^0.10.0",
         "htmlparser2": "12.0.0",
         "react": "19.3.0",
       },
@@ -1147,7 +1147,7 @@
 
     "browserslist": ["browserslist@4.28.2", "", { "dependencies": { "baseline-browser-mapping": "^2.10.12", "caniuse-lite": "^1.0.30001782", "electron-to-chromium": "^1.5.328", "node-releases": "^2.0.36", "update-browserslist-db": "^1.2.3" }, "bin": { "browserslist": "cli.js" } }, "sha512-48xSriZYYg+8qXna9kwqjIVzuQxi+KYWp2+5nCYnYKPTr0LvD89Jqk2Or5ogxz0NUMfIjhh2lIUX/LyX9B4oIg=="],
 
-    "budoux": ["budoux@0.9.3", "", { "dependencies": { "commander": "^15.0.0", "linkedom": "^0.18.7" }, "bin": { "budoux": "bin/budoux.js" } }, "sha512-Kj3eztSzqVzkmh51Hf8Z+vFw5lkEjGJlxtv7J6nMCjVHbInTom2t8XhYNcz479753NR94Ibv3t81roKgkyfTcA=="],
+    "budoux": ["budoux@0.10.0", "", { "dependencies": { "commander": "^15.0.0", "linkedom": "^0.18.7" }, "bin": { "budoux": "bin/budoux.js" } }, "sha512-jh9qIGuVLdeuc7z0jRyeSe7zEa7XthNu3QPTnzLpeMXbz4v7Lwx0j0rMK90jHSM/a8kVrTjXoLRHBhyVTfxk6w=="],
 
     "buffer-from": ["buffer-from@1.1.2", "", {}, "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ=="],
 
