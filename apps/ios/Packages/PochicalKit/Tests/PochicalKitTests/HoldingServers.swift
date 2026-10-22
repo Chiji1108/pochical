@@ -7,7 +7,7 @@ import Synchronization
 /// `status` and `body` only once `answer` is called, so a load or an
 /// upload is under way meanwhile.
 final class HoldingServer: Sendable {
-  private let listener: NWListener
+  let listener: NWListener
   private let response: Data
   private let held = Mutex<(answering: Bool, waiting: [NWConnection])>((false, []))
   /// The requests taken whole so far.
@@ -77,7 +77,7 @@ final class HoldingServer: Sendable {
 /// says Welcome only once `welcome` is called, keeping the op ids of the
 /// chat edits the sockets send after it.
 final class WelcomingServer: Sendable {
-  private let listener: NWListener
+  let listener: NWListener
   private let held = Mutex<(welcoming: Bool, waiting: [NWConnection])>((false, []))
   let sent = Mutex<[String]>([])
 
@@ -137,7 +137,7 @@ final class WelcomingServer: Sendable {
 }
 
 /// Starts `listener`, at the URL it is reached by.
-private func listening(_ listener: NWListener) async throws -> URL {
+func listening(_ listener: NWListener) async throws -> URL {
   let ready = AsyncStream<UInt16> { continuation in
     listener.stateUpdateHandler = { [listener] state in
       if case .ready = state, let port = listener.port?.rawValue {

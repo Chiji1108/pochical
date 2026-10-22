@@ -65,7 +65,9 @@ import SQLiteData
 
   private var state = State.starting
   /// The stretch a change under way began in, until the server has done
-  /// its part or it has failed.
+  /// its part or it has failed; none once any new stretch begins (a 401
+  /// meanwhile, the person's choice after it), which the change then
+  /// leaves as it is.
   private var changingIn: Int?
 
   public var phase: Phase {
@@ -246,13 +248,14 @@ import SQLiteData
   }
 
   /// ログアウト: what waits in the outbox goes first, so signing in again
-  /// finds it; the session ends on the server, and the device goes on as
-  /// someone new, holding nothing of the user.
+  /// finds it, the socket open after as before; the session ends on the
+  /// server, and the device goes on as someone new, holding nothing of the
+  /// user.
   public func signOut() async throws {
     guard case .signedIn(let credentials) = state, changingIn == nil,
       let credentials = await claimed(credentials)
     else { throw NotSignedIn() }
-    await userSocket.finishSending(as: credentials)
+    await userSocket.send(as: credentials)
     try await change(from: credentials) { [server] before in
       try await server.signOut(before.token)
       return .left(.signedOut)
@@ -287,7 +290,8 @@ import SQLiteData
       if case .ended = state { throw .sessionEnded }
       throw failure
     } catch is AccountChanged {
-      // The device is no longer the account Apple was asked for.
+      // The device is no longer the account Apple was asked for, or a
+      // socket's 401 ended its session meanwhile.
       throw whyNotSignedIn
     } catch {
       Logger.account.error("Deleting the account failed: \(error)")
@@ -327,35 +331,42 @@ import SQLiteData
   /// fails or is cut off before that leaves the device as the user it was,
   /// whose session still holds. Signed out or deleted, there is no going
   /// back: the device is erasing until both the session and its data are
-  /// gone (`beginErasing`). A 401, to this or to a socket meanwhile, ends
-  /// the session as a socket's does (`sessionUnknown`).
+  /// gone (`beginErasing`). A deletion's 401 ends the session as a
+  /// socket's does (`sessionUnknown`); one to a socket meanwhile gives way
+  /// to the change the server has done (`stillFor`).
   private func change(from before: Credentials, _ onServer: (Credentials) async throws -> Changed)
     async throws
   {
     guard case .signedIn(let now) = state, now.generation == before.generation, changingIn == nil
     else { throw AccountChanged() }
     changingIn = before.generation
-    defer { changingIn = nil }
+    defer {
+      // Unless left behind already, and another change begun since.
+      if changingIn == before.generation { changingIn = nil }
+    }
     let changed: Changed
     do {
       changed = try await onServer(before)
     } catch DeletionFailure.sessionEnded {
-      if before.isCurrent { endUnknown(before) }
+      if changingIn == before.generation { endUnknown(before) }
       throw DeletionFailure.sessionEnded
     } catch {
       Logger.account.error("Changing the account failed: \(error)")
       throw error
     }
+    guard let live = stillFor(before) else { throw AccountChanged() }
     switch changed {
     case .left(let why):
       // Noted before anything is awaited: an app ended from here on
       // starts erasing, never as the session the server ended.
       beginErasing(why)
       before.content.invalidateAndCancel()
+      live?.content.invalidateAndCancel()
     case .switched(let after):
       state = .switching
       begin(nil)
       before.content.invalidateAndCancel()
+      live?.content.invalidateAndCancel()
       await userSocket.stop()
       await places.forgetAccount()
       do {
@@ -369,6 +380,27 @@ import SQLiteData
       }
       enter(after)
       Task { await deleteLeftBehind() }
+    }
+  }
+
+  /// Whether the server's answer to a change asked in `before` is still the
+  /// device's to take, with the stretch going on now that it then ends,
+  /// if any. It is when nothing began meanwhile; and when all that did was
+  /// `before`'s own session ending (a 401, the session tried again after
+  /// it), which the change the server has done explains, as signing out
+  /// or deleting ends that session: the person's request wins, rather than
+  /// leaving them signed out of an account they asked to leave, its data
+  /// kept. Not once the person has chosen to start afresh, nor after
+  /// another change began.
+  private func stillFor(_ before: Credentials) -> Credentials?? {
+    if changingIn == before.generation { return .some(nil) }
+    switch state {
+    case .ended(let kept) where kept.token == before.token:
+      return .some(nil)
+    case .signedIn(let now) where now.token == before.token && changingIn == nil:
+      return .some(now)
+    case .starting, .signedIn, .switching, .erasing, .ended:
+      return nil
     }
   }
 
@@ -432,10 +464,12 @@ import SQLiteData
     await onErase()
   }
 
-  /// A new stretch of the account, signed in as `session` or as no one.
+  /// A new stretch of the account, signed in as `session` or as no one,
+  /// any change under way left behind.
   @discardableResult
   private func begin(_ session: StoredSession?) -> Credentials? {
     defer { generation += 1 }
+    changingIn = nil
     return current.begin(session)
   }
 

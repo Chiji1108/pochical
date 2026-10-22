@@ -36,20 +36,9 @@ final class RefusingServer: Sendable {
 
   /// Listening, at the URL it is reached by.
   func start() async throws -> URL {
-    let ready = AsyncStream<UInt16> { continuation in
-      listener.stateUpdateHandler = { [listener] state in
-        if case .ready = state, let port = listener.port?.rawValue {
-          continuation.yield(port)
-          continuation.finish()
-        }
-      }
-    }
-    listener.start(queue: .global())
-    for await port in ready {
-      return URL(string: "http://127.0.0.1:\(port)")!
-    }
-    throw CancellationError()
+    try await listening(listener)
   }
+
 }
 
 /// Waits a while at most for `done`, checking every few milliseconds.

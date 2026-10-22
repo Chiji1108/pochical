@@ -98,6 +98,7 @@ private final class FakeAccountServer: AccountServer {
 
   func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws(DeletionFailure)
   {
+    if let gate = gates.withLock({ $0["deleteAccount"] }) { await gate.wait() }
     if let failure = deletion.withLock({ $0 }) { throw failure }
     asked.withLock { $0.deleted.append(token) }
     whenDeleted.withLock { $0 }?()
@@ -712,6 +713,7 @@ private final class FakeAccountServer: AccountServer {
 @MainActor @Test func aPhotoLoadingAsADeletionFailsComesAsIfNothingHappened() async throws {
   let made = try await Made.signedIn(as: "a", "A")
   let photos = try HoldingServer(status: "200 OK", body: Data("jpeg".utf8))
+  defer { photos.listener.cancel() }
   let url = try await photos.start()
   let credentials = try made.session.current.credentials()
   let loading = Task {
@@ -727,6 +729,7 @@ private final class FakeAccountServer: AccountServer {
 @MainActor @Test func aPhotoUploadingAsADeletionFailsGoesUpAsIfNothingHappened() async throws {
   let made = try await Made.signedIn(as: "a", "A")
   let photos = try HoldingServer(status: "204 No Content")
+  defer { photos.listener.cancel() }
   let url = try await photos.start()
   let credentials = try made.session.current.credentials()
   let photoID = "p-\(UUID().uuidString)"
@@ -743,6 +746,7 @@ private final class FakeAccountServer: AccountServer {
 
 @MainActor @Test func aClosingPlacesOutboxGoesOnceConnectedAfterADeletionFails() async throws {
   let place = try WelcomingServer()
+  defer { place.listener.cancel() }
   let made = try await Made.signedIn(as: "a", "A", socketServer: try await place.start())
   #expect(await eventually { made.owner == "A" })
   var send = Pochical_V1_ChatSend()
@@ -760,4 +764,53 @@ private final class FakeAccountServer: AccountServer {
   // The connection comes back, as after a drop.
   place.welcome()
   #expect(await eventually { place.sent.withLock { $0 } == [opID] })
+}
+
+@MainActor @Test func aDeletionTheServerDoesAfterASocketsFirst401IsTheDevicesStill() async throws {
+  let made = try await Made.signedIn(as: "a", "A", socketStatus: "401 Unauthorized")
+  #expect(await eventually { made.owner == "A" })
+  try await made.addCoworker()
+  let gate = made.server.hold("deleteAccount")
+  let deleting = Task { try await made.session.deleteAccount(appleCode: { "code" }) }
+  #expect(await eventually { made.session.phase == .changing })
+  // The server ends the session as it deletes the account, and a socket
+  // hears so before the deletion's answer comes.
+  made.session.cameToFront()
+  #expect(await eventually { made.session.phase == .ended })
+  gate.open()
+  #expect(try await deleting.value)
+  // What the person asked for is done: the device erased and signed in
+  // anew, not kept as signed out with the user's data.
+  #expect(await eventually { made.session.userID == "anon-1" })
+  #expect(made.coworkers == 0)
+  #expect(made.shared.string(forKey: AccountSession.erasingKey) == nil)
+}
+
+@MainActor @Test func aSwitchTheServerDoesAfterASocketsFirst401IsTheDevicesStill() async throws {
+  let made = try await Made.signedIn(as: "a", "A", socketStatus: "401 Unauthorized")
+  let gate = made.server.hold("signInApple")
+  let switching = Task { try await made.session.useAccount(appleIDToken: "id", nonce: "n") }
+  #expect(await eventually { made.session.phase == .changing })
+  made.session.cameToFront()
+  #expect(await eventually { made.session.phase == .ended })
+  gate.open()
+  try await switching.value
+  #expect(made.session.phase == .signedIn)
+  #expect(made.session.userID == "account")
+  #expect(try made.keychain.kept() == StoredSession(token: "account-token", userID: "account"))
+}
+
+@MainActor @Test func aChangeTheServerDoesAfterThePersonStartedAfreshIsLeft() async throws {
+  let made = try await Made.signedIn(as: "a", "A", socketStatus: "401 Unauthorized")
+  let gate = made.server.hold("signInApple")
+  let switching = Task { try await made.session.useAccount(appleIDToken: "id", nonce: "n") }
+  #expect(await eventually { made.session.phase == .changing })
+  made.session.cameToFront()
+  #expect(await eventually { made.session.phase == .ended })
+  // はじめから使う, before the server answers.
+  made.session.startAfresh()
+  #expect(await eventually { made.session.erasing != nil || made.session.userID == "anon-1" })
+  gate.open()
+  await #expect(throws: AccountChanged.self) { try await switching.value }
+  #expect(await eventually { made.session.userID == "anon-1" })
 }
