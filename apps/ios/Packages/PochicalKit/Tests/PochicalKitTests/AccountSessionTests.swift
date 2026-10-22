@@ -1,4 +1,5 @@
 import Foundation
+import PochicalProto
 import SQLiteData
 import Synchronization
 import Testing
@@ -124,12 +125,15 @@ private final class FakeAccountServer: AccountServer {
       socketStatus: socketStatus)
   }
 
-  init(keychain: SessionKeychain, owner: String? = nil, socketStatus: String = "403 Forbidden")
-    async throws
-  {
+  /// Its sockets reaching `socketServer` instead, when given.
+  init(
+    keychain: SessionKeychain, owner: String? = nil, socketStatus: String = "403 Forbidden",
+    socketServer: URL? = nil
+  ) async throws {
     server = FakeAccountServer()
     sockets = try RefusingServer(status: socketStatus)
-    let url = try await sockets.start()
+    let refusing = try await sockets.start()
+    let url = socketServer ?? refusing
     socketURL = url
     self.keychain = keychain
     database = try appDatabase()
@@ -146,12 +150,15 @@ private final class FakeAccountServer: AccountServer {
       eraseFiles: {}, socketServer: url)
   }
 
-  static func signedIn(as token: String, _ userID: String, socketStatus: String = "403 Forbidden")
-    async throws -> Made
-  {
+  static func signedIn(
+    as token: String, _ userID: String, socketStatus: String = "403 Forbidden",
+    socketServer: URL? = nil
+  ) async throws -> Made {
     try await Made(
-      kept: JSONEncoder().encode(StoredSession(token: token, userID: userID)),
-      socketStatus: socketStatus)
+      keychain: SessionKeychain(
+        own: MemoryStore(JSONEncoder().encode(StoredSession(token: token, userID: userID))),
+        leftBehind: MemoryStore()),
+      socketStatus: socketStatus, socketServer: socketServer)
   }
 
   var owner: String? {
@@ -231,14 +238,15 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.server.made.withLock { $0 } == 0)
 }
 
-@MainActor @Test func nothingConnectsWhileTheAccountSwitchesAndOnlyTheAccountAfter() async throws {
+@MainActor @Test func theAccountGoesOnWhileTheServerSwitchesItAndOnlyTheAccountAfterConnectsAfter()
+  async throws
+{
   let made = try await Made.signedIn(as: "a", "A")
   #expect(await eventually { made.owner == "A" })
   try await made.addCoworker()
   made.session.cameToFront()
   #expect(await eventually { made.sockets.asked > 0 })
   let before = try made.session.current.credentials()
-  let seen = made.sockets.asked
   let gate = made.server.hold("signInApple")
 
   let switching = Task { try await made.session.useAccount(appleIDToken: "id", nonce: "n") }
@@ -250,15 +258,18 @@ private final class FakeAccountServer: AccountServer {
   let hold = await made.session.hold("g1")
   await made.session.wentToBack()
   made.session.cameToFront()
-  try await Task.sleep(for: .milliseconds(200))
-  #expect(made.sockets.asked == seen)
-  #expect(throws: NotSignedIn.self) { try made.session.current.credentials() }
-  #expect(!before.isCurrent)
-  #expect(throws: AccountChanged.self) { try before.whileCurrent {} }
+  // Until the server has switched it, the device is the account before,
+  // as it was.
+  #expect(before.isCurrent)
+  #expect(try made.session.current.credentials().token == "a")
   #expect(made.coworkers == 1)
+  #expect(made.sockets.tokens.withLock { $0.allSatisfy { $0 == "a" } })
 
   gate.open()
   try await switching.value
+  #expect(!before.isCurrent)
+  #expect(throws: AccountChanged.self) { try before.whileCurrent {} }
+  let switched = made.sockets.asked
   #expect(made.session.phase == .signedIn)
   #expect(made.session.userID == "account")
   #expect(made.shared.string(forKey: "userID") == "account")
@@ -266,12 +277,12 @@ private final class FakeAccountServer: AccountServer {
   #expect(try made.keychain.kept() == StoredSession(token: "account-token", userID: "account"))
   #expect(await eventually { made.owner == "account" })
   // The user's socket in front, and a place a screen of the account holds
-  // now, open as the account; a hold taken as the account was changing
-  // may have gone with the user before's places, as the screens hold
-  // theirs anew (OpenPlaceSocket).
+  // now, open as the account; the places held before went with the user
+  // before, as the screens hold theirs anew (OpenPlaceSocket).
   let place = await made.session.hold("g2")
-  #expect(await eventually { made.sockets.asked >= seen + 2 })
-  #expect(made.sockets.tokens.withLock { $0.dropFirst(seen).allSatisfy { $0 == "account-token" } })
+  #expect(await eventually { made.sockets.asked >= switched + 2 })
+  #expect(
+    made.sockets.tokens.withLock { $0.dropFirst(switched).allSatisfy { $0 == "account-token" } })
   await made.session.release(place, of: "g2")
   // The user left behind is deleted, and forgotten.
   #expect(await eventually { made.server.asked.withLock(\.deleted) == ["a"] })
@@ -643,18 +654,6 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.server.asked.withLock(\.deleted).isEmpty)
 }
 
-@MainActor @Test func aPlaceHeldOpensAgainAfterADeletionThatFailed() async throws {
-  let made = try await Made.signedIn(as: "a", "A")
-  _ = await made.session.hold("g1")
-  #expect(await eventually { made.sockets.asked > 0 })
-  let seen = made.sockets.asked
-  made.server.deletion.withLock { $0 = .offline }
-  await #expect(throws: DeletionFailure.offline) {
-    try await made.session.deleteAccount(appleCode: { "code" })
-  }
-  #expect(await eventually { made.sockets.asked > seen })
-}
-
 /// The session an app started again would be, made while the one before
 /// is cut off.
 @MainActor private final class Relaunched {
@@ -698,4 +697,67 @@ private final class FakeAccountServer: AccountServer {
   #expect(await eventually { again.erasing == nil })
   #expect(made.coworkers == 0)
   #expect(try made.keychain.kept()?.userID != "A")
+}
+
+// MARK: A change that fails leaves everything as it was
+
+/// Deleting the account, failing as when the network drops.
+@MainActor private func failToDelete(_ made: Made) async {
+  made.server.deletion.withLock { $0 = .offline }
+  await #expect(throws: DeletionFailure.offline) {
+    try await made.session.deleteAccount(appleCode: { "code" })
+  }
+}
+
+@MainActor @Test func aPhotoLoadingAsADeletionFailsComesAsIfNothingHappened() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  let photos = try HoldingServer(status: "200 OK", body: Data("jpeg".utf8))
+  let url = try await photos.start()
+  let credentials = try made.session.current.credentials()
+  let loading = Task {
+    try await ChatPhotos.fetch(
+      "p-\(UUID().uuidString)", in: .group("g1"), keep: false, as: credentials, server: url)
+  }
+  #expect(await eventually { photos.asked.withLock { $0 } == 1 })
+  await failToDelete(made)
+  photos.answer()
+  #expect(try await loading.value == Data("jpeg".utf8))
+}
+
+@MainActor @Test func aPhotoUploadingAsADeletionFailsGoesUpAsIfNothingHappened() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  let photos = try HoldingServer(status: "204 No Content")
+  let url = try await photos.start()
+  let credentials = try made.session.current.credentials()
+  let photoID = "p-\(UUID().uuidString)"
+  // Waiting to go up, as the member's own photo does.
+  try Data("jpeg".utf8).write(to: ChatPhotos.pending(photoID, in: .mine))
+  let uploading = Task {
+    try await ChatPhotos.upload(photoID, in: .mine, as: credentials, server: url)
+  }
+  #expect(await eventually { photos.asked.withLock { $0 } == 1 })
+  await failToDelete(made)
+  photos.answer()
+  try await uploading.value
+}
+
+@MainActor @Test func aClosingPlacesOutboxGoesOnceConnectedAfterADeletionFails() async throws {
+  let place = try WelcomingServer()
+  let made = try await Made.signedIn(as: "a", "A", socketServer: try await place.start())
+  #expect(await eventually { made.owner == "A" })
+  var send = Pochical_V1_ChatSend()
+  send.threadID = groupThread
+  send.content.words.text = "おつかれさま"
+  let now = Int64(Date().timeIntervalSince1970 * 1000)
+  try await made.database.write { [send] in try Chats.edit(.send(send), in: "g1", now: now, db: $0) }
+  let opID = try #require(
+    try await made.database.read { try Chats.frames(of: "g1", after: 0, now: now, in: $0) }
+      .0.first?.chatEdits.edits.first?.opID)
+  // The chat left with its line still to go: its socket closes once sent.
+  let hold = await made.session.hold("g1")
+  await made.session.release(hold, of: "g1")
+  await failToDelete(made)
+  // The connection comes back, as after a drop.
+  place.welcome()
+  #expect(await eventually { place.sent.withLock { $0 } == [opID] })
 }

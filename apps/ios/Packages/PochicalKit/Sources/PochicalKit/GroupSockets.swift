@@ -35,8 +35,8 @@ public actor GroupSockets {
   /// Each place's client, handed out at once to screens on the main actor.
   private let clients = Mutex<[String: SyncClient]>([:])
   private var sockets: [String: Socket] = [:]
-  /// Whom the sockets connect as; none while the account is changing or
-  /// not signed in, when the holds are kept for later.
+  /// Whom the sockets connect as; none while not signed in, when the
+  /// holds are kept for later.
   private var credentials: Credentials?
 
   /// None of its sockets opens until a session gives it whom to connect
@@ -127,17 +127,6 @@ public actor GroupSockets {
   func stop() async {
     for (placeID, socket) in sockets where socket.closing != nil {
       await client(placeID).stop()
-    }
-  }
-
-  /// Closes every socket at once, as the account starts changing, keeping
-  /// their holds: nothing more is taken in, nor is a chat outbox sent,
-  /// until a session says whom to connect as again (`use`), the same one
-  /// after a change that failed.
-  func pause() async {
-    credentials = nil
-    for client in clients.withLock({ Array($0.values) }) {
-      await client.stop()
     }
   }
 
