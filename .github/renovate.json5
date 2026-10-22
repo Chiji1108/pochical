@@ -1,10 +1,6 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: [
-    "config:recommended",
-    "group:allNonMajor",
-    "security:minimumReleaseAgeNpm",
-  ],
+  extends: ["config:recommended", "security:minimumReleaseAgeNpm"],
   timezone: "Asia/Tokyo",
   schedule: ["* 0-8 * * 1"],
   prConcurrentLimit: 5,
@@ -38,6 +34,22 @@
     },
   ],
   packageRules: [
+    // group:allNonMajor, but a 0.x package's minor update stays a PR of its
+    // own: below 1.0 a minor release may break, as budoux's and satori's do.
+    {
+      description: "Every patch, and the minor updates of packages at 1.0 or later, in one PR",
+      matchPackageNames: ["*"],
+      matchUpdateTypes: ["patch"],
+      groupName: "all non-major dependencies",
+      groupSlug: "all-minor-patch",
+    },
+    {
+      matchPackageNames: ["*"],
+      matchUpdateTypes: ["minor"],
+      matchCurrentValue: "!/^[~^=v]?0\\./",
+      groupName: "all non-major dependencies",
+      groupSlug: "all-minor-patch",
+    },
     {
       description: "The same wait as npm's, for Actions, Swift, mise's tools and buf's plugins, which the BSR publishes after the tag",
       matchDatasources: ["github-tags", "github-releases"],
