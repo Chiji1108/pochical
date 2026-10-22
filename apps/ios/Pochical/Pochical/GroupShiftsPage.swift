@@ -38,6 +38,8 @@ struct GroupShiftsPage: View {
   @Environment(\.groupCalls) private var groupCalls
   @Environment(\.rootNavigator) private var navigator
   @Fetch private var members: [GroupMember] = []
+  /// Whether the members have been read once, the page empty until then.
+  @State private var membersRead = false
   /// Whose シフトパターン is open, from a face or the menu.
   @State private var legendOf: LegendOf?
   /// シフトパターン asked for from a face while the day's sheet was up.
@@ -105,63 +107,71 @@ struct GroupShiftsPage: View {
     let months = (-monthSpan...monthSpan).map { thisMonth.addingMonths($0) }
     let opening = openingDay ?? Day.today
     VStack(spacing: 0) {
-      if layout != .person {
-        // The month in sight, pinned over the list, which opens 月を選ぶ,
-        // and 今日 while today is out of sight (/design's MonthRow).
-        HStack {
-          MonthTitleButton(
-            month: monthInSight, first: months[0], last: months[months.count - 1]
-          ) { position.scrollTo(id: ListPlace.month($0), anchor: .topLeading) } label: {
-            // Quieter than the months' own headings under it.
-            Text(monthInSight.monthWithYear(english: english))
-              .font(.headline)
-              .foregroundStyle(colors.textPrimary)
-              .contentTransition(.numericText())
-              .animation(.default, value: monthInSight)
-          }
-          Spacer()
-          if !todayInSight {
-            TodayButton(unit: "日") {
-              withAnimation(Springs.standard) {
-                position.scrollTo(id: anchor(of: Day.today), anchor: .topLeading)
+      // Laid out once the members are read: they decide the layout and
+      // the rows' heights, and a list laid out without them, then made
+      // anew, lands where the heights it guessed put it.
+      if membersRead {
+        if layout != .person {
+          // The month in sight, pinned over the list, which opens 月を選ぶ,
+          // and 今日 while today is out of sight (/design's MonthRow).
+          HStack {
+            MonthTitleButton(
+              month: monthInSight, first: months[0], last: months[months.count - 1]
+            ) { position.scrollTo(id: ListPlace.month($0), anchor: .topLeading) } label: {
+              // Quieter than the months' own headings under it.
+              Text(monthInSight.monthWithYear(english: english))
+                .font(.headline)
+                .foregroundStyle(colors.textPrimary)
+                .contentTransition(.numericText())
+                .animation(.default, value: monthInSight)
+            }
+            Spacer()
+            if !todayInSight {
+              TodayButton(unit: "日") {
+                withAnimation(Springs.standard) {
+                  position.scrollTo(id: anchor(of: Day.today), anchor: .topLeading)
+                }
               }
             }
           }
+          .animation(.default, value: todayInSight)
+          .frame(minHeight: Metrics.touch)
+          .padding(.horizontal, 16)
+          .padding(.vertical, 2)
         }
-        .animation(.default, value: todayInSight)
-        .frame(minHeight: Metrics.touch)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 2)
-      }
-      switch layout {
-      case .days:
-        GroupDayHeader(
-          members: tableMembers, groupID: group.id, offset: wide ? sidewaysOffset : nil,
-          edged: scrolledSideways
-        )
-        .padding(.horizontal, 16)
-      // Over the blocks' columns, which keep room at their trailing end.
-      case .weeks:
-        GroupWeekdays().padding(.leading, 16).padding(.trailing, 20).padding(.bottom, 6)
-      case .person: EmptyView()
-      }
-      if layout == .person {
-        ScrollView {
-          GroupPersonView(members: members, groupID: group.id, meID: meID, picked: $picked) {
-            togetherSheet = $0
+        switch layout {
+        case .days:
+          GroupDayHeader(
+            members: tableMembers, groupID: group.id, offset: wide ? sidewaysOffset : nil,
+            edged: scrolledSideways
+          )
+          .padding(.horizontal, 16)
+        // Over the blocks' columns, which keep room at their trailing end.
+        case .weeks:
+          GroupWeekdays().padding(.leading, 16).padding(.trailing, 20).padding(.bottom, 6)
+        case .person: EmptyView()
+        }
+        if layout == .person {
+          ScrollView {
+            GroupPersonView(members: members, groupID: group.id, meID: meID, picked: $picked) {
+              togetherSheet = $0
+            }
+              .padding(.vertical, 8)
           }
-            .padding(.vertical, 8)
+        } else {
+          list(months: months)
         }
-      } else {
-        list(months: months, opening: opening)
       }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(colors.backgroundBase)
-    // A list laid out anew, as on coming back from 1人ずつ, rests at its
-    // left edge.
+    // A new layout goes to the picked day or today, and a list laid out
+    // anew, as on coming back from 1人ずつ, rests at its left edge. Here,
+    // not on the list, which is made anew coming back from 1人ずつ.
     .onChange(of: layout) {
       sidewaysOffset.x = 0
       scrolledSideways = false
+      position.scrollTo(id: anchor(of: picked ?? Day.today), anchor: .topLeading)
     }
     .navigationTitle(group.name)
     .navigationBarTitleDisplayMode(.inline)
@@ -169,20 +179,22 @@ struct GroupShiftsPage: View {
       // One pull-down for the page's secondary actions: how the table is
       // laid out and what the marks mean. No 画像で保存: the members see it
       // live, and a picture would take their shifts out of the group.
-      ToolbarItem(placement: .primaryAction) {
-        Menu {
-          Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
-            ForEach(ShiftsLayout.allCases, id: \.self) { Text($0.name).tag($0) }
-          }
-          Divider()
-          Button("シフトパターン", systemImage: "info.circle") {
-            let first = members.first { $0.userID != meID } ?? members.first
-            if let first { legendOf = LegendOf(userID: first.userID) }
-          }
-        } label: {
-          HStack(spacing: 4) {
-            Text(layout.name)
-            Image(systemName: "chevron.down").imageScale(.small)
+      if membersRead {
+        ToolbarItem(placement: .primaryAction) {
+          Menu {
+            Picker("表示", selection: Binding { layout } set: { pickedLayout = $0 }) {
+              ForEach(ShiftsLayout.allCases, id: \.self) { Text($0.name).tag($0) }
+            }
+            Divider()
+            Button("シフトパターン", systemImage: "info.circle") {
+              let first = members.first { $0.userID != meID } ?? members.first
+              if let first { legendOf = LegendOf(userID: first.userID) }
+            }
+          } label: {
+            HStack(spacing: 4) {
+              Text(layout.name)
+              Image(systemName: "chevron.down").imageScale(.small)
+            }
           }
         }
       }
@@ -207,6 +219,11 @@ struct GroupShiftsPage: View {
       let first = thisMonth.addingMonths(-monthSpan).adding(days: -6)
       let last = thisMonth.addingMonths(monthSpan + 1).adding(days: 6)
       _ = try? await $members.load(GroupMembersRequest(groupID: group.id, from: first, through: last))
+      // A read cut short by a new week start leaves the next to do this.
+      guard !Task.isCancelled, !membersRead else { return }
+      // Where the list opens, set before it is first laid out.
+      position = ScrollPosition(id: anchor(of: opening), anchor: .topLeading)
+      membersRead = true
     }
     .sheet(item: $picked) {
       if let legend = legendAfterDay {
@@ -281,8 +298,8 @@ struct GroupShiftsPage: View {
     return weeks
   }
 
-  /// 一覧 and 週ごと: the months as one list, opening on `opening`.
-  private func list(months: [Day], opening: Day) -> some View {
+  /// 一覧 and 週ごと: the months as one list.
+  private func list(months: [Day]) -> some View {
     Group {
       let sideways = wide && layout == .days
       let pinning: Sideways = sideways ? .scrolls(edged: scrolledSideways) : .fits
@@ -382,18 +399,13 @@ struct GroupShiftsPage: View {
       // At the leading edge too: .top alone would center a big group's
       // wide rows sideways.
       .scrollPosition($position, anchor: .topLeading)
-      // Opening at the top, the day's month named in the pinned row, and
-      // its sheet up once there: a sheet coming up as the list appears
-      // keeps it from scrolling.
-      .onAppear { position.scrollTo(id: anchor(of: opening), anchor: .topLeading) }
+      // The opening day's sheet up once the list is there: a sheet coming
+      // up as the list appears keeps it from scrolling.
       .task {
         if let openingDay, !openedDay {
           openedDay = true
           picked = openingDay
         }
-      }
-      .onChange(of: layout) {
-        position.scrollTo(id: anchor(of: picked ?? Day.today), anchor: .topLeading)
       }
       // As /design's: the table stays where it is when a day is picked;
       // room under it while the sheet is up lets a row near the bottom be

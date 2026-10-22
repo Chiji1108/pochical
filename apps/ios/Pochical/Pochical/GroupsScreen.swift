@@ -602,6 +602,11 @@ struct GroupMembersRequest: FetchKeyRequest, Hashable {
   let through: Day
 
   func fetch(_ db: Database) throws -> [GroupMember] {
-    try GroupSync.members(of: groupID, from: from, through: through, in: db)
+    #if DEBUG
+      // As slow as a busy database, for the UI tests (POC-162).
+      let late = UserDefaults.standard.integer(forKey: "membersReadLate")
+      if late > 0 { Thread.sleep(forTimeInterval: Double(late) / 1000) }
+    #endif
+    return try GroupSync.members(of: groupID, from: from, through: through, in: db)
   }
 }
