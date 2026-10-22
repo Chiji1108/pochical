@@ -22,6 +22,9 @@ run = "bun design/scripts/gen.ts --check"
 
 [tasks."gen:worker-types"]
 description = "Write each Worker's worker-configuration.d.ts (every workspace's cf-typegen) from its wrangler.jsonc, with the wrangler in bun.lock"
+# Each cf-typegen deletes the file first. Otherwise wrangler keeps the
+# runtime types already in it whenever its workerd header line matches,
+# and a file changed below that line would pass worker-types:check.
 run = "bun run --filter '*' cf-typegen"
 
 [tasks."worker-types:check"]
