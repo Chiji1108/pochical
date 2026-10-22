@@ -898,8 +898,12 @@ const nextTry = async (userId: string): Promise<number | null> => {
   return at === null ? null : (at - Date.now()) / 1000;
 };
 
-/** The relay's next try run now, and when it comes back. */
+/**
+ * The relay's next try run now, and when it comes back. The held clock is
+ * moved to now first, so each try is at a time of its own.
+ */
 const relayOnce = async (userId: string): Promise<number | null> => {
+  vi.setSystemTime(vi.getRealSystemTime());
   await tryNow(userId);
   return await nextTry(userId);
 };

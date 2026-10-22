@@ -2,7 +2,7 @@ import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { afterAll, afterEach, beforeAll, expect } from "vitest";
+import { afterAll, afterEach, beforeAll, expect, vi } from "vitest";
 
 import {
   ClientFrameSchema,
@@ -252,7 +252,9 @@ type Relay = { alarm: number | null; behind: number };
  * if any, for later. A due alarm is the runtime's to run, waited for as it
  * starts and ends; so is one the runtime has taken up but not yet started,
  * while the alarm reads as none though lines are untold, which a relay
- * never leaves. Waited for inside the place, where its alarms run.
+ * never leaves. Due by the runtime's clock, which runs alarms and sets one
+ * asked for earlier to now: a test holding Date still does not stop it.
+ * Waited for inside the place, where its alarms run.
  */
 const settledIn = async (
   group: GroupDO,
@@ -272,7 +274,7 @@ const settledIn = async (
         "select count(*) as behind from chat_lines where cursor > coalesce((select cursor from support_relay), 0)"
       )
       .one();
-    const due = alarm === null ? behind > 0 : alarm <= Date.now();
+    const due = alarm === null ? behind > 0 : alarm <= vi.getRealSystemTime();
     if (alarms.started === started && alarms.running.size === 0) {
       if (!due) {
         return { alarm, behind };
