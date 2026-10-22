@@ -147,8 +147,9 @@ export function useComposer({
     draft,
     editing,
     formRef,
-    handleChoosePhotos: async (files: File[]) =>
-      await chosen.handleChoose(files, writing.message),
+    handleChoosePhotos: async (files: File[]) => {
+      await chosen.handleChoose(files, writing.message);
+    },
     handleRemovePhoto: chosen.handleRemove,
     linkPreview,
     mentionName,

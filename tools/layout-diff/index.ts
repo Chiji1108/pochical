@@ -1,15 +1,18 @@
-// Measures the /design demo's phone in the screens of states.ts and
-// compares two runs, to show that a styling change, like moving rules from
-// design.css to Panda, left the screens as they were. It compares what can
+// Measures an app's screens in states.ts, the demo's phone or a design
+// document's page, and compares two runs, to show that a styling change,
+// like moving rules from design.css to Panda, left the screens as they
+// were. It compares what can
 // be seen: every element with text, a label or a box of its own, by where
 // it sits in the phone and how it is drawn. Wrappers that only lay things
 // out are left out, so adding or removing one is no difference.
 //
-//   bun tools/layout-diff save before    (with the web dev server running)
+//   mise run demo:layout save before     (with mise run demo running)
 //   ...change the styles...
-//   bun tools/layout-diff check before   (measures again and compares)
+//   mise run demo:layout check before    (measures again and compares)
 //
-// --url is the dev server (http://localhost:3200), --only keeps the states
+// --app is the app whose screens to measure: design (apps/design, under
+// mise run design) or demo (apps/demo, under mise run demo). --url
+// overrides its dev server (DEV_SERVERS), --only keeps the states
 // whose names contain it, --dark measures in dark mode, --width sets the
 // window's width (800), --workers how many screens load at once (4). Runs are kept in
 // tools/layout-diff/out. It drives the installed Google Chrome, or without
@@ -24,7 +27,7 @@ import type { Page } from "playwright-core";
 import { measure } from "./measure";
 import type { Screen } from "./measure";
 import { states } from "./states";
-import type { State } from "./states";
+import type { App, State } from "./states";
 
 type Run = Record<string, Screen>;
 
@@ -101,7 +104,17 @@ async function launch() {
   }
 }
 
+// Each app's dev server, as mise run design and mise run demo start them.
+const DEV_SERVERS: Record<App, string> = {
+  demo: "http://localhost:3201",
+  design: "http://localhost:3200",
+};
+
+const isApp = (value: string | undefined): value is App =>
+  value === "design" || value === "demo";
+
 async function measureAll(options: {
+  app: App;
   url: string;
   only: string | undefined;
   dark: boolean;
@@ -126,11 +139,10 @@ async function measureAll(options: {
     });
     return await context.newPage();
   };
-  const { only } = options;
-  const chosen =
-    only === undefined
-      ? states
-      : states.filter((state) => state.name.includes(only));
+  const { app, only } = options;
+  const chosen = states[app].filter(
+    (state) => only === undefined || state.name.includes(only)
+  );
   const measured = new Map<string, Screen>();
   try {
     // The workers take the screens in turn, each from a fresh load.
@@ -223,26 +235,33 @@ async function main() {
   const { positionals, values } = parseArgs({
     allowPositionals: true,
     options: {
+      app: { type: "string" },
       dark: { default: false, type: "boolean" },
       only: { type: "string" },
-      url: { default: "http://localhost:3200", type: "string" },
+      url: { type: "string" },
       width: { default: String(VIEWPORT.width), type: "string" },
       workers: { default: String(WORKERS), type: "string" },
     },
   });
   const [command, label] = positionals;
-  if (!(command === "save" || command === "check") || label === undefined) {
+  const { app } = values;
+  if (
+    !(command === "save" || command === "check") ||
+    label === undefined ||
+    !isApp(app)
+  ) {
     throw new Error(
-      "Usage: layout-diff save <name> | check <name> [--url] [--only] [--dark]"
+      "Usage: layout-diff --app design|demo save <name> | check <name> [--url] [--only] [--dark]"
     );
   }
   const width = Number(values.width);
   const suffix = `${values.dark ? "-dark" : ""}${width === VIEWPORT.width ? "" : `-${width}`}`;
-  const file = new URL(`${label}${suffix}.json`, outDir);
+  const file = new URL(`${label}-${app}${suffix}.json`, outDir);
   const run = await measureAll({
+    app,
     dark: values.dark,
     only: values.only,
-    url: values.url,
+    url: values.url ?? DEV_SERVERS[app],
     width,
     workers: Number(values.workers),
   });

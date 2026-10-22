@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The prototype to keep on a phone at try.pochical.app, an installable
+  // web app whose scope is the whole origin: Vite's build served as static
+  // assets, with no Worker code. Behind Cloudflare Access (its Access tab)
+  // and kept out of search (index.html).
+  "name": "pochical-try",
+  "compatibility_date": "2026-09-24",
+  "observability": { "enabled": true },
+  // Every path that is no file gets index.html, where the app draws.
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+  },
+  // Branches other than main are uploaded as Worker Previews by Workers
+  // Builds (`wrangler preview`), which needs this block, even empty.
+  "previews": {},
+  "routes": [{ "pattern": "try.pochical.app", "custom_domain": true }],
+  // Kept beside the custom domain, behind the same Access, for each pull
+  // request's preview: with routes set, Wrangler turns workers.dev off
+  // unless told.
+  "workers_dev": true,
+  "preview_urls": true,
+}
