@@ -236,49 +236,43 @@ struct CalendarScreen: View {
     // A day's detail rises as the system's sheet over the folded week, to
     // just under it with the week still to tap, and goes down as it is
     // swiped away, the month unfolding behind it.
-    .sheet(
-      isPresented: Binding { opened != nil } set: { open in
-        if !open { withAnimation(folding) { opened = nil } }
-      }
-    ) {
-      if let day = opened {
-        let entry = calendar.shown(from: day, through: day)[day]
-        // One day gives way to the next however it is opened, by a tap,
-        // ‹ ›, 今週 or a swipe.
-        ZStack {
-          DayDetail(
-            day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
-            coworkers: ordered(coworkerRows, by: coworkerOrder),
-            onChange: { entry in
-              keep { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
-            },
-            onNoteChange: { note in
-              keep { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
-            },
-            // Someone added from a day is on that day too.
-            onAddCoworker: { name in
-              keep { db, now in
-                let id = try OwnValues.addCoworker(named: name, now: now, in: db)
-                if var entry {
-                  entry.people = (entry.people ?? []) + [id]
-                  try OwnValues.set(day, to: entry, now: now, in: db)
-                }
+    .daySheet(opened, first: underWeek) {
+      withAnimation(folding) { opened = nil }
+    } content: { day in
+      let entry = calendar.shown(from: day, through: day)[day]
+      // One day gives way to the next however it is opened, by a tap,
+      // ‹ ›, 今週 or a swipe.
+      ZStack {
+        DayDetail(
+          day: day, entry: entry, note: calendar.note(on: day), patterns: calendar.patterns,
+          coworkers: ordered(coworkerRows, by: coworkerOrder),
+          onChange: { entry in
+            keep { db, now in try OwnValues.set(day, to: entry, now: now, in: db) }
+          },
+          onNoteChange: { note in
+            keep { db, now in try OwnValues.setNote(day, to: note, now: now, in: db) }
+          },
+          // Someone added from a day is on that day too.
+          onAddCoworker: { name in
+            keep { db, now in
+              let id = try OwnValues.addCoworker(named: name, now: now, in: db)
+              if var entry {
+                entry.people = (entry.people ?? []) + [id]
+                try OwnValues.set(day, to: entry, now: now, in: db)
               }
-            },
-            onStep: { step in go(to: day.adding(days: step)) }
-          )
-          .id(day)
-        }
-        .animation(folding, value: day)
-        // Closed by its × or in code, the day has closed already.
-        .onSheetLeaving { going in
-          if opened != nil { withAnimation(folding) { leaving = going } }
-        }
-        .presentationDetents([underWeek, .large])
-        .presentationBackgroundInteraction(.enabled(upThrough: underWeek))
-        .presentationDragIndicator(.visible)
-        .presentationBackground(colors.backgroundBase)
+            }
+          },
+          onStep: { step in go(to: day.adding(days: step)) }
+        )
+        .id(day)
       }
+      .animation(folding, value: day)
+      // Closed by its × or in code, the day has closed already.
+      .onSheetLeaving { going in
+        if opened != nil { withAnimation(folding) { leaving = going } }
+      }
+      .presentationDragIndicator(.visible)
+      .presentationBackground(colors.backgroundBase)
     }
     .sheet(item: $breakingDown, id: \.self) { month in
       let days = monthDays(month, calendar)
