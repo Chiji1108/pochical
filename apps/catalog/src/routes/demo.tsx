@@ -12,6 +12,7 @@ import type { RepeatRule } from "@pochical/prototype/lib/design-days";
 import { useDevice } from "@pochical/prototype/lib/design-device";
 import { sampleGroups } from "@pochical/prototype/lib/design-group-samples";
 import { presetList } from "@pochical/prototype/lib/design-patterns";
+import { sampleOrder } from "@pochical/prototype/lib/design-sample-person";
 import { supportChatOf } from "@pochical/prototype/lib/design-support";
 import {
   createUserStore,
@@ -53,19 +54,15 @@ function samplePatterns(count: DesignVariants["patternSample"]) {
 // The sample orders, around the prototype's today (9/24): one from 4/1,
 // and with it one over since 1/1 and one to start on 11/1.
 function sampleRules(sample: DesignVariants["repeatSample"]): RepeatRule[] {
-  const now: RepeatRule = {
-    sequence: ["day", "day", "night", "after", "off", "off"],
-    start: new Date(2026, 3, 1),
-  };
   if (sample === "none") {
     return [];
   }
   if (sample === "now") {
-    return [now];
+    return [sampleOrder];
   }
   return [
     { sequence: ["day", "night", "after", "off"], start: new Date(2026, 0, 1) },
-    now,
+    sampleOrder,
     {
       holidaysOff: true,
       sequence: ["night", "after", "off"],
