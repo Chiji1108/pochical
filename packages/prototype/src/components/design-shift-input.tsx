@@ -1,6 +1,6 @@
 import { PATTERNS_PER_PAGE } from "@pochical/design/limits";
 import { css, cva } from "@pochical/styled-system/css";
-import { ArrowRight, Pencil, Trash2 } from "lucide-react";
+import { ArrowRight, Pencil, Trash } from "lucide-react";
 import { useMotionValue } from "motion/react";
 import type { MotionValue } from "motion/react";
 import { useState } from "react";
@@ -363,7 +363,7 @@ export function ShiftInputControls({
           }}
           type="button"
         >
-          <Trash2 aria-hidden="true" size={14} />
+          <Trash aria-hidden="true" size={14} />
           消す
         </button>
         <span>
