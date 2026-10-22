@@ -1,6 +1,5 @@
 import { css, cva } from "@pochical/styled-system/css";
 import { ChevronRight } from "lucide-react";
-import { useReducedMotion } from "motion/react";
 import type { MotionValue } from "motion/react";
 import { useState } from "react";
 
@@ -14,6 +13,7 @@ import {
 } from "../lib/design-days";
 import type { Together } from "../lib/design-group-data";
 import { designToday } from "../lib/design-today";
+import { useReducedMotion } from "../lib/device-media";
 import { shiftsPage } from "./design-group-shifts-parts";
 import { List, ListRow, SummaryRow, summaryRow } from "./design-list";
 import { monthTitleOf, monthWithYearOf } from "./design-month-name";
@@ -61,7 +61,7 @@ export function PagedTogether({
   onPickDay: (date: Date) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = useReducedMotion();
   const turn = useTurn(monthIndex(month), swiped);
   const monthOf = (by: number) => formatMonthFromToday(monthAfter(month, by));
   const label = `${monthOf(0)}のみんな休み`;

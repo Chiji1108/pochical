@@ -1,10 +1,14 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import {
+  answering,
+  changing,
   decidePoll,
   reactTo,
+  stopping,
   unsendMessage,
   votePoll,
+  writingOf,
 } from "../src/lib/chat-messages";
 import type { Message, MessageContent } from "../src/lib/design-group-data";
 
@@ -79,5 +83,45 @@ test("a line taken back keeps only who wrote it and when", () => {
     id: "a",
     time: "10:00",
     when: "今日",
+  });
+});
+
+const names = (id: string) => (id === "u2" ? "ゆき" : "");
+
+describe("the composer answers a line or changes one, never both", () => {
+  const mine = line("m", { kind: "words", text: "<@u2> 了解" }, { from: "me" });
+  const replying = answering(writingOf("うん", names), "a");
+
+  test("changing a line lets the reply go, its words in the composer", () => {
+    expect(changing(mine, names)).toEqual({
+      picked: [{ id: "u2", name: "ゆき" }],
+      target: { id: "m", kind: "edit" },
+      words: "@ゆき 了解",
+    });
+  });
+
+  test("answering a line lets the edit go, and its words with it", () => {
+    expect(answering(changing(mine, names), "a")).toStrictEqual({
+      picked: [],
+      target: { id: "a", kind: "reply" },
+      words: "",
+    });
+  });
+
+  test("answering another line keeps the words written", () => {
+    expect(answering(replying, "b")).toStrictEqual({
+      picked: [],
+      target: { id: "b", kind: "reply" },
+      words: "うん",
+    });
+  });
+
+  test("× lets a reply go and keeps its words; an edit goes with its", () => {
+    expect(stopping(replying).target).toBeUndefined();
+    expect(stopping(replying).words).toBe("うん");
+    expect(stopping(changing(mine, names))).toStrictEqual({
+      picked: [],
+      words: "",
+    });
   });
 });

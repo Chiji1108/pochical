@@ -1,7 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pochical-web",
-  "main": "src/server.ts",
+  // Astro's Worker: the pages drawn on request, and the prerendered ones
+  // and the other files from its static assets (ASSETS, which the Astro
+  // adapter adds).
+  "main": "@astrojs/cloudflare/entrypoints/server",
   "compatibility_date": "2026-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
@@ -11,4 +14,7 @@
   // apps/server (pochical-server), called Worker to Worker rather than over
   // api.pochical.app. Locally, run `mise run server` beside the site.
   "services": [{ "binding": "SERVER", "service": "pochical-server" }],
+  // No secrets. Declared, so that `wrangler types` writes Env from this
+  // file alone, not from whatever .dev.vars or .env this computer has.
+  "secrets": { "required": [] },
 }

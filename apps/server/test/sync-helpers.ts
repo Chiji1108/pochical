@@ -242,7 +242,11 @@ export const supportChat = async (token: string) => {
       {
         kind: {
           case: "send",
-          value: { device: from, text, threadId: "group" },
+          value: {
+            content: { kind: { case: "words", value: { text } } },
+            device: from,
+            threadId: "group",
+          },
         },
         opId: crypto.randomUUID(),
       },

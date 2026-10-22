@@ -16,7 +16,7 @@ The server drops an edit its place does not take (one in a one-to-one chat, a li
 
 ## What a line is
 
-A line is one thing to its reader, so it is one kind of thing in the data: the server, the wire (`ChatLine.content`, a `ChatContent`) and both apps hold a line as exactly one of these, each with only what that kind has, and everything that treats lines differently goes by the kind alone.
+A line is one thing to its reader, so it is one kind of thing in the data: the server, the wire (`ChatLine.content`, a `ChatContent`, and a send's `ChatSend.content`, a `ChatSendContent` of the first four kinds) and both apps hold a line as exactly one of these, a line waiting to be sent too, each with only what that kind has, and everything that treats lines differently goes by the kind alone.
 
 - **words** (`ChatWords`): 1 to `textLimits.chatMessage` characters, not blank; 編集済み once changed; its first link's page, if any (Previews). Only words are changed (編集).
 - **photos** (`ChatAlbum`): 1 to `chatRules.photosPerSend` photos sent at once, with no words (Photos, Albums).
@@ -68,7 +68,7 @@ A message of nothing but 1 to `chatRules.largeEmojiMax` emoji shows them large a
 A message carries at most one preview, for its first link. It is made while the message is written and sent with it, or by the server just after, so everyone sees the same preview and receivers never fetch the page.
 
 - While writing, once the first link has stayed the same for `chatRules.linkPreviewSettleMs`, the app asks the server for its preview and shows it above the composer: the site's name, the title (読み込み中… until it arrives) and the picture small at the end, with × to send without it. × holds for that link until the message is sent or the link changes.
-- A message sent before its preview arrives goes without one, and the server reads the page itself once it has the line, adding it to the line for everyone as if it had been sent with it; unless × took it off (`ChatSend.without_preview`), or the line is taken back or its first link changed meanwhile. If the server finds no page, nothing is shown above the composer, and the line stays without one.
+- A message sent before its preview arrives goes without one, and the server reads the page itself once it has the line, adding it to the line for everyone as if it had been sent with it; unless × took it off (`ChatSendWords.without_preview`), or the line is taken back or its first link changed meanwhile. If the server finds no page, nothing is shown above the composer, and the line stays without one.
 - In the chat, the preview sits inside the message's bubble, under its words: the picture (cropped to `chatRules.linkPreviewAspect`, width over height), the title (two lines at most) and the site's name. A tap opens the link; a long press opens the message's reactions and menu.
 
 ## Pochical's invitation links
@@ -87,7 +87,7 @@ The server reads the page, so that people's addresses are not sent to the sites,
 - The title is the page's `og:title`, else its `<title>`; the site's name is `og:site_name`, else the host without `www.`; the picture is `og:image`. A page with neither title gives its address without the scheme as the title.
 - Only `http` and `https` on ports 80 and 443, to hosts that resolve to public addresses (no private, loopback or link-local ranges, checked again after each redirect). At most 3 redirects, 5 seconds, and the first 512 KB of HTML.
 - The picture is fetched by the server (an image of at most 2 MB, as the site serves it) and stored with the preview, served to signed-in users from Pochical's own storage (`GET /v1/previews/{id}`), so it keeps showing after the site changes or removes it. A larger picture is left out.
-- The server asks `ChatService.GetLinkPreview` with the link; the preview goes with the message (`ChatSend.preview`), and an edit says whether its first link stayed (`ChatChange.keeps_preview`) or gives the new link's page.
+- The server asks `ChatService.GetLinkPreview` with the link; the preview goes with the message (`ChatSendWords.preview`), and an edit says whether its first link stayed (`ChatChange.keeps_preview`) or gives the new link's page.
 - Previews are cached by URL for a day.
 
 ## Mentions
@@ -122,7 +122,7 @@ A mention names one member of the group in a group chat (全体チャット). On
 
 A member can change or take back their own messages, at any time. Others' messages cannot be changed.
 
-- **編集** (text messages only): the message's words go back into the composer, its mentions as @name again, under a bar saying メッセージを編集 with × to stop. The send button becomes ✓ and the photo and day tools are hidden: only the words change. Saving replaces the words for everyone and marks the message 編集済み, shown over its time (on one line with a pin, when it is pinned). A message cannot be saved empty; taking it back is 送信取消. The link's page stays while its first link does; a new first link gets a new preview (`spec/vectors/chat.json`, edited).
+- **編集** (text messages only): the message's words go back into the composer in place of what was written there, its mentions as @name again, under a bar saying メッセージを編集 with × to stop. It stops a reply, as 返信 stops editing: the composer answers a line or changes one, never both, with one bar for it. The send button becomes ✓ and the photo and day tools are hidden: only the words change. Saving replaces the words for everyone and marks the message 編集済み, shown over its time (on one line with a pin, when it is pinned). A message cannot be saved empty; taking it back is 送信取消. The link's page stays while its first link does; a new first link gets a new preview (`spec/vectors/chat.json`, edited).
 - **送信取消** (any of one's own messages: words, photos, shared days): asked first in a centered alert (送信を取り消しますか？ / メンバー全員のチャットから消えます。 / キャンセル | 取り消す). The message's content and reactions are removed for everyone; in its place a line in the middle says 〇〇がメッセージの送信を取り消しました (メッセージの送信を取り消しました for one's own). A reply that quoted it shows 取り消されたメッセージ, and the chat list's last line says the same as the line.
 - In the message's menu, 編集 comes after the other actions and 送信取消 last, apart and in the danger color.
 - Neither sends a notification, and neither changes unread counts. Both go through the change log as edits (spec/sync-protocol.md).

@@ -1,6 +1,6 @@
-import siteIcon from "@pochical/prototype/assets/icon.png";
-import poodle from "@pochical/prototype/assets/poodle.png";
-import shareImage from "@pochical/prototype/assets/share.png";
+import siteIcon from "@pochical/prototype/assets/icon.png?url";
+import poodle from "@pochical/prototype/assets/poodle.png?url";
+import shareImage from "@pochical/prototype/assets/share.png?url";
 import { DesignAppIcon } from "@pochical/prototype/components/design-app-icon";
 import {
   DesignProviders,

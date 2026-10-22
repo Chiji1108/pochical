@@ -109,7 +109,10 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       create(ChatEditSchema, {
         kind: {
           case: "send",
-          value: { text: text.trim(), threadId: GROUP_THREAD },
+          value: {
+            content: { kind: { case: "words", value: { text: text.trim() } } },
+            threadId: GROUP_THREAD,
+          },
         },
         opId,
       }),

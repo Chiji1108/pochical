@@ -60,7 +60,7 @@ jobs:
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
-  # apps/web, apps/catalog, apps/server, apps/admin and packages/: lint
+  # apps/web, apps/catalog, apps/server, apps/admin, packages/ and tools/: lint
   # and format, types, tests.
   typescript:
     needs: changes
@@ -73,12 +73,17 @@ jobs:
         with:
           install_args: bun
       - run: bun install --frozen-lockfile
+      # Each Worker's worker-configuration.d.ts is what its wrangler.jsonc
+      # and the locked wrangler (and the workerd it pins) give, not left
+      # behind by a wrangler bump. Before typecheck, which reads them.
+      # wrangler types reads no account.
+      - run: mise run worker-types:check
       - run: bun run check
       - run: bun run typecheck
       - run: bun run test
-      # What each web page loads before it first shows, against its budget.
-      - run: bun run --cwd apps/web build
-      - run: bun run --cwd apps/web bundle:budget
+      # The site builds, and its Worker's bundle and config validate.
+      - run: bun run build && bunx wrangler deploy --dry-run
+        working-directory: apps/web
       - run: bun run --cwd apps/catalog build
       # The server and admin Workers bundle and their configs validate, as
       # Workers Builds deploys them on merge. A dry run needs no account.

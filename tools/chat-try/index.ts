@@ -153,10 +153,18 @@ const send = (socket: WebSocket, lines: Sending[]): void => {
         edits: edits.map(({ line, opId }) => ({
           kind: {
             case: "send" as const,
-            value:
-              "text" in line
-                ? { text: line.text, threadId: GROUP_THREAD }
-                : { photos: line.photos, threadId: GROUP_THREAD },
+            value: {
+              content: {
+                kind:
+                  "text" in line
+                    ? { case: "words" as const, value: { text: line.text } }
+                    : {
+                        case: "photos" as const,
+                        value: { photos: line.photos },
+                      },
+              },
+              threadId: GROUP_THREAD,
+            },
           },
           opId,
         })),

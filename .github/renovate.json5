@@ -1,0 +1,112 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    "group:allNonMajor",
+    "security:minimumReleaseAgeNpm",
+  ],
+  timezone: "Asia/Tokyo",
+  schedule: ["* 0-8 * * 1"],
+  prConcurrentLimit: 5,
+  prHourlyLimit: 2,
+  labels: ["dependencies"],
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: ["* 0-8 * * 1"],
+  },
+  customManagers: [
+    {
+      // Renovate's swift manager reads Package.swift only, not the packages
+      // an Xcode project adds itself (renovatebot/renovate#9735).
+      customType: "regex",
+      description: "Swift packages referenced from Pochical.xcodeproj",
+      managerFilePatterns: ["/(^|/)project\\.pbxproj$/"],
+      matchStrings: [
+        'repositoryURL = "https://github\\.com/(?<depName>[^"]+?)(\\.git)?";\\s*requirement = \\{\\s*kind = exactVersion;\\s*version = (?<currentValue>[^;]+);',
+      ],
+      datasourceTemplate: "github-tags",
+      versioningTemplate: "swift",
+    },
+    {
+      customType: "regex",
+      description: "buf remote plugins, versioned with the runtime they generate for",
+      managerFilePatterns: ["/(^|/)buf\\.gen\\.yaml$/"],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s*\\n\\s*- remote: \\S+:v(?<currentValue>\\S+)",
+      ],
+      extractVersionTemplate: "^v?(?<version>.+)$",
+    },
+  ],
+  packageRules: [
+    {
+      description: "The same wait as npm's, for Actions, Swift, mise's tools and buf's plugins, which the BSR publishes after the tag",
+      matchDatasources: ["github-tags", "github-releases"],
+      minimumReleaseAge: "3 days",
+      internalChecksFilter: "strict",
+    },
+    {
+      description: "astro check does not support TypeScript 7 yet (withastro/astro#17268)",
+      matchFileNames: ["apps/web/package.json"],
+      matchDepNames: ["typescript"],
+      allowedVersions: "<7",
+    },
+    {
+      matchDepNames: ["typescript"],
+      matchUpdateTypes: ["major"],
+      groupName: "TypeScript",
+    },
+    {
+      matchPackageNames: [
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom",
+      ],
+      matchUpdateTypes: ["major"],
+      groupName: "React",
+    },
+    {
+      description: "vitest-pool-workers pins the vitest it runs under",
+      matchPackageNames: [
+        "vitest",
+        "@vitest/**",
+        "@cloudflare/vitest-pool-workers",
+      ],
+      groupName: "vitest",
+      separateMajorMinor: false,
+    },
+    {
+      description: "The generated code and the runtimes it runs on move together",
+      matchDepNames: [
+        "@bufbuild/protobuf",
+        "@bufbuild/protoc-gen-es",
+        "@connectrpc/**",
+        "apple/swift-protobuf",
+        "connectrpc/connect-swift",
+        "protocolbuffers/protobuf",
+        "connectrpc/connect-kotlin",
+      ],
+      groupName: "protobuf and Connect",
+      separateMajorMinor: false,
+      prBodyNotes: [
+        "Run `mise run gen` and commit the regenerated code before merging (AGENTS.md: generated files are never edited by hand).",
+      ],
+    },
+    {
+      description: "Renovate rewrites only the bumped packages' pins in Package.resolved, and none for the Xcode project's own packages",
+      matchFileNames: ["**/Package.swift", "**/project.pbxproj"],
+      prBodyNotes: [
+        "Before merging, resolve the Swift packages (`xcodebuild -resolvePackageDependencies -project apps/ios/Pochical/Pochical.xcodeproj`, and `swift package resolve --package-path` for a changed package under `apps/ios/Packages`) and commit any `Package.resolved` change.",
+      ],
+    },
+    {
+      description: "mise.toml and packageManager pin the same Bun",
+      matchDepNames: ["bun", "@types/bun"],
+      groupName: "Bun",
+      separateMajorMinor: false,
+      prBodyNotes: [
+        "Before merging, set `BUN_VERSION` to the new version in each Worker's Workers Builds settings (server, web, catalog, admin) in the Cloudflare dashboard. Renovate cannot change it.",
+      ],
+    },
+  ],
+}

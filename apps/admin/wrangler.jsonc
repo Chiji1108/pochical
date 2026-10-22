@@ -3,7 +3,7 @@
   // Pochical's people's admin site (spec/admin.md) at admin.pochical.app,
   // the whole Worker behind Cloudflare Access (its Access tab).
   "name": "pochical-admin",
-  "main": "@tanstack/react-start/server-entry",
+  "main": "./workers/app.ts",
   "compatibility_date": "2026-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
@@ -16,6 +16,9 @@
       "entrypoint": "AdminEntrypoint",
     },
   ],
+  // No secrets. Declared, so that `wrangler types` writes Env from this
+  // file alone, not from whatever .dev.vars or .env this computer has.
+  "secrets": { "required": [] },
   "routes": [{ "pattern": "admin.pochical.app", "custom_domain": true }],
   // Reached only at its own name.
   "workers_dev": false,

@@ -2336,8 +2336,7 @@ public nonisolated struct Pochical_V1_ChatReact: Sendable {
   public init() {}
 }
 
-/// A new line at the end of the chat: words, or days shared with
-/// everyone's shifts (spec/chat.md, Long messages and shared days).
+/// A new line at the end of the chat.
 public nonisolated struct Pochical_V1_ChatSend: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2345,15 +2344,106 @@ public nonisolated struct Pochical_V1_ChatSend: Sendable {
 
   public var threadID: String = String()
 
-  /// 1 to chatMessage characters, not blank; empty for days.
+  /// What the line is to be: always one of the kinds a member sends.
+  public var content: Pochical_V1_ChatSendContent {
+    get {_content ?? Pochical_V1_ChatSendContent()}
+    set {_content = newValue}
+  }
+  /// Returns true if `content` has been explicitly set.
+  public var hasContent: Bool {self._content != nil}
+  /// Clears the value of `content`. Subsequent reads from it will return its default value.
+  public mutating func clearContent() {self._content = nil}
+
+  /// The line it answers (返信), an earlier one of the same chat; 0 for none.
+  public var replyTo: UInt64 = 0
+
+  /// The app's version and the device, as the chat's head says reach its
+  /// readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
+  /// ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
+  /// only there, cut short as an app's word on itself.
+  public var device: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _content: Pochical_V1_ChatSendContent? = nil
+}
+
+/// What a member sends as a line (spec/chat.md, What a line is): one thing
+/// to its readers, so one kind of it. A send of none, or of a kind the
+/// group does not know, is not taken.
+public nonisolated struct Pochical_V1_ChatSendContent: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var kind: Pochical_V1_ChatSendContent.OneOf_Kind? = nil
+
+  public var words: Pochical_V1_ChatSendWords {
+    get {
+      if case .words(let v)? = kind {return v}
+      return Pochical_V1_ChatSendWords()
+    }
+    set {kind = .words(newValue)}
+  }
+
+  /// 1 to chatRules.photosPerSend photos, each once: the sender's own,
+  /// uploaded first and not sent before (spec/chat.md, Albums).
+  public var photos: Pochical_V1_ChatAlbum {
+    get {
+      if case .photos(let v)? = kind {return v}
+      return Pochical_V1_ChatAlbum()
+    }
+    set {kind = .photos(newValue)}
+  }
+
+  /// Days shared with everyone's shifts (spec/chat.md, Long messages and
+  /// shared days).
+  public var days: Pochical_V1_ChatSharedDays {
+    get {
+      if case .days(let v)? = kind {return v}
+      return Pochical_V1_ChatSharedDays()
+    }
+    set {kind = .days(newValue)}
+  }
+
+  /// Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+  /// at least.
+  public var poll: Pochical_V1_ChatSharedDays {
+    get {
+      if case .poll(let v)? = kind {return v}
+      return Pochical_V1_ChatSharedDays()
+    }
+    set {kind = .poll(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum OneOf_Kind: Equatable, Sendable {
+    case words(Pochical_V1_ChatSendWords)
+    /// 1 to chatRules.photosPerSend photos, each once: the sender's own,
+    /// uploaded first and not sent before (spec/chat.md, Albums).
+    case photos(Pochical_V1_ChatAlbum)
+    /// Days shared with everyone's shifts (spec/chat.md, Long messages and
+    /// shared days).
+    case days(Pochical_V1_ChatSharedDays)
+    /// Days put to the vote (spec/chat.md, Polls), in the group chat: 2
+    /// at least.
+    case poll(Pochical_V1_ChatSharedDays)
+
+  }
+
+  public init() {}
+}
+
+public nonisolated struct Pochical_V1_ChatSendWords: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// 1 to chatMessage characters (design/src/limits.ts), not blank.
   public var text: String = String()
-
-  /// 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-  /// each once and in order; none for words.
-  public var days: [String] = []
-
-  /// The days put to the vote instead: 2 days at least, in the group chat.
-  public var poll: Bool = false
 
   /// The page of the words' first link, as GetLinkPreview gave it; none
   /// when the sender took it off (×) or it had not come, when the server
@@ -2367,21 +2457,8 @@ public nonisolated struct Pochical_V1_ChatSend: Sendable {
   /// Clears the value of `preview`. Subsequent reads from it will return its default value.
   public mutating func clearPreview() {self._preview = nil}
 
-  /// The line it answers (返信), an earlier one of the same chat; 0 for none.
-  public var replyTo: UInt64 = 0
-
   /// The sender took the page off (×): the line goes without one.
   public var withoutPreview: Bool = false
-
-  /// The app's version and the device, as the chat's head says reach its
-  /// readers (ポチカル 1.0・iPhone (iOS 26.0)): sent where the place's rules
-  /// ask for it (design/src/chat.ts, chatPlaces' sendsDevice), and kept
-  /// only there, cut short as an app's word on itself.
-  public var device: String = String()
-
-  /// Photos instead, 1 to chatRules.photosPerSend, each once: the
-  /// sender's own, uploaded first and not sent before. No words or days.
-  public var photos: [Pochical_V1_ChatPhoto] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -6150,7 +6227,7 @@ nonisolated extension Pochical_V1_ChatReact: SwiftProtobuf.Message, SwiftProtobu
 
 nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ChatSend"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{1}text\0\u{1}days\0\u{1}poll\0\u{2}\u{2}preview\0\u{3}reply_to\0\u{3}without_preview\0\u{1}device\0\u{2}\u{2}photos\0\u{b}photo\0\u{b}album\0\u{c}\u{5}\u{1}\u{c}\u{a}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}thread_id\0\u{4}\u{6}reply_to\0\u{2}\u{2}device\0\u{2}\u{3}content\0\u{b}text\0\u{b}days\0\u{b}poll\0\u{b}photo\0\u{b}album\0\u{b}preview\0\u{b}without_preview\0\u{b}photos\0\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}\u{c}\u{5}\u{1}\u{c}\u{6}\u{1}\u{c}\u{8}\u{1}\u{c}\u{a}\u{1}\u{c}\u{b}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -6159,14 +6236,9 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.threadID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
-      case 3: try { try decoder.decodeRepeatedStringField(value: &self.days) }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.poll) }()
-      case 6: try { try decoder.decodeSingularMessageField(value: &self._preview) }()
       case 7: try { try decoder.decodeSingularUInt64Field(value: &self.replyTo) }()
-      case 8: try { try decoder.decodeSingularBoolField(value: &self.withoutPreview) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self.device) }()
-      case 11: try { try decoder.decodeRepeatedMessageField(value: &self.photos) }()
+      case 12: try { try decoder.decodeSingularMessageField(value: &self._content) }()
       default: break
       }
     }
@@ -6180,43 +6252,168 @@ nonisolated extension Pochical_V1_ChatSend: SwiftProtobuf.Message, SwiftProtobuf
     if !self.threadID.isEmpty {
       try visitor.visitSingularStringField(value: self.threadID, fieldNumber: 1)
     }
-    if !self.text.isEmpty {
-      try visitor.visitSingularStringField(value: self.text, fieldNumber: 2)
-    }
-    if !self.days.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.days, fieldNumber: 3)
-    }
-    if self.poll != false {
-      try visitor.visitSingularBoolField(value: self.poll, fieldNumber: 4)
-    }
-    try { if let v = self._preview {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-    } }()
     if self.replyTo != 0 {
       try visitor.visitSingularUInt64Field(value: self.replyTo, fieldNumber: 7)
-    }
-    if self.withoutPreview != false {
-      try visitor.visitSingularBoolField(value: self.withoutPreview, fieldNumber: 8)
     }
     if !self.device.isEmpty {
       try visitor.visitSingularStringField(value: self.device, fieldNumber: 9)
     }
-    if !self.photos.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.photos, fieldNumber: 11)
-    }
+    try { if let v = self._content {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_ChatSend, rhs: Pochical_V1_ChatSend) -> Bool {
     if lhs.threadID != rhs.threadID {return false}
-    if lhs.text != rhs.text {return false}
-    if lhs.days != rhs.days {return false}
-    if lhs.poll != rhs.poll {return false}
-    if lhs._preview != rhs._preview {return false}
+    if lhs._content != rhs._content {return false}
     if lhs.replyTo != rhs.replyTo {return false}
-    if lhs.withoutPreview != rhs.withoutPreview {return false}
     if lhs.device != rhs.device {return false}
-    if lhs.photos != rhs.photos {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ChatSendContent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ChatSendContent"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}words\0\u{1}photos\0\u{1}days\0\u{1}poll\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: Pochical_V1_ChatSendWords?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .words(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .words(v)
+        }
+      }()
+      case 2: try {
+        var v: Pochical_V1_ChatAlbum?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .photos(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .photos(v)
+        }
+      }()
+      case 3: try {
+        var v: Pochical_V1_ChatSharedDays?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .days(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .days(v)
+        }
+      }()
+      case 4: try {
+        var v: Pochical_V1_ChatSharedDays?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .poll(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .poll(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.kind {
+    case .words?: try {
+      guard case .words(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    }()
+    case .photos?: try {
+      guard case .photos(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .days?: try {
+      guard case .days(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .poll?: try {
+      guard case .poll(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ChatSendContent, rhs: Pochical_V1_ChatSendContent) -> Bool {
+    if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Pochical_V1_ChatSendWords: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ChatSendWords"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}preview\0\u{3}without_preview\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._preview) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.withoutPreview) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.text.isEmpty {
+      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
+    }
+    try { if let v = self._preview {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    if self.withoutPreview != false {
+      try visitor.visitSingularBoolField(value: self.withoutPreview, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Pochical_V1_ChatSendWords, rhs: Pochical_V1_ChatSendWords) -> Bool {
+    if lhs.text != rhs.text {return false}
+    if lhs._preview != rhs._preview {return false}
+    if lhs.withoutPreview != rhs.withoutPreview {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

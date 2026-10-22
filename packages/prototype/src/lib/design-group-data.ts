@@ -188,10 +188,17 @@ export type LinkPreview = {
   image?: string;
 };
 
+// The line a draft answers (返信), or your line it changes (編集): one or
+// the other, never both, as the composer shows one bar for it
+// (spec/chat.md, Replies; Editing and unsending).
+export type DraftTarget =
+  | { kind: "reply"; id: string }
+  | { kind: "edit"; id: string };
+
 // What was being written in a chat, kept as it was left (spec/chat.md,
 // Drafts): its words as they would be sent, mentions as <@id>, and the
 // line it answers or changes.
-export type ChatDraft = { text: string; replyTo?: string; editing?: string };
+export type ChatDraft = { text: string; target?: DraftTarget };
 
 export type Chat = { messages: Message[]; unread: number; draft?: ChatDraft };
 

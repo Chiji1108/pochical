@@ -52,7 +52,15 @@ const keysOf = (...keys: string[]) => ({
 const photoLine = (id: string) => ({
   kind: {
     case: "send" as const,
-    value: { photos: [{ height: 10, id, width: 10 }], threadId: "group" },
+    value: {
+      content: {
+        kind: {
+          case: "photos" as const,
+          value: { photos: [{ height: 10, id, width: 10 }] },
+        },
+      },
+      threadId: "group",
+    },
   },
   opId: crypto.randomUUID(),
 });
@@ -106,7 +114,10 @@ const seedBucket = async () => {
         {
           kind: {
             case: "send",
-            value: { text: "見て", threadId: "group" },
+            value: {
+              content: { kind: { case: "words", value: { text: "見て" } } },
+              threadId: "group",
+            },
           },
           opId: crypto.randomUUID(),
         },

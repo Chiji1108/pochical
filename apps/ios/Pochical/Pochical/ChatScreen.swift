@@ -953,7 +953,7 @@ struct ChatScreen: View {
     let shelf = place.shelf
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
-    send.photos = photos.map { $0.shrunk.line($0.id).wire }
+    send.content.photos.photos = photos.map { $0.shrunk.line($0.id).wire }
     guard
       write.keeping({
         for photo in photos {
@@ -1322,15 +1322,17 @@ struct ChatScreen: View {
 
   private func send(_ text: String) {
     Notifications.shared.askOnce()
-    var send = Pochical_V1_ChatSend()
-    send.threadID = threadID
-    send.text = withMentions(text, picked: draft.picked)
+    var words = Pochical_V1_ChatSendWords()
+    words.text = withMentions(text, picked: draft.picked)
     if let preview = draft.attachedPreview(for: text) {
-      send.preview = preview.wire
+      words.preview = preview.wire
     }
     // Taken off with ×, so the server does not read it either; a page not
     // come yet the server reads and adds to the line.
-    send.withoutPreview = draft.previewRemoved != nil && previewLink(text) == draft.previewRemoved
+    words.withoutPreview = draft.previewRemoved != nil && previewLink(text) == draft.previewRemoved
+    var send = Pochical_V1_ChatSend()
+    send.threadID = threadID
+    send.content.words = words
     guard sent(send) else { return }
     draft.text = ""
     draft.picked = []
@@ -1358,8 +1360,11 @@ struct ChatScreen: View {
   private func shareDays(_ days: [Day], poll: Bool) -> Bool {
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
-    send.days = days.map(\.key)
-    send.poll = poll
+    if poll {
+      send.content.poll.days = days.map(\.key)
+    } else {
+      send.content.days.days = days.map(\.key)
+    }
     return sent(send)
   }
 
