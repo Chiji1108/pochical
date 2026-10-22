@@ -10,7 +10,7 @@
     "db:generate": "drizzle-kit generate",
     "group-do:generate": "drizzle-kit generate --config drizzle.group-do.config.ts",
     "user-do:generate": "drizzle-kit generate --config drizzle.user-do.config.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
     "test": "vitest run",
     "check": "bun run --cwd ../.. check",
     "fix": "bun run --cwd ../.. fix"
@@ -26,6 +26,7 @@
   "devDependencies": {
     "@bufbuild/protoc-gen-es": "2.16.0",
     "@cloudflare/vitest-plugin": "1.4.6",
+    "@types/node": "24.19.2",
     "drizzle-kit": "^0.31.11",
     "typescript": "~7.0.2",
     "vite": "^8.0.0",

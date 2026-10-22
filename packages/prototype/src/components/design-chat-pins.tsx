@@ -1,3 +1,4 @@
+import { chatRules } from "@pochical/design/chat";
 import { css, cx } from "@pochical/styled-system/css";
 import { ChevronDown, ChevronUp, Pin, PinOff } from "lucide-react";
 import { useState } from "react";
@@ -19,7 +20,10 @@ const pinBar = {
   card: css({
     borderRadius: "2xl",
     marginBottom: "4px",
-    marginTop: "4px",
+    // From the safe area's sides, out past the page's own inset.
+    marginLeft: `calc(${chatRules.pinMargin}px - var(--page-inset))`,
+    marginRight: `calc(${chatRules.pinMargin}px - var(--page-inset))`,
+    marginTop: `${chatRules.pinMargin}px`,
     paddingBottom: "4px",
     paddingLeft: "8px",
     paddingRight: "8px",
