@@ -13,7 +13,14 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 
-import { answering, changing, stopping, writingOf } from "../lib/chat-messages";
+import {
+  answering,
+  changing,
+  emptyWriting,
+  stopping,
+  writingOf,
+} from "../lib/chat-messages";
+import type { Writing } from "../lib/chat-messages";
 import {
   firstLink,
   inviteCodeOf,
@@ -45,9 +52,10 @@ export const noOne: Member[] = [];
 
 export const nameless = () => "";
 
-// What is being written: the words, the members picked from the @ list,
-// days brought from the shift table, photos chosen, the page of its first
-// link, and the line it answers or your line whose words it changes.
+// What is being written, as one Writing: the words, the members picked
+// from the @ list, days brought from the shift table, photos chosen, the
+// link whose page × took off, and the line it answers or your line whose
+// words it changes; and the page of its first link.
 export function useComposer({
   attach,
   kept,
@@ -63,15 +71,25 @@ export function useComposer({
   // A mention's name, for words put back to be changed.
   mentionName?: (id: string) => string;
 }) {
-  const [writing, setWriting] = useState(() =>
-    writingOf(kept?.text ?? "", mentionName, kept?.target)
-  );
-  const { words: draft, picked, target } = writing;
+  const [writing, setWriting] = useState<Writing>(() => ({
+    ...writingOf(kept?.text ?? "", mentionName, kept?.target),
+    days: attach,
+  }));
+  const { words: draft, picked, target, days: attached, photos } = writing;
   const editing = target?.kind === "edit" ? target.id : undefined;
   const replyTo = target?.kind === "reply" ? target.id : undefined;
-  const [attached, setAttached] = useState(attach);
-  const linkPreview = useLinkPreview(draft);
-  const chosen = useChosenPhotos();
+  const linkPreview = useLinkPreview(draft, writing.withoutPreview, (link) => {
+    setWriting((before) => ({ ...before, withoutPreview: link }));
+  });
+  const chosen = useChosenPhotos(photos, (update) => {
+    // A photo read after an edit began has no message to go with: an
+    // edit changes only the words.
+    setWriting((before) =>
+      before.target?.kind === "edit"
+        ? before
+        : { ...before, photos: update(before.photos) }
+    );
+  });
   const formRef = useRef<HTMLFormElement>(null);
   // An @ being written at the end of the message lists the others whose
   // name has what follows it, as LINE does; one picked goes in as @name
@@ -84,6 +102,9 @@ export function useComposer({
   const setDraft = (words: string) => {
     setWriting((before) => ({ ...before, words }));
   };
+  const setAttached = (days?: Date[]) => {
+    setWriting((before) => ({ ...before, days }));
+  };
   const pickMention = (member: Member) => {
     setWriting((before) => ({
       ...before,
@@ -94,36 +115,27 @@ export function useComposer({
       words: pickingMention(before.words, member.name),
     }));
   };
+  // Sent: a new message starts, still answering the line until the send
+  // lets the reply go.
   const clear = () => {
-    setWriting((before) => ({ ...before, picked: [], words: "" }));
-    linkPreview.reset();
-    setAttached(undefined);
-    chosen.clear();
+    setWriting((before) => ({ ...emptyWriting, target: before.target }));
   };
-  // Puts your message's words back in the composer to change them.
+  // Puts your message's words alone in the composer to change them.
   const startEditing = (message: Message) => {
     setWriting(changing(message, mentionName));
     formRef.current?.querySelector("textarea")?.focus();
   };
-  // Answers a line; an edit it replaces takes its words and their link's
-  // page with it.
   const reply = (id: string) => {
-    if (editing !== undefined) {
-      linkPreview.reset();
-    }
     setWriting((before) => answering(before, id));
   };
   // × on the bar of the line answered or changed.
   const stop = () => {
-    if (editing !== undefined) {
-      linkPreview.reset();
-    }
     setWriting(stopping);
   };
   // Something to send, once every photo chosen has been read.
   const sendable =
     !chosen.reading &&
-    (draft.trim() !== "" || attached !== undefined || chosen.photos.length > 0);
+    (draft.trim() !== "" || attached !== undefined || photos.length > 0);
   return {
     attached,
     clear,
@@ -135,7 +147,7 @@ export function useComposer({
     linkPreview,
     mentionName,
     mentionable,
-    photos: chosen.photos,
+    photos,
     pickMention,
     picked,
     reply,
@@ -363,8 +375,8 @@ export function Composer({
           onChoose={composer.handleChoosePhotos}
           ref={photoInputRef}
         />
-        {/* A message being changed keeps what it carries; only its words
-            change, and the capsule takes the row. */}
+        {/* A message being changed takes only words, and the capsule
+            takes the row. */}
         {editing === undefined &&
           (onShareDays ? (
             <AttachMenu onPhotos={choosePhotos} onShareDays={onShareDays} />
@@ -492,13 +504,16 @@ const readMs = 700;
 // before sending: read from the server once the link settles, shown over
 // the composer, and sent with the message unless taken off with ×. A
 // message sent before it is read goes without one.
-function useLinkPreview(draft: string) {
+function useLinkPreview(
+  draft: string,
+  skipped: string | undefined,
+  onSkip: (link?: string) => void
+) {
   const first = firstLink(draft);
   // An invitation's card comes from its group as the message shows, so
   // nothing is read or held above the composer for it.
   const link = first && !inviteCodeOf(first) ? first : undefined;
   const [settled, setSettled] = useState<string>();
-  const [skipped, setSkipped] = useState<string>();
   const [pages, setPages] = useState<Record<string, LinkPreview>>({});
   const asked = useRef(new Set<string>());
   useEffect(() => {
@@ -530,11 +545,7 @@ function useLinkPreview(draft: string) {
       : undefined;
   return {
     handleSkip: () => {
-      setSkipped(link);
-    },
-    // A new message starts with previews back on.
-    reset: () => {
-      setSkipped(undefined);
+      onSkip(link);
     },
     ready: shown ? pages[shown] : undefined,
     shown,

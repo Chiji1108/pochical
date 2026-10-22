@@ -78,13 +78,16 @@ export function photoSize(photo: Photo) {
   return { height: Math.round(width / aspect), width: Math.round(width) };
 }
 
-// Photos chosen to go with the next send, as the chat apps hold them
-// above the composer: nothing is sent on choosing. While some are still
+// Photos chosen to go with the next send, held with what is written
+// (Writing), as the chat apps hold them above the composer: nothing is
+// sent on choosing. While some are still
 // being read, `reading` holds sending back, so none lands in the composer
 // after the message has gone.
-export function useChosenPhotos() {
+export function useChosenPhotos(
+  photos: Photo[],
+  setPhotos: (update: (before: Photo[]) => Photo[]) => void
+) {
   const toast = useContext(ToastContext);
-  const [photos, setPhotos] = useState<Photo[]>([]);
   const [readingCount, setReadingCount] = useState(0);
   // Photos still being read, known at once to a choice right after (two
   // pastes in a row), which the state would tell only once drawn again.
@@ -118,14 +121,9 @@ export function useChosenPhotos() {
   const handleRemove = (photo: Photo) => {
     setPhotos((before) => before.filter((other) => other !== photo));
   };
-  const clear = () => {
-    setPhotos([]);
-  };
   return {
-    clear,
     handleChoose,
     handleRemove,
-    photos,
     reading: readingCount > 0,
   };
 }

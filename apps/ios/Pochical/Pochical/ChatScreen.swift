@@ -417,7 +417,7 @@ struct ChatScreen: View {
       // is sent, with a word if one likes.
       if let sharing, !tookSharing {
         tookSharing = true
-        draft.attachedDays = [sharing]
+        draft.writing.days = [sharing]
       }
     }
     .onDisappear {
@@ -538,7 +538,7 @@ struct ChatScreen: View {
         mentionable: otherID != nil || !place.rules.mentions
           ? [] : chat.writers.filter { !$0.left && $0.userID != meID },
         nameOf: nameOf, quoteOf: quote(of:), onSubmit: submit,
-        onStopEditing: stopEditing, keepDraft: { keepDraft() },
+        keepDraft: { keepDraft() },
         onShareDays: place.rules.days ? { sharingDays = true } : nil, say: say)
     }
   }
@@ -946,7 +946,7 @@ struct ChatScreen: View {
   /// before it goes; two or more drawn as one album (spec/chat.md,
   /// Albums).
   private func sendPhotos() -> Bool {
-    let photos = draft.photos
+    let photos = draft.writing.photos
     guard !photos.isEmpty else { return true }
     let shelf = place.shelf
     var send = Pochical_V1_ChatSend()
@@ -964,7 +964,7 @@ struct ChatScreen: View {
       }
       return false
     }
-    draft.photos = []
+    draft.writing.photos = []
     return true
   }
 
@@ -1008,11 +1008,11 @@ struct ChatScreen: View {
     guard let kept = read ?? nil else { return }
     let names = names
     let nameOf = { (id: String) in memberName(id, in: names) }
-    draft.text = plainText(kept.text, nameOf: nameOf)
-    draft.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }
-    draft.target = kept.target
+    draft.writing.text = plainText(kept.text, nameOf: nameOf)
+    draft.writing.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }
+    draft.writing.target = kept.target
     keptDraft = KeptDraft(text: kept.text, target: kept.target?.map(\.seq))
-    openedDraft = (shown: draft.text, sent: kept.text)
+    openedDraft = (shown: draft.writing.text, sent: kept.text)
   }
 
   /// Keeps what is being written with the chat, the one place a chat's
@@ -1024,7 +1024,7 @@ struct ChatScreen: View {
   private func keepDraft(leaving: Bool = false) {
     guard tookDraft else { return }
     var kept = draft.kept
-    if let opened = openedDraft, opened.shown == draft.text { kept.text = opened.sent }
+    if let opened = openedDraft, opened.shown == draft.writing.text { kept.text = opened.sent }
     guard kept != keptDraft else { return }
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     let keeping = leaving ? write : WriteAction {}
@@ -1321,20 +1321,21 @@ struct ChatScreen: View {
   private func send(_ text: String) {
     Notifications.shared.askOnce()
     var words = Pochical_V1_ChatSendWords()
-    words.text = withMentions(text, picked: draft.picked)
+    words.text = withMentions(text, picked: draft.writing.picked)
     if let preview = draft.attachedPreview(for: text) {
       words.preview = preview.wire
     }
     // Taken off with ×, so the server does not read it either; a page not
     // come yet the server reads and adds to the line.
-    words.withoutPreview = draft.previewRemoved != nil && previewLink(text) == draft.previewRemoved
+    let removed = draft.writing.previewRemoved
+    words.withoutPreview = removed != nil && previewLink(text) == removed
     var send = Pochical_V1_ChatSend()
     send.threadID = threadID
     send.content.words = words
     guard sent(send) else { return }
-    draft.text = ""
-    draft.picked = []
-    draft.previewRemoved = nil
+    draft.writing.text = ""
+    draft.writing.picked = []
+    draft.writing.previewRemoved = nil
   }
 
   /// The first and last of the days the chat's lines share, for their
@@ -1532,9 +1533,9 @@ struct ChatScreen: View {
       return
     }
     // What is not kept stays in the composer, with all after it.
-    if let days = draft.attachedDays {
+    if let days = draft.writing.days {
       guard shareDays(days, poll: false) else { return }
-      draft.attachedDays = nil
+      draft.writing.days = nil
     }
     guard sendPhotos() else { return }
     if !text.isEmpty { send(text) }
@@ -1554,8 +1555,7 @@ struct ChatScreen: View {
 
   /// Answers a line (返信): quoted over the composer until sent or ×.
   private func reply(to line: ChatLineRow) {
-    if draft.editing != nil { stopEditing() }
-    draft.target = .reply(line.seq)
+    draft.writing.answer(line.seq)
     draft.field.focus()
   }
 
@@ -1565,7 +1565,7 @@ struct ChatScreen: View {
     var line = line
     line.replyTo = draft.replyTo.map(UInt64.init) ?? 0
     guard keep(.send(line)) else { return false }
-    if draft.replyTo != nil { draft.target = nil }
+    if draft.replyTo != nil { draft.writing.target = nil }
     return true
   }
 
@@ -1598,17 +1598,8 @@ struct ChatScreen: View {
 
   private func edit(_ line: ChatLineRow) {
     guard case .words(let words) = line.content else { return }
-    draft.target = .edit(line)
-    // Its mentions as @name again, still picked.
-    draft.text = plainText(words.text, nameOf: nameOf)
-    draft.picked = mentions(in: words.text).map { PickedMember(id: $0, name: nameOf($0)) }
+    draft.writing.change(line, text: words.text, nameOf: nameOf)
     draft.field.focus()
-  }
-
-  private func stopEditing() {
-    draft.target = nil
-    draft.text = ""
-    draft.picked = []
   }
 
   private func save(_ line: ChatLineRow, text: String) {
@@ -1616,7 +1607,7 @@ struct ChatScreen: View {
     var change = Pochical_V1_ChatChange()
     change.threadID = threadID
     change.seq = UInt64(line.seq)
-    change.text = withMentions(text, picked: draft.picked)
+    change.text = withMentions(text, picked: draft.writing.picked)
     // The page stays while the first link does (spec/vectors/chat.json,
     // edited); else the new link's, if it has come.
     change.keepsPreview = keepsPreview(of: words.text, editedTo: change.text)
@@ -1624,8 +1615,7 @@ struct ChatScreen: View {
       change.preview = preview.wire
     }
     guard keep(.change(change)) else { return }
-    draft.previewRemoved = nil
-    stopEditing()
+    draft.writing.stop()
   }
 
   /// A line's menu: コピー, then for one's own 編集, and 送信取消 apart in
@@ -1793,7 +1783,7 @@ struct ChatScreen: View {
     unsend.threadID = threadID
     unsend.seq = UInt64(line.seq)
     guard keep(.unsend(unsend)) else { return }
-    if draft.editing?.seq == line.seq { stopEditing() }
+    if draft.editing?.seq == line.seq { draft.writing.stop() }
   }
 
   /// Puts the person's edit in the outbox (WriteAction); true when kept.

@@ -9,33 +9,25 @@ import SwiftUI
 /// makes only the composer again, not every line of the chat.
 @Observable
 final class ChatDraft {
-  var text = ""
-  /// The line being answered (返信), by its seq, quoted over the composer
-  /// as the chat has it now; or the line of one's own being changed in it.
-  var target: DraftTarget<ChatLineRow>?
+  /// What is written and what goes with it, switched as one as a line is
+  /// answered or changed (spec/chat.md, Editing and unsending; Replies).
+  var writing = Writing<ChatLineRow, PickedPhoto>()
   /// The line of words being changed: only words are (spec/chat.md, 編集).
-  var editing: ChatLineRow? { target?.editing.flatMap { $0.content.words == nil ? nil : $0 } }
+  var editing: ChatLineRow? {
+    writing.target?.editing.flatMap { $0.content.words == nil ? nil : $0 }
+  }
   /// The words of the line being changed, as it was sent.
   var editedWords: String? { editing?.content.words?.text }
-  var replyTo: Int64? { target?.replyTo }
-  /// Days to go with the next message (共有する日), sent first.
-  var attachedDays: [Day]?
-  /// Members picked from the list of names while writing, to be sent as
-  /// mentions while their @name stays.
-  var picked: [PickedMember] = []
-  /// Photos picked for the next send, waiting above the composer.
-  var photos: [PickedPhoto] = []
+  var replyTo: Int64? { writing.target?.replyTo }
   /// How many photos picked or pasted are still being read and shrunk,
   /// each taking its room in the tray until it is in.
   var comingPhotos = 0
   /// Picked photos are being read and shrunk: nothing is sent meanwhile.
   var readingPhotos: Bool { comingPhotos > 0 }
   /// How many more photos the tray has room for, up to Chat.photosPerSend.
-  var photoRoom: Int { Chat.photosPerSend - photos.count - comingPhotos }
+  var photoRoom: Int { Chat.photosPerSend - writing.photos.count - comingPhotos }
   /// The page of the words' first link, while writing.
   var preview: ComposerPreview?
-  /// A link whose page was taken off with ×, until sent or changed.
-  var previewRemoved: String?
   /// A word is being converted in the composer.
   var composing = false
   @ObservationIgnored let field = ComposerBox()
@@ -44,14 +36,16 @@ final class ChatDraft {
 
   /// What is written as a draft keeps it, its mentions as <@id>.
   var kept: KeptDraft {
-    KeptDraft(text: withMentions(text, picked: picked), target: target?.map(\.seq))
+    KeptDraft(
+      text: withMentions(writing.text, picked: writing.picked),
+      target: writing.target?.map(\.seq))
   }
 
   /// The page to send with `text`: its first link's, read and not taken
   /// off; none while it is still being asked for.
   func attachedPreview(for text: String) -> LinePreview? {
     guard let link = previewLink(text), let state = preview, state.url == link,
-      link != previewRemoved
+      link != writing.previewRemoved
     else { return nil }
     return state.preview
   }
@@ -98,7 +92,6 @@ struct ChatComposer: View {
   /// the chat as it is: taken back or its writer blocked, it says so.
   let quoteOf: (Int64) -> LineQuote
   let onSubmit: () -> Void
-  var onStopEditing: () -> Void = {}
   /// Keeps the draft as it is now (spec/chat.md, Drafts).
   let keepDraft: () -> Void
   /// 日にちを共有, in a group's chat.
@@ -159,7 +152,7 @@ struct ChatComposer: View {
     }
     // The member's own typing: at most every typingSendMs while the field
     // holds words, and a stop once it empties.
-    .onChange(of: draft.text) { _, words in
+    .onChange(of: draft.writing.text) { _, words in
       guard let threadID else { return }
       if words.isEmpty {
         draft.stopTyping(in: threadID, socket: groupSockets.client(place.id))
@@ -167,12 +160,14 @@ struct ChatComposer: View {
         draft.typed(in: threadID, socket: groupSockets.client(place.id))
       }
     }
-    .task(id: previewLink(draft.text)) { await readPreview(of: previewLink(draft.text)) }
+    .task(id: previewLink(draft.writing.text)) {
+      await readPreview(of: previewLink(draft.writing.text))
+    }
     // The draft is kept as it changes, once the writing pauses
     // (chatRules.draftSettleMs); an emptied
     // composer at once, so words sent are never a draft again.
     .task(id: draft.kept) {
-      if !draft.text.isEmpty {
+      if !draft.writing.text.isEmpty {
         do { try await Task.sleep(for: .milliseconds(Chat.draftSettleMs)) } catch { return }
       }
       keepDraft()
@@ -182,48 +177,51 @@ struct ChatComposer: View {
   /// The capsule: what the message is, then what goes with it, the photos
   /// last nearest the field, as /design's; the field and send under them.
   private var capsule: some View {
-    let trimmed = draft.text.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed = draft.writing.text.trimmingCharacters(in: .whitespacesAndNewlines)
     let editing = draft.editedWords
-    let unchanged = editing == withMentions(draft.text, picked: draft.picked)
+    let unchanged = editing == withMentions(draft.writing.text, picked: draft.writing.picked)
     let blocked =
       editing == nil
-      ? (trimmed.isEmpty && draft.photos.isEmpty && draft.attachedDays == nil) || draft.readingPhotos
+      ? (trimmed.isEmpty && draft.writing.photos.isEmpty && draft.writing.days == nil)
+        || draft.readingPhotos
       : trimmed.isEmpty || unchanged
     let shape = RoundedRectangle(cornerRadius: buttonSize / 2, style: .continuous)
     return VStack(spacing: 0) {
       if let editing {
         ComposerBar(
           title: "メッセージを編集", words: plainText(editing, nameOf: nameOf),
-          stop: "編集をやめる", onStop: onStopEditing)
+          stop: "編集をやめる") { draft.writing.stop() }
       }
       if let replyTo = draft.replyTo {
         ReplyBar(quote: quoteOf(replyTo), shelf: place.shelf) {
-          draft.target = nil
+          draft.writing.stop()
         }
       }
-      if editing == nil, let attachedDays = draft.attachedDays {
+      if editing == nil, let attachedDays = draft.writing.days {
         ComposerBar(
           title: "共有する日", words: daysSummary(attachedDays), stop: "共有をやめる"
         ) {
-          draft.attachedDays = nil
+          draft.writing.days = nil
         }
       }
-      if let preview = draft.preview, !preview.none, preview.url != draft.previewRemoved {
+      if let preview = draft.preview, !preview.none,
+        preview.url != draft.writing.previewRemoved
+      {
         ComposerPreviewBar(state: preview) {
-          draft.previewRemoved = preview.url
+          draft.writing.previewRemoved = preview.url
         }
       }
-      if editing == nil, !draft.photos.isEmpty {
-        PhotoTray(photos: $draft.photos)
+      if editing == nil, !draft.writing.photos.isEmpty {
+        PhotoTray(photos: $draft.writing.photos)
       }
       HStack(alignment: .bottom, spacing: 4) {
         ComposerField(
-          placeholder: "メッセージ", text: $draft.text, limit: TextLimits.chatMessage,
+          placeholder: "メッセージ", text: $draft.writing.text, limit: TextLimits.chatMessage,
           composing: $draft.composing, box: draft.field,
           // A message being changed keeps what it carries, as the tools go.
           onPasteImages: editing == nil ? { pastePhotos($0) } : nil)
         .overlay(alignment: .leading) {
-          if draft.text.isEmpty {
+          if draft.writing.text.isEmpty {
             Text("メッセージ")
               .foregroundStyle(colors.textQuaternary)
               .allowsHitTesting(false)
@@ -247,17 +245,17 @@ struct ChatComposer: View {
         .accessibilityLabel(editing == nil ? "送る" : "編集を保存")
         .animation(.easeOut(duration: 0.15), value: trimmed.isEmpty)
       }
-      if TextLimits.chatMessage - draft.text.count <= TextFields.countWhenLeft {
-        Text("\(draft.text.count)/\(TextLimits.chatMessage)")
+      if TextLimits.chatMessage - draft.writing.text.count <= TextFields.countWhenLeft {
+        Text("\(draft.writing.text.count)/\(TextLimits.chatMessage)")
           .font(.footnote.monospacedDigit())
           .foregroundStyle(
-            draft.composing && draft.text.count > TextLimits.chatMessage
+            draft.composing && draft.writing.text.count > TextLimits.chatMessage
               ? colors.dangerDefault : colors.textTertiary
           )
           .frame(maxWidth: .infinity, alignment: .trailing)
           .padding(.horizontal, 16)
           .padding(.bottom, 6)
-          .accessibilityLabel("\(TextLimits.chatMessage)文字中\(draft.text.count)文字")
+          .accessibilityLabel("\(TextLimits.chatMessage)文字中\(draft.writing.text.count)文字")
       }
     }
     // What comes in over the field (photos, a reply, a link's page) drawn
@@ -311,7 +309,7 @@ struct ChatComposer: View {
   /// The others to mention while an @ is being written at the end of the
   /// message: those in it now whose name has what follows the @.
   private var mentioned: [GroupMemberRow] {
-    mentionQuery(draft.text).map { query in
+    mentionQuery(draft.writing.text).map { query in
       mentionable.filter { query.isEmpty || $0.displayName.contains(query) }
     } ?? []
   }
@@ -319,16 +317,18 @@ struct ChatComposer: View {
   /// What the composer's height is made of now.
   private func shape(mentioning: Int) -> ComposerShape {
     let editing = draft.editing != nil
-    let preview = draft.preview.flatMap { $0.none || $0.url == draft.previewRemoved ? nil : $0 }
+    let preview = draft.preview.flatMap {
+      $0.none || $0.url == draft.writing.previewRemoved ? nil : $0
+    }
     return ComposerShape(
       editing: editing,
       replying: draft.replyTo != nil,
-      sharing: !editing && draft.attachedDays != nil,
+      sharing: !editing && draft.writing.days != nil,
       preview: preview,
-      photos: editing ? 0 : draft.photos.count,
+      photos: editing ? 0 : draft.writing.photos.count,
       mentioning: mentioning,
-      fieldHeight: draft.field.height(for: draft.text),
-      counted: TextLimits.chatMessage - draft.text.count <= TextFields.countWhenLeft)
+      fieldHeight: draft.field.height(for: draft.writing.text),
+      counted: TextLimits.chatMessage - draft.writing.text.count <= TextFields.countWhenLeft)
   }
 
   /// The others to mention, over the composer.
@@ -340,9 +340,10 @@ struct ChatComposer: View {
             Button {
               // The ＠ a Japanese keyboard is still converting is
               // confirmed first, so the field takes the name.
-              draft.text = pickingMention(draft.field.commit(), name: member.displayName)
-              draft.picked.removeAll { $0.id == member.userID }
-              draft.picked.append(PickedMember(id: member.userID, name: member.displayName))
+              draft.writing.text = pickingMention(draft.field.commit(), name: member.displayName)
+              draft.writing.picked.removeAll { $0.id == member.userID }
+              draft.writing.picked.append(
+                PickedMember(id: member.userID, name: member.displayName))
             } label: {
               HStack(spacing: 12) {
                 MemberAvatar(
@@ -407,9 +408,7 @@ struct ChatComposer: View {
       // pixels, on it, each would hold the screen still a moment.
       let thumbnail = await UIImage(data: shrunk.jpeg)?.byPreparingThumbnail(
         ofSize: CGSize(width: 128, height: 128))
-      if draft.photos.count < Chat.photosPerSend {
-        draft.photos.append(PickedPhoto(shrunk: shrunk, thumbnail: thumbnail))
-      }
+      draft.writing.pick(PickedPhoto(shrunk: shrunk, thumbnail: thumbnail))
     }
     if unreadable {
       say("開けない写真がありました")

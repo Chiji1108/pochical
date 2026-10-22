@@ -180,6 +180,30 @@ struct ChatVectors: Decodable, Sendable {
   let withdrawn: [Withdrawn]
   let draft: [Draft]
 
+  struct Composer: VectorCase {
+    /// The composer as the vectors keep it: its words as sent, the target
+    /// as two seqs, how many photos, and whether × took its link's page off.
+    struct Held: Decodable, Sendable, Equatable {
+      let text: String
+      var replyTo: Int64?
+      var editing: Int64?
+      var days: [String]?
+      var photos: Int?
+      var withoutPreview: Bool?
+    }
+    struct Step: Decodable, Sendable {
+      var reply: Int64?
+      var edit: Int64?
+      var stop: Bool?
+    }
+    let name: String
+    let composer: Held
+    let step: Step
+    let lines: [Draft.Line]
+    let expected: Held
+  }
+  let composer: [Composer]
+
   struct AlbumRows: VectorCase {
     let name: String
     let count: Int
@@ -242,6 +266,32 @@ func draftKept(_ vector: ChatVectors.Draft) {
     uniqueKeysWithValues: vector.lines.map { ($0.seq, $0.content) })
   let kept = keptDraft(vector.draft.kept) { lines[$0] }
   #expect(kept == vector.expected?.kept)
+}
+
+@Test(arguments: try vectors("chat", as: ChatVectors.self).composer)
+func composerSwitches(_ vector: ChatVectors.Composer) {
+  let nameOf = { (id: String) in id == "u2" ? "ゆき" : id }
+  let held = vector.composer
+  var writing = Writing<Int64, Int>()
+  writing.text = plainText(held.text, nameOf: nameOf)
+  writing.picked = mentions(in: held.text).map { PickedMember(id: $0, name: nameOf($0)) }
+  writing.target = DraftTarget(replyTo: held.replyTo, editing: held.editing)
+  writing.days = held.days?.compactMap(Day.init)
+  writing.photos = Array(0..<(held.photos ?? 0))
+  writing.previewRemoved = held.withoutPreview == true ? previewLink(held.text) : nil
+  if let seq = vector.step.reply {
+    writing.answer(seq)
+  } else if let seq = vector.step.edit, let line = vector.lines.first(where: { $0.seq == seq }) {
+    writing.change(seq, text: line.text ?? "", nameOf: nameOf)
+  } else {
+    writing.stop()
+  }
+  let text = withMentions(writing.text, picked: writing.picked)
+  let after = ChatVectors.Composer.Held(
+    text: text, replyTo: writing.target?.replyTo, editing: writing.target?.editing,
+    days: writing.days?.map(\.key), photos: writing.photos.isEmpty ? nil : writing.photos.count,
+    withoutPreview: writing.previewRemoved.flatMap { $0 == previewLink(text) ? true : nil })
+  #expect(after == vector.expected)
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).firstComing)

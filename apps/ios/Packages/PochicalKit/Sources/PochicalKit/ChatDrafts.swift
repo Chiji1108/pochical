@@ -55,6 +55,56 @@ extension DraftTarget where Edited == Int64 {
   }
 }
 
+/// What a chat's composer holds: the words as written (mentions as
+/// @name) with the members picked from the list of names, the line it
+/// answers or changes, the days brought to share (共有する日) and the
+/// photos picked, both sent before the words, and the link whose page ×
+/// took off, until sent or changed.
+public struct Writing<Edited: Hashable & Sendable, Photo> {
+  public var text = ""
+  public var picked: [PickedMember] = []
+  public var target: DraftTarget<Edited>?
+  public var days: [Day]?
+  public var photos: [Photo] = []
+  public var previewRemoved: String?
+
+  public init() {}
+
+  /// 返信: answering a line in place of changing one lets the edit go, and
+  /// its words with it, which were that line's; else what was written
+  /// stays, and what goes with it (spec/vectors/chat.json, composer).
+  public mutating func answer(_ seq: Int64) {
+    if target?.editing != nil { self = Self() }
+    target = .reply(seq)
+  }
+
+  /// 編集: the line's words (`text`, as sent) alone, its mentions as @name
+  /// again and still picked, in place of all that was written.
+  public mutating func change(_ line: Edited, text: String, nameOf: (String) -> String) {
+    self = Self()
+    target = .edit(line)
+    self.text = plainText(text, nameOf: nameOf)
+    picked = mentions(in: text).map { PickedMember(id: $0, name: nameOf($0)) }
+  }
+
+  /// × on the bar: an edit goes with its words; a reply's words stay, and
+  /// what goes with them.
+  public mutating func stop() {
+    if target?.editing != nil {
+      self = Self()
+    } else {
+      target = nil
+    }
+  }
+
+  /// A photo read into the tray, while it has room; one read after an
+  /// edit began has no message to go with, as an edit changes only words.
+  public mutating func pick(_ photo: Photo) {
+    guard target?.editing == nil, photos.count < Chat.photosPerSend else { return }
+    photos.append(photo)
+  }
+}
+
 /// What was being written in a chat: its words as they would be sent (its
 /// mentions as <@id>), and the line it answers or changes, by seq.
 public struct KeptDraft: Hashable, Sendable {
