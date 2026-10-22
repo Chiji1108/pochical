@@ -18,6 +18,6 @@
     "budoux": "^0.9.3",
     "react": "19.3.0",
     "svgpath": "^2.6.0",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   }
 }

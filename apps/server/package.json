@@ -27,7 +27,7 @@
     "@bufbuild/protoc-gen-es": "2.15.0",
     "@cloudflare/vitest-pool-workers": "0.22.0",
     "drizzle-kit": "^0.31.11",
-    "typescript": "~6.0.3",
+    "typescript": "~7.0.2",
     "vitest": "~4.1.11",
     "wrangler": "^4.141.0"
   }
