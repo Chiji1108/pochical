@@ -64,8 +64,8 @@ struct RootView: View {
   }
 
   var body: some View {
-    RootNavigation(navigator: navigator, tabs: hosted(tabs)) { page in
-      hosted(self.page(page).environment(\.photoShelf, page.photoShelf))
+    RootNavigation(navigator: navigator, tint: colors.accentDefault, tabs: hosted(tabs)) { page in
+      hosted(self.page(page).environment(\.photoShelf, navigator.photoShelf(of: page)))
     }
     .ignoresSafeArea()
     .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { barTop = $0 }
@@ -154,7 +154,7 @@ struct RootView: View {
   }
 
   private var tabs: some View {
-    TabView(selection: Binding { navigator.tab } set: { navigator.show([], over: $0) }) {
+    TabView(selection: Binding(get: { navigator.tab }, set: navigator.select)) {
       Tab("カレンダー", systemImage: "calendar", value: .calendar) {
         CalendarScreen()
       }
@@ -200,6 +200,8 @@ struct RootView: View {
       SupportChatScreen()
     case .photos(let photos):
       ChatPhotosScreen(photos: photos)
+    case .linked(let linked):
+      LinkedPageView(page: linked)
     }
   }
 

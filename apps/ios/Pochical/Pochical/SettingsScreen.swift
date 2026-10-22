@@ -28,7 +28,7 @@ struct SettingsScreen: View {
       // The patterns first: every way of working has them, and the
       // repeating order is made of them.
       Section("シフト") {
-        NavigationLink {
+        PageLink {
           PatternsPage()
         } label: {
           LabeledContent("シフトパターン") {
@@ -43,12 +43,12 @@ struct SettingsScreen: View {
           }
           .accessibilityValue("\(ownPatterns.count)つ")
         }
-        NavigationLink {
+        PageLink {
           RepeatPage()
         } label: {
           LabeledContent("繰り返し", value: repeatSummary(orders))
         }
-        NavigationLink {
+        PageLink {
           CoworkersPage()
         } label: {
           LabeledContent("一緒に働く人", value: "\(coworkerRows.count)人")
@@ -57,12 +57,12 @@ struct SettingsScreen: View {
       .settingsRows()
 
       Section("通知") {
-        NavigationLink {
+        PageLink {
           RemindersPage()
         } label: {
           LabeledContent("リマインド", value: remindersSummary)
         }
-        NavigationLink {
+        PageLink {
           ChatNotificationsPage()
         } label: {
           LabeledContent(
@@ -75,7 +75,7 @@ struct SettingsScreen: View {
       .settingsRows()
 
       Section("表示") {
-        NavigationLink {
+        PageLink {
           StyleSettings()
         } label: {
           // A look is shown rather than named, as /design's: one of the
@@ -90,12 +90,12 @@ struct SettingsScreen: View {
           }
           .accessibilityValue("\(styleName)、\(settings.device.theme.name)")
         }
-        NavigationLink {
+        PageLink {
           AppearanceSettings()
         } label: {
           LabeledContent("外観", value: appearanceName)
         }
-        NavigationLink {
+        PageLink {
           CalendarSettings()
         } label: {
           // The month as small text writes it, 10月 or Oct, saying
@@ -106,7 +106,7 @@ struct SettingsScreen: View {
               + Day.today.shortMonth(english: settings.device.heading.english))
         }
         // Outside the app, and changed least, so last.
-        NavigationLink {
+        PageLink {
           AppIconSettings()
         } label: {
           LabeledContent("アプリアイコン") {

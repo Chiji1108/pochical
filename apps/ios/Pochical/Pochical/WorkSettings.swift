@@ -76,7 +76,7 @@ struct RepeatPage: View {
     List {
       if orders.isEmpty {
         Section {
-          NavigationLink {
+          PageLink {
             RepeatEditor(mode: .first)
           } label: {
             LabeledContent("繰り返しを設定する", value: "なし")
@@ -88,13 +88,13 @@ struct RepeatPage: View {
       } else {
         // Over the newest first, where a new period mostly lands.
         Section {
-          NavigationLink {
+          PageLink {
             RepeatEditor(mode: .switch)
           } label: {
             Label("新しい繰り返しを追加", systemImage: "plus")
               .foregroundStyle(colors.accentDefault)
           }
-          NavigationLink {
+          PageLink {
             StopRepeatPage()
           } label: {
             Label {
@@ -123,13 +123,12 @@ struct RepeatPage: View {
       Section(title) {
         ForEach(indices, id: \.self) { index in
           let order = values.orders[index]
-          NavigationLink {
+          // The card draws its own arrow.
+          PageLink(indicator: false) {
             RepeatPeriodPage(start: order.start)
           } label: {
             OrderCard(order: order, period: periodText(values.orders, index), patterns: byID)
           }
-          // The card draws its own arrow.
-          .navigationLinkIndicatorVisibility(.hidden)
           .settingsOnPage()
           .listRowSeparator(.hidden)
           .padding(.bottom, index == indices.last ? 0 : 12)
@@ -221,7 +220,7 @@ private struct RepeatPeriodPage: View {
               SequenceTiles(sequence: order.sequence, patterns: byID)
             }
             .padding(.vertical, 6)
-            NavigationLink("カレンダーで直す") {
+            PageLink("カレンダーで直す") {
               RepeatEditor(mode: .fix(start))
             }
           }

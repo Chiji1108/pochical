@@ -15,14 +15,14 @@ import Testing
     let navigator = RootNavigator()
     navigator.show([photos("a"), .group(.newGroup)])
     #expect(navigator.replace(.group(.newGroup), with: photos("b")))
-    #expect(navigator.pages == [.root(photos("a")), .root(photos("b"))])
+    #expect(navigator.pages == [photos("a"), photos("b")])
   }
 
   @Test func aFlowsPageLeftTakesNobodyAnywhere() {
     let navigator = RootNavigator()
     navigator.show([photos("a")], over: .groups)
     #expect(!navigator.replace(.group(.newGroup), with: photos("b")))
-    #expect(navigator.pages == [.root(photos("a"))])
+    #expect(navigator.pages == [photos("a")])
     #expect(navigator.tab == .groups)
   }
 
@@ -30,13 +30,13 @@ import Testing
     let navigator = RootNavigator()
     navigator.show([photos("b"), photos("a"), .support])
     navigator.close("a")
-    #expect(navigator.pages == [.root(photos("b"))])
+    #expect(navigator.pages == [photos("b")])
   }
 
   @Test func aGroupLeftWhosePagesHaveGoneLeavesTheOthersOpen() {
     let navigator = RootNavigator()
     navigator.show([photos("b")])
     navigator.close("a")
-    #expect(navigator.pages == [.root(photos("b"))])
+    #expect(navigator.pages == [photos("b")])
   }
 }

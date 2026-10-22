@@ -23,6 +23,8 @@ enum RootPage: Hashable {
   case support
   /// A chat's photos alone, from its ⋯.
   case photos(PhotosOfChat)
+  /// A page a link in another opened (PageLink), drawn by that link.
+  case linked(LinkedPage)
 
   /// The chat the page is, for a chat opened again to be gone back to.
   var chat: OpenedChat? {
@@ -30,16 +32,19 @@ enum RootPage: Hashable {
     case .group(.chat(let group, let thread, _, _)):
       OpenedChat(groupID: group.id, threadID: thread)
     case .support: OpenedChat(groupID: ChatPlace.supportID, threadID: groupThread)
-    case .group, .photos: nil
+    case .group, .photos, .linked: nil
     }
   }
 
-  /// The place the page is of, whose socket is held while it shows.
+  /// The place the page is of, whose socket is held while it shows; none
+  /// for a linked page, which is of the place of the page it was opened
+  /// from.
   var placeID: String? {
     switch self {
     case .group(let route): route.group?.id
     case .support: ChatPlace.supportID
     case .photos(let photos): photos.placeID
+    case .linked: nil
     }
   }
 
@@ -48,18 +53,6 @@ enum RootPage: Hashable {
   var photoShelf: PhotoShelf? {
     guard let placeID, placeID != ChatPlace.supportID else { return nil }
     return .group(placeID)
-  }
-}
-
-/// A page on the stack over the tabs: one opened by the navigator, or one
-/// a NavigationLink in another opened, which SwiftUI pushes on the same
-/// stack, known by the controller it shows it in.
-enum StackPage: Hashable {
-  case root(RootPage)
-  case linked(ObjectIdentifier)
-
-  fileprivate var root: RootPage? {
-    if case .root(let page) = self { page } else { nil }
   }
 }
 
@@ -72,11 +65,11 @@ struct PhotosOfChat: Hashable {
 }
 
 /// The tab shown and the pages over it, bottom first, as the navigation
-/// has them (a link's and a back swipe included), and the way to open
-/// more.
+/// has them (a back swipe included), and the way to open more: every page
+/// over the tabs is pushed through it, so it can take any away again.
 @MainActor @Observable final class RootNavigator {
   private(set) var tab = RootTab.calendar
-  private(set) var pages: [StackPage] = []
+  private(set) var pages: [RootPage] = []
   @ObservationIgnored fileprivate weak var controller: RootNavigationController?
 
   /// Opens `page` over those open. A chat already open below, as when its
@@ -84,10 +77,19 @@ struct PhotosOfChat: Hashable {
   /// opened again with what it brings, rather than opened twice.
   func open(_ page: RootPage) {
     var kept = pages
-    if let chat = page.chat, let below = kept.firstIndex(where: { $0.root?.chat == chat }) {
+    if let chat = page.chat, let below = kept.firstIndex(where: { $0.chat == chat }) {
       kept.removeSubrange(below...)
     }
-    show(stack: kept + [.root(page)], over: nil)
+    show(kept + [page])
+  }
+
+  /// Goes to `tab`, as a tap on it does: the pages, none while the tab
+  /// bar shows, stay as they are. The TabView sets it back as it follows a
+  /// tab gone to from here, which changes nothing.
+  func select(_ tab: RootTab) {
+    guard tab != self.tab else { return }
+    self.tab = tab
+    controller?.show(pages, over: tab, animated: false)
   }
 
   /// Puts `next` in place of `page` and what was opened over it, the
@@ -95,26 +97,22 @@ struct PhotosOfChat: Hashable {
   /// メンバーを招待); nothing once `page` has gone, so a request that ends
   /// after the person left takes them nowhere. Whether it was there.
   func replace(_ page: RootPage, with next: RootPage) -> Bool {
-    guard let index = pages.lastIndex(of: .root(page)) else { return false }
-    show(stack: Array(pages[..<index]) + [.root(next)], over: nil)
+    guard let index = pages.lastIndex(of: page) else { return false }
+    show(Array(pages[..<index]) + [next])
     return true
   }
 
   /// Takes away the pages of a place gone, as a group left, and what they
   /// opened; the rest stay as they are.
   func close(_ placeID: String) {
-    guard let index = pages.firstIndex(where: { $0.root?.placeID == placeID }) else { return }
-    show(stack: Array(pages[..<index]), over: nil)
+    guard let index = pages.firstIndex(where: { $0.placeID == placeID }) else { return }
+    show(Array(pages[..<index]))
   }
 
   /// Shows `pages` over `tab`, and nothing else: a notification's chat
   /// over its tab, or a tab alone once a link opens it. Another tab is gone
   /// to at once, as a tap on it does, rather than with a push.
   func show(_ pages: [RootPage], over tab: RootTab? = nil) {
-    show(stack: pages.map(StackPage.root), over: tab)
-  }
-
-  private func show(stack pages: [StackPage], over tab: RootTab?) {
     let jump = tab.map { $0 != self.tab } ?? false
     if let tab { self.tab = tab }
     self.pages = pages
@@ -125,11 +123,18 @@ struct PhotosOfChat: Hashable {
   /// it shows: a linked page is of the place of the page it was opened
   /// from, and グループを作る of the tab's.
   var placeID: String? {
-    pages.lazy.compactMap { $0.root?.placeID }.last
+    pages.lazy.compactMap(\.placeID).last
   }
 
-  /// The pages as the navigation has them now, after a link or a back.
-  fileprivate func shown(_ pages: [StackPage]) {
+  /// The group whose photos `page`'s faces are: a linked page's are
+  /// those of the page it was opened from.
+  func photoShelf(of page: RootPage) -> PhotoShelf? {
+    guard case .linked = page else { return page.photoShelf }
+    return pages.prefix { $0 != page }.last { $0.placeID != nil }?.photoShelf
+  }
+
+  /// The pages as the navigation has them now, after a back.
+  fileprivate func shown(_ pages: [RootPage]) {
     if self.pages != pages { self.pages = pages }
   }
 }
@@ -147,6 +152,9 @@ extension EnvironmentValues {
 /// `hosted` puts the app's in it again.
 struct RootNavigation: UIViewControllerRepresentable {
   let navigator: RootNavigator
+  /// The テーマ's accent, for the bar's buttons, which UIKit draws: the
+  /// pages' own tint does not reach them.
+  let tint: Color
   let tabs: AnyView
   let page: (RootPage) -> AnyView
 
@@ -155,11 +163,13 @@ struct RootNavigation: UIViewControllerRepresentable {
     navigator.controller = controller
     controller.onShown = { [weak navigator] in navigator?.shown($0) }
     controller.show(navigator.pages, over: navigator.tab, animated: false)
+    controller.navigationBar.tintColor = UIColor(tint)
     return controller
   }
 
   func updateUIViewController(_ controller: RootNavigationController, context: Context) {
     navigator.controller = controller
+    controller.navigationBar.tintColor = UIColor(tint)
     controller.update(tabs: tabs, page: page)
   }
 }
@@ -167,7 +177,7 @@ struct RootNavigation: UIViewControllerRepresentable {
 final class RootNavigationController: UINavigationController, UINavigationControllerDelegate {
   private let tabs: UIHostingController<AnyView>
   private var page: (RootPage) -> AnyView
-  var onShown: ([StackPage]) -> Void = { _ in }
+  var onShown: ([RootPage]) -> Void = { _ in }
 
   init(tabs: AnyView, page: @escaping (RootPage) -> AnyView) {
     self.tabs = UIHostingController(rootView: tabs)
@@ -182,33 +192,27 @@ final class RootNavigationController: UINavigationController, UINavigationContro
     delegate = self
   }
 
-  /// The pages over the tabs, as each controller over them shows one.
-  private var shown: [StackPage] {
-    viewControllers.dropFirst().map {
-      ($0 as? PageHost).map { .root($0.page) } ?? .linked(ObjectIdentifier($0))
-    }
-  }
+  /// The hosts of the pages over the tabs.
+  private var hosts: [PageHost] { viewControllers.compactMap { $0 as? PageHost } }
 
   func update(tabs: AnyView, page: @escaping (RootPage) -> AnyView) {
     self.page = page
     self.tabs.rootView = tabs
-    for case let host as PageHost in viewControllers { host.rootView = page(host.page) }
+    for host in hosts { host.rootView = page(host.page) }
   }
 
   /// Puts `pages` over the tabs, keeping those already there in the same
   /// place, so a page under the one opened stays as it was. The calendar,
   /// which its month heads, has no bar: hidden only while it shows alone,
   /// so never as a page comes or goes.
-  func show(_ pages: [StackPage], over tab: RootTab, animated: Bool) {
-    let open = Array(viewControllers.dropFirst())
-    let openPages = shown
+  func show(_ pages: [RootPage], over tab: RootTab, animated: Bool) {
+    let open = hosts
     var kept = 0
-    while kept < min(open.count, pages.count), openPages[kept] == pages[kept] { kept += 1 }
+    while kept < min(open.count, pages.count), open[kept].page == pages[kept] { kept += 1 }
     if kept < open.count || kept < pages.count {
-      // A link's page above those kept went with the page it was opened
-      // from, and is not made again.
-      let made = pages[kept...].compactMap(\.root).map { PageHost(page: $0, view: page($0)) }
-      setViewControllers([tabs] + open[..<kept] + made, animated: animated && view.window != nil)
+      let made = pages[kept...].map { PageHost(page: $0, view: page($0)) }
+      let controllers: [UIViewController] = [tabs] + Array(open[..<kept]) + made
+      setViewControllers(controllers, animated: animated && view.window != nil)
     }
     setNavigationBarHidden(tab == .calendar && pages.isEmpty, animated: false)
   }
@@ -217,7 +221,7 @@ final class RootNavigationController: UINavigationController, UINavigationContro
     _ navigationController: UINavigationController, didShow viewController: UIViewController,
     animated: Bool
   ) {
-    onShown(shown)
+    onShown(hosts.map(\.page))
   }
 }
 

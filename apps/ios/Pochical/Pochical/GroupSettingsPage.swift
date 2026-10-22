@@ -32,7 +32,7 @@ struct GroupSettingsPage: View {
     let me = members.first { $0.userID == meID }
     List {
       Section {
-        NavigationLink {
+        PageLink {
           GroupEditPage(group: group)
         } label: {
           LabeledContent {
@@ -54,7 +54,7 @@ struct GroupSettingsPage: View {
 
       // /design's GroupProfileRow: the name, and whether it is the usual one.
       Section("このグループでのあなた") {
-        NavigationLink {
+        PageLink {
           if let me {
             DisplayNamePage(group: group, meID: me.userID, name: me.ownName ? me.name : "")
           }
@@ -228,7 +228,7 @@ private struct GroupEditPage: View {
         LabeledContent("グループ名") {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
-        NavigationLink {
+        PageLink {
           GroupMarkPage(name: name, mark: mark, shelf: .group(group.id)) { mark = $0 }
         } label: {
           LabeledContent("アイコン") {
