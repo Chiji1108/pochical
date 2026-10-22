@@ -71,9 +71,8 @@ export const weekTable = {
         true: {
           bg: "background.base",
           margin: "-8px 0 -8px",
-          // In from the sides as far as the weeks' columns: their border
-          // and room.
-          padding: "8px 5px 4px",
+          // In from the sides as far as the weeks keep their room.
+          padding: "8px 4px 4px",
           position: "sticky",
           top: "var(--pinned-top, -8px)",
           zIndex: 5,
