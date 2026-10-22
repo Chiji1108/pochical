@@ -74,9 +74,11 @@ import SQLiteData
   /// failed so far, for the app to say so.
   public private(set) var erasing: Erasing?
 
-  /// Which stretch of the account this is, moving on as the device signs
-  /// in as someone, and as their account changes or is erased: what the
-  /// screens of one stretch showed is not the next one's (AppRoot).
+  /// Which account the screens show, moving on as the device signs in as
+  /// someone, and as their account changes or is erased: what the screens
+  /// of one showed is not the next one's (AppRoot). A change that fails
+  /// leaves the device as it was, its screens too, so it does not move on
+  /// for one, and the failure is said where it was asked.
   public private(set) var generation = 0
 
   /// The signed-in user's id, as their groups know them: known offline,
@@ -228,7 +230,8 @@ import SQLiteData
   /// account; the user it was is deleted, tried again as the app comes back
   /// should that fail.
   public func useAccount(appleIDToken: String, nonce: String) async throws {
-    try await change { [server] before in
+    guard case .signedIn(let before) = state else { throw NotSignedIn() }
+    try await change(from: before) { [server] before in
       .switched(
         to: try await server.signInApple(idToken: appleIDToken, nonce: nonce, on: before.token))
     }
@@ -241,19 +244,53 @@ import SQLiteData
     guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials)
     else { throw NotSignedIn() }
     await userSocket.finishSending(as: credentials)
-    try await change { [server] before in
+    try await change(from: credentials) { [server] before in
       try await server.signOut(before.token)
       return .left(.signedOut)
     }
   }
 
-  /// アカウントを削除: the account and everything of it deleted on the
-  /// server, with Apple's fresh authorization code, and the device going on
-  /// as someone new, holding nothing of the user.
-  public func deleteAccount(appleAuthorizationCode: String) async throws {
-    try await change { [server] before in
-      try await server.deleteAccount(before.token, appleAuthorizationCode: appleAuthorizationCode)
-      return .left(.deleted)
+  /// アカウントを削除, only while signed in: Apple asked once more for a
+  /// fresh authorization code (`appleCode`, nil when the person cancels),
+  /// the account and everything of it deleted on the server with it, and
+  /// the device going on as someone new, holding nothing of the user.
+  /// False when the person canceled.
+  public func deleteAccount(appleCode: @MainActor () async throws -> String?)
+    async throws(DeletionFailure) -> Bool
+  {
+    guard case .signedIn(let asking) = state else { throw whyNotSignedIn }
+    let code: String
+    do {
+      guard let asked = try await appleCode() else { return false }
+      code = asked
+    } catch {
+      Logger.account.error("Asking Apple for a code failed: \(error)")
+      throw .appleUnconfirmed
+    }
+    do {
+      try await change(from: asking) { [server] before in
+        try await server.deleteAccount(before.token, appleAuthorizationCode: code)
+        return .left(.deleted)
+      }
+    } catch let failure as DeletionFailure {
+      throw failure
+    } catch is AccountChanged {
+      // The device is no longer the account Apple was asked for.
+      throw whyNotSignedIn
+    } catch {
+      Logger.account.error("Deleting the account failed: \(error)")
+      throw .serverFailed
+    }
+    return true
+  }
+
+  /// Why a deletion cannot go as the device is now, not signed in as the
+  /// account it was asked for.
+  private var whyNotSignedIn: DeletionFailure {
+    switch state {
+    case .starting: .notSignedIn
+    case .ended: .sessionEnded
+    case .signedIn, .changing, .erasing: .accountChanged
     }
   }
 
@@ -272,8 +309,17 @@ import SQLiteData
   /// user it was, whose session still holds. Once the server has ended the
   /// session (signed out, deleted) there is no going back: the device is
   /// erasing until both the session and its data are gone (`beginErasing`).
-  private func change(_ onServer: (Credentials) async throws -> Changed) async throws {
-    guard case .signedIn(let before) = state else { throw NotSignedIn() }
+  /// A deletion the server answers with a 401 ends the session as a
+  /// socket's 401 does (`sessionUnknown`), rather than going back to it.
+  /// Only from the stretch `before` it was asked in: one the account left
+  /// meanwhile (signed out, started afresh, while Apple was asked) is
+  /// refused (`AccountChanged`), so the user after it is never changed.
+  private func change(from before: Credentials, _ onServer: (Credentials) async throws -> Changed)
+    async throws
+  {
+    guard case .signedIn(let now) = state, now.generation == before.generation else {
+      throw AccountChanged()
+    }
     await leave(before)
     let changed: Changed
     do {
@@ -283,16 +329,24 @@ import SQLiteData
         try keychain.keepLeftBehind(before.token)
         try keychain.keep(after)
       }
+    } catch DeletionFailure.sessionEnded {
+      // As a socket's 401 would say before long.
+      endUnknown(before)
+      throw DeletionFailure.sessionEnded
     } catch {
       Logger.account.error("Changing the account failed: \(error)")
-      enter(StoredSession(token: before.token, userID: before.userID))
+      enter(StoredSession(token: before.token, userID: before.userID), asBefore: true)
       throw error
     }
     switch changed {
     case .switched(let after):
+      // The Keychain already has the user after, so a relaunch is them.
+      await places.forgetAccount()
       enter(after)
       Task { await deleteLeftBehind() }
     case .left(let why):
+      // Noted before anything is awaited: an app ended from here on
+      // starts erasing, never as the session the server ended.
       beginErasing(why)
     }
   }
@@ -313,6 +367,8 @@ import SQLiteData
     userID = nil
     shared?.removeObject(forKey: SignedInUser.key)
     Task {
+      // The places of the user before, paused as the change began.
+      await places.forgetAccount()
       var wait = Duration.seconds(1)
       while true {
         do {
@@ -354,21 +410,26 @@ import SQLiteData
     await onErase()
   }
 
-  /// A new stretch of the account, signed in as `session` or as no one.
+  /// A new stretch of the account, signed in as `session` or as no one;
+  /// for the screens too unless it goes on `asBefore`, as a change that
+  /// failed does (`generation`).
   @discardableResult
-  private func begin(_ session: StoredSession?) -> Credentials? {
-    defer { generation += 1 }
+  private func begin(_ session: StoredSession?, asBefore: Bool = false) -> Credentials? {
+    defer {
+      if !asBefore { generation += 1 }
+    }
     return current.begin(session)
   }
 
   /// Ends the stretch signed in as `before`: nothing it handed out is
-  /// current from here, and every socket closes.
+  /// current from here, and every socket closes, the places' holds kept
+  /// until the change is done, for a change that fails to open them again.
   private func leave(_ before: Credentials) async {
     state = .changing
-    begin(nil)
+    begin(nil, asBefore: true)
     before.content.invalidateAndCancel()
     await userSocket.stop()
-    await places.forgetAccount()
+    await places.pause()
   }
 
   // MARK: A session the server does not know
@@ -387,11 +448,18 @@ import SQLiteData
   /// A socket in the stretch `generation` was refused as a
   /// session the server does not know: every socket closes and the device
   /// keeps what it holds, its outbox too, saying so until the person
-  /// chooses, the Keychain keeping the session as ended for a relaunch. A
-  /// stretch already over says nothing of the one after it.
+  /// chooses. A stretch already over says nothing of the one after it.
   fileprivate func sessionUnknown(in generation: Int) {
     guard case .signedIn(let credentials) = state, credentials.generation == generation
     else { return }
+    endUnknown(credentials)
+  }
+
+  /// The session of `credentials`, which the server does not know, ended
+  /// until the person chooses, the Keychain keeping it so for a relaunch:
+  /// what its stretch handed out is not current from here, and the places'
+  /// sockets close (the user's stopped itself, or was by a change).
+  private func endUnknown(_ credentials: Credentials) {
     let ended = StoredSession(token: credentials.token, userID: credentials.userID, ended: true)
     do {
       try keychain.keep(ended)
@@ -402,7 +470,6 @@ import SQLiteData
     state = .ended(ended)
     begin(nil)
     credentials.content.invalidateAndCancel()
-    // The user's socket stopped itself; the places' close.
     ending = Task { await places.forgetAccount() }
   }
 
@@ -442,9 +509,10 @@ import SQLiteData
 
   // MARK: Signed in
 
-  /// A new stretch, signed in as `session`, its sockets connecting.
-  private func enter(_ session: StoredSession) {
-    guard let credentials = begin(session) else { return }
+  /// A new stretch, signed in as `session`, its sockets connecting; the
+  /// screens' account the same `asBefore`, after a change that failed.
+  private func enter(_ session: StoredSession, asBefore: Bool = false) {
+    guard let credentials = begin(session, asBefore: asBefore) else { return }
     state = .signedIn(credentials)
     userID = session.userID
     shared?.set(session.userID, forKey: SignedInUser.key)
@@ -540,7 +608,7 @@ import SQLiteData
     }
     do {
       try await server.deleteAccount(left, appleAuthorizationCode: "")
-    } catch is SessionUnknown {
+    } catch .sessionEnded {
     } catch {
       return
     }
