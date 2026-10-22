@@ -1640,7 +1640,6 @@ private final class LineCell: UICollectionViewCell {
     // (a reaction, a link's page, the words past 続きを読む) shows as the
     // cell grows, never over the line next to it first.
     clipsToBounds = true
-    contentView.autoresizingMask = []
   }
 
   /// Its line laid out whole, at once, at the cell's new size, so the
@@ -1653,7 +1652,7 @@ private final class LineCell: UICollectionViewCell {
   override func layoutSubviews() {
     UIView.performWithoutAnimation {
       super.layoutSubviews()
-      contentView.frame = bounds
+      contentView.frame = CGRect(origin: .zero, size: bounds.size)
       contentView.layoutIfNeeded()
     }
   }
