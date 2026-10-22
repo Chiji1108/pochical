@@ -2,7 +2,7 @@ import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { expect, vi } from "vitest";
+import { expect, onTestFinished, vi } from "vitest";
 
 import {
   ClientFrameSchema,
@@ -200,38 +200,53 @@ export const rosterIn = (frame: ServerFrame) =>
     ({ kind }) => kind.case === "groupProfile" || kind.case === "member"
   );
 
+/** How far ahead holdAlarms sets the clock, past any test's run. */
+const HELD_AHEAD_MS = 3_600_000;
+
 /**
- * Waits until the chat is told outside up to its newest line. An alarm
- * due now is the runtime's, which runs it at once, and is waited for; one
- * set for later, the relay's next try after a failure, is run here. The
- * two never run at once, as the runtime never runs two alarms at once.
+ * Holds every Durable Object alarm set from now on for the test to run.
+ * The code reads the time through Date, set ahead here until the test
+ * ends, so each alarm is for later by the runtime's own clock, and runs
+ * only as the test runs it (runDurableObjectAlarm), one at a time as the
+ * runtime runs them.
  */
-export const relayed = async (userId: string): Promise<void> => {
-  const place = env.GROUPS.getByName(supportPlace(userId));
-  const relay = async () =>
-    await runInDurableObject(place, async (_, state) => ({
-      alarm: await state.storage.getAlarm(),
-      behind: state.storage.sql
+export const holdAlarms = (): void => {
+  if (vi.isFakeTimers()) {
+    return;
+  }
+  vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ["Date"] });
+  vi.setSystemTime(Date.now() + HELD_AHEAD_MS);
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+};
+
+/** How many of the chat's lines are not yet told outside. */
+const untold = async (userId: string): Promise<number> =>
+  await runInDurableObject(
+    env.GROUPS.getByName(supportPlace(userId)),
+    (_, state) =>
+      state.storage.sql
         .exec<{ behind: number }>(
           "select count(*) as behind from chat_lines where cursor > coalesce((select cursor from support_relay), 0)"
         )
-        .one().behind,
-    }));
-  for (;;) {
-    // oxlint-disable-next-line no-await-in-loop -- each try after the last
-    const { behind } = await vi.waitFor(async () => {
-      const now = await relay();
-      expect(
-        now.behind === 0 || (now.alarm !== null && now.alarm > Date.now())
-      ).toBeTruthy();
-      return now;
-    });
-    if (behind === 0) {
-      return;
-    }
+        .one().behind
+  );
+
+/**
+ * Runs the chat's alarms, held by holdAlarms, until it is told outside
+ * up to its newest line: the try a change asks for, and each after a
+ * failure.
+ */
+export const relayed = async (userId: string): Promise<void> => {
+  const place = env.GROUPS.getByName(supportPlace(userId));
+  let behind = await untold(userId);
+  // oxlint-disable-next-line no-await-in-loop -- each try after the last
+  while (behind > 0 && (await runDurableObjectAlarm(place))) {
     // oxlint-disable-next-line no-await-in-loop -- as above
-    await runDurableObjectAlarm(place);
+    behind = await untold(userId);
   }
+  expect(behind).toBe(0);
 };
 
 type ChatKind = Extract<
@@ -240,10 +255,12 @@ type ChatKind = Extract<
 >["value"]["edits"];
 
 /**
- * The user's chat with Pochical's people, open on a device: each edit
- * sent as its outbox sends one, taken once acknowledged, then told outside.
+ * The user's chat with Pochical's people, open on a device, its alarms
+ * held (holdAlarms): each edit sent as its outbox sends one, taken once
+ * acknowledged, then told outside.
  */
 export const supportChat = async (token: string) => {
+  holdAlarms();
   const userId = await userIdOf(token);
   const { socket, frames } = await syncSocket("/v1/me/support/socket", token);
   await frames.next();
