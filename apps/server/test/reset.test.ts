@@ -1,8 +1,9 @@
-import { runInDurableObject } from "cloudflare:test";
+import { createExecutionContext, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it, vi } from "vitest";
 
+import { AdminEntrypoint } from "../src/admin-entrypoint";
 import { user } from "../src/db/auth-schema";
 import { reports } from "../src/db/schema";
 import { photoKey } from "../src/photos";
@@ -173,9 +174,12 @@ describe("erasing everything (全消去)", () => {
             })
           : getByName(name)
       );
-    await expect(
-      exports.AdminEntrypoint.reset("staff@pochical.app")
-    ).rejects.toThrow("unreachable");
+    // Called in this isolate, not over RPC, whose rejection workerd also
+    // reports as unhandled on the entrypoint's side.
+    const admin = new AdminEntrypoint(createExecutionContext(), env);
+    await expect(admin.reset("staff@pochical.app")).rejects.toThrow(
+      "unreachable"
+    );
     unreachable.mockRestore();
     const [latest] = await exports.AdminEntrypoint.actions();
     expect(latest).toMatchObject({ action: "reset", detail: "途中で止まった" });
