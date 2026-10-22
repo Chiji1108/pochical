@@ -76,7 +76,7 @@ private func synced(in db: Database) throws {
   try OwnValues.edit(dayChange("night"), opID: "a", in: db)
   var words = Pochical_V1_ChatSend()
   words.threadID = "t"
-  words.text = "行けそう"
+  words.content.words.text = "行けそう"
   try Chats.edit(.send(words), in: "g1", now: 1, db: db)
 }
 

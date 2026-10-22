@@ -443,7 +443,11 @@ describe("a support chat in Slack", () => {
       {
         kind: {
           case: "send",
-          value: { replyTo: 1n, text: longest, threadId: "group" },
+          value: {
+            content: { kind: { case: "words", value: { text: longest } } },
+            replyTo: 1n,
+            threadId: "group",
+          },
         },
         opId: crypto.randomUUID(),
       },
@@ -756,8 +760,14 @@ const sendPhoto = async (
       kind: {
         case: "send",
         value: {
-          photos: photoIds.map((id) => ({ height: 3, id, width: 4 })),
-          text: "",
+          content: {
+            kind: {
+              case: "photos",
+              value: {
+                photos: photoIds.map((id) => ({ height: 3, id, width: 4 })),
+              },
+            },
+          },
           threadId: "group",
         },
       },
@@ -988,7 +998,12 @@ describe("a line Slack took with its answer lost", () => {
           {
             kind: {
               case: "send",
-              value: { text: "まちがい", threadId: "group" },
+              value: {
+                content: {
+                  kind: { case: "words", value: { text: "まちがい" } },
+                },
+                threadId: "group",
+              },
             },
             opId: crypto.randomUUID(),
           },
@@ -1079,7 +1094,13 @@ const refusedOnce = async (token: string) => {
       value: {
         edits: [
           {
-            kind: { case: "send", value: { text, threadId: "group" } },
+            kind: {
+              case: "send",
+              value: {
+                content: { kind: { case: "words", value: { text } } },
+                threadId: "group",
+              },
+            },
             opId: crypto.randomUUID(),
           },
         ],

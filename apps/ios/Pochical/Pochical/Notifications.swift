@@ -159,7 +159,7 @@ nonisolated struct OpenedChat: Hashable, Sendable {
     read.lastReadSeq = UInt64(line.seq)
     var send = Pochical_V1_ChatSend()
     send.threadID = line.threadID
-    send.text = words
+    send.content.words.text = words
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     // The app may be woken for it after letting go of the database's
     // locks, or be letting go of them as it is: it holds them until sent,

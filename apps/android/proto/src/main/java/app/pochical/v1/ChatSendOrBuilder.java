@@ -24,101 +24,22 @@ public interface ChatSendOrBuilder extends
 
   /**
    * <pre>
-   * 1 to chatMessage characters, not blank; empty for days.
+   * What the line is to be: always one of the kinds a member sends.
    * </pre>
    *
-   * <code>string text = 2 [json_name = "text"];</code>
-   * @return The text.
+   * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
+   * @return Whether the content field is set.
    */
-  java.lang.String getText();
+  boolean hasContent();
   /**
    * <pre>
-   * 1 to chatMessage characters, not blank; empty for days.
+   * What the line is to be: always one of the kinds a member sends.
    * </pre>
    *
-   * <code>string text = 2 [json_name = "text"];</code>
-   * @return The bytes for text.
+   * <code>.pochical.v1.ChatSendContent content = 12 [json_name = "content"];</code>
+   * @return The content.
    */
-  com.google.protobuf.ByteString
-      getTextBytes();
-
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @return A list containing the days.
-   */
-  java.util.List<java.lang.String>
-      getDaysList();
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @return The count of days.
-   */
-  int getDaysCount();
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @param index The index of the element to return.
-   * @return The days at the given index.
-   */
-  java.lang.String getDays(int index);
-  /**
-   * <pre>
-   * 1 to SHARED_DAYS_MAX days (design/src/limits.ts), as YYYY-MM-DD,
-   * each once and in order; none for words.
-   * </pre>
-   *
-   * <code>repeated string days = 3 [json_name = "days"];</code>
-   * @param index The index of the element to return.
-   * @return The days at the given index.
-   */
-  com.google.protobuf.ByteString
-      getDaysBytes(int index);
-
-  /**
-   * <pre>
-   * The days put to the vote instead: 2 days at least, in the group chat.
-   * </pre>
-   *
-   * <code>bool poll = 4 [json_name = "poll"];</code>
-   * @return The poll.
-   */
-  boolean getPoll();
-
-  /**
-   * <pre>
-   * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come, when the server
-   * reads the page itself once the line is taken and adds it to the line.
-   * </pre>
-   *
-   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
-   * @return Whether the preview field is set.
-   */
-  boolean hasPreview();
-  /**
-   * <pre>
-   * The page of the words' first link, as GetLinkPreview gave it; none
-   * when the sender took it off (×) or it had not come, when the server
-   * reads the page itself once the line is taken and adds it to the line.
-   * </pre>
-   *
-   * <code>.pochical.v1.LinkPreview preview = 6 [json_name = "preview"];</code>
-   * @return The preview.
-   */
-  app.pochical.v1.LinkPreview getPreview();
+  app.pochical.v1.ChatSendContent getContent();
 
   /**
    * <pre>
@@ -129,16 +50,6 @@ public interface ChatSendOrBuilder extends
    * @return The replyTo.
    */
   long getReplyTo();
-
-  /**
-   * <pre>
-   * The sender took the page off (×): the line goes without one.
-   * </pre>
-   *
-   * <code>bool without_preview = 8 [json_name = "withoutPreview"];</code>
-   * @return The withoutPreview.
-   */
-  boolean getWithoutPreview();
 
   /**
    * <pre>
@@ -165,33 +76,4 @@ public interface ChatSendOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDeviceBytes();
-
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  java.util.List<app.pochical.v1.ChatPhoto> 
-      getPhotosList();
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  app.pochical.v1.ChatPhoto getPhotos(int index);
-  /**
-   * <pre>
-   * Photos instead, 1 to chatRules.photosPerSend, each once: the
-   * sender's own, uploaded first and not sent before. No words or days.
-   * </pre>
-   *
-   * <code>repeated .pochical.v1.ChatPhoto photos = 11 [json_name = "photos"];</code>
-   */
-  int getPhotosCount();
 }

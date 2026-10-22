@@ -565,63 +565,74 @@ const ownUnsentPhotos = (
         .map(({ id }) => id);
 
 /**
- * What a member's send is as a line, or none when it does not fit: its
- * words; its days with no words, a poll's two at least and in the group
- * chat (a one-to-one chat has no polls); or 1 to chatRules.photosPerSend
- * photos with neither, each once, each the sender's own, uploaded and not
- * sent before.
+ * What a member's send is as a line, or none when it does not fit: words
+ * that fit; days that fit, a poll's two at least and in the group chat (a
+ * one-to-one chat has no polls); or 1 to chatRules.photosPerSend photos,
+ * each once, each the sender's own, uploaded and not sent before.
  */
 const sentContent = (
   db: DrizzleSqliteDODatabase,
   userId: string,
-  { text, days, poll, photos, preview, threadId }: ChatSend
+  { content, threadId }: ChatSend
 ): SentContent | undefined => {
-  if (photos.length > 0) {
-    const ids = photos.map(({ id }) => id);
-    const fits =
-      text === "" &&
-      days.length === 0 &&
-      !poll &&
-      ids.length <= chatRules.photosPerSend &&
-      new Set(ids).size === ids.length &&
-      photos.every(
-        ({ width, height, thumbHash }) =>
-          fitsPhotoSize(width) &&
-          fitsPhotoSize(height) &&
-          fitsThumbHash(thumbHash)
-      ) &&
-      ownUnsentPhotos(db, userId, ids).length === ids.length;
-    return fits
-      ? {
-          kind: "photos",
-          photos: photos.map(({ height, id, thumbHash, width }) => ({
-            height,
-            id,
-            thumbHash: keptThumbHash(thumbHash),
-            width,
-          })),
-        }
-      : undefined;
+  const kind = content?.kind;
+  switch (kind?.case) {
+    case "words": {
+      const { text, preview } = kind.value;
+      return fitsLine(text)
+        ? {
+            edited: false,
+            kind: "words",
+            preview: sentPreview(preview, text),
+            text,
+          }
+        : undefined;
+    }
+    case "photos": {
+      const { photos } = kind.value;
+      const ids = photos.map(({ id }) => id);
+      const fits =
+        ids.length > 0 &&
+        ids.length <= chatRules.photosPerSend &&
+        new Set(ids).size === ids.length &&
+        photos.every(
+          ({ width, height, thumbHash }) =>
+            fitsPhotoSize(width) &&
+            fitsPhotoSize(height) &&
+            fitsThumbHash(thumbHash)
+        ) &&
+        ownUnsentPhotos(db, userId, ids).length === ids.length;
+      return fits
+        ? {
+            kind: "photos",
+            photos: photos.map(({ height, id, thumbHash, width }) => ({
+              height,
+              id,
+              thumbHash: keptThumbHash(thumbHash),
+              width,
+            })),
+          }
+        : undefined;
+    }
+    case "days": {
+      const { days } = kind.value;
+      return fitsDays(days) ? { days, kind: "days" } : undefined;
+    }
+    case "poll": {
+      const { days } = kind.value;
+      return threadId === GROUP_THREAD &&
+        days.length >= POLL_MIN_DAYS &&
+        fitsDays(days)
+        ? { days, decided: null, kind: "poll" }
+        : undefined;
+    }
+    case undefined: {
+      return undefined;
+    }
+    default: {
+      return kind satisfies never;
+    }
   }
-  if (days.length === 0) {
-    return !poll && fitsLine(text)
-      ? {
-          edited: false,
-          kind: "words",
-          preview: sentPreview(preview, text),
-          text,
-        }
-      : undefined;
-  }
-  if (text !== "" || !fitsDays(days)) {
-    return undefined;
-  }
-  if (!poll) {
-    return { days, kind: "days" };
-  }
-  return threadId === GROUP_THREAD && days.length >= POLL_MIN_DAYS
-    ? { days, decided: null, kind: "poll" }
-    : undefined;
 };
 
 /** The chat's last seq, 0 before any line. */
@@ -817,9 +828,9 @@ const placeTakes = (rules: ChatPlaceRules, kind: ChatEdit["kind"]): boolean => {
   }
   switch (kind.case) {
     case "send": {
+      const sent = kind.value.content?.kind.case;
       return (
-        (rules.days || kind.value.days.length === 0) &&
-        (rules.polls || !kind.value.poll)
+        (rules.days || sent !== "days") && (rules.polls || sent !== "poll")
       );
     }
     case "change": {
@@ -1312,11 +1323,15 @@ const takeSend = (
  * first, when the sender's app sent none and they did not take it off (×),
  * as when the line went before its preview came.
  */
-export const pageToRead = (send: ChatSend): string | undefined => {
-  if (send.preview !== undefined || send.withoutPreview) {
+export const pageToRead = ({ content }: ChatSend): string | undefined => {
+  if (content?.kind.case !== "words") {
     return undefined;
   }
-  const link = previewLinkOf(send.text);
+  const { preview, text, withoutPreview } = content.kind.value;
+  if (preview !== undefined || withoutPreview) {
+    return undefined;
+  }
+  const link = previewLinkOf(text);
   const url = link === undefined ? null : URL.parse(link);
   return url !== null && mayFetch(url) ? link : undefined;
 };

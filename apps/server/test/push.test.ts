@@ -15,7 +15,16 @@ const say = (socket: WebSocket, opId: string, text: string): void => {
     case: "chatEdits",
     value: {
       edits: [
-        { kind: { case: "send", value: { text, threadId: "group" } }, opId },
+        {
+          kind: {
+            case: "send",
+            value: {
+              content: { kind: { case: "words", value: { text } } },
+              threadId: "group",
+            },
+          },
+          opId,
+        },
       ],
     },
   });

@@ -57,7 +57,14 @@ const sendPhoto = (
           kind: {
             case: "send",
             value: {
-              photos: [{ height: size, id, thumbHash, width: size }],
+              content: {
+                kind: {
+                  case: "photos",
+                  value: {
+                    photos: [{ height: size, id, thumbHash, width: size }],
+                  },
+                },
+              },
               threadId: "group",
             },
           },
@@ -228,7 +235,13 @@ describe("a group's photos", () => {
       value: {
         edits: [
           {
-            kind: { case: "send", value: { text: "次", threadId: "group" } },
+            kind: {
+              case: "send",
+              value: {
+                content: { kind: { case: "words", value: { text: "次" } } },
+                threadId: "group",
+              },
+            },
             opId: "n",
           },
         ],
@@ -502,7 +515,13 @@ describe("a group's photo once stored", () => {
       value: {
         edits: [
           {
-            kind: { case: "send", value: { text: "次", threadId: "group" } },
+            kind: {
+              case: "send",
+              value: {
+                content: { kind: { case: "words", value: { text: "次" } } },
+                threadId: "group",
+              },
+            },
             opId: "n",
           },
         ],
