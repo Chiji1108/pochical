@@ -12,6 +12,7 @@
     },
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["bun", "node"],
+    "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
     "skipLibCheck": true,
