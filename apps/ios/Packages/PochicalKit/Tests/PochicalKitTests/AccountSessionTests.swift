@@ -108,10 +108,15 @@ private final class FakeAccountServer: AccountServer {
   let shared: UserDefaults
 
   init(kept: Data? = nil, owner: String? = nil) async throws {
+    try await self.init(
+      keychain: SessionKeychain(own: MemoryStore(kept), leftBehind: MemoryStore()), owner: owner)
+  }
+
+  init(keychain: SessionKeychain, owner: String? = nil) async throws {
     server = FakeAccountServer()
     sockets = try RefusingServer()
     let url = try await sockets.start()
-    keychain = SessionKeychain(own: MemoryStore(kept), leftBehind: MemoryStore())
+    self.keychain = keychain
     database = try appDatabase()
     // Left by another user: a coworker of theirs, still waiting to go.
     if let owner {
@@ -177,6 +182,34 @@ private final class FakeAccountServer: AccountServer {
   #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
   #expect(await eventually { made.socketTokens == ["anon-token-1"] })
   #expect(made.owner == "anon-1")
+}
+
+@MainActor @Test func aKeptSessionItCannotReadIsNoSession() async throws {
+  let made = try await Made(kept: Data("raw-token".utf8), owner: "old")
+  #expect(made.session.phase == .starting)
+
+  made.session.cameToFront()
+  #expect(await eventually { made.session.phase == .signedIn })
+  #expect(made.session.userID == "anon-1")
+  #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
+  // No session can send what the user before left, so it goes.
+  #expect(await eventually { made.owner == "anon-1" })
+  #expect(made.coworkers == 0)
+}
+
+@MainActor @Test func aKeychainItCannotReachIsWaitedForNotSignedInAnew() async throws {
+  let kept = try JSONEncoder().encode(StoredSession(token: "a", userID: "A"))
+  let own = MemoryStore(kept)
+  own.refusesToRead.withLock { $0 = true }
+  let made = try await Made(keychain: SessionKeychain(own: own, leftBehind: MemoryStore()))
+  #expect(made.session.phase == .starting)
+
+  made.session.cameToFront()
+  #expect(await eventually { own.reads.withLock { $0 } == 2 })
+  own.refusesToRead.withLock { $0 = false }
+  made.session.cameToFront()
+  #expect(await eventually { made.session.userID == "A" })
+  #expect(made.server.made.withLock { $0 } == 0)
 }
 
 @MainActor @Test func nothingConnectsWhileTheAccountSwitchesAndOnlyTheAccountAfter() async throws {
