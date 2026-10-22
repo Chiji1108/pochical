@@ -5,6 +5,7 @@ import { DurableObject } from "cloudflare:workers";
 import {
   and,
   count as rowCount,
+  desc,
   eq,
   gt,
   inArray,
@@ -688,6 +689,29 @@ export class UserDO extends DurableObject<Env> {
         .get();
     });
     broadcastChanges(this.ctx, [chatSettingsChange(changed)]);
+  }
+
+  /**
+   * The groups the user is in or has left, the latest joined first, as the
+   * admin site's page of them lists them (spec/admin.md, ユーザー).
+   */
+  groupsListed(): {
+    groupId: string;
+    name: string;
+    joinedAtMs: number;
+    leftAtMs: number | null;
+  }[] {
+    return this.db
+      .select()
+      .from(memberships)
+      .orderBy(desc(memberships.joinedAt))
+      .all()
+      .map((row) => ({
+        groupId: row.groupId,
+        joinedAtMs: row.joinedAt.getTime(),
+        leftAtMs: row.leftAt?.getTime() ?? null,
+        name: row.name,
+      }));
   }
 
   /** The usual name and photo, each empty before the user sets them. */

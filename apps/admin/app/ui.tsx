@@ -312,7 +312,7 @@ export const alert = css({
 export const danger = css({ color: "danger.default", fontWeight: 500 });
 
 /** A dialog over the page, the page dimmed behind it. */
-export const dialog = css({
+export const dialogStyle = css.raw({
   _backdrop: {
     backdropFilter: "blur(2px)",
     background: "scrim",
@@ -334,6 +334,7 @@ export const dialog = css({
   padding: "6",
   width: "calc(100% - 32px)",
 });
+export const dialog = css(dialogStyle);
 
 /** What a table holds when it holds nothing. */
 export function Empty({ children }: { children: ReactNode }) {
@@ -348,5 +349,48 @@ export function Empty({ children }: { children: ReactNode }) {
     >
       {children}
     </p>
+  );
+}
+
+/** Figures side by side, under each other on a narrow screen. */
+export const stats = css({
+  display: "grid",
+  gap: "3",
+  gridTemplateColumns: { base: "1fr", md: "repeat(3, 1fr)" },
+});
+
+/** One figure: what it is, it, and what it is made of. */
+export function Stat({
+  detail,
+  name,
+  value,
+}: {
+  detail?: ReactNode;
+  name: string;
+  value: ReactNode;
+}) {
+  return (
+    <div
+      className={css(cardStyle, {
+        display: "flex",
+        flexDirection: "column",
+        gap: "1",
+        paddingBlock: "4",
+        paddingInline: "5",
+      })}
+    >
+      <span className={meta}>{name}</span>
+      <span
+        className={css({
+          fontSize: "xl",
+          fontVariantNumeric: "tabular-nums",
+          fontWeight: 600,
+          letterSpacing: "-0.01em",
+        })}
+      >
+        {value}
+      </span>
+      {detail === undefined ? null : <span className={meta}>{detail}</span>}
+    </div>
   );
 }

@@ -2,7 +2,7 @@ import { chatRules } from "@pochical/design/chat";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
-import { signInAnonymously } from "./helpers";
+import { memberOf, signInAnonymously, userIdOf } from "./helpers";
 import { watchAlarms, relayed, supportChat, words } from "./sync-helpers";
 
 watchAlarms();
@@ -129,5 +129,53 @@ describe("what the admin site asks of the server", () => {
       .run();
     const reports = await exports.AdminEntrypoint.reports();
     expect(reports.some((report) => report.context === "宣伝")).toBeTruthy();
+  });
+
+  it("finds a user by the start of their id and gives their page", async () => {
+    const token = await memberOf(crypto.randomUUID());
+    const userId = await userIdOf(token);
+    await env.USERS.getByName(userId).setProfile("ハナ", "");
+    const { say } = await supportChat(token);
+    await say("使い方を教えて", "ポチカル 1.0・iPhone");
+    await env.DB.prepare(
+      "insert into reports (id, created_at, group_id, reporter_id, target_id, reason, context) values (?, ?, 'g', ?, 'someone', 'harassment', '言い過ぎ')"
+    )
+      .bind(crypto.randomUUID(), Date.now(), userId)
+      .run();
+    const admin = exports.AdminEntrypoint;
+
+    const found = await admin.users(userId.slice(0, 6));
+    expect(found.find((one) => one.userId === userId)).toMatchObject({
+      anonymous: true,
+      signIns: [],
+      unanswered: 1,
+    });
+    // An id's start is taken as it is: % matches no id.
+    await expect(admin.users("%")).resolves.toStrictEqual([]);
+
+    // The group tells the user's own DO of their place in it after it
+    // answers.
+    const groupsListed = async () => {
+      const listed = await admin.user(userId);
+      return listed?.groups.length;
+    };
+    await expect.poll(groupsListed).toBe(1);
+    const page = await admin.user(userId);
+    expect(page).toMatchObject({
+      anonymous: true,
+      groups: [{ leftAtMs: null, name: "テスト" }],
+      name: "ハナ",
+      reportsAbout: [],
+      reportsBy: [{ context: "言い過ぎ", targetId: "someone" }],
+      sessions: 1,
+      unanswered: 1,
+    });
+    expect(page?.supportChat).not.toBeNull();
+  });
+
+  it("gives no page for an id with no account, asking no DO", async () => {
+    await expect(
+      exports.AdminEntrypoint.user(crypto.randomUUID())
+    ).resolves.toBeNull();
   });
 });
