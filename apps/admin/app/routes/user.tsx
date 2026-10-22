@@ -71,7 +71,7 @@ export default function User({ loaderData: user }: Route.ComponentProps) {
           value={`${user.sessions} 台`}
         />
         <Stat
-          detail={`通報した ${user.reportsBy.length}、された ${user.reportsAbout.length}`}
+          detail={`通報した ${user.reportsByCount}、された ${user.reportsAboutCount}`}
           name="グループ"
           value={`${user.groups.filter((group) => group.leftAtMs === null).length}`}
         />
@@ -121,11 +121,15 @@ export default function User({ loaderData: user }: Route.ComponentProps) {
         </div>
       </section>
       <section className={section}>
-        <h2 className={sectionTitle}>通報されたもの</h2>
+        <h2 className={sectionTitle}>
+          {`通報されたもの（${user.reportsAboutCount}、新しい 200 件まで）`}
+        </h2>
         <ReportTable empty="通報されていません。" reports={user.reportsAbout} />
       </section>
       <section className={section}>
-        <h2 className={sectionTitle}>通報したもの</h2>
+        <h2 className={sectionTitle}>
+          {`通報したもの（${user.reportsByCount}、新しい 200 件まで）`}
+        </h2>
         <ReportTable empty="通報していません。" reports={user.reportsBy} />
       </section>
     </main>

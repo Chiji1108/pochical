@@ -91,6 +91,9 @@ export type UserPage = UserSummary & {
   /** What they reported, and what members reported of them. */
   reportsBy: ReportSummary[];
   reportsAbout: ReportSummary[];
+  /** How many there are of each, beyond the latest the lists hold. */
+  reportsByCount: number;
+  reportsAboutCount: number;
 };
 
 /** The most a list gives at once. */
@@ -295,8 +298,9 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
         )
       )
       .orderBy(desc(user.createdAt), desc(user.id))
-      .limit(PAGE);
-    const users = rows.map((row) => ({
+      // One past the page, to know whether another follows it.
+      .limit(PAGE + 1);
+    const users = rows.slice(0, PAGE).map((row) => ({
       anonymous: row.anonymous ?? false,
       createdAtMs: row.createdAt.getTime(),
       signIns: signInsIn(row.signIns),
@@ -305,9 +309,8 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     }));
     const last = users.at(-1);
     return {
-      // A full page may have more after it; one short of full has none.
       next:
-        users.length === PAGE && last !== undefined
+        rows.length > PAGE && last !== undefined
           ? { createdAtMs: last.createdAtMs, userId: last.userId }
           : null,
       users,
@@ -332,27 +335,38 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     if (row === undefined) {
       return null;
     }
-    const [own, signedIn, tokens, chat, by, about] = await Promise.all([
-      this.env.USERS.getByName(userId).adminView(),
-      db
+    const reportCount = async (where: SQL) => {
+      const counted = await db
         .select({ n: count() })
-        .from(session)
-        .where(eq(session.userId, userId))
-        .get(),
-      db
-        .select({ n: count() })
-        .from(pushTokens)
-        .innerJoin(session, eq(session.id, pushTokens.sessionId))
-        .where(eq(session.userId, userId))
-        .get(),
-      db
-        .select()
-        .from(supportChats)
-        .where(eq(supportChats.userId, userId))
-        .get(),
-      reportsWhere(this.env, eq(reports.reporterId, userId)),
-      reportsWhere(this.env, eq(reports.targetId, userId)),
-    ]);
+        .from(reports)
+        .where(where)
+        .get();
+      return counted?.n ?? 0;
+    };
+    const [own, signedIn, tokens, chat, by, about, byCount, aboutCount] =
+      await Promise.all([
+        this.env.USERS.getByName(userId).adminView(),
+        db
+          .select({ n: count() })
+          .from(session)
+          .where(eq(session.userId, userId))
+          .get(),
+        db
+          .select({ n: count() })
+          .from(pushTokens)
+          .innerJoin(session, eq(session.id, pushTokens.sessionId))
+          .where(eq(session.userId, userId))
+          .get(),
+        db
+          .select()
+          .from(supportChats)
+          .where(eq(supportChats.userId, userId))
+          .get(),
+        reportsWhere(this.env, eq(reports.reporterId, userId)),
+        reportsWhere(this.env, eq(reports.targetId, userId)),
+        reportCount(eq(reports.reporterId, userId)),
+        reportCount(eq(reports.targetId, userId)),
+      ]);
     return {
       anonymous: row.anonymous ?? false,
       createdAtMs: row.createdAt.getTime(),
@@ -360,7 +374,9 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       name: own.name,
       pushTokens: tokens?.n ?? 0,
       reportsAbout: about,
+      reportsAboutCount: aboutCount,
       reportsBy: by,
+      reportsByCount: byCount,
       sessions: signedIn?.n ?? 0,
       signIns: signInsIn(row.signIns),
       supportChat:
