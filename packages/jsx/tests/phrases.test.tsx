@@ -3,22 +3,17 @@ import { expect, test } from "bun:test";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+// The phrases every platform finds (spec/vectors); the iOS app's tests read
+// the same file.
+import vectors from "../../../spec/vectors/phrases.json";
 import { phrasesOf } from "../src/phrases";
 
-test("breaks Japanese between phrases, never inside a word", () => {
-  const phrases = phrasesOf(
-    "参加すると、あなたのシフトもメンバーに見えるようになります。"
-  );
-  expect(phrases.length).toBeGreaterThan(1);
-  expect(phrases.join("")).toBe(
-    "参加すると、あなたのシフトもメンバーに見えるようになります。"
-  );
-  expect(phrases.some((phrase) => phrase.includes("メンバー"))).toBe(true);
-});
-
-test("leaves text without Japanese whole", () => {
-  expect(phrasesOf("Pochical 1.0")).toEqual(["Pochical 1.0"]);
-});
+test.each(vectors.split)(
+  "splits $name as BudouX does",
+  ({ text, expected }) => {
+    expect(phrasesOf(text)).toEqual(expected);
+  }
+);
 
 test("marks the phrases of every element's Japanese with <wbr>", () => {
   expect(renderToStaticMarkup(<p>ページが見つかりません。</p>)).toBe(

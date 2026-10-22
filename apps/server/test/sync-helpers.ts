@@ -2,7 +2,7 @@ import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { beforeEach, expect, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, expect, vi } from "vitest";
 
 import {
   ClientFrameSchema,
@@ -201,7 +201,7 @@ export const rosterIn = (frame: ServerFrame) =>
     ({ kind }) => kind.case === "groupProfile" || kind.case === "member"
   );
 
-/** The group alarm as the code has it, run by watchAlarms' spy. */
+/** The group alarm as the code has it, run by watchAlarms. */
 // oxlint-disable-next-line typescript/unbound-method -- called with each group as this
 const groupAlarm = GroupDO.prototype.alarm;
 
@@ -228,38 +228,11 @@ const alarmsIn = (group: GroupDO): Alarms => {
   return alarms;
 };
 
-/** Whether the running test watches its alarms (watchAlarms). */
+/** Whether the running file watches its alarms (watchAlarms). */
 let watching = false;
 
-/**
- * Watches every group's alarm in each of the file's tests, for a test to
- * wait on: the runtime still runs each at its time, one at a time.
- */
-export const watchAlarms = (): void => {
-  beforeEach(() => {
-    vi.spyOn(GroupDO.prototype, "alarm").mockImplementation(
-      async function watched(this: GroupDO) {
-        const alarms = alarmsIn(this);
-        alarms.started += 1;
-        for (const wake of alarms.waiting) {
-          wake(undefined);
-        }
-        alarms.waiting.clear();
-        const run = groupAlarm.call(this);
-        alarms.running.add(run);
-        try {
-          await run;
-        } finally {
-          alarms.running.delete(run);
-        }
-      }
-    );
-    watching = true;
-    return () => {
-      watching = false;
-    };
-  });
-};
+/** The users whose chat with Pochical's people the running test opened. */
+const chatsOpened = new Set<string>();
 
 /** Waits until one of the group's alarms starts after the `after`th. */
 const alarmStarted = async (alarms: Alarms, after: number): Promise<void> => {
@@ -279,7 +252,9 @@ type Relay = { alarm: number | null; behind: number };
  * if any, for later. A due alarm is the runtime's to run, waited for as it
  * starts and ends; so is one the runtime has taken up but not yet started,
  * while the alarm reads as none though lines are untold, which a relay
- * never leaves. Waited for inside the place, where its alarms run.
+ * never leaves. Due by the runtime's clock, which runs alarms and sets one
+ * asked for earlier to now: a test holding Date still does not stop it.
+ * Waited for inside the place, where its alarms run.
  */
 const settledIn = async (
   group: GroupDO,
@@ -299,7 +274,7 @@ const settledIn = async (
         "select count(*) as behind from chat_lines where cursor > coalesce((select cursor from support_relay), 0)"
       )
       .one();
-    const due = alarm === null ? behind > 0 : alarm <= Date.now();
+    const due = alarm === null ? behind > 0 : alarm <= vi.getRealSystemTime();
     if (alarms.started === started && alarms.running.size === 0) {
       if (!due) {
         return { alarm, behind };
@@ -321,6 +296,48 @@ export const alarmsSettled = async (userId: string): Promise<Relay> =>
     placeOf(userId),
     async (group, state) => await settledIn(group, state.storage)
   );
+
+/** The group alarm run as the code has it, each start and end seen. */
+const watchedAlarm = async function watchedAlarm(this: GroupDO): Promise<void> {
+  const alarms = alarmsIn(this);
+  alarms.started += 1;
+  for (const wake of alarms.waiting) {
+    wake(undefined);
+  }
+  alarms.waiting.clear();
+  const run = groupAlarm.call(this);
+  alarms.running.add(run);
+  try {
+    await run;
+  } finally {
+    alarms.running.delete(run);
+  }
+};
+
+/**
+ * Watches every group's alarm in the file's tests, for a test to wait on:
+ * the runtime still runs each at its time, one at a time. Outside vi's
+ * mocks, so a test restoring its own leaves it in place. After each test,
+ * the chats it opened are left with no alarm running or due: a relay that
+ * outlived its test would call the next test's spies.
+ */
+export const watchAlarms = (): void => {
+  beforeAll(() => {
+    GroupDO.prototype.alarm = watchedAlarm;
+    watching = true;
+  });
+  afterEach(async () => {
+    for (const userId of chatsOpened) {
+      // oxlint-disable-next-line no-await-in-loop -- one chat at a time
+      await alarmsSettled(userId);
+    }
+    chatsOpened.clear();
+  });
+  afterAll(() => {
+    GroupDO.prototype.alarm = groupAlarm;
+    watching = false;
+  });
+};
 
 /**
  * The chat's next try, set for later after a failure, brought to now for
@@ -365,6 +382,7 @@ export const supportChat = async (token: string) => {
     throw new Error("supportChat waits on its chat's alarms: watchAlarms()");
   }
   const userId = await userIdOf(token);
+  chatsOpened.add(userId);
   const { socket, frames } = await syncSocket("/v1/me/support/socket", token);
   await frames.next();
   const takeEdits = async (edits: NonNullable<ChatKind>): Promise<void> => {

@@ -212,7 +212,7 @@ const closing = {
           </button>
         </h1>
         <p class={hero.description}>
-          勤務を選んで、日付をポチポチ。
+          ポチポチ押していくだけで、
           <br />
           ひと月ぶんが、すぐ埋まります。
           <br />
@@ -226,7 +226,7 @@ const closing = {
       <div class={hero.demo}>
         <HeroPhone client:idle />
         <p class={hero.hint}>
-          そのまま触れます。勤務を選んで、日付をポチッ。
+          そのまま触れます。シフトをポチッと押してみてください。
           <br />
           左右にスワイプすると、月が変わります。
         </p>
@@ -235,6 +235,24 @@ const closing = {
     {/* What else the app does, each beside its own screen: the real one,
        not touchable, so the page never drifts from the app. */}
     <ol aria-label="ポチカルでできること" class={feature.list}>
+      <li class={feature.row}>
+        <div class={feature.copy}>
+          <p class={feature.label}>REPEAT</p>
+          <h2 class={feature.title}>
+            決まった順番なら、
+            <br />
+            毎月入れなくていい。
+          </h2>
+          <p class={feature.body}>
+            当番・非番・休みも、工場の交代勤務も、
+            <br />
+            一度決めれば、毎月そのまま。
+            <br />
+            違う日だけ、ポチッと変えられます。
+          </p>
+        </div>
+        <FeatureScreen client:visible={NEAR} feature="repeat" />
+      </li>
       <li class={feature.row}>
         <div class={feature.copy}>
           <p class={feature.label}>SHARE</p>
@@ -249,7 +267,7 @@ const closing = {
             みんなが休みの日も、すぐ見つかります。
           </p>
         </div>
-        <FeatureScreen client:visible={NEAR} groupPage="shifts" tab="group" />
+        <FeatureScreen client:visible={NEAR} feature="share" />
       </li>
       <li class={feature.row}>
         <div class={feature.copy}>
@@ -265,7 +283,7 @@ const closing = {
             決まった日は、チャットのいちばん上に。
           </p>
         </div>
-        <FeatureScreen client:visible={NEAR} groupPage="chat" tab="group" />
+        <FeatureScreen client:visible={NEAR} feature="chat" />
       </li>
       <li class={feature.row}>
         <div class={feature.copy}>
