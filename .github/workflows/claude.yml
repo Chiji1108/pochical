@@ -29,6 +29,11 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
+          # claude-code-action gives git its own app token. A persisted
+          # GITHUB_TOKEN (contents: read) would win over it on push, since
+          # the action cannot remove checkout's includeIf credentials
+          # (anthropics/claude-code-action#907).
+          persist-credentials: false
 
       - name: Run Claude Code
         id: claude
