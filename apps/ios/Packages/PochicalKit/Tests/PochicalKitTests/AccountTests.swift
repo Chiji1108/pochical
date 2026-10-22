@@ -1,3 +1,4 @@
+import Connect
 import Foundation
 import PochicalProto
 import SQLiteData
@@ -187,5 +188,31 @@ private let server = URL(string: "http://localhost:8787")!
     // No one's now: the next user claims it.
     #expect(try SyncState.claim(for: "u2", in: db))
     #expect(try !SyncState.claim(for: "u1", in: db))
+  }
+}
+
+@Test func whatTheServerAnsweredADeletionWithIsWhyItFailed() {
+  let offline = NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet)
+  let unreachable = NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotConnectToHost)
+  let timedOut = NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)
+  // Connect gives these .unknown, but no server answered either.
+  let noDNS = NSError(domain: NSURLErrorDomain, code: NSURLErrorDNSLookupFailed)
+  let cases: [(ConnectError, DeletionFailure)] = [
+    (ConnectError(code: .unauthenticated, message: nil), .sessionEnded),
+    (ConnectError(code: .failedPrecondition, message: "Apple did not take the code"), .appleRefused),
+    (ConnectError(code: .unavailable, message: nil, exception: offline), .offline),
+    (ConnectError(code: .unavailable, message: nil, exception: unreachable), .offline),
+    (ConnectError(code: .deadlineExceeded, message: nil, exception: timedOut), .offline),
+    (ConnectError(code: .unknown, message: nil, exception: noDNS), .offline),
+    // Connect's own timeout.
+    (ConnectError(code: .deadlineExceeded, message: "request exceeded allowed timeout"), .offline),
+    (ConnectError(code: .canceled, message: nil, exception: URLError(.cancelled)), .serverFailed),
+    // A 503 is the server's own answer, not the network's.
+    (ConnectError(code: .unavailable, message: nil), .serverFailed),
+    (ConnectError(code: .internalError, message: nil), .serverFailed),
+    (ConnectError(code: .unknown, message: nil), .serverFailed),
+  ]
+  for (error, failure) in cases {
+    #expect(DeletionFailure(error) == failure, "\(error.code)")
   }
 }

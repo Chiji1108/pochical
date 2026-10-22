@@ -46,6 +46,10 @@ private final class FakeAccountServer: AccountServer {
   let asked = Mutex(Asked())
   let made = Mutex(0)
   let refusing = Mutex<Set<String>>([])
+  /// How deleting the account fails, when it does.
+  let deletion = Mutex<DeletionFailure?>(nil)
+  /// Called as a deletion succeeds, before its answer is back.
+  let whenDeleted = Mutex<(@Sendable () -> Void)?>(nil)
   /// Each call named here waits at its gate.
   let gates = Mutex<[String: Gate]>([:])
 
@@ -91,9 +95,11 @@ private final class FakeAccountServer: AccountServer {
     return ("of-\(token)", false)
   }
 
-  func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws {
-    try await reach("deleteAccount")
+  func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws(DeletionFailure)
+  {
+    if let failure = deletion.withLock({ $0 }) { throw failure }
     asked.withLock { $0.deleted.append(token) }
+    whenDeleted.withLock { $0 }?()
   }
 }
 
@@ -341,7 +347,9 @@ private final class FakeAccountServer: AccountServer {
   #expect(await eventually { made.sockets.asked > 0 })
   try await made.addCoworker()
 
-  try await made.session.deleteAccount(appleAuthorizationCode: "code")
+  let shown = made.session.generation
+  #expect(try await made.session.deleteAccount(appleCode: { "code" }))
+  #expect(made.session.generation != shown)
   #expect(made.server.asked.withLock(\.deleted) == ["a"])
   #expect(await eventually { made.session.userID == "anon-1" })
   #expect(made.coworkers == 0)
@@ -409,7 +417,7 @@ private final class FakeAccountServer: AccountServer {
   own.refusesToForget.withLock { $0 = true }
   made.session.cameToFront()
 
-  try await made.session.deleteAccount(appleAuthorizationCode: "code")
+  #expect(try await made.session.deleteAccount(appleCode: { "code" }))
   #expect(made.session.phase == .erasing)
   #expect(await eventually { made.session.erasing?.failed == true })
   // The Keychain still has it, but it is not signed in as.
@@ -543,4 +551,151 @@ private final class FakeAccountServer: AccountServer {
   let started = clock.now
   await #expect(throws: NotSignedIn.self) { try await calls.headers() }
   #expect(clock.now - started < .seconds(1))
+}
+
+@MainActor @Test func deletingAsksAppleOnlyOnceSignedIn() async throws {
+  let made = try await Made()
+  #expect(made.session.phase == .starting)
+  var asked = false
+  await #expect(throws: DeletionFailure.notSignedIn) {
+    try await made.session.deleteAccount(appleCode: {
+      asked = true
+      return "code"
+    })
+  }
+  #expect(!asked)
+  #expect(made.server.asked.withLock(\.deleted).isEmpty)
+}
+
+@MainActor @Test func deletingThatThePersonCancelsAtAppleDoesNothing() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  #expect(try await !made.session.deleteAccount(appleCode: { nil }))
+  #expect(made.server.asked.withLock(\.deleted).isEmpty)
+  #expect(made.session.phase == .signedIn)
+}
+
+@MainActor @Test func appleFailingToGiveACodeIsSaidSoAndNothingIsAsked() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  await #expect(throws: DeletionFailure.appleUnconfirmed) {
+    try await made.session.deleteAccount(appleCode: { throw Refused() })
+  }
+  #expect(made.server.asked.withLock(\.deleted).isEmpty)
+  #expect(made.session.phase == .signedIn)
+}
+
+@MainActor @Test func aDeletionTheServerRefusesLeavesTheDeviceSignedInAsBefore() async throws {
+  for failure in [DeletionFailure.appleRefused, .offline, .serverFailed] {
+    let made = try await Made.signedIn(as: "a", "A")
+    try await made.addCoworker()
+    let shown = made.session.generation
+    made.server.deletion.withLock { $0 = failure }
+    await #expect(throws: failure) {
+      try await made.session.deleteAccount(appleCode: { "code" })
+    }
+    #expect(made.session.phase == .signedIn)
+    #expect(made.session.userID == "A")
+    #expect(try made.session.current.credentials().token == "a")
+    #expect(made.coworkers == 1)
+    // The screens stay, to say why where it was asked.
+    #expect(made.session.generation == shown)
+  }
+}
+
+@MainActor @Test func aDeletionOfASessionTheServerDoesNotKnowEndsItAsA401Does() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  try await made.addCoworker()
+  made.server.deletion.withLock { $0 = .sessionEnded }
+  await #expect(throws: DeletionFailure.sessionEnded) {
+    try await made.session.deleteAccount(appleCode: { "code" })
+  }
+  #expect(made.session.phase == .ended)
+  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A", ended: true))
+  #expect(throws: NotSignedIn.self) { try made.session.current.credentials() }
+  #expect(made.coworkers == 1)
+}
+
+@MainActor @Test func theUserAfterAnAccountThatChangesWhileAppleIsAskedIsNotDeleted() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  made.session.cameToFront()
+  await #expect(throws: DeletionFailure.accountChanged) {
+    try await made.session.deleteAccount(appleCode: {
+      // Signed out in another window, and signed in afresh as a new user.
+      try await made.session.signOut()
+      #expect(await eventually { made.session.phase == .signedIn })
+      return "code"
+    })
+  }
+  #expect(made.session.userID == "anon-1")
+  #expect(made.session.phase == .signedIn)
+  #expect(made.server.asked.withLock(\.deleted).isEmpty)
+}
+
+@MainActor @Test func aSessionThatEndsWhileAppleIsAskedIsSaidSoNotAsAnotherAccount() async throws {
+  let made = try await Made.signedIn(as: "a", "A", socketStatus: "401 Unauthorized")
+  await #expect(throws: DeletionFailure.sessionEnded) {
+    try await made.session.deleteAccount(appleCode: {
+      // A socket's 401 while Apple is asked.
+      made.session.cameToFront()
+      #expect(await eventually { made.session.phase == .ended })
+      return "code"
+    })
+  }
+  #expect(made.server.asked.withLock(\.deleted).isEmpty)
+}
+
+@MainActor @Test func aPlaceHeldOpensAgainAfterADeletionThatFailed() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  _ = await made.session.hold("g1")
+  #expect(await eventually { made.sockets.asked > 0 })
+  let seen = made.sockets.asked
+  made.server.deletion.withLock { $0 = .offline }
+  await #expect(throws: DeletionFailure.offline) {
+    try await made.session.deleteAccount(appleCode: { "code" })
+  }
+  #expect(await eventually { made.sockets.asked > seen })
+}
+
+/// The session an app started again would be, made while the one before
+/// is cut off.
+@MainActor private final class Relaunched {
+  var session: AccountSession?
+}
+
+@MainActor @Test func anAppEndedJustAfterTheServerDeletedFinishesErasingAsItStartsAgain() async throws {
+  let made = try await Made.signedIn(as: "a", "A")
+  #expect(await eventually { made.owner == "A" })
+  try await made.addCoworker()
+  // The session before cannot finish erasing, as an app ended cannot.
+  try await made.database.write { db in
+    try db.execute(
+      sql: #"CREATE TRIGGER "keep" BEFORE DELETE ON "coworkers" BEGIN SELECT RAISE(ABORT, 'kept'); END"#)
+  }
+  _ = await made.session.hold("g1")
+  let relaunched = Relaunched()
+  // Main-actor jobs run in order: the inner one runs once the deletion's
+  // answer is back and the session first waits after it, where an app
+  // ended then would stop.
+  made.server.whenDeleted.withLock {
+    $0 = {
+      Task { @MainActor in
+        Task { @MainActor in
+          relaunched.session = AccountSession(
+            database: made.database, server: made.server, keychain: made.keychain,
+            shared: made.shared, eraseFiles: {})
+        }
+      }
+    }
+  }
+  #expect(try await made.session.deleteAccount(appleCode: { "code" }))
+  #expect(await eventually { relaunched.session != nil })
+  let again = try #require(relaunched.session)
+  // Started again erasing, not as the session the server deleted.
+  #expect(again.erasing?.why == .deleted)
+  #expect(again.userID == nil)
+  try await made.database.write { try $0.execute(sql: #"DROP TRIGGER "keep""#) }
+  again.cameToFront()
+  again.eraseAgain()
+  #expect(await eventually { again.erasing == nil })
+  #expect(made.coworkers == 0)
+  #expect(try made.keychain.kept()?.userID != "A")
 }
