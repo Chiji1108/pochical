@@ -85,7 +85,7 @@ struct AccountPage: View {
       case .notDeleted(.offline):
         "サーバーに接続できませんでした。インターネット接続を確かめて、もう一度お試しください。"
       case .notDeleted(.appleUnconfirmed):
-        "Appleで確認できませんでした。もう一度お試しください。"
+        "Appleで確認できませんでした。インターネット接続を確かめて、もう一度お試しください。"
       case .notDeleted(.appleRefused):
         "このアカウントのApple IDか確かめられませんでした。ログインしたときと同じApple IDで、もう一度お試しください。"
       case .notDeleted(.serverFailed), .notDeleted(.sessionEnded), .notSignedOut:

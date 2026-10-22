@@ -56,7 +56,7 @@ What the device holds may be a few taps tried before signing in, or months of sh
 アカウントを削除 and ログアウト are offered only while the device has its session: before its first sign-in reaches the server (offline at a first launch, or a Keychain it could not read), both are disabled, saying インターネットにつながると、ログアウトとアカウントの削除ができます。, rather than failing after Apple was asked. A deletion that fails says why, titled アカウントを削除できませんでした, and what to do next, nothing on the device changed (iOS: `DeletionFailure`):
 
 - Still no session, as the account changed while Apple was asked: まだサーバーにつながっていません。少し待ってから、もう一度お試しください。
-- Apple gave no code (the person canceling says nothing): Appleで確認できませんでした。もう一度お試しください。
+- Apple gave no code (the person canceling says nothing): Appleで確認できませんでした。インターネット接続を確かめて、もう一度お試しください。
 - The server refused it (`FAILED_PRECONDITION`, step 1): このアカウントのApple IDか確かめられませんでした。ログインしたときと同じApple IDで、もう一度お試しください。
 - The server was not reached (no answer: offline, timed out, the connection dropped): サーバーに接続できませんでした。インターネット接続を確かめて、もう一度お試しください。
 - Any other error of the server's: 時間をおいて、もう一度お試しください。, a deletion cut off part way finishing as it is tried again.
