@@ -10,10 +10,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2024"],
-    "types": [
-      "./worker-configuration.d.ts",
-      "@cloudflare/vitest-pool-workers/types"
-    ],
+    "types": ["./worker-configuration.d.ts", "@cloudflare/vitest-plugin/types"],
     "verbatimModuleSyntax": true,
     // drizzle-kit writes the Group DO's migrations as JS importing JSON.
     "allowJs": true,
