@@ -76,8 +76,10 @@ import {
   notePhoto,
   noteSharedPhoto,
   oldestStalePhoto,
+  photosTakingBack,
   revivedPhotos,
   settleSwept,
+  settleTakenBack,
   showOwnPhoto,
 } from "./group-photos";
 import type { PhotoNote } from "./group-photos";
@@ -90,7 +92,14 @@ import {
   takeMemberRepeatOrders,
 } from "./group-shifts";
 import { linkPreview } from "./link-preview";
-import { copyPersonPhoto, deleteGroupPhotos } from "./photos";
+import {
+  copyPersonPhoto,
+  CREATE_ONLY,
+  deleteGroupPhotos,
+  deletePhotosUnder,
+  photoKey,
+  smallKey,
+} from "./photos";
 import { overLimit } from "./rate-limits";
 import { retryWait } from "./retry-wait";
 import { supportPlace } from "./support-lines";
@@ -147,6 +156,13 @@ const readerKey = (threadId: string, userId: string): string =>
 // the most; it never stops, as the two must come to agree.
 export const NEWS_RETRY_FIRST_MS = 10_000;
 const NEWS_RETRY_MOST_MS = 3_600_000;
+
+// After a sweep of the photos fails at storage, the alarm sweeps again
+// after this long, twice as long each time in a row, up to the most; it
+// never stops, as R2 must come to hold only what the group notes.
+const SWEEP_RETRY_FIRST_MS = 10_000;
+const SWEEP_RETRY_MOST_MS = 3_600_000;
+const SWEEP_FAILURES = "photoSweepFailures";
 
 /**
  * How a join went: in now, in already, kept out of a full group, or of
@@ -217,6 +233,14 @@ export class GroupDO extends DurableObject<Env> {
   // Set when a support chat's change asks for its relay, so a relay
   // running meanwhile leaves the next alarm to it.
   private relayRequested = false;
+  // The writes to R2 of photos noted and not stored yet: the sweep waits
+  // on those running as it marks photos going before it deletes them, so
+  // none lands after the delete. Each is added in the turn its note is
+  // written.
+  private readonly storing = new Set<Promise<unknown>>();
+  // Set while the group is erased: no photo is noted meanwhile, so none is
+  // stored after its photos are deleted.
+  private erasing = false;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -240,15 +264,17 @@ export class GroupDO extends DurableObject<Env> {
    * would find it still stored, store nothing, and lose it as R2 deletes.
    */
   async deleteOrphanPhotos(orphans: Orphan[]): Promise<OwnerCleanup> {
-    return await this.ctx.blockConcurrencyWhile(
-      async () =>
-        await deleteGroupOrphans(
-          this.db,
-          this.env.PHOTOS,
-          this.ctx.id.name ?? "",
-          orphans
-        )
-    );
+    return await this.ctx.blockConcurrencyWhile(async () => {
+      const cleanup = deleteGroupOrphans(
+        this.db,
+        this.env.PHOTOS,
+        this.ctx.id.name ?? "",
+        orphans
+      );
+      // In the turn its notes of photos being taken back were written.
+      this.sweepIf(true);
+      return await cleanup;
+    });
   }
 
   /** The group's name and mark, or null before the group is set up. */
@@ -409,7 +435,7 @@ export class GroupDO extends DurableObject<Env> {
     if (changed?.row === undefined) {
       return false;
     }
-    this.dropPhotos(changed.gone);
+    this.sweepIf(changed.gone);
     broadcastChanges(this.ctx, [memberChange(changed.row)]);
     return true;
   }
@@ -472,7 +498,7 @@ export class GroupDO extends DurableObject<Env> {
     if (left === undefined) {
       return;
     }
-    this.dropPhotos(left.gone);
+    this.sweepIf(left.gone);
     closeUserSockets(this.ctx, userId);
     broadcastChanges(this.ctx, [memberChange(left.row), left.notice]);
   }
@@ -484,7 +510,7 @@ export class GroupDO extends DurableObject<Env> {
    * votes taken off. Whether no one is left in the group, which then goes
    * whole (`erase`).
    */
-  async deleteMember(userId: string): Promise<boolean> {
+  deleteMember(userId: string): boolean {
     const taken = this.ctx.storage.transactionSync(() => {
       const known = this.db
         .select()
@@ -532,17 +558,18 @@ export class GroupDO extends DurableObject<Env> {
       }
       // Their lines' photos, and the photos the group showed of them
       // unless it shows them still.
-      const photosGone = [
-        ...chat.photosGone,
-        ...forgetUnshown(this.db, [known.usualPhoto, known.ownPhoto]),
-      ];
-      return { ...chat, photosGone, row };
+      const unshown = forgetUnshown(this.db, [
+        known.usualPhoto,
+        known.ownPhoto,
+      ]);
+      return {
+        ...chat,
+        photosGoing: chat.photosGone.length > 0 || unshown,
+        row,
+      };
     });
     if (taken !== undefined) {
-      const groupId = this.ctx.id.name;
-      if (groupId !== undefined && taken.photosGone.length > 0) {
-        await deleteGroupPhotos(this.env, groupId, taken.photosGone);
-      }
+      this.sweepIf(taken.photosGoing);
       closeUserSockets(this.ctx, userId);
       broadcastChanges(
         this.ctx,
@@ -563,9 +590,14 @@ export class GroupDO extends DurableObject<Env> {
    * alarm goes on telling. Nothing reaches it until its tables are back.
    */
   async erase(): Promise<void> {
+    this.erasing = true;
+    await Promise.allSettled(this.storing);
     await this.ctx.blockConcurrencyWhile(async () => {
       closeUserSockets(this.ctx);
       const untold = this.db.select().from(membershipOutbox).all();
+      // Its photos first, while its notes of them stay: cut off part way,
+      // the erase is run again, and R2 never keeps what nothing notes.
+      await deletePhotosUnder(this.env, `groups/${this.ctx.id.name ?? ""}/`);
       await this.ctx.storage.deleteAlarm();
       await this.ctx.storage.deleteAll();
       // Empty, not broken: its tables again, for whatever still asks.
@@ -575,6 +607,7 @@ export class GroupDO extends DurableObject<Env> {
         await this.wakeBy(Date.now());
       }
     });
+    this.erasing = false;
   }
 
   /** Closes a member's sockets opened with a session that has ended. */
@@ -696,7 +729,7 @@ export class GroupDO extends DurableObject<Env> {
       return { changes: [written, notice], gone: unshown };
     });
     broadcastChanges(this.ctx, changes);
-    this.dropPhotos(gone);
+    this.sweepIf(gone);
     // The renamer waits on their own list; the others' come by the alarm.
     await this.tellMemberships(by);
   }
@@ -819,12 +852,12 @@ export class GroupDO extends DurableObject<Env> {
    * A member's usual name and photo as their User DO pushes them, at the
    * next cursor: shown unless they gave the group their own. Nothing when
    * they are the ones known. A usual photo replaced goes from the group's
-   * photos, unless the group shows it still.
+   * photos, unless the group shows it still: whether it does.
    */
   private takeUsualProfile(
     userId: string,
     { name, photoId, markLook }: UsualProfile
-  ): Change | undefined {
+  ): { change?: Change; photosGoing: boolean } {
     const known = this.db.select().from(members).where(inGroup(userId)).get();
     // A profile from before the look was sent keeps the one known.
     const markStyle = markLook?.style ?? known?.markStyle ?? "";
@@ -836,7 +869,7 @@ export class GroupDO extends DurableObject<Env> {
         known.markStyle === markStyle &&
         known.markFill === markFill)
     ) {
-      return undefined;
+      return { photosGoing: false };
     }
     const row = this.db
       .update(members)
@@ -851,17 +884,21 @@ export class GroupDO extends DurableObject<Env> {
       .where(eq(members.userId, userId))
       .returning()
       .get();
-    this.dropPhotos(forgetUnshown(this.db, [known.usualPhoto]));
-    return row === undefined ? undefined : memberChange(row);
+    return {
+      change: row === undefined ? undefined : memberChange(row),
+      photosGoing: forgetUnshown(this.db, [known.usualPhoto]),
+    };
   }
 
-  /** Photos the group no longer has deleted from storage, with their small versions. */
-  private dropPhotos(photoIds: string[]): void {
-    const groupId = this.ctx.id.name;
-    if (groupId === undefined || photoIds.length === 0) {
-      return;
+  /**
+   * The sweep set for now when the change just written let photos go:
+   * called in the same turn as its transaction, so the alarm is written
+   * with it (the storage's writes in one turn are kept together).
+   */
+  private sweepIf(photosGoing: boolean): void {
+    if (photosGoing) {
+      void this.ctx.storage.setAlarm(Date.now());
     }
-    this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, photoIds));
   }
 
   /** A new member at the next cursor, or one who left coming back, as a change. */
@@ -989,33 +1026,67 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * Notes a photo a member uploads, which the Worker asks before it stores
-   * it (group-photos.ts, notePhoto); refused when the user is not in the
-   * group.
+   * `write` to R2 counted as running until it settles, for the sweep and
+   * the erase to wait on (`storing`).
    */
-  async notePhoto(photoId: string, userId: string): Promise<PhotoNote> {
-    if (!this.isMember(userId)) {
+  private async stores<T>(write: Promise<T>): Promise<T> {
+    this.storing.add(write);
+    try {
+      return await write;
+    } finally {
+      this.storing.delete(write);
+    }
+  }
+
+  /**
+   * A member's upload of a photo (or its small version) noted
+   * (group-photos.ts, notePhoto), and stored when the note lets it be,
+   * by the group itself, so the sweep knows of it as it runs; refused
+   * when the user is not in the group.
+   */
+  async storePhoto(
+    photoId: string,
+    userId: string,
+    bytes: ArrayBuffer | Uint8Array,
+    { small, contentType }: { small: boolean; contentType: string }
+  ): Promise<PhotoNote> {
+    if (this.erasing || !this.isMember(userId)) {
       return "refused";
     }
     const note = notePhoto(this.db, photoId, userId);
-    if (note === "noted") {
-      await this.wakeBy(Date.now() + chatRules.unsentAfterMs);
+    if (note !== "noted") {
+      return note;
     }
+    const key = photoKey(this.ctx.id.name ?? "", photoId);
+    const stored = this.stores(
+      this.env.PHOTOS.put(small ? smallKey(key) : key, bytes, {
+        customMetadata: { userId },
+        httpMetadata: { contentType },
+        onlyIf: CREATE_ONLY,
+      })
+    );
+    await this.wakeBy(Date.now() + chatRules.unsentAfterMs);
+    await stored;
     return note;
   }
 
   /**
-   * Notes a copy of someone's own photo the Worker makes into the group's
-   * photos, before the group shows it as their face or its mark; false
-   * when the id is an upload's, which is then not copied over. One the
-   * group never comes to name goes as an upload not sent does.
+   * Someone's own photo (their usual one, or a group mark they picked)
+   * copied into the group's photos before the group shows it as their face
+   * or its mark, noted first (group-photos.ts, noteSharedPhoto) and copied
+   * by the group itself, as an upload is stored. Nothing when the id is
+   * an upload's. False when the user has no such photo, so nothing comes
+   * to name it; a note made of it goes as an upload not sent does.
    */
-  async noteSharedPhoto(photoId: string, userId: string): Promise<boolean> {
-    if (!noteSharedPhoto(this.db, photoId, userId)) {
-      return false;
+  async sharePhoto(photoId: string, userId: string): Promise<boolean> {
+    if (this.erasing || !noteSharedPhoto(this.db, photoId, userId)) {
+      return true;
     }
+    const copied = this.stores(
+      copyPersonPhoto(this.env, userId, photoId, this.ctx.id.name ?? "")
+    );
     await this.wakeBy(Date.now() + chatRules.unsentAfterMs);
-    return true;
+    return await copied;
   }
 
   /**
@@ -1030,14 +1101,17 @@ export class GroupDO extends DurableObject<Env> {
   }
 
   /**
-   * The photos nothing came to hold (spec/sync-protocol.md, Chat), deleted
-   * chatRules.unsentAfterMs after they were last noted: uploads not sent,
-   * and copies of someone's photo the group never came to name. Marked
-   * as going first, as other requests come in while storage deletes them:
-   * an upload of one waits, and a copy noted again meanwhile is copied in
-   * anew after. Then forgotten; a sweep cut short is finished by the next.
-   * A line's photo, a face or the mark is never one. When the next are
-   * due, if any.
+   * The photos nothing holds any more deleted from storage (spec/sync-
+   * protocol.md, Chat): those let go (a line taken back, a face or mark
+   * no longer shown, a recalled send's), and, chatRules.unsentAfterMs
+   * after they were last noted, uploads not sent and copies of someone's
+   * photo the group never came to name. Marked as going first, as other
+   * requests come in while storage deletes them: an upload of one waits,
+   * and a copy noted again meanwhile is copied in anew after. The writes
+   * of photos already running are waited on, so none lands after the
+   * delete. Then forgotten, or noted as taken back; a sweep cut short is
+   * finished by the next, which comes after `retryWait` should storage
+   * fail. When the next are due, if any.
    */
   private async sweepPhotos(): Promise<number | undefined> {
     const groupId = this.ctx.id.name;
@@ -1046,19 +1120,37 @@ export class GroupDO extends DurableObject<Env> {
     }
     const before = new Date(Date.now() - chatRules.unsentAfterMs);
     const going = markStalePhotos(this.db, before);
-    if (going.length > 0) {
-      await deleteGroupPhotos(this.env, groupId, going);
-      await Promise.all(
-        revivedPhotos(this.db, going, before).map(async ({ id, userId }) => {
-          await copyPersonPhoto(this.env, userId, id, groupId);
-        })
-      );
+    const takingBack = photosTakingBack(this.db);
+    if (going.length > 0 || takingBack.length > 0) {
+      try {
+        await Promise.allSettled(this.storing);
+        await deleteGroupPhotos(this.env, groupId, [...going, ...takingBack]);
+        await Promise.all(
+          revivedPhotos(this.db, going, before).map(async ({ id, userId }) => {
+            await this.stores(copyPersonPhoto(this.env, userId, id, groupId));
+          })
+        );
+      } catch (error) {
+        console.error(`Sweeping group ${groupId}'s photos failed`, error);
+        return Date.now() + this.sweepFailed();
+      }
+      this.ctx.storage.kv.delete(SWEEP_FAILURES);
       settleSwept(this.db, going, before);
+      settleTakenBack(this.db, takingBack);
     }
     const oldest = oldestStalePhoto(this.db);
     return oldest === undefined
       ? undefined
       : oldest.getTime() + chatRules.unsentAfterMs;
+  }
+
+  /** Counts a failed sweep: how long to wait before the next. */
+  private sweepFailed(): number {
+    const { kv } = this.ctx.storage;
+    const stored: unknown = kv.get(SWEEP_FAILURES);
+    const failures = (typeof stored === "number" ? stored : 0) + 1;
+    kv.put(SWEEP_FAILURES, failures);
+    return retryWait(failures, SWEEP_RETRY_FIRST_MS, SWEEP_RETRY_MOST_MS);
   }
 
   /**
@@ -1132,6 +1224,7 @@ export class GroupDO extends DurableObject<Env> {
     }
     const { changes } = fromBinary(ChangesSchema, pushed);
     const nextCursor = () => this.nextCursor();
+    let photosGoing = false;
     const taken = this.ctx.storage.transactionSync(() => {
       const kept: Change[] = [];
       for (const { kind } of changes) {
@@ -1148,7 +1241,9 @@ export class GroupDO extends DurableObject<Env> {
             nextCursor
           );
         } else if (kind.case === "profile") {
-          change = this.takeUsualProfile(userId, kind.value);
+          const usual = this.takeUsualProfile(userId, kind.value);
+          ({ change } = usual);
+          photosGoing ||= usual.photosGoing;
         }
         if (change) {
           kept.push(change);
@@ -1156,6 +1251,7 @@ export class GroupDO extends DurableObject<Env> {
       }
       return kept;
     });
+    this.sweepIf(photosGoing);
     broadcastChanges(this.ctx, taken);
   }
 
@@ -1298,10 +1394,7 @@ export class GroupDO extends DurableObject<Env> {
       return { changed: made, refused: back };
     });
     // Photos taken back go from the place's photos for everyone.
-    const groupId = this.ctx.id.name;
-    if (groupId !== undefined && photosGone.length > 0) {
-      this.ctx.waitUntil(deleteGroupPhotos(this.env, groupId, photosGone));
-    }
+    this.sweepIf(photosGone.length > 0);
     // A reply to a line before the chat's latest page, which every device
     // with the group open holds, goes after that line, so its quote reads
     // as the line (spec/sync-protocol.md, Chat).

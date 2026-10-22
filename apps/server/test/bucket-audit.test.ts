@@ -1,4 +1,4 @@
-import { runInDurableObject } from "cloudflare:test";
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/durable-sqlite";
@@ -12,6 +12,7 @@ import {
   personPhotoKey,
   photoKey,
   sharePersonPhoto,
+  uploadedPhotoKey,
 } from "../src/photos";
 import { call, ORIGIN } from "./helpers";
 import {
@@ -68,9 +69,9 @@ const photoLine = (id: string) => ({
 /**
  * A group and its maker's account with an object of every verdict: the
  * group's photos on lines, one taken back, one 0035 left on no line, one
- * uploaded and not sent, two stored with no note; the maker's usual photo
- * and a spare; a group and a user gone; preview pictures named and not; an
- * expired page; and keys the server never writes.
+ * uploaded and not sent, two stored with no note; the maker's usual photo,
+ * their uploads, and a spare; a group and a user gone; preview pictures
+ * named and not; an expired page; and keys the server never writes.
  */
 const seedBucket = async () => {
   const { groupId, maker, makerId } = await pair();
@@ -137,6 +138,8 @@ const seedBucket = async () => {
     },
   });
   await untilAcked(mine.frames);
+  // The sweep deletes the photo taken back, and notes it so.
+  await runDurableObjectAlarm(env.GROUPS.getByName(groupId));
   const linked = crypto.randomUUID();
   await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
     const db = drizzle(state.storage);
@@ -182,8 +185,10 @@ const seedBucket = async () => {
   };
   await Promise.all(
     [
-      // Taken back, its line's deletion missed.
+      // Taken back, as its line's deletion missed before the sweep did it.
       photoKey(groupId, ids.taken),
+      // Spare, as SetProfile left one before uploads were kept apart.
+      personPhotoKey(makerId, ids.spare),
       photoKey(groupId, ids.stray),
       photoKey(groupId, ids.raced),
       `groups/${groupId}/notes`,
@@ -266,11 +271,16 @@ describe("the photos bucket's audit", () => {
       "previews/images/ referenced": keysOf(`previews/images/${linked}`),
       "previews/images/ unlinked": keysOf(`previews/images/${ids.stray}`),
       "previews/pages/ expired": keysOf(keys.page),
+      // Past their day, which the bucket's lifecycle rule did not take.
+      "uploads/people/ unclaimed": keysOf(
+        uploadedPhotoKey(makerId, ids.usual),
+        uploadedPhotoKey(makerId, ids.spare)
+      ),
     });
     expect([later.groupsAsked, later.usersAsked, later.orphans]).toStrictEqual([
       2,
       1,
-      { bytes: 14 * JPEG.byteLength, count: 14 },
+      { bytes: 16 * JPEG.byteLength, count: 16 },
     ]);
     // Asked again, the same.
     await expect(admin.bucketAudit()).resolves.toMatchObject({
@@ -299,6 +309,7 @@ describe("the photos bucket's audit", () => {
       notUsual: outcomes(1),
       sentUnnamed: outcomes(2),
       takenBack: outcomes(1),
+      unclaimed: outcomes(2),
       unlinked: outcomes(1),
       unnoted: outcomes(2),
       userGone: outcomes(1),
@@ -322,9 +333,11 @@ describe("the photos bucket's audit", () => {
     const { groupId, ids, maker, photosPath } = await seedBucket();
     afterGrace();
     await exports.AdminEntrypoint.cleanBucket(Date.now());
+    // The sweep the delete set notes it taken back, once R2 has none.
+    await runDurableObjectAlarm(env.GROUPS.getByName(groupId));
 
     // The photo no line carried is taken back, so its id is never stored
-    // again; one stored with no note has none still.
+    // again.
     await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
       const notes = Object.fromEntries(
         drizzle(state.storage)
@@ -337,9 +350,13 @@ describe("the photos bucket's audit", () => {
         [ids.kept]: "sent",
         [ids.lost]: "takenBack",
         [ids.taken]: "takenBack",
-        [ids.waiting]: "unsent",
       });
-      expect(notes[ids.stray]).toBeUndefined();
+      // One stored with no note, and the upload not sent, which that
+      // sweep took as past its time too.
+      expect([notes[ids.stray], notes[ids.waiting]]).toStrictEqual([
+        undefined,
+        undefined,
+      ]);
     });
     await expect(upload(`${photosPath}/${ids.lost}`, maker)).resolves.toBe(409);
     await expect(
@@ -380,18 +397,15 @@ describe("the photos bucket's audit", () => {
 });
 
 /**
- * A photo of the maker's own, not their usual one, deleted as the audit
- * found it spare.
+ * An upload of the maker's own photo, deleted as the bucket's lifecycle
+ * rule deletes one past its day.
  */
 const deletedSpare = async () => {
   const { groupId, maker, makerId } = await pair();
   const photoId = crypto.randomUUID();
   await expect(upload(`/v1/me/photos/${photoId}`, maker)).resolves.toBe(204);
-  const key = personPhotoKey(makerId, photoId);
-  await env.USERS.getByName(makerId).deleteOrphanPhotos([
-    { bytes: JPEG.byteLength, key, verdict: "notUsual" },
-  ]);
-  return { groupId, key, maker, makerId, photoId };
+  await env.PHOTOS.delete(uploadedPhotoKey(makerId, photoId));
+  return { groupId, maker, makerId, photoId };
 };
 
 describe("what comes to name a photo as the delete takes it", () => {
@@ -403,7 +417,7 @@ describe("what comes to name a photo as the delete takes it", () => {
     const { maker, makerId, photoId } = await deletedSpare();
     const user = env.USERS.getByName(makerId);
     // Reached after a look that still found it, the user's DO looks again.
-    await expect(user.setProfile("さくら", photoId)).resolves.toBeNull();
+    await expect(user.setProfile("さくら", photoId)).resolves.toBeFalsy();
     const set = await call(
       "UserService/SetProfile",
       { name: "さくら", photoId },

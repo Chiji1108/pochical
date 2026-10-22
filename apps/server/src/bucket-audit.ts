@@ -13,7 +13,7 @@ import { invites, supportChats } from "./db/schema";
 import { kindIs } from "./group-chat";
 import { chatLines, groupPhotos, profile } from "./group-do-schema";
 import type { photoStates } from "./group-do-schema";
-import { namedPhotos, takeBackUncarried } from "./group-photos";
+import { namedPhotos, takeBack } from "./group-photos";
 import { PREVIEW_CACHE_MS } from "./link-preview";
 import { bucketPages, deleteBatchesOf } from "./photos";
 import { supportPlace } from "./support-lines";
@@ -25,8 +25,11 @@ import { supportPlace } from "./support-lines";
  * - sentUnnamed: noted as sent, but no line carries it (the lines that
  *   lost their photos in Group DO migration 0035).
  * - groupGone: its group is not set up, or was erased.
- * - notUsual: a user's own photo that is not their usual one.
+ * - notUsual: a user's own photo that is neither their usual one nor
+ *   going (UserDO's going_photos).
  * - userGone: a user's own photo whose account is gone.
+ * - unclaimed: a user's upload past its day, which the bucket's lifecycle
+ *   rule should have deleted (photos.ts, UPLOADS).
  * - unlinked: a link preview's picture that no line's preview names.
  * - expired: a page's preview cached past its day.
  * - unknown: a key no part of the server writes.
@@ -38,6 +41,7 @@ export type OrphanReason =
   | "groupGone"
   | "notUsual"
   | "userGone"
+  | "unclaimed"
   | "unlinked"
   | "expired"
   | "unknown";
@@ -150,14 +154,15 @@ const linePreviewImages = (db: DrizzleSqliteDODatabase): string[] =>
 
 /**
  * What a photo's note says of it while nothing names it: the sweep owns
- * one unsent, shown or deleting (GroupDO.sweepPhotos), and nothing owns
- * one sent or taken back.
+ * one unsent, shown, deleting or being taken back (GroupDO.sweepPhotos),
+ * and nothing owns one sent or taken back.
  */
 const HOLD_OF_STATE: Record<(typeof photoStates)[number], GroupPhotoHold> = {
   deleting: "referenced",
   sent: "sentUnnamed",
   shown: "referenced",
   takenBack: "takenBack",
+  takingBack: "referenced",
   unsent: "referenced",
 };
 
@@ -198,6 +203,9 @@ const groupPhotoVerdict = (
   return group?.setUp === true ? (hold ?? "unnoted") : "groupGone";
 };
 
+/** What a User DO names in the bucket (UserDO.bucketReferences). */
+export type UserReferences = { photoId: string; going: string[] };
+
 /**
  * What an object is held up against: its owner's references, when the
  * key is under a group or a user (none when the group was not asked or
@@ -205,7 +213,7 @@ const groupPhotoVerdict = (
  */
 type Lookup = {
   group?: GroupReferences;
-  usualPhoto?: string;
+  person?: UserReferences;
   previewImages: ReadonlySet<string>;
 };
 
@@ -230,14 +238,22 @@ const KEY_KINDS: KeyKind[] = [
     prefix: "groups/",
   },
   {
-    judge: ({ photoId = "" }, { usualPhoto }) => {
-      if (usualPhoto === undefined) {
+    judge: ({ photoId = "" }, { person }) => {
+      if (person === undefined) {
         return "userGone";
       }
-      return usualPhoto === photoId ? "referenced" : "notUsual";
+      return person.photoId === photoId || person.going.includes(photoId)
+        ? "referenced"
+        : "notUsual";
     },
     pattern: /^people\/(?<userId>[^/]+)\/photos\/(?<photoId>[^/]+)$/u,
     prefix: "people/",
+  },
+  {
+    // Past its day, as any newer is `recent`.
+    judge: () => "unclaimed",
+    pattern: /^uploads\/people\/(?<userId>[^/]+)\/(?<photoId>[^/]+)$/u,
+    prefix: "uploads/people/",
   },
   {
     judge: ({ imageId = "" }, { previewImages }) =>
@@ -296,6 +312,7 @@ const VERDICTS: Verdict[] = [
   "groupGone",
   "notUsual",
   "userGone",
+  "unclaimed",
   "unlinked",
   "expired",
   "unknown",
@@ -453,12 +470,12 @@ const walkBucket = async (
     const userId = prefix.slice(PEOPLE.length, -1);
     const objects = await objectsUnder(env.PHOTOS, prefix);
     const account = withAccount.has(userId)
-      ? await env.USERS.getByName(userId).profileOf()
+      ? await env.USERS.getByName(userId).bucketReferences()
       : undefined;
     usersAsked += account === undefined ? 0 : 1;
     await settle(
       { account: account !== undefined, kind: "user", userId },
-      judgeAll(objects, { ...nothing, usualPhoto: account?.photoId })
+      judgeAll(objects, { ...nothing, person: account })
     );
   });
 
@@ -551,10 +568,9 @@ export const deleteOrphans = async (
  * A group's orphans deleted (GroupDO.deleteOrphanPhotos), each judged
  * again against what the group names now: one a line, a face, the mark
  * or the sweep came to hold is skipped. The sent photos among them are
- * noted as taken back first, as a line taken back leaves its photos, so
- * no upload stores their ids again; should R2 refuse, the note says taken
- * back of a photo still stored, which the audit reports and a run again
- * deletes, as after a take-back.
+ * noted as being taken back first, as a line taken back leaves its
+ * photos, so no upload stores their ids again, and the sweep deletes them
+ * again and notes them taken back, should R2 refuse here.
  */
 export const deleteGroupOrphans = async (
   db: DrizzleSqliteDODatabase,
@@ -577,7 +593,7 @@ export const deleteGroupOrphans = async (
       going.push({ orphan, photoId });
     }
   }
-  takeBackUncarried(
+  takeBack(
     db,
     going.map(({ photoId }) => photoId)
   );

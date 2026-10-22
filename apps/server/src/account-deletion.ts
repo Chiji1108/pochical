@@ -9,7 +9,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { revokeApple } from "./apple";
 import { account } from "./db/auth-schema";
 import { invites, supportChats, supportSlack } from "./db/schema";
-import { deletePhotosUnder } from "./photos";
+import { deletePhotosUnder, uploadedPhotoKey } from "./photos";
 import { getAuth } from "./session";
 import { tellStaffOfDeletion } from "./slack";
 import { supportPlace } from "./support-lines";
@@ -31,14 +31,14 @@ const appleAccountOf = async (
 
 /**
  * A group gone whole, as its last member's account goes (or everything,
- * at a reset): its Group DO first, then its invitation and its photos,
- * which find it again should this be cut off part way. Once the DO is
- * erased, no one joins it: it is no group to join (`addMember`).
+ * at a reset): its Group DO first, which deletes its photos before its
+ * notes of them, then its invitation, which finds it again should this be
+ * cut off part way. Once the DO is erased, no one joins it: it is no
+ * group to join (`addMember`).
  */
 export const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
   await env.GROUPS.getByName(groupId).erase();
   await drizzle(env.DB).delete(invites).where(eq(invites.groupId, groupId));
-  await deletePhotosUnder(env, `groups/${groupId}/`);
 };
 
 /**
@@ -71,8 +71,9 @@ export const eraseUser = async (env: Env, userId: string): Promise<void> => {
   await drizzle(env.DB)
     .delete(supportSlack)
     .where(eq(supportSlack.userId, userId));
-  // Their usual photo, and any before it.
+  // Their usual photo, any still going, and their uploads not taken.
   await deletePhotosUnder(env, `people/${userId}/`);
+  await deletePhotosUnder(env, uploadedPhotoKey(userId, ""));
   if (chat?.thread !== undefined && chat.thread !== null) {
     waitUntil(tellStaffOfDeletion(env, chat.thread));
   }

@@ -17,7 +17,7 @@ import {
   SetDisplayNameResponseSchema,
   SetGroupPhotoResponseSchema,
 } from "./gen/pochical/v1/group_pb";
-import { dropPickedPhoto, requireMark, shareMarkPhoto } from "./group-marks";
+import { requireMark, shareMarkPhoto } from "./group-marks";
 import { isId } from "./ids";
 import {
   issueInviteCode,
@@ -160,7 +160,6 @@ export const registerGroupService = (router: ConnectRouter): void => {
         }
       );
       await adoptName(user.id, names);
-      await dropPickedPhoto(env, user.id, mark, names.usualPhoto);
       await requireTold(user.id, groupId, true);
       const inviteCode = await liveInviteCode(env.DB, groupId);
       return create(CreateGroupResponseSchema, { groupId, inviteCode });
@@ -282,11 +281,6 @@ export const registerGroupService = (router: ConnectRouter): void => {
       );
       // Each member's list of groups shows it as the group tells their DO.
       await group.setProfile({ mark, name }, userId);
-      if (mark.photoId !== "") {
-        const { photoId: usualPhoto } =
-          await env.USERS.getByName(userId).profileOf();
-        await dropPickedPhoto(env, userId, mark, usualPhoto);
-      }
       return create(RenameGroupResponseSchema, {});
     },
 

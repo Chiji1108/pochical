@@ -2,12 +2,7 @@ import { chatRules } from "@pochical/design/chat";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  copyPersonPhoto,
-  photoKey,
-  sharePersonPhoto,
-  smallKey,
-} from "../src/photos";
+import { photoKey, sharePersonPhoto, smallKey } from "../src/photos";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
@@ -617,12 +612,10 @@ describe("a group's photo once stored", () => {
       );
     });
     await runInDurableObject(group, async (instance) => {
-      // The sweep is waiting on storage's delete once the alarm returns.
+      // The sweep is waiting on storage once the alarm returns.
       const sweeping = instance.alarm();
-      // As sharePersonPhoto shares it, its note taken while the sweep waits.
-      if (await instance.noteSharedPhoto(stray, makerId)) {
-        await copyPersonPhoto(env, makerId, stray, groupId);
-      }
+      // Shared again while the sweep waits: the copy finds it still stored.
+      await instance.sharePhoto(stray, makerId);
       await sweeping;
     });
     await expect(storedBytes(groupId, stray)).resolves.toStrictEqual(JPEG);
@@ -652,16 +645,16 @@ describe("a group's photo once stored", () => {
     const get = vi
       .spyOn(env.PHOTOS, "get")
       .mockRejectedValueOnce(new Error("R2 out of reach"));
-    const first = await runInDurableObject(group, async (instance) => {
+    const retryAt = await runInDurableObject(group, async (instance, state) => {
       const sweeping = instance.alarm();
-      await instance.noteSharedPhoto(stray, makerId);
-      return await sweeping.then(
-        () => "swept",
-        () => "failed"
-      );
+      await instance.sharePhoto(stray, makerId);
+      await sweeping;
+      return await state.storage.getAlarm();
     });
     get.mockRestore();
-    expect(first).toBe("failed");
+    // Not copied in again yet, and the alarm comes back for it.
+    await expect(storedBytes(groupId, stray)).resolves.toBeNull();
+    expect(retryAt).not.toBeNull();
     await runInDurableObject(group, async (instance) => {
       await instance.alarm();
     });
@@ -691,7 +684,10 @@ describe("a group's photo once stored", () => {
     const noted = await runInDurableObject(group, async (instance) => {
       // The sweep is waiting on storage's delete once the alarm returns.
       const sweeping = instance.alarm();
-      const note = await instance.notePhoto("lost", makerId);
+      const note = await instance.storePhoto("lost", makerId, OTHER_JPEG, {
+        contentType: "image/jpeg",
+        small: false,
+      });
       await sweeping;
       return note;
     });
