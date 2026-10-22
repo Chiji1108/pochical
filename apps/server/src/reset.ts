@@ -42,7 +42,8 @@ const listed = async <T>(
  * Whose data is kept: every user with an account, or with a chat with
  * Pochical's people that an erasure cut off part way left; and every
  * group with a live invitation or photos in the bucket, which a group's
- * erasure deletes last, so one cut off part way is found again by them.
+ * erasure deletes only after its Group DO, so one cut off part way is
+ * found again by them.
  */
 const holders = async (env: Env) => {
   const db = drizzle(env.DB);

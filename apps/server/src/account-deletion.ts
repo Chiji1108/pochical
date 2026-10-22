@@ -31,11 +31,13 @@ const appleAccountOf = async (
 
 /**
  * A group gone whole, as its last member's account goes (or everything,
- * at a reset): its invitation first, so no one joins it as it goes.
+ * at a reset): its Group DO first, then its invitation and its photos,
+ * which find it again should this be cut off part way. Once the DO is
+ * erased, no one joins it: it is no group to join (`addMember`).
  */
 export const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
-  await drizzle(env.DB).delete(invites).where(eq(invites.groupId, groupId));
   await env.GROUPS.getByName(groupId).erase();
+  await drizzle(env.DB).delete(invites).where(eq(invites.groupId, groupId));
   await deletePhotosUnder(env, `groups/${groupId}/`);
 };
 

@@ -1,11 +1,12 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { user } from "../src/db/auth-schema";
 import { reports } from "../src/db/schema";
 import { photoKey } from "../src/photos";
+import { resetEverything } from "../src/reset";
 import { supportPlace } from "../src/support-lines";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import { pair, supportChat } from "./sync-helpers";
@@ -120,6 +121,34 @@ describe("erasing everything (全消去)", () => {
         rowsIn(env.GROUPS, id, "select user_id from members")
       ).resolves.toStrictEqual([]);
     }
+  });
+
+  it("finds a group again whose erasure failed, by the invitation it keeps until its Group DO is erased", async () => {
+    const { groupId } = await pair();
+    // Its users' accounts gone, so only its invitation leads to it.
+    await drizzle(env.DB).delete(user);
+    // Its Group DO cannot be reached, the first time.
+    const getByName = env.GROUPS.getByName.bind(env.GROUPS);
+    const unreachable = vi
+      .spyOn(env.GROUPS, "getByName")
+      .mockImplementation((name) =>
+        name === groupId
+          ? Object.assign(getByName(name), {
+              erase: () => {
+                throw new Error("unreachable");
+              },
+            })
+          : getByName(name)
+      );
+    await expect(resetEverything(env)).rejects.toThrow("unreachable");
+    unreachable.mockRestore();
+
+    await expect(exports.AdminEntrypoint.reset()).resolves.toStrictEqual(
+      NOTHING
+    );
+    await expect(
+      rowsIn(env.GROUPS, groupId, "select user_id from members")
+    ).resolves.toStrictEqual([]);
   });
 
   it("lets the device sign in anew afterwards, as a new user", async () => {
