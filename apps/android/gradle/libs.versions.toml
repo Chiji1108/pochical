@@ -1,6 +1,6 @@
 [versions]
 compileSdk = "37"
-minSdk = "26"
+minSdk = "29"
 agp = "9.4.1"
 kotlin = "2.4.21"
 # protobuf's Java and Kotlin runtimes for the protoc v36.2 plugins in
