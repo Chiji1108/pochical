@@ -103,20 +103,9 @@ private final class ClosingServer: Sendable {
   }
 
   func start() async throws -> URL {
-    let ready = AsyncStream<UInt16> { continuation in
-      listener.stateUpdateHandler = { [listener] state in
-        if case .ready = state, let port = listener.port?.rawValue {
-          continuation.yield(port)
-          continuation.finish()
-        }
-      }
-    }
-    listener.start(queue: .global())
-    for await port in ready {
-      return URL(string: "http://127.0.0.1:\(port)")!
-    }
-    throw CancellationError()
+    try await listening(listener)
   }
+
 }
 
 @Test func aGroupsSocketRefusedWith403StopsUntilTheGroupIsOpenedAgain() async throws {
