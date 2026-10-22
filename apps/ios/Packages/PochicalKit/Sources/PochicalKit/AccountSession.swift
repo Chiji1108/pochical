@@ -385,6 +385,12 @@ import SQLiteData
       beginErasing(why)
       before.content.invalidateAndCancel()
     case .switched(let after):
+      // What the device was, as kept: the session it had, or that session
+      // ended should its 401 have come meanwhile (`answerGoes`).
+      let prior =
+        if case .ended(let kept) = state { kept } else {
+          StoredSession(token: before.token, userID: before.userID)
+        }
       state = .switching
       begin(nil)
       before.content.invalidateAndCancel()
@@ -396,7 +402,7 @@ import SQLiteData
         try keychain.keep(after)
       } catch {
         Logger.account.error("Switching the account failed: \(error)")
-        enter(StoredSession(token: before.token, userID: before.userID))
+        restore(prior)
         throw error
       }
       enter(after)
@@ -487,6 +493,20 @@ import SQLiteData
   }
 
   // MARK: A session the server does not know
+
+  /// Back to `kept`, kept so in the Keychain in the same step, so the
+  /// device and a relaunch are the same: signed in as it, or, one the
+  /// server did not know, saying so as before.
+  private func restore(_ kept: StoredSession) {
+    do {
+      try keychain.keep(kept)
+    } catch {
+      // The Keychain still has what it had, which is `kept` but for
+      // this; a relaunch reads that.
+      Logger.account.error("Keeping the session gone back to failed: \(error)")
+    }
+    resume(kept)
+  }
 
   /// Goes on as the session kept: signed in as it, or, one the server did
   /// not know, saying so as before.

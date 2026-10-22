@@ -913,3 +913,32 @@ func aChangesAnswerGoesOnlyIfNothingButItsOwn401CameBetween(
     #expect(made.session.phase == before.phase)
   }
 }
+
+@MainActor @Test func aSwitchWhoseEraseFailsAfterA401GoesBackToEndedAsARelaunchDoes()
+  async throws
+{
+  let made = try await Made.signedIn(as: "a", "A", socketStatus: "503 Service Unavailable")
+  #expect(await eventually { made.owner == "A" })
+  try await made.addCoworker()
+  try await made.database.write { db in
+    try db.execute(
+      sql: #"CREATE TRIGGER "keep" BEFORE DELETE ON "coworkers" BEGIN SELECT RAISE(ABORT, 'kept'); END"#)
+  }
+  made.session.cameToFront()
+  let gate = made.server.hold("signInApple")
+  let switching = Task { try await made.session.useAccount(appleIDToken: "id", nonce: "n") }
+  #expect(await eventually { made.session.phase == .changing })
+  made.sockets.status.withLock { $0 = "401 Unauthorized" }
+  made.session.cameToFront()
+  #expect(await eventually { made.session.phase == .ended })
+  gate.open()
+  // The server switched, the device could not erase: back to what it was.
+  await #expect(throws: (any Error).self) { try await switching.value }
+  #expect(made.session.phase == .ended)
+  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A", ended: true))
+  let again = AccountSession(
+    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
+    eraseFiles: {})
+  #expect(again.phase == made.session.phase)
+  #expect(again.userID == made.session.userID)
+}
