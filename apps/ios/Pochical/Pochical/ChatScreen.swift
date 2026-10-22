@@ -618,14 +618,12 @@ struct ChatScreen: View {
 
   // MARK: Lines
 
-  /// The day whose lines are at the top, from the first item in sight:
-  /// none while that is the day's own title.
+  /// The day of the item `top`: a title's own, else that of the title
+  /// over it.
   private func dayOver(_ top: String?, in items: [ChatItem]) -> Day? {
     guard let top, let at = items.firstIndex(where: { $0.id == top }) else { return nil }
     for item in items[...at].reversed() {
-      if case .day(let day) = item {
-        return item.id == top ? nil : day
-      }
+      if case .day(let day) = item { return day }
     }
     return nil
   }
@@ -726,7 +724,7 @@ struct ChatScreen: View {
   ) -> some View {
     switch item {
     case .day(let day):
-      DayChip(day: day)
+      DayChip(day: day, scroll: scroll)
     case .unread:
       HStack(spacing: 12) {
         Rectangle().fill(colors.accentBorder).frame(height: 1)

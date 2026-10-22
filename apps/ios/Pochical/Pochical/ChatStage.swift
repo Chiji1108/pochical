@@ -185,9 +185,23 @@ struct LinesRow: Equatable {
     return kept
   }
 
+  /// How tall a day's words are drawn, in its title and floating over the
+  /// lines (DayWords), measured once for the chat's environment.
+  var dayHeight: CGFloat {
+    if let dayHeightKept { return dayHeightKept }
+    sizer.rootView = AnyView(DayWords(day: .today).environment(\.self, environment))
+    let height = sizer.sizeThatFits(
+      in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+    ).height
+    dayHeightKept = height
+    return height
+  }
+  private var dayHeightKept: CGFloat?
+
   /// Every item is drawn and measured again, the chat's environment having
   /// changed how they are drawn.
   func forgetHeights() {
+    dayHeightKept = nil
     heights.removeAll()
     drawings.removeAllObjects()
   }
@@ -1091,17 +1105,25 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     if place != before {
       scroll.place = place
     }
-    let top = lines.contentOffset.y + inset.top
-    let first = lines.indexPathsForVisibleItems.sorted().first {
-      (layout.layoutAttributesForItem(at: $0)?.frame.maxY ?? 0) > top
-    }
-    let day = first.flatMap { $0.item < ids.count ? settings?.dayOver(ids[$0.item]) : nil }
-    if day != scroll.topDay { scroll.topDay = day }
     // From the layout's own frames, as the visible items may not have
     // caught up with the scroll yet (Signal's).
+    let laid = (layout.layoutAttributesForElements(in: lines.bounds) ?? [])
+      .filter { $0.representedElementCategory == .cell }
+      .sorted { $0.indexPath < $1.indexPath }
+    let pinned = PinnedDay(
+      rows: laid.compactMap { cell in
+        let item = cell.indexPath.item
+        guard item < ids.count else { return nil }
+        return PinnedDay.Row(
+          item: item, foot: cell.frame.maxY, title: ChatItemID.isDay(ids[item]))
+      },
+      line: lines.contentOffset.y + inset.top + FloatingDay.gap, height: model.dayHeight)
+    let day = pinned.item.flatMap { $0 < ids.count ? settings?.dayOver(ids[$0]) : nil }
+    if day != scroll.topDay { scroll.topDay = day }
+    if pinned.push != scroll.dayPush { scroll.dayPush = pinned.push }
     let foot = lines.contentOffset.y + lines.bounds.height - inset.bottom + 1
-    let seen = (layout.layoutAttributesForElements(in: lines.bounds) ?? [])
-      .filter { $0.representedElementCategory == .cell && $0.frame.maxY <= foot }
+    let seen = laid
+      .filter { $0.frame.maxY <= foot }
       .compactMap { $0.indexPath.item < ids.count ? ids[$0.indexPath.item] : nil }
       .filter(ChatItemID.isLine)
     if seen != scroll.seen { scroll.seen = seen }

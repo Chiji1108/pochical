@@ -115,6 +115,10 @@ export const chatRules = {
   // A face or a group's photo mark is shrunk further, as it only ever
   // shows small: past three times its largest place on screen (88pt).
   pictureMaxEdge: 640,
+  // The room, in points (dp on Android), the pinned lines' card keeps
+  // from the screen's sides and from the header over it, alike, so it
+  // floats evenly under the header rather than hanging from it.
+  pinMargin: 8,
   // The member id Pochical's people write under in the chat with them
   // (spec/chat.md, The chat with Pochical's people): no account's, as
   // better-auth's ids are random, so their lines and reactions are told

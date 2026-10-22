@@ -1,0 +1,36 @@
+{
+  "name": "@pochical/demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --port 3201 --strictPort",
+    "image:share": "node scripts/share-image.ts",
+    "build": "vite build",
+    "preview": "vite preview --port 3201 --strictPort",
+    "deploy": "bun run build && wrangler deploy",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json"
+  },
+  "dependencies": {
+    "@pochical/design": "workspace:*",
+    "@pochical/jsx": "workspace:*",
+    "@pochical/prototype": "workspace:*",
+    "@pochical/showcase": "workspace:*",
+    "@pochical/styled-system": "workspace:*",
+    "@tanstack/react-router": "1.170.45",
+    "lucide-react": "^1.61.0",
+    "motion": "^14.4.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@pandacss/dev": "^2.3.0",
+    "@tanstack/router-plugin": "1.168.47",
+    "@types/node": "24.19.2",
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "^19.2.0",
+    "playwright-core": "^1.64.1",
+    "typescript": "~7.0.2",
+    "vite": "^8.0.0",
+    "wrangler": "^4.151.3"
+  }
+}
