@@ -32,6 +32,8 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 ## How to ship
 
 - main takes pull requests only; name the Linear issue (team POC) in the PR, and file skipped findings or follow-ups there.
-- Before merging: run `/code-review` and address it, CI must be green (Xcode Cloud included for iOS), and review threads resolved. Merge main into the branch first when other PRs landed. Never merge on red.
+- Before merging: run `/code-review` and address it, CI must be green, and review threads resolved. Merge main into the branch first when other PRs landed. Never merge on red.
+- The required `ios` status stands for Xcode Cloud (`.github/workflows/ios.yml`): it passes when the PR leaves `apps/ios` and `spec/vectors` as main has them, or once Xcode Cloud's PR build has passed on the head (or on an earlier commit of the PR with the same iOS files), and fails when that build fails. Xcode Cloud's Files and Folders start condition watches the same paths as `.github/scripts/ios-gate.sh`; change both together. When Xcode Cloud never starts on a head that needs it, start its build by hand in App Store Connect.
+- Auto-merge (`gh pr merge --auto --match-head-commit <sha>`) may be used once `/code-review` is addressed and Codex's review of that head is clean; the required checks, `ios` among them, then decide when it merges.
 - Deploys happen through Cloudflare Workers Builds on merge; never deploy by hand.
 - Renovate (`.github/renovate.json5`) opens the dependency PRs on Monday mornings: patches and minors in one PR (a 0.x package's minor, which may break, in its own), each major in its own, and what must move together in its own group at every update (Bun, vitest, protobuf and Connect) or at majors (TypeScript, React). They merge like any other PR, after the manual steps their bodies name, such as `mise run gen`.

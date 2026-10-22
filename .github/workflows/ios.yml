@@ -1,0 +1,63 @@
+# The `ios` commit status main requires: Xcode Cloud has verified the iOS
+# files of a pull request's head (.github/scripts/ios-gate.sh). Xcode Cloud
+# builds only pull requests that change them, and on the others leaves its
+# check suite queued for good, so it cannot be required itself. The status
+# is set again on each push, and each time Xcode Cloud reports on a head.
+name: iOS
+
+on:
+  pull_request:
+  # Xcode Cloud's status. A status event runs this file as it is on main, and
+  # the statuses set here with GITHUB_TOKEN start no run of their own.
+  status:
+
+permissions:
+  contents: read
+  # Which pull request a status's commit is the head of; a private
+  # repository answers it only with this.
+  pull-requests: read
+  statuses: write
+
+env:
+  XCODE_CLOUD: "Pochical | PRのテスト"
+
+# One head at a time, so the last run to write reads Xcode Cloud last.
+concurrency:
+  group: ios-${{ github.event.pull_request.head.sha || github.event.sha }}
+
+jobs:
+  gate:
+    if: github.event_name == 'status' || github.event.pull_request.base.ref == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha || github.event.sha }}
+      BASE: ${{ github.event.repository.default_branch }}
+    steps:
+      # The head, which a pull request has even when it cannot be merged; a
+      # status event checks out main.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          filter: blob:none
+      - name: Set the ios status
+        run: |
+          # A status names a commit, not a pull request: act only when the
+          # commit is the head of an open pull request into main.
+          if [ "$GITHUB_EVENT_NAME" = status ]; then
+            heads=$(gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/pulls" \
+              --jq '[.[] | select(.state == "open" and .head.sha == env.HEAD_SHA and .base.ref == env.BASE)] | length')
+            if [ "$heads" = 0 ]; then
+              echo "$HEAD_SHA is no open pull request's head"
+              exit
+            fi
+          fi
+          verdict=$(.github/scripts/ios-gate.sh "$HEAD_SHA" "$BASE")
+          read -r state description <<<"$verdict"
+          echo "$state: $description"
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA" \
+            -f context=ios -f state="$state" -f description="$description" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --silent
