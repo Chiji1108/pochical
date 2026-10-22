@@ -1,3 +1,5 @@
 .source
 .vinext
 dist
+.next
+next-env.d.ts
