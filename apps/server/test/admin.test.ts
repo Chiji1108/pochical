@@ -288,4 +288,27 @@ describe("what the admin site asks of the server", () => {
       )
     ).toHaveLength(1);
   });
+
+  it("lists more users than D1 binds at once, with how each signs in", async () => {
+    const prefix = `bulk-${crypto.randomUUID().slice(0, 8)}-`;
+    const ids = Array.from({ length: 120 }, (_, at) => `${prefix}${at}`);
+    await env.DB.batch(
+      ids.map((id) =>
+        env.DB.prepare(
+          "insert into user (id, name, email, updated_at, is_anonymous) values (?, '', ?, ?, 0)"
+        ).bind(id, `${id}@example.test`, Date.now())
+      )
+    );
+    const [first = ""] = ids;
+    await env.DB.prepare(
+      "insert into account (id, account_id, provider_id, user_id, updated_at) values (?, ?, 'apple', ?, ?)"
+    )
+      .bind(crypto.randomUUID(), "apple-sub", first, Date.now())
+      .run();
+    const listed = await exports.AdminEntrypoint.users(prefix);
+    expect(listed).toHaveLength(120);
+    expect(listed.find((one) => one.userId === first)?.signIns).toStrictEqual([
+      "apple",
+    ]);
+  });
 });

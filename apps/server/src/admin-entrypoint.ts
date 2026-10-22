@@ -5,7 +5,7 @@
 import { create } from "@bufbuild/protobuf";
 import { withinLimit } from "@pochical/design/text";
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { count, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, lt, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -122,24 +122,16 @@ export type UserPage = UserSummary & {
 /** The most a list gives at once. */
 const PAGE = 200;
 
-/** How each user signs in besides anonymously, by their ids. */
-const signInsOf = async (
-  env: Env,
-  userIds: string[]
-): Promise<Map<string, string[]>> => {
-  const byUser = new Map<string, string[]>();
-  if (userIds.length === 0) {
-    return byUser;
-  }
-  const rows = await drizzle(env.DB)
-    .select({ providerId: account.providerId, userId: account.userId })
-    .from(account)
-    .where(inArray(account.userId, userIds));
-  for (const { providerId, userId } of rows) {
-    byUser.set(userId, [...(byUser.get(userId) ?? []), providerId]);
-  }
-  return byUser;
-};
+/**
+ * How a user signs in besides anonymously (apple), in the same query as
+ * them: a list binds no id for each of its users, which D1 holds to 100.
+ */
+const signInsSql = sql<
+  string | null
+>`(select group_concat(${account.providerId}) from ${account} where ${account.userId} = ${user.id})`;
+
+const signInsIn = (joined: string | null): string[] =>
+  joined === null ? [] : joined.split(",");
 
 /** The reports, the latest first: all, or those `where` picks. */
 const reportsWhere = async (
@@ -446,23 +438,21 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       .select({
         anonymous: user.isAnonymous,
         createdAt: user.createdAt,
+        signIns: signInsSql,
         unanswered: supportChats.unanswered,
         userId: user.id,
       })
       .from(user)
       .leftJoin(supportChats, eq(supportChats.userId, user.id))
-      // The id's start compared as it is, no character taken as a pattern.
-      .where(sql`substr(${user.id}, 1, ${prefix.length}) = ${prefix}`)
+      // The ids starting with it, as a range of the primary key's order, so
+      // no character is taken as a pattern and the index finds them.
+      .where(and(gte(user.id, prefix), lt(user.id, `${prefix}\uFFFF`)))
       .orderBy(desc(user.createdAt))
       .limit(PAGE);
-    const signIns = await signInsOf(
-      this.env,
-      rows.map((row) => row.userId)
-    );
     return rows.map((row) => ({
       anonymous: row.anonymous ?? false,
       createdAtMs: row.createdAt.getTime(),
-      signIns: signIns.get(row.userId) ?? [],
+      signIns: signInsIn(row.signIns),
       unanswered: row.unanswered ?? 0,
       userId: row.userId,
     }));
@@ -474,45 +464,49 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
    */
   async user(userId: string): Promise<UserPage | null> {
     const db = drizzle(this.env.DB);
-    const row = await db.select().from(user).where(eq(user.id, userId)).get();
+    const row = await db
+      .select({
+        anonymous: user.isAnonymous,
+        createdAt: user.createdAt,
+        signIns: signInsSql,
+      })
+      .from(user)
+      .where(eq(user.id, userId))
+      .get();
     if (row === undefined) {
       return null;
     }
-    const own = this.env.USERS.getByName(userId);
-    const [signIns, profile, groups, signedIn, tokens, chat, by, about] =
-      await Promise.all([
-        signInsOf(this.env, [userId]),
-        own.profileOf(),
-        own.groupsListed(),
-        db
-          .select({ n: count() })
-          .from(session)
-          .where(eq(session.userId, userId))
-          .get(),
-        db
-          .select({ n: count() })
-          .from(pushTokens)
-          .innerJoin(session, eq(session.id, pushTokens.sessionId))
-          .where(eq(session.userId, userId))
-          .get(),
-        db
-          .select()
-          .from(supportChats)
-          .where(eq(supportChats.userId, userId))
-          .get(),
-        reportsWhere(this.env, eq(reports.reporterId, userId)),
-        reportsWhere(this.env, eq(reports.targetId, userId)),
-      ]);
+    const [own, signedIn, tokens, chat, by, about] = await Promise.all([
+      this.env.USERS.getByName(userId).adminView(),
+      db
+        .select({ n: count() })
+        .from(session)
+        .where(eq(session.userId, userId))
+        .get(),
+      db
+        .select({ n: count() })
+        .from(pushTokens)
+        .innerJoin(session, eq(session.id, pushTokens.sessionId))
+        .where(eq(session.userId, userId))
+        .get(),
+      db
+        .select()
+        .from(supportChats)
+        .where(eq(supportChats.userId, userId))
+        .get(),
+      reportsWhere(this.env, eq(reports.reporterId, userId)),
+      reportsWhere(this.env, eq(reports.targetId, userId)),
+    ]);
     return {
-      anonymous: row.isAnonymous ?? false,
+      anonymous: row.anonymous ?? false,
       createdAtMs: row.createdAt.getTime(),
-      groups,
-      name: profile.name,
+      groups: own.groups,
+      name: own.name,
       pushTokens: tokens?.n ?? 0,
       reportsAbout: about,
       reportsBy: by,
       sessions: signedIn?.n ?? 0,
-      signIns: signIns.get(userId) ?? [],
+      signIns: signInsIn(row.signIns),
       supportChat:
         chat === undefined ? null : { lastAtMs: chat.lastAt.getTime() },
       unanswered: chat?.unanswered ?? 0,
