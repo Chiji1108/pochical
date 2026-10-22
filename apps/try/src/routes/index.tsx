@@ -14,6 +14,7 @@ import {
   DesignToolbar,
   toolbarAction,
 } from "@pochical/showcase/components/design-page";
+import { demoUrl, designUrl } from "@pochical/showcase/lib/app-urls";
 import { pageMeta } from "@pochical/showcase/lib/page-meta";
 import { css, cx } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
@@ -22,7 +23,6 @@ import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useSyncExternalStore } from "react";
 
 import { appSplashScreens } from "../lib/app-splash-screens";
-import { demoUrl, designUrl } from "../lib/app-urls";
 import { screenColor } from "../lib/screen-color";
 
 const title = "ポチカル";

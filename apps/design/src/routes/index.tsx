@@ -4,12 +4,11 @@ import {
   DesignIntro,
   DesignPage,
 } from "@pochical/showcase/components/design-page";
+import { demoUrl } from "@pochical/showcase/lib/app-urls";
 import { pageMeta } from "@pochical/showcase/lib/page-meta";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-
-import { demoUrl } from "../lib/app-urls";
 
 export const Route = createFileRoute("/")({
   component: DocumentsPage,

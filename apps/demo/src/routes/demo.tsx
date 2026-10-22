@@ -30,13 +30,12 @@ import {
   toolbarAction,
 } from "@pochical/showcase/components/design-page";
 import { VariantPanel } from "@pochical/showcase/components/design-variant-panel";
+import { designUrl, tryUrl } from "@pochical/showcase/lib/app-urls";
 import { pageMeta } from "@pochical/showcase/lib/page-meta";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 import { RotateCcw, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
-
-import { designUrl, tryUrl } from "../lib/app-urls";
 
 export const Route = createFileRoute("/demo")({
   component: DemoPage,

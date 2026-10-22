@@ -1,9 +1,8 @@
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
+import { designUrl } from "@pochical/showcase/lib/app-urls";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
-
-import { designUrl } from "../lib/app-urls";
 
 import stylesheet from "../styles.css?url";
 
