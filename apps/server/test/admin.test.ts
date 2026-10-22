@@ -233,7 +233,7 @@ describe("what the admin site asks of the server", () => {
     expect(actions[0]).toMatchObject({
       action: "report",
       by: "staff@pochical.app",
-      detail: "acted：本人に注意した",
+      detail: "対応済み：本人に注意した",
       target: id,
     });
   });

@@ -50,6 +50,13 @@ export type SupportChatPage = {
 export const REPORT_STATES = ["open", "acted", "dismissed"] as const;
 export type ReportState = (typeof REPORT_STATES)[number];
 
+/** Each state as 記録 says it. */
+const STATE_WORDS: Record<ReportState, string> = {
+  acted: "対応済み",
+  dismissed: "問題なし",
+  open: "未対応",
+};
+
 const isReportState = (state: string): state is ReportState =>
   REPORT_STATES.some((one) => one === state);
 
@@ -388,7 +395,8 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     await noteAction(this.env, {
       action: "report",
       by,
-      detail: kept === "" ? state : `${state}：${kept}`,
+      detail:
+        kept === "" ? STATE_WORDS[state] : `${STATE_WORDS[state]}：${kept}`,
       target: reportId,
     });
     return true;

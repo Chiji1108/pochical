@@ -97,7 +97,7 @@ function Handling({ handling, report }: { handling: boolean; report: Report }) {
               flexDirection: "column",
               gap: "2",
               marginTop: "2",
-              minWidth: "220px",
+              minWidth: "180px",
             })}
             method="post"
           >
@@ -190,7 +190,7 @@ export function ReportTable({
                       borderRadius: "xs",
                       color: "text.secondary",
                       fontSize: "xs",
-                      minWidth: "240px",
+                      minWidth: "200px",
                       paddingBlock: "2",
                       paddingInline: "2.5",
                     })}
