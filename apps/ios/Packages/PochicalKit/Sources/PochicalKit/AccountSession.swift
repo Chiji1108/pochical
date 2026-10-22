@@ -9,12 +9,15 @@ import SQLiteData
 /// call carries. Nothing else starts a socket: the app coming to the
 /// front, a badge to set and a place opened on screen ask it.
 ///
+/// Changes of the account go one at a time: while the server answers one,
+/// the device goes on as it was and nothing else changes who it is, a 401
+/// meanwhile noted for when the answer comes. So a change that fails
+/// leaves everything as it was, sockets, calls, loads and uploads.
+///
 /// Each stretch signed in as someone has a generation (`Credentials`). A
-/// change goes on as the stretch it began in until the server has done its
-/// part, so one that fails leaves everything as it was; the stretch ends
-/// only then, before anything of the account before is erased, so
-/// whatever comes back for an earlier one (an answer, an upload, a
-/// socket's frame) is dropped;
+/// change ends the stretch once the server has done its part, before
+/// anything is erased, so whatever comes back for an earlier one (an
+/// answer, an upload, a socket's frame) is dropped;
 /// and the database records whose it is (`SyncState.owner`), so a socket
 /// never sends from nor takes into another user's data, whatever the
 /// order things happen in.
@@ -26,9 +29,8 @@ import SQLiteData
     /// to the front.
     case starting
     case signedIn
-    /// Switching to an account, signing out or deleting, the server not
-    /// done yet: signed in as before meanwhile, everything going on as it
-    /// was, and no other change begins.
+    /// Switching to an account, signing out or deleting, until it is done:
+    /// signed in as before while the server answers.
     case changing
     /// Signed out or deleted on the server, the device's data still being
     /// erased (`erasing`): the app shows none of it, and signs in afresh
@@ -55,51 +57,27 @@ import SQLiteData
   private enum State {
     case starting
     case signedIn(Credentials)
-    /// The server's part done, the device erasing for the user after a
-    /// switch, before it is signed in as them.
+    /// The server answering a change, the device signed in as before
+    /// meanwhile; `heardUnknown` once a socket's 401 has come, which the
+    /// answer settles (`change`).
+    case changing(Credentials, heardUnknown: Bool)
+    /// The server switched the account, the device erasing for the user
+    /// after.
     case switching
     case erasing
     /// The session the server did not know, kept to try again with.
     case ended(StoredSession)
-    /// The person's choice on it, made at once, and done once the
-    /// sockets of its stretch have closed: from here, nothing that comes
-    /// for the session before (a change the server did) is taken.
-    case chosen(Choice, StoredSession)
   }
 
-  /// What the person chose for a session the server did not know.
-  private enum Choice {
-    case tryAgain, startAfresh
-  }
-
-  private var state = State.starting {
-    didSet { epoch += 1 }
-  }
-  /// The stretch a change under way began in, until the server has done
-  /// its part or it has failed; none once any new stretch begins.
-  private var changingIn: Int? {
-    didSet { epoch += 1 }
-  }
-  /// Moves on with every change of `state` or `changingIn`, whatever made
-  /// it: a change begun or answered, a 401, the person's choice. The one
-  /// rule for whatever waits on something (the server's answer to a
-  /// change, a choice waiting for the sockets to close): what it then does
-  /// goes only if `epoch` is what it was as it began, nothing having moved
-  /// meanwhile. The one exception is a change's answer after the 401 the
-  /// change itself explains (`answerGoes`).
-  private var epoch = 0
-  /// A change's session ending as the server did not know it, while the
-  /// change waited for the server: `epoch` as the change began, and as the
-  /// session had ended.
-  private var endedWhileChanging: (began: Int, ended: Int)?
+  private var state = State.starting
 
   public var phase: Phase {
     switch state {
     case .starting: .starting
-    case .signedIn: changingIn == nil ? .signedIn : .changing
-    case .switching: .changing
+    case .signedIn: .signedIn
+    case .changing, .switching: .changing
     case .erasing: .erasing
-    case .ended, .chosen: .ended
+    case .ended: .ended
     }
   }
 
@@ -110,8 +88,9 @@ import SQLiteData
   /// Which stretch of the account this is, moving on as the device signs
   /// in as someone, and as their account changes or is erased: what the
   /// screens of one stretch showed is not the next one's (AppRoot). A
-  /// change that fails never ends its stretch, so the screens stay, and
-  /// the failure is said where it was asked.
+  /// change that fails before the server has done its part never ends its
+  /// stretch, so the screens stay, and the failure is said where it was
+  /// asked.
   public private(set) var generation = 0
 
   /// The signed-in user's id, as their groups know them: known offline,
@@ -196,7 +175,9 @@ import SQLiteData
         await connect()
         await deleteLeftBehind()
       }
-    case .switching, .erasing, .ended, .chosen:
+    case .changing:
+      Task { await connect() }
+    case .switching, .erasing, .ended:
       break
     }
   }
@@ -206,7 +187,7 @@ import SQLiteData
   public func wentToBack() async {
     inFront = false
     // Come back to the front meanwhile, the sockets stay as the front has them.
-    guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials),
+    guard let credentials = live, let credentials = await claimed(credentials),
       !inFront
     else { return }
     await userSocket.finishSending(as: credentials)
@@ -232,7 +213,7 @@ import SQLiteData
   /// background too (as for the badge after an answer from a
   /// notification), closing again once sent if it is.
   public func catchUp(within limit: Duration) async {
-    guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials)
+    guard let credentials = live, let credentials = await claimed(credentials)
     else { return }
     await userSocket.start(as: credentials)
     await userSocket.catchUp(within: limit)
@@ -244,7 +225,7 @@ import SQLiteData
   /// Whether the user is linked to Apple or Google, as the server says;
   /// nil when it cannot be asked now, or the account changed meanwhile.
   public func linked() async -> Bool? {
-    guard case .signedIn(let credentials) = state,
+    guard let credentials = live,
       let me = try? await server.me(credentials.token), credentials.isCurrent
     else { return nil }
     return !me.anonymous
@@ -263,7 +244,7 @@ import SQLiteData
   /// account; the user it was is deleted, tried again as the app comes back
   /// should that fail.
   public func useAccount(appleIDToken: String, nonce: String) async throws {
-    guard case .signedIn(let before) = state, changingIn == nil else { throw NotSignedIn() }
+    guard case .signedIn(let before) = state else { throw NotSignedIn() }
     try await change(from: before) { [server] before in
       .switched(
         to: try await server.signInApple(idToken: appleIDToken, nonce: nonce, on: before.token))
@@ -275,8 +256,7 @@ import SQLiteData
   /// server, and the device goes on as someone new, holding nothing of the
   /// user.
   public func signOut() async throws {
-    guard case .signedIn(let credentials) = state, changingIn == nil,
-      let credentials = await claimed(credentials)
+    guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials)
     else { throw NotSignedIn() }
     await userSocket.send(as: credentials)
     try await change(from: credentials) { [server] before in
@@ -293,7 +273,7 @@ import SQLiteData
   public func deleteAccount(appleCode: @MainActor () async throws -> String?)
     async throws(DeletionFailure) -> Bool
   {
-    guard case .signedIn(let asking) = state, changingIn == nil else { throw whyNotSignedIn }
+    guard case .signedIn(let asking) = state else { throw whyNotSignedIn }
     let code: String
     do {
       guard let asked = try await appleCode() else { return false }
@@ -308,13 +288,11 @@ import SQLiteData
         return .left(.deleted)
       }
     } catch let failure as DeletionFailure {
-      // A socket's 401 meanwhile says the session is gone, whatever this
-      // answer was.
+      // A socket's 401 meanwhile, settled as the session ended.
       if case .ended = state { throw .sessionEnded }
       throw failure
     } catch is AccountChanged {
-      // The device is no longer the account Apple was asked for, or a
-      // socket's 401 ended its session meanwhile.
+      // The device is no longer the account Apple was asked for.
       throw whyNotSignedIn
     } catch {
       Logger.account.error("Deleting the account failed: \(error)")
@@ -328,8 +306,8 @@ import SQLiteData
   private var whyNotSignedIn: DeletionFailure {
     switch state {
     case .starting: .notSignedIn
-    case .ended, .chosen: .sessionEnded
-    case .signedIn, .switching, .erasing: .accountChanged
+    case .ended: .sessionEnded
+    case .signedIn, .changing, .switching, .erasing: .accountChanged
     }
   }
 
@@ -341,43 +319,41 @@ import SQLiteData
     case left(Erasing.Why)
   }
 
-  /// Changes who the device is, in an order a failure or the app ending at
-  /// any step leaves safe. Until the server has done its part the device
-  /// goes on as the stretch `before` it was asked in, its sockets, calls,
-  /// loads and uploads as they were, so a change that fails leaves
-  /// everything as it was, nothing to bring back. Only from one still
-  /// current with no other change under way: one the account left
-  /// meanwhile (signed out, started afresh, while Apple was asked) is
-  /// refused (`AccountChanged`), so the user after it is never changed.
-  /// Once the server has done its part, the stretch ends before anything
-  /// is erased. A switch erases before the Keychain changes, so one that
-  /// fails or is cut off before that leaves the device as the user it was,
-  /// whose session still holds. Signed out or deleted, there is no going
-  /// back: the device is erasing until both the session and its data are
-  /// gone (`beginErasing`). A deletion's 401 ends the session as a
-  /// socket's does (`sessionUnknown`); one to a socket meanwhile gives way
-  /// to the change the server has done (`answerGoes`).
+  /// Changes who the device is, one change at a time, in an order a
+  /// failure or the app ending at any step leaves safe. Until the server
+  /// has done its part the device goes on as `before`, as it was, and
+  /// nothing else changes who it is: a socket's 401 meanwhile is only noted
+  /// (`sessionUnknown`). The answer settles it, here alone: done, the
+  /// change goes on, as it is the likeliest reason for that 401 (signing
+  /// out and deleting end the session); failed, the device is back as it
+  /// was, or ended should a 401 have come. Done, the stretch ends before
+  /// anything is erased. A switch erases before the Keychain changes, so
+  /// one that fails or is cut off before that goes back to what was kept
+  /// (`restore`). Signed out or deleted, there is no going back: the device
+  /// is erasing until both the session and its data are gone
+  /// (`beginErasing`). Only from the stretch `before` it was asked in: one
+  /// the account left meanwhile (signed out, started afresh, while Apple
+  /// was asked) is refused (`AccountChanged`), so the user after it is
+  /// never changed.
   private func change(from before: Credentials, _ onServer: (Credentials) async throws -> Changed)
     async throws
   {
-    guard case .signedIn(let now) = state, now.generation == before.generation, changingIn == nil
-    else { throw AccountChanged() }
-    changingIn = before.generation
-    let began = epoch
-    defer {
-      if epoch == began { changingIn = nil }
+    guard case .signedIn(let now) = state, now.generation == before.generation else {
+      throw AccountChanged()
     }
+    state = .changing(before, heardUnknown: false)
     let changed: Changed
     do {
       changed = try await onServer(before)
-    } catch DeletionFailure.sessionEnded {
-      if epoch == began { endUnknown(before) }
-      throw DeletionFailure.sessionEnded
     } catch {
       Logger.account.error("Changing the account failed: \(error)")
+      if heardUnknown || error as? DeletionFailure == .sessionEnded {
+        endUnknown(before)
+      } else {
+        state = .signedIn(before)
+      }
       throw error
     }
-    guard answerGoes(began: began) else { throw AccountChanged() }
     switch changed {
     case .left(let why):
       // Noted before anything is awaited: an app ended from here on
@@ -385,12 +361,7 @@ import SQLiteData
       beginErasing(why)
       before.content.invalidateAndCancel()
     case .switched(let after):
-      // What the device was, as kept: the session it had, or that session
-      // ended should its 401 have come meanwhile (`answerGoes`).
-      let prior =
-        if case .ended(let kept) = state { kept } else {
-          StoredSession(token: before.token, userID: before.userID)
-        }
+      let kept = StoredSession(token: before.token, userID: before.userID, ended: heardUnknown)
       state = .switching
       begin(nil)
       before.content.invalidateAndCancel()
@@ -402,7 +373,7 @@ import SQLiteData
         try keychain.keep(after)
       } catch {
         Logger.account.error("Switching the account failed: \(error)")
-        restore(prior)
+        restore(kept)
         throw error
       }
       enter(after)
@@ -410,17 +381,9 @@ import SQLiteData
     }
   }
 
-  /// Whether the server's answer to a change begun at `began` goes: when
-  /// nothing moved meanwhile (`epoch`); and, the one exception, when all
-  /// that did was the change's own session ending (a socket's 401), which
-  /// the change the server has done explains, as signing out and deleting
-  /// end that session: the person's request wins, rather than leaving them
-  /// signed out of an account they asked to leave, its data kept. Anything
-  /// after that 401 (もう一度つなぐ, はじめから使う, another 401, another
-  /// change) moved `epoch` on again, so the answer loses to it: the latest
-  /// thing the person chose is what the device does.
-  private func answerGoes(began: Int) -> Bool {
-    epoch == began || endedWhileChanging.map { $0 == (began, epoch) } == true
+  /// Whether a socket's 401 came while the server answered the change.
+  private var heardUnknown: Bool {
+    if case .changing(_, heardUnknown: true) = state { true } else { false }
   }
 
   /// Where the device notes it is erasing, as soon as the server has ended
@@ -483,26 +446,32 @@ import SQLiteData
     await onErase()
   }
 
-  /// A new stretch of the account, signed in as `session` or as no one,
-  /// any change under way left behind.
+  /// A new stretch of the account, signed in as `session` or as no one.
   @discardableResult
   private func begin(_ session: StoredSession?) -> Credentials? {
     defer { generation += 1 }
-    changingIn = nil
     return current.begin(session)
+  }
+
+  /// The credentials of the stretch going on, a change's answer awaited or
+  /// not.
+  private var live: Credentials? {
+    switch state {
+    case .signedIn(let credentials), .changing(let credentials, _): credentials
+    case .starting, .switching, .erasing, .ended: nil
+    }
   }
 
   // MARK: A session the server does not know
 
-  /// Back to `kept`, kept so in the Keychain in the same step, so the
+  /// Back to `kept`, written to the Keychain in the same step, so the
   /// device and a relaunch are the same: signed in as it, or, one the
-  /// server did not know, saying so as before.
+  /// server did not know, saying so.
   private func restore(_ kept: StoredSession) {
     do {
       try keychain.keep(kept)
     } catch {
-      // The Keychain still has what it had, which is `kept` but for
-      // this; a relaunch reads that.
+      // The Keychain still has what it had: `kept` but for its ending.
       Logger.account.error("Keeping the session gone back to failed: \(error)")
     }
     resume(kept)
@@ -522,11 +491,17 @@ import SQLiteData
   /// A socket in the stretch `generation` was refused as a
   /// session the server does not know: every socket closes and the device
   /// keeps what it holds, its outbox too, saying so until the person
-  /// chooses. A stretch already over says nothing of the one after it.
+  /// chooses; noted only, while the server answers a change, for its answer
+  /// to settle. A stretch already over says nothing of the one after it.
   fileprivate func sessionUnknown(in generation: Int) {
-    guard case .signedIn(let credentials) = state, credentials.generation == generation
-    else { return }
-    endUnknown(credentials)
+    switch state {
+    case .signedIn(let credentials) where credentials.generation == generation:
+      endUnknown(credentials)
+    case .changing(let credentials, _) where credentials.generation == generation:
+      state = .changing(credentials, heardUnknown: true)
+    case .starting, .signedIn, .changing, .switching, .erasing, .ended:
+      break
+    }
   }
 
   /// The session of `credentials`, which the server does not know, ended
@@ -534,8 +509,6 @@ import SQLiteData
   /// what its stretch handed out is not current from here, and every
   /// socket closes.
   private func endUnknown(_ credentials: Credentials) {
-    let began = changingIn == credentials.generation ? epoch : nil
-    defer { endedWhileChanging = began.map { ($0, epoch) } }
     let ended = StoredSession(token: credentials.token, userID: credentials.userID, ended: true)
     do {
       try keychain.keep(ended)
@@ -555,45 +528,34 @@ import SQLiteData
   /// もう一度つなぐ: the session the server did not know, tried again, as
   /// a server set right since knows it again.
   public func tryAgain() {
-    choose(.tryAgain)
+    afterEnding { [self] kept in
+      let session = StoredSession(token: kept.token, userID: kept.userID)
+      do {
+        try keychain.keep(session)
+      } catch {
+        // Tried all the same: a relaunch says it ended again first.
+        Logger.account.error("Keeping the session tried again failed: \(error)")
+      }
+      enter(session)
+    }
   }
 
   /// はじめから使う: the person's own choice to let the session go, and
   /// what the device holds with it, erasing as after signing out, then
   /// signing in afresh as a new install does.
   public func startAfresh() {
-    choose(.startAfresh)
+    afterEnding { [self] _ in beginErasing(.signedOut) }
   }
 
-  /// The person's choice for the session the server did not know, taken
-  /// at once (a later one in its place), and done once the places' sockets
-  /// of its stretch have closed.
-  private func choose(_ choice: Choice) {
-    switch state {
-    case .ended(let kept), .chosen(_, let kept):
-      state = .chosen(choice, kept)
-    case .starting, .signedIn, .switching, .erasing:
-      return
-    }
+  /// `then` with the session the server did not know, once the places'
+  /// sockets of its stretch have closed, if the person has not chosen
+  /// meanwhile.
+  private func afterEnding(_ then: @escaping @MainActor (StoredSession) -> Void) {
     let ending = self.ending
-    let chosen = epoch
     Task {
       await ending?.value
-      // A later choice, or anything else since, goes instead.
-      guard epoch == chosen, case .chosen(let choice, let kept) = state else { return }
-      switch choice {
-      case .tryAgain:
-        let session = StoredSession(token: kept.token, userID: kept.userID)
-        do {
-          try keychain.keep(session)
-        } catch {
-          // Tried all the same: a relaunch says it ended again first.
-          Logger.account.error("Keeping the session tried again failed: \(error)")
-        }
-        enter(session)
-      case .startAfresh:
-        beginErasing(.signedOut)
-      }
+      guard case .ended(let kept) = state else { return }
+      then(kept)
     }
   }
 
@@ -611,7 +573,7 @@ import SQLiteData
   /// The sockets connect as the user now: the places' held, and the user's
   /// own while the app is in front.
   private func connect() async {
-    guard case .signedIn(let credentials) = state, let credentials = await claimed(credentials)
+    guard let credentials = live, let credentials = await claimed(credentials)
     else { return }
     await places.use(credentials)
     if inFront {
@@ -690,9 +652,7 @@ import SQLiteData
   /// another behind meanwhile. One that is the device's own session (a
   /// switch that failed past keeping it) is only forgotten.
   private func deleteLeftBehind() async {
-    guard let left = keychain.leftBehindToken(), case .signedIn(let now) = state,
-      changingIn == nil
-    else { return }
+    guard let left = keychain.leftBehindToken(), case .signedIn(let now) = state else { return }
     guard left != now.token else {
       keychain.forgetLeftBehind()
       return
