@@ -108,6 +108,7 @@ private final class FakeAccountServer: AccountServer {
   let keychain: SessionKeychain
   let database: any DatabaseWriter
   let shared: UserDefaults
+  let socketURL: URL
 
   init(kept: Data? = nil, owner: String? = nil, socketStatus: String = "403 Forbidden")
     async throws
@@ -123,6 +124,7 @@ private final class FakeAccountServer: AccountServer {
     server = FakeAccountServer()
     sockets = try RefusingServer(status: socketStatus)
     let url = try await sockets.start()
+    socketURL = url
     self.keychain = keychain
     database = try appDatabase()
     // Left by another user: a coworker of theirs, still waiting to go.
@@ -454,7 +456,7 @@ private final class FakeAccountServer: AccountServer {
   // front again does not try it.
   #expect(made.session.userID == "A")
   #expect(made.coworkers == 1)
-  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A"))
+  #expect(try made.keychain.kept() == StoredSession(token: "a", userID: "A", ended: true))
   #expect(throws: NotSignedIn.self) { try made.session.current.credentials() }
   let seen = made.sockets.asked
   made.session.cameToFront()
@@ -462,17 +464,28 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.sockets.asked == seen)
   #expect(made.server.made.withLock { $0 } == 0)
 
+  // The app ends and starts again: still ended, trying nothing.
+  let again = AccountSession(
+    database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
+    eraseFiles: {}, socketServer: made.socketURL)
+  #expect(again.phase == .ended)
+  #expect(again.userID == "A")
+  again.cameToFront()
+  try await Task.sleep(for: .milliseconds(200))
+  #expect(made.sockets.asked == seen)
+
   // もう一度つなぐ tries it again, and it ends again.
-  made.session.tryAgain()
+  again.tryAgain()
   #expect(await eventually { made.sockets.asked > seen })
-  #expect(await eventually { made.session.phase == .ended })
+  #expect(await eventually { again.phase == .ended })
   #expect(made.coworkers == 1)
 
   // はじめから使う lets it go, with what the device holds.
-  made.session.startAfresh()
-  #expect(await eventually { made.session.userID == "anon-1" })
+  again.startAfresh()
+  #expect(await eventually { again.userID == "anon-1" })
   #expect(made.coworkers == 0)
-  #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
+  // (This server refuses the new session's socket too.)
+  #expect(try made.keychain.kept()?.token == "anon-token-1")
 }
 
 @MainActor @Test func aSessionTheServerKnowsAgainSyncsAgainOnTryingAgain() async throws {
@@ -484,6 +497,7 @@ private final class FakeAccountServer: AccountServer {
   refusing.session.tryAgain()
   #expect(await eventually { refusing.session.phase == .signedIn })
   #expect(refusing.session.userID == "A")
+  #expect(try refusing.keychain.kept() == StoredSession(token: "a", userID: "A"))
 }
 
 /// An invitation opened from a link as the app first launches: its call

@@ -139,7 +139,12 @@ import SQLiteData
     if let why = shared?.string(forKey: Self.erasingKey).flatMap(Erasing.Why.init) {
       beginErasing(why)
     } else if let kept = try? keychain.kept() {
-      enter(kept)
+      if kept.ended {
+        state = .ended(kept)
+        userID = kept.userID
+      } else {
+        enter(kept)
+      }
     }
     ends.session = self
   }
@@ -374,11 +379,19 @@ import SQLiteData
   /// The user's socket in the stretch `generation` was refused as a
   /// session the server does not know: every socket closes and the device
   /// keeps what it holds, its outbox too, saying so until the person
-  /// chooses. A stretch already over says nothing of the one after it.
+  /// chooses, the Keychain keeping the session as ended for a relaunch. A
+  /// stretch already over says nothing of the one after it.
   fileprivate func sessionUnknown(in generation: Int) {
     guard case .signedIn(let credentials) = state, credentials.generation == generation
     else { return }
-    state = .ended(StoredSession(token: credentials.token, userID: credentials.userID))
+    let ended = StoredSession(token: credentials.token, userID: credentials.userID, ended: true)
+    do {
+      try keychain.keep(ended)
+    } catch {
+      // A relaunch tries the session again, and is refused again.
+      Logger.account.error("Keeping the session as ended failed: \(error)")
+    }
+    state = .ended(ended)
     begin(nil)
     credentials.content.invalidateAndCancel()
     // The user's socket stopped itself; the places' close.
@@ -388,7 +401,16 @@ import SQLiteData
   /// もう一度つなぐ: the session the server did not know, tried again, as
   /// a server set right since knows it again.
   public func tryAgain() {
-    afterEnding { [self] kept in enter(kept) }
+    afterEnding { [self] kept in
+      let session = StoredSession(token: kept.token, userID: kept.userID)
+      do {
+        try keychain.keep(session)
+      } catch {
+        Logger.account.error("Keeping the session tried again failed: \(error)")
+        return
+      }
+      enter(session)
+    }
   }
 
   /// はじめから使う: the person's own choice to let the session go, and
