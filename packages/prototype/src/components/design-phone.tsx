@@ -28,8 +28,7 @@ const frame = cva({
     fullScreen: {
       false: {
         "@media (max-width: 370px)": {
-          "--screen-left": "10px",
-          "--screen-right": "10px",
+          "--page-inset": "10px",
           borderRadius: "44px",
           borderWidth: "5px",
         },
@@ -45,9 +44,13 @@ const frame = cva({
         // status bar and the bar itself.
         "--safe-top": "45px",
         // The room at the screens' sides, which a ground running to the
-        // phone's edges, like entering's, reaches back out by.
-        "--screen-left": "16px",
-        "--screen-right": "16px",
+        // phone's edges, like entering's, reaches back out by: the page's
+        // own inset, within the device's safe area (none pictured here).
+        "--page-inset": "16px",
+        "--safe-left": "0px",
+        "--safe-right": "0px",
+        "--screen-left": "calc(var(--safe-left) + var(--page-inset))",
+        "--screen-right": "calc(var(--safe-right) + var(--page-inset))",
         "--tab-bar-bottom": "20px",
         padding: "17px var(--screen-right) 33px var(--screen-left)",
         position: "relative",
@@ -57,8 +60,11 @@ const frame = cva({
         inset: 0,
         "--safe-bottom": "max(env(safe-area-inset-bottom), 12px)",
         "--safe-top": "max(env(safe-area-inset-top), 12px)",
-        "--screen-left": "calc(env(safe-area-inset-left) + 16px)",
-        "--screen-right": "calc(env(safe-area-inset-right) + 16px)",
+        "--page-inset": "16px",
+        "--safe-left": "env(safe-area-inset-left)",
+        "--safe-right": "env(safe-area-inset-right)",
+        "--screen-left": "calc(var(--safe-left) + var(--page-inset))",
+        "--screen-right": "calc(var(--safe-right) + var(--page-inset))",
         // As iOS's: 21pt off a phone's foot, 13pt into its home indicator
         // area.
         "--tab-bar-bottom":
