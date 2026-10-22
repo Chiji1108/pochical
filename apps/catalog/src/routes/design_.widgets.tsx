@@ -44,22 +44,22 @@ import {
   initialDesignSchedule,
 } from "@pochical/prototype/lib/design-days";
 import type { DayEntry, Schedule } from "@pochical/prototype/lib/design-days";
-import { changeOn, patternOn } from "@pochical/prototype/lib/design-group-data";
-import type { Member } from "@pochical/prototype/lib/design-group-data";
 import {
   mother,
   partner,
   sampleGroups,
-  sampleOthers,
   samplePhoto,
 } from "@pochical/prototype/lib/design-group-samples";
 import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
 import { designToday } from "@pochical/prototype/lib/design-today";
+import {
+  groupCompanion,
+  widgetPersonOf,
+} from "@pochical/prototype/lib/design-widget-companions";
 import { widgetEntry } from "@pochical/prototype/lib/design-widgets";
 import type {
   WidgetCompanion,
   WidgetEntry,
-  WidgetPerson,
 } from "@pochical/prototype/lib/design-widgets";
 import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
 import { css } from "@pochical/styled-system/css";
@@ -132,37 +132,9 @@ const namesShown = { names: { badge: true, emoji: true, icon: true } };
 // yet, and the sample person's groups: 家族 (those two), 看護学校の友達
 // (two nurses on rotating shifts) and 高校の同級生 (nine, all kinds of
 // work).
-function personOf(member: Member): WidgetPerson {
-  return {
-    dayOn: (date) => {
-      const pattern = patternOn(member, date);
-      if (!pattern) {
-        return undefined;
-      }
-      const change = changeOn(member, date);
-      return {
-        early: change?.early ?? false,
-        late: change?.late ?? false,
-        look: pattern.look,
-        name: pattern.name,
-        off: pattern.off,
-        time: change?.time ?? pattern.time,
-      };
-    },
-    name: member.name,
-    photo: member.photo,
-    style: member.style,
-  };
-}
-
-function groupOf(id: string): WidgetCompanion {
+function groupOf(id: string) {
   const group = sampleGroups().find((one) => one.id === id);
-  return {
-    kind: "group",
-    mark: group?.mark ?? { emoji: "👥", kind: "emoji" },
-    name: group?.name ?? "",
-    people: sampleOthers(id).map(personOf),
-  };
+  return group && groupCompanion(group);
 }
 
 function companionOf(
@@ -170,10 +142,10 @@ function companionOf(
 ): WidgetCompanion | undefined {
   switch (choice) {
     case "partner": {
-      return { kind: "person", person: personOf(partner) };
+      return { kind: "person", person: widgetPersonOf(partner) };
     }
     case "mother": {
-      return { kind: "person", person: personOf(mother) };
+      return { kind: "person", person: widgetPersonOf(mother) };
     }
     case "notEntered": {
       return {
