@@ -11,13 +11,16 @@ import {
   useShiftNames,
   useWords,
 } from "@pochical/prototype/components/design-widgets";
+import {
+  FitText,
+  soonestOff,
+  spokenOff,
+} from "@pochical/prototype/components/design-widgets-next-off";
 import type {
   WidgetDay,
   WidgetEntry,
 } from "@pochical/prototype/lib/design-widgets";
 import { css } from "@pochical/styled-system/css";
-
-import { FitText, soonestOff, spokenOff } from "./design-widgets-next-off";
 
 // The iPhone lock screen's widgets: circular, rectangular and inline.
 

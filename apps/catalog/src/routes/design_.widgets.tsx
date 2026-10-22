@@ -1,4 +1,8 @@
 import {
+  Fit,
+  LockScreen,
+} from "@pochical/prototype/components/design-home-screen";
+import {
   DesignProviders,
   PresetContexts,
   useDesignTheme,
@@ -16,6 +20,15 @@ import {
   CalendarLarge,
   TwoWeeksMedium,
 } from "@pochical/prototype/components/design-widgets-calendar";
+import { NextOffSmall } from "@pochical/prototype/components/design-widgets-next-off";
+import {
+  SimpleMedium,
+  SimpleSmall,
+} from "@pochical/prototype/components/design-widgets-simple";
+import {
+  UpcomingMedium,
+  UpcomingSmall,
+} from "@pochical/prototype/components/design-widgets-upcoming";
 import {
   CellNamesContext,
   IconWeightContext,
@@ -53,7 +66,6 @@ import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ReactNode, ComponentType } from "react";
 
-import { Fit, LockScreen } from "../components/design-home-screen";
 import {
   DesignIntro,
   DesignPage,
@@ -66,17 +78,11 @@ import {
   TodayInline,
   UpcomingRectangular,
 } from "../components/design-widgets-lock";
-import { NextOffSmall } from "../components/design-widgets-next-off";
 import {
   NowCircular,
   NowRectangular,
   NowSmall,
 } from "../components/design-widgets-now";
-import { SimpleMedium, SimpleSmall } from "../components/design-widgets-simple";
-import {
-  UpcomingMedium,
-  UpcomingSmall,
-} from "../components/design-widgets-upcoming";
 import {
   parseWidgetVariants,
   widgetVariantKeys,

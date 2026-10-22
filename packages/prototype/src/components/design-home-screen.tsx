@@ -1,35 +1,26 @@
-import {
-  AppIcon,
-  useAppIcons,
-} from "@pochical/prototype/components/design-app-icon";
-import { NotificationBanner } from "@pochical/prototype/components/design-notifications";
-import { Phone } from "@pochical/prototype/components/design-phone";
-import { useThemeStyle } from "@pochical/prototype/components/design-theme";
-import {
-  wallpaperFor,
-  WidgetFrame,
-} from "@pochical/prototype/components/design-widget-frame";
-import { TwoWeeksMedium } from "@pochical/prototype/components/design-widgets-calendar";
-import { formatDay } from "@pochical/prototype/lib/design-days";
-import { useDevice } from "@pochical/prototype/lib/design-device";
-import {
-  bookOf,
-  PatternsContext,
-  presetPatterns,
-} from "@pochical/prototype/lib/design-patterns";
-import { clockText } from "@pochical/prototype/lib/design-reminders";
-import { useSettings } from "@pochical/prototype/lib/design-settings-store";
-import { designToday } from "@pochical/prototype/lib/design-today";
-import {
-  useShownDays,
-  useUser,
-} from "@pochical/prototype/lib/design-user-store";
-import { widgetEntry } from "@pochical/prototype/lib/design-widgets";
-import { useDeviceScheme } from "@pochical/prototype/lib/device-media";
 import { css } from "@pochical/styled-system/css";
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { formatDay } from "../lib/design-days";
+import { useDevice } from "../lib/design-device";
+import {
+  bookOf,
+  PatternsContext,
+  presetPatterns,
+} from "../lib/design-patterns";
+import { clockText } from "../lib/design-reminders";
+import { useSettings } from "../lib/design-settings-store";
+import { designToday } from "../lib/design-today";
+import { useShownDays, useUser } from "../lib/design-user-store";
+import { widgetEntry } from "../lib/design-widgets";
+import { useDeviceScheme } from "../lib/device-media";
+import { AppIcon, useAppIcons } from "./design-app-icon";
+import { NotificationBanner } from "./design-notifications";
+import { Phone } from "./design-phone";
+import { useThemeStyle } from "./design-theme";
+import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
+import { TwoWeeksMedium } from "./design-widgets-calendar";
 import { NextOffSmall } from "./design-widgets-next-off";
 import { UpcomingSmall } from "./design-widgets-upcoming";
 

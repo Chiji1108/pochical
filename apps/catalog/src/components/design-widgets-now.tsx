@@ -10,6 +10,7 @@ import {
   useShiftNames,
   useWords,
 } from "@pochical/prototype/components/design-widgets";
+import { FitText } from "@pochical/prototype/components/design-widgets-next-off";
 import { useDisplayColor } from "@pochical/prototype/components/shift-mark";
 import { presetPatterns } from "@pochical/prototype/lib/design-patterns";
 import type {
@@ -20,7 +21,6 @@ import { css, cx } from "@pochical/styled-system/css";
 import { useContext } from "react";
 
 import { circular } from "./design-widgets-lock";
-import { FitText } from "./design-widgets-next-off";
 
 // いまのシフト: how long the shift on now runs, else how soon the next one
 // with hours starts, for long shifts like 当番 where the hour matters more
