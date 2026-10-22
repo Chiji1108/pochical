@@ -1,4 +1,4 @@
-import { createHistogram, performance } from "node:perf_hooks";
+import { monitorEventLoopDelay, performance } from "node:perf_hooks";
 
 // Every Durable Object call in a test fetches the Worker's module from
 // vitest's Node main process, so when its event loop stalls, every lane's
@@ -6,30 +6,32 @@ import { createHistogram, performance } from "node:perf_hooks";
 // has shown (1.7 s), and long enough to count toward a 5 s test timeout.
 const STALL_MS = 2000;
 const TICK_MS = 10;
+// The histogram records each whole interval, not only how late it ran.
+const lateMs = (ns: number) => Math.round(ns / 1e6) - TICK_MS;
 
 export default function setup() {
-  const lateness = createHistogram();
-  const stalls: { at: number; ms: number }[] = [];
+  const delay = monitorEventLoopDelay({ resolution: TICK_MS });
+  delay.enable();
+  let stalls = 0;
   let last = performance.now();
   const timer = setInterval(() => {
     const now = performance.now();
     const late = Math.round(now - last - TICK_MS);
-    lateness.record(Math.max(1, late));
     if (late >= STALL_MS) {
-      stalls.push({ at: Date.now() - (now - last), ms: late });
+      stalls += 1;
+      // Printed as it happens, so a run killed before teardown keeps it.
+      console.log(
+        `[event loop] stalled ${late}ms from ${new Date(Date.now() - (now - last)).toISOString()}`
+      );
     }
     last = now;
-  }, TICK_MS);
+  }, TICK_MS).unref();
 
   return () => {
     clearInterval(timer);
+    delay.disable();
     console.log(
-      `[event loop] ${stalls.length} stalls ≥${STALL_MS}ms, p50 ${lateness.percentile(50)}ms, p99 ${lateness.percentile(99)}ms, max ${lateness.max}ms`
+      `[event loop] ${stalls} stalls ≥${STALL_MS}ms, p50 ${lateMs(delay.percentile(50))}ms, p99 ${lateMs(delay.percentile(99))}ms, max ${lateMs(delay.max)}ms`
     );
-    for (const { at, ms } of stalls) {
-      console.log(
-        `[event loop] stalled ${ms}ms from ${new Date(at).toISOString()}`
-      );
-    }
   };
 }

@@ -4,6 +4,13 @@ import path from "node:path";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
 
+const appleKey = () =>
+  generateKeyPairSync("ec", {
+    namedCurve: "P-256",
+    privateKeyEncoding: { format: "pem", type: "pkcs8" },
+    publicKeyEncoding: { format: "pem", type: "spki" },
+  }).privateKey;
+
 export default defineConfig({
   plugins: [
     cloudflareTest(async () => ({
@@ -11,13 +18,9 @@ export default defineConfig({
       miniflare: {
         bindings: {
           // A key of the kind Apple gives, for signing what tests send.
-          APNS_KEY: generateKeyPairSync("ec", {
-            namedCurve: "P-256",
-          }).privateKey.export({ format: "pem", type: "pkcs8" }),
+          APNS_KEY: appleKey(),
           // A key of the kind Apple gives for Sign in with Apple.
-          APPLE_SIGNIN_KEY: generateKeyPairSync("ec", {
-            namedCurve: "P-256",
-          }).privateKey.export({ format: "pem", type: "pkcs8" }),
+          APPLE_SIGNIN_KEY: appleKey(),
           APPLE_SIGNIN_KEY_ID: "SIWATEST01",
           BETTER_AUTH_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
           BETTER_AUTH_URL: "https://server.test",
