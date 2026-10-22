@@ -36,6 +36,18 @@
   --color-fd-overlay: var(--scrim);
 }
 
+/* The documents' own ground and selection, in their light or dark. The
+   site's base styles (layer site) draw the light site's, and components
+   is the layer above them that Fumadocs UI's chrome comes in on. */
+@layer components {
+  :root {
+    background-color: var(--color-fd-background);
+  }
+  ::selection {
+    background-color: var(--accent-container);
+  }
+}
+
 @theme static {
   --color-fd-error: var(--danger-default);
 }

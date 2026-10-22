@@ -43,3 +43,18 @@ test("every shared piece is named on /design/components", () => {
   );
   expect(missing).toEqual([]);
 });
+
+// The page itself is content/design/components.mdx, which places the
+// groups of design-components.tsx: a group left out of it is a piece
+// missing from the page.
+const page = readFileSync(
+  path.join(import.meta.dir, "../content/design/components.mdx"),
+  "utf-8"
+);
+
+test("every group of pieces is placed on /design/components", () => {
+  const unplaced = [...catalog.matchAll(exported)]
+    .map((match) => match.groups?.name ?? "")
+    .filter((name) => !page.includes(`<${name} />`));
+  expect(unplaced).toEqual([]);
+});

@@ -107,6 +107,9 @@ function DocumentsPage() {
           <Link
             key={document.title}
             params={{ _splat: "splat" in document ? document.splat : "" }}
+            // The MDX documents load as a page of their own, with their
+            // stylesheet (design_.$.tsx).
+            reloadDocument={document.to === "/design/$"}
             to={document.to}
           >
             <span>

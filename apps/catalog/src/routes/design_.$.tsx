@@ -25,7 +25,17 @@ import docsStylesheet from "../docs.css?url";
 // /design pages are routes of their own, which take precedence over this
 // one.
 const loadPage = createServerFn({ method: "GET" })
-  .validator((slugs: string[]) => slugs)
+  .validator((input: unknown) => {
+    if (
+      !(
+        Array.isArray(input) &&
+        input.every((slug): slug is string => typeof slug === "string")
+      )
+    ) {
+      throw new TypeError("A document is asked for by its slugs");
+    }
+    return input;
+  })
   .handler(async ({ data: slugs }) => {
     const page = source.getPage(slugs);
     if (!page) {
@@ -85,16 +95,18 @@ function Content({ path }: { path: string }) {
 
 // TanStack Router hands a route's stylesheets to React, which keeps a
 // stylesheet once it has inserted it: docs.css, Tailwind's preflight
-// included, would stay on the pages visited after the documents. So a link
-// out of the documents loads its page anew, and one between documents
-// stays in the app.
+// included, would stay on the pages visited after the documents. So the
+// documents are a document of their own: a link out of them loads its page
+// anew (as a link into them does, design.index.tsx), and one between
+// documents stays in the app.
 function DocsLink({
   children,
   href = "",
   prefetch = true,
   ...props
 }: ComponentProps<"a"> & { prefetch?: boolean }) {
-  if (href.startsWith("#") || source.getPageByHref(href) === undefined) {
+  const found = href.startsWith("#") ? undefined : source.getPageByHref(href);
+  if (found === undefined) {
     return (
       <a href={href} {...props}>
         {children}
@@ -102,7 +114,12 @@ function DocsLink({
     );
   }
   return (
-    <Link preload={prefetch ? "intent" : false} to={href} {...props}>
+    <Link
+      hash={found.hash}
+      preload={prefetch ? "intent" : false}
+      to={found.page.url}
+      {...props}
+    >
       {children}
     </Link>
   );

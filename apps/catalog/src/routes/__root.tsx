@@ -43,7 +43,11 @@ export const Route = createRootRoute({
   notFoundComponent: () => (
     <main id="main">
       <h1>ページが見つかりません。</h1>
-      <Link to="/design">デザイン資料へ</Link>
+      {/* Anew, as it may be shown inside the MDX documents, whose
+          stylesheet the other pages must not keep (design_.$.tsx). */}
+      <Link reloadDocument to="/design">
+        デザイン資料へ
+      </Link>
     </main>
   ),
   shellComponent: RootDocument,
