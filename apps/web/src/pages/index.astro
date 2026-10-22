@@ -1,6 +1,7 @@
 ---
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
 import { site } from "@pochical/prototype/lib/brand";
+import { defaultDayBeforeTime } from "@pochical/prototype/lib/design-reminders";
 import { css } from "@pochical/styled-system/css";
 import { BellRing, CalendarPlus, ImageDown, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -183,7 +184,7 @@ const extras: { Icon: LucideIcon; title: string; body: string }[] = [
   },
   {
     Icon: BellRing,
-    body: "前の日の21時に、明日のシフトが届きます。",
+    body: `前の日の${defaultDayBeforeTime}に、明日のシフトが届きます。`,
     title: "前の晩にお知らせ",
   },
   {
