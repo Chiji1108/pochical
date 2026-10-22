@@ -163,20 +163,32 @@ const reportsWhere = async (
   }));
 };
 
-/**
- * What Pochical's people did, noted for 記録. `id` keeps one note of an
- * action sent again (an answer pressed twice is one answer).
- */
-const noteAction = async (
-  env: Env,
+/** A note for 記録 of what Pochical's people did, now. */
+const actionRow = (
   action: Omit<AdminAction, "atMs">,
   id: string = crypto.randomUUID()
+) => ({ ...action, at: new Date(), id });
+
+/**
+ * What Pochical's people did, noted for 記録 once it is done. `id` keeps
+ * one note of an action sent again (an answer pressed twice is one
+ * answer). A note that cannot be written is logged, never thrown: what it
+ * notes has happened already, and the page must say so.
+ */
+const noteDone = async (
+  env: Env,
+  action: Omit<AdminAction, "atMs">,
+  id?: string
 ): Promise<void> => {
-  await drizzle(env.DB)
-    .insert(adminActions)
-    .values({ ...action, at: new Date(), id })
-    .onConflictDoNothing()
-    .run();
+  try {
+    await drizzle(env.DB)
+      .insert(adminActions)
+      .values(actionRow(action, id))
+      .onConflictDoNothing()
+      .run();
+  } catch (error) {
+    console.error("Noting an admin action failed", action, error);
+  }
 };
 
 export class AdminEntrypoint extends WorkerEntrypoint<Env> {
@@ -246,7 +258,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     if (seqs.length === 0) {
       return false;
     }
-    await noteAction(
+    await noteDone(
       this.env,
       {
         action: "answer",
@@ -307,7 +319,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
         (sum, row) => sum + row.failed.count,
         0
       );
-      await noteAction(this.env, {
+      await noteDone(this.env, {
         action: "cleanBucket",
         by,
         detail: `${deleted} 件を消した、${failed} 件失敗`,
@@ -315,7 +327,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       });
       return cleanup;
     } catch (error) {
-      await noteAction(this.env, {
+      await noteDone(this.env, {
         action: "cleanBucket",
         by,
         detail: "途中で止まった",
@@ -341,7 +353,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
     } finally {
       // Noted whether it finished or stopped part way; 全消去 leaves the
       // notes of what was done, this one among them.
-      await noteAction(this.env, {
+      await noteDone(this.env, {
         action: "reset",
         by,
         detail: "",
@@ -371,26 +383,40 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       return false;
     }
     const handled = state === "open" ? null : new Date();
-    const updated = await drizzle(this.env.DB)
-      .update(reports)
-      .set({
-        handledAt: handled,
-        handledBy: handled === null ? null : by,
-        note: kept,
-        status: state,
-      })
-      .where(eq(reports.id, reportId))
-      .returning({ id: reports.id });
+    const db = drizzle(this.env.DB);
+    // The state and its note in 記録 together, in one transaction.
+    const [updated] = await db.batch([
+      db
+        .update(reports)
+        .set({
+          handledAt: handled,
+          handledBy: handled === null ? null : by,
+          note: kept,
+          status: state,
+        })
+        .where(eq(reports.id, reportId))
+        .returning({ id: reports.id }),
+      db.insert(adminActions).select(
+        db
+          .select({
+            action: sql<string>`'report'`.as("action"),
+            at: sql<number>`${Date.now()}`.as("at"),
+            by: sql<string>`${by}`.as("by"),
+            detail: sql<string>`${
+              kept === ""
+                ? STATE_WORDS[state]
+                : `${STATE_WORDS[state]}：${kept}`
+            }`.as("detail"),
+            id: sql<string>`${crypto.randomUUID()}`.as("id"),
+            target: reports.id,
+          })
+          .from(reports)
+          .where(eq(reports.id, reportId))
+      ),
+    ]);
     if (updated.length === 0) {
       return false;
     }
-    await noteAction(this.env, {
-      action: "report",
-      by,
-      detail:
-        kept === "" ? STATE_WORDS[state] : `${STATE_WORDS[state]}：${kept}`,
-      target: reportId,
-    });
     return true;
   }
 

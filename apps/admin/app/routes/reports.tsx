@@ -39,11 +39,10 @@ export default function Reports({
   actionData,
   loaderData: reports,
 }: Route.ComponentProps) {
-  const waiting = reports.filter((report) => report.state === "open").length;
   return (
     <main className={page}>
       <PageHeader
-        description={`メンバーが通報したもの。未対応を上に、新しい順です。未対応 ${waiting} 件。`}
+        description="メンバーが通報したもの。未対応を上に、新しい順です。未対応の数はサイドバーにあります。"
         title="通報"
       />
       {actionData !== undefined && "error" in actionData && (

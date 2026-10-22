@@ -35,6 +35,9 @@ const STATES: Record<
   open: { name: "未対応", tone: "danger" },
 };
 
+// The states in the order a report goes through them.
+const ORDER: ReportState[] = ["open", "acted", "dismissed"];
+
 type Report = {
   id: string;
   atMs: number;
@@ -108,9 +111,9 @@ function Handling({ handling, report }: { handling: boolean; report: Report }) {
               defaultValue={report.state}
               name="state"
             >
-              {Object.entries(STATES).map(([value, { name }]) => (
+              {ORDER.map((value) => (
                 <option key={value} value={value}>
-                  {name}
+                  {STATES[value].name}
                 </option>
               ))}
             </select>
