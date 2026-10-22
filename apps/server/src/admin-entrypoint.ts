@@ -5,7 +5,7 @@
 import { create } from "@bufbuild/protobuf";
 import { withinLimit } from "@pochical/design/text";
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { and, count, desc, eq, gt, gte, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, lt, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -97,6 +97,12 @@ export type UserSummary = {
   /** Their chat with Pochical's people waits for an answer (未返信). */
   unanswered: number;
 };
+
+/** Where a page of users ends, for the page after it. */
+export type UserCursor = { createdAtMs: number; userId: string };
+
+/** A page of users, and where the next begins; none after the last. */
+export type UserList = { users: UserSummary[]; next: UserCursor | null };
 
 /** One user's page: what D1 and their own DO know of them. */
 export type UserPage = UserSummary & {
@@ -456,9 +462,14 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
 
   /**
    * The users whose id starts with `prefix`, the latest signed up first:
-   * every user for an empty one.
+   * every user for an empty one, a page at a time. `after` is the last
+   * user of the page before, whose followers come next; none for the
+   * first page.
    */
-  async users(prefix: string): Promise<UserSummary[]> {
+  async users(
+    prefix: string,
+    after: UserCursor | null = null
+  ): Promise<UserList> {
     const db = drizzle(this.env.DB);
     const rows = await db
       .select({
@@ -472,16 +483,41 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       .leftJoin(supportChats, eq(supportChats.userId, user.id))
       // The ids starting with it, as a range of the primary key's order, so
       // no character is taken as a pattern and the index finds them.
-      .where(and(gte(user.id, prefix), lt(user.id, `${prefix}\uFFFF`)))
-      .orderBy(desc(user.createdAt))
+      .where(
+        and(
+          gte(user.id, prefix),
+          lt(user.id, `${prefix}\uFFFF`),
+          // After the page before, in the list's own order: signed up
+          // earlier, or at the same moment with a lower id.
+          after === null
+            ? undefined
+            : or(
+                lt(user.createdAt, new Date(after.createdAtMs)),
+                and(
+                  eq(user.createdAt, new Date(after.createdAtMs)),
+                  lt(user.id, after.userId)
+                )
+              )
+        )
+      )
+      .orderBy(desc(user.createdAt), desc(user.id))
       .limit(PAGE);
-    return rows.map((row) => ({
+    const users = rows.map((row) => ({
       anonymous: row.anonymous ?? false,
       createdAtMs: row.createdAt.getTime(),
       signIns: signInsIn(row.signIns),
       unanswered: row.unanswered ?? 0,
       userId: row.userId,
     }));
+    const last = users.at(-1);
+    return {
+      // A full page may have more after it; one short of full has none.
+      next:
+        users.length === PAGE && last !== undefined
+          ? { createdAtMs: last.createdAtMs, userId: last.userId }
+          : null,
+      users,
+    };
   }
 
   /**

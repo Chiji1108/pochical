@@ -5,6 +5,7 @@ import { Form, Link, redirect } from "react-router";
 import { SignIns } from "../sign-ins";
 import {
   badge,
+  button,
   card,
   codeStyle,
   Empty,
@@ -18,20 +19,40 @@ import { when } from "../when";
 import type { Route } from "./+types/users";
 
 // Every user, the latest signed up first, or those whose id starts with
-// what ?q= holds; one found alone opens their page, as ⌘K jumps to them.
+// what ?q= holds, a page at a time (?afterAt=&afterId=, where the page
+// before ended); one found alone opens their page, as ⌘K jumps to them.
 export const loader = async ({ url }: Route.LoaderArgs) => {
   const query = url.searchParams.get("q")?.trim() ?? "";
-  const users = await env.SERVER.users(query);
+  const afterAt = Number(url.searchParams.get("afterAt"));
+  const afterId = url.searchParams.get("afterId");
+  const after =
+    Number.isInteger(afterAt) && afterAt > 0 && afterId !== null
+      ? { createdAtMs: afterAt, userId: afterId }
+      : null;
+  const { next, users } = await env.SERVER.users(query, after);
   const [only] = users;
-  if (query !== "" && users.length === 1 && only !== undefined) {
+  if (
+    query !== "" &&
+    after === null &&
+    users.length === 1 &&
+    only !== undefined
+  ) {
     // oxlint-disable-next-line typescript/only-throw-error -- React Router's redirect
     throw redirect(`/users/${only.userId}`);
   }
-  return { query, users };
+  const nextPage =
+    next === null
+      ? null
+      : `?${new URLSearchParams({
+          afterAt: String(next.createdAtMs),
+          afterId: next.userId,
+          q: query,
+        })}`;
+  return { nextPage, query, users };
 };
 
 export default function Users({
-  loaderData: { query, users },
+  loaderData: { nextPage, query, users },
 }: Route.ComponentProps) {
   return (
     <main className={page}>
@@ -108,6 +129,16 @@ export default function Users({
           </table>
         )}
       </div>
+      {nextPage === null ? null : (
+        <Link
+          className={css(button.raw({ variant: "outline" }), {
+            alignSelf: "center",
+          })}
+          to={nextPage}
+        >
+          次のページ
+        </Link>
+      )}
     </main>
   );
 }
