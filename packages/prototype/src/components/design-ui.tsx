@@ -108,7 +108,9 @@ export function Button({
 
 // An action drawn as its icon alone, like the heading's 招待 or 保存. The
 // label is what a screen reader says.
-// As iOS 26's bar buttons: an icon in a round of glass, in the text color.
+// As iOS 26's bar buttons: an icon in a round of glass, in the text color,
+// every bar button and floating one alike (the way back, ⋯, ↓); the accent
+// is only for the one that confirms.
 // With glass={false} it is the icon alone, in the accent, for a button
 // inside something else, like a reply's way out.
 // With confirms, the glass takes the accent, as iOS tints a bar button

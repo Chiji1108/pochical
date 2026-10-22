@@ -81,9 +81,7 @@ struct InvitePage: View {
             Label(copied ? "コピーしました" : "リンクをコピー", systemImage: copied ? "checkmark" : "doc.on.doc")
               .frame(maxWidth: .infinity, minHeight: Metrics.control)
           }
-          .buttonStyle(.bordered)
-          .buttonBorderShape(.capsule)
-          .tint(colors.accentDefault)
+          .quietButton()
         }
         Text("リンクを知っている人は、だれでも「\(group.name)」に参加できます。送る相手に気をつけてください。")
           .font(.footnote)

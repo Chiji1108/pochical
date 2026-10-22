@@ -454,7 +454,6 @@ export function DesignCalendar({
                 </h4>
                 {/* The day before and after, a week's end no stop. */}
                 <IconButton
-                  glass={false}
                   label="前の日"
                   onClick={() => {
                     openDetail(addDays(openDate, -1));
@@ -463,7 +462,6 @@ export function DesignCalendar({
                   <ChevronLeft size={22} />
                 </IconButton>
                 <IconButton
-                  glass={false}
                   label="次の日"
                   onClick={() => {
                     openDetail(addDays(openDate, 1));
