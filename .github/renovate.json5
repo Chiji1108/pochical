@@ -73,7 +73,7 @@
       allowedVersions: "<0.33",
     },
     {
-      description: "A new Node major also moves @types/node",
+      description: "A Node major's PR reminds whoever merges it to move @types/node and its bound above",
       matchDepNames: ["node"],
       matchUpdateTypes: ["major"],
       prBodyNotes: [
