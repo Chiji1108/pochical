@@ -21,18 +21,16 @@ description = "Fail if the code generated from design/ is out of date"
 run = "bun design/scripts/gen.ts --check"
 
 [tasks."gen:worker-types"]
-description = "Write each Worker's worker-configuration.d.ts from its wrangler.jsonc, with the wrangler in bun.lock"
-run = [
-  "bun run --cwd apps/server cf-typegen",
-  "bun run --cwd apps/admin cf-typegen",
-  "bun run --cwd apps/web cf-typegen",
-]
+description = "Write each Worker's worker-configuration.d.ts (every workspace's cf-typegen) from its wrangler.jsonc, with the wrangler in bun.lock"
+run = "bun run --filter '*' cf-typegen"
 
 [tasks."worker-types:check"]
 description = "Fail if a Worker's worker-configuration.d.ts is not what gen:worker-types writes"
 depends = ["gen:worker-types"]
 run = '''
-if ! git diff --exit-code --stat -- '*/worker-configuration.d.ts'; then
+changed=$(git status --porcelain -- '*/worker-configuration.d.ts')
+if [ -n "$changed" ]; then
+  printf '%s\n' "$changed"
   echo "worker-configuration.d.ts is out of date: run mise run gen:worker-types and commit it (AGENTS.md)."
   exit 1
 fi
