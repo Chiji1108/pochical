@@ -60,13 +60,13 @@ final class ShiftsRotationTests: XCTestCase {
   @MainActor
   func test4PicksAMonthAndTurns() throws {
     launch()
-    turn("picked", year: "2027年")
+    turn("picked", year: year(1))
   }
 
   @MainActor
   func test5PicksAMonthAndTurnsAtTheLargestText() throws {
     launch(["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"])
-    turn("picked-largest", year: "2027年")
+    turn("picked-largest", year: year(1))
   }
 
   @MainActor
@@ -113,12 +113,12 @@ final class ShiftsRotationTests: XCTestCase {
     XCTAssertEqual(settled().top, today(), "一覧 goes to today")
     checkToday("in 一覧, on today")
 
-    pick("2027年")
+    pick(year(1))
     _ = settled()
     snap("today-far")
-    checkToday("a year on")
+    checkAway("a year on")
 
-    pick(String(Calendar.current.component(.year, from: Date())) + "年")
+    pick(year(0))
     _ = settled()
     snap("today-month")
     checkToday("back in today's month")
@@ -129,16 +129,16 @@ final class ShiftsRotationTests: XCTestCase {
     snap("today-weeks")
     checkToday("in 週ごと, on today's week")
 
-    pick("2027年")
+    pick(year(1))
     _ = settled()
-    checkToday("in 週ごと, a year on")
+    checkAway("in 週ごと, a year on")
 
     switchLayout(from: "週ごと", to: "一覧")
     XCTAssertEqual(settled().top, today(), "一覧 goes to today")
     snap("today-days")
     checkToday("in 一覧 again, on today")
 
-    pick("2027年")
+    pick(year(1))
     _ = settled()
     todayButton().tap()
     XCTAssertEqual(settled().top, today(), "今日 goes back to today")
@@ -192,11 +192,29 @@ final class ShiftsRotationTests: XCTestCase {
       .allElementsBoundByIndex.first(where: \.isHittable) ?? app.buttons["no 今日"]
   }
 
-  /// 今日 is in the bar exactly while today's row is out of sight.
+  /// 今日 is in the bar exactly while less than half of today's row is in
+  /// sight below the faces; not judged with the row near half, at the
+  /// screen's edge. Only with this year's months in sight: rows name no
+  /// year.
   @MainActor private func checkToday(_ when: String) {
+    let below = faces().first?.frame.maxY ?? 0
+    var sight = app.windows.firstMatch.frame
+    sight = sight.divided(atDistance: below - sight.minY, from: .minYEdge).remainder
     let row = app.buttons.matching(NSPredicate(format: "label MATCHES %@", today() + "([^0-9].*)?"))
-      .allElementsBoundByIndex.contains(where: \.isHittable)
-    XCTAssertEqual(todayButton().exists, !row, "今日 shows while today is out of sight, \(when)")
+      .allElementsBoundByIndex.first(where: \.isHittable)
+    let shown = row.map { $0.frame.intersection(sight).height / $0.frame.height } ?? 0
+    guard abs(shown - 0.5) > 0.25 else { return }
+    XCTAssertEqual(todayButton().exists, shown < 0.5, "今日 shows while today is out of sight, \(when)")
+  }
+
+  /// 今日 is in the bar, the list a year or more from today.
+  @MainActor private func checkAway(_ when: String) {
+    XCTAssertTrue(todayButton().exists, "今日 shows, \(when)")
+  }
+
+  /// The year `offset` years from this one, as 月を選ぶ's wheel names it.
+  private func year(_ offset: Int) -> String {
+    "\(Calendar.current.component(.year, from: Date()) + offset)年"
   }
 
   /// A member's column across a big group's 一覧.

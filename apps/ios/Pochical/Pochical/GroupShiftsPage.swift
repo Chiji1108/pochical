@@ -57,8 +57,9 @@ struct GroupShiftsPage: View {
   /// The layout picked from the menu; until then the group's size's.
   @State private var pickedLayout: ShiftsLayout?
   /// Whether today's day or week is in sight, told by its own row as it
-  /// is laid out; 今日 shows while it isn't.
-  @State private var todayInSight = false
+  /// is laid out; 今日 shows while it isn't. At first, whether the list
+  /// opens on today, which puts that row at its top.
+  @State private var todayInSight: Bool
   /// How far a big group's 一覧 is scrolled sideways, for the faces over
   /// it; whether it is, for the edge beside its pinned columns; and how
   /// wide its view is, for the months' headings.
@@ -96,6 +97,7 @@ struct GroupShiftsPage: View {
   init(group: GroupRow, day: Day?) {
     self.group = group
     openingDay = day
+    _todayInSight = State(initialValue: day.map { $0 == Day.today } ?? true)
   }
 
   var body: some View {
@@ -284,6 +286,7 @@ struct GroupShiftsPage: View {
     Group {
       let sideways = wide && layout == .days
       let pinning: Sideways = sideways ? .scrolls(edged: scrolledSideways) : .fits
+      let today = anchor(of: Day.today)
       ScrollView(sideways ? [.vertical, .horizontal] : .vertical) {
         LazyVStack(alignment: .leading, spacing: layout == .weeks ? 12 : 0) {
           ForEach(months, id: \.self) { month in
@@ -307,7 +310,7 @@ struct GroupShiftsPage: View {
                 )
                 .equatable()
                 .padding(.horizontal, 16)
-                .placed(at: .day(day), today: anchor(of: Day.today), inSight: $todayInSight)
+                .placed(at: .day(day), inSight: .day(day) == today ? $todayInSight : nil)
               }
             } else {
               ForEach(weeks(endingIn: month), id: \.self) { week in
@@ -328,7 +331,7 @@ struct GroupShiftsPage: View {
                 .overlay(
                   RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
                 .padding(.horizontal, 16)
-                .placed(at: .day(week[0]), today: anchor(of: Day.today), inSight: $todayInSight)
+                .placed(at: .day(week[0]), inSight: .day(week[0]) == today ? $todayInSight : nil)
               }
             }
           }
@@ -438,17 +441,21 @@ nonisolated private enum ListPlace: Hashable, Sendable {
 }
 
 extension View {
-  /// A day's row or week's block at its place in the list. Today's tells
-  /// whether it is in sight from its own layout, which every move of the
-  /// list lays out anew: the list's visible targets can be left empty by
-  /// a jump with ScrollPosition, until a hand scrolls it again.
-  fileprivate func placed(at place: ListPlace, today: ListPlace, inSight: Binding<Bool>)
-    -> some View
-  {
-    onScrollVisibilityChange(threshold: 0.5) { shown in
-      if place == today { inSight.wrappedValue = shown }
+  /// A day's row or week's block at its place in the list; today's tells
+  /// `inSight` whether it is in sight from its own layout, which every
+  /// move of the list lays out anew. The list's visible targets can be
+  /// left empty by a jump with ScrollPosition until a hand scrolls it.
+  /// Taken out of the list while in sight, as by a new layout, the row
+  /// reports nothing, so it says so as it goes.
+  @ViewBuilder
+  fileprivate func placed(at place: ListPlace, inSight: Binding<Bool>?) -> some View {
+    if let inSight {
+      onScrollVisibilityChange(threshold: 0.5) { inSight.wrappedValue = $0 }
+        .onDisappear { inSight.wrappedValue = false }
+        .id(place)
+    } else {
+      id(place)
     }
-    .id(place)
   }
 }
 
