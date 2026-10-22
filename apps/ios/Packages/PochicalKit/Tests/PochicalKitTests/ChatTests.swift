@@ -194,6 +194,7 @@ struct ChatVectors: Decodable, Sendable {
     struct Step: Decodable, Sendable {
       var reply: Int64?
       var edit: Int64?
+      var share: [String]?
       var stop: Bool?
     }
     let name: String
@@ -269,20 +270,22 @@ func draftKept(_ vector: ChatVectors.Draft) {
 }
 
 @Test(arguments: try vectors("chat", as: ChatVectors.self).composer)
-func composerSwitches(_ vector: ChatVectors.Composer) {
+func composerSwitches(_ vector: ChatVectors.Composer) throws {
   let nameOf = { (id: String) in id == "u2" ? "ゆき" : id }
   let held = vector.composer
-  var writing = Writing<Int64, Int>()
-  writing.text = plainText(held.text, nameOf: nameOf)
-  writing.picked = mentions(in: held.text).map { PickedMember(id: $0, name: nameOf($0)) }
-  writing.target = DraftTarget(replyTo: held.replyTo, editing: held.editing)
+  var writing = Writing<Int64, Int>(
+    text: held.text, nameOf: nameOf,
+    target: DraftTarget(replyTo: held.replyTo, editing: held.editing))
   writing.days = held.days?.compactMap(Day.init)
   writing.photos = Array(0..<(held.photos ?? 0))
   writing.previewRemoved = held.withoutPreview == true ? previewLink(held.text) : nil
   if let seq = vector.step.reply {
     writing.answer(seq)
-  } else if let seq = vector.step.edit, let line = vector.lines.first(where: { $0.seq == seq }) {
-    writing.change(seq, text: line.text ?? "", nameOf: nameOf)
+  } else if let seq = vector.step.edit {
+    let line = try #require(vector.lines.first { $0.seq == seq })
+    writing.change(seq, text: try #require(line.text), nameOf: nameOf)
+  } else if let days = vector.step.share {
+    writing.share(days.compactMap(Day.init))
   } else {
     writing.stop()
   }

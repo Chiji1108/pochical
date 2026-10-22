@@ -417,7 +417,7 @@ struct ChatScreen: View {
       // is sent, with a word if one likes.
       if let sharing, !tookSharing {
         tookSharing = true
-        draft.writing.days = [sharing]
+        draft.writing.share([sharing])
       }
     }
     .onDisappear {
@@ -1008,9 +1008,7 @@ struct ChatScreen: View {
     guard let kept = read ?? nil else { return }
     let names = names
     let nameOf = { (id: String) in memberName(id, in: names) }
-    draft.writing.text = plainText(kept.text, nameOf: nameOf)
-    draft.writing.picked = mentions(in: kept.text).map { PickedMember(id: $0, name: nameOf($0)) }
-    draft.writing.target = kept.target
+    draft.writing = Writing(text: kept.text, nameOf: nameOf, target: kept.target)
     keptDraft = KeptDraft(text: kept.text, target: kept.target?.map(\.seq))
     openedDraft = (shown: draft.writing.text, sent: kept.text)
   }

@@ -204,9 +204,7 @@ struct ChatComposer: View {
           draft.writing.days = nil
         }
       }
-      if let preview = draft.preview, !preview.none,
-        preview.url != draft.writing.previewRemoved
-      {
+      if let preview = shownPreview {
         ComposerPreviewBar(state: preview) {
           draft.writing.previewRemoved = preview.url
         }
@@ -314,12 +312,20 @@ struct ChatComposer: View {
     } ?? []
   }
 
+  /// The page over the field: the words' first link's, as it comes, and
+  /// not taken off; a page read for words since replaced is not theirs.
+  private var shownPreview: ComposerPreview? {
+    guard let preview = draft.preview, !preview.none,
+      preview.url == previewLink(draft.writing.text),
+      preview.url != draft.writing.previewRemoved
+    else { return nil }
+    return preview
+  }
+
   /// What the composer's height is made of now.
   private func shape(mentioning: Int) -> ComposerShape {
     let editing = draft.editing != nil
-    let preview = draft.preview.flatMap {
-      $0.none || $0.url == draft.writing.previewRemoved ? nil : $0
-    }
+    let preview = shownPreview
     return ComposerShape(
       editing: editing,
       replying: draft.replyTo != nil,
@@ -390,11 +396,13 @@ struct ChatComposer: View {
   /// the last is in, nothing is sent and the tray has no room for them.
   private func read(_ sources: [PhotoSource]) {
     draft.comingPhotos += sources.count
-    Task { await readPhotos(sources) }
+    let message = draft.writing.message
+    Task { await readPhotos(sources, for: message) }
   }
 
-  /// Reads photos counted coming, and shrinks them to send, into the tray.
-  private func readPhotos(_ sources: [PhotoSource]) async {
+  /// Reads photos counted coming, and shrinks them to send, into the tray
+  /// of the message they were picked for.
+  private func readPhotos(_ sources: [PhotoSource], for message: UUID) async {
     var unreadable = false
     for source in sources {
       defer { draft.comingPhotos -= 1 }
@@ -408,7 +416,7 @@ struct ChatComposer: View {
       // pixels, on it, each would hold the screen still a moment.
       let thumbnail = await UIImage(data: shrunk.jpeg)?.byPreparingThumbnail(
         ofSize: CGSize(width: 128, height: 128))
-      draft.writing.pick(PickedPhoto(shrunk: shrunk, thumbnail: thumbnail))
+      draft.writing.pick(PickedPhoto(shrunk: shrunk, thumbnail: thumbnail), for: message)
     }
     if unreadable {
       say("開けない写真がありました")

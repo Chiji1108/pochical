@@ -17,6 +17,8 @@ import {
   answering,
   changing,
   emptyWriting,
+  picking,
+  sharing,
   stopping,
   writingOf,
 } from "../lib/chat-messages";
@@ -71,24 +73,27 @@ export function useComposer({
   // A mention's name, for words put back to be changed.
   mentionName?: (id: string) => string;
 }) {
-  const [writing, setWriting] = useState<Writing>(() => ({
-    ...writingOf(kept?.text ?? "", mentionName, kept?.target),
-    days: attach,
-  }));
+  const [writing, setWriting] = useState<Writing>(() => {
+    const opened = writingOf(kept?.text ?? "", mentionName, kept?.target);
+    return attach ? sharing(opened, attach) : opened;
+  });
   const { words: draft, picked, target, days: attached, photos } = writing;
   const editing = target?.kind === "edit" ? target.id : undefined;
   const replyTo = target?.kind === "reply" ? target.id : undefined;
   const linkPreview = useLinkPreview(draft, writing.withoutPreview, (link) => {
     setWriting((before) => ({ ...before, withoutPreview: link }));
   });
-  const chosen = useChosenPhotos(photos, (update) => {
-    // A photo read after an edit began has no message to go with: an
-    // edit changes only the words.
-    setWriting((before) =>
-      before.target?.kind === "edit"
-        ? before
-        : { ...before, photos: update(before.photos) }
-    );
+  const chosen = useChosenPhotos({
+    onRead: (read, message) => {
+      setWriting((before) => picking(before, message, read));
+    },
+    onRemove: (photo) => {
+      setWriting((before) => ({
+        ...before,
+        photos: before.photos.filter((other) => other !== photo),
+      }));
+    },
+    photos,
   });
   const formRef = useRef<HTMLFormElement>(null);
   // An @ being written at the end of the message lists the others whose
@@ -118,7 +123,7 @@ export function useComposer({
   // Sent: a new message starts, still answering the line until the send
   // lets the reply go.
   const clear = () => {
-    setWriting((before) => ({ ...emptyWriting, target: before.target }));
+    setWriting((before) => emptyWriting(before.target));
   };
   // Puts your message's words alone in the composer to change them.
   const startEditing = (message: Message) => {
@@ -142,7 +147,8 @@ export function useComposer({
     draft,
     editing,
     formRef,
-    handleChoosePhotos: chosen.handleChoose,
+    handleChoosePhotos: async (files: File[]) =>
+      await chosen.handleChoose(files, writing.message),
     handleRemovePhoto: chosen.handleRemove,
     linkPreview,
     mentionName,

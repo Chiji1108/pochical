@@ -36,6 +36,7 @@ import {
   keptDraft,
   pinMessage,
   pinsOf,
+  sharing,
   stopping,
   unsendMessage,
   writingOf,
@@ -719,21 +720,20 @@ describe("spec/vectors/chat.json", () => {
   } of chatMessages.composer) {
     test(name, () => {
       const before = writingFrom(composer);
-      const lineOf = (seq: number) => {
-        const one = lines.find((held) => held.seq === seq);
-        return line(
-          String(seq),
-          one && "text" in one
-            ? { kind: "words", text: one.text }
-            : { kind: "unsent" },
-          { from: "me" }
-        );
-      };
       let after: Writing;
       if ("reply" in step) {
         after = answering(before, String(step.reply));
       } else if ("edit" in step) {
-        after = changing(lineOf(step.edit), mentionName);
+        const edited = lines.find((one) => one.seq === step.edit);
+        if (!(edited && "text" in edited)) {
+          throw new Error(`no words at ${step.edit}`);
+        }
+        after = changing(
+          line(String(step.edit), { kind: "words", text: edited.text }),
+          mentionName
+        );
+      } else if ("share" in step) {
+        after = sharing(before, step.share.map(dayOf));
       } else {
         after = stopping(before);
       }
