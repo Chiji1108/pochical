@@ -1,0 +1,43 @@
+/* #699's apps/catalog/src/docs.css: Tailwind CSS and Fumadocs UI for the
+   documents' chrome, loaded by app/design/layout.tsx only. */
+@import "tailwindcss" source(none);
+@import "fumadocs-ui/css/lib/default-colors.css";
+@import "fumadocs-ui/css/preset.css";
+
+@source "./";
+@source "../../../components/docs-theme-switch.tsx";
+@source "../../../components/pieces.tsx";
+
+:root,
+.dark {
+  --color-fd-background: var(--background-base);
+  --color-fd-foreground: var(--text-primary);
+  --color-fd-muted: var(--fill-quaternary);
+  --color-fd-muted-foreground: var(--text-tertiary);
+  --color-fd-popover: var(--background-elevated);
+  --color-fd-popover-foreground: var(--text-primary);
+  --color-fd-card: var(--background-card);
+  --color-fd-card-foreground: var(--text-primary);
+  --color-fd-border: var(--border-default);
+  --color-fd-primary: var(--accent-default);
+  --color-fd-primary-foreground: var(--accent-on-fill);
+  --color-fd-secondary: var(--fill-tertiary);
+  --color-fd-secondary-foreground: var(--text-primary);
+  --color-fd-accent: var(--accent-container);
+  --color-fd-accent-foreground: var(--text-primary);
+  --color-fd-ring: var(--accent-focus);
+  --color-fd-overlay: var(--scrim);
+}
+
+@layer components {
+  :root {
+    background-color: var(--color-fd-background);
+  }
+  ::selection {
+    background-color: var(--accent-container);
+  }
+}
+
+@theme static {
+  --color-fd-error: var(--danger-default);
+}

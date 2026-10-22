@@ -1,0 +1,11 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // A throwaway sketch (POC-175): the /design documents on vinext, run
+  // locally in workerd only. No routes, no workers.dev, no Workers Builds.
+  "name": "pochical-catalog-vinext-sketch",
+  "main": "vinext/server/app-router-entry",
+  "compatibility_date": "2026-09-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "assets": { "not_found_handling": "none" },
+}

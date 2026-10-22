@@ -1,0 +1,149 @@
+---
+title: 部品の棚卸し
+description: 画面で使う共通の部品を、役割ごとにすべて並べています。それぞれに、iOS と Android のアプリでどの部品にあたるかを添えています。部品を足したら、ここにも載せます（載っていないとテストで止まります）。
+---
+
+import {
+  BottomPieces,
+  Buttons,
+  Cards,
+  Chips,
+  Choices,
+  DayCells,
+  Fields,
+  HeaderButtons,
+  OtherButtons,
+  Overlays,
+  Rows,
+  Sheets,
+  ShiftMarks,
+  Switches,
+  Tiles,
+  Times,
+} from "@/components/design-components";
+
+## ボタン
+
+主・控えめ・文字・目立たないの4段。以前の dc-start、dc-import-primary、ob-primary、st-primary(主)、dc-start-photo、dc-save-secondary、gr-secondary(控えめ)、ob-link、st-link(文字)、dc-import-later(目立たない)をまとめたものです。
+
+<Pieces>
+  <Buttons />
+</Pieces>
+
+## 画面の上
+
+戻る(またはキャンセル)・右の操作・大きなタイトル。iPhone と Android のナビゲーションバーと同じ形です。設定、グループ、パターンの編集などの pe-topbar と PageHeader をまとめたものです。
+
+<Pieces>
+  <HeaderButtons />
+</Pieces>
+
+## そのほかのボタン
+
+画面の中で使う、そのほかの押すもの。
+
+<Pieces>
+  <OtherButtons />
+</Pieces>
+
+## 行
+
+List に ListRow を並べます。ラベル、右の値、前の印、後ろの操作(スイッチや入力)を持てて、押せる行には矢印が付きます。設定の Row と SwitchRow、各画面の st-row をまとめたものです。
+
+<Pieces>
+  <Rows />
+</Pieces>
+
+## カードと並べ替え
+
+画面に直接置く面は、リストと同じ角丸 24 です。
+
+<Pieces>
+  <Cards />
+</Pieces>
+
+## 入力
+
+LimitedInput の look で見た目を選びます。inline は行の中、box は地の上に1つ、chip はチップの間。文字数の上限を超えそうになると数を出します。
+
+<Pieces>
+  <Fields />
+</Pieces>
+
+## 切り替え
+
+SegmentedControl に Segment を並べます。中身は見本でも言葉だけでもよく、高さは regular(62px)、tall(大きな見本)、compact(言葉だけ)の3つ。SwiftUI の segmented Picker、Compose の SegmentedButton にあたります。比べる案の切り替え(design-segment)はアプリの外なので別です。
+
+<Pieces>
+  <Switches />
+</Pieces>
+
+## 時間
+
+TimeField は時と分を別々に選んで、数字を打つか ↑↓ で変えます。24時間表記。React Aria の TimeField(HeroUI のもの)で、SwiftUI の DatePicker(.compact, .hourAndMinute)、Compose の TimeInput にあたります。シフトの開始と終了は TimeRange で並べます。
+
+<Pieces>
+  <Times />
+</Pieces>
+
+## 1つを選ぶ
+
+いくつかから1つを選ぶところ。ChoiceGrid に Choice を並べ、見た目(色の丸、アイコン、アプリアイコン)はその場所が決めます。行で選ぶときは ChoiceList と ChoiceRow で、選んだ行にチェックが付きます。Ark UI の RadioGroup なので矢印キーで選べます。SwiftUI の Picker、Compose の selectable にあたります。
+
+<Pieces>
+  <Choices />
+</Pieces>
+
+## タイルとめくり
+
+絵の下に名前を置いて選ぶタイルと、横にめくる並び。選んだタイルは枠と地が付き、名前が太字になります。
+
+<Pieces>
+  <Tiles />
+</Pieces>
+
+## チップとタグ
+
+押せる Chip と、見せるだけの Tag。どちらも ChipGroup で折り返して並べます。Tag は accent(グループの知らせ)、neutral(ページの上)、raised(塗られたカードの上)の3色と、sm・md の2つの大きさです。
+
+<Pieces>
+  <Chips />
+</Pieces>
+
+## シートの見出し
+
+見るだけのシートは「タイトル+×」、決めるシートは「キャンセル/タイトル/決定」。iPhone と Android の標準のシートと同じ使い分けです。メニューと確認は見出しなしで、下にキャンセルがあります。
+
+<Pieces>
+  <Sheets />
+</Pieces>
+
+## 画面と重なり
+
+画面の器と、電話の上に重なって出るもの。ページの上では出せないので、電話の中で開いて見ます。
+
+<Pieces>
+  <Overlays />
+</Pieces>
+
+## シフトの印(ポチカル独自)
+
+スタイル3種 × 印なし・早出・残業。グループでも同じものが出ます。
+
+<Pieces>
+  <ShiftMarks />
+</Pieces>
+
+## 日のマス(ポチカル独自)
+
+月のマスの状態。
+
+<Pieces>
+  <DayCells />
+</Pieces>
+
+## 画面の下と見出し(ポチカル独自)
+
+<Pieces>
+  <BottomPieces />
+</Pieces>

@@ -1,0 +1,13 @@
+{
+  "title": "デザイン資料",
+  "pages": [
+    "[デモ](/demo)",
+    "[画面遷移図](/design/flows)",
+    "[状態の一覧](/design/states)",
+    "components",
+    "[ウィジェット](/design/widgets)",
+    "[素材](/design/assets)",
+    "colors",
+    "[Plain page](/plain)"
+  ]
+}

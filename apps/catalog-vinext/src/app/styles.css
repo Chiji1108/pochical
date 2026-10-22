@@ -1,0 +1,4 @@
+/* Same layer order as #699's apps/catalog/src/styles.css. */
+@layer theme, base, site, components, utilities, panda-reset, panda-base, panda-tokens, panda-recipes, panda-utilities;
+
+@import "@pochical/styled-system/base.css";

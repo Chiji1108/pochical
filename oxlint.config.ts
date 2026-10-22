@@ -21,7 +21,12 @@ export default defineConfig({
       // Existing findings in the web apps and the prototype they show,
       // downgraded until the /design prototype settles. Fix a rule's
       // findings, then delete it from this list.
-      files: ["apps/web/**", "apps/catalog/**", "packages/prototype/**"],
+      files: [
+        "apps/web/**",
+        "apps/catalog/**",
+        "apps/catalog-vinext/**",
+        "packages/prototype/**",
+      ],
       rules: {
         complexity: "warn",
         "import/newline-after-import": "warn",
