@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useContext, useState } from "react";
 
-import storeIcon from "../assets/icon-192.png";
+import storeIcon from "../assets/icon-192.png?url";
 import { dateKey, formatMonth } from "../lib/design-days";
 import type { Schedule } from "../lib/design-days";
 import { isDayOff } from "../lib/design-patterns";

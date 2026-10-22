@@ -10,7 +10,7 @@
     "cf-typegen": "wrangler types",
     "sync": "astro sync",
     "prepare": "bun run sync",
-    "typecheck": "astro check && tsc --noEmit -p tsconfig.tools.json",
+    "typecheck": "astro check && tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
     "test": "bun test",
     "check": "bun run --cwd ../.. check",
     "fix": "bun run --cwd ../.. fix"
@@ -40,7 +40,6 @@
     "@types/react": "~19.3.0",
     "@types/react-dom": "^19.2.0",
     "typescript": "npm:@typescript/typescript6@~6.0.2",
-    "vite": "^8.0.0",
     "wrangler": "^4.137.0"
   }
 }
