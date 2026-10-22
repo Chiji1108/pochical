@@ -6,6 +6,7 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 
 - Tool versions and tasks are in `mise.toml` (`mise run gen`, `mise run server:test`, `mise run ios:test`, ...).
 - Bun's version is in three places, changed together: `mise.toml`, `packageManager` in `package.json`, and the `BUN_VERSION` build variable of each Worker in Workers Builds (Settings > Build > Build Variables and Secrets), which reads no version file for Bun.
+- Node's version is in `.node-version` alone: mise reads it (`idiomatic_version_file_enable_tools` in `mise.toml`), and so does Workers Builds.
 - Generated files are never edited by hand; change their source and regenerate:
   - Wire types: `proto/` → `mise run gen` (into `apps/server/src/gen`, `apps/web/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`). A change to `Change` or anything it holds fails `mise run sync:check` until the iOS `Sync.schema` is raised and `mise run sync:check -- --write` records it.
   - Numbers every platform shares (limits, the chat's, days', invites', sockets', widgets'), design tokens, mark icons and holidays: `design/` → `mise run gen` (into `spec/design-tokens.json`, `apps/ios/Packages/PochicalDesign/Sources`, `apps/android/design/src/main`). Specs and code refer to them by name, never by value.
