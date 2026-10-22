@@ -40,17 +40,16 @@ export const weekTable = {
       },
     },
   }),
-  // Room above the dates and below the last person, so the picked day's
-  // frame and the shared days off stay clear of the edge. Inside the
-  // hub's card it takes the card's ground: the screen's would cut a hole
-  // in it in dark mode.
+  // Room all round, so the faces, the picked day's frame and the shared
+  // days off stay clear of the edge. Inside the hub's card it takes the
+  // card's ground: the screen's would cut a hole in it in dark mode.
   week: cva({
     base: {
       bg: "background.base",
       border: "1px solid token(colors.separator)",
       borderRadius: "2xl",
       overflow: "hidden",
-      padding: "4px 0",
+      padding: "4px",
     },
     variants: {
       compact: {
@@ -72,7 +71,9 @@ export const weekTable = {
         true: {
           bg: "background.base",
           margin: "-8px 0 -8px",
-          padding: "8px 0 4px",
+          // In from the sides as far as the weeks' columns: their border
+          // and room.
+          padding: "8px 5px 4px",
           position: "sticky",
           top: "var(--pinned-top, -8px)",
           zIndex: 5,

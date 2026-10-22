@@ -7,6 +7,9 @@ import SwiftUI
 /// /design's (monthSpan).
 private let monthSpan = 24
 
+/// The room a week's block keeps inside its border, on every side.
+private let weekInset = Metrics.spacingStep
+
 /// How everyone's shifts are laid out (/design's Layout): a row a day
 /// (一覧), a block a week (週ごと), or one member's month at a time
 /// (1人ずつ).
@@ -142,9 +145,10 @@ struct GroupShiftsPage: View {
             edged: scrolledSideways
           )
           .padding(.horizontal, 16)
-        // Over the blocks' columns, which keep room at their trailing end.
+        // Over the blocks' columns, in from the list's margins as far as
+        // the blocks keep their own room.
         case .weeks:
-          GroupWeekdays().padding(.leading, 16).padding(.trailing, 20).padding(.bottom, 6)
+          GroupWeekdays().padding(.horizontal, 16 + weekInset).padding(.bottom, 6)
         case .person: EmptyView()
         }
         if layout == .person {
@@ -335,9 +339,9 @@ struct GroupShiftsPage: View {
                   onPick: pickDay, drawing: drawing
                 )
                 .equatable()
-                // Clear of the rounded corners, a band in the last column too.
-                .padding(.vertical, 4)
-                .padding(.trailing, 4)
+                // Clear of the rounded corners all round: the faces, and a
+                // band in the last column.
+                .padding(weekInset)
                 .background(
                   colors.backgroundBase, in: RoundedRectangle(cornerRadius: Radius.xxl)
                 )
