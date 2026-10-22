@@ -3,6 +3,7 @@ import { Check, ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { useDevice } from "../lib/design-device";
+import { iconButtonStyle } from "./design-ui";
 import type { ButtonProps } from "./design-ui";
 
 // A screen's top: the way back, its actions, 完了 and 今月.
@@ -10,53 +11,51 @@ import type { ButtonProps } from "./design-ui";
 // 完了 at a screen's top right, for the mode that has to be left on
 // purpose: entering shifts, an order typed on the calendar.
 // Each platform's own: iOS 26 draws a confirming bar button as its
-// symbol alone, a check on a round of tinted glass that names itself
-// only to a screen reader; Material's is a filled button with its word.
-const doneButtonStyle = cva({
-  base: {
-    _disabled: {
-      bg: "fill.quaternary",
-      color: "text.disabled",
-      cursor: "default",
-    },
-    alignItems: "center",
-    bg: "accent.fill",
-    border: 0,
-    color: "accent.onFill",
-    display: "inline-flex",
-    flexShrink: 0,
-    height: "touch",
-    justifyContent: "center",
+// symbol alone, the heading's icon buttons' round in the accent, naming
+// itself only to a screen reader; Material's is a filled button with its
+// word.
+const materialDoneStyle = css({
+  _disabled: {
+    bg: "fill.quaternary",
+    color: "text.disabled",
+    cursor: "default",
   },
-  variants: {
-    platform: {
-      android: {
-        borderRadius: "2xl",
-        gap: "8px",
-        paddingInline: "20px",
-        textStyle: "subheadline",
-      },
-      ios: { borderRadius: "full", width: "touch" },
-    },
-  },
+  alignItems: "center",
+  bg: "accent.fill",
+  border: 0,
+  borderRadius: "2xl",
+  color: "accent.onFill",
+  display: "inline-flex",
+  flexShrink: 0,
+  gap: "8px",
+  height: "touch",
+  justifyContent: "center",
+  paddingInline: "20px",
+  textStyle: "subheadline",
 });
 
 export function DoneButton({ className, ...props }: ButtonProps) {
   const platform = useDevice((state) => state.platform);
-  const ios = platform === "ios";
+  if (platform === "ios") {
+    return (
+      <button
+        aria-label="完了"
+        className={cx(iconButtonStyle({ confirms: true }), className)}
+        type="button"
+        {...props}
+      >
+        <Check aria-hidden="true" size={22} strokeWidth={2.5} />
+      </button>
+    );
+  }
   return (
     <button
-      aria-label={ios ? "完了" : undefined}
-      className={cx(doneButtonStyle({ platform }), className)}
+      className={cx(materialDoneStyle, className)}
       type="button"
       {...props}
     >
-      <Check
-        aria-hidden="true"
-        size={ios ? 22 : 18}
-        strokeWidth={ios ? 2.5 : 2}
-      />
-      {ios ? null : "完了"}
+      <Check aria-hidden="true" size={18} />
+      完了
     </button>
   );
 }
