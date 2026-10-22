@@ -3,9 +3,11 @@ import XCTest
 /// A big group's 一覧 turned to landscape and back (POC-132): its rows are
 /// drawn where they are laid out, under their faces, and the list stays
 /// on the days it showed; its 今日 shows while today is out of sight
-/// (POC-156); and its 週ごと opens on today's week (POC-162). Run by
-/// `mise run ios:shifts-rotation`, against the local server it starts
-/// with a group of twelve; skipped without it.
+/// (POC-156); and its 週ごと opens on today's week (POC-162). In 少人数,
+/// whose 一覧 fits across: 今日 leaves each row in its place, and 週ごと
+/// after 一覧 shows only weeks (POC-195). Run by `mise run ios:shifts-rotation`, against the local
+/// server it starts with a group of twelve and one of two; skipped
+/// without it.
 final class ShiftsRotationTests: XCTestCase {
   private var app: XCUIApplication!
   private var shared: URL!
@@ -23,26 +25,39 @@ final class ShiftsRotationTests: XCTestCase {
     MainActor.assumeIsolated { XCUIDevice.shared.orientation = .portrait }
   }
 
+  /// Joins the big group, then 少人数, whose 一覧 fits across; the big
+  /// one, joined first, is the one the グループ tab opens on.
   @MainActor
   func test1JoinsTheGroup() throws {
     launch()
-    let code = try String(contentsOf: shared.appending(path: "invite"), encoding: .utf8)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
+    join("invite", named: "テスト")
+    join("small-invite", named: nil)
+  }
+
+  @MainActor private func join(_ invite: String, named name: String?) {
+    guard
+      let code = try? String(contentsOf: shared.appending(path: invite), encoding: .utf8)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    else { return XCTFail("the invitation \(invite) is there") }
     app.open(URL(string: "pochical://invite/\(code)")!)
     let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
     let open = springboard.buttons.matching(NSPredicate(format: "label IN {'開く', 'Open'}"))
       .firstMatch
     if open.waitForExistence(timeout: 5) { open.tap() }
-    let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
-      .firstMatch
-    XCTAssertTrue(profile.waitForExistence(timeout: 15), "the join screen opens")
-    profile.tap()
-    let name = app.textFields.firstMatch
-    XCTAssertTrue(name.waitForExistence(timeout: 5), "the name can be typed")
-    name.tap()
-    name.typeText("テスト")
-    app.navigationBars.buttons.firstMatch.tap()
-    app.buttons["参加する"].tap()
+    if let name {
+      let profile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '名前を入れてください'"))
+        .firstMatch
+      XCTAssertTrue(profile.waitForExistence(timeout: 15), "the join screen opens")
+      profile.tap()
+      let field = app.textFields.firstMatch
+      XCTAssertTrue(field.waitForExistence(timeout: 5), "the name can be typed")
+      field.tap()
+      field.typeText(name)
+      app.navigationBars.buttons.firstMatch.tap()
+    }
+    let join = app.buttons["参加する"]
+    XCTAssertTrue(join.waitForExistence(timeout: 15), "the join screen opens")
+    join.tap()
     XCTAssertTrue(app.buttons["月で見る"].waitForExistence(timeout: 15), "the group's hub shows")
   }
 
@@ -166,8 +181,7 @@ final class ShiftsRotationTests: XCTestCase {
     continueAfterFailure = true
     for open in 1...20 {
       launch(["-membersReadLate", "\(open * 100)"])
-      let tab = app.tabBars.buttons["グループ"]
-      if tab.waitForExistence(timeout: 10) { tab.tap() }
+      openHub()
       let shifts = app.buttons["月で見る"]
       XCTAssertTrue(shifts.waitForExistence(timeout: 15), "the group's hub shows")
       shifts.tap()
@@ -184,6 +198,89 @@ final class ShiftsRotationTests: XCTestCase {
       if !landed { snap("opened-\(open)") }
       XCTAssertTrue(landed, "open \(open) lands on today's week")
     }
+  }
+
+  /// 今日 from last month, in 少人数's 一覧: the list is at today, each
+  /// row drawn in its place, today's between yesterday's and tomorrow's
+  /// (POC-195). XCUITest waits for the app to settle after a tap, so this
+  /// sees where the rows end up, not each frame of the way there.
+  @MainActor
+  func test9aDrawsTodayInPlaceAfterAJump() throws {
+    launch()
+    openList(small: true)
+    continueAfterFailure = true
+    _ = settled()
+    let lastMonth = Calendar.current.date(byAdding: .month, value: -1, to: Date())!
+    pick("\(Calendar.current.component(.month, from: lastMonth))月")
+    _ = settled()
+    let button = todayButton()
+    XCTAssertTrue(button.exists, "今日 shows")
+    button.tap()
+    let shot = XCUIScreen.main.screenshot()
+    XCTAssertEqual(settled().top, today(), "今日 goes back to today")
+    checkDrawnInPlace(shot)
+  }
+
+  /// On `shot`, every row is drawn on its own: the lines under the rows,
+  /// down their trailing end, are a row apart or more, never two rows
+  /// over each other; and today's bar, down the start of its row, is a
+  /// row tall and starts just under the row before it.
+  @MainActor private func checkDrawnInPlace(_ shot: XCUIScreenshot) {
+    let row = app.buttons.matching(NSPredicate(format: "label MATCHES %@", today() + "([^0-9].*)?"))
+      .firstMatch
+    guard row.waitForExistence(timeout: 5), let rested = Pixels(XCUIScreen.main.screenshot()),
+      let pixels = Pixels(shot)
+    else { return XCTFail("today's row is there") }
+    let list = app.windows.firstMatch.frame.divided(
+      atDistance: (faces().first?.frame.maxY ?? 0) + 1, from: .minYEdge
+    ).remainder
+    let span = list.minY...list.maxY
+    let bar = row.frame.minX + 1.5
+    let end = row.frame.maxX - 3
+    let barColor = rested.color(x: bar, y: row.frame.midY)
+    let line = rested.color(x: end, y: row.frame.maxY - 0.5)
+    let lines = pixels.runs(of: line, x: end, in: span).map(\.lowerBound)
+    let apart = zip(lines, lines.dropFirst()).allSatisfy { $1 - $0 > row.frame.height - 2 }
+    let barred = pixels.runs(of: barColor, x: bar, in: span).allSatisfy { run in
+      run.lowerBound <= span.lowerBound + 1 || run.upperBound >= span.upperBound - 1
+        || abs((run.upperBound - run.lowerBound) - row.frame.height) < 2
+          && pixels.color(x: end, y: run.lowerBound - 0.5).matches(line)
+    }
+    if !apart || !barred {
+      let attachment = XCTAttachment(screenshot: shot)
+      attachment.name = "drawn-out-of-place"
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
+    XCTAssertTrue(apart, "no two rows are drawn over each other")
+    XCTAssertTrue(barred, "today's bar is down its own row")
+  }
+
+  /// 少人数's 一覧, then 週ごと: only weeks show, no day of 一覧 left among
+  /// them under the same date (POC-195); at the default text size and the
+  /// largest, each kept as a screenshot of the weeks.
+  @MainActor
+  func test9bShowsOnlyWeeksAfterDays() throws {
+    continueAfterFailure = true
+    for (name, size) in [("default", nil), ("largest", "UICTContentSizeCategoryAccessibilityXXXL")] {
+      launch(size.map { ["-UIPreferredContentSizeCategoryName", $0] } ?? [])
+      openList(small: true)
+      _ = settled()
+      switchLayout(from: "一覧", to: "週ごと")
+      checkOnlyWeeks("\(name), at once")
+      _ = settled()
+      checkOnlyWeeks(name)
+      snap("weeks-\(name)")
+    }
+  }
+
+  /// No day of 一覧, a row across the screen, among 週ごと's weeks.
+  @MainActor private func checkOnlyWeeks(_ when: String) {
+    let width = app.windows.firstMatch.frame.width
+    let rows = app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]{1,2}月[0-9]{1,2}日.*'"))
+      .allElementsBoundByIndex.filter { $0.isHittable && $0.frame.width > width / 2 }
+    if !rows.isEmpty { snap("days-among-weeks") }
+    XCTAssertEqual(rows.map(\.label), [], "no day of 一覧 among the weeks, \(when)")
   }
 
   @MainActor private func launch(_ arguments: [String] = []) {
@@ -309,15 +406,16 @@ final class ShiftsRotationTests: XCTestCase {
         withVelocity: .default, thenHoldForDuration: 0.5)
   }
 
-  /// Turns 月を選ぶ's year wheel to `year`, and closes it. One wheel
-  /// only: the wheels follow the list, which moves as each one stops.
-  @MainActor private func pick(_ year: String) {
+  /// Turns 月を選ぶ's year wheel to a year, or its month wheel to a
+  /// month (`2027年`, `9月`), and closes it. One wheel only: the wheels
+  /// follow the list, which moves as each one stops.
+  @MainActor private func pick(_ value: String) {
     app.buttons.matching(NSPredicate(format: "label MATCHES '[0-9]{4}年[0-9]{1,2}月'")).firstMatch
       .tap()
     let wheels = app.pickerWheels
     XCTAssertTrue(wheels.firstMatch.waitForExistence(timeout: 5), "月を選ぶ opens")
-    wheels.matching(NSPredicate(format: "value ENDSWITH '年'")).firstMatch
-      .adjust(toPickerWheelValue: year)
+    wheels.matching(NSPredicate(format: "value ENDSWITH %@", String(value.suffix(1)))).firstMatch
+      .adjust(toPickerWheelValue: value)
     // A tap outside the wheels closes them: low on the screen, as they can
     // come up over the bar.
     app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)).tap()
@@ -325,14 +423,25 @@ final class ShiftsRotationTests: XCTestCase {
     wait(for: [closed], timeout: 5)
   }
 
-  /// The group's 一覧, or what it opens on, from the グループ tab.
-  @MainActor private func openList(in layout: String? = "一覧") {
+  /// The big group's hub, or 少人数's, picked in the rail.
+  @MainActor private func openHub(small: Bool = false) {
     let tab = app.tabBars.buttons["グループ"]
     if tab.waitForExistence(timeout: 10) { tab.tap() }
+    let name = small ? "少人数" : "ポチカルのテスト"
+    let group = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+    XCTAssertTrue(group.waitForExistence(timeout: 10), "\(name) is in the rail")
+    group.tap()
+  }
+
+  /// The group's 一覧, or what it opens on: a big group 週ごと, 少人数 一覧.
+  @MainActor private func openList(in layout: String? = "一覧", small: Bool = false) {
+    openHub(small: small)
     let shifts = app.buttons["月で見る"]
     XCTAssertTrue(shifts.waitForExistence(timeout: 15), "the group's hub shows")
     shifts.tap()
-    if let layout { switchLayout(from: "週ごと", to: layout) }
+    if let layout, layout != (small ? "一覧" : "週ごと") {
+      switchLayout(from: small ? "一覧" : "週ごと", to: layout)
+    }
     XCTAssertTrue(topRow().waitForExistence(timeout: 10), "the rows show")
   }
 
@@ -394,5 +503,51 @@ final class ShiftsRotationTests: XCTestCase {
     shot.lifetime = .keepAlways
     add(shot)
     try? screenshot.pngRepresentation.write(to: shared.appending(path: "\(name).png"))
+  }
+}
+
+/// A screenshot's pixels, read in points.
+private struct Pixels {
+  struct Color {
+    let rgb: [Int]
+    func matches(_ other: Color) -> Bool {
+      zip(rgb, other.rgb).allSatisfy { abs($0 - $1) <= 12 }
+    }
+  }
+
+  private let image: CGImage
+  private let data: CFData
+  private let scale: CGFloat
+
+  init?(_ shot: XCUIScreenshot) {
+    let image = shot.image
+    guard let cg = image.cgImage, let data = cg.dataProvider?.data else { return nil }
+    self.image = cg
+    self.data = data
+    scale = CGFloat(cg.width) / image.size.width
+  }
+
+  func color(x: CGFloat, y: CGFloat) -> Color {
+    let px = min(max(Int(x * scale), 0), image.width - 1)
+    let py = min(max(Int(y * scale), 0), image.height - 1)
+    let bytes = CFDataGetBytePtr(data)!
+    let at = py * image.bytesPerRow + px * image.bitsPerPixel / 8
+    return Color(rgb: (0..<3).map { Int(bytes[at + $0]) })
+  }
+
+  /// The stretches down the column at `x` drawn in `color`, in points.
+  func runs(of color: Color, x: CGFloat, in span: ClosedRange<CGFloat>) -> [ClosedRange<CGFloat>] {
+    var runs: [ClosedRange<CGFloat>] = []
+    var start: Int?
+    let rows = Int(span.lowerBound * scale)...Int(span.upperBound * scale)
+    for py in rows {
+      let hit = self.color(x: x, y: CGFloat(py) / scale).matches(color)
+      if hit, start == nil { start = py }
+      if !hit || py == rows.upperBound, let first = start {
+        runs.append(CGFloat(first) / scale...CGFloat(hit ? py + 1 : py) / scale)
+        start = nil
+      }
+    }
+    return runs
   }
 }

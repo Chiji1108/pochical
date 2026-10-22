@@ -117,7 +117,7 @@ struct GroupShiftsPage: View {
           HStack {
             MonthTitleButton(
               month: monthInSight, first: months[0], last: months[months.count - 1]
-            ) { position.scrollTo(id: ListPlace.month($0), anchor: .topLeading) } label: {
+            ) { go(to: .month($0)) } label: {
               // Quieter than the months' own headings under it.
               Text(monthInSight.monthWithYear(english: english))
                 .font(.headline)
@@ -127,11 +127,7 @@ struct GroupShiftsPage: View {
             }
             Spacer()
             if !todayInSight {
-              TodayButton(unit: "日") {
-                withAnimation(Springs.standard) {
-                  position.scrollTo(id: anchor(of: Day.today), anchor: .topLeading)
-                }
-              }
+              TodayButton(unit: "日") { go(to: anchor(of: Day.today)) }
             }
           }
           .animation(.default, value: todayInSight)
@@ -171,7 +167,7 @@ struct GroupShiftsPage: View {
     .onChange(of: layout) {
       sidewaysOffset.x = 0
       scrolledSideways = false
-      position.scrollTo(id: anchor(of: picked ?? Day.today), anchor: .topLeading)
+      go(to: anchor(of: picked ?? Day.today))
     }
     .navigationTitle(group.name)
     .navigationBarTitleDisplayMode(.inline)
@@ -362,13 +358,16 @@ struct GroupShiftsPage: View {
           alignment: .leading)
         .padding(.bottom, 24)
       }
-      // Made anew when it starts or stops scrolling sideways. One whose
-      // axes change in place keeps the safe area at its sides as it had
-      // it: made scrolling down only, it lays its rows out inside the
-      // safe area but, scrolling sideways, draws them from the screen's
-      // edge, so in landscape they lie under the notch, apart from the
-      // faces.
-      .id(sideways)
+      // Made anew for each layout, and as it starts or stops scrolling
+      // sideways. 一覧's day and 週ごと's week from it are one place, kept
+      // across the change; in one list, the new layout's week would be
+      // drawn with the old one's row, which it found under that place.
+      // And one whose axes change in place keeps the safe area at its
+      // sides as it had it: made scrolling down only, it lays its rows out
+      // inside the safe area but, scrolling sideways, draws them from the
+      // screen's edge, so in landscape they lie under the notch, apart
+      // from the faces.
+      .id(ListShape(layout: layout, sideways: sideways))
       // A big group's 一覧: how far it is scrolled sideways from where it
       // rests, read by the faces alone, so each frame of a scroll makes
       // only them again; then what changes seldom: the safe area at its
@@ -391,9 +390,7 @@ struct GroupShiftsPage: View {
       // anew at the new width, and leaves the list where the guess put it.
       .onScrollGeometryChange(for: CGFloat.self) { $0.containerSize.width } action: {
         viewWidth = $1
-        if let top = position.viewID(type: ListPlace.self) {
-          position.scrollTo(id: top, anchor: .topLeading)
-        }
+        if let top = position.viewID(type: ListPlace.self) { go(to: top) }
       }
       .scrollIndicators(.hidden, axes: .horizontal)
       // At the leading edge too: .top alone would center a big group's
@@ -439,6 +436,14 @@ struct GroupShiftsPage: View {
     .day(layout == .days ? day : weekStart(of: day))
   }
 
+  /// To `place`, at the list's top, at once: SwiftUI lays out only the
+  /// rows in sight and guesses the heights of those between, so a scroll
+  /// animated over them moves the row gone to from where the guess put
+  /// it while the rows around it are drawn where they are.
+  private func go(to place: ListPlace) {
+    position.scrollTo(id: place, anchor: .topLeading)
+  }
+
   private func weekStart(of day: Day) -> Day {
     day.adding(days: -(((day.weekday - settings.device.week.start) % 7 + 7) % 7))
   }
@@ -447,6 +452,13 @@ struct GroupShiftsPage: View {
 /// A place in the list of months, which it is scrolled to and keeps at
 /// its top: a month's heading, or a day's row (一覧) or week's block (週ごと),
 /// named by its first day.
+/// What makes the list of months a list of its own: its layout, and
+/// whether it scrolls sideways.
+private struct ListShape: Hashable {
+  let layout: ShiftsLayout
+  let sideways: Bool
+}
+
 nonisolated private enum ListPlace: Hashable, Sendable {
   case month(Day)
   case day(Day)
