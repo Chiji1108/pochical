@@ -12,7 +12,7 @@
 - `bun run test`: packages、web、catalog、serverのテスト
 - `bun run check` / `bun run fix`: 共通のUltracite設定でチェック・整形
 
-ルートの `bun.lock` を使います。ページは `src/pages` の `.astro` ファイルです。`bun run --cwd apps/web typecheck` は `astro check` で `.astro` も含めて型を確かめます。`worker-configuration.d.ts` は `bun run --cwd apps/web cf-typegen` で生成します。Workers設定を変更したら型を再生成してください。
+ルートの `bun.lock` を使います。ページは `src/pages` の `.astro` ファイルです。`bun run --cwd apps/web typecheck` は `astro check` で `.astro` を、`tsc --noEmit` で `src` のTS/TSXとそこから読み込むファイル（`@pochical/prototype` を含む）を確かめます。`astro check` が報告するのは `src` のファイルだけで、読み込み先の型エラーは出さないからです。`worker-configuration.d.ts` は `bun run --cwd apps/web cf-typegen` で生成します。Workers設定を変更したら型を再生成してください。
 
 ## ページ
 

@@ -1,4 +1,4 @@
-import siteIcon from "@pochical/prototype/assets/icon.png";
+import siteIcon from "@pochical/prototype/assets/icon.png?url";
 import {
   createRootRoute,
   HeadContent,
