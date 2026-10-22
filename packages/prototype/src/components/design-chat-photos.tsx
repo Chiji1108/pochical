@@ -78,18 +78,28 @@ export function photoSize(photo: Photo) {
   return { height: Math.round(width / aspect), width: Math.round(width) };
 }
 
-// Photos chosen to go with the next send, as the chat apps hold them
-// above the composer: nothing is sent on choosing. While some are still
+// Photos chosen to go with the next send, held with what is written
+// (Writing), as the chat apps hold them above the composer: nothing is
+// sent on choosing. While some are still
 // being read, `reading` holds sending back, so none lands in the composer
 // after the message has gone.
-export function useChosenPhotos() {
+export function useChosenPhotos({
+  photos,
+  onRead,
+  onRemove,
+}: {
+  photos: Photo[];
+  // Read, for the message they were chosen for, which onChoose names as
+  // they are chosen.
+  onRead: (photos: Photo[], message: symbol) => void;
+  onRemove: (photo: Photo) => void;
+}) {
   const toast = useContext(ToastContext);
-  const [photos, setPhotos] = useState<Photo[]>([]);
   const [readingCount, setReadingCount] = useState(0);
   // Photos still being read, known at once to a choice right after (two
   // pastes in a row), which the state would tell only once drawn again.
   const coming = useRef(0);
-  const handleChoose = async (files: File[]) => {
+  const handleChoose = async (files: File[], message: symbol) => {
     // A roster is a page or two, and more would flood a small group's chat.
     const room = Math.max(
       0,
@@ -108,24 +118,14 @@ export function useChosenPhotos() {
     const chosen = results.flatMap((result) =>
       result.status === "fulfilled" ? [result.value] : []
     );
-    setPhotos((before) =>
-      [...before, ...chosen].slice(0, chatRules.photosPerSend)
-    );
+    onRead(chosen, message);
     if (chosen.length < taken.length) {
       toast("開けない写真がありました", "problem");
     }
   };
-  const handleRemove = (photo: Photo) => {
-    setPhotos((before) => before.filter((other) => other !== photo));
-  };
-  const clear = () => {
-    setPhotos([]);
-  };
   return {
-    clear,
     handleChoose,
-    handleRemove,
-    photos,
+    handleRemove: onRemove,
     reading: readingCount > 0,
   };
 }

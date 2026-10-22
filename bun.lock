@@ -6,7 +6,7 @@
       "name": "pochical",
       "devDependencies": {
         "@astrojs/compiler-rs": "^0.5.2",
-        "@bufbuild/protobuf": "2.15.0",
+        "@bufbuild/protobuf": "2.16.0",
         "@pochical/design": "workspace:*",
         "@types/bun": "^1.4.3",
         "lefthook": "^2.2.2",
@@ -71,14 +71,14 @@
       "name": "@pochical/server",
       "dependencies": {
         "@better-auth/core": "1.7.12",
-        "@bufbuild/protobuf": "2.15.0",
+        "@bufbuild/protobuf": "2.16.0",
         "@connectrpc/connect": "2.2.0",
         "@pochical/design": "workspace:*",
         "better-auth": "^1.7.12",
         "drizzle-orm": "^0.45.4",
       },
       "devDependencies": {
-        "@bufbuild/protoc-gen-es": "2.15.0",
+        "@bufbuild/protoc-gen-es": "2.16.0",
         "@cloudflare/vitest-pool-workers": "0.22.0",
         "drizzle-kit": "^0.31.11",
         "typescript": "~7.0.2",
@@ -91,7 +91,7 @@
       "dependencies": {
         "@astrojs/cloudflare": "14.4.2",
         "@astrojs/react": "7.1.1",
-        "@bufbuild/protobuf": "2.15.0",
+        "@bufbuild/protobuf": "2.16.0",
         "@connectrpc/connect": "2.2.0",
         "@connectrpc/connect-web": "2.2.0",
         "@pochical/design": "workspace:*",
@@ -123,7 +123,7 @@
         "@phosphor-icons/react": "^2.1.10",
         "@types/bun": "^1.4.3",
         "@types/react": "~19.3.0",
-        "budoux": "^0.9.3",
+        "budoux": "^0.10.0",
         "react": "19.3.1",
         "svgpath": "^2.6.0",
         "typescript": "~7.0.2",
@@ -132,7 +132,7 @@
     "packages/jsx": {
       "name": "@pochical/jsx",
       "dependencies": {
-        "budoux": "^0.9.3",
+        "budoux": "^0.10.0",
         "htmlparser2": "12.0.0",
         "react": "19.3.1",
       },
@@ -311,11 +311,11 @@
 
     "@bruits/satteri-win32-x64-msvc": ["@bruits/satteri-win32-x64-msvc@0.10.5", "", { "os": "win32", "cpu": "x64" }, "sha512-C3IfPvfvMXmlzBxaMPKFS1XiuV9pu2mC7YqkPk7PSvTgPZ8gbdASIpHpztDLvTTQjqZ0z1Ol8tK5X+V6XXC0wQ=="],
 
-    "@bufbuild/protobuf": ["@bufbuild/protobuf@2.15.0", "", {}, "sha512-DAheWUkVr/SJTWCc+lg9dhY0eN4SaWlf4+bG1KzHeXbnqt0AfB/NX0Z+VunGlM1ki1B4zVvye27MpKh/svySUA=="],
+    "@bufbuild/protobuf": ["@bufbuild/protobuf@2.16.0", "", {}, "sha512-FWa0sPlqYGJgpTs6OxBRcL/AW4JT0OIO+W1ajerluoTVh8CV0B7XM1qsNCRgnkSCkRCgOICKHRQlY17jrsm0+Q=="],
 
-    "@bufbuild/protoc-gen-es": ["@bufbuild/protoc-gen-es@2.15.0", "", { "dependencies": { "@bufbuild/protobuf": "2.15.0", "@bufbuild/protoplugin": "2.15.0" }, "bin": { "protoc-gen-es": "bin/protoc-gen-es" } }, "sha512-FRhNTAZEXW6arWx2JxgtpuazhmewYctXugu5SfXGpXpLLCInDT1005fSKDzEM/70Es2oIn07PM4RvpwvDvR/fg=="],
+    "@bufbuild/protoc-gen-es": ["@bufbuild/protoc-gen-es@2.16.0", "", { "dependencies": { "@bufbuild/protobuf": "2.16.0", "@bufbuild/protoplugin": "2.16.0" }, "bin": { "protoc-gen-es": "bin/protoc-gen-es" } }, "sha512-LbPrEaGd7bOxKbJHllTR5439+PZjqd6fM7xyDZkDVtZ+Efzr7TMdMqShG9Qkf/nYVyiNS/SK5r9JhRaBTFkfZw=="],
 
-    "@bufbuild/protoplugin": ["@bufbuild/protoplugin@2.15.0", "", { "dependencies": { "@bufbuild/protobuf": "2.15.0", "@typescript/vfs": "^1.6.2", "typescript": "5.4.5" } }, "sha512-vZhRoqB/jTHATqItRvJQf1zbxdrGRRhiusGty4+lKcfEFODG0PMXky2Ezv4WHHS6oSxq+5qShITuE7K1/82SuQ=="],
+    "@bufbuild/protoplugin": ["@bufbuild/protoplugin@2.16.0", "", { "dependencies": { "@bufbuild/protobuf": "2.16.0", "@typescript/vfs": "^1.6.2", "typescript": "5.4.5" } }, "sha512-3FdYJys34VhFnBQsjiV9wurBkX/DBACQAkAk+nCKdO1p8ROVNi7gmaRAcba+4qq8hQq8rYVukuutwvGCvd4kJA=="],
 
     "@canvas/image-data": ["@canvas/image-data@1.1.0", "", {}, "sha512-QdObRRjRbcXGmM1tmJ+MrHcaz1MftF2+W7YI+MsphnsCrmtyfS0d5qJbk0MeSbUeyM/jCb0hmnkXPsy026L7dA=="],
 
@@ -1145,7 +1145,7 @@
 
     "browserslist": ["browserslist@4.28.2", "", { "dependencies": { "baseline-browser-mapping": "^2.10.12", "caniuse-lite": "^1.0.30001782", "electron-to-chromium": "^1.5.328", "node-releases": "^2.0.36", "update-browserslist-db": "^1.2.3" }, "bin": { "browserslist": "cli.js" } }, "sha512-48xSriZYYg+8qXna9kwqjIVzuQxi+KYWp2+5nCYnYKPTr0LvD89Jqk2Or5ogxz0NUMfIjhh2lIUX/LyX9B4oIg=="],
 
-    "budoux": ["budoux@0.9.3", "", { "dependencies": { "commander": "^15.0.0", "linkedom": "^0.18.7" }, "bin": { "budoux": "bin/budoux.js" } }, "sha512-Kj3eztSzqVzkmh51Hf8Z+vFw5lkEjGJlxtv7J6nMCjVHbInTom2t8XhYNcz479753NR94Ibv3t81roKgkyfTcA=="],
+    "budoux": ["budoux@0.10.0", "", { "dependencies": { "commander": "^15.0.0", "linkedom": "^0.18.7" }, "bin": { "budoux": "bin/budoux.js" } }, "sha512-jh9qIGuVLdeuc7z0jRyeSe7zEa7XthNu3QPTnzLpeMXbz4v7Lwx0j0rMK90jHSM/a8kVrTjXoLRHBhyVTfxk6w=="],
 
     "buffer-from": ["buffer-from@1.1.2", "", {}, "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ=="],
 
