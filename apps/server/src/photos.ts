@@ -95,10 +95,10 @@ const jpegOf = async (
 };
 
 /**
- * A member's photo stored, once the group has noted it as theirs
- * (group-photos.ts, notePhoto). Sending their own again (a retry after a
- * lost answer, or the upload each send of its line makes, sent already or
- * not) stores nothing: the bytes first stored stay.
+ * A member's photo stored by the group, once it has noted it as theirs
+ * (GroupDO.storePhoto). Sending their own again (a retry after a lost
+ * answer, or the upload each send of its line makes, sent already or not)
+ * stores nothing: the bytes first stored stay.
  */
 export const putPhoto = async (
   request: Request,
@@ -111,7 +111,12 @@ export const putPhoto = async (
   if (bytes instanceof Response) {
     return bytes;
   }
-  const note = await env.GROUPS.getByName(groupId).notePhoto(photoId, userId);
+  const note = await env.GROUPS.getByName(groupId).storePhoto(
+    photoId,
+    userId,
+    bytes,
+    { contentType: "image/jpeg", small: wantsSmall(request) }
+  );
   if (note === "refused") {
     return new Response("Not a photo of yours to upload", { status: 409 });
   }
@@ -122,15 +127,6 @@ export const putPhoto = async (
       status: 503,
     });
   }
-  if (note === "sent") {
-    return new Response(null, { status: 204 });
-  }
-  const key = photoKey(groupId, photoId);
-  await env.PHOTOS.put(wantsSmall(request) ? smallKey(key) : key, bytes, {
-    customMetadata: { userId },
-    httpMetadata: { contentType: "image/jpeg" },
-    onlyIf: CREATE_ONLY,
-  });
   return new Response(null, { status: 204 });
 };
 
@@ -138,8 +134,7 @@ export const putPhoto = async (
  * A photo kept by the device: a photo never changes, only goes when its
  * line is taken back.
  */
-const servePhoto = async (env: Env, key: string): Promise<Response> => {
-  const photo = await env.PHOTOS.get(key);
+const photoResponse = (photo: R2ObjectBody | null): Response => {
   if (photo === null) {
     return new Response("No such photo", { status: 404 });
   }
@@ -151,6 +146,10 @@ const servePhoto = async (env: Env, key: string): Promise<Response> => {
     },
   });
 };
+
+/** The photo under `key`, as photoResponse answers with it. */
+const servePhoto = async (env: Env, key: string): Promise<Response> =>
+  photoResponse(await env.PHOTOS.get(key));
 
 /**
  * A chat photo, or its small version when asked for one and it has one
@@ -216,14 +215,39 @@ export const deletePhotosUnder = async (
 export const SUPPORT_PHOTO_PATH = /^\/v1\/support\/photos\/(?<photoId>[^/]+)$/u;
 
 /**
- * Where a user's own photo is kept: their usual photo (spec/sync-protocol.md,
- * Profile), read by them alone and copied into each group that shows it.
+ * Where a user's usual photo is kept (spec/sync-protocol.md, Profile),
+ * read by them alone and copied into each group that shows it: copied
+ * here from their upload as SetProfile names it (UserDO.setProfile).
  */
 export const personPhotoKey = (userId: string, photoId: string): string =>
   `people/${userId}/photos/${photoId}`;
 
+/**
+ * The bucket's staging prefix: what is uploaded here is kept only until
+ * the bucket's lifecycle rule deletes it a day after (spec/admin.md), so
+ * nothing uploaded and never taken stays.
+ */
+export const UPLOADS = "uploads/";
+
+/**
+ * Where a user's upload of their own photo is kept until it is taken: as
+ * their usual photo (copied to personPhotoKey) or a group's mark (copied
+ * into the group's photos).
+ */
+export const uploadedPhotoKey = (userId: string, photoId: string): string =>
+  `${UPLOADS}people/${userId}/${photoId}`;
+
 /** The user's own photo: /v1/me/photos/{photoId}. */
 export const PERSON_PHOTO_PATH = /^\/v1\/me\/photos\/(?<photoId>[^/]+)$/u;
+
+/** One of the user's own photos: their usual one, else their upload of it. */
+export const personPhotoOf = async (
+  env: Env,
+  userId: string,
+  photoId: string
+): Promise<R2ObjectBody | null> =>
+  (await env.PHOTOS.get(personPhotoKey(userId, photoId))) ??
+  (await env.PHOTOS.get(uploadedPhotoKey(userId, photoId)));
 
 /** The user's upload of their own photo, or a read of one. */
 export const personPhoto = async (
@@ -238,13 +262,13 @@ export const personPhoto = async (
       if (bytes instanceof Response) {
         return bytes;
       }
-      await env.PHOTOS.put(personPhotoKey(userId, photoId), bytes, {
+      await env.PHOTOS.put(uploadedPhotoKey(userId, photoId), bytes, {
         httpMetadata: { contentType: "image/jpeg" },
       });
       return new Response(null, { status: 204 });
     }
     case "GET": {
-      return await servePhoto(env, personPhotoKey(userId, photoId));
+      return photoResponse(await personPhotoOf(env, userId, photoId));
     }
     default: {
       return new Response("Method not allowed", { status: 405 });
@@ -252,20 +276,28 @@ export const personPhoto = async (
   }
 };
 
-/** Whether the user has uploaded this photo of their own. */
+/** Whether the user has this photo of their own, as their usual one or uploaded. */
 export const hasPersonPhoto = async (
   env: Env,
   userId: string,
   photoId: string
-): Promise<boolean> =>
-  isId(photoId) &&
-  (await env.PHOTOS.head(personPhotoKey(userId, photoId))) !== null;
+): Promise<boolean> => {
+  if (!isId(photoId)) {
+    return false;
+  }
+  const found = await Promise.all(
+    [personPhotoKey, uploadedPhotoKey].map(
+      async (key) => await env.PHOTOS.head(key(userId, photoId))
+    )
+  );
+  return found.some((object) => object !== null);
+};
 
 /**
  * The user's own photo copied into a group's photos where the group has
  * none under its id: whether the group has it now, false when the user
- * has no photo of that id (gone since it was looked for, as the bucket's
- * delete may take it).
+ * has no photo of that id (gone since it was looked for, as their usual
+ * photo replaced, or an upload past its day).
  */
 export const copyPersonPhoto = async (
   env: Env,
@@ -277,7 +309,7 @@ export const copyPersonPhoto = async (
   if ((await env.PHOTOS.head(key)) !== null) {
     return true;
   }
-  const photo = await env.PHOTOS.get(personPhotoKey(userId, photoId));
+  const photo = await personPhotoOf(env, userId, photoId);
   if (photo === null) {
     return false;
   }
@@ -292,22 +324,15 @@ export const copyPersonPhoto = async (
 /**
  * The user's own photo (their usual one, or a group mark they picked)
  * copied into a group's photos, for its members to read as they read the
- * rest; noted by the group as one it shows first, so no upload takes it,
- * and copied once, as a photo never changes. Nothing when the id is an
- * upload's. False when the user has no such photo, so nothing comes to
- * name it in the group; a note made of it goes as a copy nothing named.
+ * rest (GroupDO.sharePhoto).
  */
 export const sharePersonPhoto = async (
   env: Env,
   userId: string,
   photoId: string,
   groupId: string
-): Promise<boolean> => {
-  if (await env.GROUPS.getByName(groupId).noteSharedPhoto(photoId, userId)) {
-    return await copyPersonPhoto(env, userId, photoId, groupId);
-  }
-  return true;
-};
+): Promise<boolean> =>
+  await env.GROUPS.getByName(groupId).sharePhoto(photoId, userId);
 
 /**
  * A face on an invitation's join screen, by its path:
