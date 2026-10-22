@@ -6,3 +6,4 @@
 set -e
 defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
 defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidation -bool YES
+# Probe for POC-164: not to be merged.
