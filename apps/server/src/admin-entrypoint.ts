@@ -354,18 +354,16 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
    * cut short left, and after one that finished, nothing.
    */
   async reset(by: string): Promise<void> {
+    // Noted whether it finished or stopped part way, saying which; 全消去
+    // leaves the notes of what was done, this one among them.
+    const noted = { action: "reset", by, target: "" };
     try {
       await resetEverything(this.env);
-    } finally {
-      // Noted whether it finished or stopped part way; 全消去 leaves the
-      // notes of what was done, this one among them.
-      await noteDone(this.env, {
-        action: "reset",
-        by,
-        detail: "",
-        target: "",
-      });
+    } catch (error) {
+      await noteDone(this.env, { ...noted, detail: "途中で止まった" });
+      throw error;
     }
+    await noteDone(this.env, { ...noted, detail: "" });
   }
 
   /** What members reported, the latest first. */

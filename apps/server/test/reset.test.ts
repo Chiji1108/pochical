@@ -158,6 +158,30 @@ describe("erasing everything (全消去)", () => {
     ).resolves.toStrictEqual([]);
   });
 
+  it("notes in 記録 a reset that stopped part way as such", async () => {
+    const { groupId } = await pair();
+    await drizzle(env.DB).delete(user);
+    const getByName = env.GROUPS.getByName.bind(env.GROUPS);
+    const unreachable = vi
+      .spyOn(env.GROUPS, "getByName")
+      .mockImplementation((name) =>
+        name === groupId
+          ? Object.assign(getByName(name), {
+              erase: () => {
+                throw new Error("unreachable");
+              },
+            })
+          : getByName(name)
+      );
+    await expect(
+      exports.AdminEntrypoint.reset("staff@pochical.app")
+    ).rejects.toThrow("unreachable");
+    unreachable.mockRestore();
+    const [latest] = await exports.AdminEntrypoint.actions();
+    expect(latest).toMatchObject({ action: "reset", detail: "途中で止まった" });
+    await exports.AdminEntrypoint.reset("staff@pochical.app");
+  });
+
   it("lets the device sign in anew afterwards, as a new user", async () => {
     const before = await signInAnonymously();
     const beforeId = await userIdOf(before);
