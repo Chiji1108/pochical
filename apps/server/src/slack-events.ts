@@ -14,7 +14,6 @@ import { drizzle } from "drizzle-orm/d1";
 import { supportChats } from "./db/schema";
 import { ChatEditSchema } from "./gen/pochical/v1/sync_pb";
 import { GROUP_THREAD } from "./group-chat";
-import { CREATE_ONLY, photoKey } from "./photos";
 import {
   emojiOfSlackName,
   fromSlackText,
@@ -63,18 +62,16 @@ const keepSlackPhoto = async (
     return null;
   }
   const id = `slack-${fileId}`;
-  const place = env.GROUPS.getByName(supportPlace(userId));
-  const note = await place.notePhoto(id, chatRules.pochicalMember);
+  // Sent already, as Slack tells an event again, it stores nothing: its
+  // line, by the same op_id, is dropped as sent.
+  const note = await env.GROUPS.getByName(supportPlace(userId)).storePhoto(
+    id,
+    chatRules.pochicalMember,
+    image.bytes,
+    { contentType: image.type, small: false }
+  );
   if (note === "refused") {
     return null;
-  }
-  // Sent already, as Slack tells an event again: its line, by the same
-  // op_id, is dropped as sent.
-  if (note === "noted") {
-    await env.PHOTOS.put(photoKey(supportPlace(userId), id), image.bytes, {
-      httpMetadata: { contentType: image.type },
-      onlyIf: CREATE_ONLY,
-    });
   }
   return { height, id, width };
 };

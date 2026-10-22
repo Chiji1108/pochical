@@ -274,8 +274,9 @@ export const chatRecalls = sqliteTable(
 
 // Every photo the group keeps (groups/{groupId}/photos/{id} in R2), each
 // noted before it is stored, so no id is ever stored twice: a photo never
-// changes. `state` says what holds it, and R2 holds it in all but
-// takenBack:
+// changes. Its row goes only once R2 has deleted it, so R2 never holds a
+// photo the group has no note of. `state` says what holds it, and R2
+// holds it in all but takenBack:
 // - unsent: a member uploaded it to the group (PUT), and nothing carries
 //   it yet. Only its uploader may upload it again, which stores nothing
 //   but keeps it, or send it as a line, once. Once its uploader has
@@ -284,29 +285,34 @@ export const chatRecalls = sqliteTable(
 //   time it sends the line, so a send comes moments after that upload.
 // - sent: a line carries it, until the line is taken back. Its uploader
 //   uploading it again, as a send tried again does, stores nothing.
-// - takenBack: its line was taken back (or no line carried it once sent,
-//   and the bucket's delete took it, spec/admin.md), and R2 holds it no
-//   more. Nothing
-//   holds it, but the note stays for good, so no upload stores its id
-//   again and no line sends it: devices keep a photo by its id.
+// - takingBack: its line was taken back (or no line carried it once sent,
+//   spec/admin.md), and the sweep is deleting it from R2, then notes it
+//   takenBack. Nothing may upload, send or show it.
+// - takenBack: R2 has deleted it. Nothing holds it, but the note stays
+//   for good, so no upload stores its id again and no line sends it:
+//   devices keep a photo by its id.
 // - shown: the group shows it, as someone's face (their usual photo, which
 //   the server copies in, or one of the group's they uploaded and set as
 //   their own) or as the group's mark (copied in). No upload touches it;
 //   it goes once neither the mark nor anyone in the group names it, and a
 //   copy nothing came to name goes as an unsent one does.
-// - deleting: the sweep (GroupDO.sweepPhotos) is deleting an unsent or
-//   unnamed one from R2, its row going after. Meanwhile its uploader's
-//   upload of it is answered to try again (503) and a send of it does not
-//   fit; a copy noted again keeps going, noted since the sweep began,
-//   and the sweep copies it in anew once R2 has deleted it, then shows it
-//   again. A sweep cut short leaves its rows so, and the next finishes
-//   them. Nothing else is ever marked so.
+// - deleting: the sweep is deleting it from R2, its row going after: an
+//   unsent one past its time, or one let go at once (its send recalled,
+//   or shown and named no more). Meanwhile its uploader's upload of it is
+//   answered to try again (503) and a send of it does not fit. A sweep cut
+//   short leaves its rows so, and the next finishes them.
+// - reviving: a copy noted again while deleting: the sweep deletes it from
+//   R2 still (a copy made meanwhile may have found it stored and stored
+//   nothing), copies it in anew, then shows it. A sweep cut short leaves
+//   it so, for the next.
 export const photoStates = [
   "unsent",
   "sent",
+  "takingBack",
   "takenBack",
   "shown",
   "deleting",
+  "reviving",
 ] as const;
 
 export const groupPhotos = sqliteTable("group_photos", {
