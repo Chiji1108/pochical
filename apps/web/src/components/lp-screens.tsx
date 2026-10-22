@@ -1,16 +1,17 @@
 import { themeSkyId } from "@pochical/design/skies";
 import { DesignApp } from "@pochical/prototype/components/design-app";
+import type { GroupStart } from "@pochical/prototype/components/design-group";
 import {
   DesignProviders,
   PresetContexts,
 } from "@pochical/prototype/components/design-providers";
+import type { SettingsPage } from "@pochical/prototype/components/design-settings";
 import {
   nextSkyId,
   paleSkyFromTop,
   paleSkyLights,
   SkyLight,
 } from "@pochical/prototype/components/design-surprise";
-import type { Tab } from "@pochical/prototype/components/design-tab-bar";
 import { ColorSchemeContext } from "@pochical/prototype/components/design-theme";
 import type { PresetId } from "@pochical/prototype/components/design-theme";
 import {
@@ -27,12 +28,16 @@ import type {
 } from "@pochical/prototype/components/shift-mark";
 import { initialDesignSchedule } from "@pochical/prototype/lib/design-days";
 import { sampleGroups } from "@pochical/prototype/lib/design-group-samples";
-import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
+import {
+  sampleOrder,
+  useSamplePerson,
+} from "@pochical/prototype/lib/design-sample-person";
 import {
   createUserStore,
   sampleCoworkers,
   UserStoreContext,
 } from "@pochical/prototype/lib/design-user-store";
+import type { OwnData } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { css, cva } from "@pochical/styled-system/css";
 import { AnimatePresence, MotionConfig } from "motion/react";
@@ -203,14 +208,31 @@ const screenStyle = css({
   width: "min(390px, 100%)",
 });
 
-export function FeatureScreen({
-  tab,
-  groupPage,
-}: {
-  tab: Tab;
-  groupPage?: "shifts" | "chat";
-}) {
-  const person = useSamplePerson();
+// Where each feature's screen opens, a tab and its page, and what the
+// sample person holds for it beyond the demo's.
+type FeatureOpening =
+  | { initialTab: "group"; initialGroupPage: GroupStart }
+  | { initialTab: "settings"; initialSettingsPage: SettingsPage };
+
+type Feature = "repeat" | "share" | "chat";
+
+const featureScreens: Record<
+  Feature,
+  { opening: FeatureOpening; own?: Partial<OwnData> }
+> = {
+  chat: { opening: { initialGroupPage: "chat", initialTab: "group" } },
+  // An order typed on the month, as 設定's 新しい繰り返し opens with the
+  // last one: its days solid, then coming round faint.
+  repeat: {
+    opening: { initialSettingsPage: "repeat-new", initialTab: "settings" },
+    own: { rules: [sampleOrder] },
+  },
+  share: { opening: { initialGroupPage: "shifts", initialTab: "group" } },
+};
+
+export function FeatureScreen({ feature }: { feature: Feature }) {
+  const { opening, own } = featureScreens[feature];
+  const person = useSamplePerson(own);
   return (
     <Motion>
       <div aria-hidden="true" className={screenStyle} inert>
@@ -218,8 +240,7 @@ export function FeatureScreen({
           <UserStoreContext value={person}>
             <DesignApp
               initialEditing={false}
-              initialGroupPage={groupPage}
-              initialTab={tab}
+              {...opening}
               variants={variants}
             />
           </UserStoreContext>

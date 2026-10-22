@@ -237,6 +237,24 @@ const closing = {
     <ol aria-label="ポチカルでできること" class={feature.list}>
       <li class={feature.row}>
         <div class={feature.copy}>
+          <p class={feature.label}>REPEAT</p>
+          <h2 class={feature.title}>
+            決まった順番なら、
+            <br />
+            毎月入れなくていい。
+          </h2>
+          <p class={feature.body}>
+            日勤・夜勤・明け・休みの繰り返しも、
+            <br />
+            一度決めれば、毎月そのまま。
+            <br />
+            違う日だけ、ポチッと変えられます。
+          </p>
+        </div>
+        <FeatureScreen client:visible={NEAR} feature="repeat" />
+      </li>
+      <li class={feature.row}>
+        <div class={feature.copy}>
           <p class={feature.label}>SHARE</p>
           <h2 class={feature.title}>
             「いつ休み？」が、
@@ -249,7 +267,7 @@ const closing = {
             みんなが休みの日も、すぐ見つかります。
           </p>
         </div>
-        <FeatureScreen client:visible={NEAR} groupPage="shifts" tab="group" />
+        <FeatureScreen client:visible={NEAR} feature="share" />
       </li>
       <li class={feature.row}>
         <div class={feature.copy}>
@@ -265,7 +283,7 @@ const closing = {
             決まった日は、チャットのいちばん上に。
           </p>
         </div>
-        <FeatureScreen client:visible={NEAR} groupPage="chat" tab="group" />
+        <FeatureScreen client:visible={NEAR} feature="chat" />
       </li>
       <li class={feature.row}>
         <div class={feature.copy}>
