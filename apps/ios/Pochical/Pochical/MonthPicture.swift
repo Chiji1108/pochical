@@ -141,10 +141,10 @@ struct MonthPicturePage: View {
         ) {
           shareLabel
         }
-        .buttonStyle(.bordered)
+        .quietButton()
       } else {
         Button {} label: { shareLabel }
-          .buttonStyle(.bordered)
+          .quietButton()
           .disabled(true)
       }
       Button {

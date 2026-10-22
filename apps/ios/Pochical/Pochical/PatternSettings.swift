@@ -120,9 +120,7 @@ struct PatternsPage: View {
     .navigationTitle("シフトパターン")
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
-        Button(sorting ? "完了" : "並び替え") {
-          withAnimation { editMode = sorting ? .inactive : .active }
-        }
+        SortButton(editMode: $editMode)
       }
     }
   }

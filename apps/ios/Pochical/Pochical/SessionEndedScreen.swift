@@ -37,7 +37,6 @@ struct SessionEndedScreen: View {
       .foregroundStyle(colors.accentOnFill)
       Button("もう一度つなぐ", action: tryAgain)
         .font(.subheadline)
-        .tint(colors.accentDefault)
     }
     .multilineTextAlignment(.center)
     .padding(.horizontal, 20)
