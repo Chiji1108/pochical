@@ -1,6 +1,6 @@
 import { markIconGlyphs } from "@pochical/design/mark-icons";
 import { css, cva } from "@pochical/styled-system/css";
-import { Camera, ImageIcon, RotateCcw, Trash2 } from "lucide-react";
+import { Camera, ImageIcon, RotateCcw, Trash } from "lucide-react";
 import { useContext, useId, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -623,7 +623,7 @@ export function PhotoPicker({
               label="写真を削除"
               leading={
                 <>
-                  <Trash2 aria-hidden="true" size={20} />
+                  <Trash aria-hidden="true" size={20} />
                 </>
               }
               danger
