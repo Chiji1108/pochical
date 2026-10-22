@@ -15,7 +15,11 @@ import { ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useSyncExternalStore } from "react";
 
-import { DesignPage, DesignToolbar } from "../components/design-page";
+import {
+  DesignPage,
+  DesignToolbar,
+  toolbarAction,
+} from "../components/design-page";
 import { appSplashScreens } from "../lib/app-splash-screens";
 import { pageMeta } from "../lib/page-meta";
 import { screenColor } from "../lib/screen-color";
@@ -113,19 +117,16 @@ function showPage() {
 }
 
 // The browser's bars take the color of the screen under them, which
-// follows the theme and its light or dark. On a computer the page keeps
-// its own ground around the framed phone.
+// follows the theme and its light or dark. On a computer they take the
+// page's own ground around the framed phone.
 function useBarColor(fullScreen: boolean) {
   useEffect(() => {
-    if (!fullScreen) {
-      showPage();
-      return;
-    }
+    const ground = document.querySelector<HTMLElement>("#main");
     const phone = document.querySelector<HTMLElement>(".dc-phone");
     const meta = document.querySelector<HTMLMetaElement>(
       'meta[name="theme-color"]'
     );
-    if (!(phone && meta)) {
+    if (!(ground && phone && meta)) {
       showPage();
       return;
     }
@@ -134,10 +135,12 @@ function useBarColor(fullScreen: boolean) {
     // A screen whose ground runs up under the bar, like the camera's,
     // lends it that ground instead.
     const follow = () => {
-      const under = phone.querySelector<HTMLElement>(
-        "[data-status-bar]:not([hidden])"
-      );
-      const color = getComputedStyle(under ?? phone).backgroundColor;
+      const under = fullScreen
+        ? (phone.querySelector<HTMLElement>(
+            "[data-status-bar]:not([hidden])"
+          ) ?? phone)
+        : ground;
+      const color = getComputedStyle(under).backgroundColor;
       meta.content = color;
       root.style.background = color;
     };
@@ -163,25 +166,34 @@ function useBarColor(fullScreen: boolean) {
   }, [fullScreen]);
 }
 
-// A computer: a mouse or trackpad to point with, and a window wider than
-// the catalog's one column. A tablet, or a phone on its side, can be as
-// wide, but a finger keeps the app filling its screen, as installed.
-const COMPUTER = "(min-width: 761px) and (pointer: fine)";
+// A computer's browser tab: a mouse or trackpad to point with, and a
+// window wider than the catalog's one column. A tablet, or a phone on its
+// side, can be as wide, but a finger keeps the app filling its screen, as
+// does opening it from the home screen or as an installed app.
+const COMPUTER =
+  "(min-width: 761px) and (pointer: fine) and (display-mode: browser)";
+
+let computerQuery: MediaQueryList | undefined;
+function computerList() {
+  computerQuery ??= matchMedia(COMPUTER);
+  return computerQuery;
+}
 
 function subscribeComputer(onChange: () => void) {
-  const query = matchMedia(COMPUTER);
-  query.addEventListener("change", onChange);
+  computerList().addEventListener("change", onChange);
   return () => {
-    query.removeEventListener("change", onChange);
+    computerList().removeEventListener("change", onChange);
   };
 }
 
 // The server draws the phone's page; on a computer the render right after
-// moves to the framed one, while launchScript still hides the page.
+// moves to the framed one, while launchScript still hides the page. Moving
+// between the two builds the app again, as a window resized across the
+// line does.
 function useOnComputer() {
   return useSyncExternalStore(
     subscribeComputer,
-    () => matchMedia(COMPUTER).matches,
+    () => computerList().matches,
     () => false
   );
 }
@@ -196,27 +208,18 @@ const onComputer = {
     justifyContent: "center",
     padding: "32px 16px 48px",
   }),
-  link: css({
-    _hover: { borderColor: "var(--border-strong)" },
-    alignItems: "center",
-    bg: "background.card",
-    border: "1px solid token(colors.separator)",
-    borderRadius: "16px",
-    color: "text.tertiary",
-    display: "flex",
-    fontSize: "12px",
-    gap: "12px",
-    lineHeight: "1.6",
-    padding: "14px 16px",
-    textDecoration: "none",
-  }),
-  linkText: css({
-    "& strong": { color: "text.primary", fontSize: "14px" },
-    display: "flex",
-    flex: 1,
-    flexDirection: "column",
-    gap: "2px",
-  }),
+  // The toolbars' pill, standing on its own.
+  link: cx(
+    toolbarAction,
+    css({
+      alignItems: "center",
+      alignSelf: "flex-start",
+      color: "text.tertiary",
+      display: "inline-flex",
+      fontSize: "12px",
+      gap: "8px",
+    })
+  ),
   note: css({
     "& h1": {
       fontSize: "22px",
@@ -258,12 +261,9 @@ function OpenOnPhone() {
           value={url}
         />
       </div>
+      <p>サンプルや比べる案を切り替えながら触るなら、デモで。</p>
       <Link className={onComputer.link} search={variants} to="/demo">
-        <span className={onComputer.linkText}>
-          <strong>デモで見る</strong>
-          サンプルや比べる案を切り替えながら、ブラウザで触れます。
-        </span>
-        <ChevronRight aria-hidden="true" size={18} />
+        デモで見る <ChevronRight aria-hidden="true" size={14} />
       </Link>
     </section>
   );
