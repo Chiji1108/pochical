@@ -12,9 +12,11 @@ import SwiftUI
 @Observable
 final class ChatScroll {
   var place = ScrollPlace()
-  /// The day of the lines at the top, once its title has gone up out of
-  /// sight (LINE's), shown while the chat scrolls.
+  /// The day of the lines at the top, pinned over them while the chat
+  /// scrolls as a list pins its section's header (PinnedDay).
   var topDay: Day?
+  /// How far the next day's title coming up pushes the floating day up.
+  var dayPush: CGFloat = 0
   var dayShown = false
   var scrolling = false
   /// The lines whose foot is on the screen, by item id: read on to the
@@ -109,7 +111,11 @@ struct UnderPins: View {
 
 /// The day of the lines at the top, floating over them while the chat
 /// scrolls and a moment after (chatRules.floatingDayMs); not over a notice.
+/// The next day's title pushes it up and out, under where it rests, as it
+/// comes up to take its place.
 struct FloatingDay: View {
+  /// Between the top of the lines seen and where the day rests.
+  static let gap: CGFloat = 8
   @Environment(\.themeColors) private var colors
   let scroll: ChatScroll
   let covered: Bool
@@ -117,13 +123,12 @@ struct FloatingDay: View {
   var body: some View {
     Group {
       if let day = scroll.topDay, scroll.dayShown, !covered {
-        Text(ChatTime.day(day))
-          .font(.caption2)
+        DayWords(day: day)
           .foregroundStyle(colors.textSecondary)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 2)
           .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Radius.sm))
-          .padding(.top, 8)
+          .offset(y: -scroll.dayPush)
+          .clipped()
+          .padding(.top, Self.gap)
           .allowsHitTesting(false)
           .accessibilityHidden(true)
           .transition(.opacity)

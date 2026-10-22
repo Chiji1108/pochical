@@ -1,6 +1,0 @@
-/* The order of every layer in the catalog: the base styles, then Panda
-   CSS's, each above the one before. Panda's PostCSS plugin adds its styles
-   to the stylesheet with this line, so it names Panda's layers only here. */
-@layer site, reset, base, tokens, recipes, utilities;
-
-@import "@pochical/styled-system/base.css";
