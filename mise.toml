@@ -121,6 +121,16 @@ run = [
   "swift test --package-path apps/ios/Packages/PochicalKit",
 ]
 
+[tasks."android:build"]
+description = "Build the Android app's debug APK"
+dir = "{{config_root}}/apps/android"
+run = "./gradlew assembleDebug"
+
+[tasks."android:test"]
+description = "Run the Android modules' unit tests and lint"
+dir = "{{config_root}}/apps/android"
+run = "./gradlew test lint"
+
 [tasks."ios:photo-touches"]
 description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts on :8787: <simulator name> [derived data]"
 run = "tools/photo-line-touches/run.sh"
