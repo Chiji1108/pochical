@@ -5,11 +5,10 @@ import {
   PresetContexts,
 } from "@pochical/prototype/components/design-providers";
 import {
-  BREATH_SECONDS,
   nextSkyId,
   paleSkyFromTop,
   paleSkyLights,
-  SKY_CHANGE,
+  SkyLight,
 } from "@pochical/prototype/components/design-surprise";
 import type { Tab } from "@pochical/prototype/components/design-tab-bar";
 import { ColorSchemeContext } from "@pochical/prototype/components/design-theme";
@@ -35,9 +34,8 @@ import {
   UserStoreContext,
 } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
-import { useReducedMotion } from "@pochical/prototype/lib/device-media";
 import { css, cva } from "@pochical/styled-system/css";
-import { AnimatePresence, motion, MotionConfig } from "motion/react";
+import { AnimatePresence, MotionConfig } from "motion/react";
 import { useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 
@@ -139,33 +137,17 @@ export function Sky({
     });
   }
   const { id } = shown;
-  const still = useReducedMotion();
   return (
     <Motion>
       <div aria-hidden="true" className={sky.root({ place })}>
         <AnimatePresence initial={false}>
           {id === undefined ? null : (
-            <motion.div
-              animate={{ opacity: 1 }}
+            <SkyLight
+              background={skyBackground(id, place)}
               className={sky.layer}
-              exit={{ opacity: 0 }}
-              initial={{ opacity: 0 }}
               key={id}
-              transition={SKY_CHANGE}
-            >
-              <motion.div
-                animate={still ? undefined : { scale: 1.08, x: "2%" }}
-                className={sky.light}
-                initial={{ scale: 1, x: "-2%" }}
-                style={{ background: skyBackground(id, place) }}
-                transition={{
-                  duration: BREATH_SECONDS,
-                  ease: "easeInOut",
-                  repeat: Number.POSITIVE_INFINITY,
-                  repeatType: "mirror",
-                }}
-              />
-            </motion.div>
+              lightClassName={sky.light}
+            />
           )}
         </AnimatePresence>
       </div>
