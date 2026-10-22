@@ -139,13 +139,9 @@ private struct JumpHighlight: ViewModifier {
           .allowsHitTesting(false)
           .accessibilityHidden(true)
       }
-      .overlay {
-        shape.fill(.clear)
-          .changeEffect(.shine(duration: total * 0.6), value: lit, isEnabled: !reduceMotion)
-          .clipShape(shape)
-          .allowsHitTesting(false)
-          .accessibilityHidden(true)
-      }
+      // Pow's shine draws only over what the bubble itself draws, so it
+      // keeps to its outline.
+      .changeEffect(.shine(duration: total * 0.6), value: lit, isEnabled: !reduceMotion)
   }
 
   @ViewBuilder private var light: some View {
@@ -154,9 +150,12 @@ private struct JumpHighlight: ViewModifier {
       fill.keyframeAnimator(initialValue: 0.0, trigger: lit) { view, on in
         view.opacity(on)
       } keyframes: { _ in
+        // Held lit, then off at once, a frame's worth: the animator keeps
+        // where its timeline ends, and a step of no length at its end
+        // left the light on.
         MoveKeyframe(1)
         LinearKeyframe(1, duration: total)
-        MoveKeyframe(0)
+        LinearKeyframe(0, duration: 1.0 / 60)
       }
     } else {
       fill.keyframeAnimator(initialValue: 0.0, trigger: lit) { view, on in
