@@ -121,6 +121,30 @@ const sendPhotos = async (page: Page) => {
     .waitFor({ state: "hidden" });
 };
 
+// 日にちを共有, from the menu the group chat's ＋ opens.
+const toShareDays = async (page: Page) => {
+  await tap(page, "グループ");
+  await tap(page, /^全体チャット/u);
+  await tap(page, "写真や日にちを送る");
+  await page.getByRole("menuitem", { name: named("日にちを共有") }).click();
+};
+
+const toRepeat = async (page: Page) => {
+  await tap(page, "設定");
+  await tap(page, /^繰り返し/u);
+};
+
+const toNewRepeat = async (page: Page) => {
+  await toRepeat(page);
+  await tap(page, /^繰り返しを設定する/u);
+};
+
+const toNewJob = async (page: Page) => {
+  await tap(page, "設定");
+  await tap(page, /^シフトパターン/u);
+  await tap(page, /^新しい仕事にする/u);
+};
+
 const toGroupMonth = async (page: Page) => {
   await tap(page, "グループ");
   await tap(page, "月で見る");
@@ -278,29 +302,22 @@ export const states: State[] = [
     },
   },
   {
-    name: "calendar/date-picker",
-    path: demo("scheduleSample=empty"),
-    steps: async (page) => {
-      await tap(page, "ポチポチ入力");
-      await tap(page, /^入力する日付/u);
-    },
-  },
-  {
     name: "settings/repeat-new",
     path: demo("scheduleSample=filled"),
-    steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^働き方/u);
-      await tap(page, /決まった順番で回すようにする/u);
-    },
+    steps: toNewRepeat,
   },
   {
     name: "settings/job",
     path: demo("scheduleSample=filled"),
+    steps: toNewJob,
+  },
+  {
+    // The date picker, over 新しい仕事にする's first day.
+    name: "settings/job-date-picker",
+    path: demo("scheduleSample=filled"),
     steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^働き方/u);
-      await tap(page, /新しい仕事にする/u);
+      await toNewJob(page);
+      await tap(page, /^新しい仕事の初日/u);
     },
   },
   {
@@ -308,9 +325,7 @@ export const states: State[] = [
     name: "settings/repeat-sequence",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^働き方/u);
-      await tap(page, /決まった順番で回すようにする/u);
+      await toNewRepeat(page);
       await tap(page, "日勤");
       await tap(page, "日勤");
       await tap(page, "休み");
@@ -331,14 +346,14 @@ export const states: State[] = [
   { name: "design/states", path: "/design/states" },
   { name: "design/flows", path: "/design/flows" },
   {
-    // The first-run day picked, with the two weeks it starts. The flow
-    // page covers its frames against taps, so the click goes to the day.
+    // The first run's order moved to start on another day. The flow page
+    // covers its frames against taps, so the click goes to the day.
     name: "design/flows-anchor",
     path: "/design/flows",
     steps: async (page) => {
       await page
-        .locator(".dc-phone", { hasText: "の日を1日選んでください" })
-        .getByRole("button", { name: /2026年9月10日/u })
+        .locator(".dc-phone", { hasText: /の日を押す/u })
+        .getByRole("button", { name: /^9月10日、/u })
         .dispatchEvent("click");
     },
   },
@@ -456,12 +471,9 @@ export const states: State[] = [
     },
   },
   {
-    name: "settings/work",
+    name: "settings/repeat",
     path: demo("scheduleSample=filled"),
-    steps: async (page) => {
-      await tap(page, "設定");
-      await tap(page, /^働き方/u);
-    },
+    steps: toRepeat,
   },
   {
     name: "settings/appearance",
@@ -892,19 +904,13 @@ export const states: State[] = [
   {
     name: "group/share-days",
     path: demo("scheduleSample=filled"),
-    steps: async (page) => {
-      await tap(page, "グループ");
-      await tap(page, /^全体チャット/u);
-      await tap(page, "日にちを共有");
-    },
+    steps: toShareDays,
   },
   {
     name: "group/share-days-picked",
     path: demo("scheduleSample=filled"),
     steps: async (page) => {
-      await tap(page, "グループ");
-      await tap(page, /^全体チャット/u);
-      await tap(page, "日にちを共有");
+      await toShareDays(page);
       await tap(page, /^9\/27/u);
       await tap(page, "9月29日(火)");
     },
