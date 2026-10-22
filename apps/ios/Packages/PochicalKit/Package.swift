@@ -12,7 +12,7 @@ let package = Package(
   dependencies: [
     .package(path: "../PochicalDesign"),
     .package(path: "../PochicalProto"),
-    .package(url: "https://github.com/pointfreeco/sqlite-data.git", exact: "1.12.0"),
+    .package(url: "https://github.com/pointfreeco/sqlite-data.git", exact: "1.12.1"),
     .package(url: "https://github.com/connectrpc/connect-swift.git", exact: "1.2.3"),
     // SQLiteData's own, for ValueObservation, which it does not export.
     .package(url: "https://github.com/groue/GRDB.swift", exact: "7.11.1"),

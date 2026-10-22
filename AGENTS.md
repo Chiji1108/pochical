@@ -6,6 +6,7 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 
 - Tool versions and tasks are in `mise.toml` (`mise run gen`, `mise run server:test`, `mise run ios:test`, ...).
 - Bun's version is in three places, changed together: `mise.toml`, `packageManager` in `package.json`, and the `BUN_VERSION` build variable of each Worker in Workers Builds (Settings > Build > Build Variables and Secrets), which reads no version file for Bun.
+- Node's version is in `.node-version` alone: mise reads it (`idiomatic_version_file_enable_tools` in `mise.toml`), and so does Workers Builds.
 - Generated files are never edited by hand; change their source and regenerate:
   - Wire types: `proto/` → `mise run gen` (into `apps/server/src/gen`, `apps/web/src/gen`, `apps/ios/Packages/PochicalProto/Sources`, `apps/android/proto/src/main`). A change to `Change` or anything it holds fails `mise run sync:check` until the iOS `Sync.schema` is raised and `mise run sync:check -- --write` records it.
   - Numbers every platform shares (limits, the chat's, days', invites', sockets', widgets'), design tokens, mark icons and holidays: `design/` → `mise run gen` (into `spec/design-tokens.json`, `apps/ios/Packages/PochicalDesign/Sources`, `apps/android/design/src/main`). Specs and code refer to them by name, never by value.
@@ -33,4 +34,4 @@ Pochical is a monorepo: native SwiftUI (`apps/ios`) and Jetpack Compose (`apps/a
 - main takes pull requests only; name the Linear issue (team POC) in the PR, and file skipped findings or follow-ups there.
 - Before merging: run `/code-review` and address it, CI must be green (Xcode Cloud included for iOS), and review threads resolved. Merge main into the branch first when other PRs landed. Never merge on red.
 - Deploys happen through Cloudflare Workers Builds on merge; never deploy by hand.
-- Renovate (`.github/renovate.json5`) opens the dependency PRs on Monday mornings: patches and minors in one PR, each major in its own, and what must move together in its own group at every update (Bun, vitest, protobuf and Connect) or at majors (TypeScript, React). They merge like any other PR, after the manual steps their bodies name, such as `mise run gen`.
+- Renovate (`.github/renovate.json5`) opens the dependency PRs on Monday mornings: patches and minors in one PR (a 0.x package's minor, which may break, in its own), each major in its own, and what must move together in its own group at every update (Bun, vitest, protobuf and Connect) or at majors (TypeScript, React). They merge like any other PR, after the manual steps their bodies name, such as `mise run gen`.

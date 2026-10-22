@@ -47,7 +47,7 @@ const spaced = (pattern: string) => {
 
 const named = (name: string | RegExp) =>
   typeof name === "string"
-    ? new RegExp(`^${spaced(name.replace(SYNTAX, String.raw`\$&`))}$`, "u")
+    ? new RegExp(`^${spaced(name.replaceAll(SYNTAX, String.raw`\$&`))}$`, "u")
     : new RegExp(spaced(name.source), name.flags);
 
 const tap = async (page: Page, name: string | RegExp) => {

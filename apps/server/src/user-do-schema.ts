@@ -295,6 +295,15 @@ export const profile = sqliteTable(
   ]
 );
 
+// The user's own photos (people/{userId}/photos/{photoId} in R2) to be
+// deleted from it: a usual photo replaced, or one being copied in to be
+// the usual photo, noted before it is stored and let off once the profile
+// names it, so R2 never keeps one of theirs nothing notes. The alarm
+// deletes them, and their rows after.
+export const goingPhotos = sqliteTable("going_photos", {
+  photoId: text("photo_id").primaryKey(),
+});
+
 // The newest cursor the user's log has given out: one row. Kept apart
 // from the values, some of whose rows leaving a group takes away, so the
 // cursor never goes back and no two values share one
