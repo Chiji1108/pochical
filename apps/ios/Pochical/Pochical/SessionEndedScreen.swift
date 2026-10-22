@@ -21,7 +21,7 @@ struct SessionEndedScreen: View {
         .font(.title3.bold())
         .foregroundStyle(colors.textPrimary)
       Text(
-        "ほかの端末でログアウトしたか、アカウントが削除されたため、同期できません。この端末のデータは残っています。"
+        "ほかの端末でログアウトしたか、アカウントが削除されたため、同期できません。この端末のデータは、はじめから使うまで消しません。"
       )
       .font(.subheadline)
       .foregroundStyle(colors.textTertiary)

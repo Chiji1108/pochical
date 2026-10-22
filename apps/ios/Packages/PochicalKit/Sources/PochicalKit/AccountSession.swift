@@ -31,7 +31,7 @@ import SQLiteData
     /// erased (`erasing`): the app shows none of it, and signs in afresh
     /// only once it is gone.
     case erasing
-    /// The server does not know the session (a 401 to the user's socket):
+    /// The server does not know the session (a 401 to any of its sockets):
     /// signed out or deleted on another device or by request, or the
     /// server misconfigured. Nothing syncs and nothing is cleared until the
     /// person tries again (`tryAgain`) or starts afresh (`startAfresh`)
@@ -133,18 +133,15 @@ import SQLiteData
     userSocket = SyncClient(database: database, server: socketServer) { generation in
       await ends.unknown(in: generation)
     }
-    places = GroupSockets(database: database, server: socketServer)
+    places = GroupSockets(database: database, server: socketServer) { generation in
+      await ends.unknown(in: generation)
+    }
     // Cut off while erasing: the session kept, if the Keychain still has
     // it, is the one that ended, and is never signed in as again.
     if let why = shared?.string(forKey: Self.erasingKey).flatMap(Erasing.Why.init) {
       beginErasing(why)
     } else if let kept = try? keychain.kept() {
-      if kept.ended {
-        state = .ended(kept)
-        userID = kept.userID
-      } else {
-        enter(kept)
-      }
+      resume(kept)
     }
     ends.session = self
   }
@@ -376,7 +373,18 @@ import SQLiteData
 
   // MARK: A session the server does not know
 
-  /// The user's socket in the stretch `generation` was refused as a
+  /// Goes on as the session kept: signed in as it, or, one the server did
+  /// not know, saying so as before.
+  private func resume(_ kept: StoredSession) {
+    if kept.ended {
+      state = .ended(kept)
+      userID = kept.userID
+    } else {
+      enter(kept)
+    }
+  }
+
+  /// A socket in the stretch `generation` was refused as a
   /// session the server does not know: every socket closes and the device
   /// keeps what it holds, its outbox too, saying so until the person
   /// chooses, the Keychain keeping the session as ended for a relaunch. A
@@ -406,8 +414,8 @@ import SQLiteData
       do {
         try keychain.keep(session)
       } catch {
+        // Tried all the same: a relaunch says it ended again first.
         Logger.account.error("Keeping the session tried again failed: \(error)")
-        return
       }
       enter(session)
     }
@@ -503,7 +511,7 @@ import SQLiteData
       do {
         let session = try await established()
         guard case .starting = state else { return }
-        enter(session)
+        resume(session)
       } catch {
         Logger.account.error("Signing in failed: \(error)")
       }

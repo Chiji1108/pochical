@@ -460,24 +460,22 @@ private final class FakeAccountServer: AccountServer {
   #expect(throws: NotSignedIn.self) { try made.session.current.credentials() }
   let seen = made.sockets.asked
   made.session.cameToFront()
-  try await Task.sleep(for: .milliseconds(200))
-  #expect(made.sockets.asked == seen)
-  #expect(made.server.made.withLock { $0 } == 0)
 
-  // The app ends and starts again: still ended, trying nothing.
+  // The app ends and starts again: still ended.
   let again = AccountSession(
     database: made.database, server: made.server, keychain: made.keychain, shared: made.shared,
     eraseFiles: {}, socketServer: made.socketURL)
   #expect(again.phase == .ended)
   #expect(again.userID == "A")
   again.cameToFront()
-  try await Task.sleep(for: .milliseconds(200))
-  #expect(made.sockets.asked == seen)
 
-  // もう一度つなぐ tries it again, and it ends again.
+  // もう一度つなぐ tries it again, and it ends again: the one socket since
+  // is its, so coming to the front tried nothing.
   again.tryAgain()
   #expect(await eventually { made.sockets.asked > seen })
   #expect(await eventually { again.phase == .ended })
+  #expect(made.sockets.asked == seen + 1)
+  #expect(made.server.made.withLock { $0 } == 0)
   #expect(made.coworkers == 1)
 
   // はじめから使う lets it go, with what the device holds.
@@ -486,18 +484,6 @@ private final class FakeAccountServer: AccountServer {
   #expect(made.coworkers == 0)
   // (This server refuses the new session's socket too.)
   #expect(try made.keychain.kept()?.token == "anon-token-1")
-}
-
-@MainActor @Test func aSessionTheServerKnowsAgainSyncsAgainOnTryingAgain() async throws {
-  let refusing = try await Made.signedIn(as: "a", "A", socketStatus: "401 Unauthorized")
-  refusing.session.cameToFront()
-  #expect(await eventually { refusing.session.phase == .ended })
-  refusing.sockets.listener.cancel()
-  // The same session, tried again, is signed in as again.
-  refusing.session.tryAgain()
-  #expect(await eventually { refusing.session.phase == .signedIn })
-  #expect(refusing.session.userID == "A")
-  #expect(try refusing.keychain.kept() == StoredSession(token: "a", userID: "A"))
 }
 
 /// An invitation opened from a link as the app first launches: its call

@@ -133,8 +133,8 @@ public actor SyncClient {
   private var photoPageWatchers: [UUID: AsyncStream<ChatPhotosPage>.Continuation] = [:]
 
   /// Told, with the stretch's generation, that the server does not know
-  /// the session it connected as (a 401): the user's socket tells
-  /// AccountSession, which alone decides what comes of it.
+  /// the session it connected as (a 401): every socket the session starts
+  /// tells AccountSession, which alone decides what comes of it.
   private let sessionUnknown: @Sendable (Int) async -> Void
 
   init(
