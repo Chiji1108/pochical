@@ -73,6 +73,11 @@ jobs:
         with:
           install_args: bun
       - run: bun install --frozen-lockfile
+      # Each Worker's worker-configuration.d.ts is what its wrangler.jsonc
+      # and the locked wrangler (and the workerd it pins) give, not left
+      # behind by a wrangler bump. Before typecheck, which reads them.
+      # wrangler types reads no account.
+      - run: mise run worker-types:check
       - run: bun run check
       - run: bun run typecheck
       - run: bun run test

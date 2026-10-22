@@ -4,8 +4,8 @@ buf = "1.73.0"
 java = "temurin-21"
 
 [tasks.gen]
-description = "Generate the code made from proto/ and design/"
-depends = ["gen:proto", "gen:design"]
+description = "Generate the code made from proto/ and design/, and the Workers' types"
+depends = ["gen:proto", "gen:design", "gen:worker-types"]
 
 [tasks."gen:proto"]
 description = "Generate TypeScript, Swift and Kotlin code from proto/"
@@ -19,6 +19,25 @@ run = "bun design/scripts/gen.ts"
 [tasks."design:check"]
 description = "Fail if the code generated from design/ is out of date"
 run = "bun design/scripts/gen.ts --check"
+
+[tasks."gen:worker-types"]
+description = "Write each Worker's worker-configuration.d.ts (every workspace's cf-typegen) from its wrangler.jsonc, with the wrangler in bun.lock"
+# Each cf-typegen deletes the file first. Otherwise wrangler keeps the
+# runtime types already in it whenever its workerd header line matches,
+# and a file changed below that line would pass worker-types:check.
+run = "bun run --filter '*' cf-typegen"
+
+[tasks."worker-types:check"]
+description = "Fail if a Worker's worker-configuration.d.ts is not what gen:worker-types writes"
+depends = ["gen:worker-types"]
+run = '''
+changed=$(git status --porcelain -- '*/worker-configuration.d.ts')
+if [ -n "$changed" ]; then
+  printf '%s\n' "$changed"
+  echo "worker-configuration.d.ts is out of date: run mise run gen:worker-types and commit it (AGENTS.md)."
+  exit 1
+fi
+'''
 
 [tasks."proto:lint"]
 description = "Lint and format-check proto/"

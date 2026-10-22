@@ -7,7 +7,7 @@
     "build": "astro build",
     "preview": "astro preview --port 3000",
     "deploy": "bun run build && wrangler deploy",
-    "cf-typegen": "wrangler types",
+    "cf-typegen": "rm -f worker-configuration.d.ts && wrangler types",
     "sync": "astro sync",
     "prepare": "bun run sync",
     "typecheck": "astro check && tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",

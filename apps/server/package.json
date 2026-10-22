@@ -5,12 +5,12 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "cf-typegen": "wrangler types",
+    "cf-typegen": "rm -f worker-configuration.d.ts && wrangler types",
     "auth:schema": "bunx @better-auth/cli@1 generate --config better-auth.config.ts --output src/db/auth-schema.ts -y",
     "db:generate": "drizzle-kit generate",
     "group-do:generate": "drizzle-kit generate --config drizzle.group-do.config.ts",
     "user-do:generate": "drizzle-kit generate --config drizzle.user-do.config.ts",
-    "typecheck": "wrangler types && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "bun run --cwd ../.. check",
     "fix": "bun run --cwd ../.. fix"
