@@ -2,18 +2,19 @@ import { css, cx } from "@pochical/styled-system/css";
 import { ArrowLeft } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
-// The pages the phones are shown on, /demo (apps/demo) and the design
-// documents under /design (apps/design): their ground, the toolbar at the top, the heading, and the
-// screens laid side by side with captions. They are the workspace around
-// the app, so the native apps have no counterpart.
+// The pages the phones are shown on, /demo (apps/demo) and the app to try
+// on a computer (apps/try): their ground, the toolbar at the top, and the
+// captions under the phones. They are the workspace around the app, so the
+// native apps have no counterpart. The design documents (apps/design) set
+// their pieces on the same workspace.
 
 // Where the pages go down to one column, as on a phone.
 const NARROW = "@media (max-width: 760px)";
 
 // The workspace's own colors around the phones; the app's come from
 // design/ through design-theme.tsx as CSS variables. Every page showing
-// the app's pieces sits on it, the MDX documents' pieces too
-// (components/mdx.tsx), with `design-page` as the hook for the pieces'
+// the app's pieces sits on it, the design documents' pieces too
+// (apps/design/src/components/mdx.tsx), with `design-page` as the hook for the pieces'
 // focus rings and button colors (@pochical/styled-system's globalCss).
 export const workspace = cx(
   "design-page",
@@ -93,77 +94,6 @@ export function DesignToolbar({
     </div>
   );
 }
-
-const intro = {
-  description: css({ color: "text.tertiary", fontSize: "13px" }),
-  eyebrow: css({
-    color: "accent.focus",
-    fontSize: "10px",
-    letterSpacing: "0.2em",
-  }),
-  root: css({
-    "& h1": {
-      fontSize: "clamp(25px, 3vw, 36px)",
-      fontWeight: 500,
-      letterSpacing: "0.04em",
-      margin: "18px 0",
-    },
-    // A second line of the title goes under the first on a phone.
-    "& h1 > span": { [NARROW]: { display: "block", marginTop: "6px" } },
-    [NARROW]: { margin: "38px auto" },
-    margin: "55px auto 52px",
-    textAlign: "center",
-  }),
-};
-
-// The page's heading: where it is, its title, and what it is for.
-export function DesignIntro({
-  eyebrow,
-  title,
-  children,
-}: {
-  eyebrow: string;
-  title: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <header className={intro.root}>
-      <p className={intro.eyebrow}>{eyebrow}</p>
-      <h1>{title}</h1>
-      <p className={intro.description}>{children}</p>
-    </header>
-  );
-}
-
-// Screens side by side, a phone's width each, each section headed by its
-// number and name; one column on a phone.
-export const designScreens = css({
-  "& > section": {
-    [NARROW]: { width: "min(390px, 100%)" },
-    flex: "0 0 auto",
-    minWidth: 0,
-    width: "390px",
-  },
-  "& > section > h2": {
-    color: "accent.default",
-    fontSize: "13px",
-    fontWeight: 500,
-    margin: "0 0 20px 8px",
-  },
-  "& > section > h2 > span": {
-    color: "text.quaternary",
-    fontSize: "10px",
-    marginRight: "13px",
-  },
-  [NARROW]: { alignItems: "center", flexDirection: "column", gap: "38px" },
-  alignItems: "start",
-  display: "flex",
-  flexWrap: "wrap",
-  gap: "clamp(35px, 7vw, 100px)",
-  justifyContent: "center",
-  marginInline: "auto",
-  maxWidth: "1400px",
-});
 
 // A note under a screen.
 export const designCaption = css({

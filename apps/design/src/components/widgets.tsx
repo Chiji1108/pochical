@@ -2,12 +2,7 @@ import {
   Fit,
   LockScreen,
 } from "@pochical/prototype/components/design-home-screen";
-import {
-  DesignProviders,
-  PresetContexts,
-  useDesignTheme,
-} from "@pochical/prototype/components/design-providers";
-import { pageStyle } from "@pochical/prototype/components/design-theme";
+import { PresetContexts } from "@pochical/prototype/components/design-providers";
 import { WeekSettingsContext } from "@pochical/prototype/components/design-week";
 import {
   LabelledWidget,
@@ -62,45 +57,31 @@ import type {
   WidgetEntry,
 } from "@pochical/prototype/lib/design-widgets";
 import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
-import {
-  DesignIntro,
-  DesignPage,
-  DesignToolbar,
-} from "@pochical/showcase/components/design-page";
 import { VariantPanel } from "@pochical/showcase/components/design-variant-panel";
-import { pageMeta } from "@pochical/showcase/lib/page-meta";
 import { css } from "@pochical/styled-system/css";
-import { createFileRoute } from "@tanstack/react-router";
-import type { ReactNode, ComponentType } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import type { ComponentType, ReactNode } from "react";
 
-import {
-  NextOffCircular,
-  TodayCircular,
-  TodayInline,
-  UpcomingRectangular,
-} from "../components/design-widgets-lock";
-import {
-  NowCircular,
-  NowRectangular,
-  NowSmall,
-} from "../components/design-widgets-now";
 import {
   parseWidgetVariants,
   widgetVariantKeys,
   widgetVariantOptions,
 } from "../lib/design-widget-variants";
 import type { WidgetVariants } from "../lib/design-widget-variants";
+import {
+  NextOffCircular,
+  TodayCircular,
+  TodayInline,
+  UpcomingRectangular,
+} from "./design-widgets-lock";
+import { NowCircular, NowRectangular, NowSmall } from "./design-widgets-now";
 
-export const Route = createFileRoute("/design_/widgets")({
-  component: WidgetsPage,
-  head: () => ({
-    ...pageMeta(
-      "ウィジェット",
-      "ポチカルのホーム画面とロック画面のウィジェット"
-    ),
-  }),
-  validateSearch: parseWidgetVariants,
-});
+// The widgets of content/design/widgets at their real size, iPhone
+// (390×844pt) and Pixel 9a, switched between the day they show, the device
+// and the person's settings, as /demo switches the app. The switches are
+// kept in the URL, so every widget's page shows the same state. Each
+// widget draws from one entry, worked out from the sample person, as the
+// native widgets will from theirs.
 
 // The sample month and the next, with today a work day of 残業 that has a
 // memo, so every widget has something to show.
@@ -207,60 +188,26 @@ function scheduleFor(day: WidgetVariants["day"]): Schedule {
 
 type Size = "small" | "medium" | "large";
 type WidgetView = ComponentType<{ entry: WidgetEntry }>;
-type KindSize = { size: Size; View: WidgetView };
 
 // The kinds a person picks from the widget gallery, each in its sizes.
-const kinds: {
-  id: Exclude<WidgetVariants["kind"], "all" | "lock">;
-  name: string;
-  description: string;
-  sizes: KindSize[];
-}[] = [
-  {
-    description:
-      "その日だけを大きく。小は今日、中は今日と明日。添えるのは変わった時間（早出・残業）だけで、メモは日付の下の線だけ。休みの日も印で。",
-    id: "simple",
-    name: "シンプル",
-    sizes: [
-      { View: SimpleSmall, size: "small" },
-      { View: SimpleMedium, size: "medium" },
-    ],
-  },
-  {
-    description:
-      "次の休みまであと何日か。ウィジェットの編集で人を選ぶとその人と一緒に休める日、グループを選ぶとみんな休み（全員が休みの日）になります。今日が休みの日は数えずに「おやすみ」。",
-    id: "nextOff",
-    name: "次の休み",
-    sizes: [{ View: NextOffSmall, size: "small" }],
-  },
-  {
-    description:
-      "今日からの日を並べて。小は今日と続く3日、中は今日から5日を列で。添えるのは変わった時間だけで、メモは日付の下の線だけ。ウィジェットの編集で人を選ぶと、その人の段が並びます（小は今日と明日）。",
-    id: "upcoming",
-    name: "これから",
-    sizes: [
-      { View: UpcomingSmall, size: "small" },
-      { View: UpcomingMedium, size: "medium" },
-    ],
-  },
-  {
-    description:
-      "いまのシフトがあと何時間で終わるか、なければ次のシフトまであと何時間か。当番のように長い勤務向けに。1日より先は「3日後」。数字は端末の時計に合わせて進みます。休みと時間のないシフト（明け・非番）は数えません。",
-    id: "now",
-    name: "いまのシフト",
-    sizes: [{ View: NowSmall, size: "small" }],
-  },
-  {
-    description:
-      "中は今週と来週の2週間、大は月。アプリのカレンダーと同じ日のマスで。",
-    id: "calendar",
-    name: "カレンダー",
-    sizes: [
-      { View: TwoWeeksMedium, size: "medium" },
-      { View: CalendarLarge, size: "large" },
-    ],
-  },
-];
+const kinds = {
+  calendar: [
+    { View: TwoWeeksMedium, size: "medium" },
+    { View: CalendarLarge, size: "large" },
+  ],
+  nextOff: [{ View: NextOffSmall, size: "small" }],
+  now: [{ View: NowSmall, size: "small" }],
+  simple: [
+    { View: SimpleSmall, size: "small" },
+    { View: SimpleMedium, size: "medium" },
+  ],
+  upcoming: [
+    { View: UpcomingSmall, size: "small" },
+    { View: UpcomingMedium, size: "medium" },
+  ],
+} satisfies Record<string, { size: Size; View: WidgetView }[]>;
+
+export type WidgetKind = keyof typeof kinds;
 
 const iosFamilies: Record<Size, WidgetFamily> = {
   large: "systemLarge",
@@ -271,29 +218,6 @@ const androidFamilies: Record<Size, WidgetFamily> = {
   large: "android4x4",
   medium: "android4x2",
   small: "android2x2",
-};
-
-const page = {
-  caption: css({ color: "text.secondary", fontSize: "12px", margin: 0 }),
-  kind: css({ display: "flex", flexDirection: "column", gap: "8px" }),
-  kindName: css({ fontSize: "15px", fontWeight: 700, margin: 0 }),
-  // The choices beside the widgets on a wide screen, kept in view as the
-  // widgets scroll; above them on a narrow one.
-  layout: css({
-    "@media (min-width: 1100px)": {
-      alignItems: "flex-start",
-      display: "grid",
-      gridTemplateColumns: "380px 1fr",
-    },
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-    padding: "8px 16px 48px",
-  }),
-  panel: css({
-    "@media (min-width: 1100px)": { position: "sticky", top: "16px" },
-  }),
-  stage: css({ display: "flex", flexDirection: "column", gap: "32px" }),
 };
 
 // Every mark in the テーマ's one color, as シフトの色 ワントーン.
@@ -373,20 +297,54 @@ function momentOf(day: Date, clock: WidgetVariants["clock"]) {
 const PHONE_WIDTH = 390;
 const lockPhone = css({ flexShrink: 0, width: `${PHONE_WIDTH}px` });
 
-// The widgets of one kind, or all, on the device's home screen as the
-// choices set it.
-function Stage({ variants }: { variants: WidgetVariants }) {
-  const android = variants.platform === "android";
-  const week = weekOf(variants);
+// The switches as the URL has them, and a change to one, kept there.
+function useWidgetVariants() {
+  const variants = parseWidgetVariants(useSearch({ strict: false }));
+  const navigate = useNavigate();
+  const change = (key: keyof WidgetVariants, value: string) => {
+    void navigate({
+      replace: true,
+      resetScroll: false,
+      search: (previous) => ({ ...previous, [key]: value }),
+      to: ".",
+    });
+  };
+  return [variants, change] as const;
+}
+
+// The switches, at the top of every widget's page.
+export function WidgetSwitches() {
+  const [variants, change] = useWidgetVariants();
+  return (
+    <VariantPanel
+      onChange={change}
+      options={widgetVariantOptions}
+      order={widgetVariantKeys}
+      title="切り替え"
+      variants={variants}
+    />
+  );
+}
+
+// The one entry every widget draws from, at the moment the switches set.
+function useEntry(variants: WidgetVariants) {
   const august = variants.month === "august";
   const at = momentOf(august ? augustDay : designToday, variants.clock);
   const entry = widgetEntry(
     august ? augustSchedule : scheduleFor(variants.day),
-    week,
+    weekOf(variants),
     at,
     presetPatterns,
     { companion: companionOf(variants.companion), me }
   );
+  return { at, entry };
+}
+
+// One kind's sizes on the device's home screen, as the switches set it.
+export function HomeWidgets({ kind }: { kind: WidgetKind }) {
+  const [variants] = useWidgetVariants();
+  const { entry } = useEntry(variants);
+  const android = variants.platform === "android";
   const placement = {
     appearance: variants.look,
     wallpaperHue: android
@@ -397,16 +355,44 @@ function Stage({ variants }: { variants: WidgetVariants }) {
       : undefined,
   };
   const families = android ? androidFamilies : iosFamilies;
-  if (variants.kind === "lock") {
-    return (
-      <div className={page.kind}>
-        <h2 className={page.kindName}>ロック画面</h2>
-        <p className={page.caption}>
-          iPhone
-          のロック画面に置いたところ。1行は時計の上の日付の後ろに、円形（72pt）と長方形（160×72pt）は時計の下に。背景はなく、灰色の濃淡で壁紙の上に出ます。
-        </p>
-        <Fit width={PHONE_WIDTH}>
-          <div className={lockPhone}>
+  return (
+    <SettingsAround variants={variants}>
+      <Wallpaper {...placement}>
+        {kinds[kind].map(({ size, View }) => (
+          <LabelledWidget {...placement} family={families[size]} key={size}>
+            <View entry={entry} />
+          </LabelledWidget>
+        ))}
+      </Wallpaper>
+    </SettingsAround>
+  );
+}
+
+// iPhone's lock screen with the widgets for it: the line above the clock,
+// and the circles and rectangle under it, or いまのシフト's.
+export function LockWidgets({ now = false }: { now?: boolean }) {
+  const [variants] = useWidgetVariants();
+  const { at, entry } = useEntry(variants);
+  return (
+    <SettingsAround variants={variants}>
+      <Fit width={PHONE_WIDTH}>
+        <div className={lockPhone}>
+          {now ? (
+            <LockScreen
+              ground={wallpaperFor({ appearance: "lock" })}
+              when={at}
+              widgets={
+                <>
+                  <WidgetFrame appearance="lock" family="accessoryCircular">
+                    <NowCircular entry={entry} />
+                  </WidgetFrame>
+                  <WidgetFrame appearance="lock" family="accessoryRectangular">
+                    <NowRectangular entry={entry} />
+                  </WidgetFrame>
+                </>
+              }
+            />
+          ) : (
             <LockScreen
               ground={wallpaperFor({ appearance: "lock" })}
               inline={
@@ -429,93 +415,9 @@ function Stage({ variants }: { variants: WidgetVariants }) {
                 </>
               }
             />
-          </div>
-        </Fit>
-        <p className={page.caption}>
-          いまのシフトを置いたところ。円形は勤務中ならその進み具合を輪で、長方形はあと何時間かを。
-        </p>
-        <Fit width={PHONE_WIDTH}>
-          <div className={lockPhone}>
-            <LockScreen
-              ground={wallpaperFor({ appearance: "lock" })}
-              when={at}
-              widgets={
-                <>
-                  <WidgetFrame appearance="lock" family="accessoryCircular">
-                    <NowCircular entry={entry} />
-                  </WidgetFrame>
-                  <WidgetFrame appearance="lock" family="accessoryRectangular">
-                    <NowRectangular entry={entry} />
-                  </WidgetFrame>
-                </>
-              }
-            />
-          </div>
-        </Fit>
-      </div>
-    );
-  }
-  const shown =
-    variants.kind === "all"
-      ? kinds
-      : kinds.filter(({ id }) => id === variants.kind);
-  return (
-    <div className={page.stage}>
-      {shown.map(({ id, name, description, sizes }) => (
-        <div className={page.kind} key={id}>
-          <h2 className={page.kindName}>{name}</h2>
-          <p className={page.caption}>{description}</p>
-          <Wallpaper {...placement}>
-            {sizes.map(({ size, View }) => (
-              <LabelledWidget {...placement} family={families[size]} key={size}>
-                <View entry={entry} />
-              </LabelledWidget>
-            ))}
-          </Wallpaper>
+          )}
         </div>
-      ))}
-    </div>
-  );
-}
-
-// The widgets at their real size, switched between their kinds, the day
-// they show, the device and the person's settings, as /demo switches the
-// app. Each widget draws from one entry, worked out from the sample
-// person, as the native widgets will from theirs.
-function WidgetsPage() {
-  const variants = Route.useSearch();
-  const navigate = Route.useNavigate();
-  const theme = useDesignTheme();
-  return (
-    <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar documentsHref="/" />
-      <DesignIntro eyebrow="POCHICAL / WIDGETS" title="ウィジェット">
-        iPhone（390×844pt）と Pixel 9a
-        での実寸です。下の切り替えで、種類、今日の状態、端末と見た目、アプリの設定を変えて見られます。選んだ状態は
-        URL に残ります。
-      </DesignIntro>
-      <DesignProviders>
-        <div className={page.layout}>
-          <div className={page.panel}>
-            <VariantPanel
-              onChange={(key, value) => {
-                void navigate({
-                  replace: true,
-                  resetScroll: false,
-                  search: (previous) => ({ ...previous, [key]: value }),
-                });
-              }}
-              options={widgetVariantOptions}
-              order={widgetVariantKeys}
-              title="切り替え"
-              variants={variants}
-            />
-          </div>
-          <SettingsAround variants={variants}>
-            <Stage variants={variants} />
-          </SettingsAround>
-        </div>
-      </DesignProviders>
-    </DesignPage>
+      </Fit>
+    </SettingsAround>
   );
 }

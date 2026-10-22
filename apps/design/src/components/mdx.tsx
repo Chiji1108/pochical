@@ -1,15 +1,19 @@
 import { useDesignTheme } from "@pochical/prototype/components/design-providers";
 import { pageStyle } from "@pochical/prototype/components/design-theme";
+import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
 import { workspace } from "@pochical/showcase/components/design-page";
+import { demoUrl } from "@pochical/showcase/lib/app-urls";
 import { css, cx } from "@pochical/styled-system/css";
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import defaultMdxComponents from "fumadocs-ui/mdx";
+import { ExternalLink } from "lucide-react";
 import type { MDXComponents } from "mdx/types";
 import type { ReactNode } from "react";
 
-// The ground the app's pieces are drawn for, as the other /design pages
-// give them: the workspace, the app's text color, and the page's size and
-// spacing of text rather than the document's, which they would otherwise
-// inherit.
+// The ground the app's pieces are drawn for: the workspace, the app's text
+// color, and the page's size and spacing of text rather than the
+// document's, which they would otherwise inherit.
 const ground = css({
   color: "text.primary",
   fontSize: "1rem",
@@ -29,7 +33,8 @@ const lightPage = css({
 // (`not-prose`): they draw only with their own Panda CSS, as on a screen.
 // They follow the document's light or dark, or with `light` stay on the
 // light page whatever 外観 is, as a page showing light and dark side by
-// side (colors.mdx) is drawn for.
+// side (colors.mdx) and the workspace's own controls (the widgets'
+// switches) are drawn for.
 function Pieces({
   children,
   light = false,
@@ -48,10 +53,30 @@ function Pieces({
   );
 }
 
+// The demo (apps/demo) opened on what the page just showed, by its
+// choices in the URL as /demo keeps them.
+function DemoLink({ state }: { state?: Partial<DesignVariants> }) {
+  const search = new URLSearchParams(state).toString();
+  return (
+    <a
+      className="not-prose text-fd-primary inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
+      href={demoUrl(search === "" ? "/demo" : `/demo?${search}`)}
+    >
+      この状態をデモで見る
+      <ExternalLink aria-hidden="true" className="size-3.5" />
+    </a>
+  );
+}
+
 export function useMDXComponents(components?: MDXComponents) {
   return {
     ...defaultMdxComponents,
+    DemoLink,
     Pieces,
+    Step,
+    Steps,
+    Tab,
+    Tabs,
     ...components,
   } satisfies MDXComponents;
 }

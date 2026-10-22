@@ -1,6 +1,8 @@
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
 import { DesignProviders } from "@pochical/prototype/components/design-providers";
 import {
+  ColorSchemeContext,
+  DeviceSchemeContext,
   useColorScheme,
   useThemeStyle,
 } from "@pochical/prototype/components/design-theme";
@@ -9,13 +11,18 @@ import {
   HeadContent,
   Link,
   Scripts,
-  useMatch,
 } from "@tanstack/react-router";
+import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
 
+import { LookProvider, readLook, useLook } from "../lib/appearance";
+import { japanese } from "../lib/translations";
+
 import stylesheet from "../styles.css?url";
 
+// The loader comes before the component that reads what it returns.
+// oxlint-disable-next-line sort-keys
 export const Route = createRootRoute({
   errorComponent: ({ reset }) => (
     <main id="main">
@@ -33,17 +40,18 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { content: "width=device-width, initial-scale=1", name: "viewport" },
-      { content: "#fbfaf7", name: "theme-color" },
       // Design documents, not pages for search.
       { content: "noindex, nofollow", name: "robots" },
     ],
   }),
+  // 外観 as the cookie keeps it, read once, when the server draws the
+  // first page; the page keeps it from then on (lib/appearance.tsx).
+  loader: async () => await readLook(),
+  staleTime: Number.POSITIVE_INFINITY,
   notFoundComponent: () => (
     <main id="main">
       <h1>ページが見つかりません。</h1>
-      {/* Anew, as it may be shown inside the MDX documents, whose
-          stylesheet the other pages must not keep (design_.$.tsx). */}
-      <Link reloadDocument to="/">
+      <Link params={{ _splat: "" }} to="/$">
         デザイン資料へ
       </Link>
     </main>
@@ -51,35 +59,54 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 });
 
-// The MDX documents (design_.$.tsx) take their colors, Fumadocs UI's
-// chrome included, from the person's テーマ and 外観, set on <html> so the
-// dialogs Fumadocs UI opens on <body> have them too. The other pages draw
-// their own grounds and keep the providers fresh, as if this were not here:
-// each sets up its own.
 function RootDocument({ children }: { children: ReactNode }) {
-  const document = useMatch({ from: "/design_/$", shouldThrow: false });
   return (
-    <DesignProviders fresh={document === undefined}>
-      <Html themed={document !== undefined}>{children}</Html>
-    </DesignProviders>
+    <LookProvider saved={Route.useLoaderData()}>
+      <DesignProviders>
+        <Html>{children}</Html>
+      </DesignProviders>
+    </LookProvider>
   );
 }
 
-function Html({ children, themed }: { children: ReactNode; themed: boolean }) {
+// Every page, Fumadocs UI's chrome included, takes its colors from the
+// person's テーマ and the documents' 外観, set on <html> so the dialogs
+// Fumadocs UI opens on <body> have them too. The pieces on the pages draw
+// in the same light or dark, and the home and lock screens they show
+// follow the device's.
+function Html({ children }: { children: ReactNode }) {
+  const { device, scheme } = useLook();
+  return (
+    <ColorSchemeContext value={scheme}>
+      <DeviceSchemeContext value={device}>
+        <ThemedHtml>{children}</ThemedHtml>
+      </DeviceSchemeContext>
+    </ColorSchemeContext>
+  );
+}
+
+function ThemedHtml({ children }: { children: ReactNode }) {
   const style = useThemeStyle();
   const dark = useColorScheme() === "dark";
+  const ground = style["--background-base"];
   return (
-    <html
-      className={themed && dark ? "dark" : undefined}
-      lang="ja"
-      style={themed ? style : undefined}
-    >
+    <html className={dark ? "dark" : undefined} lang="ja" style={style}>
       <head>
         <HeadContent />
+        {/* The browser's bars around the page, in the page's ground. */}
+        <meta
+          content={typeof ground === "string" ? ground : undefined}
+          name="theme-color"
+        />
       </head>
       <body>
         {/* Movement follows the device's 視差効果を減らす setting. */}
-        <MotionConfig reducedMotion="user">{children}</MotionConfig>
+        <MotionConfig reducedMotion="user">
+          {/* Light and dark follow 外観 above, not next-themes. */}
+          <RootProvider i18n={japanese} theme={{ enabled: false }}>
+            {children}
+          </RootProvider>
+        </MotionConfig>
         <Scripts />
       </body>
     </html>

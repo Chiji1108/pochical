@@ -1,0 +1,26 @@
+---
+title: ロック画面
+description: iPhone のロック画面に置いたウィジェット。背景はなく、灰色の濃淡で壁紙の上に出ます。
+---
+
+import { LockWidgets, WidgetSwitches } from "../../../src/components/widgets";
+
+<Pieces light>
+  <WidgetSwitches />
+</Pieces>
+
+## 今日・次の休み・これから
+
+1行は時計の上の日付の後ろに、円形（72pt）と長方形（160×72pt）は時計の下に。
+
+<Pieces>
+  <LockWidgets />
+</Pieces>
+
+## いまのシフト
+
+円形は勤務中ならその進み具合を輪で、長方形はあと何時間かを。
+
+<Pieces>
+  <LockWidgets now />
+</Pieces>

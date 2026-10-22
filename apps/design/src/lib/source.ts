@@ -1,14 +1,15 @@
 import { loader } from "fumadocs-core/source";
 import { defineDocs } from "fumadocs-mdx/macro";
 
-// The /design documents written in MDX, each a page of content/design under
-// /design, with its sidebar (meta.json) and search index.
+// The design documents, each an MDX page of content/ at its path from the
+// site's root, with the sidebar's order and groups (content/meta.json)
+// and the search index.
 export const docs = defineDocs({
-  dir: "content/design",
+  dir: "content",
   docs: { async: true },
 });
 
 export const source = loader({
-  baseUrl: "/design",
+  baseUrl: "/",
   source: docs.toFumadocsSource(),
 });

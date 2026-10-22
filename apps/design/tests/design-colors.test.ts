@@ -18,9 +18,9 @@ const componentFiles = folders.flatMap((folder) =>
 
 // The design pages and the device's stand-ins draw with their own colors.
 const outside = new Set([
+  "assets.tsx",
   "design-app-icon.tsx",
   "design-colors.tsx",
-  "design-components.tsx",
   "design-frames.tsx",
   "design-home-screen.tsx",
   "design-phone.tsx",

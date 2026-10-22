@@ -1,12 +1,60 @@
-/* The order of every layer in the catalog, each above the one before:
-   Tailwind CSS's theme and preflight (base), which only the /design
-   documents load (docs.css); the base styles every page starts from (site),
-   which win over that preflight where both set something; Tailwind's
-   components and utilities, which draw Fumadocs UI's chrome; then Panda
-   CSS's, so the app's pieces win over everything they share a page with.
-   Panda's layers take its own names (panda.config.ts), apart from
-   Tailwind's. Its PostCSS plugin adds its styles to the stylesheet with
-   this line, so the line names Panda's layers only here. */
+/* The order of every layer in this app, each above the one before:
+   Tailwind CSS's theme and preflight (base); the base styles every web app
+   starts from (site), which win over that preflight where both set
+   something; Tailwind's components and utilities, which draw Fumadocs
+   UI's chrome; then Panda CSS's, so the app's pieces win over everything
+   they share a page with. Panda's layers take their own names
+   (panda.config.ts), apart from Tailwind's. Its PostCSS plugin adds its
+   styles to the stylesheet with this line, so the line names Panda's
+   layers only here. */
 @layer theme, base, site, components, utilities, panda-reset, panda-base, panda-tokens, panda-recipes, panda-utilities;
 
 @import "@pochical/styled-system/base.css";
+@import "tailwindcss" source(none);
+@import "fumadocs-ui/css/lib/default-colors.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* Tailwind reads its classes from this app's own files only; Fumadocs
+   UI's preset brings its own. */
+@source "./routes";
+@source "./components";
+
+/* Fumadocs UI's colors are the design tokens' roles, the way its shadcn
+   preset takes shadcn's: themeStyle() sets them on <html>, in the person's
+   テーマ and light or dark (routes/__root.tsx). */
+:root,
+.dark {
+  --color-fd-background: var(--background-base);
+  --color-fd-foreground: var(--text-primary);
+  --color-fd-muted: var(--fill-quaternary);
+  --color-fd-muted-foreground: var(--text-tertiary);
+  --color-fd-popover: var(--background-elevated);
+  --color-fd-popover-foreground: var(--text-primary);
+  --color-fd-card: var(--background-card);
+  --color-fd-card-foreground: var(--text-primary);
+  --color-fd-border: var(--border-default);
+  --color-fd-primary: var(--accent-default);
+  --color-fd-primary-foreground: var(--accent-on-fill);
+  --color-fd-secondary: var(--fill-tertiary);
+  --color-fd-secondary-foreground: var(--text-primary);
+  --color-fd-accent: var(--accent-container);
+  --color-fd-accent-foreground: var(--text-primary);
+  --color-fd-ring: var(--accent-focus);
+  --color-fd-overlay: var(--scrim);
+}
+
+/* The documents' own ground and selection, in their light or dark. The
+   base styles (layer site) draw the light site's, and components is the
+   layer above them that Fumadocs UI's chrome comes in on. */
+@layer components {
+  :root {
+    background-color: var(--color-fd-background);
+  }
+  ::selection {
+    background-color: var(--accent-container);
+  }
+}
+
+@theme static {
+  --color-fd-error: var(--danger-default);
+}

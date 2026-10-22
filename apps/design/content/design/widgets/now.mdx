@@ -1,0 +1,16 @@
+---
+title: いまのシフト
+description: いまのシフトがあと何時間で終わるか、なければ次のシフトまであと何時間か。当番のように長い勤務向けに。
+---
+
+import { HomeWidgets, WidgetSwitches } from "../../../src/components/widgets";
+
+1日より先は「3日後」。数字は端末の時計に合わせて進みます。休みと時間のないシフト（明け・非番）は数えません。勤務の前、勤務中、勤務の後は、切り替えの時刻で見られます。ロック画面に置いたところは、[ロック画面](/design/widgets/lock#いまのシフト)にあります。
+
+<Pieces light>
+  <WidgetSwitches />
+</Pieces>
+
+<Pieces>
+  <HomeWidgets kind="now" />
+</Pieces>

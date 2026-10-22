@@ -1,13 +1,13 @@
 import type { Appearance } from "@pochical/prototype/components/design-theme";
-import { useSettings } from "@pochical/prototype/lib/design-settings-store";
 import type { ThemeSwitchProps } from "fumadocs-ui/layouts/shared/slots/theme-switch";
 import { Airplay, Moon, Sun } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { useLook } from "../lib/appearance";
+
 // Fumadocs UI's light, dark and system switch, drawn as its own
-// ("light-dark-system"), set to 外観 in the prototype's settings rather
-// than to next-themes: the documents follow the same light or dark as the
-// screens they show (__root.tsx).
+// ("light-dark-system"), set to the documents' 外観 (lib/appearance.tsx)
+// rather than to next-themes.
 const choices = [
   { Icon: Sun, appearance: "light", label: "ライト" },
   { Icon: Moon, appearance: "dark", label: "ダーク" },
@@ -19,8 +19,7 @@ const choices = [
 }[];
 
 export function DocsThemeSwitch({ className, ...props }: ThemeSwitchProps) {
-  const appearance = useSettings((state) => state.device.appearance);
-  const setAppearance = useSettings((state) => state.setAppearance);
+  const { appearance, setAppearance } = useLook();
   return (
     <div
       className={`inline-flex items-center overflow-hidden rounded-full border p-1 *:rounded-full ${className ?? ""}`}

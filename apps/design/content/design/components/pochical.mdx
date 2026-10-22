@@ -1,0 +1,34 @@
+---
+title: ポチカル独自
+description: ポチカルのためにある部品。シフトの印、日のマス、画面の下と見出し。
+---
+
+import {
+  BottomPieces,
+  DayCells,
+  ShiftMarks,
+} from "../../../src/components/inventory/pochical";
+
+シフトの印と日のマスは、iOS と Android のアプリも同じ図柄を自分の View や Composable で描きます。
+
+## シフトの印
+
+スタイル3種 × 印なし・早出・残業。グループでも同じものが出ます。
+
+<Pieces>
+  <ShiftMarks />
+</Pieces>
+
+## 日のマス
+
+月のマスの状態。
+
+<Pieces>
+  <DayCells />
+</Pieces>
+
+## 画面の下と見出し
+
+<Pieces>
+  <BottomPieces />
+</Pieces>

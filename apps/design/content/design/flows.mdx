@@ -1,0 +1,102 @@
+---
+title: 画面遷移図
+description: 画面の流れと分かれ道を、実際の画面を小さく並べて見ます。触って試すときは、デモから。
+---
+
+import {
+  ChatTap,
+  DayTap,
+  FirstRun,
+  FirstRunWithAccount,
+  GapCheck,
+  GapCheckByPerson,
+  NextOffTap,
+  ReminderTap,
+  SettingsPages,
+  SettingsTop,
+  WidgetTap,
+} from "../../src/components/flows";
+
+画面はどれもアプリの本物で、開いた状態を小さく描いています。流れは左から右へ。横に収まらない列は、横にスクロールできます。
+
+## はじめての設定
+
+最初の画面から、働き方、繰り返しの順番、その最初の日を選ぶと、カレンダーに1か月分が入ります。
+
+<Pieces>
+  <FirstRun />
+</Pieces>
+
+### アカウントがある人
+
+ログインすると、前のデータが戻ったカレンダーから始まります。
+
+<Pieces>
+  <FirstRunWithAccount />
+</Pieces>
+
+## 空いた日の確認
+
+ポチポチ入力で空けた日を、完了のときにまとめて聞きます。
+
+<Pieces>
+  <GapCheck />
+</Pieces>
+
+### 人によって変わるところ
+
+休みを空白で見せている人には空白のスイッチがなく、休みのパターンが2つ以上ある人は入れるパターンを選べます。
+
+<Pieces>
+  <GapCheckByPerson />
+</Pieces>
+
+## 設定
+
+<Pieces>
+  <SettingsTop />
+</Pieces>
+
+### それぞれの行から
+
+<Pieces>
+  <SettingsPages />
+</Pieces>
+
+## 通知をタップしたとき
+
+通知は、書いてあることを確かめられる画面で開きます。
+
+### リマインド
+
+<Pieces>
+  <ReminderTap />
+</Pieces>
+
+### チャットのメッセージ
+
+<Pieces>
+  <ChatTap />
+</Pieces>
+
+## ウィジェットをタップしたとき
+
+ウィジェットも、映っている日を確かめられる画面で開きます。何も入れていないうちは、今日のカレンダー。
+
+### これから・シンプル・ロック画面
+
+<Pieces>
+  <WidgetTap />
+</Pieces>
+
+### 次の休み
+
+<Pieces>
+  <NextOffTap />
+</Pieces>
+
+### カレンダー・これから（中）の日
+
+<Pieces>
+  <DayTap />
+</Pieces>
