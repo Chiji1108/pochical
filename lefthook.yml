@@ -4,25 +4,32 @@ glob_matcher: doublestar
 pre-commit:
   jobs:
     - name: ultracite fix
-      # What `ultracite fix` runs, but with oxfmt told too that files all
-      # skipped are fine: ultracite passes no flags to oxfmt, which then
-      # fails a commit staging only what lint-ignores.ts skips. Those paths
-      # are skipped there, so they are not listed here again.
+      # Oxlint fails a commit staging only what lint-ignores.ts skips unless
+      # told that unmatched paths are fine. Those paths are skipped there, so
+      # they are not listed here again. The globs are every type oxfmt or
+      # oxlint takes in this repository, as `ultracite check` covers them.
       run: |
         # GUI Git clients may not load the shell's mise/proto/Bun PATH settings.
         export PATH="$HOME/.local/share/mise/shims:$PATH:${PROTO_HOME:-$HOME/.proto}/shims:${BUN_INSTALL:-$HOME/.bun}/bin"
-        bun x oxlint --fix --no-error-on-unmatched-pattern {staged_files} && bun x oxfmt --write --no-error-on-unmatched-pattern {staged_files}
+        bun x ultracite fix --no-error-on-unmatched-pattern {staged_files}
       glob:
         - "**/*.js"
         - "**/*.jsx"
+        - "**/*.mjs"
+        - "**/*.cjs"
         - "**/*.ts"
         - "**/*.tsx"
+        - "**/*.mts"
+        - "**/*.cts"
         - "**/*.json"
         - "**/*.jsonc"
         - "**/*.json5"
         - "**/*.css"
         - "**/*.md"
         - "**/*.astro"
+        - "**/*.yaml"
+        - "**/*.yml"
+        - "**/*.toml"
       stage_fixed: true
     - name: buf format and lint
       root: proto/
