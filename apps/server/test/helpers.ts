@@ -5,7 +5,12 @@ import { expect } from "vitest";
 
 import type { LineContent } from "../src/chat-content";
 import { photosPage } from "../src/group-chat";
-import { chatLines, memberBlocks } from "../src/group-do-schema";
+import {
+  chatLines,
+  logHead,
+  memberBlocks,
+  members,
+} from "../src/group-do-schema";
 
 export const ORIGIN = "https://server.test";
 
@@ -66,6 +71,41 @@ export const memberOf = async (groupId: string): Promise<string> => {
     await group.addMember(member);
   }
   return token;
+};
+
+/**
+ * The group with `count` more members, written in one call, each at its
+ * own cursor. They have no accounts, so no one's own DO is told, and a
+ * test filling a group makes no round trips for each, as addMember does.
+ */
+export const fillGroup = async (
+  groupId: string,
+  count: number
+): Promise<void> => {
+  await runInDurableObject(env.GROUPS.getByName(groupId), (_, state) => {
+    const db = drizzle(state.storage);
+    state.storage.transactionSync(() => {
+      const head = db.select().from(logHead).get()?.cursor ?? 0;
+      for (let index = 0; index < count; index += 1) {
+        db.insert(members)
+          .values({
+            cursor: head + index + 1,
+            displayName: `メンバー${index}`,
+            joinedAt: new Date(),
+            userId: `filler-${index}`,
+            usualName: `メンバー${index}`,
+          })
+          .run();
+      }
+      db.insert(logHead)
+        .values({ cursor: head + count, id: 1 })
+        .onConflictDoUpdate({
+          set: { cursor: head + count },
+          target: logHead.id,
+        })
+        .run();
+    });
+  });
 };
 
 /**
