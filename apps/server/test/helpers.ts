@@ -97,8 +97,12 @@ export const fillGroup = async (
           })
           .run();
       }
-      db.update(logHead)
-        .set({ cursor: head + count })
+      db.insert(logHead)
+        .values({ cursor: head + count, id: 1 })
+        .onConflictDoUpdate({
+          set: { cursor: head + count },
+          target: logHead.id,
+        })
         .run();
     });
   });

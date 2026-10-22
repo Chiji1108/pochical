@@ -219,12 +219,17 @@ describe("telling a member's own DO", () => {
     const taken = Promise.withResolvers<undefined>();
     const restore = await failTelling(groupId, guestId, async (...news) => {
       await held.promise;
-      await Reflect.apply(
-        env.USERS.getByName(guestId).takeMembership,
-        undefined,
-        news
-      );
-      taken.resolve(undefined);
+      try {
+        await Reflect.apply(
+          env.USERS.getByName(guestId).takeMembership,
+          undefined,
+          news
+        );
+        taken.resolve(undefined);
+      } catch (error) {
+        taken.reject(error);
+        throw error;
+      }
     });
     const nameIn = async (userId: string) =>
       await runInDurableObject(
