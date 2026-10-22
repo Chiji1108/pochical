@@ -185,13 +185,16 @@ private final class FakeAccountServer: AccountServer {
 }
 
 @MainActor @Test func aKeptSessionItCannotReadIsNoSession() async throws {
-  let made = try await Made(kept: Data("raw-token".utf8))
+  let made = try await Made(kept: Data("raw-token".utf8), owner: "old")
   #expect(made.session.phase == .starting)
 
   made.session.cameToFront()
   #expect(await eventually { made.session.phase == .signedIn })
   #expect(made.session.userID == "anon-1")
   #expect(try made.keychain.kept() == StoredSession(token: "anon-token-1", userID: "anon-1"))
+  // No session can send what the user before left, so it goes.
+  #expect(await eventually { made.owner == "anon-1" })
+  #expect(made.coworkers == 0)
 }
 
 @MainActor @Test func aKeychainItCannotReachIsWaitedForNotSignedInAnew() async throws {
@@ -200,8 +203,9 @@ private final class FakeAccountServer: AccountServer {
   own.refusesToRead.withLock { $0 = true }
   let made = try await Made(keychain: SessionKeychain(own: own, leftBehind: MemoryStore()))
   #expect(made.session.phase == .starting)
-  #expect(throws: KeychainError.self) { try made.keychain.kept() }
 
+  made.session.cameToFront()
+  #expect(await eventually { own.reads.withLock { $0 } == 2 })
   own.refusesToRead.withLock { $0 = false }
   made.session.cameToFront()
   #expect(await eventually { made.session.userID == "A" })

@@ -115,16 +115,17 @@ struct SessionKeychain: Sendable {
     self.leftBehind = leftBehind
   }
 
-  /// Nil when nothing is kept, or when what is kept is not a session
-  /// this app can read: a stored shape changes without a migration until
-  /// release, as the database's does, so the device signs in anew and
-  /// keeping that session replaces it (spec/sync-protocol.md, Signing
-  /// in). A Keychain it cannot reach, as before the first unlock, throws.
+  /// Nil when nothing is kept, or, until release (`erasesOnShapeChange`),
+  /// when what is kept is not a session this app can read: the device
+  /// signs in anew and keeping that session replaces it
+  /// (spec/sync-protocol.md, Signing in). A Keychain it cannot reach, as
+  /// before the first unlock, throws.
   func kept() throws -> StoredSession? {
     guard let data = try own.data() else { return nil }
     do {
       return try JSONDecoder().decode(StoredSession.self, from: data)
     } catch {
+      guard erasesOnShapeChange else { throw error }
       Logger.account.notice("The kept session is unreadable, so the device signs in anew: \(error)")
       return nil
     }

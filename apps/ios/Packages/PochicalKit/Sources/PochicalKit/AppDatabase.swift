@@ -96,12 +96,17 @@ func coordinated<T>(
   return try result!.get()
 }
 
-/// The tables, one step a group of them. Nothing is released yet, so a
-/// table changes where it is created: any change to the tables erases the
-/// device's database in every build, and it syncs again from the server.
+/// Nothing is released yet, so what the device stores changes shape with
+/// no migration: the database is erased and syncs again from the server,
+/// and a kept session it cannot read is no session (`SessionKeychain`).
+/// Turned off at release, migration steps following from then on.
+let erasesOnShapeChange = true
+
+/// The tables, one step a group of them, each changed where it is created
+/// until release (`erasesOnShapeChange`).
 var migrator: DatabaseMigrator {
   var migrator = DatabaseMigrator()
-  migrator.eraseDatabaseOnSchemaChange = true
+  migrator.eraseDatabaseOnSchemaChange = erasesOnShapeChange
   migrator.registerOwnValues()
   migrator.registerGroups()
   migrator.registerGroupValues()
