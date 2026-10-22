@@ -111,6 +111,8 @@ export function Button({
 // As iOS 26's bar buttons: an icon in a round of glass, in the text color.
 // With glass={false} it is the icon alone, in the accent, for a button
 // inside something else, like a reply's way out.
+// With confirms, the glass takes the accent, as iOS tints a bar button
+// that confirms, like 完了; gray while it cannot yet.
 export const iconButtonStyle = cva({
   base: {
     border: 0,
@@ -121,8 +123,24 @@ export const iconButtonStyle = cva({
     placeItems: "center",
     width: "touch",
   },
-  defaultVariants: { glass: true },
+  compoundVariants: [
+    {
+      confirms: true,
+      css: {
+        _disabled: {
+          bg: "fill.quaternary",
+          color: "text.disabled",
+          cursor: "default",
+        },
+        bg: "accent.fill",
+        color: "accent.onFill",
+      },
+      glass: true,
+    },
+  ],
+  defaultVariants: { confirms: false, glass: true },
   variants: {
+    confirms: { false: {}, true: {} },
     glass: {
       false: {
         _hover: { bg: "fill.quaternary" },
