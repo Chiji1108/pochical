@@ -68,8 +68,12 @@ struct PinBar: View {
         }
       }
       .padding(.vertical, 4)
-      .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Radius.xxl))
-      .padding(.horizontal, 8)
+      // The glass is drawn behind what it holds, not around it: clipped to
+      // the same shape, the list opening or closing shows only as far as
+      // the glass has grown, the two one piece through the change.
+      .clipShape(.rect(cornerRadius: Radius.xxl))
+      .glassEffect(.regular, in: .rect(cornerRadius: Radius.xxl))
+      .padding([.horizontal, .top], CGFloat(Chat.pinMargin))
     }
   }
 

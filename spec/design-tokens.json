@@ -31,6 +31,7 @@
     "photoThumbHashMaxBytes": 25,
     "photosPerSend": 10,
     "pictureMaxEdge": 640,
+    "pinMargin": 8,
     "pochicalMember": "pochical",
     "prefetchScreens": 2,
     "replySwipe": 56,
