@@ -12,12 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as TryRouteImport } from './routes/try'
+import { Route as RenderShareImageRouteImport } from './routes/[_]render/share-image'
 import { Route as ApiSearchRouteImport } from './routes/api.search'
 import { Route as DesignIndexRouteImport } from './routes/design.index'
 import { Route as DesignSplatRouteImport } from './routes/design_.$'
 import { Route as DesignAssetsRouteImport } from './routes/design_.assets'
 import { Route as DesignFlowsRouteImport } from './routes/design_.flows'
-import { Route as DesignShareImageRouteImport } from './routes/design_.share-image'
 import { Route as DesignStatesRouteImport } from './routes/design_.states'
 import { Route as DesignWidgetsRouteImport } from './routes/design_.widgets'
 
@@ -34,6 +34,11 @@ const DemoRoute = DemoRouteImport.update({
 const TryRoute = TryRouteImport.update({
   id: '/try',
   path: '/try',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RenderShareImageRoute = RenderShareImageRouteImport.update({
+  id: '/_render/share-image',
+  path: '/_render/share-image',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
@@ -61,11 +66,6 @@ const DesignFlowsRoute = DesignFlowsRouteImport.update({
   path: '/design/flows',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DesignShareImageRoute = DesignShareImageRouteImport.update({
-  id: '/design_/share-image',
-  path: '/design/share-image',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DesignStatesRoute = DesignStatesRouteImport.update({
   id: '/design_/states',
   path: '/design/states',
@@ -81,11 +81,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/demo': typeof DemoRoute
   '/try': typeof TryRoute
+  '/_render/share-image': typeof RenderShareImageRoute
   '/api/search': typeof ApiSearchRoute
   '/design/$': typeof DesignSplatRoute
   '/design/assets': typeof DesignAssetsRoute
   '/design/flows': typeof DesignFlowsRoute
-  '/design/share-image': typeof DesignShareImageRoute
   '/design/states': typeof DesignStatesRoute
   '/design/widgets': typeof DesignWidgetsRoute
   '/design/': typeof DesignIndexRoute
@@ -94,11 +94,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/demo': typeof DemoRoute
   '/try': typeof TryRoute
+  '/_render/share-image': typeof RenderShareImageRoute
   '/api/search': typeof ApiSearchRoute
   '/design/$': typeof DesignSplatRoute
   '/design/assets': typeof DesignAssetsRoute
   '/design/flows': typeof DesignFlowsRoute
-  '/design/share-image': typeof DesignShareImageRoute
   '/design/states': typeof DesignStatesRoute
   '/design/widgets': typeof DesignWidgetsRoute
   '/design': typeof DesignIndexRoute
@@ -108,11 +108,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/demo': typeof DemoRoute
   '/try': typeof TryRoute
+  '/_render/share-image': typeof RenderShareImageRoute
   '/api/search': typeof ApiSearchRoute
   '/design_/$': typeof DesignSplatRoute
   '/design_/assets': typeof DesignAssetsRoute
   '/design_/flows': typeof DesignFlowsRoute
-  '/design_/share-image': typeof DesignShareImageRoute
   '/design_/states': typeof DesignStatesRoute
   '/design_/widgets': typeof DesignWidgetsRoute
   '/design/': typeof DesignIndexRoute
@@ -123,11 +123,11 @@ export interface FileRouteTypes {
     | '/'
     | '/demo'
     | '/try'
+    | '/_render/share-image'
     | '/api/search'
     | '/design/$'
     | '/design/assets'
     | '/design/flows'
-    | '/design/share-image'
     | '/design/states'
     | '/design/widgets'
     | '/design/'
@@ -136,11 +136,11 @@ export interface FileRouteTypes {
     | '/'
     | '/demo'
     | '/try'
+    | '/_render/share-image'
     | '/api/search'
     | '/design/$'
     | '/design/assets'
     | '/design/flows'
-    | '/design/share-image'
     | '/design/states'
     | '/design/widgets'
     | '/design'
@@ -149,11 +149,11 @@ export interface FileRouteTypes {
     | '/'
     | '/demo'
     | '/try'
+    | '/_render/share-image'
     | '/api/search'
     | '/design_/$'
     | '/design_/assets'
     | '/design_/flows'
-    | '/design_/share-image'
     | '/design_/states'
     | '/design_/widgets'
     | '/design/'
@@ -163,11 +163,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DemoRoute: typeof DemoRoute
   TryRoute: typeof TryRoute
+  RenderShareImageRoute: typeof RenderShareImageRoute
   ApiSearchRoute: typeof ApiSearchRoute
   DesignSplatRoute: typeof DesignSplatRoute
   DesignAssetsRoute: typeof DesignAssetsRoute
   DesignFlowsRoute: typeof DesignFlowsRoute
-  DesignShareImageRoute: typeof DesignShareImageRoute
   DesignStatesRoute: typeof DesignStatesRoute
   DesignWidgetsRoute: typeof DesignWidgetsRoute
   DesignIndexRoute: typeof DesignIndexRoute
@@ -194,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/try'
       fullPath: '/try'
       preLoaderRoute: typeof TryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_render/share-image': {
+      id: '/_render/share-image'
+      path: '/_render/share-image'
+      fullPath: '/_render/share-image'
+      preLoaderRoute: typeof RenderShareImageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/search': {
@@ -231,13 +238,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignFlowsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/design_/share-image': {
-      id: '/design_/share-image'
-      path: '/design/share-image'
-      fullPath: '/design/share-image'
-      preLoaderRoute: typeof DesignShareImageRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/design_/states': {
       id: '/design_/states'
       path: '/design/states'
@@ -259,11 +259,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DemoRoute: DemoRoute,
   TryRoute: TryRoute,
+  RenderShareImageRoute: RenderShareImageRoute,
   ApiSearchRoute: ApiSearchRoute,
   DesignSplatRoute: DesignSplatRoute,
   DesignAssetsRoute: DesignAssetsRoute,
   DesignFlowsRoute: DesignFlowsRoute,
-  DesignShareImageRoute: DesignShareImageRoute,
   DesignStatesRoute: DesignStatesRoute,
   DesignWidgetsRoute: DesignWidgetsRoute,
   DesignIndexRoute: DesignIndexRoute,

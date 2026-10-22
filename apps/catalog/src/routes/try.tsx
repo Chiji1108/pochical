@@ -1,14 +1,25 @@
 import { presets } from "@pochical/design/themes";
 import { DesignApp } from "@pochical/prototype/components/design-app";
-import { DesignProviders } from "@pochical/prototype/components/design-providers";
+import {
+  DesignProviders,
+  useDesignTheme,
+} from "@pochical/prototype/components/design-providers";
+import { pageStyle } from "@pochical/prototype/components/design-theme";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { deviceSettingsKey } from "@pochical/prototype/lib/design-settings-key";
 import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import { css, cx } from "@pochical/styled-system/css";
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { useEffect, useSyncExternalStore } from "react";
 
+import {
+  DesignPage,
+  DesignToolbar,
+  toolbarAction,
+} from "../components/design-page";
 import { appSplashScreens } from "../lib/app-splash-screens";
 import { pageMeta } from "../lib/page-meta";
 import { screenColor } from "../lib/screen-color";
@@ -106,14 +117,16 @@ function showPage() {
 }
 
 // The browser's bars take the color of the screen under them, which
-// follows the theme and its light or dark.
-function useBarColor() {
+// follows the theme and its light or dark. On a computer they take the
+// page's own ground around the framed phone.
+function useBarColor(fullScreen: boolean) {
   useEffect(() => {
+    const ground = document.querySelector<HTMLElement>("#main");
     const phone = document.querySelector<HTMLElement>(".dc-phone");
     const meta = document.querySelector<HTMLMetaElement>(
       'meta[name="theme-color"]'
     );
-    if (!(phone && meta)) {
+    if (!(ground && phone && meta)) {
       showPage();
       return;
     }
@@ -122,10 +135,12 @@ function useBarColor() {
     // A screen whose ground runs up under the bar, like the camera's,
     // lends it that ground instead.
     const follow = () => {
-      const under = phone.querySelector<HTMLElement>(
-        "[data-status-bar]:not([hidden])"
-      );
-      const color = getComputedStyle(under ?? phone).backgroundColor;
+      const under = fullScreen
+        ? (phone.querySelector<HTMLElement>(
+            "[data-status-bar]:not([hidden])"
+          ) ?? phone)
+        : ground;
+      const color = getComputedStyle(under).backgroundColor;
       meta.content = color;
       root.style.background = color;
     };
@@ -148,21 +163,146 @@ function useBarColor() {
       meta.content = before.meta;
       root.style.background = before.background;
     };
-  }, []);
+  }, [fullScreen]);
+}
+
+// A computer's browser tab: a mouse or trackpad to point with, and a
+// window wider than the catalog's one column. A tablet, or a phone on its
+// side, can be as wide, but a finger keeps the app filling its screen, as
+// does opening it from the home screen or as an installed app.
+const COMPUTER =
+  "(min-width: 761px) and (pointer: fine) and (display-mode: browser)";
+
+let computerQuery: MediaQueryList | undefined;
+function computerList() {
+  computerQuery ??= matchMedia(COMPUTER);
+  return computerQuery;
+}
+
+function subscribeComputer(onChange: () => void) {
+  computerList().addEventListener("change", onChange);
+  return () => {
+    computerList().removeEventListener("change", onChange);
+  };
+}
+
+// The server draws the phone's page; on a computer the render right after
+// moves to the framed one, while launchScript still hides the page. Moving
+// between the two builds the app again, as a window resized across the
+// line does.
+function useOnComputer() {
+  return useSyncExternalStore(
+    subscribeComputer,
+    () => computerList().matches,
+    () => false
+  );
+}
+
+// The framed phone at its size, and beside it the way onto a phone.
+const onComputer = {
+  layout: css({
+    alignItems: "center",
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "48px",
+    justifyContent: "center",
+    padding: "32px 16px 48px",
+  }),
+  // The toolbars' pill, standing on its own.
+  link: cx(
+    toolbarAction,
+    css({
+      alignItems: "center",
+      alignSelf: "flex-start",
+      color: "text.tertiary",
+      display: "inline-flex",
+      fontSize: "12px",
+      gap: "8px",
+    })
+  ),
+  note: css({
+    "& h1": {
+      fontSize: "22px",
+      fontWeight: 500,
+      letterSpacing: "0.04em",
+      margin: 0,
+    },
+    "& p": { color: "text.tertiary", fontSize: "13px", lineHeight: "1.9" },
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+    width: "280px",
+  }),
+  phone: css({ flex: "0 0 auto", width: "390px" }),
+  qr: css({
+    alignSelf: "flex-start",
+    bg: "white",
+    border: "1px solid token(colors.separator)",
+    borderRadius: "16px",
+    display: "flex",
+    padding: "14px",
+  }),
+};
+
+// What /try is for, a QR code that opens this page on a phone, and /demo
+// for switching the samples.
+function OpenOnPhone() {
+  const url = `${location.origin}${location.pathname}`;
+  return (
+    <section className={onComputer.note}>
+      <h1>スマホで試す</h1>
+      <p>
+        このページは、スマホで触るための試作です。カメラでQRコードを読み取ると、スマホで開きます。ホーム画面に追加すると、アプリのように開けます。
+      </p>
+      <div className={onComputer.qr}>
+        <QRCodeSVG
+          size={152}
+          title="このページをスマホで開くQRコード"
+          value={url}
+        />
+      </div>
+      <p>サンプルや比べる案を切り替えながら触るなら、デモで。</p>
+      <Link className={onComputer.link} search={variants} to="/demo">
+        デモで見る <ChevronRight aria-hidden="true" size={14} />
+      </Link>
+    </section>
+  );
 }
 
 // The app alone on a phone: the demo's sample person, starting over on
-// reload. /demo has it framed, with the open design choices beside it.
+// reload. On a computer it stands framed at a phone's size, with the way
+// onto a phone beside it. /demo has it framed, with the open design
+// choices beside it.
 function TryPage() {
   const person = useSamplePerson();
-  useBarColor();
+  const theme = useDesignTheme();
+  const computer = useOnComputer();
+  useBarColor(!computer);
+  const app = (
+    <DesignProviders>
+      <UserStoreContext value={person}>
+        <DesignApp
+          fullScreen={!computer}
+          initialEditing={false}
+          variants={variants}
+        />
+      </UserStoreContext>
+    </DesignProviders>
+  );
+  if (computer) {
+    return (
+      <DesignPage style={pageStyle(theme)}>
+        <DesignToolbar />
+        <div className={onComputer.layout}>
+          <div className={onComputer.phone}>{app}</div>
+          <OpenOnPhone />
+        </div>
+      </DesignPage>
+    );
+  }
   return (
     <main className={cx("design-page", page)} id="main">
-      <DesignProviders>
-        <UserStoreContext value={person}>
-          <DesignApp fullScreen initialEditing={false} variants={variants} />
-        </UserStoreContext>
-      </DesignProviders>
+      {app}
     </main>
   );
 }
