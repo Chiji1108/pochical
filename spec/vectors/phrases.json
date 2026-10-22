@@ -1,0 +1,158 @@
+{
+  "about": "Japanese text cut into the phrases a line may break between, as BudouX 0.10's Japanese model finds them in JavaScript: the site marks them with <wbr> (packages/jsx phrasesOf), the iOS app keeps each whole (PochicalDesign Phrases.split). BudouX scores the text in UTF-16 code units, so an emoji outside the BMP counts as two, and never cuts between the halves of a surrogate pair. Text with no Hiragana, Katakana or Han, by Unicode script extensions (which take in 、。ー and the half-width kana, but not full-width Latin letters or ！？), stays whole, though BudouX would cut it. Every other `expected` is what BudouX's own parser gives for `text`.",
+  "split": [
+    {
+      "name": "nothing",
+      "text": "",
+      "expected": [""]
+    },
+    {
+      "name": "no Japanese",
+      "text": "Pochical 1.0",
+      "expected": ["Pochical 1.0"]
+    },
+    {
+      "name": "full-width letters and marks, which BudouX would cut",
+      "text": "ＯＫ！ＮＧ？ＯＫ",
+      "expected": ["ＯＫ！ＮＧ？ＯＫ"]
+    },
+    {
+      "name": "only Japanese punctuation",
+      "text": "１、２、３",
+      "expected": ["１、", "２、", "３"]
+    },
+    {
+      "name": "one phrase",
+      "text": "自分らしく。",
+      "expected": ["自分らしく。"]
+    },
+    {
+      "name": "a short sentence",
+      "text": "ページが見つかりません。",
+      "expected": ["ページが", "見つかりません。"]
+    },
+    {
+      "name": "a name and its honorific",
+      "text": "さくらさんのシフトを見る",
+      "expected": ["さくらさんの", "シフトを", "見る"]
+    },
+    {
+      "name": "a split compound",
+      "text": "見た目も、",
+      "expected": ["見た", "目も、"]
+    },
+    {
+      "name": "an adverb on its own",
+      "text": "もう一度お試し",
+      "expected": ["もう", "一度", "お試し"]
+    },
+    {
+      "name": "a sentence with a katakana word",
+      "text": "参加すると、あなたのシフトもメンバーに見えるようになります。",
+      "expected": [
+        "参加すると、",
+        "あなたの",
+        "シフトも",
+        "メンバーに",
+        "見えるようになります。"
+      ]
+    },
+    {
+      "name": "a sentence with kanji compounds",
+      "text": "通信状態を確認して、もう一度お試しください。",
+      "expected": [
+        "通信状態を",
+        "確認して、",
+        "もう",
+        "一度",
+        "お試しください。"
+      ]
+    },
+    {
+      "name": "two sentences",
+      "text": "家族や友だちのシフトを、ひとつの表に。みんなが休みの日も、すぐ見つかります。",
+      "expected": [
+        "家族や",
+        "友だちの",
+        "シフトを、",
+        "ひとつの",
+        "表に。",
+        "みんなが",
+        "休みの",
+        "日も、",
+        "すぐ",
+        "見つかります。"
+      ]
+    },
+    {
+      "name": "an emoji inside a sentence",
+      "text": "さくら🌸さんのシフトを見る",
+      "expected": ["さくら", "🌸さんの", "シフトを", "見る"]
+    },
+    {
+      "name": "an emoji before a katakana word",
+      "text": "今日は🎉パーティーです",
+      "expected": ["今日は", "🎉パーティーです"]
+    },
+    {
+      "name": "emoji at the start and in the middle",
+      "text": "🌸さくらのシフト🌸を見る",
+      "expected": ["🌸さくらの", "シフト🌸を", "見る"]
+    },
+    {
+      "name": "a poodle at the start",
+      "text": "🐩ポチカルへようこそ",
+      "expected": ["🐩ポチカルへ", "ようこそ"]
+    },
+    {
+      "name": "a ZWJ family",
+      "text": "旅行👨‍👩‍👧に行く",
+      "expected": ["旅行👨‍👩‍👧に", "行く"]
+    },
+    {
+      "name": "a ZWJ sequence with a skin tone",
+      "text": "家族👩🏻‍💻です",
+      "expected": ["家族👩🏻‍💻です"]
+    },
+    {
+      "name": "a ZWJ sequence with a gender sign",
+      "text": "ありがとう🙇‍♀️また明日",
+      "expected": ["ありがとう🙇‍♀️また", "明日"]
+    },
+    {
+      "name": "a flag",
+      "text": "日本🇯🇵のシフトを見る",
+      "expected": ["日本🇯🇵の", "シフトを", "見る"]
+    },
+    {
+      "name": "two flags",
+      "text": "私は🇯🇵🇺🇸です",
+      "expected": ["私は", "🇯🇵🇺🇸です"]
+    },
+    {
+      "name": "a skin tone",
+      "text": "シフト👍🏽を見る",
+      "expected": ["シフト👍🏽を", "見る"]
+    },
+    {
+      "name": "a skin tone ending a phrase",
+      "text": "いいね👍🏽ありがとう",
+      "expected": ["いいね👍🏽", "ありがとう"]
+    },
+    {
+      "name": "a keycap",
+      "text": "1️⃣番目のシフト",
+      "expected": ["1️⃣番目の", "シフト"]
+    },
+    {
+      "name": "an emoji with its presentation selector",
+      "text": "休み🏖️の日",
+      "expected": ["休み🏖️の", "日"]
+    },
+    {
+      "name": "a kanji outside the BMP",
+      "text": "𠮷野家で食べる",
+      "expected": ["𠮷野家で", "食べる"]
+    }
+  ]
+}
