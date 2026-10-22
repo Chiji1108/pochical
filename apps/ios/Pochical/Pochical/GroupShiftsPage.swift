@@ -56,8 +56,9 @@ struct GroupShiftsPage: View {
   @State private var pickedFromList: Day?
   /// The layout picked from the menu; until then the group's size's.
   @State private var pickedLayout: ShiftsLayout?
-  /// Whether today's day or week is in sight; 今日 shows while it isn't.
-  @State private var todayInSight = true
+  /// Whether today's day or week is in sight, told by its own row as it
+  /// is laid out; 今日 shows while it isn't.
+  @State private var todayInSight = false
   /// How far a big group's 一覧 is scrolled sideways, for the faces over
   /// it; whether it is, for the edge beside its pinned columns; and how
   /// wide its view is, for the months' headings.
@@ -306,7 +307,7 @@ struct GroupShiftsPage: View {
                 )
                 .equatable()
                 .padding(.horizontal, 16)
-                .id(ListPlace.day(day))
+                .placed(at: .day(day), today: anchor(of: Day.today), inSight: $todayInSight)
               }
             } else {
               ForEach(weeks(endingIn: month), id: \.self) { week in
@@ -327,7 +328,7 @@ struct GroupShiftsPage: View {
                 .overlay(
                   RoundedRectangle(cornerRadius: Radius.xxl).strokeBorder(colors.separator))
                 .padding(.horizontal, 16)
-                .id(ListPlace.day(week[0]))
+                .placed(at: .day(week[0]), today: anchor(of: Day.today), inSight: $todayInSight)
               }
             }
           }
@@ -375,9 +376,6 @@ struct GroupShiftsPage: View {
         }
       }
       .scrollIndicators(.hidden, axes: .horizontal)
-      .onScrollTargetVisibilityChange(idType: ListPlace.self, threshold: 0.5) { shown in
-        todayInSight = shown.contains(anchor(of: Day.today))
-      }
       // At the leading edge too: .top alone would center a big group's
       // wide rows sideways.
       .scrollPosition($position, anchor: .topLeading)
@@ -437,6 +435,21 @@ struct GroupShiftsPage: View {
 nonisolated private enum ListPlace: Hashable, Sendable {
   case month(Day)
   case day(Day)
+}
+
+extension View {
+  /// A day's row or week's block at its place in the list. Today's tells
+  /// whether it is in sight from its own layout, which every move of the
+  /// list lays out anew: the list's visible targets can be left empty by
+  /// a jump with ScrollPosition, until a hand scrolls it again.
+  fileprivate func placed(at place: ListPlace, today: ListPlace, inSight: Binding<Bool>)
+    -> some View
+  {
+    onScrollVisibilityChange(threshold: 0.5) { shown in
+      if place == today { inSight.wrappedValue = shown }
+    }
+    .id(place)
+  }
 }
 
 /// A month's days everyone is off, for its sheet.

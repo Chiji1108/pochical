@@ -2,7 +2,8 @@ import XCTest
 
 /// A big group's 一覧 turned to landscape and back (POC-132): its rows are
 /// drawn where they are laid out, under their faces, and the list stays
-/// on the days it showed. Run by `mise run ios:shifts-rotation`, against
+/// on the days it showed; and its 今日 shows while today is out of sight
+/// (POC-156). Run by `mise run ios:shifts-rotation`, against
 /// the local server it starts with a group of twelve; skipped without it.
 final class ShiftsRotationTests: XCTestCase {
   private var app: XCUIApplication!
@@ -97,6 +98,54 @@ final class ShiftsRotationTests: XCTestCase {
     XCUIDevice.shared.orientation = .portrait
   }
 
+  /// 今日 shows exactly while today is out of sight, after 月を選ぶ, a
+  /// change of layout and 今日 itself move the list (POC-156).
+  @MainActor
+  func test7ShowsTodayAfterAJump() throws {
+    launch()
+    openList(in: nil)
+    continueAfterFailure = true
+    _ = settled()
+    snap("today-opened")
+    checkToday("opened in 週ごと")
+
+    switchLayout(from: "週ごと", to: "一覧")
+    XCTAssertEqual(settled().top, today(), "一覧 goes to today")
+    checkToday("in 一覧, on today")
+
+    pick("2027年")
+    _ = settled()
+    snap("today-far")
+    checkToday("a year on")
+
+    pick(String(Calendar.current.component(.year, from: Date())) + "年")
+    _ = settled()
+    snap("today-month")
+    checkToday("back in today's month")
+
+    // A new layout goes to today's day or week.
+    switchLayout(from: "一覧", to: "週ごと")
+    _ = settled()
+    snap("today-weeks")
+    checkToday("in 週ごと, on today's week")
+
+    pick("2027年")
+    _ = settled()
+    checkToday("in 週ごと, a year on")
+
+    switchLayout(from: "週ごと", to: "一覧")
+    XCTAssertEqual(settled().top, today(), "一覧 goes to today")
+    snap("today-days")
+    checkToday("in 一覧 again, on today")
+
+    pick("2027年")
+    _ = settled()
+    todayButton().tap()
+    XCTAssertEqual(settled().top, today(), "今日 goes back to today")
+    snap("today-tapped")
+    checkToday("after 今日")
+  }
+
   @MainActor private func launch(_ arguments: [String] = []) {
     app = XCUIApplication()
     app.launchArguments += ["-firstRunDone", "YES"] + arguments
@@ -135,6 +184,19 @@ final class ShiftsRotationTests: XCTestCase {
     XCTAssertEqual(back.month, portrait.month, "portrait again stays on the month")
     XCTAssertEqual(back.top, portrait.top, "portrait again stays on the day at the top")
     checkRows("in portrait again")
+  }
+
+  /// The bar's 今日; the カレンダー tab has its own, out of sight.
+  @MainActor private func todayButton() -> XCUIElement {
+    app.buttons.matching(NSPredicate(format: "label == '今日に戻る'"))
+      .allElementsBoundByIndex.first(where: \.isHittable) ?? app.buttons["no 今日"]
+  }
+
+  /// 今日 is in the bar exactly while today's row is out of sight.
+  @MainActor private func checkToday(_ when: String) {
+    let row = app.buttons.matching(NSPredicate(format: "label MATCHES %@", today() + "([^0-9].*)?"))
+      .allElementsBoundByIndex.contains(where: \.isHittable)
+    XCTAssertEqual(todayButton().exists, !row, "今日 shows while today is out of sight, \(when)")
   }
 
   /// A member's column across a big group's 一覧.
@@ -205,18 +267,23 @@ final class ShiftsRotationTests: XCTestCase {
     wait(for: [closed], timeout: 5)
   }
 
-  /// The group's 一覧, from the グループ tab.
-  @MainActor private func openList() {
+  /// The group's 一覧, or what it opens on, from the グループ tab.
+  @MainActor private func openList(in layout: String? = "一覧") {
     let tab = app.tabBars.buttons["グループ"]
     if tab.waitForExistence(timeout: 10) { tab.tap() }
     let shifts = app.buttons["月で見る"]
     XCTAssertTrue(shifts.waitForExistence(timeout: 15), "the group's hub shows")
     shifts.tap()
-    let layout = app.buttons.matching(NSPredicate(format: "label BEGINSWITH '週ごと'")).firstMatch
-    XCTAssertTrue(layout.waitForExistence(timeout: 10), "a big group opens on 週ごと")
-    layout.tap()
-    app.buttons["一覧"].tap()
-    XCTAssertTrue(topRow().waitForExistence(timeout: 10), "一覧's rows show")
+    if let layout { switchLayout(from: "週ごと", to: layout) }
+    XCTAssertTrue(topRow().waitForExistence(timeout: 10), "the rows show")
+  }
+
+  /// From the layout menu, which a big group opens on 週ごと.
+  @MainActor private func switchLayout(from: String, to: String) {
+    let menu = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", from)).firstMatch
+    XCTAssertTrue(menu.waitForExistence(timeout: 10), "the layout menu shows \(from)")
+    menu.tap()
+    app.buttons[to].tap()
   }
 
   /// The month named over the list, and the day of the row at its top.
