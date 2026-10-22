@@ -3,7 +3,9 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { signInAnonymously } from "./helpers";
-import { relayed, supportChat, words } from "./sync-helpers";
+import { holdAlarms, relayed, supportChat, words } from "./sync-helpers";
+
+holdAlarms();
 
 describe("what the admin site asks of the server", () => {
   it("lists the chats from their index and answers one, the user hearing of it", async () => {

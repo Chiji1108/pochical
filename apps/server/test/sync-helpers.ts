@@ -2,7 +2,7 @@ import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { expect, onTestFinished, vi } from "vitest";
+import { beforeEach, expect, vi } from "vitest";
 
 import {
   ClientFrameSchema,
@@ -203,21 +203,25 @@ export const rosterIn = (frame: ServerFrame) =>
 /** How far ahead holdAlarms sets the clock, past any test's run. */
 const HELD_AHEAD_MS = 3_600_000;
 
+/** Whether the running test holds its alarms (holdAlarms). */
+let held = false;
+
 /**
- * Holds every Durable Object alarm set from now on for the test to run.
- * The code reads the time through Date, set ahead here until the test
- * ends, so each alarm is for later by the runtime's own clock, and runs
- * only as the test runs it (runDurableObjectAlarm), one at a time as the
- * runtime runs them.
+ * Holds every Durable Object alarm in each of the file's tests for the
+ * test to run. The code reads the time through Date, set ahead from the
+ * test's start to its end, so each alarm is for later by the runtime's
+ * own clock, and runs only as the test runs it (runDurableObjectAlarm),
+ * one at a time as the runtime runs them.
  */
 export const holdAlarms = (): void => {
-  if (vi.isFakeTimers()) {
-    return;
-  }
-  vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ["Date"] });
-  vi.setSystemTime(Date.now() + HELD_AHEAD_MS);
-  onTestFinished(() => {
-    vi.useRealTimers();
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + HELD_AHEAD_MS);
+    held = true;
+    return () => {
+      held = false;
+      vi.useRealTimers();
+    };
   });
 };
 
@@ -255,12 +259,14 @@ type ChatKind = Extract<
 >["value"]["edits"];
 
 /**
- * The user's chat with Pochical's people, open on a device, its alarms
- * held (holdAlarms): each edit sent as its outbox sends one, taken once
- * acknowledged, then told outside.
+ * The user's chat with Pochical's people, open on a device, in a file
+ * that holds its alarms (holdAlarms): each edit sent as its outbox sends
+ * one, taken once acknowledged, then told outside.
  */
 export const supportChat = async (token: string) => {
-  holdAlarms();
+  if (!held) {
+    throw new Error("supportChat runs its chat's alarms: holdAlarms() first");
+  }
   const userId = await userIdOf(token);
   const { socket, frames } = await syncSocket("/v1/me/support/socket", token);
   await frames.next();

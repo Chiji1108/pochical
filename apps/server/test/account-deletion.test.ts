@@ -12,12 +12,15 @@ import {
   userIdOf,
 } from "./helpers";
 import {
+  holdAlarms,
   pair,
   sendFrame,
   supportChat,
   syncSocket,
   untilAcked,
 } from "./sync-helpers";
+
+holdAlarms();
 
 /** A line in the group's chat, sent and taken. */
 const say = async (groupId: string, token: string, text: string) => {

@@ -11,15 +11,16 @@ import {
   toSlackText,
 } from "../src/slack";
 import { supportPlace } from "../src/support-lines";
-import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
+import { call, ORIGIN, signInAnonymously } from "./helpers";
 import {
   holdAlarms,
   relayed,
   sendFrame,
   supportChat,
-  syncSocket,
   untilAcked,
 } from "./sync-helpers";
+
+holdAlarms();
 
 const SECRET = "slack-signing-secret";
 
@@ -1080,15 +1081,11 @@ const failureOf = async (userId: string) => {
 };
 
 /**
- * The user's chat open, its alarms held, a line sent and taken, and
- * Slack's first refusal of it: the relay waiting to try again, its first
- * wait in seconds.
+ * The user's chat open, a line sent and taken, and Slack's first refusal
+ * of it: the relay waiting to try again, its first wait in seconds.
  */
 const refusedOnce = async (token: string) => {
-  holdAlarms();
-  const userId = await userIdOf(token);
-  const { socket, frames } = await syncSocket("/v1/me/support/socket", token);
-  await frames.next();
+  const { frames, socket, userId } = await supportChat(token);
   const send = async (text: string): Promise<void> => {
     sendFrame(socket, {
       case: "chatEdits",
