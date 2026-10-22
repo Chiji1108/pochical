@@ -14,4 +14,7 @@
   // apps/server (pochical-server), called Worker to Worker rather than over
   // api.pochical.app. Locally, run `mise run server` beside the site.
   "services": [{ "binding": "SERVER", "service": "pochical-server" }],
+  // No secrets. Declared, so that `wrangler types` writes Env from this
+  // file alone, not from whatever .dev.vars or .env this computer has.
+  "secrets": { "required": [] },
 }

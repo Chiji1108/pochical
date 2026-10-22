@@ -93,6 +93,20 @@
       ],
     },
     {
+      description: "wrangler pins the workerd that each Worker's worker-configuration.d.ts is generated with",
+      matchDepNames: ["wrangler"],
+      prBodyNotes: [
+        "Run `mise run gen:worker-types` and commit the regenerated types before merging; CI's `worker-types:check` fails until then.",
+      ],
+    },
+    {
+      description: "Lock file maintenance can move wrangler too",
+      matchUpdateTypes: ["lockFileMaintenance"],
+      prBodyNotes: [
+        "Run `mise run gen:worker-types` and commit the regenerated types before merging; CI's `worker-types:check` fails until then.",
+      ],
+    },
+    {
       description: "Renovate rewrites only the bumped packages' pins in Package.resolved, and none for the Xcode project's own packages",
       matchFileNames: ["**/Package.swift", "**/project.pbxproj"],
       prBodyNotes: [
