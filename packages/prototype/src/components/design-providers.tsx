@@ -6,6 +6,7 @@ import { useLook, useSettings } from "../lib/design-settings-store";
 import { useDeviceScheme } from "../lib/device-media";
 import {
   ColorSchemeContext,
+  DeviceSchemeContext,
   presetOf,
   ThemeContext,
   DEVICE_COLORS,
@@ -51,7 +52,7 @@ export function PresetContexts({
 // by /demo and the /design pages alike.
 // `fresh` starts from the default settings in light, whatever this
 // browser saved or the device's light or dark, as the top page shows the
-// app; changes made in its phones still apply.
+// app, its home screen too; changes made in its phones still apply.
 export function DesignProviders({
   children,
   fresh = false,
@@ -86,31 +87,33 @@ export function DesignProviders({
     (appearance === "system" ? systemScheme : appearance);
   return (
     <WeekSettingsContext value={{ english: monthName === "english", week }}>
-      <ColorSchemeContext value={scheme}>
-        <ThemeContext value={{ theme: preset, wallpaperHue }}>
-          <IconWeightContext value={look.fill ? "duotone" : "regular"}>
-            <ShiftMarkStyleContext value={look.style}>
-              <CellNamesContext
-                value={{
-                  names: {
-                    badge: look.names,
-                    emoji: look.names,
-                    icon: look.names,
-                  },
-                }}
-              >
-                <MonochromeContext value={{ monochrome: !shiftColors }}>
-                  <OffLooksContext
-                    value={{ off: look.off, offs: look.offs ?? noOffLooks }}
-                  >
-                    {children}
-                  </OffLooksContext>
-                </MonochromeContext>
-              </CellNamesContext>
-            </ShiftMarkStyleContext>
-          </IconWeightContext>
-        </ThemeContext>
-      </ColorSchemeContext>
+      <DeviceSchemeContext value={systemScheme}>
+        <ColorSchemeContext value={scheme}>
+          <ThemeContext value={{ theme: preset, wallpaperHue }}>
+            <IconWeightContext value={look.fill ? "duotone" : "regular"}>
+              <ShiftMarkStyleContext value={look.style}>
+                <CellNamesContext
+                  value={{
+                    names: {
+                      badge: look.names,
+                      emoji: look.names,
+                      icon: look.names,
+                    },
+                  }}
+                >
+                  <MonochromeContext value={{ monochrome: !shiftColors }}>
+                    <OffLooksContext
+                      value={{ off: look.off, offs: look.offs ?? noOffLooks }}
+                    >
+                      {children}
+                    </OffLooksContext>
+                  </MonochromeContext>
+                </CellNamesContext>
+              </ShiftMarkStyleContext>
+            </IconWeightContext>
+          </ThemeContext>
+        </ColorSchemeContext>
+      </DeviceSchemeContext>
     </WeekSettingsContext>
   );
 }

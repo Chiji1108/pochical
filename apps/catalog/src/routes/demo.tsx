@@ -1,4 +1,5 @@
 import { DesignApp } from "@pochical/prototype/components/design-app";
+import { HomeScreen } from "@pochical/prototype/components/design-home-screen";
 import {
   DesignProviders,
   useDesignTheme,
@@ -27,7 +28,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { RotateCcw, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { HomeScreen } from "../components/design-home-screen";
 import {
   designCaption,
   DesignPage,

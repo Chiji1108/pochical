@@ -1,44 +1,35 @@
-import {
-  AppIcon,
-  useAppIcons,
-} from "@pochical/prototype/components/design-app-icon";
-import { NotificationBanner } from "@pochical/prototype/components/design-notifications";
-import { Phone } from "@pochical/prototype/components/design-phone";
-import { useThemeStyle } from "@pochical/prototype/components/design-theme";
-import {
-  wallpaperFor,
-  WidgetFrame,
-} from "@pochical/prototype/components/design-widget-frame";
-import { TwoWeeksMedium } from "@pochical/prototype/components/design-widgets-calendar";
-import { formatDay } from "@pochical/prototype/lib/design-days";
-import { useDevice } from "@pochical/prototype/lib/design-device";
+import { css } from "@pochical/styled-system/css";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+
+import { formatDay } from "../lib/design-days";
+import { useDevice } from "../lib/design-device";
 import {
   bookOf,
   PatternsContext,
   presetPatterns,
-} from "@pochical/prototype/lib/design-patterns";
-import { clockText } from "@pochical/prototype/lib/design-reminders";
-import { useSettings } from "@pochical/prototype/lib/design-settings-store";
-import { designToday } from "@pochical/prototype/lib/design-today";
-import {
-  useShownDays,
-  useUser,
-} from "@pochical/prototype/lib/design-user-store";
-import { widgetEntry } from "@pochical/prototype/lib/design-widgets";
-import { useDeviceScheme } from "@pochical/prototype/lib/device-media";
-import { css } from "@pochical/styled-system/css";
-import { useLayoutEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
-
+} from "../lib/design-patterns";
+import { clockText } from "../lib/design-reminders";
+import { useSettings } from "../lib/design-settings-store";
+import { designToday } from "../lib/design-today";
+import { useShownDays, useUser } from "../lib/design-user-store";
+import { groupCompanion } from "../lib/design-widget-companions";
+import { widgetEntry } from "../lib/design-widgets";
+import { AppIcon, useAppIcons } from "./design-app-icon";
+import { NotificationBanner } from "./design-notifications";
+import { Phone } from "./design-phone";
+import { DeviceSchemeContext, useThemeStyle } from "./design-theme";
+import { wallpaperFor, WidgetFrame } from "./design-widget-frame";
+import { TwoWeeksMedium } from "./design-widgets-calendar";
 import { NextOffSmall } from "./design-widgets-next-off";
 import { UpcomingSmall } from "./design-widgets-upcoming";
 
-// The phone's home screen beside the app on /demo, with the widgets on it
-// drawn from the same person's data, so what is entered in the app shows
-// there at once. Like the phone itself it stands in for the device: its
-// wallpaper, the other apps and the dock are the system's. It follows the
-// computer's own light or dark, as a home screen follows the phone's
-// rather than the app's 外観.
+// The phone's home screen beside the app on /demo and on the top page,
+// with the widgets on it drawn from the same person's data, so what is
+// entered in the app shows there at once. Like the phone itself it stands
+// in for the device: its wallpaper, the other apps and the dock are the
+// system's. It follows the device's own light or dark, as a home screen
+// follows the phone's rather than the app's 外観.
 
 // The other apps: plain colors in an icon's shape, a little faded, as the
 // app icon study draws neighbors, so none stands for a real app.
@@ -213,17 +204,23 @@ function Dock({ round }: { round: boolean }) {
   );
 }
 
-export function HomeScreen() {
+// `nextOffGroup` is the group 次の休み is set to (みんな休み), by its id
+// among the person's groups; without it, the person's own days off.
+export function HomeScreen({ nextOffGroup }: { nextOffGroup?: string }) {
   const platform = useDevice((state) => state.platform);
   const hue = useDevice((state) => state.wallpaperHue);
-  const scheme = useDeviceScheme();
+  const scheme = useContext(DeviceSchemeContext);
   const schedule = useShownDays();
   const patterns = useUser((state) => state.patterns);
+  const groups = useUser((state) => state.groups);
   const week = useSettings((state) => state.device.week);
   // The person's own patterns, over the ready-made ones, as the calendar
   // names them.
   const book = { ...presetPatterns, ...bookOf(patterns) };
-  const entry = widgetEntry(schedule, week, designToday, book);
+  const group = groups.find((one) => one.id === nextOffGroup);
+  const entry = widgetEntry(schedule, week, designToday, book, {
+    companion: group && groupCompanion(group),
+  });
   const android = platform === "android";
   const placement = {
     appearance: scheme,
@@ -341,7 +338,7 @@ export function LockScreen({
 }) {
   const platform = useDevice((state) => state.platform);
   const hue = useDevice((state) => state.wallpaperHue);
-  const scheme = useDeviceScheme();
+  const scheme = useContext(DeviceSchemeContext);
   const background =
     ground ??
     wallpaperFor({
