@@ -45,7 +45,7 @@ struct RootView: View {
   /// none in the background.
   private var openPlaceID: String? {
     guard scenePhase == .active else { return nil }
-    if let page = navigator.placePage { return page.placeID }
+    if let placeID = navigator.placeID { return placeID }
     switch navigator.tab {
     case .calendar: return nil
     case .groups: return openGroup(openGroupID, among: groups)?.id

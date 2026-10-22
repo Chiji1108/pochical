@@ -104,10 +104,11 @@ struct PhotosOfChat: Hashable {
     controller?.show(pages, over: self.tab, animated: !jump)
   }
 
-  /// The top page of a place, whose socket is held while it shows: a
-  /// linked page is of the place of the page it was opened from.
-  var placePage: RootPage? {
-    pages.last { $0.root != nil }?.root
+  /// The place of the top page that is of one, whose socket is held while
+  /// it shows: a linked page is of the place of the page it was opened
+  /// from, and グループを作る of the tab's.
+  var placeID: String? {
+    pages.lazy.compactMap { $0.root?.placeID }.last
   }
 
   /// The pages as the navigation has them now, after a link or a back.
