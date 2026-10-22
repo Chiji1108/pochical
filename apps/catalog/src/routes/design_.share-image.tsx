@@ -1,6 +1,6 @@
 import { themeSkyId } from "@pochical/design/skies";
-import storeIcon from "@pochical/prototype/assets/icon-192.png";
-import siteIcon from "@pochical/prototype/assets/icon.png";
+import storeIcon from "@pochical/prototype/assets/icon-192.png?url";
+import siteIcon from "@pochical/prototype/assets/icon.png?url";
 import { DesignApp } from "@pochical/prototype/components/design-app";
 import { DesignProviders } from "@pochical/prototype/components/design-providers";
 import { paleSkyFromTop } from "@pochical/prototype/components/design-surprise";
