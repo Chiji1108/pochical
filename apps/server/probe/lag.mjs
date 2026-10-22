@@ -1,7 +1,7 @@
 // Logs, with wall-clock time, each time the vitest main process's event
 // loop is late by more than LAG_MS, and the worst lag at the end.
 export default function setup() {
-  const limit = Number(process.env.LAG_MS ?? 250);
+  const limit = Number(process.env.LAG_MS ?? 1000);
   let last = Date.now();
   let worst = 0;
   const timer = setInterval(() => {

@@ -20,17 +20,12 @@ jobs:
         with:
           install_args: node bun
       - run: bun install --frozen-lockfile
-      - run: nproc; free -m
-      - name: suite, 6 times, with the main process's lag and vmstat
+      - name: DO call latency beside the suite, per file isolation and without
         working-directory: apps/server
         run: |
-          vmstat -t 1 > /tmp/vmstat.log &
-          for i in 1 2 3 4 5 6; do
-            echo "=== run $i"
-            ./node_modules/.bin/vitest run -c vitest.probe.config.ts 2>&1 \
+          for mode in isolate no-isolate isolate no-isolate isolate no-isolate; do
+            echo "=== $mode"
+            ./node_modules/.bin/vitest run -c vitest.probe.config.ts --maxWorkers=4 --$mode 2>&1 \
               | sed 's/\x1b\[[0-9;]*m//g' \
-              | grep -E '\[lag\]|^ +Tests |Duration|×|[0-9]{4,}ms$|FAIL' || true
+              | grep -E '"calls"|"worst"|Z [0-9]+ms|lag\] worst|^ +Tests |Duration|×' || true
           done
-          kill %1
-          echo "=== vmstat rows with steal or wait over 10, or idle under 5"
-          awk 'NR>2 && ($16 > 10 || $17 > 10 || $15 < 5)' /tmp/vmstat.log | head -80
