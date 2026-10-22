@@ -692,16 +692,20 @@ export class UserDO extends DurableObject<Env> {
   }
 
   /**
-   * The groups the user is in or has left, the latest joined first, as the
-   * admin site's page of them lists them (spec/admin.md, ユーザー).
+   * The user's name and the groups they are in or have left, the latest
+   * joined first, as the admin site's page of them shows them
+   * (spec/admin.md, ユーザー).
    */
-  groupsListed(): {
-    groupId: string;
+  adminView(): {
     name: string;
-    joinedAtMs: number;
-    leftAtMs: number | null;
-  }[] {
-    return this.db
+    groups: {
+      groupId: string;
+      name: string;
+      joinedAtMs: number;
+      leftAtMs: number | null;
+    }[];
+  } {
+    const groups = this.db
       .select()
       .from(memberships)
       .orderBy(desc(memberships.joinedAt))
@@ -712,6 +716,7 @@ export class UserDO extends DurableObject<Env> {
         leftAtMs: row.leftAt?.getTime() ?? null,
         name: row.name,
       }));
+    return { groups, name: this.profileOf().name };
   }
 
   /** The usual name and photo, each empty before the user sets them. */
