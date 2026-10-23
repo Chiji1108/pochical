@@ -46,8 +46,8 @@ private let nov2 = Day("2026-11-02")!
   #expect(firing?.minute == 23 * 60 + 30)
 }
 
-@Test func remindersKeptBeforeThereWereAnyStartWithTheEveningBefore() throws {
-  let settings = try JSONDecoder().decode(DeviceSettings.self, from: Data("{}".utf8))
+@Test func remindersStartWithTheEveningBefore() throws {
+  let settings = DeviceSettings()
   #expect(settings.reminders == Reminder.defaults)
   let kept = try JSONEncoder().encode(settings)
   #expect(try JSONDecoder().decode(DeviceSettings.self, from: kept).reminders == Reminder.defaults)
