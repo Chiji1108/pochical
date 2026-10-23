@@ -6,8 +6,9 @@
 # 週ごと opening on today's week however late the members are read (POC-162);
 # and in a group of two, 今日's rows, 週ごと after 一覧 and the day's sheet
 # following the day tapped (POC-195).
-# It starts the server itself, so nothing else may be on :8787, and erases
-# the simulator it is given.
+# It starts the server itself, so nothing else may be on
+# POCHICAL_DEV_SERVER (:8787 by default), and erases the simulator it is
+# given.
 #
 #   mise run ios:shifts-rotation -- "<simulator name>" [derived data]
 #

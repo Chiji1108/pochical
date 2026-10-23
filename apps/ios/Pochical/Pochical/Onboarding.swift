@@ -107,12 +107,17 @@ private enum OnboardingStep: Hashable {
   case patterns(JobTemplate)
   /// The order, typed with the patterns chosen.
   case order(JobTemplate, [PatternID])
+  /// A roster's work, with the patterns chosen: the period its shifts
+  /// are handed out for, then the day one starting mid-month starts on.
+  case period([PatternID])
+  case periodDay([PatternID])
 }
 
 /// はじめの設定: each step pushed as a page, the system's back going a
 /// question back.
 struct Onboarding: View {
   @Environment(\.write) private var write
+  @Environment(Settings.self) private var settings
   @State private var path: [OnboardingStep] = []
   /// Starting over after deleting the account, which is said first.
   @AppStorage(FirstRun.deletedKey) private var deleted = false
@@ -149,13 +154,23 @@ struct Onboarding: View {
           PatternsStep(template: template) { choose(template, patterns: $0) }
         case .order(let template, let patterns):
           OrderStep(template: template, patternIDs: patterns)
+        case .period(let patterns):
+          PeriodStep {
+            start(roster: patterns, period: ShiftPeriod())
+          } onMidMonth: {
+            path.append(.periodDay(patterns))
+          }
+        case .periodDay(let patterns):
+          PeriodDayStep(action: "はじめる") { start in
+            self.start(roster: patterns, period: ShiftPeriod(start: start))
+          }
         }
       }
     }
   }
 
-  /// The patterns chosen: a roster's work, or a weekly order, end the
-  /// questions; others go on to their order's first day.
+  /// The patterns chosen: a weekly order ends the questions, an order
+  /// goes on to its first day, and a roster's work to its period.
   private func choose(_ template: JobTemplate, patterns: [PatternID]) {
     if let sequence = template.sequence, template.weekly {
       // A week starts on Sunday: its order lines up with the weekdays.
@@ -164,15 +179,25 @@ struct Onboarding: View {
     } else if template.sequence != nil {
       path.append(.order(template, patterns))
     } else {
-      begin(patterns, sequence: [], anchor: .today, write: write)
+      path.append(.period(patterns))
+    }
+  }
+
+  /// A roster's work begins, its pages the period its shifts come for,
+  /// once the patterns are kept, as 新しい仕事にする sets it.
+  private func start(roster patterns: [PatternID], period: ShiftPeriod) {
+    if begin(patterns, sequence: [], anchor: .today, write: write) {
+      settings.device.period = period
     }
   }
 }
 
-/// The patterns chosen become the person's, and the order repeats.
+/// The patterns chosen become the person's, and the order repeats; true
+/// once kept.
+@discardableResult
 @MainActor private func begin(
   _ patternIDs: [PatternID], sequence: [PatternID], anchor: Day, write: WriteAction
-) {
+) -> Bool {
   let incoming = readyPatterns(patternIDs)
   let now = Int64(Date.now.timeIntervalSince1970 * 1000)
   let kept = write {
@@ -180,8 +205,9 @@ struct Onboarding: View {
       with: incoming, sequence: sequence, anchor: anchor, today: .today,
       holidayCountry: HolidayCountry.current, now: now, in: $0)
   }
-  guard kept else { return }
+  guard kept else { return false }
   ReminderOffer.setUpOrder(sequence)
+  return true
 }
 
 // MARK: Steps
@@ -315,7 +341,7 @@ private struct TemplateStep: View {
 
 /// The patterns to use, the kind of work's own already picked, with the
 /// button on kept at the foot over the chips, in reach however many: 次へ
-/// when an order is typed next, else はじめる.
+/// when an order or the period is asked next, else はじめる.
 private struct PatternsStep: View {
   let template: JobTemplate
   let onNext: ([PatternID]) -> Void
@@ -328,7 +354,6 @@ private struct PatternsStep: View {
   }
 
   var body: some View {
-    let ordering = template.sequence != nil && !template.startsWeekly
     StepPage(
       title: patternsQuestion(template).title,
       description: patternsQuestion(template).description
@@ -340,7 +365,7 @@ private struct PatternsStep: View {
       Button {
         onNext(chosenPatterns(picked))
       } label: {
-        Text(ordering ? "次へ" : "はじめる").frame(maxWidth: .infinity)
+        Text(template.asksMore ? "次へ" : "はじめる").frame(maxWidth: .infinity)
       }
       .mainButton()
       .disabled(picked.isEmpty)
@@ -385,6 +410,49 @@ private struct OrderStep: View {
         }
         .disabled(sequence.isEmpty)
       }
+    }
+  }
+}
+
+/// The period a roster's shifts are handed out for, which becomes the
+/// calendar's page (spec/shift-patterns.md, Changing jobs): by the month
+/// first, as most people's come, starting in one tap.
+private struct PeriodStep: View {
+  let onMonth: () -> Void
+  let onMidMonth: () -> Void
+
+  var body: some View {
+    StepPage(title: PeriodQuestion.title, description: PeriodQuestion.description) {
+      OptionCard(
+        icon: PeriodQuestion.month.icon, title: PeriodQuestion.month.title,
+        note: PeriodQuestion.month.note, action: onMonth)
+      OptionCard(
+        icon: PeriodQuestion.midMonth.icon, title: PeriodQuestion.midMonth.title,
+        note: PeriodQuestion.midMonth.note, action: onMidMonth)
+    }
+  }
+}
+
+/// The day a period starting mid-month starts on, with はじめる at the
+/// foot.
+private struct PeriodDayStep: View {
+  let action: String
+  let onStart: (Int) -> Void
+  @State private var start = PeriodQuestion.firstPick
+
+  var body: some View {
+    StepPage(title: PeriodQuestion.dayTitle, description: PeriodQuestion.dayDescription) {
+      PeriodDayPicker(start: $start)
+    }
+    .safeAreaInset(edge: .bottom) {
+      Button {
+        onStart(start)
+      } label: {
+        Text(action).frame(maxWidth: .infinity)
+      }
+      .mainButton()
+      .padding(.horizontal, 20)
+      .padding(.bottom, 12)
     }
   }
 }

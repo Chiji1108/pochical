@@ -73,6 +73,9 @@ export type DeviceSettings = {
   shiftColors: boolean;
   appearance: Appearance;
   week: WeekSettings;
+  // シフトの期間: the day of the month each page starts on, 1 for the
+  // month itself, else 2 to 28 (spec/calendar.md, The shift period).
+  periodStart: number;
   // 月と曜日: the calendar's headings as 9月 and 日, or as sep. and S.
   monthName: MonthName;
   monthTap: MonthTap;
@@ -103,6 +106,7 @@ type SettingsState = {
   setShiftColors: (shiftColors: boolean) => void;
   setAppearance: (appearance: Appearance) => void;
   setWeek: (week: WeekSettings) => void;
+  setPeriodStart: (periodStart: number) => void;
   setMonthName: (monthName: MonthName) => void;
   setMonthTap: (monthTap: MonthTap) => void;
   setSky: (sky: string) => void;
@@ -199,6 +203,7 @@ export const useSettings = create<SettingsState>()(
         imageOptions: defaultImageOptions,
         monthName: "number",
         monthTap: "pick",
+        periodStart: 1,
         preset: "pochical",
         reminders: defaultReminders,
         shiftColors: true,
@@ -258,6 +263,9 @@ export const useSettings = create<SettingsState>()(
           });
           return { device: { ...state.device, calendar } };
         });
+      },
+      setPeriodStart: (periodStart) => {
+        set((state) => ({ device: { ...state.device, periodStart } }));
       },
       setPreset: (preset) => {
         set((state) => ({ device: { ...state.device, preset } }));

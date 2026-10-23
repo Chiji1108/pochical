@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import {
   dateKey,
   formatMonthDay,
+  formatSlash,
   movesText,
   timeChangeOf,
   timeRange,
@@ -228,6 +229,7 @@ export function DayCell({
   dimmed = false,
   faint: fainted = false,
   preview = false,
+  withMonth = false,
   className,
 }: {
   date: Date;
@@ -249,6 +251,9 @@ export function DayCell({
   // A blank day drawn faint as the gap sheet would fill it, read as the
   // blank it still is.
   preview?: boolean;
+  // Dated with its month, 11/1: the 1st where a シフトの期間's page turns
+  // the month (spec/calendar.md, The shift period).
+  withMonth?: boolean;
   className?: string;
 }) {
   const faint = fainted || preview;
@@ -303,7 +308,7 @@ export function DayCell({
         )}
       >
         <span className={cx(onToday && todayMark, noted && dayParts.noted)}>
-          {date.getDate()}
+          {withMonth ? formatSlash(date) : date.getDate()}
         </span>
       </span>
       {shift && !hideOff && (

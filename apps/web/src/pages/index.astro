@@ -3,7 +3,14 @@ import siteIcon from "@pochical/prototype/assets/icon.png?url";
 import { site } from "@pochical/prototype/lib/brand";
 import { defaultDayBeforeTime } from "@pochical/prototype/lib/design-reminders";
 import { css } from "@pochical/styled-system/css";
-import { BellRing, CalendarPlus, ImageDown, UserRound } from "lucide-react";
+import {
+  BellRing,
+  CalendarPlus,
+  CalendarRange,
+  Clock,
+  ImageDown,
+  UserRound,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import {
@@ -27,14 +34,6 @@ const NEAR = { rootMargin: "100% 0px" };
 // The site's muted gray, a step darker: over the sky it keeps above 5:1,
 // where the site's own falls short of 4.5:1.
 const ON_SKY_TEXT = "#5c6159";
-
-// The /design phone's frame colors, as the workspace gives them.
-const page = css({
-  "--ws-bezel": "#333631",
-  "--ws-bezel-edge": "#b9bdb6",
-  "--ws-bezel-shadow": "#30392f35",
-  "--ws-island": "#242724",
-});
 
 const hero = {
   copy: css({
@@ -205,6 +204,16 @@ const extras: { Icon: LucideIcon; title: string; body: string }[] = [
     body: "ひと月を1枚の画像に。写真に保存しても、そのまま送っても。",
     title: "月まるごと画像で保存",
   },
+  {
+    Icon: CalendarRange,
+    body: "シフトが15日から翌月14日の分で出るなら、カレンダーの1ページをその期間に。お休みの数も、画像やカレンダーへの保存も、その期間で。",
+    title: "15日始まりのシフトにも",
+  },
+  {
+    Icon: Clock,
+    body: "いつもと時間が違う日だけ、時間を変えられます。カレンダーにも、早出や残業の印がつきます。",
+    title: "早出や残業も、その日だけ",
+  },
 ];
 
 const more = {
@@ -284,7 +293,7 @@ const closing = {
 ---
 
 <Site description={site.description} path="/" title="シフトを、ポチッと。">
-  <main class={page} id="main">
+  <main id="main">
     <section class={hero.root}>
       <div class={hero.copy}>
         <Sky client:idle place="top" />

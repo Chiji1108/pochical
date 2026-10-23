@@ -1,9 +1,14 @@
 import { css, cva } from "@pochical/styled-system/css";
 import { Check, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import type { ReactNode } from "react";
 
-import { dateKey, formatYearMonth } from "../lib/design-days";
-import type { Schedule } from "../lib/design-days";
+import {
+  dateKey,
+  formatPeriodWithYear,
+  formatYearMonth,
+} from "../lib/design-days";
+import type { Period, Schedule } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
 import type { Coworker } from "../lib/design-user-store";
 import { monthWithYearOf } from "./design-month-name";
@@ -50,6 +55,7 @@ export function useShownWith(
 // their days, and pressing the one shown lets them go.
 export function BreakdownSheet({
   month,
+  period,
   counts,
   unfilled,
   days,
@@ -60,6 +66,9 @@ export function BreakdownSheet({
   onShow,
 }: {
   month: Date;
+  // A シフトの期間's page, its 期間の内訳 (spec/calendar.md, The shift
+  // period).
+  period?: Period;
   counts: { key: Shift; label: string; count: number }[];
   unfilled: number;
   // How many days the month has.
@@ -72,25 +81,28 @@ export function BreakdownSheet({
   onShow: (id: string | undefined) => void;
 }) {
   const { english } = useWeek();
+  const title = period ? "期間の内訳" : "今月の内訳";
+  let eyebrow: ReactNode = formatYearMonth(month);
+  if (period) {
+    eyebrow = formatPeriodWithYear(period);
+  } else if (english) {
+    // In English as the カレンダー page's 月と曜日 asks, said in 日本語 to
+    // screen readers as the rest of the sheet is.
+    eyebrow = (
+      <>
+        <span className={srOnly}>{formatYearMonth(month)}</span>
+        <span aria-hidden="true">{monthWithYearOf(month, true)}</span>
+      </>
+    );
+  }
   return (
-    <Sheet label="今月の内訳" onOpenChange={onOpenChange} open={open}>
+    <Sheet label={title} onOpenChange={onOpenChange} open={open}>
       <SheetHeading
-        eyebrow={
-          // In English as the カレンダー page's 月と曜日 asks, said in
-          // 日本語 to screen readers as the rest of the sheet is.
-          english ? (
-            <>
-              <span className={srOnly}>{formatYearMonth(month)}</span>
-              <span aria-hidden="true">{monthWithYearOf(month, true)}</span>
-            </>
-          ) : (
-            formatYearMonth(month)
-          )
-        }
+        eyebrow={eyebrow}
         onClose={() => {
           onOpenChange(false);
         }}
-        title="今月の内訳"
+        title={title}
       />
       <div className={sheetBody}>
         <dl className={breakdown.list}>
@@ -114,7 +126,9 @@ export function BreakdownSheet({
             </dd>
           </div>
         </dl>
-        <p className={breakdown.total}>この月は全{days}日</p>
+        <p className={breakdown.total}>
+          {period ? "この期間" : "この月"}は全{days}日
+        </p>
         {people.length > 0 && (
           <section>
             <h3 className={breakdown.heading}>一緒に働く人</h3>

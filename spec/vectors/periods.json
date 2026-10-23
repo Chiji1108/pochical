@@ -1,0 +1,149 @@
+{
+  "about": "シフトの期間 (spec/calendar.md, The shift period). `start` is the day of the month a period starts on: 1 for the month itself, else 2 to 28, running to the day before it a month on; each page of the calendar is one, `[first, last]`. containing: the period holding `day`, as the calendar opens on today's and a day's link on its own. stepped: the period `by` pages on from `page`, or back for a negative count. picked: the period 月を選ぶ's `month` opens, the one starting in it. weeks: the days a page draws, whole weeks from `weekStart` (0 for Sunday) holding the period, as the first and last day drawn and the count of weeks. written: a period by its days (spec/calendar.md, How days are written): `short` alone, `year` where the year shows, its last day's too when it is another year, `full` titling a picture, and `english` for that title with 月と曜日 in English.",
+  "containing": [
+    {
+      "name": "a day of the month, without a period",
+      "start": 1,
+      "day": "2026-10-23",
+      "expected": ["2026-10-01", "2026-10-31"]
+    },
+    {
+      "name": "the day before the start is the period's last",
+      "start": 15,
+      "day": "2026-10-14",
+      "expected": ["2026-09-15", "2026-10-14"]
+    },
+    {
+      "name": "the start day is the period's first",
+      "start": 15,
+      "day": "2026-10-15",
+      "expected": ["2026-10-15", "2026-11-14"]
+    },
+    {
+      "name": "across a year",
+      "start": 15,
+      "day": "2027-01-03",
+      "expected": ["2026-12-15", "2027-01-14"]
+    },
+    {
+      "name": "a period over February",
+      "start": 28,
+      "day": "2027-02-27",
+      "expected": ["2027-01-28", "2027-02-27"]
+    }
+  ],
+  "stepped": [
+    {
+      "name": "the next month, without a period",
+      "start": 1,
+      "page": ["2026-10-01", "2026-10-31"],
+      "by": 1,
+      "expected": ["2026-11-01", "2026-11-30"]
+    },
+    {
+      "name": "the next period",
+      "start": 15,
+      "page": ["2026-10-15", "2026-11-14"],
+      "by": 1,
+      "expected": ["2026-11-15", "2026-12-14"]
+    },
+    {
+      "name": "back across a year",
+      "start": 15,
+      "page": ["2027-01-15", "2027-02-14"],
+      "by": -2,
+      "expected": ["2026-11-15", "2026-12-14"]
+    },
+    {
+      "name": "over February",
+      "start": 28,
+      "page": ["2027-01-28", "2027-02-27"],
+      "by": 1,
+      "expected": ["2027-02-28", "2027-03-27"]
+    }
+  ],
+  "picked": [
+    {
+      "name": "the month itself, without a period",
+      "start": 1,
+      "month": "2026-10",
+      "expected": ["2026-10-01", "2026-10-31"]
+    },
+    {
+      "name": "the period starting in the month",
+      "start": 15,
+      "month": "2026-10",
+      "expected": ["2026-10-15", "2026-11-14"]
+    },
+    {
+      "name": "a period starting in December runs into the next year",
+      "start": 15,
+      "month": "2026-12",
+      "expected": ["2026-12-15", "2027-01-14"]
+    }
+  ],
+  "weeks": [
+    {
+      "name": "a month from Sunday",
+      "start": 1,
+      "weekStart": 0,
+      "page": ["2026-10-01", "2026-10-31"],
+      "expected": {
+        "first": "2026-09-27",
+        "last": "2026-10-31",
+        "weeks": 5
+      }
+    },
+    {
+      "name": "a period from Sunday",
+      "start": 15,
+      "weekStart": 0,
+      "page": ["2026-10-15", "2026-11-14"],
+      "expected": {
+        "first": "2026-10-11",
+        "last": "2026-11-14",
+        "weeks": 5
+      }
+    },
+    {
+      "name": "a period from Monday, across a year",
+      "start": 15,
+      "weekStart": 1,
+      "page": ["2026-12-15", "2027-01-14"],
+      "expected": {
+        "first": "2026-12-14",
+        "last": "2027-01-17",
+        "weeks": 5
+      }
+    },
+    {
+      "name": "a period that spans six weeks",
+      "start": 28,
+      "weekStart": 0,
+      "page": ["2026-08-28", "2026-09-27"],
+      "expected": {
+        "first": "2026-08-23",
+        "last": "2026-10-03",
+        "weeks": 6
+      }
+    }
+  ],
+  "written": [
+    {
+      "name": "within a year",
+      "period": ["2026-10-15", "2026-11-14"],
+      "short": "10/15〜11/14",
+      "year": "2026/10/15〜11/14",
+      "full": "2026年10月15日〜11月14日",
+      "english": "Oct 15 – Nov 14, 2026"
+    },
+    {
+      "name": "across a year",
+      "period": ["2026-12-15", "2027-01-14"],
+      "short": "12/15〜1/14",
+      "year": "2026/12/15〜2027/1/14",
+      "full": "2026年12月15日〜2027年1月14日",
+      "english": "Dec 15, 2026 – Jan 14, 2027"
+    }
+  ]
+}

@@ -70,6 +70,47 @@ extension JobTemplate {
 
   /// A weekly order, which starts on a Sunday with nothing to type.
   var startsWeekly: Bool { weekly && sequence != nil }
+
+  /// Whether a question follows the patterns: the order to type, or a
+  /// roster's period; only a weekly order has nothing more to ask.
+  var asksMore: Bool { !startsWeekly }
+}
+
+/// What はじめの設定 and 新しい仕事にする ask a roster's work about the
+/// period its shifts are handed out for (spec/shift-patterns.md, Changing
+/// jobs), each drawing the answers its own way.
+enum PeriodQuestion {
+  static let title = "シフト表は、いつからいつまでの分が出ますか？"
+  static let description = "カレンダーの1ページを、この期間にします。あとから設定の「カレンダー」で変えられます。"
+  static let month = (icon: "🗓️", title: "毎月1日から末日まで", note: "月ごとに出る")
+  static let midMonth = (icon: "📌", title: "月の途中から始まる", note: "15日から翌月14日まで、など")
+  static let dayTitle = "何日から始まりますか？"
+  static let dayDescription = "シフト表の最初の日を選んでください。"
+  /// The day picked to begin with.
+  static let firstPick = Days.periodFirstPick
+}
+
+/// The day a period starting mid-month starts on, 2 to 28, with the
+/// range it makes under it.
+struct PeriodDayPicker: View {
+  @Environment(\.themeColors) private var colors
+  @Binding var start: Int
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Picker("始まる日", selection: $start) {
+        ForEach(ShiftPeriod.starts.dropFirst(), id: \.self) { day in
+          Text("\(day)日").tag(day)
+        }
+      }
+      .pickerStyle(.wheel)
+      .frame(maxWidth: .infinity)
+      Text(ShiftPeriod.name(of: start))
+        .font(.subheadline)
+        .foregroundStyle(colors.textTertiary)
+        .frame(maxWidth: .infinity)
+    }
+  }
 }
 
 /// What the chips ask: a kind of work's own are picked already, so the

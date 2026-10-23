@@ -20,7 +20,7 @@ import {
   dayGridHeight,
   MONTH_WEEKS,
 } from "./design-day-grid";
-import { useWeek } from "./design-week";
+import { usePages } from "./design-pages";
 
 // The calendar's week view: a day opened folds the month up into its
 // week, with the day's details under it, and closing it, or pulling the
@@ -40,7 +40,7 @@ export function useWeekFold({
   initialDetail?: Date;
   onOpen: (turnTo: Date | undefined) => void;
 }) {
-  const weekTools = useWeek();
+  const pages = usePages();
   const [detailDate, setDetailDate] = useState(initialDetail);
   // The row of the month the opened week is on, for the month to fold up
   // into it and unfold back around it. It follows the week as it turns.
@@ -54,8 +54,8 @@ export function useWeekFold({
   const openDate = editing ? undefined : detailDate;
   const weekDetail = openDate !== undefined;
   function rowOf(date: Date, inMonth: Date) {
-    const index = weekTools
-      .monthDates(inMonth)
+    const index = pages
+      .datesOf(inMonth)
       .findIndex((day) => dateKey(day) === dateKey(date));
     return Math.max(0, Math.floor(index / 7));
   }
@@ -76,9 +76,7 @@ export function useWeekFold({
   // folds back into that row. Only a week off the month takes its month.
   // The month shown once a date's week is opened.
   function monthOpening(date: Date) {
-    return onMonth(date)
-      ? month
-      : new Date(date.getFullYear(), date.getMonth(), 1);
+    return onMonth(date) ? month : pages.monthOf(date);
   }
   function foldTo(target: 0 | 1, velocity = 0) {
     if (reduceFolding) {
