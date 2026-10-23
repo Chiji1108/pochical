@@ -67,14 +67,6 @@ enum ChatItemID {
   }
 }
 
-/// How the reader made a choice on a line: a touch is felt where it is
-/// felt, a screen reader's action never (spec/haptics.md), its own sounds
-/// answering it.
-enum ChoiceBy {
-  case touch
-  case screenReader
-}
-
 /// What a chat's lines show for a moment, beyond what they are: the line
 /// lit as it is gone to, and the line whose bubble is lifted over the chat
 /// while its menu is open.
@@ -86,17 +78,15 @@ enum ChoiceBy {
   /// The reactions the reader has just chosen, by line and emoji, each
   /// to spray its emoji once, as its pill shows it (ReactionRow).
   private(set) var chosen: Set<[String]> = []
-  /// How many reactions the reader has put on by a touch, each felt at
-  /// the tap that chose it (spec/haptics.md); taking one back, or putting
-  /// one on by a screen reader's action, adds none.
+  /// How many reactions the reader has put on, each felt at the tap that
+  /// chose it (spec/haptics.md); taking one back adds none.
   private(set) var reacted = 0
 
-  /// The reader put `emoji` on the line `lineID`, or took it back, `by` a
-  /// touch or a screen reader's action.
-  func chose(_ emoji: String, on lineID: String, _ on: Bool, by: ChoiceBy) {
+  /// The reader put `emoji` on the line `lineID`, or took it back.
+  func chose(_ emoji: String, on lineID: String, _ on: Bool) {
     if on {
       chosen.insert([lineID, emoji])
-      if by == .touch { reacted += 1 }
+      reacted += 1
     } else {
       chosen.remove([lineID, emoji])
     }
@@ -186,9 +176,8 @@ enum LineAction {
   case deleteUnsent
   /// Its photos stopped going up, with × on one: the line is not sent.
   case stopSending
-  /// The reader's reaction put on, or taken back, by a touch or by
-  /// VoiceOver.
-  case react(String, by: ChoiceBy)
+  /// The reader's reaction put on, or taken back.
+  case react(String)
   /// A poll's 行ける, on or off.
   case vote(Day, Bool)
   /// 日にちを決める.
@@ -375,7 +364,7 @@ struct LineView: View {
             ReactionRow(
               lineID: lineID, reactions: reactions, meID: meID, nameOf: nameOf,
               counted: countedReactions, marks: marks, shown: shown,
-              onReact: { act(.react($0, by: .touch)) }
+              onReact: { act(.react($0)) }
             )
             .transition(ReactionRow.transition(reduceMotion))
           }
@@ -507,7 +496,7 @@ struct LineView: View {
         let on = reaction.userIDs.contains(meID ?? "")
         actions.append(
           VoiceAction(title: on ? "\(reaction.emoji)を外す" : "\(reaction.emoji)を付ける") {
-            act(.react(reaction.emoji, by: .screenReader))
+            act(.react(reaction.emoji))
           })
       }
     }
