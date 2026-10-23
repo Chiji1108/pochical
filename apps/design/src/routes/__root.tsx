@@ -1,4 +1,5 @@
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
+import { workspaceGround } from "@pochical/prototype/components/design-page";
 import { DesignProviders } from "@pochical/prototype/components/design-providers";
 import {
   ColorSchemeContext,
@@ -8,7 +9,6 @@ import {
   useColorScheme,
   useThemeStyle,
 } from "@pochical/prototype/components/design-theme";
-import { workspaceGround } from "@pochical/showcase/components/design-page";
 import {
   createRootRoute,
   HeadContent,

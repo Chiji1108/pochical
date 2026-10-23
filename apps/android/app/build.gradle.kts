@@ -61,6 +61,7 @@ android {
 
 dependencies {
   implementation(project(":design"))
+  implementation(project(":kit"))
   implementation(project(":proto"))
   implementation(platform(libs.compose.bom))
   implementation(libs.compose.material3)

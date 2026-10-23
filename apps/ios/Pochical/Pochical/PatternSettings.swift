@@ -236,8 +236,8 @@ private enum LookPart: Hashable {
   case emoji, icon, symbol
 }
 
-/// パターンを追加 or パターンを編集: the pattern at the top, the way into its
-/// mark; the name and the time; whether it counts as a day off and the
+/// パターンを追加 or パターンを編集: its mark at the top, which opens 印と色;
+/// the name and the time; whether it counts as a day off and the
 /// next day's pattern; whether it is still in use; deleting at the foot.
 struct PatternEditor: View {
   @Environment(\.themeColors) private var colors
@@ -280,38 +280,28 @@ struct PatternEditor: View {
     let others = ownPatterns(rows, order).filter {
       $0.id != draft.id && (!$0.archived || $0.id == draft.nextDay)
     }
-    let saved = shaped
     Form {
-      // The pattern as it is being changed, and the way into its mark, as
-      // Contacts' edit screen puts 編集 under the photo.
+      // The pattern's mark, the way into it, as a group's and a face's.
       Section {
         PageLink(indicator: false) {
           LookEditor(draft: $draft, picked: $picked, others: others)
         } label: {
-          HStack(spacing: 16) {
-            VStack(spacing: 4) {
-              ShiftMark(pattern: saved, size: 44)
-              Text("印と色を変える")
-                .font(.caption)
-                .foregroundStyle(colors.accentDefault)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-              Text(draft.name.isEmpty ? "新しいパターン" : draft.name)
-                .font(.headline)
-                .foregroundStyle(draft.name.isEmpty ? colors.textTertiary : colors.textPrimary)
-              Text(patternTimeText(saved.time))
-                .font(.footnote)
-                .foregroundStyle(colors.textTertiary)
-            }
+          // One button to VoiceOver, its value the mark.
+          PictureHeader(label: "印と色を変える") {
+            ShiftMark(pattern: draft, size: 44)
+              .markFrame()
           }
-          .padding(.vertical, 4)
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("印と色を変える")
+          .accessibilityValue(markDescription)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("印と色を変える")
-        .accessibilityValue(markDescription)
-        .accessibilityAddTraits(.isButton)
+        // Pressed as the faces' and the group's are: the mark and its
+        // words alone, not the row across the page.
+        .buttonStyle(.borderless)
+        .fixedSize()
+        .frame(maxWidth: .infinity)
+        .settingsOnPage()
       }
-      .settingsRows()
 
       Section {
         LabeledContent("名前") {

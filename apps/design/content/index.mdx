@@ -3,7 +3,7 @@ title: デザイン資料
 description: 毎日のシフトに、やさしい余白。見るときは、すっきり。入力は、ポチッと。
 ---
 
-import { tryUrl } from "@pochical/showcase/lib/app-urls";
+import { tryUrl } from "../src/lib/try-url";
 
 ポチカルの画面を作るときの手本です。部品も画面もアプリの本物のコンポーネントで描いているので、コードと食い違いません。iOS と Android のアプリは、ここを見て同じものを作ります。
 
@@ -36,7 +36,7 @@ import { tryUrl } from "@pochical/showcase/lib/app-urls";
   <Card href="/demo" title="デモ">
     電話1台で、ポチカルを実際に触れます。比べる案もここで切り替えます。
   </Card>
-  <Card href={tryUrl("/")} title="自分のスマホで試す">
+  <Card href={tryUrl} title="自分のスマホで試す">
     スマホのホーム画面に置いて、自分の予定で使えます。
   </Card>
 </Cards>

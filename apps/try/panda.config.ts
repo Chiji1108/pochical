@@ -1,2 +1,2 @@
-// Panda CSS for this app, shared with apps/design.
-export { default } from "@pochical/showcase/panda";
+// Panda CSS for this app, from @pochical/styled-system's config.
+export { appConfig as default } from "@pochical/styled-system/config";
