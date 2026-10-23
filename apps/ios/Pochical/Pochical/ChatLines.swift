@@ -78,11 +78,15 @@ enum ChatItemID {
   /// The reactions the reader has just chosen, by line and emoji, each
   /// to spray its emoji once, as its pill shows it (ReactionRow).
   private(set) var chosen: Set<[String]> = []
+  /// How many reactions the reader has put on, each felt at the tap that
+  /// chose it (spec/haptics.md); taking one back adds none.
+  private(set) var reacted = 0
 
   /// The reader put `emoji` on the line `lineID`, or took it back.
   func chose(_ emoji: String, on lineID: String, _ on: Bool) {
     if on {
       chosen.insert([lineID, emoji])
+      reacted += 1
     } else {
       chosen.remove([lineID, emoji])
     }

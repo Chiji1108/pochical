@@ -2,7 +2,7 @@
 
 Where the native apps tap back under the finger. The web prototype cannot play haptics, so `/design` shows none of this; both native apps follow this list instead.
 
-Haptics are few on purpose. They answer a finger for what the eye cannot follow under it, or for what it did out of sight, and mark the one moment worth feeling: a month filled in. Pochical plays nothing for a celebration beyond that, no confetti or other effect over the screen.
+Haptics are few on purpose. They answer a finger for what the eye cannot follow under it, or for what it did out of sight, and mark the one moment worth feeling: a month filled in. Pochical plays nothing for a celebration beyond that, no confetti or other effect over the screen; the one effect over the lines, a reaction's spray (spec/chat.md, Reactions), is felt only as the tap that chose it, never by the effect itself.
 
 Both apps use the system's own feedback, which follows the device's own setting for touch haptics. There is no setting of Pochical's own.
 
@@ -15,6 +15,7 @@ Both apps use the system's own feedback, which follows the device's own setting 
 | A photo is saved to Photos (a chat's, the invitation's QR code, the month's picture), or words or a link are copied (a message's コピー, a link's リンクをコピー, the invitation's リンクをコピー). What it made is out of sight, in Photos or on the clipboard, so it is felt as well as said. Only once done: a failure plays nothing. | `.sensoryFeedback(.success)` | `HapticFeedbackType.Confirm` |
 | A row is picked up, moved past another and let go, when reordering patterns, people or anything else with handles. | `List`'s `.onMove` plays its own | `GestureThresholdActivate` on pick up, `SegmentFrequentTick` on each move past a row, `GestureEnd` on letting go |
 | A chat line dragged sideways to reply reaches `chatRules.replySwipe` (spec/chat.md, Replies): once each time it gets there, so the finger knows letting go answers it. | `UIImpactFeedbackGenerator(style: .light)` | `HapticFeedbackType.GestureThresholdActivate` |
+| The reader puts a reaction on a line: picked from its menu's bar or ほかの絵文字, or by a tap on a pill to join it (spec/chat.md, Reactions), as Messages' tapbacks and Telegram's reactions answer the tap. Only putting one on: taking one's own back plays nothing, and nor do others' reactions coming in. With motion reduced it plays as ever, though nothing sprays. | `.sensoryFeedback(.impact(weight: .light))` | `HapticFeedbackType.ToggleOn` |
 | A long press opens a menu: a system one plays its own; a chat line's, which the apps draw themselves (spec/chat.md), plays a light one as it opens. | `.contextMenu` plays its own; a line's: `UIImpactFeedbackGenerator(style: .light)` | `combinedClickable`'s long click plays its own (`hapticFeedbackEnabled`) |
 
 ## Where not
@@ -23,4 +24,4 @@ Both apps use the system's own feedback, which follows the device's own setting 
 
 - Turning months or pages by a swipe, switching tabs, opening screens and sheets. These are seen, and the OS plays nothing for its own.
 - Switches, pickers and segmented controls beyond what the system's own controls play.
-- Sending a chat message, a reaction, saving a form, and errors. What they do is seen on the screen, nothing a finger is not on at that moment buzzes, and a failure is said in words.
+- Sending a chat message, saving a form, and errors. What they do is seen on the screen, nothing a finger is not on at that moment buzzes, and a failure is said in words.
