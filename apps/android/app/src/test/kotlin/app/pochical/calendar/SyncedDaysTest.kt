@@ -3,6 +3,10 @@ package app.pochical.calendar
 import app.pochical.v1.pattern
 import app.pochical.v1.repeatOrder
 import java.time.LocalDate
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -49,6 +53,15 @@ class SyncedDaysTest {
       calendar.patterns,
     )
     assertEquals(DayEntry("day"), calendar.shown(day, day)[day])
+  }
+
+  @Test
+  fun onceReadTheCalendarHoldsWhatTheDeviceKeeps() = runBlocking {
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val opened = SyncedDays(test.database, test.edits, scope)
+    opened.awaitRead()
+    assertEquals(listOf("day", "night"), opened.calendar.value.patterns.map { it.id })
+    scope.cancel()
   }
 
   @Test

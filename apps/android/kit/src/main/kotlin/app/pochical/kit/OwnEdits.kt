@@ -184,6 +184,7 @@ class OwnEdits(private val database: AppDatabase, private val now: () -> Long = 
       }
     })
   }
-
-  private fun newId() = UUID.randomUUID().toString().lowercase()
 }
+
+/** A new id for a value, an edit or a device: a UUID as the wire writes them, lowercase. */
+fun newId(): String = UUID.randomUUID().toString().lowercase()

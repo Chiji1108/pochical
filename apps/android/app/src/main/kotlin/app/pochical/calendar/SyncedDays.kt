@@ -5,15 +5,16 @@ import app.pochical.kit.CoworkerRow
 import app.pochical.kit.OwnEdits
 import app.pochical.kit.PatternRow
 import app.pochical.kit.ShownDay
+import app.pochical.kit.newId
 import app.pochical.kit.ownCalendar
 import app.pochical.v1.DayField
 import java.time.LocalDate
-import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import app.pochical.kit.OwnCalendar as KitCalendar
@@ -24,9 +25,15 @@ import app.pochical.kit.OwnCalendar as KitCalendar
  * other devices.
  */
 class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: CoroutineScope) : OwnDays {
+  private val unread = Synced(KitCalendar.empty, emptyList())
+
   override val calendar: StateFlow<OwnCalendar> =
     combine(database.values().ownCalendar(), database.values().coworkers(), ::Synced)
-      .stateIn(scope, SharingStarted.Eagerly, Synced(KitCalendar.empty, emptyList()))
+      .stateIn(scope, SharingStarted.Eagerly, unread)
+
+  override suspend fun awaitRead() {
+    calendar.first { it !== unread }
+  }
 
   // One at a time in the order they were made: each reads the day as the one before left it.
   private val writes = Channel<suspend () -> Unit>(Channel.UNLIMITED)
@@ -46,7 +53,7 @@ class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: Coro
   }
 
   override fun addCoworker(name: String): Coworker {
-    val coworker = Coworker(UUID.randomUUID().toString().lowercase(), name)
+    val coworker = Coworker(newId(), name)
     writes.trySend { edits.addCoworker(name, coworker.id) }
     return coworker
   }
