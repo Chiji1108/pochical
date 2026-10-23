@@ -80,10 +80,12 @@ const picker = {
     placeItems: "center",
     width: "touch",
   }),
+  // The days 2px apart, each cell keeping 1px around its day.
+  cell: css({ padding: "1px" }),
   month: css({ margin: "12px 0" }),
   table: css({ borderCollapse: "collapse", width: "100%" }),
-  title: css({ margin: 0, textStyle: "body" }),
-  weekday: css({ paddingBottom: "8px" }),
+  title: css({ margin: 0, textStyle: "headline" }),
+  weekday: css({ padding: "1px 1px 8px" }),
 };
 
 // A day in the month. The picked day's fill outranks the week's colors,
@@ -200,6 +202,7 @@ export function MonthPicker({
                         const today = dateKey(date) === dateKey(designToday);
                         return (
                           <DatePicker.TableCell
+                            className={picker.cell}
                             key={day.toString()}
                             value={day}
                           >
