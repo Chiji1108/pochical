@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { account, session, user, verification } from "./db/auth-schema";
+import { isSuspended } from "./suspension";
 
 // A session lasts for good: an anonymous user's token is their only key,
 // so an expiry would only lock out someone who did not open the app for a
@@ -105,11 +106,7 @@ export const createAuth = (
           // with Apple, or by switching to their account, they are refused
           // with USER_SUSPENDED, which the apps say as such.
           before: async (created) => {
-            const [row] = await drizzle(d1)
-              .select({ suspendedAt: user.suspendedAt })
-              .from(user)
-              .where(eq(user.id, created.userId));
-            if (row?.suspendedAt !== null && row?.suspendedAt !== undefined) {
+            if (await isSuspended(d1, created.userId)) {
               throw new APIError("FORBIDDEN", {
                 code: USER_SUSPENDED,
                 message: "This account is suspended",

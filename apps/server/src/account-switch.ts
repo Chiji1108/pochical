@@ -9,8 +9,9 @@ import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { eraseUser } from "./account-deletion";
-import { account, user } from "./db/auth-schema";
+import { account } from "./db/auth-schema";
 import { getAuth } from "./session";
+import { isSuspended } from "./suspension";
 
 const APPLE = "apple";
 
@@ -53,11 +54,7 @@ const userWith = async (
  * suspension (spec/admin.md, ユーザー).
  */
 const refuseSuspended = async (env: Env, userId: string): Promise<void> => {
-  const [row] = await drizzle(env.DB)
-    .select({ suspendedAt: user.suspendedAt })
-    .from(user)
-    .where(eq(user.id, userId));
-  if (row?.suspendedAt !== null && row?.suspendedAt !== undefined) {
+  if (await isSuspended(env.DB, userId)) {
     throw new ConnectError("This account is suspended", Code.PermissionDenied);
   }
 };

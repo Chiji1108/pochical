@@ -43,7 +43,14 @@ export const loader = async ({ params }: Route.LoaderArgs) => {
 // Access let in; then the page again (Post/Redirect/Get).
 export const action = async ({ params, request, url }: Route.ActionArgs) => {
   const form = await request.formData();
-  const on = form.get("suspend") === "on";
+  const asked = form.get("suspend");
+  if (asked !== "on" && asked !== "off") {
+    return data(
+      { error: "停止か解除かが分かりませんでした。" },
+      { status: 400 }
+    );
+  }
+  const on = asked === "on";
   const done = await env.SERVER.suspend(
     params.userId,
     on,

@@ -2,7 +2,14 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { appleKeys, idToken, link } from "./apple-helpers";
-import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
+import {
+  call,
+  memberOf,
+  openSocket,
+  ORIGIN,
+  signInAnonymously,
+  userIdOf,
+} from "./helpers";
 
 const STAFF = "staff@pochical.app";
 
@@ -32,6 +39,15 @@ const signInWithApple = async (subject: string, nonce: string) => {
   );
   const body: unknown = response.ok ? null : await response.json();
   return { body, device, status: response.status };
+};
+
+/** The code a socket closes with, once it does. */
+const closed = async (socket: WebSocket): Promise<number> => {
+  const { promise, resolve } = Promise.withResolvers<number>();
+  socket.addEventListener("close", (event) => {
+    resolve(event.code);
+  });
+  return await promise;
 };
 
 describe("suspending a user", () => {
@@ -95,6 +111,27 @@ describe("suspending a user", () => {
         .filter((action) => action.target === userId)
         .map((action) => action.action),
     ]).toStrictEqual([200, ["unsuspend", "suspend"]]);
+  });
+
+  it("closes the sockets their sessions opened, in their groups too", async () => {
+    const token = await memberOf("suspending");
+    const own = await openSocket("/v1/me/socket", token);
+    const group = await openSocket("/v1/groups/suspending/socket", token);
+    const ownClosed = closed(own);
+    const groupClosed = closed(group);
+    await exports.AdminEntrypoint.suspend(await userIdOf(token), true, STAFF);
+    await expect(Promise.all([ownClosed, groupClosed])).resolves.toStrictEqual([
+      1000, 1000,
+    ]);
+  });
+
+  it("keeps when the suspension began, suspended again", async () => {
+    const { userId } = await linkedUser("apple-su4");
+    await exports.AdminEntrypoint.suspend(userId, true, STAFF);
+    const first = await exports.AdminEntrypoint.user(userId);
+    await exports.AdminEntrypoint.suspend(userId, true, STAFF);
+    const again = await exports.AdminEntrypoint.user(userId);
+    expect(again?.suspendedAtMs).toBe(first?.suspendedAtMs);
   });
 
   it("suspends no one for an id with no account", async () => {

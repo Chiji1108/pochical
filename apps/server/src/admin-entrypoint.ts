@@ -473,7 +473,12 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   async suspend(userId: string, on: boolean, by: string): Promise<boolean> {
     const updated = await drizzle(this.env.DB)
       .update(user)
-      .set({ suspendedAt: on ? new Date() : null })
+      // Suspended again (a retry, a second press), it keeps when it began.
+      .set({
+        suspendedAt: on
+          ? sql`coalesce(${user.suspendedAt}, ${Date.now()})`
+          : null,
+      })
       .where(eq(user.id, userId))
       .returning({ id: user.id });
     if (updated.length === 0) {
