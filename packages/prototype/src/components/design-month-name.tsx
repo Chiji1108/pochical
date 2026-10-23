@@ -2,7 +2,15 @@ import { css, cva } from "@pochical/styled-system/css";
 import type { MotionValue } from "motion/react";
 import { Fragment } from "react";
 
-import { formatMonth, formatYearMonth, monthAfter } from "../lib/design-days";
+import {
+  formatMonth,
+  formatPeriodInFull,
+  formatSlash,
+  formatYearMonth,
+  monthAfter,
+  periodOf,
+} from "../lib/design-days";
+import type { Period } from "../lib/design-days";
 import { useSettings } from "../lib/design-settings-store";
 import { useReducedMotion } from "../lib/device-media";
 import { monthIndex, RollingName, useTurn } from "./design-rolling";
@@ -76,6 +84,21 @@ export function monthWithYearOf(month: Date, english = false) {
     : formatYearMonth(month);
 }
 
+// A period titling a picture of it (spec/calendar.md, The shift period):
+// 2026年10月15日〜11月14日, or Oct 15 – Nov 14, 2026 in English, each
+// day's year with it when the period runs into the next.
+export function periodTitleOf(period: Period, english = false) {
+  if (!english) {
+    return formatPeriodInFull(period);
+  }
+  const { first, last } = period;
+  const dayOf = (date: Date) =>
+    `${shortMonths[date.getMonth()]} ${date.getDate()}`;
+  return first.getFullYear() === last.getFullYear()
+    ? `${dayOf(first)} – ${dayOf(last)}, ${last.getFullYear()}`
+    : `${dayOf(first)}, ${first.getFullYear()} – ${dayOf(last)}, ${last.getFullYear()}`;
+}
+
 // A month where room is tight, as on a button among twelve or in a
 // table's corner: 9月, or Sep.
 export function shortMonthOf(month: Date, english = false) {
@@ -93,11 +116,16 @@ export function shortMonthOf(month: Date, english = false) {
 // changes.
 export function MonthName({
   month,
+  period,
   progress,
   swiped = false,
   beside: besideMonths,
 }: {
   month: Date;
+  // A シフトの期間's page, named by its days (spec/calendar.md, The shift
+  // period): its first large, 10/15, its last after it as small as 月,
+  // 〜11/14, with the year of each over them.
+  period?: Period;
   progress?: MotionValue<number>;
   // Turned by a swipe, which has already brought the new name in.
   swiped?: boolean;
@@ -111,14 +139,34 @@ export function MonthName({
   const english = style === "english";
   const previous = besideMonths?.previous ?? monthAfter(month, -1);
   const next = besideMonths?.next ?? monthAfter(month, 1);
-  const nameOf = (date: Date) =>
-    english ? englishMonthOf(date) : String(date.getMonth() + 1);
-  const yearOf = (date: Date) => String(date.getFullYear());
+  const periodStart = period?.first.getDate() ?? 1;
+  const periodAt = (date: Date) => periodOf(date, periodStart);
+  const dayOf = (date: Date) =>
+    english ? `${englishMonthOf(date)} ${date.getDate()}` : formatSlash(date);
+  const nameOf = (date: Date) => {
+    if (period) {
+      return dayOf(periodAt(date).first);
+    }
+    return english ? englishMonthOf(date) : String(date.getMonth() + 1);
+  };
+  const endOf = (date: Date) =>
+    `${english ? " – " : "〜"}${dayOf(periodAt(date).last)}`;
+  const yearOf = (date: Date) => {
+    if (!period) {
+      return String(date.getFullYear());
+    }
+    const { first, last } = periodAt(date);
+    return first.getFullYear() === last.getFullYear()
+      ? String(first.getFullYear())
+      : `${first.getFullYear()} – ${last.getFullYear()}`;
+  };
   const beside = (of: (date: Date) => string) =>
     progress ? { next: of(next), previous: of(previous) } : {};
   return (
     <>
-      <span className={srOnly}>{formatYearMonth(month)}</span>
+      <span className={srOnly}>
+        {period ? formatPeriodInFull(period) : formatYearMonth(month)}
+      </span>
       <span aria-hidden="true" className={monthName.year({ lower: english })}>
         <RollingName
           {...beside(yearOf)}
@@ -140,7 +188,20 @@ export function MonthName({
             text={nameOf(month)}
             turn={turn}
           />
-          {english ? null : <span className={monthName.unit}>月</span>}
+          {period ? (
+            <span className={monthName.unit}>
+              <RollingName
+                {...beside(endOf)}
+                progress={progress}
+                still={reduceMotion}
+                text={endOf(month)}
+                turn={turn}
+              />
+            </span>
+          ) : null}
+          {english || period ? null : (
+            <span className={monthName.unit}>月</span>
+          )}
         </Fragment>
       </strong>
     </>

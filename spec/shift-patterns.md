@@ -28,7 +28,7 @@ A person's patterns sync between their devices as whole values, each last-writer
 
 ## The next day
 
-Entering a pattern with a `nextDay` also enters that pattern on the following day, replacing what was there but keeping that day's note and people. Selection then moves on two days. Selection never moves past the month's last day: entering stays there until 完了, even when the next day it filled is the first of the month after.
+Entering a pattern with a `nextDay` also enters that pattern on the following day, replacing what was there but keeping that day's note and people. Selection then moves on two days. Selection never moves past the page's last day, the month's or, with a シフトの期間, the period's (spec/calendar.md, The shift period): entering stays there until 完了, even when the next day it filled is the first of the page after (`spec/vectors/entering.json`, enter).
 
 It goes **one day only**. The following day's own `nextDay` is never followed, so patterns that name each other (夜勤 → 明け, 明け → 夜勤) are allowed and each entry still fills exactly one extra day. Implementations must not chain.
 
@@ -42,7 +42,7 @@ So a day may hold a memo and no shift. It is blank wherever blanks count (Blanks
 
 ## Blanks when entering ends
 
-Many people leave days off blank, moving on with 翌日へ. Rather than stop them while entering, 完了 asks once about the blank days of the month before its last entered day, and fills them with a day off in one tap. Blanks after the last entered day are left alone: those are more likely not decided yet (`spec/vectors/entering.json`, gaps). Someone with no pattern that counts as off leaves days off blank on purpose, so nothing is asked of them. Showing them blank can be chosen there, for those who keep days off blank for the look; the sheet says the look changes back in 休みの見せ方 (設定 > スタイル), as a blank day off is otherwise hard to tell from one not entered (spec/calendar.md, ポチポチ入力).
+Many people leave days off blank, moving on with 翌日へ. Rather than stop them while entering, 完了 asks once about the blank days of the page (the month, or a シフトの期間's period) before its last entered day, and fills them with a day off in one tap. Blanks after the last entered day are left alone: those are more likely not decided yet (`spec/vectors/entering.json`, gaps). Someone with no pattern that counts as off leaves days off blank on purpose, so nothing is asked of them. Showing them blank can be chosen there, for those who keep days off blank for the look; the sheet says the look changes back in 休みの見せ方 (設定 > スタイル), as a blank day off is otherwise hard to tell from one not entered (spec/calendar.md, ポチポチ入力).
 
 ## Picking a mark's icon
 

@@ -1,5 +1,7 @@
 import { createContext, useContext } from "react";
 
+import { addDays, daysOfPeriod, periodOf } from "../lib/design-days";
+import type { Period } from "../lib/design-days";
 import { fallbackHolidayCountry, holidays } from "../lib/holiday-names";
 
 // 週の始まり and 色をつける日 from settings. They are the viewer's own and
@@ -142,17 +144,17 @@ export function weekDatesFrom(date: Date, weekStart: number) {
 
 // Whole weeks covering the month.
 export function monthDatesFrom(month: Date, weekStart: number) {
-  const first = new Date(month.getFullYear(), month.getMonth(), 1);
-  const count = new Date(
-    month.getFullYear(),
-    month.getMonth() + 1,
-    0
-  ).getDate();
-  const offset = daysIntoWeek(first, weekStart);
+  return periodDatesFrom(periodOf(month, 1), weekStart);
+}
+
+// Whole weeks covering a page's days, a month's or a シフトの期間's
+// (spec/calendar.md, The shift period).
+export function periodDatesFrom(period: Period, weekStart: number) {
+  const offset = daysIntoWeek(period.first, weekStart);
+  const count = daysOfPeriod(period).length;
   return Array.from(
     { length: Math.ceil((offset + count) / weekLength) * weekLength },
-    (_, index) =>
-      new Date(month.getFullYear(), month.getMonth(), index - offset + 1)
+    (_, index) => addDays(period.first, index - offset)
   );
 }
 

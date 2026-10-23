@@ -1,5 +1,5 @@
 {
-  "about": "Entering shifts day by day (ポチポチ入力, spec/shift-patterns.md, The next day). enter: `days` are the days as they show, by date, each a `shift` (a pattern's id) with an optional `note` and `people`; entering `shift` on `date` (null clears it) gives `expected`. The day keeps its note and people; a pattern with a `nextDay` also enters that pattern on the following day (none when that pattern is gone), keeping that day's note and people, and only that day: the following day's own `nextDay` is never followed. Clearing a day clears only that day. `selects` is the day selected next: one day on, or two past a next day filled, but never past the month's last day, where entering stays until 完了 even when a next day fills the first of the month after. gaps: the blank days 完了 asks about in `month`: those before the month's last entered day; blanks after it are left alone.",
+  "about": "Entering shifts day by day (ポチポチ入力, spec/shift-patterns.md, The next day). enter: `days` are the days as they show, by date, each a `shift` (a pattern's id) with an optional `note` and `people`; entering `shift` on `date` (null clears it) gives `expected`. The day keeps its note and people; a pattern with a `nextDay` also enters that pattern on the following day (none when that pattern is gone), keeping that day's note and people, and only that day: the following day's own `nextDay` is never followed. Clearing a day clears only that day. `selects` is the day selected next: one day on, or two past a next day filled, but never past the last day of the page, `page` as `[first, last]` (`date`'s month unless given; a シフトの期間's period, spec/vectors/periods.json), where entering stays until 完了 even when a next day fills the first of the page after. gaps: the blank days 完了 asks about in `page`, `[first, last]` (a month, or a period): those before its last entered day; blanks after it are left alone.",
   "enter": [
     {
       "name": "a shift takes the day, keeping its memo and people",
@@ -170,32 +170,99 @@
         }
       },
       "selects": "2026-10-02"
+    },
+    {
+      "name": "a period runs on into the next month",
+      "patterns": [
+        {
+          "id": "day"
+        }
+      ],
+      "days": {},
+      "date": "2026-10-31",
+      "shift": "day",
+      "page": ["2026-10-15", "2026-11-14"],
+      "expected": {
+        "2026-10-31": {
+          "shift": "day"
+        }
+      },
+      "selects": "2026-11-01"
+    },
+    {
+      "name": "the next day runs into the next period",
+      "patterns": [
+        {
+          "id": "night",
+          "nextDay": "after"
+        },
+        {
+          "id": "after"
+        }
+      ],
+      "days": {},
+      "date": "2026-11-14",
+      "shift": "night",
+      "page": ["2026-10-15", "2026-11-14"],
+      "expected": {
+        "2026-11-14": {
+          "shift": "night"
+        },
+        "2026-11-15": {
+          "shift": "after"
+        }
+      },
+      "selects": "2026-11-14"
     }
   ],
   "gaps": [
     {
       "name": "blanks between entered days",
       "days": ["2026-10-01", "2026-10-02", "2026-10-05"],
-      "month": "2026-10",
+      "page": ["2026-10-01", "2026-10-31"],
       "expected": ["2026-10-03", "2026-10-04"]
     },
     {
       "name": "blanks after the last entered day are left alone",
       "days": ["2026-10-01", "2026-10-03"],
-      "month": "2026-10",
+      "page": ["2026-10-01", "2026-10-31"],
       "expected": ["2026-10-02"]
     },
     {
       "name": "a month with nothing entered has no gaps",
       "days": [],
-      "month": "2026-10",
+      "page": ["2026-10-01", "2026-10-31"],
       "expected": []
     },
     {
-      "name": "only the month's own days count",
+      "name": "only the page's own days count",
       "days": ["2026-09-30", "2026-10-02", "2026-11-03"],
-      "month": "2026-10",
+      "page": ["2026-10-01", "2026-10-31"],
       "expected": ["2026-10-01"]
+    },
+    {
+      "name": "a period's blanks, across the month",
+      "days": ["2026-10-14", "2026-10-16", "2026-11-02", "2026-11-15"],
+      "page": ["2026-10-15", "2026-11-14"],
+      "expected": [
+        "2026-10-15",
+        "2026-10-17",
+        "2026-10-18",
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23",
+        "2026-10-24",
+        "2026-10-25",
+        "2026-10-26",
+        "2026-10-27",
+        "2026-10-28",
+        "2026-10-29",
+        "2026-10-30",
+        "2026-10-31",
+        "2026-11-01"
+      ]
     }
   ]
 }

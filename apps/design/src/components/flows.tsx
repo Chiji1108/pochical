@@ -10,6 +10,7 @@ import {
   dateKey,
   gapDaysIn,
   initialDesignSchedule,
+  periodOf,
 } from "@pochical/prototype/lib/design-days";
 import type { Schedule } from "@pochical/prototype/lib/design-days";
 import { chatKey, groupChat } from "@pochical/prototype/lib/design-group-data";
@@ -105,7 +106,7 @@ function filledGaps(schedule: Schedule): Schedule {
   return {
     ...schedule,
     ...Object.fromEntries(
-      gapDaysIn(schedule, october).map((date) => [
+      gapDaysIn(schedule, periodOf(october, 1)).map((date) => [
         dateKey(date),
         { shift: "off" as const },
       ])
@@ -125,7 +126,7 @@ function GapFrame({
   note?: string;
   schedule?: Schedule;
 } & Partial<GapSheetProps>) {
-  const days = gapDaysIn(schedule, october);
+  const days = gapDaysIn(schedule, periodOf(october, 1));
   return (
     <CalendarFrame
       label={label}

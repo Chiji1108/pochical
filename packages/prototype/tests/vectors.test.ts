@@ -13,6 +13,7 @@ import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
 import ownDays from "../../../spec/vectors/own-days.json";
 import patternChanges from "../../../spec/vectors/patterns.json";
+import periods from "../../../spec/vectors/periods.json";
 import reconnect from "../../../spec/vectors/reconnect.json";
 import repeat from "../../../spec/vectors/repeat.json";
 import review from "../../../spec/vectors/review.json";
@@ -23,7 +24,11 @@ import together from "../../../spec/vectors/together.json";
 import unread from "../../../spec/vectors/unread.json";
 import widgets from "../../../spec/vectors/widgets.json";
 import { bytesOf } from "../src/components/design-chat-photos";
-import { defaultWeekSettings } from "../src/components/design-week";
+import { periodTitleOf } from "../src/components/design-month-name";
+import {
+  defaultWeekSettings,
+  periodDatesFrom,
+} from "../src/components/design-week";
 import { guessLook, nextColor } from "../src/components/shift-mark";
 import {
   albumRows,
@@ -74,8 +79,14 @@ import {
   withOrderPut,
   withoutOrder,
   withShiftEntered,
+  formatPeriod,
+  formatPeriodInFull,
+  formatPeriodWithYear,
+  monthAfter,
+  periodHolding,
+  periodOf,
 } from "../src/lib/design-days";
-import type { OwnDays, Schedule } from "../src/lib/design-days";
+import type { OwnDays, Period, Schedule } from "../src/lib/design-days";
 import {
   chatKey,
   groupsUnread,
@@ -362,6 +373,50 @@ const bookOfVectors = (patterns: readonly Partial<Pattern>[]): PatternBook =>
     patterns.map((pattern) => [pattern.id ?? "", patternOf(pattern)] as const)
   );
 
+const periodOfVector = ([first, last]: readonly string[]): Period => ({
+  first: dayOf(first ?? ""),
+  last: dayOf(last ?? ""),
+});
+const keysOf = ({ first, last }: Period) => [dateKey(first), dateKey(last)];
+
+describe("spec/vectors/periods.json", () => {
+  for (const { name, start, day, expected } of periods.containing) {
+    test(name, () => {
+      expect(keysOf(periodHolding(dayOf(day), start))).toEqual(expected);
+    });
+  }
+  for (const { name, start, page, by, expected } of periods.stepped) {
+    test(name, () => {
+      const month = monthAfter(periodOfVector(page).first, by);
+      expect(keysOf(periodOf(month, start))).toEqual(expected);
+    });
+  }
+  for (const { name, start, month, expected } of periods.picked) {
+    test(name, () => {
+      expect(keysOf(periodOf(dayOf(`${month}-01`), start))).toEqual(expected);
+    });
+  }
+  for (const { name, weekStart, page, expected } of periods.weeks) {
+    test(name, () => {
+      const dates = periodDatesFrom(periodOfVector(page), weekStart);
+      expect({
+        first: dateKey(dates[0] ?? new Date(Number.NaN)),
+        last: dateKey(dates.at(-1) ?? new Date(Number.NaN)),
+        weeks: dates.length / 7,
+      }).toEqual(expected);
+    });
+  }
+  for (const { name, period, short, year, full, english } of periods.written) {
+    test(name, () => {
+      const written = periodOfVector(period);
+      expect(formatPeriod(written)).toBe(short);
+      expect(formatPeriodWithYear(written)).toBe(year);
+      expect(formatPeriodInFull(written)).toBe(full);
+      expect(periodTitleOf(written, true)).toBe(english);
+    });
+  }
+});
+
 describe("spec/vectors/entering.json", () => {
   for (const {
     name,
@@ -371,6 +426,7 @@ describe("spec/vectors/entering.json", () => {
     shift,
     expected,
     selects,
+    ...vector
   } of entering.enter) {
     test(name, () => {
       const book = bookOfVectors(patterns);
@@ -382,17 +438,22 @@ describe("spec/vectors/entering.json", () => {
         book
       );
       expect(plain(after)).toEqual(expected);
+      // The page is the date's month unless the vector names a period.
+      const last =
+        "page" in vector
+          ? dayOf(vector.page[1])
+          : periodOf(dayOf(date), 1).last;
       expect(
-        dateKey(selectedAfter(dayOf(date), daysMovedOn(entered, book)))
+        dateKey(selectedAfter(dayOf(date), daysMovedOn(entered, book), last))
       ).toBe(selects);
     });
   }
-  for (const { name, days, month, expected } of entering.gaps) {
+  for (const { name, days, page, expected } of entering.gaps) {
     test(name, () => {
       const schedule: Schedule = Object.fromEntries(
         days.map((date) => [date, { shift: "day" }])
       );
-      const gaps = gapDaysIn(schedule, dayOf(`${month}-01`)).map(dateKey);
+      const gaps = gapDaysIn(schedule, periodOfVector(page)).map(dateKey);
       expect(gaps).toEqual(expected);
     });
   }
