@@ -14,9 +14,33 @@
   <string name="appearance_system">端末に合わせると、端末の設定に合わせてライトとダークが切り替わります。</string>
   <string name="appearance_always_dark">テーマの「%1$s」はいつもダークで表示されます。ほかのテーマにすると、ここでの設定に戻ります。</string>
   <string name="cancel">キャンセル</string>
+  <string name="ok">OK</string>
+  <string name="close">閉じる</string>
+  <string name="none">なし</string>
+  <string name="name">名前</string>
+  <string name="add">追加</string>
+  <string name="clear">消す</string>
   <string name="calendar_this_month">今月</string>
+  <string name="calendar_this_week">今週</string>
+  <string name="day_before">前の日</string>
+  <string name="day_after">次の日</string>
+  <string name="day_shift">シフト</string>
+  <string name="day_shift_search">シフトを探す</string>
+  <string name="day_hours">時間</string>
+  <string name="pattern_no_time">時間なし</string>
+  <string name="day_hours_changed">変更済み</string>
+  <string name="day_hours_reset">標準（%1$s）に戻す</string>
+  <string name="day_people">一緒に働く人</string>
+  <string name="day_people_add">追加</string>
+  <string name="day_people_add_first">人を追加</string>
+  <string name="day_people_add_title">一緒に働く人を追加</string>
+  <string name="day_people_full">一緒に働く人は%1$d人までです</string>
+  <string name="day_memo">メモ</string>
+  <string name="day_memo_clear">メモを消す</string>
+  <string name="day_clear">この日のシフトを消す</string>
+  <string name="day_clear_title">この日のシフトを消しますか？</string>
+  <string name="day_clear_hours">時間の変更</string>
+  <string name="day_clear_lost">%1$sも消えます。</string>
   <string name="calendar_pick_month">月を選ぶ</string>
   <string name="calendar_show_month">表示</string>
-  <!-- Sunday first, as the settings count weekdays. -->
-  <string name="calendar_weekday_letters" translatable="false">日月火水木金土</string>
 </resources>

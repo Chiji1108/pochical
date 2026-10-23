@@ -8,8 +8,14 @@ import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,8 +29,8 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
@@ -42,12 +48,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -60,17 +70,30 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.pochical.LocalDeviceSettings
 import app.pochical.LocalThemeColors
 import app.pochical.R
+import app.pochical.RootPage
 import app.pochical.Week
+import app.pochical.design.Springs
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /** How far the pages reach either side of the month the screen opened on. Only the pages in view are drawn. */
 private const val MONTHS_AROUND = 120
+
+/** How far the weeks reach either side of the one a day opened in. */
+private const val WEEKS_AROUND = 520
+
+/** How far a pull let go must have unfolded the month for it to unfold. */
+private const val UNFOLD_SHARE = 1f / 3
+
+/** A pull let go faster than this, in pixels a second, goes the way it was flicked. */
+private const val UNFOLD_FLICK = 1200f
 
 /** Between a page's weeks, and between a week's days. */
 private val DAY_GAP = 4.dp
@@ -80,10 +103,16 @@ private val LEAST_DAY_HEIGHT = 44.dp
 
 private val SCREEN_EDGE = 16.dp
 
-/** カレンダー: the person's month, a page a month, turned by swiping (spec/calendar.md, The month). */
+/**
+ * カレンダー: the person's month, a page a month, turned by swiping, and a
+ * day opened from it under its week (spec/calendar.md, The month and A
+ * day's detail). `onDayOpen` says when a day opens and closes, for the tab
+ * bar to give way to it.
+ */
 @Composable
-fun CalendarScreen() {
-  val calendar by LocalOwnDays.current.calendar.collectAsStateWithLifecycle()
+fun CalendarScreen(open: (RootPage) -> Unit, onDayOpen: (Boolean) -> Unit) {
+  val days = LocalOwnDays.current
+  val calendar by days.calendar.collectAsStateWithLifecycle()
   val week = LocalDeviceSettings.current.device.week
   val today = rememberToday()
   val country = remember { holidayCountry() }
@@ -97,27 +126,126 @@ fun CalendarScreen() {
   val pageOf = { month: YearMonth -> ChronoUnit.MONTHS.between(months.start, month).toInt() }
   val pager = rememberPagerState(initialPage = MONTHS_AROUND) { pageOf(months.endInclusive) + 1 }
   val scope = rememberCoroutineScope()
-  val thisMonthPage = pageOf(YearMonth.from(today))
   val turnTo = { month: YearMonth ->
     scope.launch { if (reduceMotion) pager.scrollToPage(pageOf(month)) else pager.animateScrollToPage(pageOf(month)) }
   }
-  Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))) {
-    Heading(pager, months, monthAt, thisMonthPage, reduceMotion, onPick = { turnTo(it) }, onThisMonth = { turnTo(YearMonth.from(today)) })
+
+  // The day opened, and the month its week folds out of: the one shown
+  // while the week is one of its rows, a faded day's too, else the day's own.
+  var openedKey by rememberSaveable { mutableStateOf<String?>(null) }
+  var foldedKey by rememberSaveable { mutableStateOf<String?>(null) }
+  val opened = openedKey?.let(LocalDate::parse)
+  val folded = foldedKey?.let(YearMonth::parse) ?: monthAt(pager.currentPage)
+  // 一緒に働く人 stays unfolded as another day opens, for noting people day after day.
+  var peopleOpen by rememberSaveable { mutableStateOf(false) }
+  // How far the month is folded into the opened day's week, 0 to 1.
+  val fold = remember { Animatable(if (opened != null) 1f else 0f) }
+  var closing by remember { mutableStateOf(false) }
+  val dayOpen by rememberUpdatedState(onDayOpen)
+  val showsDay = opened != null && !closing
+  LaunchedEffect(showsDay) { dayOpen(showsDay) }
+
+  fun monthShowing(day: LocalDate, month: YearMonth): YearMonth =
+    if (monthWeeks(month, week.start).any { day in it }) month else YearMonth.from(day)
+
+  fun openDay(day: LocalDate) {
+    foldedKey = monthShowing(day, folded).toString()
+    openedKey = day.toString()
+    scope.launch { if (reduceMotion) fold.snapTo(1f) else fold.animateTo(1f, Springs.standard()) }
+  }
+
+  suspend fun unfold() {
+    closing = true
+    // The pages wait on the month the week folds back into.
+    pager.requestScrollToPage(pageOf(folded))
+    if (reduceMotion) fold.snapTo(0f) else fold.animateTo(0f, Springs.standard())
+    openedKey = null
+    foldedKey = null
+    closing = false
+  }
+
+  // A back, predictive or not, unfolds the month, following the finger as it goes.
+  PredictiveBackHandler(enabled = opened != null && !closing) { progress ->
+    try {
+      progress.collect { fold.snapTo(1f - it.progress) }
+      unfold()
+    } catch (e: CancellationException) {
+      fold.animateTo(1f, Springs.standard())
+      throw e
+    }
+  }
+
+  Column(
+    Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+  ) {
+    Heading(
+      pages = if (opened != null) pageOf(folded).toFloat() else pager.currentPage + pager.currentPageOffsetFraction,
+      months = months,
+      monthAt = monthAt,
+      todayPage = pageOf(YearMonth.from(today)),
+      reduceMotion = reduceMotion,
+      dayOpen = opened != null,
+      thisWeekAway = opened != null && opened.weekStartingOn(week.start) != today.weekStartingOn(week.start),
+      onPick = { turnTo(it) },
+      onThisMonth = { turnTo(YearMonth.from(today)) },
+      onThisWeek = { openDay(today) },
+    )
     WeekdayRow(week, Modifier.padding(horizontal = SCREEN_EDGE))
     BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
       val cell = dayHeight(fitting = maxHeight - DAY_GAP)
-      // The pages run to the screen's edges, so a month slides out of
-      // sight rather than being cut off inside them.
-      HorizontalPager(pager, Modifier.fillMaxWidth(), beyondViewportPageCount = 1, verticalAlignment = Alignment.Top) { page ->
-        MonthPage(
-          monthAt(page),
-          week,
-          calendar,
-          today,
-          country,
-          cell,
-          Modifier.padding(horizontal = SCREEN_EDGE),
-        )
+      val monthHeight = cell * 6 + DAY_GAP * 5
+      Column {
+        val pageDays = PageDays(calendar, week, today, country, cell, selected = opened, onSelect = ::openDay)
+        // Pulling the week down unfolds the month, following the finger: let
+        // go past a third of the way, or flicked down, it unfolds, else it
+        // folds back. A pull never presses the day it starts on.
+        val unfoldPx = with(LocalDensity.current) { (monthHeight - cell).toPx() }
+        val pull =
+          rememberDraggableState { down -> scope.launch { fold.snapTo((fold.value - down / unfoldPx).coerceIn(0f, 1f)) } }
+        Box(
+          Modifier.fillMaxWidth()
+            .height(cell + (monthHeight - cell) * (1 - fold.value))
+            .clipToBounds()
+            .draggable(
+              pull,
+              Orientation.Vertical,
+              enabled = opened != null && !closing,
+              onDragStopped = { speed ->
+                val unfolds = if (abs(speed) > UNFOLD_FLICK) speed > 0 else fold.value < 1 - UNFOLD_SHARE
+                if (unfolds) unfold() else fold.animateTo(1f, Springs.standard())
+              },
+            )
+        ) {
+          when {
+            opened == null && fold.value == 0f ->
+              // The pages run to the screen's edges, so a month slides out
+              // of sight rather than being cut off inside them.
+              HorizontalPager(pager, Modifier.fillMaxWidth(), beyondViewportPageCount = 1, verticalAlignment = Alignment.Top) {
+                page ->
+                MonthPage(monthAt(page), pageDays, Modifier.padding(horizontal = SCREEN_EDGE))
+              }
+            opened != null && fold.value == 1f && !closing ->
+              WeekPager(opened, week.start, pageDays) { day ->
+                foldedKey = monthShowing(day, folded).toString()
+                openedKey = day.toString()
+              }
+            else ->
+              MonthPage(folded, pageDays, Modifier.padding(horizontal = SCREEN_EDGE), foldedInto = opened, fold = fold.value)
+          }
+        }
+        if (opened != null && !closing) {
+          DayDetail(
+            day = opened,
+            calendar = calendar,
+            days = days,
+            peopleOpen = peopleOpen,
+            onPeopleOpenChange = { peopleOpen = it },
+            onStep = { step -> opened.plusDays(step.toLong()).let { openDay(it) } },
+            onClose = { scope.launch { unfold() } },
+            onPickShift = { open(RootPage.ShiftChoice(opened.toString())) },
+            modifier = Modifier.weight(1f).padding(top = 8.dp).graphicsLayer { alpha = fold.value },
+          )
+        }
       }
     }
   }
@@ -125,20 +253,24 @@ fun CalendarScreen() {
 
 /**
  * The month's name, which opens 月を選ぶ, and 今月, which fades in as the
- * pages leave this month and out as they come back.
+ * pages leave this month and out as they come back. With a day open, the
+ * name stays put and 今週 shows while another week is open.
  */
 @Composable
 private fun Heading(
-  pager: PagerState,
+  pages: Float,
   months: ClosedRange<YearMonth>,
   monthAt: (Int) -> YearMonth,
-  thisMonthPage: Int,
+  todayPage: Int,
   reduceMotion: Boolean,
+  dayOpen: Boolean,
+  thisWeekAway: Boolean,
   onPick: (YearMonth) -> Unit,
   onThisMonth: () -> Unit,
+  onThisWeek: () -> Unit,
 ) {
-  val pages = pager.currentPage + pager.currentPageOffsetFraction
   var picking by remember { mutableStateOf(false) }
+  val colors = LocalThemeColors.current
   Row(
     Modifier.fillMaxWidth().padding(start = SCREEN_EDGE + 8.dp, end = SCREEN_EDGE, top = 8.dp, bottom = 12.dp),
     verticalAlignment = Alignment.Bottom,
@@ -148,23 +280,23 @@ private fun Heading(
       pages,
       monthAt,
       reduceMotion,
-      Modifier.clickable(onClickLabel = pickLabel, role = Role.Button) { picking = true },
+      // Only the month on its own opens 月を選ぶ; a day's week keeps to the days around.
+      if (dayOpen) Modifier else Modifier.clickable(onClickLabel = pickLabel, role = Role.Button) { picking = true },
     )
     Spacer(Modifier.weight(1f))
-    val away = abs(pages - thisMonthPage).coerceAtMost(1f)
+    val away = if (dayOpen) (if (thisWeekAway) 1f else 0f) else abs(pages - todayPage).coerceAtMost(1f)
     if (away > 0f) {
-      val colors = LocalThemeColors.current
       OutlinedButton(
-        onClick = onThisMonth,
+        onClick = if (dayOpen) onThisWeek else onThisMonth,
         modifier = Modifier.alpha(away),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
       ) {
-        Text(stringResource(R.string.calendar_this_month))
+        Text(stringResource(if (dayOpen) R.string.calendar_this_week else R.string.calendar_this_month))
       }
     }
   }
   if (picking) {
-    MonthPicker(monthAt(pager.currentPage), months, onPick = onPick, onDismiss = { picking = false })
+    MonthPicker(monthAt(pages.roundToInt()), months, onPick = onPick, onDismiss = { picking = false })
   }
 }
 
@@ -220,12 +352,11 @@ private fun MonthPicker(
 @Composable
 private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
-  val names = stringResource(R.string.calendar_weekday_letters)
   Row(modifier.padding(bottom = 12.dp).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
     repeat(7) { index ->
       val weekday = (week.start + index) % 7
       Text(
-        names[weekday].toString(),
+        weekdayLetter(weekday),
         Modifier.weight(1f),
         fontSize = 11.sp,
         color =
@@ -240,42 +371,110 @@ private fun WeekdayRow(week: Week, modifier: Modifier = Modifier) {
   }
 }
 
-/** A month's page: its weeks, a row each, with room kept for six, so what is under it stays put as the months turn. */
+/** What every page's days are drawn with. */
+private class PageDays(
+  val calendar: OwnCalendar,
+  val week: Week,
+  val today: LocalDate,
+  val country: String,
+  val cell: Dp,
+  /** The day opened, framed. */
+  val selected: LocalDate?,
+  val onSelect: (LocalDate) -> Unit,
+) {
+  private val patterns = calendar.patterns.associateBy { it.id }
+
+  /** A week's row, its days of other months faded when `month` is given. */
+  @Composable
+  fun Week(days: List<LocalDate>, shown: Map<LocalDate, DayEntry>, fadingOutside: YearMonth?, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
+      for (day in days) {
+        val entry = shown[day]
+        DayCell(
+          DayLook(
+            day = day,
+            entry = entry,
+            pattern = entry?.let { patterns[it.shift] },
+            note = calendar.note(day),
+            holiday = day.holidayName(country),
+            outside = fadingOutside != null && YearMonth.from(day) != fadingOutside,
+            isToday = day == today,
+            isSelected = day == selected,
+          ),
+          height = cell,
+          colorsHoliday = week.holiday,
+          onClick = { onSelect(day) },
+          modifier = Modifier.weight(1f),
+        )
+      }
+    }
+  }
+}
+
+/**
+ * A month's page: its weeks, a row each, with room kept for six, so what is
+ * under it stays put as the months turn. A day opened folds the page into
+ * its week, as the Calendar apps do and /design's: the weeks move up to bring
+ * that week to the top while the others fade, all following `fold`, so a
+ * predictive back moves it as the animations do.
+ */
 @Composable
 private fun MonthPage(
   month: YearMonth,
-  week: Week,
-  calendar: OwnCalendar,
-  today: LocalDate,
-  country: String,
-  cell: Dp,
+  days: PageDays,
   modifier: Modifier = Modifier,
+  foldedInto: LocalDate? = null,
+  fold: Float = 0f,
 ) {
-  val weeks = remember(month, week.start) { monthWeeks(month, week.start) }
-  val shown = remember(calendar, weeks) { calendar.shown(weeks.first().first(), weeks.last().last()) }
-  val patterns = remember(calendar) { calendar.patterns.associateBy { it.id } }
-  Column(modifier.height(cell * 6 + DAY_GAP * 5), verticalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-    for (days in weeks) {
-      Row(horizontalArrangement = Arrangement.spacedBy(DAY_GAP)) {
-        for (day in days) {
-          val entry = shown[day]
-          DayCell(
-            DayLook(
-              day = day,
-              entry = entry,
-              pattern = entry?.let { patterns[it.shift] },
-              note = calendar.note(day),
-              holiday = day.holidayName(country),
-              outside = YearMonth.from(day) != month,
-              isToday = day == today,
-            ),
-            height = cell,
-            colorsHoliday = week.holiday,
-            modifier = Modifier.weight(1f),
-          )
-        }
-      }
+  val weeks = remember(month, days.week.start) { monthWeeks(month, days.week.start) }
+  val shown = remember(days.calendar, weeks) { days.calendar.shown(weeks.first().first(), weeks.last().last()) }
+  val row = foldedInto?.let { day -> weeks.indexOfFirst { day in it } }?.takeIf { it >= 0 } ?: 0
+  Column(
+    modifier
+      .wrapContentHeight(Alignment.Top, unbounded = true)
+      .height(days.cell * 6 + DAY_GAP * 5)
+      .graphicsLayer { translationY = -row * (days.cell + DAY_GAP).toPx() * fold },
+    verticalArrangement = Arrangement.spacedBy(DAY_GAP),
+  ) {
+    weeks.forEachIndexed { index, week ->
+      // Folded away, the rest of the month is out of reach.
+      val away = foldedInto != null && index != row
+      days.Week(
+        week,
+        shown,
+        fadingOutside = if (foldedInto == null) month else null,
+        Modifier.graphicsLayer { alpha = if (away) 1 - fold else 1f }.then(if (away) Modifier.clearAndSetSemantics {} else Modifier),
+      )
     }
+  }
+}
+
+/**
+ * The weeks around an opened day, a page each, swiped as the months are:
+ * once a swipe settles, the same weekday opens there; a day opened in another
+ * week slides the pages to it.
+ */
+@Composable
+private fun WeekPager(opened: LocalDate, weekStart: Int, days: PageDays, onOpen: (LocalDate) -> Unit) {
+  val base = remember { opened.weekStartingOn(weekStart) }
+  val weekAt = { page: Int -> base.plusWeeks((page - WEEKS_AROUND).toLong()) }
+  val openedPage = WEEKS_AROUND + ChronoUnit.WEEKS.between(base, opened.weekStartingOn(weekStart)).toInt()
+  val pager = rememberPagerState(initialPage = openedPage) { 2 * WEEKS_AROUND + 1 }
+  val latestOpened by rememberUpdatedState(opened)
+  LaunchedEffect(pager.settledPage) {
+    val week = weekAt(pager.settledPage)
+    val day = latestOpened
+    if (week != day.weekStartingOn(weekStart)) onOpen(week.plusDays(((day.weekday - weekStart + 7) % 7).toLong()))
+  }
+  LaunchedEffect(openedPage) { if (pager.currentPage != openedPage) pager.animateScrollToPage(openedPage) }
+  HorizontalPager(pager, Modifier.fillMaxWidth(), beyondViewportPageCount = 1, verticalAlignment = Alignment.Top) { page ->
+    val week = List(7) { weekAt(page).plusDays(it.toLong()) }
+    days.Week(
+      week,
+      remember(days.calendar, week) { days.calendar.shown(week.first(), week.last()) },
+      fadingOutside = null,
+      Modifier.padding(horizontal = SCREEN_EDGE),
+    )
   }
 }
 

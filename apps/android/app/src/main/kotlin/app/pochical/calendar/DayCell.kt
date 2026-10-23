@@ -2,6 +2,7 @@ package app.pochical.calendar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +17,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -63,7 +67,7 @@ data class DayLook(
  * stroke under it, and its shift's mark; today framed inside the day.
  */
 @Composable
-fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifier = Modifier) {
+fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
   val colors = LocalThemeColors.current
   val style = LocalDeviceSettings.current.device.look
   val pattern = look.pattern
@@ -85,8 +89,13 @@ fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifie
         }
       )
       .alpha(if (look.outside) 0.35f else 1f)
+      .clip(shape)
+      .clickable(role = Role.Button, onClick = onClick)
       .padding(vertical = 4.dp)
-      .clearAndSetSemantics { contentDescription = description(look) },
+      .clearAndSetSemantics {
+        contentDescription = description(look)
+        selected = look.isSelected
+      },
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(2.dp),
   ) {
@@ -138,7 +147,7 @@ fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifie
 
 /** What a screen reader hears: the date, a holiday, the shift and its moved hours, and a memo. */
 private fun description(look: DayLook): String = buildList {
-  add("${look.day.monthValue}月${look.day.dayOfMonth}日")
+  add(look.day.monthDayText)
   look.holiday?.let(::add)
   add(look.pattern?.name ?: "未入力")
   val pattern = look.pattern
