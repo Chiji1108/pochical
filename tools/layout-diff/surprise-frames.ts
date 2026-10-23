@@ -1,6 +1,6 @@
 // Records the calendar's おたのしみ as strips of frames, to look at it
 // without a visible browser (a hidden pane throttles animation frames).
-// Run with mise run demo up:
+// Run with mise run design up:
 //   bun tools/layout-diff/surprise-frames.ts <light|dark> [taps] [out dir]
 // Each tap picks its look at random; each strip is the /demo phone at the
 // frames' times after one tap.
@@ -14,7 +14,7 @@ import { chromium } from "playwright-core";
 const appearance = process.argv[2] ?? "light";
 const taps = Number(process.argv[3] ?? "8");
 const out = process.argv[4] ?? "tools/layout-diff/out/surprise";
-const base = process.env.BASE_URL ?? "http://localhost:3201";
+const base = process.env.BASE_URL ?? "http://localhost:3200";
 const FRAMES_AT = [400, 1200, 3000, 5200];
 const ROUND_MS = 6500;
 const SETTLE_MS = 1000;

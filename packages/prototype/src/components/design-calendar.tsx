@@ -724,11 +724,13 @@ const calendarPage = {
   // Under the month: its summary, then what to do next and the tab bar.
   // Room at the foot for the tab bar floating over it, 16px clear.
   bottom: css({
+    "&:has(> [data-tab-bar])": {
+      paddingBottom: "calc(var(--tab-bar-bottom) + 80px - var(--safe-bottom))",
+    },
     display: "flex",
     flexDirection: "column",
     flexShrink: 0,
     marginTop: "auto",
-    paddingBottom: "calc(var(--tab-bar-bottom) + 80px - var(--safe-bottom))",
   }),
   controls: css({ flexShrink: 0, minHeight: "92px", paddingTop: "12px" }),
   // Entering takes the bottom for the pattern buttons, on the screen's

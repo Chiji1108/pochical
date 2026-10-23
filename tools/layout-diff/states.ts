@@ -1,7 +1,7 @@
 import type { Page } from "playwright-core";
 
-// The screens layout-diff measures, each app's under its own dev server:
-// the demo in its variants and the taps that reach each screen from the
+// The screens layout-diff measures, under apps/design's dev server: /demo
+// in its variants and the taps that reach each screen from the
 // page as it loads, and the design documents. Add a state here when a
 // change reaches a screen none of these show.
 export type State = {
@@ -962,9 +962,9 @@ const designStates: State[] = [
   })),
 ];
 
-// The apps layout-diff measures, each under its own dev server.
-export type App = "design" | "demo";
-export const states: Record<App, State[]> = {
+// The pages layout-diff measures: the documents, or /demo.
+export type Pages = "design" | "demo";
+export const states: Record<Pages, State[]> = {
   demo: demoStates,
   design: designStates,
 };

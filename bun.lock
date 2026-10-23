@@ -43,32 +43,6 @@
         "wrangler": "^4.151.3",
       },
     },
-    "apps/demo": {
-      "name": "@pochical/demo",
-      "dependencies": {
-        "@pochical/design": "workspace:*",
-        "@pochical/jsx": "workspace:*",
-        "@pochical/prototype": "workspace:*",
-        "@pochical/showcase": "workspace:*",
-        "@pochical/styled-system": "workspace:*",
-        "@tanstack/react-router": "1.170.45",
-        "lucide-react": "^1.61.0",
-        "motion": "^14.4.0",
-        "react": "19.3.1",
-        "react-dom": "19.3.1",
-      },
-      "devDependencies": {
-        "@pandacss/dev": "^2.3.0",
-        "@tanstack/router-plugin": "1.168.47",
-        "@types/node": "24.19.2",
-        "@types/react": "~19.3.0",
-        "@types/react-dom": "^19.2.0",
-        "playwright-core": "^1.64.1",
-        "typescript": "~7.0.2",
-        "vite": "^8.0.0",
-        "wrangler": "^4.151.3",
-      },
-    },
     "apps/design": {
       "name": "@pochical/design-docs",
       "dependencies": {
@@ -96,6 +70,7 @@
         "@types/node": "24.19.2",
         "@types/react": "~19.3.0",
         "@types/react-dom": "^19.2.0",
+        "playwright-core": "^1.64.1",
         "tailwindcss": "4.3.3",
         "typescript": "~7.0.2",
         "vite": "^8.0.0",
@@ -781,8 +756,6 @@
     "@phosphor-icons/react": ["@phosphor-icons/react@2.1.10", "", { "peerDependencies": { "react": ">= 16.8", "react-dom": ">= 16.8" } }, "sha512-vt8Tvq8GLjheAZZYa+YG/pW7HDbov8El/MANW8pOAz4eGxrwhnbfrQZq0Cp4q8zBEu8NIhHdnr+r8thnfRSNYA=="],
 
     "@pochical/admin": ["@pochical/admin@workspace:apps/admin"],
-
-    "@pochical/demo": ["@pochical/demo@workspace:apps/demo"],
 
     "@pochical/design": ["@pochical/design@workspace:design"],
 

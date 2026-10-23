@@ -1,0 +1,47 @@
+{
+  "about": "The days a month's page shows (spec/calendar.md, The month). weeks: whole weeks covering `month` (\"YYYY-MM\"), each starting on `weekStart` (0 for Sunday through 6 for Saturday), the days of the months around it filling the first and last; `expected` gives the first day shown, the last, and how many weeks, four to six. The page keeps room for six whatever the count.",
+  "weeks": [
+    {
+      "name": "a month from a Thursday, weeks from Sunday",
+      "month": "2026-10",
+      "weekStart": 0,
+      "expected": { "first": "2026-09-27", "last": "2026-10-31", "weeks": 5 }
+    },
+    {
+      "name": "the same month, weeks from Monday, runs into the next",
+      "month": "2026-10",
+      "weekStart": 1,
+      "expected": { "first": "2026-09-28", "last": "2026-11-01", "weeks": 5 }
+    },
+    {
+      "name": "the same month, weeks from Saturday, takes six",
+      "month": "2026-10",
+      "weekStart": 6,
+      "expected": { "first": "2026-09-26", "last": "2026-11-06", "weeks": 6 }
+    },
+    {
+      "name": "a February from the week's first day fills four weeks exactly",
+      "month": "2026-02",
+      "weekStart": 0,
+      "expected": { "first": "2026-02-01", "last": "2026-02-28", "weeks": 4 }
+    },
+    {
+      "name": "a long month from a Saturday spans six weeks",
+      "month": "2026-08",
+      "weekStart": 0,
+      "expected": { "first": "2026-07-26", "last": "2026-09-05", "weeks": 6 }
+    },
+    {
+      "name": "the first weeks of a year start in the year before",
+      "month": "2027-01",
+      "weekStart": 1,
+      "expected": { "first": "2026-12-28", "last": "2027-01-31", "weeks": 5 }
+    },
+    {
+      "name": "a leap February ends on its 29th",
+      "month": "2028-02",
+      "weekStart": 3,
+      "expected": { "first": "2028-01-26", "last": "2028-02-29", "weeks": 5 }
+    }
+  ]
+}

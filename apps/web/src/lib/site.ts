@@ -15,7 +15,7 @@ export const siteOrigin = (): string | undefined => {
 // A page's own share image, at SHARE_IMAGE's size, in place of the site's.
 export type PageImage = { path: string; alt: string };
 
-export const storeLink = (
+const storeLink = (
   value: string | undefined,
   hostname: string
 ): string | undefined => {
@@ -31,3 +31,10 @@ export const storeLink = (
     return;
   }
 };
+
+// The app's store pages, once each URL is set for the build.
+export const appStoreUrl = (): string | undefined =>
+  storeLink(import.meta.env.VITE_APP_STORE_URL, "apps.apple.com");
+
+export const googlePlayUrl = (): string | undefined =>
+  storeLink(import.meta.env.VITE_GOOGLE_PLAY_URL, "play.google.com");
