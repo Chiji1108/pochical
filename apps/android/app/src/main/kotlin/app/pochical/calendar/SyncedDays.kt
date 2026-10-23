@@ -27,9 +27,10 @@ import app.pochical.kit.OwnCalendar as KitCalendar
 class SyncedDays(database: AppDatabase, private val edits: OwnEdits, scope: CoroutineScope) : OwnDays {
   private val unread = Synced(KitCalendar.empty, emptyList())
 
+  // Read first when first asked for, so what the launch puts in before then is in that first read.
   override val calendar: StateFlow<OwnCalendar> =
     combine(database.values().ownCalendar(), database.values().coworkers(), ::Synced)
-      .stateIn(scope, SharingStarted.Eagerly, unread)
+      .stateIn(scope, SharingStarted.Lazily, unread)
 
   override suspend fun awaitRead() {
     calendar.first { it !== unread }

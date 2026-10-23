@@ -25,6 +25,7 @@ import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.android.ActivityKey
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @ContributesIntoMap(AppScope::class, binding<Activity>())
 @ActivityKey
@@ -42,9 +43,10 @@ class MainActivity(
     installSplashScreen().setKeepOnScreenCondition { settings == null || !calendarRead }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
-    // Not cancelled with the activity, so a sample is never left half put in.
-    if (savedInstanceState == null) lifecycleScope.launch(NonCancellable) { takeLaunchOptions(intent, kit) }
     lifecycleScope.launch {
+      // Not cancelled with the activity, so a sample is never left half put in; read after it, so
+      // the first calendar drawn holds it.
+      if (savedInstanceState == null) withContext(NonCancellable) { takeLaunchOptions(intent, kit) }
       ownDays.awaitRead()
       calendarRead = true
     }
