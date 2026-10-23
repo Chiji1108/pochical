@@ -92,6 +92,8 @@ class SyncAccount(
   private var closingUser: Job? = null
   /** A new session the store could not keep yet; only [signIn], one at a time, reads and writes it. */
   private var unkept: StoredSession? = null
+  /** How many links the device has made; an answer to GetMe asked before the last is stale. */
+  private var links = 0L
   /** How many [sendOutbox] calls wait: the user's socket stays open for them in the background. */
   private var sending = 0
 
@@ -151,11 +153,11 @@ class SyncAccount(
                 throw NotSignedIn()
               }
               // Linked already, as from another of the person's devices: said as the server says it.
-              417 -> refreshLinked(credentials)
+              417 -> commands.send(Command.AskLinked(credentials.generation))
             }
             throw e
           }
-        if (result == LinkResult.Linked) commands.send(Command.Linked(credentials.generation, account.account))
+        if (result == LinkResult.Linked) commands.send(Command.Linked(credentials.generation, account.account, asOf = null))
         result
       }
       .await()
@@ -166,7 +168,7 @@ class SyncAccount(
    * elsewhere may not say, and keeps it with the session; an email this device read stays while the
    * provider does. Nothing changes when the server cannot be asked.
    */
-  private suspend fun refreshLinked(credentials: Credentials) {
+  private suspend fun askLinked(credentials: Credentials, asOf: Long) {
     val provider =
       try {
         UserCalls(http, server, credentials.token).linkedProvider()
@@ -174,7 +176,7 @@ class SyncAccount(
         if (e.code == Code.UNAUTHENTICATED) commands.send(Command.SessionUnknown(credentials.generation))
         return
       }
-    commands.send(Command.Linked(credentials.generation, provider?.let { LinkedAccount(it, email = null) }))
+    commands.send(Command.Linked(credentials.generation, provider?.let { LinkedAccount(it, email = null) }, asOf))
   }
 
   /** Keeps the group's socket open, while the app is in the foreground, until [GroupHold.release]. */
@@ -236,7 +238,8 @@ class SyncAccount(
         if (foreground || sending > 0) stretch.user.start()
         if (foreground) holds.keys.forEach { stretch.group(it).start() }
         if (command.kept) keepAgain()
-        stretch.scope.launch { refreshLinked(stretch.credentials) }
+        val asOf = links
+        stretch.scope.launch { askLinked(stretch.credentials, asOf) }
       }
       is Command.SessionUnknown -> {
         if (current?.credentials?.generation != command.generation) return
@@ -252,8 +255,15 @@ class SyncAccount(
         }
         mutableState.value = AccountState.SessionEnded
       }
+      is Command.AskLinked -> {
+        if (current?.credentials?.generation != command.generation) return
+        val asOf = links
+        current.scope.launch { askLinked(current.credentials, asOf) }
+      }
       is Command.Linked -> {
         if (current?.credentials?.generation != command.generation) return
+        // A link made here wins over what the server said of the user before it.
+        if (command.asOf == null) links += 1 else if (command.asOf != links) return
         val before = (state.value as? AccountState.SignedIn)?.linked
         val after =
           when {
@@ -390,9 +400,13 @@ class SyncAccount(
 
     /**
      * The stretch [generation]'s user is linked to [account], null while anonymous; one without an
-     * email names the provider alone, as the server does.
+     * email names the provider alone, as the server does. [asOf] is how many links the device had
+     * made when GetMe was asked, null for a link made here.
      */
-    data class Linked(val generation: Long, val account: LinkedAccount?) : Command
+    data class Linked(val generation: Long, val account: LinkedAccount?, val asOf: Long?) : Command
+
+    /** Ask the server which provider the stretch [generation]'s user is linked to. */
+    data class AskLinked(val generation: Long) : Command
 
     data object NetworkLost : Command
 

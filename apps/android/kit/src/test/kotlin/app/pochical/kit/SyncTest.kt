@@ -212,6 +212,23 @@ class SyncTest {
   }
 
   @Test
+  fun anAnswerAskedBeforeALinkDoesNotUndoIt() = runBlocking {
+    // GetMe, asked as the device signs in, answers anonymous only after the link is made.
+    server.getMeDelayMs = 1_000
+    val phone = device()
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+
+    phone.account.link(ProviderToken(LinkedAccount.Provider.Google, "t", "n", "a@example.com"))
+    val account = LinkedAccount(LinkedAccount.Provider.Google, "a@example.com")
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, account) } }
+    delay(1_500)
+
+    assertEquals(AccountState.SignedIn(server.userId, account), phone.account.state.value)
+    assertEquals(account, phone.sessions.read()?.linked)
+  }
+
+  @Test
   fun anAccountInUseChangesNothing() = runBlocking {
     val phone = device()
     phone.account.foreground()

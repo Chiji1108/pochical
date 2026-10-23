@@ -53,6 +53,9 @@ class FakeServer : AutoCloseable {
   /** What the anonymous sign-in answers in its body, null for the user as better-auth gives it. */
   @Volatile var signInBody: String? = null
 
+  /** How long `GetMe` takes to answer, in milliseconds. */
+  @Volatile var getMeDelayMs = 0L
+
   /** The provider `GetMe` says the user is linked to. */
   @Volatile var provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
 
@@ -86,6 +89,7 @@ class FakeServer : AutoCloseable {
                 MockResponse.Builder().code(401).body("""{"code":"unauthenticated"}""").build()
               } else {
                 MockResponse.Builder()
+                  .headersDelay(getMeDelayMs, TimeUnit.MILLISECONDS)
                   .addHeader("Content-Type", "application/proto")
                   .body(Buffer().write(getMeResponse { userId = this@FakeServer.userId; provider = this@FakeServer.provider }.toByteArray()))
                   .build()
