@@ -3,7 +3,7 @@ import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { invites } from "../src/db/schema";
 import { ChangesSchema, DayField } from "../src/gen/pochical/v1/sync_pb";
@@ -334,14 +334,22 @@ describe("a member's shifts in their groups", () => {
     await expect(alarmOf(user)).resolves.toBeNull();
   });
 
-  it("leaves the next round to a change made while it pushes", async () => {
+  it("pushes a change made while it pushes in the same run, the alarm the change set lost", async () => {
     const { maker, user } = await someone();
+    const storage = await runInDurableObject(user, (_, state) => state.storage);
     // The change comes as the push below fails, once: every round it
     // made would fail and make it again, on past the file's last test.
     let changing = false;
+    let tries = 0;
     await failPushesTo(user, ["!unreachable"], (instance) => {
+      tries += 1;
       if (changing) {
         changing = false;
+        // The runtime drops an alarm set for the millisecond the run was
+        // set for, as the clock falls; here each one the change sets.
+        const dropped = vi
+          .spyOn(storage, "setAlarm")
+          .mockResolvedValue(undefined);
         // Out of the group and in again, which pushes to it whole.
         instance.takeMembership("!unreachable", { cursor: 1, group: null });
         instance.takeMembership("!unreachable", {
@@ -351,16 +359,19 @@ describe("a member's shifts in their groups", () => {
             name: "届かない",
           },
         });
+        dropped.mockRestore();
       }
     });
     await enterADay(maker);
 
     await alarmsSettled(user);
     changing = true;
+    tries = 0;
     const before = await alarmRunsOf(user);
-    // The change is a round of its own, at once, not after the retry.
-    await expect(runAlarm(user)).resolves.toBeTruthy();
-    await expect(alarmRunsOf(user)).resolves.toBe(before + 2);
+    await runAlarm(user);
+    // The change's round came in the run it was made in.
+    expect(tries).toBe(2);
+    await expect(alarmRunsOf(user)).resolves.toBe(before + 1);
     // Nor that round's retry, to fail as the file's tests end.
     await runInDurableObject(user, async (_, state) => {
       await state.storage.deleteAlarm();

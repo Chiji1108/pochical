@@ -12,7 +12,7 @@ import {
   toSlackText,
 } from "../src/slack";
 import { supportPlace } from "../src/support-lines";
-import { alarmOf, alarmsSettled, runAlarm } from "./alarms";
+import { alarmOf, alarmRunsOf, alarmsSettled, runAlarm } from "./alarms";
 import { call, ORIGIN, signInAnonymously } from "./helpers";
 import { relayed, sendFrame, supportChat, untilAcked } from "./sync-helpers";
 
@@ -539,6 +539,68 @@ describe("a support chat in Slack", () => {
         .filter(({ method }) => method === "chat.postMessage")
         .map(({ args }) => args.thread_ts)
     ).toStrictEqual([undefined, undefined, undefined, thread]);
+  });
+
+  it("posts a line sent while it posts the one before in the same run, the alarm the line set lost", async () => {
+    const calls = slackCalls();
+    const answer = vi.mocked(globalThis.fetch).getMockImplementation();
+    const posting = Promise.withResolvers<undefined>();
+    const release = Promise.withResolvers<undefined>();
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.endsWith("/chat.postMessage") && postsIn(calls) === 0) {
+        posting.resolve(undefined);
+        await release.promise;
+      }
+      if (answer === undefined) {
+        throw new Error("Slack's answers are not set up");
+      }
+      return await answer(input, init);
+    });
+    const token = await signInAnonymously();
+    const { frames, socket, userId } = await supportChat(token);
+    const place = env.GROUPS.getByName(supportPlace(userId));
+    const storage = await runInDurableObject(
+      place,
+      (_, state) => state.storage
+    );
+    const send = async (text: string): Promise<void> => {
+      sendFrame(socket, {
+        case: "chatEdits",
+        value: {
+          edits: [
+            {
+              kind: {
+                case: "send",
+                value: {
+                  content: { kind: { case: "words", value: { text } } },
+                  threadId: "group",
+                },
+              },
+              opId: crypto.randomUUID(),
+            },
+          ],
+        },
+      });
+      await untilAcked(frames);
+    };
+    await send("一つ目");
+    await runInDurableObject(place, async () => {
+      await posting.promise;
+    });
+    const runs = await alarmRunsOf(place);
+    // The runtime drops an alarm set for the millisecond the run was set
+    // for, as the clock falls; here the one the line sets.
+    const dropped = vi.spyOn(storage, "setAlarm").mockResolvedValue(undefined);
+    await send("二つ目");
+    dropped.mockRestore();
+    await runInDurableObject(place, () => {
+      release.resolve(undefined);
+    });
+    await vi.waitFor(async () => {
+      await expect(alarmRunsOf(place)).resolves.toBe(runs + 1);
+    });
+    expect(postsIn(calls)).toBe(2);
   });
 
   it("takes no reply from a bot, another channel or outside a thread", async () => {
