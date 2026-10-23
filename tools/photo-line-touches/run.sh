@@ -2,7 +2,8 @@
 # Runs PhotoLineTouchTests (apps/ios/Pochical/PochicalUITests) in a
 # simulator against `mise run server`: who takes which touch on a chat's
 # photo line (POC-130). It starts the server itself, so nothing else may be
-# on :8787, and erases the simulator it is given.
+# on POCHICAL_DEV_SERVER (:8787 by default), and erases the simulator it
+# is given.
 #
 #   mise run ios:photo-touches -- "<simulator name>" [derived data]
 #
