@@ -107,6 +107,7 @@ struct PhotoEditor<Picture: View>: View {
       }
     }
     .disabled(busy)
+    .frame(maxWidth: .infinity)
     // The system's photos in a sheet of the app's own, as the camera is
     // in a cover of its own, for onDismiss to say when they have gone.
     .sheet(isPresented: $picking, onDismiss: uncover) {
@@ -211,7 +212,6 @@ struct PictureHeader<Picture: View>: View {
         .font(.subheadline)
         .foregroundStyle(colors.accentDefault)
     }
-    .frame(maxWidth: .infinity)
   }
 }
 

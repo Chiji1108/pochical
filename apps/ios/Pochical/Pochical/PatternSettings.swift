@@ -286,15 +286,20 @@ struct PatternEditor: View {
         PageLink(indicator: false) {
           LookEditor(draft: $draft, picked: $picked, others: others)
         } label: {
+          // One button to VoiceOver, its value the mark.
           PictureHeader(label: "印と色を変える") {
             ShiftMark(pattern: draft, size: 44)
               .markFrame()
           }
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("印と色を変える")
+          .accessibilityValue(markDescription)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("印と色を変える")
-        .accessibilityValue(markDescription)
-        .accessibilityAddTraits(.isButton)
+        // Pressed as the faces' and the group's are: the mark and its
+        // words alone, not the row across the page.
+        .buttonStyle(.borderless)
+        .fixedSize()
+        .frame(maxWidth: .infinity)
         .settingsOnPage()
       }
 

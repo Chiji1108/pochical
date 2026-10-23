@@ -270,12 +270,8 @@ export const hub = {
 // contact cards have it; the choices open in a sheet.
 export const photoPicker = {
   action: css({
-    bg: "transparent",
-    border: 0,
     color: "accent.default",
-    cursor: "pointer",
     fontWeight: 600,
-    padding: 0,
     textStyle: "body",
   }),
   badge: css({
@@ -302,19 +298,19 @@ export const photoPicker = {
     textStyle: "callout",
     width: "100%",
   }),
+  // The picture and its words, one button.
   edit: css({
+    alignItems: "center",
     bg: "transparent",
     border: 0,
     cursor: "pointer",
-    padding: 0,
-    position: "relative",
-  }),
-  root: css({
-    alignItems: "center",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
+    padding: 0,
   }),
+  picture: css({ display: "grid", position: "relative" }),
+  root: css({ display: "flex", justifyContent: "center" }),
 };
 
 export const memberButton = css({
@@ -671,15 +667,17 @@ export function PictureHeader({
         onClick={onOpen}
         type="button"
       >
-        {picture}
-        {corner !== undefined && (
-          <span aria-hidden="true" className={photoPicker.badge}>
-            {corner}
-          </span>
-        )}
-      </button>
-      <button className={photoPicker.action} onClick={onOpen} type="button">
-        {label}
+        <span className={photoPicker.picture}>
+          {picture}
+          {corner !== undefined && (
+            <span aria-hidden="true" className={photoPicker.badge}>
+              {corner}
+            </span>
+          )}
+        </span>
+        <span aria-hidden="true" className={photoPicker.action}>
+          {label}
+        </span>
       </button>
       {children}
     </div>
