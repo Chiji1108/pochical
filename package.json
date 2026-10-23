@@ -12,7 +12,7 @@
   ],
   "type": "module",
   "scripts": {
-    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd packages/showcase typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/design typecheck && bun run --cwd apps/try typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck && tsc --noEmit -p tools && tsc --noEmit -p tools/layout-diff",
+    "typecheck": "bun run --cwd design typecheck && bun run --cwd packages/styled-system typecheck && bun run --cwd packages/jsx typecheck && bun run --cwd packages/prototype typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/design typecheck && bun run --cwd apps/try typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/admin typecheck && tsc --noEmit -p tools && tsc --noEmit -p tools/layout-diff",
     "test": "bun run --cwd packages/jsx test && bun run --cwd packages/prototype test && bun run --cwd apps/web test && bun run --cwd apps/design test && bun run --cwd apps/server test",
     "check": "ultracite check",
     "fix": "ultracite fix",

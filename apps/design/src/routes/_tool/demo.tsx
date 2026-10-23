@@ -1,5 +1,6 @@
 import { DesignApp } from "@pochical/prototype/components/design-app";
 import { HomeScreen } from "@pochical/prototype/components/design-home-screen";
+import { DesignPage } from "@pochical/prototype/components/design-page";
 import {
   DesignProviders,
   useDesignTheme,
@@ -23,20 +24,14 @@ import {
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
 import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
-import {
-  designCaption,
-  DesignPage,
-  DesignToolbar,
-  toolbarAction,
-} from "@pochical/showcase/components/design-page";
-import { tryUrl } from "@pochical/showcase/lib/app-urls";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute } from "@tanstack/react-router";
-import { RotateCcw, Smartphone } from "lucide-react";
+import { ArrowLeft, RotateCcw, Smartphone } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { VariantPanel } from "../../components/design-variant-panel";
 import { pageMeta } from "../../lib/page-meta";
+import { tryUrl } from "../../lib/try-url";
 
 export const Route = createFileRoute("/_tool/demo")({
   component: DemoPage,
@@ -120,6 +115,41 @@ const demo = {
   }),
 };
 
+// Back to the design documents on the left, and the page's actions, each
+// a pill, on the right.
+const toolbar = {
+  action: css({
+    bg: "transparent",
+    border: "1px solid token(colors.border.default)",
+    borderRadius: "22px",
+    padding: "10px 14px",
+  }),
+  actions: css({ display: "flex", gap: "8px" }),
+  root: css({
+    "& a, & button": {
+      alignItems: "center",
+      display: "inline-flex",
+      gap: "8px",
+    },
+    alignItems: "center",
+    color: "text.tertiary",
+    display: "flex",
+    fontSize: "12px",
+    justifyContent: "space-between",
+    margin: "auto",
+    maxWidth: "1100px",
+  }),
+};
+
+// A note under a phone.
+const caption = css({
+  color: "text.tertiary",
+  fontSize: "11px",
+  lineHeight: "1.9",
+  marginTop: "22px",
+  textAlign: "center",
+});
+
 // On a phone the toolbar has room for the link's icon alone; its words
 // stay for screen readers.
 const tryLabel = css({ "@media (max-width: 760px)": { srOnly: true } });
@@ -162,21 +192,26 @@ function DemoPage() {
   };
   return (
     <DesignPage style={pageStyle(theme)}>
-      <DesignToolbar documentsHref="/">
-        <a className={toolbarAction} href={tryUrl("/")}>
-          <Smartphone aria-hidden="true" size={14} />
-          <span className={tryLabel}>自分のスマホで試す</span>
+      <div className={toolbar.root}>
+        <a href="/">
+          <ArrowLeft aria-hidden="true" size={16} /> デザイン資料
         </a>
-        <button
-          className={toolbarAction}
-          onClick={() => {
-            startOver(variants.scheduleSample);
-          }}
-          type="button"
-        >
-          <RotateCcw aria-hidden="true" size={14} /> サンプルに戻す
-        </button>
-      </DesignToolbar>
+        <div className={toolbar.actions}>
+          <a className={toolbar.action} href={tryUrl}>
+            <Smartphone aria-hidden="true" size={14} />
+            <span className={tryLabel}>自分のスマホで試す</span>
+          </a>
+          <button
+            className={toolbar.action}
+            onClick={() => {
+              startOver(variants.scheduleSample);
+            }}
+            type="button"
+          >
+            <RotateCcw aria-hidden="true" size={14} /> サンプルに戻す
+          </button>
+        </div>
+      </div>
       <DesignProviders>
         <div className={demo.layout}>
           <div className={demo.phone} key={version}>
@@ -187,7 +222,7 @@ function DemoPage() {
                 variants={variants}
               />
             </UserStoreContext>
-            <p className={designCaption}>
+            <p className={caption}>
               実際にタップして試せます。架空のサンプルで、再読み込みすると元に戻ります。
             </p>
           </div>
@@ -195,7 +230,7 @@ function DemoPage() {
             <UserStoreContext value={person}>
               <HomeScreen />
             </UserStoreContext>
-            <p className={designCaption}>
+            <p className={caption}>
               ホーム画面のウィジェット。アプリで入力すると、すぐに変わります。
             </p>
           </div>

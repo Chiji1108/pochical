@@ -15,7 +15,6 @@
     "@pochical/design": "workspace:*",
     "@pochical/jsx": "workspace:*",
     "@pochical/prototype": "workspace:*",
-    "@pochical/showcase": "workspace:*",
     "@pochical/styled-system": "workspace:*",
     "@tanstack/react-router": "1.170.45",
     "@tanstack/react-start": "1.169.3",

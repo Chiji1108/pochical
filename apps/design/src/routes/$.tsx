@@ -1,4 +1,3 @@
-import { tryUrl } from "@pochical/showcase/lib/app-urls";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useFumadocsLoader } from "fumadocs-core/source/client";
@@ -16,6 +15,7 @@ import { DocsThemeSwitch } from "../components/docs-theme-switch";
 import { useMDXComponents } from "../components/mdx";
 import { pageMeta } from "../lib/page-meta";
 import { docs, source } from "../lib/source";
+import { tryUrl } from "../lib/try-url";
 
 // Every page of the design documents: an MDX page of content/, in
 // Fumadocs UI's docs layout with its sidebar, search and table of
@@ -78,7 +78,7 @@ const apps = [
     icon: <Smartphone />,
     text: "自分のスマホで試す",
     type: "main",
-    url: tryUrl("/"),
+    url: tryUrl,
   },
 ] as const;
 
