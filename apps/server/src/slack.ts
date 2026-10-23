@@ -439,6 +439,41 @@ const CLOCK_SKEW_S = 60;
 const LOOK_PAGE = 200;
 
 /**
+ * The messages a conversations.* method gives for `args`, with their
+ * metadata, page after page.
+ * @yields {Record<string, unknown>[]} Each page's messages.
+ * @throws {SlackRefusedError} When Slack refuses a page.
+ */
+const messagePages = async function* messagePages(
+  env: Env,
+  method: string,
+  args: Record<string, unknown>
+): AsyncGenerator<Record<string, unknown>[]> {
+  let cursor = "";
+  do {
+    // oxlint-disable-next-line no-await-in-loop -- page after page
+    const page = await slackTake(
+      env,
+      method,
+      {
+        include_all_metadata: true,
+        limit: LOOK_PAGE,
+        ...args,
+        ...(cursor === "" ? {} : { cursor }),
+      },
+      "a look for messages",
+      true
+    );
+    const messages: unknown[] = Array.isArray(page.messages)
+      ? page.messages
+      : [];
+    yield messages.filter(isRecord);
+    const next = page.response_metadata;
+    cursor = (isRecord(next) ? stringOf(next.next_cursor) : undefined) ?? "";
+  } while (cursor !== "");
+};
+
+/**
  * The message `matches` finds in the channel (conversations.history) or in
  * `thread` (conversations.replies), posted since `since` or a little
  * before, and by `until` or a little after when given; undefined when
@@ -454,40 +489,23 @@ const findPosted = async (
   matches: (message: Record<string, unknown>) => boolean,
   until?: Date
 ): Promise<string | undefined> => {
-  const method =
-    thread === null ? "conversations.history" : "conversations.replies";
-  let cursor = "";
-  do {
-    // oxlint-disable-next-line no-await-in-loop -- page after page
-    const page = await slackTake(
-      env,
-      method,
-      {
-        include_all_metadata: true,
-        limit: LOOK_PAGE,
-        oldest: (since.getTime() / 1000 - CLOCK_SKEW_S).toFixed(6),
-        ...(until === undefined
-          ? {}
-          : { latest: (until.getTime() / 1000 + CLOCK_SKEW_S).toFixed(6) }),
-        ...(thread === null ? {} : { ts: thread }),
-        ...(cursor === "" ? {} : { cursor }),
-      },
-      "a look for a message",
-      true
-    );
-    const messages: unknown[] = Array.isArray(page.messages)
-      ? page.messages
-      : [];
-    const found = messages.find(
-      (message) => isRecord(message) && matches(message)
-    );
-    const ts = isRecord(found) ? stringOf(found.ts) : undefined;
+  const pages = messagePages(
+    env,
+    thread === null ? "conversations.history" : "conversations.replies",
+    {
+      oldest: (since.getTime() / 1000 - CLOCK_SKEW_S).toFixed(6),
+      ...(until === undefined
+        ? {}
+        : { latest: (until.getTime() / 1000 + CLOCK_SKEW_S).toFixed(6) }),
+      ...(thread === null ? {} : { ts: thread }),
+    }
+  );
+  for await (const messages of pages) {
+    const ts = stringOf(messages.find(matches)?.ts);
     if (ts !== undefined) {
       return ts;
     }
-    const next = page.response_metadata;
-    cursor = (isRecord(next) ? stringOf(next.next_cursor) : undefined) ?? "";
-  } while (cursor !== "");
+  }
   return undefined;
 };
 
@@ -1082,55 +1100,114 @@ const DELETED_EVENT = "pochical_account_deleted";
 const DELETED_WORDS =
   "（このユーザーのアカウントは削除されました。ユーザーのメッセージと写真は、アプリ・管理サイト・Slackから削除されています）";
 
-/** Every message of `thread`, its first included (conversations.replies). */
+/**
+ * Every message of `thread` once, its first included, which Slack gives
+ * again on every page (conversations.replies); none for a thread Slack no
+ * longer has.
+ */
 const threadMessages = async (
   env: Env,
   thread: string
 ): Promise<Record<string, unknown>[]> => {
-  const messages: Record<string, unknown>[] = [];
-  let cursor = "";
-  do {
-    // oxlint-disable-next-line no-await-in-loop -- page after page
-    const answer = await askSlack(
-      env,
-      "conversations.replies",
-      {
-        include_all_metadata: true,
-        limit: LOOK_PAGE,
-        ts: thread,
-        ...(cursor === "" ? {} : { cursor }),
-      },
-      true
-    );
-    if ("refused" in answer) {
-      if (answer.refused.why === "thread_not_found") {
-        return messages;
-      }
-      throw new SlackRefusedError("a look at a thread", answer.refused);
-    }
-    const page = answer.taken;
-    // Slack gives the thread's first message again on every page.
-    const seen = new Set(messages.map(({ ts }) => ts));
-    const found: unknown[] = Array.isArray(page.messages) ? page.messages : [];
-    for (const message of found) {
-      if (isRecord(message) && !seen.has(message.ts)) {
-        messages.push(message);
+  const byTs = new Map<unknown, Record<string, unknown>>();
+  try {
+    for await (const messages of messagePages(env, "conversations.replies", {
+      ts: thread,
+    })) {
+      for (const message of messages) {
+        byTs.set(message.ts, message);
       }
     }
-    const next = page.response_metadata;
-    cursor = (isRecord(next) ? stringOf(next.next_cursor) : undefined) ?? "";
-  } while (cursor !== "");
-  return messages;
+  } catch (error) {
+    if (
+      error instanceof SlackRefusedError &&
+      error.refusal.why === "thread_not_found"
+    ) {
+      return [];
+    }
+    throw error;
+  }
+  return [...byTs.values()];
+};
+
+/** The app's bot and its user, as Slack names them for its token. */
+type SlackApp = { bot?: string; user?: string };
+
+/**
+ * What the app put on one message of a deleted account's chat thread
+ * gone: the message itself when the app posted it (the thread's first
+ * said as deleted instead, its metadata naming no one), else the user's
+ * reactions the app put on it (reactions.remove); then the files the app
+ * uploaded with it, the user's photos (files.delete).
+ */
+const eraseAppPartOf = async (
+  env: Env,
+  app: SlackApp,
+  thread: string,
+  message: Record<string, unknown>
+): Promise<void> => {
+  const { metadata, ts } = message;
+  if (typeof ts !== "string") {
+    return;
+  }
+  const byApp =
+    (app.user !== undefined && message.user === app.user) ||
+    (app.bot !== undefined && message.bot_id === app.bot);
+  if (byApp && ts !== thread) {
+    await settle(env, "chat.delete", { ts }, ["message_not_found"]);
+  } else if (byApp) {
+    if (!isRecord(metadata) || metadata.event_type !== DELETED_EVENT) {
+      await settle(
+        env,
+        "chat.update",
+        {
+          blocks: [],
+          metadata: { event_payload: {}, event_type: DELETED_EVENT },
+          text: DELETED_WORDS,
+          ts,
+        },
+        ["message_not_found"]
+      );
+    }
+  } else {
+    const reactions: unknown[] = Array.isArray(message.reactions)
+      ? message.reactions
+      : [];
+    for (const reaction of reactions) {
+      if (
+        isRecord(reaction) &&
+        Array.isArray(reaction.users) &&
+        reaction.users.includes(app.user)
+      ) {
+        // oxlint-disable-next-line no-await-in-loop -- Slack takes one at a time
+        await settle(
+          env,
+          "reactions.remove",
+          { name: reaction.name, timestamp: ts },
+          ["no_reaction", "message_not_found"]
+        );
+      }
+    }
+  }
+  const files: unknown[] = Array.isArray(message.files) ? message.files : [];
+  for (const file of files) {
+    if (isRecord(file) && app.user !== undefined && file.user === app.user) {
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await settle(env, "files.delete", { file: file.id }, [
+        "file_deleted",
+        "file_not_found",
+      ]);
+    }
+  }
 };
 
 /**
- * Whether the app's posts in a deleted account's chat thread are gone:
- * each message and file the app posted there deleted (chat.delete,
- * files.delete), the thread's first message said as deleted instead
- * (chat.update), its metadata naming no one; Pochical's people's own
- * replies stay, which the app's token cannot delete. False while Slack
- * does not take it, for the daily cron to try again. Run again, it finds
- * only what is left to do.
+ * Whether what the app put in a deleted account's chat thread is gone
+ * (eraseAppPartOf, each message): the app's bot named by auth.test, the
+ * thread read with conversations.replies. Pochical's people's own replies
+ * stay, which the app's token cannot delete. False while Slack does not
+ * take it, for the daily cron to try again. Run again, it finds only what
+ * is left to do.
  */
 export const eraseSupportThread = async (
   env: Env,
@@ -1138,45 +1215,10 @@ export const eraseSupportThread = async (
 ): Promise<boolean> => {
   try {
     const me = await slackTake(env, "auth.test", {}, "who the app is");
-    const appUser = stringOf(me.user_id);
-    const appBot = stringOf(me.bot_id);
-    const byApp = (message: Record<string, unknown>): boolean =>
-      (appUser !== undefined && message.user === appUser) ||
-      (appBot !== undefined && message.bot_id === appBot);
+    const app = { bot: stringOf(me.bot_id), user: stringOf(me.user_id) };
     for (const message of await threadMessages(env, thread)) {
-      const files: unknown[] = Array.isArray(message.files)
-        ? message.files
-        : [];
-      for (const file of files) {
-        if (isRecord(file) && appUser !== undefined && file.user === appUser) {
-          // oxlint-disable-next-line no-await-in-loop -- Slack takes one at a time
-          await settle(env, "files.delete", { file: file.id }, [
-            "file_deleted",
-            "file_not_found",
-          ]);
-        }
-      }
-      const { metadata, ts } = message;
-      if (!byApp(message) || typeof ts !== "string") {
-        continue;
-      }
-      if (ts !== thread) {
-        // oxlint-disable-next-line no-await-in-loop -- as above
-        await settle(env, "chat.delete", { ts }, ["message_not_found"]);
-      } else if (!isRecord(metadata) || metadata.event_type !== DELETED_EVENT) {
-        // oxlint-disable-next-line no-await-in-loop -- as above
-        await settle(
-          env,
-          "chat.update",
-          {
-            blocks: [],
-            metadata: { event_payload: {}, event_type: DELETED_EVENT },
-            text: DELETED_WORDS,
-            ts,
-          },
-          ["message_not_found"]
-        );
-      }
+      // oxlint-disable-next-line no-await-in-loop -- Slack takes one at a time
+      await eraseAppPartOf(env, app, thread, message);
     }
     return true;
   } catch (error) {

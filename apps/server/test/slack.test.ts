@@ -91,6 +91,24 @@ const slackAnswer = (
       Object.assign(message, { metadata: args.metadata, text: args.text });
       return { ok: true };
     }
+    case "reactions.remove": {
+      const message = messages.find((each) => each.ts === args.timestamp);
+      const reactions: unknown[] = Array.isArray(message?.reactions)
+        ? message.reactions
+        : [];
+      const reaction = reactions.find(
+        (each) =>
+          isRecord(each) &&
+          each.name === args.name &&
+          Array.isArray(each.users) &&
+          each.users.includes(APP_USER)
+      );
+      if (!isRecord(reaction) || !Array.isArray(reaction.users)) {
+        return { error: "no_reaction", ok: false };
+      }
+      reaction.users = reaction.users.filter((user) => user !== APP_USER);
+      return { ok: true };
+    }
     case "files.delete": {
       const holding = messages.find(
         (message) =>
@@ -1288,12 +1306,14 @@ describe("a deleted account's support chat, in Slack", () => {
     const thread = await threadOf(userId);
     const staff = {
       files: [{ id: "F-STAFF", user: "U-STAFF" }],
+      // The user's 👍 on it, put there by the app, and a staff member's.
+      reactions: [{ name: "+1", users: [APP_USER, "U-STAFF"] }],
       text: "設定から変えられます",
       thread_ts: thread,
       ts: "1700000100.000001",
       user: "U-STAFF",
     };
-    messages.push(staff);
+    messages.push(structuredClone(staff));
     socket.close();
 
     // Slack down as the account goes: the deletion is done all the same,
@@ -1341,7 +1361,7 @@ describe("a deleted account's support chat, in Slack", () => {
           ts: thread,
           user: APP_USER,
         },
-        staff,
+        { ...staff, reactions: [{ name: "+1", users: ["U-STAFF"] }] },
       ],
       later: 0,
       waiting: 4,
