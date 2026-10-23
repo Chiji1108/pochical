@@ -1,7 +1,7 @@
 // Where a person signs in besides anonymously (spec/sync-protocol.md,
 // Signing in): the proto's SignInProvider and better-auth's provider ids,
-// which `account.provider_id` keeps.
-import { and, asc, eq, inArray } from "drizzle-orm";
+// which `account.provider_id` keeps. A user is linked to one at most.
+import { and, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { account } from "./db/auth-schema";
@@ -18,10 +18,7 @@ export const betterAuthProvider = (
 ): string | undefined =>
   provider === undefined ? undefined : PROVIDER_IDS.get(provider);
 
-/**
- * The provider the user is linked to, the first linked should there be
- * more; UNSPECIFIED while anonymous.
- */
+/** The provider the user is linked to; UNSPECIFIED while anonymous. */
 export const linkedProvider = async (
   db: D1Database,
   userId: string
@@ -35,7 +32,6 @@ export const linkedProvider = async (
         inArray(account.providerId, [...PROVIDER_IDS.values()])
       )
     )
-    .orderBy(asc(account.createdAt))
     .limit(1);
   for (const [provider, id] of PROVIDER_IDS) {
     if (id === linked?.providerId) {

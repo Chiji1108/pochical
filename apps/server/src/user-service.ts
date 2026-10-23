@@ -17,6 +17,7 @@ import {
   SetChatNotificationsResponseSchema,
   SetMarkLookResponseSchema,
   SetProfileResponseSchema,
+  SignInProvider,
   UserService,
 } from "./gen/pochical/v1/user_pb";
 import { GROUP_THREAD, otherIn } from "./group-chat";
@@ -43,7 +44,9 @@ export const registerUserService = (router: ConnectRouter): void => {
       const { id, anonymous } = await requireUser(context);
       return create(GetMeResponseSchema, {
         anonymous,
-        provider: await linkedProvider(env.DB, id),
+        provider: anonymous
+          ? SignInProvider.UNSPECIFIED
+          : await linkedProvider(env.DB, id),
         userId: id,
       });
     },
@@ -114,8 +117,8 @@ export const registerUserService = (router: ConnectRouter): void => {
       return create(SetProfileResponseSchema, {});
     },
     takeAccount: async ({ account }, context) => {
-      const { id } = await requireUser(context);
-      await takeAccount(env, id, account);
+      const { anonymous, id } = await requireUser(context);
+      await takeAccount(env, { anonymous, id }, account);
       return create(TakeAccountResponseSchema, {});
     },
   });

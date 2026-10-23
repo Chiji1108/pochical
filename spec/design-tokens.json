@@ -3242,6 +3242,7 @@
     "sizes": {
       "action": 40,
       "control": 52,
+      "signIn": 50,
       "touch": 44
     },
     "spacingStep": 4,

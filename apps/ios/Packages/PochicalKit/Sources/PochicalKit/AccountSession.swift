@@ -1,3 +1,4 @@
+import Connect
 import Foundation
 import OSLog
 import SQLiteData
@@ -265,24 +266,27 @@ import SQLiteData
     }
   }
 
-  /// アカウントを削除, only while signed in: a user linked to Apple has
-  /// Apple asked once more for a fresh authorization code (`appleCode`,
-  /// nil when the person cancels), and one linked to Google answers it
-  /// empty, as nothing of Google's is revoked; the account and everything
-  /// of it deleted on the server with it, and
-  /// the device going on as someone new, holding nothing of the user.
+  /// アカウントを削除, only while signed in: a user the server says is
+  /// linked to Apple has Apple asked once more for a fresh authorization
+  /// code (`appleCode`, nil when the person cancels), as Apple's tokens
+  /// are revoked with it, and any other user nothing, as nothing of
+  /// Google's is revoked; the account and everything of it deleted on the
+  /// server, and the device going on as someone new, holding nothing of
+  /// the user.
   /// False when the person canceled.
   public func deleteAccount(appleCode: @MainActor () async throws -> String?)
     async throws(DeletionFailure) -> Bool
   {
     guard case .signedIn(let asking) = state else { throw whyNotSignedIn }
-    let code: String
-    do {
-      guard let asked = try await appleCode() else { return false }
-      code = asked
-    } catch {
-      Logger.account.error("Asking Apple for a code failed: \(error)")
-      throw .appleUnconfirmed
+    var code = ""
+    if try await linkedProvider(of: asking) == .apple {
+      do {
+        guard let asked = try await appleCode() else { return false }
+        code = asked
+      } catch {
+        Logger.account.error("Asking Apple for a code failed: \(error)")
+        throw .appleUnconfirmed
+      }
     }
     do {
       try await change(from: asking) { [server] before in
@@ -301,6 +305,24 @@ import SQLiteData
       throw .serverFailed
     }
     return true
+  }
+
+  /// The provider the user of `asking` is linked to, as the server says
+  /// now rather than as the device last noted, as only an Apple account
+  /// needs Apple asked again; a 401 ends the session as a socket's does.
+  private func linkedProvider(of asking: Credentials) async throws(DeletionFailure)
+    -> LinkedAccount.Provider?
+  {
+    let linked: LinkedAccount.Provider?
+    do {
+      linked = try await server.me(asking.token).linked
+    } catch {
+      let failure = (error as? ConnectError).map(DeletionFailure.init) ?? .serverFailed
+      if failure == .sessionEnded { sessionUnknown(in: asking.generation) }
+      throw failure
+    }
+    guard asking.isCurrent else { throw whyNotSignedIn }
+    return linked
   }
 
   /// Why a deletion cannot go as the device is now, not signed in as the

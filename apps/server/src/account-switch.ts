@@ -20,7 +20,7 @@ type ProviderAccount = { providerId: string; accountId: string };
 
 /**
  * The provider's account an ID token is of, once checked; else
- * UNAUTHENTICATED, or INVALID_ARGUMENT for no provider.
+ * UNAUTHENTICATED, or INVALID_ARGUMENT for no provider or no nonce.
  */
 const accountOf = async (
   token: ProviderToken | undefined
@@ -28,6 +28,10 @@ const accountOf = async (
   const providerId = betterAuthProvider(token?.provider);
   if (token === undefined || providerId === undefined) {
     throw new ConnectError("No provider", Code.InvalidArgument);
+  }
+  // better-auth checks the nonce only when one is given (auth.ts).
+  if (token.nonce === "") {
+    throw new ConnectError("No nonce", Code.InvalidArgument);
   }
   const auth = await getAuth().$context;
   const provider = auth.socialProviders.find(({ id }) => id === providerId);
@@ -93,21 +97,26 @@ export const peekAccount = async (
  * Keeps the caller's data: the account's user deleted, everything of it
  * with it, and the provider's account linked to the caller instead, which
  * makes them anonymous no more. Again after it was done, nothing changes.
+ * A caller linked to a provider already is refused (FAILED_PRECONDITION)
+ * before anything is deleted, as a user is linked to one at most.
  */
 export const takeAccount = async (
   env: Env,
-  callerId: string,
+  caller: { id: string; anonymous: boolean },
   token: ProviderToken | undefined
 ): Promise<void> => {
   const linking = await accountOf(token);
   const other = await userWith(env, linking);
-  if (other === callerId) {
+  if (other === caller.id) {
     return;
+  }
+  if (!caller.anonymous) {
+    throw new ConnectError("Linked already", Code.FailedPrecondition);
   }
   if (other !== undefined) {
     await refuseSuspended(env, other);
     await eraseUser(env, other);
   }
   const auth = await getAuth().$context;
-  await auth.internalAdapter.createAccount({ ...linking, userId: callerId });
+  await auth.internalAdapter.createAccount({ ...linking, userId: caller.id });
 };

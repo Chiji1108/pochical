@@ -48,6 +48,7 @@ struct SignInButtons: View {
         signedIn: { token in await signedIn(token) },
         failed: { failed = true })
       GoogleButton(
+        busy: $busy,
         signedIn: { token in await signedIn(token) },
         failed: { failed = true })
     }
@@ -176,9 +177,6 @@ struct SignInButtons: View {
   }
 }
 
-/// The height both ways in share, Sign in with Apple's.
-private let buttonHeight: CGFloat = 50
-
 /// Sign in with Apple, asking for the email and with a nonce Apple puts
 /// the SHA-256 of in its ID token; one the person cancelled says nothing.
 private struct AppleButton: View {
@@ -197,7 +195,7 @@ private struct AppleButton: View {
       Task { await completed(result) }
     }
     .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-    .frame(height: buttonHeight)
+    .frame(height: Metrics.signIn)
     .clipShape(Capsule())
   }
 
@@ -223,11 +221,13 @@ private struct AppleButton: View {
 /// nothing.
 private struct GoogleButton: View {
   @Environment(\.colorScheme) private var colorScheme
+  /// Set from the tap, so a second tap starts no second sign-in.
+  @Binding var busy: Bool
   let signedIn: (ProviderToken) async -> Void
   let failed: () -> Void
 
   var body: some View {
-    let dark = colorScheme == .dark
+    let colors = colorScheme == .dark ? GoogleButtonColors.dark : .light
     Button {
       Task { await signIn() }
     } label: {
@@ -239,26 +239,19 @@ private struct GoogleButton: View {
         Text("Googleで続ける")
           .font(.system(size: 19, weight: .medium))
       }
-      .foregroundStyle(dark ? rgb(0xE3E3E3) : rgb(0x1F1F1F))
-      .frame(maxWidth: .infinity, minHeight: buttonHeight)
-      .background(dark ? rgb(0x131314) : .white, in: Capsule())
-      .overlay {
-        Capsule().strokeBorder(dark ? rgb(0x8E918F) : rgb(0x747775), lineWidth: 1)
-      }
+      .foregroundStyle(colors.text)
+      .frame(maxWidth: .infinity, minHeight: Metrics.signIn)
+      .background(colors.fill, in: Capsule())
+      .overlay { Capsule().strokeBorder(colors.stroke, lineWidth: 1) }
       .contentShape(Capsule())
     }
     .buttonStyle(.plain)
   }
 
-  /// One of the guidelines' colors, given as hex there.
-  private func rgb(_ hex: UInt32) -> Color {
-    Color(
-      red: Double(hex >> 16 & 0xFF) / 255, green: Double(hex >> 8 & 0xFF) / 255,
-      blue: Double(hex & 0xFF) / 255)
-  }
-
   private func signIn() async {
     guard let presenting = UIApplication.shared.topViewController else { return failed() }
+    busy = true
+    defer { busy = false }
     let nonce = SignInNonce().raw
     let result: GIDSignInResult
     do {
@@ -290,17 +283,5 @@ struct ProviderMark: View {
         .resizable()
         .frame(width: size, height: size)
     }
-  }
-}
-
-extension UIApplication {
-  /// What a sign-in presents over: the key window's topmost screen.
-  var topViewController: UIViewController? {
-    let scenes = connectedScenes.compactMap { $0 as? UIWindowScene }
-    var top = scenes.flatMap(\.windows).first(where: \.isKeyWindow)?.rootViewController
-    while let presented = top?.presentedViewController {
-      top = presented
-    }
-    return top
   }
 }

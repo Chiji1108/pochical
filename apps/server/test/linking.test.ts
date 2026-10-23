@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { call, signInAnonymously, userIdOf } from "./helpers";
-import { idToken, link, providerKeys } from "./provider-helpers";
+import { accountToken, idToken, link, providerKeys } from "./provider-helpers";
 import type { Provider } from "./provider-helpers";
 
 /** What GetMe says of the session's user. */
@@ -86,6 +86,62 @@ describe.each<Provider>(["apple", "google"])("linking %s", (provider) => {
     ];
     const after = await meOf(token);
     expect([statuses, after.anonymous]).toStrictEqual([[401, 401], true]);
+  });
+});
+
+describe("one provider a user", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("links no second provider to a user linked already, by either way", async () => {
+    providerKeys();
+    const token = await signInAnonymously();
+    await link(token, "apple", await idToken("apple", "one-a", "n1"), "n1");
+    const linked = await link(
+      token,
+      "google",
+      await idToken("google", "one-g", "n2"),
+      "n2"
+    );
+    const other = await signInAnonymously();
+    await link(other, "google", await idToken("google", "one-g2", "n3"), "n3");
+    const taken = await call(
+      "UserService/TakeAccount",
+      { account: await accountToken("google", "one-g2", "n4") },
+      token
+    );
+    const kept = await env.DB.prepare(
+      "select provider_id from account where user_id = ?"
+    )
+      .bind(await userIdOf(token))
+      .all();
+    const stillOther = await meOf(other);
+    // better-auth answers a refused link 417, Connect FAILED_PRECONDITION
+    // 400; the other user keeps their Google account.
+    expect([
+      linked,
+      taken.status,
+      kept.results,
+      stillOther.anonymous,
+    ]).toStrictEqual([417, 400, [{ provider_id: "apple" }], false]);
+  });
+
+  it("takes no ID token without its nonce", async () => {
+    providerKeys();
+    const token = await signInAnonymously();
+    const linked = await link(
+      token,
+      "google",
+      await idToken("google", "no-nonce", ""),
+      ""
+    );
+    const peeked = await call(
+      "UserService/PeekAccount",
+      { account: { ...(await accountToken("google", "no-nonce", "")) } },
+      token
+    );
+    expect([linked, peeked.status]).toStrictEqual([400, 400]);
   });
 });
 

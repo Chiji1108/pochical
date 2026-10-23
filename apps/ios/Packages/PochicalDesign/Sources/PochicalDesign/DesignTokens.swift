@@ -1495,6 +1495,7 @@ public enum Metrics {
   public static let spacingStep: CGFloat = 4
   public static let action: CGFloat = 40
   public static let control: CGFloat = 52
+  public static let signIn: CGFloat = 50
   public static let touch: CGFloat = 44
   public static let hoverOpacity: Double = 0.12
   public static let pressedOpacity: Double = 0.16
@@ -1524,6 +1525,16 @@ public struct Shadow: Sendable {
   public static let lg = Shadow(y: 8, blur: 24, color: \.shadowLarge)
   public static let md = Shadow(y: 4, blur: 14, color: \.shadowMedium)
   public static let sm = Shadow(y: 1, blur: 3, color: \.shadowLarge)
+}
+
+/// Google's sign-in button in its guidelines' colors (design/src/sign-in.ts).
+public struct GoogleButtonColors: Sendable {
+  public let fill: Color
+  public let stroke: Color
+  public let text: Color
+
+  public static let dark = GoogleButtonColors(fill: Color(hex: 0x131314), stroke: Color(hex: 0x8E918F), text: Color(hex: 0xE3E3E3))
+  public static let light = GoogleButtonColors(fill: Color(hex: 0xFFFFFF), stroke: Color(hex: 0x747775), text: Color(hex: 0x1F1F1F))
 }
 
 /// Pochical's own motion, for withAnimation.

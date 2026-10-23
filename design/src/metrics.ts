@@ -29,6 +29,8 @@ export const sizes = {
   action: 40,
   // A button's height.
   control: 52,
+  // A way in's button (Sign in with Apple, Google), as Apple's draws it.
+  signIn: 50,
   // The least a tap target takes, as iOS's 44pt.
   touch: 44,
 } as const;

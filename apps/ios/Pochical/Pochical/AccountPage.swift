@@ -2,7 +2,6 @@ import AuthenticationServices
 import PochicalDesign
 import PochicalKit
 import SwiftUI
-import SwiftUINavigation
 
 /// 設定's アカウント row (/design's AccountRow): the provider signed in
 /// with, or ログインしていません.
@@ -59,8 +58,7 @@ struct AccountPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(AccountSession.self) private var session
   @Binding var linked: LinkedAccount?
-  /// The provider of the account asked to be deleted, while asking.
-  @State private var confirmingDelete: LinkedAccount.Provider?
+  @State private var confirmingDelete = false
   @State private var confirmingSignOut = false
   @State private var busy = false
   @State private var problem: Problem?
@@ -132,7 +130,7 @@ struct AccountPage: View {
         }
         .settingsRows()
         Section {
-          Button("アカウントを削除", role: .destructive) { confirmingDelete = linked.provider }
+          Button("アカウントを削除", role: .destructive) { confirmingDelete = true }
             .disabled(busy || !hasSession)
         } footer: {
           if session.phase == .starting {
@@ -150,15 +148,12 @@ struct AccountPage: View {
     .alert(item: $problem) { problem in
       Alert(title: Text(problem.title), message: Text(problem.message))
     }
-    .alert(
-      "アカウントを削除しますか？", isPresented: Binding($confirmingDelete),
-      presenting: confirmingDelete
-    ) { provider in
+    .alert("アカウントを削除しますか？", isPresented: $confirmingDelete) {
       Button("キャンセル", role: .cancel) {}
       Button("アカウントとすべてのデータを削除", role: .destructive) {
-        Task { await deleteAccount(linkedTo: provider) }
+        Task { await deleteAccount() }
       }
-    } message: { _ in
+    } message: {
       Text("シフト、グループ、チャットがすべて削除されます。元に戻せません。")
     }
     .alert("ログアウトしますか？", isPresented: $confirmingSignOut) {
@@ -222,19 +217,13 @@ struct AccountPage: View {
 
   /// Deletes the account (spec/sync-protocol.md, Deleting an account): a
   /// user linked to Apple has Apple asked once more first, for the code
-  /// the server revokes Apple's tokens with, and one linked to Google
-  /// nothing, as the server holds no Google token to revoke; then the
-  /// device holds nothing of the user, and goes on as someone new.
-  private func deleteAccount(linkedTo provider: LinkedAccount.Provider) async {
+  /// the server revokes Apple's tokens with; then the device holds nothing
+  /// of the user, and goes on as someone new.
+  private func deleteAccount() async {
     busy = true
     defer { busy = false }
-    let appleCode: @MainActor () async throws -> String? =
-      switch provider {
-      case .apple: AppleCode.ask
-      case .google: { "" }
-      }
     do throws(DeletionFailure) {
-      guard try await session.deleteAccount(appleCode: appleCode) else { return }
+      guard try await session.deleteAccount(appleCode: AppleCode.ask) else { return }
     } catch .sessionEnded {
       return
     } catch {

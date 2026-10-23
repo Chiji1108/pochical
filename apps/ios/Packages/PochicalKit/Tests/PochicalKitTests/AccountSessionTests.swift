@@ -44,12 +44,16 @@ private final class FakeAccountServer: AccountServer {
   struct Asked {
     var signedOut: [String] = []
     var deleted: [String] = []
+    /// The Apple code each deletion came with.
+    var codes: [String] = []
     var me = 0
   }
 
   let asked = Mutex(Asked())
   let made = Mutex(0)
   let refusing = Mutex<Set<String>>([])
+  /// The provider GetMe says the user is linked to.
+  let linkedTo = Mutex<LinkedAccount.Provider?>(.apple)
   /// How deleting the account fails, when it does.
   let deletion = Mutex<DeletionFailure?>(nil)
   /// Called as a deletion succeeds, before its answer is back.
@@ -97,14 +101,17 @@ private final class FakeAccountServer: AccountServer {
   func me(_ token: String) async throws -> (userID: String, linked: LinkedAccount.Provider?) {
     asked.withLock { $0.me += 1 }
     try await reach("me")
-    return ("of-\(token)", .apple)
+    return ("of-\(token)", linkedTo.withLock { $0 })
   }
 
   func deleteAccount(_ token: String, appleAuthorizationCode: String) async throws(DeletionFailure)
   {
     if let gate = gates.withLock({ $0["deleteAccount"] }) { await gate.wait() }
     if let failure = deletion.withLock({ $0 }) { throw failure }
-    asked.withLock { $0.deleted.append(token) }
+    asked.withLock {
+      $0.deleted.append(token)
+      $0.codes.append(appleAuthorizationCode)
+    }
     whenDeleted.withLock { $0 }?()
   }
 }
@@ -370,6 +377,23 @@ private final class FakeAccountServer: AccountServer {
   #expect(await eventually { made.session.userID == "anon-1" })
   #expect(made.coworkers == 0)
   #expect(await eventually { made.socketTokens == ["a", "anon-token-1"] })
+}
+
+@MainActor @Test func onlyAUserTheServerSaysIsLinkedToAppleHasAppleAskedBeforeDeleting()
+  async throws
+{
+  for (linked, code) in [(LinkedAccount.Provider.apple, "code"), (.google, "")] {
+    let made = try await Made.signedIn(as: "a", "A")
+    made.server.linkedTo.withLock { $0 = linked }
+    let asked = Mutex(0)
+    #expect(
+      try await made.session.deleteAccount(appleCode: {
+        asked.withLock { $0 += 1 }
+        return "code"
+      }))
+    #expect(asked.withLock { $0 } == (linked == .apple ? 1 : 0))
+    #expect(made.server.asked.withLock(\.codes) == [code])
+  }
 }
 
 @MainActor @Test func anAnswerForTheAccountBeforeIsDropped() async throws {
