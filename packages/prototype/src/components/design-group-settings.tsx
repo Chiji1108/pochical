@@ -711,10 +711,10 @@ export function NewGroupPage({
   // Starts as your usual name; change it only if this group calls you
   // something else.
   const [myName, setMyName] = useState(profile.name);
-  const [color] = useState(() => nextColor(usedColors));
-  const [mark, setMark] = useState<GroupMark>(() => guessGroupMark("", color));
-  // Once picked, the mark stays when the name changes afterwards.
-  const [picked, setPicked] = useState(false);
+  // Once picked, the mark stays when the name changes afterwards; until
+  // then it follows the name, in the first color the groups do not use.
+  const [picked, setPicked] = useState<GroupMark>();
+  const mark = picked ?? guessGroupMark(name, nextColor(usedColors));
   const [editingMark, setEditingMark] = useState(false);
   const canCreate = name.trim() !== "" && myName.trim() !== "";
   if (editingMark) {
@@ -726,10 +726,7 @@ export function NewGroupPage({
         onBack={() => {
           setEditingMark(false);
         }}
-        onChange={(next) => {
-          setMark(next);
-          setPicked(true);
-        }}
+        onChange={setPicked}
       />
     );
   }
@@ -760,12 +757,7 @@ export function NewGroupPage({
                 align="end"
                 look="inline"
                 kind="groupName"
-                onValueChange={(next) => {
-                  setName(next);
-                  if (!picked) {
-                    setMark(guessGroupMark(next, color));
-                  }
-                }}
+                onValueChange={setName}
                 placeholder="例：家族"
                 value={name}
               />

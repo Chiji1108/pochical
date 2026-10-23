@@ -29,6 +29,29 @@ public struct GroupRow: Hashable, Sendable, Identifiable {
   }
 }
 
+/// A group the person asks to make: its name, its mark and their name in
+/// it, under one request id the server makes it once for, so a retry after
+/// a lost answer gives back the same group (spec/sync-protocol.md, Groups).
+public struct NewGroupRequest: Hashable, Sendable {
+  public let name: String
+  public let mark: GroupMarkValue
+  public let displayName: String
+  public let id: String
+
+  /// The request for these, after `last`: the same one again while nothing
+  /// it asks for has changed, else a new one with `newID`, as one request
+  /// id stands for one request.
+  public static func asking(
+    name: String, mark: GroupMarkValue, displayName: String, after last: NewGroupRequest?,
+    newID: () -> String = { UUID().uuidString.lowercased() }
+  ) -> NewGroupRequest {
+    if let last, last.name == name, last.mark == mark, last.displayName == displayName {
+      return last
+    }
+    return NewGroupRequest(name: name, mark: mark, displayName: displayName, id: newID())
+  }
+}
+
 /// A group's mark (/design's GroupMark; proto GroupMark): one emoji, one of
 /// the mark icons, letters, the last two in one of the mark palette's
 /// colors, or a photo. Every member sees it as it is, whatever their style
@@ -195,19 +218,15 @@ public struct GroupCalls: Sendable {
       photoID, in: shelf, small: small, keep: keep, as: current.signedIn())
   }
 
-  /// Makes a group with the user in it, as `displayName`. `requestID` is
-  /// made once for each group the person sets out to make and sent again
-  /// with every retry, so a retry after a lost answer makes no second one.
-  /// The new group's id.
-  public func create(
-    name: String, mark: GroupMarkValue, displayName: String, requestID: String
-  ) async throws -> String {
-    var request = Pochical_V1_CreateGroupRequest()
-    request.name = name
-    request.mark = mark.wire
-    request.displayName = displayName
-    request.requestID = requestID
-    return try await client.createGroup(request: request, headers: headers()).result
+  /// Makes the group `request` asks for, with the user in it. The new
+  /// group's id.
+  public func create(_ request: NewGroupRequest) async throws -> String {
+    var wire = Pochical_V1_CreateGroupRequest()
+    wire.name = request.name
+    wire.mark = request.mark.wire
+    wire.displayName = request.displayName
+    wire.requestID = request.id
+    return try await client.createGroup(request: wire, headers: headers()).result
       .get().groupID
   }
 

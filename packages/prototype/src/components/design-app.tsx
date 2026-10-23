@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 
+import { AppFeaturesContext, everyFeature } from "../lib/design-features";
+import type { AppFeatures } from "../lib/design-features";
 import {
   bookOf,
   patternsInUse,
@@ -36,6 +38,7 @@ export function DesignApp({
   initialGroupPage,
   initialDetail,
   fullScreen = false,
+  features = everyFeature,
 }: {
   initialEditing: boolean;
   // The day entering starts on, as the top page opens on its first blank.
@@ -55,6 +58,9 @@ export function DesignApp({
   // A group's invitation link was opened: ask about joining, in a screen
   // over the calendar.
   pendingInvite?: boolean;
+  // What it offers besides the calendar. The top page's offers nothing
+  // else: a visitor picks and enters shifts, and nothing leads away.
+  features?: AppFeatures;
 }) {
   const phoneRef = useRef<HTMLDivElement>(null);
   const { say: toast, toaster } = usePhoneToaster();
@@ -78,70 +84,72 @@ export function DesignApp({
   // and samples name.
   const book: PatternBook = { ...presetPatterns, ...bookOf(ownPatterns) };
   return (
-    <PatternsContext value={book}>
-      <OwnPatternsContext value={patternsInUse(ownPatterns)}>
-        <PhoneContext value={phoneRef}>
-          <ToastContext value={toast}>
-            <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
-              {tab === "settings" && (
-                <DesignSettings
-                  initialPage={initialSettingsPage}
-                  onChangeJob={changeJob}
-                  onPutRule={putOrder}
-                  onRemoveRule={removeOrder}
-                  onProfile={setProfile}
+    <AppFeaturesContext value={features}>
+      <PatternsContext value={book}>
+        <OwnPatternsContext value={patternsInUse(ownPatterns)}>
+          <PhoneContext value={phoneRef}>
+            <ToastContext value={toast}>
+              <Phone fullScreen={fullScreen} ref={phoneRef} style={themeStyle}>
+                {tab === "settings" && (
+                  <DesignSettings
+                    initialPage={initialSettingsPage}
+                    onChangeJob={changeJob}
+                    onPutRule={putOrder}
+                    onRemoveRule={removeOrder}
+                    onProfile={setProfile}
+                    onTab={setTab}
+                    patterns={ownPatterns}
+                    profile={profile}
+                    rules={rules}
+                    schedule={schedule}
+                  />
+                )}
+                {tab === "group" && (
+                  <DesignGroup
+                    initialGroupId={openGroup}
+                    initialPage={initialGroupPage}
+                    photoFetch={variants.photoFetch}
+                    photoSend={variants.photoSend}
+                    scanResult={variants.scanResult}
+                    onTab={setTab}
+                    patterns={ownPatterns}
+                    profile={profile}
+                    schedule={schedule}
+                  />
+                )}
+                {joining && (
+                  <JoinScreen
+                    onClose={() => {
+                      setJoining(false);
+                    }}
+                    onJoin={(joined) => {
+                      setGroups([...groups, joined]);
+                      setJoining(false);
+                      setOpenGroup(joined.id);
+                      setTab("group");
+                      toast(`「${joined.name}」に参加しました`);
+                    }}
+                    profile={profile}
+                  />
+                )}
+                <DesignCalendar
+                  calendarAccess={variants.calendarAccess}
+                  covered={joining}
+                  initialDay={initialDay}
+                  initialDetail={initialDetail}
+                  initialEditing={initialEditing}
+                  month={month}
+                  onMonth={setMonth}
                   onTab={setTab}
-                  patterns={ownPatterns}
-                  profile={profile}
-                  rules={rules}
                   schedule={schedule}
+                  shown={tab === "calendar"}
                 />
-              )}
-              {tab === "group" && (
-                <DesignGroup
-                  initialGroupId={openGroup}
-                  initialPage={initialGroupPage}
-                  photoFetch={variants.photoFetch}
-                  photoSend={variants.photoSend}
-                  scanResult={variants.scanResult}
-                  onTab={setTab}
-                  patterns={ownPatterns}
-                  profile={profile}
-                  schedule={schedule}
-                />
-              )}
-              {joining && (
-                <JoinScreen
-                  onClose={() => {
-                    setJoining(false);
-                  }}
-                  onJoin={(joined) => {
-                    setGroups([...groups, joined]);
-                    setJoining(false);
-                    setOpenGroup(joined.id);
-                    setTab("group");
-                    toast(`「${joined.name}」に参加しました`);
-                  }}
-                  profile={profile}
-                />
-              )}
-              <DesignCalendar
-                calendarAccess={variants.calendarAccess}
-                covered={joining}
-                initialDay={initialDay}
-                initialDetail={initialDetail}
-                initialEditing={initialEditing}
-                month={month}
-                onMonth={setMonth}
-                onTab={setTab}
-                schedule={schedule}
-                shown={tab === "calendar"}
-              />
-              <PhoneToasts toaster={toaster} />
-            </Phone>
-          </ToastContext>
-        </PhoneContext>
-      </OwnPatternsContext>
-    </PatternsContext>
+                <PhoneToasts toaster={toaster} />
+              </Phone>
+            </ToastContext>
+          </PhoneContext>
+        </OwnPatternsContext>
+      </PatternsContext>
+    </AppFeaturesContext>
   );
 }

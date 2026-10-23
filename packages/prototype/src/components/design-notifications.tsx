@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import type { Schedule } from "../lib/design-days";
 import { useDevice } from "../lib/design-device";
+import { useAppFeatures } from "../lib/design-features";
 import { groupChat, isMuted, withMuted } from "../lib/design-group-data";
 import type { Member } from "../lib/design-group-data";
 import { sampleOthers } from "../lib/design-group-samples";
@@ -161,8 +162,14 @@ export function useReminderOffer() {
     (reminder) => reminder.on && reminder.kind === "dayBefore"
   );
   const eveningTime = evening?.kind === "dayBefore" ? evening.time : undefined;
+  // A phone without notifications, as the top page's, never asks.
+  const offerable =
+    useAppFeatures().has("notifications") &&
+    !offered &&
+    notifications === "notAsked" &&
+    eveningTime !== undefined;
   const offer = () => {
-    if (offered || notifications !== "notAsked" || eveningTime === undefined) {
+    if (!offerable) {
       return;
     }
     useDevice.setState({ reminderOffered: true });
@@ -175,11 +182,11 @@ export function useReminderOffer() {
       return;
     }
     useDevice.setState({ reminderOfferPending: false });
-    if (!offered && notifications === "notAsked" && eveningTime !== undefined) {
+    if (offerable) {
       useDevice.setState({ reminderOffered: true });
       setStep("offer");
     }
-  }, [pending, offered, notifications, eveningTime]);
+  }, [pending, offerable]);
   let node: ReactNode = null;
   if (step === "offer") {
     node = (

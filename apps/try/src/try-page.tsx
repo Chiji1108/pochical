@@ -1,25 +1,31 @@
 import { DesignApp } from "@pochical/prototype/components/design-app";
+import { DesignPage } from "@pochical/prototype/components/design-page";
 import {
   DesignProviders,
   useDesignTheme,
 } from "@pochical/prototype/components/design-providers";
-import { pageStyle } from "@pochical/prototype/components/design-theme";
+import {
+  PhoneContext,
+  SystemAlert,
+} from "@pochical/prototype/components/design-sheet";
+import {
+  pageStyle,
+  useThemeStyle,
+} from "@pochical/prototype/components/design-theme";
 import { useSamplePerson } from "@pochical/prototype/lib/design-sample-person";
 import { UserStoreContext } from "@pochical/prototype/lib/design-user-store";
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
-import {
-  DesignPage,
-  DesignToolbar,
-  toolbarAction,
-} from "@pochical/showcase/components/design-page";
-import { demoUrl, designUrl } from "@pochical/showcase/lib/app-urls";
 import { css, cx } from "@pochical/styled-system/css";
-import { ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 // The current proposal for each open design choice.
 const variants = parseDesignVariants({});
+
+// What this is, for anyone the link reaches: said beside the framed phone
+// on a computer, and once over the app on a phone.
+const prototypeNote =
+  "入力した内容はこの端末の外に出ません。シフトやグループは、開き直すとサンプルに戻ります。";
 
 // The phone's screens fill the page, with nothing of the page to scroll
 // or bounce behind them.
@@ -103,18 +109,6 @@ const onComputer = {
     justifyContent: "center",
     padding: "32px 16px 48px",
   }),
-  // The toolbars' pill, standing on its own.
-  link: cx(
-    toolbarAction,
-    css({
-      alignItems: "center",
-      alignSelf: "flex-start",
-      color: "text.tertiary",
-      display: "inline-flex",
-      fontSize: "12px",
-      gap: "8px",
-    })
-  ),
   note: css({
     "& h1": {
       fontSize: "22px",
@@ -139,8 +133,7 @@ const onComputer = {
   }),
 };
 
-// What this app is for, a QR code that opens this page on a phone, and /demo
-// for switching the samples.
+// What this app is for, and a QR code that opens this page on a phone.
 function OpenOnPhone() {
   const url = `${location.origin}${location.pathname}`;
   return (
@@ -149,6 +142,7 @@ function OpenOnPhone() {
       <p>
         このページは、スマホで触るための試作です。カメラでQRコードを読み取ると、スマホで開きます。ホーム画面に追加すると、アプリのように開けます。
       </p>
+      <p>{prototypeNote}</p>
       <div className={onComputer.qr}>
         <QRCodeSVG
           size={152}
@@ -156,14 +150,57 @@ function OpenOnPhone() {
           value={url}
         />
       </div>
-      <p>サンプルや比べる案を切り替えながら触るなら、デモで。</p>
-      <a
-        className={onComputer.link}
-        href={demoUrl(`/demo?${new URLSearchParams(variants)}`)}
-      >
-        デモで見る <ChevronRight aria-hidden="true" size={14} />
-      </a>
     </section>
+  );
+}
+
+// Whether this browser has been told what this is. Storage a browser
+// refuses, as some private windows do, tells it again on each opening.
+const NOTED = "pochical-try-noted";
+
+function wasNoted() {
+  try {
+    return localStorage.getItem(NOTED) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function markNoted() {
+  try {
+    localStorage.setItem(NOTED, "1");
+  } catch {
+    // Said again on the next opening.
+  }
+}
+
+// Over the whole screen, as the phone's own alerts are over the phone.
+const alertLayer = css({ inset: 0, position: "fixed", zIndex: 100 });
+
+// On a phone the app fills the screen, so what this is comes the way an
+// app says something on its first launch: an alert over it, once, in the
+// app's テーマ and light or dark.
+function FirstLaunchNote() {
+  const [noted, setNoted] = useState(wasNoted);
+  const layer = useRef<HTMLDivElement>(null);
+  const style = useThemeStyle();
+  if (noted) {
+    return null;
+  }
+  return (
+    <div className={alertLayer} ref={layer} style={style}>
+      <PhoneContext value={layer}>
+        <SystemAlert
+          buttons={[{ label: "はじめる" }]}
+          message={prototypeNote}
+          onClose={() => {
+            markNoted();
+            setNoted(true);
+          }}
+          title="ポチカルの試作です"
+        />
+      </PhoneContext>
+    </div>
   );
 }
 
@@ -185,12 +222,12 @@ export function TryPage() {
           variants={variants}
         />
       </UserStoreContext>
+      {!computer && <FirstLaunchNote />}
     </DesignProviders>
   );
   if (computer) {
     return (
       <DesignPage style={pageStyle(theme)}>
-        <DesignToolbar documentsHref={designUrl("/")} />
         <div className={onComputer.layout}>
           <div className={onComputer.phone}>{app}</div>
           <OpenOnPhone />
