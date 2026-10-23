@@ -26,15 +26,31 @@ import Testing
   #expect(day.firstOfMonth.key == "2026-11-01")
 }
 
-@Test func laysAMonthOutInWholeWeeks() {
-  // October 2026 begins on a Thursday and ends on a Saturday.
-  let sunday = monthWeeks(Day("2026-10-01")!, weekStart: 0)
-  #expect(sunday.count == 5)
-  #expect(sunday.first?.first?.key == "2026-09-27")
-  #expect(sunday.last?.last?.key == "2026-10-31")
-  let monday = monthWeeks(Day("2026-10-01")!, weekStart: 1)
-  #expect(monday.first?.first?.key == "2026-09-28")
-  #expect(monday.last?.last?.key == "2026-11-01")
+struct MonthVectors: Decodable, Sendable {
+  struct Case: VectorCase {
+    struct Expected: Decodable, Sendable {
+      let first: String
+      let last: String
+      let weeks: Int
+    }
+
+    let name: String
+    let month: String
+    let weekStart: Int
+    let expected: Expected
+  }
+
+  let weeks: [Case]
+}
+
+@Test(arguments: try vectors("month", as: MonthVectors.self).weeks)
+func laysAMonthOutInWholeWeeks(_ vector: MonthVectors.Case) throws {
+  let month = try #require(Day("\(vector.month)-01"))
+  let weeks = monthWeeks(month, weekStart: vector.weekStart)
+  #expect(weeks.count == vector.expected.weeks)
+  #expect(weeks.allSatisfy { $0.count == 7 })
+  #expect(weeks.first?.first?.key == vector.expected.first)
+  #expect(weeks.last?.last?.key == vector.expected.last)
 }
 
 @Test func entersFromTheMonthsFirstBlankDay() {

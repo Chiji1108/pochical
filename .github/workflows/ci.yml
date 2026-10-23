@@ -34,7 +34,6 @@ jobs:
             typescript:
               - "apps/web/**"
               - "apps/design/**"
-              - "apps/demo/**"
               - "apps/try/**"
               - "apps/server/**"
               - "apps/admin/**"
@@ -59,17 +58,20 @@ jobs:
               - "apps/android/proto/**"
               - "apps/ios/Packages/PochicalKit/Sources/PochicalKit/Sync.swift"
               - "apps/ios/Packages/PochicalKit/sync-wire.json"
+              - "apps/android/kit/src/main/kotlin/app/pochical/kit/Sync.kt"
+              - "apps/android/kit/sync-wire.json"
               - "tools/sync-schema/**"
               - "mise.toml"
               - ".github/workflows/ci.yml"
             # design/ and proto/ reach the app through the code generated
-            # into apps/android.
+            # into apps/android; :kit's tests read spec/vectors.
             android:
               - "apps/android/**"
+              - "spec/vectors/**"
               - "mise.toml"
               - ".github/workflows/ci.yml"
 
-  # apps/web, apps/design, apps/demo, apps/try, apps/server, apps/admin,
+  # apps/web, apps/design, apps/try, apps/server, apps/admin,
   # packages/ and tools/: lint
   # and format, types, tests.
   typescript:
@@ -94,11 +96,9 @@ jobs:
       # The site builds, and its Worker's bundle and config validate.
       - run: bun run build && bunx wrangler deploy --dry-run
         working-directory: apps/web
-      # The design, demo and try Workers build, and their configs validate.
+      # The design and try Workers build, and their configs validate.
       - run: bun run build && bunx wrangler deploy --dry-run
         working-directory: apps/design
-      - run: bun run build && bunx wrangler deploy --dry-run
-        working-directory: apps/demo
       - run: bun run build && bunx wrangler deploy --dry-run
         working-directory: apps/try
       # The server and admin Workers bundle and their configs validate, as
@@ -170,3 +170,4 @@ jobs:
       # its rules are checked before main releases it.
       - run: mise run android:release
       - run: mise run android:test
+      - run: mise run android:db:check

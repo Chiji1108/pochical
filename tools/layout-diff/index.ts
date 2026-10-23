@@ -1,18 +1,18 @@
-// Measures an app's screens in states.ts, the demo's phone or a design
-// document's page, and compares two runs, to show that a styling change,
+// Measures the screens in states.ts, /demo's phone or a design document's
+// page, and compares two runs, to show that a styling change,
 // like moving rules from design.css to Panda, left the screens as they
 // were. It compares what can
 // be seen: every element with text, a label or a box of its own, by where
 // it sits in the phone and how it is drawn. Wrappers that only lay things
 // out are left out, so adding or removing one is no difference.
 //
-//   mise run demo:layout save before     (with mise run demo running)
+//   mise run design:demo-layout save before     (with mise run design running)
 //   ...change the styles...
-//   mise run demo:layout check before    (measures again and compares)
+//   mise run design:demo-layout check before    (measures again and compares)
 //
-// --app is the app whose screens to measure: design (apps/design, under
-// mise run design) or demo (apps/demo, under mise run demo). --url
-// overrides its dev server (DEV_SERVERS), --only keeps the states
+// --pages is the pages whose screens to measure, both under mise run
+// design: design (the documents) or demo (/demo). --url overrides the dev
+// server (DEV_SERVER), --only keeps the states
 // whose names contain it, --dark measures in dark mode, --width sets the
 // window's width (800), --workers how many screens load at once (4). Runs are kept in
 // tools/layout-diff/out. It drives the installed Google Chrome, or without
@@ -27,7 +27,7 @@ import type { Page } from "playwright-core";
 import { measure } from "./measure";
 import type { Screen } from "./measure";
 import { states } from "./states";
-import type { App, State } from "./states";
+import type { Pages, State } from "./states";
 
 type Run = Record<string, Screen>;
 
@@ -104,17 +104,14 @@ async function launch() {
   }
 }
 
-// Each app's dev server, as mise run design and mise run demo start them.
-const DEV_SERVERS: Record<App, string> = {
-  demo: "http://localhost:3201",
-  design: "http://localhost:3200",
-};
+// apps/design's dev server, as mise run design starts it.
+const DEV_SERVER = "http://localhost:3200";
 
-const isApp = (value: string | undefined): value is App =>
+const isPages = (value: string | undefined): value is Pages =>
   value === "design" || value === "demo";
 
 async function measureAll(options: {
-  app: App;
+  pages: Pages;
   url: string;
   only: string | undefined;
   dark: boolean;
@@ -139,8 +136,8 @@ async function measureAll(options: {
     });
     return await context.newPage();
   };
-  const { app, only } = options;
-  const chosen = states[app].filter(
+  const { pages, only } = options;
+  const chosen = states[pages].filter(
     (state) => only === undefined || state.name.includes(only)
   );
   const measured = new Map<string, Screen>();
@@ -235,33 +232,33 @@ async function main() {
   const { positionals, values } = parseArgs({
     allowPositionals: true,
     options: {
-      app: { type: "string" },
       dark: { default: false, type: "boolean" },
       only: { type: "string" },
+      pages: { type: "string" },
       url: { type: "string" },
       width: { default: String(VIEWPORT.width), type: "string" },
       workers: { default: String(WORKERS), type: "string" },
     },
   });
   const [command, label] = positionals;
-  const { app } = values;
+  const { pages } = values;
   if (
     !(command === "save" || command === "check") ||
     label === undefined ||
-    !isApp(app)
+    !isPages(pages)
   ) {
     throw new Error(
-      "Usage: layout-diff --app design|demo save <name> | check <name> [--url] [--only] [--dark]"
+      "Usage: layout-diff --pages design|demo save <name> | check <name> [--url] [--only] [--dark]"
     );
   }
   const width = Number(values.width);
   const suffix = `${values.dark ? "-dark" : ""}${width === VIEWPORT.width ? "" : `-${width}`}`;
-  const file = new URL(`${label}-${app}${suffix}.json`, outDir);
+  const file = new URL(`${label}-${pages}${suffix}.json`, outDir);
   const run = await measureAll({
-    app,
     dark: values.dark,
     only: values.only,
-    url: values.url ?? DEV_SERVERS[app],
+    pages,
+    url: values.url ?? DEV_SERVER,
     width,
     workers: Number(values.workers),
   });

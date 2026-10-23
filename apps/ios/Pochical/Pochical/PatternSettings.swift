@@ -236,15 +236,18 @@ private enum LookPart: Hashable {
   case emoji, icon, symbol
 }
 
-/// パターンを追加 or パターンを編集: the name, the time, whether it counts as
-/// a day off, the next day's pattern and the mark; deleting at the foot.
+/// パターンを追加 or パターンを編集: its mark at the top, which opens 印と色;
+/// the name and the time; whether it counts as a day off and the
+/// next day's pattern; whether it is still in use; deleting at the foot.
 struct PatternEditor: View {
   @Environment(\.themeColors) private var colors
+  @Environment(\.look) private var look
   @Environment(\.dismiss) private var dismiss
   @Dependency(\.defaultDatabase) private var database
   @Environment(\.write) private var write
   @FetchAll private var rows: [PatternRow]
   @FetchAll private var order: [PatternOrderRow]
+  @FetchAll(RepeatOrderRow.order(by: \.position)) private var repeatOrders
   let initial: Pattern
   let isNew: Bool
   /// Kept: said to the page that opened it.
@@ -256,7 +259,9 @@ struct PatternEditor: View {
   @State private var picked: Set<LookPart>
   /// Shown days with the pattern, asked before deleting.
   @State private var deleting: Int?
-  @State private var repeating = false
+  /// A save or delete the rules refused, as a repeating order took the
+  /// pattern on since the page showed it.
+  @State private var refusal: PatternRefusal?
 
   init(pattern: Pattern, isNew: Bool, onSaved: @escaping () -> Void = {}) {
     initial = pattern
@@ -275,26 +280,30 @@ struct PatternEditor: View {
     let others = ownPatterns(rows, order).filter {
       $0.id != draft.id && (!$0.archived || $0.id == draft.nextDay)
     }
-    let saved = shaped
     Form {
+      // The pattern's mark, the way into it, as a group's and a face's.
       Section {
-        HStack(spacing: 16) {
-          ShiftMark(pattern: saved, size: 44)
-          VStack(alignment: .leading, spacing: 2) {
-            Text(draft.name.isEmpty ? "新しいパターン" : draft.name)
-              .font(.headline)
-              .foregroundStyle(draft.name.isEmpty ? colors.textTertiary : colors.textPrimary)
-            Text(patternTimeText(saved.time))
-              .font(.footnote)
-              .foregroundStyle(colors.textTertiary)
+        PageLink(indicator: false) {
+          LookEditor(draft: $draft, picked: $picked, others: others)
+        } label: {
+          // One button to VoiceOver, its value the mark.
+          PictureHeader(label: "印と色を変える") {
+            ShiftMark(pattern: draft, size: 44)
+              .markFrame()
           }
-          Spacer()
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("印と色を変える")
+          .accessibilityValue(markDescription)
         }
-        .padding(.vertical, 4)
+        // Pressed as the faces' and the group's are: the mark and its
+        // words alone, not the row across the page.
+        .buttonStyle(.borderless)
+        .fixedSize()
+        .frame(maxWidth: .infinity)
+        .settingsOnPage()
       }
-      .settingsRows()
 
-      Section("基本") {
+      Section {
         LabeledContent("名前") {
           LimitedTextField(
             placeholder: "例：日勤", text: nameBinding, limit: TextLimits.shiftName)
@@ -307,7 +316,14 @@ struct PatternEditor: View {
             Text("–").foregroundStyle(colors.textTertiary)
             ClockPicker(label: "終了時刻", time: $end)
           }
+          // From the row's edge, as under the others: a list starts the line
+          // at a row's first words, here the dash between the times.
+          .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         }
+      }
+      .settingsRows()
+
+      Section {
         Toggle(isOn: $draft.countsAsOff) {
           Text("休みとして数える")
           Text("今月のお休みの日数に入ります")
@@ -329,31 +345,28 @@ struct PatternEditor: View {
       }
       .settingsRows()
 
-      Section("見た目") {
-        PageLink {
-          LookEditor(draft: $draft, picked: $picked, others: others)
-        } label: {
-          LabeledContent("印と色") {
-            ShiftMark(pattern: saved, size: 20)
-          }
-        }
-      }
-      .settingsRows()
-
+      // A state undone as easily, so a switch saved with the rest, as
+      // iOS's; a new pattern is in use.
       if !isNew {
         Section {
-          if initial.archived {
-            Button("また使う") { setArchived(false) }
-              .frame(maxWidth: .infinity)
-              .settingsRows()
-          } else if !repeating {
-            // Its days keep their marks; only its key goes.
-            Button("使わないパターンにする") { setArchived(true) }
-              .frame(maxWidth: .infinity)
-              .settingsRows()
-          }
+          // Locked only where turning it off is refused: one turned off
+          // before an order took it on may still be turned back on.
+          Toggle("入力に出す", isOn: inUse)
+            .disabled(archivingRefused && !draft.archived)
+        } footer: {
+          Text(
+            archivingRefused
+              ? "繰り返しの並びに入っているので、オフにしたり削除したりできません。先に「繰り返し」で並びを変えてください。"
+              : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。")
+        }
+        .settingsRows()
+      }
+
+      // Said once: under the switch, while that is blocked too.
+      if !isNew, !archivingRefused {
+        Section {
           if repeating {
-            Text("繰り返しの並びに入っているので、削除したり使わないパターンにしたりできません。先に「繰り返し」で並びを変えてください。")
+            Text("繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。")
               .font(.footnote)
               .foregroundStyle(colors.textSecondary)
               .padding(.horizontal, 16)
@@ -375,9 +388,6 @@ struct PatternEditor: View {
           .disabled(draft.name.trimmingCharacters(in: .whitespaces).isEmpty)
       }
     }
-    .task {
-      repeating = (try? await database.read { try OwnValues.isRepeating(initial.id, in: $0) }) ?? false
-    }
     .alert(
       "「\(initial.name)」を削除しますか？",
       isPresented: Binding($deleting),
@@ -387,8 +397,13 @@ struct PatternEditor: View {
       Button("削除", role: .destructive) { delete() }
     } message: { days in
       Text(
-        "\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。日の印を残すなら「使わないパターンにする」を選んでください。"
+        "\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。日の印を残すなら「入力に出す」をオフにしてください。"
       )
+    }
+    .alert("繰り返しの並びに入っています", isPresented: Binding($refusal)) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("先に「繰り返し」で並びを変えてください。")
     }
   }
 
@@ -399,6 +414,37 @@ struct PatternEditor: View {
     pattern.name = draft.name.trimmingCharacters(in: .whitespaces)
     pattern.time = allDay ? nil : ShiftTime(start: start, end: end)
     return pattern
+  }
+
+  /// Whether a repeating order in use or to come has it, kept as the
+  /// orders change: it cannot be deleted until then.
+  private var repeating: Bool {
+    repeats(initial.id, in: repeatOrders.compactMap(\.order))
+  }
+
+  /// The mark as the person's スタイル draws it, and the color it is drawn
+  /// in, for VoiceOver.
+  private var markDescription: String {
+    let mark =
+      switch look.style {
+      case .icon: MarkIconNames.names[draft.icon] ?? draft.icon
+      case .emoji: draft.emoji
+      case .badge: draft.symbol
+      }
+    return look.colored && look.style != .emoji ? "\(mark)、\(colors.mark(draft.color).name)" : mark
+  }
+
+  /// 入力に出す: whether it is in use, archived when off.
+  private var inUse: Binding<Bool> {
+    Binding { !draft.archived } set: { draft.archived = !$0 }
+  }
+
+  /// Whether keeping it archived would be refused, as `OwnValues.save`
+  /// refuses it, against how it is saved now.
+  private var archivingRefused: Bool {
+    refusesArchiving(
+      initial.id, archived: rows.first { $0.id == initial.id }?.archived ?? false,
+      orders: repeatOrders.compactMap(\.order))
   }
 
   /// The name, its mark's parts not picked by hand guessed from it.
@@ -416,7 +462,8 @@ struct PatternEditor: View {
 
   private func save() {
     let pattern = shaped
-    guard write({ try OwnValues.save(pattern, now: nowMs(), in: $0) }) else { return }
+    guard write({ try OwnValues.save(pattern, now: nowMs(), in: $0) }, refused: { refusal = $0 })
+    else { return }
     onSaved()
     dismiss()
   }
@@ -431,15 +478,10 @@ struct PatternEditor: View {
     }
   }
 
-  /// No longer used, or used again: as it is saved, its days untouched.
-  private func setArchived(_ archived: Bool) {
-    var pattern = initial
-    pattern.archived = archived
-    if write({ try OwnValues.save(pattern, now: nowMs(), in: $0) }) { dismiss() }
-  }
-
   private func delete() {
-    if write({ try OwnValues.deletePattern(initial.id, now: nowMs(), in: $0) }) { dismiss() }
+    if write({ try OwnValues.deletePattern(initial.id, now: nowMs(), in: $0) }, refused: { refusal = $0 }) {
+      dismiss()
+    }
   }
 }
 

@@ -18,12 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
-/** カレンダー, which its month heads, with no bar of its own (POC-206 draws it). */
-@Composable
-fun CalendarScreen() {
-  Placeholder(stringResource(R.string.tab_calendar))
-}
-
 /** グループ, which heads itself (the group's hub comes with sync). */
 @Composable
 fun GroupsScreen() {

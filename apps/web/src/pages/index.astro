@@ -15,6 +15,8 @@ import {
 } from "../components/lp-screens";
 import StoreLinks from "../components/store-links.astro";
 import Site from "../layouts/site.astro";
+import { primaryAction } from "../lib/primary-action";
+import { appStoreUrl } from "../lib/site";
 
 // The page's words are its own HTML; what the app's own code draws, its
 // skies and its phones, are islands (components/lp-screens.tsx), drawn by
@@ -26,17 +28,14 @@ const NEAR = { rootMargin: "100% 0px" };
 // where the site's own falls short of 4.5:1.
 const ON_SKY_TEXT = "#5c6159";
 
-// The /design phone's frame colors, as the workspace gives them.
-const page = css({
-  "--ws-bezel": "#333631",
-  "--ws-bezel-edge": "#b9bdb6",
-  "--ws-bezel-shadow": "#30392f35",
-  "--ws-island": "#242724",
-});
-
 const hero = {
   copy: css({
-    _wide: { paddingTop: "120px", textAlign: "left" },
+    _wide: {
+      gridColumn: 1,
+      gridRow: 1,
+      paddingTop: "120px",
+      textAlign: "left",
+    },
     display: "flex",
     flexDirection: "column",
     gap: "24px",
@@ -44,6 +43,7 @@ const hero = {
     textAlign: "center",
   }),
   demo: css({
+    _wide: { display: "contents" },
     display: "flex",
     flexDirection: "column",
     gap: "18px",
@@ -61,20 +61,20 @@ const hero = {
     fontWeight: 650,
     letterSpacing: "0.17em",
   }),
-  hint: css({
-    color: "var(--muted)",
-    fontSize: "12px",
-    lineHeight: 1.9,
-    textAlign: "center",
-  }),
   release: css({ color: ON_SKY_TEXT, fontSize: "11px" }),
+  // Wide, the words on the left and the phone on the right, and what is
+  // under the phone on a narrow screen (HeroPhone's foot) under the words
+  // instead, where it is seen beside the phone without scrolling.
   root: css({
     _wide: {
-      alignItems: "flex-start",
-      flexDirection: "row",
-      gap: "96px",
+      alignItems: "start",
+      columnGap: "96px",
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 460px) 390px",
+      gridTemplateRows: "auto 1fr",
       justifyContent: "center",
       padding: "24px 48px 96px",
+      rowGap: "40px",
     },
     alignItems: "center",
     display: "flex",
@@ -276,7 +276,7 @@ const closing = {
 ---
 
 <Site description={site.description} path="/" title="シフトを、ポチッと。">
-  <main class={page} id="main">
+  <main id="main">
     <section class={hero.root}>
       <div class={hero.copy}>
         <Sky client:idle place="top" />
@@ -301,12 +301,7 @@ const closing = {
         </div>
       </div>
       <div class={hero.demo}>
-        <HeroPhone client:idle />
-        <p class={hero.hint}>
-          そのまま触れます。シフトをポチッと押してみてください。
-          <br />
-          左右にスワイプすると、月が変わります。
-        </p>
+        <HeroPhone action={primaryAction(appStoreUrl())} client:idle />
       </div>
     </section>
     {/* What else the app does, each beside its own screen: the real one,

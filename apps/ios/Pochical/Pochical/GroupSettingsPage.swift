@@ -229,7 +229,7 @@ private struct GroupEditPage: View {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
         PageLink {
-          GroupMarkPage(name: name, mark: mark, shelf: .group(group.id)) { mark = $0 }
+          GroupMarkPage(name: name, mark: $mark, shelf: .group(group.id))
         } label: {
           LabeledContent("アイコン") {
             GroupMarkBadge(mark: mark, shelf: .group(group.id))

@@ -1,18 +1,12 @@
 ---
 import { ArrowUpRight, Smartphone } from "lucide-react";
 
-import { storeLink } from "../lib/site";
+import { appStoreUrl, googlePlayUrl } from "../lib/site";
 
 // The app's store pages, each marked 公開準備中 until its URL is set.
 const stores = [
-  {
-    name: "App Store",
-    url: storeLink(import.meta.env.VITE_APP_STORE_URL, "apps.apple.com"),
-  },
-  {
-    name: "Google Play",
-    url: storeLink(import.meta.env.VITE_GOOGLE_PLAY_URL, "play.google.com"),
-  },
+  { name: "App Store", url: appStoreUrl() },
+  { name: "Google Play", url: googlePlayUrl() },
 ];
 ---
 

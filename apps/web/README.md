@@ -26,7 +26,7 @@
 | `/support/google-calendar` | Googleカレンダーにシフトを入れる手順（アプリから開く） |
 | `/account/delete` | 削除される内容と、メールでの削除依頼 |
 
-デザイン資料は `apps/design`、試作のデモは `apps/demo`、スマホで試す試作は `apps/try` にあります。
+デザイン資料と試作のデモは `apps/design`、スマホで試す試作は `apps/try` にあります。
 
 招待ページ（と招待の画像）以外はビルド時に描画し、静的ファイルとして配信します。招待ページはリクエストごとにWorkerで描画し、no-storeです。招待ページ・削除ページはnoindexです。セキュリティヘッダーは `src/lib/headers.ts` の一覧から、静的ファイルには `_headers`（ビルド時に書き出し）、Workerのページにはmiddlewareで付けます。日本語の改行位置（文節ごとの `<wbr>`）は、`.astro` のHTMLにはmiddlewareが、ReactのアイランドにはJSXランタイムが、同じBudouXの規則（`@pochical/jsx`）で入れます。招待ページのタイトルとOGPにはグループ名と絵文字を入れ、チャットに貼ったリンクのカードにも出します。ページを開けば誰でも見られる情報なので、カードに出しても見える範囲は変わりません。
 
