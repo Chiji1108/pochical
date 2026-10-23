@@ -2,6 +2,7 @@ package app.pochical.calendar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,10 +17,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -62,7 +66,14 @@ data class DayLook(
  * stroke under it, and its shift's mark; today framed inside the day.
  */
 @Composable
-fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifier = Modifier) {
+fun DayCell(
+  look: DayLook,
+  height: Dp,
+  colorsHoliday: Boolean,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier,
+  enabled: Boolean = true,
+) {
   val colors = LocalThemeColors.current
   val style = LocalDeviceSettings.current.device.look
   val pattern = look.pattern
@@ -97,8 +108,13 @@ fun DayCell(look: DayLook, height: Dp, colorsHoliday: Boolean, modifier: Modifie
           else -> Modifier
         }
       )
+      .clip(shape)
+      .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
       .padding(vertical = CELL_PADDING)
-      .clearAndSetSemantics { contentDescription = description },
+      .clearAndSetSemantics {
+        contentDescription = description
+        selected = look.isSelected
+      },
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(2.dp),
   ) {
