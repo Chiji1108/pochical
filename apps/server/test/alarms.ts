@@ -7,14 +7,14 @@ import { UserDO } from "../src/user-do";
 
 // Durable Objects' alarms in tests are run by the runtime alone, one at a
 // time for each object, and no switch of the pool, Miniflare or workerd
-// turns that off. Once the runtime takes one up it reads as none, and it
-// begins it only once the object is free and the pool has fetched the
-// Worker's module from vitest's main process: nothing in the object shows
-// such a run. One set for the very millisecond of a run taken up is kept,
-// and never run. So a test waits only on runs of an alarm it set itself,
-// a millisecond after any taken up, which the runtime runs after them.
-// Where nothing was owed, that run is the object's alarm with nothing to
-// do, as the runtime may run any alarm again.
+// turns that off. Once the runtime takes one up it reads as none, though
+// the pool begins it only after it has fetched the Worker's module from
+// vitest's main process: nothing in the object shows such a run. One set
+// for the very millisecond of a run taken up is kept, and never run. So a
+// test waits only on runs of an alarm it set itself, a millisecond after
+// any taken up, which the runtime runs after them. Where nothing was
+// owed, that run is the object's alarm with nothing to do, as the runtime
+// may run any alarm again.
 
 /** A Durable Object's alarm runs, as the runtime begins and ends them. */
 type Runs = {
