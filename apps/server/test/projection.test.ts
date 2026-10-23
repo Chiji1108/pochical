@@ -9,6 +9,7 @@ import { invites } from "../src/db/schema";
 import { ChangesSchema, DayField } from "../src/gen/pochical/v1/sync_pb";
 import { PUSH_RETRY_FIRST_MS } from "../src/user-do";
 import type { UserDO } from "../src/user-do";
+import { alarmOf, alarmRunsOf, alarmsSettled, runAlarm } from "./alarms";
 import { call, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesIn,
@@ -275,12 +276,14 @@ describe("a member's shifts in their groups", () => {
     const { groupId } = (await created.json()) as { groupId: string };
     await enterADay(maker);
 
-    const before = Date.now();
-    await runInDurableObject(user, async (instance, state) => {
-      // As if no push had failed yet, whatever ran before this one.
+    // As if no push had failed yet, whatever ran before this one.
+    await alarmsSettled(user);
+    await runInDurableObject(user, (_, state) => {
       state.storage.kv.delete("pushFailures:!unreachable");
-      await state.storage.deleteAlarm();
-      await instance.alarm();
+    });
+    const before = Date.now();
+    await runAlarm(user);
+    await runInDurableObject(user, async (_, state) => {
       const [unreached, reached] = state.storage.sql
         .exec(
           "SELECT group_id, pushed_cursor FROM memberships ORDER BY group_id"
@@ -310,24 +313,25 @@ describe("a member's shifts in their groups", () => {
     await failPushesTo(user, ["!long-gone", "!just-now"]);
     await enterADay(maker);
 
-    await runInDurableObject(user, async (instance, state) => {
-      // One group has failed for hours; the other fails for the first time.
+    // One group has failed for hours; the other fails for the first time.
+    await alarmsSettled(user);
+    await runInDurableObject(user, (_, state) => {
       state.storage.kv.put("pushFailures:!long-gone", 20);
       state.storage.kv.delete("pushFailures:!just-now");
-      await state.storage.deleteAlarm();
-      const before = Date.now();
-      await instance.alarm();
-      const retry = await state.storage.getAlarm();
-      expect(retry).toBeGreaterThanOrEqual(before + PUSH_RETRY_FIRST_MS);
-      expect(retry).toBeLessThanOrEqual(Date.now() + PUSH_RETRY_FIRST_MS);
+    });
+    const before = Date.now();
+    await runAlarm(user);
+    const retry = await alarmOf(user);
+    expect(retry).toBeGreaterThanOrEqual(before + PUSH_RETRY_FIRST_MS);
+    expect(retry).toBeLessThanOrEqual(Date.now() + PUSH_RETRY_FIRST_MS);
 
-      // Both past the most retries: the next change tries them again.
+    // Both past the most retries: the next change tries them again.
+    await runInDurableObject(user, (_, state) => {
       state.storage.kv.put("pushFailures:!long-gone", 30);
       state.storage.kv.put("pushFailures:!just-now", 30);
-      await state.storage.deleteAlarm();
-      await instance.alarm();
-      await expect(state.storage.getAlarm()).resolves.toBeNull();
     });
+    await runAlarm(user);
+    await expect(alarmOf(user)).resolves.toBeNull();
   });
 
   it("leaves the next round to a change made while it pushes", async () => {
@@ -351,15 +355,14 @@ describe("a member's shifts in their groups", () => {
     });
     await enterADay(maker);
 
-    await runInDurableObject(user, async (instance, state) => {
-      await state.storage.deleteAlarm();
-      const before = Date.now();
-      changing = true;
-      await instance.alarm();
-      await expect(state.storage.getAlarm()).resolves.toBeLessThan(
-        before + PUSH_RETRY_FIRST_MS
-      );
-      // Nor that round, to fail as the file's tests end.
+    await alarmsSettled(user);
+    changing = true;
+    const before = await alarmRunsOf(user);
+    // The change is a round of its own, at once, not after the retry.
+    await expect(runAlarm(user)).resolves.toBeTruthy();
+    await expect(alarmRunsOf(user)).resolves.toBe(before + 2);
+    // Nor that round's retry, to fail as the file's tests end.
+    await runInDurableObject(user, async (_, state) => {
       await state.storage.deleteAlarm();
     });
   });

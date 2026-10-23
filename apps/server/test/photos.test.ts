@@ -3,6 +3,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 
 import { photoKey, sharePersonPhoto, smallKey } from "../src/photos";
+import { alarmsSettled, runAlarm } from "./alarms";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import {
   changesBesidesNotices,
@@ -256,8 +257,7 @@ describe("a group's photos", () => {
   });
 
   it("deletes the photos no line came to carry once their uploader has uploaded nothing for as long as a line goes by itself", async () => {
-    const { runDurableObjectAlarm, runInDurableObject } =
-      await import("cloudflare:test");
+    const { runInDurableObject } = await import("cloudflare:test");
     const { groupId, guest, maker } = await pair();
     const group = env.GROUPS.getByName(groupId);
     const own = crypto.randomUUID();
@@ -292,7 +292,7 @@ describe("a group's photos", () => {
     await uploadedAgo(chatRules.unsentAfterMs - 60_000, "fresh");
 
     // The uploads set the alarm, so a group that goes quiet sweeps too.
-    await expect(runDurableObjectAlarm(group)).resolves.toBeTruthy();
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     const kept = {
       fresh: await stored("fresh"),
       lost: await stored("lost"),
@@ -320,13 +320,12 @@ describe("a group's photos", () => {
 
     // The alarm comes back for the one still within its time.
     await uploadedAgo(chatRules.unsentAfterMs, "fresh");
-    await expect(runDurableObjectAlarm(group)).resolves.toBeTruthy();
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(stored("fresh")).resolves.toBeFalsy();
   });
 
   it("keeps a member's photos not sent while they upload more, as the rest of a frame's go up", async () => {
-    const { runDurableObjectAlarm, runInDurableObject } =
-      await import("cloudflare:test");
+    const { runInDurableObject } = await import("cloudflare:test");
     const { groupId, maker } = await pair();
     const group = env.GROUPS.getByName(groupId);
     await photo("PUT", groupId, "first", maker, JPEG);
@@ -337,7 +336,7 @@ describe("a group's photos", () => {
       );
     });
     await photo("PUT", groupId, "second", maker, JPEG);
-    await runDurableObjectAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(
       env.PHOTOS.head(photoKey(groupId, "first"))
     ).resolves.not.toBeNull();
@@ -386,9 +385,7 @@ const usualFace = async (token: string, groupId: string): Promise<string> => {
   const photoId = await ownPhoto(token);
   await call("UserService/SetProfile", { name: "さくら", photoId }, token);
   await push(await userIdOf(token));
-  await vi.waitFor(async () => {
-    await expect(storedBytes(groupId, photoId)).resolves.not.toBeNull();
-  });
+  await expect(storedBytes(groupId, photoId)).resolves.not.toBeNull();
   return photoId;
 };
 
@@ -409,8 +406,7 @@ const photoMark = async (token: string, groupId: string): Promise<string> => {
  * whether it ran.
  */
 const sweepAll = async (groupId: string): Promise<boolean> => {
-  const { runDurableObjectAlarm, runInDurableObject } =
-    await import("cloudflare:test");
+  const { runInDurableObject } = await import("cloudflare:test");
   const group = env.GROUPS.getByName(groupId);
   await runInDurableObject(group, (_, state) => {
     state.storage.sql.exec(
@@ -418,7 +414,7 @@ const sweepAll = async (groupId: string): Promise<boolean> => {
       Date.now() - chatRules.unsentAfterMs
     );
   });
-  return await runDurableObjectAlarm(group);
+  return await runAlarm(group);
 };
 
 describe("a group's photo once stored", () => {
@@ -560,8 +556,7 @@ describe("a group's photo once stored", () => {
   });
 
   it("is uploaded again by its uploader until sent, kept longer with its first bytes", async () => {
-    const { runDurableObjectAlarm, runInDurableObject } =
-      await import("cloudflare:test");
+    const { runInDurableObject } = await import("cloudflare:test");
     const { groupId, maker } = await pair();
     const group = env.GROUPS.getByName(groupId);
     await photo("PUT", groupId, "again", maker, JPEG);
@@ -580,7 +575,7 @@ describe("a group's photo once stored", () => {
             .one().at
       )
     ).resolves.toBeGreaterThan(long);
-    await runDurableObjectAlarm(group);
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(storedBytes(groupId, "again")).resolves.toStrictEqual(JPEG);
     // And its line still goes.
     const mine = await syncSocket(`/v1/groups/${groupId}/socket`, maker);
@@ -605,6 +600,8 @@ describe("a group's photo once stored", () => {
     const group = env.GROUPS.getByName(groupId);
     const stray = await ownPhoto(maker);
     await sharePersonPhoto(env, makerId, stray, groupId);
+    // No run of the runtime's goes with the test's own below.
+    await alarmsSettled(group);
     await runInDurableObject(group, (_, state) => {
       state.storage.sql.exec(
         "update group_photos set uploaded_at = ?",
@@ -636,6 +633,8 @@ describe("a group's photo once stored", () => {
     const group = env.GROUPS.getByName(groupId);
     const stray = await ownPhoto(maker);
     await sharePersonPhoto(env, makerId, stray, groupId);
+    // No run of the runtime's goes with the test's own below.
+    await alarmsSettled(group);
     await runInDurableObject(group, (_, state) => {
       state.storage.sql.exec(
         "update group_photos set uploaded_at = ?",
@@ -655,9 +654,7 @@ describe("a group's photo once stored", () => {
     // Not copied in again yet, and the alarm comes back for it.
     await expect(storedBytes(groupId, stray)).resolves.toBeNull();
     expect(retryAt).not.toBeNull();
-    await runInDurableObject(group, async (instance) => {
-      await instance.alarm();
-    });
+    await expect(runAlarm(group)).resolves.toBeTruthy();
     await expect(storedBytes(groupId, stray)).resolves.toStrictEqual(JPEG);
     await expect(
       runInDurableObject(group, (_, state) =>
@@ -675,6 +672,8 @@ describe("a group's photo once stored", () => {
     const { groupId, maker, makerId } = await pair();
     const group = env.GROUPS.getByName(groupId);
     await photo("PUT", groupId, "lost", maker, JPEG);
+    // No run of the runtime's goes with the test's own below.
+    await alarmsSettled(group);
     await runInDurableObject(group, (_, state) => {
       state.storage.sql.exec(
         "update group_photos set uploaded_at = ?",
