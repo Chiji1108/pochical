@@ -1041,11 +1041,13 @@ export class UserDO extends DurableObject<Env> {
    * which would leave the values waiting for the user's next change, so
    * the alarm comes back for a failed group itself, each group waiting by
    * its own failures. A change made while it runs has set the next alarm
-   * already, which is kept when earlier. The user's own photos noted as going are
-   * deleted first, and come back so should storage fail.
+   * already, which is kept when earlier. The user's own photos noted as
+   * going are deleted first, and come back so should storage fail.
    */
   async alarm(run: AlarmInvocationInfo): Promise<void> {
-    this.alarms.begin(run);
+    // Not waited on: the run starts as the runtime began it, and the
+    // check lands before its first wait.
+    void this.alarms.begin(run);
     const userId = this.ctx.id.name;
     if (userId === undefined) {
       return;
@@ -1080,9 +1082,9 @@ export class UserDO extends DurableObject<Env> {
         .where(eq(memberships.groupId, groupId))
         .run();
     }
-    await this.alarms.end(
-      retries.length > 0 ? Date.now() + Math.min(...retries) : undefined
-    );
+    if (retries.length > 0) {
+      await this.alarms.setBy(Date.now() + Math.min(...retries));
+    }
   }
 
   /**

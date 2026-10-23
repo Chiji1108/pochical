@@ -7,12 +7,7 @@
  * (cloudflare/workerd#7915). getAlarm() reads null meanwhile, so the
  * run's time is kept here as each run begins, and an alarm asked for it
  * is set a millisecond after it, which the scheduler takes as any other.
- * Remove this once workerd schedules such a set.
- *
- * One set for the run's time before the run began is the exception: the
- * run is already to see the change that set it, and storage keeps that
- * time with nothing to run it. Read here as no alarm, it goes as the run
- * ends.
+ * Remove this once workerd schedules such a set (POC-266).
  */
 export class Alarm {
   /** When the latest run this object began was set for. */
@@ -24,9 +19,19 @@ export class Alarm {
     this.storage = storage;
   }
 
-  /** Called as each run of the alarm begins, with what the runtime gave it. */
-  begin(run: AlarmInvocationInfo): void {
+  /**
+   * Called as each run of the alarm begins, with what the runtime gave
+   * it; the run's time is kept before anything else is done. Storage
+   * holding that time means a set for it came after the runtime took the
+   * run up and before it began, and was kept, not scheduled: it is set
+   * again by the same rule, so storage never holds an alarm that will not
+   * run.
+   */
+  async begin(run: AlarmInvocationInfo): Promise<void> {
     this.lastRun = run.scheduledTime;
+    if ((await this.storage.getAlarm()) === run.scheduledTime) {
+      await this.set(run.scheduledTime);
+    }
   }
 
   /**
@@ -39,29 +44,14 @@ export class Alarm {
     await this.storage.setAlarm(time === this.lastRun ? time + 1 : time);
   }
 
-  /** The alarm set for `due` at the latest: one set earlier stays. */
+  /**
+   * The alarm set for `due` at the latest: one set earlier stays, as one
+   * a change set while a run went, which getAlarm() reads then.
+   */
   async setBy(due: number): Promise<void> {
-    const set = await this.stored();
+    const set = await this.storage.getAlarm();
     if (set === null || set > due) {
       await this.set(due);
     }
-  }
-
-  /**
-   * As a run ends: the alarm set for `due`, what is still to do, unless
-   * one was set earlier meanwhile, as by a change made while it ran.
-   */
-  async end(due: number | undefined): Promise<void> {
-    if (due !== undefined) {
-      await this.setBy(due);
-    } else if ((await this.storage.getAlarm()) === this.lastRun) {
-      await this.storage.deleteAlarm();
-    }
-  }
-
-  /** The alarm that will run, if any. */
-  private async stored(): Promise<number | null> {
-    const set = await this.storage.getAlarm();
-    return set === this.lastRun ? null : set;
   }
 }

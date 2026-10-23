@@ -147,19 +147,22 @@ export const settle = async (
   for (;;) {
     const own = vi.getRealSystemTime() + 1;
     runs.own = own;
-    // oxlint-disable-next-line no-await-in-loop -- again for one left due
-    await storage.setAlarm(own);
     let left: number | null;
-    do {
-      const after = runs.ended;
-      // oxlint-disable-next-line no-await-in-loop -- each run as it ends
-      await until(runs, () => !runs.going && runs.ended > after);
-      if (runs.threw !== undefined && runs.threw.ended > since) {
-        throw new Error("An alarm's run threw", { cause: runs.threw.error });
-      }
-      ({ left } = runs.last);
-    } while (left === own && runs.last.scheduled !== own);
-    runs.own = undefined;
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- again for one left due
+      await storage.setAlarm(own);
+      do {
+        const after = runs.ended;
+        // oxlint-disable-next-line no-await-in-loop -- each run as it ends
+        await until(runs, () => !runs.going && runs.ended > after);
+        if (runs.threw !== undefined && runs.threw.ended > since) {
+          throw new Error("An alarm's run threw", { cause: runs.threw.error });
+        }
+        ({ left } = runs.last);
+      } while (left === own && runs.last.scheduled !== own);
+    } finally {
+      runs.own = undefined;
+    }
     if (left === null || left > vi.getRealSystemTime()) {
       return set !== null;
     }

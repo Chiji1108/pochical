@@ -51,7 +51,7 @@ describe("a Durable Object's alarm", () => {
 
   it("asked for the time of the run going, is set a millisecond after it", async () => {
     const { at, stored } = await storedAfter(async (alarm, _, time) => {
-      alarm.begin(ownRun(time));
+      await alarm.begin(ownRun(time));
       await alarm.set(time);
     });
     expect(stored).toBe(at + 1);
@@ -59,7 +59,7 @@ describe("a Durable Object's alarm", () => {
 
   it("asked for another time while a run goes, is set for it", async () => {
     const { at, stored } = await storedAfter(async (alarm, _, time) => {
-      alarm.begin(ownRun(time));
+      await alarm.begin(ownRun(time));
       await alarm.set(time + 5);
     });
     expect(stored).toBe(at + 5);
@@ -77,37 +77,30 @@ describe("a Durable Object's alarm", () => {
     expect([kept.stored, moved.stored]).toStrictEqual([kept.at, moved.at]);
   });
 
-  it("asked for by a time, takes the run's own time left in storage as none", async () => {
+  it("asked for by a time, keeps the run's own time when the runtime keeps it to try the run again", async () => {
     const { at, stored } = await storedAfter(async (alarm, storage, time) => {
-      // As a set kept when it came after the runtime took the run up.
+      await alarm.begin(ownRun(time));
+      // As the runtime keeps a run that threw, to try it again.
       await storage.setAlarm(time);
-      alarm.begin(ownRun(time));
       await alarm.setBy(time + 5);
-    });
-    expect(stored).toBe(at + 5);
-  });
-
-  it("as a run ends, keeps one set earlier while it ran", async () => {
-    const { at, stored } = await storedAfter(async (alarm, _, time) => {
-      alarm.begin(ownRun(time - 10));
-      await alarm.set(time);
-      await alarm.end(time + 5);
     });
     expect(stored).toBe(at);
   });
 
-  it("as a run ends with nothing to do, deletes the run's own time left, and keeps any other", async () => {
-    const left = await storedAfter(async (alarm, storage, time) => {
+  it("found at its run's own time as the run begins, is set again a millisecond after it", async () => {
+    const { at, stored } = await storedAfter(async (alarm, storage, time) => {
+      // As a set kept when it came after the runtime took the run up.
       await storage.setAlarm(time);
-      alarm.begin(ownRun(time));
-      await alarm.end(undefined);
+      await alarm.begin(ownRun(time));
     });
-    const other = await storedAfter(async (alarm, _, time) => {
-      alarm.begin(ownRun(time - 10));
-      await alarm.set(time);
-      await alarm.end(undefined);
+    expect(stored).toBe(at + 1);
+  });
+
+  it("is left as it is when a run begins with none set", async () => {
+    const { stored } = await storedAfter(async (alarm, _, time) => {
+      await alarm.begin(ownRun(time));
     });
-    expect([left.stored, other.stored]).toStrictEqual([null, other.at]);
+    expect(stored).toBeNull();
   });
 });
 
@@ -147,15 +140,21 @@ describe("a change made while a User DO's alarm runs", () => {
     expect(stored).toBe(at + 1);
   });
 
-  it("before the run began, in its millisecond, leaves no alarm once the run has taken it", async () => {
+  it("before the run began, in its millisecond, has a run of its own after it", async () => {
     const user = env.USERS.getByName(crypto.randomUUID());
-    const stored = await runInDurableObject(user, async (instance, state) => {
-      const at = Date.now() + HOUR_MS;
-      // As the runtime keeps a set for the run's time it has taken up.
-      await state.storage.setAlarm(at);
-      await instance.alarm(ownRun(at));
-      return await state.storage.getAlarm();
-    });
-    expect(stored).toBeNull();
+    const { at, stored } = await runInDurableObject(
+      user,
+      async (instance, state) => {
+        const time = Date.now() + HOUR_MS;
+        // As the runtime keeps a set for the run's time it has taken up.
+        await state.storage.setAlarm(time);
+        await instance.alarm(ownRun(time));
+        const left = await state.storage.getAlarm();
+        await state.storage.deleteAlarm();
+        return { at: time, stored: left };
+      }
+    );
+    // Run again, a millisecond after, though the run took the change.
+    expect(stored).toBe(at + 1);
   });
 });

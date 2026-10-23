@@ -376,9 +376,10 @@ describe("a member's shifts in their groups", () => {
   it("keeps the alarm a change made while it pushes set, not the failed group's later retry", async () => {
     const { maker, user } = await someone();
     let changing = false;
-    // The change's alarm comes before the retry: its clock is held 5
-    // seconds ahead, so the runtime does not run it as the test reads it.
-    const changeAt = Date.now() + 5000;
+    // The change's alarm comes before the retry, half an hour ahead, its
+    // clock held there, so the runtime does not run it as the test reads
+    // it; the group has failed for hours, so its retry waits an hour.
+    const changeAt = Date.now() + 1_800_000;
     await failPushesTo(user, ["!unreachable"], (instance) => {
       if (changing) {
         changing = false;
@@ -390,6 +391,9 @@ describe("a member's shifts in their groups", () => {
     });
     await enterADay(maker);
     await alarmsSettled(user);
+    await runInDurableObject(user, (_, state) => {
+      state.storage.kv.put("pushFailures:!unreachable", 20);
+    });
     changing = true;
     const stored = await runInDurableObject(user, async (instance, state) => {
       await instance.alarm(ownRun());

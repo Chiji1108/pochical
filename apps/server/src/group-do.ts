@@ -1446,13 +1446,14 @@ export class GroupDO extends DurableObject<Env> {
    * index and its Slack thread (support-place.ts). A failure comes back
    * after the wait the relay gives, the relayed cursor kept; a change
    * made while it runs has set the next alarm already, which is kept when
-   * earlier. The
-   * photos nothing carries are swept, and the alarm comes back for the
-   * next (`sweepPhotos`). News of a membership due is told, and the alarm
-   * comes back for any not taken, until it is.
+   * earlier. The photos nothing carries are swept, and the alarm comes
+   * back for the next (`sweepPhotos`). News of a membership due is told,
+   * and the alarm comes back for any not taken, until it is.
    */
   async alarm(run: AlarmInvocationInfo): Promise<void> {
-    this.alarms.begin(run);
+    // Not waited on: the run starts as the runtime began it, and the
+    // check lands before its first wait.
+    void this.alarms.begin(run);
     const userId = this.supportUser();
     const waitMs =
       userId === undefined
@@ -1466,7 +1467,9 @@ export class GroupDO extends DurableObject<Env> {
       ...(photosDue === undefined ? [] : [photosDue]),
       ...(newsDue === undefined ? [] : [newsDue]),
     ];
-    await this.alarms.end(dues.length > 0 ? Math.min(...dues) : undefined);
+    if (dues.length > 0) {
+      await this.alarms.setBy(Math.min(...dues));
+    }
   }
 
   /** The user whose chat with Pochical's people this is, if it is one. */
