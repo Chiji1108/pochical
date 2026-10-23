@@ -307,6 +307,9 @@ struct PatternEditor: View {
             Text("–").foregroundStyle(colors.textTertiary)
             ClockPicker(label: "終了時刻", time: $end)
           }
+          // From the row's edge, as under the others: a list starts the line
+          // at a row's first words, here the dash between the times.
+          .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
         }
         Toggle(isOn: $draft.countsAsOff) {
           Text("休みとして数える")
