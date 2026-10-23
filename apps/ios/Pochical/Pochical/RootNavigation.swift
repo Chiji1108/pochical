@@ -152,9 +152,6 @@ extension EnvironmentValues {
 /// `hosted` puts the app's in it again.
 struct RootNavigation: UIViewControllerRepresentable {
   let navigator: RootNavigator
-  /// The テーマ's accent, for the bar's buttons, which UIKit draws: the
-  /// pages' own tint does not reach them.
-  let tint: Color
   let tabs: AnyView
   let page: (RootPage) -> AnyView
 
@@ -163,13 +160,11 @@ struct RootNavigation: UIViewControllerRepresentable {
     navigator.controller = controller
     controller.onShown = { [weak navigator] in navigator?.shown($0) }
     controller.show(navigator.pages, over: navigator.tab, animated: false)
-    controller.navigationBar.tintColor = UIColor(tint)
     return controller
   }
 
   func updateUIViewController(_ controller: RootNavigationController, context: Context) {
     navigator.controller = controller
-    controller.navigationBar.tintColor = UIColor(tint)
     controller.update(tabs: tabs, page: page)
   }
 }

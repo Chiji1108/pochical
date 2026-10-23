@@ -456,9 +456,8 @@ export const chatStyle = {
   floatingDay: cva({
     base: {
       bg: "background.base",
-      borderColor: "border.default",
+      border: "1px solid token(colors.border.default)",
       borderRadius: "sm",
-      borderWidth: "1px",
       boxShadow: "md",
       color: "text.tertiary",
       left: "50%",

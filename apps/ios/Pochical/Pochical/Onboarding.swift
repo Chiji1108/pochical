@@ -41,6 +41,7 @@ enum FirstRun {
 /// user before shows; nor while the server does not know the session,
 /// which is said instead.
 struct AppRoot: View {
+  @Environment(\.themeColors) private var colors
   @AppStorage(FirstRun.doneKey) private var done = false
   @Environment(OpenPlaceSocket.self) private var openPlace
   @Environment(AccountSession.self) private var session
@@ -76,6 +77,7 @@ struct AppRoot: View {
         Onboarding()
       }
     }
+    .background(WindowTint(color: colors.accentDefault))
     .onChange(of: hasPatterns, initial: true) { _, has in
       if has { done = true }
     }
@@ -110,7 +112,6 @@ private enum OnboardingStep: Hashable {
 /// はじめの設定: each step pushed as a page, the system's back going a
 /// question back.
 struct Onboarding: View {
-  @Environment(\.themeColors) private var colors
   @Environment(\.write) private var write
   @State private var path: [OnboardingStep] = []
   /// Starting over after deleting the account, which is said first.
@@ -151,7 +152,6 @@ struct Onboarding: View {
         }
       }
     }
-    .tint(colors.accentDefault)
   }
 
   /// The patterns chosen: a roster's work, or a weekly order, end the
@@ -475,5 +475,31 @@ private struct OptionCard<More: View>: View {
 extension OptionCard where More == EmptyView {
   init(icon: String? = nil, title: String, note: String, action: @escaping () -> Void) {
     self.init(icon: icon, title: title, note: note, action: action) { EmptyView() }
+  }
+}
+
+/// The テーマ's accent as the window's tint, the way UIKit tints an app:
+/// what is on the screens takes it as their accent and the bars fill their
+/// prominent buttons with it, while the bars' other buttons and the menus
+/// stay in the label color, as iOS 26 draws them (spec/chat.md, The chat's
+/// page). A SwiftUI tint over the screens would reach those too.
+private struct WindowTint: UIViewRepresentable {
+  let color: Color
+
+  func makeUIView(context: Context) -> TintingView { TintingView() }
+
+  func updateUIView(_ view: TintingView, context: Context) {
+    view.tint = UIColor(color)
+  }
+
+  final class TintingView: UIView {
+    var tint: UIColor? {
+      didSet { window?.tintColor = tint }
+    }
+
+    override func didMoveToWindow() {
+      super.didMoveToWindow()
+      window?.tintColor = tint
+    }
   }
 }

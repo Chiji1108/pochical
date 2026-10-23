@@ -281,9 +281,19 @@ private struct Shifts {
   }
 }
 
-/// The days to share, picked (/design's DaySheet): days everyone is off
-/// in the next weeks offered first, then a month to pick any from. ✓ sends
-/// them as a line of their own with everyone's shifts.
+/// How the days sheet was opened: to share days, or to put them to the
+/// vote.
+enum DaysPick: Identifiable {
+  case share, poll
+
+  var id: Self { self }
+}
+
+/// The days to share or to put to the vote, picked (/design's DaySheet):
+/// days everyone is off in the next weeks offered first, then a month to
+/// pick any from. ✓ sends them as a line of their own with everyone's
+/// shifts, or as a poll. Which it is is how it was opened, never changed in
+/// it.
 struct ShareDaysSheet: View {
   @Environment(\.english) private var english
   @Environment(\.themeColors) private var colors
@@ -293,21 +303,16 @@ struct ShareDaysSheet: View {
   let groupID: String
   /// Who the card shows: everyone, or the two of a one-to-one chat.
   let people: Set<String>?
-  /// 共有 | 投票 at its top: in the group chat, not a one-to-one chat.
-  let pollable: Bool
-  /// Sends the days, shared, or put to the vote.
-  let onSend: ([Day], Bool) -> Bool
-  /// On 投票: the days are put to the vote instead.
-  @State private var poll = false
+  /// To share the days, or to put them to the vote.
+  let pick: DaysPick
+  /// Sends the days; true when kept.
+  let onSend: ([Day]) -> Bool
   @State private var month = Day.today.firstOfMonth
   @State private var picked: [Day] = []
   @State private var notice: String?
   /// How many notices have been said, so only the latest one's time takes
   /// it away.
   @State private var notices = 0
-
-  /// The fewest days a poll puts to the vote.
-  private static var pollLeast: Int { 2 }
 
   /// How far ahead the days everyone is off are offered.
   private static var suggestionDays: Int { 45 }
@@ -321,20 +326,13 @@ struct ShareDaysSheet: View {
     NavigationStack {
       ScrollView {
         VStack(alignment: .leading, spacing: 16) {
-          if pollable {
-            Picker("日にちをどうするか", selection: $poll) {
-              Text("共有").tag(false)
-              Text("投票").tag(true)
-            }
-            .pickerStyle(.segmented)
-          }
           suggestions(together.filter { $0 >= today }.sorted())
           monthGrid(together: together, today: today)
           note
         }
         .padding(16)
       }
-      .navigationTitle(poll ? "日にちの投票" : "日にちを共有")
+      .navigationTitle(pick == .poll ? "日にちの投票" : "日にちを共有")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -342,9 +340,9 @@ struct ShareDaysSheet: View {
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("送る", systemImage: "checkmark", role: .confirm) {
-            if onSend(picked, poll) { dismiss() }
+            if onSend(picked) { dismiss() }
           }
-          .disabled(picked.count < (poll ? Self.pollLeast : 1))
+          .disabled(picked.count < (pick == .poll ? pollMinDays : 1))
         }
       }
       .overlay(alignment: .top) {
@@ -471,11 +469,11 @@ struct ShareDaysSheet: View {
   private var note: some View {
     let tinted = "うすく色のついた日は、みんな休みの日です。"
     let words =
-      switch (poll, picked.count) {
-      case (true, ..<Self.pollLeast): "候補の日を\(Self.pollLeast)日以上選んでください。\(tinted)"
-      case (true, let count): "\(count)日の中から、みんなが行ける日を投票で決めます。"
-      case (false, 0): tinted
-      case (false, let count): "\(count)日分のみんなのシフトを送ります。"
+      switch (pick, picked.count) {
+      case (.poll, ..<pollMinDays): "候補の日を\(pollMinDays)日以上選んでください。\(tinted)"
+      case (.poll, let count): "\(count)日の中から、みんなが行ける日を投票で決めます。"
+      case (.share, 0): tinted
+      case (.share, let count): "\(count)日分のみんなのシフトを送ります。"
       }
     return Text(words)
     .font(.footnote)

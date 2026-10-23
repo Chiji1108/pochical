@@ -23,7 +23,11 @@ import { countShown, limitText, markLetter } from "../lib/text-limits";
 // row itself, like a name being added. box stands on its own ground, as
 // a day's memo. chip sits among chips as one more being added.
 export const fieldStyle = cva({
-  base: { font: "inherit", outline: "none" },
+  base: {
+    color: "text.primary",
+    font: "inherit",
+    outline: "none",
+  },
   defaultVariants: { align: "start" },
   variants: {
     align: { end: { textAlign: "right" }, start: {} },
@@ -33,13 +37,13 @@ export const fieldStyle = cva({
         bg: "fill.quaternary",
         border: "1px solid transparent",
         borderRadius: "md",
-        color: "text.primary",
         minHeight: "40px",
         minWidth: 0,
         padding: "0 12px",
         textStyle: "body",
       },
       chip: {
+        bg: "transparent",
         border: "1px solid token(colors.accent.focus)",
         borderRadius: "full",
         minHeight: "34px",
@@ -49,7 +53,6 @@ export const fieldStyle = cva({
       inline: {
         bg: "transparent",
         border: 0,
-        color: "text.primary",
         flex: 1,
         minWidth: 0,
         padding: 0,
