@@ -40,6 +40,8 @@ describe("a Durable Object's alarm", () => {
     expect(stored).toBe(at);
   });
 
+  // Read in the same turn as it is set: the runtime hears of the alarm
+  // only as that turn's writes are kept, so it takes none up in between.
   it("is set for now when the time asked is past", async () => {
     const before = Date.now();
     const { stored } = await storedAfter((alarm) => {

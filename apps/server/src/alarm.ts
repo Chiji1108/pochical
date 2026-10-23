@@ -27,6 +27,18 @@ export class Alarm {
    * the same rule, so storage never holds an alarm that will not run. A
    * retry is left alone: the runtime keeps the time to retry it, and no
    * set lands on it, the clock being past it by the retry's wait.
+   *
+   * Storage holds a run's own time only so: while a run goes, getAlarm()
+   * reads null until something sets the alarm, in workerd's own code, not
+   * the alarm manager's. Before calling alarm(), runAlarm in
+   * api/global-scope.c++ calls armAlarmHandler, and ActorSqlite's
+   * (io/actor-sqlite.c++), finding the stored time to be the run's, arms
+   * the deferred delete, for which ActorSqlite::getAlarm reads null.
+   * SQLite-backed objects run that same code in production, as the docs
+   * say getAlarm() reads null while alarm() runs. So the set below never
+   * comes round again for the time it sets. Should the run then throw,
+   * the runtime runs it again too: at least once, as every alarm here
+   * does only what is left, the same whichever run does it.
    */
   async begin(run: AlarmInvocationInfo): Promise<void> {
     this.lastRun = run.scheduledTime;

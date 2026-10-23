@@ -369,7 +369,6 @@ const storedBytes = async (
   return object === null ? null : new Uint8Array(await object.arrayBuffer());
 };
 
-/** A photo of the user's own, uploaded to `/v1/me/photos`. */
 /**
  * R2's next delete held until let go: a sweep waits on it, as other calls
  * come in, as the runtime lets them in while it waits.
@@ -394,6 +393,7 @@ const heldDelete = () => {
   };
 };
 
+/** A photo of the user's own, uploaded to `/v1/me/photos`. */
 const ownPhoto = async (token: string): Promise<string> => {
   const photoId = crypto.randomUUID();
   await exports.default.fetch(`${ORIGIN}/v1/me/photos/${photoId}`, {

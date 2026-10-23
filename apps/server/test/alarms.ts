@@ -127,9 +127,9 @@ const until = async (runs: Runs, done: () => boolean): Promise<void> => {
  * each the runtime has taken up among them, begun or not. "now" brings
  * one set for later to now first, as the runtime would run it then; one
  * for later is otherwise kept, and hides a run taken up before a call set
- * it (Alarm.setBy, as GroupDO's photos are swept). A run that ends throwing after it is called
- * fails the wait, as the runtime would only run it again. Whether an
- * alarm was set as it was called.
+ * it (Alarm.setBy, as GroupDO's photos are swept). A run that ends
+ * throwing after it is called fails the wait, as the runtime would only
+ * run it again. Whether an alarm was set as it was called.
  */
 export const settle = async (
   state: DurableObjectState,
