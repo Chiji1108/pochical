@@ -17,7 +17,7 @@ import androidx.room3.PrimaryKey
 data class DayRow(
   /** "YYYY-MM-DD". */
   @PrimaryKey val date: String,
-  /** A pattern's id, or `DayRules.noShift` for a day cleared on purpose. */
+  /** A pattern's id, or `Days.noShift` for a day cleared on purpose. */
   val pattern: String? = null,
   val start: String? = null,
   val end: String? = null,
@@ -65,9 +65,12 @@ data class CoworkerRow(@PrimaryKey val id: String, val name: String)
 @Entity(tableName = "coworkerOrder")
 data class CoworkerOrderRow(@PrimaryKey val position: Int, val coworkerId: String)
 
-/** One of the user's preferences (spec/sync-protocol.md, Preferences): its value as JSON. */
+/**
+ * One of the user's preferences (spec/sync-protocol.md, Preferences): the message its key names,
+ * encoded (proto/pochical/v1/preferences.proto).
+ */
 @Entity(tableName = "preferences")
-data class PreferenceRow(@PrimaryKey val key: String, val value: String)
+class PreferenceRow(@PrimaryKey val key: String, val value: ByteArray)
 
 /** The last change the server sent for each value, as a `pochical.v1.Change`. */
 @Entity(tableName = "serverValues")

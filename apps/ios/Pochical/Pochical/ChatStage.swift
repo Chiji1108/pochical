@@ -1400,7 +1400,10 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     layer.onClosed = { [weak self, weak layer] in
       if let self, let layer { menuClosed(layer) }
     }
-    effectsLayer.putMenu(layer, in: window, lifting: ids[path.item])
+    window.addSubview(layer)
+    effectsLayer.menuOpened(ground: layer.effects, lifting: ids[path.item]) { [weak layer] in
+      layer?.removeFromSuperview()
+    }
     menuLayer = layer
     menuAnchor = (ids[path.item], spot.frame)
     UIView.performWithoutAnimation { layoutMenu() }
@@ -1458,17 +1461,16 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     putKeyboardAway()
   }
 
-  /// The menu has gone: its line draws its bubble again as the layer goes,
-  /// both in this pass, so they reach the screen in the same frame and the
-  /// bubble is never missing between the two.
+  /// The menu has gone: its line draws its bubble again as the layer's
+  /// goes, both in this pass, so they reach the screen in the same frame
+  /// and the bubble is never missing between the two.
   private func menuClosed(_ layer: MenuLayer) {
     guard menuLayer === layer else { return }
     let item = menuAnchor?.item
     menuLayer = nil
     menuAnchor = nil
     settings?.onMenuClosed()
-    layer.removeFromSuperview()
-    effectsLayer.menuGone()
+    effectsLayer.menuClosed()
     // VoiceOver back on the line.
     if UIAccessibility.isVoiceOverRunning,
       let index = item.flatMap({ ids.firstIndex(of: $0) })
@@ -1483,6 +1485,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   func closeMenuNow() {
     guard let menuLayer else { return }
     menuLayer.close(fade: true)
+    menuLayer.takePartsAway()
     menuClosed(menuLayer)
   }
 

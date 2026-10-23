@@ -75,7 +75,7 @@ public actor SyncClient {
   static let photoTries = 5
 
   /// The socket protocol this build speaks (apps/server/src/protocol.ts).
-  static let protocolVersion: UInt32 = 1
+  static let protocolVersion: UInt32 = 2
 
   private let database: any DatabaseWriter
   private let peer: Peer

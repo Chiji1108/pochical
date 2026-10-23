@@ -140,7 +140,7 @@ private suspend fun SyncDao.show(change: Change, floors: List<OrderFloor>) {
     }
     KindCase.PREFERENCE -> {
       val value = change.preference
-      if (value.hasValue()) upsert(PreferenceRow(value.key, value.value)) else deletePreference(value.key)
+      if (value.hasMessage()) upsert(PreferenceRow(value.key, value.message.toByteArray())) else deletePreference(value.key)
     }
     else -> return
   }
@@ -210,7 +210,7 @@ private fun Change.cleared(): Change =
     KindCase.REPEAT_ORDERS -> change { repeatOrders = repeatOrders {} }
     KindCase.COWORKER -> change { coworker = this@cleared.coworker.toBuilder().clearName().build() }
     KindCase.COWORKER_ORDER -> change { coworkerOrder = coworkerOrder {} }
-    KindCase.PREFERENCE -> change { preference = this@cleared.preference.toBuilder().clearValue().build() }
+    KindCase.PREFERENCE -> change { preference = this@cleared.preference.toBuilder().clearMessage().build() }
     else -> this
   }
 
