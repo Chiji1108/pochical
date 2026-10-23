@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStoreFile
 import app.pochical.calendar.OwnDays
-import app.pochical.calendar.SampleDays
+import app.pochical.calendar.SyncedDays
 import app.pochical.kit.PochicalKit
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
@@ -13,7 +13,9 @@ import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.createGraphFactory
 import dev.zacsweers.metrox.android.MetroAppComponentProviders
 import dev.zacsweers.metrox.android.MetroApplication
-import java.time.LocalDate
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /** What the app holds once for as long as it runs, the activities it makes among them. */
 @DependencyGraph(AppScope::class)
@@ -23,7 +25,10 @@ interface AppGraph : MetroAppComponentProviders {
   fun deviceSettings(application: Application): DataStore<DeviceSettings> =
     deviceSettingsStore(application.dataStoreFile("device-settings.json"))
 
-  @Provides @SingleIn(AppScope::class) fun ownDays(): OwnDays = SampleDays(LocalDate.now())
+  @Provides
+  @SingleIn(AppScope::class)
+  fun ownDays(kit: PochicalKit): OwnDays =
+    SyncedDays(kit.database, kit.edits, CoroutineScope(SupervisorJob() + Dispatchers.Default))
 
   /** The database, the edits and the account that syncs them. */
   @Provides

@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.pochical.calendar.LocalOwnDays
 import app.pochical.calendar.OwnDays
+import app.pochical.kit.PochicalKit
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
@@ -30,6 +31,7 @@ import kotlinx.coroutines.launch
 class MainActivity(
   private val deviceSettings: DataStore<DeviceSettings>,
   private val ownDays: OwnDays,
+  private val kit: PochicalKit,
 ) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
 
@@ -38,6 +40,7 @@ class MainActivity(
     installSplashScreen().setKeepOnScreenCondition { settings == null }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    if (savedInstanceState == null) lifecycleScope.launch { takeLaunchOptions(intent, kit) }
     lifecycleScope.launch {
       repeatOnLifecycle(Lifecycle.State.STARTED) { deviceSettings.settings.collect { settings = it } }
     }
