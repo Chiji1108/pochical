@@ -50,6 +50,23 @@ class SampleDaysTest {
   }
 
   @Test
+  fun changedHoursFallOnADayShiftEveryMonth() {
+    for (month in 1..12) {
+      val days = SampleDays(LocalDate.of(2027, month, 1)).calendar.value
+      val first = LocalDate.of(2027, month, 1)
+      assertEquals(DayEntry("day", end = "20:00"), days.shown(first.plusDays(7), first.plusDays(7)).values.single())
+      assertEquals(DayEntry("day", start = "08:00"), days.shown(first.plusDays(12), first.plusDays(12)).values.single())
+    }
+  }
+
+  @Test
+  fun aDayOfAPatternNotAmongThePatternsShowsNothing() {
+    val days = SampleDays(today)
+    days.set(day, DayEntry("duty"))
+    assertNull(days.calendar.value.shown(day, day)[day])
+  }
+
+  @Test
   fun aClearedDayShowsNothingAndKeepsItsMemo() {
     val days = SampleDays(today)
     days.setNote(day, "研修")

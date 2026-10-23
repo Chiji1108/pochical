@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.update
 
 /**
  * A month to look at before the app keeps days, as iOS's SampleDays puts
- * in: Pochical's 二交代制 patterns, repeated from last month with holidays
- * off, a memo and changed hours on a few days. Kept in memory: what is
+ * in: Pochical's 二交代制 patterns, repeated from last month with the
+ * device's holidays off, a memo on two days and changed hours on two 日勤. Kept in memory: what is
  * changed lasts while the app runs.
  */
 class SampleDays(today: LocalDate) : OwnDays {
@@ -21,7 +21,7 @@ class SampleDays(today: LocalDate) : OwnDays {
       sequence = listOf("day", "day", "night", "after", "off", "off"),
       anchor = first.minusMonths(1),
       holidayShift = "off",
-      holidays = "JP",
+      holidays = holidayCountry(),
     )
   private val state =
     MutableStateFlow(
@@ -45,8 +45,8 @@ class SampleDays(today: LocalDate) : OwnDays {
         order = order,
         own =
           mapOf(
-            first.plusDays(7) to order.entryOn(first.plusDays(7)).copy(end = "20:00"),
-            first.plusDays(12) to order.entryOn(first.plusDays(12)).copy(start = "08:00"),
+            first.plusDays(7) to DayEntry("day", end = "20:00"),
+            first.plusDays(12) to DayEntry("day", start = "08:00"),
           ),
         notes = mapOf(first.plusDays(7) to "棚卸し", first.plusDays(15) to "歯医者"),
       )
@@ -65,7 +65,10 @@ class SampleDays(today: LocalDate) : OwnDays {
     return coworker
   }
 
-  /** A day's own entry wins over the order's; one cleared (null) shows nothing. */
+  /**
+   * A day's own entry wins over the order's; one cleared (null) shows
+   * nothing, and so does a pattern not among `patterns`.
+   */
   private data class Sample(
     override val patterns: List<Pattern>,
     override val coworkers: List<Coworker>,
@@ -77,6 +80,7 @@ class SampleDays(today: LocalDate) : OwnDays {
       generateSequence(from) { it.plusDays(1) }
         .takeWhile { it <= through }
         .mapNotNull { day -> (if (day in own) own[day] else order.entryOn(day))?.let { day to it } }
+        .filter { (_, entry) -> patterns.any { it.id == entry.shift } }
         .toMap()
 
     override fun note(day: LocalDate): String? = notes[day]

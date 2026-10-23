@@ -18,8 +18,9 @@ fun LocalDate.weekStartingOn(weekStart: Int): LocalDate = minusDays(((weekday - 
  * the first and last (spec/vectors/month.json).
  */
 fun monthWeeks(month: YearMonth, weekStart: Int): List<List<LocalDate>> {
-  val start = month.atDay(1).weekStartingOn(weekStart)
-  val lead = start.until(month.atDay(1)).days
+  val first = month.atDay(1)
+  val lead = (first.weekday - weekStart + 7) % 7
+  val start = first.minusDays(lead.toLong())
   val weeks = (lead + month.lengthOfMonth() + 6) / 7
   return List(weeks) { week -> List(7) { start.plusDays((week * 7 + it).toLong()) } }
 }
