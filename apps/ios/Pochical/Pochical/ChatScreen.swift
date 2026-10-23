@@ -463,7 +463,7 @@ struct ChatScreen: View {
       }
     }
     .sheet(item: $reactingTo) { line in
-      EmojiKeyboardSheet(title: "リアクション") { react($0, on: line) }
+      EmojiKeyboardSheet(title: "リアクション") { react($0, on: line, by: .touch) }
     }
     .sheet(item: $browsing) { link in
       SafariView(url: link.url).ignoresSafeArea()
@@ -872,8 +872,8 @@ struct ChatScreen: View {
         photoID: faces[line.authorID] ?? "")
     case .sendAgain, .deleteUnsent, .stopSending:
       break
-    case .react(let emoji):
-      react(emoji, on: line)
+    case .react(let emoji, let by):
+      react(emoji, on: line, by: by)
     case .vote(let day, let on):
       var vote = Pochical_V1_ChatVote()
       vote.threadID = threadID
@@ -899,7 +899,7 @@ struct ChatScreen: View {
           MessageActionsRequest(
             lineID: line.opID, mine: mine, bubble: bubble,
             reactions: line.reactions, meID: meID,
-            onReact: { react($0, on: line) },
+            onReact: { react($0, on: line, by: .touch) },
             onMoreReactions: { reactingTo = line }, actions: actions(for: line, mine: mine)))
       }
     }
@@ -1760,8 +1760,8 @@ struct ChatScreen: View {
   }
 
   /// Puts the reader's `emoji` on the line, or takes it back if it was
-  /// theirs already.
-  private func react(_ emoji: String, on line: ChatLineRow) {
+  /// theirs already, `by` a touch or a screen reader's action.
+  private func react(_ emoji: String, on line: ChatLineRow, by: ChoiceBy) {
     let current = chat.state.lines.first { $0.seq == line.seq } ?? line
     var react = Pochical_V1_ChatReact()
     react.threadID = threadID
@@ -1769,7 +1769,7 @@ struct ChatScreen: View {
     react.emoji = emoji
     react.on = !current.reactions.contains { $0.emoji == emoji && $0.userIDs.contains(meID ?? "") }
     guard keep(.react(react)) else { return }
-    marks.chose(emoji, on: line.opID, react.on)
+    marks.chose(emoji, on: line.opID, react.on, by: by)
   }
 
   private func unsend(_ line: ChatLineRow) {
