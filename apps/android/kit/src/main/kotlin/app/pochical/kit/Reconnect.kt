@@ -6,7 +6,7 @@ package app.pochical.kit
  * (spec/vectors/reconnect.json). The wait is drawn at random from 0 up to it.
  */
 fun reconnectWaitMost(tries: Int, firstMs: Int, mostMs: Int): Int {
-  var most = firstMs
-  repeat(maxOf(tries, 1) - 1) { if (most < mostMs) most *= 2 }
-  return minOf(most, mostMs)
+  // Past 31 doublings any wait in milliseconds is at its most.
+  val doublings = (tries - 1).coerceIn(0, 31)
+  return (firstMs.toLong() shl doublings).coerceAtMost(mostMs.toLong()).toInt()
 }

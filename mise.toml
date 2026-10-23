@@ -145,15 +145,24 @@ dir = "{{config_root}}/apps/android"
 run = "./gradlew test lint"
 
 [tasks."android:db:check"]
-description = "Fail if building the Android app rewrote a database version's schema Room exports, a shape changed without its version raised (run after a build)"
-run = '''
-changed=$(git status --porcelain -- apps/android/kit/schemas)
-if [ -n "$changed" ]; then
-  printf '%s\n' "$changed"
-  echo "The Android database's schema changed: raise AppDatabase.VERSION for a new shape, which erases the database until release, and commit kit/schemas (AGENTS.md)."
-  exit 1
-fi
-'''
+description = "Fail if building the Android app changed a database version's schema Room exports (its identity hash: a shape changed without its version raised) or wrote one not committed (run after a build)"
+run = """
+status=0
+hash() { grep -o '"identityHash": *"[^"]*"' | head -1; }
+for file in $(git diff --name-only -- apps/android/kit/schemas); do
+  if [ "$(git show "HEAD:$file" | hash)" != "$(hash < "$file")" ]; then
+    echo "$file: the database's shape changed under the same version. Raise AppDatabase.VERSION, which erases the database until release, and commit kit/schemas (AGENTS.md)."
+  else
+    echo "$file: Room wrote the same shape anew; commit it."
+  fi
+  status=1
+done
+for file in $(git ls-files --others --exclude-standard -- apps/android/kit/schemas); do
+  echo "$file: a new database version's schema; commit it."
+  status=1
+done
+exit $status
+"""
 
 [tasks."ios:photo-touches"]
 description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts on :8787: <simulator name> [derived data]"

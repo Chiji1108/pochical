@@ -9,13 +9,24 @@ import app.pochical.v1.Hlc
  * (spec/vectors/order-clears.json).
  */
 data class Clock(val ms: Long, val counter: UInt, val device: String) : Comparable<Clock> {
-  // Device ids are ASCII (spec/sync-protocol.md, HLC), where UTF-16 order is the characters' codes.
+  // Devices by their UTF-8 bytes, as iOS compares them: the same order for the ASCII ids the spec
+  // asks for (HLC), and still the same on both should one not be.
   override fun compareTo(other: Clock): Int =
-    compareValuesBy(this, other, Clock::ms, Clock::counter, Clock::device)
+    compareValuesBy(this, other, Clock::ms, Clock::counter).takeIf { it != 0 }
+      ?: compareBytes(device.encodeToByteArray(), other.device.encodeToByteArray())
 
   companion object {
     fun of(hlc: Hlc) = Clock(hlc.physicalMs, hlc.counter.toUInt(), hlc.deviceId)
   }
+}
+
+/** Orders byte strings as unsigned bytes, a prefix first. */
+private fun compareBytes(a: ByteArray, b: ByteArray): Int {
+  for (i in 0 until minOf(a.size, b.size)) {
+    val order = a[i].toUByte().compareTo(b[i].toUByte())
+    if (order != 0) return order
+  }
+  return a.size.compareTo(b.size)
 }
 
 /** A device's last hybrid logical clock (spec/sync-protocol.md, HLC); its edits add the device's id. */

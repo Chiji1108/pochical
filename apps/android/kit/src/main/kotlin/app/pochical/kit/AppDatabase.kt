@@ -74,9 +74,12 @@ abstract class AppDatabase : RoomDatabase() {
  */
 private object TakeAllAgainIfOlder : RoomDatabase.Callback() {
   override suspend fun onOpen(connection: SQLiteConnection) {
+    // One transaction, so the schema is never raised without its cursors rewound.
+    connection.execSQL("BEGIN IMMEDIATE")
     connection.execSQL(
       "UPDATE groupCursors SET cursor = 0 WHERE (SELECT schema FROM syncState WHERE id = 1) < $SYNC_SCHEMA"
     )
     connection.execSQL("UPDATE syncState SET cursor = 0, schema = $SYNC_SCHEMA WHERE schema < $SYNC_SCHEMA")
+    connection.execSQL("COMMIT")
   }
 }

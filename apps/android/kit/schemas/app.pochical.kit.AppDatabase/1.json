@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "2903d5e63f6935074f2cb3b6eb19b442",
+    "identityHash": "8d4c9d331834cdb7624889638ca135cc",
     "entities": [
       {
         "tableName": "days",
@@ -603,7 +603,7 @@
       },
       {
         "tableName": "memberPatterns",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `userId` TEXT NOT NULL, `id` TEXT NOT NULL, `name` TEXT NOT NULL, `emoji` TEXT NOT NULL, `symbol` TEXT NOT NULL, `icon` TEXT NOT NULL, `color` INTEGER NOT NULL, `start` TEXT, `end` TEXT, `countsAsOff` INTEGER NOT NULL, `nextDay` TEXT, PRIMARY KEY(`groupId`, `userId`, `id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `userId` TEXT NOT NULL, `id` TEXT NOT NULL, `name` TEXT NOT NULL, `emoji` TEXT NOT NULL, `symbol` TEXT NOT NULL, `icon` TEXT NOT NULL, `color` INTEGER NOT NULL, `start` TEXT, `end` TEXT, `countsAsOff` INTEGER NOT NULL, `nextDay` TEXT, `archived` INTEGER NOT NULL, PRIMARY KEY(`groupId`, `userId`, `id`))",
         "fields": [
           {
             "fieldPath": "groupId",
@@ -618,61 +618,67 @@
             "notNull": true
           },
           {
-            "fieldPath": "id",
+            "fieldPath": "pattern.id",
             "columnName": "id",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "name",
+            "fieldPath": "pattern.name",
             "columnName": "name",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "emoji",
+            "fieldPath": "pattern.emoji",
             "columnName": "emoji",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "symbol",
+            "fieldPath": "pattern.symbol",
             "columnName": "symbol",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "icon",
+            "fieldPath": "pattern.icon",
             "columnName": "icon",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "color",
+            "fieldPath": "pattern.color",
             "columnName": "color",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "start",
+            "fieldPath": "pattern.start",
             "columnName": "start",
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "end",
+            "fieldPath": "pattern.end",
             "columnName": "end",
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "countsAsOff",
+            "fieldPath": "pattern.countsAsOff",
             "columnName": "countsAsOff",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "nextDay",
+            "fieldPath": "pattern.nextDay",
             "columnName": "nextDay",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pattern.archived",
+            "columnName": "archived",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -701,41 +707,41 @@
             "notNull": true
           },
           {
-            "fieldPath": "position",
+            "fieldPath": "order.position",
             "columnName": "position",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "start",
+            "fieldPath": "order.start",
             "columnName": "start",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "anchor",
+            "fieldPath": "order.anchor",
             "columnName": "anchor",
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "sequence",
+            "fieldPath": "order.sequence",
             "columnName": "sequence",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "holidaysOff",
+            "fieldPath": "order.holidaysOff",
             "columnName": "holidaysOff",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "holidayShift",
+            "fieldPath": "order.holidayShift",
             "columnName": "holidayShift",
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "holidayCountry",
+            "fieldPath": "order.holidayCountry",
             "columnName": "holidayCountry",
             "affinity": "TEXT",
             "notNull": true
@@ -777,7 +783,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2903d5e63f6935074f2cb3b6eb19b442')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8d4c9d331834cdb7624889638ca135cc')"
     ]
   }
 }

@@ -74,8 +74,9 @@ internal suspend fun SyncDao.take(changes: List<Change>) {
   val state = state()
   var last = state.last
   var cursor = state.cursor
+  val floors = waitingFloors()
   for (change in changes) {
-    takeOwn(change)
+    takeOwn(change, floors)
     takeMembership(change)
     change.hlc?.let { last = last.receiving(HlcTime.of(it)) }
     cursor = maxOf(cursor, change.cursor)
@@ -129,14 +130,15 @@ internal suspend fun SyncDao.restamp(now: Long) {
  * with its `op_id` and its clock (spec/sync-protocol.md, Outbox).
  */
 internal fun framesOf(edits: List<OutboxEdit>): List<ClientFrame> {
-  val runs = mutableListOf<Pair<ClientFrame.KindCase, MutableList<OutboxEdit>>>()
+  val runs = mutableListOf<Pair<ClientFrame.KindCase, MutableList<Pair<OutboxEdit, Change>>>>()
   for (edit in edits) {
-    val kind = Change.parseFrom(edit.change).frameKind ?: continue
+    val change = Change.parseFrom(edit.change)
+    val kind = change.frameKind ?: continue
     val run = runs.lastOrNull()
     if (run != null && run.first == kind && run.second.size < SyncLimits.editsPerFrame) {
-      run.second += edit
+      run.second += edit to change
     } else {
-      runs += kind to mutableListOf(edit)
+      runs += kind to mutableListOf(edit to change)
     }
   }
   return runs.map { (kind, run) -> frameOf(kind, run) }
@@ -156,9 +158,8 @@ private val Change.frameKind: ClientFrame.KindCase?
       else -> null
     }
 
-private fun frameOf(kind: ClientFrame.KindCase, edits: List<OutboxEdit>): ClientFrame {
+private fun frameOf(kind: ClientFrame.KindCase, changes: List<Pair<OutboxEdit, Change>>): ClientFrame {
   val frame = ClientFrame.newBuilder()
-  val changes = edits.map { it to Change.parseFrom(it.change) }
   when (kind) {
     ClientFrame.KindCase.DAY_EDITS ->
       frame.setDayEdits(

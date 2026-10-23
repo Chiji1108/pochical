@@ -111,6 +111,8 @@ internal interface SyncDao {
 
   @Query("DELETE FROM groups WHERE id = :id") suspend fun deleteGroup(id: String)
 
+  @Query("SELECT EXISTS(SELECT 1 FROM groups WHERE id = :id)") suspend fun isListed(id: String): Boolean
+
   @Query("DELETE FROM groups") suspend fun deleteGroups()
 
   @Upsert suspend fun upsert(member: GroupMemberRow)

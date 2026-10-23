@@ -179,36 +179,13 @@ data class MemberDayRow(
   val end: String? = null,
 )
 
-/** One of a member's patterns, so the group can draw their marks. */
+/** One of a member's patterns, so the group can draw their marks: as the member's own row holds it. */
 @Entity(tableName = "memberPatterns", primaryKeys = ["groupId", "userId", "id"])
-data class MemberPatternRow(
-  val groupId: String,
-  val userId: String,
-  val id: String,
-  val name: String,
-  val emoji: String,
-  val symbol: String,
-  val icon: String,
-  val color: Int,
-  val start: String?,
-  val end: String?,
-  val countsAsOff: Boolean,
-  val nextDay: String?,
-)
+data class MemberPatternRow(val groupId: String, val userId: String, @Embedded val pattern: PatternRow)
 
-/** One of a member's repeating orders, in their timeline's order. */
+/** One of a member's repeating orders, in their timeline's order, as the member's own row holds it. */
 @Entity(tableName = "memberOrders", primaryKeys = ["groupId", "userId", "position"])
-data class MemberOrderRow(
-  val groupId: String,
-  val userId: String,
-  val position: Int,
-  val start: String,
-  val anchor: String?,
-  val sequence: String,
-  val holidaysOff: Boolean,
-  val holidayShift: String?,
-  val holidayCountry: String,
-)
+data class MemberOrderRow(val groupId: String, val userId: String, @Embedded val order: RepeatOrderRow)
 
 /** How far the device has taken a group's log. */
 @Entity(tableName = "groupCursors")
