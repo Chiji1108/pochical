@@ -64,6 +64,40 @@ describe("syncing a user's preferences", () => {
     ).toMatchObject([{ key: "theme", value: '"zen"' }]);
   });
 
+  it("keeps each key's last value apart from the others'", async () => {
+    const token = await signInAnonymously();
+    const phone = await device(token);
+    sendFrame(phone.socket, preferenceEdit("a", "theme", '"zen"', 3000));
+    await phone.frames.next();
+    await phone.frames.next();
+    // Older than the theme's, but of another key: taken.
+    sendFrame(phone.socket, preferenceEdit("b", "week", '{"start":1}', 1000));
+    await expect(phone.frames.next()).resolves.toMatchObject({
+      kind: {
+        case: "changes",
+        value: {
+          changes: [
+            {
+              kind: {
+                case: "preference",
+                value: { key: "week", value: '{"start":1}' },
+              },
+            },
+          ],
+        },
+      },
+    });
+    await phone.frames.next();
+
+    const laptop = await device(token);
+    expect(
+      changesIn(await laptop.frames.next()).map(({ kind }) => kind.value)
+    ).toMatchObject([
+      { key: "theme", value: '"zen"' },
+      { key: "week", value: '{"start":1}' },
+    ]);
+  });
+
   it("keeps what was there for a value too long, and takes one set back", async () => {
     const token = await signInAnonymously();
     const phone = await device(token);

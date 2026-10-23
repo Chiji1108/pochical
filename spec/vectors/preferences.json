@@ -1,0 +1,90 @@
+{
+  "about": "The preferences a device keeps with the account (spec/sync-protocol.md, Preferences): a key each, its value the part of the device's settings it names. defaults is what each key holds on a device where nothing was set yet, every key the account keeps. Each of roundTrips is one value of its key a device takes from the account and then holds for that key again, the other keys left as they were. Each of unreadable is a value a device cannot take, or a key it has none of, which leaves a device holding the values of roundTrips as it was.",
+  "defaults": {
+    "calendarAdd": { "chosen": {}, "notes": false, "people": false },
+    "heading": { "english": false, "surprise": false },
+    "look": {
+      "badge": { "names": false, "off": "mark", "offs": {} },
+      "colored": true,
+      "emoji": { "names": false, "off": "mark", "offs": {} },
+      "fill": true,
+      "icon": { "names": false, "off": "highlight", "offs": {} },
+      "style": "icon"
+    },
+    "picture": { "names": true, "off": "highlight", "offs": {} },
+    "theme": "pochical",
+    "week": { "holiday": true, "saturday": true, "start": 0, "sunday": true }
+  },
+  "roundTrips": [
+    { "name": "a テーマ", "key": "theme", "value": "zen" },
+    {
+      "name": "the marks' shape and each shape's options",
+      "key": "look",
+      "value": {
+        "badge": {
+          "names": true,
+          "off": "blank",
+          "offs": { "p1": "highlight" }
+        },
+        "colored": false,
+        "emoji": { "names": false, "off": "highlight", "offs": {} },
+        "fill": false,
+        "icon": { "names": true, "off": "mark", "offs": { "p2": "blank" } },
+        "style": "emoji"
+      }
+    },
+    {
+      "name": "a week starting on Monday with no colored days",
+      "key": "week",
+      "value": {
+        "holiday": false,
+        "saturday": false,
+        "start": 1,
+        "sunday": false
+      }
+    },
+    {
+      "name": "an English heading with おたのしみ's sky up",
+      "key": "heading",
+      "value": { "english": true, "sky": "aurora", "surprise": true }
+    },
+    {
+      "name": "a picture's 休みの見せ方 and シフト名",
+      "key": "picture",
+      "value": { "names": false, "off": "blank", "offs": { "p1": "mark" } }
+    },
+    {
+      "name": "端末カレンダーに追加 with patterns picked, the memo and people",
+      "key": "calendarAdd",
+      "value": {
+        "chosen": { "p1": false, "p2": true },
+        "notes": true,
+        "people": true
+      }
+    }
+  ],
+  "unreadable": [
+    {
+      "name": "a shape the app does not know",
+      "key": "look",
+      "value": {
+        "badge": { "names": false, "off": "mark", "offs": {} },
+        "colored": true,
+        "emoji": { "names": false, "off": "mark", "offs": {} },
+        "fill": true,
+        "icon": { "names": false, "off": "highlight", "offs": {} },
+        "style": "sparkle"
+      }
+    },
+    {
+      "name": "a day off's look the app does not know",
+      "key": "picture",
+      "value": { "names": true, "off": "highlight", "offs": { "p1": "glow" } }
+    },
+    {
+      "name": "a key the app has none of",
+      "key": "gone",
+      "value": { "start": 3 }
+    }
+  ]
+}
