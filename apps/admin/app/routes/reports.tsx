@@ -1,20 +1,56 @@
 import { env } from "cloudflare:workers";
+import { data, redirect } from "react-router";
 
 import { ReportTable } from "../report-table";
-import { page, PageHeader } from "../ui";
+import { staffOf } from "../staff";
+import { alert, page, PageHeader } from "../ui";
 import type { Route } from "./+types/reports";
 
-// What members reported, the latest first, with what they saw.
+// What members reported, those waiting first, then the latest, with what
+// they saw and where each stands.
 export const loader = async () => await env.SERVER.reports();
 
-export default function Reports({ loaderData: reports }: Route.ComponentProps) {
+// A report's state and note, set by whoever Access let in (spec/admin.md,
+// 通報), then the page again (Post/Redirect/Get), so reloading it sends
+// nothing.
+export const action = async ({ request, url }: Route.ActionArgs) => {
+  const form = await request.formData();
+  const value = (name: string) => {
+    const got = form.get(name);
+    return typeof got === "string" ? got : "";
+  };
+  const kept = await env.SERVER.handleReport(
+    value("reportId"),
+    value("state"),
+    value("note"),
+    staffOf(request)
+  ).catch(() => false);
+  return kept
+    ? redirect(url.pathname)
+    : data(
+        {
+          error: "保存できませんでした。メモが長すぎないか確かめてください。",
+        },
+        { status: 400 }
+      );
+};
+
+export default function Reports({
+  actionData,
+  loaderData: reports,
+}: Route.ComponentProps) {
   return (
     <main className={page}>
       <PageHeader
-        description="メンバーが通報したもの。新しい順です。"
+        description="メンバーが通報したもの。未対応を上に、新しい順です。未対応の数はサイドバーにあります。"
         title="通報"
       />
-      <ReportTable empty="通報はまだありません。" reports={reports} />
+      {actionData !== undefined && "error" in actionData && (
+        <p className={alert} role="alert">
+          {actionData.error}
+        </p>
+      )}
+      <ReportTable empty="通報はまだありません。" handling reports={reports} />
     </main>
   );
 }

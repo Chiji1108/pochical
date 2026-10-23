@@ -24,7 +24,12 @@ describe("what the admin site asks of the server", () => {
     });
 
     await expect(
-      admin.answerSupport(userId, "設定から変えられます", crypto.randomUUID())
+      admin.answerSupport(
+        userId,
+        "設定から変えられます",
+        crypto.randomUUID(),
+        "staff@pochical.app"
+      )
     ).resolves.toBeTruthy();
     // The open chat hears of the answer as a group's chat hears a line.
     await expect(frames.next()).resolves.toMatchObject({
@@ -90,10 +95,20 @@ describe("what the admin site asks of the server", () => {
     const { userId } = await supportChat(token);
     const admin = exports.AdminEntrypoint;
     await expect(
-      admin.answerSupport(userId, "  ", crypto.randomUUID())
+      admin.answerSupport(
+        userId,
+        "  ",
+        crypto.randomUUID(),
+        "staff@pochical.app"
+      )
     ).resolves.toBeFalsy();
     await expect(
-      admin.answerSupport("someone", "やあ", crypto.randomUUID())
+      admin.answerSupport(
+        "someone",
+        "やあ",
+        crypto.randomUUID(),
+        "staff@pochical.app"
+      )
     ).resolves.toBeFalsy();
   });
 
@@ -103,17 +118,22 @@ describe("what the admin site asks of the server", () => {
     const admin = exports.AdminEntrypoint;
     const opId = crypto.randomUUID();
     const sent = await Promise.all([
-      admin.answerSupport(userId, "確認します", opId),
-      admin.answerSupport(userId, "確認します", opId),
+      admin.answerSupport(userId, "確認します", opId, "staff@pochical.app"),
+      admin.answerSupport(userId, "確認します", opId, "staff@pochical.app"),
     ]);
     await expect(
-      admin.answerSupport(userId, "確認します", opId)
+      admin.answerSupport(userId, "確認します", opId, "staff@pochical.app")
     ).resolves.toBeTruthy();
     expect(sent).toStrictEqual([true, true]);
     const { lines } = await admin.supportChat(userId);
     expect(lines.map((line) => line.text)).toStrictEqual(["確認します"]);
     // New words are a new answer.
-    await admin.answerSupport(userId, "確認しました", crypto.randomUUID());
+    await admin.answerSupport(
+      userId,
+      "確認しました",
+      crypto.randomUUID(),
+      "staff@pochical.app"
+    );
     const after = await admin.supportChat(userId);
     expect(after.lines.map((line) => line.text)).toStrictEqual([
       "確認します",
@@ -181,6 +201,96 @@ describe("what the admin site asks of the server", () => {
     await expect(
       exports.AdminEntrypoint.user(crypto.randomUUID())
     ).resolves.toBeNull();
+  });
+
+  it("sets a report's state and note, noting who, and counts what waits", async () => {
+    const id = crypto.randomUUID();
+    await env.DB.prepare(
+      "insert into reports (id, created_at, group_id, reporter_id, target_id, reason, context) values (?, ?, 'g', 'r', 't', 'spam', '宣伝の連投')"
+    )
+      .bind(id, Date.now())
+      .run();
+    const admin = exports.AdminEntrypoint;
+    const before = await admin.waiting();
+    const listed = async () => {
+      const all = await admin.reports();
+      return all.find((report) => report.id === id);
+    };
+    await expect(listed()).resolves.toMatchObject({
+      handled: null,
+      note: "",
+      state: "open",
+    });
+
+    await expect(
+      admin.handleReport(id, "acted", " 本人に注意した ", "staff@pochical.app")
+    ).resolves.toBeTruthy();
+    await expect(listed()).resolves.toMatchObject({
+      handled: { by: "staff@pochical.app" },
+      note: "本人に注意した",
+      state: "acted",
+    });
+    await expect(admin.waiting()).resolves.toMatchObject({
+      reports: before.reports - 1,
+    });
+    const actions = await admin.actions();
+    expect(actions[0]).toMatchObject({
+      action: "report",
+      by: "staff@pochical.app",
+      detail: "対応済み：本人に注意した",
+      target: id,
+    });
+  });
+
+  it("takes a report back to waiting, with no one's mark", async () => {
+    const id = crypto.randomUUID();
+    await env.DB.prepare(
+      "insert into reports (id, created_at, group_id, reporter_id, target_id, reason, context) values (?, ?, 'g', 'r', 't', 'other', '確認')"
+    )
+      .bind(id, Date.now())
+      .run();
+    const admin = exports.AdminEntrypoint;
+    await admin.handleReport(id, "dismissed", "", "staff@pochical.app");
+    await admin.handleReport(id, "open", "", "staff@pochical.app");
+    const all = await admin.reports();
+    expect(all.find((report) => report.id === id)).toMatchObject({
+      handled: null,
+      state: "open",
+    });
+  });
+
+  it("takes no state it does not know, nor a report that is not there", async () => {
+    const id = crypto.randomUUID();
+    await env.DB.prepare(
+      "insert into reports (id, created_at, group_id, reporter_id, target_id, reason, context) values (?, ?, 'g', 'r', 't', 'spam', '宣伝')"
+    )
+      .bind(id, Date.now())
+      .run();
+    const admin = exports.AdminEntrypoint;
+    await expect(
+      admin.handleReport(id, "closed", "", "staff@pochical.app")
+    ).resolves.toBeFalsy();
+    await expect(
+      admin.handleReport(id, "acted", "あ".repeat(1001), "staff@pochical.app")
+    ).resolves.toBeFalsy();
+    await expect(
+      admin.handleReport(crypto.randomUUID(), "acted", "", "staff@pochical.app")
+    ).resolves.toBeFalsy();
+  });
+
+  it("notes an answer sent twice once", async () => {
+    const token = await signInAnonymously();
+    const { userId } = await supportChat(token);
+    const admin = exports.AdminEntrypoint;
+    const opId = crypto.randomUUID();
+    await admin.answerSupport(userId, "見ます", opId, "staff@pochical.app");
+    await admin.answerSupport(userId, "見ます", opId, "staff@pochical.app");
+    const actions = await admin.actions();
+    expect(
+      actions.filter(
+        (action) => action.action === "answer" && action.target === userId
+      )
+    ).toHaveLength(1);
   });
 
   it("lists more users than D1 binds at once, with how each signs in", async () => {

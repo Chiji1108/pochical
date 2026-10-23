@@ -22,23 +22,36 @@ export const invites = sqliteTable("invites", {
 // What members have reported to Pochical (spec/chat.md, Reporting and
 // blocking), kept with what they saw, so a line taken back since can still
 // be looked at. Nobody in the group is told.
-export const reports = sqliteTable("reports", {
-  // A line's reported, the few lines around it as they were, as JSON
-  // ({ seq, authorId, text }[]); a member's, their name in the group.
-  context: text().notNull(),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-  groupId: text("group_id").notNull(),
-  id: text().primaryKey(),
-  // spam, harassment, explicit, impersonation or other.
-  reason: text().notNull(),
-  reporterId: text("reporter_id").notNull(),
-  // The line reported, when it is one: its place in its chat.
-  seq: integer(),
-  // Who is reported: the member, or the line's writer.
-  targetId: text("target_id").notNull(),
-  // The line reported's chat, when it is one.
-  threadId: text("thread_id"),
-});
+export const reports = sqliteTable(
+  "reports",
+  {
+    // A line's reported, the few lines around it as they were, as JSON
+    // ({ seq, authorId, text }[]); a member's, their name in the group.
+    context: text().notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    groupId: text("group_id").notNull(),
+    // When Pochical's people last set its state, and who (their address on
+    // Cloudflare Access); none while it waits (spec/admin.md, 通報).
+    handledAt: integer("handled_at", { mode: "timestamp_ms" }),
+    handledBy: text("handled_by"),
+    id: text().primaryKey(),
+    // What Pochical's people noted of it.
+    note: text().notNull().default(""),
+    // spam, harassment, explicit, impersonation or other.
+    reason: text().notNull(),
+    reporterId: text("reporter_id").notNull(),
+    // The line reported, when it is one: its place in its chat.
+    seq: integer(),
+    // open while it waits for Pochical's people; acted once they acted on
+    // it, dismissed once they found nothing to act on.
+    status: text().notNull().default("open"),
+    // Who is reported: the member, or the line's writer.
+    targetId: text("target_id").notNull(),
+    // The line reported's chat, when it is one.
+    threadId: text("thread_id"),
+  },
+  (table) => [index("reports_status").on(table.status, table.createdAt)]
+);
 
 // An index of every user's chat with Pochical's people, whose lines are
 // kept in its own Group DO (support:{userId}, spec/chat.md, The chat with
@@ -105,4 +118,24 @@ export const pushTokens = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => [index("push_tokens_session").on(table.sessionId)]
+);
+
+// What Pochical's people did on the admin site, the latest kept for good:
+// who (their address on Cloudflare Access), when, what, and to whom
+// (spec/admin.md, 記録).
+export const adminActions = sqliteTable(
+  "admin_actions",
+  {
+    // answer, report, cleanBucket or reset.
+    action: text().notNull(),
+    at: integer({ mode: "timestamp_ms" }).notNull(),
+    by: text().notNull(),
+    // What was done, in Pochical's people's words: the answer's start, the
+    // report's new state and note, what was deleted.
+    detail: text().notNull().default(""),
+    id: text().primaryKey(),
+    // Whom or what it was done to: a user, a report; empty for the bucket.
+    target: text().notNull().default(""),
+  },
+  (table) => [index("admin_actions_at").on(table.at)]
 );

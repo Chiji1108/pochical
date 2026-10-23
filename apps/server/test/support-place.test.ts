@@ -289,7 +289,8 @@ describe("the chat with Pochical's people", () => {
     await exports.AdminEntrypoint.answerSupport(
       userId,
       "どうしましたか",
-      crypto.randomUUID()
+      crypto.randomUUID(),
+      "staff@pochical.app"
     );
     const counted = changesIn(await phone.frames.next());
     expect(counted).toMatchObject([

@@ -4,6 +4,7 @@ import { data, Form, useNavigation } from "react-router";
 import type { ShouldRevalidateFunctionArgs } from "react-router";
 
 import { sizeOf } from "../size";
+import { staffOf } from "../staff";
 import {
   actions,
   actionsStyle,
@@ -38,7 +39,7 @@ export const action = async ({ request }: Route.ActionArgs) => {
   if (!Number.isInteger(asOfMs) || asOfMs <= 0) {
     return data({ failed: true as const }, { status: 400 });
   }
-  return await env.SERVER.cleanBucket(asOfMs).then(
+  return await env.SERVER.cleanBucket(asOfMs, staffOf(request)).then(
     (cleanup) => ({ cleanup }),
     () => data({ failed: true as const }, { status: 502 })
   );
