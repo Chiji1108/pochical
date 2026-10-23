@@ -256,7 +256,7 @@ With the system's 視差効果を減らす (Reduce Motion) on, nothing in a chat
 - The composer's bars and photos come and go by fading, the capsule growing and shrinking with them. The lines and ↓ make room with them as they come and go, and with the keyboard, which the system moves as ever: they never stand apart from what moves under them, which would open a gap over the keyboard as it rises.
 - The floating day and ↓ fade, as they always do; the next day's title pushes the floating day out as ever, since it goes with the lines rather than moving by itself. A notice over the screen (コピーしました) fades without coming down from the top.
 - A photo opened large fades in and out instead of the zoom out of its place (Photos); a photo coming and its upload ring stay still: no breathing grey, no turning quarter, the ring still filling as its bytes go.
-- Haptics are not motion and stay as they are (spec/haptics.md).
+- Haptics are not motion and stay as they are, but a reaction's goes with its spray (spec/haptics.md).
 
 ## Text size and contrast
 
