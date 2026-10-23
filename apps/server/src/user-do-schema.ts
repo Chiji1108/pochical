@@ -4,6 +4,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  customType,
   integer,
   primaryKey,
   sqliteTable,
@@ -159,8 +160,16 @@ export const coworkerOrder = sqliteTable(
   (table) => [check("coworker_order_single_row", sql`${table.id} = 1`)]
 );
 
+// Bytes as SQLite keeps them, a BLOB. drizzle's own blob() reads them as
+// Node's Buffer, which Workers have only with nodejs_compat.
+const bytes = customType<{ data: Uint8Array; driverData: ArrayBuffer }>({
+  dataType: () => "blob",
+  fromDriver: (value) => new Uint8Array(value),
+  toDriver: (value) => new Uint8Array(value).buffer,
+});
+
 // The user's preferences, each key one last-writer-wins value, as the
-// apps write it: a value, or none once set back to the apps' own default
+// apps encode it: a value, or none once set back to the apps' own default
 // (kept, so an older edit cannot bring it back).
 export const preferences = sqliteTable(
   "preferences",
@@ -170,7 +179,7 @@ export const preferences = sqliteTable(
     hlcDevice: text("hlc_device").notNull(),
     hlcMs: integer("hlc_ms").notNull(),
     key: text().primaryKey(),
-    value: text(),
+    value: bytes(),
   },
   (table) => [uniqueIndex("preferences_cursor").on(table.cursor)]
 );

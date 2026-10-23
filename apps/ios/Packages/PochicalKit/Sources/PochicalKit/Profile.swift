@@ -67,7 +67,7 @@ public enum Profile {
   /// Unset, the account's is the app's default.
   public static func markLookToSend(in db: Database) throws -> MarkLook? {
     guard let row = try PreferenceRow.where({ $0.key.eq("look") }).fetchOne(db),
-      let look = try? JSONDecoder().decode(Look.self, from: Data(row.value.utf8))
+      let look = try? Look(Pochical_V1_LookPreference(serializedBytes: row.value))
     else { return nil }
     let kept = try markLook(in: db) ?? Look().markLook
     return look.markLook == kept ? nil : look.markLook

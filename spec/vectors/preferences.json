@@ -1,5 +1,13 @@
 {
-  "about": "The preferences a device keeps with the account (spec/sync-protocol.md, Preferences): a key each, its value the part of the device's settings it names. defaults is what each key holds on a device where nothing was set yet, every key the account keeps. Each of roundTrips is one value of its key a device takes from the account and then holds for that key again, the other keys left as they were. Each of unreadable is a value a device cannot take, or a key it has none of, which leaves a device holding the values of roundTrips as it was.",
+  "about": "The preferences a device keeps with the account (spec/sync-protocol.md, Preferences): a key each, its value the part of the device's settings it names, as the message messages names for the key (proto/pochical/v1/preferences.proto), written here in its JSON form. defaults is what each key holds on a device where nothing was set yet, every key the account keeps. Each of roundTrips is one value of its key a device takes from the account and then holds for that key again, the other keys left as they were. Each of unreadable is a value a device cannot take, or a key it has none of, which leaves a device holding the values of roundTrips as it was.",
+  "messages": {
+    "calendarAdd": "pochical.v1.CalendarAddPreference",
+    "heading": "pochical.v1.HeadingPreference",
+    "look": "pochical.v1.LookPreference",
+    "picture": "pochical.v1.MarkOptions",
+    "theme": "pochical.v1.ThemePreference",
+    "week": "pochical.v1.WeekPreference"
+  },
   "defaults": {
     "calendarAdd": { "chosen": {}, "notes": false, "people": false },
     "heading": { "english": false, "surprise": false },
@@ -12,11 +20,11 @@
       "style": "icon"
     },
     "picture": { "names": true, "off": "highlight", "offs": {} },
-    "theme": "pochical",
+    "theme": { "id": "pochical" },
     "week": { "holiday": true, "saturday": true, "start": 0, "sunday": true }
   },
   "roundTrips": [
-    { "name": "a テーマ", "key": "theme", "value": "zen" },
+    { "name": "a テーマ", "key": "theme", "value": { "id": "zen" } },
     {
       "name": "the marks' shape and each shape's options",
       "key": "look",

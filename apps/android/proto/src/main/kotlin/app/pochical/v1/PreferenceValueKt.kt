@@ -63,13 +63,14 @@ public object PreferenceValueKt {
 
     /**
      * ```
-     * As the apps write it, JSON, syncLimits.preferenceLength characters at
-     * most. Unset: none kept, so each device keeps its own.
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
      * ```
      *
-     * `optional string value = 2 [json_name = "value"];`
+     * `optional bytes value = 2 [json_name = "value"];`
      */
-    public var value: kotlin.String
+    public var value: com.google.protobuf.ByteString
       @kotlin.jvm.JvmName("getValue")
         get() = _builder.value
       @kotlin.jvm.JvmName("setValue")
@@ -78,22 +79,24 @@ public object PreferenceValueKt {
       }
     /**
      * ```
-     * As the apps write it, JSON, syncLimits.preferenceLength characters at
-     * most. Unset: none kept, so each device keeps its own.
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
      * ```
      *
-     * `optional string value = 2 [json_name = "value"];`
+     * `optional bytes value = 2 [json_name = "value"];`
      */
     public fun clearValue() {
       _builder.clearValue()
     }
     /**
      * ```
-     * As the apps write it, JSON, syncLimits.preferenceLength characters at
-     * most. Unset: none kept, so each device keeps its own.
+     * The message the key names (preferences.proto), encoded,
+     * syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+     * device keeps its own.
      * ```
      *
-     * `optional string value = 2 [json_name = "value"];`
+     * `optional bytes value = 2 [json_name = "value"];`
      * @return Whether the value field is set.
      */
     public fun hasValue(): kotlin.Boolean {

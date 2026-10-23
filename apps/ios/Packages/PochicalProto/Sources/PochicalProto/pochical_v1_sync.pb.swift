@@ -1653,10 +1653,11 @@ public nonisolated struct Pochical_V1_PreferenceValue: Sendable {
   /// Which preference, as the apps name it: an id (syncLimits.idLength).
   public var key: String = String()
 
-  /// As the apps write it, JSON, syncLimits.preferenceLength characters at
-  /// most. Unset: none kept, so each device keeps its own.
-  public var value: String {
-    get {_value ?? String()}
+  /// The message the key names (preferences.proto), encoded,
+  /// syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+  /// device keeps its own.
+  public var value: Data {
+    get {_value ?? Data()}
     set {_value = newValue}
   }
   /// Returns true if `value` has been explicitly set.
@@ -1677,7 +1678,7 @@ public nonisolated struct Pochical_V1_PreferenceValue: Sendable {
 
   public init() {}
 
-  fileprivate var _value: String? = nil
+  fileprivate var _value: Data? = nil
   fileprivate var _hlc: Pochical_V1_Hlc? = nil
 }
 
@@ -5108,7 +5109,7 @@ nonisolated extension Pochical_V1_PreferenceValue: SwiftProtobuf.Message, SwiftP
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.key) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self._value) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self._value) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._hlc) }()
       default: break
       }
@@ -5124,7 +5125,7 @@ nonisolated extension Pochical_V1_PreferenceValue: SwiftProtobuf.Message, SwiftP
       try visitor.visitSingularStringField(value: self.key, fieldNumber: 1)
     }
     try { if let v = self._value {
-      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+      try visitor.visitSingularBytesField(value: v, fieldNumber: 2)
     } }()
     try { if let v = self._hlc {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
