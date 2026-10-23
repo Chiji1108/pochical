@@ -21,6 +21,16 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     public var holiday = true
 
     public init() {}
+
+    // A setting missing from what was kept takes its default.
+    public init(from decoder: any Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      let defaults = Week()
+      start = try container.decodeIfPresent(Int.self, forKey: .start) ?? defaults.start
+      sunday = try container.decodeIfPresent(Bool.self, forKey: .sunday) ?? defaults.sunday
+      saturday = try container.decodeIfPresent(Bool.self, forKey: .saturday) ?? defaults.saturday
+      holiday = try container.decodeIfPresent(Bool.self, forKey: .holiday) ?? defaults.holiday
+    }
   }
 
   /// The calendar's month heading: 月と曜日 in Japanese or English, and
@@ -37,6 +47,13 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
     public var sky: String?
 
     public init() {}
+
+    public init(from decoder: any Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      english = try container.decodeIfPresent(Bool.self, forKey: .english) ?? false
+      surprise = try container.decodeIfPresent(Bool.self, forKey: .surprise) ?? false
+      sky = try container.decodeIfPresent(String.self, forKey: .sky)
+    }
   }
 
   public var week = Week()
@@ -60,6 +77,18 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   }
 
   public init() {}
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    week = try container.decodeIfPresent(Week.self, forKey: .week) ?? Week()
+    heading = try container.decodeIfPresent(Heading.self, forKey: .heading) ?? Heading()
+    look = try container.decodeIfPresent(Look.self, forKey: .look) ?? Look()
+    themeID = try container.decodeIfPresent(String.self, forKey: .themeID) ?? Theme.pochical.rawValue
+    appearance = try container.decodeIfPresent(Appearance.self, forKey: .appearance) ?? .system
+    picture = try container.decodeIfPresent(PictureLook.self, forKey: .picture) ?? PictureLook()
+    reminders = try container.decodeIfPresent([Reminder].self, forKey: .reminders) ?? Reminder.defaults
+    calendarAdd = try container.decodeIfPresent(CalendarAdd.self, forKey: .calendarAdd) ?? CalendarAdd()
+  }
 }
 
 /// How a month saved as a picture looks (/design's ImageOptions): it goes
@@ -74,6 +103,12 @@ public struct PictureLook: Codable, Equatable, Sendable {
   public var dark: Bool?
 
   public init() {}
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    options = try container.decodeIfPresent(MarkOptions.self, forKey: .options) ?? PictureLook().options
+    dark = try container.decodeIfPresent(Bool.self, forKey: .dark)
+  }
 }
 
 /// What 端末カレンダーに追加 puts in (spec/calendar.md): the patterns
@@ -87,6 +122,13 @@ public struct CalendarAdd: Codable, Equatable, Sendable {
   public var people = false
 
   public init() {}
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    chosen = try container.decodeIfPresent([PatternID: Bool].self, forKey: .chosen) ?? [:]
+    notes = try container.decodeIfPresent(Bool.self, forKey: .notes) ?? false
+    people = try container.decodeIfPresent(Bool.self, forKey: .people) ?? false
+  }
 
   /// The patterns put in, of `patterns`.
   public func shown(of patterns: [Pattern]) -> Set<PatternID> {
@@ -162,6 +204,13 @@ public struct MarkOptions: Codable, Equatable, Sendable {
     self.offs = offs
   }
 
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    names = try container.decodeIfPresent(Bool.self, forKey: .names) ?? false
+    off = try container.decodeIfPresent(OffLook.self, forKey: .off) ?? .mark
+    offs = try container.decodeIfPresent([PatternID: OffLook].self, forKey: .offs) ?? [:]
+  }
+
   /// How the days of the pattern `id` show, when it counts as off.
   public func offLook(of id: PatternID) -> OffLook {
     offs[id] ?? off
@@ -225,6 +274,17 @@ public struct Look: Codable, Equatable, Sendable {
       case .badge: badge = newValue
       }
     }
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let defaults = Look()
+    style = try container.decodeIfPresent(MarkStyle.self, forKey: .style) ?? defaults.style
+    fill = try container.decodeIfPresent(Bool.self, forKey: .fill) ?? defaults.fill
+    colored = try container.decodeIfPresent(Bool.self, forKey: .colored) ?? defaults.colored
+    icon = try container.decodeIfPresent(MarkOptions.self, forKey: .icon) ?? defaults.icon
+    emoji = try container.decodeIfPresent(MarkOptions.self, forKey: .emoji) ?? defaults.emoji
+    badge = try container.decodeIfPresent(MarkOptions.self, forKey: .badge) ?? defaults.badge
   }
 }
 
