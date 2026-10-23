@@ -499,6 +499,46 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   }
 
   /**
+   * The user taken out of the group by Pochical's people (spec/admin.md,
+   * ユーザー), as a member takes another out: the group's line says
+   * 〇〇がグループから外されました. Only a user with an account, and a group
+   * their own DO lists them in now, so no DO is made by asking; false,
+   * changing nothing, otherwise.
+   */
+  async removeFromGroup(
+    userId: string,
+    groupId: string,
+    by: string
+  ): Promise<boolean> {
+    const known = await drizzle(this.env.DB)
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.id, userId))
+      .get();
+    if (known === undefined) {
+      return false;
+    }
+    const { groups } = await this.env.USERS.getByName(userId).adminView();
+    const inIt = groups.some(
+      (group) => group.groupId === groupId && group.leftAtMs === null
+    );
+    if (!inIt) {
+      return false;
+    }
+    const taken =
+      await this.env.GROUPS.getByName(groupId).removeByPochical(userId);
+    if (taken) {
+      await noteDone(this.env, {
+        action: "removeFromGroup",
+        by,
+        detail: groups.find((group) => group.groupId === groupId)?.name ?? "",
+        target: userId,
+      });
+    }
+    return taken;
+  }
+
+  /**
    * The users whose id starts with `prefix`, the latest signed up first:
    * every user for an empty one, a page at a time. `after` is the last
    * user of the page before, whose followers come next; none for the
