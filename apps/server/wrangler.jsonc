@@ -57,8 +57,8 @@
     // the apps ask Google's tokens for, then the iOS app's. Client ids are
     // not secret.
     "GOOGLE_CLIENT_IDS": [
-      "PLACEHOLDER-web.apps.googleusercontent.com",
-      "PLACEHOLDER-ios.apps.googleusercontent.com",
+      "608132058597-2ldp23dv5lqc7ld5omtob4pk04cglre1.apps.googleusercontent.com",
+      "608132058597-dpqpcmsadl021doot4vun3fcmerddffj.apps.googleusercontent.com",
     ],
   },
   "secrets": {

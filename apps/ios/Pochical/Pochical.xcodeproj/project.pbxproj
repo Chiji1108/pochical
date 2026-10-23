@@ -644,8 +644,8 @@
 				DEVELOPMENT_TEAM = 6KC44WPYLJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				GOOGLE_IOS_CLIENT = "PLACEHOLDER-ios";
-				GOOGLE_WEB_CLIENT_ID = "PLACEHOLDER-web.apps.googleusercontent.com";
+				GOOGLE_IOS_CLIENT = "608132058597-dpqpcmsadl021doot4vun3fcmerddffj";
+				GOOGLE_WEB_CLIENT_ID = "608132058597-2ldp23dv5lqc7ld5omtob4pk04cglre1.apps.googleusercontent.com";
 				INFOPLIST_FILE = Pochical/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -687,8 +687,8 @@
 				DEVELOPMENT_TEAM = 6KC44WPYLJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				GOOGLE_IOS_CLIENT = "PLACEHOLDER-ios";
-				GOOGLE_WEB_CLIENT_ID = "PLACEHOLDER-web.apps.googleusercontent.com";
+				GOOGLE_IOS_CLIENT = "608132058597-dpqpcmsadl021doot4vun3fcmerddffj";
+				GOOGLE_WEB_CLIENT_ID = "608132058597-2ldp23dv5lqc7ld5omtob4pk04cglre1.apps.googleusercontent.com";
 				INFOPLIST_FILE = Pochical/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
