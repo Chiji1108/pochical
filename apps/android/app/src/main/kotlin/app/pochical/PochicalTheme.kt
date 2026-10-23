@@ -13,7 +13,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.staticCompositionLocalOf
+import app.pochical.design.MarkColor
+import app.pochical.design.Theme
 import app.pochical.design.ThemeColors
 
 /**
@@ -36,8 +40,19 @@ fun PochicalTheme(settings: DeviceSettings, content: @Composable () -> Unit) {
     val bars = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
     activity?.enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
   }
-  MaterialTheme(colorScheme = colorScheme(settings, dark), content = content)
+  CompositionLocalProvider(LocalThemeColors provides settings.theme.colors(dark)) {
+    MaterialTheme(colorScheme = colorScheme(settings, dark), content = content)
+  }
 }
+
+/**
+ * The colors of the テーマ in use, in light or dark as the screens are, for
+ * what Material has no role for: the marks', a day off's tint, a holiday's.
+ */
+val LocalThemeColors = staticCompositionLocalOf { Theme.Pochical.colors(dark = false) }
+
+/** A pattern's color slot as this テーマ draws it; one past the palette is its last. */
+fun ThemeColors.mark(slot: Int): MarkColor = marks[slot.coerceIn(0, marks.lastIndex)]
 
 /** Whether the screens are drawn dark, given the phone's own light or dark. */
 fun isDark(settings: DeviceSettings, systemDark: Boolean): Boolean =
