@@ -1,5 +1,5 @@
 {
-  "about": "How long a device may wait before a try to reconnect (spec/sync-protocol.md, Reconnecting): tries counts the tries since the last Welcome, this one included; the most is firstMs doubled for each try before it, up to mostMs (socketRules.reconnectFirstMs and reconnectMostMs in design/src/socket.ts), and the device waits a time drawn at random from 0 up to that most.",
+  "about": "How long a device may wait before a try to reconnect (spec/sync-protocol.md, Reconnecting): tries counts the tries since a socket last caught up (the Pong to the Ping after Welcome, Keepalive), this one included; the most is firstMs doubled for each try before it, up to mostMs (socketRules.reconnectFirstMs and reconnectMostMs in design/src/socket.ts), and the device waits a time drawn at random from 0 up to that most.",
   "waitMost": [
     {
       "name": "the first try",
