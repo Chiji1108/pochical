@@ -231,9 +231,8 @@ class SyncTest {
     val phone = device()
     phone.account.foreground()
     eventually { server.signIns.get() == 1 }
+    // Back before the server has answered the sign-in the background cancelled.
     phone.account.background()
-    delay(1_000)
-    server.signInDelayMs = 0
     phone.account.foreground()
     withTimeout(10_000) { phone.current() }
 
@@ -269,20 +268,18 @@ class SyncTest {
   }
 
   @Test
-  fun theServerSaysWhichProviderTheUserIsLinkedTo() = runBlocking {
+  fun eachSignInAsksTheServerWhichProviderTheUserIsLinkedTo() = runBlocking {
+    server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
     val phone = device()
     phone.account.foreground()
-    withTimeout(10_000) { phone.current() }
-
-    server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
-    phone.account.refreshLinked()
     val google = LinkedAccount(LinkedAccount.Provider.Google, email = null)
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, google) } }
     assertEquals(google, phone.sessions.read()?.linked)
 
     server.provider = SignInProvider.SIGN_IN_PROVIDER_UNSPECIFIED
-    phone.account.refreshLinked()
-    withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, null) } }
+    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope)
+    again.foreground()
+    withTimeout(10_000) { again.state.first { it == AccountState.SignedIn(server.userId, null) } }
     assertNull(phone.sessions.read()?.linked)
   }
 
@@ -296,9 +293,11 @@ class SyncTest {
     withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, account) } }
 
     server.provider = SignInProvider.SIGN_IN_PROVIDER_GOOGLE
-    phone.account.refreshLinked()
+    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope)
+    again.foreground()
+    withTimeout(10_000) { again.userSocket.first { it == SocketState.Current } }
     delay(300)
-    assertEquals(AccountState.SignedIn(server.userId, account), phone.account.state.value)
+    assertEquals(AccountState.SignedIn(server.userId, account), again.state.value)
     assertEquals(account, phone.sessions.read()?.linked)
   }
 

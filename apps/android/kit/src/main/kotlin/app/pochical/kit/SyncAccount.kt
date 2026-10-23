@@ -166,10 +166,6 @@ class SyncAccount(
    * elsewhere may not say, and keeps it with the session; an email this device read stays while the
    * provider does. Nothing changes when the server cannot be asked.
    */
-  suspend fun refreshLinked() {
-    refreshLinked(stretch.value?.credentials ?: return)
-  }
-
   private suspend fun refreshLinked(credentials: Credentials) {
     val provider =
       try {
@@ -239,6 +235,8 @@ class SyncAccount(
         mutableState.value = AccountState.SignedIn(command.session.userId, command.session.linked)
         if (foreground || sending > 0) stretch.user.start()
         if (foreground) holds.keys.forEach { stretch.group(it).start() }
+        if (command.kept) keepAgain()
+        stretch.scope.launch { refreshLinked(stretch.credentials) }
       }
       is Command.SessionUnknown -> {
         if (current?.credentials?.generation != command.generation) return
@@ -265,7 +263,8 @@ class SyncAccount(
           }
         if (after == before) return
         try {
-          sessions.read()?.let { sessions.write(it.copy(linked = after)) }
+          val kept = sessions.read()
+          if (kept != null) sessions.write(kept.copy(linked = after)) else Log.i(TAG, "No session kept to note the account with")
         } catch (e: StoreUnreachable) {
           // The server holds the link, and GetMe says it again at the next refresh.
           Log.i(TAG, "The linked account could not be kept: $e")
@@ -278,8 +277,22 @@ class SyncAccount(
   }
 
   private fun startSigningIn() {
-    if (signingIn?.isActive != true && state.value != AccountState.SessionEnded) {
-      signingIn = scope.launch { signIn() }
+    val before = signingIn
+    if (before?.isActive != true && state.value != AccountState.SessionEnded) {
+      // One cancelled may still be keeping the user it made: this one starts from what it kept.
+      signingIn = scope.launch {
+        before?.join()
+        signIn()
+      }
+    }
+  }
+
+  /** Keeps the session again, so it goes to the cloud backup once a screen lock lets Block Store encrypt it. */
+  private suspend fun keepAgain() {
+    try {
+      sessions.read()?.let { sessions.write(it) }
+    } catch (e: StoreUnreachable) {
+      Log.i(TAG, "The kept session could not be kept again: $e")
     }
   }
 
@@ -301,15 +314,7 @@ class SyncAccount(
       mutableState.value = AccountState.SessionEnded
       return
     }
-    if (kept != null) {
-      Log.i(TAG, "Signed in as kept, ${kept.userId}")
-      // Kept again, so it goes to the cloud backup once a screen lock lets Block Store encrypt it.
-      try {
-        sessions.write(kept)
-      } catch (e: StoreUnreachable) {
-        Log.i(TAG, "The kept session could not be kept again: $e")
-      }
-    }
+    if (kept != null) Log.i(TAG, "Signed in as kept, ${kept.userId}")
     var tries = 0
     var session = kept
     while (session == null) {
@@ -332,7 +337,7 @@ class SyncAccount(
         claim(userId)
       }
     }
-    commands.send(Command.SignedIn(session))
+    commands.send(Command.SignedIn(session, kept = kept != null))
   }
 
   /**
@@ -378,7 +383,8 @@ class SyncAccount(
 
     data class Release(val groupId: String) : Command
 
-    data class SignedIn(val session: StoredSession) : Command
+    /** Signed in as [session], [kept] from before rather than made now. */
+    data class SignedIn(val session: StoredSession, val kept: Boolean) : Command
 
     data class SessionUnknown(val generation: Long) : Command
 

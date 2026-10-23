@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +47,7 @@ import app.pochical.design.GoogleButtonColors
 import app.pochical.design.Metrics
 import app.pochical.kit.AccountState
 import app.pochical.kit.LinkResult
+import app.pochical.kit.LinkRefused
 import app.pochical.kit.LinkedAccount
 import app.pochical.kit.NotSignedIn
 import app.pochical.kit.SyncAccount
@@ -60,11 +60,7 @@ val LocalAccount = staticCompositionLocalOf<SyncAccount> { error("No account pro
 /** 設定's アカウント row: the provider signed in with, or ログインしていません. */
 @Composable
 fun AccountRow(open: (RootPage) -> Unit) {
-  val account = LocalAccount.current
-  val state by account.state.collectAsState()
-  val signedIn = state is AccountState.SignedIn
-  // As the server says: linked here, on another device, or no longer.
-  LaunchedEffect(signedIn) { if (signedIn) account.refreshLinked() }
+  val state by LocalAccount.current.state.collectAsState()
   val linked = (state as? AccountState.SignedIn)?.linked
   ListItem(
     headlineContent = { Text(stringResource(R.string.account)) },
@@ -160,6 +156,9 @@ private fun SignInSection(state: AccountState) {
           } catch (_: NotSignedIn) {
             // Said in place of the app, as the server no longer knows the session.
             null
+          } catch (e: LinkRefused) {
+            // Linked already, as on another device: the page shows the account the server names.
+            if (e.status == 417) null else SignInProblem.Failed
           } catch (_: NoGoogleAccount) {
             SignInProblem.NoGoogleAccount
           } catch (_: Exception) {
