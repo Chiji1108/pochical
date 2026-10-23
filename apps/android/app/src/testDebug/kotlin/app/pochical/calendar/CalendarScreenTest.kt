@@ -25,6 +25,7 @@ import app.pochical.PochicalTheme
 import app.pochical.RootPage
 import java.time.LocalDate
 import java.time.YearMonth
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -41,7 +42,10 @@ class CalendarScreenTest {
   @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
   private val today = LocalDate.now()
-  private val days = SampleDays(today)
+  private val test = sampleDays(today)
+  private val days = test.days
+
+  @After fun close() = test.close()
   private val opened = mutableListOf<RootPage>()
   private var dayOpen = false
 
@@ -146,11 +150,15 @@ class CalendarScreenTest {
     val day = today.withDayOfMonth(20)
     tap(day)
     compose.onNode(hasSetTextAction()).performTextReplacement("早めに出る")
-    // Not on each letter: only as the day closes.
-    assertNull(days.calendar.value.note(day))
+    compose.waitForIdle()
+    // Not on each letter: only as the day closes. Edits land in the order they are made, so a memo
+    // shown on another day after it shows that nothing was written before.
+    val other = today.withDayOfMonth(1).minusMonths(1)
+    days.setNote(other, "先月")
+    assertNull(test.awaitCalendar { it.note(other) != null }.note(day))
     compose.onNodeWithContentDescription("閉じる").performClick()
     compose.waitForIdle()
-    assertEquals("早めに出る", days.calendar.value.note(day))
+    assertEquals("早めに出る", test.awaitCalendar { it.note(day) != null }.note(day))
   }
 
   @Test
@@ -162,8 +170,8 @@ class CalendarScreenTest {
     compose.onNodeWithText("時間の変更も消えます。").assertIsDisplayed()
     compose.onNodeWithText("消す").performClick()
     compose.waitForIdle()
-    assertNull(days.calendar.value.shown(day, day)[day])
-    assertEquals("棚卸し", days.calendar.value.note(day))
+    val calendar = test.awaitCalendar { it.shown(day, day).isEmpty() }
+    assertEquals("棚卸し", calendar.note(day))
   }
 
   @Test

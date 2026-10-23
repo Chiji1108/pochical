@@ -23,7 +23,9 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.android.ActivityKey
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @ContributesIntoMap(AppScope::class, binding<Activity>())
 @ActivityKey
@@ -34,17 +36,26 @@ class MainActivity(
   private val kit: PochicalKit,
 ) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
+  private var calendarRead by mutableStateOf(false)
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    // The splash stays until the first frame can be drawn in the person's テーマ.
-    installSplashScreen().setKeepOnScreenCondition { settings == null }
+    // The splash stays until the first frame can be drawn in the person's テーマ, with their days.
+    installSplashScreen().setKeepOnScreenCondition { settings == null || !calendarRead }
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    lifecycleScope.launch {
+      // Not cancelled with the activity, so a sample is never left half put in; read after it, so
+      // the first calendar drawn holds it.
+      if (savedInstanceState == null) withContext(NonCancellable) { takeLaunchOptions(intent, kit) }
+      ownDays.awaitRead()
+      calendarRead = true
+    }
     lifecycleScope.launch {
       repeatOnLifecycle(Lifecycle.State.STARTED) { deviceSettings.settings.collect { settings = it } }
     }
     setContent {
       val device = settings ?: return@setContent
+      if (!calendarRead) return@setContent
       val state =
         remember(device) {
           DeviceSettingsState(device) { change ->

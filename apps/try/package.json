@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --configLoader runner --port 3202 --strictPort",
+    "dev": "vite dev --configLoader runner",
     "icon:app": "bun scripts/app-assets.ts",
     "build": "vite build --configLoader runner",
-    "preview": "vite preview --configLoader runner --port 3202 --strictPort",
+    "preview": "vite preview --configLoader runner",
     "deploy": "bun run build && wrangler deploy",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json"
   },
