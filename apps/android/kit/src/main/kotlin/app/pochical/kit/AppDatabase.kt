@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room3.Database
 import androidx.room3.Room
 import androidx.room3.RoomDatabase
+import androidx.room3.withReadTransaction
 import androidx.room3.withWriteTransaction
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
@@ -48,6 +49,9 @@ abstract class AppDatabase : RoomDatabase() {
 
   /** Runs [block] in one write transaction, as everything sync takes in or sends from does. */
   internal suspend fun <T> write(block: suspend SyncDao.() -> T): T = withWriteTransaction { sync().block() }
+
+  /** Runs [block] in one read transaction, as what a socket sends is read. */
+  internal suspend fun <T> read(block: suspend SyncDao.() -> T): T = withReadTransaction { sync().block() }
 
   companion object {
     const val VERSION = 1

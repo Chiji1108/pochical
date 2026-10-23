@@ -8,7 +8,9 @@ import type { CSSProperties, ReactNode, Ref, RefObject } from "react";
 // home indicator. They stand in for the device, so the native apps have no
 // counterpart; what carries over is the screens inside. Its height is
 // fixed, so a screen's bottom controls stay in the frame. `dc-phone` stays
-// on the frame as the hook toasts and tools/layout-diff find it by.
+// on the frame as the hook toasts and tools/layout-diff find it by. Its
+// bezel and island are the device's own colors, the same on every page
+// that shows it.
 const frame = cva({
   base: {
     // Phones show scroll indicators only while scrolling, so the desktop
@@ -32,10 +34,9 @@ const frame = cva({
           borderRadius: "44px",
           borderWidth: "5px",
         },
-        border: "6px solid var(--ws-bezel)",
+        border: "6px solid #333631",
         borderRadius: "53px",
-        boxShadow:
-          "0 3px 0 1px var(--ws-bezel-edge), 0 28px 50px -30px var(--ws-bezel-shadow)",
+        boxShadow: "0 3px 0 1px #b9bdb6, 0 28px 50px -30px #30392f35",
         height: "844px",
         // The foot is iOS's home indicator area, 33pt: the screens end
         // there, and the floating tab bar sits 20px off the bottom.
@@ -97,7 +98,7 @@ const phone = {
   }),
   island: css({
     "@media (max-width: 370px)": { width: "76px" },
-    bg: "var(--ws-island)",
+    bg: "#242724",
     borderRadius: "20px",
     height: "27px",
     left: "50%",

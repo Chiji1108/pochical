@@ -24,6 +24,7 @@ import {
 import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
 import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
+import { tryUrl } from "@pochical/prototype/lib/try-url";
 import { css } from "@pochical/styled-system/css";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, RotateCcw, Smartphone } from "lucide-react";
@@ -31,7 +32,6 @@ import { useEffect, useState } from "react";
 
 import { VariantPanel } from "../../components/design-variant-panel";
 import { pageMeta } from "../../lib/page-meta";
-import { tryUrl } from "../../lib/try-url";
 
 export const Route = createFileRoute("/_tool/demo")({
   component: DemoPage,

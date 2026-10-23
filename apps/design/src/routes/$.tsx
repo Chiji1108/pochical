@@ -1,3 +1,4 @@
+import { tryUrl } from "@pochical/prototype/lib/try-url";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useFumadocsLoader } from "fumadocs-core/source/client";
@@ -15,7 +16,6 @@ import { DocsThemeSwitch } from "../components/docs-theme-switch";
 import { useMDXComponents } from "../components/mdx";
 import { pageMeta } from "../lib/page-meta";
 import { docs, source } from "../lib/source";
-import { tryUrl } from "../lib/try-url";
 
 // Every page of the design documents: an MDX page of content/, in
 // Fumadocs UI's docs layout with its sidebar, search and table of
