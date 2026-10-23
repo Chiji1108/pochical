@@ -386,9 +386,7 @@ const usualFace = async (token: string, groupId: string): Promise<string> => {
   const photoId = await ownPhoto(token);
   await call("UserService/SetProfile", { name: "さくら", photoId }, token);
   await push(await userIdOf(token));
-  await vi.waitFor(async () => {
-    await expect(storedBytes(groupId, photoId)).resolves.not.toBeNull();
-  });
+  await expect(storedBytes(groupId, photoId)).resolves.not.toBeNull();
   return photoId;
 };
 

@@ -10,7 +10,6 @@ import {
   smallKey,
   uploadedPhotoKey,
 } from "../src/photos";
-import type { UserDO } from "../src/user-do";
 import { call, ORIGIN } from "./helpers";
 import {
   PAIR_ROSTER,
@@ -57,16 +56,6 @@ const groupAlarm = async (groupId: string): Promise<void> => {
   await runInDurableObject(
     env.GROUPS.getByName(groupId),
     async (instance: GroupDO) => {
-      await instance.alarm();
-    }
-  );
-};
-
-/** A User DO's alarm run now, whenever it was set for. */
-const userAlarm = async (userId: string): Promise<void> => {
-  await runInDurableObject(
-    env.USERS.getByName(userId),
-    async (instance: UserDO) => {
       await instance.alarm();
     }
   );
@@ -328,7 +317,7 @@ describe("the photos bucket", () => {
         { name: "さくら", photoId: next },
         maker
       );
-      await userAlarm(makerId);
+      await push(makerId);
       await expect(
         stored(personPhotoKey(makerId, first))
       ).resolves.toBeTruthy();
@@ -337,7 +326,7 @@ describe("the photos bucket", () => {
       ).resolves.toStrictEqual({ going: [first], photoId: next });
 
       deletes.mockRestore();
-      await userAlarm(makerId);
+      await push(makerId);
       await expect(stored(personPhotoKey(makerId, first))).resolves.toBeFalsy();
       await expect(
         env.USERS.getByName(makerId).bucketReferences()

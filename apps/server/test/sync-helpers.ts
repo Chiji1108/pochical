@@ -1,6 +1,6 @@
 import { create, fromBinary, toBinary } from "@bufbuild/protobuf";
 import type { MessageInitShape } from "@bufbuild/protobuf";
-import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { afterAll, afterEach, beforeAll, expect, vi } from "vitest";
 
@@ -17,6 +17,7 @@ import type {
 import { GroupDO } from "../src/group-do";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
 import { supportPlace } from "../src/support-lines";
+import { UserDO } from "../src/user-do";
 import { call, openSocket, signInAnonymously, userIdOf } from "./helpers";
 
 // Sync sockets in tests: their frames as they arrive, and the edits sent
@@ -157,9 +158,48 @@ export const pair = async () => {
 // joiner's read mark at that notice.
 export const PAIR_ROSTER = 5n;
 
-// Runs the user's push now, as their alarm would.
+/** The user alarm as the code has it, run in turn by userAlarmInTurn. */
+// oxlint-disable-next-line typescript/unbound-method -- called with each user as this
+const userAlarm = UserDO.prototype.alarm;
+
+/** When each user's last alarm run ends, for the next to wait on. */
+const lastUserAlarm = new WeakMap<UserDO, Promise<undefined>>();
+
+/**
+ * The user alarm run once the one before it has ended, as the runtime
+ * runs a DO's alarms, one at a time, whether the runtime or push runs it.
+ */
+const userAlarmInTurn = async function userAlarmInTurn(
+  this: UserDO
+): Promise<void> {
+  const before = lastUserAlarm.get(this);
+  const { promise: ended, resolve } = Promise.withResolvers<undefined>();
+  lastUserAlarm.set(this, ended);
+  try {
+    await before;
+    await userAlarm.call(this);
+  } finally {
+    resolve(undefined);
+  }
+};
+UserDO.prototype.alarm = userAlarmInTurn;
+
+/**
+ * Runs the user's push now, as their alarm would, after any the runtime
+ * has started: so their groups have taken what changed by the time it
+ * returns. A change sets the alarm for now, which the runtime takes up on
+ * its own; from then the alarm reads as none, though it may not have
+ * started yet, so runDurableObjectAlarm alone would run nothing and not
+ * wait for it.
+ */
 export const push = async (userId: string): Promise<void> => {
-  await runDurableObjectAlarm(env.USERS.getByName(userId));
+  await runInDurableObject(
+    env.USERS.getByName(userId),
+    async (user: UserDO, state) => {
+      await state.storage.deleteAlarm();
+      await user.alarm();
+    }
+  );
 };
 
 export const changesIn = (frame: ServerFrame) =>

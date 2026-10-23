@@ -110,12 +110,9 @@ describe("members' photos", () => {
     await upload(`/v1/me/photos/${photoId}`, maker);
     await call("UserService/SetProfile", { name: "さくら", photoId }, maker);
     await push(makerId);
-    // The push may still be under way from the alarm set as it changed.
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.not.toBeNull();
-    });
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.not.toBeNull();
     const deleted = await call("UserService/DeleteAccount", {}, maker);
     expect(deleted.status).toBe(200);
     await expect(
@@ -132,11 +129,9 @@ describe("members' photos", () => {
     await upload(`/v1/me/photos/${photoId}`, maker);
     await call("UserService/SetProfile", { name: "さくら", photoId }, maker);
     await push(makerId);
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.not.toBeNull();
-    });
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.not.toBeNull();
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
     await group.frames.next();
     await call("GroupService/LeaveGroup", { groupId }, maker);
@@ -156,11 +151,9 @@ describe("members' photos", () => {
     await upload(`/v1/me/photos/${photoId}`, maker);
     await call("UserService/SetProfile", { name: "さくら", photoId }, maker);
     await push(makerId);
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.not.toBeNull();
-    });
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.not.toBeNull();
     const outsider = await signInAnonymously();
     const invite = await call(
       "GroupService/GetInvite",
