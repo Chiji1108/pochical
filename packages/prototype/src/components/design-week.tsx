@@ -1,7 +1,5 @@
 import { createContext, useContext } from "react";
 
-import { addDays, daysOfPeriod, periodOf } from "../lib/design-days";
-import type { Period } from "../lib/design-days";
 import { fallbackHolidayCountry, holidays } from "../lib/holiday-names";
 
 // 週の始まり and 色をつける日 from settings. They are the viewer's own and
@@ -142,19 +140,36 @@ export function weekDatesFrom(date: Date, weekStart: number) {
   );
 }
 
-// Whole weeks covering the month.
-export function monthDatesFrom(month: Date, weekStart: number) {
-  return periodDatesFrom(periodOf(month, 1), weekStart);
-}
-
 // Whole weeks covering a page's days, a month's or a シフトの期間's
 // (spec/calendar.md, The shift period).
-export function periodDatesFrom(period: Period, weekStart: number) {
-  const offset = daysIntoWeek(period.first, weekStart);
-  const count = daysOfPeriod(period).length;
+// design-days' Period, which imports from here.
+export function periodDatesFrom(
+  { first, last }: { first: Date; last: Date },
+  weekStart: number
+) {
+  const offset = daysIntoWeek(first, weekStart);
+  const dayOf = (date: Date) =>
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const count = (dayOf(last) - dayOf(first)) / 86_400_000 + 1;
   return Array.from(
     { length: Math.ceil((offset + count) / weekLength) * weekLength },
-    (_, index) => addDays(period.first, index - offset)
+    (_, index) =>
+      new Date(
+        first.getFullYear(),
+        first.getMonth(),
+        first.getDate() + index - offset
+      )
+  );
+}
+
+// Whole weeks covering the month.
+export function monthDatesFrom(month: Date, weekStart: number) {
+  return periodDatesFrom(
+    {
+      first: new Date(month.getFullYear(), month.getMonth(), 1),
+      last: new Date(month.getFullYear(), month.getMonth() + 1, 0),
+    },
+    weekStart
   );
 }
 
