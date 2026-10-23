@@ -18,12 +18,6 @@
       "port": 3200
     },
     {
-      "name": "demo",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd apps/demo && exec bun run dev"],
-      "port": 3201
-    },
-    {
       "name": "try",
       "runtimeExecutable": "sh",
       "runtimeArgs": ["-c", "cd apps/try && exec bun run dev"],

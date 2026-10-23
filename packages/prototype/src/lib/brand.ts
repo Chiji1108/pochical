@@ -6,7 +6,7 @@ export const site = {
 };
 
 // The picture shared links show (og:image), at the size previews expect:
-// assets/share.png, taken from apps/demo's /_render/share-image by bun
+// assets/share.png, taken from apps/design's /_render/share-image by bun
 // run image:share.
 export const SHARE_IMAGE = {
   alt: "ポチカル シフトを、ポチッと。家族や友だちと共有できる、シフトカレンダー。",

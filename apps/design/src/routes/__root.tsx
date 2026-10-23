@@ -1,4 +1,5 @@
 import siteIcon from "@pochical/prototype/assets/icon.png?url";
+import { workspaceGround } from "@pochical/prototype/components/design-page";
 import { DesignProviders } from "@pochical/prototype/components/design-providers";
 import {
   ColorSchemeContext,
@@ -13,6 +14,7 @@ import {
   HeadContent,
   Link,
   Scripts,
+  useMatch,
 } from "@tanstack/react-router";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { MotionConfig } from "motion/react";
@@ -94,12 +96,19 @@ function Html({ children }: { children: ReactNode }) {
   );
 }
 
+// A tool (_tool.tsx) draws on the workspace's ground, light whatever 外観
+// the documents keep, so its <html> takes neither their colors nor dark.
 function ThemedHtml({ children }: { children: ReactNode }) {
+  const tool = useMatch({ from: "/_tool", shouldThrow: false }) !== undefined;
   const style = useThemeStyle();
   const dark = useColorScheme() === "dark";
-  const ground = style["--background-base"];
+  const ground = tool ? workspaceGround : style["--background-base"];
   return (
-    <html className={dark ? "dark" : undefined} lang="ja" style={style}>
+    <html
+      className={tool ? "tool" : `documents${dark ? " dark" : ""}`}
+      lang="ja"
+      style={tool ? undefined : style}
+    >
       <head>
         <HeadContent />
         {/* The browser's bars around the page, in the page's ground. */}
@@ -111,10 +120,15 @@ function ThemedHtml({ children }: { children: ReactNode }) {
       <body>
         {/* Movement follows the device's 視差効果を減らす setting. */}
         <MotionConfig reducedMotion="user">
-          {/* Light and dark follow 外観 above, not next-themes. */}
-          <RootProvider i18n={japanese} theme={{ enabled: false }}>
-            {children}
-          </RootProvider>
+          {/* Light and dark follow 外観 above, not next-themes. A tool
+              has none of Fumadocs UI's chrome, its search among it. */}
+          {tool ? (
+            children
+          ) : (
+            <RootProvider i18n={japanese} theme={{ enabled: false }}>
+              {children}
+            </RootProvider>
+          )}
         </MotionConfig>
         <Scripts />
       </body>
