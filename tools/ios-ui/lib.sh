@@ -14,8 +14,11 @@ export POCHICAL_DEV_SERVER=${POCHICAL_DEV_SERVER:-http://localhost:8787}
 port=${BASH_REMATCH[1]}
 server=""
 
+# The server runs in a process group of its own, led by mise (`server`),
+# which runs the task's shell, bun, wrangler and workerd in a group of
+# their own; stopping signals both groups.
 start_server() {
-  (cd "$root" && exec mise run server -- --port "$port" >>"$server_log" 2>&1) &
+  (cd "$root" && exec perl -e 'setpgrp; exec @ARGV' mise run server -- --port "$port" >>"$server_log" 2>&1) &
   server=$!
   until curl -s -o /dev/null "$POCHICAL_DEV_SERVER"; do
     kill -0 "$server" 2>/dev/null || { echo "the server did not start: $server_log" >&2; exit 1; }
@@ -25,10 +28,18 @@ start_server() {
 
 stop_server() {
   [ -n "$server" ] || return 0
-  kill "$server" 2>/dev/null || true
+  local group
+  for group in "$server" $(ps -A -o ppid=,pgid= | awk -v p="$server" '$1 == p { print $2 }'); do
+    kill -- "-$group" 2>/dev/null || true
+  done
   wait "$server" 2>/dev/null || true
   server=""
-  while curl -s -o /dev/null "$POCHICAL_DEV_SERVER"; do sleep 1; done
+  for _ in $(seq 30); do
+    curl -s -o /dev/null "$POCHICAL_DEV_SERVER" || return 0
+    sleep 1
+  done
+  echo "the server still answers at $POCHICAL_DEV_SERVER 30s after it was stopped" >&2
+  exit 1
 }
 
 xcodebuild_for() {
