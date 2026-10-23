@@ -44,7 +44,7 @@ extension GroupCalls {
     request.appleIDToken = appleIDToken
     request.nonce = nonce
     let answer = try await users.peekAccount(request: request, headers: headers())
-      .result.get()
+      .result.mapError(suspendedOr).get()
     return Holdings(
       shiftDays: Int(answer.shiftDays), repeating: answer.repeating,
       coworkers: Int(answer.coworkers), groups: Int(answer.groups))
@@ -56,6 +56,13 @@ extension GroupCalls {
     var request = Pochical_V1_TakeAccountRequest()
     request.appleIDToken = appleIDToken
     request.nonce = nonce
-    _ = try await users.takeAccount(request: request, headers: headers()).result.get()
+    _ = try await users.takeAccount(request: request, headers: headers()).result
+      .mapError(suspendedOr).get()
   }
+}
+
+/// The server's PERMISSION_DENIED to switching as the account being
+/// suspended; any other error as it is.
+private func suspendedOr(_ error: ConnectError) -> any Error {
+  error.code == .permissionDenied ? AccountSuspended() : error
 }

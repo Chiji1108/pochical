@@ -43,10 +43,13 @@ private final class FakeServer: Sendable {
   let requests = Mutex<[URLRequest]>([])
   let status: Int
   let token: String?
+  /// What it answers with instead of a session, as a refusal's code.
+  let body: String?
 
-  init(status: Int = 200, token: String? = "made") {
+  init(status: Int = 200, token: String? = "made", body: String? = nil) {
     self.status = status
     self.token = token
+    self.body = body
   }
 
   var send: Account.Send {
@@ -55,7 +58,9 @@ private final class FakeServer: Sendable {
       let headers = self.token.map { ["set-auth-token": $0] } ?? [:]
       let response = HTTPURLResponse(
         url: request.url!, statusCode: self.status, httpVersion: nil, headerFields: headers)!
-      let body = #"{"token":"short","user":{"id":"user-\#(self.token ?? "")","isAnonymous":true}}"#
+      let body =
+        self.body
+        ?? #"{"token":"short","user":{"id":"user-\#(self.token ?? "")","isAnonymous":true}}"#
       return (Data(body.utf8), response)
     }
   }
@@ -130,6 +135,24 @@ private let server = URL(string: "http://localhost:8787")!
   #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/sign-in/social")
   #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer anonymous")
   #expect(!request.httpShouldHandleCookies)
+}
+
+@Test func aSuspendedAccountsSignInIsSaidAsSuch() async throws {
+  let suspended = Account(
+    server: server,
+    send: FakeServer(
+      status: 403, token: nil,
+      body: #"{"code":"USER_SUSPENDED","message":"This account is suspended"}"#
+    ).send)
+  await #expect(throws: AccountSuspended.self) {
+    try await suspended.signInApple(idToken: "id-token", nonce: "raw", on: "anonymous")
+  }
+  // Another 403 is a refusal like any other.
+  let refused = Account(
+    server: server, send: FakeServer(status: 403, token: nil, body: #"{"code":"OTHER"}"#).send)
+  await #expect(throws: SignInError.self) {
+    try await refused.signInApple(idToken: "id-token", nonce: "raw", on: "anonymous")
+  }
 }
 
 @Test func signingOutEndsTheSessionOnTheServer() async throws {

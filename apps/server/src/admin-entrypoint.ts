@@ -18,6 +18,7 @@ import { GROUP_THREAD } from "./group-chat";
 import { photoKey } from "./photos";
 import { previewReset, resetEverything } from "./reset";
 import type { ResetPreview } from "./reset";
+import { getAuth } from "./session";
 import { supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
 
@@ -96,6 +97,8 @@ export type UserSummary = {
   signIns: string[];
   /** Their chat with Pochical's people waits for an answer (未返信). */
   unanswered: number;
+  /** When Pochical's people suspended them; null while they are not. */
+  suspendedAtMs: number | null;
 };
 
 /** Where a page of users ends, for the page after it. */
@@ -462,6 +465,40 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
   }
 
   /**
+   * The user suspended (or, with `on` false, let back): they sign in
+   * nowhere while suspended, and every device of theirs is signed out at
+   * once, its sockets closed, as signing out does (spec/admin.md,
+   * ユーザー). False, changing nothing, for an id with no account.
+   */
+  async suspend(userId: string, on: boolean, by: string): Promise<boolean> {
+    const updated = await drizzle(this.env.DB)
+      .update(user)
+      // Suspended again (a retry, a second press), it keeps when it began.
+      .set({
+        suspendedAt: on
+          ? sql`coalesce(${user.suspendedAt}, ${Date.now()})`
+          : null,
+      })
+      .where(eq(user.id, userId))
+      .returning({ id: user.id });
+    if (updated.length === 0) {
+      return false;
+    }
+    if (on) {
+      // better-auth's own, which runs the hook that closes their sockets.
+      const auth = await getAuth().$context;
+      await auth.internalAdapter.deleteUserSessions(userId);
+    }
+    await noteDone(this.env, {
+      action: on ? "suspend" : "unsuspend",
+      by,
+      detail: "",
+      target: userId,
+    });
+    return true;
+  }
+
+  /**
    * The users whose id starts with `prefix`, the latest signed up first:
    * every user for an empty one, a page at a time. `after` is the last
    * user of the page before, whose followers come next; none for the
@@ -477,6 +514,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
         anonymous: user.isAnonymous,
         createdAt: user.createdAt,
         signIns: signInsSql,
+        suspendedAt: user.suspendedAt,
         unanswered: supportChats.unanswered,
         userId: user.id,
       })
@@ -508,6 +546,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       anonymous: row.anonymous ?? false,
       createdAtMs: row.createdAt.getTime(),
       signIns: signInsIn(row.signIns),
+      suspendedAtMs: row.suspendedAt?.getTime() ?? null,
       unanswered: row.unanswered ?? 0,
       userId: row.userId,
     }));
@@ -532,6 +571,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
         anonymous: user.isAnonymous,
         createdAt: user.createdAt,
         signIns: signInsSql,
+        suspendedAt: user.suspendedAt,
       })
       .from(user)
       .where(eq(user.id, userId))
@@ -585,6 +625,7 @@ export class AdminEntrypoint extends WorkerEntrypoint<Env> {
       signIns: signInsIn(row.signIns),
       supportChat:
         chat === undefined ? null : { lastAtMs: chat.lastAt.getTime() },
+      suspendedAtMs: row.suspendedAt?.getTime() ?? null,
       unanswered: chat?.unanswered ?? 0,
       userId,
     };

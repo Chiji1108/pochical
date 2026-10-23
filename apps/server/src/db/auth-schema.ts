@@ -17,6 +17,7 @@ export const user = sqliteTable("user", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
   isAnonymous: integer("is_anonymous", { mode: "boolean" }).default(false),
+  suspendedAt: integer("suspended_at", { mode: "timestamp_ms" }),
 });
 
 export const session = sqliteTable(
