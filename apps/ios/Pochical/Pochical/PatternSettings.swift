@@ -289,7 +289,7 @@ struct PatternEditor: View {
           LookEditor(draft: $draft, picked: $picked, others: others)
         } label: {
           HStack(spacing: 16) {
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
               ShiftMark(pattern: saved, size: 44)
               Text("印と色を変える")
                 .font(.caption)

@@ -113,7 +113,7 @@ const editor = {
     alignItems: "center",
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
+    gap: "4px",
   }),
   // The name over the time, beside the mark at the top.
   name: css({ display: "flex", flexDirection: "column", gap: "2px" }),
