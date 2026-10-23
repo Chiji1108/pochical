@@ -1,5 +1,6 @@
 import PochicalDesign
 import PochicalKit
+import Pow
 import SwiftUI
 import UIKit
 
@@ -7,26 +8,57 @@ import UIKit
 let reactionChoices = ["👍", "❤️", "😂", "👀", "🙏", "🎉"]
 
 /// A line's reactions under its bubble, wrapping to more rows as needed.
+/// One coming while the chat is open pops in, the accent's, and the
+/// reader's own choice sprays its emoji, as Telegram's and iMessage's
+/// tapbacks land; one going shrinks away. Others' coming only pop, and
+/// with motion reduced each fades in and out where it is. Those there as
+/// the line is drawn are simply there.
 struct ReactionRow: View {
+  @Environment(\.themeColors) private var colors
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// The line's op_id.
+  let lineID: String
   let reactions: [LineReaction]
   let meID: String?
   let nameOf: (String) -> String
   /// In a chat of two, who chose it needs no face: the emoji alone, and
   /// how many once both did.
   var counted = false
+  /// What the reader has just chosen, which sprays; none where nothing
+  /// does.
+  var marks: LineMarks?
   let onReact: (String) -> Void
+  /// Where its pills' sprays are drawn: over the whole line, apart from
+  /// the row, which comes in growing from nothing with its first.
+  static let sprays = "reaction-sprays"
+
+  /// How a pill comes and goes, and the line's first with the row.
+  static func transition(_ reduceMotion: Bool, _ colors: ThemeColors) -> AnyTransition {
+    reduceMotion
+      ? .opacity
+      : .asymmetric(
+        insertion: .movingParts.pop(colors.accentDefault),
+        removal: .scale(scale: 0.5).combined(with: .opacity))
+  }
+
+  /// The animation pills come and go in.
+  static func motion(_ reduceMotion: Bool) -> Animation {
+    reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.35)
+  }
 
   var body: some View {
     WrappingRow(spacing: 4) {
       ForEach(reactions, id: \.emoji) { reaction in
         ReactionPill(
           reaction: reaction, mine: reaction.userIDs.contains(meID ?? ""), nameOf: nameOf,
-          counted: counted
+          counted: counted, lineID: lineID, marks: marks
         ) {
           onReact(reaction.emoji)
         }
+        .transition(Self.transition(reduceMotion, colors))
       }
     }
+    .animation(ReactionRow.motion(reduceMotion), value: reactions)
   }
 }
 
@@ -40,7 +72,16 @@ private struct ReactionPill: View {
   let nameOf: (String) -> String
   @Environment(\.memberFaces) private var photos
   var counted = false
+  /// Its line's op_id, and what the reader has just chosen, which it
+  /// sprays for.
+  let lineID: String
+  let marks: LineMarks?
   let onToggle: () -> Void
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// Drawn only to be measured, apart from the screen.
+  @Environment(\.measuringLine) private var measuring
+  /// How many times it has sprayed.
+  @State private var sprayed = 0
   /// Its height and faces, growing with the reader's text size as its
   /// emoji and count do.
   @ScaledMetric(relativeTo: .subheadline) private var height: CGFloat = 24
@@ -49,6 +90,24 @@ private struct ReactionPill: View {
   private static var mostFaces: Int { 3 }
 
   var body: some View {
+    pill
+      // Its spray drawn over the line rather than on the pill, which keeps
+      // its own frame to be touched and read by.
+      .changeEffect(
+        .spray(layer: .named(ReactionRow.sprays)) { Text(reaction.emoji) }, value: sprayed,
+        isEnabled: !reduceMotion)
+      .onAppear(perform: spray)
+      .onChange(of: marks?.chosen.contains([lineID, reaction.emoji]) ?? false) { _, now in
+        if now { spray() }
+      }
+  }
+
+  /// Sprays for the reader's choice of it just made, once.
+  private func spray() {
+    if !measuring, marks?.shows(reaction.emoji, on: lineID) == true { sprayed += 1 }
+  }
+
+  @ViewBuilder private var pill: some View {
     let crowded = reaction.userIDs.count > Self.mostFaces
     let faces = crowded ? Array(reaction.userIDs.prefix(Self.mostFaces - 1)) : reaction.userIDs
     let names = reaction.userIDs.map(nameOf)

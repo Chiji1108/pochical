@@ -16,3 +16,7 @@ dependencies {
   api(libs.compose.ui)
   api(libs.compose.animation.core)
 }
+
+kotlin {
+  jvmToolchain(libs.versions.jvm.get().toInt())
+}
