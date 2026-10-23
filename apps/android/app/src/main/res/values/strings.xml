@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string name="app_name">ポチカル</string>
+  <string name="tab_calendar">カレンダー</string>
+  <string name="tab_groups">グループ</string>
+  <string name="tab_settings">設定</string>
+  <string name="settings_display">表示</string>
+  <string name="appearance">外観</string>
+  <string name="back">戻る</string>
 </resources>

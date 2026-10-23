@@ -10,6 +10,10 @@ protobuf = "4.36.2"
 connect = "0.9.0"
 compose-bom = "2026.09.00"
 activity-compose = "1.13.0"
+navigation3 = "1.2.0"
+metro = "1.4.5"
+kotlinx-serialization = "1.12.0"
+junit = "4.13.2"
 
 [libraries]
 protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf" }
@@ -20,10 +24,18 @@ compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-
 compose-ui = { module = "androidx.compose.ui:ui" }
 compose-animation-core = { module = "androidx.compose.animation:animation-core" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-material3-navigation-suite = { module = "androidx.compose.material3:material3-adaptive-navigation-suite" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+metrox-android = { module = "dev.zacsweers.metro:metrox-android", version.ref = "metro" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
+junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+metro = { id = "dev.zacsweers.metro", version.ref = "metro" }
