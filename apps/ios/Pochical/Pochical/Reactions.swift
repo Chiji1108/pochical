@@ -30,22 +30,18 @@ struct ReactionRow: View {
   var shown = false
   let onReact: (String) -> Void
 
-  /// How a pill comes and goes: in by the pop's own scale, the pop itself
-  /// played round it over the chat (ChatEffects), where the line's cell
-  /// would cut it.
+  /// How a pill comes and goes, and the line's first with the row, which
+  /// is then as large as the pill: in by the pop's own scale, its ring and
+  /// burst played round it over the chat (ChatEffects), where the line's
+  /// cell would cut them. Only the outermost of views coming in together
+  /// takes its transition.
   static func transition(_ reduceMotion: Bool) -> AnyTransition {
     reduceMotion
       ? .opacity
-      : .asymmetric(insertion: .movingParts.pop(Color.clear), removal: leaving)
+      : .asymmetric(
+        insertion: .movingParts.pop(Color.clear),
+        removal: .scale(scale: 0.5).combined(with: .opacity))
   }
-
-  /// How the row comes with the line's first pill, which pops in it, and
-  /// goes with its last.
-  static func rowTransition(_ reduceMotion: Bool) -> AnyTransition {
-    reduceMotion ? .opacity : .asymmetric(insertion: .identity, removal: leaving)
-  }
-
-  private static var leaving: AnyTransition { .scale(scale: 0.5).combined(with: .opacity) }
 
   /// The animation pills come and go in.
   static func motion(_ reduceMotion: Bool) -> Animation {
@@ -85,6 +81,8 @@ private struct ReactionPill: View {
   let onToggle: () -> Void
   /// Its line was on the screen as it came, as it was first made: it pops.
   @State private var cameLater: Bool
+  /// This pill's own, apart from one of the same emoji coming as it goes.
+  @State private var token = UUID()
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   /// The chat's effects; none where the line is only measured.
   @Environment(\.chatEffects) private var effects
@@ -112,7 +110,7 @@ private struct ReactionPill: View {
   }
 
   private var part: EffectPart {
-    EffectPart(item: ChatItemID.line(lineID), name: reaction.emoji)
+    EffectPart(item: ChatItemID.line(lineID), name: token.uuidString)
   }
 
   var body: some View {

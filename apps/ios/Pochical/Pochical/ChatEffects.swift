@@ -21,6 +21,13 @@ struct EffectPart: Hashable {
   let name: String
 }
 
+/// Where an item of the lines is: its frame in the lines' content, and
+/// its cell's own transform (dragged aside to reply).
+struct ItemPlace {
+  let frame: CGRect
+  let transform: CGAffineTransform
+}
+
 /// What plays on a part.
 enum ChatEffect {
   /// It came in: Pow's pop round it, in the accent.
@@ -61,7 +68,13 @@ extension EnvironmentValues {
 final class ChatEffectsLayer: UIView {
   let effects = ChatEffects()
   /// The chat's environment, which the effects are drawn in.
-  var environment = EnvironmentValues()
+  var environment = EnvironmentValues() {
+    didSet {
+      for played in playing.values {
+        played.host.rootView = Self.content(played.burst, environment)
+      }
+    }
+  }
   /// A frame for each item on the screen, as the lines lay it out.
   private var items: [String: UIView] = [:]
   /// What plays, by the part it plays on.
@@ -83,12 +96,12 @@ final class ChatEffectsLayer: UIView {
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
-  /// Lays the items' frames out as `lines` has them now, `frames` giving
-  /// each item's in the lines' content, in whatever animation the lines are
-  /// in: the layer is the lines' content as they scroll, and each item's
-  /// frame moves with its cell. Items gone from the screen go, with what
-  /// plays on them.
-  func follow(_ lines: UIScrollView, items shown: [String: CGRect]) {
+  /// Lays the items' frames out as `lines` has them now, `shown` giving
+  /// each item's place in the lines' content, in whatever animation the
+  /// lines are in: the layer is the lines' content as they scroll, and
+  /// each item's frame moves with its cell, dragged aside to reply
+  /// included. Items gone from the screen go, with what plays on them.
+  func follow(_ lines: UIScrollView, items shown: [String: ItemPlace]) {
     frame = lines.frame
     bounds.origin = lines.bounds.origin
     for (id, view) in items where shown[id] == nil {
@@ -96,20 +109,30 @@ final class ChatEffectsLayer: UIView {
       items[id] = nil
       playing = playing.filter { $0.key.item != id }
     }
-    for (id, frame) in shown {
+    for (id, place) in shown {
       if let view = items[id] {
-        view.frame = frame
+        put(view, at: place)
       } else {
-        let view = UIView(frame: frame)
-        addSubview(view)
+        // New to the screen: where it is, not moved there.
+        let view = UIView()
+        UIView.performWithoutAnimation {
+          put(view, at: place)
+          addSubview(view)
+        }
         items[id] = view
       }
     }
   }
 
+  private func put(_ view: UIView, at place: ItemPlace) {
+    view.bounds = CGRect(origin: .zero, size: place.frame.size)
+    view.center = CGPoint(x: place.frame.midX, y: place.frame.midY)
+    view.transform = place.transform
+  }
+
   fileprivate func play(_ effect: ChatEffect, on part: EffectPart, at frame: CGRect) {
     guard let item = items[part.item] else { return }
-    let played = playing[part] ?? begin(part, in: item)
+    let played = playing[part] ?? begin(part, in: item, at: frame)
     played.host.view.frame = frame
     switch effect {
     case .pop: played.burst.pops += 1
@@ -119,17 +142,25 @@ final class ChatEffectsLayer: UIView {
     }
   }
 
-  private func begin(_ part: EffectPart, in item: UIView) -> Played {
+  /// Starts what plays on `part`, put at `frame` at once, whatever
+  /// animation it is asked in.
+  private func begin(_ part: EffectPart, in item: UIView, at frame: CGRect) -> Played {
     let burst = Burst()
-    let host = UIHostingController(
-      rootView: AnyView(BurstView(burst: burst).environment(\.self, environment)))
+    let host = UIHostingController(rootView: Self.content(burst, environment))
     host.sizingOptions = []
     host.safeAreaRegions = []
     host.view.backgroundColor = .clear
-    UIView.performWithoutAnimation { item.addSubview(host.view) }
+    UIView.performWithoutAnimation {
+      host.view.frame = frame
+      item.addSubview(host.view)
+    }
     let played = Played(burst: burst, host: host)
     playing[part] = played
     return played
+  }
+
+  private static func content(_ burst: Burst, _ environment: EnvironmentValues) -> AnyView {
+    AnyView(BurstView(burst: burst).environment(\.self, environment))
   }
 
   fileprivate func move(_ part: EffectPart, to frame: CGRect) {
@@ -163,8 +194,9 @@ private struct BurstView: View {
 
   var body: some View {
     ZStack {
+      // Each pop its own view, coming in anew.
       if popped > 0 {
-        Color.clear.transition(.movingParts.pop(colors.accentDefault))
+        Color.clear.id(popped).transition(.movingParts.pop(colors.accentDefault))
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

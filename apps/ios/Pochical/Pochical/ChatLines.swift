@@ -362,7 +362,7 @@ struct LineView: View {
               counted: countedReactions, marks: marks, shown: shown,
               onReact: { act(.react($0)) }
             )
-            .transition(ReactionRow.rowTransition(reduceMotion))
+            .transition(ReactionRow.transition(reduceMotion))
           }
         }
         .animation(ReactionRow.motion(reduceMotion), value: reactions.isEmpty)

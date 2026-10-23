@@ -366,6 +366,8 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   /// Over the lines, under the pins and the composer: what plays past a
   /// line for a moment (ChatEffects).
   private let effectsLayer = ChatEffectsLayer()
+  /// The lines and what plays over them, shown and hidden as one.
+  private let stage = UIView()
   /// Holds a line's bubble for its reactions and menu.
   private lazy var press = TouchedPress(target: self, action: #selector(pressed))
   /// The line whose bubble the press is on, and the cell's space it was
@@ -463,9 +465,11 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
       object: nil)
     replyArrow.alpha = 0
     lines.addSubview(replyArrow)
-    view.addSubview(lines)
     model.effects = effectsLayer.effects
-    view.addSubview(effectsLayer)
+    stage.translatesAutoresizingMaskIntoConstraints = false
+    stage.addSubview(lines)
+    stage.addSubview(effectsLayer)
+    view.addSubview(stage)
 
     host(empty, sizing: .intrinsicContentSize)
     host(top, sizing: .preferredContentSize)
@@ -479,14 +483,18 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     composer.view.addInteraction(edge)
     view.addLayoutGuide(room)
     NSLayoutConstraint.activate([
-      lines.topAnchor.constraint(equalTo: view.topAnchor),
+      stage.topAnchor.constraint(equalTo: view.topAnchor),
+      stage.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+      stage.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      stage.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      lines.topAnchor.constraint(equalTo: stage.topAnchor),
       // Going on under the composer and the keyboard to the screen's foot,
       // kept clear of them by the lines' inset (fitRoom), as ChatLayout's
       // Example keeps them over its input bar: their height stays as the
       // keyboard comes and goes, so no cell is made again for it.
-      lines.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      lines.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      lines.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      lines.bottomAnchor.constraint(equalTo: stage.bottomAnchor),
+      lines.leadingAnchor.constraint(equalTo: stage.leadingAnchor),
+      lines.trailingAnchor.constraint(equalTo: stage.trailingAnchor),
       top.view.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
       top.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       top.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -590,9 +598,9 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     replyArrow.tintColor = UIColor(environment.themeColors.textTertiary)
     effectsLayer.environment = environment
     let alpha: CGFloat = settings.shown ? 1 : 0
-    if lines.alpha != alpha {
+    if stage.alpha != alpha {
       UIView.animate(withDuration: alpha == 1 ? 0.15 : 0, delay: 0, options: .curveEaseOut) {
-        self.lines.alpha = alpha
+        self.stage.alpha = alpha
       }
     }
     let look = LinesLook(environment)
@@ -1270,6 +1278,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     let sign: CGFloat = way == .rightward ? 1 : -1
     // The cell itself: its hosted content keeps a transform of its own.
     cell.transform = CGAffineTransform(translationX: sign * shift, y: 0)
+    followEffects()
     // Where the line stands in its cell, unmoved, inside the room kept
     // for its tail.
     let size = replyArrow.intrinsicContentSize
@@ -1298,6 +1307,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     let back = {
       cell?.transform = .identity
       self.replyArrow.alpha = 0
+      self.followEffects()
     }
     if reduceMotion {
       back()
@@ -1423,16 +1433,19 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   }
 
   /// The effects' layer over the lines as they are laid out now, in
-  /// whatever animation laid them out: each item on the screen where the
-  /// layout has it, from the layout's attributes, as the menu is placed.
+  /// whatever animation laid them out: each item in the lines' bounds where
+  /// the layout has it, as the menu is placed (in the layout's own order,
+  /// the update's as it is put in), before its cell is there as the lines
+  /// scroll, with its cell's drag aside to reply.
   private func followEffects() {
-    var frames: [String: CGRect] = [:]
-    for path in lines.indexPathsForVisibleItems where path.item < ids.count {
-      if let frame = layout.layoutAttributesForItem(at: path)?.frame {
-        frames[ids[path.item]] = frame
-      }
+    var places: [String: ItemPlace] = [:]
+    for attributes in layout.layoutAttributesForElements(in: lines.bounds) ?? []
+    where attributes.representedElementCategory == .cell && attributes.indexPath.item < ids.count {
+      places[ids[attributes.indexPath.item]] = ItemPlace(
+        frame: attributes.frame,
+        transform: lines.cellForItem(at: attributes.indexPath)?.transform ?? .identity)
     }
-    effectsLayer.follow(lines, items: frames)
+    effectsLayer.follow(lines, items: places)
   }
 
   /// A keyboard up goes down when the bubble, the bar and the menu do not
