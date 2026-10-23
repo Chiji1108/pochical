@@ -13,10 +13,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.datastore.core.DataStore
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /** カレンダー, which its month heads, with no bar of its own (POC-206 draws it). */
 @Composable
@@ -33,7 +36,8 @@ fun GroupsScreen() {
 /** 設定: each row's page pushed over the tabs. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(open: (RootPage) -> Unit) {
+fun SettingsScreen(deviceSettings: DataStore<DeviceSettings>, open: (RootPage) -> Unit) {
+  val settings by deviceSettings.data.collectAsStateWithLifecycle(initialValue = null)
   Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_settings)) }) }) { padding ->
     LazyColumn(contentPadding = padding) {
       item {
@@ -47,6 +51,7 @@ fun SettingsScreen(open: (RootPage) -> Unit) {
       item {
         ListItem(
           headlineContent = { Text(stringResource(R.string.appearance)) },
+          supportingContent = { settings?.let { Text(stringResource(it.appearance.title)) } },
           modifier = Modifier.clickable { open(RootPage.Appearance) },
         )
       }
