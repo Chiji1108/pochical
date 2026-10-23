@@ -11,6 +11,7 @@ import chatMessages from "../../../spec/vectors/chat.json";
 import entering from "../../../spec/vectors/entering.json";
 import hlc from "../../../spec/vectors/hlc.json";
 import localEdits from "../../../spec/vectors/local-edits.json";
+import monthWeeks from "../../../spec/vectors/month.json";
 import ownDays from "../../../spec/vectors/own-days.json";
 import patternChanges from "../../../spec/vectors/patterns.json";
 import reconnect from "../../../spec/vectors/reconnect.json";
@@ -23,7 +24,10 @@ import together from "../../../spec/vectors/together.json";
 import unread from "../../../spec/vectors/unread.json";
 import widgets from "../../../spec/vectors/widgets.json";
 import { bytesOf } from "../src/components/design-chat-photos";
-import { defaultWeekSettings } from "../src/components/design-week";
+import {
+  defaultWeekSettings,
+  monthDatesFrom,
+} from "../src/components/design-week";
 import { guessLook, nextColor } from "../src/components/shift-mark";
 import {
   albumRows,
@@ -213,6 +217,19 @@ describe("spec/vectors/repeat.json", () => {
       expect(withoutOrder(orders.map(ruleOf), dayOf(start))).toEqual(
         expected.map(ruleOf)
       );
+    });
+  }
+});
+
+describe("spec/vectors/month.json", () => {
+  for (const { name, month, weekStart, expected } of monthWeeks.weeks) {
+    test(name, () => {
+      const days = monthDatesFrom(dayOf(`${month}-01`), weekStart).map(dateKey);
+      expect({
+        first: days.at(0),
+        last: days.at(-1),
+        weeks: days.length / 7,
+      }).toEqual(expected);
     });
   }
 });
