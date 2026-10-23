@@ -34,14 +34,18 @@ sealed interface AccountState {
   /** Signing in: a first launch, or offline before its first sign-in reached the server. */
   data object SigningIn : AccountState
 
-  data class SignedIn(val userId: String) : AccountState
+  /** Signed in as [userId], linked to [linked], null while anonymous. */
+  data class SignedIn(val userId: String, val linked: LinkedAccount?) : AccountState
 
   /**
    * The server does not know the session (ログアウトされています): nothing syncs, nothing is
-   * cleared, until the person chooses (sign-in proper, POC-204, offers the choices).
+   * cleared, until the person chooses (spec/sync-protocol.md, Reconnecting).
    */
   data object SessionEnded : AccountState
 }
+
+/** The device has no session now: it is signing in, or the server ended it. */
+class NotSignedIn : Exception()
 
 /**
  * The one owner on the device of who it is and of every socket (iOS: AccountSession): it signs in
@@ -121,6 +125,17 @@ class SyncAccount(
     }
   }
 
+  /**
+   * Links the provider's account to the signed-in user (spec/sync-protocol.md, Signing in), keeping
+   * the session with the account it is now linked to. [NotSignedIn] before the device has a session.
+   */
+  suspend fun link(account: ProviderToken): LinkResult {
+    val credentials = stretch.value?.credentials ?: throw NotSignedIn()
+    val result = linkSocial(http, server, credentials.token, account)
+    if (result == LinkResult.Linked) commands.send(Command.Linked(credentials.generation, account.account))
+    return result
+  }
+
   /** Keeps the group's socket open, while the app is in the foreground, until [GroupHold.release]. */
   fun hold(groupId: String): GroupHold {
     commands.trySend(Command.Hold(groupId))
@@ -176,7 +191,7 @@ class SyncAccount(
       is Command.SignedIn -> {
         val stretch = Stretch(Credentials(generation.incrementAndGet(), command.session.token, command.session.userId, generation::get))
         this.stretch.value = stretch
-        mutableState.value = AccountState.SignedIn(command.session.userId)
+        mutableState.value = AccountState.SignedIn(command.session.userId, command.session.linked)
         if (foreground || sending > 0) stretch.user.start()
         if (foreground) holds.keys.forEach { stretch.group(it).start() }
       }
@@ -186,8 +201,23 @@ class SyncAccount(
         generation.incrementAndGet()
         current.end()
         stretch.value = null
-        withContext(Dispatchers.IO) { sessions.read()?.let { sessions.write(it.copy(ended = true)) } }
+        try {
+          sessions.read()?.let { sessions.write(it.copy(ended = true)) }
+        } catch (e: StoreUnreachable) {
+          // Not kept as ended, a relaunch tries the session again and hears the same.
+          Log.i(TAG, "The ended session could not be noted: $e")
+        }
         mutableState.value = AccountState.SessionEnded
+      }
+      is Command.Linked -> {
+        if (current?.credentials?.generation != command.generation) return
+        try {
+          sessions.read()?.let { sessions.write(it.copy(linked = command.account)) }
+        } catch (e: StoreUnreachable) {
+          // The server holds the link; only the email shown is lost.
+          Log.i(TAG, "The linked account could not be kept: $e")
+        }
+        mutableState.value = AccountState.SignedIn(current.credentials.userId, command.account)
       }
       Command.NetworkLost -> current?.clients()?.forEach { it.networkLost() }
       Command.NetworkBack -> current?.clients()?.forEach { it.networkBack() }
@@ -207,17 +237,28 @@ class SyncAccount(
    * any more (spec/sync-protocol.md, Sockets).
    */
   private suspend fun signIn() {
-    val kept = withContext(Dispatchers.IO) { sessions.read() }
+    val kept =
+      try {
+        sessions.read()
+      } catch (e: StoreUnreachable) {
+        Log.i(TAG, "The kept session cannot be reached, tried again in the foreground: $e")
+        return
+      }
     if (kept?.ended == true) {
       mutableState.value = AccountState.SessionEnded
       return
     }
+    if (kept != null) Log.i(TAG, "Signed in as kept, ${kept.userId}")
     var tries = 0
     var session = kept
     while (session == null) {
       try {
-        session = signInAnonymously(http, server).also { withContext(Dispatchers.IO) { sessions.write(it) } }
+        session = signInAnonymously(http, server).also { sessions.write(it) }
         Log.i(TAG, "Signed in anonymously as ${session.userId}")
+      } catch (e: StoreUnreachable) {
+        // A session not kept would be a new user at each launch.
+        Log.i(TAG, "The new session could not be kept, tried again in the foreground: $e")
+        return
       } catch (e: IOException) {
         tries += 1
         Log.i(TAG, "Signing in failed: $e")
@@ -267,6 +308,9 @@ class SyncAccount(
     data class SignedIn(val session: StoredSession) : Command
 
     data class SessionUnknown(val generation: Long) : Command
+
+    /** The stretch [generation]'s user was linked to [account]. */
+    data class Linked(val generation: Long, val account: LinkedAccount) : Command
 
     data object NetworkLost : Command
 

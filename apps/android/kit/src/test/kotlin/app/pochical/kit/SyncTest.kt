@@ -3,8 +3,6 @@ package app.pochical.kit
 import app.pochical.design.SyncLimits
 import app.pochical.v1.ClientFrame
 import app.pochical.v1.DayField
-import java.io.File
-import kotlin.io.path.createTempDirectory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,8 +27,8 @@ private const val NOTE = 4
 private class Device(server: FakeServer, now: () -> Long = System::currentTimeMillis) {
   val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
   val database = AppDatabase.open(RuntimeEnvironment.getApplication(), inMemory = true)
-  val sessionFile = File(createTempDirectory().toFile(), "session")
-  val sessions = SessionStore(sessionFile, MarkedSeal)
+  val kept = MemoryBytes()
+  val sessions = SessionStore(kept)
   val edits = OwnEdits(database, now)
   /** How many times the account asked the OS for time to send in the background. */
   val backgroundSends = java.util.concurrent.atomic.AtomicInteger()
@@ -73,7 +71,7 @@ class SyncTest {
     val phone = device()
     phone.account.foreground()
     withTimeout(10_000) { phone.current() }
-    assertEquals(AccountState.SignedIn(server.userId), phone.account.state.value)
+    assertEquals(AccountState.SignedIn(server.userId, linked = null), phone.account.state.value)
     assertEquals(StoredSession(server.token, server.userId), phone.sessions.read())
 
     phone.edits.setDay("2026-10-01", DayField.DAY_FIELD_NOTE, "夜勤明け")
@@ -158,6 +156,71 @@ class SyncTest {
     again.foreground()
     withTimeout(10_000) { again.state.first { it == AccountState.SessionEnded } }
     assertEquals("token-1", phone.sessions.read()?.token)
+  }
+
+  @Test
+  fun aStoreOutOfReachSignsInAsNoOneNewAndIsTriedAgainInTheForeground() = runBlocking {
+    val phone = device()
+    phone.sessions.write(StoredSession(server.token, server.userId))
+    phone.kept.reachable = false
+    phone.account.foreground()
+    delay(500)
+    assertEquals(AccountState.SigningIn, phone.account.state.value)
+    assertEquals(0, server.signIns.get())
+
+    phone.kept.reachable = true
+    phone.account.background()
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    assertEquals(AccountState.SignedIn(server.userId, linked = null), phone.account.state.value)
+    assertEquals(0, server.signIns.get())
+  }
+
+  @Test
+  fun aNewSessionThatCannotBeKeptIsNotUsed() = runBlocking {
+    val phone = device()
+    phone.kept.writable = false
+    phone.account.foreground()
+    eventually { server.signIns.get() == 1 }
+    delay(500)
+    assertEquals(AccountState.SigningIn, phone.account.state.value)
+    assertTrue(server.sockets.isEmpty())
+  }
+
+  @Test
+  fun linkingKeepsTheUserAndTheAccountWithTheSession() = runBlocking<Unit> {
+    val phone = device()
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    val token = idToken("""{"email":"a@example.com"}""")
+
+    val result = phone.account.link(ProviderToken(LinkedAccount.Provider.Google, token, "nonce-1"))
+
+    assertEquals(LinkResult.Linked, result)
+    val (authorization, body) = server.links.single()
+    assertEquals("Bearer ${server.token}", authorization)
+    assertEquals("""{"provider":"google","idToken":{"token":"$token","nonce":"nonce-1"}}""", body)
+    val account = LinkedAccount(LinkedAccount.Provider.Google, "a@example.com")
+    withTimeout(10_000) { phone.account.state.first { it == AccountState.SignedIn(server.userId, account) } }
+    assertEquals(StoredSession(server.token, server.userId, linked = account), phone.sessions.read())
+    // A relaunch shows the account as kept.
+    val again = SyncAccount(phone.database, phone.sessions, server.url, OkHttpClient(), phone.scope)
+    again.foreground()
+    withTimeout(10_000) { again.state.first { it == AccountState.SignedIn(server.userId, account) } }
+  }
+
+  @Test
+  fun anAccountInUseChangesNothing() = runBlocking {
+    val phone = device()
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    server.linkStatus = 409
+
+    val result = phone.account.link(ProviderToken(LinkedAccount.Provider.Google, idToken("{}"), "nonce-1"))
+
+    assertEquals(LinkResult.InUse, result)
+    assertEquals(AccountState.SignedIn(server.userId, linked = null), phone.account.state.value)
+    assertEquals(StoredSession(server.token, server.userId), phone.sessions.read())
   }
 
   @Test

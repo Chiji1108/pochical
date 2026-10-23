@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,8 +25,7 @@ class PochicalKit(context: Context) {
   val account =
     SyncAccount(
       database = database,
-      // Kept out of backups: a session restored elsewhere could not be read there anyway.
-      sessions = SessionStore(File(context.noBackupFilesDir, "session"), KeystoreSeal()),
+      sessions = SessionStore(BlockStoreBytes(context)),
       server = BuildConfig.SERVER.toHttpUrl(),
       http = OkHttpClient(),
       scope = CoroutineScope(SupervisorJob() + Dispatchers.Default),

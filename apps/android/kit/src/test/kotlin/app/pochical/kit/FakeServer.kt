@@ -14,6 +14,7 @@ import app.pochical.v1.serverError
 import app.pochical.v1.serverFrame
 import app.pochical.v1.welcome
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -39,6 +40,15 @@ class FakeServer : AutoCloseable {
   var token = "token-1"
   val userId = "user-1"
 
+  /** How many anonymous sign-ins it answered. */
+  val signIns = AtomicInteger()
+
+  /** What `/link-social` answers: 200 links, 409 is an account in use. */
+  @Volatile var linkStatus = 200
+
+  /** Each `/link-social` call, as its Authorization header and its body. */
+  val links = CopyOnWriteArrayList<Pair<String?, String>>()
+
   /** The frames each socket sent, in order, one list a socket. */
   val sockets = CopyOnWriteArrayList<MutableList<ClientFrame>>()
 
@@ -53,9 +63,14 @@ class FakeServer : AutoCloseable {
           when (request.url.encodedPath) {
             "/api/auth/sign-in/anonymous" ->
               MockResponse.Builder()
+                .also { signIns.incrementAndGet() }
                 .addHeader("set-auth-token", token)
                 .body("""{"token":"$token","user":{"id":"$userId","isAnonymous":true}}""")
                 .build()
+            "/api/auth/link-social" -> {
+              links += request.headers["Authorization"] to request.body!!.utf8()
+              MockResponse.Builder().code(linkStatus).body("{}").build()
+            }
             "/v1/me/socket" ->
               if (request.headers["Authorization"] != "Bearer $token") MockResponse.Builder().code(401).build()
               else MockResponse.Builder().webSocketUpgrade(Socket()).build()

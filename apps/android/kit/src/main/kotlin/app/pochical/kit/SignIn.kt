@@ -5,6 +5,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -39,3 +42,40 @@ suspend fun signInAnonymously(http: OkHttpClient, server: HttpUrl): StoredSessio
       StoredSession(token, answer.user.id)
     }
   }
+
+/** Linking was refused for another reason than the account being in use. */
+class LinkRefused(val status: Int) : IOException("Linking answered $status")
+
+/**
+ * Links the provider's account to the user of the session [token] (better-auth's `/link-social`),
+ * keeping the user and all of theirs. Its cookie is neither sent nor kept: with one and no Origin,
+ * better-auth takes the call for a browser's from another site.
+ */
+suspend fun linkSocial(http: OkHttpClient, server: HttpUrl, token: String, account: ProviderToken): LinkResult =
+  withContext(Dispatchers.IO) {
+    val body =
+      buildJsonObject {
+          put("provider", account.provider.serialName)
+          putJsonObject("idToken") {
+            put("token", account.idToken)
+            put("nonce", account.nonce)
+          }
+        }
+        .toString()
+    val request =
+      Request.Builder()
+        .url(server.resolve("/api/auth/link-social")!!)
+        .header("Authorization", "Bearer $token")
+        .post(body.toRequestBody("application/json".toMediaType()))
+        .build()
+    http.newCall(request).execute().use { response ->
+      when (response.code) {
+        200 -> LinkResult.Linked
+        409 -> LinkResult.InUse
+        else -> throw LinkRefused(response.code)
+      }
+    }
+  }
+
+private val LinkedAccount.Provider.serialName
+  get() = LinkedAccount.Provider.serializer().descriptor.getElementName(ordinal)
