@@ -19,7 +19,10 @@ extension OwnValues {
   public static func save(_ pattern: Pattern, now: Int64, in db: Database) throws {
     let saved = try PatternRow.find(pattern.id).fetchOne(db)
     let isNew = saved == nil
-    if pattern.archived, saved?.archived != true, try isRepeating(pattern.id, in: db) {
+    if pattern.archived,
+      refusesArchiving(
+        pattern.id, archived: saved?.archived == true, orders: try repeatOrders(in: db))
+    {
       throw PatternRefusal.repeating
     }
     var value = Pochical_V1_PatternValue()
@@ -88,7 +91,7 @@ extension OwnValues {
 
 /// Whether one of `orders`, in their order, in use or to come puts the
 /// pattern on days.
-func repeats(_ id: PatternID, in orders: [RepeatOrder], today: Day) -> Bool {
+public func repeats(_ id: PatternID, in orders: [RepeatOrder], today: Day = .today) -> Bool {
   // A period in use or to come still needs it; one over does not.
   orders.indices.contains { index in
     let order = orders[index]
@@ -98,12 +101,13 @@ func repeats(_ id: PatternID, in orders: [RepeatOrder], today: Day) -> Bool {
   }
 }
 
-extension OwnCalendar {
-  /// Whether a repeating order in use or to come puts the pattern on days,
-  /// as `OwnValues.isRepeating` reads it.
-  public func repeats(_ id: PatternID, today: Day = .today) -> Bool {
-    PochicalKit.repeats(id, in: orders, today: today)
-  }
+/// Whether archiving the pattern, saved as `archived`, is refused: one in
+/// use stays so while one of `orders` repeats it. Bringing one back into
+/// use never is.
+public func refusesArchiving(
+  _ id: PatternID, archived: Bool, orders: [RepeatOrder], today: Day = .today
+) -> Bool {
+  !archived && repeats(id, in: orders, today: today)
 }
 
 extension Pattern {

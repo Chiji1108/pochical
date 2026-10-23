@@ -611,7 +611,7 @@ function PatternEditor({
           {!isNew && (
             <SwitchRow
               checked={draft.archived !== true}
-              disabled={blocksArchiving}
+              disabled={blocksArchiving && draft.archived !== true}
               label="入力に出す"
               onChange={(checked) => {
                 setDraft({ ...draft, archived: checked ? undefined : true });

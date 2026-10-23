@@ -1,5 +1,4 @@
 import OSLog
-import PochicalKit
 import SQLiteData
 import SwiftUI
 import UIKit
@@ -17,17 +16,17 @@ struct WriteAction {
     return keeping { try database.write(edit) }
   }
 
-  /// An edit of a pattern, one the rules refuse handed to `refused` for
-  /// the page to say why, as nothing went wrong.
+  /// The same, a `Refusal` the rules throw handed to `refused` for the
+  /// page to say why, as nothing went wrong.
   @MainActor @discardableResult
-  func callAsFunction(
-    _ edit: (Database) throws -> Void, refused: (PatternRefusal) -> Void
+  func callAsFunction<Refusal: Error>(
+    _ edit: (Database) throws -> Void, refused: (Refusal) -> Void
   ) -> Bool {
     @Dependency(\.defaultDatabase) var database
     do {
       try database.write(edit)
       return true
-    } catch let refusal as PatternRefusal {
+    } catch let refusal as Refusal {
       refused(refusal)
       return false
     } catch {

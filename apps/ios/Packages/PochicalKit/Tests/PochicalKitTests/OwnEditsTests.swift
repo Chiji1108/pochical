@@ -180,11 +180,14 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
   try database.write { db in
     #expect(try OwnValues.isRepeating("day", in: db))
     #expect(try !OwnValues.isRepeating("night", in: db))
-    // The same as a page reads it from the orders it observes.
-    let calendar = OwnCalendar(
-      days: [], patterns: [], patternOrder: [], orders: try RepeatOrderRow.fetchAll(db))
-    #expect(calendar.repeats("day"))
-    #expect(!calendar.repeats("night"))
+    // The same as a page reads it from the orders it observes: in use, it
+    // cannot go out of use, and archived already, it can come back.
+    let orders = try OwnValues.repeatOrders(in: db)
+    #expect(repeats("day", in: orders))
+    #expect(!repeats("night", in: orders))
+    #expect(refusesArchiving("day", archived: false, orders: orders))
+    #expect(!refusesArchiving("day", archived: true, orders: orders))
+    #expect(!refusesArchiving("night", archived: false, orders: orders))
     // 夜勤 and the 明け it brings on the day after.
     try OwnValues.enter("night", on: Day("2026-10-05")!, now: 1, in: db)
     #expect(try OwnValues.daysShowing("night", in: db) == 1)

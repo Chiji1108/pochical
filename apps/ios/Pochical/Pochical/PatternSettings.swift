@@ -246,7 +246,7 @@ struct PatternEditor: View {
   @Environment(\.write) private var write
   @FetchAll private var rows: [PatternRow]
   @FetchAll private var order: [PatternOrderRow]
-  @FetchAll private var repeatOrders: [RepeatOrderRow]
+  @FetchAll(RepeatOrderRow.order(by: \.position)) private var repeatOrders
   let initial: Pattern
   let isNew: Bool
   /// Kept: said to the page that opened it.
@@ -336,15 +336,17 @@ struct PatternEditor: View {
         // A state undone as easily, so a switch saved with the rest, as
         // iOS's; a new pattern is in use.
         if !isNew {
+          // Locked only where turning it off is refused: one turned off
+          // before an order took it on may still be turned back on.
           Toggle("入力に出す", isOn: inUse)
-            .disabled(blocksArchiving)
+            .disabled(archivingRefused && !draft.archived)
         }
       } header: {
         Text("基本")
       } footer: {
         if !isNew {
           Text(
-            blocksArchiving
+            archivingRefused
               ? "繰り返しの並びに入っているので、オフにしたり削除したりできません。先に「繰り返し」で並びを変えてください。"
               : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。")
         }
@@ -363,7 +365,7 @@ struct PatternEditor: View {
       .settingsRows()
 
       // Said once: under the switch, while that is blocked too.
-      if !isNew, !blocksArchiving {
+      if !isNew, !archivingRefused {
         Section {
           if repeating {
             Text("繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。")
@@ -417,10 +419,9 @@ struct PatternEditor: View {
   }
 
   /// Whether a repeating order in use or to come has it, kept as the
-  /// orders change: it can be neither archived nor deleted until then.
+  /// orders change: it cannot be deleted until then.
   private var repeating: Bool {
-    OwnCalendar(days: [], patterns: [], patternOrder: [], orders: repeatOrders)
-      .repeats(initial.id)
+    repeats(initial.id, in: repeatOrders.compactMap(\.order))
   }
 
   /// 入力に出す: whether it is in use, archived when off.
@@ -428,10 +429,12 @@ struct PatternEditor: View {
     Binding { !draft.archived } set: { draft.archived = !$0 }
   }
 
-  /// A repeating order in use or to come puts it on days, so it stays in
-  /// use; one already archived may still come back.
-  private var blocksArchiving: Bool {
-    repeating && !initial.archived
+  /// Whether keeping it archived would be refused, as `OwnValues.save`
+  /// refuses it, against how it is saved now.
+  private var archivingRefused: Bool {
+    refusesArchiving(
+      initial.id, archived: rows.first { $0.id == initial.id }?.archived ?? false,
+      orders: repeatOrders.compactMap(\.order))
   }
 
   /// The name, its mark's parts not picked by hand guessed from it.
