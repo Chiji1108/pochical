@@ -4,16 +4,19 @@ import OSLog
 import PochicalProto
 import Security
 
-/// Where the apps reach the server: `mise run server` on the Mac while
-/// developing in the simulator, which reaches it as localhost. A Debug
-/// build on an iPhone cannot, so it uses the deployed server, the only
-/// one that can send its notifications.
+/// Where the apps reach the server: each bundle's `PochicalServer`, from the
+/// project's `POCHICAL_SERVER` build setting. That is the deployed server,
+/// except in a Debug build for the simulator, which reaches `mise run
+/// server` on the Mac at `POCHICAL_DEV_SERVER`. A Debug build on an iPhone
+/// cannot reach the Mac, so it uses the deployed server, the only one that
+/// can send its notifications.
 public enum Server {
-  #if DEBUG && targetEnvironment(simulator)
-    public static let url = URL(string: "http://localhost:8787")!
-  #else
-    public static let url = URL(string: "https://api.pochical.app")!
-  #endif
+  public static let url: URL = {
+    guard let origin = Bundle.main.object(forInfoDictionaryKey: "PochicalServer") as? String,
+      let url = URL(string: origin)
+    else { preconditionFailure("the bundle's Info.plist names no PochicalServer") }
+    return url
+  }()
 }
 
 /// A session the device keeps: its token, the user it signs in as, and

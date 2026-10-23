@@ -37,6 +37,7 @@ import { dayGrid, WeekdayRow } from "./design-day-grid";
 import { SampleTag } from "./design-fields";
 import { MonthName } from "./design-month-name";
 import { Pager } from "./design-pager";
+import { usePages } from "./design-pages";
 import { settingsParts } from "./design-settings-parts";
 import {
   ColorSchemeContext,
@@ -150,6 +151,7 @@ export function StylePreview({
   // pager draws the calendar anew as it moves between its slots, so it
   // is measured by a callback that follows the element drawn, and a
   // calendar taken away (measured as nothing) leaves the height alone.
+  const calendarPages = usePages();
   const [calendarHeight, setCalendarHeight] = useState<number>();
   const calendarObserver = useRef<ResizeObserver>(undefined);
   const calendarRef = useCallback((element: HTMLDivElement | null) => {
@@ -176,7 +178,16 @@ export function StylePreview({
     >
       {heading && (
         <div className={settingsParts.previewHeading}>
-          <MonthName month={dates[0] ?? designToday} />
+          {/* The page holding today, as the calendar heads it: by its
+              days with a シフトの期間. */}
+          <MonthName
+            month={calendarPages.today}
+            period={
+              calendarPages.byPeriod
+                ? calendarPages.periodOf(calendarPages.today)
+                : undefined
+            }
+          />
         </div>
       )}
       <WeekdayRow compact />

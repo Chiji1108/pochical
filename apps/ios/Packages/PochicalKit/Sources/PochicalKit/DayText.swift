@@ -92,6 +92,35 @@ extension Day {
   }
 }
 
+// A シフトの期間's page by its days, never a month's name, which would read
+// as the month's own days (spec/calendar.md, How days are written).
+extension Period {
+  /// 10/15〜11/14
+  public var text: String { "\(first.slashText)〜\(last.slashText)" }
+
+  /// 2026/10/15〜11/14, its last day's year too in another year.
+  public var yearText: String {
+    let last = last.year == first.year ? last.slashText : last.yearSlashText
+    return "\(first.yearSlashText)〜\(last)"
+  }
+
+  /// 2026年10月15日〜11月14日, titling a picture of it.
+  public var fullText: String {
+    let last = last.year == first.year ? last.monthDayText : "\(last.year)年\(last.monthDayText)"
+    return "\(first.year)年\(first.monthDayText)〜\(last)"
+  }
+
+  /// The picture's title: its full text, or Oct 15 – Nov 14, 2026 with
+  /// 月と曜日 in English.
+  public func title(english: Bool) -> String {
+    guard english else { return fullText }
+    func day(_ day: Day) -> String { "\(day.shortMonth(english: true)) \(day.day)" }
+    return first.year == last.year
+      ? "\(day(first)) – \(day(last)), \(last.year)"
+      : "\(day(first)), \(first.year) – \(day(last)), \(last.year)"
+  }
+}
+
 /// A shift's name as a day has room for: up to `TextFields.dayNameLength`
 /// characters, else cut short with …, as /design's dayName.
 public func dayName(_ name: String) -> String {

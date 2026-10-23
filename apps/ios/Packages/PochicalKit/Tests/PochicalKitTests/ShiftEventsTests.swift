@@ -91,8 +91,8 @@ func shiftsAsEvents(_ vector: DeviceCalendarVectors.Case) throws {
     uniqueKeysWithValues: (vector.notes ?? [:]).compactMap { key, memo in Day(key).map { ($0, memo) } })
   let people = Dictionary(
     uniqueKeysWithValues: (vector.people ?? [:]).compactMap { key, names in Day(key).map { ($0, names) } })
-  let events = ShiftEvents.month(
-    try #require(Day(vector.month)), days: days, patterns: patterns, shown: Set(vector.shown),
+  let events = ShiftEvents.page(
+    Period(of: try #require(Day(vector.month)), start: 1), days: days, patterns: patterns, shown: Set(vector.shown),
     notes: notes, people: people)
   #expect(
     events.map {
