@@ -36,6 +36,7 @@ class MainActivity(
   private val kit: PochicalKit,
 ) : ComponentActivity() {
   private var settings by mutableStateOf<DeviceSettings?>(null)
+  private val appleSignIn = AppleSignIn(this, kit.appleSignIn)
   private var calendarRead by mutableStateOf(false)
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,6 +67,7 @@ class MainActivity(
         LocalDeviceSettings provides state,
         LocalOwnDays provides ownDays,
         LocalAccount provides kit.account,
+        LocalAppleSignIn provides appleSignIn,
       ) {
         PochicalTheme(device) { RootScreen(rememberRootNavigator()) }
       }

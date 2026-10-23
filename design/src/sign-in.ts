@@ -1,7 +1,8 @@
 // The ways in (spec/sync-protocol.md, Signing in), each in its provider's
 // own colors as its guidelines ask, each following light and dark while
-// shown. Sign in with Apple's button is the system's on both platforms,
-// black, or white in dark mode; Google's is drawn by the apps, white with a
+// shown. Sign in with Apple's button is black, or white in dark mode: the
+// system's on iOS, drawn by the Android app, which has none; Google's is
+// drawn by the apps, white with a
 // gray outline in light mode and near-black in dark (Google's sign-in
 // branding guidelines).
 export const googleButton = {
