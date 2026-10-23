@@ -32,6 +32,11 @@ export const chatRules = {
   floatingDayMs: 1500,
   // A message's words past this many lines end in … and 続きを読む.
   foldLines: 10,
+  // How long, in milliseconds, a line gone to (from a pin or a quote)
+  // stays lit: its bubble lighting and fading once, a band of shine
+  // sweeping across it, as Telegram lights a message it goes to; held
+  // still that long with motion reduced.
+  jumpFlashMs: 1000,
   // A message of nothing but 1 to this many emoji shows them large,
   // without a bubble, as iMessage does.
   largeEmojiMax: 3,

@@ -292,13 +292,15 @@ describe("the photos bucket's audit", () => {
     await seedBucket();
     const admin = exports.AdminEntrypoint;
     // Just stored: nothing is deleted.
-    await expect(admin.cleanBucket(Date.now())).resolves.toMatchObject({
+    await expect(
+      admin.cleanBucket(Date.now(), "staff@pochical.app")
+    ).resolves.toMatchObject({
       rows: [],
     });
 
     afterGrace();
     const audited = await admin.bucketAudit();
-    const cleanup = await admin.cleanBucket(Date.now());
+    const cleanup = await admin.cleanBucket(Date.now(), "staff@pochical.app");
     expect(
       Object.fromEntries(
         cleanup.rows.map(({ verdict, ...rest }) => [verdict, rest])
@@ -324,7 +326,9 @@ describe("the photos bucket's audit", () => {
     ).toStrictEqual(
       audited.rows.filter(({ verdict }) => verdict === "referenced")
     );
-    await expect(admin.cleanBucket(Date.now())).resolves.toMatchObject({
+    await expect(
+      admin.cleanBucket(Date.now(), "staff@pochical.app")
+    ).resolves.toMatchObject({
       rows: [],
     });
   });
@@ -332,7 +336,7 @@ describe("the photos bucket's audit", () => {
   it("leaves the group's notes saying what the bucket holds", async () => {
     const { groupId, ids, maker, photosPath } = await seedBucket();
     afterGrace();
-    await exports.AdminEntrypoint.cleanBucket(Date.now());
+    await exports.AdminEntrypoint.cleanBucket(Date.now(), "staff@pochical.app");
     // The sweep the delete set notes it taken back, once R2 has none.
     await runDurableObjectAlarm(env.GROUPS.getByName(groupId));
 
@@ -448,7 +452,7 @@ describe("what comes to name a photo as the delete takes it", () => {
     await seedBucket();
     afterGrace();
     await expect(
-      exports.AdminEntrypoint.cleanBucket(readAt)
+      exports.AdminEntrypoint.cleanBucket(readAt, "staff@pochical.app")
     ).resolves.toMatchObject({ rows: [] });
   });
 });

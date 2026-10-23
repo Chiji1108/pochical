@@ -1,0 +1,34 @@
+---
+title: ボタン
+description: 主・控えめ・文字・目立たないの4段と、画面の上のボタン、そのほかの押すもの。
+---
+
+import {
+  Buttons,
+  HeaderButtons,
+  OtherButtons,
+} from "../../../src/components/inventory/buttons";
+
+## ボタン
+
+主・控えめ・文字・目立たないの4段。以前の dc-start、dc-import-primary、ob-primary、st-primary(主)、dc-start-photo、dc-save-secondary、gr-secondary(控えめ)、ob-link、st-link(文字)、dc-import-later(目立たない)をまとめたものです。
+
+<Pieces>
+  <Buttons />
+</Pieces>
+
+## 画面の上
+
+戻る(またはキャンセル)・右の操作・大きなタイトル。iPhone と Android のナビゲーションバーと同じ形です。設定、グループ、パターンの編集などの pe-topbar と PageHeader をまとめたものです。バーとガラスのボタンは、記号も文字も本文の色です（戻る、⋯、↓、招待、設定）。アクセントは、その画面で確定する1つ（保存、作る、追加、完了）を塗るときだけに使います。
+
+<Pieces>
+  <HeaderButtons />
+</Pieces>
+
+## そのほかのボタン
+
+画面の中で使う、そのほかの押すもの。
+
+<Pieces>
+  <OtherButtons />
+</Pieces>

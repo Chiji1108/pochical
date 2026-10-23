@@ -1,0 +1,69 @@
+---
+title: 状態の一覧
+description: カレンダーがなりうる状態を並べています。直したら、ここで全部を見比べます。
+---
+
+import {
+  MonthFill,
+  OffLooks,
+  PatternCounts,
+  ShiftShapes,
+  Themes,
+} from "../../src/components/states";
+
+スタイルの設定で選ぶもの（シフトの見た目、休みの見せ方、テーマ）は列ごとに決めてあり、そのほかはこのページの外観に合わせます。横に収まらない列は、横にスクロールできます。
+
+## 月の埋まり方
+
+何もない月、12日まで入った月、埋まった月と、途中までの月を入力しているところ。
+
+<Pieces>
+  <MonthFill />
+</Pieces>
+
+何もない月は、デモで予定を空にしたところです。
+
+<DemoLink state={{ scheduleSample: "empty" }} />
+
+## 6段の月 × パターンの数
+
+2026年8月。入力ボタンがいちばん場所をとる、入力中で比べます。パターンは4つから13まで。
+
+<Pieces>
+  <PatternCounts />
+</Pieces>
+
+13パターンは、デモでパターンを13個にしたときと同じ並びです（デモは9月）。
+
+<DemoLink state={{ patternSample: "many" }} />
+
+## シフトの見た目
+
+<Pieces>
+  <ShiftShapes />
+</Pieces>
+
+## 休みの見せ方
+
+強調、印だけ、空白。空白にした休みは、入力中だけ薄く出ます。
+
+<Pieces>
+  <OffLooks />
+</Pieces>
+
+## テーマとライト・ダーク
+
+9つのテーマを、ライトとダークのそれぞれで。
+
+<Tabs items={["ライト", "ダーク"]}>
+  <Tab value="ライト">
+    <Pieces>
+      <Themes scheme="light" />
+    </Pieces>
+  </Tab>
+  <Tab value="ダーク">
+    <Pieces>
+      <Themes scheme="dark" />
+    </Pieces>
+  </Tab>
+</Tabs>

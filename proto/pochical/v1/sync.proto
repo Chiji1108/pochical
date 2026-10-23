@@ -633,6 +633,9 @@ message ChatNotice {
     KIND_INVITE_REMADE = 4;
     // 〇〇がグループ名を「name」に変えました, or the group's icon, or both.
     KIND_PROFILE_CHANGED = 5;
+    // 〇〇がグループから外されました: Pochical's people took them out
+    // (spec/admin.md, ユーザー); the line's writer is who was taken out.
+    KIND_REMOVED_BY_POCHICAL = 6;
   }
   Kind kind = 1;
   // REMOVED: who was taken out.

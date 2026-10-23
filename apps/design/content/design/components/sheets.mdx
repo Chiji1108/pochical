@@ -1,0 +1,22 @@
+---
+title: シートと重なり
+description: シートの見出しの使い分けと、電話の上に重なって出るもの。
+---
+
+import { Overlays, Sheets } from "../../../src/components/inventory/sheets";
+
+## シートの見出し
+
+見るだけのシートは「タイトル+×」、決めるシートは「キャンセル/タイトル/決定」。iPhone と Android の標準のシートと同じ使い分けです。メニューと確認は見出しなしで、下にキャンセルがあります。
+
+<Pieces>
+  <Sheets />
+</Pieces>
+
+## 画面と重なり
+
+画面の器と、電話の上に重なって出るもの。ページの上では出せないので、電話の中で開いて見ます。
+
+<Pieces>
+  <Overlays />
+</Pieces>

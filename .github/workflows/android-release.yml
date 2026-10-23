@@ -1,0 +1,90 @@
+# The Android app's release: each push to main that changes it builds the
+# minified bundle, signs it with Play's upload key and puts it on Play's
+# internal testing track. Nothing runs until the repository has the
+# secrets (AGENTS.md, How to ship): without the upload key the release is
+# skipped, and without the service account the signed bundle is kept as
+# the run's artifact, for Play's first upload by hand.
+name: Android release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/android/**"
+      - "mise.toml"
+      - ".github/workflows/android-release.yml"
+  workflow_dispatch:
+
+# Runs queue rather than cancel: a run cut short may already have uploaded.
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # A job's `if` cannot read secrets, so this job's outputs say which are set.
+  secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      signing: ${{ steps.check.outputs.signing }}
+      play: ${{ steps.check.outputs.play }}
+    steps:
+      - id: check
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          PLAY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          echo "signing=$([ -n "$KEYSTORE" ] && [ -n "$PASSWORD" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "play=$([ -n "$PLAY" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  # Only main is released, also when run by hand.
+  release:
+    needs: secrets
+    if: github.ref == 'refs/heads/main' && needs.secrets.outputs.signing == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+        with:
+          install_args: java
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+      - name: Write the upload key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+      # The commit released passed its own tests, not only its pull request's.
+      - run: mise run android:test
+      # Play takes each versionCode once and only ever a higher one; this
+      # workflow's run number only grows, as Xcode Cloud's build number does,
+      # while this file keeps its name.
+      - env:
+          ORG_GRADLE_PROJECT_pochicalVersionCode: ${{ github.run_number }}
+          ORG_GRADLE_PROJECT_pochicalUploadStoreFile: ${{ runner.temp }}/upload.jks
+          ORG_GRADLE_PROJECT_pochicalUploadStorePassword: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_pochicalUploadKeyAlias: upload
+          ORG_GRADLE_PROJECT_pochicalUploadKeyPassword: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_PASSWORD }}
+        run: mise run android:release
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android-release-${{ github.run_number }}
+          path: |
+            apps/android/app/build/outputs/bundle/release/app-release.aab
+            apps/android/app/build/outputs/mapping/release/mapping.txt
+      # r0adkll/upload-google-play (MIT): the Play Developer API's edits,
+      # with the mapping file so Play's crash reports are deobfuscated. Pinned
+      # by commit, as it is handed the service account.
+      - if: needs.secrets.outputs.play == 'true'
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: app.pochical
+          releaseFiles: apps/android/app/build/outputs/bundle/release/app-release.aab
+          mappingFile: apps/android/app/build/outputs/mapping/release/mapping.txt
+          track: internal
+          status: completed

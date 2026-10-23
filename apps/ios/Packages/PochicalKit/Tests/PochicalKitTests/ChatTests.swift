@@ -958,6 +958,20 @@ func pinsAfterAStep(_ vector: PinVectors.Case) {
   }
 }
 
+@Test func aMemberPochicalTookOutIsSaidAsTheirOwnLine() throws {
+  let database = try appDatabase()
+  try database.write { db in
+    var notice = line(1, "")
+    notice.chatLine.content.notice.kind = .removedByPochical
+    try GroupSync.take([notice], of: "g", in: db)
+    let state = try Chats.state(of: groupThread, in: "g", now: early, db: db)
+    #expect(state.lines.map(\.content) == [.notice(LineNotice(kind: .removedByPochical))])
+  }
+  #expect(
+    LineNotice(kind: .removedByPochical).words(by: "ゆうき", subject: "")
+      == "ゆうきがグループから外されました")
+}
+
 @Test func aNoticeIsKeptAsOneAndALineOfNoKnownKindAsNothing() throws {
   let database = try appDatabase()
   try database.write { db in

@@ -5,6 +5,20 @@ plugins {
   alias(libs.plugins.metro)
 }
 
+// The version people see is the iOS app's: one MARKETING_VERSION for the
+// app and its widgets. Each store's build number comes from its own CI.
+val marketingVersion =
+  providers
+    .fileContents(rootProject.layout.projectDirectory.file("../ios/Pochical/Pochical.xcodeproj/project.pbxproj"))
+    .asText
+    .map { pbxproj ->
+      Regex("""MARKETING_VERSION = ([^;]+);""")
+        .findAll(pbxproj)
+        .map { it.groupValues[1] }
+        .toSet()
+        .singleOrNull() ?: error("The iOS targets' MARKETING_VERSION must be one version")
+    }
+
 android {
   namespace = "app.pochical"
   compileSdk = libs.versions.compileSdk.get().toInt()
@@ -12,8 +26,31 @@ android {
     applicationId = "app.pochical"
     minSdk = libs.versions.minSdk.get().toInt()
     targetSdk = libs.versions.compileSdk.get().toInt()
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = providers.gradleProperty("pochicalVersionCode").orElse("1").get().toInt()
+    versionName = marketingVersion.get()
+  }
+  signingConfigs {
+    // Play's upload key never enters the repository: CI passes it as
+    // ORG_GRADLE_PROJECT_* variables, a computer in ~/.gradle/gradle.properties.
+    if (providers.gradleProperty("pochicalUploadStoreFile").isPresent) {
+      create("upload") {
+        storeFile = file(providers.gradleProperty("pochicalUploadStoreFile").get())
+        storePassword = providers.gradleProperty("pochicalUploadStorePassword").get()
+        keyAlias = providers.gradleProperty("pochicalUploadKeyAlias").get()
+        keyPassword = providers.gradleProperty("pochicalUploadKeyPassword").get()
+      }
+    }
+  }
+  buildTypes {
+    release {
+      isMinifyEnabled = true
+      isShrinkResources = true
+      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      // Without the upload key, the debug key signs, so the minified build
+      // installs on any computer. Play refuses that bundle: it accepts
+      // only the upload key it was given.
+      signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
+    }
   }
   testOptions {
     unitTests.isIncludeAndroidResources = true

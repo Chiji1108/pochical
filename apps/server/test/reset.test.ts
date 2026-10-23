@@ -1,8 +1,9 @@
-import { runInDurableObject } from "cloudflare:test";
+import { createExecutionContext, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { drizzle } from "drizzle-orm/d1";
 import { describe, expect, it, vi } from "vitest";
 
+import { AdminEntrypoint } from "../src/admin-entrypoint";
 import { user } from "../src/db/auth-schema";
 import { reports } from "../src/db/schema";
 import { photoKey } from "../src/photos";
@@ -91,7 +92,7 @@ describe("erasing everything (全消去)", () => {
       users: 2,
     });
 
-    await admin.reset();
+    await admin.reset("staff@pochical.app");
     // Their sessions unknown, their group and chat empty, the bucket too.
     const left = await Promise.all([
       admin.resetPreview(),
@@ -103,7 +104,7 @@ describe("erasing everything (全消去)", () => {
     ]);
     expect(left).toStrictEqual([NOTHING, 401, 401, [], [], []]);
 
-    await admin.reset();
+    await admin.reset("staff@pochical.app");
     await expect(admin.resetPreview()).resolves.toStrictEqual(NOTHING);
   });
 
@@ -117,7 +118,7 @@ describe("erasing everything (全消去)", () => {
       .bind(groupId)
       .run();
 
-    await exports.AdminEntrypoint.reset();
+    await exports.AdminEntrypoint.reset("staff@pochical.app");
     await expect(exports.AdminEntrypoint.resetPreview()).resolves.toStrictEqual(
       NOTHING
     );
@@ -149,7 +150,7 @@ describe("erasing everything (全消去)", () => {
     await expect(resetEverything(env)).rejects.toThrow("unreachable");
     unreachable.mockRestore();
 
-    await exports.AdminEntrypoint.reset();
+    await exports.AdminEntrypoint.reset("staff@pochical.app");
     await expect(exports.AdminEntrypoint.resetPreview()).resolves.toStrictEqual(
       NOTHING
     );
@@ -158,10 +159,37 @@ describe("erasing everything (全消去)", () => {
     ).resolves.toStrictEqual([]);
   });
 
+  it("notes in 記録 a reset that stopped part way as such", async () => {
+    const { groupId } = await pair();
+    await drizzle(env.DB).delete(user);
+    const getByName = env.GROUPS.getByName.bind(env.GROUPS);
+    const unreachable = vi
+      .spyOn(env.GROUPS, "getByName")
+      .mockImplementation((name) =>
+        name === groupId
+          ? Object.assign(getByName(name), {
+              erase: () => {
+                throw new Error("unreachable");
+              },
+            })
+          : getByName(name)
+      );
+    // Called in this isolate, not over RPC, whose rejection workerd also
+    // reports as unhandled on the entrypoint's side.
+    const admin = new AdminEntrypoint(createExecutionContext(), env);
+    await expect(admin.reset("staff@pochical.app")).rejects.toThrow(
+      "unreachable"
+    );
+    unreachable.mockRestore();
+    const [latest] = await exports.AdminEntrypoint.actions();
+    expect(latest).toMatchObject({ action: "reset", detail: "途中で止まった" });
+    await exports.AdminEntrypoint.reset("staff@pochical.app");
+  });
+
   it("lets the device sign in anew afterwards, as a new user", async () => {
     const before = await signInAnonymously();
     const beforeId = await userIdOf(before);
-    await exports.AdminEntrypoint.reset();
+    await exports.AdminEntrypoint.reset("staff@pochical.app");
     const after = await signInAnonymously();
     await expect(userIdOf(after)).resolves.not.toBe(beforeId);
     await expect(signedIn(after)).resolves.toBe(200);

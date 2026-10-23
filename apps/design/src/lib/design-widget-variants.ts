@@ -3,10 +3,11 @@ import {
   wallpaperVariant,
 } from "@pochical/prototype/lib/design-variants";
 
-// What /design/widgets switches between, as /demo's choices do: each kept
-// in the URL, the first of each the one shown when the URL leaves it out.
-// The widgets' own settings, the day they show and the device they sit
-// on, so a widget can be looked at in any state without a page of rows.
+// What each widget's page (content/design/widgets) switches between, as
+// /demo's choices do: each kept in the URL, the first of each the one
+// shown when the URL leaves it out. The widgets' own settings, the day
+// they show and the device they sit on, so a widget can be looked at in
+// any state without a page of rows.
 export const widgetVariantOptions = {
   // Who 次の休み and これから are set to, as editing the widget picks:
   // someone, or for 次の休み a whole group.
@@ -36,18 +37,6 @@ export const widgetVariantOptions = {
       { label: "何も入れていない", value: "empty" },
     ],
     label: "今日",
-  },
-  kind: {
-    choices: [
-      { label: "すべて", value: "all" },
-      { label: "シンプル", value: "simple" },
-      { label: "次の休み", value: "nextOff" },
-      { label: "これから", value: "upcoming" },
-      { label: "カレンダー", value: "calendar" },
-      { label: "いまのシフト", value: "now" },
-      { label: "ロック画面", value: "lock" },
-    ],
-    label: "種類",
   },
   // The time the widgets are looked at, for いまのシフト: before the
   // day's shift, during it, and after it; tHHMM, as a URL keeps a value
@@ -151,7 +140,6 @@ export type WidgetVariants = {
 // The choices in the order the panel lists them: what is shown, then the
 // device, then the person's settings.
 export const widgetVariantKeys: WidgetVariantKey[] = [
-  "kind",
   "day",
   "clock",
   "companion",

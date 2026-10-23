@@ -13,6 +13,7 @@ import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import type { Alert } from "./apns";
 import { deleteGroupOrphans, groupReferences } from "./bucket-audit";
 import type { GroupReferences, Orphan, OwnerCleanup } from "./bucket-audit";
+import type { Notice } from "./chat-content";
 import { mentions } from "./chat-links";
 import {
   ChangeSchema,
@@ -224,6 +225,17 @@ type MemberLog = {
 
 /** One Durable Object per group, named by the group's id. */
 type RefusedSendInit = MessageInitShape<typeof RefusedSendSchema>;
+
+/** Who took a member out: themselves, another member, or Pochical. */
+type Leaving = { self: true } | { member: string } | { pochical: true };
+
+/** The group's line saying how a member came to leave it. */
+const noticeOf = (userId: string, by: Leaving): Notice => {
+  if ("member" in by) {
+    return { kind: "removed", subjectId: userId };
+  }
+  return "pochical" in by ? { kind: "removedByPochical" } : { kind: "left" };
+};
 
 export class GroupDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
@@ -450,11 +462,23 @@ export class GroupDO extends DurableObject<Env> {
    * them out, none when they left themselves.
    */
   async removeMember(userId: string, by?: string): Promise<void> {
-    this.takeOut(userId, by);
+    this.takeOut(userId, by === undefined ? { self: true } : { member: by });
     await this.tellMemberships(userId);
   }
 
-  private takeOut(userId: string, by?: string): void {
+  /**
+   * Takes the member out as Pochical's people (spec/admin.md, ユーザー),
+   * as a member takes another out, the group's line saying
+   * 〇〇がグループから外されました. False, changing nothing, for someone not
+   * in the group now.
+   */
+  async removeByPochical(userId: string): Promise<boolean> {
+    const taken = this.takeOut(userId, { pochical: true });
+    await this.tellMemberships(userId);
+    return taken;
+  }
+
+  private takeOut(userId: string, by: Leaving): boolean {
     const left = this.ctx.storage.transactionSync(() => {
       const known = this.db.select().from(members).where(inGroup(userId)).get();
       if (known === undefined) {
@@ -477,7 +501,7 @@ export class GroupDO extends DurableObject<Env> {
           cursor: this.nextCursor(),
           leftAt: new Date(),
           ownPhoto: null,
-          removedBy: by ?? null,
+          removedBy: "member" in by ? by.member : null,
           usualPhoto: "",
         })
         .where(eq(members.userId, userId))
@@ -485,10 +509,8 @@ export class GroupDO extends DurableObject<Env> {
         .get();
       const notice = writeNotice(
         this.db,
-        by ?? userId,
-        by === undefined
-          ? { kind: "left" }
-          : { kind: "removed", subjectId: userId },
+        "member" in by ? by.member : userId,
+        noticeOf(userId, by),
         this.nextCursor()
       );
       // The photos the group showed of them, unless it shows them still.
@@ -497,11 +519,12 @@ export class GroupDO extends DurableObject<Env> {
       return row === undefined ? undefined : { gone, notice, row };
     });
     if (left === undefined) {
-      return;
+      return false;
     }
     this.sweepIf(left.gone);
     closeUserSockets(this.ctx, userId);
     broadcastChanges(this.ctx, [memberChange(left.row), left.notice]);
+    return true;
   }
 
   /**

@@ -1,0 +1,32 @@
+---
+title: 部品の棚卸し
+description: 画面で使う共通の部品を、役割ごとにすべて並べています。それぞれに、iOS と Android のアプリでどの部品にあたるかを添えています。
+---
+
+部品はどれも本物のコンポーネントで、見本の下にコードでの名前、使う場所、iOS（SwiftUI）と Android（Compose）で何から作るかを書いています。同じ役割の部品が2つあれば、ここで見つかります。
+
+<Callout title="部品を足したら、ここにも載せます">
+  共通の部品（`packages/prototype` の `design-ui.tsx`
+  など）を足すと、どこかのページに載せるまでテストで止まります。
+</Callout>
+
+<Cards>
+  <Card href="/design/components/buttons" title="ボタン">
+    主・控えめ・文字・目立たないの4段、画面の上のボタン、そのほかの押すもの。
+  </Card>
+  <Card href="/design/components/lists" title="行とカード">
+    List と ListRow、画面に直接置くカードと並べ替え。
+  </Card>
+  <Card href="/design/components/inputs" title="入力と時間">
+    文字の入力、文字数の上限、時と分の入力。
+  </Card>
+  <Card href="/design/components/choices" title="選ぶ">
+    切り替え、1つを選ぶ、タイルとめくり、チップとタグ。
+  </Card>
+  <Card href="/design/components/sheets" title="シートと重なり">
+    シートの見出し、メニュー、確認、トースト。
+  </Card>
+  <Card href="/design/components/pochical" title="ポチカル独自">
+    シフトの印、日のマス、画面の下と見出し。
+  </Card>
+</Cards>

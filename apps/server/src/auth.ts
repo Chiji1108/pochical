@@ -1,10 +1,12 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError } from "better-auth/api";
 import { anonymous, bearer } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { account, session, user, verification } from "./db/auth-schema";
+import { isSuspended } from "./suspension";
 
 // A session lasts for good: an anonymous user's token is their only key,
 // so an expiry would only lock out someone who did not open the app for a
@@ -32,6 +34,9 @@ type AuthConfig = {
   // with their account), to close what was let in with it.
   onSessionEnd?: (ended: { id: string; userId: string }) => Promise<void>;
 };
+
+/** The code better-auth answers a suspended user's sign-in with (403). */
+export const USER_SUSPENDED = "USER_SUSPENDED";
 
 /**
  * A provider's account as kept: which account of which provider is the
@@ -97,15 +102,25 @@ export const createAuth = (
       },
       session: {
         create: {
-          // oxlint-disable-next-line require-await -- better-auth's hooks return a promise
-          before: async (created) => ({
-            data: {
-              ...created,
-              expiresAt: neverExpires(),
-              ipAddress: null,
-              userAgent: null,
-            },
-          }),
+          // A suspended user signs in nowhere (spec/admin.md, ユーザー):
+          // with Apple, or by switching to their account, they are refused
+          // with USER_SUSPENDED, which the apps say as such.
+          before: async (created) => {
+            if (await isSuspended(d1, created.userId)) {
+              throw new APIError("FORBIDDEN", {
+                code: USER_SUSPENDED,
+                message: "This account is suspended",
+              });
+            }
+            return {
+              data: {
+                ...created,
+                expiresAt: neverExpires(),
+                ipAddress: null,
+                userAgent: null,
+              },
+            };
+          },
         },
         delete: {
           after: async (ended) => {
@@ -138,6 +153,14 @@ export const createAuth = (
         appBundleIdentifier: appleAppId,
         clientId: appleAppId,
         clientSecret: "",
+      },
+    },
+    // When Pochical's people suspended the user (spec/admin.md, ユーザー);
+    // null while they are not. Set on the admin site alone, never by a
+    // sign-in or an update the apps send.
+    user: {
+      additionalFields: {
+        suspendedAt: { input: false, required: false, type: "date" },
       },
     },
   });

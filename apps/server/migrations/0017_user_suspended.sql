@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `suspended_at` integer;

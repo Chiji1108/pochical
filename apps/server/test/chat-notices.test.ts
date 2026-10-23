@@ -1,3 +1,4 @@
+import { exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { ChatNotice_Kind } from "../src/gen/pochical/v1/sync_pb";
@@ -128,6 +129,51 @@ describe("a group's notices", () => {
         seq: 2n,
       },
     ]);
+  });
+
+  it("says who Pochical's people took out, as their own line", async () => {
+    const { groupId, guest, maker } = await pair();
+    const guestId = await userIdOf(guest);
+    const group = await groupSocket(groupId, maker);
+    const admin = exports.AdminEntrypoint;
+    await expect(
+      admin.removeFromGroup(guestId, groupId, "staff@pochical.app")
+    ).resolves.toBeTruthy();
+    expect(noticesIn(await group.frames.next())).toMatchObject([
+      {
+        authorId: guestId,
+        notice: { kind: ChatNotice_Kind.REMOVED_BY_POCHICAL, subjectId: "" },
+        seq: 2n,
+      },
+    ]);
+    // Their own DO lists them out of it once the call has answered.
+    const page = await admin.user(guestId);
+    expect(
+      page?.groups.map((listed) => listed.leftAtMs !== null)
+    ).toStrictEqual([true]);
+    // Out of it now, they are not taken out again, nor noted twice.
+    await expect(
+      admin.removeFromGroup(guestId, groupId, "staff@pochical.app")
+    ).resolves.toBeFalsy();
+    const noted = await admin.actions();
+    expect(
+      noted.filter(
+        (action) =>
+          action.action === "removeFromGroup" && action.target === guestId
+      )
+    ).toMatchObject([{ detail: "いとこ会" }]);
+  });
+
+  it("takes no one out of a group they are not in, nor for no account", async () => {
+    const { groupId } = await pair();
+    const outsider = await signInAnonymously();
+    const admin = exports.AdminEntrypoint;
+    await expect(
+      admin.removeFromGroup(await userIdOf(outsider), groupId, "staff")
+    ).resolves.toBeFalsy();
+    await expect(
+      admin.removeFromGroup(crypto.randomUUID(), groupId, "staff")
+    ).resolves.toBeFalsy();
   });
 
   it("says a new name or icon, and nothing when neither changed", async () => {

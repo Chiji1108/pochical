@@ -1,0 +1,11 @@
+{
+  "pages": [
+    "index",
+    "simple",
+    "next-off",
+    "upcoming",
+    "now",
+    "calendar",
+    "lock"
+  ]
+}
