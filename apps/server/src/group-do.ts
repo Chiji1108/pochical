@@ -239,11 +239,11 @@ const noticeOf = (userId: string, by: Leaving): Notice => {
 
 export class GroupDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
-  // Set when a support chat's change asks for its relay, so a relay
-  // running meanwhile leaves the next alarm to it.
+  // Set when a support chat's change asks for its relay, so an alarm
+  // running meanwhile goes round again for it.
   private relayRequested = false;
-  // Set when a change lets photos go, so an alarm running meanwhile
-  // leaves the next one, set for at once, to it.
+  // Set when a change lets photos go, so an alarm running meanwhile goes
+  // round again for them.
   private sweepRequested = false;
   // The writes to R2 of photos noted and not stored yet: the sweep waits
   // on those running as it marks photos going before it deletes them, so
@@ -1140,7 +1140,7 @@ export class GroupDO extends DurableObject<Env> {
    * of photos already running are waited on, so none lands after the
    * delete. Then forgotten, or noted as taken back; a sweep cut short is
    * finished by the next, which comes after `retryWait` should storage
-   * fail. When the next are due, if any.
+   * fail. When to try again should storage fail, if it did.
    */
   private async sweepPhotos(): Promise<number | undefined> {
     const groupId = this.ctx.id.name;
@@ -1189,6 +1189,11 @@ export class GroupDO extends DurableObject<Env> {
       );
       settleTakenBack(this.db, takingBack);
     }
+    return undefined;
+  }
+
+  /** When the next photos are due to be swept, if any are to be. */
+  private photosDue(): number | undefined {
     const oldest = oldestStalePhoto(this.db);
     return oldest === undefined
       ? undefined
@@ -1460,34 +1465,45 @@ export class GroupDO extends DurableObject<Env> {
   /**
    * The chat with Pochical's people told outside as it changes: to D1's
    * index and its Slack thread (support-place.ts). A failure comes back
-   * after the wait the relay gives, the relayed cursor kept; a change
-   * made while it runs has set the next alarm already, which is kept. The
-   * photos nothing carries are swept, and the alarm comes back for the
-   * next (`sweepPhotos`). News of a membership due is told, and the alarm
+   * after the wait the relay gives, the relayed cursor kept. The photos
+   * nothing carries are swept, and the alarm comes back for the next
+   * (`sweepPhotos`). News of a membership due is told, and the alarm
    * comes back for any not taken, until it is.
+   *
+   * A change made while it runs is taken by another round before it
+   * ends, never left to the alarm the change set: the runtime drops one
+   * set for the very millisecond the run was set for (workerd's
+   * ActorSqlite sees no change to the alarm it holds). So it ends by
+   * setting the alarm for what is left, read from storage then, or none,
+   * which wakeBy reads.
    */
   async alarm(): Promise<void> {
-    this.relayRequested = false;
-    this.sweepRequested = false;
-    const userId = this.supportUser();
-    const waitMs =
-      userId === undefined
-        ? null
-        : await relaySupport(this.env, this.db, userId);
-    const photosDue = await this.sweepPhotos();
-    await this.deliverNews(lte(membershipOutbox.dueAt, new Date()));
-    if (this.relayRequested || this.sweepRequested) {
-      return;
-    }
+    let relayWait: number | null;
+    let sweepRetry: number | undefined;
+    do {
+      this.relayRequested = false;
+      this.sweepRequested = false;
+      const userId = this.supportUser();
+      relayWait =
+        userId === undefined
+          ? null
+          : // oxlint-disable-next-line no-await-in-loop -- again for a change made meanwhile
+            await relaySupport(this.env, this.db, userId);
+      // oxlint-disable-next-line no-await-in-loop -- again for a change made meanwhile
+      sweepRetry = await this.sweepPhotos();
+      // oxlint-disable-next-line no-await-in-loop -- again for a change made meanwhile
+      await this.deliverNews(lte(membershipOutbox.dueAt, new Date()));
+    } while (this.relayRequested || this.sweepRequested);
+    const photosDue = sweepRetry ?? this.photosDue();
     const newsDue = this.newsDue();
     const dues = [
-      ...(waitMs === null ? [] : [Date.now() + waitMs]),
+      ...(relayWait === null ? [] : [Date.now() + relayWait]),
       ...(photosDue === undefined ? [] : [photosDue]),
       ...(newsDue === undefined ? [] : [newsDue]),
     ];
-    if (dues.length > 0) {
-      await this.ctx.storage.setAlarm(Math.min(...dues));
-    }
+    await (dues.length > 0
+      ? this.ctx.storage.setAlarm(Math.min(...dues))
+      : this.ctx.storage.deleteAlarm());
   }
 
   /** The user whose chat with Pochical's people this is, if it is one. */

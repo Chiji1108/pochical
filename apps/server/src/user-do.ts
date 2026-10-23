@@ -165,9 +165,9 @@ type SyncedLog = {
  */
 export class UserDO extends DurableObject<Env> {
   private readonly db: DrizzleSqliteDODatabase;
-  // Set when a change asks for a push, so an alarm running meanwhile
-  // leaves the next one to it.
-  private pushRequested = false;
+  // Set when a change asks for the alarm, so one running meanwhile goes
+  // round again for it.
+  private roundRequested = false;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -304,7 +304,7 @@ export class UserDO extends DurableObject<Env> {
     broadcastChanges(this.ctx, [membershipChange(taken.row)]);
     if (taken.joined) {
       this.ctx.waitUntil(this.tellGroup(groupId));
-      this.schedulePush();
+      this.requestRound();
     }
   }
 
@@ -808,7 +808,7 @@ export class UserDO extends DurableObject<Env> {
       });
       broadcastChanges(this.ctx, [profileChange(changed)]);
       // The alarm pushes the profile to the groups and deletes what goes.
-      this.schedulePush();
+      this.requestRound();
       return true;
     });
   }
@@ -833,7 +833,7 @@ export class UserDO extends DurableObject<Env> {
     // Noted with the alarm that deletes it, should SetProfile stop before
     // it names the photo.
     this.db.insert(goingPhotos).values({ photoId }).onConflictDoNothing().run();
-    void this.ctx.storage.setAlarm(Date.now());
+    this.requestRound();
     // Read whole first: a body streamed to R2 inside blockConcurrencyWhile
     // stalls until the call is cancelled.
     await this.env.PHOTOS.put(key, await upload.arrayBuffer(), {
@@ -899,7 +899,7 @@ export class UserDO extends DurableObject<Env> {
         .get();
     });
     broadcastChanges(this.ctx, [profileChange(changed)]);
-    this.schedulePush();
+    this.requestRound();
   }
 
   /**
@@ -1040,16 +1040,32 @@ export class UserDO extends DurableObject<Env> {
    * The runtime's own retries of an alarm that throws stop after a few,
    * which would leave the values waiting for the user's next change, so
    * the alarm comes back for a failed group itself, each group waiting by
-   * its own failures. A change made while it runs has set the next alarm
-   * already, which is kept. The user's own photos noted as going are
-   * deleted first, and come back so should storage fail.
+   * its own failures. A change made while it runs is taken by another
+   * round before it ends, never left to the alarm the change set: the
+   * runtime drops one set for the very millisecond the run was set for
+   * (workerd's ActorSqlite sees no change to the alarm it holds). So it
+   * ends by setting the alarm it leaves, or none. The user's own photos
+   * noted as going are deleted first, and come back so should storage
+   * fail.
    */
   async alarm(): Promise<void> {
     const userId = this.ctx.id.name;
     if (userId === undefined) {
       return;
     }
-    this.pushRequested = false;
+    let retries: number[];
+    do {
+      this.roundRequested = false;
+      // oxlint-disable-next-line no-await-in-loop -- again for a change made meanwhile
+      retries = await this.pushRound(userId);
+    } while (this.roundRequested);
+    await (retries.length > 0
+      ? this.ctx.storage.setAlarm(Date.now() + Math.min(...retries))
+      : this.ctx.storage.deleteAlarm());
+  }
+
+  /** One round of the alarm: how long each part that failed waits. */
+  private async pushRound(userId: string): Promise<number[]> {
     const retries: number[] = [];
     const photosWait = await this.deleteGoingPhotos(userId);
     if (photosWait !== undefined) {
@@ -1080,9 +1096,7 @@ export class UserDO extends DurableObject<Env> {
         .where(eq(memberships.groupId, groupId))
         .run();
     }
-    if (!this.pushRequested && retries.length > 0) {
-      await this.ctx.storage.setAlarm(Date.now() + Math.min(...retries));
-    }
+    return retries;
   }
 
   /**
@@ -1107,8 +1121,9 @@ export class UserDO extends DurableObject<Env> {
     }
   }
 
-  private schedulePush(): void {
-    this.pushRequested = true;
+  /** The alarm asked for at once, or another round of one running. */
+  private requestRound(): void {
+    this.roundRequested = true;
     void this.ctx.storage.setAlarm(Date.now());
   }
 
@@ -1408,7 +1423,7 @@ export class UserDO extends DurableObject<Env> {
       return changes;
     });
     if (changed.length > 0) {
-      this.schedulePush();
+      this.requestRound();
     }
     broadcastChanges(this.ctx, changed);
     // After the changes, so the sender has the server's value by the time
