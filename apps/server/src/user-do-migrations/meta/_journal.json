@@ -176,6 +176,20 @@
       "when": 1792653805138,
       "tag": "0024_going_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1792740158180,
+      "tag": "0025_preference_bytes",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1792740216279,
+      "tag": "0026_drop_json_preferences",
+      "breakpoints": true
     }
   ]
 }

@@ -1,53 +1,56 @@
 package app.pochical.kit
 
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import java.io.File
-import java.security.GeneralSecurityException
-import java.security.KeyStore
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
+import android.content.Context
+import com.google.android.gms.auth.blockstore.Blockstore
+import com.google.android.gms.auth.blockstore.DeleteBytesRequest
+import com.google.android.gms.auth.blockstore.RetrieveBytesRequest
+import com.google.android.gms.auth.blockstore.StoreBytesData
+import com.google.android.gms.common.api.ApiException
+import kotlinx.coroutines.tasks.await
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
- * The session the device signed in with (spec/sync-protocol.md, Signing in): its token and the
- * user it is, kept as one. [ended] once the server said it does not know it (a 401, Reconnecting):
- * kept so a relaunch says so too and tries nothing, until the person chooses.
+ * The session the device signed in with (spec/sync-protocol.md, Signing in): its token, the user it
+ * is and the account that user is linked to, kept as one, so a session never names another user's
+ * account. [ended] once the server said it does not know it (a 401, Reconnecting): kept so a
+ * relaunch says so too and tries nothing, until the person chooses.
  */
 @Serializable
-data class StoredSession(val token: String, val userId: String, val ended: Boolean = false)
+data class StoredSession(
+  val token: String,
+  val userId: String,
+  val ended: Boolean = false,
+  /** Null while the user is anonymous. */
+  val linked: LinkedAccount? = null,
+)
 
-/** What seals the kept session so that only this app on this device can read it. */
-interface SessionSeal {
-  fun seal(plain: ByteArray): ByteArray
+/** The store cannot be reached now, as without Google Play services: nothing in it is lost. */
+class StoreUnreachable(cause: Throwable) : Exception(cause)
 
-  /** The plain bytes, or a [GeneralSecurityException] for bytes it cannot open. */
-  fun open(sealed: ByteArray): ByteArray
+/** Bytes kept for the app outside it, under one key. */
+interface KeptBytes {
+  /** The bytes, null when none are kept, or [StoreUnreachable]. */
+  suspend fun read(): ByteArray?
+
+  /** Keeps [bytes] in place of those before, or [StoreUnreachable]. */
+  suspend fun write(bytes: ByteArray)
 }
 
 /**
- * Where the device keeps its session, sealed. Until release, a kept session the app cannot read
- * (its key gone, as after a restore to another phone, or its shape changed) is no session: the app
- * signs in anew and keeps the new one in its place (AGENTS.md).
- *
- * The spec keeps it in Block Store, so a reinstall or a phone restored from this one comes back as
- * the same user; a Keystore-sealed file goes with the app. Sign-in proper (POC-204) moves it there
- * behind this same read and write.
+ * Where the device keeps its session. Until release, a kept session the app cannot read (its shape
+ * changed) is no session: the app signs in anew and keeps the new one in its place (AGENTS.md). A
+ * store it cannot reach is not unreadable: [read] says so, and nothing is forgotten.
  */
-class SessionStore(private val file: File, private val seal: SessionSeal) {
+class SessionStore(private val kept: KeptBytes) {
   private val json = Json { ignoreUnknownKeys = false }
 
-  /** The kept session, or null when there is none the app can read. */
-  fun read(): StoredSession? {
-    if (!file.exists()) return null
+  /** The kept session, or null when there is none the app can read; [StoreUnreachable]. */
+  suspend fun read(): StoredSession? {
+    val bytes = kept.read() ?: return null
     return try {
-      json.decodeFromString(StoredSession.serializer(), seal.open(file.readBytes()).decodeToString())
-    } catch (_: GeneralSecurityException) {
-      null
+      json.decodeFromString(StoredSession.serializer(), bytes.decodeToString())
     } catch (_: SerializationException) {
       null
     } catch (_: IllegalArgumentException) {
@@ -55,51 +58,39 @@ class SessionStore(private val file: File, private val seal: SessionSeal) {
     }
   }
 
-  /** Keeps [session] in place of any before it, in one step. */
-  fun write(session: StoredSession) {
-    val next = File(file.parentFile, "${file.name}.next")
-    next.writeBytes(seal.seal(json.encodeToString(StoredSession.serializer(), session).encodeToByteArray()))
-    check(next.renameTo(file)) { "The session could not be kept" }
+  /** Keeps [session] in place of any before it; [StoreUnreachable]. */
+  suspend fun write(session: StoredSession) {
+    kept.write(json.encodeToString(StoredSession.serializer(), session).encodeToByteArray())
   }
 }
 
 /**
- * Seals with an AES key that Android Keystore holds and never lets out: the sealed file is
- * unreadable anywhere else, a backup restored to another phone included.
+ * Google Play services' Block Store, which keeps the bytes through the app's reinstall and moves
+ * them to a new phone restored from this one, and to Google's cloud backup only while it can
+ * encrypt them end to end (a screen lock set), as an encrypted backup carries the iOS Keychain's.
  */
-class KeystoreSeal(private val alias: String = "pochical.session") : SessionSeal {
-  private val keyStore by lazy { KeyStore.getInstance(KEYSTORE).apply { load(null) } }
+class BlockStoreBytes(context: Context, private val key: String = "app.pochical.session") : KeptBytes {
+  private val client = Blockstore.getClient(context)
 
-  private fun key(): SecretKey =
-    (keyStore.getKey(alias, null) as SecretKey?)
-      ?: KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE)
-        .apply {
-          init(
-            KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-              .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-              .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-              .setKeySize(256)
-              .build()
-          )
-        }
-        .generateKey()
-
-  override fun seal(plain: ByteArray): ByteArray {
-    val cipher = Cipher.getInstance(TRANSFORMATION).apply { init(Cipher.ENCRYPT_MODE, key()) }
-    return byteArrayOf(cipher.iv.size.toByte()) + cipher.iv + cipher.doFinal(plain)
+  override suspend fun read(): ByteArray? = reaching {
+    client.retrieveBytes(RetrieveBytesRequest.Builder().setKeys(listOf(key)).build()).await().blockstoreDataMap[key]?.bytes
   }
 
-  override fun open(sealed: ByteArray): ByteArray {
-    val key = keyStore.getKey(alias, null) as SecretKey? ?: throw GeneralSecurityException("No key to open it")
-    val ivSize = sealed.firstOrNull()?.toInt() ?: throw GeneralSecurityException("Empty")
-    if (sealed.size < 1 + ivSize) throw GeneralSecurityException("Too short")
-    val cipher = Cipher.getInstance(TRANSFORMATION)
-    cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, sealed, 1, ivSize))
-    return cipher.doFinal(sealed, 1 + ivSize, sealed.size - 1 - ivSize)
+  override suspend fun write(bytes: ByteArray) = reaching {
+    val toCloud = client.isEndToEndEncryptionAvailable.await()
+    client
+      .storeBytes(StoreBytesData.Builder().setKey(key).setBytes(bytes).setShouldBackupToCloud(toCloud).build())
+      .await()
+    Unit
   }
 
-  private companion object {
-    const val KEYSTORE = "AndroidKeyStore"
-    const val TRANSFORMATION = "AES/GCM/NoPadding"
-  }
+  /** Forgets the bytes, as a test starting afresh does. */
+  suspend fun delete() = reaching { client.deleteBytes(DeleteBytesRequest.Builder().setKeys(listOf(key)).build()).await() }
+
+  private suspend fun <T> reaching(body: suspend () -> T): T =
+    try {
+      body()
+    } catch (e: ApiException) {
+      throw StoreUnreachable(e)
+    }
 }

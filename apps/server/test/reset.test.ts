@@ -10,9 +10,7 @@ import { photoKey } from "../src/photos";
 import { resetEverything } from "../src/reset";
 import { supportPlace } from "../src/support-lines";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
-import { watchAlarms, pair, supportChat } from "./sync-helpers";
-
-watchAlarms();
+import { pair, supportChat } from "./sync-helpers";
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
 

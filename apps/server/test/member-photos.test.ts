@@ -1,7 +1,8 @@
 import { env, exports } from "cloudflare:workers";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { personPhotoKey, photoKey } from "../src/photos";
+import { alarmsSettled } from "./alarms";
 import { call, ORIGIN, signInAnonymously, userIdOf } from "./helpers";
 import { changesIn, pair, push, syncSocket } from "./sync-helpers";
 
@@ -110,12 +111,9 @@ describe("members' photos", () => {
     await upload(`/v1/me/photos/${photoId}`, maker);
     await call("UserService/SetProfile", { name: "さくら", photoId }, maker);
     await push(makerId);
-    // The push may still be under way from the alarm set as it changed.
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.not.toBeNull();
-    });
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.not.toBeNull();
     const deleted = await call("UserService/DeleteAccount", {}, maker);
     expect(deleted.status).toBe(200);
     await expect(
@@ -132,22 +130,19 @@ describe("members' photos", () => {
     await upload(`/v1/me/photos/${photoId}`, maker);
     await call("UserService/SetProfile", { name: "さくら", photoId }, maker);
     await push(makerId);
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.not.toBeNull();
-    });
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.not.toBeNull();
     const group = await syncSocket(`/v1/groups/${groupId}/socket`, guest);
     await group.frames.next();
     await call("GroupService/LeaveGroup", { groupId }, maker);
     expect(
       memberOf(changesIn(await group.frames.next()), makerId)
     ).toMatchObject([{ kind: { value: { left: true, photoId: "" } } }]);
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.toBeNull();
-    });
+    await alarmsSettled(env.GROUPS.getByName(groupId));
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.toBeNull();
   });
 
   it("show on the join screen to whoever holds the invitation", async () => {
@@ -156,11 +151,9 @@ describe("members' photos", () => {
     await upload(`/v1/me/photos/${photoId}`, maker);
     await call("UserService/SetProfile", { name: "さくら", photoId }, maker);
     await push(makerId);
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.not.toBeNull();
-    });
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.not.toBeNull();
     const outsider = await signInAnonymously();
     const invite = await call(
       "GroupService/GetInvite",
@@ -295,10 +288,9 @@ describe("a group's photo mark", () => {
     await upload(`/v1/me/photos/${photoId}`, maker);
     await renamed(groupId, { photoId }, maker);
     await renamed(groupId, { color: 2, letter: "い" }, maker);
-    await vi.waitFor(async () => {
-      await expect(
-        env.PHOTOS.head(photoKey(groupId, photoId))
-      ).resolves.toBeNull();
-    });
+    await alarmsSettled(env.GROUPS.getByName(groupId));
+    await expect(
+      env.PHOTOS.head(photoKey(groupId, photoId))
+    ).resolves.toBeNull();
   });
 });

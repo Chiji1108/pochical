@@ -1,14 +1,11 @@
 import { socketRules } from "@pochical/design/socket";
-import {
-  listDurableObjectIds,
-  runDurableObjectAlarm,
-  runInDurableObject,
-} from "cloudflare:test";
+import { listDurableObjectIds, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { NEWS_RETRY_FIRST_MS } from "../src/group-do";
 import { CURRENT_PROTOCOL_VERSION } from "../src/protocol";
+import { alarmOf, runAlarm } from "./alarms";
 import {
   call,
   failTelling,
@@ -67,7 +64,7 @@ const alarmComes = async (groupId: string): Promise<void> => {
   await runInDurableObject(group, (_, state) => {
     state.storage.sql.exec("update membership_outbox set due_at = 0");
   });
-  await runDurableObjectAlarm(group);
+  await expect(runAlarm(group)).resolves.toBeTruthy();
 };
 
 /** How many tries to tell `userId` of the group have failed in a row. */
@@ -80,13 +77,6 @@ const failuresTelling = async (groupId: string, userId: string) =>
           failures: number;
         }>("select failures from membership_outbox where user_id = ?", userId)
         .one().failures
-  );
-
-/** The group's alarm, as set now. */
-const alarmOf = async (groupId: string): Promise<number | null> =>
-  await runInDurableObject(
-    env.GROUPS.getByName(groupId),
-    async (_, state) => await state.storage.getAlarm()
   );
 
 describe("the group deciding who reaches it", () => {
@@ -165,12 +155,14 @@ describe("telling a member's own DO", () => {
       listed: await env.USERS.getByName(guestId).isMember(groupId),
       status: failed.status,
     }).toStrictEqual({ inGroup: true, listed: false, status: 503 });
-    const retry = (await alarmOf(groupId)) ?? 0;
+    const retry = (await alarmOf(env.GROUPS.getByName(groupId))) ?? 0;
     expect(retry).toBeGreaterThanOrEqual(before + NEWS_RETRY_FIRST_MS);
 
     // Still failing, the alarm comes back later each time.
     await alarmComes(groupId);
-    await expect(alarmOf(groupId)).resolves.toBeGreaterThan(retry);
+    await expect(
+      alarmOf(env.GROUPS.getByName(groupId))
+    ).resolves.toBeGreaterThan(retry);
 
     await restore();
     await alarmComes(groupId);
@@ -181,7 +173,7 @@ describe("telling a member's own DO", () => {
     // join tried again answers.
     const again = await join(inviteCode, guest);
     expect({
-      alarm: await alarmOf(groupId),
+      alarm: await alarmOf(env.GROUPS.getByName(groupId)),
       listed: await env.USERS.getByName(guestId).isMember(groupId),
       status: again.status,
     }).toStrictEqual({ alarm: null, listed: true, status: 200 });

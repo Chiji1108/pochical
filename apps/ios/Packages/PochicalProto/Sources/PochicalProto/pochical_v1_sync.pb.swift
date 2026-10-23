@@ -1653,17 +1653,6 @@ public nonisolated struct Pochical_V1_PreferenceValue: Sendable {
   /// Which preference, as the apps name it: an id (syncLimits.idLength).
   public var key: String = String()
 
-  /// As the apps write it, JSON, syncLimits.preferenceLength characters at
-  /// most. Unset: none kept, so each device keeps its own.
-  public var value: String {
-    get {_value ?? String()}
-    set {_value = newValue}
-  }
-  /// Returns true if `value` has been explicitly set.
-  public var hasValue: Bool {self._value != nil}
-  /// Clears the value of `value`. Subsequent reads from it will return its default value.
-  public mutating func clearValue() {self._value = nil}
-
   public var hlc: Pochical_V1_Hlc {
     get {_hlc ?? Pochical_V1_Hlc()}
     set {_hlc = newValue}
@@ -1673,12 +1662,24 @@ public nonisolated struct Pochical_V1_PreferenceValue: Sendable {
   /// Clears the value of `hlc`. Subsequent reads from it will return its default value.
   public mutating func clearHlc() {self._hlc = nil}
 
+  /// The message the key names (preferences.proto), encoded,
+  /// syncLimits.preferenceLength bytes at most. Unset: none kept, so each
+  /// device keeps its own.
+  public var message: Data {
+    get {_message ?? Data()}
+    set {_message = newValue}
+  }
+  /// Returns true if `message` has been explicitly set.
+  public var hasMessage: Bool {self._message != nil}
+  /// Clears the value of `message`. Subsequent reads from it will return its default value.
+  public mutating func clearMessage() {self._message = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _value: String? = nil
   fileprivate var _hlc: Pochical_V1_Hlc? = nil
+  fileprivate var _message: Data? = nil
 }
 
 public nonisolated struct Pochical_V1_PreferenceEdits: Sendable {
@@ -5099,7 +5100,7 @@ nonisolated extension Pochical_V1_CoworkerEdit: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Pochical_V1_PreferenceValue: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PreferenceValue"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}key\0\u{1}value\0\u{1}hlc\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}key\0\u{2}\u{2}hlc\0\u{1}message\0\u{b}value\0\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5108,8 +5109,8 @@ nonisolated extension Pochical_V1_PreferenceValue: SwiftProtobuf.Message, SwiftP
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.key) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self._value) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._hlc) }()
+      case 4: try { try decoder.decodeSingularBytesField(value: &self._message) }()
       default: break
       }
     }
@@ -5123,19 +5124,19 @@ nonisolated extension Pochical_V1_PreferenceValue: SwiftProtobuf.Message, SwiftP
     if !self.key.isEmpty {
       try visitor.visitSingularStringField(value: self.key, fieldNumber: 1)
     }
-    try { if let v = self._value {
-      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
-    } }()
     try { if let v = self._hlc {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try { if let v = self._message {
+      try visitor.visitSingularBytesField(value: v, fieldNumber: 4)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Pochical_V1_PreferenceValue, rhs: Pochical_V1_PreferenceValue) -> Bool {
     if lhs.key != rhs.key {return false}
-    if lhs._value != rhs._value {return false}
     if lhs._hlc != rhs._hlc {return false}
+    if lhs._message != rhs._message {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

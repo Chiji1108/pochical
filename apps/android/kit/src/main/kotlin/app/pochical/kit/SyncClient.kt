@@ -359,7 +359,7 @@ class SyncClient internal constructor(
 
   companion object {
     /** The socket protocol this build speaks (apps/server/src/protocol.ts). */
-    const val PROTOCOL_VERSION = 1
+    const val PROTOCOL_VERSION = 2
 
     private const val TAG = "PochicalSync"
   }

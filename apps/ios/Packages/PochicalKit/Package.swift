@@ -16,6 +16,8 @@ let package = Package(
     .package(url: "https://github.com/connectrpc/connect-swift.git", exact: "1.2.3"),
     // SQLiteData's own, for ValueObservation, which it does not export.
     .package(url: "https://github.com/groue/GRDB.swift", exact: "7.11.1"),
+    // PochicalProto's, for Message, which it does not export.
+    .package(url: "https://github.com/apple/swift-protobuf.git", exact: "1.39.0"),
   ],
   targets: [
     .target(
@@ -26,8 +28,12 @@ let package = Package(
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "Connect", package: "connect-swift"),
         .product(name: "GRDB", package: "GRDB.swift"),
+        .product(name: "SwiftProtobuf", package: "swift-protobuf"),
       ]
     ),
-    .testTarget(name: "PochicalKitTests", dependencies: ["PochicalKit"]),
+    .testTarget(
+      name: "PochicalKitTests",
+      dependencies: ["PochicalKit", .product(name: "SwiftProtobuf", package: "swift-protobuf")]
+    ),
   ]
 )

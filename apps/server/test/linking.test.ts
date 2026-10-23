@@ -163,4 +163,32 @@ describe("linking Google", () => {
     );
     expect(status).toBe(200);
   });
+
+  it("takes Android's token, for the Web client by an Android client the server does not name", async () => {
+    providerKeys();
+    const token = await signInAnonymously();
+    const status = await link(
+      token,
+      "google",
+      await idToken("google", "google-android", "n7", {
+        azp: "608132058597-android.apps.googleusercontent.com",
+      }),
+      "n7"
+    );
+    expect(status).toBe(200);
+  });
+
+  it("takes no token for a client the server does not name", async () => {
+    providerKeys();
+    const token = await signInAnonymously();
+    const status = await link(
+      token,
+      "google",
+      await idToken("google", "google-other", "n8", {
+        aud: "608132058597-android.apps.googleusercontent.com",
+      }),
+      "n8"
+    );
+    expect(status).toBe(401);
+  });
 });

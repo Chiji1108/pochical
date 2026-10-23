@@ -1,51 +1,69 @@
 package app.pochical.kit
 
-import java.io.File
-import java.security.GeneralSecurityException
-import kotlin.io.path.createTempDirectory
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
-/** Seals by marking the bytes, so the test can tell sealed from not. */
-internal object MarkedSeal : SessionSeal {
-  private val mark = "sealed:".encodeToByteArray()
+/**
+ * Bytes kept in memory, as Block Store keeps them; [reachable] false as without Play services, and
+ * [writable] false for a store that went out of reach between a read and a write.
+ */
+internal class MemoryBytes : KeptBytes {
+  @Volatile var bytes: ByteArray? = null
+  @Volatile var reachable = true
+  @Volatile var writable = true
 
-  override fun seal(plain: ByteArray) = mark + plain
+  override suspend fun read(): ByteArray? {
+    if (!reachable) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
+    return bytes
+  }
 
-  override fun open(sealed: ByteArray): ByteArray {
-    if (!sealed.take(mark.size).toByteArray().contentEquals(mark)) throw GeneralSecurityException("Not sealed here")
-    return sealed.drop(mark.size).toByteArray()
+  override suspend fun write(bytes: ByteArray) {
+    if (!reachable || !writable) throw StoreUnreachable(IllegalStateException("Play services unavailable"))
+    this.bytes = bytes
   }
 }
 
 class SessionStoreTest {
-  private val file = File(createTempDirectory().toFile(), "session")
-  private val store = SessionStore(file, MarkedSeal)
+  private val kept = MemoryBytes()
+  private val store = SessionStore(kept)
 
   @Test
-  fun aSessionKeptIsReadBackSealed() {
+  fun aSessionKeptIsReadBackWithItsAccount() = runBlocking {
     assertNull(store.read())
-    store.write(StoredSession("token", "user"))
-    assertEquals(StoredSession("token", "user"), store.read())
-    assertEquals("sealed:", file.readText().take("sealed:".length))
+    val session = StoredSession("token", "user", linked = LinkedAccount(LinkedAccount.Provider.Google, "a@example.com"))
+    store.write(session)
+    assertEquals(session, SessionStore(kept).read())
   }
 
   @Test
-  fun anEndedSessionStaysEndedAcrossLaunches() {
+  fun anEndedSessionStaysEndedAcrossLaunches() = runBlocking {
     store.write(StoredSession("token", "user"))
     store.write(StoredSession("token", "user", ended = true))
-    assertEquals(StoredSession("token", "user", ended = true), SessionStore(file, MarkedSeal).read())
+    assertEquals(StoredSession("token", "user", ended = true), SessionStore(kept).read())
   }
 
   @Test
-  fun aSessionTheAppCannotReadIsNoSession() {
-    file.writeText("sealed elsewhere")
+  fun aSessionTheAppCannotReadIsNoSession() = runBlocking {
+    kept.bytes = "not json".encodeToByteArray()
     assertNull(store.read())
-    file.writeBytes("sealed:{\"shape\":\"older\"}".encodeToByteArray())
+    kept.bytes = """{"shape":"older"}""".encodeToByteArray()
     assertNull(store.read())
 
     store.write(StoredSession("new", "user"))
     assertEquals(StoredSession("new", "user"), store.read())
+  }
+
+  @Test
+  fun aStoreOutOfReachForgetsNothing() = runBlocking {
+    store.write(StoredSession("token", "user"))
+    val before = kept.bytes
+    kept.reachable = false
+    assertThrows(StoreUnreachable::class.java) { runBlocking { store.read() } }
+    assertThrows(StoreUnreachable::class.java) { runBlocking { store.write(StoredSession("other", "user")) } }
+    assertArrayEquals(before, kept.bytes)
   }
 }

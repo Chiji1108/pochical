@@ -9,7 +9,6 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.pochical.v1.DayField
-import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -52,7 +51,7 @@ class NetworkSwitchTest {
   @Test
   fun anEditRightAfterWifiTakesOverReachesTheServerOverIt() = runBlocking<Unit> {
     val database = AppDatabase.open(context, inMemory = true)
-    val sessions = SessionStore(File(context.cacheDir, "session-switch").apply { delete() }, KeystoreSeal("e2e-switch"))
+    val sessions = SessionStore(BlockStoreBytes(context, "e2e-switch").also { it.delete() })
     val http = OkHttpClient()
     val account = SyncAccount(database, sessions, server, http, scope, DefaultNetworkWatch(context))
     val edits = OwnEdits(database)
