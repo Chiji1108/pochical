@@ -155,6 +155,26 @@ private func outbox(_ db: Database) throws -> [Pochical_V1_DayValue] {
   }
 }
 
+@Test func aPatternInTheOrderInUseCanBeNeitherArchivedNorDeleted() throws {
+  let database = try calendarWithAnOrder()
+  try database.write { db in
+    var day = try #require(try OwnValues.patterns(in: db).first { $0.id == "day" })
+    day.archived = true
+    #expect(throws: PatternRefusal.repeating) { try OwnValues.save(day, now: 1, in: db) }
+    #expect(throws: PatternRefusal.repeating) { try OwnValues.deletePattern("day", now: 2, in: db) }
+    #expect(try OwnValues.patterns(in: db).first { $0.id == "day" }?.archived == false)
+
+    // Another edit of it is kept, and one no order has can go.
+    day.archived = false
+    day.name = "日中"
+    try OwnValues.save(day, now: 3, in: db)
+    var night = try #require(try OwnValues.patterns(in: db).first { $0.id == "night" })
+    night.archived = true
+    try OwnValues.save(night, now: 4, in: db)
+    #expect(try OwnValues.patterns(in: db).first { $0.id == "night" }?.archived == true)
+  }
+}
+
 @Test func aPatternInTheOrderInUseIsKeptAndItsDaysAreCounted() throws {
   let database = try calendarWithAnOrder()
   try database.write { db in
