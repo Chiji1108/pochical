@@ -6,7 +6,10 @@ import Link from "../../components/link.astro";
 import Page from "../../components/page.astro";
 import Site from "../../layouts/site.astro";
 
-const request = `mailto:${site.email}?subject=${encodeURIComponent("ポチカル アカウント削除の依頼")}`;
+const mailTo = (subject: string) =>
+  `mailto:${site.email}?subject=${encodeURIComponent(subject)}`;
+const request = mailTo("ポチカル アカウント削除の依頼");
+const partRequest = mailTo("ポチカル データ削除の依頼");
 ---
 
 <Site
@@ -32,23 +35,57 @@ const request = `mailto:${site.email}?subject=${encodeURIComponent("ポチカル
         <li>ポチカルとのチャット（写真を含む）</li>
       </ul>
       <p>
-        共有チャットには「削除済み」の表示が残ります。通報の記録は、不正利用への対応のため保存することがあります。他の人が保存した画像やコピーは削除されません。Webでの手続きでは、オフライン端末内のデータを直接消去できません。利用していた端末でも、同期後にデータの削除を確認してください。
+        共有チャットには「削除されたメッセージ」の表示が残ります。他の人が保存した画像やコピーは削除されません。Webでの手続きでは、オフライン端末内のデータを直接消去できません。利用していた端末でも、同期後にデータの削除を確認してください。
       </p>
       <p class="warning-text">
         削除は取り消せません。必要な予定は、手続き前に保存してください。
       </p>
     </section>
+    <section class="deletion-explanation" id="timing">
+      <h2>削除の時期</h2>
+      <ul>
+        <li>アプリの設定から削除すると、その場ですぐに削除されます。</li>
+        <li>メールでのご依頼は、受け付けてから30日以内に削除します。</li>
+        <li>
+          自分がした通報と、自分が通報された記録は、不正利用への対応のため、アカウントの削除から最長1年保存し、その後消去します。
+        </li>
+      </ul>
+    </section>
     <section class="deletion-panel">
       <Mail aria-hidden="true" size={24} />
       <h2>メールで削除を依頼する</h2>
       <p>
-        アプリの設定からも削除できます。アプリを使えないときは、メールでご連絡ください。確認のうえ、削除します。
+        アプリの設定からも削除できます。アプリを使えないときは、メールでご連絡ください。確認のうえ、受け付けてから30日以内に削除します。
       </p>
       <a class="button" href={request}>
         削除を依頼する
       </a>
       <p class="small-note">
         パスワードや、勤務先で扱う個人情報は送らないでください。
+      </p>
+    </section>
+    <section class="deletion-explanation" id="data">
+      <h2>アカウントを残して、データの一部を消す</h2>
+      <p>アカウントを削除しなくても、アプリから次のデータを消せます。</p>
+      <ul>
+        <li>
+          シフトとメモ：カレンダーで日を選び、「この日のシフトを消す」「メモを消す」から
+        </li>
+        <li>
+          勤務パターン・繰り返し・一緒に働く人：設定の「シフトパターン」「繰り返し」「一緒に働く人」から
+        </li>
+        <li>
+          チャットのメッセージと写真：自分が送ったものを長押しし、「送信取消」から。メンバー全員のチャットから消えます。付けたリアクションも外せます
+        </li>
+        <li>プロフィール写真：設定の「プロフィール」から変更・削除</li>
+        <li>
+          グループ：グループの設定の「このグループから抜ける」から。そのグループに共有していたシフトが消えます。送ったメッセージは残るため、消したいものは先に送信を取り消してください
+        </li>
+      </ul>
+      <p>
+        このほかのデータを消したいときは、
+        <a href={partRequest}>メールでご依頼ください</a>
+        。受け付けてから30日以内に削除します。
       </p>
     </section>
     <Link class="text-link" href="/privacy">

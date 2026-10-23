@@ -370,6 +370,17 @@
   .deletion-explanation p.warning-text {
     color: var(--danger);
   }
+  .deletion-explanation + .deletion-explanation {
+    margin-top: 40px;
+  }
+  .deletion-explanation + .text-link {
+    margin-top: 36px;
+  }
+  .deletion-explanation p a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
   .deletion-panel {
     padding: 35px;
     margin: 36px 0;
