@@ -1347,4 +1347,73 @@ describe("a deleted account's support chat, in Slack", () => {
       waiting: 4,
     });
   });
+
+  it("loses a thread whose first message lands after the account went", async () => {
+    const messages: SlackMessage[] = [];
+    slackCalls(() => false, messages);
+    const answer = vi.mocked(fetch).getMockImplementation();
+    // Plain flags, as a promise made in one Durable Object's context
+    // cannot be settled from another's.
+    let reached = false;
+    let held = true;
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      if (new Request(input, init).url.endsWith("/chat.postMessage")) {
+        reached = true;
+        await vi.waitUntil(() => !held, { interval: 5, timeout: 5000 });
+      }
+      if (answer === undefined) {
+        throw new Error("Slack is not answered");
+      }
+      return await answer(input, init);
+    });
+    const token = await signInAnonymously();
+    const { frames, socket, userId } = await supportChat(token);
+    sendFrame(socket, {
+      case: "chatEdits",
+      value: {
+        edits: [
+          {
+            kind: {
+              case: "send",
+              value: {
+                content: {
+                  kind: { case: "words", value: { text: "色を変えたい" } },
+                },
+                device: "",
+                threadId: "group",
+              },
+            },
+            opId: crypto.randomUUID(),
+          },
+        ],
+      },
+    });
+    await untilAcked(frames);
+    await vi.waitUntil(() => reached);
+    socket.close();
+    const deleting = call(
+      "UserService/DeleteAccount",
+      { appleAuthorizationCode: "" },
+      token
+    );
+    // The post lands once the chat is gone from D1's index.
+    await vi.waitUntil(async () => {
+      const left = await env.DB.prepare(
+        "select count(*) as n from support_chats where user_id = ?"
+      )
+        .bind(userId)
+        .first<number>("n");
+      return left === 0;
+    });
+    held = false;
+    const deleted = await deleting;
+    expect(deleted.status).toBe(200);
+    await vi.waitFor(() => {
+      expect(messages).toHaveLength(1);
+    });
+    await sweep(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    expect(messages.map(({ metadata }) => metadata)).toStrictEqual([
+      { event_payload: {}, event_type: "pochical_account_deleted" },
+    ]);
+  });
 });

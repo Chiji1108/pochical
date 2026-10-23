@@ -3,7 +3,7 @@
 // finished by trying again, as the user's session goes last.
 import { Code, ConnectError } from "@connectrpc/connect";
 import { waitUntil } from "cloudflare:workers";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { revokeApple } from "./apple";
@@ -49,13 +49,17 @@ export const eraseGroup = async (env: Env, groupId: string): Promise<void> => {
 /**
  * Everything of a user gone but Apple's tokens: their part in every group
  * they were ever in, a group they were the last of gone whole; their chat
- * with Pochical's people, and the app's posts of it in Slack (now, or by
- * the daily cron while Slack does not take it); their own values; the
- * reports by or about them set to go a year on; and last their sign-ins
- * and provider accounts, which closes what is still open. Also how
- * switching to an account in use deletes the side not kept.
+ * with Pochical's people, its Slack thread noted for the app's posts there
+ * to go (by the daily cron, or at once by eraseSupportThread on the thread
+ * given back); their own values; the reports by or about them set to go a
+ * year on; and last their sign-ins and provider accounts, which closes
+ * what is still open. Also how switching to an account in use deletes the
+ * side not kept.
  */
-export const eraseUser = async (env: Env, userId: string): Promise<void> => {
+export const eraseUser = async (
+  env: Env,
+  userId: string
+): Promise<string | undefined> => {
   const user = env.USERS.getByName(userId);
   // Every group they asked to make or join, noted before the group heard
   // of them, so none they are in is missed.
@@ -69,44 +73,48 @@ export const eraseUser = async (env: Env, userId: string): Promise<void> => {
   // Their chat with Pochical's people, kept as a group's chats are.
   await eraseGroup(env, supportPlace(userId));
   const db = drizzle(env.DB);
-  const [chat] = await db
-    .select({ thread: supportChats.slackThreadTs })
-    .from(supportChats)
-    .where(eq(supportChats.userId, userId));
-  const thread = chat?.thread ?? null;
-  // Its Slack thread noted to be erased as the index that finds it goes,
-  // in one transaction, so a deletion cut off never loses track of it.
-  const unindexed = [
+  // Its Slack thread noted to be erased in the same transaction as the
+  // index that finds it goes, so neither a deletion cut off nor a thread
+  // kept just before it is lost track of.
+  const [noted] = await db.batch([
+    db
+      .insert(erasingSlackThreads)
+      .select(
+        db
+          .select({
+            notedAt: sql<number>`${Date.now()}`.as("noted_at"),
+            threadTs: sql<string>`${supportChats.slackThreadTs}`.as(
+              "thread_ts"
+            ),
+          })
+          .from(supportChats)
+          .where(
+            and(
+              eq(supportChats.userId, userId),
+              isNotNull(supportChats.slackThreadTs)
+            )
+          )
+      )
+      .onConflictDoNothing()
+      .returning({ threadTs: erasingSlackThreads.threadTs }),
     db.delete(supportChats).where(eq(supportChats.userId, userId)),
     db.delete(supportSlack).where(eq(supportSlack.userId, userId)),
-  ] as const;
-  if (thread === null) {
-    await db.batch(unindexed);
-  } else {
-    await db.batch([
-      db
-        .insert(erasingSlackThreads)
-        .values({ notedAt: new Date(), threadTs: thread })
-        .onConflictDoNothing(),
-      ...unindexed,
-    ]);
-    // Tried at once; the daily cron finishes what Slack did not take.
-    waitUntil(eraseSupportThread(env, thread));
-  }
+  ]);
   // With their own photos, and their uploads not taken.
   await user.erase();
   // The reports by or about them go a year from now.
   await noteDeletedAccount(env, userId, new Date());
   const auth = await getAuth().$context;
   await auth.internalAdapter.deleteUser(userId);
+  return noted[0]?.threadTs;
 };
 
 /**
  * Deletes everything of the user's account: Apple's tokens revoked first
  * (from `appleCode`, FAILED_PRECONDITION when one is needed and Apple
  * takes none); their part in every group they were ever in, a group they
- * were the last of gone whole; their chat with Pochical's people, said in
- * its Slack thread; their own values; and last their sign-ins, which
+ * were the last of gone whole; their chat with Pochical's people, with
+ * the app's posts of it in Slack; their own values; and last their sign-ins, which
  * closes what is still open.
  */
 export const deleteAccount = async (
@@ -130,7 +138,11 @@ export const deleteAccount = async (
       );
     }
   }
-  await eraseUser(env, userId);
+  const thread = await eraseUser(env, userId);
+  if (thread !== undefined) {
+    // Tried at once; the daily cron finishes what Slack did not take.
+    waitUntil(eraseSupportThread(env, thread));
+  }
 };
 
 /**

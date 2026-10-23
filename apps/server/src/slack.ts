@@ -3,10 +3,10 @@
 // new reports are posted with the way to the admin site. Without the
 // secrets nothing is posted and no reply is taken; Slack failing never
 // fails what the user did.
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, notExists, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { supportChats } from "./db/schema";
+import { erasingSlackThreads, supportChats } from "./db/schema";
 import { photoKey } from "./photos";
 import { photoWords, supportPlace } from "./support-lines";
 import type { SupportLine } from "./support-lines";
@@ -492,6 +492,18 @@ const findPosted = async (
 };
 
 /**
+ * Slack's warnings on a post logged: it takes a post whose metadata it
+ * finds wrong without the metadata, by which the post is found again.
+ */
+const warnOfPost = (posted: Record<string, unknown>, what: string): void => {
+  const said = posted.response_metadata;
+  const warnings = isRecord(said) ? said.warnings : undefined;
+  if (Array.isArray(warnings) && warnings.length > 0) {
+    console.warn(`Slack warned of ${what}`, warnings);
+  }
+};
+
+/**
  * A line's message posted by the relay, with its metadata, and its ts;
  * SlackRefusedError thrown when Slack did not take it, or took it without
  * saying which message it is. Slack ignores metadata it finds wrong, with
@@ -509,11 +521,7 @@ const postForRelay = async (
     { ...args, metadata: lineMetadata(line) },
     what
   );
-  const said = posted.response_metadata;
-  const warnings = isRecord(said) ? said.warnings : undefined;
-  if (Array.isArray(warnings) && warnings.length > 0) {
-    console.warn("Slack warned of a relay post", warnings);
-  }
+  warnOfPost(posted, "a relay post");
   const ts = stringOf(posted.ts);
   if (ts === undefined) {
     throw new SlackRefusedError(what, passing("no_ts"));
@@ -555,13 +563,37 @@ const keepThread = async (
   userId: string,
   ts: string
 ): Promise<void> => {
-  // Two first lines at once keep the thread the first kept.
-  await drizzle(env.DB)
-    .update(supportChats)
-    .set({ slackThreadTs: ts })
-    .where(
-      and(eq(supportChats.userId, userId), isNull(supportChats.slackThreadTs))
-    );
+  const db = drizzle(env.DB);
+  // Two first lines at once keep the thread the first kept. A chat erased
+  // as its account went while the thread was being posted has no row to
+  // keep it on, so the thread is noted to be erased instead.
+  await db.batch([
+    db
+      .update(supportChats)
+      .set({ slackThreadTs: ts })
+      .where(
+        and(eq(supportChats.userId, userId), isNull(supportChats.slackThreadTs))
+      ),
+    db
+      .insert(erasingSlackThreads)
+      .select(
+        db
+          .select({
+            notedAt: sql<number>`${Date.now()}`.as("noted_at"),
+            threadTs: sql<string>`${ts}`.as("thread_ts"),
+          })
+          .from(sql`(select 1)`)
+          .where(
+            notExists(
+              db
+                .select({ userId: supportChats.userId })
+                .from(supportChats)
+                .where(eq(supportChats.userId, userId))
+            )
+          )
+      )
+      .onConflictDoNothing(),
+  ]);
 };
 
 /** A chat's thread, started by the user's first line. */
@@ -976,13 +1008,26 @@ export const tellStaffOfReport = async (
       `<${ADMIN_SITE}/reports|管理サイトで開く>`,
     ].join("\n"),
   });
-  // Slack takes a post whose metadata it finds wrong without it, warning.
-  const said = posted?.response_metadata;
-  const warnings = isRecord(said) ? said.warnings : undefined;
-  if (Array.isArray(warnings) && warnings.length > 0) {
-    console.warn("Slack warned of a report post", warnings);
+  if (posted !== null) {
+    warnOfPost(posted, "a report post");
   }
   return stringOf(posted?.ts);
+};
+
+/**
+ * A call to Slack that is done once Slack takes it or says that what it
+ * acts on is already gone (`gone`); SlackRefusedError thrown otherwise.
+ */
+const settle = async (
+  env: Env,
+  method: string,
+  args: Record<string, unknown>,
+  gone: readonly string[]
+): Promise<void> => {
+  const answer = await askSlack(env, method, args);
+  if ("refused" in answer && !gone.includes(answer.refused.why)) {
+    throw new SlackRefusedError(method, answer.refused);
+  }
 };
 
 /**
@@ -1005,28 +1050,26 @@ export const eraseReportPost = async (
   if (!report.slackTried) {
     return true;
   }
-  let ts = report.slackTs ?? undefined;
-  if (ts === undefined) {
-    try {
-      ts = await findPosted(
+  try {
+    const ts =
+      report.slackTs ??
+      (await findPosted(
         env,
         report.createdAt,
         null,
         isReportMessage(report.id),
         new Date(report.createdAt.getTime() + REPORT_POST_WITHIN_MS)
-      );
-    } catch (error) {
-      if (error instanceof SlackRefusedError) {
-        return false;
-      }
-      throw error;
+      ));
+    if (ts !== undefined) {
+      await settle(env, "chat.delete", { ts }, ["message_not_found"]);
     }
-    if (ts === undefined) {
-      return true;
+    return true;
+  } catch (error) {
+    if (error instanceof SlackRefusedError) {
+      return false;
     }
+    throw error;
   }
-  const answer = await askSlack(env, "chat.delete", { ts });
-  return "taken" in answer || answer.refused.why === "message_not_found";
 };
 
 /**
@@ -1038,22 +1081,6 @@ const DELETED_EVENT = "pochical_account_deleted";
 
 const DELETED_WORDS =
   "（このユーザーのアカウントは削除されました。ユーザーのメッセージと写真は、アプリ・管理サイト・Slackから削除されています）";
-
-/**
- * A call to Slack that is done once Slack takes it or says that what it
- * acts on is already gone (`gone`); SlackRefusedError thrown otherwise.
- */
-const settle = async (
-  env: Env,
-  method: string,
-  args: Record<string, unknown>,
-  gone: readonly string[]
-): Promise<void> => {
-  const answer = await askSlack(env, method, args);
-  if ("refused" in answer && !gone.includes(answer.refused.why)) {
-    throw new SlackRefusedError(method, answer.refused);
-  }
-};
 
 /** Every message of `thread`, its first included (conversations.replies). */
 const threadMessages = async (
@@ -1082,8 +1109,13 @@ const threadMessages = async (
       throw new SlackRefusedError("a look at a thread", answer.refused);
     }
     const page = answer.taken;
-    if (Array.isArray(page.messages)) {
-      messages.push(...page.messages.filter(isRecord));
+    // Slack gives the thread's first message again on every page.
+    const seen = new Set(messages.map(({ ts }) => ts));
+    const found: unknown[] = Array.isArray(page.messages) ? page.messages : [];
+    for (const message of found) {
+      if (isRecord(message) && !seen.has(message.ts)) {
+        messages.push(message);
+      }
     }
     const next = page.response_metadata;
     cursor = (isRecord(next) ? stringOf(next.next_cursor) : undefined) ?? "";

@@ -5,12 +5,14 @@ import { verifyProviderIdToken } from "@better-auth/core/oauth2";
 // token and the nonce it was asked with, as linking does, which proves
 // the person holds the account.
 import { Code, ConnectError } from "@connectrpc/connect";
+import { waitUntil } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { eraseUser } from "./account-deletion";
 import { account } from "./db/auth-schema";
 import { getAuth } from "./session";
+import { eraseSupportThread } from "./slack";
 import { isSuspended } from "./suspension";
 
 const APPLE = "apple";
@@ -95,7 +97,10 @@ export const takeAccount = async (
   }
   if (other !== undefined) {
     await refuseSuspended(env, other);
-    await eraseUser(env, other);
+    const thread = await eraseUser(env, other);
+    if (thread !== undefined) {
+      waitUntil(eraseSupportThread(env, thread));
+    }
   }
   const auth = await getAuth().$context;
   await auth.internalAdapter.createAccount({

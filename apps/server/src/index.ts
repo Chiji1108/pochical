@@ -270,7 +270,16 @@ export default {
   // erasing deleted accounts' chat threads.
   async scheduled(controller, env) {
     const now = new Date(controller.scheduledTime);
-    await eraseNotedSlackThreads(env, now);
-    await eraseDueReports(env, now);
+    // Each goes on should the other fail; a failure fails the run, logged.
+    const runs = await Promise.allSettled([
+      eraseDueReports(env, now),
+      eraseNotedSlackThreads(env, now),
+    ]);
+    const failed = runs.flatMap((run): unknown[] =>
+      run.status === "rejected" ? [run.reason] : []
+    );
+    if (failed.length > 0) {
+      throw new AggregateError(failed, "A daily sweep failed");
+    }
   },
 } satisfies ExportedHandler<Env>;
