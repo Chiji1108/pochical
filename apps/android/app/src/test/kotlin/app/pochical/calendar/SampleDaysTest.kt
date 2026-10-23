@@ -46,6 +46,7 @@ class SampleDaysTest {
     assertEquals("08:00", month.getValue(LocalDate.parse("2026-10-13")).start)
     // スポーツの日 takes the day off whatever the order says.
     assertEquals("off", month.getValue(LocalDate.parse("2026-10-12")).shift)
+    assertEquals("after", calendar.patterns.first { it.id == "night" }.nextDay)
   }
 
   @Test

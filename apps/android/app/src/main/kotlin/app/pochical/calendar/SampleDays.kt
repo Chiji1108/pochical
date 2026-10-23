@@ -38,6 +38,7 @@ class SampleDays(today: LocalDate) : OwnDays {
               color = ready.color,
               time = ready.time?.let { (start, end) -> ShiftTime(start, end) },
               countsAsOff = ready.countsAsOff,
+              nextDay = ready.nextDay,
             )
           },
         coworkers = emptyList(),

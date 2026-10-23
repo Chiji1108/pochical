@@ -15,6 +15,8 @@ data class Pattern(
   /** Its standard hours; none for a pattern without a time. */
   val time: ShiftTime?,
   val countsAsOff: Boolean,
+  /** Another pattern's id, entered on the following day too, as 明け after 夜勤 (spec/shift-patterns.md, The next day). */
+  val nextDay: String? = null,
   /** Kept for the days that show it, offered nowhere a pattern is picked (spec/vectors/patterns.json, newJob). */
   val archived: Boolean = false,
 )
