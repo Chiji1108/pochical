@@ -968,9 +968,7 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   /// To the item asked for, laid out now: gliding, or put there at once.
   private func go(to asked: Showing) {
     lines.layoutIfNeeded()
-    guard let index = ids.firstIndex(of: asked.id),
-      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
-    else {
+    guard let frame = extent(of: asked.id) else {
       hold(.free)
       return
     }
@@ -1005,6 +1003,24 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
   /// Nothing more to go to, the lines gone: told so.
   func letGo() {
     hold(.free)
+  }
+
+  /// Where the item `id` stands in the lines as laid out: a line with its
+  /// reactions, the item under it, as the one thing it is to the reader
+  /// (its foot, where it is gone to and whether it is seen).
+  private func extent(of id: String) -> CGRect? {
+    ids.firstIndex(of: id).flatMap(extent(at:))
+  }
+
+  private func extent(at index: Int) -> CGRect? {
+    guard index < ids.count,
+      let frame = layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
+    else { return nil }
+    let under = index + 1
+    guard under < ids.count, ids[under] == ChatItemID.reactions(of: ids[index]),
+      let reactions = layout.layoutAttributesForItem(at: IndexPath(item: under, section: 0))?.frame
+    else { return frame }
+    return frame.union(reactions)
   }
 
   /// Where an item's top goes below the top of the lines seen.
@@ -1152,10 +1168,12 @@ final class ChatController: UIViewController, UICollectionViewDelegate,
     if day != scroll.topDay { scroll.topDay = day }
     if pinned.push != scroll.dayPush { scroll.dayPush = pinned.push }
     let foot = lines.contentOffset.y + lines.bounds.height - inset.bottom + 1
-    let seen = laid
-      .filter { $0.frame.maxY <= foot }
-      .compactMap { $0.indexPath.item < ids.count ? ids[$0.indexPath.item] : nil }
-      .filter(ChatItemID.isLine)
+    let seen = laid.map(\.indexPath.item)
+      .filter { item in
+        item < ids.count && ChatItemID.isLine(ids[item])
+          && (extent(at: item)?.maxY ?? .infinity) <= foot
+      }
+      .map { ids[$0] }
     if seen != scroll.seen { scroll.seen = seen }
     layoutMenu()
   }

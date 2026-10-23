@@ -50,6 +50,19 @@ const fail = (message: string): never => {
   process.exit(1);
 };
 
+// Waits for the group's answer, failing once it has not come in
+// ACK_TIMEOUT_MS (the socket closed, the server gone).
+const inTime = async <T>(answer: Promise<T>): Promise<T> => {
+  const late = setTimeout(() => {
+    fail("no answer from the group");
+  }, ACK_TIMEOUT_MS);
+  try {
+    return await answer;
+  } finally {
+    clearTimeout(late);
+  }
+};
+
 const flags = new Set(["--rich", "--album"]);
 const args = process.argv.slice(2).filter((arg) => !flags.has(arg));
 const rich = process.argv.includes("--rich");
@@ -335,10 +348,6 @@ socket.addEventListener("error", () => fail("socket: could not connect"));
 await welcomed.promise;
 
 if (reaction !== undefined) {
-  // As the sends' answer below: the group stopping answering fails.
-  const unanswered = setTimeout(() => {
-    fail("no answer from the group");
-  }, ACK_TIMEOUT_MS);
   socket.send(
     toBinary(
       ClientFrameSchema,
@@ -347,12 +356,12 @@ if (reaction !== undefined) {
       })
     )
   );
-  await caughtUp.promise;
+  await inTime(caughtUp.promise);
   const seq =
     seqOfWords.get(reactTo ?? "") ?? fail(`no line of the words ${reactTo}`);
   const opId = crypto.randomUUID();
-  const answered = Promise.withResolvers<undefined>();
-  sent.set(opId, { answered, what: reaction });
+  const acked = Promise.withResolvers<undefined>();
+  sent.set(opId, { answered: acked, what: reaction });
   socket.send(
     toBinary(
       ClientFrameSchema,
@@ -379,8 +388,7 @@ if (reaction !== undefined) {
       })
     )
   );
-  await answered.promise;
-  clearTimeout(unanswered);
+  await inTime(acked.promise);
   socket.close();
   // The group answers every edit, taken or not: the line it sent again
   // says whether the reaction is on it.
@@ -425,15 +433,13 @@ if (every > 0) {
 }
 // Until the group has answered every send: the lines it took come before
 // its Acked, and a send acked with no line was refused.
-const unanswered = setTimeout(() => {
-  fail("no answer from the group");
-}, ACK_TIMEOUT_MS);
-await Promise.all(
-  [...sent.values()].map(async ({ answered }) => {
-    await answered.promise;
-  })
+await inTime(
+  Promise.all(
+    [...sent.values()].map(async ({ answered }) => {
+      await answered.promise;
+    })
+  )
 );
-clearTimeout(unanswered);
 socket.close();
 const refused = [...sent]
   .filter(([opId]) => !taken.has(opId))
