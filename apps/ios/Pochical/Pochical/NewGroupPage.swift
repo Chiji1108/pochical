@@ -18,9 +18,9 @@ struct NewGroupPage: View {
   @State private var myName = ""
   /// The usual name, which the field starts with (設定 › プロフィール).
   @Fetch(ProfileNameRequest()) private var usualName = ""
-  @State private var mark = guessedMark(for: "", color: 0)
-  /// Once picked, the mark stays when the name changes afterwards.
-  @State private var picked = false
+  /// The mark picked by hand, which then stays as the name changes; none
+  /// while the mark follows the name.
+  @State private var pickedMark: GroupMarkValue?
   /// Made once for the group being made and sent with every try, so a
   /// retry after a lost answer makes no second group.
   @State private var requestID = UUID().uuidString.lowercased()
@@ -38,10 +38,7 @@ struct NewGroupPage: View {
           LimitedTextField(placeholder: "例：家族", text: $name, limit: TextLimits.groupName)
         }
         PageLink {
-          GroupMarkPage(name: name, mark: mark) { pick in
-            mark = pick
-            picked = true
-          }
+          GroupMarkPage(name: name, mark: mark) { pickedMark = $0 }
         } label: {
           LabeledContent("アイコン") {
             GroupMarkBadge(mark: mark)
@@ -66,11 +63,6 @@ struct NewGroupPage: View {
     .onChange(of: usualName, initial: true) { _, usual in
       if myName.isEmpty { myName = usual }
     }
-    .onChange(of: name, initial: true) { _, name in
-      if !picked {
-        mark = guessedMark(for: name, color: nextColor)
-      }
-    }
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         if making {
@@ -93,11 +85,13 @@ struct NewGroupPage: View {
     }
   }
 
-  /// The first color the user's groups do not use yet, as /design picks a
+  /// The mark picked, else the one the name and the user's groups give:
+  /// in the first color those groups do not use yet, as /design picks a
   /// new group's.
-  private var nextColor: Int {
-    let used = Set(groups.map(\.color))
-    return colors.marks.indices.first { !used.contains($0) } ?? groups.count % colors.marks.count
+  private var mark: GroupMarkValue {
+    pickedMark
+      ?? guessedMark(
+        for: name, color: nextColor(groups.map(\.color), slots: colors.marks.count))
   }
 
   private func make() {
@@ -117,8 +111,7 @@ struct NewGroupPage: View {
         return
       } catch is MarkPhotoGone {
         // Back to following the name, as before a photo was picked.
-        picked = false
-        mark = guessedMark(for: name, color: nextColor)
+        pickedMark = nil
         photoGone = true
       } catch {
         ReviewPrompt.troubled = true
