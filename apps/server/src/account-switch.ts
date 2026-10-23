@@ -5,6 +5,7 @@ import { verifyProviderIdToken } from "@better-auth/core/oauth2";
 // provider's ID token and the nonce it was asked with, as linking does,
 // which proves the person holds the account.
 import { Code, ConnectError } from "@connectrpc/connect";
+import { waitUntil } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -13,6 +14,7 @@ import { account } from "./db/auth-schema";
 import type { ProviderToken } from "./gen/pochical/v1/user_pb";
 import { getAuth } from "./session";
 import { betterAuthProvider } from "./sign-in-providers";
+import { eraseSupportThread } from "./slack";
 import { isSuspended } from "./suspension";
 
 /** A provider's account, as better-auth keys it. */
@@ -115,7 +117,10 @@ export const takeAccount = async (
   }
   if (other !== undefined) {
     await refuseSuspended(env, other);
-    await eraseUser(env, other);
+    const thread = await eraseUser(env, other);
+    if (thread !== undefined) {
+      waitUntil(eraseSupportThread(env, thread));
+    }
   }
   const auth = await getAuth().$context;
   await auth.internalAdapter.createAccount({ ...linking, userId: caller.id });

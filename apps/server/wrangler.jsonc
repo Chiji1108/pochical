@@ -107,6 +107,9 @@
       "simple": { "limit": 20, "period": 60 },
     },
   ],
+  // Each day at 3:00 in Japan, the reports whose year after an account's
+  // deletion is up are erased (src/report-retention.ts, SWEEP_EVERY_MS).
+  "triggers": { "crons": ["0 18 * * *"] },
   // The apps (and later the site's sign-in) reach the server here; the
   // site's own Worker calls it through a service binding instead.
   "routes": [{ "pattern": "api.pochical.app", "custom_domain": true }],
