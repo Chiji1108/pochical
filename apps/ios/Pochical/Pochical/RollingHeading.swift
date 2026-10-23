@@ -26,6 +26,10 @@ struct MonthName: View {
   let position: PagerPosition
   /// The month the page at an index shows.
   let monthAt: (Int) -> Day
+  /// シフトの期間: with one, a page is named by its days rather than its
+  /// month (spec/calendar.md, The shift period): its first large, 10/15,
+  /// its last after it as small as 月, 〜11/14.
+  var period = ShiftPeriod()
 
   var body: some View {
     let at = position.pages
@@ -35,11 +39,17 @@ struct MonthName: View {
     let month = monthAt(page)
     let coming = share > 0 ? monthAt(page + 1) : share < 0 ? monthAt(page - 1) : month
     VStack(alignment: .leading, spacing: 4) {
-      RollingText(text: String(month.year), coming: String(coming.year), share: share)
+      RollingText(text: year(month), coming: year(coming), share: share)
         .font(.system(size: 11))
         .foregroundStyle(colors.textTertiary)
       HStack(alignment: .firstTextBaseline, spacing: 4) {
-        if english {
+        if period.byPeriod {
+          // English months a letter at a time, as a month's name rolls.
+          rolling(first(month), coming: first(coming), share: share)
+            .font(.system(size: 36, weight: .semibold))
+          rolling(last(month), coming: last(coming), share: share)
+            .font(.system(size: 14, weight: .medium))
+        } else if english {
           // A lettered calendar's month, lower case and cut short: sep.
           RollingLetters(text: month.headingMonth, coming: coming.headingMonth, share: share)
             .font(.system(size: 36, weight: .semibold))
@@ -53,8 +63,37 @@ struct MonthName: View {
       .foregroundStyle(colors.textPrimary)
     }
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(month.yearMonthText)
+    .accessibilityLabel(period.byPeriod ? period.page(month).fullText : month.yearMonthText)
     .accessibilityAddTraits(.isHeader)
+  }
+
+  /// The year over the name, each of a period's when it runs into the
+  /// next.
+  private func year(_ month: Day) -> String {
+    let page = period.page(month)
+    return page.first.year == page.last.year
+      ? String(page.first.year) : "\(page.first.year) – \(page.last.year)"
+  }
+
+  @ViewBuilder private func rolling(_ text: String, coming: String, share: CGFloat) -> some View {
+    if english {
+      RollingLetters(text: text, coming: coming, share: share)
+    } else {
+      RollingText(text: text, coming: coming, share: share)
+    }
+  }
+
+  /// A period's day as the heading writes it: 10/15, or oct. 15.
+  private func dayName(_ day: Day) -> String {
+    english ? "\(day.headingMonth) \(day.day)" : day.slashText
+  }
+
+  private func first(_ month: Day) -> String {
+    dayName(period.page(month).first)
+  }
+
+  private func last(_ month: Day) -> String {
+    "\(english ? " – " : "〜")\(dayName(period.page(month).last))"
   }
 }
 

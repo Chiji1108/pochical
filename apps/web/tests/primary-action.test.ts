@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
 
+import { tryUrl } from "@pochical/prototype/lib/try-url";
+
 import { primaryAction } from "../src/lib/primary-action";
 
 test("asks to try the prototype on a phone until the App Store has the app", () => {
   expect(primaryAction(undefined)).toEqual({
-    href: "https://try.pochical.app/",
+    href: tryUrl,
     label: "自分のスマホで試す",
   });
 });

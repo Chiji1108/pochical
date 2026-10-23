@@ -23,6 +23,8 @@ internal interface SyncDao {
 
   @Query("DELETE FROM patterns WHERE id = :id") suspend fun deletePattern(id: String)
 
+  @Query("SELECT EXISTS(SELECT 1 FROM patterns WHERE id = :id)") suspend fun hasPattern(id: String): Boolean
+
   @Insert suspend fun insertPatternOrder(rows: List<PatternOrderRow>)
 
   @Query("DELETE FROM patternOrder") suspend fun deletePatternOrder()
@@ -37,6 +39,10 @@ internal interface SyncDao {
 
   @Query("SELECT coworkerId FROM coworkerOrder ORDER BY position")
   suspend fun coworkerOrder(): List<String>
+
+  @Query("SELECT patterns.id $PATTERNS_IN_ORDER") suspend fun patternIds(): List<String>
+
+  @Query("SELECT coworkers.id $COWORKERS_IN_ORDER") suspend fun coworkerIds(): List<String>
 
   @Insert suspend fun insertCoworkerOrder(rows: List<CoworkerOrderRow>)
 
@@ -150,5 +156,17 @@ internal interface SyncDao {
   @Upsert suspend fun upsert(cursor: GroupCursorRow)
 
   @Query("DELETE FROM groupCursors WHERE groupId = :groupId") suspend fun deleteGroupCursor(groupId: String)
+
+  @Query("DELETE FROM outbox") suspend fun deleteOutbox()
+
+  @Query("DELETE FROM groupMembers") suspend fun deleteAllMembers()
+
+  @Query("DELETE FROM memberDays") suspend fun deleteAllMemberDays()
+
+  @Query("DELETE FROM memberPatterns") suspend fun deleteAllMemberPatterns()
+
+  @Query("DELETE FROM memberOrders") suspend fun deleteAllMemberOrders()
+
+  @Query("DELETE FROM groupCursors") suspend fun deleteGroupCursors()
 
 }

@@ -20,7 +20,7 @@ apps/
 | --- | --- |
 | `mise run gen` | `proto/` からTypeScript・Swift・Kotlinのコードを生成 |
 | `mise run proto:lint` | `proto/` のlintと整形チェック |
-| `mise run server` | サーバーの開発環境を起動（先に `apps/server/.dev.vars` に `BETTER_AUTH_SECRET=<32文字以上のランダムな値>` と `BETTER_AUTH_URL=http://localhost:8787` を書く） |
+| `mise run server` | サーバーの開発環境を `http://localhost:8787` で起動（`-- --port <n>` で別のポート。先に `apps/server/.dev.vars` に `BETTER_AUTH_SECRET=<32文字以上のランダムな値>` を書く） |
 | `mise run server:test` | サーバーのテストをWorkersのランタイムで実行 |
 | `mise run api:try -- create [名前] [絵文字]` | 本番のサーバーで、匿名ユーザーとしてグループを作り招待リンクを表示する。続けて `join`・`preview`・`remake`、最後に `cleanup` で後片付け（`--local` でローカル） |
 | `bun run web` | Webの開発サーバーを起動 |

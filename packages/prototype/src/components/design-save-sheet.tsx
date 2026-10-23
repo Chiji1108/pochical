@@ -9,8 +9,14 @@ import {
 import { useContext, useState } from "react";
 
 import storeIcon from "../assets/icon-192.png?url";
-import { dateKey, formatMonth } from "../lib/design-days";
-import type { Schedule } from "../lib/design-days";
+import {
+  dateKey,
+  formatMonth,
+  formatPeriod,
+  isInPeriod,
+  periodOf,
+} from "../lib/design-days";
+import type { Period, Schedule } from "../lib/design-days";
 import { isDayOff } from "../lib/design-patterns";
 import type { Pattern, PatternBook } from "../lib/design-patterns";
 import { useSettings, withOffLook } from "../lib/design-settings-store";
@@ -20,7 +26,7 @@ import { DayCell } from "./design-day-cell";
 import { dayGrid, WeekdayRow } from "./design-day-grid";
 import { PageHeader } from "./design-header";
 import { List, ListRow, SwitchRow } from "./design-list";
-import { monthWithYearOf } from "./design-month-name";
+import { monthWithYearOf, periodTitleOf } from "./design-month-name";
 import { timeText } from "./design-pattern-editor";
 import { NameTabs, OffLookRows } from "./design-settings-style";
 import {
@@ -47,7 +53,7 @@ import {
   ScreenScroll,
   Section,
 } from "./design-ui";
-import { useWeek } from "./design-week";
+import { periodDatesFrom, useWeek } from "./design-week";
 import {
   CellNamesContext,
   noOffLooks,
@@ -371,6 +377,7 @@ export function SaveSheet({
   open,
   onOpenChange,
   month,
+  period,
   days,
   patterns,
   access = "granted",
@@ -381,7 +388,10 @@ export function SaveSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   month: Date;
-  // Each day of the month as it goes in.
+  // A シフトの期間's page, named by its days wherever the month would be
+  // (spec/calendar.md, The shift period).
+  period?: Period;
+  // Each day of the page as it goes in.
   days: CalendarDay[];
   // The person's patterns in their order, those of a job left too.
   patterns: Pattern[];
@@ -416,7 +426,7 @@ export function SaveSheet({
   const close = () => {
     change(false);
   };
-  const monthLabel = formatMonth(month);
+  const monthLabel = period ? formatPeriod(period) : formatMonth(month);
   const shown = shownOf(patterns, putting.chosen);
   // The shifts' events, and the memos' own where no shift's event is.
   const count = eventCount(
@@ -654,6 +664,7 @@ export function SaveSheet({
 
 export function ImagePreviewPage({
   month,
+  period,
   schedule,
   offPatterns,
   options,
@@ -661,6 +672,9 @@ export function ImagePreviewPage({
   onClose,
 }: {
   month: Date;
+  // A シフトの期間's page, which the picture holds rather than the month
+  // (spec/calendar.md, The shift period).
+  period?: Period;
   schedule: Schedule;
   // The patterns that count as off, those of a job left too, as an older
   // month holds them and 端末カレンダーに追加 offers them.
@@ -671,15 +685,18 @@ export function ImagePreviewPage({
 }) {
   const setNote = useContext(ToastContext);
   const weekTools = useWeek();
-  const dates = weekTools.monthDates(month);
+  const days = period ?? periodOf(month, 1);
+  const dates = periodDatesFrom(days, weekTools.weekStart);
   const scheme = useContext(ColorSchemeContext);
   const { theme } = useContext(ThemeContext);
   const shown = options.scheme ?? scheme;
   const alwaysDark = presetOf(theme).scheme === "dark";
   // The month alone, as the calendar heads it: a calendar of marks says
   // for itself that it is shifts. In English as 月と曜日 asks, like the
-  // weekdays under it.
-  const title = monthWithYearOf(month, weekTools.english);
+  // weekdays under it. A period by its days, with its year.
+  const title = period
+    ? periodTitleOf(period, weekTools.english)
+    : monthWithYearOf(month, weekTools.english);
   return (
     <Screen>
       <ScreenScroll>
@@ -701,7 +718,7 @@ export function ImagePreviewPage({
                 value={{ off: options.off, offs: options.offs ?? noOffLooks }}
               >
                 <figure
-                  aria-label={`${monthWithYearOf(month)}のシフトの画像`}
+                  aria-label={`${period ? periodTitleOf(period) : monthWithYearOf(month)}のシフトの画像`}
                   className={picture.frame}
                   inert
                   style={themeStyle(theme, shown)}
@@ -717,8 +734,15 @@ export function ImagePreviewPage({
                         entry={schedule[dateKey(date)]}
                         key={dateKey(date)}
                         onPress={() => undefined}
-                        outside={date.getMonth() !== month.getMonth()}
+                        outside={!isInPeriod(date, days)}
                         plain
+                        // Where the month turns inside a period, 11/1,
+                        // as on the page.
+                        withMonth={
+                          period !== undefined &&
+                          date.getDate() === 1 &&
+                          isInPeriod(date, days)
+                        }
                       />
                     ))}
                   </div>
