@@ -2,20 +2,11 @@
 // protocol.md, Deleting an account): a report made by or about someone
 // whose account was deleted goes, with its post in Slack, a year after the
 // deletion. Reports among people still here stay as they are.
-import {
-  and,
-  eq,
-  inArray,
-  isNotNull,
-  isNull,
-  lte,
-  notInArray,
-  or,
-} from "drizzle-orm";
+import { and, eq, inArray, lte, notInArray, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { deletedAccounts, reports } from "./db/schema";
-import { deleteReportPost } from "./slack";
+import { eraseReportPost } from "./slack";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -45,7 +36,8 @@ export const noteDeletedAccount = async (
 /**
  * Every report naming an account deleted long enough ago erased by `now`'s
  * sweep: those due before the next sweep comes, so none outlives its year.
- * A report's post in Slack goes first; one Slack does not delete yet keeps
+ * A report's post in Slack goes first, found there by its metadata when
+ * the report does not know it; one Slack does not find or delete yet keeps
  * its report, and its account's note, for the next sweep. Run again, it
  * finds nothing more to do.
  */
@@ -64,18 +56,22 @@ export const eraseDueReports = async (env: Env, now: Date): Promise<void> => {
     inArray(reports.reporterId, due),
     inArray(reports.targetId, due)
   );
-  const posted = await db
-    .select({ id: reports.id, slackTs: reports.slackTs })
+  const erasing = await db
+    .select({
+      createdAt: reports.createdAt,
+      id: reports.id,
+      slackTried: reports.slackTried,
+      slackTs: reports.slackTs,
+    })
     .from(reports)
-    .where(and(naming, isNotNull(reports.slackTs)));
-  for (const { id, slackTs } of posted) {
+    .where(naming);
+  for (const report of erasing) {
     // oxlint-disable-next-line no-await-in-loop -- Slack takes one at a time
-    if (slackTs !== null && (await deleteReportPost(env, slackTs))) {
+    if (await eraseReportPost(env, report)) {
       // oxlint-disable-next-line no-await-in-loop -- as above
-      await db.delete(reports).where(eq(reports.id, id));
+      await db.delete(reports).where(eq(reports.id, report.id));
     }
   }
-  await db.delete(reports).where(and(naming, isNull(reports.slackTs)));
   await db
     .delete(deletedAccounts)
     .where(

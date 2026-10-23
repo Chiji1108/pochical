@@ -83,34 +83,72 @@ const sweep = async (at: number): Promise<void> => {
   );
 };
 
+/** How Slack takes a post: whole, taken with its answer lost, or refused. */
+type Posting = "taken" | "lost" | "refused";
+
 /**
- * Pochical's people's Slack as the tests answer for it: each report
- * posted gets its own message, and `deleting` answers chat.delete.
+ * Pochical's people's Slack as the tests answer for it: each report posted
+ * as `posting` says gets its own message, with its metadata, which the
+ * channel's history gives back by when it was posted while `looking`;
+ * and `deleting` answers chat.delete.
  */
-const slack = (
-  deleting: () => Record<string, unknown> = () => ({ ok: true })
-) => {
+const slack = ({
+  deleting = () => ({ ok: true }),
+  looking = () => true,
+  posting = () => "taken",
+}: {
+  deleting?: () => Record<string, unknown>;
+  looking?: () => boolean;
+  posting?: () => Posting;
+} = {}) => {
+  const channel: { metadata: unknown; ts: string }[] = [];
   const posted: string[] = [];
   const deleted: string[] = [];
+  let tries = 0;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const request = new Request(input, init);
+    const url = new URL(request.url);
+    if (url.pathname.endsWith("/conversations.history")) {
+      if (!looking()) {
+        return Response.json({ error: "ratelimited", ok: false });
+      }
+      const oldest = Number(url.searchParams.get("oldest") ?? "0");
+      const latest = Number(url.searchParams.get("latest") ?? "Infinity");
+      return Response.json({
+        messages: channel.filter(
+          ({ ts }) => Number(ts) >= oldest && Number(ts) <= latest
+        ),
+        ok: true,
+      });
+    }
     const body: unknown = await request.json();
-    const ts =
-      typeof body === "object" && body !== null && "ts" in body
-        ? String(body.ts)
-        : "";
-    if (request.url.endsWith("/chat.delete")) {
+    const args = typeof body === "object" && body !== null ? body : {};
+    if (url.pathname.endsWith("/chat.delete")) {
+      const ts = "ts" in args ? String(args.ts) : "";
       const answer = deleting();
       if (answer.ok === true) {
         deleted.push(ts);
+        channel.splice(
+          channel.findIndex((message) => message.ts === ts),
+          1
+        );
       }
       return Response.json(answer);
     }
-    const made = `${posted.length + 1}.0`;
-    posted.push(made);
-    return Response.json({ ok: true, ts: made });
+    tries += 1;
+    const how = posting();
+    if (how === "refused") {
+      return Response.json({ error: "not_in_channel", ok: false });
+    }
+    const ts = `${Math.floor(Date.now() / 1000)}.${String(tries).padStart(6, "0")}`;
+    channel.push({ metadata: "metadata" in args ? args.metadata : null, ts });
+    posted.push(ts);
+    if (how === "lost") {
+      throw new TypeError("Network connection lost.");
+    }
+    return Response.json({ ok: true, ts });
   });
-  return { deleted, posted };
+  return { channel, deleted, posted, tries: () => tries };
 };
 
 describe("reports after an account is deleted", () => {
@@ -162,9 +200,10 @@ describe("reports after an account is deleted", () => {
   it("keeps a report until Slack deletes its post", async () => {
     const { groupId, guest, makerId } = await pair();
     let slackBusy = true;
-    const { deleted } = slack(() =>
-      slackBusy ? { error: "ratelimited", ok: false } : { ok: true }
-    );
+    const { deleted, posted } = slack({
+      deleting: () =>
+        slackBusy ? { error: "ratelimited", ok: false } : { ok: true },
+    });
     await expect(reportMember(groupId, guest, makerId)).resolves.toBe(200);
     await vi.waitFor(async () => {
       await expect(told(groupId)).resolves.toBe(1);
@@ -177,7 +216,45 @@ describe("reports after an account is deleted", () => {
 
     slackBusy = false;
     await sweep(due + DAY_MS);
-    expect([await kept(groupId), deleted]).toStrictEqual([[], ["1.0"]]);
+    expect([await kept(groupId), deleted]).toStrictEqual([[], posted]);
+  });
+
+  it("finds a post whose answer was lost before erasing its report, and erases one Slack refused", async () => {
+    const { groupId, guest, maker, makerId } = await pair();
+    const guestId = await userIdOf(guest);
+    const answers: Posting[] = ["lost", "refused"];
+    let slackLooks = false;
+    const { channel, deleted, posted, tries } = slack({
+      looking: () => slackLooks,
+      posting: () => answers.shift() ?? "taken",
+    });
+    expect([
+      await reportMember(groupId, guest, makerId),
+      await reportMember(groupId, maker, guestId),
+    ]).toStrictEqual([200, 200]);
+    await vi.waitFor(() => {
+      expect(tries()).toBe(2);
+    });
+    await expect(deleteAccount(guest)).resolves.toBe(200);
+    const due = Date.now() + YEAR_MS;
+
+    // Neither report knows its message; while Slack's history cannot be
+    // read, both wait, as either may be there.
+    await sweep(due);
+    const waiting = await kept(groupId);
+    expect({ kept: waiting.length, told: await told(groupId) }).toStrictEqual({
+      kept: 2,
+      told: 0,
+    });
+
+    slackLooks = true;
+    await sweep(due + DAY_MS);
+    expect({
+      channel,
+      deleted,
+      kept: await kept(groupId),
+      posted: posted.length,
+    }).toStrictEqual({ channel: [], deleted: posted, kept: [], posted: 1 });
   });
 
   it("takes no report of a line taken back, or of the app's notice", async () => {

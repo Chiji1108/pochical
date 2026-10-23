@@ -155,7 +155,7 @@ export const signedBySlack = async (
 };
 
 /** Whether this server posts to Slack: not on a computer without it. */
-const slackSetUp = (env: Env): boolean =>
+export const slackSetUp = (env: Env): boolean =>
   slackSecret(env.SLACK_BOT_TOKEN) !== "" &&
   slackSecret(env.SLACK_CHANNEL_ID) !== "";
 
@@ -441,16 +441,18 @@ const LOOK_PAGE = 200;
 /**
  * The message `matches` finds in the channel (conversations.history) or in
  * `thread` (conversations.replies), posted since `since` or a little
- * before; undefined when there is none. For a retry after Slack's answer
- * to a post was lost, which may have been taken all the same: reading
- * needs channels:history or groups:history, which the message event the
- * app takes replies by needs too.
+ * before, and by `until` or a little after when given; undefined when
+ * there is none. For a retry after Slack's answer to a post was lost,
+ * which may have been taken all the same: reading needs channels:history
+ * or groups:history, which the message event the app takes replies by
+ * needs too.
  */
 const findPosted = async (
   env: Env,
   since: Date,
   thread: string | null,
-  matches: (message: Record<string, unknown>) => boolean
+  matches: (message: Record<string, unknown>) => boolean,
+  until?: Date
 ): Promise<string | undefined> => {
   const method =
     thread === null ? "conversations.history" : "conversations.replies";
@@ -464,10 +466,13 @@ const findPosted = async (
         include_all_metadata: true,
         limit: LOOK_PAGE,
         oldest: (since.getTime() / 1000 - CLOCK_SKEW_S).toFixed(6),
+        ...(until === undefined
+          ? {}
+          : { latest: (until.getTime() / 1000 + CLOCK_SKEW_S).toFixed(6) }),
         ...(thread === null ? {} : { ts: thread }),
         ...(cursor === "" ? {} : { cursor }),
       },
-      "a look for a line",
+      "a look for a message",
       true
     );
     const messages: unknown[] = Array.isArray(page.messages)
@@ -917,13 +922,40 @@ const reportLinesOf = (context: string): string[] => {
 };
 
 /**
- * A member's report, as the admin site keeps it: why, the group, who
+ * The metadata a report's message carries, as a relay post's does: the
+ * report it is, by which the message is found again should Slack's answer
+ * to the post be lost.
+ */
+const REPORT_EVENT = "pochical_report";
+
+const isReportMessage =
+  (id: string) =>
+  (message: Record<string, unknown>): boolean => {
+    const { metadata } = message;
+    return (
+      isRecord(metadata) &&
+      metadata.event_type === REPORT_EVENT &&
+      isRecord(metadata.event_payload) &&
+      metadata.event_payload.report_id === id
+    );
+  };
+
+/**
+ * How long after a report is made its message may be posted: the post is
+ * tried in the report's own request, which the runtime ends 30 seconds
+ * after answering it (waitUntil).
+ */
+const REPORT_POST_WITHIN_MS = 30_000;
+
+/**
+ * A member's report `id`, as the admin site keeps it: why, the group, who
  * reported whom, and for a line, it and the few around it, the reported
  * one marked; with the way to the admin site. The message posted, if
- * Slack took it.
+ * Slack took it and said which.
  */
 export const tellStaffOfReport = async (
   env: Env,
+  id: string,
   report: {
     why: string;
     groupName: string;
@@ -935,6 +967,7 @@ export const tellStaffOfReport = async (
   const lines = reportLinesOf(report.context);
   const what = lines.length === 0 ? "メンバーを通報" : "メッセージを通報";
   const posted = await slackCall(env, "chat.postMessage", {
+    metadata: { event_payload: { report_id: id }, event_type: REPORT_EVENT },
     text: [
       `新しい通報：${REASON_WORDS[report.why] ?? report.why}（${what}）`,
       `グループ：${toSlackText(report.groupName)}`,
@@ -947,13 +980,45 @@ export const tellStaffOfReport = async (
 };
 
 /**
- * A report's message in Slack deleted, as the report goes: whether it is
- * gone, as it is once Slack no longer has it.
+ * Whether a report's message is gone from Slack, as the report goes:
+ * deleted by the ts the report kept; else, for a report whose post was
+ * tried, found first by its metadata among the messages posted while its
+ * request ran, and deleted, a report with none found having none; and for
+ * one never to be posted, none to begin with. False while Slack does not
+ * answer or delete it, for the next sweep to try again.
  */
-export const deleteReportPost = async (
+export const eraseReportPost = async (
   env: Env,
-  ts: string
+  report: {
+    id: string;
+    createdAt: Date;
+    slackTried: boolean;
+    slackTs: string | null;
+  }
 ): Promise<boolean> => {
+  if (!report.slackTried) {
+    return true;
+  }
+  let ts = report.slackTs ?? undefined;
+  if (ts === undefined) {
+    try {
+      ts = await findPosted(
+        env,
+        report.createdAt,
+        null,
+        isReportMessage(report.id),
+        new Date(report.createdAt.getTime() + REPORT_POST_WITHIN_MS)
+      );
+    } catch (error) {
+      if (error instanceof SlackRefusedError) {
+        return false;
+      }
+      throw error;
+    }
+    if (ts === undefined) {
+      return true;
+    }
+  }
   const answer = await askSlack(env, "chat.delete", { ts });
   return "taken" in answer || answer.refused.why === "message_not_found";
 };

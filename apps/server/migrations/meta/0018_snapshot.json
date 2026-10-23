@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ff49ff2d-9b60-41ad-b69b-08cdf7d9cb8b",
+  "id": "a7431418-c06b-4521-9934-2ea6dcc364d9",
   "prevId": "1ee8f46b-28c0-43e7-ba4c-678a8973fcc0",
   "tables": {
     "admin_actions": {
@@ -255,6 +255,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "slack_tried": {
+          "name": "slack_tried",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
         },
         "slack_ts": {
           "name": "slack_ts",

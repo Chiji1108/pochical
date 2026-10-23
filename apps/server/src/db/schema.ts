@@ -44,8 +44,16 @@ export const reports = sqliteTable(
     reporterId: text("reporter_id").notNull(),
     // The line reported, when it is one: its place in its chat.
     seq: integer(),
-    // The message it was posted as in Pochical's people's Slack channel,
-    // deleted with it; none until posted, or with no Slack.
+    // Whether it was to be posted in Pochical's people's Slack channel, as
+    // it is when Slack is set up, noted with the report before the post is
+    // tried: a message of it may then be in Slack, which goes with it
+    // (slack.ts, eraseReportPost). A row that does not say counts as
+    // tried, so no message is ever left behind as never posted.
+    slackTried: integer("slack_tried", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    // That message, once Slack said which it is: none until then, so one
+    // whose answer was lost is found by its metadata instead.
     slackTs: text("slack_ts"),
     // open while it waits for Pochical's people; acted once they acted on
     // it, dismissed once they found nothing to act on.
