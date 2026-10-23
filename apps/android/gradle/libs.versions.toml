@@ -1,4 +1,6 @@
 [versions]
+# The JDK every module compiles with and targets, mise.toml's java.
+jvm = "21"
 compileSdk = "37"
 minSdk = "29"
 agp = "9.4.1"
@@ -14,6 +16,7 @@ navigation3 = "1.2.0"
 metro = "1.4.5"
 kotlinx-serialization = "1.12.0"
 junit = "4.13.2"
+lifecycle = "2.10.0"
 
 [libraries]
 protobuf-javalite = { module = "com.google.protobuf:protobuf-javalite", version.ref = "protobuf" }
@@ -31,6 +34,7 @@ navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref =
 metrox-android = { module = "dev.zacsweers.metro:metrox-android", version.ref = "metro" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
 junit = { module = "junit:junit", version.ref = "junit" }
+lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -27,24 +27,25 @@ fun RootScreen(navigator: RootNavigator) {
     popTransitionSpec = { slideInHorizontally { -it / 4 } togetherWith slideOutHorizontally { it } },
   ) { route ->
     when (route) {
-      Tabs -> NavEntry(route) { TabsScreen(navigator) }
-      RootPage.Appearance -> NavEntry(route) { AppearancePage(onBack = navigator::back) }
+      Tabs -> NavEntry(route) { TabsScreen(navigator, rememberPageNavigation(navigator)) }
+      RootPage.Appearance ->
+        NavEntry(route) { AppearancePage(onBack = rememberPageNavigation(navigator)::back) }
     }
   }
 }
 
 /** The tab shown, over the tab bar, each tab keeping what it showed as another is gone to. */
 @Composable
-private fun TabsScreen(navigator: RootNavigator) {
+private fun TabsScreen(navigator: RootNavigator, navigation: PageNavigation) {
   val tabStates = rememberSaveableStateHolder()
   BackHandler(enabled = navigator.backGoesToFirstTab, onBack = navigator::back)
   NavigationSuiteScaffold(
     navigationSuiteItems = {
       RootTab.entries.forEach { tab ->
-        val selected = tab == navigator.tab
+        val selected = tab == navigation.tab
         item(
           selected = selected,
-          onClick = { navigator.select(tab) },
+          onClick = { navigation.select(tab) },
           icon = {
             Icon(painterResource(if (selected) tab.selectedIcon else tab.icon), contentDescription = null)
           },
@@ -53,11 +54,11 @@ private fun TabsScreen(navigator: RootNavigator) {
       }
     },
   ) {
-    tabStates.SaveableStateProvider(navigator.tab) {
-      when (navigator.tab) {
+    tabStates.SaveableStateProvider(navigation.tab) {
+      when (navigation.tab) {
         RootTab.Calendar -> CalendarScreen()
         RootTab.Groups -> GroupsScreen()
-        RootTab.Settings -> SettingsScreen(open = navigator::open)
+        RootTab.Settings -> SettingsScreen(open = navigation::open)
       }
     }
   }

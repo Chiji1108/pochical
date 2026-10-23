@@ -28,6 +28,11 @@ dependencies {
   implementation(libs.navigation3.ui)
   implementation(libs.metrox.android)
   implementation(libs.kotlinx.serialization.core)
+  implementation(libs.lifecycle.runtime.compose)
 
   testImplementation(libs.junit)
+}
+
+kotlin {
+  jvmToolchain(libs.versions.jvm.get().toInt())
 }

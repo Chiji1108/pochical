@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
@@ -80,6 +82,33 @@ class RootNavigator(private val pages: NavBackStack<RootPage>, tab: MutableState
   fun back() {
     if (pages.isNotEmpty()) pages.removeAt(pages.lastIndex) else tab = RootTab.entries.first()
   }
+}
+
+/**
+ * The navigation as a page asks it: what the page asks while it is not
+ * settled in front, coming or going, is dropped, so a second tap while a
+ * page comes cannot open it twice (Navigation 3's dropUnlessResumed).
+ */
+class PageNavigation(private val navigator: RootNavigator, private val lifecycle: Lifecycle) {
+  val tab: RootTab
+    get() = navigator.tab
+
+  fun open(page: RootPage) = whenSettled { navigator.open(page) }
+
+  fun select(tab: RootTab) = whenSettled { navigator.select(tab) }
+
+  fun back() = whenSettled { navigator.back() }
+
+  private fun whenSettled(action: () -> Unit) {
+    if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) action()
+  }
+}
+
+/** The navigation as the page this is in asks it. */
+@Composable
+fun rememberPageNavigation(navigator: RootNavigator): PageNavigation {
+  val lifecycle = LocalLifecycleOwner.current.lifecycle
+  return remember(navigator, lifecycle) { PageNavigation(navigator, lifecycle) }
 }
 
 /** A navigator kept across a configuration change and the process's death. */
