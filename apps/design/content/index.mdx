@@ -1,0 +1,42 @@
+---
+title: デザイン資料
+description: 毎日のシフトに、やさしい余白。見るときは、すっきり。入力は、ポチッと。
+---
+
+import { demoUrl, tryUrl } from "@pochical/showcase/lib/app-urls";
+
+ポチカルの画面を作るときの手本です。部品も画面もアプリの本物のコンポーネントで描いているので、コードと食い違いません。iOS と Android のアプリは、ここを見て同じものを作ります。
+
+## 資料
+
+<Cards>
+  <Card href="/design/colors" title="カラーパレット">
+    役割ごとの色、トーンごとのテーマ、シフトの色の見分けやすさ。
+  </Card>
+  <Card href="/design/components" title="部品の棚卸し">
+    ボタン、行、切り替え、シートなどの部品を役割ごとに。同じ役割の重複も見えます。
+  </Card>
+  <Card href="/design/flows" title="画面遷移図">
+    はじめての設定、空いた日の確認、設定の画面の流れと分かれ道。
+  </Card>
+  <Card href="/design/states" title="状態の一覧">
+    月の埋まり方、6段の月 × パターンの数、休みの見せ方、テーマとライト・ダーク。
+  </Card>
+  <Card href="/design/widgets" title="ウィジェット">
+    ホーム画面とロック画面のウィジェット。サイズごとに、ライト・ダーク・色合い・クリアで。
+  </Card>
+  <Card href="/design/assets" title="素材">
+    アプリアイコンと、元になるプードルの絵、サイトの画像。
+  </Card>
+</Cards>
+
+## 触って試す
+
+<Cards>
+  <Card href={demoUrl("/demo")} title="デモ">
+    電話1台で、ポチカルを実際に触れます。比べる案もここで切り替えます。
+  </Card>
+  <Card href={tryUrl("/")} title="自分のスマホで試す">
+    スマホのホーム画面に置いて、自分の予定で使えます。
+  </Card>
+</Cards>

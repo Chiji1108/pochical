@@ -1,0 +1,17 @@
+{
+  "title": "デザイン資料",
+  "pages": [
+    "index",
+    "---基本---",
+    "design/colors",
+    "---部品---",
+    "...design/components",
+    "---画面---",
+    "design/flows",
+    "design/states",
+    "---ウィジェット---",
+    "...design/widgets",
+    "---素材---",
+    "design/assets"
+  ]
+}

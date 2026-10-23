@@ -5,6 +5,6 @@ export const Route = createFileRoute("/design")({
   beforeLoad: () => {
     // TanStack Router redirects by throwing what redirect() returns.
     // oxlint-disable-next-line typescript/only-throw-error
-    throw redirect({ to: "/" });
+    throw redirect({ params: { _splat: "" }, to: "/$" });
   },
 });

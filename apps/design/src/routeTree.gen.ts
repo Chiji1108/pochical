@@ -9,18 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as DesignRouteImport } from './routes/design'
-import { Route as DesignAssetsRouteImport } from './routes/design_.assets'
-import { Route as DesignColorsRouteImport } from './routes/design_.colors'
-import { Route as DesignComponentsRouteImport } from './routes/design_.components'
-import { Route as DesignFlowsRouteImport } from './routes/design_.flows'
-import { Route as DesignStatesRouteImport } from './routes/design_.states'
-import { Route as DesignWidgetsRouteImport } from './routes/design_.widgets'
+import { Route as ApiSearchRouteImport } from './routes/api.search'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DesignRoute = DesignRouteImport.update({
@@ -28,119 +23,49 @@ const DesignRoute = DesignRouteImport.update({
   path: '/design',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DesignAssetsRoute = DesignAssetsRouteImport.update({
-  id: '/design_/assets',
-  path: '/design/assets',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignColorsRoute = DesignColorsRouteImport.update({
-  id: '/design_/colors',
-  path: '/design/colors',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignComponentsRoute = DesignComponentsRouteImport.update({
-  id: '/design_/components',
-  path: '/design/components',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignFlowsRoute = DesignFlowsRouteImport.update({
-  id: '/design_/flows',
-  path: '/design/flows',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignStatesRoute = DesignStatesRouteImport.update({
-  id: '/design_/states',
-  path: '/design/states',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DesignWidgetsRoute = DesignWidgetsRouteImport.update({
-  id: '/design_/widgets',
-  path: '/design/widgets',
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/design': typeof DesignRoute
-  '/design/assets': typeof DesignAssetsRoute
-  '/design/colors': typeof DesignColorsRoute
-  '/design/components': typeof DesignComponentsRoute
-  '/design/flows': typeof DesignFlowsRoute
-  '/design/states': typeof DesignStatesRoute
-  '/design/widgets': typeof DesignWidgetsRoute
+  '/api/search': typeof ApiSearchRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/design': typeof DesignRoute
-  '/design/assets': typeof DesignAssetsRoute
-  '/design/colors': typeof DesignColorsRoute
-  '/design/components': typeof DesignComponentsRoute
-  '/design/flows': typeof DesignFlowsRoute
-  '/design/states': typeof DesignStatesRoute
-  '/design/widgets': typeof DesignWidgetsRoute
+  '/api/search': typeof ApiSearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/$': typeof SplatRoute
   '/design': typeof DesignRoute
-  '/design_/assets': typeof DesignAssetsRoute
-  '/design_/colors': typeof DesignColorsRoute
-  '/design_/components': typeof DesignComponentsRoute
-  '/design_/flows': typeof DesignFlowsRoute
-  '/design_/states': typeof DesignStatesRoute
-  '/design_/widgets': typeof DesignWidgetsRoute
+  '/api/search': typeof ApiSearchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/design'
-    | '/design/assets'
-    | '/design/colors'
-    | '/design/components'
-    | '/design/flows'
-    | '/design/states'
-    | '/design/widgets'
+  fullPaths: '/$' | '/design' | '/api/search'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/design'
-    | '/design/assets'
-    | '/design/colors'
-    | '/design/components'
-    | '/design/flows'
-    | '/design/states'
-    | '/design/widgets'
-  id:
-    | '__root__'
-    | '/'
-    | '/design'
-    | '/design_/assets'
-    | '/design_/colors'
-    | '/design_/components'
-    | '/design_/flows'
-    | '/design_/states'
-    | '/design_/widgets'
+  to: '/$' | '/design' | '/api/search'
+  id: '__root__' | '/$' | '/design' | '/api/search'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
   DesignRoute: typeof DesignRoute
-  DesignAssetsRoute: typeof DesignAssetsRoute
-  DesignColorsRoute: typeof DesignColorsRoute
-  DesignComponentsRoute: typeof DesignComponentsRoute
-  DesignFlowsRoute: typeof DesignFlowsRoute
-  DesignStatesRoute: typeof DesignStatesRoute
-  DesignWidgetsRoute: typeof DesignWidgetsRoute
+  ApiSearchRoute: typeof ApiSearchRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/design': {
@@ -150,60 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DesignRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/design_/assets': {
-      id: '/design_/assets'
-      path: '/design/assets'
-      fullPath: '/design/assets'
-      preLoaderRoute: typeof DesignAssetsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/colors': {
-      id: '/design_/colors'
-      path: '/design/colors'
-      fullPath: '/design/colors'
-      preLoaderRoute: typeof DesignColorsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/components': {
-      id: '/design_/components'
-      path: '/design/components'
-      fullPath: '/design/components'
-      preLoaderRoute: typeof DesignComponentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/flows': {
-      id: '/design_/flows'
-      path: '/design/flows'
-      fullPath: '/design/flows'
-      preLoaderRoute: typeof DesignFlowsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/states': {
-      id: '/design_/states'
-      path: '/design/states'
-      fullPath: '/design/states'
-      preLoaderRoute: typeof DesignStatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/design_/widgets': {
-      id: '/design_/widgets'
-      path: '/design/widgets'
-      fullPath: '/design/widgets'
-      preLoaderRoute: typeof DesignWidgetsRouteImport
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
   DesignRoute: DesignRoute,
-  DesignAssetsRoute: DesignAssetsRoute,
-  DesignColorsRoute: DesignColorsRoute,
-  DesignComponentsRoute: DesignComponentsRoute,
-  DesignFlowsRoute: DesignFlowsRoute,
-  DesignStatesRoute: DesignStatesRoute,
-  DesignWidgetsRoute: DesignWidgetsRoute,
+  ApiSearchRoute: ApiSearchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
