@@ -287,6 +287,8 @@ const welcomed = Promise.withResolvers<undefined>();
 const caughtUp = Promise.withResolvers<undefined>();
 // The latest line of each words, by its seq.
 const seqOfWords = new Map<string, bigint>();
+// Who chose each emoji on each line, by its seq, as the group last sent it.
+const reactionsOf = new Map<bigint, Map<string, string[]>>();
 // The sends the group took as lines.
 const taken = new Set<string>();
 socket.addEventListener("open", () => {
@@ -311,10 +313,14 @@ socket.addEventListener("message", (event) => {
     for (const { kind } of frame.kind.value.changes) {
       if (kind.case === "chatLine") {
         taken.add(kind.value.opId);
-        const { content, seq } = kind.value;
+        const { content, reactions, seq } = kind.value;
         if (content?.kind.case === "words") {
           seqOfWords.set(content.kind.value.text, seq);
         }
+        reactionsOf.set(
+          seq,
+          new Map(reactions.map(({ emoji, userIds }) => [emoji, userIds]))
+        );
       }
     }
   } else if (frame.kind.case === "acked") {
@@ -329,6 +335,10 @@ socket.addEventListener("error", () => fail("socket: could not connect"));
 await welcomed.promise;
 
 if (reaction !== undefined) {
+  // As the sends' answer below: the group stopping answering fails.
+  const unanswered = setTimeout(() => {
+    fail("no answer from the group");
+  }, ACK_TIMEOUT_MS);
   socket.send(
     toBinary(
       ClientFrameSchema,
@@ -370,7 +380,13 @@ if (reaction !== undefined) {
     )
   );
   await answered.promise;
+  clearTimeout(unanswered);
   socket.close();
+  // The group answers every edit, taken or not: the line it sent again
+  // says whether the reaction is on it.
+  if (!(reactionsOf.get(seq)?.get(reaction)?.includes(userId) ?? false)) {
+    fail(`refused by the group: ${reaction} on ${reactTo}`);
+  }
   console.log(`${name}として${reactTo}に${reaction}を付けました`);
   process.exit(0);
 }
