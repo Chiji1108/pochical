@@ -29,7 +29,7 @@ import type { LookField } from "./design-look-editor";
 import { inChipOrder, ReadyPatternChips, toggled } from "./design-ready-chips";
 import { ConfirmDialog } from "./design-sheet";
 import { SortableList } from "./design-sortable-list";
-import { Button, DestructiveButton, Note, Section } from "./design-ui";
+import { DestructiveButton, Note, Section } from "./design-ui";
 import {
   guessLook,
   MarkGlyph,
@@ -160,15 +160,6 @@ export function PatternsPage({
   const remove = (id: string) => {
     setItems((previous) => patternsWithout(previous, id));
   };
-  // No longer used, or used again: archived, a pattern keeps its days'
-  // marks but leaves the keys, and goes under 使わなくなったパターン.
-  const setArchived = (id: string, archived: boolean) => {
-    setItems((previous) =>
-      previous.map((item) =>
-        item.id === id ? { ...item, archived: archived || undefined } : item
-      )
-    );
-  };
   const used = items.filter((item) => item.archived !== true);
   const archived = items.filter((item) => item.archived === true);
 
@@ -184,10 +175,6 @@ export function PatternsPage({
         }}
         onDelete={() => {
           remove(editing.id);
-          setEditing(undefined);
-        }}
-        onArchive={(on) => {
-          setArchived(editing.id, on);
           setEditing(undefined);
         }}
         onSave={(draft) => {
@@ -439,7 +426,6 @@ function PatternEditor({
   onBack,
   onSave,
   onDelete,
-  onArchive,
 }: {
   initial: PatternDraft;
   // How many days use this pattern.
@@ -451,8 +437,6 @@ function PatternEditor({
   onBack: () => void;
   onSave: (draft: PatternDraft) => void;
   onDelete: () => void;
-  // Archives it, or brings it back into use.
-  onArchive: (archived: boolean) => void;
 }) {
   const style = useContext(ShiftMarkStyleContext);
   const [draft, setDraft] = useState(initial);
@@ -479,6 +463,9 @@ function PatternEditor({
     });
   };
   const canSave = draft.name.trim() !== "";
+  // A repeating order in use or to come puts it on days, so it stays in
+  // use; one already archived may still come back.
+  const blocksArchiving = inOrder && initial.archived !== true;
   // Another pattern that style could not tell apart from this one.
   const lookalike = (tab: ShiftMarkStyle) =>
     others.find((other) => lookAlike(other, draft, tab));
@@ -618,7 +605,27 @@ function PatternEditor({
             }
             valueClassName={markValue}
           />
+          {/* A state undone as easily, so a switch saved with the rest, as
+              iOS's; a new pattern is in use. Archived, it keeps its days'
+              marks but leaves the keys. */}
+          {!isNew && (
+            <SwitchRow
+              checked={draft.archived !== true}
+              disabled={blocksArchiving}
+              label="入力に出す"
+              onChange={(checked) => {
+                setDraft({ ...draft, archived: checked ? undefined : true });
+              }}
+            />
+          )}
         </List>
+        {!isNew && (
+          <Note>
+            {blocksArchiving
+              ? "繰り返しの並びに入っているので、オフにできません。先に「繰り返し」で並びを変えてください。"
+              : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。"}
+          </Note>
+        )}
       </Section>
       <Section title="見た目">
         <List>
@@ -636,33 +643,9 @@ function PatternEditor({
           />
         </List>
       </Section>
-      {!isNew && initial.archived === true && (
-        <Button
-          className={archiveButton}
-          onClick={() => {
-            onArchive(false);
-          }}
-          size="small"
-          variant="text"
-        >
-          また使う
-        </Button>
-      )}
-      {!(isNew || inOrder || initial.archived === true) && (
-        <Button
-          className={archiveButton}
-          onClick={() => {
-            onArchive(true);
-          }}
-          size="small"
-          variant="text"
-        >
-          使わないパターンにする
-        </Button>
-      )}
       {!isNew && inOrder && (
         <Note>
-          繰り返しの並びに入っているので、削除したり使わないパターンにしたりできません。先に「繰り返し」で並びを変えてください。
+          繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。
         </Note>
       )}
       {!(isNew || inOrder) && (
@@ -682,7 +665,7 @@ function PatternEditor({
       {confirming && (
         <ConfirmDialog
           action="削除"
-          message={`${days}日の予定に入っている「${initial.name}」も一緒に消えます。元に戻せません。日の印を残すなら「使わないパターンにする」を選んでください。`}
+          message={`${days}日の予定に入っている「${initial.name}」も一緒に消えます。元に戻せません。日の印を残すなら「入力に出す」をオフにしてください。`}
           onCancel={() => {
             setConfirming(false);
           }}
@@ -696,9 +679,6 @@ function PatternEditor({
     </>
   );
 }
-
-// Archiving, a quiet action over 削除, centered as it is.
-const archiveButton = css({ alignSelf: "center" });
 
 // The value of なし among the patterns' ids.
 const noNextDay = "none";

@@ -376,6 +376,8 @@ const toggle = {
   }),
   track: css({
     _checked: { bg: "accent.switch" },
+    // As the system dims a switch it cannot turn.
+    _disabled: { cursor: "default", opacity: 0.5 },
     _focusVisible: {
       outline: "2px solid token(colors.accent.default)",
       outlineOffset: "2px",
@@ -441,10 +443,12 @@ export function SwitchRow({
   swatch,
   leading,
   className,
+  disabled,
 }: {
   label: ReactNode;
   detail?: ReactNode;
   checked: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
   swatch?: string;
   // Before the label, as a ListRow's: a group's mark.
@@ -460,6 +464,7 @@ export function SwitchRow({
         className
       )}
       data-list-row=""
+      disabled={disabled}
       onCheckedChange={(details) => {
         onChange(details.checked);
       }}

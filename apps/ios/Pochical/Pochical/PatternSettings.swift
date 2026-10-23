@@ -237,7 +237,8 @@ private enum LookPart: Hashable {
 }
 
 /// パターンを追加 or パターンを編集: the name, the time, whether it counts as
-/// a day off, the next day's pattern and the mark; deleting at the foot.
+/// a day off, the next day's pattern, whether it is still in use and the
+/// mark; deleting at the foot.
 struct PatternEditor: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
@@ -294,7 +295,7 @@ struct PatternEditor: View {
       }
       .settingsRows()
 
-      Section("基本") {
+      Section {
         LabeledContent("名前") {
           LimitedTextField(
             placeholder: "例：日勤", text: nameBinding, limit: TextLimits.shiftName)
@@ -329,6 +330,21 @@ struct PatternEditor: View {
             }
           }
         }
+        // A state undone as easily, so a switch saved with the rest, as
+        // iOS's; a new pattern is in use.
+        if !isNew {
+          Toggle("入力に出す", isOn: inUse)
+            .disabled(blocksArchiving)
+        }
+      } header: {
+        Text("基本")
+      } footer: {
+        if !isNew {
+          Text(
+            blocksArchiving
+              ? "繰り返しの並びに入っているので、オフにできません。先に「繰り返し」で並びを変えてください。"
+              : "オフにすると、ポチポチ入力のボタンに出なくなります。入っている日には、そのまま出ます。")
+        }
       }
       .settingsRows()
 
@@ -345,18 +361,8 @@ struct PatternEditor: View {
 
       if !isNew {
         Section {
-          if initial.archived {
-            Button("また使う") { setArchived(false) }
-              .frame(maxWidth: .infinity)
-              .settingsRows()
-          } else if !repeating {
-            // Its days keep their marks; only its key goes.
-            Button("使わないパターンにする") { setArchived(true) }
-              .frame(maxWidth: .infinity)
-              .settingsRows()
-          }
           if repeating {
-            Text("繰り返しの並びに入っているので、削除したり使わないパターンにしたりできません。先に「繰り返し」で並びを変えてください。")
+            Text("繰り返しの並びに入っているので、削除できません。先に「繰り返し」で並びを変えてください。")
               .font(.footnote)
               .foregroundStyle(colors.textSecondary)
               .padding(.horizontal, 16)
@@ -390,7 +396,7 @@ struct PatternEditor: View {
       Button("削除", role: .destructive) { delete() }
     } message: { days in
       Text(
-        "\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。日の印を残すなら「使わないパターンにする」を選んでください。"
+        "\(days)日の予定に入っている「\(initial.name)」も一緒に消えます。元に戻せません。日の印を残すなら「入力に出す」をオフにしてください。"
       )
     }
   }
@@ -402,6 +408,17 @@ struct PatternEditor: View {
     pattern.name = draft.name.trimmingCharacters(in: .whitespaces)
     pattern.time = allDay ? nil : ShiftTime(start: start, end: end)
     return pattern
+  }
+
+  /// 入力に出す: whether it is in use, archived when off.
+  private var inUse: Binding<Bool> {
+    Binding { !draft.archived } set: { draft.archived = !$0 }
+  }
+
+  /// A repeating order in use or to come puts it on days, so it stays in
+  /// use; one already archived may still come back.
+  private var blocksArchiving: Bool {
+    repeating && !initial.archived
   }
 
   /// The name, its mark's parts not picked by hand guessed from it.
@@ -432,13 +449,6 @@ struct PatternEditor: View {
     } else {
       deleting = days
     }
-  }
-
-  /// No longer used, or used again: as it is saved, its days untouched.
-  private func setArchived(_ archived: Bool) {
-    var pattern = initial
-    pattern.archived = archived
-    if write({ try OwnValues.save(pattern, now: nowMs(), in: $0) }) { dismiss() }
   }
 
   private func delete() {
