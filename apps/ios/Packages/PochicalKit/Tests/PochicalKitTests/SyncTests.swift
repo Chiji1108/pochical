@@ -13,7 +13,22 @@ struct ReconnectVectors: Decodable, Sendable {
     let expected: Int
   }
 
+  struct DefaultNetworkCase: VectorCase {
+    let name: String
+    let from: String?
+    let steps: [String?]
+    let expected: [String]
+  }
+
   let waitMost: [WaitMost]
+  let defaultNetwork: [DefaultNetworkCase]
+}
+
+@Test(arguments: try vectors("reconnect", as: ReconnectVectors.self).defaultNetwork)
+func defaultNetwork(_ vector: ReconnectVectors.DefaultNetworkCase) {
+  var network = DefaultNetwork(now: vector.from)
+  let heard = vector.steps.compactMap { network.becomes($0) }.map { "\($0)" }
+  #expect(heard == vector.expected)
 }
 
 @Test(arguments: try vectors("reconnect", as: ReconnectVectors.self).waitMost)

@@ -4,6 +4,7 @@ import app.pochical.design.SyncLimits
 import app.pochical.design.SyncSocket
 import app.pochical.v1.Change
 import app.pochical.v1.ClientFrame
+import app.pochical.v1.DayField
 import app.pochical.v1.ServerError
 import app.pochical.v1.ServerFrame
 import app.pochical.v1.SignInProvider
@@ -11,6 +12,8 @@ import app.pochical.v1.getMeResponse
 import app.pochical.v1.acked
 import app.pochical.v1.change
 import app.pochical.v1.changes
+import app.pochical.v1.dayValue
+import app.pochical.v1.hlc
 import app.pochical.v1.pong
 import app.pochical.v1.serverError
 import app.pochical.v1.serverFrame
@@ -105,6 +108,28 @@ class FakeServer : AutoCloseable {
           }
       }
     server.start()
+  }
+
+  /**
+   * Notes on [dates] from another device, each sent on a frame of its own to every socket open, as
+   * that device's edits would come one by one.
+   */
+  @Synchronized
+  fun noteElsewhere(dates: List<String>) {
+    for (date in dates) {
+      cursor += 1
+      val taken = change {
+        cursor = this@FakeServer.cursor
+        day = dayValue {
+          this.date = date
+          field = DayField.DAY_FIELD_NOTE
+          value = "ほかの端末から"
+          hlc = hlc { physicalMs = System.currentTimeMillis(); deviceId = "other" }
+        }
+      }
+      values[taken.valueKey!!] = taken
+      for (each in open) each.send(serverFrame { changes = changes { changes += taken } })
+    }
   }
 
   /** The value the DO holds for the day's field, as it would send it. */

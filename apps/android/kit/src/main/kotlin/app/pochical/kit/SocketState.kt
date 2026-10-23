@@ -55,8 +55,11 @@ sealed interface SocketEvent {
   /** Asked to be open (the app came to the front, the group was opened): try at once, the count started again. */
   data object Start : SocketEvent
 
-  /** The network came back after it went: try at once, the count started again. */
-  data object NetworkBack : SocketEvent
+  /**
+   * Another network became the default, after none or in place of the one the socket went over:
+   * try at once over it, the count started again.
+   */
+  data object NetworkChanged : SocketEvent
 
   /** The wait before a try is over. */
   data object WaitOver : SocketEvent
@@ -89,7 +92,15 @@ fun SocketState.on(event: SocketEvent): SocketState =
         is SocketState.CatchingUp,
         SocketState.Current -> this
       }
-    SocketEvent.NetworkBack -> if (this is SocketState.Waiting) SocketState.Opening(1) else this
+    SocketEvent.NetworkChanged ->
+      when (this) {
+        is SocketState.Waiting,
+        is SocketState.Opening,
+        is SocketState.CatchingUp,
+        SocketState.Current -> SocketState.Opening(1)
+        SocketState.Closed,
+        is SocketState.Stopped -> this
+      }
     SocketEvent.WaitOver -> if (this is SocketState.Waiting) SocketState.Opening(tries) else this
     SocketEvent.Welcomed -> if (this is SocketState.Opening) SocketState.CatchingUp(tries) else this
     SocketEvent.CaughtUp -> if (this is SocketState.CatchingUp) SocketState.Current else this

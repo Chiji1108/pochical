@@ -142,3 +142,28 @@ private final class ClosingServer: Sendable {
   #expect(server.opened.withLock { $0 } == 1)
   await client.stop()
 }
+
+@Test func aSocketMovesAtOnceToTheNetworkThatBecomesTheDefault() async throws {
+  let server = try WelcomingServer()
+  defer { server.listener.cancel() }
+  server.welcome()
+  let url = try await server.start()
+  let (networks, network) = AsyncStream.makeStream(of: String?.self)
+  let credentials = try #require(CurrentAccount().begin(StoredSession(token: "t", userID: "me")))
+  let client = SyncClient(
+    database: try database(ownedBy: "me"), peer: .group("g"), server: url,
+    defaultNetworks: { networks })
+  network.yield("pdp_ip0")
+  await client.start(as: credentials)
+  #expect(await eventually { server.opened.withLock { $0 } == 1 })
+
+  // Wi-Fi taking over while cellular is still up: the path stays satisfied.
+  network.yield("en0")
+  #expect(await eventually { server.opened.withLock { $0 } == 2 })
+
+  // Wi-Fi lost, then cellular the default again.
+  network.yield(nil)
+  network.yield("pdp_ip0")
+  #expect(await eventually { server.opened.withLock { $0 } == 3 })
+  await client.stop()
+}

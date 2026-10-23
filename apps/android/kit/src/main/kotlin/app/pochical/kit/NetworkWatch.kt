@@ -3,35 +3,69 @@ package app.pochical.kit
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.util.Log
 
 /**
- * What the OS says of the network (spec/sync-protocol.md, Keepalive; Reconnecting): the sockets
- * close at once as it goes, rather than waiting for their keepalive, and try at once as it comes
- * back.
+ * What the OS says of the device's default network (spec/sync-protocol.md, Keepalive;
+ * Reconnecting): the sockets close at once as it goes, rather than waiting for their keepalive, and
+ * move at once to the one that becomes the default, after none or in place of another.
  */
 interface NetworkWatch {
-  fun watch(lost: () -> Unit, back: () -> Unit)
+  fun watch(lost: () -> Unit, changed: () -> Unit)
 }
 
 /** The device's default network, as ConnectivityManager tells of it. */
 class DefaultNetworkWatch(private val context: Context) : NetworkWatch {
-  override fun watch(lost: () -> Unit, back: () -> Unit) {
+  override fun watch(lost: () -> Unit, changed: () -> Unit) {
     val connectivity = context.getSystemService(ConnectivityManager::class.java)
+    val default =
+      DefaultNetwork(
+        connectivity.activeNetwork,
+        lost = {
+          Log.i(TAG, "No default network")
+          lost()
+        },
+        changed = { network ->
+          Log.i(TAG, "Default network now $network")
+          changed()
+        },
+      )
     connectivity.registerDefaultNetworkCallback(
       object : ConnectivityManager.NetworkCallback() {
-        // Only after one went: the OS also says a network is there as the watch begins.
-        private var gone = false
+        override fun onAvailable(network: Network) = default.available(network)
 
-        override fun onAvailable(network: Network) {
-          if (gone) back()
-          gone = false
-        }
-
-        override fun onLost(network: Network) {
-          gone = true
-          lost()
-        }
+        override fun onLost(network: Network) = default.lost(network)
       }
     )
+  }
+
+  private companion object {
+    const val TAG = "PochicalNetwork"
+  }
+}
+
+/**
+ * Which network is the default (spec/vectors/reconnect.json, defaultNetwork), [N] being the OS's
+ * handle of a network and [now] the default as the watch begins, null for none. A default network
+ * callback says onAvailable for each network that becomes the default, the one already the default
+ * as the watch begins included, but onLost only for the default itself: another taking over is
+ * told by its onAvailable alone, while the one before lingers until the OS tears it down.
+ */
+class DefaultNetwork<N : Any>(
+  private var now: N?,
+  private val lost: () -> Unit,
+  private val changed: (N) -> Unit,
+) {
+  fun available(network: N) = becomes(network)
+
+  fun lost(network: N) {
+    if (network == now) becomes(null)
+  }
+
+  /** [network] is the default now, null for none. */
+  fun becomes(network: N?) {
+    if (network == now) return
+    now = network
+    if (network == null) lost() else changed(network)
   }
 }

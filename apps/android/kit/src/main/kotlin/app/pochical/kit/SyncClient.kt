@@ -11,6 +11,7 @@ import app.pochical.v1.ping
 import kotlin.random.Random
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
@@ -21,7 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.selects.select
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -81,8 +82,11 @@ class SyncClient internal constructor(
   private val mutableState = MutableStateFlow<SocketState>(SocketState.Closed)
   val state: StateFlow<SocketState> = mutableState.asStateFlow()
 
-  /** The socket open or opening, cancelled at once when the network goes. */
-  @Volatile private var socket: WebSocket? = null
+  /**
+   * What the OS last said of the network, taken by the socket's loop: what it ends is the socket
+   * open as it is taken. Only the last word counts, so a client long closed holds one at most.
+   */
+  private val network = Channel<SocketEvent>(Channel.CONFLATED)
 
   /** When the server last answered the keepalive. */
   @Volatile private var lastReplyMs = 0L
@@ -101,12 +105,15 @@ class SyncClient internal constructor(
 
   fun close() = on(SocketEvent.Close)
 
-  /** Closes the socket at once, as the OS says the network went; it tries again as [SocketState] says. */
+  /** The network went: the socket closes at once and tries again as [SocketState] says. */
   fun networkLost() {
-    socket?.cancel()
+    network.trySend(SocketEvent.Dropped)
   }
 
-  fun networkBack() = on(SocketEvent.NetworkBack)
+  /** Another network became the default: an open socket closes at once, and it tries over that one. */
+  fun networkChanged() {
+    network.trySend(SocketEvent.NetworkChanged)
+  }
 
   private fun on(event: SocketEvent) = mutableState.update { it.on(event) }
 
@@ -115,10 +122,19 @@ class SyncClient internal constructor(
       when (val state = mutableState.value) {
         SocketState.Closed,
         is SocketState.Stopped -> mutableState.first { it is SocketState.Opening || it is SocketState.Waiting }
-        is SocketState.Waiting -> {
+        is SocketState.Waiting -> coroutineScope {
           val most = reconnectWaitMost(state.tries, SyncSocket.reconnectFirstMs, SyncSocket.reconnectMostMs)
-          val changed = withTimeoutOrNull(random.nextLong(most + 1L)) { mutableState.first { it != state } }
-          if (changed == null) on(SocketEvent.WaitOver)
+          val waited = async { delay(random.nextLong(most + 1L)) }
+          val changed = async { mutableState.first { it != state } }
+          // The network going while it waits changes nothing: the wait drawn goes on.
+          do {
+            select {
+              waited.onAwait { on(SocketEvent.WaitOver) }
+              changed.onAwait {}
+              network.onReceive { on(it) }
+            }
+          } while (mutableState.value == state)
+          coroutineContext.cancelChildren()
         }
         is SocketState.Opening -> {
           // Null when the app closed it: the state is already what the app made it.
@@ -142,11 +158,12 @@ class SyncClient internal constructor(
       } catch (_: NotTheOwner) {
         return@coroutineScope SocketEvent.Refused(Stop.NotTheOwner)
       }
+    // What the OS said before this socket opens is not of the network it goes over.
+    while (network.tryReceive().isSuccess) continue
     val messages = Channel<SocketMessage>(Channel.UNLIMITED)
     val request =
       Request.Builder().url(socketUrl()).header("Authorization", "Bearer ${credentials.token}").build()
     val socket = http.newWebSocket(request, Listener(messages))
-    this@SyncClient.socket = socket
     val sentMs = now()
     socket.send(clientFrame { hello = hello { protocolVersion = PROTOCOL_VERSION; this.cursor = cursor } })
     lastReplyMs = sentMs
@@ -156,8 +173,15 @@ class SyncClient internal constructor(
     }
     val keepalive = launch { keepAlive(socket) }
     try {
-      for (message in messages) {
-        val ended =
+      var ended: SocketEvent?
+      do {
+        val message =
+          // The network before frames still queued: the next socket's catch-up brings them again.
+          select {
+            network.onReceive { SocketMessage.Ended(it) }
+            messages.onReceive { it }
+          }
+        ended =
           when (message) {
             is SocketMessage.Text -> {
               if (message.text == SyncSocket.keepaliveReply) lastReplyMs = now()
@@ -175,9 +199,8 @@ class SyncClient internal constructor(
             is SocketMessage.Ended -> message.event
             SocketMessage.Closing -> return@coroutineScope null
           }
-        if (ended != null) return@coroutineScope ended
-      }
-      SocketEvent.Dropped
+      } while (ended == null)
+      ended
     } catch (_: NotTheOwner) {
       SocketEvent.Refused(Stop.NotTheOwner)
     } catch (e: CancellationException) {
@@ -190,7 +213,6 @@ class SyncClient internal constructor(
       closing.cancel()
       keepalive.cancel()
       socket.cancel()
-      this@SyncClient.socket = null
       coroutineContext.cancelChildren()
     }
   }

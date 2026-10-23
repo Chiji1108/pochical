@@ -14,7 +14,8 @@ import SQLiteData
 /// (Outbox). A group's, open while the app has the group open, takes the
 /// group's values the same way and sends the group's chat outbox. Each
 /// keeps its socket alive and reconnects after a random wait that doubles
-/// with each failed try, at once when the network comes back; never after
+/// with each failed try, at once when the network comes back or another
+/// becomes the default; never after
 /// a 401 or an update the server asks for, nor, until a group's is started
 /// again, once the user is not in the group (`mayStart`).
 ///
@@ -82,7 +83,12 @@ public actor SyncClient {
   private let server: URL
   private let socketURL: URL
   private let session = URLSession(configuration: .default)
-  private let paths = NWPathMonitor()
+  /// The device's default network as the OS tells of it, in order, from
+  /// the first socket on.
+  private let defaultNetworks: @Sendable () -> AsyncStream<String?>
+  private var watchingNetwork: Task<Void, Never>?
+  /// Unknown until the OS first says, as the watch begins.
+  private var defaultNetwork: DefaultNetwork<String>?
   private var running: Task<Void, Never>?
   /// The socket open or opening, closed by `stop` at once rather than
   /// left to notice its task's cancellation.
@@ -91,8 +97,6 @@ public actor SyncClient {
   /// that breaks right after it, again and again, still waits longer.
   private var tries = 0
   private var connected = false
-  /// The OS said the network went away, and has not said it came back.
-  private var offline = false
   /// Between tries, waiting before the next.
   private var waitingToRetry = false
   /// When the server last answered the keepalive.
@@ -141,9 +145,11 @@ public actor SyncClient {
 
   init(
     database: any DatabaseWriter, peer: Peer = .user, server: URL = Server.url,
-    sessionUnknown: @escaping @Sendable (Int) async -> Void = { _ in }
+    sessionUnknown: @escaping @Sendable (Int) async -> Void = { _ in },
+    defaultNetworks: @escaping @Sendable () -> AsyncStream<String?> = SyncClient.defaultNetworks
   ) {
     self.database = database
+    self.defaultNetworks = defaultNetworks
     self.peer = peer
     self.server = server
     self.sessionUnknown = sessionUnknown
@@ -159,7 +165,21 @@ public actor SyncClient {
 
   // Its watch on the network goes with it.
   deinit {
-    paths.cancel()
+    watchingNetwork?.cancel()
+  }
+
+  /// The interface the system routes over first while the path is
+  /// satisfied, nil while it is not: another taking over (Wi-Fi coming back
+  /// while cellular is up) leaves the path satisfied throughout.
+  static func defaultNetworks() -> AsyncStream<String?> {
+    AsyncStream { continuation in
+      let paths = NWPathMonitor()
+      paths.pathUpdateHandler = { path in
+        continuation.yield(path.status == .satisfied ? path.availableInterfaces.first?.name : nil)
+      }
+      continuation.onTermination = { _ in paths.cancel() }
+      paths.start(queue: DispatchQueue(label: "app.pochical.sync.paths"))
+    }
   }
 
   /// Connects as `credentials`, or tries again at once with the count
@@ -207,16 +227,12 @@ public actor SyncClient {
     tries = 0
     waitingToRetry = false
     running = Task { await run(as: credentials) }
-    paths.pathUpdateHandler = { [weak self] path in
-      guard let self else { return }
-      if path.status == .satisfied {
-        Task { await self.networkCameBack() }
-      } else {
-        Task { await self.networkWentAway() }
+    if watchingNetwork == nil {
+      watchingNetwork = Task { [weak self, defaultNetworks] in
+        for await network in defaultNetworks() {
+          await self?.defaultNetworkIs(network)
+        }
       }
-    }
-    if paths.queue == nil {
-      paths.start(queue: DispatchQueue(label: "app.pochical.sync.paths"))
     }
   }
 
@@ -312,23 +328,38 @@ public actor SyncClient {
     return try Chats.lastToSend(of: placeID, now: now, in: db)
   }
 
+  private func defaultNetworkIs(_ network: String?) {
+    // The first word is the network the socket opening goes over.
+    guard var watched = defaultNetwork else {
+      defaultNetwork = DefaultNetwork(now: network)
+      return
+    }
+    let change = watched.becomes(network)
+    defaultNetwork = watched
+    switch change {
+    case .lost: networkWentAway()
+    case .changed: networkChanged()
+    case nil: break
+    }
+  }
+
   /// With no network the socket is gone, though the keepalive would take
   /// a while to find it so: closed at once, so the screens say 接続中…,
-  /// and opened again as the network comes back.
+  /// and opened again as a network becomes the default.
   private func networkWentAway() {
-    offline = true
     guard connected else { return }
     socket?.cancel(with: .goingAway, reason: nil)
   }
 
-  /// Only after it went away: the OS also says so as it starts watching,
-  /// which would open a second socket beside the one opening.
-  private func networkCameBack() {
-    guard offline else { return }
-    offline = false
-    if let credentials, running != nil, !connected {
-      reconnect(as: credentials)
-    }
+  /// A network became the default, after none or in place of the one the
+  /// socket goes over, which the OS tears down a while later and which may
+  /// carry nothing meanwhile: a socket open, opening or waiting tries again
+  /// at once over the new one, the count started again.
+  private func networkChanged() {
+    guard let credentials, running != nil else { return }
+    running?.cancel()
+    running = nil
+    reconnect(as: credentials)
   }
 
   private func run(as credentials: Credentials) async {

@@ -80,6 +80,8 @@ final class WelcomingServer: Sendable {
   let listener: NWListener
   private let held = Mutex<(welcoming: Bool, waiting: [NWConnection])>((false, []))
   let sent = Mutex<[String]>([])
+  /// How many sockets were opened.
+  let opened = Mutex(0)
 
   init() throws {
     let parameters = NWParameters.tcp
@@ -87,6 +89,7 @@ final class WelcomingServer: Sendable {
       NWProtocolWebSocket.Options(), at: 0)
     listener = try NWListener(using: parameters, on: .any)
     listener.newConnectionHandler = { [weak self] connection in
+      self?.opened.withLock { $0 += 1 }
       connection.start(queue: .global())
       self?.take(on: connection, helloed: false)
     }

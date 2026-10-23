@@ -1,20 +1,27 @@
 package app.pochical.kit
 
 import app.pochical.design.SyncLimits
+import app.pochical.design.SyncSocket
 import app.pochical.v1.ClientFrame
 import app.pochical.v1.DayField
 import app.pochical.v1.SignInProvider
+import java.time.LocalDate
+import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.random.Random
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -26,7 +33,12 @@ import org.robolectric.RuntimeEnvironment
 private const val NOTE = 4
 
 /** One of the user's devices: its own database, kept session and account. */
-private class Device(server: FakeServer, now: () -> Long = System::currentTimeMillis) {
+private class Device(
+  server: FakeServer,
+  now: () -> Long = System::currentTimeMillis,
+  network: NetworkWatch? = null,
+  random: Random = Random.Default,
+) {
   val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
   val database = AppDatabase.open(RuntimeEnvironment.getApplication(), inMemory = true)
   val kept = MemoryBytes()
@@ -35,7 +47,9 @@ private class Device(server: FakeServer, now: () -> Long = System::currentTimeMi
   /** How many times the account asked the OS for time to send in the background. */
   val backgroundSends = java.util.concurrent.atomic.AtomicInteger()
   val account =
-    SyncAccount(database, sessions, server.url, OkHttpClient(), scope, now = now) { backgroundSends.incrementAndGet() }
+    SyncAccount(database, sessions, server.url, OkHttpClient(), scope, network, now, random) {
+      backgroundSends.incrementAndGet()
+    }
 
   suspend fun note(date: String) = database.values().days(date, date).first().singleOrNull()?.note
 
@@ -49,6 +63,24 @@ private class Device(server: FakeServer, now: () -> Long = System::currentTimeMi
   }
 }
 
+/** The OS's default network, as the test tells of it. */
+private class FakeNetwork : NetworkWatch {
+  lateinit var lost: () -> Unit
+  lateinit var changed: () -> Unit
+
+  override fun watch(lost: () -> Unit, changed: () -> Unit) {
+    this.lost = lost
+    this.changed = changed
+  }
+}
+
+/** Draws the longest wait before each try, so that a try made at once is told from one after a wait. */
+private object LongestWait : Random() {
+  override fun nextBits(bitCount: Int) = Random.Default.nextBits(bitCount)
+
+  override fun nextLong(until: Long) = until - 1
+}
+
 /** Waits for [condition], polling, for a few seconds at most. */
 private suspend fun eventually(condition: suspend () -> Boolean) =
   withTimeout(10_000) {
@@ -60,7 +92,11 @@ class SyncTest {
   private val server = FakeServer()
   private val devices = mutableListOf<Device>()
 
-  private fun device(now: () -> Long = System::currentTimeMillis) = Device(server, now).also { devices += it }
+  private fun device(
+    now: () -> Long = System::currentTimeMillis,
+    network: NetworkWatch? = null,
+    random: Random = Random.Default,
+  ) = Device(server, now, network, random).also { devices += it }
 
   @After
   fun closeAll() {
@@ -368,5 +404,59 @@ class SyncTest {
     client.start()
     assertEquals(SocketState.Stopped(Stop.NotTheOwner), withTimeout(10_000) { client.state.first { it is SocketState.Stopped } })
     assertEquals(0, server.sockets.size)
+  }
+
+  @Test
+  fun aSocketMovesAtOnceToTheNetworkThatBecomesTheDefault() = runBlocking {
+    val network = FakeNetwork()
+    val phone = device(network = network, random = LongestWait)
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+    val states = CopyOnWriteArrayList<SocketState>()
+    phone.scope.launch { phone.account.userSocket.collect { states += it } }
+    eventually { states.isNotEmpty() }
+
+    // Wi-Fi taking over from cellular, which is not lost but lingers.
+    network.changed()
+    eventually { server.sockets.size == 2 && states.last() == SocketState.Current }
+    assertFalse("moved without a wait: $states", states.any { it is SocketState.Waiting })
+
+    // Wi-Fi lost, then cellular the default again.
+    network.lost()
+    eventually { states.last() is SocketState.Waiting }
+    val changedMs = System.currentTimeMillis()
+    network.changed()
+    eventually { server.sockets.size == 3 }
+    val tookMs = System.currentTimeMillis() - changedMs
+    assertTrue("tried in $tookMs ms, not after the wait", tookMs < SyncSocket.reconnectFirstMs / 2)
+  }
+
+  @Test
+  fun aSocketMovesBeforeTakingFramesStillQueued() = runBlocking {
+    val network = FakeNetwork()
+    val phone = device(network = network)
+    phone.account.foreground()
+    withTimeout(10_000) { phone.current() }
+
+    // The database held, the socket takes its first frame no further and the rest queue behind it.
+    val held = CompletableDeferred<Unit>()
+    val release = CompletableDeferred<Unit>()
+    val holding = phone.scope.launch {
+      phone.database.write {
+        held.complete(Unit)
+        release.await()
+      }
+    }
+    held.await()
+    val dates = (0L until 50L).map { LocalDate.of(2026, 11, 1).plusDays(it).toString() }
+    server.noteElsewhere(dates)
+    delay(500)
+    network.changed()
+    release.complete(Unit)
+    holding.join()
+
+    eventually { server.sockets.size == 2 && server.sockets[1].isNotEmpty() }
+    val hello = server.sockets[1].first().hello
+    assertTrue("moved at cursor ${hello.cursor}, not after all ${dates.size} frames", hello.cursor < dates.size)
   }
 }
