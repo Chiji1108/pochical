@@ -23,6 +23,7 @@ import { GROUP_THREAD, otherIn } from "./group-chat";
 import { isId } from "./ids";
 import { registerPushToken } from "./push-tokens";
 import { requireUser } from "./session";
+import { linkedProvider } from "./sign-in-providers";
 import { requireText } from "./text-limits";
 
 /** The shapes marks are drawn in (MarkLook.style). */
@@ -40,13 +41,17 @@ export const registerUserService = (router: ConnectRouter): void => {
     },
     getMe: async (_request, context) => {
       const { id, anonymous } = await requireUser(context);
-      return create(GetMeResponseSchema, { anonymous, userId: id });
+      return create(GetMeResponseSchema, {
+        anonymous,
+        provider: await linkedProvider(env.DB, id),
+        userId: id,
+      });
     },
-    peekAccount: async ({ appleIdToken, nonce }, context) => {
+    peekAccount: async ({ account }, context) => {
       const { id } = await requireUser(context);
       return create(
         PeekAccountResponseSchema,
-        await peekAccount(env, id, appleIdToken, nonce)
+        await peekAccount(env, id, account)
       );
     },
     registerPushToken: async ({ token, sandbox }, context) => {
@@ -108,9 +113,9 @@ export const registerUserService = (router: ConnectRouter): void => {
       }
       return create(SetProfileResponseSchema, {});
     },
-    takeAccount: async ({ appleIdToken, nonce }, context) => {
+    takeAccount: async ({ account }, context) => {
       const { id } = await requireUser(context);
-      await takeAccount(env, id, appleIdToken, nonce);
+      await takeAccount(env, id, account);
       return create(TakeAccountResponseSchema, {});
     },
   });

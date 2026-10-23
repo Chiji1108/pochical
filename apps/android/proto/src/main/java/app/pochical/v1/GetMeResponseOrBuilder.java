@@ -31,4 +31,23 @@ public interface GetMeResponseOrBuilder extends
    * @return The anonymous.
    */
   boolean getAnonymous();
+
+  /**
+   * <pre>
+   * The provider the user is linked to; unspecified while anonymous.
+   * </pre>
+   *
+   * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+   * @return The enum numeric value on the wire for provider.
+   */
+  int getProviderValue();
+  /**
+   * <pre>
+   * The provider the user is linked to; unspecified while anonymous.
+   * </pre>
+   *
+   * <code>.pochical.v1.SignInProvider provider = 3 [json_name = "provider"];</code>
+   * @return The provider.
+   */
+  app.pochical.v1.SignInProvider getProvider();
 }

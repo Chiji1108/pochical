@@ -37,12 +37,11 @@ public struct Holdings: Equatable, Sendable {
 }
 
 extension GroupCalls {
-  /// What the account a Sign in with Apple ID token is of holds, when it
-  /// is another user's.
-  public func peekAccount(appleIDToken: String, nonce: String) async throws -> Holdings {
+  /// What the account a provider's ID token is of holds, when it is
+  /// another user's.
+  public func peekAccount(_ account: ProviderToken) async throws -> Holdings {
     var request = Pochical_V1_PeekAccountRequest()
-    request.appleIDToken = appleIDToken
-    request.nonce = nonce
+    request.account = account.proto
     let answer = try await users.peekAccount(request: request, headers: headers())
       .result.mapError(suspendedOr).get()
     return Holdings(
@@ -50,12 +49,11 @@ extension GroupCalls {
       coworkers: Int(answer.coworkers), groups: Int(answer.groups))
   }
 
-  /// Keeps this device's data: the account's user deleted, and its Apple
-  /// account linked to this one.
-  public func takeAccount(appleIDToken: String, nonce: String) async throws {
+  /// Keeps this device's data: the account's user deleted, and its
+  /// provider's account linked to this one.
+  public func takeAccount(_ account: ProviderToken) async throws {
     var request = Pochical_V1_TakeAccountRequest()
-    request.appleIDToken = appleIDToken
-    request.nonce = nonce
+    request.account = account.proto
     _ = try await users.takeAccount(request: request, headers: headers()).result
       .mapError(suspendedOr).get()
   }

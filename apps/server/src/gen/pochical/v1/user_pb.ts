@@ -2,8 +2,8 @@
 // @generated from file pochical/v1/user.proto (package pochical.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { MarkLook } from "./marks_pb";
 import { file_pochical_v1_marks } from "./marks_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file pochical/v1/user.proto.
  */
 export const file_pochical_v1_user: GenFile = /*@__PURE__*/
-  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIjMKEVNldFByb2ZpbGVSZXF1ZXN0EgwKBG5hbWUYASABKAkSEAoIcGhvdG9faWQYAiABKAkiFAoSU2V0UHJvZmlsZVJlc3BvbnNlIjkKElNldE1hcmtMb29rUmVxdWVzdBIjCgRsb29rGAEgASgLMhUucG9jaGljYWwudjEuTWFya0xvb2siFQoTU2V0TWFya0xvb2tSZXNwb25zZSI6ChhSZWdpc3RlclB1c2hUb2tlblJlcXVlc3QSDQoFdG9rZW4YASABKAkSDwoHc2FuZGJveBgCIAEoCCIbChlSZWdpc3RlclB1c2hUb2tlblJlc3BvbnNlIjUKEVNldEJsb2NrZWRSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSDwoHYmxvY2tlZBgCIAEoCCIUChJTZXRCbG9ja2VkUmVzcG9uc2UiDgoMR2V0TWVSZXF1ZXN0IjMKDUdldE1lUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIRCglhbm9ueW1vdXMYAiABKAgiOAoURGVsZXRlQWNjb3VudFJlcXVlc3QSIAoYYXBwbGVfYXV0aG9yaXphdGlvbl9jb2RlGAEgASgJIhcKFURlbGV0ZUFjY291bnRSZXNwb25zZSI7ChJQZWVrQWNjb3VudFJlcXVlc3QSFgoOYXBwbGVfaWRfdG9rZW4YASABKAkSDQoFbm9uY2UYAiABKAkiXwoTUGVla0FjY291bnRSZXNwb25zZRISCgpzaGlmdF9kYXlzGAEgASgFEhEKCXJlcGVhdGluZxgCIAEoCBIRCgljb3dvcmtlcnMYAyABKAUSDgoGZ3JvdXBzGAQgASgFIjsKElRha2VBY2NvdW50UmVxdWVzdBIWCg5hcHBsZV9pZF90b2tlbhgBIAEoCRINCgVub25jZRgCIAEoCSIVChNUYWtlQWNjb3VudFJlc3BvbnNlMpEHCgtVc2VyU2VydmljZRJbCg1EZWxldGVBY2NvdW50EiEucG9jaGljYWwudjEuRGVsZXRlQWNjb3VudFJlcXVlc3QaIi5wb2NoaWNhbC52MS5EZWxldGVBY2NvdW50UmVzcG9uc2UiA5ACAhJVCgtQZWVrQWNjb3VudBIfLnBvY2hpY2FsLnYxLlBlZWtBY2NvdW50UmVxdWVzdBogLnBvY2hpY2FsLnYxLlBlZWtBY2NvdW50UmVzcG9uc2UiA5ACARJVCgtUYWtlQWNjb3VudBIfLnBvY2hpY2FsLnYxLlRha2VBY2NvdW50UmVxdWVzdBogLnBvY2hpY2FsLnYxLlRha2VBY2NvdW50UmVzcG9uc2UiA5ACAhJDCgVHZXRNZRIZLnBvY2hpY2FsLnYxLkdldE1lUmVxdWVzdBoaLnBvY2hpY2FsLnYxLkdldE1lUmVzcG9uc2UiA5ACARJSCgpTZXRCbG9ja2VkEh4ucG9jaGljYWwudjEuU2V0QmxvY2tlZFJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVzcG9uc2UiA5ACAhJnChFSZWdpc3RlclB1c2hUb2tlbhIlLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVxdWVzdBomLnBvY2hpY2FsLnYxLlJlZ2lzdGVyUHVzaFRva2VuUmVzcG9uc2UiA5ACAhJYCgxTZXRDaGF0TXV0ZWQSIC5wb2NoaWNhbC52MS5TZXRDaGF0TXV0ZWRSZXF1ZXN0GiEucG9jaGljYWwudjEuU2V0Q2hhdE11dGVkUmVzcG9uc2UiA5ACAhJwChRTZXRDaGF0Tm90aWZpY2F0aW9ucxIoLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVxdWVzdBopLnBvY2hpY2FsLnYxLlNldENoYXROb3RpZmljYXRpb25zUmVzcG9uc2UiA5ACAhJSCgpTZXRQcm9maWxlEh4ucG9jaGljYWwudjEuU2V0UHJvZmlsZVJlcXVlc3QaHy5wb2NoaWNhbC52MS5TZXRQcm9maWxlUmVzcG9uc2UiA5ACAhJVCgtTZXRNYXJrTG9vaxIfLnBvY2hpY2FsLnYxLlNldE1hcmtMb29rUmVxdWVzdBogLnBvY2hpY2FsLnYxLlNldE1hcmtMb29rUmVzcG9uc2UiA5ACAkJpCg9hcHAucG9jaGljYWwudjFCCVVzZXJQcm90b1ABogIDUFhYqgILUG9jaGljYWwuVjHKAgtQb2NoaWNhbFxWMeICF1BvY2hpY2FsXFYxXEdQQk1ldGFkYXRh6gIMUG9jaGljYWw6OlYxYgZwcm90bzM", [file_pochical_v1_marks]);
+  fileDesc("ChZwb2NoaWNhbC92MS91c2VyLnByb3RvEgtwb2NoaWNhbC52MSJJChNTZXRDaGF0TXV0ZWRSZXF1ZXN0EhAKCGdyb3VwX2lkGAEgASgJEhEKCXRocmVhZF9pZBgCIAEoCRINCgVtdXRlZBgDIAEoCCIWChRTZXRDaGF0TXV0ZWRSZXNwb25zZSI6ChtTZXRDaGF0Tm90aWZpY2F0aW9uc1JlcXVlc3QSGwoTbWVudGlvbnNfd2hlbl9tdXRlZBgBIAEoCCIeChxTZXRDaGF0Tm90aWZpY2F0aW9uc1Jlc3BvbnNlIjMKEVNldFByb2ZpbGVSZXF1ZXN0EgwKBG5hbWUYASABKAkSEAoIcGhvdG9faWQYAiABKAkiFAoSU2V0UHJvZmlsZVJlc3BvbnNlIjkKElNldE1hcmtMb29rUmVxdWVzdBIjCgRsb29rGAEgASgLMhUucG9jaGljYWwudjEuTWFya0xvb2siFQoTU2V0TWFya0xvb2tSZXNwb25zZSI6ChhSZWdpc3RlclB1c2hUb2tlblJlcXVlc3QSDQoFdG9rZW4YASABKAkSDwoHc2FuZGJveBgCIAEoCCIbChlSZWdpc3RlclB1c2hUb2tlblJlc3BvbnNlIjUKEVNldEJsb2NrZWRSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkSDwoHYmxvY2tlZBgCIAEoCCIUChJTZXRCbG9ja2VkUmVzcG9uc2UiDgoMR2V0TWVSZXF1ZXN0ImIKDUdldE1lUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIRCglhbm9ueW1vdXMYAiABKAgSLQoIcHJvdmlkZXIYAyABKA4yGy5wb2NoaWNhbC52MS5TaWduSW5Qcm92aWRlciJfCg1Qcm92aWRlclRva2VuEi0KCHByb3ZpZGVyGAEgASgOMhsucG9jaGljYWwudjEuU2lnbkluUHJvdmlkZXISEAoIaWRfdG9rZW4YAiABKAkSDQoFbm9uY2UYAyABKAkiOAoURGVsZXRlQWNjb3VudFJlcXVlc3QSIAoYYXBwbGVfYXV0aG9yaXphdGlvbl9jb2RlGAEgASgJIhcKFURlbGV0ZUFjY291bnRSZXNwb25zZSJkChJQZWVrQWNjb3VudFJlcXVlc3QSKwoHYWNjb3VudBgDIAEoCzIaLnBvY2hpY2FsLnYxLlByb3ZpZGVyVG9rZW5KBAgBEAJKBAgCEANSDmFwcGxlX2lkX3Rva2VuUgVub25jZSJfChNQZWVrQWNjb3VudFJlc3BvbnNlEhIKCnNoaWZ0X2RheXMYASABKAUSEQoJcmVwZWF0aW5nGAIgASgIEhEKCWNvd29ya2VycxgDIAEoBRIOCgZncm91cHMYBCABKAUiZAoSVGFrZUFjY291bnRSZXF1ZXN0EisKB2FjY291bnQYAyABKAsyGi5wb2NoaWNhbC52MS5Qcm92aWRlclRva2VuSgQIARACSgQIAhADUg5hcHBsZV9pZF90b2tlblIFbm9uY2UiFQoTVGFrZUFjY291bnRSZXNwb25zZSprCg5TaWduSW5Qcm92aWRlchIgChxTSUdOX0lOX1BST1ZJREVSX1VOU1BFQ0lGSUVEEAASGgoWU0lHTl9JTl9QUk9WSURFUl9BUFBMRRABEhsKF1NJR05fSU5fUFJPVklERVJfR09PR0xFEAIykQcKC1VzZXJTZXJ2aWNlElsKDURlbGV0ZUFjY291bnQSIS5wb2NoaWNhbC52MS5EZWxldGVBY2NvdW50UmVxdWVzdBoiLnBvY2hpY2FsLnYxLkRlbGV0ZUFjY291bnRSZXNwb25zZSIDkAICElUKC1BlZWtBY2NvdW50Eh8ucG9jaGljYWwudjEuUGVla0FjY291bnRSZXF1ZXN0GiAucG9jaGljYWwudjEuUGVla0FjY291bnRSZXNwb25zZSIDkAIBElUKC1Rha2VBY2NvdW50Eh8ucG9jaGljYWwudjEuVGFrZUFjY291bnRSZXF1ZXN0GiAucG9jaGljYWwudjEuVGFrZUFjY291bnRSZXNwb25zZSIDkAICEkMKBUdldE1lEhkucG9jaGljYWwudjEuR2V0TWVSZXF1ZXN0GhoucG9jaGljYWwudjEuR2V0TWVSZXNwb25zZSIDkAIBElIKClNldEJsb2NrZWQSHi5wb2NoaWNhbC52MS5TZXRCbG9ja2VkUmVxdWVzdBofLnBvY2hpY2FsLnYxLlNldEJsb2NrZWRSZXNwb25zZSIDkAICEmcKEVJlZ2lzdGVyUHVzaFRva2VuEiUucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXF1ZXN0GiYucG9jaGljYWwudjEuUmVnaXN0ZXJQdXNoVG9rZW5SZXNwb25zZSIDkAICElgKDFNldENoYXRNdXRlZBIgLnBvY2hpY2FsLnYxLlNldENoYXRNdXRlZFJlcXVlc3QaIS5wb2NoaWNhbC52MS5TZXRDaGF0TXV0ZWRSZXNwb25zZSIDkAICEnAKFFNldENoYXROb3RpZmljYXRpb25zEigucG9jaGljYWwudjEuU2V0Q2hhdE5vdGlmaWNhdGlvbnNSZXF1ZXN0GikucG9jaGljYWwudjEuU2V0Q2hhdE5vdGlmaWNhdGlvbnNSZXNwb25zZSIDkAICElIKClNldFByb2ZpbGUSHi5wb2NoaWNhbC52MS5TZXRQcm9maWxlUmVxdWVzdBofLnBvY2hpY2FsLnYxLlNldFByb2ZpbGVSZXNwb25zZSIDkAICElUKC1NldE1hcmtMb29rEh8ucG9jaGljYWwudjEuU2V0TWFya0xvb2tSZXF1ZXN0GiAucG9jaGljYWwudjEuU2V0TWFya0xvb2tSZXNwb25zZSIDkAICQmkKD2FwcC5wb2NoaWNhbC52MUIJVXNlclByb3RvUAGiAgNQWFiqAgtQb2NoaWNhbC5WMcoCC1BvY2hpY2FsXFYx4gIXUG9jaGljYWxcVjFcR1BCTWV0YWRhdGHqAgxQb2NoaWNhbDo6VjFiBnByb3RvMw", [file_pochical_v1_marks]);
 
 /**
  * @generated from message pochical.v1.SetChatMutedRequest
@@ -255,6 +255,13 @@ export type GetMeResponse = Message<"pochical.v1.GetMeResponse"> & {
    * @generated from field: bool anonymous = 2;
    */
   anonymous: boolean;
+
+  /**
+   * The provider the user is linked to; unspecified while anonymous.
+   *
+   * @generated from field: pochical.v1.SignInProvider provider = 3;
+   */
+  provider: SignInProvider;
 };
 
 /**
@@ -263,6 +270,38 @@ export type GetMeResponse = Message<"pochical.v1.GetMeResponse"> & {
  */
 export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
   messageDesc(file_pochical_v1_user, 13);
+
+/**
+ * A provider's ID token as the app got it signing in, which proves the
+ * person holds the provider's account.
+ *
+ * @generated from message pochical.v1.ProviderToken
+ */
+export type ProviderToken = Message<"pochical.v1.ProviderToken"> & {
+  /**
+   * @generated from field: pochical.v1.SignInProvider provider = 1;
+   */
+  provider: SignInProvider;
+
+  /**
+   * @generated from field: string id_token = 2;
+   */
+  idToken: string;
+
+  /**
+   * The nonce the app asked the provider with.
+   *
+   * @generated from field: string nonce = 3;
+   */
+  nonce: string;
+};
+
+/**
+ * Describes the message pochical.v1.ProviderToken.
+ * Use `create(ProviderTokenSchema)` to create a new message.
+ */
+export const ProviderTokenSchema: GenMessage<ProviderToken> = /*@__PURE__*/
+  messageDesc(file_pochical_v1_user, 14);
 
 /**
  * @generated from message pochical.v1.DeleteAccountRequest
@@ -282,7 +321,7 @@ export type DeleteAccountRequest = Message<"pochical.v1.DeleteAccountRequest"> &
  * Use `create(DeleteAccountRequestSchema)` to create a new message.
  */
 export const DeleteAccountRequestSchema: GenMessage<DeleteAccountRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 14);
+  messageDesc(file_pochical_v1_user, 15);
 
 /**
  * @generated from message pochical.v1.DeleteAccountResponse
@@ -295,21 +334,16 @@ export type DeleteAccountResponse = Message<"pochical.v1.DeleteAccountResponse">
  * Use `create(DeleteAccountResponseSchema)` to create a new message.
  */
 export const DeleteAccountResponseSchema: GenMessage<DeleteAccountResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 15);
+  messageDesc(file_pochical_v1_user, 16);
 
 /**
  * @generated from message pochical.v1.PeekAccountRequest
  */
 export type PeekAccountRequest = Message<"pochical.v1.PeekAccountRequest"> & {
   /**
-   * @generated from field: string apple_id_token = 1;
+   * @generated from field: pochical.v1.ProviderToken account = 3;
    */
-  appleIdToken: string;
-
-  /**
-   * @generated from field: string nonce = 2;
-   */
-  nonce: string;
+  account?: ProviderToken | undefined;
 };
 
 /**
@@ -317,7 +351,7 @@ export type PeekAccountRequest = Message<"pochical.v1.PeekAccountRequest"> & {
  * Use `create(PeekAccountRequestSchema)` to create a new message.
  */
 export const PeekAccountRequestSchema: GenMessage<PeekAccountRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 16);
+  messageDesc(file_pochical_v1_user, 17);
 
 /**
  * What a user holds that the person entered, for telling a few taps tried
@@ -358,21 +392,16 @@ export type PeekAccountResponse = Message<"pochical.v1.PeekAccountResponse"> & {
  * Use `create(PeekAccountResponseSchema)` to create a new message.
  */
 export const PeekAccountResponseSchema: GenMessage<PeekAccountResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 17);
+  messageDesc(file_pochical_v1_user, 18);
 
 /**
  * @generated from message pochical.v1.TakeAccountRequest
  */
 export type TakeAccountRequest = Message<"pochical.v1.TakeAccountRequest"> & {
   /**
-   * @generated from field: string apple_id_token = 1;
+   * @generated from field: pochical.v1.ProviderToken account = 3;
    */
-  appleIdToken: string;
-
-  /**
-   * @generated from field: string nonce = 2;
-   */
-  nonce: string;
+  account?: ProviderToken | undefined;
 };
 
 /**
@@ -380,7 +409,7 @@ export type TakeAccountRequest = Message<"pochical.v1.TakeAccountRequest"> & {
  * Use `create(TakeAccountRequestSchema)` to create a new message.
  */
 export const TakeAccountRequestSchema: GenMessage<TakeAccountRequest> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 18);
+  messageDesc(file_pochical_v1_user, 19);
 
 /**
  * @generated from message pochical.v1.TakeAccountResponse
@@ -393,7 +422,36 @@ export type TakeAccountResponse = Message<"pochical.v1.TakeAccountResponse"> & {
  * Use `create(TakeAccountResponseSchema)` to create a new message.
  */
 export const TakeAccountResponseSchema: GenMessage<TakeAccountResponse> = /*@__PURE__*/
-  messageDesc(file_pochical_v1_user, 19);
+  messageDesc(file_pochical_v1_user, 20);
+
+/**
+ * Where a person signs in besides anonymously (spec/sync-protocol.md,
+ * Signing in).
+ *
+ * @generated from enum pochical.v1.SignInProvider
+ */
+export enum SignInProvider {
+  /**
+   * @generated from enum value: SIGN_IN_PROVIDER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: SIGN_IN_PROVIDER_APPLE = 1;
+   */
+  APPLE = 1,
+
+  /**
+   * @generated from enum value: SIGN_IN_PROVIDER_GOOGLE = 2;
+   */
+  GOOGLE = 2,
+}
+
+/**
+ * Describes the enum pochical.v1.SignInProvider.
+ */
+export const SignInProviderSchema: GenEnum<SignInProvider> = /*@__PURE__*/
+  enumDesc(file_pochical_v1_user, 0);
 
 /**
  * The signed-in user. Every call here needs the session token from
@@ -409,7 +467,9 @@ export const UserService: GenService<{
    * every line they wrote taken back, their chat with Pochical's people,
    * and their sign-ins. A user linked to Sign in with Apple sends a fresh
    * authorization code, with which the server revokes the app's Apple
-   * tokens as Apple asks; FAILED_PRECONDITION without one Apple takes.
+   * tokens as Apple asks; FAILED_PRECONDITION without one Apple takes. A
+   * user linked to Google sends none, as the server holds no Google token
+   * to revoke.
    *
    * @generated from rpc pochical.v1.UserService.DeleteAccount
    */
@@ -419,11 +479,12 @@ export const UserService: GenService<{
     output: typeof DeleteAccountResponseSchema;
   },
   /**
-   * What the account a Sign in with Apple ID token is linked to holds,
-   * when it is another user's than the caller (spec/sync-protocol.md,
-   * Switching to an account in use): the ID token, with the nonce it was
-   * asked with, proves the person holds it. NOT_FOUND when the account is
-   * no other user's; UNAUTHENTICATED for a token that does not check out.
+   * What the account a provider's ID token is of holds, when it is linked
+   * to another user than the caller (spec/sync-protocol.md, Switching to
+   * an account in use): the ID token, with the nonce it was asked with,
+   * proves the person holds it. NOT_FOUND when the account is no other
+   * user's; UNAUTHENTICATED for a token that does not check out;
+   * INVALID_ARGUMENT for no provider.
    *
    * @generated from rpc pochical.v1.UserService.PeekAccount
    */
@@ -434,7 +495,7 @@ export const UserService: GenService<{
   },
   /**
    * Keeps this device's data: the account's user is deleted, everything
-   * of it with it, and its Sign in with Apple account linked to the caller
+   * of it with it, and its provider's account linked to the caller
    * instead, in one call. As PeekAccount for the token.
    *
    * @generated from rpc pochical.v1.UserService.TakeAccount

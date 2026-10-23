@@ -30,6 +30,10 @@ type AuthConfig = {
   secret: string;
   // The iOS app's bundle id, which Sign in with Apple's ID tokens are for.
   appleAppId: string;
+  // The Google OAuth clients whose ID tokens are taken: the Web client,
+  // which the apps ask Google's tokens for (serverClientID), and the iOS
+  // client.
+  googleClientIds: string[];
   // Told when a session ends (signing out, or the user's sessions going
   // with their account), to close what was let in with it.
   onSessionEnd?: (ended: { id: string; userId: string }) => Promise<void>;
@@ -65,7 +69,7 @@ const withoutTokens = <Row extends object>(row: Row) => ({
  */
 export const createAuth = (
   d1: D1Database,
-  { appleAppId, baseURL, onSessionEnd, secret }: AuthConfig
+  { appleAppId, baseURL, googleClientIds, onSessionEnd, secret }: AuthConfig
 ) =>
   betterAuth({
     // Linking Apple or Google keeps the anonymous user, whose email is the
@@ -103,8 +107,8 @@ export const createAuth = (
       session: {
         create: {
           // A suspended user signs in nowhere (spec/admin.md, ユーザー):
-          // with Apple, or by switching to their account, they are refused
-          // with USER_SUSPENDED, which the apps say as such.
+          // with Apple or Google, or by switching to their account, they are
+          // refused with USER_SUSPENDED, which the apps say as such.
           before: async (created) => {
             if (await isSuspended(d1, created.userId)) {
               throw new APIError("FORBIDDEN", {
@@ -146,14 +150,17 @@ export const createAuth = (
       disableSessionRefresh: true,
       expiresIn: COOKIE_SECONDS_MOST,
     },
-    // Sign in with Apple in the iOS app: its ID token is checked against
-    // the app's bundle id; nothing needs Apple's client secret.
+    // The apps sign in with Apple and Google by their ID tokens alone,
+    // never through a redirect, so neither takes a client secret. Apple's
+    // are checked against the iOS app's bundle id, Google's against the
+    // OAuth clients' ids (its audience).
     socialProviders: {
       apple: {
         appBundleIdentifier: appleAppId,
         clientId: appleAppId,
         clientSecret: "",
       },
+      google: { clientId: googleClientIds },
     },
     // When Pochical's people suspended the user (spec/admin.md, ユーザー);
     // null while they are not. Set on the admin site alone, never by a

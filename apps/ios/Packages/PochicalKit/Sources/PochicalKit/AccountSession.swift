@@ -222,32 +222,32 @@ import SQLiteData
     }
   }
 
-  /// Whether the user is linked to Apple or Google, as the server says;
-  /// nil when it cannot be asked now, or the account changed meanwhile.
-  public func linked() async -> Bool? {
-    guard let credentials = live,
-      let me = try? await server.me(credentials.token), credentials.isCurrent
-    else { return nil }
-    return !me.anonymous
+  /// The provider the user is linked to, as the server says, nil while
+  /// anonymous; throws when it cannot be asked now, or the account changed
+  /// meanwhile.
+  public func linkedProvider() async throws -> LinkedAccount.Provider? {
+    guard let credentials = live else { throw NotSignedIn() }
+    let me = try await server.me(credentials.token)
+    guard credentials.isCurrent else { throw AccountChanged() }
+    return me.linked
   }
 
-  /// Links Sign in with Apple's account to the user.
-  public func linkApple(idToken: String, nonce: String) async throws -> LinkResult {
+  /// Links the provider's account to the user.
+  public func link(_ account: ProviderToken) async throws -> LinkResult {
     guard case .signedIn(let credentials) = state else { throw NotSignedIn() }
-    return try await server.linkApple(idToken: idToken, nonce: nonce, on: credentials.token)
+    return try await server.link(account, on: credentials.token)
   }
 
   // MARK: Changing the account
 
-  /// アカウントのデータを使う: the device signs in to the user the Apple
-  /// account is linked to, erases what it held, and catches up from the
-  /// account; the user it was is deleted, tried again as the app comes back
-  /// should that fail.
-  public func useAccount(appleIDToken: String, nonce: String) async throws {
+  /// アカウントのデータを使う: the device signs in to the user the
+  /// provider's account is linked to, erases what it held, and catches up
+  /// from the account; the user it was is deleted, tried again as the app
+  /// comes back should that fail.
+  public func useAccount(_ account: ProviderToken) async throws {
     guard case .signedIn(let before) = state else { throw NotSignedIn() }
     try await change(from: before) { [server] before in
-      .switched(
-        to: try await server.signInApple(idToken: appleIDToken, nonce: nonce, on: before.token))
+      .switched(to: try await server.signIn(with: account, on: before.token))
     }
   }
 
@@ -265,9 +265,11 @@ import SQLiteData
     }
   }
 
-  /// アカウントを削除, only while signed in: Apple asked once more for a
-  /// fresh authorization code (`appleCode`, nil when the person cancels),
-  /// the account and everything of it deleted on the server with it, and
+  /// アカウントを削除, only while signed in: a user linked to Apple has
+  /// Apple asked once more for a fresh authorization code (`appleCode`,
+  /// nil when the person cancels), and one linked to Google answers it
+  /// empty, as nothing of Google's is revoked; the account and everything
+  /// of it deleted on the server with it, and
   /// the device going on as someone new, holding nothing of the user.
   /// False when the person canceled.
   public func deleteAccount(appleCode: @MainActor () async throws -> String?)

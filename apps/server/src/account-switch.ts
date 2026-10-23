@@ -1,57 +1,70 @@
 import { verifyProviderIdToken } from "@better-auth/core/oauth2";
 // Switching to an account in use (spec/sync-protocol.md): a device whose
-// user links a Sign in with Apple account that is another user's already
-// keeps one side whole and deletes the other. Both calls take Apple's ID
-// token and the nonce it was asked with, as linking does, which proves
-// the person holds the account.
+// user links a provider's account (Apple or Google) that is another user's
+// already keeps one side whole and deletes the other. Both calls take the
+// provider's ID token and the nonce it was asked with, as linking does,
+// which proves the person holds the account.
 import { Code, ConnectError } from "@connectrpc/connect";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { eraseUser } from "./account-deletion";
 import { account } from "./db/auth-schema";
+import type { ProviderToken } from "./gen/pochical/v1/user_pb";
 import { getAuth } from "./session";
+import { betterAuthProvider } from "./sign-in-providers";
 import { isSuspended } from "./suspension";
 
-const APPLE = "apple";
+/** A provider's account, as better-auth keys it. */
+type ProviderAccount = { providerId: string; accountId: string };
 
-/** The Apple account an ID token is of, once checked; else UNAUTHENTICATED. */
-const appleSubjectOf = async (
-  token: string,
-  nonce: string
-): Promise<string> => {
+/**
+ * The provider's account an ID token is of, once checked; else
+ * UNAUTHENTICATED, or INVALID_ARGUMENT for no provider.
+ */
+const accountOf = async (
+  token: ProviderToken | undefined
+): Promise<ProviderAccount> => {
+  const providerId = betterAuthProvider(token?.provider);
+  if (token === undefined || providerId === undefined) {
+    throw new ConnectError("No provider", Code.InvalidArgument);
+  }
   const auth = await getAuth().$context;
-  const provider = auth.socialProviders.find(({ id }) => id === APPLE);
+  const provider = auth.socialProviders.find(({ id }) => id === providerId);
   const verified =
     provider !== undefined &&
-    (await verifyProviderIdToken(provider, token, nonce));
-  const info = verified ? await provider.getUserInfo({ idToken: token }) : null;
+    (await verifyProviderIdToken(provider, token.idToken, token.nonce));
+  const info = verified
+    ? await provider.getUserInfo({ idToken: token.idToken })
+    : null;
   const data = info?.data;
   const subject: unknown =
     data !== undefined && "sub" in data ? data.sub : undefined;
   if (typeof subject !== "string") {
-    throw new ConnectError("Not Apple's word", Code.Unauthenticated);
+    throw new ConnectError("Not the provider's word", Code.Unauthenticated);
   }
-  return subject;
+  return { accountId: subject, providerId };
 };
 
-/** The user the Apple account is linked to, if any. */
+/** The user the provider's account is linked to, if any. */
 const userWith = async (
   env: Env,
-  subject: string
+  { accountId, providerId }: ProviderAccount
 ): Promise<string | undefined> => {
   const [linked] = await drizzle(env.DB)
     .select({ userId: account.userId })
     .from(account)
-    .where(and(eq(account.providerId, APPLE), eq(account.accountId, subject)));
+    .where(
+      and(eq(account.providerId, providerId), eq(account.accountId, accountId))
+    );
   return linked?.userId;
 };
 
 /**
  * Refuses a suspended account (PERMISSION_DENIED), which the apps say as
  * such: switching to it would sign in as it, and keeping the device's
- * data would delete it and take its Apple account elsewhere, out of the
- * suspension (spec/admin.md, ユーザー).
+ * data would delete it and take its provider's account elsewhere, out of
+ * the suspension (spec/admin.md, ユーザー).
  */
 const refuseSuspended = async (env: Env, userId: string): Promise<void> => {
   if (await isSuspended(env.DB, userId)) {
@@ -66,10 +79,9 @@ const refuseSuspended = async (env: Env, userId: string): Promise<void> => {
 export const peekAccount = async (
   env: Env,
   callerId: string,
-  token: string,
-  nonce: string
+  token: ProviderToken | undefined
 ) => {
-  const other = await userWith(env, await appleSubjectOf(token, nonce));
+  const other = await userWith(env, await accountOf(token));
   if (other === undefined || other === callerId) {
     throw new ConnectError("No other user holds it", Code.NotFound);
   }
@@ -79,17 +91,16 @@ export const peekAccount = async (
 
 /**
  * Keeps the caller's data: the account's user deleted, everything of it
- * with it, and the Apple account linked to the caller instead, which
+ * with it, and the provider's account linked to the caller instead, which
  * makes them anonymous no more. Again after it was done, nothing changes.
  */
 export const takeAccount = async (
   env: Env,
   callerId: string,
-  token: string,
-  nonce: string
+  token: ProviderToken | undefined
 ): Promise<void> => {
-  const subject = await appleSubjectOf(token, nonce);
-  const other = await userWith(env, subject);
+  const linking = await accountOf(token);
+  const other = await userWith(env, linking);
   if (other === callerId) {
     return;
   }
@@ -98,9 +109,5 @@ export const takeAccount = async (
     await eraseUser(env, other);
   }
   const auth = await getAuth().$context;
-  await auth.internalAdapter.createAccount({
-    accountId: subject,
-    providerId: APPLE,
-    userId: callerId,
-  });
+  await auth.internalAdapter.createAccount({ ...linking, userId: callerId });
 };

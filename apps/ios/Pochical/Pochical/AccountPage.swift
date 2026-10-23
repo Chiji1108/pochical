@@ -2,6 +2,7 @@ import AuthenticationServices
 import PochicalDesign
 import PochicalKit
 import SwiftUI
+import SwiftUINavigation
 
 /// 設定's アカウント row (/design's AccountRow): the provider signed in
 /// with, or ログインしていません.
@@ -14,21 +15,24 @@ struct AccountRow: View {
       AccountPage(linked: $linked)
     } label: {
       LabeledContent("アカウント") {
-        if linked == nil {
-          Text("ログインしていません")
+        if let linked {
+          ProviderName(provider: linked.provider)
         } else {
-          ProviderName()
+          Text("ログインしていません")
         }
       }
     }
     // As the server says: linked here, or on another of the person's
-    // devices, or no longer.
+    // devices, or no longer; the email only this device's sign-in read.
     .task {
-      guard let isLinked = await session.linked() else { return }
-      if !isLinked {
-        linked = nil
-      } else if linked == nil {
-        linked = LinkedAccount(provider: .apple, email: nil)
+      let provider: LinkedAccount.Provider?
+      do {
+        provider = try await session.linkedProvider()
+      } catch {
+        return
+      }
+      if linked?.provider != provider {
+        linked = provider.map { LinkedAccount(provider: $0, email: nil) }
       }
       LinkedAccount.keep(linked)
     }
@@ -38,10 +42,12 @@ struct AccountRow: View {
 /// The provider signed in with, its mark before its name, as 設定's
 /// アプリアイコン row shows its icon.
 private struct ProviderName: View {
+  let provider: LinkedAccount.Provider
+
   var body: some View {
     HStack(spacing: 8) {
-      Image(systemName: "apple.logo")
-      Text("Apple")
+      ProviderMark(provider: provider)
+      Text(provider.name)
     }
   }
 }
@@ -53,7 +59,8 @@ struct AccountPage: View {
   @Environment(\.themeColors) private var colors
   @Environment(AccountSession.self) private var session
   @Binding var linked: LinkedAccount?
-  @State private var confirmingDelete = false
+  /// The provider of the account asked to be deleted, while asking.
+  @State private var confirmingDelete: LinkedAccount.Provider?
   @State private var confirmingSignOut = false
   @State private var busy = false
   @State private var problem: Problem?
@@ -104,13 +111,12 @@ struct AccountPage: View {
               .foregroundStyle(colors.textTertiary)
           } label: {
             HStack(spacing: 12) {
-              Image(systemName: "apple.logo")
-                .font(.system(size: 16))
+              ProviderMark(provider: linked.provider)
                 .foregroundStyle(colors.textPrimary)
                 .frame(width: 30, height: 30)
                 .background(colors.backgroundCard, in: Circle())
                 .accessibilityHidden(true)
-              Text("Apple")
+              Text(linked.provider.name)
             }
           }
         } header: {
@@ -126,7 +132,7 @@ struct AccountPage: View {
         }
         .settingsRows()
         Section {
-          Button("アカウントを削除", role: .destructive) { confirmingDelete = true }
+          Button("アカウントを削除", role: .destructive) { confirmingDelete = linked.provider }
             .disabled(busy || !hasSession)
         } footer: {
           if session.phase == .starting {
@@ -144,12 +150,15 @@ struct AccountPage: View {
     .alert(item: $problem) { problem in
       Alert(title: Text(problem.title), message: Text(problem.message))
     }
-    .alert("アカウントを削除しますか？", isPresented: $confirmingDelete) {
+    .alert(
+      "アカウントを削除しますか？", isPresented: Binding($confirmingDelete),
+      presenting: confirmingDelete
+    ) { provider in
       Button("キャンセル", role: .cancel) {}
       Button("アカウントとすべてのデータを削除", role: .destructive) {
-        Task { await deleteAccount() }
+        Task { await deleteAccount(linkedTo: provider) }
       }
-    } message: {
+    } message: { _ in
       Text("シフト、グループ、チャットがすべて削除されます。元に戻せません。")
     }
     .alert("ログアウトしますか？", isPresented: $confirmingSignOut) {
@@ -163,7 +172,7 @@ struct AccountPage: View {
     }
   }
 
-  /// What signing in keeps, and Sign in with Apple.
+  /// What signing in keeps, and the ways in.
   private var signIn: some View {
     Section {
       VStack(spacing: 8) {
@@ -186,7 +195,7 @@ struct AccountPage: View {
       .padding(.vertical, 8)
       .settingsOnPage()
       .listRowSeparator(.hidden)
-      AppleSignInButton { account, _ in
+      SignInButtons { account, _ in
         withAnimation { linked = account }
       }
       .settingsOnPage()
@@ -211,15 +220,21 @@ struct AccountPage: View {
     FirstRun.again()
   }
 
-  /// Deletes the account (spec/sync-protocol.md, Deleting an account):
-  /// Apple asked once more first, for the code the server revokes Apple's
-  /// tokens with; then the device holds nothing of the user, and goes on
-  /// as someone new.
-  private func deleteAccount() async {
+  /// Deletes the account (spec/sync-protocol.md, Deleting an account): a
+  /// user linked to Apple has Apple asked once more first, for the code
+  /// the server revokes Apple's tokens with, and one linked to Google
+  /// nothing, as the server holds no Google token to revoke; then the
+  /// device holds nothing of the user, and goes on as someone new.
+  private func deleteAccount(linkedTo provider: LinkedAccount.Provider) async {
     busy = true
     defer { busy = false }
+    let appleCode: @MainActor () async throws -> String? =
+      switch provider {
+      case .apple: AppleCode.ask
+      case .google: { "" }
+      }
     do throws(DeletionFailure) {
-      guard try await session.deleteAccount(appleCode: AppleCode.ask) else { return }
+      guard try await session.deleteAccount(appleCode: appleCode) else { return }
     } catch .sessionEnded {
       return
     } catch {

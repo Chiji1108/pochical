@@ -17,6 +17,7 @@
 		C6C3CD0330740000000C5B81 /* Pow in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3CD0230740000000C5B81 /* Pow */; };
 		C6C3CB0330740000000C5B81 /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3CB0230740000000C5B81 /* Nuke */; };
 		C6C3CC0330740000000C5B81 /* SwiftUINavigation in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3CC0230740000000C5B81 /* SwiftUINavigation */; };
+		C6C3CE0330740000000C5B81 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = C6C3CE0230740000000C5B81 /* GoogleSignIn */; };
 		C6C383423073460000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C383413073460000C0C5B8 /* PochicalKit */; };
 		C6C38351307347A000C0C5B8 /* PochicalKit in Frameworks */ = {isa = PBXBuildFile; productRef = C6C38350307347A000C0C5B8 /* PochicalKit */; };
 		C6C3AE0330750000000C5B81 /* PochicalNotificationsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C6C3AE0130750000000C5B81 /* PochicalNotificationsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -177,6 +178,7 @@
 				C6C3CD0330740000000C5B81 /* Pow in Frameworks */,
 				C6C3CB0330740000000C5B81 /* Nuke in Frameworks */,
 				C6C3CC0330740000000C5B81 /* SwiftUINavigation in Frameworks */,
+				C6C3CE0330740000000C5B81 /* GoogleSignIn in Frameworks */,
 				C6C3832A307345A800C0C5B8 /* PochicalDesign in Frameworks */,
 			);
 		};
@@ -275,6 +277,7 @@
 				C6C3CD0230740000000C5B81 /* Pow */,
 				C6C3CB0230740000000C5B81 /* Nuke */,
 				C6C3CC0230740000000C5B81 /* SwiftUINavigation */,
+				C6C3CE0230740000000C5B81 /* GoogleSignIn */,
 			);
 			productName = Pochical;
 			productReference = C6C382E2307343AF00C0C5B8 /* Pochical.app */;
@@ -412,6 +415,7 @@
 				C6C3CD0130740000000C5B81 /* XCRemoteSwiftPackageReference "Pow" */,
 				C6C3CB0130740000000C5B81 /* XCRemoteSwiftPackageReference "Nuke" */,
 				C6C3CC0130740000000C5B81 /* XCRemoteSwiftPackageReference "swift-navigation" */,
+				C6C3CE0130740000000C5B81 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C6C382E3307343AF00C0C5B8 /* Products */;
@@ -640,6 +644,8 @@
 				DEVELOPMENT_TEAM = 6KC44WPYLJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				GOOGLE_IOS_CLIENT = "PLACEHOLDER-ios";
+				GOOGLE_WEB_CLIENT_ID = "PLACEHOLDER-web.apps.googleusercontent.com";
 				INFOPLIST_FILE = Pochical/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -681,6 +687,8 @@
 				DEVELOPMENT_TEAM = 6KC44WPYLJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				GOOGLE_IOS_CLIENT = "PLACEHOLDER-ios";
+				GOOGLE_WEB_CLIENT_ID = "PLACEHOLDER-web.apps.googleusercontent.com";
 				INFOPLIST_FILE = Pochical/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "ポチカル";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -1017,9 +1025,22 @@
 				version = 2.11.2;
 			};
 		};
+		C6C3CE0130740000000C5B81 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = exactVersion;
+				version = 10.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		C6C3CE0230740000000C5B81 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C6C3CE0130740000000C5B81 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
 		C6C3CB0230740000000C5B81 /* Nuke */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C6C3CB0130740000000C5B81 /* XCRemoteSwiftPackageReference "Nuke" */;

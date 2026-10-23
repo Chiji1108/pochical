@@ -13,22 +13,25 @@ service UserService {
   // every line they wrote taken back, their chat with Pochical's people,
   // and their sign-ins. A user linked to Sign in with Apple sends a fresh
   // authorization code, with which the server revokes the app's Apple
-  // tokens as Apple asks; FAILED_PRECONDITION without one Apple takes.
+  // tokens as Apple asks; FAILED_PRECONDITION without one Apple takes. A
+  // user linked to Google sends none, as the server holds no Google token
+  // to revoke.
   rpc DeleteAccount(DeleteAccountRequest) returns (DeleteAccountResponse) {
     option idempotency_level = IDEMPOTENT;
   }
 
-  // What the account a Sign in with Apple ID token is linked to holds,
-  // when it is another user's than the caller (spec/sync-protocol.md,
-  // Switching to an account in use): the ID token, with the nonce it was
-  // asked with, proves the person holds it. NOT_FOUND when the account is
-  // no other user's; UNAUTHENTICATED for a token that does not check out.
+  // What the account a provider's ID token is of holds, when it is linked
+  // to another user than the caller (spec/sync-protocol.md, Switching to
+  // an account in use): the ID token, with the nonce it was asked with,
+  // proves the person holds it. NOT_FOUND when the account is no other
+  // user's; UNAUTHENTICATED for a token that does not check out;
+  // INVALID_ARGUMENT for no provider.
   rpc PeekAccount(PeekAccountRequest) returns (PeekAccountResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
   // Keeps this device's data: the account's user is deleted, everything
-  // of it with it, and its Sign in with Apple account linked to the caller
+  // of it with it, and its provider's account linked to the caller
   // instead, in one call. As PeekAccount for the token.
   rpc TakeAccount(TakeAccountRequest) returns (TakeAccountResponse) {
     option idempotency_level = IDEMPOTENT;
@@ -131,6 +134,25 @@ message GetMeResponse {
   string user_id = 1;
   // Signed in without Apple or Google yet; linking one keeps the user.
   bool anonymous = 2;
+  // The provider the user is linked to; unspecified while anonymous.
+  SignInProvider provider = 3;
+}
+
+// Where a person signs in besides anonymously (spec/sync-protocol.md,
+// Signing in).
+enum SignInProvider {
+  SIGN_IN_PROVIDER_UNSPECIFIED = 0;
+  SIGN_IN_PROVIDER_APPLE = 1;
+  SIGN_IN_PROVIDER_GOOGLE = 2;
+}
+
+// A provider's ID token as the app got it signing in, which proves the
+// person holds the provider's account.
+message ProviderToken {
+  SignInProvider provider = 1;
+  string id_token = 2;
+  // The nonce the app asked the provider with.
+  string nonce = 3;
 }
 
 message DeleteAccountRequest {
@@ -142,8 +164,9 @@ message DeleteAccountRequest {
 message DeleteAccountResponse {}
 
 message PeekAccountRequest {
-  string apple_id_token = 1;
-  string nonce = 2;
+  reserved 1, 2;
+  reserved "apple_id_token", "nonce";
+  ProviderToken account = 3;
 }
 
 // What a user holds that the person entered, for telling a few taps tried
@@ -159,8 +182,9 @@ message PeekAccountResponse {
 }
 
 message TakeAccountRequest {
-  string apple_id_token = 1;
-  string nonce = 2;
+  reserved 1, 2;
+  reserved "apple_id_token", "nonce";
+  ProviderToken account = 3;
 }
 
 message TakeAccountResponse {}

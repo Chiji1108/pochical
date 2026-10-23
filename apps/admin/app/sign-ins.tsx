@@ -3,7 +3,10 @@ import { css } from "@pochical/styled-system/css";
 import { badge } from "./ui";
 
 /** Each way to sign in besides anonymously, as Pochical's people name it. */
-const SIGN_IN_NAMES: Record<string, string> = { apple: "Apple" };
+const SIGN_IN_NAMES: Record<string, string> = {
+  apple: "Apple",
+  google: "Google",
+};
 
 /** How a user signs in, as badges: 匿名 alone, or each way besides. */
 export function SignIns({
