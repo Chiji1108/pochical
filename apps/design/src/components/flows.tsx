@@ -80,6 +80,21 @@ export function FirstRun() {
   );
 }
 
+// A roster's work is asked the period its shifts come for, which becomes
+// the calendar's page.
+export function FirstRunRoster() {
+  return (
+    <FrameRow>
+      <OnboardingFrame label="期間" note="繰り返しがない人" screen="period" />
+      <OnboardingFrame
+        label="始まる日"
+        note="月の途中から始まる人"
+        screen="periodDay"
+      />
+    </FrameRow>
+  );
+}
+
 export function FirstRunWithAccount() {
   return (
     <FrameRow>

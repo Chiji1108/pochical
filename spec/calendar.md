@@ -21,7 +21,7 @@ How カレンダー, the person's own month, behaves on screen: what each part s
 
 ## The shift period
 
-Shifts are often handed out for a period that is not a month, 15日 to the next 14日, as a workplace closes its month on its own day. 設定 > カレンダー's シフトの期間 (kept with the account, spec/sync-protocol.md, Preferences) is 1日〜末日, the month, until the person picks a day from 2日 to 28日 for it to start on (15日〜翌月14日; no later, so every month has the day), a period running from that day to the day before it a month on (`spec/vectors/periods.json`). Most people's shifts come by the month, and for them nothing changes.
+Shifts are often handed out for a period that is not a month, 15日 to the next 14日, as a workplace closes its month on its own day. 設定 > カレンダー's シフトの期間 (kept with the account, spec/sync-protocol.md, Preferences; asked of a roster's work by はじめの設定 and 新しい仕事にする, spec/shift-patterns.md, Changing jobs) is 1日〜末日, the month, until the person picks a day from 2日 to 28日 for it to start on (15日〜翌月14日; no later, so every month has the day), a period running from that day to the day before it a month on (`spec/vectors/periods.json`). Most people's shifts come by the month, and for them nothing changes.
 
 With a period set, each page of the calendar is a period rather than a month, so what is shown, counted, entered and handed out is always the same days: the page, 今月のお休み and its 内訳, where ポチポチ入力 ends and what 完了 asks about, and what the picture and the device calendar get. What this spec says of the calendar's month is said of the period, but for what follows. It is one calendar, the range of its page an input: never a second calendar to pick, which every screen would then need twice.
 

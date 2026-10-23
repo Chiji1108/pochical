@@ -22,6 +22,10 @@ private enum JobStep: Hashable {
   case patterns(JobTemplate)
   /// The order, typed with the patterns chosen.
   case order(JobTemplate, [PatternID])
+  /// A roster's work, with the patterns chosen: the period its shifts
+  /// are handed out for, then the day one starting mid-month starts on.
+  case period([PatternID])
+  case periodDay([PatternID])
 }
 
 /// 新しい仕事にする.
@@ -29,7 +33,10 @@ struct JobChangePage: View {
   @Environment(\.themeColors) private var colors
   @Environment(\.dismiss) private var dismiss
   @Environment(\.write) private var write
+  @Environment(Settings.self) private var settings
   @State private var start = Day.today.firstOfMonth.addingMonths(1)
+  /// The day a period starting mid-month starts on, as picked.
+  @State private var periodStart = PeriodQuestion.firstPick
   @State private var steps: [JobStep] = [.day]
   @State private var sequence: [PatternID] = []
   @State private var anchor = Day.today
@@ -55,6 +62,8 @@ struct JobChangePage: View {
       case .rotation: templates(ReadyPatterns.rotationTemplates, asking: "近い働き方を選んでください")
       case .patterns(let template): patternsStep(template)
       case .order: EmptyView()
+      case .period(let patterns): periodStep(patterns)
+      case .periodDay(let patterns): periodDayStep(patterns)
       }
     }
     .settingsList()
@@ -144,9 +153,8 @@ struct JobChangePage: View {
   }
 
   /// The patterns to use, the kind of work's own already picked: 次へ
-  /// when an order is typed next, else 完了.
+  /// when an order or the period is asked next, else 完了.
   @ViewBuilder private func patternsStep(_ template: JobTemplate) -> some View {
-    let ordering = template.sequence != nil && !template.startsWeekly
     question(patternsQuestion(template).title, patternsQuestion(template).description)
     Section {
       ReadyPatternChips(picked: $picked, needed: template.needed)
@@ -157,10 +165,44 @@ struct JobChangePage: View {
       Button {
         choose(template, patterns: chosenPatterns(picked))
       } label: {
-        Text(ordering ? "次へ" : "完了").frame(maxWidth: .infinity)
+        Text(template.asksMore ? "次へ" : "完了").frame(maxWidth: .infinity)
       }
       .mainButton()
       .disabled(picked.isEmpty)
+      .settingsOnPage()
+    }
+  }
+
+  /// The period a roster's shifts are handed out for, which becomes the
+  /// calendar's page: by the month first, ending the questions in one tap.
+  @ViewBuilder private func periodStep(_ patterns: [PatternID]) -> some View {
+    question(PeriodQuestion.title, PeriodQuestion.description)
+    Section {
+      let month = PeriodQuestion.month
+      let midMonth = PeriodQuestion.midMonth
+      option(month.icon, month.title, month.note) {
+        finish(patterns, sequence: [], anchor: start, period: ShiftPeriod())
+      }
+      option(midMonth.icon, midMonth.title, midMonth.note) { go(.periodDay(patterns)) }
+    }
+    .settingsRows()
+  }
+
+  /// The day a period starting mid-month starts on, then 完了.
+  @ViewBuilder private func periodDayStep(_ patterns: [PatternID]) -> some View {
+    question(PeriodQuestion.dayTitle, PeriodQuestion.dayDescription)
+    Section {
+      PeriodDayPicker(start: $periodStart)
+    }
+    .settingsRows()
+    Section {
+      Button {
+        finish(
+          patterns, sequence: [], anchor: start, period: ShiftPeriod(start: periodStart))
+      } label: {
+        Text("完了").frame(maxWidth: .infinity)
+      }
+      .mainButton()
       .settingsOnPage()
     }
   }
@@ -262,11 +304,15 @@ struct JobChangePage: View {
       anchor = start
       go(.order(template, patterns))
     } else {
-      finish(patterns, sequence: [], anchor: start)
+      go(.period(patterns))
     }
   }
 
-  private func finish(_ patternIDs: [PatternID], sequence: [PatternID], anchor: Day) {
+  /// The new job takes over; a roster's work brings the period its
+  /// shifts come for, an order's leaves the one set.
+  private func finish(
+    _ patternIDs: [PatternID], sequence: [PatternID], anchor: Day, period: ShiftPeriod? = nil
+  ) {
     let incoming = readyPatterns(patternIDs)
     let now = Int64(Date.now.timeIntervalSince1970 * 1000)
     let kept = write {
@@ -275,6 +321,7 @@ struct JobChangePage: View {
         holidayCountry: HolidayCountry.current, now: now, in: $0)
     }
     guard kept else { return }
+    if let period { settings.device.period = period }
     ReminderOffer.setUpOrder(sequence)
     dismiss()
   }

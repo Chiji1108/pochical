@@ -4,7 +4,7 @@ import { css, cva, cx } from "@pochical/styled-system/css";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
-import { addDays } from "../lib/design-days";
+import { addDays, formatPeriodStart, periodStarts } from "../lib/design-days";
 import {
   PatternsContext,
   presetPatterns,
@@ -14,6 +14,7 @@ import type { PresetShift, Shift } from "../lib/design-patterns";
 import { designMonth } from "../lib/design-today";
 import { BackButton, DoneButton, PageHeader } from "./design-header";
 import { List, ListRow, listRow } from "./design-list";
+import { MenuPicker, PullDownMenu } from "./design-menu";
 import { inChipOrder, ReadyPatternChips, toggled } from "./design-ready-chips";
 import {
   OrderTitle,
@@ -32,17 +33,25 @@ export type Step =
   | { name: "rotation" }
   // The patterns to use, the kind of work's to start with.
   | { name: "patterns"; template: Template; kind: "roster" | "rotation" }
-  | { name: "order"; template: Template };
+  | { name: "order"; template: Template }
+  // A roster's work, its template holding the patterns chosen: the period
+  // its shifts are handed out for, then the day a period starting
+  // mid-month starts on.
+  | { name: "period"; template: Template }
+  | { name: "periodDay"; template: Template };
 
 // What a page's 完了 asks before days already there change.
 type Confirm = { title: string; message: string; action: string };
 
-// What the setup questions end with: the patterns to use, and for work
-// that repeats, the order and a day that falls on its first shift.
+// What the setup questions end with: the patterns to use; for work that
+// repeats, the order and a day that falls on its first shift; for a
+// roster's, the day each period starts on (spec/calendar.md, The shift
+// period).
 export type WorkSetup = {
   patternKeys: PresetShift[];
   sequence?: Shift[];
   anchor?: Date;
+  periodStart?: number;
 };
 
 // A template's order or keys, under its note.
@@ -215,7 +224,7 @@ export function WorkSetupSteps({
     patternKeys: PresetShift[]
   ) {
     if (kind === "roster") {
-      onFinish({ patternKeys });
+      goTo({ name: "period", template: { ...template, patternKeys } });
     } else if (template.weekly && template.sequence) {
       // Any Sunday works as the first day of a week-based sequence.
       onFinish({
@@ -278,10 +287,7 @@ export function WorkSetupSteps({
           onNext={(patternKeys) => {
             goOnWith(step.template, step.kind, patternKeys);
           }}
-          ordering={
-            step.kind === "rotation" &&
-            !(step.template.weekly && step.template.sequence)
-          }
+          asksMore={!(step.template.weekly && step.template.sequence)}
           template={step.template}
         />
       )}
@@ -301,6 +307,34 @@ export function WorkSetupSteps({
             onFinish({ ...order, patternKeys: step.template.patternKeys });
           }}
           template={step.template}
+        />
+      )}
+      {step.name === "period" && (
+        <PeriodStep
+          first={!onExit}
+          onBack={() => {
+            goTo({ kind: "roster", name: "patterns", template: step.template });
+          }}
+          onMidMonth={() => {
+            goTo({ name: "periodDay", template: step.template });
+          }}
+          onMonth={() => {
+            onFinish({
+              patternKeys: step.template.patternKeys,
+              periodStart: 1,
+            });
+          }}
+        />
+      )}
+      {step.name === "periodDay" && (
+        <PeriodDayStep
+          first={!onExit}
+          onBack={() => {
+            goTo({ name: "period", template: step.template });
+          }}
+          onFinish={(periodStart) => {
+            onFinish({ patternKeys: step.template.patternKeys, periodStart });
+          }}
         />
       )}
     </PatternsContext>
@@ -505,14 +539,15 @@ function TemplateStep({
 function PatternsStep({
   template,
   first,
-  ordering,
+  asksMore,
   onBack,
   onNext,
 }: {
   template: Template;
   first: boolean;
-  // An order to type comes next, so the button goes on to it.
-  ordering: boolean;
+  // An order to type or the period comes next, so the button goes on to
+  // it.
+  asksMore: boolean;
   onBack: () => void;
   onNext: (patternKeys: PresetShift[]) => void;
 }) {
@@ -522,7 +557,7 @@ function PatternsStep({
   const needed = new Set(template.custom ? [] : (template.sequence ?? []));
   const chosen = inChipOrder(picked);
   let action = "完了";
-  if (ordering) {
+  if (asksMore) {
     action = "次へ";
   } else if (first) {
     action = "はじめる";
@@ -562,6 +597,127 @@ function PatternsStep({
         }}
       >
         {action}
+      </Button>
+    </>
+  );
+}
+
+// The period a roster's shifts are handed out for, which becomes the
+// calendar's page (spec/shift-patterns.md, Changing jobs): by the month
+// first, as most people's come, ending the questions in one tap; a period
+// starting mid-month goes on to its day.
+function PeriodStep({
+  first,
+  onBack,
+  onMonth,
+  onMidMonth,
+}: {
+  first: boolean;
+  onBack: () => void;
+  onMonth: () => void;
+  onMidMonth: () => void;
+}) {
+  return (
+    <>
+      <StepHeader
+        description="カレンダーの1ページを、この期間にします。あとから設定の「カレンダー」で変えられます。"
+        onBack={onBack}
+        title="シフト表は、いつからいつまでの分が出ますか？"
+      />
+      {first ? (
+        <div className={optionList}>
+          {periodAnswers.map((answer) => (
+            <OptionCard
+              icon={answer.icon}
+              key={answer.title}
+              note={answer.note}
+              onClick={answer.id === "month" ? onMonth : onMidMonth}
+              title={answer.title}
+            />
+          ))}
+        </div>
+      ) : (
+        <List>
+          {periodAnswers.map((answer) => (
+            <ListRow
+              detail={answer.note}
+              key={answer.title}
+              label={answer.title}
+              leading={
+                <span aria-hidden="true" className={answerRow.emoji}>
+                  {answer.icon}
+                </span>
+              }
+              onClick={answer.id === "month" ? onMonth : onMidMonth}
+            />
+          ))}
+        </List>
+      )}
+    </>
+  );
+}
+
+const periodAnswers = [
+  {
+    icon: "🗓️",
+    id: "month",
+    note: "月ごとに出る",
+    title: "毎月1日から末日まで",
+  },
+  {
+    icon: "📌",
+    id: "midMonth",
+    note: "15日から翌月14日まで、など",
+    title: "月の途中から始まる",
+  },
+] as const;
+
+// The day a period starting mid-month starts on, 2 to 28 so every month
+// has it, with the range it makes under it.
+function PeriodDayStep({
+  first,
+  onBack,
+  onFinish,
+}: {
+  first: boolean;
+  onBack: () => void;
+  onFinish: (periodStart: number) => void;
+}) {
+  const [start, setStart] = useState(15);
+  return (
+    <>
+      <StepHeader
+        description="シフト表の最初の日を選んでください。"
+        onBack={onBack}
+        title="何日から始まりますか？"
+      />
+      <List>
+        <ListRow
+          control={
+            <PullDownMenu label={`${start}日`}>
+              <MenuPicker
+                onValueChange={(value) => {
+                  setStart(Number(value));
+                }}
+                options={periodStarts.slice(1).map((day) => ({
+                  label: `${day}日`,
+                  value: String(day),
+                }))}
+                value={String(start)}
+              />
+            </PullDownMenu>
+          }
+          label="始まる日"
+        />
+      </List>
+      <p className={onboarding.description}>{formatPeriodStart(start)}</p>
+      <Button
+        className={patternsStep.next({ pinned: first })}
+        onClick={() => {
+          onFinish(start);
+        }}
+      >
+        {first ? "はじめる" : "完了"}
       </Button>
     </>
   );

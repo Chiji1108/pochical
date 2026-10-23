@@ -19,6 +19,7 @@ import {
   usePatterns,
 } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
+import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import { Chip, ChipGroup } from "./design-choices";
@@ -520,6 +521,7 @@ export function JobChangePage({
 }) {
   const [start, setStart] = useState(nextMonthStart);
   const [asking, setAsking] = useState(false);
+  const setPeriodStart = useSettings((state) => state.setPeriodStart);
   if (asking) {
     return (
       <div className={settingsParts.job}>
@@ -536,8 +538,11 @@ export function JobChangePage({
           onExit={() => {
             setAsking(false);
           }}
-          onFinish={({ patternKeys, sequence, anchor }) => {
+          onFinish={({ patternKeys, sequence, anchor, periodStart }) => {
             onOrdering(false);
+            if (periodStart !== undefined) {
+              setPeriodStart(periodStart);
+            }
             // Offered as the calendar next shows, as after はじめの設定.
             if (sequence !== undefined && sequence.length > 0) {
               useDevice.setState({ reminderOfferPending: true });
