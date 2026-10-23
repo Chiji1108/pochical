@@ -57,7 +57,6 @@ import type {
   WidgetEntry,
 } from "@pochical/prototype/lib/design-widgets";
 import { wallpaperSamples } from "@pochical/prototype/lib/material-you";
-import { VariantPanel } from "@pochical/showcase/components/design-variant-panel";
 import { css } from "@pochical/styled-system/css";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { ComponentType, ReactNode } from "react";
@@ -68,6 +67,7 @@ import {
   widgetVariantOptions,
 } from "../lib/design-widget-variants";
 import type { WidgetVariants } from "../lib/design-widget-variants";
+import { VariantPanel } from "./design-variant-panel";
 import {
   NextOffCircular,
   TodayCircular,

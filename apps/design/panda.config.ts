@@ -1,6 +1,6 @@
 import showcase from "@pochical/showcase/panda";
 
-// Panda CSS for this app, shared with the other two, with its layers named
+// Panda CSS for this app, shared with apps/try, with its layers named
 // apart from Tailwind CSS's (base, utilities), which Fumadocs UI brings
 // (src/styles.css).
 export default {

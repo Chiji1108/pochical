@@ -1,5 +1,4 @@
-import { demoUrl, tryUrl } from "@pochical/showcase/lib/app-urls";
-import { pageMeta } from "@pochical/showcase/lib/page-meta";
+import { tryUrl } from "@pochical/showcase/lib/app-urls";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useFumadocsLoader } from "fumadocs-core/source/client";
@@ -15,6 +14,7 @@ import { Suspense, use } from "react";
 
 import { DocsThemeSwitch } from "../components/docs-theme-switch";
 import { useMDXComponents } from "../components/mdx";
+import { pageMeta } from "../lib/page-meta";
 import { docs, source } from "../lib/source";
 
 // Every page of the design documents: an MDX page of content/, in
@@ -66,13 +66,13 @@ export const Route = createFileRoute("/$")({
   staleTime: Number.POSITIVE_INFINITY,
 });
 
-// The other two apps, beside the documents in the sidebar.
+// /demo and the app to try, beside the documents in the sidebar.
 const apps = [
   {
     icon: <TabletSmartphone />,
     text: "デモ",
     type: "main",
-    url: demoUrl("/demo"),
+    url: "/demo",
   },
   {
     icon: <Smartphone />,

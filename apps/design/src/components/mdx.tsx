@@ -1,13 +1,14 @@
 import { useDesignTheme } from "@pochical/prototype/components/design-providers";
 import { pageStyle } from "@pochical/prototype/components/design-theme";
+import { parseDesignVariants } from "@pochical/prototype/lib/design-variants";
 import type { DesignVariants } from "@pochical/prototype/lib/design-variants";
 import { workspace } from "@pochical/showcase/components/design-page";
-import { demoUrl } from "@pochical/showcase/lib/app-urls";
 import { css, cx } from "@pochical/styled-system/css";
+import { Link } from "@tanstack/react-router";
 import { Step, Steps } from "fumadocs-ui/components/steps";
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import defaultMdxComponents from "fumadocs-ui/mdx";
-import { ExternalLink } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { MDXComponents } from "mdx/types";
 import type { ReactNode } from "react";
 
@@ -53,18 +54,18 @@ function Pieces({
   );
 }
 
-// The demo (apps/demo) opened on what the page just showed, by its
-// choices in the URL as /demo keeps them.
+// /demo opened on what the page just showed, by its choices in the URL
+// as /demo keeps them, the current proposal for the rest.
 function DemoLink({ state }: { state?: Partial<DesignVariants> }) {
-  const search = new URLSearchParams(state).toString();
   return (
-    <a
+    <Link
       className="not-prose text-fd-primary inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
-      href={demoUrl(search === "" ? "/demo" : `/demo?${search}`)}
+      search={parseDesignVariants({ ...state })}
+      to="/demo"
     >
       この状態をデモで見る
-      <ExternalLink aria-hidden="true" className="size-3.5" />
-    </a>
+      <ChevronRight aria-hidden="true" className="size-3.5" />
+    </Link>
   );
 }
 
