@@ -79,7 +79,7 @@ extension PatternRow {
 
 extension RepeatOrderRow {
   /// Nil for a start that names no day, which the server never sends.
-  var order: RepeatOrder? {
+  public var order: RepeatOrder? {
     guard let start = Day(start) else {
       return nil
     }

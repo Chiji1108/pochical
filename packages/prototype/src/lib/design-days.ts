@@ -496,6 +496,34 @@ export function patternsWithout(patterns: readonly Pattern[], id: Shift) {
   return patterns.filter((pattern) => pattern.id !== id);
 }
 
+// Whether an order in use or to come puts the pattern on days, in its
+// sequence or on holidays: it cannot be deleted until that order changes.
+// One only in periods over can (spec/vectors/patterns.json, refused).
+export function repeatsPattern(
+  rules: readonly RepeatRule[],
+  id: Shift,
+  today: Date
+) {
+  return rules.some((rule, index) => {
+    const next = rules[index + 1];
+    const puts =
+      rule.sequence.includes(id) ||
+      (rule.holidaysOff === true && rule.holidayShift === id);
+    return puts && (!next || next.start > today);
+  });
+}
+
+// Whether archiving the pattern, saved as `archived`, is refused: one in
+// use stays so while an order repeats it. Bringing one back never is.
+export function refusesArchiving(
+  rules: readonly RepeatRule[],
+  id: Shift,
+  archived: boolean,
+  today: Date
+) {
+  return !archived && repeatsPattern(rules, id, today);
+}
+
 export function addDays(date: Date, days: number) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
