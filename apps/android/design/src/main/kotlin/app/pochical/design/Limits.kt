@@ -36,6 +36,9 @@ object SyncLimits {
 /** The most days one chat message shares. */
 const val SHARED_DAYS_MAX = 31
 
+/** The fewest days a poll puts to the vote. */
+const val POLL_MIN_DAYS = 2
+
 /** The most people in one group. */
 const val GROUP_MAX_MEMBERS = 100
 

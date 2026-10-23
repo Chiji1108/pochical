@@ -43,6 +43,7 @@ const buttonStyle = cva({
     fontWeight: 500,
     gap: "8px",
     justifyContent: "center",
+    padding: 0,
   },
   defaultVariants: { size: "regular", variant: "primary" },
   variants: {

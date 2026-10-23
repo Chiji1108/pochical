@@ -44,9 +44,10 @@ prepare() {
   start_server
 }
 
-# A new group, made by a new user, its invitation code kept in "$1".
+# A new group, made by a new user, its invitation code kept in "$1", and
+# named "$2" if given.
 new_group() {
   rm -f "$root/tools/api-try/out/state.json"
-  bun "$root/tools/api-try/index.ts" create --local
+  bun "$root/tools/api-try/index.ts" create ${2:+"$2"} --local
   jq -r .inviteCode "$root/tools/api-try/out/state.json" >"$1"
 }

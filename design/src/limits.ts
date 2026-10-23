@@ -47,6 +47,9 @@ export const textFields = {
 // poll's choices: a month's worth.
 export const SHARED_DAYS_MAX = 31;
 
+// The fewest days a poll puts to the vote: one day would be no choice.
+export const POLL_MIN_DAYS = 2;
+
 // The most people in one group. Far past a family's or friends' group, so
 // it only caps what a leaked invitation link can let in.
 export const GROUP_MAX_MEMBERS = 100;
