@@ -833,7 +833,7 @@ export class UserDO extends DurableObject<Env> {
     // Noted with the alarm that deletes it, should SetProfile stop before
     // it names the photo.
     this.db.insert(goingPhotos).values({ photoId }).onConflictDoNothing().run();
-    void this.alarms.set(Date.now());
+    this.alarms.set(Date.now());
     // Read whole first: a body streamed to R2 inside blockConcurrencyWhile
     // stalls until the call is cancelled.
     await this.env.PHOTOS.put(key, await upload.arrayBuffer(), {
@@ -1045,9 +1045,7 @@ export class UserDO extends DurableObject<Env> {
    * going are deleted first, and come back so should storage fail.
    */
   async alarm(run: AlarmInvocationInfo): Promise<void> {
-    // Not waited on: the run starts as the runtime began it, and the
-    // check lands before its first wait.
-    void this.alarms.begin(run);
+    await this.alarms.begin(run);
     const userId = this.ctx.id.name;
     if (userId === undefined) {
       return;
@@ -1110,7 +1108,7 @@ export class UserDO extends DurableObject<Env> {
   }
 
   private schedulePush(): void {
-    void this.alarms.set(Date.now());
+    this.alarms.set(Date.now());
   }
 
   /**

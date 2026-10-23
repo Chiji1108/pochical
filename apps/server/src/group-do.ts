@@ -922,7 +922,7 @@ export class GroupDO extends DurableObject<Env> {
    */
   private sweepIf(photosGoing: boolean): void {
     if (photosGoing) {
-      void this.alarms.set(Date.now());
+      this.alarms.set(Date.now());
     }
   }
 
@@ -1436,7 +1436,7 @@ export class GroupDO extends DurableObject<Env> {
       this.ctx.waitUntil(this.addPage(page));
     }
     if (changed.length > 0 && this.placeKind() === "support") {
-      this.ctx.waitUntil(this.alarms.set(Date.now()));
+      this.alarms.set(Date.now());
     }
     return { refused, refusedSends, sent };
   }
@@ -1451,9 +1451,7 @@ export class GroupDO extends DurableObject<Env> {
    * and the alarm comes back for any not taken, until it is.
    */
   async alarm(run: AlarmInvocationInfo): Promise<void> {
-    // Not waited on: the run starts as the runtime began it, and the
-    // check lands before its first wait.
-    void this.alarms.begin(run);
+    await this.alarms.begin(run);
     const userId = this.supportUser();
     const waitMs =
       userId === undefined

@@ -19,7 +19,7 @@ const storedAfter = async (
     alarm: Alarm,
     storage: DurableObjectStorage,
     at: number
-  ) => Promise<void>
+  ) => Promise<void> | void
 ): Promise<{ at: number; stored: number | null }> =>
   await runInDurableObject(
     env.USERS.getByName(crypto.randomUUID()),
@@ -34,16 +34,16 @@ const storedAfter = async (
 
 describe("a Durable Object's alarm", () => {
   it("is set for the time asked", async () => {
-    const { at, stored } = await storedAfter(async (alarm, _, time) => {
-      await alarm.set(time);
+    const { at, stored } = await storedAfter((alarm, _, time) => {
+      alarm.set(time);
     });
     expect(stored).toBe(at);
   });
 
   it("is set for now when the time asked is past", async () => {
     const before = Date.now();
-    const { stored } = await storedAfter(async (alarm) => {
-      await alarm.set(0);
+    const { stored } = await storedAfter((alarm) => {
+      alarm.set(0);
     });
     expect(stored).toBeGreaterThanOrEqual(before);
     expect(stored).toBeLessThanOrEqual(Date.now());
@@ -52,7 +52,7 @@ describe("a Durable Object's alarm", () => {
   it("asked for the time of the run going, is set a millisecond after it", async () => {
     const { at, stored } = await storedAfter(async (alarm, _, time) => {
       await alarm.begin(ownRun(time));
-      await alarm.set(time);
+      alarm.set(time);
     });
     expect(stored).toBe(at + 1);
   });
@@ -60,18 +60,18 @@ describe("a Durable Object's alarm", () => {
   it("asked for another time while a run goes, is set for it", async () => {
     const { at, stored } = await storedAfter(async (alarm, _, time) => {
       await alarm.begin(ownRun(time));
-      await alarm.set(time + 5);
+      alarm.set(time + 5);
     });
     expect(stored).toBe(at + 5);
   });
 
   it("asked for by a time, keeps one set earlier and moves one set later", async () => {
     const kept = await storedAfter(async (alarm, _, time) => {
-      await alarm.set(time);
+      alarm.set(time);
       await alarm.setBy(time + 5);
     });
     const moved = await storedAfter(async (alarm, _, time) => {
-      await alarm.set(time + 5);
+      alarm.set(time + 5);
       await alarm.setBy(time);
     });
     expect([kept.stored, moved.stored]).toStrictEqual([kept.at, moved.at]);
@@ -94,6 +94,15 @@ describe("a Durable Object's alarm", () => {
       await alarm.begin(ownRun(time));
     });
     expect(stored).toBe(at + 1);
+  });
+
+  it("kept at its run's own time to try the run again, is left as it is as the retry begins", async () => {
+    const { at, stored } = await storedAfter(async (alarm, storage, time) => {
+      // As the runtime keeps a run that threw, to try it again.
+      await storage.setAlarm(time);
+      await alarm.begin({ isRetry: true, retryCount: 1, scheduledTime: time });
+    });
+    expect(stored).toBe(at);
   });
 
   it("is left as it is when a run begins with none set", async () => {
