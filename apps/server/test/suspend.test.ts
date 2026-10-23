@@ -1,7 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { appleKeys, idToken, link } from "./apple-helpers";
 import {
   call,
   memberOf,
@@ -10,13 +9,14 @@ import {
   signInAnonymously,
   userIdOf,
 } from "./helpers";
+import { accountToken, idToken, link, providerKeys } from "./provider-helpers";
 
 const STAFF = "staff@pochical.app";
 
 /** A user linked to the Apple account `subject`. */
 const linkedUser = async (subject: string) => {
   const token = await signInAnonymously();
-  await link(token, await idToken(subject, "n0"), "n0");
+  await link(token, "apple", await idToken("apple", subject, "n0"), "n0");
   return { token, userId: await userIdOf(token) };
 };
 
@@ -27,7 +27,7 @@ const signInWithApple = async (subject: string, nonce: string) => {
     `${ORIGIN}/api/auth/sign-in/social`,
     {
       body: JSON.stringify({
-        idToken: { nonce, token: await idToken(subject, nonce) },
+        idToken: { nonce, token: await idToken("apple", subject, nonce) },
         provider: "apple",
       }),
       headers: {
@@ -56,7 +56,7 @@ describe("suspending a user", () => {
   });
 
   it("signs out every device of theirs and refuses their sign-in with Apple", async () => {
-    appleKeys();
+    providerKeys();
     const { token, userId } = await linkedUser("apple-su1");
     await expect(
       exports.AdminEntrypoint.suspend(userId, true, STAFF)
@@ -73,18 +73,18 @@ describe("suspending a user", () => {
   });
 
   it("refuses switching to a suspended account, or taking its Apple account away", async () => {
-    appleKeys();
+    providerKeys();
     const { userId } = await linkedUser("apple-su2");
     await exports.AdminEntrypoint.suspend(userId, true, STAFF);
     const device = await signInAnonymously();
     const peeked = await call(
       "UserService/PeekAccount",
-      { appleIdToken: await idToken("apple-su2", "n2"), nonce: "n2" },
+      { account: await accountToken("apple", "apple-su2", "n2") },
       device
     );
     const taken = await call(
       "UserService/TakeAccount",
-      { appleIdToken: await idToken("apple-su2", "n3"), nonce: "n3" },
+      { account: await accountToken("apple", "apple-su2", "n3") },
       device
     );
     const stillTheirs = await env.DB.prepare(
@@ -99,7 +99,7 @@ describe("suspending a user", () => {
   });
 
   it("lets them sign in again once let back, and notes both in 記録", async () => {
-    appleKeys();
+    providerKeys();
     const { userId } = await linkedUser("apple-su3");
     await exports.AdminEntrypoint.suspend(userId, true, STAFF);
     await exports.AdminEntrypoint.suspend(userId, false, STAFF);

@@ -93,7 +93,7 @@ export type UserSummary = {
   userId: string;
   createdAtMs: number;
   anonymous: boolean;
-  /** How they sign in besides anonymously: apple. */
+  /** How they sign in besides anonymously: apple, google. */
   signIns: string[];
   /** Their chat with Pochical's people waits for an answer (未返信). */
   unanswered: number;
@@ -135,8 +135,9 @@ export type UserPage = UserSummary & {
 const PAGE = 200;
 
 /**
- * How a user signs in besides anonymously (apple), in the same query as
- * them: a list binds no id for each of its users, which D1 holds to 100.
+ * How a user signs in besides anonymously (apple, google), in the same
+ * query as them: a list binds no id for each of its users, which D1 holds
+ * to 100.
  */
 const signInsSql = sql<
   string | null

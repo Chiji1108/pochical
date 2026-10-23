@@ -1486,6 +1486,7 @@ object Metrics {
   val spacingStep = 4.dp
   val action = 40.dp
   val control = 52.dp
+  val signIn = 50.dp
   val touch = 44.dp
   const val HOVER_OPACITY = 0.12f
   const val PRESSED_OPACITY = 0.16f
@@ -1511,6 +1512,14 @@ data class Shadow(val y: Dp, val blur: Dp, val color: (ThemeColors) -> Color) {
     val lg = Shadow(8.dp, 24.dp, ThemeColors::shadowLarge)
     val md = Shadow(4.dp, 14.dp, ThemeColors::shadowMedium)
     val sm = Shadow(1.dp, 3.dp, ThemeColors::shadowLarge)
+  }
+}
+
+/** Google's sign-in button in its guidelines' colors (design/src/sign-in.ts). */
+data class GoogleButtonColors(val fill: Color, val stroke: Color, val text: Color) {
+  companion object {
+    val Dark = GoogleButtonColors(Color(0xFF131314), Color(0xFF8E918F), Color(0xFFE3E3E3))
+    val Light = GoogleButtonColors(Color(0xFFFFFFFF), Color(0xFF747775), Color(0xFF1F1F1F))
   }
 }
 

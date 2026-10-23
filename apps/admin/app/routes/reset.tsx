@@ -106,7 +106,7 @@ export default function Reset({
         <p className={meta}>
           アカウントは、アカウントの削除と同じ手順で消します。Apple
           のトークンは取り消しません（取り消しには本人の新しい認可コードが要ります）。同じ
-          Apple ID
+          Apple ID や Google アカウント
           でもう一度ログインすると、新しいユーザーになります。端末に残ったセッションは使えなくなります。
         </p>
       </section>

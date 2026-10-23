@@ -1,8 +1,8 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { appleKeys, idToken, link } from "./apple-helpers";
 import { call, ORIGIN, userIdOf } from "./helpers";
+import { providerKeys, idToken, link } from "./provider-helpers";
 import { changesIn, device, pair, sendFrame, syncSocket } from "./sync-helpers";
 
 // An APNs token as a device gives it.
@@ -282,15 +282,15 @@ describe("a chat's notifications", () => {
 
 /** A second session of the user, as signing in with Apple on another device. */
 const secondSession = async (token: string, subject: string) => {
-  appleKeys();
-  await expect(link(token, await idToken(subject, "p1"), "p1")).resolves.toBe(
-    200
-  );
+  providerKeys();
+  await expect(
+    link(token, "apple", await idToken("apple", subject, "p1"), "p1")
+  ).resolves.toBe(200);
   const signedIn = await exports.default.fetch(
     `${ORIGIN}/api/auth/sign-in/social`,
     {
       body: JSON.stringify({
-        idToken: { nonce: "p2", token: await idToken(subject, "p2") },
+        idToken: { nonce: "p2", token: await idToken("apple", subject, "p2") },
         provider: "apple",
       }),
       headers: { "Content-Type": "application/json" },

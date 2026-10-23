@@ -68,6 +68,10 @@ private final class FakeServer: Sendable {
 
 private let server = URL(string: "http://localhost:8787")!
 
+private func token(_ provider: LinkedAccount.Provider) -> ProviderToken {
+  ProviderToken(provider: provider, idToken: "id-token", nonce: "raw")
+}
+
 @Test func signsInAnonymouslyAsTheUserTheServerMade() async throws {
   let fake = FakeServer()
   let account = Account(server: server, send: fake.send)
@@ -88,23 +92,26 @@ private let server = URL(string: "http://localhost:8787")!
   }
 }
 
-@Test func linksAppleOnTheSessionAndSaysWhenTheAccountIsInUse() async throws {
+@Test(arguments: [LinkedAccount.Provider.apple, .google])
+func linksTheProviderOnTheSessionAndSaysWhenTheAccountIsInUse(
+  _ provider: LinkedAccount.Provider
+) async throws {
   for (status, said) in [(200, LinkResult.linked), (409, .inUse)] {
     let fake = FakeServer(status: status)
     let account = Account(server: server, send: fake.send)
-    #expect(try await account.linkApple(idToken: "id-token", nonce: "raw", on: "kept") == said)
+    #expect(try await account.link(token(provider), on: "kept") == said)
     let request = try #require(fake.requests.withLock { $0.first })
     #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/link-social")
     #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer kept")
     #expect(!request.httpShouldHandleCookies)
     let body = try #require(
       try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
-    #expect(body["provider"] as? String == "apple")
+    #expect(body["provider"] as? String == provider.rawValue)
     #expect(body["idToken"] as? [String: String] == ["nonce": "raw", "token": "id-token"])
   }
   let refused = Account(server: server, send: FakeServer(status: 401).send)
   await #expect(throws: LinkError.self) {
-    try await refused.linkApple(idToken: "id-token", nonce: "raw", on: "kept")
+    try await refused.link(token(provider), on: "kept")
   }
 }
 
@@ -129,7 +136,7 @@ private let server = URL(string: "http://localhost:8787")!
   let fake = FakeServer(token: "theirs")
   let account = Account(server: server, send: fake.send)
   #expect(
-    try await account.signInApple(idToken: "id-token", nonce: "raw", on: "anonymous")
+    try await account.signIn(with: token(.apple), on: "anonymous")
       == StoredSession(token: "theirs", userID: "user-theirs"))
   let request = try #require(fake.requests.withLock { $0.first })
   #expect(request.url?.absoluteString == "http://localhost:8787/api/auth/sign-in/social")
@@ -145,13 +152,13 @@ private let server = URL(string: "http://localhost:8787")!
       body: #"{"code":"USER_SUSPENDED","message":"This account is suspended"}"#
     ).send)
   await #expect(throws: AccountSuspended.self) {
-    try await suspended.signInApple(idToken: "id-token", nonce: "raw", on: "anonymous")
+    try await suspended.signIn(with: token(.apple), on: "anonymous")
   }
   // Another 403 is a refusal like any other.
   let refused = Account(
     server: server, send: FakeServer(status: 403, token: nil, body: #"{"code":"OTHER"}"#).send)
   await #expect(throws: SignInError.self) {
-    try await refused.signInApple(idToken: "id-token", nonce: "raw", on: "anonymous")
+    try await refused.signIn(with: token(.apple), on: "anonymous")
   }
 }
 

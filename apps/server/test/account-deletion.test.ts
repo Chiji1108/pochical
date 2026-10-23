@@ -3,7 +3,6 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { supportPlace } from "../src/support-lines";
-import { appleKeys, idToken, link } from "./apple-helpers";
 import {
   call,
   failTelling,
@@ -11,6 +10,7 @@ import {
   signInAnonymously,
   userIdOf,
 } from "./helpers";
+import { providerKeys, idToken, link } from "./provider-helpers";
 import {
   watchAlarms,
   pair,
@@ -219,7 +219,7 @@ describe("deleting an account", () => {
   it("revokes Apple's tokens first, and goes no further without a code Apple takes", async () => {
     const asked: { path: string; form: URLSearchParams }[] = [];
     let takes: "none" | "other" | "theirs" = "none";
-    appleKeys((request) => {
+    providerKeys((request) => {
       const url = new URL(request.url);
       if (url.host !== "appleid.apple.com") {
         return undefined;
@@ -241,7 +241,7 @@ describe("deleting an account", () => {
       return new Response(null, { status: 200 });
     });
     const token = await signInAnonymously();
-    await link(token, await idToken("apple-del", "n1"), "n1");
+    await link(token, "apple", await idToken("apple", "apple-del", "n1"), "n1");
     const statuses = [
       await deleteAccount(token),
       await deleteAccount(token, "stale-code"),
@@ -266,6 +266,22 @@ describe("deleting an account", () => {
       "refresh-1",
       "app.pochical",
     ]);
+  });
+
+  it("deletes a user linked to Google without asking Google again", async () => {
+    providerKeys();
+    const token = await signInAnonymously();
+    await link(
+      token,
+      "google",
+      await idToken("google", "google-del", "n1"),
+      "n1"
+    );
+    const statuses = [await deleteAccount(token), await signedIn(token)];
+    const left = await env.DB.prepare(
+      "select count(*) as n from account where account_id = 'google-del'"
+    ).first<number>("n");
+    expect([statuses, left]).toStrictEqual([[200, 401], 0]);
   });
 
   it("is refused without a session", async () => {
