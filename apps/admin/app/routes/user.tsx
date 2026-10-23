@@ -156,7 +156,11 @@ export default function User({
           >
             キャンセル
           </button>
-          <button className={button({ variant: "danger" })} type="submit">
+          <button
+            className={button({ variant: "danger" })}
+            disabled={busy}
+            type="submit"
+          >
             停止する
           </button>
         </Form>
@@ -216,7 +220,7 @@ export default function User({
                           <span className={badge({ tone: "accent" })}>
                             参加中
                           </span>
-                          <RemoveFromGroup group={group} name={name} />
+                          <RemoveFromGroup busy={busy} group={group} />
                         </span>
                       ) : (
                         <span className={badge()}>
@@ -253,11 +257,11 @@ export default function User({
  * them out.
  */
 function RemoveFromGroup({
+  busy,
   group,
-  name,
 }: {
+  busy: boolean;
   group: { groupId: string; name: string };
-  name: string;
 }) {
   const id = `remove-${group.groupId}`;
   return (
@@ -276,7 +280,7 @@ function RemoveFromGroup({
       <dialog className={dialog} id={id}>
         <h2 className={sectionTitle}>{`「${group.name}」から外しますか？`}</h2>
         <p className={css({ color: "text.secondary" })}>
-          {`グループのチャットに「${name}がグループから外されました」と出ます。シフトなど、このグループでのその人のものはグループから消えます。また招待されれば、入り直せます。`}
+          グループのチャットに、このグループでのその人の名前で「〇〇がグループから外されました」と出ます。シフトなど、このグループでのその人のものはグループから消えます。また招待されれば、入り直せます。
         </p>
         <Form
           className={css(actionsStyle, { justifyContent: "flex-end" })}
@@ -291,7 +295,11 @@ function RemoveFromGroup({
           >
             キャンセル
           </button>
-          <button className={button({ variant: "danger" })} type="submit">
+          <button
+            className={button({ variant: "danger" })}
+            disabled={busy}
+            type="submit"
+          >
             外す
           </button>
         </Form>
