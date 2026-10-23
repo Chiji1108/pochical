@@ -11,10 +11,6 @@ import { Section } from "./design-ui";
 
 export const previewDays = 14;
 
-export function shortDay(date: Date) {
-  return `${date.getMonth() + 1}/${date.getDate()}`;
-}
-
 export const settingsParts = {
   // A section's footer, as iOS sets explanation under a group of rows.
   footer: css({

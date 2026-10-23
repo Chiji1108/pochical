@@ -7,6 +7,7 @@ import {
   dateKey,
   defaultHolidaysOff,
   formatDay,
+  formatSlash,
   holidayShiftOf,
 } from "../lib/design-days";
 import type { RepeatRule, Schedule } from "../lib/design-days";
@@ -18,6 +19,7 @@ import {
   usePatterns,
 } from "../lib/design-patterns";
 import type { Pattern, Shift } from "../lib/design-patterns";
+import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { useUser } from "../lib/design-user-store";
 import { Chip, ChipGroup } from "./design-choices";
@@ -29,11 +31,7 @@ import {
   RepeatCalendar,
   SequenceTiles,
 } from "./design-repeat-editor";
-import {
-  nextMonthStart,
-  settingsParts,
-  shortDay,
-} from "./design-settings-parts";
+import { nextMonthStart, settingsParts } from "./design-settings-parts";
 import { ConfirmDialog, Sheet, SheetHeading, sheetBody } from "./design-sheet";
 import { ToastContext } from "./design-toast";
 import {
@@ -127,8 +125,8 @@ function periodOf(rules: readonly RepeatRule[], index: number) {
   const rule = rules[index];
   const next = rules[index + 1];
   return next
-    ? `${shortDay(rule.start)}〜${shortDay(addDays(next.start, -1))}`
-    : `${shortDay(rule.start)}から`;
+    ? `${formatSlash(rule.start)}〜${formatSlash(addDays(next.start, -1))}`
+    : `${formatSlash(rule.start)}から`;
 }
 
 // The periods as a list that never overlaps, newest first under the
@@ -472,7 +470,7 @@ export function RepeatEditorPage({
         sequence={sequence}
       />
       <Sheet
-        label={`${shortDay(start)}${text.question}`}
+        label={`${formatSlash(start)}${text.question}`}
         onOpenChange={setConfirming}
         open={confirming}
       >
@@ -480,7 +478,7 @@ export function RepeatEditorPage({
           onClose={() => {
             setConfirming(false);
           }}
-          title={`${shortDay(start)}${text.question}`}
+          title={`${formatSlash(start)}${text.question}`}
         />
         <div className={sheetBody}>
           <p className={orderConfirm.lead}>
@@ -523,6 +521,7 @@ export function JobChangePage({
 }) {
   const [start, setStart] = useState(nextMonthStart);
   const [asking, setAsking] = useState(false);
+  const setPeriodStart = useSettings((state) => state.setPeriodStart);
   if (asking) {
     return (
       <div className={settingsParts.job}>
@@ -531,7 +530,7 @@ export function JobChangePage({
             action: "切り替える",
             message:
               "前の日までのシフトは、そのまま残ります。この日からのシフトは、新しい仕事に合わせて入れ直します。",
-            title: `${shortDay(start)}から新しい仕事にしますか？`,
+            title: `${formatSlash(start)}から新しい仕事にしますか？`,
           }}
           from={start}
           month={start}
@@ -539,8 +538,11 @@ export function JobChangePage({
           onExit={() => {
             setAsking(false);
           }}
-          onFinish={({ patternKeys, sequence, anchor }) => {
+          onFinish={({ patternKeys, sequence, anchor, periodStart }) => {
             onOrdering(false);
+            if (periodStart !== undefined) {
+              setPeriodStart(periodStart);
+            }
             // Offered as the calendar next shows, as after はじめの設定.
             if (sequence !== undefined && sequence.length > 0) {
               useDevice.setState({ reminderOfferPending: true });
@@ -676,7 +678,7 @@ export function StopRepeatPage({
           onApply(start);
         }}
       >
-        {shortDay(start)}から繰り返しをやめる
+        {formatSlash(start)}から繰り返しをやめる
         <ArrowRight aria-hidden="true" size={16} />
       </Button>
     </>

@@ -102,8 +102,10 @@ struct SettingsScreen: View {
           // 月と曜日 without a word for it.
           LabeledContent(
             "カレンダー",
-            value: "\(Day.weekdayNames[settings.device.week.start])曜はじまり・"
-              + Day.today.shortMonth(english: settings.device.heading.english))
+            value: (["\(Day.weekdayNames[settings.device.week.start])曜はじまり",
+              Day.today.shortMonth(english: settings.device.heading.english)]
+              + (settings.device.period.byPeriod ? [settings.device.period.shortName] : []))
+              .joined(separator: "・"))
         }
         // Outside the app, and changed least, so last.
         PageLink {
@@ -338,7 +340,8 @@ private struct SchemeChoice: View {
 }
 
 /// The calendar's frame (/design's カレンダー page): 週の始まり and 色を
-/// つける日. Only this device's screen changes.
+/// つける日, then シフトの期間, what each page holds. Only this person's
+/// screens change.
 private struct CalendarSettings: View {
   @Environment(Settings.self) private var settings
   @Environment(\.themeColors) private var colors
@@ -407,6 +410,21 @@ private struct CalendarSettings: View {
         Text("色をつける日")
       } footer: {
         Text("土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面やウィジェットでも、この並びと色で表示されます。")
+      }
+      .settingsRows()
+      // Most people's shifts come by the month, so it starts as the month;
+      // a workplace closing on its own day picks the day its shifts start
+      // (spec/calendar.md, The shift period).
+      Section {
+        Picker("1ページの期間", selection: $settings.device.period.start) {
+          ForEach(ShiftPeriod.starts, id: \.self) { start in
+            Text(ShiftPeriod.name(of: start)).tag(start)
+          }
+        }
+      } header: {
+        Text("シフトの期間")
+      } footer: {
+        Text("シフトが15日から翌月14日の分で出るなら「15日〜翌月14日」に。カレンダーの1ページ、お休みの数、画像と端末カレンダーへの保存が、この期間になります。")
       }
       .settingsRows()
     }

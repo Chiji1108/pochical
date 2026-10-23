@@ -1,27 +1,29 @@
 import { css, cva } from "@pochical/styled-system/css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, useMotionValue } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   addDays,
   dateKey,
   daysMovedOn,
-  daysOfMonth,
+  daysOfPeriod,
   firstBlankDay,
   formatDay,
   formatMonthDay,
+  formatPeriodWithYear,
   formatYearMonth,
   formatYearMonthDay,
   gapDaysIn,
   isSameMonth,
   monthAfter,
   nextDayOf,
+  pageMonthOf,
   selectedAfter,
   withNote,
   withShiftEntered,
 } from "../lib/design-days";
-import type { DayEntry, Schedule } from "../lib/design-days";
+import type { DayEntry, Period, Schedule } from "../lib/design-days";
 import { isDayOff, patternsInUse, usePatterns } from "../lib/design-patterns";
 import type { Shift } from "../lib/design-patterns";
 import { useSettings } from "../lib/design-settings-store";
@@ -40,6 +42,7 @@ import { GapSheet } from "./design-gap-sheet";
 import { BreakdownSheet, useShownWith } from "./design-month-breakdown";
 import { useReminderOffer } from "./design-notifications";
 import { Pager } from "./design-pager";
+import { usePages } from "./design-pages";
 import { calendarDays, ImagePreviewPage, SaveSheet } from "./design-save-sheet";
 import type { CalendarAccess } from "./design-save-sheet";
 import {
@@ -134,9 +137,24 @@ export function DesignCalendar({
   const patternKeys = ownPatterns.map((pattern) => pattern.id);
   const book = usePatterns();
   const weekTools = useWeek();
-  const dates = weekTools.monthDates(month);
-  const monthDays = dates.filter(
-    (date) => date.getMonth() === month.getMonth()
+  // The page: the month, or the period starting in it with a シフトの期間
+  // (spec/calendar.md, The shift period), whose days are what is counted,
+  // entered and saved.
+  const pages = usePages();
+  const page = pages.periodOf(month);
+  const dates = pages.datesOf(month);
+  const pageDays = daysOfPeriod(page);
+  // A シフトの期間 changed, or loaded with the saved settings, turns to the
+  // page holding today, as the apps open on it.
+  useEffect(
+    () =>
+      useSettings.subscribe((state, previous) => {
+        const start = state.device.periodStart;
+        if (start !== previous.device.periodStart) {
+          setMonth(pageMonthOf(designToday, start));
+        }
+      }),
+    [setMonth]
   );
   const daysOffIn = (days: Date[]) =>
     days.filter((date) => {
@@ -147,18 +165,18 @@ export function DesignCalendar({
   const shown = useShownWith(coworkers, schedule);
   const summaryIn = (days: Date[]) =>
     shown.person === undefined ? daysOffIn(days) : shown.countIn(days);
-  // The months beside, for the summary to follow a drag of the pages.
+  // The pages beside, for the summary to follow a drag of the pages.
   const summaryBy = (by: number) =>
-    summaryIn(daysOfMonth(monthAfter(month, by)));
-  // The month's breakdown counts every pattern on its days, archived too.
+    summaryIn(daysOfPeriod(pages.periodOf(monthAfter(month, by))));
+  // The page's breakdown counts every pattern on its days, archived too.
   const counts = allPatterns.map((pattern) => ({
-    count: monthDays.filter(
+    count: pageDays.filter(
       (date) => schedule[dateKey(date)]?.shift === pattern.id
     ).length,
     key: pattern.id,
     label: pattern.name,
   }));
-  const unfilled = monthDays.filter((date) => !schedule[dateKey(date)]).length;
+  const unfilled = pageDays.filter((date) => !schedule[dateKey(date)]).length;
   // A month turned to by a tap or a pick rather than a swipe, whose name
   // the drag has not brought in.
   const turnTo = (target: Date) => {
@@ -171,9 +189,7 @@ export function DesignCalendar({
     enterFrom,
     enterShift,
     enterMonth,
-    lastDay,
     selectedDate,
-    selectedDay,
     selectedShift,
     skip,
     start: startEntering,
@@ -183,6 +199,7 @@ export function DesignCalendar({
     initialEditing,
     month,
     onChange,
+    page,
     schedule,
     turnTo,
   });
@@ -262,7 +279,7 @@ export function DesignCalendar({
     stopEntering();
     // Someone with no pattern that counts as off leaves days off blank on
     // purpose, so nothing is asked (spec/shift-patterns.md).
-    const gaps = ownPatterns.some(isDayOff) ? gapDaysIn(schedule, month) : [];
+    const gaps = ownPatterns.some(isDayOff) ? gapDaysIn(schedule, page) : [];
     if (gaps.length > 0) {
       setGapDays(gaps);
       setGapFill(undefined);
@@ -308,6 +325,7 @@ export function DesignCalendar({
       {tabShown && imagePreview && (
         <ImagePreviewPage
           month={month}
+          period={pages.byPeriod ? page : undefined}
           onClose={() => {
             setImagePreview(false);
           }}
@@ -328,6 +346,7 @@ export function DesignCalendar({
             mode={headingMode}
             month={month}
             onPick={goToMonth}
+            period={pages.byPeriod ? page : undefined}
             onSurprise={() => {
               surprise.play();
             }}
@@ -352,9 +371,7 @@ export function DesignCalendar({
             }}
             onStep={step}
             onThisMonth={() => {
-              goToMonth(
-                new Date(designToday.getFullYear(), designToday.getMonth(), 1)
-              );
+              goToMonth(pages.today);
             }}
             onThisWeek={() => {
               openDetail(designToday);
@@ -389,14 +406,13 @@ export function DesignCalendar({
                   const pageDates =
                     weekDetail && offset !== 0
                       ? weekTools.weekDates(addDays(openDate, offset * 7))
-                      : weekTools.monthDates(pageMonth);
+                      : pages.datesOf(pageMonth);
                   const renderCell = (date: Date) => (
                     <DayCell
                       active={
                         offset === 0 &&
                         (editing
-                          ? date.getMonth() === month.getMonth() &&
-                            date.getDate() === selectedDay
+                          ? dateKey(date) === dateKey(selectedDate)
                           : openDate !== undefined &&
                             dateKey(date) === dateKey(openDate))
                       }
@@ -413,12 +429,20 @@ export function DesignCalendar({
                         editing ? enterFrom(date) : openDetail(date);
                       }}
                       dimmed={!editing && shown.fades(date)}
-                      outside={
-                        !weekDetail && date.getMonth() !== pageMonth.getMonth()
+                      outside={!(weekDetail || pages.holds(pageMonth, date))}
+                      // Where the month turns inside a period, 11/1.
+                      withMonth={
+                        pages.byPeriod &&
+                        date.getDate() === 1 &&
+                        pages.holds(pageMonth, date)
                       }
                     />
                   );
-                  const label = `${formatYearMonth(pageMonth)}のシフト`;
+                  const label = `${
+                    pages.byPeriod
+                      ? formatPeriodWithYear(pages.periodOf(pageMonth))
+                      : formatYearMonth(pageMonth)
+                  }のシフト`;
                   // Only the page shown folds; the ones beside it are
                   // there to be dragged in.
                   if (offset === 0) {
@@ -497,8 +521,9 @@ export function DesignCalendar({
           <div className={calendarPage.bottom}>
             <MonthSummary
               beside={{ next: summaryBy(1), previous: summaryBy(-1) }}
-              days={summaryIn(monthDays)}
+              days={summaryIn(pageDays)}
               month={month}
+              byPeriod={pages.byPeriod}
               onOpen={() => {
                 setOpenSheet("breakdown");
               }}
@@ -517,7 +542,7 @@ export function DesignCalendar({
         {headingMode === "edit" && (
           <div className={calendarPage.input}>
             <ShiftInputControls
-              canSkip={selectedDay < lastDay}
+              canSkip={selectedDate < page.last}
               datePicker={datePicker}
               onEnter={enterShift}
               onSkip={skip}
@@ -529,27 +554,29 @@ export function DesignCalendar({
       </Screen>
       <BreakdownSheet
         counts={counts}
-        days={monthDays.length}
+        days={pageDays.length}
         month={month}
+        period={pages.byPeriod ? page : undefined}
         onOpenChange={sheetChange("breakdown")}
         onShow={(id) => {
           shown.show(id);
           setOpenSheet(null);
         }}
         open={openSheet === "breakdown"}
-        people={shown.peopleIn(monthDays)}
+        people={shown.peopleIn(pageDays)}
         shownWith={shown.person?.id}
         unfilled={unfilled}
       />
       <SaveSheet
         access={calendarAccess}
         month={month}
+        period={pages.byPeriod ? page : undefined}
         days={calendarDays(
-          monthDays,
+          pageDays,
           schedule,
           book,
           new Set(
-            monthDays
+            pageDays
               .map((date) => dateKey(date))
               .filter((key) => (own[key]?.note ?? "") !== "")
           ),
@@ -572,6 +599,7 @@ export function DesignCalendar({
             label: pattern.name,
           }))}
         days={gapDays}
+        pageFirst={page.first}
         onFill={fillGaps}
         onPick={setGapFill}
         onBlankOff={(key) => {
@@ -593,12 +621,13 @@ export function DesignCalendar({
 }
 
 // Entering the shifts day by day (ポチポチ入力): the day being entered,
-// whether its month had blank days as entering came to it, and what a
-// screen reader hears as each day is entered.
+// always one of the page's own, and what a screen reader hears as each day
+// is entered.
 function useShiftEntry({
   initialEditing,
   initialDay,
   month,
+  page,
   schedule,
   onChange,
   turnTo,
@@ -606,51 +635,59 @@ function useShiftEntry({
   initialEditing: boolean;
   initialDay: number;
   month: Date;
+  // The page's days, a month's or a シフトの期間's: entering starts on
+  // their first blank day and stays at their last until 完了.
+  page: Period;
   schedule: Schedule;
   onChange: ReturnType<typeof useChangeDays>;
-  // Turns the calendar to another month, for a day picked in it.
+  // Turns the calendar to another page, for a day picked in it.
   turnTo: (month: Date) => void;
 }) {
   const book = usePatterns();
+  const pages = usePages();
   const [editing, setEditing] = useState(initialEditing);
-  const [selectedDay, setSelectedDay] = useState(initialDay);
-  const [announcement, setAnnouncement] = useState("");
-  const selectedDate = new Date(
-    month.getFullYear(),
-    month.getMonth(),
-    selectedDay
+  const [selectedDate, setSelectedDate] = useState(
+    () => new Date(month.getFullYear(), month.getMonth(), initialDay)
   );
-  const lastDay = daysOfMonth(month).length;
+  const [announcement, setAnnouncement] = useState("");
   const selectedShift = schedule[dateKey(selectedDate)]?.shift;
   function moveToNextDay(result: string, days = 1) {
-    const nextDay = selectedAfter(selectedDate, days).getDate();
-    setSelectedDay(nextDay);
+    const next = selectedAfter(selectedDate, days, page.last);
+    const atLast = dateKey(selectedDate) === dateKey(page.last);
+    const end = pages.byPeriod
+      ? "期間の最後の日です。入力が終わったら完了を押してください"
+      : "月末です。入力が終わったら完了を押してください";
+    // The next day by its date alone, in the month of the day entered.
+    const nextName = isSameMonth(next, selectedDate)
+      ? `${next.getDate()}日`
+      : formatMonthDay(next);
+    setSelectedDate(next);
     setAnnouncement(
-      `${formatMonthDay(selectedDate)}、${result}。${selectedDay === lastDay ? "月末です。入力が終わったら完了を押してください" : `${nextDay}日を選択中`}`
+      `${formatMonthDay(selectedDate)}、${result}。${atLast ? end : `${nextName}を選択中`}`
     );
   }
   function announcePicked(date: Date) {
     setAnnouncement(`${formatYearMonthDay(date)}を選択中`);
   }
-  // The day to enter, in its own month: a day of the month before or after,
-  // tapped on the calendar or picked from the date, turns to that month.
+  // The day to enter, on its own page: a faded day of the page before or
+  // after, tapped on the calendar or picked from the date, turns to it.
   function enterFrom(date: Date) {
-    setSelectedDay(date.getDate());
-    if (isSameMonth(date, month)) {
+    setSelectedDate(date);
+    if (pages.holds(month, date)) {
       return;
     }
-    const target = monthAfter(date, 0);
-    turnTo(target);
+    turnTo(pages.monthOf(date));
     announcePicked(date);
   }
-  // A month turned to while entering starts on its first blank day, as
+  // A page turned to while entering starts on its first blank day, as
   // entering does (spec/calendar.md).
   function enterMonth(target: Date) {
-    setSelectedDay(firstBlankDay(schedule, target).getDate());
-    setAnnouncement(`${formatYearMonthDay(target)}を選択中`);
+    const first = firstBlankDay(schedule, pages.periodOf(target));
+    setSelectedDate(first);
+    setAnnouncement(`${formatYearMonthDay(first)}を選択中`);
   }
   function start() {
-    setSelectedDay(firstBlankDay(schedule, month).getDate());
+    setSelectedDate(firstBlankDay(schedule, page));
     setEditing(true);
   }
   function stop() {
@@ -681,9 +718,7 @@ function useShiftEntry({
     enterFrom,
     enterMonth,
     enterShift,
-    lastDay,
     selectedDate,
-    selectedDay,
     selectedShift,
     skip,
     start,

@@ -57,6 +57,8 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   }
 
   public var week = Week()
+  /// シフトの期間: what each page of the calendar holds.
+  public var period = ShiftPeriod()
   public var heading = Heading()
   public var look = Look()
   /// The テーマ's id, as /design's preset; one no longer known is the app's
@@ -81,6 +83,7 @@ public struct DeviceSettings: Codable, Equatable, Sendable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     week = try container.decodeIfPresent(Week.self, forKey: .week) ?? Week()
+    period = try container.decodeIfPresent(ShiftPeriod.self, forKey: .period) ?? ShiftPeriod()
     heading = try container.decodeIfPresent(Heading.self, forKey: .heading) ?? Heading()
     look = try container.decodeIfPresent(Look.self, forKey: .look) ?? Look()
     themeID = try container.decodeIfPresent(String.self, forKey: .themeID) ?? Theme.pochical.rawValue

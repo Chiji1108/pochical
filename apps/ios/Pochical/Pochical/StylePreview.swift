@@ -50,7 +50,12 @@ struct StylePreview: View {
       isEntering: false, onSelect: nil)
     return VStack(alignment: .leading, spacing: 4) {
       if heading {
-        MonthName(position: PagerPosition(pages: 0), monthAt: { _ in today })
+        // The page holding today, as the calendar heads it: by its days
+        // with a シフトの期間.
+        MonthName(
+          position: PagerPosition(pages: 0),
+          monthAt: { _ in settings.device.period.month(holding: today) },
+          period: settings.device.period)
           .padding(.horizontal, 8)
           .padding(.bottom, 8)
       }

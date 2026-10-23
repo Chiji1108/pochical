@@ -1,12 +1,13 @@
 import { css } from "@pochical/styled-system/css";
 import { useState } from "react";
 
+import { formatSlash } from "../lib/design-days";
 import type { Shift } from "../lib/design-patterns";
 import { Chip, ChipGroup, Tag } from "./design-choices";
 import { List, SwitchRow } from "./design-list";
 import { Sheet, SheetHeading, SheetPicture, sheetBody } from "./design-sheet";
 import { Button } from "./design-ui";
-import { weekdayNames } from "./design-week";
+import { dateKey, weekdayNames } from "./design-week";
 
 // A pattern that counts as off, and whether the person's look left it
 // blank as the sheet opened: decided then, so switching it on there does
@@ -30,6 +31,9 @@ const gap = {
 export type GapSheetProps = {
   // The blank days to fill.
   days: Date[];
+  // The page's first day: a month's 1st after it, of a シフトの期間, is
+  // dated 11/1(日), as on the page.
+  pageFirst?: Date;
   // The person's patterns that count as a day off, in their order; it is
   // asked only with one.
   choices: OffChoice[];
@@ -87,6 +91,7 @@ export function GapSheetPreview(props: GapSheetProps) {
 
 function GapSheetBody({
   days,
+  pageFirst,
   choices,
   onFill,
   onBlankOff,
@@ -104,8 +109,13 @@ function GapSheetBody({
         <div className={gap.body}>
           <ChipGroup as="ul" className={spaced}>
             {days.map((day) => (
-              <Tag as="li" key={day.getDate()}>
-                {day.getDate()}日({weekdayNames[day.getDay()]})
+              <Tag as="li" key={dateKey(day)}>
+                {day.getDate() === 1 &&
+                pageFirst !== undefined &&
+                dateKey(day) !== dateKey(pageFirst)
+                  ? formatSlash(day)
+                  : `${day.getDate()}日`}
+                ({weekdayNames[day.getDay()]})
               </Tag>
             ))}
           </ChipGroup>

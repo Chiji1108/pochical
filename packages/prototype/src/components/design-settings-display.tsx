@@ -3,6 +3,7 @@ import { css } from "@pochical/styled-system/css";
 import { Check } from "lucide-react";
 import { useContext, useState } from "react";
 
+import { formatPeriodStart, periodStarts } from "../lib/design-days";
 import { useSettings } from "../lib/design-settings-store";
 import { designToday } from "../lib/design-today";
 import { AppIcon, pickableIcons, useAppIcons } from "./design-app-icon";
@@ -15,6 +16,7 @@ import {
 } from "./design-choices";
 import { PageHeader } from "./design-header";
 import { List, ListRow, SwitchRow } from "./design-list";
+import { MenuPicker, PullDownMenu } from "./design-menu";
 import { shortMonthOf } from "./design-month-name";
 import { settingsParts } from "./design-settings-parts";
 import { StylePreview } from "./design-settings-preview";
@@ -319,6 +321,7 @@ const coloredDayOptions: { day: ColoredDay; name: string; color: string }[] = [
 export function WeekRow({ onOpen }: { onOpen: () => void }) {
   const week = useSettings((state) => state.device.week);
   const monthName = useSettings((state) => state.device.monthName);
+  const periodStart = useSettings((state) => state.device.periodStart);
   // Set small in a row, the month reads as UI text does (Sep), not as
   // the calendar's heading draws it (sep.).
   const month = shortMonthOf(designToday, monthName === "english");
@@ -326,7 +329,11 @@ export function WeekRow({ onOpen }: { onOpen: () => void }) {
     <ListRow
       label="カレンダー"
       onClick={onOpen}
-      value={`${weekdayNames[week.weekStart]}曜はじまり・${month}`}
+      value={[
+        `${weekdayNames[week.weekStart]}曜はじまり`,
+        month,
+        ...(periodStart === 1 ? [] : [`${periodStart}日〜`]),
+      ].join("・")}
     />
   );
 }
@@ -334,7 +341,8 @@ export function WeekRow({ onOpen }: { onOpen: () => void }) {
 // The calendar's frame: 月と曜日, what a tap on the month name does,
 // 週の始まり and 色をつける日, seen on
 // the style page's preview with the month's heading over it, in the order
-// they come down it. Only the viewer's screen changes.
+// they come down it. Only the viewer's screen changes. Then シフトの期間,
+// what each page holds, which the preview's two weeks cannot show.
 export function WeekPage({
   preview,
   onBack,
@@ -348,6 +356,8 @@ export function WeekPage({
   const setMonthName = useSettings((state) => state.setMonthName);
   const monthTap = useSettings((state) => state.device.monthTap);
   const setMonthTap = useSettings((state) => state.setMonthTap);
+  const periodStart = useSettings((state) => state.device.periodStart);
+  const setPeriodStart = useSettings((state) => state.setPeriodStart);
   return (
     <>
       <PageHeader back="設定" onBack={onBack} title="カレンダー" />
@@ -428,6 +438,33 @@ export function WeekPage({
       </Section>
       <Note>
         土曜と日曜は曜日の見出しに、祝日は日付に色がつきます。祝日は日曜と同じ赤です。グループの画面やウィジェットでも、この並びと色で表示されます。
+      </Note>
+      {/* Most people's shifts come by the month, so it starts as the
+          month; a workplace closing on its own day picks the day its
+          shifts start (spec/calendar.md, The shift period). */}
+      <Section title="シフトの期間">
+        <List>
+          <ListRow
+            control={
+              <PullDownMenu label={formatPeriodStart(periodStart)}>
+                <MenuPicker
+                  onValueChange={(start) => {
+                    setPeriodStart(Number(start));
+                  }}
+                  options={periodStarts.map((start) => ({
+                    label: formatPeriodStart(start),
+                    value: String(start),
+                  }))}
+                  value={String(periodStart)}
+                />
+              </PullDownMenu>
+            }
+            label="1ページの期間"
+          />
+        </List>
+      </Section>
+      <Note>
+        シフトが15日から翌月14日の分で出るなら「15日〜翌月14日」に。カレンダーの1ページ、お休みの数、画像と端末カレンダーへの保存が、この期間になります。
       </Note>
     </>
   );
