@@ -30,6 +30,8 @@ internal suspend fun SyncDao.cursorOf(groupId: String): Long = groupCursor(group
 
 /** Changes of a group, in cursor order: each the group's value from now on. */
 internal suspend fun SyncDao.take(changes: List<Change>, groupId: String) {
+  // A group's frame already on its way as the user left it, after the leaving dropped the group.
+  if (!isListed(groupId)) return
   var cursor = cursorOf(groupId)
   for (change in changes) {
     take(change, groupId)
@@ -83,23 +85,7 @@ private suspend fun SyncDao.take(change: Change, groupId: String) {
       val userId = change.memberPattern.userId
       val value = change.memberPattern.pattern
       if (value.hasPattern()) {
-        val pattern = value.pattern.row(value.id)
-        upsert(
-          MemberPatternRow(
-            groupId = groupId,
-            userId = userId,
-            id = pattern.id,
-            name = pattern.name,
-            emoji = pattern.emoji,
-            symbol = pattern.symbol,
-            icon = pattern.icon,
-            color = pattern.color,
-            start = pattern.start,
-            end = pattern.end,
-            countsAsOff = pattern.countsAsOff,
-            nextDay = pattern.nextDay,
-          )
-        )
+        upsert(MemberPatternRow(groupId, userId, value.pattern.row(value.id)))
       } else {
         deleteMemberPattern(groupId, userId, value.id)
       }
@@ -109,18 +95,7 @@ private suspend fun SyncDao.take(change: Change, groupId: String) {
       deleteMemberOrders(groupId, userId)
       insertMemberOrders(
         change.memberRepeatOrders.orders.ordersList.mapIndexed { position, order ->
-          val own = order.row(position)
-          MemberOrderRow(
-            groupId = groupId,
-            userId = userId,
-            position = position,
-            start = own.start,
-            anchor = own.anchor,
-            sequence = own.sequence,
-            holidaysOff = own.holidaysOff,
-            holidayShift = own.holidayShift,
-            holidayCountry = own.holidayCountry,
-          )
+          MemberOrderRow(groupId, userId, order.row(position))
         }
       )
     }

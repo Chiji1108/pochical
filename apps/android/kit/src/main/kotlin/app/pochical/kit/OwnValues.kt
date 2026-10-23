@@ -29,11 +29,14 @@ internal suspend fun SyncDao.edit(change: Change, opId: String, clearFrom: Strin
   if (clearFrom != null) showDays(listOf(clearFrom))
 }
 
-/** A change from the server: the value's from now on, shown unless an edit of it still waits. */
-internal suspend fun SyncDao.takeOwn(change: Change) {
+/**
+ * A change from the server: the value's from now on, shown unless an edit of it still waits.
+ * [floors] are the waiting orders', read once for a frame's changes, which leave the outbox alone.
+ */
+internal suspend fun SyncDao.takeOwn(change: Change, floors: List<OrderFloor>? = null) {
   val key = change.valueKey ?: return
   upsert(ServerValue(key, change.toByteArray()))
-  if (!isWaiting(key)) show(change, waitingFloors())
+  if (!isWaiting(key)) show(change, floors ?: waitingFloors())
 }
 
 /**
@@ -84,7 +87,7 @@ internal suspend fun SyncDao.showDays(starts: List<String>) {
 }
 
 /** The new job's orders waiting in the outbox, each taking back the days from its start set before it. */
-private suspend fun SyncDao.waitingFloors(): List<OrderFloor> =
+internal suspend fun SyncDao.waitingFloors(): List<OrderFloor> =
   waitingOrders().mapNotNull { edit ->
     val hlc = Change.parseFrom(edit.change).hlc ?: return@mapNotNull null
     OrderFloor(edit.clearFrom ?: return@mapNotNull null, Clock.of(hlc))

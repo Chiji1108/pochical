@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,6 +64,8 @@ private suspend fun SyncDao.startOrder(start: String, now: Long) {
 @RunWith(RobolectricTestRunner::class)
 class DatabaseTest {
   private val database = testDatabase()
+
+  @After fun close() = database.close()
 
   @Test
   fun aWaitingNewOrderHidesOnlyWhatWasSetBeforeIt() = runTest {
@@ -165,6 +168,15 @@ class DatabaseTest {
   }
 
   @Test
+  fun aGroupsFrameAfterTheUserLeftItIsDropped() = runTest {
+    database.write {
+      take(listOf(change { member = member { userId = "u"; displayName = "母" } }), groupId = "gone")
+      assertEquals(0L, cursorOf("gone"))
+    }
+    assertEquals(emptyList<GroupMemberRow>(), database.values().members("gone").first())
+  }
+
+  @Test
   fun theOutboxGoesInFramesOfOneKindEach() = runTest {
     val frames = database.write {
       for (date in listOf("2026-10-01", "2026-10-02")) {
@@ -210,7 +222,9 @@ class SyncSchemaTest {
     AppDatabase.open(context).run {
       write {
         take(listOf(serverDay("2026-10-01", "day", ms = 1, cursor = 12)))
+        take(listOf(change { membership = membership { groupId = "g"; joinedAtMs = 1 } }))
         take(listOf(change { cursor = 5; member = member { userId = "u" } }), groupId = "g")
+        assertEquals(5L, cursorOf("g"))
         upsert(state().copy(schema = SYNC_SCHEMA - 1))
       }
       close()
