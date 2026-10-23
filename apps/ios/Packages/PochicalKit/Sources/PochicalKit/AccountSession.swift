@@ -136,8 +136,7 @@ import SQLiteData
 
   init(
     database: any DatabaseWriter, server: AccountServer, keychain: SessionKeychain,
-    shared: UserDefaults?, eraseFiles: @escaping @MainActor () -> Void,
-    socketServer: URL = Server.url
+    shared: UserDefaults?, eraseFiles: @escaping @MainActor () -> Void, socketServer: URL
   ) {
     self.eraseFiles = eraseFiles
     self.database = database

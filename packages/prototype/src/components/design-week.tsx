@@ -140,19 +140,36 @@ export function weekDatesFrom(date: Date, weekStart: number) {
   );
 }
 
-// Whole weeks covering the month.
-export function monthDatesFrom(month: Date, weekStart: number) {
-  const first = new Date(month.getFullYear(), month.getMonth(), 1);
-  const count = new Date(
-    month.getFullYear(),
-    month.getMonth() + 1,
-    0
-  ).getDate();
+// Whole weeks covering a page's days, a month's or a シフトの期間's
+// (spec/calendar.md, The shift period).
+// design-days' Period, which imports from here.
+export function periodDatesFrom(
+  { first, last }: { first: Date; last: Date },
+  weekStart: number
+) {
   const offset = daysIntoWeek(first, weekStart);
+  const dayOf = (date: Date) =>
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const count = (dayOf(last) - dayOf(first)) / 86_400_000 + 1;
   return Array.from(
     { length: Math.ceil((offset + count) / weekLength) * weekLength },
     (_, index) =>
-      new Date(month.getFullYear(), month.getMonth(), index - offset + 1)
+      new Date(
+        first.getFullYear(),
+        first.getMonth(),
+        first.getDate() + index - offset
+      )
+  );
+}
+
+// Whole weeks covering the month.
+export function monthDatesFrom(month: Date, weekStart: number) {
+  return periodDatesFrom(
+    {
+      first: new Date(month.getFullYear(), month.getMonth(), 1),
+      last: new Date(month.getFullYear(), month.getMonth() + 1, 0),
+    },
+    weekStart
   );
 }
 

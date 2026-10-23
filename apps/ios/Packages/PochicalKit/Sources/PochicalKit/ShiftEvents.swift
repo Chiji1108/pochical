@@ -18,16 +18,16 @@ public struct ShiftEvent: Hashable, Sendable {
 }
 
 public enum ShiftEvents {
-  /// The month's days with a shift of `shown` as events, each at the day's
+  /// The page's days with a shift of `shown` as events, each at the day's
   /// own time, else its pattern's. `notes` and `people`, given only when
   /// asked for, are each day's memo and the names of those on it: they go
   /// in a shift's event's notes, and a day with a memo and no shift's
   /// event gets one of its own, all day, named by the memo.
-  public static func month(
-    _ month: Day, days: [Day: DayEntry], patterns: [PatternID: Pattern], shown: Set<PatternID>,
+  public static func page(
+    _ page: Period, days: [Day: DayEntry], patterns: [PatternID: Pattern], shown: Set<PatternID>,
     notes: [Day: String] = [:], people: [Day: [String]] = [:]
   ) -> [ShiftEvent] {
-    month.daysOfMonth.compactMap { day in
+    page.days.compactMap { day in
       shiftEvent(on: day, days: days, patterns: patterns, shown: shown, notes: notes,
         people: people)
         ?? notes[day].flatMap { memo in memoEvent(memo, on: day) }

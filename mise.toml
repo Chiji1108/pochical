@@ -58,8 +58,12 @@ description = "Fail if the Changes the apps read changed without raising their s
 run = ["bun test tools/sync-schema", "bun tools/sync-schema/check.ts"]
 
 [tasks.server]
-description = "Run the Workers dev server"
-run = "bun run --cwd apps/server dev"
+description = "Run the Workers dev server: [--port <port>, 8787 by default] [more wrangler dev flags]"
+usage = '''
+flag "--port <port>" default="8787"
+arg "[wrangler]..." help="passed on to wrangler dev" var=#true
+'''
+run = 'bun run --cwd apps/server dev --port {{usage.port}} --var BETTER_AUTH_URL:http://localhost:{{usage.port}} {% for a in usage.wrangler %}{{ a | quote }} {% endfor %}'
 
 [tasks.admin]
 description = "Run the admin site's dev server, beside mise run server"
@@ -161,15 +165,15 @@ exit $status
 """
 
 [tasks."ios:photo-touches"]
-description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts on :8787: <simulator name> [derived data]"
+description = "Run the chat photo line's touch UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/photo-line-touches/run.sh"
 
 [tasks."ios:notification-taps"]
-description = "Run the chat notification tap UI tests in a simulator, erasing it, against a server it starts on :8787: <simulator name> [derived data]"
+description = "Run the chat notification tap UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/notification-taps/run.sh"
 
 [tasks."ios:shifts-rotation"]
-description = "Run a big group's 一覧 rotation UI tests in a simulator, erasing it, against a server it starts on :8787: <simulator name> [derived data]"
+description = "Run a big group's 一覧 rotation UI tests in a simulator, erasing it, against a server it starts at POCHICAL_DEV_SERVER (:8787 by default): <simulator name> [derived data]"
 run = "tools/shifts-rotation/run.sh"
 
 [tasks."server:typecheck"]

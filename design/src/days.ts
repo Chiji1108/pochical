@@ -9,4 +9,9 @@ export const dayRules = {
   // shift. Never collapse them (Swift's `?? ""`, Kotlin's
   // isNullOrEmpty, SQLite's NULL and '').
   noShift: "",
+  // シフトの期間 (spec/calendar.md, The shift period): the day picked first
+  // when asked for the day a period starts on, and the latest it may
+  // start on, so every month has it (1 is the month itself).
+  periodFirstPick: 15,
+  periodLastStart: 28,
 } as const;

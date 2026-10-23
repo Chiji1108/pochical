@@ -421,16 +421,13 @@ export function daysMovedOn(shift: Shift | undefined, book: PatternBook) {
   return nextDayOf(shift, book) === undefined ? 1 : 2;
 }
 
-// The day selected `days` on from `date` while entering, never past the
-// month's last day: entering stays there until 完了, though a next day
-// may fill the first of the month after.
-export function selectedAfter(date: Date, days: number) {
-  const last = daysOfMonth(date).length;
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    Math.min(date.getDate() + days, last)
-  );
+// The day selected `days` on from `date` while entering, never past
+// `last`, the page's last day (the month's, or a シフトの期間's period's):
+// entering stays there until 完了, though a next day may fill the first
+// of the page after.
+export function selectedAfter(date: Date, days: number, last: Date) {
+  const next = addDays(date, days);
+  return next > last ? last : next;
 }
 
 // The days after entering `shift` on `date` (ポチポチ入力): the day takes it,
@@ -456,11 +453,13 @@ export function withShiftEntered(
   };
 }
 
-// Where ポチポチ入力 starts in a month: its first day without a shift, else
-// its 1st (spec/calendar.md).
-export function firstBlankDay(schedule: Schedule, month: Date) {
-  const days = daysOfMonth(month);
-  return days.find((date) => !schedule[dateKey(date)]) ?? days[0] ?? month;
+// Where ポチポチ入力 starts on a page: its first day without a shift, else
+// its first day (spec/calendar.md).
+export function firstBlankDay(schedule: Schedule, period: Period) {
+  return (
+    daysOfPeriod(period).find((date) => !schedule[dateKey(date)]) ??
+    period.first
+  );
 }
 
 // The person's own days with the memo of the day under `key` set to
@@ -477,8 +476,8 @@ export function withNote(own: OwnDays, key: string, note: string): OwnDays {
 // blanks between entered days and fills them with a day off in one tap.
 // Blanks after the last entered day are left alone: those are more likely
 // not decided yet.
-export function gapDaysIn(schedule: Schedule, month: Date) {
-  const days = daysOfMonth(month);
+export function gapDaysIn(schedule: Schedule, period: Period) {
+  const days = daysOfPeriod(period);
   const lastEntered = days.findLast((date) => schedule[dateKey(date)]);
   return days.filter(
     (date) =>
@@ -549,6 +548,88 @@ export function daysOfMonth(month: Date) {
     { length: count },
     (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
   );
+}
+
+// シフトの期間 (spec/calendar.md, The shift period): each page of the
+// calendar runs from `start`, the day of the month a period starts on (1
+// for the month itself, else 2 to 28), to the day before it a month on.
+// A page is named by its month, the one its period starts in, so turning
+// pages is turning months whatever the period.
+export type Period = {
+  first: Date;
+  last: Date;
+};
+
+// The period starting in the date's month.
+export function periodOf(month: Date, start: number): Period {
+  return {
+    first: new Date(month.getFullYear(), month.getMonth(), start),
+    last: new Date(month.getFullYear(), month.getMonth() + 1, start - 1),
+  };
+}
+
+// The period a day is in: the calendar opens on today's, and entering
+// stops at its last day.
+export function periodHolding(date: Date, start: number): Period {
+  const back = date.getDate() < start ? -1 : 0;
+  return periodOf(monthAfter(date, back), start);
+}
+
+// The month that names the page holding the date.
+export function pageMonthOf(date: Date, start: number) {
+  return monthAfter(periodHolding(date, start).first, 0);
+}
+
+// Every day of the period, its first to its last.
+export function daysOfPeriod({ first, last }: Period) {
+  return Array.from(
+    {
+      length:
+        Math.round((last.getTime() - first.getTime()) / dayMilliseconds) + 1,
+    },
+    (_, index) => addDays(first, index)
+  );
+}
+
+export function isInPeriod(date: Date, { first, last }: Period) {
+  return date >= first && date <= last;
+}
+
+// A period by its days, never a month's name, which would read as the
+// month's own days: 10/15〜11/14, with its year where the year shows
+// (2026/10/15〜11/14, its last day's too in another year), and in full
+// 2026年10月15日〜11月14日 (spec/calendar.md, How days are written).
+export function formatPeriod({ first, last }: Period) {
+  return `${formatSlash(first)}〜${formatSlash(last)}`;
+}
+
+export function formatPeriodWithYear({ first, last }: Period) {
+  const lastYear =
+    last.getFullYear() === first.getFullYear() ? "" : `${last.getFullYear()}/`;
+  return `${first.getFullYear()}/${formatSlash(first)}〜${lastYear}${formatSlash(last)}`;
+}
+
+export function formatPeriodInFull({ first, last }: Period) {
+  const lastYear =
+    last.getFullYear() === first.getFullYear() ? "" : `${last.getFullYear()}年`;
+  return `${formatYearMonthDay(first)}〜${lastYear}${formatMonthDay(last)}`;
+}
+
+// シフトの期間 as 設定 names it: 1日〜末日, or 15日〜翌月14日.
+export function formatPeriodStart(start: number) {
+  return start === 1 ? "1日〜末日" : `${start}日〜翌月${start - 1}日`;
+}
+
+// The days a period may start on: the month's 1st, else 2 to
+// dayRules.periodLastStart, so every month has the day.
+export const periodStarts = Array.from(
+  { length: dayRules.periodLastStart },
+  (_, index) => index + 1
+);
+
+// 11/1, where room is short.
+export function formatSlash(date: Date) {
+  return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
 // Dates as the Japanese sentences around them write them: 9月, 2026年9月,
